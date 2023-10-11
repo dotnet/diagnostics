@@ -37,6 +37,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string probingPath;
             Assembly assembly;
 
+            // Look next to the executing assembly
+            probingPath = Path.Combine(_defaultAssembliesPath, fileName);
+            Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");
+            if (Probe(probingPath, referenceName.Version, out assembly))
+            {
+                Debug.WriteLine($"Matched {probingPath} based on ExecutingAssembly");
+                return assembly;
+            }
+
             // Look next to requesting assembly
             assemblyPath = args.RequestingAssembly?.Location;
             if (!string.IsNullOrEmpty(assemblyPath))
@@ -48,15 +57,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Debug.WriteLine($"Matched {probingPath} based on RequestingAssembly");
                     return assembly;
                 }
-            }
-
-            // Look next to the executing assembly
-            probingPath = Path.Combine(_defaultAssembliesPath, fileName);
-            Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");
-            if (Probe(probingPath, referenceName.Version, out assembly))
-            {
-                Debug.WriteLine($"Matched {probingPath} based on ExecutingAssembly");
-                return assembly;
             }
 
             return null;

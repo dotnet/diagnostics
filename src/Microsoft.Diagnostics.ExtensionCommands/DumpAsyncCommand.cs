@@ -14,44 +14,16 @@ using Microsoft.Diagnostics.Runtime.Interfaces;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = CommandName, Aliases = new string[] { "DumpAsync" }, Help = "Displays information about async \"stacks\" on the garbage-collected heap.")]
-    public sealed class DumpAsyncCommand : ExtensionCommandBase
+    public sealed class DumpAsyncCommand : ClrRuntimeCommandBase
     {
         /// <summary>The name of the command.</summary>
         private const string CommandName = "dumpasync";
 
         /// <summary>Indent width.</summary>
         private const int TabWidth = 2;
+
         /// <summary>The command invocation syntax when used in Debugger Markup Language (DML) commands.</summary>
         private const string DmlCommandInvoke = $"!{CommandName}";
-
-        /// <summary>The help text to render when asked for help.</summary>
-        private static readonly string s_detailedHelpText =
-            $"Usage: {CommandName} [--stats] [--coalesce] [--address <object address>] [--methodtable <mt address>] [--type <partial type name>] [--tasks] [--completed] [--fields]" + Environment.NewLine +
-            Environment.NewLine +
-            "Displays information about async \"stacks\" on the garbage-collected heap. Stacks" + Environment.NewLine +
-            "are synthesized by finding all task objects (including async state machine box" + Environment.NewLine +
-            "objects) on the GC heap and chaining them together based on continuations." + Environment.NewLine +
-            Environment.NewLine +
-            "Options:" + Environment.NewLine +
-            "  --stats        Summarize all async frames found rather than showing detailed stacks." + Environment.NewLine +
-            "  --coalesce     Coalesce stacks and portions of stacks that are the same." + Environment.NewLine +
-            "  --address      Only show stacks that include the object with the specified address." + Environment.NewLine +
-            "  --methodtable  Only show stacks that include objects with the specified method table." + Environment.NewLine +
-            "  --type         Only show stacks that include objects whose type includes the specified name in its name." + Environment.NewLine +
-            "  --tasks        Include stacks that contain only non-state machine task objects." + Environment.NewLine +
-            "  --completed    Include completed tasks in stacks." + Environment.NewLine +
-            "  --fields       Show fields for each async stack frame." + Environment.NewLine +
-            Environment.NewLine +
-            "Examples:" + Environment.NewLine +
-            $"Summarize all async frames associated with a specific method table address:        !{CommandName} --stats --methodtable 0x00007ffbcfbe0970" + Environment.NewLine +
-            $"Show all stacks coalesced by common frames:                                        !{CommandName} --coalesce" + Environment.NewLine +
-            $"Show each stack that includes \"ReadAsync\":                                         !{CommandName} --type ReadAsync" + Environment.NewLine +
-            $"Show each stack that includes an object at a specific address, and include fields: !{CommandName} --address 0x000001264adce778 --fields";
-
-        /// <summary>Gets the runtime for the process.  Set by the command framework.</summary>
-        [ServiceImport(Optional = true)]
-        public ClrRuntime? Runtime { get; set; }
-
 
         /// <summary>Gets whether to only show stacks that include the object with the specified address.</summary>
         [Option(Name = "--address", Aliases = new string[] { "-addr" }, Help = "Only show stacks that include the object with the specified address.")]
@@ -96,27 +68,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public bool CoalesceStacks { get; set; }
 
         /// <summary>Invokes the command.</summary>
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
-            ClrRuntime? runtime = Runtime;
-            if (runtime is null)
-            {
-                WriteLineError("Unable to access runtime.");
-                return;
-            }
-
+            ClrRuntime runtime = Runtime;
             ClrHeap heap = runtime.Heap;
             if (!heap.CanWalkHeap)
             {
-                WriteLineError("Unable to examine the heap.");
-                return;
+                throw new DiagnosticsException("Unable to examine the heap.");
             }
 
             ClrType? taskType = runtime.BaseClassLibrary.GetTypeByName("System.Threading.Tasks.Task");
             if (taskType is null)
             {
-                WriteLineError("Unable to find required type.");
-                return;
+                throw new DiagnosticsException("Unable to find required type.");
             }
 
             ClrStaticField? taskCompletionSentinelType = taskType.GetStaticFieldByName("s_taskCompletionSentinel");
@@ -1191,7 +1155,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         /// <summary>Gets detailed help for the command.</summary>
-        protected override string GetDetailedHelp() => s_detailedHelpText;
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"Displays information about async ""stacks"" on the garbage-collected heap. Stacks
+are synthesized by finding all task objects (including async state machine box
+objects) on the GC heap and chaining them together based on continuations.
+
+Examples:
+   Summarize all async frames associated with a specific method table address:        dumpasync --stats --methodtable 0x00007ffbcfbe0970
+   Show all stacks coalesced by common frames:                                        dumpasync --coalesce
+   Show each stack that includes ""ReadAsync"":                                       dumpasync --type ReadAsync
+   Show each stack that includes an object at a specific address, and include fields: dumpasync --address 0x000001264adce778 --fields
+";
 
         /// <summary>Represents an async object to be used as a frame in an async "stack".</summary>
         private sealed class AsyncObject

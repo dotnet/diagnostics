@@ -50,7 +50,9 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
 
                         taskArray[i] = Task.Run(() => TestTask());
                     }
+#pragma warning disable xUnit1031 // Do not use blocking task operations in test method
                     Task.WaitAll(taskArray);
+#pragma warning restore xUnit1031 // Do not use blocking task operations in test method
                 };
 
                 void TestTask()
@@ -64,8 +66,8 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
 
                     int ThreadPoolWorkerThreadAdjustmentSampleEvents = 0;
                     int ThreadPoolWorkerThreadAdjustmentAdjustmentEvents = 0;
-                    source.Clr.ThreadPoolWorkerThreadAdjustmentSample += (eventData) => ThreadPoolWorkerThreadAdjustmentSampleEvents += 1;
-                    source.Clr.ThreadPoolWorkerThreadAdjustmentAdjustment += (eventData) => ThreadPoolWorkerThreadAdjustmentAdjustmentEvents += 1;
+                    source.Clr.ThreadPoolWorkerThreadAdjustmentSample += (eventData) => Interlocked.Increment(ref ThreadPoolWorkerThreadAdjustmentSampleEvents);
+                    source.Clr.ThreadPoolWorkerThreadAdjustmentAdjustment += (eventData) => Interlocked.Increment(ref ThreadPoolWorkerThreadAdjustmentAdjustmentEvents);
 
                     return () => {
                         Logger.logger.Log("Event counts validation");

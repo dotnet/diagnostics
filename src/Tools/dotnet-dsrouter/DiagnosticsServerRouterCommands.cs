@@ -72,26 +72,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 LogLevel = logLevel;
             }
 
-            protected SpecificRunnerBase(string logLevel) : this(ParseLogLevel(logLevel))
-            {
-            }
-
             public abstract void ConfigureLauncher(CancellationToken cancellationToken);
-
-            protected static LogLevel ParseLogLevel(string verbose)
-            {
-                LogLevel logLevel = LogLevel.Information;
-                if (string.Equals(verbose, "debug", StringComparison.OrdinalIgnoreCase))
-                {
-                    logLevel = LogLevel.Debug;
-                }
-                else if (string.Equals(verbose, "trace", StringComparison.OrdinalIgnoreCase))
-                {
-                    logLevel = LogLevel.Trace;
-                }
-
-                return logLevel;
-            }
 
             // The basic run loop: configure logging and the launcher, then create the router and run it until it exits or the user interrupts
             public async Task<int> CommonRunLoop(Func<ILogger, DiagnosticsServerRouterRunner.ICallbacks, CancellationTokenSource, Task<int>> createRouterTask, CancellationToken token)
@@ -103,7 +84,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
                 ConfigureLauncher(token);
 
-                ILogger logger = loggerFactory.CreateLogger("dotnet-dsrouter");
+                int pid = Process.GetCurrentProcess().Id;
+
+                ILogger logger = loggerFactory.CreateLogger($"dotnet-dsrouter-{pid}");
+
+                logger.LogInformation($"Starting dotnet-dsrouter using pid={pid}");
 
                 Task<int> routerTask = createRouterTask(logger, Launcher, linkedCancelToken);
 
@@ -127,19 +112,31 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                         }
                     }
                 }
-                return routerTask.Result;
+
+                if (!routerTask.IsCompleted)
+                {
+                    cancelRouterTask.Cancel();
+                }
+
+                await Task.WhenAny(routerTask, Task.Delay(1000, CancellationToken.None)).ConfigureAwait(false);
+                if (routerTask.IsCompleted)
+                {
+                    return routerTask.Result;
+                }
+
+                return 0;
             }
         }
 
         private sealed class IpcClientTcpServerRunner : SpecificRunnerBase
         {
-            public IpcClientTcpServerRunner(string verbose) : base(verbose) { }
+            public IpcClientTcpServerRunner(LogLevel logLevel) : base(logLevel) { }
 
             public override void ConfigureLauncher(CancellationToken cancellationToken)
             {
                 Launcher.SuspendProcess = true;
                 Launcher.ConnectMode = true;
-                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.Verbose = LogLevel < LogLevel.Information;
                 Launcher.CommandToken = cancellationToken;
             }
 
@@ -155,9 +152,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcClientTcpServerRouter(CancellationToken token, string ipcClient, string tcpServer, int runtimeTimeout, string verbose, string forwardPort)
         {
-            checkLoopbackOnly(tcpServer);
+            LogLevel logLevel = ParseLogLevel(verbose);
 
-            IpcClientTcpServerRunner runner = new(verbose);
+            checkLoopbackOnly(tcpServer, logLevel);
+
+            IpcClientTcpServerRunner runner = new(logLevel);
 
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = ChooseTcpServerRouterFactory(forwardPort, logger);
@@ -169,22 +168,24 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private sealed class IpcServerTcpServerRunner : SpecificRunnerBase
         {
-            public IpcServerTcpServerRunner(string verbose) : base(verbose) { }
+            public IpcServerTcpServerRunner(LogLevel logLevel) : base(logLevel) { }
 
             public override void ConfigureLauncher(CancellationToken cancellationToken)
             {
                 Launcher.SuspendProcess = false;
                 Launcher.ConnectMode = true;
-                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.Verbose = LogLevel < LogLevel.Information;
                 Launcher.CommandToken = cancellationToken;
             }
         }
 
         public async Task<int> RunIpcServerTcpServerRouter(CancellationToken token, string ipcServer, string tcpServer, int runtimeTimeout, string verbose, string forwardPort)
         {
-            checkLoopbackOnly(tcpServer);
+            LogLevel logLevel = ParseLogLevel(verbose);
 
-            IpcServerTcpServerRunner runner = new(verbose);
+            checkLoopbackOnly(tcpServer, logLevel);
+
+            IpcServerTcpServerRunner runner = new(logLevel);
 
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 NetServerRouterFactory.CreateInstanceDelegate tcpServerRouterFactory = ChooseTcpServerRouterFactory(forwardPort, logger);
@@ -201,20 +202,20 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private sealed class IpcServerTcpClientRunner : SpecificRunnerBase
         {
-            public IpcServerTcpClientRunner(string verbose) : base(verbose) { }
+            public IpcServerTcpClientRunner(LogLevel logLevel) : base(logLevel) { }
 
             public override void ConfigureLauncher(CancellationToken cancellationToken)
             {
                 Launcher.SuspendProcess = false;
                 Launcher.ConnectMode = false;
-                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.Verbose = LogLevel < LogLevel.Information;
                 Launcher.CommandToken = cancellationToken;
             }
         }
 
         public async Task<int> RunIpcServerTcpClientRouter(CancellationToken token, string ipcServer, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
         {
-            IpcServerTcpClientRunner runner = new(verbose);
+            IpcServerTcpClientRunner runner = new(ParseLogLevel(verbose));
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = ChooseTcpClientRouterFactory(forwardPort, logger);
 
@@ -230,20 +231,20 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private sealed class IpcClientTcpClientRunner : SpecificRunnerBase
         {
-            public IpcClientTcpClientRunner(string verbose) : base(verbose) { }
+            public IpcClientTcpClientRunner(LogLevel logLevel) : base(logLevel) { }
 
             public override void ConfigureLauncher(CancellationToken cancellationToken)
             {
                 Launcher.SuspendProcess = true;
                 Launcher.ConnectMode = false;
-                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.Verbose = LogLevel < LogLevel.Information;
                 Launcher.CommandToken = cancellationToken;
             }
         }
 
         public async Task<int> RunIpcClientTcpClientRouter(CancellationToken token, string ipcClient, string tcpClient, int runtimeTimeout, string verbose, string forwardPort)
         {
-            IpcClientTcpClientRunner runner = new(verbose);
+            IpcClientTcpClientRunner runner = new(ParseLogLevel(verbose));
             return await runner.CommonRunLoop((logger, launcherCallbacks, linkedCancelToken) => {
                 TcpClientRouterFactory.CreateInstanceDelegate tcpClientRouterFactory = ChooseTcpClientRouterFactory(forwardPort, logger);
 
@@ -254,20 +255,20 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private sealed class IpcServerWebSocketServerRunner : SpecificRunnerBase
         {
-            public IpcServerWebSocketServerRunner(string verbose) : base(verbose) { }
+            public IpcServerWebSocketServerRunner(LogLevel logLevel) : base(logLevel) { }
 
             public override void ConfigureLauncher(CancellationToken cancellationToken)
             {
                 Launcher.SuspendProcess = false;
                 Launcher.ConnectMode = true;
-                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.Verbose = LogLevel < LogLevel.Information;
                 Launcher.CommandToken = cancellationToken;
             }
         }
 
         public async Task<int> RunIpcServerWebSocketServerRouter(CancellationToken token, string ipcServer, string webSocket, int runtimeTimeout, string verbose)
         {
-            IpcServerWebSocketServerRunner runner = new(verbose);
+            IpcServerWebSocketServerRunner runner = new(ParseLogLevel(verbose));
 
             WebSocketServer.WebSocketServerImpl server = new(runner.LogLevel);
 
@@ -297,20 +298,20 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private sealed class IpcClientWebSocketServerRunner : SpecificRunnerBase
         {
-            public IpcClientWebSocketServerRunner(string verbose) : base(verbose) { }
+            public IpcClientWebSocketServerRunner(LogLevel logLevel) : base(logLevel) { }
 
             public override void ConfigureLauncher(CancellationToken cancellationToken)
             {
                 Launcher.SuspendProcess = true;
                 Launcher.ConnectMode = true;
-                Launcher.Verbose = LogLevel != LogLevel.Information;
+                Launcher.Verbose = LogLevel < LogLevel.Information;
                 Launcher.CommandToken = cancellationToken;
             }
         }
 
         public async Task<int> RunIpcClientWebSocketServerRouter(CancellationToken token, string ipcClient, string webSocket, int runtimeTimeout, string verbose)
         {
-            IpcClientWebSocketServerRunner runner = new(verbose);
+            IpcClientWebSocketServerRunner runner = new(ParseLogLevel(verbose));
 
             WebSocketServer.WebSocketServerImpl server = new(runner.LogLevel);
 
@@ -333,21 +334,54 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
+        public async Task<int> RunIpcServerIOSSimulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info)
+        {
+            if (info)
+            {
+                logRouterUsageInfo("ios simulator", "127.0.0.1:9000", true);
+            }
+
+            return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
+        }
+
+        public async Task<int> RunIpcServerIOSRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info)
+        {
+            if (info)
+            {
+                logRouterUsageInfo("ios device", "127.0.0.1:9000", true);
+            }
+
+            return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "iOS").ConfigureAwait(false);
+        }
+
+        public async Task<int> RunIpcServerAndroidEmulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info)
+        {
+            if (info)
+            {
+                logRouterUsageInfo("android emulator", "10.0.2.2:9000", false);
+            }
+
+            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
+        }
+
+        public async Task<int> RunIpcServerAndroidRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info)
+        {
+            if (info)
+            {
+                logRouterUsageInfo("android device", "127.0.0.1:9000", false);
+            }
+
+            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "Android").ConfigureAwait(false);
+        }
+
         private static string GetDefaultIpcServerPath(ILogger logger)
         {
+            string path = string.Empty;
             int processId = Process.GetCurrentProcess().Id;
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                string path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}");
-                if (File.Exists(path))
-                {
-                    logger?.LogWarning($"Default IPC server path, {path}, already in use. To disable default diagnostics for dotnet-dsrouter, set DOTNET_EnableDiagnostics=0 and re-run.");
-
-                    path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}");
-                    logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
-                }
-
-                return path.Substring(PidIpcEndpoint.IpcRootPath.Length);
+                path = $"dotnet-diagnostic-dsrouter-{processId}";
             }
             else
             {
@@ -358,19 +392,13 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 #endif
                 TimeSpan diff = Process.GetCurrentProcess().StartTime.ToUniversalTime() - unixEpoch;
-
-                string path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-{(long)diff.TotalSeconds}-socket");
-                if (Directory.GetFiles(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket").Length != 0)
-                {
-                    logger?.LogWarning($"Default IPC server path, {Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-{processId}-*-socket")}, already in use. To disable default diagnostics for dotnet-dsrouter, set DOTNET_EnableDiagnostics=0 and re-run.");
-
-                    path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-dsrouter-{processId}-{(long)diff.TotalSeconds}-socket");
-                    logger?.LogWarning($"Fallback using none default IPC server path, {path}.");
-                }
-
-                return path;
+                path = Path.Combine(PidIpcEndpoint.IpcRootPath, $"dotnet-diagnostic-dsrouter-{processId}-{(long)diff.TotalSeconds}-socket");
             }
 
+            logger?.LogDebug($"Using default IPC server path, {path}.");
+            logger?.LogDebug($"Attach to default dotnet-dsrouter IPC server using --process-id {processId} diagnostic tooling argument.");
+
+            return path;
         }
 
         private static TcpClientRouterFactory.CreateInstanceDelegate ChooseTcpClientRouterFactory(string forwardPort, ILogger logger)
@@ -411,9 +439,71 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return tcpServerRouterFactory;
         }
 
-        private static void checkLoopbackOnly(string tcpServer)
+        private static LogLevel ParseLogLevel(string verbose)
         {
-            if (!string.IsNullOrEmpty(tcpServer) && !DiagnosticsServerRouterRunner.isLoopbackOnly(tcpServer))
+            LogLevel logLevel;
+            if (string.Equals(verbose, "none", StringComparison.OrdinalIgnoreCase))
+            {
+                logLevel = LogLevel.None;
+            }
+            else if (string.Equals(verbose, "critical", StringComparison.OrdinalIgnoreCase))
+            {
+                logLevel = LogLevel.Critical;
+            }
+            else if (string.Equals(verbose, "error", StringComparison.OrdinalIgnoreCase))
+            {
+                logLevel = LogLevel.Error;
+            }
+            else if (string.Equals(verbose, "warning", StringComparison.OrdinalIgnoreCase))
+            {
+                logLevel = LogLevel.Warning;
+            }
+            else if (string.Equals(verbose, "info", StringComparison.OrdinalIgnoreCase))
+            {
+                logLevel = LogLevel.Information;
+            }
+            else if (string.Equals(verbose, "debug", StringComparison.OrdinalIgnoreCase))
+            {
+                logLevel = LogLevel.Debug;
+            }
+            else if (string.Equals(verbose, "trace", StringComparison.OrdinalIgnoreCase))
+            {
+                logLevel = LogLevel.Trace;
+            }
+            else
+            {
+                throw new ArgumentException($"Unknown verbose log level, {verbose}");
+            }
+
+            return logLevel;
+        }
+
+        private static void logRouterUsageInfo(string deviceName, string deviceTcpIpAddress, bool deviceListenMode)
+        {
+            StringBuilder message = new();
+
+            string listenMode = deviceListenMode ? "listen" : "connect";
+            int pid = Process.GetCurrentProcess().Id;
+
+            message.AppendLine($"How to connect current dotnet-dsrouter pid={pid} with {deviceName} and diagnostics tooling.");
+            message.AppendLine($"Start an application on {deviceName} with ONE of the following environment variables set:");
+            message.AppendLine("[Default Tracing]");
+            message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},nosuspend,{listenMode}");
+            message.AppendLine("[Startup Tracing]");
+            message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},suspend,{listenMode}");
+            message.AppendLine($"Run diagnotic tool connecting application on {deviceName} through dotnet-dsrouter pid={pid}:");
+            message.AppendLine($"dotnet-trace collect -p {pid}");
+            message.AppendLine($"See https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dsrouter for additional details and examples.");
+
+            ConsoleColor currentColor = Console.ForegroundColor;
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine(message.ToString());
+            Console.ForegroundColor = currentColor;
+        }
+
+        private static void checkLoopbackOnly(string tcpServer, LogLevel logLevel)
+        {
+            if (logLevel != LogLevel.None && !string.IsNullOrEmpty(tcpServer) && !DiagnosticsServerRouterRunner.isLoopbackOnly(tcpServer))
             {
                 StringBuilder message = new();
 

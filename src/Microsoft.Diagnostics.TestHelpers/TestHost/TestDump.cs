@@ -45,6 +45,17 @@ namespace Microsoft.Diagnostics.TestHelpers
             _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
         }
 
+        public override void Dispose()
+        {
+            base.Dispose();
+            _dataTarget?.Dispose();
+            _dataTarget = null;
+        }
+
+        public ServiceManager ServiceManager => _serviceManager;
+
+        public ServiceContainer ServiceContainer => _serviceContainer;
+
         protected override ITarget GetTarget()
         {
             _dataTarget = DataTarget.LoadDump(DumpFile);

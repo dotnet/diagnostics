@@ -43,6 +43,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Host.OnTargetCreate.Fire(this);
         }
 
+        protected void FlushService<T>() => _serviceContainer?.RemoveService(typeof(T));
+
         #region ITarget
 
         /// <summary>

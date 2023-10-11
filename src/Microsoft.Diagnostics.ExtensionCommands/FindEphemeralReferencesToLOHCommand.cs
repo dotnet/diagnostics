@@ -12,13 +12,10 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "ephtoloh", Help = "Finds ephemeral objects which reference the large object heap.")]
-    public class FindEphemeralReferencesToLOHCommand : CommandBase
+    public class FindEphemeralReferencesToLOHCommand : ClrRuntimeCommandBase
     {
         // IComparer for binary search
         private readonly IComparer<(ClrObject, ClrObject)> _firstObjectComparer = Comparer<(ClrObject, ClrObject)>.Create((x, y) => x.Item1.Address.CompareTo(y.Item1.Address));
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
 
         public override void Invoke()
         {

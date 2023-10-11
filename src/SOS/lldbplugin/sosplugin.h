@@ -9,6 +9,7 @@
 #include "lldbservices.h"
 #include "extensions.h"
 #include "dbgtargetcontext.h"
+#include "specialdiaginfo.h"
 #include "specialthreadinfo.h"
 #include "services.h"
 

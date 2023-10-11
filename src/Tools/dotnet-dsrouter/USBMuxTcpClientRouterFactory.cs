@@ -362,6 +362,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 if (_deviceConnectionID == 0)
                 {
+                    _logger.LogError($"Failed to connect device over USB, no device currently connected.");
                     throw new Exception($"Failed to connect device over USB, no device currently connected.");
                 }
 
@@ -370,6 +371,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             if (result != 0)
             {
+                _logger?.LogError($"Failed USBMuxConnectByPort: device = {_deviceConnectionID}, port = {_port}, result = {result}.");
                 throw new Exception($"Failed to connect device over USB using connection {_deviceConnectionID} and port {_port}.");
             }
 

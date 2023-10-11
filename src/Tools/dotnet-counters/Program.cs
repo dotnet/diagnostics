@@ -167,7 +167,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Option DiagnosticPortOption() =>
             new(
-                alias: "--diagnostic-port",
+                aliases: new[] { "--dport", "--diagnostic-port" },
                 description: "The path to diagnostic port to be used.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => "")

@@ -11,12 +11,9 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "listnearobj", Help = "Displays the object preceding and succeeding the specified address.")]
-    public class ListNearObjCommand : CommandBase
+    [Command(Name = "listnearobj", Aliases = new[] { "lno", "ListNearObj" }, Help = "Displays the object preceding and succeeding the specified address.")]
+    public class ListNearObjCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
 

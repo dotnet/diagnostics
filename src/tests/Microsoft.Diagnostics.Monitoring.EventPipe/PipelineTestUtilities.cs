@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit.Abstractions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
@@ -16,9 +17,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         public static async Task<TestRunner> StartProcess(TestConfiguration config, string testArguments, ITestOutputHelper outputHelper, int testProcessTimeout = 60_000)
         {
-            TestRunner runner = await TestRunner.Create(config, outputHelper, "EventPipeTracee", testArguments);
-            await runner.Start(testProcessTimeout);
-            return runner;
+            return await TestRunnerUtilities.StartProcess(config, testArguments, outputHelper, testProcessTimeout);
         }
 
         public static async Task ExecutePipelineWithTracee(
@@ -75,14 +74,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             Task runTask = await startPipelineAsync(pipeline, token);
 
-            // Begin event production
-            testRunner.WakeupTracee();
-
-            // Wait for event production to be done
-            testRunner.WaitForSignal();
-
-            try
-            {
+            Func<CancellationToken, Task> waitForPipeline = async (cancellationToken) => {
                 // Optionally wait on caller before allowing the pipeline to stop.
                 if (null != waitTaskSource)
                 {
@@ -96,15 +88,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
                 //Signal for the pipeline to stop
                 await pipeline.StopAsync(token);
+            };
 
-                //After a pipeline is stopped, we should expect the RunTask to eventually finish
-                await runTask;
-            }
-            finally
-            {
-                // Signal for debugee that's ok to end/move on.
-                testRunner.WakeupTracee();
-            }
+            await TestRunnerUtilities.ExecuteCollection(runTask, testRunner, token, waitForPipeline);
         }
     }
 }

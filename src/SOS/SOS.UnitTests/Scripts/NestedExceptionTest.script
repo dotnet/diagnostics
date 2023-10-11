@@ -99,12 +99,7 @@ VERIFY:HResult:\s+80131509\s+
 VERIFY:There are nested exceptions on this thread. Run with -nested for details
 
 # Verify that Threads (clrthreads) works
-IFDEF:DOTNETDUMP
 SOSCOMMAND:clrthreads
-ENDIF:DOTNETDUMP
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:Threads
-ENDIF:DOTNETDUMP
 VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
 VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
 VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+

@@ -11,8 +11,8 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "finalizequeue", Help = "Displays all objects registered for finalization.")]
-    public class FinalizeQueueCommand : CommandBase
+    [Command(Name = "finalizequeue", Aliases = new[] { "fq", "FinalizeQueue" }, Help = "Displays all objects registered for finalization.")]
+    public class FinalizeQueueCommand : ClrRuntimeCommandBase
     {
         [Option(Name = "-detail", Help = "Will display extra information on any SyncBlocks that need to be cleaned up, and on any RuntimeCallableWrappers (RCWs) that await cleanup.  Both of these data structures are cached and cleaned up by the finalizer thread when it gets a chance to run.")]
         public bool Detail { get; set; }
@@ -37,9 +37,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [ServiceImport]
         public DumpHeapService DumpHeap { get; set; }
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
 
         public override void Invoke()
         {
@@ -87,6 +84,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             DumpHeap.PrintHeap(objects, displayKind, Stat, printFragmentation: false);
 
         }
+
         private IEnumerable<ClrObject> EnumerateFinalizableObjects(bool allReady, ulong mt)
         {
             IEnumerable<ClrObject> result = EnumerateValidFinalizableObjectsWithTypeFilter(mt);

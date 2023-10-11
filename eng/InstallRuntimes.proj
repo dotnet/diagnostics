@@ -113,13 +113,14 @@
           Condition="$([MSBuild]::IsOsPlatform(Windows))"
           Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
 
-    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(MicrosoftDotnetSdkInternalVersion) }&quot;" />
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(MicrosoftDotnetSdkInternalVersion) }&quot;"
+          IgnoreStandardErrorWarningFormat="true" />
 
     <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) %(TestVersions.ExtraInstallArgs) -Version %(TestVersions.RuntimeVersion) -Runtime dotnet }&quot;"
-          Condition="'%(TestVersions.RuntimeVersion)' != ''" />
+          IgnoreStandardErrorWarningFormat="true" Condition="'%(TestVersions.RuntimeVersion)' != ''" />
 
     <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) %(TestVersions.ExtraInstallArgs) -Version %(TestVersions.AspNetVersion) -Runtime aspnetcore }&quot;"
-          Condition="'%(TestVersions.AspNetVersion)' != ''" />
+          IgnoreStandardErrorWarningFormat="true" Condition="'%(TestVersions.AspNetVersion)' != ''" />
   </Target>
 
 <!--

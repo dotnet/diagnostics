@@ -8,7 +8,7 @@ using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 
-namespace SOS
+namespace SOS.Extensions
 {
     internal sealed unsafe class RemoteMemoryService : CallableCOMWrapper, IRemoteMemoryService
     {

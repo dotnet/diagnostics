@@ -19,7 +19,7 @@ COMMAND: contents.
 SOS is a debugger extension DLL designed to aid in the debugging of managed
 programs. Functions are listed by category, then roughly in order of
 importance. Shortcut names for popular functions are listed in parenthesis.
-Type "!help <functionname>" for detailed info on that function. 
+Type "!soshelp <functionname>" for detailed info on that function. 
 
 Object Inspection                  Examining code and stacks
 -----------------------------      -----------------------------
@@ -682,10 +682,16 @@ The arguments in detail:
 
 -allReady Specifying this argument will allow for the display of all objects 
           that are ready for finalization, whether they are already marked by 
-          the GC as such, or whether the next GC will.  The objects that are 
-          not in the "Ready for finalization" list are finalizable objects that 
-          are no longer rooted.  This option can be very expensive, as it 
-          verifies whether all the objects in the finalizable queues are still 
+          the GC as such or not. The former means GC already put them in the 
+          "Ready for finalization" list and their finalizers are ready to run
+          but haven't run yet. The latter means there is nothing holding onto
+          these objects but GC hasn't noticed it yet because a GC that collects
+          the generation this object lives in has not happened yet. When that
+          GC happens, this object will be moved to the "Ready for finalization"
+          list. For example, if a finalizable object lives in gen2 and a gen2 GC
+          has not happened, even if it's displayed by -allReady it's not actually
+          ready for finalization. This option can be very expensive, as it 
+          verifies whether all the objects in the finalizable queues are still
           rooted or not.
 -short    Limits the output to just the address of each object.  If used in 
           conjunction with -allReady it enumerates all objects that have a 
@@ -2638,26 +2644,6 @@ You can use the "dotnet --info" in a command shell to find the path of an instal
 .NET Core runtime.
 \\
 
-COMMAND: setsymbolserver.
-!SetSymbolServer [-ms] [-mi] [-disable] [-log] [-cache <cache-path>] [-directory <search-directory>] [-timeout <minutes> ] [-pat <token>] [<symbol-server-URL>]
-
--ms - Use the public Microsoft symbol server.
--mi - Use the internal symweb symbol server.
--disable - Disable symbol download support.
--directory - Directory to search for symbols. Can be more than one.
--timeout - Specify the symbol server timeout in minutes
--pat - Access token to the authenticated server.
--cache - Specific a symbol cache directory. The default is %%TEMP%%\SymbolCache if not specified.
-<symbol-server-URL> - Symbol server URL.
-
-This commands enables symbol server support for portable PDBs in SOS. If the .sympath is set, this
-symbol server support is automatically enabled.
-
-To disable downloading or clear the current SOS symbol settings allowing new symbol paths to be set:
-
-    0:000> !setsymbolserver -disable
-\\
-
 COMMAND: sosstatus.
 !SOSStatus [-reset]
 
@@ -2699,8 +2685,3 @@ runtimes [-netfx] [-netcore]
 List and select the .NET runtimes in the target process.
 \\
 
-COMMAND: logging.
-logging [enable] [disable]
-
-Enables or disables the internal trace logging.
-\\

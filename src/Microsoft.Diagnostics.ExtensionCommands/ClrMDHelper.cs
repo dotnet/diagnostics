@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private readonly ClrHeap _heap;
 
         [ServiceExport(Scope = ServiceScope.Runtime)]
-        public static ClrMDHelper Create([ServiceImport(Optional = true)] ClrRuntime clrRuntime)
+        public static ClrMDHelper TryCreate([ServiceImport(Optional = true)] ClrRuntime clrRuntime)
         {
             return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
         }
@@ -995,7 +995,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         ClrType slotType = _heap.GetObjectType(slotEntry.ToUInt64());
                         if (slotType.IsString)
                         {
-                            yield return $"\"{new ClrObject(slotEntry.ToUInt64(), slotType).AsString()}\"";
+                            yield return $"\"{_heap.GetObject(slotEntry.ToUInt64(), slotType).AsString()}\"";
                         }
                         else
                         {
@@ -1106,7 +1106,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private static string DumpPropertyValue(ClrObject obj, string propertyName)
+        private string DumpPropertyValue(ClrObject obj, string propertyName)
         {
             const string defaultContent = "?";
 
@@ -1115,7 +1115,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (fieldType.IsString)
                 {
-                    return $"\"{new ClrObject(field.Address, fieldType).AsString()}\"";
+                    return $"\"{_heap.GetObject(field.Address, fieldType).AsString()}\"";
                 }
                 else if (fieldType.IsArray)
                 {

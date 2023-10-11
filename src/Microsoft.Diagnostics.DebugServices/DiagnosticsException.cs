@@ -27,23 +27,43 @@ namespace Microsoft.Diagnostics.DebugServices
     }
 
     /// <summary>
-    /// Thrown if a command is not supported on the configuration, platform or runtime
+    /// Thrown if a command is not found.
     /// </summary>
-    public class CommandNotSupportedException : DiagnosticsException
+    public class CommandNotFoundException : DiagnosticsException
     {
-        public CommandNotSupportedException()
-            : base()
-        {
-        }
+        public const string NotFoundMessage = $"Unrecognized SOS command";
 
-        public CommandNotSupportedException(string message)
+        public CommandNotFoundException(string message)
             : base(message)
         {
         }
 
-        public CommandNotSupportedException(string message, Exception innerException)
+        public CommandNotFoundException(string message, Exception innerException)
             : base(message, innerException)
         {
+        }
+    }
+
+    /// <summary>
+    /// Thrown if a command is not found.
+    /// </summary>
+    public class CommandParsingException : DiagnosticsException
+    {
+        /// <summary>
+        /// The detailed help of the command
+        /// </summary>
+        public string DetailedHelp { get; }
+
+        public CommandParsingException(string message, string detailedHelp)
+            : base(message)
+        {
+            DetailedHelp = detailedHelp;
+        }
+
+        public CommandParsingException(string message, string detailedHelp, Exception innerException)
+            : base(message, innerException)
+        {
+            DetailedHelp = detailedHelp;
         }
     }
 }

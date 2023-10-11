@@ -4,9 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.ExtensionCommands;
@@ -20,7 +20,7 @@ namespace SOS.Extensions
     /// <summary>
     /// The extension services Wrapper the native hosts are given
     /// </summary>
-    public sealed unsafe class HostServices : COMCallableIUnknown, IHost
+    public sealed unsafe class HostServices : COMCallableIUnknown, IHost, SOSLibrary.ISOSModule
     {
         private static readonly Guid IID_IHostServices = new("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
 
@@ -42,6 +42,7 @@ namespace SOS.Extensions
         private readonly SymbolService _symbolService;
         private readonly HostWrapper _hostWrapper;
         private ServiceContainer _serviceContainer;
+        private ServiceContainer _servicesWithManagedOnlyFilter;
         private ContextServiceFromDebuggerServices _contextService;
         private int _targetIdFactory;
         private ITarget _target;
@@ -101,14 +102,17 @@ namespace SOS.Extensions
                 return HResult.E_FAIL;
             }
             Debug.Assert(Instance == null);
-            Instance = new HostServices();
+            Instance = new HostServices(extensionPath, extensionLibrary);
             return initialializeCallback(Instance.IHostServices);
         }
 
-        private HostServices()
+        private HostServices(string extensionPath, IntPtr extensionsLibrary)
         {
+            SOSPath = Path.GetDirectoryName(extensionPath);
+            SOSHandle = extensionsLibrary;
+
             _serviceManager = new ServiceManager();
-            _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!ext" : null);
+            _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!sos" : null);
             _serviceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
 
             _symbolService = new SymbolService(this)
@@ -128,7 +132,6 @@ namespace SOS.Extensions
             builder.AddMethod(new FlushTargetDelegate(FlushTarget));
             builder.AddMethod(new DestroyTargetDelegate(DestroyTarget));
             builder.AddMethod(new DispatchCommandDelegate(DispatchCommand));
-            builder.AddMethod(new DisplayHelpDelegate(DisplayHelp));
             builder.AddMethod(new UninitializeDelegate(Uninitialize));
             IHostServices = builder.Complete();
 
@@ -193,15 +196,14 @@ namespace SOS.Extensions
                 FileLoggingConsoleService fileLoggingConsoleService = new(consoleService);
                 DiagnosticLoggingService.Instance.SetConsole(consoleService, fileLoggingConsoleService);
 
-                // Don't register everything in the SOSHost assembly; just the wrappers
-                _serviceManager.RegisterExportedServices(typeof(TargetWrapper));
-                _serviceManager.RegisterExportedServices(typeof(RuntimeWrapper));
-
                 // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
                 _serviceManager.RegisterAssembly(typeof(Target).Assembly);
 
                 // Register all the services and commands in the SOS.Extensions (this) assembly
                 _serviceManager.RegisterAssembly(typeof(HostServices).Assembly);
+
+                // Register all the services and commands in the SOS.Hosting assembly
+                _serviceManager.RegisterAssembly(typeof(SOSHost).Assembly);
 
                 // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
                 _serviceManager.RegisterAssembly(typeof(ClrMDHelper).Assembly);
@@ -220,6 +222,8 @@ namespace SOS.Extensions
                 _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
                 _serviceContainer.AddService<IServiceManager>(_serviceManager);
                 _serviceContainer.AddService<IHost>(this);
+                _serviceContainer.AddService<SOSLibrary.ISOSModule>(this);
+                _serviceContainer.AddService<SOSHost.INativeClient>(DebuggerServices);
                 _serviceContainer.AddService<ICommandService>(_commandService);
                 _serviceContainer.AddService<ISymbolService>(_symbolService);
                 _serviceContainer.AddService<IConsoleService>(fileLoggingConsoleService);
@@ -232,6 +236,10 @@ namespace SOS.Extensions
                 ThreadUnwindServiceFromDebuggerServices threadUnwindService = new(DebuggerServices);
                 _serviceContainer.AddService<IThreadUnwindService>(threadUnwindService);
 
+                // Used to invoke only managed commands
+                _servicesWithManagedOnlyFilter = new(_contextService.Services);
+                _servicesWithManagedOnlyFilter.AddService(new SOSCommandBase.ManagedOnlyCommandFilter());
+
                 // Add each extension command to the native debugger
                 foreach ((string name, string help, IEnumerable<string> aliases) in _commandService.Commands)
                 {
@@ -240,12 +248,6 @@ namespace SOS.Extensions
                     {
                         Trace.TraceWarning($"Cannot add extension command {hr:X8} {name} - {help}");
                     }
-                }
-
-                if (DebuggerServices.DebugClient is IDebugControl5 control)
-                {
-                    MemoryRegionServiceFromDebuggerServices memRegions = new(DebuggerServices.DebugClient, control);
-                    _serviceContainer.AddService<IMemoryRegionService>(memRegions);
                 }
             }
             catch (Exception ex)
@@ -349,56 +351,27 @@ namespace SOS.Extensions
             {
                 return HResult.E_INVALIDARG;
             }
-            if (!_commandService.IsCommand(commandName))
-            {
-                return HResult.E_NOTIMPL;
-            }
             try
             {
-                StringBuilder sb = new();
-                sb.Append(commandName);
-                if (!string.IsNullOrWhiteSpace(commandArguments))
-                {
-                    sb.Append(' ');
-                    sb.Append(commandArguments);
-                }
-                if (_commandService.Execute(sb.ToString(), _contextService.Services))
+                if (_commandService.Execute(commandName, commandArguments, commandName == "help" ? _contextService.Services : _servicesWithManagedOnlyFilter))
                 {
                     return HResult.S_OK;
                 }
-            }
-            catch (CommandNotSupportedException)
-            {
-                return HResult.E_NOTIMPL;
-            }
-            catch (Exception ex)
-            {
-                Trace.TraceError(ex.ToString());
-            }
-            return HResult.E_FAIL;
-        }
-
-        private int DisplayHelp(
-            IntPtr self,
-            string commandName)
-        {
-            try
-            {
-                if (!_commandService.DisplayHelp(commandName, _contextService.Services))
+                else
                 {
-                    return HResult.E_INVALIDARG;
+                    // The command was not found or supported
+                    return HResult.E_NOTIMPL;
                 }
             }
-            catch (CommandNotSupportedException)
-            {
-                return HResult.E_NOTIMPL;
-            }
             catch (Exception ex)
             {
                 Trace.TraceError(ex.ToString());
-                return HResult.E_FAIL;
+                IConsoleService consoleService = Services.GetService<IConsoleService>();
+                // TODO: when we can figure out how to deal with error messages in the scripts that are displayed on STDERROR under lldb
+                //consoleService.WriteLineError(ex.Message);
+                consoleService.WriteLine(ex.Message);
             }
-            return HResult.S_OK;
+            return HResult.E_FAIL;
         }
 
         private void Uninitialize(
@@ -436,6 +409,14 @@ namespace SOS.Extensions
 
         #endregion
 
+        #region SOSLibrary.ISOSModule
+
+        public string SOSPath { get; }
+
+        public IntPtr SOSHandle { get; }
+
+        #endregion
+
         #region IHostServices delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
@@ -470,11 +451,6 @@ namespace SOS.Extensions
             [In] IntPtr self,
             [In, MarshalAs(UnmanagedType.LPStr)] string commandName,
             [In, MarshalAs(UnmanagedType.LPStr)] string commandArguments);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int DisplayHelpDelegate(
-            [In] IntPtr self,
-            [In, MarshalAs(UnmanagedType.LPStr)] string commandName);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate void UninitializeDelegate(

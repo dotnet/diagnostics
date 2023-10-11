@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     /// Prints objects and statistics for a range of object pointers.
     /// </summary>
     [Command(Name = "notreachableinrange", Help = "A helper command for !finalizerqueue")]
-    public class NotReachableInRangeCommand : CommandBase
+    public class NotReachableInRangeCommand : ClrRuntimeCommandBase
     {
         private HashSet<ulong> _nonFQLiveObjects;
 
@@ -29,9 +29,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [ServiceImport]
         public IMemoryService Memory { get; set; }
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
 
         [Option(Name = "-short")]
         public bool Short { get; set; }

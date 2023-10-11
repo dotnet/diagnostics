@@ -400,44 +400,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Download a file from the symbol stores/server.
         /// </summary>
-        /// <param name="key">index of the file to download</param>
-        /// <returns>path to the downloaded file either in the cache or in the temp directory or null if error</returns>
-        public string DownloadFile(SymbolStoreKey key)
-        {
-            string downloadFilePath = null;
-
-            if (IsSymbolStoreEnabled)
-            {
-                using SymbolStoreFile file = GetSymbolStoreFile(key);
-                if (file != null)
-                {
-                    try
-                    {
-                        downloadFilePath = file.FileName;
-
-                        // Make sure the stream is at the beginning of the module
-                        file.Stream.Position = 0;
-
-                        // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
-                        if (!File.Exists(downloadFilePath))
-                        {
-                            downloadFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + "-" + Path.GetFileName(key.FullPathName));
-                            using (Stream destinationStream = File.OpenWrite(downloadFilePath))
-                            {
-                                file.Stream.CopyTo(destinationStream);
-                            }
-                            Trace.WriteLine($"Downloaded symbol file {key.FullPathName}");
-                        }
-                    }
-                    catch (Exception ex) when (ex is UnauthorizedAccessException or DirectoryNotFoundException)
-                    {
-                        Trace.TraceError("{0}: {1}", file.FileName, ex.Message);
-                        downloadFilePath = null;
-                    }
-                }
-            }
-            return downloadFilePath;
-        }
+        /// <param name="index">index to lookup on symbol server</param>
+        /// <param name="file">the full path name of the file</param>
+        public string DownloadFile(string index, string file) => DownloadFile(new SymbolStoreKey(index, file));
 
         /// <summary>
         /// Returns the metadata for the assembly
@@ -840,6 +805,48 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Download a file from the symbol stores/server.
+        /// </summary>
+        /// <param name="key">index of the file to download</param>
+        /// <returns>path to the downloaded file either in the cache or in the temp directory or null if error</returns>
+        private string DownloadFile(SymbolStoreKey key)
+        {
+            string downloadFilePath = null;
+
+            if (IsSymbolStoreEnabled)
+            {
+                using SymbolStoreFile file = GetSymbolStoreFile(key);
+                if (file != null)
+                {
+                    try
+                    {
+                        downloadFilePath = file.FileName;
+
+                        // Make sure the stream is at the beginning of the module
+                        file.Stream.Position = 0;
+
+                        // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
+                        if (!File.Exists(downloadFilePath))
+                        {
+                            downloadFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + "-" + Path.GetFileName(key.FullPathName));
+                            using (Stream destinationStream = File.OpenWrite(downloadFilePath))
+                            {
+                                file.Stream.CopyTo(destinationStream);
+                            }
+                            Trace.WriteLine($"Downloaded symbol file {key.FullPathName}");
+                        }
+                    }
+                    catch (Exception ex) when (ex is UnauthorizedAccessException or DirectoryNotFoundException)
+                    {
+                        Trace.TraceError("{0}: {1}", file.FileName, ex.Message);
+                        downloadFilePath = null;
+                    }
+                }
+            }
+            return downloadFilePath;
         }
 
         private static void ReadPortableDebugTableEntries(PEReader peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry)

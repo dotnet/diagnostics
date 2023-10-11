@@ -5,8 +5,8 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "logopen", Help = "Enables console file logging.", Flags = CommandFlags.Global)]
-    [Command(Name = "logclose", DefaultOptions = "--disable", Help = "Disables console file logging.", Flags = CommandFlags.Global)]
+    [Command(Name = "logopen", Help = "Enables console file logging.")]
+    [Command(Name = "logclose", DefaultOptions = "--disable", Help = "Disables console file logging.")]
     public class ConsoleLoggingCommand : CommandBase
     {
         [ServiceImport(Optional = true)]
