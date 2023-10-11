@@ -41,6 +41,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         /// </summary>
         string Metadata { get; }
 
-        EventType EventType { get; set; }
+        EventType EventType { get; }
+
+        bool IsMeter { get; }
+
+        int Series { get; }
     }
 }

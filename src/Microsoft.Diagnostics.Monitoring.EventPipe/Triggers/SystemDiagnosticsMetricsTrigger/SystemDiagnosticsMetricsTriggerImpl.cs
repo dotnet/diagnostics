@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         {
             EventType eventType = payload.EventType;
 
-            if (eventType == EventType.Error || eventType == EventType.CounterEnded)
+            if (eventType.IsError() || eventType == EventType.CounterEnded)
             {
                 // not currently logging the error messages
 
@@ -63,17 +63,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
             }
             else
             {
-                bool passesValueFilter = (payload is PercentilePayload percentilePayload) ?
-                    _valueFilterHistogram(CreatePayloadDictionary(percentilePayload)) :
+                bool passesValueFilter = (payload is AggregatePercentilePayload aggregatePercentilePayload) ?
+                    _valueFilterHistogram(CreatePayloadDictionary(aggregatePercentilePayload)) :
                     _valueFilterDefault(payload.Value);
 
                 return SharedTriggerImplHelper.HasSatisfiedCondition(ref _latestTicks, ref _targetTicks, _windowTicks, _intervalTicks, payload, passesValueFilter);
             }
         }
 
-        private static Dictionary<int, double> CreatePayloadDictionary(PercentilePayload percentilePayload)
+        private static Dictionary<int, double> CreatePayloadDictionary(AggregatePercentilePayload aggregatePercentilePayload)
         {
-            return percentilePayload.Quantiles.ToDictionary(keySelector: p => CounterUtilities.CreatePercentile(p.Percentage), elementSelector: p => p.Value);
+            return aggregatePercentilePayload.Quantiles.ToDictionary(keySelector: q => CounterUtilities.CreatePercentile(q.Percentage), elementSelector: q => q.Value);
         }
     }
 }
