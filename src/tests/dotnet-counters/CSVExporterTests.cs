@@ -36,11 +36,7 @@ namespace DotnetCounters.UnitTests
                 List<string> lines = File.ReadLines(fileName).ToList();
                 Assert.Equal(101, lines.Count); // should be 101 including the headers
 
-                string[] headerTokens = lines[0].Split(',');
-                Assert.Equal("Provider", headerTokens[1]);
-                Assert.Equal("Counter Name", headerTokens[2]);
-                Assert.Equal("Counter Type", headerTokens[3]);
-                Assert.Equal("Mean/Increment", headerTokens[4]);
+                ValidateHeaderTokens(lines[0]);
 
                 for (int i = 1; i < lines.Count; i++)
                 {
@@ -78,12 +74,7 @@ namespace DotnetCounters.UnitTests
                 List<string> lines = File.ReadLines(fileName).ToList();
                 Assert.Equal(11, lines.Count); // should be 11 including the headers
 
-                string[] headerTokens = lines[0].Split(',');
-                Assert.Equal("Provider", headerTokens[1]);
-                Assert.Equal("Counter Name", headerTokens[2]);
-                Assert.Equal("Counter Type", headerTokens[3]);
-                Assert.Equal("Mean/Increment", headerTokens[4]);
-
+                ValidateHeaderTokens(lines[0]);
 
                 for (int i = 1; i < lines.Count; i++)
                 {
@@ -121,11 +112,7 @@ namespace DotnetCounters.UnitTests
                 List<string> lines = File.ReadLines(fileName).ToList();
                 Assert.Equal(101, lines.Count); // should be 101 including the headers
 
-                string[] headerTokens = lines[0].Split(',');
-                Assert.Equal("Provider", headerTokens[1]);
-                Assert.Equal("Counter Name", headerTokens[2]);
-                Assert.Equal("Counter Type", headerTokens[3]);
-                Assert.Equal("Mean/Increment", headerTokens[4]);
+                ValidateHeaderTokens(lines[0]);
 
                 for (int i = 1; i < lines.Count; i++)
                 {
@@ -163,11 +150,7 @@ namespace DotnetCounters.UnitTests
                 List<string> lines = File.ReadLines(fileName).ToList();
                 Assert.Equal(101, lines.Count); // should be 101 including the headers
 
-                string[] headerTokens = lines[0].Split(',');
-                Assert.Equal("Provider", headerTokens[1]);
-                Assert.Equal("Counter Name", headerTokens[2]);
-                Assert.Equal("Counter Type", headerTokens[3]);
-                Assert.Equal("Mean/Increment", headerTokens[4]);
+                ValidateHeaderTokens(lines[0]);
 
                 for (int i = 1; i < lines.Count; i++)
                 {
@@ -205,11 +188,7 @@ namespace DotnetCounters.UnitTests
                 List<string> lines = File.ReadLines(fileName).ToList();
                 Assert.Equal(101, lines.Count); // should be 101 including the headers
 
-                string[] headerTokens = lines[0].Split(',');
-                Assert.Equal("Provider", headerTokens[1]);
-                Assert.Equal("Counter Name", headerTokens[2]);
-                Assert.Equal("Counter Type", headerTokens[3]);
-                Assert.Equal("Mean/Increment", headerTokens[4]);
+                ValidateHeaderTokens(lines[0]);
 
                 for (int i = 1; i < lines.Count; i++)
                 {
@@ -247,11 +226,7 @@ namespace DotnetCounters.UnitTests
                 List<string> lines = File.ReadLines(fileName).ToList();
                 Assert.Equal(101, lines.Count); // should be 101 including the headers
 
-                string[] headerTokens = lines[0].Split(',');
-                Assert.Equal("Provider", headerTokens[1]);
-                Assert.Equal("Counter Name", headerTokens[2]);
-                Assert.Equal("Counter Type", headerTokens[3]);
-                Assert.Equal("Mean/Increment", headerTokens[4]);
+                ValidateHeaderTokens(lines[0]);
 
                 for (int i = 1; i < lines.Count; i++)
                 {
@@ -267,6 +242,15 @@ namespace DotnetCounters.UnitTests
             {
                 File.Delete(fileName);
             }
+        }
+
+        internal static void ValidateHeaderTokens(string headerLine)
+        {
+            string[] headerTokens = headerLine.Split(',');
+            Assert.Equal("Provider", headerTokens[TestConstants.ProviderIndex]);
+            Assert.Equal("Counter Name", headerTokens[TestConstants.CounterNameIndex]);
+            Assert.Equal("Counter Type", headerTokens[TestConstants.CounterTypeIndex]);
+            Assert.Equal("Mean/Increment", headerTokens[TestConstants.ValueIndex]);
         }
     }
 }
