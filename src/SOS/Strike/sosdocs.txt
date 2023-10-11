@@ -682,10 +682,16 @@ The arguments in detail:
 
 -allReady Specifying this argument will allow for the display of all objects 
           that are ready for finalization, whether they are already marked by 
-          the GC as such, or whether the next GC will.  The objects that are 
-          not in the "Ready for finalization" list are finalizable objects that 
-          are no longer rooted.  This option can be very expensive, as it 
-          verifies whether all the objects in the finalizable queues are still 
+          the GC as such or not. The former means GC already put them in the 
+          "Ready for finalization" list and their finalizers are ready to run
+          but haven't run yet. The latter means there is nothing holding onto
+          these objects but GC hasn't noticed it yet because a GC that collects
+          the generation this object lives in has not happened yet. When that
+          GC happens, this object will be moved to the "Ready for finalization"
+          list. For example, if a finalizable object lives in gen2 and a gen2 GC
+          has not happened, even if it's displayed by -allReady it's not actually
+          ready for finalization. This option can be very expensive, as it 
+          verifies whether all the objects in the finalizable queues are still
           rooted or not.
 -short    Limits the output to just the address of each object.  If used in 
           conjunction with -allReady it enumerates all objects that have a 
