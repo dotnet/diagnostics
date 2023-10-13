@@ -17,6 +17,13 @@ namespace DotnetCounters.UnitTests
     /// </summary>
     public class CSVExporterTests
     {
+        private const string tag1 = "foo=bar";
+        private const string tag2 = "baz=7";
+        private const string meterTag1 = "MeterTagKey=MeterTagValue";
+        private const string meterTag2 = "MeterTagKey2=MeterTagValue2";
+        private const string instrumentTag1 = "InstrumentTagKey=InstrumentTagValue";
+        private const string instrumentTag2 = "InstrumentTagKey2=InstrumentTagValue2";
+
         [Fact]
         public void IncrementingCounterTest()
         {
@@ -26,7 +33,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", string.Empty, string.Empty, i, 1, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload(new Provider("myProvider", null, null, null), "incrementingCounterOne", "Incrementing Counter One", string.Empty, string.Empty, i, 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -55,8 +62,13 @@ namespace DotnetCounters.UnitTests
             }
         }
 
-        [Fact]
-        public void CounterTest()
+        [Theory]
+        [InlineData("", "", "", "")]
+        [InlineData($"{meterTag1},{meterTag2}", "", "", $"[{meterTag1};{meterTag2}]")]
+        [InlineData("", $"{instrumentTag1},{instrumentTag2}", "", $"[{instrumentTag1};{instrumentTag2}]")]
+        [InlineData($"{meterTag1},{meterTag2}", $"{instrumentTag1},{instrumentTag2}", "", $"[{meterTag1};{meterTag2};{instrumentTag1};{instrumentTag2}]")]
+        [InlineData($"{meterTag1},{meterTag2}", $"{instrumentTag1},{instrumentTag2}", $"{tag1},{tag2}", $"[{meterTag1};{meterTag2};{instrumentTag1};{instrumentTag2};{tag1};{tag2}]")]
+        public void CounterTest(string meterTags, string instrumentTags, string tags, string expectedTags)
         {
             string fileName = "CounterTest.csv";
             CSVExporter exporter = new(fileName);
@@ -64,7 +76,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new GaugePayload("myProvider", "counterOne", "Counter One", string.Empty, null, i, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new GaugePayload(new Provider("myProvider", meterTags, instrumentTags, null), "counterOne", "Counter One", string.Empty, tags, i, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -82,7 +94,7 @@ namespace DotnetCounters.UnitTests
                     string[] tokens = lines[i].Split(',');
 
                     Assert.Equal("myProvider", tokens[1]);
-                    Assert.Equal("Counter One", tokens[2]);
+                    Assert.Equal($"Counter One{expectedTags}", tokens[2]);
                     Assert.Equal("Metric", tokens[3]);
                     Assert.Equal((i - 1).ToString(), tokens[4]);
                 }
@@ -102,7 +114,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload("myProvider", "incrementingCounterOne", "Incrementing Counter One", string.Empty, null, i, 60, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload(new Provider("myProvider", null, null, null), "incrementingCounterOne", "Incrementing Counter One", string.Empty, null, i, 60, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -140,7 +152,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload("myProvider", "allocRateGen", "Allocation Rate Gen", "MB", string.Empty, i, 60, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload(new Provider("myProvider", null, null, null), "allocRateGen", "Allocation Rate Gen", "MB", string.Empty, i, 60, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -178,7 +190,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload("myProvider", "allocRateGen", "Allocation Rate Gen", "MB", "foo=bar,baz=7", i, 60, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload(new Provider("myProvider", null, null, null), "allocRateGen", "Allocation Rate Gen", "MB", "foo=bar,baz=7", i, 60, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -216,7 +228,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 100; i++)
             {
-                exporter.CounterPayloadReceived(new PercentilePayload("myProvider", "allocRateGen", "Allocation Rate Gen", "MB", "foo=bar,Percentile=50", i, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new PercentilePayload(new Provider("myProvider", null, null, null), "allocRateGen", "Allocation Rate Gen", "MB", "foo=bar,Percentile=50", i, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 

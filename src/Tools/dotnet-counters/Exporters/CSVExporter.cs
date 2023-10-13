@@ -71,11 +71,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
                 builder
                     .Append(payload.Timestamp.ToString()).Append(',')
-                    .Append(payload.Provider).Append(',')
+                    .Append(payload.Provider.ProviderName).Append(',')
                     .Append(payload.GetDisplay());
-                if (!string.IsNullOrEmpty(payload.Metadata))
+
+                string tags = payload.CombineTags();
+                if (!string.IsNullOrEmpty(tags))
                 {
-                    builder.Append('[').Append(payload.Metadata.Replace(',', ';')).Append(']');
+                    builder.Append('[').Append(tags.Replace(',', ';')).Append(']');
                 }
                 builder.Append(',')
                     .Append(payload.CounterType).Append(',')

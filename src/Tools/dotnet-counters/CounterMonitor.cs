@@ -66,13 +66,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private void HandleDiagnosticCounter(ICounterPayload payload)
         {
             // init providerEventState if this is the first time we've seen an event from this provider
-            if (!_providerEventStates.TryGetValue(payload.Provider, out ProviderEventState providerState))
+            if (!_providerEventStates.TryGetValue(payload.Provider.ProviderName, out ProviderEventState providerState))
             {
                 providerState = new ProviderEventState()
                 {
                     FirstReceiveTimestamp = payload.Timestamp
                 };
-                _providerEventStates.Add(payload.Provider, providerState);
+                _providerEventStates.Add(payload.Provider.ProviderName, providerState);
             }
 
             // we give precedence to instrument events over diagnostic counter events. If we are seeing
@@ -131,7 +131,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 while (_bufferedEvents.Count != 0)
                 {
                     CounterPayload payload = _bufferedEvents.Peek();
-                    ProviderEventState providerEventState = _providerEventStates[payload.Provider];
+                    ProviderEventState providerEventState = _providerEventStates[payload.Provider.ProviderName];
                     if (providerEventState.InstrumentEventObserved)
                     {
                         _bufferedEvents.Dequeue();
@@ -618,7 +618,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 else if (payload.IsMeter)
                 {
-                    MeterInstrumentEventObserved(payload.Provider, payload.Timestamp);
+                    MeterInstrumentEventObserved(payload.Provider.ProviderName, payload.Timestamp);
                     if (payload.EventType.IsValuePublishedEvent())
                     {
                         CounterPayloadReceived((CounterPayload)payload);

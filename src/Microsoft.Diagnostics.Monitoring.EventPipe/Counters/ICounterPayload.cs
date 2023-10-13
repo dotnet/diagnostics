@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         CounterType CounterType { get; }
 
-        string Provider { get; }
+        Provider Provider { get; }
 
         string DisplayName { get; }
 
