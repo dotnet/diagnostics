@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Text;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tracing.Parsers;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
@@ -39,7 +40,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         {
                             { "FilterSpecs", _filterSpecs }
                         }
-                )
+                ),
+                // Activity correlation
+                new EventPipeProvider(
+                    TplEventSource,
+                    EventLevel.Informational,
+                    (long)TplEtwProviderTraceEventParser.Keywords.TasksFlowActivityIds
+                ),
             };
         }
 

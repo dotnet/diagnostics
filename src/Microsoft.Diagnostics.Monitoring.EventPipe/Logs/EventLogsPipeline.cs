@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,44 +43,48 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             string lastFormattedMessage = string.Empty;
 
-            Dictionary<Guid, LogActivityItem> logActivities = new();
-            Stack<Guid> stack = new();
+            //
+            // We enable TplEventSource's TasksFlowActivityIds as part of our configuration to enable activity correlation.
+            // This means that each time an event start occurs the current ActivityId will branch creating a new one with a RelatedActivityId equal to where it branched from.
+            // Combining this with the fact that scopes are handled as ActivityJson/{Start,Stop} means the ActivityId will branch each time a scope starts.
+            // When a log message occurs, it'll have an ActivityId equal to the latest applicable scope.
+            //
+            // By maintaining a tree with the branching data, we can construct the full scope for a log message:
+            // - Each time the ActivityId branches, create a node in the tree with it's parent being the node corresponding to the RelatedActivityId.
+            //   - Each node has corresponding scope data.
+            // - When a log message occurs, grab the node with the corresponding ActivityId and backtrack to the root of the tree. Each node visited is included as part of the log's scope.
+            //
+            // NOTE: There are edge cases with concurrent traces, this is described in greater detail above our backtracking code.
+            //
+            Dictionary<Guid, LogScopeItem> activityIdToScope = new();
 
             eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Start", (traceEvent) => {
-                int factoryId = (int)traceEvent.PayloadByName("FactoryID");
-                string categoryName = (string)traceEvent.PayloadByName("LoggerName");
+                if (traceEvent.ActivityID == Guid.Empty)
+                {
+                    // Unexpected
+                    return;
+                }
+
                 string argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
 
                 // TODO: Store this information by logger factory id
-                LogActivityItem item = new()
+                LogScopeItem item = new()
                 {
                     ActivityID = traceEvent.ActivityID,
                     ScopedObject = new LogObject(JsonDocument.Parse(argsJson).RootElement),
                 };
 
-                if (stack.Count > 0)
+                if (activityIdToScope.TryGetValue(traceEvent.RelatedActivityID, out LogScopeItem parentItem))
                 {
-                    Guid parentId = stack.Peek();
-                    if (logActivities.TryGetValue(parentId, out LogActivityItem parentItem))
-                    {
-                        item.Parent = parentItem;
-                    }
+                    item.Parent = parentItem;
                 }
 
-                stack.Push(traceEvent.ActivityID);
-                logActivities[traceEvent.ActivityID] = item;
+                activityIdToScope[traceEvent.ActivityID] = item;
             });
 
             eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Stop", (traceEvent) => {
-                int factoryId = (int)traceEvent.PayloadByName("FactoryID");
-                string categoryName = (string)traceEvent.PayloadByName("LoggerName");
-
-                //If we begin collection in the middle of a request, we can receive a stop without having a start.
-                if (stack.Count > 0)
-                {
-                    stack.Pop();
-                    logActivities.Remove(traceEvent.ActivityID);
-                }
+                // Not all stopped event ActivityIds will exist in our tree since there may be scopes already active when we start the trace session.
+                _ = activityIdToScope.Remove(traceEvent.ActivityID);
             });
 
             eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "MessageJson", (traceEvent) => {
@@ -110,14 +115,29 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 ILogger logger = _factory.CreateLogger(categoryName);
                 List<IDisposable> scopes = new();
 
-                if (logActivities.TryGetValue(traceEvent.ActivityID, out LogActivityItem logActivityItem))
+                //
+                // The MessageJson event will occur with an ActivityId equal to the most relevant activity branch and we can backtrack to the root of the tree
+                // to grab all applicable scopes (where each node we visit is an applicable scope).
+                //
+                // Ideally the ActivityId will always exist in our tree, however if another trace is ongoing that is interested in an event start
+                // within the same async context as our log message then there will be nodes+edges that our tree is unaware of.
+                // This is because TplEventSource's TasksFlowActivityIds is a singleton implementation that is shared for all traces,
+                // regardless of if the other traces have TasksFlowActivityIds enabled.
+                //
+                // In this scenario there's still a chance that only a single branch has occurred and we're the first event logged with the newly branched ActivityId,
+                // in which case we can use the RelatedActivityId to still grab the whole scope.
+                //
+                // If not then we will be operating on a subtree without a way of getting back to the root node and will only have a subset (if any) of the
+                // applicable scopes.
+                //
+                if (activityIdToScope.TryGetValue(traceEvent.ActivityID, out LogScopeItem scopeItem) ||
+                    activityIdToScope.TryGetValue(traceEvent.RelatedActivityID, out scopeItem))
                 {
-                    // REVIEW: Does order matter here? We're combining everything anyways.
-                    while (logActivityItem != null)
+                    while (scopeItem != null)
                     {
-                        scopes.Add(logger.BeginScope(logActivityItem.ScopedObject));
+                        scopes.Add(logger.BeginScope(scopeItem.ScopedObject));
 
-                        logActivityItem = logActivityItem.Parent;
+                        scopeItem = scopeItem.Parent;
                     }
                 }
 
@@ -190,13 +210,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return state.ToString();
         }
 
-        private class LogActivityItem
+        private class LogScopeItem
         {
             public Guid ActivityID { get; set; }
 
             public LogObject ScopedObject { get; set; }
 
-            public LogActivityItem Parent { get; set; }
+            public LogScopeItem Parent { get; set; }
         }
     }
 }
