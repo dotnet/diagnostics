@@ -124,8 +124,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // This is because TplEventSource's TasksFlowActivityIds is a singleton implementation that is shared for all traces,
                 // regardless of if the other traces have TasksFlowActivityIds enabled.
                 //
-                // In this scenario there's still a chance that only a single branch has occurred and we're the first event logged with the newly branched ActivityId,
-                // in which case we can use the RelatedActivityId to still grab the whole scope.
+                // In this scenario there's still a chance that only a single branch has occurred and we're the first event logged with the newly branched ActivityId.
+                // In which case we can use the RelatedActivityId to find our way back onto the tree.
                 //
                 // If not then we will be operating on a subtree without a way of getting back to the root node and will only have a subset (if any) of the
                 // applicable scopes.
