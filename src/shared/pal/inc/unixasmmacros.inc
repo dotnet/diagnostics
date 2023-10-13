@@ -43,6 +43,8 @@
 #include "unixasmmacrosarm.inc"
 #elif defined(HOST_ARM64)
 #include "unixasmmacrosarm64.inc"
+#elif defined(HOST_RISCV64)
+#include "unixasmmacrosriscv64.inc"
 #elif defined(HOST_S390X)
 #include "unixasmmacross390x.inc"
 #endif

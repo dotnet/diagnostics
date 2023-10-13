@@ -520,13 +520,13 @@ bool GcInfoDecoder::GetIsVarArg()
     return m_IsVarArg;
 }
 
-#if defined(TARGET_ARM) || defined(TARGET_ARM64)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64)
 bool GcInfoDecoder::HasTailCalls()
 {
     _ASSERTE( m_Flags & DECODE_HAS_TAILCALLS );
     return m_HasTailCalls;
 }
-#endif // TARGET_ARM || TARGET_ARM64
+#endif // TARGET_ARM || TARGET_ARM64 || TARGET_RISCV64
 
 bool GcInfoDecoder::WantsReportOnlyLeaf()
 {
