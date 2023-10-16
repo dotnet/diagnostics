@@ -76,7 +76,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             private static string CreateKey(ICounterPayload payload)
             {
-                return CreateKey(payload.Provider, payload.Name);
+                return CreateKey(payload.Provider.ProviderName, payload.Name);
             }
 
             private static string CreateKey(string providerName, string counterName)
@@ -127,7 +127,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             IOrderedEnumerable<string> actualMetrics = logger.Metrics.Select(m => m.Name).OrderBy(m => m);
 
             Assert.Equal(expectedCounters, actualMetrics);
-            Assert.True(logger.Metrics.All(m => string.Equals(m.Provider, expectedProvider)));
+            Assert.True(logger.Metrics.All(m => string.Equals(m.Provider.ProviderName, expectedProvider)));
         }
     }
 }
