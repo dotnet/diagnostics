@@ -14,6 +14,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal class EventLogsPipeline : EventSourcePipeline<EventLogsPipelineSettings>
     {
+        // We guard against excessive scope depth
+        private const int ActivityIdLimit = 10_000;
+
         private readonly ILoggerFactory _factory;
         private static readonly Func<object, Exception, string> _messageFormatter = MessageFormatter;
         public EventLogsPipeline(DiagnosticsClient client, EventLogsPipelineSettings settings, ILoggerFactory factory)
@@ -78,7 +81,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     item.Parent = parentItem;
                 }
 
-                activityIdToScope[traceEvent.ActivityID] = item;
+                if (activityIdToScope.Count < ActivityIdLimit || activityIdToScope.ContainsKey(traceEvent.ActivityID))
+                {
+                    activityIdToScope[traceEvent.ActivityID] = item;
+                }
             });
 
             eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Stop", (traceEvent) => {
