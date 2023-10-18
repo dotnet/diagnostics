@@ -1,4 +1,5 @@
-# Dotnet Diagnostic Tools CLI Design
+The newest documentation is now maintained at [dotnet-trace](), [dotnet-counters](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-trace.md), [dotnet-dump](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-dump.md), [dotnet-gcdump](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-gcdump.md), [dotnet-dsrouter](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-dsrouter.md), [dotnet-monitor](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-monitor.md), [dotnet-symbol](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-symbol.md), [dotnet-sos](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-sos.md). This documentation is no longer being updated.
+# Dotnet Diagnostic Tools CLI Design 
 
 ## User workflows
 
