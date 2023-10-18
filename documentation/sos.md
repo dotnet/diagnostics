@@ -1,3 +1,5 @@
+This documentation is now being maintained at [dotnet-sos](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-sos.md). This doc is no longer being updated.
+
 SOS 
 ===
 
