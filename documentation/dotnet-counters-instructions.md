@@ -1,3 +1,5 @@
+This documentation is now being maintained here: [dotnet-counters](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-counters.md). This doc is no longer being updated.
+
 # dotnet-counters
 
 NOTE: This documentation page may contain information on some features that are still work-in-progress. For most up-to-date documentation on released version of `dotnet-counters`, please refer to [its official documentation](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-counters) page.
