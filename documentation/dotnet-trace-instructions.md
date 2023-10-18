@@ -1,3 +1,5 @@
+This documentation is now being maintained at [dotnet-trace](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-trace.md). This doc is no longer being updated.
+
 # Trace for performance analysis utility (dotnet-trace)
 
 NOTE: This documentation page may contain information on some features that are still work-in-progress. For most up-to-date documentation on released version of `dotnet-trace`, please refer to [its official documentation](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace) page.
