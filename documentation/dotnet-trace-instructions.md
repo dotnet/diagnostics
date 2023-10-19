@@ -1,4 +1,4 @@
-This documentation is now being maintained at [dotnet-trace](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/dotnet-trace.md). This doc is no longer being updated.
+This documentation is now being maintained at [dotnet-trace](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-trace). This doc is no longer being updated.
 
 # Trace for performance analysis utility (dotnet-trace)
 
