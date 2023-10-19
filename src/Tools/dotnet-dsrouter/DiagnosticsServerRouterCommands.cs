@@ -336,7 +336,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcServerIOSSimulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info)
         {
-            if (info)
+            if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
                 logRouterUsageInfo("ios simulator", "127.0.0.1:9000", true);
             }
@@ -346,7 +346,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcServerIOSRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info)
         {
-            if (info)
+            if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
                 logRouterUsageInfo("ios device", "127.0.0.1:9000", true);
             }
@@ -356,7 +356,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcServerAndroidEmulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info)
         {
-            if (info)
+            if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
                 logRouterUsageInfo("android emulator", "10.0.2.2:9000", false);
             }
@@ -366,12 +366,12 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public async Task<int> RunIpcServerAndroidRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info)
         {
-            if (info)
+            if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
                 logRouterUsageInfo("android device", "127.0.0.1:9000", false);
             }
 
-            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "Android").ConfigureAwait(false);
+            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9001", runtimeTimeout, verbose, "Android").ConfigureAwait(false);
         }
 
         private static string GetDefaultIpcServerPath(ILogger logger)
