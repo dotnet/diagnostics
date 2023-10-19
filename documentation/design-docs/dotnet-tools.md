@@ -1,4 +1,5 @@
-# Dotnet Diagnostic Tools CLI Design
+For the latest public documentation on using dotnet-* diagnostic tools see [dotnet-trace](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-trace), [dotnet-counters](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-counters), [dotnet-dump](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-dump), [dotnet-gcdump](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-gcdump), [dotnet-dsrouter](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-dsrouter), [dotnet-monitor](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-monitor), [dotnet-symbol](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-symbol), [dotnet-sos](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-sos).
+# Dotnet Diagnostic Tools CLI Design 
 
 ## User workflows
 
