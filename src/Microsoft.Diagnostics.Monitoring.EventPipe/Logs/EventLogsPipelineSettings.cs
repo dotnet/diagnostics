@@ -16,5 +16,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         // This setting will collect logs for the application-defined categories and levels.
         public bool UseAppFilters { get; set; } = true;
+
+        public bool CollectScopes { get; set; } = true;
     }
 }

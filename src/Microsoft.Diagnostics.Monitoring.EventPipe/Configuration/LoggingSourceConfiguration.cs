@@ -16,21 +16,24 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private readonly string _filterSpecs;
         private readonly long _keywords;
         private readonly EventLevel _level;
+        private readonly bool _collectScopes;
 
         /// <summary>
         /// Creates a new logging source configuration.
         /// </summary>
-        public LoggingSourceConfiguration(LogLevel level, LogMessageType messageType, IDictionary<string, LogLevel?> filterSpecs, bool useAppFilters)
+        public LoggingSourceConfiguration(LogLevel level, LogMessageType messageType, IDictionary<string, LogLevel?> filterSpecs, bool useAppFilters,
+            bool collectScopes)
         {
             RequestRundown = false;
             _filterSpecs = ToFilterSpecsString(filterSpecs, useAppFilters);
             _keywords = (long)ToKeywords(messageType);
             _level = ToEventLevel(level);
+            _collectScopes = collectScopes;
         }
 
         public override IList<EventPipeProvider> GetProviders()
         {
-            return new List<EventPipeProvider>()
+            List<EventPipeProvider> providers = new()
             {
                 new EventPipeProvider(
                     MicrosoftExtensionsLoggingProviderName,
@@ -40,14 +43,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         {
                             { "FilterSpecs", _filterSpecs }
                         }
-                ),
+                )
+            };
+
+            if (_collectScopes)
+            {
                 // Activity correlation
-                new EventPipeProvider(
+                providers.Add(new EventPipeProvider(
                     TplEventSource,
                     EventLevel.Informational,
-                    (long)TplEtwProviderTraceEventParser.Keywords.TasksFlowActivityIds
-                ),
-            };
+                    (long)TplEtwProviderTraceEventParser.Keywords.TasksFlowActivityIds));
+            }
+
+            return providers;
         }
 
         private static string ToFilterSpecsString(IDictionary<string, LogLevel?> filterSpecs, bool useAppFilters)

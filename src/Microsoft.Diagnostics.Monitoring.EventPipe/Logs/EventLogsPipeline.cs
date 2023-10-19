@@ -33,7 +33,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     Settings.LogLevel,
                     LogMessageType.FormattedMessage | LogMessageType.JsonMessage,
                     Settings.FilterSpecs,
-                    Settings.UseAppFilters);
+                    Settings.UseAppFilters,
+                    Settings.CollectScopes);
             }
             catch (NotSupportedException ex)
             {
@@ -60,37 +61,40 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //
             Dictionary<Guid, LogScopeItem> activityIdToScope = new();
 
-            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Start", (traceEvent) => {
-                if (traceEvent.ActivityID == Guid.Empty)
-                {
-                    // Unexpected
-                    return;
-                }
+            if (Settings.CollectScopes)
+            {
+                eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Start", (traceEvent) => {
+                    if (traceEvent.ActivityID == Guid.Empty)
+                    {
+                        // Unexpected
+                        return;
+                    }
 
-                string argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
+                    string argsJson = (string)traceEvent.PayloadByName("ArgumentsJson");
 
-                // TODO: Store this information by logger factory id
-                LogScopeItem item = new()
-                {
-                    ActivityID = traceEvent.ActivityID,
-                    ScopedObject = new LogObject(JsonDocument.Parse(argsJson).RootElement),
-                };
+                    // TODO: Store this information by logger factory id
+                    LogScopeItem item = new()
+                    {
+                        ActivityID = traceEvent.ActivityID,
+                        ScopedObject = new LogObject(JsonDocument.Parse(argsJson).RootElement),
+                    };
 
-                if (activityIdToScope.TryGetValue(traceEvent.RelatedActivityID, out LogScopeItem parentItem))
-                {
-                    item.Parent = parentItem;
-                }
+                    if (activityIdToScope.TryGetValue(traceEvent.RelatedActivityID, out LogScopeItem parentItem))
+                    {
+                        item.Parent = parentItem;
+                    }
 
-                if (activityIdToScope.Count < ActivityIdLimit || activityIdToScope.ContainsKey(traceEvent.ActivityID))
-                {
-                    activityIdToScope[traceEvent.ActivityID] = item;
-                }
-            });
+                    if (activityIdToScope.Count < ActivityIdLimit || activityIdToScope.ContainsKey(traceEvent.ActivityID))
+                    {
+                        activityIdToScope[traceEvent.ActivityID] = item;
+                    }
+                });
 
-            eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Stop", (traceEvent) => {
-                // Not all stopped event ActivityIds will exist in our tree since there may be scopes already active when we start the trace session.
-                _ = activityIdToScope.Remove(traceEvent.ActivityID);
-            });
+                eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "ActivityJson/Stop", (traceEvent) => {
+                    // Not all stopped event ActivityIds will exist in our tree since there may be scopes already active when we start the trace session.
+                    _ = activityIdToScope.Remove(traceEvent.ActivityID);
+                });
+            }
 
             eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "MessageJson", (traceEvent) => {
                 // Level, FactoryID, LoggerName, EventID, EventName, ExceptionJson, ArgumentsJson
