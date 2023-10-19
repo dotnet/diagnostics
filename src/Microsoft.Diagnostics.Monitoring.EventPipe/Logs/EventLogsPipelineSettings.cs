@@ -18,5 +18,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public bool UseAppFilters { get; set; } = true;
 
         public bool CollectScopes { get; set; } = true;
+
+        public int ScopeLimit { get; set; } = 10_000;
     }
 }

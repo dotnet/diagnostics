@@ -43,10 +43,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesAllLevels(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
+            //if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            //{
+            //    throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
+            //}
 
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
@@ -95,13 +95,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events at the default level are collected for categories without a specified level.
         /// </summary>
-        [SkippableTheory(Skip = "Unreliable test https://github.com/dotnet/diagnostics/issues/3143"), MemberData(nameof(Configurations))]
+        [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevelFallback(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
+            //if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            //{
+            //    throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
+            //}
 
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;

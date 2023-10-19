@@ -14,9 +14,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal class EventLogsPipeline : EventSourcePipeline<EventLogsPipelineSettings>
     {
-        // We guard against excessive scope depth
-        private const int ActivityIdLimit = 10_000;
-
         private readonly ILoggerFactory _factory;
         private static readonly Func<object, Exception, string> _messageFormatter = MessageFormatter;
         public EventLogsPipeline(DiagnosticsClient client, EventLogsPipelineSettings settings, ILoggerFactory factory)
@@ -84,7 +81,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         item.Parent = parentItem;
                     }
 
-                    if (activityIdToScope.Count < ActivityIdLimit || activityIdToScope.ContainsKey(traceEvent.ActivityID))
+                    if (activityIdToScope.Count < Settings.ScopeLimit || activityIdToScope.ContainsKey(traceEvent.ActivityID))
                     {
                         activityIdToScope[traceEvent.ActivityID] = item;
                     }
