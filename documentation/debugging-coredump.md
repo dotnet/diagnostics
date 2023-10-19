@@ -1,4 +1,4 @@
-This documentation is now located at [debug-linux-dumps](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/debug-linux-dumps.md) This doc is no longer being updated.
+This documentation is now located at [debug-linux-dumps](https://learn.microsoft.com/dotnet/core/diagnostics/debug-linux-dumps) This doc is no longer being updated.
 
 Debugging Linux or MacOS Core Dump
 ==================================
