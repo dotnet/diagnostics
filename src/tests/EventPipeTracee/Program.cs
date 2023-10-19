@@ -17,7 +17,7 @@ namespace EventPipeTracee
     {
         private const string AppLoggerCategoryName = "AppLoggerCategory";
 
-        public static int Main(string[] args)
+        public static async Task<int> Main(string[] args)
         {
             int pid = Process.GetCurrentProcess().Id;
             string pipeServerName = args.Length > 0 ? args[0] : null;
@@ -89,7 +89,7 @@ namespace EventPipeTracee
                 }).ConfigureAwait(true);
             }
 
-            TestBodyCore(customCategoryLogger, appCategoryLogger);
+            await TestBodyCore(customCategoryLogger, appCategoryLogger).ConfigureAwait(false);
 
             Console.WriteLine($"{pid} EventPipeTracee: signal end of test data");
             Console.Out.Flush();
@@ -123,17 +123,49 @@ namespace EventPipeTracee
         }
 
         // TODO At some point we may want parameters to choose different test bodies.
-        private static void TestBodyCore(ILogger customCategoryLogger, ILogger appCategoryLogger)
+        private static async Task TestBodyCore(ILogger customCategoryLogger, ILogger appCategoryLogger)
         {
-            //Json data is always converted to strings for ActivityStart events.
-            using (IDisposable scope = customCategoryLogger.BeginScope(new Dictionary<string, object> {
+            TaskCompletionSource secondSetScopes = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource firstFinishedLogging = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource secondFinishedLogging = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            Task firstTask = Task.Run(async () => {
+                using (IDisposable scope = customCategoryLogger.BeginScope(new Dictionary<string, object> {
                     { "IntValue", "5" },
                     { "BoolValue", "true" },
                     { "StringValue", "test" } }.ToList()))
-            {
-                customCategoryLogger.LogInformation("Some warning message with {Arg}", 6);
-            }
+                {
+                    // Await for the other task to add its scopes.
+                    await secondSetScopes.Task.ConfigureAwait(false);
 
+                    customCategoryLogger.LogInformation("Some warning message with {Arg}", 6);
+
+                    // Signal other task to log
+                    firstFinishedLogging.SetResult();
+
+                    // Do not dispose scopes until the other task is done
+                    await secondFinishedLogging.Task.ConfigureAwait(false);
+                }
+            });
+
+            Task secondTask = Task.Run(async () => {
+                using (IDisposable scope = customCategoryLogger.BeginScope(new Dictionary<string, object> {
+                    { "IntValue", "6" },
+                    { "BoolValue", "false" },
+                    { "StringValue", "string" } }.ToList()))
+                {
+                    // Signal that we added our scopes and wait for the other task to log
+                    secondSetScopes.SetResult();
+                    await firstFinishedLogging.Task.ConfigureAwait(false);
+                    customCategoryLogger.LogInformation("Some other message with {Arg}", 7);
+                    secondFinishedLogging.SetResult();
+                }
+            });
+
+            await firstTask.ConfigureAwait(false);
+            await secondTask.ConfigureAwait(false);
+
+            //Json data is always converted to strings for ActivityStart events.
             customCategoryLogger.LogWarning(new EventId(7, "AnotherEventId"), "Another message");
 
             appCategoryLogger.LogInformation("Information message.");
