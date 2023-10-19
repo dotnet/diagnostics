@@ -1,4 +1,4 @@
-The newest documentation is now maintained at [eventcounters](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/event-counters.md?plain=1#L2). This doc is no longer being updated.
+The newest documentation is now maintained at [eventcounters](https://learn.microsoft.com/dotnet/core/diagnostics/event-counters). This doc is no longer being updated.
 
 # EventCounters in .NET Core 3.0
 
