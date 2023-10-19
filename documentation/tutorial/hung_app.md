@@ -1,4 +1,4 @@
-The newest documentation is now being maintained at [debug-deadlock](https://github.com/dotnet/docs/blob/a201d22d8c33fcb77af093edb96d0fe669e0e491/docs/core/diagnostics/debug-deadlock.md). This documentation is no longer being updated.
+The newest documentation is now being maintained at [debug-deadlock](https://learn.microsoft.com/dotnet/core/diagnostics/debug-deadlock). This documentation is no longer being updated.
 
 # App stops responding
 
