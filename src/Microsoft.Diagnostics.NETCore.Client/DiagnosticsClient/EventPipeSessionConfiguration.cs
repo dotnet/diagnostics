@@ -59,7 +59,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 writer.Write(Providers.Count);
                 foreach (EventPipeProvider provider in Providers)
                 {
-                    writer.Write(provider.Keywords);
+                    writer.Write(unchecked((ulong)provider.Keywords));
                     writer.Write((uint)provider.EventLevel);
 
                     writer.WriteString(provider.Name);

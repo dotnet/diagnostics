@@ -13,13 +13,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class EventPipeSession : IDisposable
     {
-        private long _sessionId;
+        private ulong _sessionId;
         private IpcEndpoint _endpoint;
         private bool _disposedValue; // To detect redundant calls
         private bool _stopped; // To detect redundant calls
         private readonly IpcResponse _response;
 
-        private EventPipeSession(IpcEndpoint endpoint, IpcResponse response, long sessionId)
+        private EventPipeSession(IpcEndpoint endpoint, IpcResponse response, ulong sessionId)
         {
             _endpoint = endpoint;
             _response = response;
@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 DiagnosticsClient.ValidateResponseMessage(response.Value.Message, operationName);
 
-                long sessionId = BinaryPrimitives.ReadInt64LittleEndian(new ReadOnlySpan<byte>(response.Value.Message.Payload, 0, 8));
+                ulong sessionId = BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(response.Value.Message.Payload, 0, 8));
 
                 EventPipeSession session = new(endpoint, response.Value, sessionId);
                 response = null;
