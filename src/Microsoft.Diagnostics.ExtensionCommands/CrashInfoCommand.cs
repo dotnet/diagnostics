@@ -30,6 +30,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             WriteLine($"ThreadId:           {CrashInfo.ThreadId:X4}");
             WriteLine($"HResult:            {CrashInfo.HResult:X4}");
             WriteLine($"RuntimeType:        {CrashInfo.RuntimeType}");
+            WriteLine($"RuntimeBaseAddress: {CrashInfo.RuntimeBaseAddress:X16}");
             WriteLine($"RuntimeVersion:     {CrashInfo.RuntimeVersion}");
             WriteLine($"Message:            {CrashInfo.Message}");
 
