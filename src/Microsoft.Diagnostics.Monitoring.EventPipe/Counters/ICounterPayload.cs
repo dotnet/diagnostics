@@ -16,13 +16,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal interface ICounterPayload
     {
-        string Name { get; }
-
         double Value { get; }
 
         CounterType CounterType { get; }
 
-        Provider Provider { get; }
+        CachedCounterInfo CounterInfo { get; }
 
         string DisplayName { get; }
 

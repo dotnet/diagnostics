@@ -258,8 +258,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     return;
                 }
 
-                string providerName = payload.Provider.ProviderName;
-                string name = payload.Name;
+                string providerName = payload.CounterInfo.ProviderName;
+                string name = payload.CounterInfo.CounterName;
 
                 string tags = payload.CombineTags();
 
@@ -315,8 +315,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             lock (_lock)
             {
-                string providerName = payload.Provider.ProviderName;
-                string counterName = payload.Name;
+                string providerName = payload.CounterInfo.ProviderName;
+                string counterName = payload.CounterInfo.CounterName;
                 string tags = payload.CombineTags();
 
                 if (!_providers.TryGetValue(providerName, out ObservedProvider provider))

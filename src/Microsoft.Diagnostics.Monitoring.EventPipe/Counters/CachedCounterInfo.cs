@@ -3,18 +3,20 @@
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public class Provider
+    public class CachedCounterInfo
     {
-        public Provider(string providerName, string meterTags, string instrumentTags, string scopeHash)
+        public CachedCounterInfo(string providerName, string counterName, string meterTags, string instrumentTags, string scopeHash)
         {
             ProviderName = providerName;
+            CounterName = counterName;
             MeterTags = meterTags;
             InstrumentTags = instrumentTags;
             ScopeHash = scopeHash;
         }
 
-        public Provider() { }
+        public CachedCounterInfo() { }
         public string ProviderName { get; private set; }
+        public string CounterName { get; private set; }
         public string MeterTags { get; private set; }
         public string InstrumentTags { get; private set; }
         public string ScopeHash { get; private set; }
