@@ -30,11 +30,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             [JsonPropertyName("reason")]
             public int Reason { get; set; }
 
-            [JsonPropertyName("runtime")]
-            public string Runtime { get; set; }
-
             [JsonPropertyName("runtime_type")]
             public int RuntimeType { get; set; }
+
+            [JsonPropertyName("runtime_base")]
+            [JsonConverter(typeof(HexUInt64Converter))]
+            public ulong RuntimeBaseAddress { get; set; }
+
+            [JsonPropertyName("runtime_version")]
+            public string RuntimeVersion { get; set; }
 
             [JsonPropertyName("thread")]
             [JsonConverter(typeof(HexUInt32Converter))]
@@ -165,7 +169,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             ThreadId = threadId;
             HResult = hresult;
             CrashReason = (CrashReason)crashInfo.Reason;
-            RuntimeVersion = crashInfo.Runtime;
+            RuntimeBaseAddress = crashInfo.RuntimeBaseAddress;
+            RuntimeVersion = crashInfo.RuntimeVersion;
             RuntimeType = (RuntimeType)crashInfo.RuntimeType;
             Message = crashInfo.Message;
             Exception = crashInfo.Exception;
@@ -179,9 +184,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public CrashReason CrashReason { get; }
 
-        public string RuntimeVersion { get; }
+        public ulong RuntimeBaseAddress { get; }
 
         public RuntimeType RuntimeType { get; }
+
+        public string RuntimeVersion { get; }
 
         public string Message { get; }
 
