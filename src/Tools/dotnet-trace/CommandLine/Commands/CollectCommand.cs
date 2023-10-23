@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
 using Microsoft.Tools.Common;
@@ -256,7 +257,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     bool rundownRequested = false;
                     System.Timers.Timer durationTimer = null;
 
-
                     using (VirtualTerminalMode vTermMode = printStatusOverTime ? VirtualTerminalMode.TryEnable() : null)
                     {
                         EventPipeSession session = null;
@@ -317,7 +317,31 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             ConsoleWriteLine("\n\n");
 
                             FileInfo fileInfo = new(output.FullName);
-                            Task copyTask = session.EventStream.CopyToAsync(fs);
+                            EventMonitor eventMonitor = null;
+                            Task copyTask = null;
+                            if (hasStoppingEventProviderName)
+                            {
+                                eventMonitor = new(
+                                    stoppingEventProviderName,
+                                    stoppingEventEventName,
+                                    payloadFilter,
+                                    onEvent: (traceEvent) =>
+                                    {
+                                        shouldExit.Set();
+                                    },
+                                    onPayloadFilterMismatch: (traceEvent) =>
+                                    {
+                                        ConsoleWriteLine($"One or more field names specified in the payload filter for event '{traceEvent.ProviderName}/{traceEvent.EventName}' do not match any of the known field names: '{string.Join(' ', traceEvent.PayloadNames)}'. As a result the requested stopping event is unreachable; will continue to collect the trace for the remaining specified duration.");
+                                    },
+                                    eventStream: new PassthroughStream(session.EventStream, fs, (int)buffersize, leaveDestinationStreamOpen: true),
+                                    callOnEventOnlyOnce: true);
+
+                                copyTask = eventMonitor.ProcessAsync(CancellationToken.None);
+                            }
+                            else
+                            {
+                                copyTask = session.EventStream.CopyToAsync(fs);
+                            }
                             Task shouldExitTask = copyTask.ContinueWith(
                                 (task) => shouldExit.Set(),
                                 CancellationToken.None,
@@ -375,6 +399,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 {
                                     printStatus();
                                 } while (!copyTask.Wait(100));
+
+                                if (eventMonitor != null)
+                                {
+                                    await eventMonitor.DisposeAsync().ConfigureAwait(false);
+                                }
                             }
                             // At this point the copyTask will have finished, so wait on the shouldExitTask in case it threw
                             // an exception or had some other interesting behavior
