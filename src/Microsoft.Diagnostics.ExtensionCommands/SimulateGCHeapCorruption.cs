@@ -13,15 +13,12 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [DebugCommand(Name=nameof(SimulateGCHeapCorruption), Help = "Writes values to the GC heap in strategic places to simulate heap corruption.")]
-    public class SimulateGCHeapCorruption : CommandBase
+    public class SimulateGCHeapCorruption : ClrRuntimeCommandBase
     {
         private static readonly List<Change> _changes = new();
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
 
         [Argument]
         public string Command { get; set; }

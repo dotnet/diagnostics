@@ -29,6 +29,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         private readonly string _meterName;
         private readonly string _clientId;
         private readonly string _sessionId;
+        private CounterConfiguration _counterConfiguration;
 
         public SystemDiagnosticsMetricsTrigger(SystemDiagnosticsMetricsTriggerSettings settings)
         {
@@ -49,6 +50,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
             _clientId = settings.ClientId;
 
             _sessionId = settings.SessionId;
+
+            _clientId = settings.ClientId;
+
+            _counterConfiguration = new CounterConfiguration(_filter) { SessionId = _sessionId, ClientId = _clientId };
         }
 
         public IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetProviderEventMap()
@@ -59,7 +64,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         public bool HasSatisfiedCondition(TraceEvent traceEvent)
         {
             // Filter to the counter of interest before forwarding to the implementation
-            if (traceEvent.TryGetCounterPayload(_filter, _sessionId, _clientId, out ICounterPayload payload))
+            if (traceEvent.TryGetCounterPayload(_counterConfiguration, out ICounterPayload payload))
             {
                 return _impl.HasSatisfiedCondition(payload);
             }

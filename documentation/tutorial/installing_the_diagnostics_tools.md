@@ -1,3 +1,5 @@
+The newest documentation is now maintained at [dotnet-trace](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-trace), [dotnet-counters](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-counters), [dotnet-dump](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-dump), [dotnet-gcdump](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-gcdump), [dotnet-dsrouter](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-dsrouter), [dotnet-monitor](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-monitor), [dotnet-symbol](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-symbol), [dotnet-sos](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-sos). This documentation is no longer being updated.
+
 # Installing the diagnostics tools
 
 Depending on the diagnostics scenario you will use one or more of the tools below to get to root cause. By default, these tools are installed to ~/.dotnet/tools. 

@@ -11,12 +11,9 @@ using Microsoft.Diagnostics.Runtime;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "dumpobjgcrefs", Help = "A helper command to implement !dumpobj -refs")]
-    public sealed class DumpObjGCRefsHelper : CommandBase
+    public sealed class DumpObjGCRefsCommand : ClrRuntimeCommandBase
     {
         private readonly StringBuilderPool _stringBuilderPool = new(260);
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
 
         [Argument(Name = "object")]
         public string ObjectAddress { get; set; }

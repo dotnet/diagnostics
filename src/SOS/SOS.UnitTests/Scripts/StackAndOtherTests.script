@@ -250,20 +250,20 @@ ENDIF:DESKTOP
 # Verify that "u" works (depends on the IP2MD here)
 SOSCOMMAND:ClrStack
 SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo4.*\s+<POUT>
-SOSCOMMAND:u <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
+SOSCOMMAND:clru <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
 VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (53|57):\s+
 
 # Verify that "u" with no line info works
-SOSCOMMAND:u -n <PREVPOUT>
+SOSCOMMAND:clru -n <PREVPOUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
 
 # Verify that "u" with offsets info works
-SOSCOMMAND:u -o <PREVPOUT>
+SOSCOMMAND:clru -o <PREVPOUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
@@ -279,12 +279,7 @@ VERIFY:\s+Name:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+JITTED Code Address:\s+<HEXVAL>\s+
 
 # Verify that Threads (clrthreads) works
-IFDEF:DOTNETDUMP
 SOSCOMMAND:clrthreads
-ENDIF:DOTNETDUMP
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:Threads
-ENDIF:DOTNETDUMP
 VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
 VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
 VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+

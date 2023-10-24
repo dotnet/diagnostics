@@ -9,14 +9,11 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumpheap", Help = "Displays a list of all managed objects.")]
-    public class DumpHeapCommand : CommandBase
+    [Command(Name = "dumpheap", Aliases = new[] { "DumpHeap" }, Help = "Displays a list of all managed objects.")]
+    public class DumpHeapCommand : ClrRuntimeCommandBase
     {
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
 
         [ServiceImport]
         public LiveObjectService LiveObjects { get; set; }

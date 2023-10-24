@@ -6,45 +6,31 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.IO;
 using System.CommandLine.Rendering;
+using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.Tracing;
-using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
-using Microsoft.Diagnostics.Tracing;
 using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
-    public class CounterMonitor
+    internal class CounterMonitor : ICountersLogger
     {
         private const int BufferDelaySecs = 1;
-        private const string SharedSessionId = "SHARED"; // This should be identical to the one used by dotnet-monitor in MetricSourceConfiguration.cs
-        private static HashSet<string> inactiveSharedSessions = new(StringComparer.OrdinalIgnoreCase);
-
-        private string _sessionId;
         private int _processId;
-        private int _interval;
         private CounterSet _counterList;
-        private CancellationToken _ct;
         private IConsole _console;
         private ICounterRenderer _renderer;
         private string _output;
         private bool _pauseCmdSet;
-        private readonly TaskCompletionSource<int> _shouldExit;
-        private bool _resumeRuntime;
+        private readonly TaskCompletionSource<ReturnCode> _shouldExit;
         private DiagnosticsClient _diagnosticsClient;
-        private EventPipeSession _session;
-        private readonly string _clientId;
-        private int _maxTimeSeries;
-        private int _maxHistograms;
-        private TimeSpan _duration;
+        private MetricsPipelineSettings _settings;
 
         private class ProviderEventState
         {
@@ -57,77 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         public CounterMonitor()
         {
             _pauseCmdSet = false;
-            _clientId = Guid.NewGuid().ToString();
-
-            _shouldExit = new TaskCompletionSource<int>();
-        }
-
-        private void DynamicAllMonitor(TraceEvent obj)
-        {
-            if (_shouldExit.Task.IsCompleted)
-            {
-                return;
-            }
-
-            lock (this)
-            {
-                // If we are paused, ignore the event.
-                // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
-                _renderer.ToggleStatus(_pauseCmdSet);
-
-                // If a session received a MultipleSessionsConfiguredIncorrectlyError, ignore future shared events
-                if (obj.ProviderName == "System.Diagnostics.Metrics" && !inactiveSharedSessions.Contains(_clientId))
-                {
-                    if (obj.EventName == "BeginInstrumentReporting")
-                    {
-                        HandleBeginInstrumentReporting(obj);
-                    }
-                    if (obj.EventName == "HistogramValuePublished")
-                    {
-                        HandleHistogram(obj);
-                    }
-                    else if (obj.EventName == "GaugeValuePublished")
-                    {
-                        HandleGauge(obj);
-                    }
-                    else if (obj.EventName == "CounterRateValuePublished")
-                    {
-                        HandleCounterRate(obj);
-                    }
-                    else if (obj.EventName == "UpDownCounterRateValuePublished")
-                    {
-                        HandleUpDownCounterValue(obj);
-                    }
-                    else if (obj.EventName == "TimeSeriesLimitReached")
-                    {
-                        HandleTimeSeriesLimitReached(obj);
-                    }
-                    else if (obj.EventName == "HistogramLimitReached")
-                    {
-                        HandleHistogramLimitReached(obj);
-                    }
-                    else if (obj.EventName == "Error")
-                    {
-                        HandleError(obj);
-                    }
-                    else if (obj.EventName == "ObservableInstrumentCallbackError")
-                    {
-                        HandleObservableInstrumentCallbackError(obj);
-                    }
-                    else if (obj.EventName == "MultipleSessionsNotSupportedError")
-                    {
-                        HandleMultipleSessionsNotSupportedError(obj);
-                    }
-                    else if (obj.EventName == "MultipleSessionsConfiguredIncorrectlyError")
-                    {
-                        HandleMultipleSessionsConfiguredIncorrectlyError(obj);
-                    }
-                }
-                else if (obj.EventName == "EventCounters")
-                {
-                    HandleDiagnosticCounter(obj);
-                }
-            }
+            _shouldExit = new TaskCompletionSource<ReturnCode>();
         }
 
         private void MeterInstrumentEventObserved(string meterName, DateTime timestamp)
@@ -147,255 +63,16 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        private void HandleBeginInstrumentReporting(TraceEvent obj)
+        private void HandleDiagnosticCounter(ICounterPayload payload)
         {
-            string sessionId = (string)obj.PayloadValue(0);
-            string meterName = (string)obj.PayloadValue(1);
-            // string instrumentName = (string)obj.PayloadValue(3);
-            if (sessionId != _sessionId)
-            {
-                return;
-            }
-            MeterInstrumentEventObserved(meterName, obj.TimeStamp);
-        }
-
-        private void HandleCounterRate(TraceEvent obj)
-        {
-            string sessionId = (string)obj.PayloadValue(0);
-            string meterName = (string)obj.PayloadValue(1);
-            //string meterVersion = (string)obj.PayloadValue(2);
-            string instrumentName = (string)obj.PayloadValue(3);
-            string unit = (string)obj.PayloadValue(4);
-            string tags = (string)obj.PayloadValue(5);
-            string rateText = (string)obj.PayloadValue(6);
-            if (sessionId != _sessionId || !Filter(meterName, instrumentName))
-            {
-                return;
-            }
-            MeterInstrumentEventObserved(meterName, obj.TimeStamp);
-
-            // the value might be an empty string indicating no measurement was provided this collection interval
-            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
-            {
-                CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, rate, _interval, obj.TimeStamp);
-                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
-            }
-
-        }
-
-        private void HandleGauge(TraceEvent obj)
-        {
-            string sessionId = (string)obj.PayloadValue(0);
-            string meterName = (string)obj.PayloadValue(1);
-            //string meterVersion = (string)obj.PayloadValue(2);
-            string instrumentName = (string)obj.PayloadValue(3);
-            string unit = (string)obj.PayloadValue(4);
-            string tags = (string)obj.PayloadValue(5);
-            string lastValueText = (string)obj.PayloadValue(6);
-            if (sessionId != _sessionId || !Filter(meterName, instrumentName))
-            {
-                return;
-            }
-            MeterInstrumentEventObserved(meterName, obj.TimeStamp);
-
-            // the value might be an empty string indicating no measurement was provided this collection interval
-            if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
-            {
-                CounterPayload payload = new GaugePayload(meterName, instrumentName, null, unit, tags, lastValue, obj.TimeStamp);
-                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
-            }
-            else
-            {
-                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
-                CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, 0, _interval, obj.TimeStamp);
-                _renderer.CounterStopped(payload);
-            }
-        }
-
-        private void HandleUpDownCounterValue(TraceEvent obj)
-        {
-            if (obj.Version < 1) // Version 1 added the value field.
-            {
-                return;
-            }
-
-            string sessionId = (string)obj.PayloadValue(0);
-            string meterName = (string)obj.PayloadValue(1);
-            //string meterVersion = (string)obj.PayloadValue(2);
-            string instrumentName = (string)obj.PayloadValue(3);
-            string unit = (string)obj.PayloadValue(4);
-            string tags = (string)obj.PayloadValue(5);
-            //string rateText = (string)obj.PayloadValue(6); // Not currently using rate for UpDownCounters.
-            string valueText = (string)obj.PayloadValue(7);
-            if (sessionId != _sessionId || !Filter(meterName, instrumentName))
-            {
-                return;
-            }
-            MeterInstrumentEventObserved(meterName, obj.TimeStamp);
-
-            // the value might be an empty string indicating no measurement was provided this collection interval
-            if (double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-            {
-                // UpDownCounter reports the value, not the rate - this is different than how Counter behaves, and is thus treated as a gauge.
-                CounterPayload payload = new GaugePayload(meterName, instrumentName, null, unit, tags, value, obj.TimeStamp);
-                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
-            }
-            else
-            {
-                // for observable instruments we assume the lack of data is meaningful and remove it from the UI
-                CounterPayload payload = new RatePayload(meterName, instrumentName, null, unit, tags, 0, _interval, obj.TimeStamp);
-                _renderer.CounterStopped(payload);
-            }
-        }
-
-        private void HandleHistogram(TraceEvent obj)
-        {
-            string sessionId = (string)obj.PayloadValue(0);
-            string meterName = (string)obj.PayloadValue(1);
-            //string meterVersion = (string)obj.PayloadValue(2);
-            string instrumentName = (string)obj.PayloadValue(3);
-            string unit = (string)obj.PayloadValue(4);
-            string tags = (string)obj.PayloadValue(5);
-            string quantilesText = (string)obj.PayloadValue(6);
-            if (sessionId != _sessionId || !Filter(meterName, instrumentName))
-            {
-                return;
-            }
-            MeterInstrumentEventObserved(meterName, obj.TimeStamp);
-            KeyValuePair<double, double>[] quantiles = ParseQuantiles(quantilesText);
-            foreach ((double key, double val) in quantiles)
-            {
-                CounterPayload payload = new PercentilePayload(meterName, instrumentName, null, unit, AppendQuantile(tags, $"Percentile={key * 100}"), val, obj.TimeStamp);
-                _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
-            }
-        }
-
-        private void HandleHistogramLimitReached(TraceEvent obj)
-        {
-            string sessionId = (string)obj.PayloadValue(0);
-            if (sessionId != _clientId)
-            {
-                return;
-            }
-            _renderer.SetErrorText(
-                $"Warning: Histogram tracking limit ({_maxHistograms}) reached. Not all data is being shown." + Environment.NewLine +
-                "The limit can be changed with --maxHistograms but will use more memory in the target process."
-                );
-        }
-
-        private void HandleTimeSeriesLimitReached(TraceEvent obj)
-        {
-            string sessionId = (string)obj.PayloadValue(0);
-            if (sessionId != _sessionId)
-            {
-                return;
-            }
-            _renderer.SetErrorText(
-                $"Warning: Time series tracking limit ({_maxTimeSeries}) reached. Not all data is being shown." + Environment.NewLine +
-                "The limit can be changed with --maxTimeSeries but will use more memory in the target process."
-                );
-        }
-
-        private void HandleError(TraceEvent obj)
-        {
-            string sessionId = (string)obj.PayloadValue(0);
-            string error = (string)obj.PayloadValue(1);
-            if (sessionId != _sessionId)
-            {
-                return;
-            }
-            _renderer.SetErrorText(
-                "Error reported from target process:" + Environment.NewLine +
-                error
-                );
-            _shouldExit.TrySetResult((int)ReturnCode.TracingError);
-        }
-
-        private void HandleObservableInstrumentCallbackError(TraceEvent obj)
-        {
-            string sessionId = (string)obj.PayloadValue(0);
-            string error = (string)obj.PayloadValue(1);
-            if (sessionId != _sessionId)
-            {
-                return;
-            }
-            _renderer.SetErrorText(
-                "Exception thrown from an observable instrument callback in the target process:" + Environment.NewLine +
-                error
-                );
-        }
-
-        private void HandleMultipleSessionsNotSupportedError(TraceEvent obj)
-        {
-            string runningSessionId = (string)obj.PayloadValue(0);
-            if (runningSessionId == _sessionId)
-            {
-                // If our session is the one that is running then the error is not for us,
-                // it is for some other session that came later
-                return;
-            }
-            _renderer.SetErrorText(
-                "Error: Another metrics collection session is already in progress for the target process." + Environment.NewLine +
-                "Concurrent sessions are not supported.");
-            _shouldExit.TrySetResult((int)ReturnCode.SessionCreationError);
-        }
-
-        private void HandleMultipleSessionsConfiguredIncorrectlyError(TraceEvent obj)
-        {
-            if (TraceEventExtensions.TryCreateSharedSessionConfiguredIncorrectlyMessage(obj, _clientId, out string message))
-            {
-                _renderer.SetErrorText(message);
-                inactiveSharedSessions.Add(_clientId);
-                _shouldExit.TrySetResult((int)ReturnCode.SessionCreationError);
-            }
-        }
-
-        private static KeyValuePair<double, double>[] ParseQuantiles(string quantileList)
-        {
-            string[] quantileParts = quantileList.Split(';', StringSplitOptions.RemoveEmptyEntries);
-            List<KeyValuePair<double, double>> quantiles = new();
-            foreach (string quantile in quantileParts)
-            {
-                string[] keyValParts = quantile.Split('=', StringSplitOptions.RemoveEmptyEntries);
-                if (keyValParts.Length != 2)
-                {
-                    continue;
-                }
-                if (!double.TryParse(keyValParts[0], NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double key))
-                {
-                    continue;
-                }
-                if (!double.TryParse(keyValParts[1], NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double val))
-                {
-                    continue;
-                }
-                quantiles.Add(new KeyValuePair<double, double>(key, val));
-            }
-            return quantiles.ToArray();
-        }
-
-        private static string AppendQuantile(string tags, string quantile) => string.IsNullOrEmpty(tags) ? quantile : $"{tags},{quantile}";
-
-        private void HandleDiagnosticCounter(TraceEvent obj)
-        {
-            IDictionary<string, object> payloadVal = (IDictionary<string, object>)(obj.PayloadValue(0));
-            IDictionary<string, object> payloadFields = (IDictionary<string, object>)(payloadVal["Payload"]);
-
-            // If it's not a counter we asked for, ignore it.
-            string name = payloadFields["Name"].ToString();
-            if (!_counterList.Contains(obj.ProviderName, name))
-            {
-                return;
-            }
-
             // init providerEventState if this is the first time we've seen an event from this provider
-            if (!_providerEventStates.TryGetValue(obj.ProviderName, out ProviderEventState providerState))
+            if (!_providerEventStates.TryGetValue(payload.Provider, out ProviderEventState providerState))
             {
                 providerState = new ProviderEventState()
                 {
-                    FirstReceiveTimestamp = obj.TimeStamp
+                    FirstReceiveTimestamp = payload.Timestamp
                 };
-                _providerEventStates.Add(obj.ProviderName, providerState);
+                _providerEventStates.Add(payload.Provider, providerState);
             }
 
             // we give precedence to instrument events over diagnostic counter events. If we are seeing
@@ -405,48 +82,43 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 return;
             }
 
-            CounterPayload payload;
-            if (payloadFields["CounterType"].Equals("Sum"))
-            {
-                payload = new RatePayload(
-                    obj.ProviderName,
-                    name,
-                    payloadFields["DisplayName"].ToString(),
-                    payloadFields["DisplayUnits"].ToString(),
-                    null,
-                    (double)payloadFields["Increment"],
-                    _interval,
-                    obj.TimeStamp);
-            }
-            else
-            {
-                payload = new GaugePayload(
-                    obj.ProviderName,
-                    name,
-                    payloadFields["DisplayName"].ToString(),
-                    payloadFields["DisplayUnits"].ToString(),
-                    null,
-                    (double)payloadFields["Mean"],
-                    obj.TimeStamp);
-            }
-
             // If we saw the first event for this provider recently then a duplicate instrument event may still be
             // coming. We'll buffer this event for a while and then render it if it remains unduplicated for
             // a while.
             // This is all best effort, if we do show the DiagnosticCounter event and then an instrument event shows up
-            // later the renderer may obsserve some odd behavior like changes in the counter metadata, oddly timed reporting
+            // later the renderer may observe some odd behavior like changes in the counter metadata, oddly timed reporting
             // intervals, or counters that stop reporting.
             // I'm gambling this is good enough that the behavior will never be seen in practice, but if it is we could
             // either adjust the time delay or try to improve how the renderers handle it.
-            if (providerState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) >= obj.TimeStamp)
+            if (providerState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) >= payload.Timestamp)
             {
-                _bufferedEvents.Enqueue(payload);
+                _bufferedEvents.Enqueue((CounterPayload)payload);
+            }
+            else
+            {
+                CounterPayloadReceived((CounterPayload)payload);
+            }
+        }
+
+        private void CounterPayloadReceived(CounterPayload payload)
+        {
+            if (payload is AggregatePercentilePayload aggregatePayload)
+            {
+                foreach (Quantile quantile in aggregatePayload.Quantiles)
+                {
+                    (double key, double val) = quantile;
+                    PercentilePayload percentilePayload = new(payload.Provider, payload.Name, payload.DisplayName, payload.Unit, AppendQuantile(payload.Metadata, $"Percentile={key * 100}"), val, payload.Timestamp);
+                    _renderer.CounterPayloadReceived(percentilePayload, _pauseCmdSet);
+                }
+
             }
             else
             {
                 _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
             }
         }
+
+        private static string AppendQuantile(string tags, string quantile) => string.IsNullOrEmpty(tags) ? quantile : $"{tags},{quantile}";
 
         // when receiving DiagnosticCounter events we may have buffered them to wait for
         // duplicate instrument events. If we've waited long enough then we should remove
@@ -459,7 +131,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 while (_bufferedEvents.Count != 0)
                 {
                     CounterPayload payload = _bufferedEvents.Peek();
-                    ProviderEventState providerEventState = _providerEventStates[payload.ProviderName];
+                    ProviderEventState providerEventState = _providerEventStates[payload.Provider];
                     if (providerEventState.InstrumentEventObserved)
                     {
                         _bufferedEvents.Dequeue();
@@ -467,7 +139,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     else if (providerEventState.FirstReceiveTimestamp + TimeSpan.FromSeconds(BufferDelaySecs) < now)
                     {
                         _bufferedEvents.Dequeue();
-                        _renderer.CounterPayloadReceived(payload, _pauseCmdSet);
+                        CounterPayloadReceived((CounterPayload)payload);
                     }
                     else
                     {
@@ -481,37 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        private void StopMonitor()
-        {
-            try
-            {
-                _session?.Stop();
-            }
-            catch (EndOfStreamException ex)
-            {
-                // If the app we're monitoring exits abruptly, this may throw in which case we just swallow the exception and exit gracefully.
-                Debug.WriteLine($"[ERROR] {ex}");
-            }
-            // We may time out if the process ended before we sent StopTracing command. We can just exit in that case.
-            catch (TimeoutException)
-            {
-            }
-            // On Unix platforms, we may actually get a PNSE since the pipe is gone with the process, and Runtime Client Library
-            // does not know how to distinguish a situation where there is no pipe to begin with, or where the process has exited
-            // before dotnet-counters and got rid of a pipe that once existed.
-            // Since we are catching this in StopMonitor() we know that the pipe once existed (otherwise the exception would've
-            // been thrown in StartMonitor directly)
-            catch (PlatformNotSupportedException)
-            {
-            }
-            // On non-abrupt exits, the socket may be already closed by the runtime and we won't be able to send a stop request through it.
-            catch (ServerNotAvailableException)
-            {
-            }
-            _renderer.Stop();
-        }
-
-        public async Task<int> Monitor(
+        public async Task<ReturnCode> Monitor(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -535,7 +177,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
                 if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
                 {
-                    return (int)ReturnCode.ArgumentError;
+                    return ReturnCode.ArgumentError;
                 }
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
@@ -546,7 +188,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     bool useAnsi = vTerm.IsEnabled;
                     if (holder == null)
                     {
-                        return (int)ReturnCode.Ok;
+                        return ReturnCode.Ok;
                     }
                     try
                     {
@@ -554,38 +196,48 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
                         _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
-                        _ct = ct;
-                        _interval = refreshInterval;
-                        _maxHistograms = maxHistograms;
-                        _maxTimeSeries = maxTimeSeries;
                         _renderer = new ConsoleWriter(useAnsi);
                         _diagnosticsClient = holder.Client;
-                        _resumeRuntime = resumeRuntime;
-                        _duration = duration;
-                        int ret = await Start().ConfigureAwait(false);
+                        _settings = new MetricsPipelineSettings();
+                        _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;
+                        _settings.MaxHistograms = maxHistograms;
+                        _settings.MaxTimeSeries = maxTimeSeries;
+                        _settings.CounterIntervalSeconds = refreshInterval;
+                        _settings.ResumeRuntime = resumeRuntime;
+                        _settings.CounterGroups = GetEventPipeProviders();
+
+                        bool useSharedSession = false;
+                        if (_diagnosticsClient.GetProcessInfo().TryGetProcessClrVersion(out Version version))
+                        {
+                            useSharedSession = version.Major >= 8 ? true : false;
+                        }
+                        _settings.UseSharedSession = useSharedSession;
+
+                        ReturnCode ret;
+                        MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
+                        await using (eventCounterPipeline.ConfigureAwait(false))
+                        {
+                            ret = await Start(eventCounterPipeline, ct).ConfigureAwait(false);
+                        }
                         ProcessLauncher.Launcher.Cleanup();
                         return ret;
                     }
                     catch (OperationCanceledException)
                     {
-                        try
-                        {
-                            _session.Stop();
-                        }
-                        catch (Exception) { } // Swallow all exceptions for now.
+                        //Cancellation token should automatically stop the session
 
                         console.Out.WriteLine($"Complete");
-                        return (int)ReturnCode.Ok;
+                        return ReturnCode.Ok;
                     }
                 }
             }
             catch (CommandLineErrorException e)
             {
                 console.Error.WriteLine(e.Message);
-                return (int)ReturnCode.ArgumentError;
+                return ReturnCode.ArgumentError;
             }
         }
-        public async Task<int> Collect(
+        public async Task<ReturnCode> Collect(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -611,7 +263,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
                 if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
                 {
-                    return (int)ReturnCode.ArgumentError;
+                    return ReturnCode.ArgumentError;
                 }
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
@@ -629,17 +281,19 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
                         _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
-                        _ct = ct;
-                        _interval = refreshInterval;
-                        _maxHistograms = maxHistograms;
-                        _maxTimeSeries = maxTimeSeries;
+                        _settings = new MetricsPipelineSettings();
+                        _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;
+                        _settings.MaxHistograms = maxHistograms;
+                        _settings.MaxTimeSeries = maxTimeSeries;
+                        _settings.CounterIntervalSeconds = refreshInterval;
+                        _settings.ResumeRuntime = resumeRuntime;
+                        _settings.CounterGroups = GetEventPipeProviders();
                         _output = output;
                         _diagnosticsClient = holder.Client;
-                        _duration = duration;
                         if (_output.Length == 0)
                         {
                             _console.Error.WriteLine("Output cannot be an empty string");
-                            return (int)ReturnCode.ArgumentError;
+                            return ReturnCode.ArgumentError;
                         }
                         if (format == CountersExportFormat.csv)
                         {
@@ -663,27 +317,29 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         else
                         {
                             _console.Error.WriteLine($"The output format {format} is not a valid output format.");
-                            return (int)ReturnCode.ArgumentError;
+                            return ReturnCode.ArgumentError;
                         }
-                        _resumeRuntime = resumeRuntime;
-                        int ret = await Start().ConfigureAwait(false);
+
+                        ReturnCode ret;
+                        MetricsPipeline eventCounterPipeline = new(holder.Client, _settings, new[] { this });
+                        await using (eventCounterPipeline.ConfigureAwait(false))
+                        {
+                            ret = await Start(pipeline: eventCounterPipeline, ct).ConfigureAwait(false);
+                        }
+
                         return ret;
                     }
                     catch (OperationCanceledException)
                     {
-                        try
-                        {
-                            _session.Stop();
-                        }
-                        catch (Exception) { } // session.Stop() can throw if target application already stopped before we send the stop command.
-                        return (int)ReturnCode.Ok;
+                        //Cancellation token should automatically stop the session
+                        return ReturnCode.Ok;
                     }
                 }
             }
             catch (CommandLineErrorException e)
             {
                 console.Error.WriteLine(e.Message);
-                return (int)ReturnCode.ArgumentError;
+                return ReturnCode.ArgumentError;
             }
         }
 
@@ -833,85 +489,21 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        private EventPipeProvider[] GetEventPipeProviders()
-        {
-            // EventSources support EventCounter based metrics directly
-            IEnumerable<EventPipeProvider> eventCounterProviders = _counterList.Providers.Select(
-                providerName => new EventPipeProvider(providerName, EventLevel.Error, 0, new Dictionary<string, string>()
-                {{ "EventCounterIntervalSec", _interval.ToString() }}));
-
-            //System.Diagnostics.Metrics EventSource supports the new Meter/Instrument APIs
-            const long TimeSeriesValues = 0x2;
-            StringBuilder metrics = new();
-            foreach (string provider in _counterList.Providers)
+        private EventPipeCounterGroup[] GetEventPipeProviders() =>
+            _counterList.Providers.Select(provider => new EventPipeCounterGroup
             {
-                if (metrics.Length != 0)
-                {
-                    metrics.Append(',');
-                }
-                if (_counterList.IncludesAllCounters(provider))
-                {
-                    metrics.Append(provider);
-                }
-                else
-                {
-                    string[] providerCounters = _counterList.GetCounters(provider).Select(counter => $"{provider}\\{counter}").ToArray();
-                    metrics.Append(string.Join(',', providerCounters));
-                }
-            }
+                ProviderName = provider,
+                CounterNames = _counterList.GetCounters(provider).ToArray()
+            }).ToArray();
 
-            // Shared Session Id was added in 8.0 - older runtimes will not properly support it.
-            _sessionId = Guid.NewGuid().ToString();
-            if (_diagnosticsClient.GetProcessInfo().TryGetProcessClrVersion(out Version version))
-            {
-                _sessionId = version.Major >= 8 ? SharedSessionId : _sessionId;
-            }
-
-            EventPipeProvider metricsEventSourceProvider =
-                new("System.Diagnostics.Metrics", EventLevel.Informational, TimeSeriesValues,
-                    new Dictionary<string, string>()
-                    {
-                        { "SessionId", _sessionId },
-                        { "Metrics", metrics.ToString() },
-                        { "RefreshInterval", _interval.ToString() },
-                        { "MaxTimeSeries", _maxTimeSeries.ToString() },
-                        { "MaxHistograms", _maxHistograms.ToString() },
-                        { "ClientId", _clientId  }
-                    }
-                );
-
-            return eventCounterProviders.Append(metricsEventSourceProvider).ToArray();
-        }
-
-        private bool Filter(string meterName, string instrumentName)
+        private async Task<ReturnCode> Start(MetricsPipeline pipeline, CancellationToken token)
         {
-            return _counterList.GetCounters(meterName).Contains(instrumentName) || _counterList.IncludesAllCounters(meterName);
-        }
-
-        private Task<int> Start()
-        {
-            EventPipeProvider[] providers = GetEventPipeProviders();
             _renderer.Initialize();
-
-            Task monitorTask = new(() => {
+            Task monitorTask = new(async () => {
                 try
                 {
-                    _session = _diagnosticsClient.StartEventPipeSession(providers, false, 10);
-                    if (_resumeRuntime)
-                    {
-                        try
-                        {
-                            _diagnosticsClient.ResumeRuntime();
-                        }
-                        catch (UnsupportedCommandException)
-                        {
-                            // Noop if the command is unknown since the target process is most likely a 3.1 app.
-                        }
-                    }
-                    EventPipeEventSource source = new(_session.EventStream);
-                    source.Dynamic.All += DynamicAllMonitor;
-                    _renderer.EventPipeSourceConnected();
-                    source.Process();
+                    Task runAsyncTask = await pipeline.StartAsync(token).ConfigureAwait(false);
+                    await runAsyncTask.ConfigureAwait(false);
                 }
                 catch (DiagnosticsClientException ex)
                 {
@@ -928,15 +520,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             });
 
             monitorTask.Start();
-            bool shouldStopAfterDuration = _duration != default(TimeSpan);
-            Stopwatch durationStopwatch = null;
 
-            if (shouldStopAfterDuration)
-            {
-                durationStopwatch = Stopwatch.StartNew();
-            }
-
-            while (!_shouldExit.Task.Wait(250))
+            while (!_shouldExit.Task.Wait(250, token))
             {
                 HandleBufferedEvents();
                 if (!Console.IsInputRedirected && Console.KeyAvailable)
@@ -955,16 +540,107 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _pauseCmdSet = false;
                     }
                 }
-
-                if (shouldStopAfterDuration && durationStopwatch.Elapsed >= _duration)
-                {
-                    durationStopwatch.Stop();
-                    break;
-                }
             }
 
-            StopMonitor();
-            return _shouldExit.Task;
+            try
+            {
+                await pipeline.StopAsync(token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (PipelineException)
+            {
+            }
+
+            return await _shouldExit.Task.ConfigureAwait(false);
+        }
+
+        void ICountersLogger.Log(ICounterPayload payload)
+        {
+            if (_shouldExit.Task.IsCompleted)
+            {
+                return;
+            }
+
+            lock (this)
+            {
+                // If we are paused, ignore the event.
+                // There's a potential race here between the two tasks but not a huge deal if we miss by one event.
+                _renderer.ToggleStatus(_pauseCmdSet);
+                if (payload is ErrorPayload errorPayload)
+                {
+                    // Several of the error messages used by Dotnet are specific to the tool;
+                    // the error messages found in errorPayload.ErrorMessage are not tool-specific.
+                    // This replaces the generic error messages with specific ones as-needed.
+                    string errorMessage = string.Empty;
+                    switch (errorPayload.EventType)
+                    {
+                        case EventType.HistogramLimitError:
+                            errorMessage = $"Warning: Histogram tracking limit ({_settings.MaxHistograms}) reached. Not all data is being shown." + Environment.NewLine +
+                "The limit can be changed with --maxHistograms but will use more memory in the target process.";
+                            break;
+                        case EventType.TimeSeriesLimitError:
+                            errorMessage = $"Warning: Time series tracking limit ({_settings.MaxTimeSeries}) reached. Not all data is being shown." + Environment.NewLine +
+                "The limit can be changed with --maxTimeSeries but will use more memory in the target process.";
+                            break;
+                        case EventType.ErrorTargetProcess:
+                        case EventType.MultipleSessionsNotSupportedError:
+                        case EventType.MultipleSessionsConfiguredIncorrectlyError:
+                        case EventType.ObservableInstrumentCallbackError:
+                        default:
+                            errorMessage = errorPayload.ErrorMessage;
+                            break;
+                    }
+
+                    _renderer.SetErrorText(errorMessage);
+
+                    if (errorPayload.EventType.IsSessionStartupError())
+                    {
+                        _shouldExit.TrySetResult(ReturnCode.SessionCreationError);
+                    }
+                    else if (errorPayload.EventType.IsTracingError())
+                    {
+                        _shouldExit.TrySetResult(ReturnCode.TracingError);
+                    }
+                    else if (errorPayload.EventType.IsNonFatalError())
+                    {
+                        // Don't need to exit for NonFatalError
+                    }
+                    else
+                    {
+                        _shouldExit.TrySetResult(ReturnCode.UnknownError);
+                    }
+                }
+                else if (payload is CounterEndedPayload counterEnded)
+                {
+                    _renderer.CounterStopped(counterEnded);
+                }
+                else if (payload.IsMeter)
+                {
+                    MeterInstrumentEventObserved(payload.Provider, payload.Timestamp);
+                    if (payload.EventType.IsValuePublishedEvent())
+                    {
+                        CounterPayloadReceived((CounterPayload)payload);
+                    }
+                }
+                else
+                {
+                    HandleDiagnosticCounter(payload);
+                }
+            }
+        }
+
+        public Task PipelineStarted(CancellationToken token)
+        {
+            _renderer.EventPipeSourceConnected();
+            return Task.CompletedTask;
+        }
+
+        public Task PipelineStopped(CancellationToken token)
+        {
+            _renderer.Stop();
+            return Task.CompletedTask;
         }
     }
 }

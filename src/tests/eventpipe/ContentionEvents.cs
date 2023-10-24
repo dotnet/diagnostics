@@ -70,9 +70,9 @@ namespace EventPipe.UnitTests.ContentionValidation
 
                 Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int ContentionStartEvents = 0;
-                    source.Clr.ContentionStart += (eventData) => ContentionStartEvents += 1;
+                    source.Clr.ContentionStart += (eventData) => Interlocked.Increment(ref ContentionStartEvents);
                     int ContentionStopEvents = 0;
-                    source.Clr.ContentionStop += (eventData) => ContentionStopEvents += 1;
+                    source.Clr.ContentionStop += (eventData) => Interlocked.Increment(ref ContentionStopEvents);
                     return () => {
                         Logger.logger.Log("Event counts validation");
                         Logger.logger.Log("ContentionStartEvents: " + ContentionStartEvents);

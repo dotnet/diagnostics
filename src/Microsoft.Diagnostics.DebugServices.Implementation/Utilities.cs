@@ -9,6 +9,8 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
@@ -34,7 +36,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <remarks>
         /// This function is neither commutative nor associative; the hash codes must be combined in
         /// a deterministic order.  Do not use this when hashing collections whose contents are
-        /// nondeterministically ordered!
+        /// non-deterministically ordered!
         /// </remarks>
         public static int CombineHashCodes(int hashCode0, int hashCode1)
         {
@@ -411,5 +413,47 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             return arguments;
         }
+    }
+
+    public class CaptureConsoleService : IConsoleService
+    {
+        private readonly StringBuilder _builder = new();
+
+        public CaptureConsoleService()
+        {
+        }
+
+        public void Clear() => _builder.Clear();
+
+        public override string ToString() => _builder.ToString();
+
+        #region IConsoleService
+
+        public void Write(string text)
+        {
+            _builder.Append(text);
+        }
+
+        public void WriteWarning(string text)
+        {
+            _builder.Append(text);
+        }
+
+        public void WriteError(string text)
+        {
+            _builder.Append(text);
+        }
+
+        public bool SupportsDml => false;
+
+        public void WriteDml(string text) => throw new NotSupportedException();
+
+        public void WriteDmlExec(string text, string _) => throw new NotSupportedException();
+
+        public CancellationToken CancellationToken { get; set; } = CancellationToken.None;
+
+        int IConsoleService.WindowWidth => int.MaxValue;
+
+        #endregion
     }
 }

@@ -120,7 +120,7 @@ namespace SOS.Hosting
                 if (symbolService.IsSymbolStoreEnabled)
                 {
                     SymbolStoreKey key = PEFileKeyGenerator.GetKey(imagePath, imageTimestamp, imageSize);
-                    string localFilePath = symbolService.DownloadFile(key);
+                    string localFilePath = symbolService.DownloadFile(key.Index, key.FullPathName);
                     if (!string.IsNullOrWhiteSpace(localFilePath))
                     {
                         localFilePath += "\0";              // null terminate the string

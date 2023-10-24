@@ -8,12 +8,9 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "objsize", Help = "Lists the sizes of the all the objects found on managed threads.")]
-    public class ObjSizeCommand : CommandBase
+    [Command(Name = "objsize", Aliases = new[] { "ObjSize" }, Help = "Lists the sizes of the all the objects found on managed threads.")]
+    public class ObjSizeCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [ServiceImport]
         public DumpHeapService DumpHeap { get; set; }
 

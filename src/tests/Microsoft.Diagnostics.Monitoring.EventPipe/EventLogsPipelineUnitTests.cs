@@ -263,6 +263,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal(string.Empty, result.EventName);
             Validate(result.Scopes, ("BoolValue", "true"), ("StringValue", "test"), ("IntValue", "5"));
             Validate(result.Arguments, ("Arg", "6"));
+
+            message = reader.ReadLine();
+            Assert.NotNull(message);
+
+            result = JsonSerializer.Deserialize<LoggerTestResult>(message);
+            Assert.Equal("Some other message with 7", result.Message);
+            Assert.Equal(LoggerRemoteTestName, result.Category);
+            Assert.Equal("Information", result.LogLevel);
+            Assert.Equal(0, result.EventId);
+            Assert.Equal(string.Empty, result.EventName);
+            Validate(result.Scopes, ("BoolValue", "false"), ("StringValue", "string"), ("IntValue", "6"));
+            Validate(result.Arguments, ("Arg", "7"));
         }
 
         private static void ValidateLoggerRemoteCategoryWarningMessage(StreamReader reader)

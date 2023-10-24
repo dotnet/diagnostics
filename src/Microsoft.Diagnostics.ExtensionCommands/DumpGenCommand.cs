@@ -8,7 +8,7 @@ using Microsoft.Diagnostics.Runtime;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "dumpgen", Aliases = new string[] { "dg" }, Help = "Displays heap content for the specified generation.")]
-    public class DumpGenCommand : ExtensionCommandBase
+    public class DumpGenCommand : ClrMDHelperCommandBase
     {
         private const string statsHeader32bits = "      MT    Count    TotalSize Class Name";
         private const string statsHeader64bits = "              MT    Count    TotalSize Class Name";
@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-mt", Help = "The address pointing on a Method table.")]
         public string MethodTableAddress { get; set; }
 
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             GCGeneration generation = ParseGenerationArgument(Generation);
             if (generation != GCGeneration.NotSet)
@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 else
                 {
-                    WriteLine("Hexadecimal address expected for -mt option");
+                    throw new DiagnosticsException("Hexadecimal address expected for -mt option");
                 }
             }
             WriteLine(string.Empty);
@@ -88,12 +88,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             WriteLine($"Total {objectsCount} objects");
         }
 
-        private GCGeneration ParseGenerationArgument(string generation)
+        private static GCGeneration ParseGenerationArgument(string generation)
         {
             if (string.IsNullOrEmpty(generation))
             {
-                WriteLine("Generation argument is missing");
-                return GCGeneration.NotSet;
+                throw new DiagnosticsException("Generation argument is missing");
             }
             string lowerString = generation.ToLowerInvariant();
             GCGeneration result = lowerString switch
@@ -106,17 +105,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 "foh" => GCGeneration.FrozenObjectHeap,
                 _ => GCGeneration.NotSet,
             };
+
             if (result == GCGeneration.NotSet)
             {
-                WriteLine($"{generation} is not a supported generation (gen0, gen1, gen2, loh, poh, foh)");
+                throw new DiagnosticsException($"{generation} is not a supported generation (gen0, gen1, gen2, loh, poh, foh)");
             }
             return result;
         }
 
-
-        protected override string GetDetailedHelp()
-        {
-            return
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
 @"-------------------------------------------------------------------------------
 DumpGen
 This command can be used for 2 use cases:
@@ -160,6 +158,5 @@ Total 46 objects
 00000184aa23e918 00007ff9ea6e75b8       40
 Total 3 objects
 ";
-        }
     }
 }

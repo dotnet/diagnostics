@@ -14,11 +14,8 @@ using Microsoft.Diagnostics.Runtime;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "dumpexceptions", Help = "Displays a list of all managed exceptions.")]
-    public class DumpExceptionsCommand : CommandBase
+    public class DumpExceptionsCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; } = null!;
-
         [ServiceImport]
         public LiveObjectService LiveObjects { get; set; } = null!;
 

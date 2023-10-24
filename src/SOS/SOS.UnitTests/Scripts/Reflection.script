@@ -43,12 +43,7 @@ VERIFY:(StackTraceString: <none>\s+)?
 VERIFY:HResult:\s+80131604
 
 # Verify that Threads (clrthreads) works
-IFDEF:DOTNETDUMP
 SOSCOMMAND:clrthreads
-ENDIF:DOTNETDUMP
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:Threads
-ENDIF:DOTNETDUMP
 VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
 VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
 VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+

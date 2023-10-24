@@ -66,6 +66,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return memoryService;
             });
 
+            // Add optional crash info service (currently only for Native AOT on Linux/MacOS).
+            _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => SpecialDiagInfo.CreateCrashInfoService(services));
+            OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
+
             Finished();
         }
     }

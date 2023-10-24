@@ -68,8 +68,8 @@
 #error The Volatile type is currently only defined for Visual C++ and GNU C++
 #endif
 
-#if defined(__GNUC__) && !defined(HOST_X86) && !defined(HOST_AMD64) && !defined(HOST_ARM) && !defined(HOST_ARM64) && !defined(HOST_S390X)
-#error The Volatile type is currently only defined for GCC when targeting x86, AMD64, ARM, ARM64, or S390X CPUs
+#if defined(__GNUC__) && !defined(HOST_X86) && !defined(HOST_AMD64) && !defined(HOST_ARM) && !defined(HOST_ARM64) && !defined(HOST_RISCV64) && !defined(HOST_S390X)
+#error The Volatile type is currently only defined for GCC when targeting x86, AMD64, ARM, ARM64, RISCV64, or S390X CPUs
 #endif
 
 #if defined(__GNUC__)
@@ -99,6 +99,8 @@
 // currently don't have a cheap way to determine the number of CPUs from this header file. Revisit this if it
 // turns out to be a performance issue for the uni-proc case.
 #define VOLATILE_MEMORY_BARRIER() MemoryBarrier()
+#elif defined(HOST_RISCV64)
+#define VOLATILE_MEMORY_BARRIER() asm volatile ("fence rw,rw" : : : "memory")
 #else
 //
 // On VC++, reorderings at the compiler and machine level are prevented by the use of the

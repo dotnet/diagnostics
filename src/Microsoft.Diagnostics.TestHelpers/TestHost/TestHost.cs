@@ -1,11 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
-    public abstract class TestHost
+    public abstract class TestHost : IDisposable
     {
         private TestDataReader _testData;
         private ITarget _target;
@@ -15,6 +16,12 @@ namespace Microsoft.Diagnostics.TestHelpers
         public TestHost(TestConfiguration config)
         {
             Config = config;
+        }
+
+        public virtual void Dispose()
+        {
+            _target?.Destroy();
+            _target = null;
         }
 
         public TestDataReader TestData

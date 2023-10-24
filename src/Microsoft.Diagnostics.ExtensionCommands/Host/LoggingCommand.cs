@@ -5,7 +5,7 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "logging", Help = "Enables/disables internal diagnostic logging.", Flags = CommandFlags.Global)]
+    [Command(Name = "logging", Help = "Enables/disables internal diagnostic logging.")]
     public class LoggingCommand : CommandBase
     {
         [ServiceImport(Optional = true)]

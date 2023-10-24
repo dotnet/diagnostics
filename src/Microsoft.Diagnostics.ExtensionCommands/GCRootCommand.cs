@@ -11,17 +11,14 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "gcroot", Help = "Displays info about references (or roots) to an object at the specified address.")]
-    public class GCRootCommand : CommandBase
+    [Command(Name = "gcroot", Aliases = new[] { "GCRoot" }, Help = "Displays info about references (or roots) to an object at the specified address.")]
+    public class GCRootCommand : ClrRuntimeCommandBase
     {
         private StringBuilder _lineBuilder = new(64);
         private ClrRoot _lastRoot;
 
         [ServiceImport]
         public IMemoryService Memory { get; set; }
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
 
         [ServiceImport]
         public RootCacheService RootCache { get; set; }
@@ -68,8 +65,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ClrSegment seg = Runtime.Heap.GetSegmentByAddress(address);
                 if (seg is null)
                 {
-                    Console.WriteLineError($"Address {address:x} is not in the managed heap.");
-                    return;
+                    throw new DiagnosticsException($"Address {address:x} is not in the managed heap.");
                 }
 
                 Generation objectGen = seg.GetGeneration(address);
