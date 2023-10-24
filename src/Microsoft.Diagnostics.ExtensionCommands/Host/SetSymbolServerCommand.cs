@@ -5,16 +5,8 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(
-        Name = "setsymbolserver",
-        Aliases = new string[] { "SetSymbolServer" },
-        Help = "Enables and sets symbol server support for symbols and module download.",
-        Flags = CommandFlags.Global)]
-    [Command(
-        Name = "loadsymbols",
-        DefaultOptions = "--loadsymbols",
-        Help = "Loads symbols for all modules.",
-        Flags = CommandFlags.Global)]
+    [Command(Name = "setsymbolserver", Aliases = new string[] { "SetSymbolServer" }, Help = "Enables and sets symbol server support for symbols and module download.")]
+    [Command(Name = "loadsymbols", DefaultOptions = "--loadsymbols", Help = "Loads symbols for all modules.")]
     public class SetSymbolServerCommand : CommandBase
     {
         [ServiceImport]
@@ -107,5 +99,92 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Write(SymbolService.ToString());
             }
         }
+
+        [HelpInvoke]
+        public static string GetDetailedHelp(IHost host)
+        {
+            switch (host.HostType)
+            {
+                case HostType.DbgEng:
+                    return s_detailedHelpTextDbgEng;
+                case HostType.Lldb:
+                    return s_detailedHelpTextLLDB;
+                case HostType.DotnetDump:
+                    return s_detailedHelpTextDotNetDump;
+            }
+            return null;
+        }
+
+        private const string s_detailedHelpTextDbgEng =
+        @"
+This commands enables symbol server support for portable PDBs for managed assemblies and 
+.NET Core native modules files (like the DAC) in SOS. If the .sympath is set, the symbol 
+server supported is automatically set and this command isn't necessary.
+";
+
+        private const string s_detailedHelpTextLLDB =
+        @"
+This commands enables symbol server support in SOS. The portable PDBs for managed assemblies
+and .NET Core native symbol and module (like the DAC) files are downloaded.
+
+To enable downloading symbols from the Microsoft symbol server:
+
+    (lldb) setsymbolserver -ms
+
+This command may take some time without any output while it attempts to download the symbol files. 
+
+To disable downloading or clear the current SOS symbol settings allowing new symbol paths to be set:
+
+    (lldb) setsymbolserver -disable
+
+To add a directory to search for symbols:
+
+    (lldb) setsymbolserver -directory /home/mikem/symbols
+
+This command can be used so the module/symbol file structure does not have to match the machine 
+file structure that the core dump was generated.
+
+To clear the default cache run ""rm -r $HOME/.dotnet/symbolcache"" in a command shell.
+
+If you receive an error like the one below on a core dump, you need to set the .NET Core
+runtime with the ""sethostruntime"" command. Type ""soshelp sethostruntime"" for more details.
+
+    (lldb) setsymbolserver -ms
+    Error: Fail to initialize CoreCLR 80004005
+    SetSymbolServer -ms  failed
+
+The ""-loadsymbols"" option and the ""loadsymbol"" command alias attempts to download the native .NET
+Core symbol files. It is only useful for live sessions and not core dumps. This command needs to 
+be run before the lldb ""bt"" (stack trace) or the ""clrstack -f"" (dumps both managed and native
+stack frames).
+
+    (lldb) loadsymbols
+    (lldb) bt
+";
+
+        private const string s_detailedHelpTextDotNetDump =
+        @"
+This commands enables symbol server support in SOS. The portable PDBs for managed assemblies
+and .NET Core native module (like the DAC) files are downloaded.
+
+To enable downloading symbols from the Microsoft symbol server:
+
+    > setsymbolserver -ms
+
+This command may take some time without any output while it attempts to download the symbol files. 
+
+To disable downloading or clear the current SOS symbol settings allowing new symbol paths to be set:
+
+    > setsymbolserver -disable
+
+To add a directory to search for symbols:
+
+    > setsymbolserver -directory /home/mikem/symbols
+
+This command can be used so the module/symbol file structure does not have to match the machine 
+file structure that the core dump was generated.
+
+To clear the default cache run ""rm -r $HOME/.dotnet/symbolcache"" in a command shell.
+";
     }
 }

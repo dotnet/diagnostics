@@ -62,6 +62,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             PrintPointers(!ShowAllObjects, Regions);
         }
 
+        [FilterInvoke(Message = "The memory region service does not exists. This command is only supported under windbg/cdb debuggers.")]
+        public static bool FilterInvoke([ServiceImport(Optional = true)] ClrRuntime runtime, [ServiceImport(Optional = true)] NativeAddressHelper helper) => runtime != null && helper != null;
+
         private void PrintPointers(bool pinnedOnly, params string[] memTypes)
         {
             DescribedRegion[] allRegions = AddressHelper.EnumerateAddressSpace(tagClrMemoryRanges: true, includeReserveMemory: false, tagReserveMemoryHeuristically: false, includeHandleTableIfSlow: false).ToArray();
@@ -496,9 +499,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         [HelpInvoke]
-        public void HelpInvoke()
-        {
-            WriteLine(
+        public static string GetDetailedHelp() =>
 @"-------------------------------------------------------------------------------
 The findpointersin command will search the regions of memory given by MADDRESS_TYPE_LIST
 to find all pointers to other memory regions and display them.  By default, pointers
@@ -508,15 +509,15 @@ pointer, or a stray pointer that should be ignored.) If --all is set,
 then this command print out ALL objects that are pointed to instead of collapsing
 them into one entry.
 
-usage: !findpointersin [--all] MADDRESS_TYPE_LIST
+usage: findpointersin [--all] MADDRESS_TYPE_LIST
 
-Note: The MADDRESS_TYPE_LIST must be a memory type as printed by !maddress.
+Note: The MADDRESS_TYPE_LIST must be a memory type as printed by maddress.
 
-Example: ""!findpointersin PAGE_READWRITE"" will only search for regions of memory that
+Example: ""findpointersin PAGE_READWRITE"" will only search for regions of memory that
 !maddress marks as ""PAGE_READWRITE"" and not every page of memory that's
 marked with PAGE_READWRITE protection.
 
-Example: Running the command ""!findpointersin Stack PAGE_READWRITE"" will find all pointers
+Example: Running the command ""findpointersin Stack PAGE_READWRITE"" will find all pointers
 on any ""Stack"" and ""PAGE_READWRITE"" memory segments and summarize those contents into
 three tables:  One table for pointers to the GC heap, one table for pointers where
 symbols could be resolved, and one table of pointers where we couldn't resolve symbols.
@@ -549,7 +550,6 @@ Sample Output:
 
                                                          ...
     --------------------------------------------------------- [ TOTALS ] ---------33,360---------72,029---------------
-");
-        }
+";
     }
 }

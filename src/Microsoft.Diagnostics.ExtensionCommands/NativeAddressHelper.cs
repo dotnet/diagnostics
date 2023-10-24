@@ -12,22 +12,29 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [ServiceExport(Scope = ServiceScope.Target)]
     public sealed class NativeAddressHelper : IDisposable
     {
         private readonly IDisposable _onFlushEvent;
         private ((bool, bool, bool, bool) Key, DescribedRegion[] Result) _previous;
 
-        public NativeAddressHelper(ITarget target)
+        [ServiceExport(Scope = ServiceScope.Target)]
+        public static NativeAddressHelper TryCreate(ITarget target, [ServiceImport(Optional = true)] IMemoryRegionService memoryRegionService)
+        {
+            return memoryRegionService != null ? new NativeAddressHelper(target, memoryRegionService) : null;
+        }
+
+        private NativeAddressHelper(ITarget target, IMemoryRegionService memoryRegionService)
         {
             Target = target;
+            MemoryRegionService = memoryRegionService;
             _onFlushEvent = target.OnFlushEvent.Register(() => _previous = default);
         }
 
         public void Dispose() => _onFlushEvent.Dispose();
 
-        [ServiceImport]
-        public ITarget Target { get; set; }
+        public ITarget Target { get; }
+
+        public IMemoryRegionService MemoryRegionService { get; }
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
@@ -40,9 +47,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [ServiceImport]
         public IModuleService ModuleService { get; set; }
-
-        [ServiceImport]
-        public IMemoryRegionService MemoryRegionService { get; set; }
 
         [ServiceImport]
         public IConsoleService Console { get; set; }
@@ -107,9 +111,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
                 {
                     ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
-                    RootCacheService rootCache = runtime.Services.GetService<RootCacheService>();
                     if (clrRuntime is not null)
                     {
+                        RootCacheService rootCache = runtime.Services.GetService<RootCacheService>() ?? throw new DiagnosticsException("NativeAddressHelper: RootCacheService not found");
                         foreach ((ulong Address, ulong Size, ClrMemoryKind Kind) mem in EnumerateClrMemoryAddresses(clrRuntime, rootCache, includeHandleTableIfSlow))
                         {
                             // The GCBookkeeping range is a large region of memory that the GC reserved.  We'll simply mark every
@@ -192,7 +196,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         // by the other region kind.
                                         if (region.ClrMemoryKind == ClrMemoryKind.None)
                                         {
-                                            region.ClrMemoryKind = mem.Kind;
+                                            AssignKindIfAppropriate(mem, region);
                                         }
 
                                         DescribedRegion middleRegion = new(region)
@@ -259,8 +263,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         region.Start = newRange.End;
                                         if (region.ClrMemoryKind == ClrMemoryKind.None)  // see note above
                                         {
-                                            region.ClrMemoryKind = mem.Kind;
+                                            AssignKindIfAppropriate(mem, region);
                                         }
+
+                                        rangeList.Add(newRange);
                                     }
                                     else
                                     {
@@ -274,7 +280,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             DescribedRegion[] ranges = rangeList.OrderBy(r => r.Start).ToArray();
-
             if (tagReserveMemoryHeuristically)
             {
                 foreach (DescribedRegion mem in ranges)
@@ -294,6 +299,29 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             return ranges;
+        }
+
+        private void AssignKindIfAppropriate((ulong Address, ulong Size, ClrMemoryKind Kind) mem, DescribedRegion region)
+        {
+            // On platforms other than Windows, we may not have accurate region begin/end
+            // locations.  For example, with Windows dumps, we will get two distinct regions
+            // when one call to virtual alloc maps 0x10000-0x20000 and a different call to
+            // virtual alloc maps 0x20000-0x30000.  On Linux, we seem to only get one region
+            // defined (0x10000-0x30000) even if that came from two different calls to
+            // the Linux equivalent of VirtualAlloc.  Therefore, we only use this heuristic
+            // to tag memory on Windows to avoid accidently over-attributing memory to CLR.
+            //
+            // Finally, we actually get very accurate data about GC structures, so never
+            // use this heuristic to tag memory as belonging to the GC because we know it
+            // doesn't.
+            if (Target.OperatingSystem == OSPlatform.Windows
+                && mem.Kind != ClrMemoryKind.GCHeap
+                && mem.Kind != ClrMemoryKind.GCHeapReserve
+                && mem.Kind != ClrMemoryKind.GCBookkeeping
+                && mem.Kind != ClrMemoryKind.GCHeapToBeFreed)
+            {
+                region.ClrMemoryKind = mem.Kind;
+            }
         }
 
         /// <summary>

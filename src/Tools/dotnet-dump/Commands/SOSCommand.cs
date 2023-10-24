@@ -9,55 +9,48 @@ using SOS.Hosting;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    [Command(Name = "sos", Aliases = new string[] { "ext" }, Help = "Executes various SOS debugging commands.", Flags = CommandFlags.Global | CommandFlags.Manual)]
+    [Command(Name = "sos", Aliases = new string[] { "ext" }, Help = "Executes various SOS debugging commands.")]
     public class SOSCommand : CommandBase
     {
-        private readonly CommandService _commandService;
-        private readonly IServiceProvider _services;
-        private SOSHost _sosHost;
+        [ServiceImport]
+        public CommandService CommandService { get; set; }
 
-        [Argument(Name = "arguments", Help = "SOS command and arguments.")]
+        [ServiceImport]
+        public IServiceProvider Services { get; set; }
+
+        [ServiceImport(Optional = true)]
+        public SOSHost SOSHost { get; set; }
+
+        [Argument(Name = "command_and_arguments", Help = "SOS command and arguments.")]
         public string[] Arguments { get; set; }
 
-        public SOSCommand(CommandService commandService, IServiceProvider services)
+        public SOSCommand()
         {
-            _commandService = commandService;
-            _services = services;
         }
 
         public override void Invoke()
         {
-            string commandLine;
-            string commandName;
+            string command;
+            string arguments;
             if (Arguments != null && Arguments.Length > 0)
             {
-                commandLine = string.Concat(Arguments.Select((arg) => arg + " ")).Trim();
-                commandName = Arguments[0];
+                command = Arguments[0];
+                arguments = string.Concat(Arguments.Skip(1).Select((arg) => arg + " ")).Trim();
             }
             else
             {
-                commandLine = commandName = "help";
+                command = "help";
+                arguments = null;
             }
-            if (_commandService.IsCommand(commandName))
+            if (CommandService.Execute(command, arguments, Services))
             {
-                try
-                {
-                    _commandService.Execute(commandLine, _services);
-                    return;
-                }
-                catch (CommandNotSupportedException)
-                {
-                }
+                return;
             }
-            if (_sosHost is null)
+            if (SOSHost is null)
             {
-                _sosHost = _services.GetService<SOSHost>();
-                if (_sosHost is null)
-                {
-                    throw new DiagnosticsException($"'{commandName}' command not found");
-                }
+                throw new CommandNotFoundException($"{CommandNotFoundException.NotFoundMessage} '{command}'");
             }
-            _sosHost.ExecuteCommand(commandLine);
+            SOSHost.ExecuteCommand(command, arguments);
         }
     }
 }

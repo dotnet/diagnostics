@@ -7,32 +7,6 @@ using System.Diagnostics;
 namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
-    /// Command flags to filter by OS Platforms, control scope and how the command is registered.
-    /// </summary>
-    [Flags]
-    public enum CommandFlags : byte
-    {
-        Windows = 0x01,
-        Linux = 0x02,
-        OSX = 0x04,
-
-        /// <summary>
-        /// Command is supported when there is no target
-        /// </summary>
-        Global = 0x08,
-
-        /// <summary>
-        /// Command is not added through reflection, but manually with command service API.
-        /// </summary>
-        Manual = 0x10,
-
-        /// <summary>
-        /// Default. All operating system, but target is required
-        /// </summary>
-        Default = Windows | Linux | OSX
-    }
-
-    /// <summary>
     /// Marks the class as a Command.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
@@ -52,11 +26,6 @@ namespace Microsoft.Diagnostics.DebugServices
         /// The command's aliases
         /// </summary>
         public string[] Aliases = Array.Empty<string>();
-
-        /// <summary>
-        /// Command flags to filter by OS Platforms, control scope and how the command is registered.
-        /// </summary>
-        public CommandFlags Flags = CommandFlags.Default;
 
         /// <summary>
         /// A string of options that are parsed before the command line options
@@ -121,10 +90,24 @@ namespace Microsoft.Diagnostics.DebugServices
     }
 
     /// <summary>
-    /// Marks the function to invoke to display alternate help for command.
+    /// Marks the function to invoke to return the alternate help for command. The function returns
+    /// a string. The Argument and Option properties of the command are not set.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     public class HelpInvokeAttribute : Attribute
     {
+    }
+
+    /// <summary>
+    /// Marks the function to invoke to filter a command. The function returns a bool; true if
+    /// the command is supported. The Argument and Option properties of the command are not set.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method)]
+    public class FilterInvokeAttribute : Attribute
+    {
+        /// <summary>
+        /// Message to display if the filter fails
+        /// </summary>
+        public string Message;
     }
 }

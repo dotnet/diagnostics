@@ -2,10 +2,6 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 include(configure.cmake)
 
-if(WIN32)
-    add_definitions(-MT)
-endif(WIN32)
-
 add_definitions(-DPAL_STDCPP_COMPAT)
 
 include_directories(${ROOT_DIR}/src/SOS/inc)

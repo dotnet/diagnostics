@@ -7,12 +7,9 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "analyzeoom", Help = "Displays the info of the last OOM that occurred on an allocation request to the GC heap.")]
-    public class AnalyzeOOMCommand : CommandBase
+    [Command(Name = "analyzeoom", Aliases = new[] { "AnalyzeOOM" }, Help = "Displays the info of the last OOM that occurred on an allocation request to the GC heap.")]
+    public class AnalyzeOOMCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         public override void Invoke()
         {
             bool foundOne = false;

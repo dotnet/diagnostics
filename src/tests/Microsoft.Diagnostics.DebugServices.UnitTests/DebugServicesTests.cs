@@ -30,11 +30,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public static IEnumerable<object[]> GetConfigurations()
         {
-            _configurations ??= TestRunConfiguration.Instance.Configurations
+            return _configurations ??= TestRunConfiguration.Instance.Configurations
                 .Where((config) => config.AllSettings.ContainsKey("DumpFile"))
-                .Select((config) => CreateHost(config))
-                .Select((host) => new[] { host }).ToImmutableArray();
-            return _configurations;
+                .Select(CreateHost)
+                .Select((host) => new[] { host })
+                .ToImmutableArray();
         }
 
         private static TestHost CreateHost(TestConfiguration config)
@@ -115,6 +115,15 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     }
                 }
                 Assert.NotNull(module);
+
+                if (OS.Kind != OSKind.Windows)
+                {
+                    // Skip managed modules when running on Linux/OSX because of the 6.0 injection activation issue in the DAC
+                    if (moduleData.TryGetValue("IsManaged", out bool isManaged) && isManaged)
+                    {
+                        continue;
+                    }
+                }
 
                 if (host.Target.Host.HostType != HostType.Lldb)
                 {
@@ -263,6 +272,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             if (OS.IsAlpine)
             {
                 throw new SkipTestException("Not supported on Alpine Linux");
+            }
+            // Disable running on Linux/OSX because of the 6.0 injection activation issue in the DAC
+            if (OS.Kind != OSKind.Windows)
+            {
+                throw new SkipTestException("Not supported on Linux");
             }
             IRuntimeService runtimeService = host.Target.Services.GetService<IRuntimeService>();
             Assert.NotNull(runtimeService);

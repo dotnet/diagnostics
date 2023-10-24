@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using System.IO;
-using Microsoft.SymbolStore;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -96,9 +95,9 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Download a file from the symbol stores/server.
         /// </summary>
-        /// <param name="key">index of the file to download</param>
-        /// <returns>path to the downloaded file either in the cache or in the temp directory or null if error</returns>
-        string DownloadFile(SymbolStoreKey key);
+        /// <param name="index">index to lookup on symbol server</param>
+        /// <param name="file">the full path name of the file</param>
+        string DownloadFile(string index, string file);
 
         /// <summary>
         /// Returns the metadata for the assembly

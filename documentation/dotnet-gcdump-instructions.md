@@ -1,3 +1,5 @@
+This documentation is now being maintained at [dotnet-gcdump](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-gcdump). This doc is no longer being updated.
+
 # Heap Analysis Tool (dotnet-gcdump)
 
 NOTE: This documentation page may contain information on some features that are still work-in-progress. For most up-to-date documentation on released version of `dotnet-gcdump`, please refer to [its official documentation](https://docs.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-gcdump) page.

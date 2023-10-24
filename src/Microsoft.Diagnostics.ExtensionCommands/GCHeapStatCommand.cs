@@ -11,12 +11,9 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "gcheapstat", DefaultOptions = "GCHeapStat", Help = "Displays various GC heap stats.")]
-    public class GCHeapStatCommand : CommandBase
+    [Command(Name = "gcheapstat", Aliases = new[] { "GCHeapStat" }, Help = "Displays various GC heap stats.")]
+    public class GCHeapStatCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [ServiceImport]
         public LiveObjectService LiveObjects { get; set; }
 

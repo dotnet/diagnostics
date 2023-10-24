@@ -331,7 +331,7 @@ namespace SOS.Hosting
             Assert.True(timeStamp != 0 && sizeOfImage != 0);
             SymbolStoreKey key = PEFileKeyGenerator.GetKey(moduleName, timeStamp, sizeOfImage);
             Assert.NotNull(key);
-            string downloadedPath = SymbolService.DownloadFile(key);
+            string downloadedPath = SymbolService.DownloadFile(key.Index, key.FullPathName);
             Assert.NotNull(downloadedPath);
             return downloadedPath;
         }
@@ -368,7 +368,7 @@ namespace SOS.Hosting
                 key = MachOFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, moduleName, buildId, symbolFile: false, symbolFileName: null).SingleOrDefault();
             }
             Assert.NotNull(key);
-            string downloadedPath = SymbolService.DownloadFile(key);
+            string downloadedPath = SymbolService.DownloadFile(key.Index, key.FullPathName);
             Assert.NotNull(downloadedPath);
             return downloadedPath;
         }

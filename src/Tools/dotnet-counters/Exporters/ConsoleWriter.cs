@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
@@ -12,7 +13,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
     /// ConsoleWriter is an implementation of ICounterRenderer for rendering the counter values in real-time
     /// to the console. This is the renderer for the `dotnet-counters monitor` command.
     /// </summary>
-    public class ConsoleWriter : ICounterRenderer
+    internal class ConsoleWriter : ICounterRenderer
     {
         /// <summary>Information about an observed provider.</summary>
         private class ObservedProvider
@@ -257,9 +258,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     return;
                 }
 
-                string providerName = payload.ProviderName;
+                string providerName = payload.Provider;
                 string name = payload.Name;
-                string tags = payload.Tags;
+                string tags = payload.Metadata;
 
                 bool redraw = false;
                 if (!_providers.TryGetValue(providerName, out ObservedProvider provider))
@@ -270,7 +271,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
                 if (!provider.Counters.TryGetValue(name, out ObservedCounter counter))
                 {
-                    string displayName = payload.DisplayName;
+                    string displayName = payload.GetDisplay();
                     provider.Counters[name] = counter = new ObservedCounter(displayName);
                     _maxNameLength = Math.Max(_maxNameLength, displayName.Length);
                     if (tags != null)
@@ -313,9 +314,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             lock (_lock)
             {
-                string providerName = payload.ProviderName;
+                string providerName = payload.Provider;
                 string counterName = payload.Name;
-                string tags = payload.Tags;
+                string tags = payload.Metadata;
 
                 if (!_providers.TryGetValue(providerName, out ObservedProvider provider))
                 {

@@ -21,6 +21,17 @@ namespace SOS.Hosting
     [ServiceExport(Scope = ServiceScope.Target)]
     public sealed class SOSHost : IDisposable
     {
+       /// <summary>
+       /// Provides the native debugger's debug client instance
+       /// </summary>
+       public interface INativeClient
+       {
+           /// <summary>
+           /// Native debugger client interface
+           /// </summary>
+           IntPtr Client { get; }
+       }
+
         // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
         internal const uint InvalidTimeStamp = 0xFFFFFFFE;
         internal const uint InvalidChecksum = 0xFFFFFFFF;
@@ -45,57 +56,47 @@ namespace SOS.Hosting
         private readonly SOSLibrary _sosLibrary;
 #pragma warning restore
 
-        private readonly IntPtr _interface;
+        private readonly IntPtr _client;
         private readonly ulong _ignoreAddressBitsMask;
-        private bool _disposed;
+        private readonly bool _releaseClient;
 
         /// <summary>
         /// Create an instance of the hosting class. Has the lifetime of the target.
         /// </summary>
-        public SOSHost(ITarget target, IMemoryService memoryService)
+        public SOSHost(ITarget target, IMemoryService memoryService, [ServiceImport(Optional = true)] INativeClient client)
         {
-            Target = target ?? throw new DiagnosticsException("No target");
+            Target = target;
             MemoryService = memoryService;
             _ignoreAddressBitsMask = memoryService.SignExtensionMask();
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            // If running under a native debugger, use the client instance supplied by the debugger for commands
+            if (client != null)
             {
-                DebugClient debugClient = new(this);
-                _interface = debugClient.IDebugClient;
+                _client = client.Client;
             }
             else
             {
-                LLDBServices lldbServices = new(this);
-                _interface = lldbServices.ILLDBServices;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    DebugClient debugClient = new(this);
+                    _client = debugClient.IDebugClient;
+                }
+                else
+                {
+                    LLDBServices lldbServices = new(this);
+                    _client = lldbServices.ILLDBServices;
+                }
+                _releaseClient = true;
             }
         }
 
         void IDisposable.Dispose()
         {
-            Trace.TraceInformation($"SOSHost.Dispose {_disposed}");
-            if (!_disposed)
+            Trace.TraceInformation($"SOSHost.Dispose");
+            if (_releaseClient)
             {
-                _disposed = true;
-                ComWrapper.ReleaseWithCheck(_interface);
+                ComWrapper.ReleaseWithCheck(_client);
             }
-        }
-
-        /// <summary>
-        /// Execute a SOS command.
-        /// </summary>
-        /// <param name="commandLine">command name and arguments</param>
-        public void ExecuteCommand(string commandLine)
-        {
-            string command = "Help";
-            string arguments = null;
-
-            if (commandLine != null)
-            {
-                int firstSpace = commandLine.IndexOf(' ');
-                command = firstSpace == -1 ? commandLine : commandLine.Substring(0, firstSpace);
-                arguments = firstSpace == -1 ? null : commandLine.Substring(firstSpace);
-            }
-            ExecuteCommand(command, arguments);
         }
 
         /// <summary>
@@ -103,14 +104,14 @@ namespace SOS.Hosting
         /// </summary>
         /// <param name="command">just the command name</param>
         /// <param name="arguments">the command arguments and options</param>
-        public void ExecuteCommand(string command, string arguments)
-        {
-            if (_disposed)
-            {
-                throw new ObjectDisposedException("SOSHost instance disposed");
-            }
-            _sosLibrary.ExecuteCommand(_interface, command, arguments);
-        }
+        public void ExecuteCommand(string command, string arguments) => _sosLibrary.ExecuteCommand(_client, command, arguments);
+
+        /// <summary>
+        /// Get the detailed help text for a native SOS command.
+        /// </summary>
+        /// <param name="command">command name</param>
+        /// <returns>help text or null if not found or error</returns>
+        public string GetHelpText(string command) => _sosLibrary.GetHelpText(command);
 
         #region Reverse PInvoke Implementations
 

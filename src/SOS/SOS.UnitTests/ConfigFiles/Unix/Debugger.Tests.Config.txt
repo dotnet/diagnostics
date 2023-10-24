@@ -92,6 +92,16 @@
       <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
     </Option>
     <!--
+        SOS.TestExtensions
+      -->
+    <Option Condition="'$(RuntimeVersion60)' != ''">
+      <TestName>SOS.TestExtensions</TestName>
+      <BuildProjectFramework>net6.0</BuildProjectFramework>
+      <RuntimeFrameworkVersion>$(RuntimeVersion60)</RuntimeFrameworkVersion>
+      <DotNetDiagnosticExtensions>$(RootBinDir)/bin/TestExtension/$(TargetConfiguration)/netstandard2.0/TestExtension.dll</DotNetDiagnosticExtensions>
+      <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+    </Option>
+    <!--
         SOS.StackAndOtherTests (cli because tested with embedded, portable PDBs and single-file)
       -->
     <Option>

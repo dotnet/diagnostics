@@ -8,12 +8,9 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumpruntimetypes", Help = "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer too.")]
-    public sealed class DumpRuntimeTypeCommand : CommandBase
+    [Command(Name = "dumpruntimetypes", Aliases = new[] { "DumpRuntimeTypes" }, Help = "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer too.")]
+    public sealed class DumpRuntimeTypeCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         public override void Invoke()
         {
             Table output = null;

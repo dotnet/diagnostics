@@ -24,10 +24,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public bool ShowAll { get; set; }
 
         [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
+        public NativeAddressHelper AddressHelper { get; set; }
 
         [ServiceImport]
-        public NativeAddressHelper AddressHelper { get; set; }
+        public ClrRuntime Runtime { get; set; }
 
         private int Width
         {
@@ -57,6 +57,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             PrintGCPointersToMemory(ShowAll, MemoryTypes);
         }
+
+        [FilterInvoke(Message = "The memory region service does not exists. This command is only supported under windbg/cdb debuggers.")]
+        public static bool FilterInvoke([ServiceImport(Optional = true)] ClrRuntime runtime, [ServiceImport(Optional = true)] NativeAddressHelper helper) => runtime != null && helper != null;
 
         public void PrintGCPointersToMemory(bool showAll, params string[] memoryTypes)
         {
@@ -556,24 +559,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         [HelpInvoke]
-        public void HelpInvoke()
-        {
-            WriteLine(
+        public static string GetDetailedHelp() =>
 @"-------------------------------------------------------------------------------
-!gctonative searches the GC heap for pointers to native memory.  This is used
+gctonative searches the GC heap for pointers to native memory.  This is used
 to help locate regions of native memory that are referenced (or possibly held
 alive) by objects on the GC heap.
 
-usage: !gctonative [--all] MADDRESS_TYPE_LIST
+usage: gctonative [--all] MADDRESS_TYPE_LIST
 
-Note: The MADDRESS_TYPE_LIST must be a memory type as printed by !maddress.
+Note: The MADDRESS_TYPE_LIST must be a memory type as printed by maddress.
 
 If --all is set, a full list of every pointer from the GC heap to the
 specified memory will be displayed instead of just a summary table.
 
 Sample Output:
 
-    0:000> !gctonative PAGE_READWRITE
+    0:000> gctonative PAGE_READWRITE
     Walking GC heap to find pointers...
     Resolving object names...
     ================================================ PAGE_READWRITE Regions ================================================
@@ -618,7 +619,6 @@ Sample Output:
     System.Net.Sockets.SocketAsyncEngine                                             |        1 | 7f059800edd0
     Microsoft.Extensions.Caching.Memory.CacheEntry                                   |        1 | 7f05241e0000
     System.Runtime.CompilerServices.AsyncTaskMethodBuilder<...>+AsyncStateMachine... |        1 | 7f0500000004
-");
-        }
+";
     }
 }

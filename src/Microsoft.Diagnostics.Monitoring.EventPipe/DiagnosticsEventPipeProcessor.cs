@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _sessionStarted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        public async Task Process(DiagnosticsClient client, TimeSpan duration, CancellationToken token)
+        public async Task Process(DiagnosticsClient client, TimeSpan duration, bool resumeRuntime, CancellationToken token)
         {
             //No need to guard against reentrancy here, since the calling pipeline does this already.
             IDisposable registration = token.Register(() => TryCancelCompletionSources(token));
@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     // Allows the event handling routines to stop processing before the duration expires.
                     Func<Task> stopFunc = () => Task.Run(() => { streamProvider.StopProcessing(); });
 
-                    Stream sessionStream = await streamProvider.ProcessEvents(client, duration, token).ConfigureAwait(false);
+                    Stream sessionStream = await streamProvider.ProcessEvents(client, duration, resumeRuntime, token).ConfigureAwait(false);
 
                     if (!_sessionStarted.TrySetResult(true))
                     {

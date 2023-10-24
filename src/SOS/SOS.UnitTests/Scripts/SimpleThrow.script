@@ -46,12 +46,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Ss]imple[Tt]hrow.*!(\$0_)?Simple\.Main.*\+0x<HE
 VERIFY:\[.*[\\|/]Debuggees[\\|/].*SimpleThrow[\\|/]SimpleThrow\.cs @ 12\s*\]\s*
 
 # Verify that Threads (clrthreads) works
-IFDEF:DOTNETDUMP
 SOSCOMMAND:clrthreads
-ENDIF:DOTNETDUMP
-!IFDEF:DOTNETDUMP
-SOSCOMMAND:Threads
-ENDIF:DOTNETDUMP
 VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
 VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
 VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+
