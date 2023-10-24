@@ -85,6 +85,8 @@ inline TADDR GetSP(T_CONTEXT* context)
     return (TADDR)context->Sp;
 #elif defined(TARGET_ARM64)
     return (TADDR)context->Sp;
+#elif defined(TARGET_RISCV64)
+    return (TADDR)context->Sp;
 #else
     _ASSERTE(!"nyi for platform");
 #endif
@@ -97,6 +99,8 @@ inline PCODE GetIP(T_CONTEXT* context)
 #elif defined(TARGET_ARM)
     return (PCODE)context->Pc;
 #elif defined(TARGET_ARM64)
+    return (PCODE)context->Pc;
+#elif defined(TARGET_RISCV64)
     return (PCODE)context->Pc;
 #else
     _ASSERTE(!"nyi for platform");
@@ -214,7 +218,7 @@ enum GcInfoDecoderFlags
     DECODE_RETURN_KIND           = 0x2000,
 #if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64)
     DECODE_HAS_TAILCALLS         = 0x4000,
-#endif // TARGET_ARM || TARGET_ARM64
+#endif // TARGET_ARM || TARGET_ARM64 || TARGET_RISCV64
 };
 
 enum GcInfoHeaderFlags
