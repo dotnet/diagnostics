@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             MemoryRange range;
-            if (Bounds is null || Bounds.Length == 0)
+            if (Bounds is not null || Bounds.Length == 0)
             {
                 range = GetStackRange();
             }
