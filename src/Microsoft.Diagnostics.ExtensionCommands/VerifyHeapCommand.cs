@@ -25,6 +25,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-segment")]
         public string Segment { get; set; }
 
+        [Option(Name = "-ignoreGCState", Help = "Ignore the GC's marker that the heap is not walkable (will generate lots of false positive errors).")]
+        public bool IgnoreGCState { get; set; }
+
         [Argument(Help ="Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
@@ -44,6 +47,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (MemoryRange is not null)
             {
                 filteredHeap.FilterByStringMemoryRange(MemoryRange, CommandName);
+            }
+
+            if (!Runtime.Heap.CanWalkHeap && !IgnoreGCState)
+            {
+                throw new DiagnosticsException("The GC heap is not in a valid state for traversal.  (Use -ignoreGCState to override.)");
             }
 
             VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken), verifySyncTable: filteredHeap.HasFilters);

@@ -117,12 +117,13 @@ public class DotNetHeapDumpGraphReader
                 return;
             }
 
-            if (!m_moduleID2Name.ContainsKey((ulong)data.ModuleID))
+            ulong moduleID = unchecked((ulong)data.ModuleID);
+            if (!m_moduleID2Name.ContainsKey(moduleID))
             {
-                m_moduleID2Name[(ulong)data.ModuleID] = data.ModuleILPath;
+                m_moduleID2Name[moduleID] = data.ModuleILPath;
             }
 
-            m_log.WriteLine("Found Module {0} ID 0x{1:x}", data.ModuleILFileName, (ulong)data.ModuleID);
+            m_log.WriteLine("Found Module {0} ID 0x{1:x}", data.ModuleILFileName, moduleID);
         };
         source.Clr.AddCallbackForEvents(moduleCallback); // Get module events for clr provider
         // TODO should not be needed if we use CAPTURE_STATE when collecting.

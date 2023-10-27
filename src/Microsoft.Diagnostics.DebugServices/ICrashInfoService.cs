@@ -42,6 +42,11 @@ namespace Microsoft.Diagnostics.DebugServices
         RuntimeType RuntimeType { get; }
 
         /// <summary>
+        /// The module base address that contains the runtime
+        /// </summary>
+        ulong RuntimeBaseAddress { get; }
+
+        /// <summary>
         /// Runtime version and possible commit id
         /// </summary>
         string RuntimeVersion { get; }

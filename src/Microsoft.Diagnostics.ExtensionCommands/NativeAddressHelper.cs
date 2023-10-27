@@ -196,25 +196,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         // by the other region kind.
                                         if (region.ClrMemoryKind == ClrMemoryKind.None)
                                         {
-                                            // On platforms other than Windows, we may not have accurate region begin/end
-                                            // locations.  For example, with Windows dumps, we will get two distinct regions
-                                            // when one call to virtual alloc maps 0x10000-0x20000 and a different call to
-                                            // virtual alloc maps 0x20000-0x30000.  On Linux, we seem to only get one region
-                                            // defined (0x10000-0x30000) even if that came from two different calls to
-                                            // the Linux equivalent of VirtualAlloc.  Therefore, we only use this heuristic
-                                            // to tag memory on Windows to avoid accidently over-attributing memory to CLR.
-                                            //
-                                            // Finally, we actually get very accurate data about GC structures, so never
-                                            // use this heuristic to tag memory as belonging to the GC because we know it
-                                            // doesn't.
-                                            if (Target.OperatingSystem == OSPlatform.Windows
-                                                && mem.Kind != ClrMemoryKind.GCHeap
-                                                && mem.Kind != ClrMemoryKind.GCHeapReserve
-                                                && mem.Kind != ClrMemoryKind.GCBookkeeping
-                                                && mem.Kind != ClrMemoryKind.GCHeapToBeFreed)
-                                            {
-                                                region.ClrMemoryKind = mem.Kind;
-                                            }
+                                            AssignKindIfAppropriate(mem, region);
                                         }
 
                                         DescribedRegion middleRegion = new(region)
@@ -281,8 +263,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                         region.Start = newRange.End;
                                         if (region.ClrMemoryKind == ClrMemoryKind.None)  // see note above
                                         {
-                                            region.ClrMemoryKind = mem.Kind;
+                                            AssignKindIfAppropriate(mem, region);
                                         }
+
+                                        rangeList.Add(newRange);
                                     }
                                     else
                                     {
@@ -296,7 +280,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             DescribedRegion[] ranges = rangeList.OrderBy(r => r.Start).ToArray();
-
             if (tagReserveMemoryHeuristically)
             {
                 foreach (DescribedRegion mem in ranges)
@@ -316,6 +299,29 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             return ranges;
+        }
+
+        private void AssignKindIfAppropriate((ulong Address, ulong Size, ClrMemoryKind Kind) mem, DescribedRegion region)
+        {
+            // On platforms other than Windows, we may not have accurate region begin/end
+            // locations.  For example, with Windows dumps, we will get two distinct regions
+            // when one call to virtual alloc maps 0x10000-0x20000 and a different call to
+            // virtual alloc maps 0x20000-0x30000.  On Linux, we seem to only get one region
+            // defined (0x10000-0x30000) even if that came from two different calls to
+            // the Linux equivalent of VirtualAlloc.  Therefore, we only use this heuristic
+            // to tag memory on Windows to avoid accidently over-attributing memory to CLR.
+            //
+            // Finally, we actually get very accurate data about GC structures, so never
+            // use this heuristic to tag memory as belonging to the GC because we know it
+            // doesn't.
+            if (Target.OperatingSystem == OSPlatform.Windows
+                && mem.Kind != ClrMemoryKind.GCHeap
+                && mem.Kind != ClrMemoryKind.GCHeapReserve
+                && mem.Kind != ClrMemoryKind.GCBookkeeping
+                && mem.Kind != ClrMemoryKind.GCHeapToBeFreed)
+            {
+                region.ClrMemoryKind = mem.Kind;
+            }
         }
 
         /// <summary>
