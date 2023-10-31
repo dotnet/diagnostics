@@ -85,19 +85,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             SortSubHeaps = (heap) => heap.OrderBy(heap => heap.Index);
         }
 
-        public void FilterBySegmentHex(string segmentStr)
+        public void FilterBySegmentHex(ulong segment)
         {
-            if (!ulong.TryParse(segmentStr, NumberStyles.HexNumber, null, out ulong segment))
-            {
-                throw new ArgumentException($"Invalid segment address: {segmentStr}");
-            }
-
-            if (ThrowIfNoMatchingGCRegions && !_heap.Segments.Any(seg => seg.Address == segment || seg.CommittedMemory.Contains(segment)))
-            {
-                throw new ArgumentException($"No segments match address: {segment:x}");
-            }
-
-            Segment = segment;
+            Segment = segment != 0 ? 0 : null;
         }
 
         public void FilterByStringMemoryRange(string[] memoryRange, string commandName)

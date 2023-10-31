@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <returns></returns>
         protected bool TryParseAddress(string addressInHexa, out ulong address)
         {
-            if (addressInHexa == null)
+            if (string.IsNullOrWhiteSpace(addressInHexa))
             {
                 address = 0;
                 return false;
@@ -104,6 +104,13 @@ namespace Microsoft.Diagnostics.DebugServices
             }
 
             addressInHexa = addressInHexa.TrimStart('0');
+
+            int index = addressInHexa.IndexOf('`');
+            if (index >= 0 && index < addressInHexa.Length - 1)
+            {
+                // Remove up to one instance of ` since that's what WinDbg adds to its x64 addresses.
+                addressInHexa = addressInHexa.Substring(0, index) + addressInHexa.Substring(index + 1);
+            }
 
             return ulong.TryParse(addressInHexa, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out address);
         }
