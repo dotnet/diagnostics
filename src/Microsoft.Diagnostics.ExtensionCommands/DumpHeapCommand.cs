@@ -197,9 +197,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 FilteredHeap.GCHeap = GCHeap;
             }
 
-            if (!string.IsNullOrWhiteSpace(Segment))
+            if (TryParseAddress(Segment, out ulong segment))
             {
-                FilteredHeap.FilterBySegmentHex(Segment);
+                FilteredHeap.FilterBySegmentHex(segment);
+            }
+            else if (!string.IsNullOrWhiteSpace(Segment))
+            {
+                throw new DiagnosticsException($"Failed to parse segment '{Segment}'.");
             }
 
             if (MemoryRange is not null && MemoryRange.Length > 0)
