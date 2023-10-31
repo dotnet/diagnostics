@@ -16,6 +16,7 @@ using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Internal.Common.Utils;
+using IConsole = System.CommandLine.IConsole;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -196,7 +197,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
                         _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
-                        _renderer = new ConsoleWriter(useAnsi);
+                        _renderer = new ConsoleWriter(new DefaultConsole(useAnsi));
                         _diagnosticsClient = holder.Client;
                         _settings = new MetricsPipelineSettings();
                         _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;

@@ -72,18 +72,27 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private string _errorText;
 
         private int _maxRow = -1;
-        private readonly bool _useAnsi;
 
         private int _consoleHeight = -1;
         private int _consoleWidth = -1;
+        private IConsole _console;
+        private bool oldCursorVisibility = true;
 
-        public ConsoleWriter(bool useAnsi)
+        public ConsoleWriter(IConsole console)
         {
-            _useAnsi = useAnsi;
+            _console = console;
         }
 
         public void Initialize()
         {
+            try
+            {
+                oldCursorVisibility = _console.CursorVisible;
+                _console.CursorVisible = false;
+            }
+            // if it isn't supported then we just leave it showing. Its only aesthetic.
+            catch (NotSupportedException) { }
+
             AssignRowsAndInitializeDisplay();
         }
 
@@ -98,33 +107,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             AssignRowsAndInitializeDisplay();
         }
 
-        private void SetCursorPosition(int col, int row)
-        {
-            if (_useAnsi)
-            {
-                Console.Write($"\u001b[{row + 1 - _topRow};{col + 1}H");
-            }
-            else
-            {
-                Console.SetCursorPosition(col, row);
-            }
-        }
-
-        private void Clear()
-        {
-            if (_useAnsi)
-            {
-                Console.Write($"\u001b[H\u001b[J");
-            }
-            else
-            {
-                Console.Clear();
-            }
-        }
         private void UpdateStatus()
         {
-            SetCursorPosition(0, _statusRow);
-            Console.Write($"    Status: {GetStatus()}{new string(' ', 40)}"); // Write enough blanks to clear previous status.
+            _console.SetCursorPosition(0, _statusRow);
+            _console.Write($"    Status: {GetStatus()}{new string(' ', 40)}"); // Write enough blanks to clear previous status.
         }
 
         private string GetStatus() => !_initialized ? "Waiting for initial payload..." : (_paused ? "Paused" : "Running");
@@ -132,7 +118,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         /// <summary>Clears display and writes out category and counter name layout.</summary>
         public void AssignRowsAndInitializeDisplay()
         {
-            Clear();
+            _console.Clear();
 
             // clear row data on all counters
             foreach (ObservedProvider provider in _providers.Values)
@@ -147,20 +133,20 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
             }
 
-            _consoleWidth = Console.WindowWidth;
-            _consoleHeight = Console.WindowHeight;
+            _consoleWidth = _console.WindowWidth;
+            _consoleHeight = _console.WindowHeight;
             _maxNameLength = Math.Max(Math.Min(80, _consoleWidth) - (CounterValueLength + Indent + 1), 0); // Truncate the name to prevent line wrapping as long as the console width is >= CounterValueLength + Indent + 1 characters
 
 
-            int row = Console.CursorTop;
+            int row = _console.CursorTop;
             _topRow = row;
 
             string instructions = "Press p to pause, r to resume, q to quit.";
-            Console.WriteLine((instructions.Length < _consoleWidth) ? instructions : instructions.Substring(0, _consoleWidth)); row++;
-            Console.WriteLine($"    Status: {GetStatus()}"); _statusRow = row++;
+            _console.WriteLine((instructions.Length < _consoleWidth) ? instructions : instructions.Substring(0, _consoleWidth)); row++;
+            _console.WriteLine($"    Status: {GetStatus()}"); _statusRow = row++;
             if (_errorText != null)
             {
-                Console.WriteLine(_errorText);
+                _console.WriteLine(_errorText);
                 row += GetLineWrappedLines(_errorText);
             }
 
@@ -173,12 +159,12 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
                 if (lineOutput != null)
                 {
-                    Console.Write(lineOutput);
+                    _console.Write(lineOutput);
                 }
 
                 if (row < _consoleHeight + _topRow - 1) // prevents screen from scrolling due to newline on last line of console
                 {
-                    Console.WriteLine();
+                    _console.WriteLine();
                 }
 
                 if (counterRow != null)
@@ -290,7 +276,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     redraw = true;
                 }
 
-                if (Console.WindowWidth != _consoleWidth || Console.WindowHeight != _consoleHeight)
+                if (_console.WindowWidth != _consoleWidth || _console.WindowHeight != _consoleHeight)
                 {
                     redraw = true;
                 }
@@ -305,8 +291,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 {
                     return;
                 }
-                SetCursorPosition(Indent + _maxNameLength + 1, row);
-                Console.Write(FormatValue(payload.Value));
+                _console.SetCursorPosition(Indent + _maxNameLength + 1, row);
+                _console.Write(FormatValue(payload.Value));
             }
         }
 
@@ -352,11 +338,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
         }
 
-        private static int GetLineWrappedLines(string text)
+        private int GetLineWrappedLines(string text)
         {
             string[] lines = text.Split(Environment.NewLine);
             int lineCount = lines.Length;
-            int width = Console.BufferWidth;
+            int width = _console.BufferWidth;
             foreach (string line in lines)
             {
                 lineCount += (int)Math.Floor(((float)line.Length) / width);
@@ -430,10 +416,16 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
                     if (row > -1)
                     {
-                        SetCursorPosition(0, row);
-                        Console.WriteLine();
+                        _console.SetCursorPosition(0, row);
+                        _console.WriteLine();
                     }
                 }
+
+                try
+                {
+                    _console.CursorVisible = oldCursorVisibility;
+                }
+                catch (NotSupportedException) { }
             }
         }
     }
