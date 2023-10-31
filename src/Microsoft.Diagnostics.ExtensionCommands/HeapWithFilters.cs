@@ -87,7 +87,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public void FilterBySegmentHex(ulong segment)
         {
-            Segment = segment != 0 ? 0 : null;
+            Segment = segment != 0 ? segment : null;
         }
 
         public void FilterByStringMemoryRange(string[] memoryRange, string commandName)
