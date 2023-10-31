@@ -54,6 +54,7 @@ namespace SOS.Extensions
                     IMAGE_FILE_MACHINE.THUMB2 => Architecture.Arm,
                     IMAGE_FILE_MACHINE.AMD64 => Architecture.X64,
                     IMAGE_FILE_MACHINE.ARM64 => Architecture.Arm64,
+                    IMAGE_FILE_MACHINE.RISCV64 => (Architecture)9 /* Architecture.RiscV64 */,
                     _ => throw new PlatformNotSupportedException($"Machine type not supported: {type}"),
                 };
             }

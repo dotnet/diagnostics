@@ -59,6 +59,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     contextType = typeof(ArmContext);
                     break;
 
+                case (Architecture)9 /* Architecture.RiscV64 */:
+                    _contextSize = RiscV64Context.Size;
+                    _contextFlags = RiscV64Context.ContextControl | RiscV64Context.ContextInteger | RiscV64Context.ContextFloatingPoint;
+                    contextType = typeof(RiscV64Context);
+                    break;
+
                 default:
                     throw new PlatformNotSupportedException($"Unsupported architecture: {Target.Architecture}");
             }

@@ -10962,6 +10962,13 @@ public:
             ExtOut("           cpsr=%08x        fpcr=%08x        fpsr=%08x\n", context.Arm64Context.Cpsr, context.Arm64Context.Fpcr, context.Arm64Context.Fpsr);
         }
 #endif
+#if defined(SOS_TARGET_RISCV64)
+        if (IsDbgTargetRiscV64())
+        {
+            ExtOut("RISCV64:NYI\n");
+        }
+#endif
+
         if (!foundPlatform)
         {
             ExtOut("Can't display register values for this platform\n");

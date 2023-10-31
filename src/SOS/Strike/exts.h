@@ -56,6 +56,10 @@
 // printing CDA values.
 #define CDA_TO_UL64(cda) ((ULONG64)(TO_TADDR(cda)))
 
+#ifndef IMAGE_FILE_MACHINE_RISCV64
+#define IMAGE_FILE_MACHINE_RISCV64        0x5064  // RISCV64
+#endif // !IMAGE_FILE_MACHINE_RISCV64
+
 typedef struct _TADDR_RANGE
 {
     TADDR start;
@@ -493,6 +497,7 @@ inline BOOL IsDbgTargetX86()    { return g_targetMachine->GetPlatform() == IMAGE
 inline BOOL IsDbgTargetAmd64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_AMD64; }
 inline BOOL IsDbgTargetArm()    { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARMNT; }
 inline BOOL IsDbgTargetArm64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64; }
+inline BOOL IsDbgTargetRiscV64(){ return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_RISCV64; }
 inline BOOL IsDbgTargetWin64()  { return IsDbgTargetAmd64(); }
 
 /* Returns the instruction pointer for the given CONTEXT.  We need this and its family of
