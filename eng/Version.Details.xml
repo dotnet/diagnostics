@@ -47,9 +47,9 @@
       <Uri>https://github.com/dotnet/runtime</Uri>
       <Sha>59edaad404d1b8e47080015ae8d0787f94c970df</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="9.0.0-alpha.1.23530.1">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="9.0.0-alpha.1.23551.1">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>65d856fde9705faa6e3dd35854d6912cf078ccfc</Sha>
+      <Sha>3311314a123a5365b73459998bba3629de8f9e54</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis" Version="4.6.0-1.23073.4">
