@@ -10492,7 +10492,7 @@ public:
         InternalFrameManager internalFrameManager;
         IfFailRet(internalFrameManager.Init(pThread3));
 
-    #if defined(_AMD64_) || defined(_ARM64_)
+    #if defined(_AMD64_) || defined(_ARM64_) || defined(_RISCV64_)
         ExtOut("%-16s %-16s %s\n", "Child SP", "IP", "Call Site");
     #elif defined(_X86_) || defined(_ARM_)
         ExtOut("%-8s %-8s %s\n", "Child SP", "IP", "Call Site");
@@ -10965,7 +10965,19 @@ public:
 #if defined(SOS_TARGET_RISCV64)
         if (IsDbgTargetRiscV64())
         {
-            ExtOut("RISCV64:NYI\n");
+            foundPlatform = true;
+            String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
+            ExtOut(outputFormat3, "r0", context.RiscV64Context.R0, "ra", context.RiscV64Context.Ra, "sp", context.RiscV64Context.Sp);
+            ExtOut(outputFormat3, "gp", context.RiscV64Context.Gp, "tp", context.RiscV64Context.Tp, "t0", context.RiscV64Context.T0);
+            ExtOut(outputFormat3, "t1", context.RiscV64Context.T1, "t2", context.RiscV64Context.T2, "fp", context.RiscV64Context.Fp);
+            ExtOut(outputFormat3, "s1", context.RiscV64Context.S1, "a0", context.RiscV64Context.A0, "a1", context.RiscV64Context.A1);
+            ExtOut(outputFormat3, "a2", context.RiscV64Context.A2, "a3", context.RiscV64Context.A3, "a4", context.RiscV64Context.A4);
+            ExtOut(outputFormat3, "a5", context.RiscV64Context.A5, "a6", context.RiscV64Context.A6, "a7", context.RiscV64Context.A7);
+            ExtOut(outputFormat3, "s2", context.RiscV64Context.S2, "s3", context.RiscV64Context.S3, "s4", context.RiscV64Context.S4);
+            ExtOut(outputFormat3, "s5", context.RiscV64Context.S5, "s6", context.RiscV64Context.S6, "s7", context.RiscV64Context.S7);
+            ExtOut(outputFormat3, "s8", context.RiscV64Context.S8, "s9", context.RiscV64Context.S9, "s10", context.RiscV64Context.S10);
+            ExtOut(outputFormat3, "s11", context.RiscV64Context.S11, "t3", context.RiscV64Context.T3, "t4", context.RiscV64Context.T4);
+            ExtOut(outputFormat3, "t5", context.RiscV64Context.T5, "t6", context.RiscV64Context.T6, "pc", context.RiscV64Context.Pc);
         }
 #endif
 
