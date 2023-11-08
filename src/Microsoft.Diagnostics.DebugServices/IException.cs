@@ -8,7 +8,7 @@ namespace Microsoft.Diagnostics.DebugServices
     /// <summary>
     /// Describes a managed exception
     /// </summary>
-    public interface IManagedException
+    public interface IException
     {
         /// <summary>
         /// Exception object address
@@ -31,13 +31,13 @@ namespace Microsoft.Diagnostics.DebugServices
         uint HResult { get; }
 
         /// <summary>
-        /// Stack trace of exception
+        /// Stack trace of exception or null
         /// </summary>
-        IEnumerable<IStackFrame> Stack { get; }
+        IStack Stack { get; }
 
         /// <summary>
         /// The inner exception or exceptions in the AggregateException case
         /// </summary>
-        IEnumerable<IManagedException> InnerExceptions { get; }
+        IEnumerable<IException> InnerExceptions { get; }
     }
 }

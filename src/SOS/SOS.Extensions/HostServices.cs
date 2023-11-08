@@ -223,7 +223,7 @@ namespace SOS.Extensions
                 _serviceContainer.AddService<IServiceManager>(_serviceManager);
                 _serviceContainer.AddService<IHost>(this);
                 _serviceContainer.AddService<SOSLibrary.ISOSModule>(this);
-                _serviceContainer.AddService<SOSHost.INativeClient>(DebuggerServices);
+                _serviceContainer.AddService<SOSHost.INativeDebugger>(DebuggerServices);
                 _serviceContainer.AddService<ICommandService>(_commandService);
                 _serviceContainer.AddService<ISymbolService>(_symbolService);
                 _serviceContainer.AddService<IConsoleService>(fileLoggingConsoleService);

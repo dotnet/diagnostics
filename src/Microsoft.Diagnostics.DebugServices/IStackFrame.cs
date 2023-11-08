@@ -21,16 +21,14 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// The module base of the IP
         /// </summary>
-        public ulong ModuleBase { get; }
+        ulong ModuleBase { get; }
 
         /// <summary>
-        /// Offset from beginning of method
+        /// Returns the module, method name and displacement
         /// </summary>
-        uint Offset { get; }
-
-        /// <summary>
-        /// The exception type name
-        /// </summary>
-        string MethodName { get; }
+        /// <param name="moduleName">the module name of the method or null</param>
+        /// <param name="methodName">the method name or null</param>
+        /// <param name="displacement">the offset from the beginning of the function</param>
+        void GetMethodName(out string moduleName, out string methodName, out ulong displacement);
     }
 }
