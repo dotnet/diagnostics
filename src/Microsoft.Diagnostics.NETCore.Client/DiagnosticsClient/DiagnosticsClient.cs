@@ -19,6 +19,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
     /// </summary>
     public sealed class DiagnosticsClient
     {
+        private const int DefaultCircularBufferMB = 256;
+
         private readonly IpcEndpoint _endpoint;
 
         public DiagnosticsClient(int processId) :
@@ -66,7 +68,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns>
-        public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown = true, int circularBufferMB = 256)
+        public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown = true, int circularBufferMB = DefaultCircularBufferMB)
         {
             return EventPipeSession.Start(_endpoint, providers, requestRundown, circularBufferMB);
         }
@@ -80,7 +82,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns>
-        public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown = true, int circularBufferMB = 256)
+        public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown = true, int circularBufferMB = DefaultCircularBufferMB)
         {
             return EventPipeSession.Start(_endpoint, new[] { provider }, requestRundown, circularBufferMB);
         }
@@ -95,7 +97,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns>
-        internal Task<EventPipeSession> StartEventPipeSessionAsync(IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB, CancellationToken token)
+        public Task<EventPipeSession> StartEventPipeSessionAsync(IEnumerable<EventPipeProvider> providers, bool requestRundown,
+            int circularBufferMB = DefaultCircularBufferMB, CancellationToken token = default)
         {
             return EventPipeSession.StartAsync(_endpoint, providers, requestRundown, circularBufferMB, token);
         }
@@ -110,7 +113,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns>
-        internal Task<EventPipeSession> StartEventPipeSessionAsync(EventPipeProvider provider, bool requestRundown, int circularBufferMB, CancellationToken token)
+        public Task<EventPipeSession> StartEventPipeSessionAsync(EventPipeProvider provider, bool requestRundown,
+            int circularBufferMB = DefaultCircularBufferMB, CancellationToken token = default)
         {
             return EventPipeSession.StartAsync(_endpoint, new[] { provider }, requestRundown, circularBufferMB, token);
         }
