@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 builder = new StringBuilder();
                 builder
                     .Append("{ \"TargetProcess\": \"").Append(_processName).Append("\", ")
-                    .Append("\"StartTime\": \"").Append(DateTime.Now.ToString()).Append("\", ")
+                    .Append("\"StartTime\": \"").Append(DateTime.Now.ToString("O")).Append("\", ")
                     .Append("\"Events\": [");
             }
         }
@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     builder.Clear();
                 }
                 builder
-                    .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("u")).Append("\", ")
+                    .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("O")).Append("\", ")
                     .Append(" \"provider\": \"").Append(JsonEscape(payload.Provider)).Append("\", ")
                     .Append(" \"name\": \"").Append(JsonEscape(payload.GetDisplay())).Append("\", ")
                     .Append(" \"tags\": \"").Append(JsonEscape(payload.Metadata)).Append("\", ")
