@@ -9,15 +9,12 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = CommandName, Help = "Searches the managed heap for memory corruption..")]
-    public class VerifyHeapCommand : CommandBase
+    [Command(Name = CommandName, Aliases = new[] { "VerifyHeap" }, Help = "Searches the managed heap for memory corruption..")]
+    public class VerifyHeapCommand : ClrRuntimeCommandBase
     {
         private const string CommandName = "verifyheap";
 
         private int _totalObjects;
-
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
 
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
@@ -27,6 +24,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [Option(Name = "-segment")]
         public string Segment { get; set; }
+
+        [Option(Name = "-ignoreGCState", Help = "Ignore the GC's marker that the heap is not walkable (will generate lots of false positive errors).")]
+        public bool IgnoreGCState { get; set; }
 
         [Argument(Help ="Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
@@ -39,14 +39,23 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 filteredHeap.GCHeap = GCHeap;
             }
 
-            if (!string.IsNullOrWhiteSpace(Segment))
+            if (TryParseAddress(Segment, out ulong segment))
             {
-                filteredHeap.FilterBySegmentHex(Segment);
+                filteredHeap.FilterBySegmentHex(segment);
+            }
+            else if (!string.IsNullOrWhiteSpace(Segment))
+            {
+                throw new DiagnosticsException($"Failed to parse segment '{Segment}'.");
             }
 
             if (MemoryRange is not null)
             {
                 filteredHeap.FilterByStringMemoryRange(MemoryRange, CommandName);
+            }
+
+            if (!Runtime.Heap.CanWalkHeap && !IgnoreGCState)
+            {
+                throw new DiagnosticsException("The GC heap is not in a valid state for traversal.  (Use -ignoreGCState to override.)");
             }
 
             VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken), verifySyncTable: filteredHeap.HasFilters);

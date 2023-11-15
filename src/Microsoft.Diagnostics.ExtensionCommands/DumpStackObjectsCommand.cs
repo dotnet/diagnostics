@@ -15,8 +15,8 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumpstackobjects", Aliases = new string[] { "dso" }, Help = "Displays all managed objects found within the bounds of the current stack.")]
-    public class DumpStackObjectsCommand : CommandBase
+    [Command(Name = "dumpstackobjects", Aliases = new string[] { "dso", "DumpStackObjects" }, Help = "Displays all managed objects found within the bounds of the current stack.")]
+    public class DumpStackObjectsCommand : ClrRuntimeCommandBase
     {
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
@@ -27,13 +27,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IThreadService ThreadService { get; set; }
 
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [Option(Name = "-verify", Help = "Verify each object and only print ones that are valid objects.")]
         public bool Verify { get; set; }
 
-        [Argument(Name = "StackBounds", Help = "The top and bottom of the stack (in hex).")]
+        [Argument(Name = "stackbounds", Help = "The top and bottom of the stack (in hex).")]
         public string[] Bounds { get; set; }
 
         public override void Invoke()
@@ -44,7 +41,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             MemoryRange range;
-            if (Bounds is null || Bounds.Length == 0)
+            if (Bounds is not null || Bounds.Length == 0)
             {
                 range = GetStackRange();
             }

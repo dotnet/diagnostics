@@ -1,3 +1,5 @@
+This documentation is now being maintained at [dotnet-dump](https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-dump). This doc is no longer being updated.
+
 Dump collection and analysis utility (dotnet-dump)
 ==================================================
 

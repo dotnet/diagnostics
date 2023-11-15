@@ -12,12 +12,9 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "traverseheap", Help = "Writes out heap information to a file in a format understood by the CLR Profiler.")]
-    public class TraverseHeapCommand : CommandBase
+    [Command(Name = "traverseheap", Aliases = new[] { "TraverseHeap" }, Help = "Writes out heap information to a file in a format understood by the CLR Profiler.")]
+    public class TraverseHeapCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [ServiceImport]
         public RootCacheService RootCache { get; set; }
 

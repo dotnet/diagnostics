@@ -363,6 +363,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public ExtensionLoadContext(string extensionPath)
             {
+                Trace.TraceInformation($"ExtensionLoadContext: {extensionPath}");
                 _extensionPath = extensionPath;
             }
 
@@ -387,12 +388,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         throw new InvalidOperationException($"Extension assembly reference version not supported for {assemblyName.Name} {assemblyName.Version}");
                     }
+                    Trace.TraceInformation($"ExtensionLoadContext: loading SOS assembly {assembly.CodeBase}");
                     return assembly;
                 }
                 else if (_extensionPaths.TryGetValue(assemblyName.Name, out string path))
                 {
+                    Trace.TraceInformation($"ExtensionLoadContext: loading from extension path {path}");
                     return LoadFromAssemblyPath(path);
                 }
+                Trace.TraceInformation($"ExtensionLoadContext: returning null {assemblyName}");
                 return null;
             }
         }

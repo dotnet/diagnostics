@@ -11,12 +11,9 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "gcwhere", Help = "Displays the location in the GC heap of the specified address.")]
-    public class GCWhereCommand : CommandBase
+    [Command(Name = "gcwhere", Aliases = new[] { "GCWhere" }, Help = "Displays the location in the GC heap of the specified address.")]
+    public class GCWhereCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         [ServiceImport]
         public IMemoryService MemoryService { get; set; }
 

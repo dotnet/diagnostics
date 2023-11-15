@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal static class Program
     {
-        private delegate Task<int> CollectDelegate(
+        private delegate Task<ReturnCode> CollectDelegate(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             int maxTimeSeries,
             TimeSpan duration);
 
-        private delegate Task<int> MonitorDelegate(
+        private delegate Task<ReturnCode> MonitorDelegate(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -167,7 +167,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private static Option DiagnosticPortOption() =>
             new(
-                alias: "--diagnostic-port",
+                aliases: new[] { "--dport", "--diagnostic-port" },
                 description: "The path to diagnostic port to be used.")
             {
                 Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => "")

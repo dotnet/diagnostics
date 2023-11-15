@@ -225,7 +225,6 @@ public class SOS
         {
             throw new SkipTestException("This test validates POH behavior, which was introduced in .net 5");
         }
-
         await SOSTestHelpers.RunTest(
             config,
             debuggeeName: "GCPOH",
@@ -309,6 +308,17 @@ public class SOS
             scriptName: "StackTests.script",
             Output,
             testName: "SOS.StackTests");
+    }
+
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.TestExtensions", MemberType = typeof(SOSTestHelpers))]
+    public async Task TestExtensions(TestConfiguration config)
+    {
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "LineNums",
+            scriptName: "TestExtensions.script",
+            Output,
+            testName: "SOS.TestExtensions");
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]

@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Hosting;
 using SOS.Hosting.DbgEng.Interop;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
@@ -53,6 +54,7 @@ namespace SOS.Extensions
                     IMAGE_FILE_MACHINE.THUMB2 => Architecture.Arm,
                     IMAGE_FILE_MACHINE.AMD64 => Architecture.X64,
                     IMAGE_FILE_MACHINE.ARM64 => Architecture.Arm64,
+                    IMAGE_FILE_MACHINE.RISCV64 => (Architecture)9 /* Architecture.RiscV64 */,
                     _ => throw new PlatformNotSupportedException($"Machine type not supported: {type}"),
                 };
             }
@@ -94,7 +96,48 @@ namespace SOS.Extensions
                 return memoryService;
             });
 
+            // Add optional crash info service (currently only for Native AOT).
+            _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => CreateCrashInfoService(services, debuggerServices));
+            OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
+
+            if (debuggerServices.DebugClient is not null)
+            {
+                _serviceContainerFactory.AddServiceFactory<IMemoryRegionService>((services) => new MemoryRegionServiceFromDebuggerServices(debuggerServices.DebugClient));
+            }
+
             Finished();
+        }
+
+        private unsafe ICrashInfoService CreateCrashInfoService(IServiceProvider services, DebuggerServices debuggerServices)
+        {
+            // For Linux/OSX dumps loaded under dbgeng the GetLastException API doesn't return the necessary information
+            if (Host.HostType == HostType.DbgEng && (OperatingSystem == OSPlatform.Linux || OperatingSystem == OSPlatform.OSX))
+            {
+                return SpecialDiagInfo.CreateCrashInfoService(services);
+            }
+            HResult hr = debuggerServices.GetLastException(out uint processId, out int threadIndex, out EXCEPTION_RECORD64 exceptionRecord);
+            if (hr.IsOK)
+            {
+                if (exceptionRecord.ExceptionCode == CrashInfoService.STATUS_STACK_BUFFER_OVERRUN &&
+                    exceptionRecord.NumberParameters >= 4 &&
+                    exceptionRecord.ExceptionInformation[0] == CrashInfoService.FAST_FAIL_EXCEPTION_DOTNET_AOT)
+                {
+                    uint hresult = (uint)exceptionRecord.ExceptionInformation[1];
+                    ulong triageBufferAddress = exceptionRecord.ExceptionInformation[2];
+                    int triageBufferSize = (int)exceptionRecord.ExceptionInformation[3];
+
+                    Span<byte> buffer = new byte[triageBufferSize];
+                    if (services.GetService<IMemoryService>().ReadMemory(triageBufferAddress, buffer, out int bytesRead) && bytesRead == triageBufferSize)
+                    {
+                        return CrashInfoService.Create(hresult, buffer);
+                    }
+                    else
+                    {
+                        Trace.TraceError($"CrashInfoService: ReadMemory({triageBufferAddress}) failed");
+                    }
+                }
+            }
+            return null;
         }
     }
 }

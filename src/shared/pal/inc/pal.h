@@ -96,6 +96,8 @@ typedef PVOID NATIVE_LIBRARY_HANDLE;
 #define _M_ARM64 1
 #elif defined(__s390x__) && !defined(_M_S390X)
 #define _M_S390X 1
+#elif defined(__riscv) && (__riscv_xlen == 64) && !defined(_M_RISCV64)
+#define _M_RISCV64 1
 #endif
 
 #if defined(_M_IX86) && !defined(HOST_X86)
@@ -108,6 +110,8 @@ typedef PVOID NATIVE_LIBRARY_HANDLE;
 #define HOST_ARM64
 #elif defined(_M_S390X) && !defined(HOST_S390X)
 #define HOST_S390X
+#elif defined(_M_RISCV64) && !defined(HOST_RISCV64)
+#define HOST_RISCV64
 #endif
 
 #endif // !_MSC_VER
@@ -1762,6 +1766,134 @@ typedef struct _KNONVOLATILE_CONTEXT_POINTERS {
 
 } KNONVOLATILE_CONTEXT_POINTERS, *PKNONVOLATILE_CONTEXT_POINTERS;
 
+#elif defined(HOST_RISCV64)
+
+// Please refer to src/coreclr/pal/src/arch/riscv64/asmconstants.h
+#define CONTEXT_RISCV64 0x01000000L
+
+#define CONTEXT_CONTROL (CONTEXT_RISCV64 | 0x1)
+#define CONTEXT_INTEGER (CONTEXT_RISCV64 | 0x2)
+#define CONTEXT_FLOATING_POINT  (CONTEXT_RISCV64 | 0x4)
+#define CONTEXT_DEBUG_REGISTERS (CONTEXT_RISCV64 | 0x8)
+
+#define CONTEXT_FULL (CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_FLOATING_POINT)
+
+#define CONTEXT_ALL (CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_FLOATING_POINT | CONTEXT_DEBUG_REGISTERS)
+
+#define CONTEXT_EXCEPTION_ACTIVE 0x8000000
+#define CONTEXT_SERVICE_ACTIVE 0x10000000
+#define CONTEXT_EXCEPTION_REQUEST 0x40000000
+#define CONTEXT_EXCEPTION_REPORTING 0x80000000
+
+//
+// This flag is set by the unwinder if it has unwound to a call
+// site, and cleared whenever it unwinds through a trap frame.
+// It is used by language-specific exception handlers to help
+// differentiate exception scopes during dispatching.
+//
+
+#define CONTEXT_UNWOUND_TO_CALL 0x20000000
+
+// begin_ntoshvp
+
+//
+// Specify the number of breakpoints and watchpoints that the OS
+// will track. Architecturally, RISCV64 supports up to 16. In practice,
+// however, almost no one implements more than 4 of each.
+//
+
+#define RISCV64_MAX_BREAKPOINTS     8
+#define RISCV64_MAX_WATCHPOINTS     2
+
+typedef struct DECLSPEC_ALIGN(16) _CONTEXT {
+
+    //
+    // Control flags.
+    //
+
+    /* +0x000 */ DWORD ContextFlags;
+
+    //
+    // Integer registers.
+    //
+    DWORD64 R0;
+    DWORD64 Ra;
+    DWORD64 Sp;
+    DWORD64 Gp;
+    DWORD64 Tp;
+    DWORD64 T0;
+    DWORD64 T1;
+    DWORD64 T2;
+    DWORD64 Fp;
+    DWORD64 S1;
+    DWORD64 A0;
+    DWORD64 A1;
+    DWORD64 A2;
+    DWORD64 A3;
+    DWORD64 A4;
+    DWORD64 A5;
+    DWORD64 A6;
+    DWORD64 A7;
+    DWORD64 S2;
+    DWORD64 S3;
+    DWORD64 S4;
+    DWORD64 S5;
+    DWORD64 S6;
+    DWORD64 S7;
+    DWORD64 S8;
+    DWORD64 S9;
+    DWORD64 S10;
+    DWORD64 S11;
+    DWORD64 T3;
+    DWORD64 T4;
+    DWORD64 T5;
+    DWORD64 T6;
+    DWORD64 Pc;
+
+    //
+    // Floating Point Registers
+    //
+    // TODO-RISCV64: support the SIMD.
+    ULONGLONG F[32];
+    DWORD Fcsr;
+} CONTEXT, *PCONTEXT, *LPCONTEXT;
+
+//
+// Nonvolatile context pointer record.
+//
+
+typedef struct _KNONVOLATILE_CONTEXT_POINTERS {
+
+    PDWORD64 S1;
+    PDWORD64 S2;
+    PDWORD64 S3;
+    PDWORD64 S4;
+    PDWORD64 S5;
+    PDWORD64 S6;
+    PDWORD64 S7;
+    PDWORD64 S8;
+    PDWORD64 S9;
+    PDWORD64 S10;
+    PDWORD64 S11;
+    PDWORD64 Fp;
+    PDWORD64 Gp;
+    PDWORD64 Tp;
+    PDWORD64 Ra;
+
+    PDWORD64 F8;
+    PDWORD64 F9;
+    PDWORD64 F18;
+    PDWORD64 F19;
+    PDWORD64 F20;
+    PDWORD64 F21;
+    PDWORD64 F22;
+    PDWORD64 F23;
+    PDWORD64 F24;
+    PDWORD64 F25;
+    PDWORD64 F26;
+    PDWORD64 F27;
+} KNONVOLATILE_CONTEXT_POINTERS, *PKNONVOLATILE_CONTEXT_POINTERS;
+
 #elif defined(HOST_S390X)
 
 // There is no context for s390x defined in winnt.h,
@@ -1912,6 +2044,8 @@ GetThreadTimes(
 #define PAL_CS_NATIVE_DATA_SIZE 56
 #elif defined(__sun) && defined(__x86_64__)
 #define PAL_CS_NATIVE_DATA_SIZE 48
+#elif defined(__linux__) && defined(__riscv) && __riscv_xlen == 64
+#define PAL_CS_NATIVE_DATA_SIZE 96
 #else
 #warning
 #error  PAL_CS_NATIVE_DATA_SIZE is not defined for this architecture
@@ -2548,9 +2682,9 @@ BitScanReverse64(
     return qwMask != 0;
 }
 
-FORCEINLINE void PAL_ArmInterlockedOperationBarrier()
+FORCEINLINE void PAL_InterlockedOperationBarrier()
 {
-#ifdef HOST_ARM64
+#if defined(HOST_ARM64) || defined(HOST_RISCV64)
     // On arm64, most of the __sync* functions generate a code sequence like:
     //   loop:
     //     ldaxr (load acquire exclusive)
@@ -2563,7 +2697,7 @@ FORCEINLINE void PAL_ArmInterlockedOperationBarrier()
     // require the load to occur after the store. This memory barrier should be used following a call to a __sync* function to
     // prevent that reordering. Code generated for arm32 includes a 'dmb' after 'cbnz', so no issue there at the moment.
     __sync_synchronize();
-#endif // HOST_ARM64
+#endif
 }
 
 /*++
@@ -2594,7 +2728,7 @@ InterlockedIncrement(
     IN OUT LONG volatile *lpAddend)
 {
     LONG result = __sync_add_and_fetch(lpAddend, (LONG)1);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2607,7 +2741,7 @@ InterlockedIncrement64(
     IN OUT LONGLONG volatile *lpAddend)
 {
     LONGLONG result = __sync_add_and_fetch(lpAddend, (LONGLONG)1);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2639,7 +2773,7 @@ InterlockedDecrement(
     IN OUT LONG volatile *lpAddend)
 {
     LONG result = __sync_sub_and_fetch(lpAddend, (LONG)1);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2655,7 +2789,7 @@ InterlockedDecrement64(
     IN OUT LONGLONG volatile *lpAddend)
 {
     LONGLONG result = __sync_sub_and_fetch(lpAddend, (LONGLONG)1);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2690,7 +2824,7 @@ InterlockedExchange(
     IN LONG Value)
 {
     LONG result = __atomic_exchange_n(Target, Value, __ATOMIC_ACQ_REL);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2704,7 +2838,7 @@ InterlockedExchange64(
     IN LONGLONG Value)
 {
     LONGLONG result = __atomic_exchange_n(Target, Value, __ATOMIC_ACQ_REL);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2746,7 +2880,7 @@ InterlockedCompareExchange(
             Destination, /* The pointer to a variable whose value is to be compared with. */
             Comperand, /* The value to be compared */
             Exchange /* The value to be stored */);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2769,7 +2903,7 @@ InterlockedCompareExchange64(
             Destination, /* The pointer to a variable whose value is to be compared with. */
             Comperand, /* The value to be compared */
             Exchange /* The value to be stored */);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2800,7 +2934,7 @@ InterlockedExchangeAdd(
     IN LONG Value)
 {
     LONG result = __sync_fetch_and_add(Addend, Value);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2814,7 +2948,7 @@ InterlockedExchangeAdd64(
     IN LONGLONG Value)
 {
     LONGLONG result = __sync_fetch_and_add(Addend, Value);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2828,7 +2962,7 @@ InterlockedAnd(
     IN LONG Value)
 {
     LONG result = __sync_fetch_and_and(Destination, Value);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2842,7 +2976,7 @@ InterlockedOr(
     IN LONG Value)
 {
     LONG result = __sync_fetch_and_or(Destination, Value);
-    PAL_ArmInterlockedOperationBarrier();
+    PAL_InterlockedOperationBarrier();
     return result;
 }
 
@@ -2914,6 +3048,9 @@ YieldProcessor()
         "nop");
 #elif defined(HOST_ARM) || defined(HOST_ARM64)
     __asm__ __volatile__( "yield");
+#elif defined(HOST_RISCV64)
+    // TODO-RISCV64-CQ: When Zihintpause is supported, replace with `pause` instruction.
+    __asm__ __volatile__(".word 0x0100000f");
 #else
     return;
 #endif

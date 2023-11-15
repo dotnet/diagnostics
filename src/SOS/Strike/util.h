@@ -1545,7 +1545,7 @@ BOOL IsMiniDumpFile();
 void ReportOOM();
 
 BOOL SafeReadMemory (TADDR offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead);
-#if !defined(_TARGET_WIN64_) && !defined(_ARM64_) && !defined(_MIPS64_)
+#if !defined(_TARGET_WIN64_) && !defined(_ARM64_) && !defined(_MIPS64_) && !defined(_RISCV64_)
 // on 64-bit platforms TADDR and CLRDATA_ADDRESS are identical
 inline BOOL SafeReadMemory (CLRDATA_ADDRESS offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead)
 { return SafeReadMemory(TO_TADDR(offset), lpBuffer, cb, lpcbBytesRead); }
@@ -1777,8 +1777,6 @@ CLRDATA_ADDRESS GetAppDomainForMT(CLRDATA_ADDRESS mtPtr);
 CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr);
 
 BOOL IsMTForFreeObj(DWORD_PTR pMT);
-
-HRESULT ExecuteCommand(PCSTR commandName, PCSTR args);
 
 enum ARGTYPE {COBOOL,COSIZE_T,COHEX,COSTRING};
 struct CMDOption
@@ -2418,6 +2416,54 @@ typedef struct {
 
 } ARM64_CONTEXT;
 
+///RISCV64 Context
+#define RISCV64_MAX_BREAKPOINTS     8
+#define RISCV64_MAX_WATCHPOINTS     2
+typedef struct {
+
+    DWORD ContextFlags;
+
+    DWORD64 R0;
+    DWORD64 Ra;
+    DWORD64 Sp;
+    DWORD64 Gp;
+    DWORD64 Tp;
+    DWORD64 T0;
+    DWORD64 T1;
+    DWORD64 T2;
+    DWORD64 Fp;
+    DWORD64 S1;
+    DWORD64 A0;
+    DWORD64 A1;
+    DWORD64 A2;
+    DWORD64 A3;
+    DWORD64 A4;
+    DWORD64 A5;
+    DWORD64 A6;
+    DWORD64 A7;
+    DWORD64 S2;
+    DWORD64 S3;
+    DWORD64 S4;
+    DWORD64 S5;
+    DWORD64 S6;
+    DWORD64 S7;
+    DWORD64 S8;
+    DWORD64 S9;
+    DWORD64 S10;
+    DWORD64 S11;
+    DWORD64 T3;
+    DWORD64 T4;
+    DWORD64 T5;
+    DWORD64 T6;
+    DWORD64 Pc;
+
+    ULONGLONG F[32];
+    DWORD Fcsr;
+
+    DWORD Padding[3];
+
+} RISCV64_CONTEXT;
+
 typedef struct _CROSS_PLATFORM_CONTEXT {
 
     _CROSS_PLATFORM_CONTEXT() {}
@@ -2427,6 +2473,7 @@ typedef struct _CROSS_PLATFORM_CONTEXT {
         AMD64_CONTEXT     Amd64Context;
         ARM_CONTEXT       ArmContext;
         ARM64_CONTEXT     Arm64Context;
+        RISCV64_CONTEXT   RiscV64Context;
     };
 
 } CROSS_PLATFORM_CONTEXT, *PCROSS_PLATFORM_CONTEXT;

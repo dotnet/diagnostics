@@ -31,8 +31,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <stddef.h>
-
 #include "strike.h"
+
 // We need to define the target address type.  This will be used in the
 // functions that read directly from the debuggee address space, vs. using
 // the DAC tgo read the DAC-ized data structures.
@@ -258,7 +258,7 @@ void GcHistAddLog(LPCSTR msg, StressMsg* stressMsg)
 DECLARE_API(HistStats)
 {
     INIT_API();
-
+    
     ExtOut ("%8s %8s %8s\n",
         "GCCount", "Promotes", "Relocs");
     ExtOut ("-----------------------------------\n");
@@ -348,12 +348,13 @@ DECLARE_API(HistRoot)
     };
 
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
-        return Status;
-
+    { 
+        return E_INVALIDARG;
+    }
     if (nArg != 1)
     {
         ExtOut ("!Root <valid object pointer>\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     size_t Root = (size_t) GetExpression(rootstr.data);
@@ -463,12 +464,13 @@ DECLARE_API(HistObjFind)
     };
 
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
-        return Status;
-
+    {
+        return E_INVALIDARG;
+    }
     if (nArg != 1)
     {
         ExtOut ("!ObjSearch <valid object pointer>\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     size_t object = (size_t) GetExpression(objstr.data);
@@ -542,12 +544,13 @@ DECLARE_API(HistObj)
     };
 
     if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
-        return Status;
-
+    {
+        return E_INVALIDARG;
+    }
     if (nArg != 1)
     {
         ExtOut ("!object <valid object pointer>\n");
-        return Status;
+        return E_INVALIDARG;
     }
 
     size_t object = (size_t) GetExpression(objstr.data);

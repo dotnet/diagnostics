@@ -10,11 +10,8 @@ using Microsoft.Diagnostics.Runtime;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "sizestats", Help = "Size statistics for the GC heap.")]
-    public sealed class SizeStatsCommand : CommandBase
+    public sealed class SizeStatsCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
-
         public override void Invoke()
         {
             SizeStats(Generation.Generation0, isFree: false);

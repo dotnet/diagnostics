@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public Runtime(IServiceProvider services, int id, ClrInfo clrInfo)
         {
-            Target = services.GetService<ITarget>() ?? throw new ArgumentNullException(nameof(Target), "Uninitialized service");
+            Target = services.GetService<ITarget>() ?? throw new NullReferenceException($"Uninitialized service: {nameof(Target)}");
             Id = id;
             _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
             _symbolService = services.GetService<ISymbolService>();
@@ -252,7 +252,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (key is not null)
                 {
                     // Now download the DAC module from the symbol server
-                    filePath = _symbolService.DownloadFile(key);
+                    filePath = _symbolService.DownloadFile(key.Index, key.FullPathName);
                 }
             }
             else

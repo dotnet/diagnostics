@@ -35,6 +35,7 @@ namespace SOS.Hosting.DbgEng.Interop
         AMD64 = 0x8664, // AMD64 (K8)
         M32R = 0x9041, // M32R little-endian
         ARM64 = 0xAA64, // ARM64 Little-endian
-        CEE = 0xC0EE
+        CEE = 0xC0EE,
+        RISCV64 = 0x5064
     }
 }

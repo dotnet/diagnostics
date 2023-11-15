@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 {
                     if (!matcher.Match(value))
                     {
-                        Assert.True(false, $"Expected {value} to match pattern {keyValuePair.Key}");
+                        Assert.Fail($"Expected {value} to match pattern {keyValuePair.Key}");
                     };
                 }
 
@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 {
                     if (matcher.Match(value))
                     {
-                        Assert.False(true, $"Expected {value} to not match pattern {keyValuePair.Key}");
+                        Assert.Fail($"Expected {value} to not match pattern {keyValuePair.Key}");
                     }
                 }
             }

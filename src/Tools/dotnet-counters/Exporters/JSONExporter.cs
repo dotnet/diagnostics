@@ -5,6 +5,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
@@ -41,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 builder = new StringBuilder();
                 builder
                     .Append("{ \"TargetProcess\": \"").Append(_processName).Append("\", ")
-                    .Append("\"StartTime\": \"").Append(DateTime.Now.ToString()).Append("\", ")
+                    .Append("\"StartTime\": \"").Append(DateTime.Now.ToString("O")).Append("\", ")
                     .Append("\"Events\": [");
             }
         }
@@ -71,11 +72,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     builder.Clear();
                 }
                 builder
-                    .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("u")).Append("\", ")
-                    .Append(" \"provider\": \"").Append(JsonEscape(payload.ProviderName)).Append("\", ")
-                    .Append(" \"name\": \"").Append(JsonEscape(payload.DisplayName)).Append("\", ")
-                    .Append(" \"tags\": \"").Append(JsonEscape(payload.Tags)).Append("\", ")
-                    .Append(" \"counterType\": \"").Append(JsonEscape(payload.CounterType)).Append("\", ")
+                    .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("O")).Append("\", ")
+                    .Append(" \"provider\": \"").Append(JsonEscape(payload.Provider)).Append("\", ")
+                    .Append(" \"name\": \"").Append(JsonEscape(payload.GetDisplay())).Append("\", ")
+                    .Append(" \"tags\": \"").Append(JsonEscape(payload.Metadata)).Append("\", ")
+                    .Append(" \"counterType\": \"").Append(JsonEscape(payload.CounterType.ToString())).Append("\", ")
                     .Append(" \"value\": ").Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append(" },");
             }
         }

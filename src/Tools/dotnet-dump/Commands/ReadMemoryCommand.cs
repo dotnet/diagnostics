@@ -7,7 +7,7 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    [Command(Name = "readmemory", Aliases = new string[] { "d" }, Help = "Dumps memory contents.")]
+    [Command(Name = "d", Aliases = new string[] { "readmemory" }, Help = "Dumps memory contents.")]
     [Command(Name = "db", DefaultOptions = "--ascii:true  --unicode:false --ascii-string:false --unicode-string:false -c:128 -l:1  -w:16", Help = "Dumps memory as bytes.")]
     [Command(Name = "dc", DefaultOptions = "--ascii:false --unicode:true  --ascii-string:false --unicode-string:false -c:64  -l:2  -w:8", Help = "Dumps memory as chars.")]
     [Command(Name = "da", DefaultOptions = "--ascii:false --unicode:false --ascii-string:true  --unicode-string:false -c:128 -l:1  -w:0", Help = "Dumps memory as zero-terminated byte strings.")]

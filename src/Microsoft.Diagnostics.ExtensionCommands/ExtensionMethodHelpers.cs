@@ -11,6 +11,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     internal static class ExtensionMethodHelpers
     {
         public static string ConvertToHumanReadable(this ulong totalBytes) => ConvertToHumanReadable((double)totalBytes);
+
         public static string ConvertToHumanReadable(this long totalBytes) => ConvertToHumanReadable((double)totalBytes);
 
         public static string ConvertToHumanReadable(this double totalBytes)

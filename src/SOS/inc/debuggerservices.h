@@ -166,6 +166,17 @@ public:
     virtual HRESULT STDMETHODCALLTYPE AddModuleSymbol(
         void* param,
         const char* symbolFileName) = 0;
+
+    virtual HRESULT STDMETHODCALLTYPE GetLastEventInformation(
+        PULONG type,
+        PULONG processId,
+        PULONG threadId,
+        PVOID extraInformation,
+        ULONG extraInformationSize,
+        PULONG extraInformationUsed,
+        PSTR description,
+        ULONG descriptionSize,
+        PULONG descriptionUsed) = 0;
 };
 
 #ifdef __cplusplus

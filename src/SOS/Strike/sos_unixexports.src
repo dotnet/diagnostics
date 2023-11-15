@@ -2,7 +2,6 @@
 ; The .NET Foundation licenses this file to you under the MIT license.
 ; See the LICENSE file in the project root for more information.
 
-AnalyzeOOM
 bpmd
 ClrStack
 dbgout
@@ -13,32 +12,24 @@ DumpClass
 DumpDelegate
 DumpDomain
 DumpGCData
-DumpHeap
 DumpIL
 DumpLog
 DumpMD
 DumpModule
 DumpMT
 DumpObj
-DumpRuntimeTypes
 DumpSig
 DumpSigElem
 DumpStack
-DumpStackObjects
 DumpVC
-EEHeap
 EEVersion
 EEStack
 EHInfo
 enummem
-FinalizeQueue
 FindAppDomain
 FindRoots
 GCHandles
-GCHeapStat
 GCInfo
-GCRoot
-GCWhere
 Help
 HistClear
 HistInit
@@ -47,11 +38,8 @@ HistObjFind
 HistRoot
 HistStats
 IP2MD
-ListNearObj
 Name2EE
-ObjSize
 PrintException
-PathTo
 runtimes
 StopOnCatch
 SetClrPath
@@ -61,13 +49,9 @@ runtimes
 SuppressJitOptimization
 SyncBlk
 Threads
-ThreadPool
 ThreadState
 Token2EE
-TraverseHeap
 u
-VerifyHeap
-VerifyObj
 
 SOSInitializeByHost
 SOSUninitializeByHost

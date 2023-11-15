@@ -137,6 +137,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             routerFactory.Logger?.LogInformation("Starting automatic shutdown.");
                             throw;
                         }
+
+                        routerFactory.Logger?.LogTrace($"runRouter continues after exception: {ex.Message}");
                     }
                 }
             }

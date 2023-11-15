@@ -83,14 +83,6 @@ public:
         PCSTR arguments) = 0;
 
     /// <summary>
-    /// Displays the help for a managed extension command
-    /// </summary>
-    /// <param name="commandName"></param>
-    /// <returns>error code</returns>
-    virtual HRESULT STDMETHODCALLTYPE DisplayHelp( 
-        PCSTR commandName) = 0;
-
-    /// <summary>
     /// Uninitialize the extension infrastructure
     /// </summary>
     virtual void STDMETHODCALLTYPE Uninitialize() = 0;

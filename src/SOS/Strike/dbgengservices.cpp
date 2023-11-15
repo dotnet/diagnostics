@@ -512,6 +512,30 @@ DbgEngServices::AddModuleSymbol(
     return S_OK;
 }
 
+HRESULT
+DbgEngServices::GetLastEventInformation(
+        PULONG type,
+        PULONG processId,
+        PULONG threadId,
+        PVOID extraInformation,
+        ULONG extraInformationSize,
+        PULONG extraInformationUsed,
+        PSTR description,
+        ULONG descriptionSize,
+        PULONG descriptionUsed)
+{
+    return m_control->GetLastEventInformation(
+        type,
+        processId,
+        threadId,
+        extraInformation,
+        extraInformationSize,
+        extraInformationUsed,
+        description,
+        descriptionSize,
+        descriptionUsed);
+}
+
 //----------------------------------------------------------------------------
 // IRemoteMemoryService
 //----------------------------------------------------------------------------

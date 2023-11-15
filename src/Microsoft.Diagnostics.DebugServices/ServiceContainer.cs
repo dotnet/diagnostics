@@ -29,9 +29,8 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         /// <param name="parent">search this provider if service isn't found in this instance or null</param>
         /// <param name="factories">service factories to initialize provider or null</param>
-        public ServiceContainer(IServiceProvider parent, Dictionary<Type, ServiceFactory> factories)
+        public ServiceContainer(IServiceProvider parent, Dictionary<Type, ServiceFactory> factories = null)
         {
-            Debug.Assert(factories != null);
             _parent = parent;
             _factories = factories;
             _instances = new Dictionary<Type, object>();
@@ -88,7 +87,7 @@ namespace Microsoft.Diagnostics.DebugServices
             {
                 return service;
             }
-            if (_factories.TryGetValue(type, out ServiceFactory factory))
+            if (_factories != null && _factories.TryGetValue(type, out ServiceFactory factory))
             {
                 service = factory(this);
                 _instances.Add(type, service);

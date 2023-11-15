@@ -32,9 +32,9 @@ if(CLR_CMAKE_HOST_ARCH_AMD64)
   add_definitions(-D_TARGET_WIN64_=1)
   add_definitions(-DDBG_TARGET_64BIT)
   add_definitions(-DDBG_TARGET_WIN64=1)
-  if(WIN32)
+  if (CLR_CMAKE_HOST_WIN32)
     add_definitions(-DSOS_TARGET_ARM64=1)
-  endif(WIN32)
+  endif(CLR_CMAKE_HOST_WIN32)
   remove_definitions(-D_TARGET_ARM64_=1)
   add_definitions(-D_TARGET_AMD64_)
   add_definitions(-DDBG_TARGET_AMD64)
@@ -44,9 +44,9 @@ elseif(CLR_CMAKE_HOST_ARCH_I386)
   add_definitions(-D_TARGET_X86_=1)
   add_definitions(-DTARGET_X86)
   add_definitions(-DDBG_TARGET_32BIT)
-  if(WIN32)
+  if (CLR_CMAKE_HOST_WIN32)
     add_definitions(-DSOS_TARGET_ARM=1)
-  endif(WIN32)
+  endif(CLR_CMAKE_HOST_WIN32)
 elseif(CLR_CMAKE_HOST_ARCH_ARM)
   message(STATUS "CLR_CMAKE_HOST_ARCH_ARM")
   add_definitions(-DSOS_TARGET_ARM=1)
@@ -64,6 +64,11 @@ elseif(CLR_CMAKE_HOST_ARCH_MIPS64)
   add_definitions(-D_TARGET_WIN64_=1)
   add_definitions(-DDBG_TARGET_64BIT)
   add_definitions(-DDBG_TARGET_WIN64=1)
+elseif(CLR_CMAKE_HOST_ARCH_RISCV64)
+  add_definitions(-DSOS_TARGET_RISCV64=1)
+  add_definitions(-D_TARGET_WIN64_=1)
+  add_definitions(-DDBG_TARGET_64BIT)
+  add_definitions(-DDBG_TARGET_WIN64=1)
 endif()
 
 add_definitions(-DSTRIKE)  
@@ -73,11 +78,8 @@ include_directories(${ROOT_DIR}/src/SOS/extensions)
 include_directories(${CLR_SHARED_DIR}/gcdump)
 include_directories(platform)
 
-if(WIN32)
+if (CLR_CMAKE_HOST_WIN32)
   add_definitions(-DUSE_STL)
-
-  #use static crt
-  add_definitions(-MT) 
 
   set(SOS_SOURCES
     disasm.cpp
@@ -89,6 +91,7 @@ if(WIN32)
     gchist.cpp
     gcroot.cpp
     symbols.cpp
+    managedcommands.cpp
     metadata.cpp
     sigparser.cpp
     sildasm.cpp
@@ -137,7 +140,7 @@ if(WIN32)
         mscoree.lib)
   endif(NOT CLR_CMAKE_HOST_ARCH_ARM64 AND NOT CLR_CMAKE_HOST_ARCH_ARM)
 
-else(WIN32)
+else(CLR_CMAKE_HOST_WIN32)
   add_definitions(-DFEATURE_ENABLE_HARDWARE_EXCEPTIONS)
   add_definitions(-DPAL_STDCPP_COMPAT=1)
   add_compile_options(-Wno-null-arithmetic)
@@ -186,28 +189,28 @@ else(WIN32)
     coreclrpal
   )
 
-endif(WIN32)
+endif(CLR_CMAKE_HOST_WIN32)
 
 if(CLR_CMAKE_HOST_ARCH_AMD64)
   set(SOS_SOURCES_ARCH
     disasmX86.cpp
   )
-  if(WIN32)
+  if (CLR_CMAKE_HOST_WIN32)
     list(APPEND 
       SOS_SOURCES_ARCH  
       disasmARM64.cpp
     )
-  endif(WIN32)
+  endif(CLR_CMAKE_HOST_WIN32)
 elseif(CLR_CMAKE_HOST_ARCH_I386)
   set(SOS_SOURCES_ARCH 
     disasmX86.cpp
   )
-  if(WIN32)
+  if (CLR_CMAKE_HOST_WIN32)
     list(APPEND
       SOS_SOURCES_ARCH
       disasmARM.cpp
     )
-  endif(WIN32)
+  endif(CLR_CMAKE_HOST_WIN32)
 elseif(CLR_CMAKE_HOST_ARCH_ARM)
   set(SOS_SOURCES_ARCH
     disasmARM.cpp
@@ -215,6 +218,10 @@ elseif(CLR_CMAKE_HOST_ARCH_ARM)
 elseif(CLR_CMAKE_HOST_ARCH_ARM64)
   set(SOS_SOURCES_ARCH
     disasmARM64.cpp
+  )
+elseif(CLR_CMAKE_HOST_ARCH_RISCV64)
+  set(SOS_SOURCES_ARCH
+    disasmRISCV64.cpp
   )
 endif()
 
@@ -245,6 +252,6 @@ target_link_libraries(sos ${SOS_LIBRARY})
 # add the install targets
 install_clr(TARGETS sos DESTINATIONS .)
 
-if(NOT WIN32)
+if(NOT CLR_CMAKE_HOST_WIN32)
   install(FILES sosdocsunix.txt DESTINATION .)
-endif(NOT WIN32)
+endif(NOT CLR_CMAKE_HOST_WIN32)

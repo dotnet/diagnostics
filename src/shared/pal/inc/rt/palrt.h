@@ -1167,7 +1167,7 @@ typedef struct _DISPATCHER_CONTEXT {
     DWORD Reserved;
 } DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;
 
-#elif defined(HOST_ARM64)
+#elif defined(HOST_ARM64) || defined(HOST_RISCV64)
 
 typedef struct _DISPATCHER_CONTEXT {
     ULONG64 ControlPc;

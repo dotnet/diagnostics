@@ -9,9 +9,9 @@ using Microsoft.Diagnostics.DebugServices;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     [Command(Name = "timerinfo", Aliases = new string[] { "ti" }, Help = "Displays information about running timers.")]
-    public class TimersCommand : ExtensionCommandBase
+    public class TimersCommand : ClrMDHelperCommandBase
     {
-        public override void ExtensionInvoke()
+        public override void Invoke()
         {
             try
             {
@@ -104,33 +104,28 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         }
 
-        protected override string GetDetailedHelp()
-        {
-            return DetailedHelpText;
-        }
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"-------------------------------------------------------------------------------
+TimerInfo
 
-        private readonly string DetailedHelpText =
-            "-------------------------------------------------------------------------------" + Environment.NewLine +
-            "TimerInfo" + Environment.NewLine +
-            Environment.NewLine +
-            "TimerInfo lists all the running timers followed by a summary of the different items." + Environment.NewLine +
-            "The name of the method to be called (on which instance if any) is also provided when available." + Environment.NewLine +
-            Environment.NewLine +
-            "> ti" + Environment.NewLine +
-            "0x000001E29BD45848 @     964 ms every     1000 ms |  0x000001E29BD0C828 (Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat) ->" + Environment.NewLine +
-            "0x000001E19BD0F868 @       1 ms every   ------ ms |  0x000001E19BD0F800 (System.Threading.Tasks.Task+DelayPromise) -> System.Threading.Tasks.Task+<>c.<Delay>b__260_1" + Environment.NewLine +
-            "0x000001E09BD09B40 @       1 ms every   ------ ms |  0x000001E09BD09AD8 (System.Threading.Tasks.Task+DelayPromise) -> System.Threading.Tasks.Task+<>c.<Delay>b__260_1" + Environment.NewLine +
-            "0x000001E29BD58C68 @       1 ms every   ------ ms |  0x000001E29BD58C00 (System.Threading.Tasks.Task+DelayPromise) -> System.Threading.Tasks.Task+<>c.<Delay>b__260_1" + Environment.NewLine +
-            "0x000001E29BCB1398 @    5000 ms every   ------ ms |  0x0000000000000000 () -> System.Diagnostics.Tracing.EventPipeController.PollForTracingCommand" + Environment.NewLine +
-            Environment.NewLine +
-            "   5 timers" + Environment.NewLine +
-            "-----------------------------------------------" + Environment.NewLine +
-            "   1 | @     964 ms every     1000 ms | (Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat) ->" + Environment.NewLine +
-            "   1 | @    5000 ms every   ------ ms | () -> System.Diagnostics.Tracing.EventPipeController.PollForTracingCommand" + Environment.NewLine +
-            "   3 | @       1 ms every   ------ ms | (System.Threading.Tasks.Task+DelayPromise) -> System.Threading.Tasks.Task+<>c.<Delay>b__260_1"
-            ;
+TimerInfo lists all the running timers followed by a summary of the different items.
+The name of the method to be called (on which instance if any) is also provided when available.
+
+> ti
+0x000001E29BD45848 @     964 ms every     1000 ms |  0x000001E29BD0C828 (Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat) ->
+0x000001E19BD0F868 @       1 ms every   ------ ms |  0x000001E19BD0F800 (System.Threading.Tasks.Task+DelayPromise) -> System.Threading.Tasks.Task+<>c.<Delay>b__260_1
+0x000001E09BD09B40 @       1 ms every   ------ ms |  0x000001E09BD09AD8 (System.Threading.Tasks.Task+DelayPromise) -> System.Threading.Tasks.Task+<>c.<Delay>b__260_1
+0x000001E29BD58C68 @       1 ms every   ------ ms |  0x000001E29BD58C00 (System.Threading.Tasks.Task+DelayPromise) -> System.Threading.Tasks.Task+<>c.<Delay>b__260_1
+0x000001E29BCB1398 @    5000 ms every   ------ ms |  0x0000000000000000 () -> System.Diagnostics.Tracing.EventPipeController.PollForTracingCommand
+
+   5 timers
+-----------------------------------------------
+   1 | @     964 ms every     1000 ms | (Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat) ->
+   1 | @    5000 ms every   ------ ms | () -> System.Diagnostics.Tracing.EventPipeController.PollForTracingCommand
+   3 | @       1 ms every   ------ ms | (System.Threading.Tasks.Task+DelayPromise) -> System.Threading.Tasks.Task+<>c.<Delay>b__260_1
+";
     }
-
 
     internal sealed class TimerStat
     {
