@@ -140,8 +140,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private static void SerializeProviders(EventPipeSessionConfiguration config, BinaryWriter writer)
         {
-            writer.Write(Providers.Count);
-            foreach (EventPipeProvider provider in Providers)
+            writer.Write(config.Providers.Count);
+            foreach (EventPipeProvider provider in config.Providers)
             {
                 writer.Write(unchecked((ulong)provider.Keywords));
                 writer.Write((uint)provider.EventLevel);
