@@ -333,7 +333,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (!TryGetDefaultAddress(pid, out string defaultAddress))
             {
-                string msg = $"Process {pid} not running compatible .NET runtime.";
+                string msg = $"Unable to connect to Process {pid}.";
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     msg += $" Please verify that {IpcRootPath} is writable by the current user. "
