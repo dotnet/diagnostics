@@ -305,10 +305,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             defaultAddress = dsrouterAddress;
                         }
                     }
-                    else
-                    {
-                        defaultAddress ??= dsrouterAddress;
-                    }
                 }
                 catch { }
             }
