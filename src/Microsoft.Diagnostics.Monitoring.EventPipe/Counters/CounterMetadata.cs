@@ -3,9 +3,9 @@
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    public class CachedCounterInfo
+    public class CounterMetadata
     {
-        public CachedCounterInfo(string providerName, string counterName, string meterTags, string instrumentTags, string scopeHash)
+        public CounterMetadata(string providerName, string counterName, string meterTags, string instrumentTags, string scopeHash)
         {
             ProviderName = providerName;
             CounterName = counterName;
@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             ScopeHash = scopeHash;
         }
 
-        public CachedCounterInfo() { }
+        public CounterMetadata() { }
         public string ProviderName { get; private set; }
         public string CounterName { get; private set; }
         public string MeterTags { get; private set; }

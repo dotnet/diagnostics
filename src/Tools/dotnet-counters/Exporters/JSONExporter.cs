@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 builder = new StringBuilder();
                 builder
                     .Append("{ \"TargetProcess\": \"").Append(_processName).Append("\", ")
-                    .Append("\"StartTime\": \"").Append(DateTime.Now.ToString()).Append("\", ")
+                    .Append("\"StartTime\": \"").Append(DateTime.Now.ToString("O")).Append("\", ")
                     .Append("\"Events\": [");
             }
         }
@@ -72,13 +72,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     builder.Clear();
                 }
                 builder
-                    .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("u")).Append("\", ")
-                    .Append(" \"provider\": \"").Append(JsonEscape(payload.CounterInfo.ProviderName)).Append("\", ")
+                    .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("O")).Append("\", ")
+                    .Append(" \"provider\": \"").Append(JsonEscape(payload.CounterMetadata.ProviderName)).Append("\", ")
                     .Append(" \"name\": \"").Append(JsonEscape(payload.GetDisplay())).Append("\", ")
-                    .Append(" \"tags\": \"").Append(JsonEscape(payload.Metadata)).Append("\", ")
+                    .Append(" \"tags\": \"").Append(JsonEscape(payload.ValueTags)).Append("\", ")
                     .Append(" \"counterType\": \"").Append(JsonEscape(payload.CounterType.ToString())).Append("\", ")
-                    .Append(" \"meterTags\": \"").Append(JsonEscape(payload.CounterInfo.MeterTags)).Append("\", ")
-                    .Append(" \"instrumentTags\": \"").Append(JsonEscape(payload.CounterInfo.InstrumentTags)).Append("\", ")
+                    .Append(" \"meterTags\": \"").Append(JsonEscape(payload.CounterMetadata.MeterTags)).Append("\", ")
+                    .Append(" \"instrumentTags\": \"").Append(JsonEscape(payload.CounterMetadata.InstrumentTags)).Append("\", ")
                     .Append(" \"value\": ").Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append(" },");
             }
         }

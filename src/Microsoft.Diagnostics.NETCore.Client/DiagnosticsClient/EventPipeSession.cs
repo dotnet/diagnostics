@@ -28,16 +28,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public Stream EventStream => _response.Continuation;
 
-        internal static EventPipeSession Start(IpcEndpoint endpoint, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
+        internal static EventPipeSession Start(IpcEndpoint endpoint, EventPipeSessionConfiguration config)
         {
-            IpcMessage requestMessage = CreateStartMessage(providers, requestRundown, circularBufferMB);
+            IpcMessage requestMessage = CreateStartMessage(config);
             IpcResponse? response = IpcClient.SendMessageGetContinuation(endpoint, requestMessage);
             return CreateSessionFromResponse(endpoint, ref response, nameof(Start));
         }
 
-        internal static async Task<EventPipeSession> StartAsync(IpcEndpoint endpoint, IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB, CancellationToken cancellationToken)
+        internal static async Task<EventPipeSession> StartAsync(IpcEndpoint endpoint, EventPipeSessionConfiguration config, CancellationToken cancellationToken)
         {
-            IpcMessage requestMessage = CreateStartMessage(providers, requestRundown, circularBufferMB);
+            IpcMessage requestMessage = CreateStartMessage(config);
             IpcResponse? response = await IpcClient.SendMessageGetContinuationAsync(endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
             return CreateSessionFromResponse(endpoint, ref response, nameof(StartAsync));
         }
@@ -81,10 +81,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        private static IpcMessage CreateStartMessage(IEnumerable<EventPipeProvider> providers, bool requestRundown, int circularBufferMB)
+        private static IpcMessage CreateStartMessage(EventPipeSessionConfiguration config)
         {
-            EventPipeSessionConfiguration config = new(circularBufferMB, EventPipeSerializationFormat.NetTrace, providers, requestRundown);
-            return new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing2, config.SerializeV2());
+            // To keep backward compatibility with older runtimes we only use newer serialization format when needed
+            // V3 has added support to disable the stacktraces
+            bool shouldUseV3 = !config.RequestStackwalk;
+            EventPipeCommandId command = shouldUseV3 ? EventPipeCommandId.CollectTracing3 : EventPipeCommandId.CollectTracing2;
+            byte[] payload = shouldUseV3 ? config.SerializeV3() : config.SerializeV2();
+            return new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)command, payload);
         }
 
         private static EventPipeSession CreateSessionFromResponse(IpcEndpoint endpoint, ref IpcResponse? response, string operationName)

@@ -63,6 +63,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        public async Task<EventPipeSession> StartEventPipeSession(EventPipeSessionConfiguration config, TimeSpan timeout)
+        {
+            if (_useAsync)
+            {
+                CancellationTokenSource cancellation = new(timeout);
+                return await _client.StartEventPipeSessionAsync(config, cancellation.Token).ConfigureAwait(false);
+            }
+
+            throw new NotSupportedException($"{nameof(StartEventPipeSession)} with config parameter is only supported on async path");
+        }
+
         public async Task<EventPipeSession> StartEventPipeSession(IEnumerable<EventPipeProvider> providers, TimeSpan timeout)
         {
             if (_useAsync)

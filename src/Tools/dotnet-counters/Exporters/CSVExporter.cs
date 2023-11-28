@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
                 builder
                     .Append(payload.Timestamp.ToString()).Append(',')
-                    .Append(payload.CounterInfo.ProviderName).Append(',')
+                    .Append(payload.CounterMetadata.ProviderName).Append(',')
                     .Append(payload.GetDisplay());
 
                 string tags = payload.CombineTags();

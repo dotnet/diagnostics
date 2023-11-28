@@ -112,6 +112,7 @@ namespace SOS.Hosting
                 Architecture.X86 => IMAGE_FILE_MACHINE.I386,
                 Architecture.Arm => IMAGE_FILE_MACHINE.THUMB2,
                 Architecture.Arm64 => IMAGE_FILE_MACHINE.ARM64,
+                (Architecture)9 /* Architecture.RiscV64 */ => IMAGE_FILE_MACHINE.RISCV64,
                 _ => IMAGE_FILE_MACHINE.UNKNOWN,
             };
             return HResult.S_OK;

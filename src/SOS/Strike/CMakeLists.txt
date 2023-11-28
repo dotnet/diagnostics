@@ -219,6 +219,10 @@ elseif(CLR_CMAKE_HOST_ARCH_ARM64)
   set(SOS_SOURCES_ARCH
     disasmARM64.cpp
   )
+elseif(CLR_CMAKE_HOST_ARCH_RISCV64)
+  set(SOS_SOURCES_ARCH
+    disasmRISCV64.cpp
+  )
 endif()
 
 list(APPEND SOS_SOURCES ${SOS_SOURCES_ARCH})

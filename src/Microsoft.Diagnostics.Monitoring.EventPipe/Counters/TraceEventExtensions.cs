@@ -27,23 +27,25 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public int MaxTimeseries { get; set; }
     }
 
+    internal record struct ProviderAndCounter(string ProviderName, string CounterName);
+
     internal static class TraceEventExtensions
     {
-        private static Dictionary<(string, string), CachedCounterInfo> counterInfoByName = new();
+        private static Dictionary<ProviderAndCounter, CounterMetadata> counterMetadataByName = new();
         private static HashSet<string> inactiveSharedSessions = new(StringComparer.OrdinalIgnoreCase);
 
         // This assumes uniqueness of provider/counter combinations;
         // this is currently a limitation (see https://github.com/dotnet/runtime/issues/93097 and https://github.com/dotnet/runtime/issues/93767)
-        public static CachedCounterInfo GetOrCreateProvider(string providerName, string counterName, string meterTags = null, string instrumentTags = null, string scopeHash = null)
+        public static CounterMetadata GetCounterMetadata(string providerName, string counterName, string meterTags = null, string instrumentTags = null, string scopeHash = null)
         {
-            (string providerName, string counterName) providerAndCounter = (providerName, counterName);
-            if (counterInfoByName.TryGetValue(providerAndCounter, out CachedCounterInfo provider))
+            ProviderAndCounter providerAndCounter = new(providerName, counterName);
+            if (counterMetadataByName.TryGetValue(providerAndCounter, out CounterMetadata provider))
             {
                 return provider;
             }
 
-            counterInfoByName.Add(providerAndCounter, new CachedCounterInfo(providerName, counterName, meterTags, instrumentTags, scopeHash));
-            return counterInfoByName[providerAndCounter];
+            counterMetadataByName.Add(providerAndCounter, new CounterMetadata(providerName, counterName, meterTags, instrumentTags, scopeHash));
+            return counterMetadataByName[providerAndCounter];
         }
 
         public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterConfiguration counterConfiguration, out ICounterPayload payload)
@@ -187,13 +189,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
             {
-                payload = new GaugePayload(GetOrCreateProvider(meterName, instrumentName), null, unit, tags, lastValue, obj.TimeStamp);
+                payload = new GaugePayload(GetCounterMetadata(meterName, instrumentName), null, unit, tags, lastValue, obj.TimeStamp);
             }
             else
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
                 // this happens when the Gauge callback function throws an exception.
-                payload = new CounterEndedPayload(GetOrCreateProvider(meterName, instrumentName), obj.TimeStamp);
+                payload = new CounterEndedPayload(GetCounterMetadata(meterName, instrumentName), obj.TimeStamp);
             }
         }
 
@@ -218,7 +220,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (traceEvent.Version < 1)
             {
-                payload = new BeginInstrumentReportingPayload(GetOrCreateProvider(meterName, instrumentName), traceEvent.TimeStamp);
+                payload = new BeginInstrumentReportingPayload(GetCounterMetadata(meterName, instrumentName), traceEvent.TimeStamp);
             }
             else
             {
@@ -226,7 +228,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 string meterTags = (string)traceEvent.PayloadValue(8);
                 string meterScopeHash = (string)traceEvent.PayloadValue(9);
 
-                payload = new BeginInstrumentReportingPayload(GetOrCreateProvider(meterName, instrumentName, meterTags, instrumentTags, meterScopeHash), traceEvent.TimeStamp);
+                payload = new BeginInstrumentReportingPayload(GetCounterMetadata(meterName, instrumentName, meterTags, instrumentTags, meterScopeHash), traceEvent.TimeStamp);
             }
         }
 
@@ -255,14 +257,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
             {
-                payload = new RatePayload(GetOrCreateProvider(meterName, instrumentName), null, unit, tags, value, counterConfiguration.CounterFilter.DefaultIntervalSeconds, traceEvent.TimeStamp);
+                payload = new RatePayload(GetCounterMetadata(meterName, instrumentName), null, unit, tags, value, counterConfiguration.CounterFilter.DefaultIntervalSeconds, traceEvent.TimeStamp);
             }
             else
             {
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
                 // this happens when the ObservableCounter callback function throws an exception
                 // or when the ObservableCounter doesn't include a measurement for a particular set of tag values.
-                payload = new CounterEndedPayload(GetOrCreateProvider(meterName, instrumentName), traceEvent.TimeStamp);
+                payload = new CounterEndedPayload(GetCounterMetadata(meterName, instrumentName), traceEvent.TimeStamp);
             }
         }
 
@@ -293,7 +295,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             if (double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
             {
                 // UpDownCounter reports the value, not the rate - this is different than how Counter behaves.
-                payload = new UpDownCounterPayload(GetOrCreateProvider(meterName, instrumentName), null, unit, tags, value, traceEvent.TimeStamp);
+                payload = new UpDownCounterPayload(GetCounterMetadata(meterName, instrumentName), null, unit, tags, value, traceEvent.TimeStamp);
 
             }
             else
@@ -301,7 +303,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // for observable instruments we assume the lack of data is meaningful and remove it from the UI
                 // this happens when the ObservableUpDownCounter callback function throws an exception
                 // or when the ObservableUpDownCounter doesn't include a measurement for a particular set of tag values.
-                payload = new CounterEndedPayload(GetOrCreateProvider(meterName, instrumentName), traceEvent.TimeStamp);
+                payload = new CounterEndedPayload(GetCounterMetadata(meterName, instrumentName), traceEvent.TimeStamp);
             }
         }
 
@@ -331,7 +333,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //Note quantiles can be empty.
             IList<Quantile> quantiles = ParseQuantiles(quantilesText);
 
-            payload = new AggregatePercentilePayload(GetOrCreateProvider(meterName, instrumentName), null, unit, tags, quantiles, obj.TimeStamp);
+            payload = new AggregatePercentilePayload(GetCounterMetadata(meterName, instrumentName), null, unit, tags, quantiles, obj.TimeStamp);
         }
 
         private static void HandleHistogramLimitReached(TraceEvent obj, CounterConfiguration configuration, out ICounterPayload payload)
