@@ -38,6 +38,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Name = "target")]
         public string TargetAddress { get; set; }
 
+        [Option(Name = "-count", Help = "Max count of roots to find")]
+        public int? Count { get; set; }
+
         public override void Invoke()
         {
             if (!TryParseAddress(TargetAddress, out ulong address))
@@ -58,6 +61,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             });
 
             int count;
+            int maxRoots = Count ?? int.MaxValue;
+
             if (AsGCGeneration.HasValue)
             {
                 int gen = AsGCGeneration.Value;
@@ -81,32 +86,32 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // If not gen0 or gen1, treat it as a normal !gcroot
                     if (NoStacks)
                     {
-                        count = PrintNonStackRoots(gcroot);
+                        count = PrintNonStackRoots(gcroot, maxRoots);
                     }
                     else
                     {
-                        count = PrintAllRoots(gcroot);
+                        count = PrintAllRoots(gcroot, maxRoots);
                     }
                 }
                 else
                 {
-                    count = PrintOlderGenerationRoots(gcroot, gen);
-                    count += PrintNonStackRoots(gcroot);
+                    count = PrintOlderGenerationRoots(gcroot, gen, maxRoots);
+                    count += PrintNonStackRoots(gcroot, maxRoots);
                 }
             }
             else if (NoStacks)
             {
-                count = PrintNonStackRoots(gcroot);
+                count = PrintNonStackRoots(gcroot, maxRoots);
             }
             else
             {
-                count = PrintAllRoots(gcroot);
+                count = PrintAllRoots(gcroot, maxRoots);
             }
 
             Console.WriteLine($"Found {count:n0} unique roots.");
         }
 
-        private int PrintOlderGenerationRoots(GCRoot gcroot, int gen)
+        private int PrintOlderGenerationRoots(GCRoot gcroot, int gen, int maxCount)
         {
             int count = 0;
 
@@ -125,6 +130,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ulong address = internalRootArray.Start;
                 while (internalRootArray.Contains(address))
                 {
+                    if (count >= maxCount)
+                    {
+                        break;
+                    }
+
                     Console.CancellationToken.ThrowIfCancellationRequested();
 
                     if (Memory.ReadPointer(address, out ulong objAddress))
@@ -167,11 +177,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return count;
         }
 
-        private int PrintAllRoots(GCRoot gcroot)
+        private int PrintAllRoots(GCRoot gcroot, int maxCount)
         {
             int count = 0;
             foreach (ClrRoot root in RootCache.EnumerateRoots())
             {
+                if (count >= maxCount)
+                {
+                    break;
+                }
+
                 Console.CancellationToken.ThrowIfCancellationRequested();
                 GCRoot.ChainLink item = gcroot.FindPathFrom(root.Object);
                 if (item is not null)
@@ -184,11 +199,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return count;
         }
 
-        private int PrintNonStackRoots(GCRoot gcroot)
+        private int PrintNonStackRoots(GCRoot gcroot, int maxCount)
         {
             int count = 0;
             foreach (ClrRoot root in RootCache.GetHandleRoots())
             {
+                if (count >= maxCount)
+                {
+                    break;
+                }
+
                 Console.CancellationToken.ThrowIfCancellationRequested();
                 GCRoot.ChainLink item = gcroot.FindPathFrom(root.Object);
                 if (item is not null)
@@ -200,6 +220,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             foreach (ClrRoot root in RootCache.GetFinalizerQueueRoots())
             {
+                if (count >= maxCount)
+                {
+                    break;
+                }
+
                 Console.CancellationToken.ThrowIfCancellationRequested();
                 GCRoot.ChainLink item = gcroot.FindPathFrom(root.Object);
                 if (item is not null)
