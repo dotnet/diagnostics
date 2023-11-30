@@ -9,7 +9,7 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumprefs", Help = "Prints referenced object and total stats for a given object address")]
+    [Command(Name = "dumpreferencedobjects", Aliases = new[] { "dro", "DumpReferencedObjects" }, Help = "Displays a list of all managed objects that are referenced by an object at given address")]
     public class DumpReferencedObjectsCommand : ClrRuntimeCommandBase
     {
         [ServiceImport]
@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
             }
 
-            // do not count itself as referenced?
+            // do not count object itself as referenced?
             visited.Remove(clrObject);
 
             return visited;
