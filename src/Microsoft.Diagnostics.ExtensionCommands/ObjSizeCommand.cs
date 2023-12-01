@@ -33,9 +33,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public override void Invoke()
         {
             IEnumerable<ClrObject> objects;
-            ulong addressOrMethodTable;
-            ClrType objectType;
-            string argument;
 
             if (!string.IsNullOrEmpty(MethodTable))
             {
@@ -44,10 +41,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     throw new ArgumentException($"Could not parse method table: {MethodTable}");
                 }
 
-                addressOrMethodTable = methodTable;
-                objectType = Runtime.Heap.GetTypeByMethodTable(methodTable);
-                argument = "-mt ";
                 objects = Runtime.Heap.EnumerateObjects().Where(obj => obj.Type?.MethodTable == methodTable);
+
+                Console.Write("Objects which ");
+                Console.WriteLine($"({Runtime.Heap.GetTypeByMethodTable(methodTable)?.Name ?? "<unknown type>"}) transitively keep alive:");
+                Console.WriteLine();
             }
             else
             {
@@ -63,16 +61,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     return;
                 }
 
-                addressOrMethodTable = objAddress;
-                objectType = obj.Type;
-                argument = "";
                 objects = new[] { obj };
-            }
 
-            Console.Write("Objects which ");
-            Console.WriteDmlExec(addressOrMethodTable.ToString("x"), $"!dumpobj {argument}{addressOrMethodTable:x}");
-            Console.WriteLine($" ({objectType?.Name ?? "<unknown type>"}) transitively keep alive:");
-            Console.WriteLine();
+                Console.Write("Objects which ");
+                Console.WriteDmlExec(obj.Address.ToString("x"), $"!dumpobj {obj.Address:x}");
+                Console.WriteLine($" ({obj.Type?.Name ?? "<unknown type>"}) transitively keep alive:");
+                Console.WriteLine();
+            }
 
             DumpHeapService.DisplayKind displayKind;
             if (Strings)
