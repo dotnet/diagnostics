@@ -38,8 +38,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument(Name = "target")]
         public string TargetAddress { get; set; }
 
-        [Option(Name = "-count", Help = "Max count of roots to find")]
-        public int? Count { get; set; }
+        [Option(Name = "-limit", Help = "Limits the amount of roots to find")]
+        public int? Limit { get; set; }
 
         public override void Invoke()
         {
@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             });
 
             int count;
-            int maxRoots = Count ?? int.MaxValue;
+            int limit = Limit ?? int.MaxValue;
 
             if (AsGCGeneration.HasValue)
             {
@@ -86,32 +86,32 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // If not gen0 or gen1, treat it as a normal !gcroot
                     if (NoStacks)
                     {
-                        count = PrintNonStackRoots(gcroot, maxRoots);
+                        count = PrintNonStackRoots(gcroot, limit);
                     }
                     else
                     {
-                        count = PrintAllRoots(gcroot, maxRoots);
+                        count = PrintAllRoots(gcroot, limit);
                     }
                 }
                 else
                 {
-                    count = PrintOlderGenerationRoots(gcroot, gen, maxRoots);
-                    count += PrintNonStackRoots(gcroot, maxRoots);
+                    count = PrintOlderGenerationRoots(gcroot, gen, limit);
+                    count += PrintNonStackRoots(gcroot, limit);
                 }
             }
             else if (NoStacks)
             {
-                count = PrintNonStackRoots(gcroot, maxRoots);
+                count = PrintNonStackRoots(gcroot, limit);
             }
             else
             {
-                count = PrintAllRoots(gcroot, maxRoots);
+                count = PrintAllRoots(gcroot, limit);
             }
 
             Console.WriteLine($"Found {count:n0} unique roots.");
         }
 
-        private int PrintOlderGenerationRoots(GCRoot gcroot, int gen, int maxCount)
+        private int PrintOlderGenerationRoots(GCRoot gcroot, int gen, int limit)
         {
             int count = 0;
 
@@ -130,7 +130,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ulong address = internalRootArray.Start;
                 while (internalRootArray.Contains(address))
                 {
-                    if (count >= maxCount)
+                    if (count >= limit)
                     {
                         break;
                     }
@@ -177,12 +177,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return count;
         }
 
-        private int PrintAllRoots(GCRoot gcroot, int maxCount)
+        private int PrintAllRoots(GCRoot gcroot, int limit)
         {
             int count = 0;
             foreach (ClrRoot root in RootCache.EnumerateRoots())
             {
-                if (count >= maxCount)
+                if (count >= limit)
                 {
                     break;
                 }
@@ -199,12 +199,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return count;
         }
 
-        private int PrintNonStackRoots(GCRoot gcroot, int maxCount)
+        private int PrintNonStackRoots(GCRoot gcroot, int limit)
         {
             int count = 0;
             foreach (ClrRoot root in RootCache.GetHandleRoots())
             {
-                if (count >= maxCount)
+                if (count >= limit)
                 {
                     break;
                 }
@@ -220,7 +220,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             foreach (ClrRoot root in RootCache.GetFinalizerQueueRoots())
             {
-                if (count >= maxCount)
+                if (count >= limit)
                 {
                     break;
                 }

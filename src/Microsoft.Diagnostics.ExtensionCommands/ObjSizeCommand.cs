@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 
@@ -26,45 +27,93 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Argument]
         public string ObjectAddress { get; set; }
 
+        [Option(Name = "-mt")]
+        public string MethodTable { get; set; }
+
         public override void Invoke()
         {
-            if (!TryParseAddress(ObjectAddress, out ulong objAddress))
+            IEnumerable<ClrObject> objects;
+            ulong addressOrMethodTable;
+            ClrType objectType;
+            string argument;
+
+            if (!string.IsNullOrEmpty(MethodTable))
             {
-                throw new ArgumentException($"Could not parse target object address: {objAddress:x}");
+                if (!TryParseAddress(MethodTable, out ulong methodTable))
+                {
+                    throw new ArgumentException($"Could not parse method table: {MethodTable}");
+                }
+
+                addressOrMethodTable = methodTable;
+                objectType = Runtime.Heap.GetTypeByMethodTable(methodTable);
+                argument = "-mt ";
+                objects = Runtime.Heap.EnumerateObjects().Where(obj => obj.Type?.MethodTable == methodTable);
+            }
+            else
+            {
+                if (!TryParseAddress(ObjectAddress, out ulong objAddress))
+                {
+                    throw new ArgumentException($"Could not parse target object address: {objAddress:x}");
+                }
+
+                ClrObject obj = Runtime.Heap.GetObject(objAddress);
+                if (!obj.IsValid)
+                {
+                    Console.WriteLine($"{objAddress:x} is not a valid object");
+                    return;
+                }
+
+                addressOrMethodTable = objAddress;
+                objectType = obj.Type;
+                argument = "";
+                objects = new[] { obj };
             }
 
-            ClrObject obj = Runtime.Heap.GetObject(objAddress);
-            if (!obj.IsValid)
-            {
-                Console.WriteLine($"{objAddress:x} is not a valid object");
-                return;
-            }
-
-            Console.Write($"Objects which ");
-            Console.WriteDmlExec(obj.Address.ToString("x"), $"!dumpobj {obj.Address:x}");
-            Console.WriteLine($"({obj.Type?.Name ?? " <unknown type>"}) transitively keep alive:");
+            Console.Write("Objects which ");
+            Console.WriteDmlExec(addressOrMethodTable.ToString("x"), $"!dumpobj {argument}{addressOrMethodTable:x}");
+            Console.WriteLine($" ({objectType?.Name ?? "<unknown type>"}) transitively keep alive:");
             Console.WriteLine();
 
-            DumpHeapService.DisplayKind displayKind = Strings ? DumpHeapService.DisplayKind.Strings : DumpHeapService.DisplayKind.Normal;
-            DumpHeap.PrintHeap(GetTransitiveClosure(obj), displayKind, Stat, printFragmentation: false);
+            DumpHeapService.DisplayKind displayKind;
+            if (Strings)
+            {
+                displayKind = DumpHeapService.DisplayKind.Strings;
+            }
+            else if (Short)
+            {
+                displayKind = DumpHeapService.DisplayKind.Short;
+            }
+            else
+            {
+                displayKind = DumpHeapService.DisplayKind.Normal;
+            }
+
+            DumpHeap.PrintHeap(GetTransitiveClosure(objects), displayKind, Stat, printFragmentation: false);
         }
 
-        private static IEnumerable<ClrObject> GetTransitiveClosure(ClrObject obj)
+        private static IEnumerable<ClrObject> GetTransitiveClosure(IEnumerable<ClrObject> objects)
         {
-            HashSet<ulong> seen = new() { obj };
+            HashSet<ulong> seen = new();
             Queue<ClrObject> queue = new();
 
-            queue.Enqueue(obj);
-            while (queue.Count > 0)
+            foreach (ClrObject obj in objects)
             {
-                ClrObject parent = queue.Dequeue();
-                yield return parent;
-
-                foreach (ClrObject child in parent.EnumerateReferences())
+                if (obj.IsValid && seen.Add(obj))
                 {
-                    if (child.IsValid && seen.Add(child))
+                    queue.Enqueue(obj);
+
+                    while (queue.Count > 0)
                     {
-                        queue.Enqueue(child);
+                        ClrObject parent = queue.Dequeue();
+                        yield return parent;
+
+                        foreach (ClrObject child in parent.EnumerateReferences())
+                        {
+                            if (child.IsValid && seen.Add(child))
+                            {
+                                queue.Enqueue(child);
+                            }
+                        }
                     }
                 }
             }
