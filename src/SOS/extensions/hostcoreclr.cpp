@@ -640,7 +640,7 @@ static HRESULT InitializeNetCoreHost()
         char* exePath = minipal_getexepath();
         if (!exePath)
         {
-            TraceError("Could not get full path to current executable");
+            TraceError("Could not get full path to current executable\n");
             return E_FAIL;
         }
 

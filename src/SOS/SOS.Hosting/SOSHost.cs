@@ -24,12 +24,12 @@ namespace SOS.Hosting
        /// <summary>
        /// Provides the native debugger's debug client instance
        /// </summary>
-       public interface INativeClient
+       public interface INativeDebugger
        {
-           /// <summary>
-           /// Native debugger client interface
-           /// </summary>
-           IntPtr Client { get; }
+            /// <summary>
+            /// Get the native SOS client for commands (IDebugClient under dbgeng, ILLDBServices under lldb)
+            /// </summary>
+            public IntPtr GetNativeClient();
        }
 
         // This is what dbgeng/IDebuggerServices returns for non-PE modules that don't have a timestamp
@@ -58,21 +58,20 @@ namespace SOS.Hosting
 
         private readonly IntPtr _client;
         private readonly ulong _ignoreAddressBitsMask;
-        private readonly bool _releaseClient;
 
         /// <summary>
         /// Create an instance of the hosting class. Has the lifetime of the target.
         /// </summary>
-        public SOSHost(ITarget target, IMemoryService memoryService, [ServiceImport(Optional = true)] INativeClient client)
+        public SOSHost(ITarget target, IMemoryService memoryService, [ServiceImport(Optional = true)] INativeDebugger nativeDebugger)
         {
             Target = target;
             MemoryService = memoryService;
             _ignoreAddressBitsMask = memoryService.SignExtensionMask();
 
             // If running under a native debugger, use the client instance supplied by the debugger for commands
-            if (client != null)
+            if (nativeDebugger != null)
             {
-                _client = client.Client;
+                _client = nativeDebugger.GetNativeClient();
             }
             else
             {
@@ -86,17 +85,14 @@ namespace SOS.Hosting
                     LLDBServices lldbServices = new(this);
                     _client = lldbServices.ILLDBServices;
                 }
-                _releaseClient = true;
             }
+            Debug.Assert(_client != IntPtr.Zero);
         }
 
         void IDisposable.Dispose()
         {
             Trace.TraceInformation($"SOSHost.Dispose");
-            if (_releaseClient)
-            {
-                ComWrapper.ReleaseWithCheck(_client);
-            }
+            ComWrapper.ReleaseWithCheck(_client);
         }
 
         /// <summary>

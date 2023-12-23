@@ -16,7 +16,7 @@ using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Extensions
 {
-    internal sealed unsafe class DebuggerServices : CallableCOMWrapper, SOSHost.INativeClient
+    internal sealed unsafe class DebuggerServices : CallableCOMWrapper, SOSHost.INativeDebugger
     {
         internal enum OperatingSystem
         {
@@ -41,7 +41,6 @@ namespace SOS.Extensions
             : base(new RefCountedFreeLibrary(IntPtr.Zero), IID_IDebuggerServices, punk)
         {
             _hostType = hostType;
-            Client = punk;
 
             // This uses COM marshalling code, so we also check that the OSPlatform is Windows.
             if (hostType == HostType.DbgEng && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -54,9 +53,20 @@ namespace SOS.Extensions
             }
         }
 
-        #region INativeClient
+        #region SOSHost.INativeDebugger
 
-        public IntPtr Client { get; }
+        public IntPtr GetNativeClient()
+        {
+            if (_hostType == HostType.DbgEng)
+            {
+                return QueryInterface(typeof(IDebugClient).GUID);
+            }
+            else if (_hostType == HostType.Lldb)
+            {
+                return QueryInterface(LLDBServices.IID_ILLDBServices);
+            }
+            throw new InvalidOperationException($"DebuggerServices.GetNativeClient: invalid host type {_hostType}");
+        }
 
         #endregion
 

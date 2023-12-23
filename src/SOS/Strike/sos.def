@@ -253,6 +253,9 @@ EXPORTS
     TraceToCode
     tracetocode=TraceToCode
 
+    CLRMACreateInstance
+    CLRMAReleaseInstance
+
     SOSInitializeByHost
     SOSUninitializeByHost
     InitializeHostServices
