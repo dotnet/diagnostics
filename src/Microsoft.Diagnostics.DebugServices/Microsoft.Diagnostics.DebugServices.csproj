@@ -4,7 +4,6 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>;1591;1701</NoWarn>
     <Description>Diagnostics debug services</Description>
-    <VersionPrefix>7.0.0</VersionPrefix>
     <IsPackable>true</IsPackable>
     <PackageTags>Diagnostic</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
