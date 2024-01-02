@@ -17,9 +17,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--allthreads", Aliases = new string[] { "-a" }, Help = "Displays all threads per group instead of at most 4 by default.")]
         public bool AllThreads { get; set; }
 
+        [Option(Name = "--runtime", Aliases = new string[] { "-r" }, Help = "Displays runtime stacks in addition to managed ones.")]
+        public bool IncludeRuntimeStacks { get; set; }
+
         public override void Invoke()
         {
-            ParallelStack ps = ParallelStack.Build(Runtime);
+            ParallelStack ps = ParallelStack.Build(Runtime, IncludeRuntimeStacks);
             if (ps == null)
             {
                 return;

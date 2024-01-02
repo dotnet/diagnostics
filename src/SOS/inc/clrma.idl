@@ -1,0 +1,103 @@
+//
+// CLRMA.idl
+//
+
+import "unknwn.idl";
+
+[
+    uuid(511BCC9D-5B25-4d15-8F00-4DDFB0C142D5),
+    version(3.0),
+    helpstring("CLR Managed Analysis")
+]
+library CLRMA
+{
+    //
+    // Forward declarations
+    //
+
+    interface ICLRManagedAnalysis;
+    interface ICLRMAClrThread;
+    interface ICLRMAClrException;
+    interface ICLRMAObjectInspection;
+
+    //
+    // Interface declarations
+    //
+
+    // ICLRManagedAnalysis
+    [
+        uuid(8CA73A16-C017-4c8f-AD51-B758727478CA),
+        helpstring("ICLRManagedAnalysis interface")
+    ]
+    interface ICLRManagedAnalysis : IUnknown
+    {
+        [propget] HRESULT ProviderName([out, retval] BSTR* bstrProvider);
+
+        [helpstring("Associate a debug engine (usually an IDebugClient) with the CLRMA Provider.")]
+        HRESULT AssociateClient([in] IUnknown* pUnknown);
+
+        [helpstring("-1 : Last Event Thread, 0 : Current Thread, NN : OS Thread ID (TID)")]
+        HRESULT GetThread([in] ULONG osThreadID, [out, retval] ICLRMAClrThread** ppClrThread);
+
+        [helpstring(" 0 : Current Thread's Current Exception\nNN : Exception Object Address")]
+        HRESULT GetException([in] ULONG64 addr, [out, retval] ICLRMAClrException** ppClrException);
+
+        [helpstring("Interface to Inspect Objects")]
+        [propget] HRESULT ObjectInspection([out, retval] ICLRMAObjectInspection** ppObjectInspection);
+    };
+
+    // ICLRMAClrThread
+    [
+        uuid(9849CFC9-0868-406e-9059-6B04E9ADBBB8),
+            helpstring("ICLRMAClrThread interface")
+    ]
+        interface ICLRMAClrThread : IUnknown
+    {
+        [propget] HRESULT DebuggerCommand([out, retval] BSTR* pValue);
+        [propget] HRESULT OSThreadId([out, retval] ULONG* pValue);
+
+        [propget] HRESULT FrameCount([out, retval] UINT* pCount);
+        HRESULT Frame([in] UINT nFrame, [out] ULONG64* pAddrIP, [out] ULONG64* pAddrSP, [out] BSTR* bstrModule, [out] BSTR* bstrFunction, [out] ULONG64* pDisplacement);
+
+        [propget] HRESULT CurrentException([out, retval] ICLRMAClrException** ppClrException);
+
+        [propget] HRESULT NestedExceptionCount([out, retval] USHORT* pCount);
+        HRESULT NestedException([in] USHORT nIndex, [out, retval] ICLRMAClrException** ppClrException);
+    };
+
+    // ICLRMAClrException
+    [
+        uuid(7C165652-D539-472e-A6CF-F657FFF31751),
+        helpstring("ICLRMAClrException interface")
+    ]
+    interface ICLRMAClrException : IUnknown
+    {
+        [propget] HRESULT DebuggerCommand([out, retval] BSTR* pValue);
+        [propget] HRESULT Address([out, retval] ULONG64* pValue);
+        [propget] HRESULT HResult([out, retval] HRESULT* pValue);
+        [propget] HRESULT Type([out, retval] BSTR* pValue);
+        [propget] HRESULT Message([out, retval] BSTR* pValue);
+
+        [propget] HRESULT FrameCount([out, retval] UINT* pCount);
+        HRESULT Frame([in] UINT nFrame, [out] ULONG64* pAddrIP, [out] ULONG64* pAddrSP, [out] BSTR* pModule, [out] BSTR* pFunction, [out] ULONG64* pDisplacement) ;
+
+        [propget] HRESULT InnerExceptionCount([out, retval] USHORT* pCount);
+        HRESULT InnerException([in] USHORT nIndex, [out, retval] ICLRMAClrException** ppClrException);
+    };
+
+    // ICLRMAObjectInspection
+    [
+        uuid(836259DB-7452-4b2b-95C4-4BC52CB9ABC7),
+        helpstring("ICLRMAObjectInspection interface")
+    ]
+    interface ICLRMAObjectInspection : IUnknown
+    {
+        HRESULT GetType([in] ULONG64 addr, [out, retval] BSTR* pValue);
+        HRESULT GetAddressFromCcwAddress([in] ULONG64 addr, [out, retval] ULONG64* pAddress);
+
+        HRESULT GetField_SystemString([in] ULONG64 addr, [in] BSTR bstrField, [out, retval] BSTR* pValue);
+        HRESULT GetField_SystemUInt32([in] ULONG64 addr, [in] BSTR bstrField, [out, retval] ULONG* pValue);
+        HRESULT GetField_SystemInt32([in] ULONG64 addr, [in] BSTR bstrField, [out, retval] LONG* pValue);
+    };
+
+}; // CLRMA Library

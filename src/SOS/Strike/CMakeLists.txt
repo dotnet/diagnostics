@@ -82,6 +82,7 @@ if (CLR_CMAKE_HOST_WIN32)
   add_definitions(-DUSE_STL)
 
   set(SOS_SOURCES
+    clrma.cpp
     disasm.cpp
     dllsext.cpp
     eeheap.cpp
@@ -218,6 +219,10 @@ elseif(CLR_CMAKE_HOST_ARCH_ARM)
 elseif(CLR_CMAKE_HOST_ARCH_ARM64)
   set(SOS_SOURCES_ARCH
     disasmARM64.cpp
+  )
+elseif(CLR_CMAKE_HOST_ARCH_RISCV64)
+  set(SOS_SOURCES_ARCH
+    disasmRISCV64.cpp
   )
 endif()
 

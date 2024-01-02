@@ -973,7 +973,7 @@ LLDBServices::GetNameByOffset(
             goto exit;
         }
 
-        address = module.ResolveFileAddress(offset);
+        address = target.ResolveLoadAddress(offset);
         if (!address.IsValid())
         {
             hr = E_INVALIDARG;
@@ -1445,16 +1445,7 @@ LLDBServices::GetModuleSize(
     /* const */ lldb::SBModule& module)
 {
     ULONG64 size = 0;
-#if defined(__APPLE__)
-    mach_header_64 header;
-    ULONG read;
-    HRESULT hr = ReadVirtual(baseAddress, &header, sizeof(mach_header_64), &read) == S_OK;
-    if (SUCCEEDED(hr))
-    {
-	    // Since MachO segments are not contiguous the image size is just the headers/commands
-	    size = sizeof(mach_header_64) + header.sizeofcmds;
-    }
-#else
+
     // Find the first section with an valid base address
     int numSections = module.GetNumSections();
     for (int si = 0; si < numSections; si++)
@@ -1462,10 +1453,15 @@ LLDBServices::GetModuleSize(
         lldb::SBSection section = module.GetSectionAtIndex(si);
         if (section.IsValid())
         {
+#if defined(__APPLE__)
+            if (strcmp(section.GetName(), "__LINKEDIT") == 0)
+            {
+                continue;
+            }
+ #endif
             size += section.GetByteSize();
         }
     }
-#endif
     // For core dumps lldb doesn't return the section sizes when it 
     // doesn't have access to the actual module file, but SOS (like 
     // the SymbolReader code) still needs a non-zero module size.

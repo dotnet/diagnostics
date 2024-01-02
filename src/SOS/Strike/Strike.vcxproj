@@ -385,6 +385,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="clrma.cpp" />
     <ClCompile Include="dbgengservices.cpp" />
     <ClCompile Include="disasm.cpp" />
     <ClCompile Include="dllsext.cpp" />

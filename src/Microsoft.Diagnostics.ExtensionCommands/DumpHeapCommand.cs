@@ -62,6 +62,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-gen")]
         public string Generation { get; set; }
 
+        [Option(Name = "-ignoreGCState", Help = "Ignore the GC's marker that the heap is not walkable (will generate lots of false positive errors).")]
+        public bool IgnoreGCState { get; set; }
+
         [Argument(Help = "Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
@@ -165,6 +168,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void ParseArguments()
         {
+            if (!Runtime.Heap.CanWalkHeap && !IgnoreGCState)
+            {
+                throw new DiagnosticsException("The GC heap is not in a valid state for traversal.  (Use -ignoreGCState to override.)");
+            }
+
             if (Live && Dead)
             {
                 Live = false;
@@ -189,9 +197,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 FilteredHeap.GCHeap = GCHeap;
             }
 
-            if (!string.IsNullOrWhiteSpace(Segment))
+            if (TryParseAddress(Segment, out ulong segment))
             {
-                FilteredHeap.FilterBySegmentHex(Segment);
+                FilteredHeap.FilterBySegmentHex(segment);
+            }
+            else if (!string.IsNullOrWhiteSpace(Segment))
+            {
+                throw new DiagnosticsException($"Failed to parse segment '{Segment}'.");
             }
 
             if (MemoryRange is not null && MemoryRange.Length > 0)

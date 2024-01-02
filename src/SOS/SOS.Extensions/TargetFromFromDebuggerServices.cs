@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using SOS.Extensions.Clrma;
 using SOS.Hosting;
 using SOS.Hosting.DbgEng.Interop;
 using Architecture = System.Runtime.InteropServices.Architecture;
@@ -54,6 +55,7 @@ namespace SOS.Extensions
                     IMAGE_FILE_MACHINE.THUMB2 => Architecture.Arm,
                     IMAGE_FILE_MACHINE.AMD64 => Architecture.X64,
                     IMAGE_FILE_MACHINE.ARM64 => Architecture.Arm64,
+                    IMAGE_FILE_MACHINE.RISCV64 => (Architecture)9 /* Architecture.RiscV64 */,
                     _ => throw new PlatformNotSupportedException($"Machine type not supported: {type}"),
                 };
             }
@@ -105,6 +107,9 @@ namespace SOS.Extensions
             }
 
             Finished();
+
+            TargetWrapper targetWrapper = Services.GetService<TargetWrapper>();
+            targetWrapper?.ServiceWrapper.AddServiceWrapper(ManagedAnalysisWrapper.IID_ICLRManagedAnalysis, () => new ManagedAnalysisWrapper(this, Services, targetWrapper.ServiceWrapper));
         }
 
         private unsafe ICrashInfoService CreateCrashInfoService(IServiceProvider services, DebuggerServices debuggerServices)
@@ -128,7 +133,7 @@ namespace SOS.Extensions
                     Span<byte> buffer = new byte[triageBufferSize];
                     if (services.GetService<IMemoryService>().ReadMemory(triageBufferAddress, buffer, out int bytesRead) && bytesRead == triageBufferSize)
                     {
-                        return CrashInfoService.Create(hresult, buffer);
+                        return CrashInfoService.Create(hresult, buffer, services.GetService<IModuleService>());
                     }
                     else
                     {
