@@ -30,11 +30,12 @@ namespace SOS.Hosting
         private readonly ITarget _target;
         private readonly IContextService _contextService;
 
-        public TargetWrapper(ITarget target, IContextService contextService, ISymbolService symbolService, IMemoryService memoryService)
+        public TargetWrapper(
+            ITarget target,
+            IContextService contextService,
+            ISymbolService symbolService,
+            IMemoryService memoryService)
         {
-            Debug.Assert(target != null);
-            Debug.Assert(contextService != null);
-            Debug.Assert(symbolService != null);
             _target = target;
             _contextService = contextService;
 
@@ -62,7 +63,6 @@ namespace SOS.Hosting
         protected override void Destroy()
         {
             Trace.TraceInformation("TargetWrapper.Destroy");
-            ServiceWrapper.RemoveServiceWrapper(SymbolServiceWrapper.IID_ISymbolService);
             ServiceWrapper.Dispose();
         }
 

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -57,8 +58,27 @@ namespace Microsoft.Diagnostics.DebugServices
         string Message { get; }
 
         /// <summary>
-        /// The exception that caused the crash or null
+        /// The exception at the address
         /// </summary>
-        IManagedException Exception { get; }
+        /// <param name="address">address of exception object or 0 for current exception</param>
+        /// <returns>exception or null if none</returns>
+        /// <exception cref="ArgumentOutOfRangeException">invalid exception address</exception>
+        IException GetException(ulong address);
+
+        /// <summary>
+        /// Returns the thread's current exception.
+        /// </summary>
+        /// <param name="threadId">OS thread id</param>
+        /// <returns>exception or null if none</returns>
+        /// <exception cref="ArgumentOutOfRangeException">invalid thread id</exception>
+        IException GetThreadException(uint threadId);
+
+        /// <summary>
+        /// Returns all the thread's nested exception.
+        /// </summary>
+        /// <param name="threadId">OS thread id</param>
+        /// <returns>array of nested exceptions</returns>
+        /// <exception cref="ArgumentOutOfRangeException">invalid thread id</exception>
+        IEnumerable<IException> GetNestedExceptions(uint threadId);
     }
 }

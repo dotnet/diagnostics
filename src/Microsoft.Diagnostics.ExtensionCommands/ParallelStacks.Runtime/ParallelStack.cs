@@ -11,7 +11,7 @@ namespace ParallelStacks.Runtime
 {
     public class ParallelStack
     {
-        public static ParallelStack Build(ClrRuntime runtime)
+        public static ParallelStack Build(ClrRuntime runtime, bool includeRuntimeStacks)
         {
             ParallelStack ps = new();
             List<ClrStackFrame> stackFrames = new(64);
@@ -20,7 +20,11 @@ namespace ParallelStacks.Runtime
                 stackFrames.Clear();
                 foreach (ClrStackFrame stackFrame in thread.EnumerateStackTrace().Reverse())
                 {
-                    if ((stackFrame.Kind != ClrStackFrameKind.ManagedMethod) || (stackFrame.Method == null))
+                    bool shouldAdd =
+                        stackFrame.Kind == ClrStackFrameKind.ManagedMethod
+                            || (includeRuntimeStacks && stackFrame.Kind == ClrStackFrameKind.Runtime);
+
+                    if ((!shouldAdd) || (stackFrame.Method == null))
                     {
                         continue;
                     }
@@ -39,7 +43,7 @@ namespace ParallelStacks.Runtime
             return ps;
         }
 
-        public static ParallelStack Build(string dumpFile, string dacFilePath)
+        public static ParallelStack Build(string dumpFile, string dacFilePath, bool includeRuntimeStacks)
         {
             DataTarget dataTarget = null;
             ParallelStack ps = null;
@@ -63,7 +67,7 @@ namespace ParallelStacks.Runtime
                     return null;
                 }
 
-                ps = ParallelStack.Build(runtime);
+                ps = ParallelStack.Build(runtime, includeRuntimeStacks);
             }
             finally
             {
@@ -73,7 +77,7 @@ namespace ParallelStacks.Runtime
             return ps;
         }
 
-        public static ParallelStack Build(int pid, string dacFilePath)
+        public static ParallelStack Build(int pid, string dacFilePath, bool includeRuntimeStacks)
         {
             DataTarget dataTarget = null;
             ParallelStack ps = null;
@@ -100,7 +104,7 @@ namespace ParallelStacks.Runtime
                     return null;
                 }
 
-                ps = ParallelStack.Build(runtime);
+                ps = ParallelStack.Build(runtime, includeRuntimeStacks);
             }
             finally
             {

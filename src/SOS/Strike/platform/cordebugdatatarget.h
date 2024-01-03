@@ -96,6 +96,8 @@ public:
                 *pPlatform = CORDB_PLATFORM_POSIX_ARM;
             else if (platformKind == IMAGE_FILE_MACHINE_ARM64)
                 *pPlatform = CORDB_PLATFORM_POSIX_ARM64;
+            else if (platformKind == IMAGE_FILE_MACHINE_RISCV64)
+                *pPlatform = CORDB_PLATFORM_POSIX_RISCV64;
             else
                 return E_FAIL;
         }

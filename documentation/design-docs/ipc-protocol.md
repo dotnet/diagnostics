@@ -370,7 +370,7 @@ enum class ProfilerCommandId : uint8_t
     AttachProfiler  = 0x01,
     // future
 }
-``` 
+```
 See: [Profiler Commands](#Profiler-Commands)
 
 ```c++
@@ -460,7 +460,7 @@ Payload
     array<provider_config> providers
 }
 
-provider_config 
+provider_config
 {
     ulong keywords,
     uint logLevel,
@@ -482,7 +482,7 @@ Followed by an Optional Continuation of a `nettrace` format stream of events.
 
 Command Code: `0x0203`
 
-The `CollectTracing2` Command is an extension of the `CollectTracing` command - its behavior is the same as `CollectTracing` command, except that it has another field that lets you specify whether rundown events should be fired by the runtime.
+The `CollectTracing2` command is an extension of the `CollectTracing` command - its behavior is the same as `CollectTracing` command, except that it has another field that lets you specify whether rundown events should be fired by the runtime.
 
 #### Inputs:
 
@@ -500,7 +500,7 @@ A `provider_config` is composed of the following data:
 * `string filter_data` (optional): Filter information
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
-> 
+>
 #### Returns (as an IPC Message Payload):
 
 Header: `{ Magic; 28; 0xFF00; 0x0000; }`
@@ -520,7 +520,7 @@ Payload
     array<provider_config> providers
 }
 
-provider_config 
+provider_config
 {
     ulong keywords,
     uint logLevel,
@@ -538,7 +538,70 @@ Payload
 ```
 Followed by an Optional Continuation of a `nettrace` format stream of events.
 
-### `StopTracing` 
+### `CollectTracing3`
+
+Command Code: `0x0204`
+
+The `CollectTracing3` command is an extension of the `CollectTracing2` command - its behavior is the same as `CollectTracing2` command, except that it has another field that lets you specify whether the stackwalk should be made for each event.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0203; 0x0000 }`
+
+* `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `bool requestRundown`: Indicates whether rundown should be fired by the runtime.
+* `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
+* `array<provider_config> providers`: The providers to turn on for the streaming session
+
+A `provider_config` is composed of the following data:
+* `ulong keywords`: The keywords to turn on with this providers
+* `uint logLevel`: The level of information to turn on
+* `string provider_name`: The name of the provider
+* `string filter_data` (optional): Filter information
+
+> see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
+>
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`CollectTracing2` returns:
+* `ulong sessionId`: the ID for the stream session starting on the current connection
+
+##### Details:
+
+Input:
+```
+Payload
+{
+    uint circularBufferMB,
+    uint format,
+    bool requestRundown,
+    bool requestStackwalk,
+    array<provider_config> providers
+}
+
+provider_config
+{
+    ulong keywords,
+    uint logLevel,
+    string provider_name,
+    string filter_data (optional)
+}
+```
+
+Returns:
+```c
+Payload
+{
+    ulong sessionId
+}
+```
+Followed by an Optional Continuation of a `nettrace` format stream of events.
+
+
+### `StopTracing`
 
 Command Code: `0x0201`
 

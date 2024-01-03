@@ -329,7 +329,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (!TryGetDefaultAddress(pid, out string defaultAddress))
             {
-                throw new ServerNotAvailableException($"Process {pid} not running compatible .NET runtime.");
+                string msg = $"Unable to connect to Process {pid}.";
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    msg += $" Please verify that {IpcRootPath} is writable by the current user. "
+                        + "If the target process has environment variable TMPDIR set, please set TMPDIR to the same directory. "
+                        + "Please see https://aka.ms/dotnet-diagnostics-port for more information";
+                }
+                throw new ServerNotAvailableException(msg);
             }
 
             return defaultAddress;
