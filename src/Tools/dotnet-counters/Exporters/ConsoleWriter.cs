@@ -76,7 +76,6 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private int _consoleHeight = -1;
         private int _consoleWidth = -1;
         private IConsole _console;
-        private bool _oldCursorVisibility = true;
 
         public ConsoleWriter(IConsole console)
         {
@@ -85,14 +84,6 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         public void Initialize()
         {
-            try
-            {
-                _oldCursorVisibility = _console.CursorVisible;
-                _console.CursorVisible = false;
-            }
-            // if it isn't supported then we just leave it showing. Its only aesthetic.
-            catch (NotSupportedException) { }
-
             AssignRowsAndInitializeDisplay();
         }
 
@@ -420,12 +411,6 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                         _console.WriteLine();
                     }
                 }
-
-                try
-                {
-                    _console.CursorVisible = _oldCursorVisibility;
-                }
-                catch (NotSupportedException) { }
             }
         }
     }
