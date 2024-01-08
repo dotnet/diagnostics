@@ -16,11 +16,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal interface ICounterPayload
     {
+        string Name { get; }
+
         double Value { get; }
 
         CounterType CounterType { get; }
 
-        CounterMetadata CounterMetadata { get; }
+        string Provider { get; }
 
         string DisplayName { get; }
 
@@ -34,10 +36,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         float Interval { get; }
 
         /// <summary>
-        /// Optional tags for counters. Note that normal counters use ':' as a separator character, while System.Diagnostics.Metrics use ';'.
+        /// Optional metadata for counters. Note that normal counters use ':' as a separator character, while System.Diagnostics.Metrics use ';'.
         /// We do not immediately convert string to Dictionary, since dotnet-counters does not need this conversion.
         /// </summary>
-        string ValueTags { get; }
+        string Metadata { get; }
 
         EventType EventType { get; }
 

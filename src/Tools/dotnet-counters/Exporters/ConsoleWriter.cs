@@ -235,10 +235,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     return;
                 }
 
-                string providerName = payload.CounterMetadata.ProviderName;
-                string name = payload.CounterMetadata.CounterName;
-
-                string tags = payload.CombineTags();
+                string providerName = payload.Provider;
+                string name = payload.Name;
+                string tags = payload.Metadata;
 
                 bool redraw = false;
                 if (!_providers.TryGetValue(providerName, out ObservedProvider provider))
@@ -292,9 +291,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             lock (_lock)
             {
-                string providerName = payload.CounterMetadata.ProviderName;
-                string counterName = payload.CounterMetadata.CounterName;
-                string tags = payload.CombineTags();
+                string providerName = payload.Provider;
+                string counterName = payload.Name;
+                string tags = payload.Metadata;
 
                 if (!_providers.TryGetValue(providerName, out ObservedProvider provider))
                 {

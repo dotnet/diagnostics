@@ -5,7 +5,7 @@ using Microsoft.Diagnostics.Monitoring.EventPipe;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
-    internal static class DotnetCountersCounterPayloadExtensions
+    internal static class CounterPayloadExtensions
     {
         public static string GetDisplay(this ICounterPayload counterPayload)
         {
