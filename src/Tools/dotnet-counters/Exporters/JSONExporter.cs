@@ -73,10 +73,12 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
                 builder
                     .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("O")).Append("\", ")
-                    .Append(" \"provider\": \"").Append(JsonEscape(payload.Provider)).Append("\", ")
+                    .Append(" \"provider\": \"").Append(JsonEscape(payload.CounterMetadata.ProviderName)).Append("\", ")
                     .Append(" \"name\": \"").Append(JsonEscape(payload.GetDisplay())).Append("\", ")
-                    .Append(" \"tags\": \"").Append(JsonEscape(payload.Metadata)).Append("\", ")
+                    .Append(" \"tags\": \"").Append(JsonEscape(payload.ValueTags)).Append("\", ")
                     .Append(" \"counterType\": \"").Append(JsonEscape(payload.CounterType.ToString())).Append("\", ")
+                    .Append(" \"meterTags\": \"").Append(JsonEscape(payload.CounterMetadata.MeterTags)).Append("\", ")
+                    .Append(" \"instrumentTags\": \"").Append(JsonEscape(payload.CounterMetadata.InstrumentTags)).Append("\", ")
                     .Append(" \"value\": ").Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append(" },");
             }
         }
