@@ -314,7 +314,7 @@ namespace DotnetCounters.UnitTests
 
         private static CounterPayload CreateMeterCounter(string meterName, string instrumentName, string unit, string tags, double value)
         {
-            return new RatePayload(meterName, instrumentName, instrumentName, unit, tags, value, 1, DateTime.MinValue);
+            return new RatePayload(new CounterMetadata(meterName, instrumentName, null, null, null), instrumentName, unit, tags, value, 1, DateTime.MinValue);
         }
     }
 }
