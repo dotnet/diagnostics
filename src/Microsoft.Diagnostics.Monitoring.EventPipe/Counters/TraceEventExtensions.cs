@@ -25,6 +25,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public int MaxHistograms { get; set; }
 
         public int MaxTimeseries { get; set; }
+
+        // Starting in .NET 8 MetricsEventSource reports both absolute value and rate for Counter instruments
+        // If this is false the pipeline will produce RatePayload objects
+        // If this is true the pipeline will produce CounterRateAndValuePayload instead if value field is available
+        public bool UseCounterRateAndValuePayload { get; set; }
     }
 
     internal record struct ProviderAndCounter(string ProviderName, string CounterName);
@@ -249,15 +254,30 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string unit = (string)traceEvent.PayloadValue(4);
             string tags = (string)traceEvent.PayloadValue(5);
             string rateText = (string)traceEvent.PayloadValue(6);
+            //Starting in .NET 8 we also publish the absolute value of these counters
+            string absoluteValueText = null;
+            if (traceEvent.Version >= 1)
+            {
+                absoluteValueText = (string)traceEvent.PayloadValue(7);
+            }
 
             if (!counterConfiguration.CounterFilter.IsIncluded(meterName, instrumentName))
             {
                 return;
             }
 
-            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
             {
-                payload = new RatePayload(GetCounterMetadata(meterName, instrumentName), null, unit, tags, value, counterConfiguration.CounterFilter.DefaultIntervalSeconds, traceEvent.TimeStamp);
+                if (absoluteValueText != null &&
+                    counterConfiguration.UseCounterRateAndValuePayload &&
+                    double.TryParse(absoluteValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                {
+                    payload = new CounterRateAndValuePayload(GetCounterMetadata(meterName, instrumentName), null, unit, tags, rate, value, traceEvent.TimeStamp);
+                }
+                else
+                {
+                    payload = new RatePayload(GetCounterMetadata(meterName, instrumentName), null, unit, tags, rate, counterConfiguration.CounterFilter.DefaultIntervalSeconds, traceEvent.TimeStamp);
+                }
             }
             else
             {
