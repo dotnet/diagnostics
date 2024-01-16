@@ -29,13 +29,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             public readonly CounterProvider KnownProvider;
         }
 
-        private interface ICounterRow
-        {
-            int Row { get; set; }
-        }
-
         /// <summary>Information about an observed counter.</summary>
-        private class ObservedCounter : ICounterRow
+        private class ObservedCounter
         {
             public ObservedCounter(string displayName) => DisplayName = displayName;
             public string DisplayName { get; } // Display name for this counter.
@@ -45,9 +40,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             public bool RenderValueInline => TagSets.Count == 0 ||
                        (TagSets.Count == 1 && string.IsNullOrEmpty(TagSets.Keys.First()));
             public double LastValue { get; set; }
+            public double? LastDelta { get; set; }
         }
 
-        private class ObservedTagSet : ICounterRow
+        private class ObservedTagSet
         {
             public ObservedTagSet(string tags)
             {
@@ -57,14 +53,16 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             public string DisplayTags => string.IsNullOrEmpty(Tags) ? "<no tags>" : Tags;
             public int Row { get; set; } // Assigned row for this counter. May change during operation.
             public double LastValue { get; set; }
+            public double? LastDelta { get; set; }
         }
 
         private readonly object _lock = new();
         private readonly Dictionary<string, ObservedProvider> _providers = new(); // Tracks observed providers and counters.
+        private readonly bool _showDeltaColumn;
         private const int Indent = 4; // Counter name indent size.
         private const int CounterValueLength = 15;
 
-        private int _maxNameLength;
+        private int _nameColumnWidth; // fixed width of the name column. Names will be truncated if needed to fit in this space.
         private int _statusRow; // Row # of where we print the status of dotnet-counters
         private int _topRow;
         private bool _paused;
@@ -77,9 +75,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private int _consoleWidth = -1;
         private IConsole _console;
 
-        public ConsoleWriter(IConsole console)
+        public ConsoleWriter(IConsole console, bool showDeltaColumn = false)
         {
             _console = console;
+            _showDeltaColumn = showDeltaColumn;
         }
 
         public void Initialize()
@@ -126,7 +125,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
             _consoleWidth = _console.WindowWidth;
             _consoleHeight = _console.WindowHeight;
-            _maxNameLength = Math.Max(Math.Min(80, _consoleWidth) - (CounterValueLength + Indent + 1), 0); // Truncate the name to prevent line wrapping as long as the console width is >= CounterValueLength + Indent + 1 characters
+            // Truncate the name column if needed to prevent line wrapping
+            int numValueColumns = _showDeltaColumn ? 2 : 1;
+            _nameColumnWidth = Math.Max(Math.Min(80, _consoleWidth) - numValueColumns * (CounterValueLength + 1), 0);
 
 
             int row = _console.CursorTop;
@@ -141,62 +142,36 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 row += GetLineWrappedLines(_errorText);
             }
 
-            bool RenderRow(ref int row, string lineOutput = null, ICounterRow counterRow = null)
-            {
-                if (row >= _consoleHeight + _topRow) // prevents from displaying more counters than vertical space available
-                {
-                    return false;
-                }
-
-                if (lineOutput != null)
-                {
-                    _console.Write(lineOutput);
-                }
-
-                if (row < _consoleHeight + _topRow - 1) // prevents screen from scrolling due to newline on last line of console
-                {
-                    _console.WriteLine();
-                }
-
-                if (counterRow != null)
-                {
-                    counterRow.Row = row;
-                }
-
-                row++;
-
-                return true;
-            }
-
-            if (RenderRow(ref row)) // Blank line.
+            if (RenderRow(ref row) &&                                            // Blank line.
+                RenderTableRow(ref row, "Name", "Current Value", "Last Delta"))  // Table header
             {
                 foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
                 {
-                    if (!RenderRow(ref row, $"[{provider.Name}]"))
+                    if (!RenderTableRow(ref row, $"[{provider.Name}]"))
                     {
                         break;
                     }
 
                     foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
                     {
-                        string name = MakeFixedWidth($"{new string(' ', Indent)}{counter.DisplayName}", Indent + _maxNameLength);
+                        counter.Row = row;
                         if (counter.RenderValueInline)
                         {
-                            if (!RenderRow(ref row, $"{name} {FormatValue(counter.LastValue)}", counter))
+                            if (!RenderCounterValueRow(ref row, indentLevel:1, counter.DisplayName, counter.LastValue, 0))
                             {
                                 break;
                             }
                         }
                         else
                         {
-                            if (!RenderRow(ref row, name, counter))
+                            if (!RenderCounterNameRow(ref row, counter.DisplayName))
                             {
                                 break;
                             }
                             foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
                             {
-                                string tagName = MakeFixedWidth($"{new string(' ', 2 * Indent)}{tagSet.Tags}", Indent + _maxNameLength);
-                                if (!RenderRow(ref row, $"{tagName} {FormatValue(tagSet.LastValue)}", tagSet))
+                                tagSet.Row = row;
+                                if (!RenderCounterValueRow(ref row, indentLevel: 2, tagSet.Tags, tagSet.LastValue, 0))
                                 {
                                     break;
                                 }
@@ -251,21 +226,30 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 {
                     string displayName = payload.GetDisplay();
                     provider.Counters[name] = counter = new ObservedCounter(displayName);
-                    _maxNameLength = Math.Max(_maxNameLength, displayName.Length);
-                    if (tags != null)
-                    {
-                        counter.LastValue = payload.Value;
-                    }
                     redraw = true;
+                }
+                else
+                {
+                    counter.LastDelta = payload.Value - counter.LastValue;
                 }
 
                 ObservedTagSet tagSet = null;
-                if (tags != null && !counter.TagSets.TryGetValue(tags, out tagSet))
+                if (string.IsNullOrEmpty(tags))
                 {
-                    counter.TagSets[tags] = tagSet = new ObservedTagSet(tags);
-                    _maxNameLength = Math.Max(_maxNameLength, tagSet.DisplayTags.Length);
+                    counter.LastValue = payload.Value;
+                }
+                else
+                {
+                    if (!counter.TagSets.TryGetValue(tags, out tagSet))
+                    {
+                        counter.TagSets[tags] = tagSet = new ObservedTagSet(tags);
+                        redraw = true;
+                    }
+                    else
+                    {
+                        tagSet.LastDelta = payload.Value - tagSet.LastValue;
+                    }
                     tagSet.LastValue = payload.Value;
-                    redraw = true;
                 }
 
                 if (_console.WindowWidth != _consoleWidth || _console.WindowHeight != _consoleHeight)
@@ -277,14 +261,17 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 {
                     AssignRowsAndInitializeDisplay();
                 }
-
-                int row = counter.RenderValueInline ? counter.Row : tagSet.Row;
-                if (row < 0)
+                else
                 {
-                    return;
+                    if (tagSet != null)
+                    {
+                        IncrementalUpdateCounterValueRow(tagSet.Row, tagSet.LastValue, tagSet.LastDelta.Value);
+                    }
+                    else
+                    {
+                        IncrementalUpdateCounterValueRow(counter.Row, counter.LastValue, counter.LastDelta.Value);
+                    }
                 }
-                _console.SetCursorPosition(Indent + _maxNameLength + 1, row);
-                _console.Write(FormatValue(payload.Value));
             }
         }
 
@@ -342,6 +329,81 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             return lineCount;
         }
 
+        private bool RenderCounterValueRow(ref int row, int indentLevel, string name, double value, double? delta)
+        {
+            // if you change line formatting, keep it in sync with IncrementaUpdateCounterValueRow below
+            string deltaText = delta.HasValue ? "" : FormatValue(delta.Value);
+            return RenderTableRow(ref row, $"{new string(' ', Indent * indentLevel)}{name}", FormatValue(value), deltaText);
+        }
+
+        private bool RenderCounterNameRow(ref int row, string name)
+        {
+            return RenderTableRow(ref row, $"{new string(' ', Indent)}{name}");
+        }
+
+        private bool RenderTableRow(ref int row, string name, string value = null, string delta = null)
+        {
+            // if you change line formatting, keep it in sync with IncrementaUpdateCounterValueRow below
+            string nameCellText = MakeFixedWidth(name, _nameColumnWidth);
+            string valueCellText = MakeFixedWidth(value, CounterValueLength, alignRight: true);
+            string deltaCellText = MakeFixedWidth(delta, CounterValueLength, alignRight: true);
+            string lineText;
+            if (_showDeltaColumn)
+            {
+                lineText = $"{nameCellText} {valueCellText} {deltaCellText}";
+            }
+            else
+            {
+                lineText = $"{nameCellText} {valueCellText}";
+            }
+            return RenderRow(ref row, lineText);
+        }
+
+        private bool RenderRow(ref int row, string text = null)
+        {
+            if (row >= _consoleHeight + _topRow) // prevents from displaying more counters than vertical space available
+            {
+                return false;
+            }
+
+            if (text != null)
+            {
+                _console.Write(text);
+            }
+
+            if (row < _consoleHeight + _topRow - 1) // prevents screen from scrolling due to newline on last line of console
+            {
+                _console.WriteLine();
+            }
+
+            row++;
+
+            return true;
+        }
+
+        private void IncrementalUpdateCounterValueRow(int row, double value, double delta)
+        {
+            // prevents from displaying more counters than vertical space available
+            if (row < 0 || row >= _consoleHeight + _topRow)
+            {
+                return;
+            }
+
+            _console.SetCursorPosition(_nameColumnWidth + 1, row);
+            string valueCellText = MakeFixedWidth(FormatValue(value), CounterValueLength);
+            string deltaCellText = MakeFixedWidth(FormatValue(delta), CounterValueLength);
+            string partialLineText;
+            if (_showDeltaColumn)
+            {
+                partialLineText = $"{valueCellText} {deltaCellText}";
+            }
+            else
+            {
+                partialLineText = $"{valueCellText}";
+            }
+            _console.Write(partialLineText);
+        }
+
         private static string FormatValue(double value)
         {
             string valueText;
@@ -382,9 +444,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             return valueText;
         }
 
-        private static string MakeFixedWidth(string text, int width)
+        private static string MakeFixedWidth(string text, int width, bool alignRight = false)
         {
-            if (text.Length == width)
+            if (text == null)
+            {
+                return new string(' ', width);
+            }
+            else if (text.Length == width)
             {
                 return text;
             }
@@ -394,7 +460,14 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
             else
             {
-                return text += new string(' ', width - text.Length);
+                if (alignRight)
+                {
+                    return new string(' ', width - text.Length) + text;
+                }
+                else
+                {
+                    return text + new string(' ', width - text.Length);
+                }
             }
         }
 

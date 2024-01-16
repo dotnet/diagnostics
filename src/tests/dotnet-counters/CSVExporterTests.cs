@@ -109,6 +109,47 @@ namespace DotnetCounters.UnitTests
             }
         }
 
+        // Starting in .NET 8 MetricsEventSource, Meter counter instruments report both rate of change and
+        // absolute value. Reporting rate in the UI was less useful for many counters than just seeing the raw
+        // value. Now dotnet-counters reports these counters as absolute values.
+        [Fact]
+        public void CounterReportsAbsoluteValuePostNet8()
+        {
+            string fileName = "CounterReportsAbsoluteValuePostNet8.csv";
+            CSVExporter exporter = new(fileName);
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+            for (int i = 0; i < 100; i++)
+            {
+                exporter.CounterPayloadReceived(new CounterRateAndValuePayload(new CounterMetadata("myProvider", "counter", null, null, null), "Counter One", string.Empty, string.Empty, rate:0, i, start + TimeSpan.FromSeconds(i)), false);
+            }
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+
+            try
+            {
+                List<string> lines = File.ReadLines(fileName).ToList();
+                Assert.Equal(101, lines.Count); // should be 101 including the headers
+
+                ValidateHeaderTokens(lines[0]);
+
+                for (int i = 1; i < lines.Count; i++)
+                {
+                    string[] tokens = lines[i].Split(',');
+
+                    Assert.Equal("myProvider", tokens[1]);
+                    Assert.Equal($"Counter One (Count)", tokens[2]);
+                    Assert.Equal("Metric", tokens[3]);
+                    Assert.Equal((i - 1).ToString(), tokens[4]);
+                }
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+        }
+
         [Fact]
         public void CounterTest_SameMeterDifferentTagsPerInstrument()
         {

@@ -114,8 +114,15 @@ namespace DotnetCounters.UnitTests
 
         public void AssertLinesEqual(int startLine, params string[] expectedLines)
         {
-            for(int i = 0; i < expectedLines.Length; i++)
+            if (startLine + expectedLines.Length > Lines.Length)
             {
+                Assert.Fail("MockConsole output had fewer output lines than expected." + Environment.NewLine +
+                    $"Expected line count: {expectedLines.Length}" + Environment.NewLine +
+                    $"Actual line count: {Lines.Length}");
+            }
+            for (int i = 0; i < expectedLines.Length; i++)
+            {
+
                 string actualLine = GetLineText(startLine+i);
                 string expectedLine = expectedLines[i];
                 if(actualLine != expectedLine)

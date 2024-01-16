@@ -127,10 +127,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
     }
 
+    /// <summary>
+    /// This gets generated for Counter instruments from Meters. This is used for pre-.NET 8 versions of MetricsEventSource that only reported rate and not absolute value,
+    /// or for any tools that haven't opted into using RateAndValuePayload in the CounterConfiguration settings.
+    /// </summary>
     internal sealed class RatePayload : MeterPayload
     {
-        public RatePayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, double value, double intervalSecs, DateTime timestamp) :
-            base(timestamp, counterMetadata, displayName, displayUnits, value, CounterType.Rate, valueTags, EventType.Rate)
+
+        public RatePayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, double rate, double intervalSecs, DateTime timestamp) :
+            base(timestamp, counterMetadata, displayName, displayUnits, rate, CounterType.Rate, valueTags, EventType.Rate)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? counterMetadata.CounterName : displayName;
@@ -138,6 +143,25 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string intervalName = intervalSecs.ToString() + " sec";
             DisplayName = $"{counterName} ({unitsName} / {intervalName})";
         }
+    }
+
+    /// <summary>
+    /// Starting in .NET 8, MetricsEventSource reports counters with both absolute value and rate. If enabled in the CounterConfiguration and the new value field is present
+    /// then this payload will be created rather than the older RatePayload. Unlike RatePayload, this one treats the absolute value as the primary statistic.
+    /// </summary>
+    internal sealed class CounterRateAndValuePayload : MeterPayload
+    {
+        public CounterRateAndValuePayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, double rate, double value, DateTime timestamp) :
+            base(timestamp, counterMetadata, displayName, displayUnits, value, CounterType.Metric, valueTags, EventType.Rate)
+        {
+            // In case these properties are not provided, set them to appropriate values.
+            string counterName = string.IsNullOrEmpty(displayName) ? counterMetadata.CounterName : displayName;
+            string unitsName = string.IsNullOrEmpty(displayUnits) ? "Count" : displayUnits;
+            DisplayName = $"{counterName} ({unitsName})";
+            Rate = rate;
+        }
+
+        public double Rate { get; private set; }
     }
 
     internal record struct Quantile(double Percentage, double Value);

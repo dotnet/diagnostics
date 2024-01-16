@@ -319,6 +319,42 @@ namespace DotnetCounters.UnitTests
                 }
             }
         }
+
+        [Fact]
+        public void CounterReportsAbsoluteValuePostNet8()
+        {
+            // Starting in .NET 8 MetricsEventSource, Meter counter instruments report both rate of change and
+            // absolute value. Reporting rate in the UI was less useful for many counters than just seeing the raw
+            // value. Now dotnet-counters reports these counters as absolute values.
+
+            string fileName = "counterReportsAbsoluteValuePostNet8.json";
+            JSONExporter exporter = new(fileName, "myProcess.exe");
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+            for (int i = 0; i < 20; i++)
+            {
+                exporter.CounterPayloadReceived(new CounterRateAndValuePayload(new CounterMetadata("myProvider", "heapSize", null, null, null), "Heap Size", "MB", string.Empty, rate: 0, i, start + TimeSpan.FromSeconds(i)), false);
+            }
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+            using (StreamReader r = new(fileName))
+            {
+                string json = r.ReadToEnd();
+                JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
+                Assert.Equal("myProcess.exe", counterTrace.targetProcess);
+                Assert.Equal(20, counterTrace.events.Length);
+                int i = 0;
+                foreach (JSONCounterPayload payload in counterTrace.events)
+                {
+                    Assert.Equal("myProvider", payload.provider);
+                    Assert.Equal("Heap Size (MB)", payload.name);
+                    Assert.Equal("Metric", payload.counterType);
+                    Assert.Equal(i, payload.value);
+                    i += 1;
+                }
+            }
+        }
     }
 
     internal class JSONCounterPayload

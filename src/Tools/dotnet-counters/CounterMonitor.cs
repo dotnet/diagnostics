@@ -166,7 +166,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             bool resumeRuntime,
             int maxHistograms,
             int maxTimeSeries,
-            TimeSpan duration)
+            TimeSpan duration,
+            bool showDeltas)
         {
             try
             {
@@ -197,7 +198,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
                         _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
-                        _renderer = new ConsoleWriter(new DefaultConsole(useAnsi));
+                        _renderer = new ConsoleWriter(new DefaultConsole(useAnsi), showDeltaColumn:showDeltas);
                         _diagnosticsClient = holder.Client;
                         _settings = new MetricsPipelineSettings();
                         _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;
@@ -206,6 +207,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _settings.CounterIntervalSeconds = refreshInterval;
                         _settings.ResumeRuntime = resumeRuntime;
                         _settings.CounterGroups = GetEventPipeProviders();
+                        _settings.UseCounterRateAndValuePayloads = true;
 
                         bool useSharedSession = false;
                         if (_diagnosticsClient.GetProcessInfo().TryGetProcessClrVersion(out Version version))
