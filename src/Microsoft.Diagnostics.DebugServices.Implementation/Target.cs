@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.FileFormats;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -34,6 +35,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // Initialize the per-target services.
             _serviceContainerFactory = host.Services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Target, host.Services);
             _serviceContainerFactory.AddServiceFactory<ITarget>((_) => this);
+            _serviceContainerFactory.AddServiceFactory<Reader>(CreateReader);
         }
 
         protected void Finished()
@@ -132,6 +134,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #endregion
 
+        /// <summary>
+        /// Create the file format reader used to read and layout TStruct derived structures from memory
+        /// </summary>
+        private Reader CreateReader(IServiceProvider services)
+        {
+            IMemoryService memoryService = services.GetService<IMemoryService>();
+            Stream stream = memoryService.CreateMemoryStream();
+            LayoutManager layoutManager = new LayoutManager()
+                                            .AddPrimitives()
+                                            .AddEnumTypes()
+                                            .AddSizeT(memoryService.PointerSize)
+                                            .AddPointerTypes()
+                                            .AddNullTerminatedString()
+                                            .AddTStructTypes();
+            return new Reader(new StreamAddressSpace(stream), layoutManager);
+        }
+
         private void CleanupTempDirectory()
         {
             if (_tempDirectory != null)
@@ -165,19 +184,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             StringBuilder sb = new();
             string process = ProcessId.HasValue ? string.Format("{0} (0x{0:X})", ProcessId.Value) : "<none>";
-            sb.AppendLine($"Target OS: {OperatingSystem} Architecture: {Architecture} ProcessId: {process}");
-            if (_tempDirectory != null)
-            {
-                sb.AppendLine($"Temp path: {_tempDirectory}");
-            }
+            sb.Append($"Target OS: {OperatingSystem} Architecture: {Architecture} ProcessId: {process}");
             if (_dumpPath != null)
             {
-                sb.AppendLine($"Dump path: {_dumpPath}");
+                sb.Append($" {_dumpPath}");
             }
-            IRuntimeService runtimeService = Services.GetService<IRuntimeService>();
-            if (runtimeService != null)
+            if (_tempDirectory != null)
             {
-                sb.AppendLine(runtimeService.ToString());
+                sb.Append($" {_tempDirectory}");
             }
             return sb.ToString();
         }
