@@ -22,6 +22,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public string Description { get; }
 
+        public bool Rundown { get; set;  }
+
         public static void MergeProfileAndProviders(Profile selectedProfile, List<EventPipeProvider> providerCollection, Dictionary<string, string> enabledBy)
         {
             List<EventPipeProvider> profileProviders = new();
