@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks Condition="'$(DotNetBuildFromSource)' != 'true'">netstandard2.0;net6.0</TargetFrameworks>
-    <TargetFramework Condition="'$(DotNetBuildFromSource)' == 'true'">netstandard2.0</TargetFramework>
+    <TargetFrameworks Condition="'$(DotNetBuildSourceOnly)' != 'true'">netstandard2.0;net6.0</TargetFrameworks>
+    <TargetFramework Condition="'$(DotNetBuildSourceOnly)' == 'true'">netstandard2.0</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.NETCore.Client</RootNamespace>
     <Description>.NET Core Diagnostics Client Library</Description>
     <VersionPrefix>0.2.0</VersionPrefix>
