@@ -12,7 +12,6 @@
 // Error output.
 #define DEBUG_OUTPUT_ERROR             0x00000002
 
-extern void UninitializeDesktopClrHost();
 extern bool g_hostingInitialized;
 
 Extensions* Extensions::s_extensions = nullptr;

@@ -40,10 +40,7 @@ HRESULT CLRMACreateInstance(ICLRManagedAnalysis** ppCLRMA)
             return hr;
         }
     }
-    else
-    {
-        g_managedAnalysis->AddRef();
-    }
+    g_managedAnalysis->AddRef();
     *ppCLRMA = g_managedAnalysis;
     return S_OK;
 }

@@ -16,6 +16,7 @@ using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Internal.Common.Utils;
+using IConsole = System.CommandLine.IConsole;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -66,13 +67,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private void HandleDiagnosticCounter(ICounterPayload payload)
         {
             // init providerEventState if this is the first time we've seen an event from this provider
-            if (!_providerEventStates.TryGetValue(payload.Provider, out ProviderEventState providerState))
+            if (!_providerEventStates.TryGetValue(payload.CounterMetadata.ProviderName, out ProviderEventState providerState))
             {
                 providerState = new ProviderEventState()
                 {
                     FirstReceiveTimestamp = payload.Timestamp
                 };
-                _providerEventStates.Add(payload.Provider, providerState);
+                _providerEventStates.Add(payload.CounterMetadata.ProviderName, providerState);
             }
 
             // we give precedence to instrument events over diagnostic counter events. If we are seeing
@@ -107,7 +108,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 foreach (Quantile quantile in aggregatePayload.Quantiles)
                 {
                     (double key, double val) = quantile;
-                    PercentilePayload percentilePayload = new(payload.Provider, payload.Name, payload.DisplayName, payload.Unit, AppendQuantile(payload.Metadata, $"Percentile={key * 100}"), val, payload.Timestamp);
+                    PercentilePayload percentilePayload = new(payload.CounterMetadata, payload.DisplayName, payload.Unit, AppendQuantile(payload.ValueTags, $"Percentile={key * 100}"), val, payload.Timestamp);
                     _renderer.CounterPayloadReceived(percentilePayload, _pauseCmdSet);
                 }
 
@@ -131,7 +132,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 while (_bufferedEvents.Count != 0)
                 {
                     CounterPayload payload = _bufferedEvents.Peek();
-                    ProviderEventState providerEventState = _providerEventStates[payload.Provider];
+                    ProviderEventState providerEventState = _providerEventStates[payload.CounterMetadata.ProviderName];
                     if (providerEventState.InstrumentEventObserved)
                     {
                         _bufferedEvents.Dequeue();
@@ -165,7 +166,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             bool resumeRuntime,
             int maxHistograms,
             int maxTimeSeries,
-            TimeSpan duration)
+            TimeSpan duration,
+            bool showDeltas)
         {
             try
             {
@@ -196,7 +198,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
                         _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
-                        _renderer = new ConsoleWriter(useAnsi);
+                        _renderer = new ConsoleWriter(new DefaultConsole(useAnsi), showDeltaColumn:showDeltas);
                         _diagnosticsClient = holder.Client;
                         _settings = new MetricsPipelineSettings();
                         _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;
@@ -205,6 +207,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _settings.CounterIntervalSeconds = refreshInterval;
                         _settings.ResumeRuntime = resumeRuntime;
                         _settings.CounterGroups = GetEventPipeProviders();
+                        _settings.UseCounterRateAndValuePayloads = true;
 
                         bool useSharedSession = false;
                         if (_diagnosticsClient.GetProcessInfo().TryGetProcessClrVersion(out Version version))
@@ -618,7 +621,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 else if (payload.IsMeter)
                 {
-                    MeterInstrumentEventObserved(payload.Provider, payload.Timestamp);
+                    MeterInstrumentEventObserved(payload.CounterMetadata.ProviderName, payload.Timestamp);
                     if (payload.EventType.IsValuePublishedEvent())
                     {
                         CounterPayloadReceived((CounterPayload)payload);

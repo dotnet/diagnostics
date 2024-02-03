@@ -21,8 +21,6 @@ EXTERN_GUID(CLSID_CLRRuntimeHost, 0x90F1A06E, 0x7712, 0x4762, 0x86, 0xB5, 0x7A, 
 extern HMODULE g_hInstance;
 extern void TraceError(PCSTR format, ...);
 
-void UninitializeDesktopClrHost();
-
 ICLRRuntimeHost* g_clrHost = nullptr;
 
 /// <summary>
@@ -99,27 +97,17 @@ HRESULT InitializeDesktopClrHost()
     if (FAILED(hr)) 
     {
         TraceError("Error: ICLRRuntimeHost::ExecuteInDefaultAppDomain failed %08x\n", hr);
-        UninitializeDesktopClrHost();
+        g_clrHost->Release();
+        g_clrHost = nullptr;
         return hr;
     }
     if (ret != 0)
     { 
         TraceError("Error: InitializeSymbolReader failed %08x\n", ret);
-        UninitializeDesktopClrHost();
+        g_clrHost->Release();
+        g_clrHost = nullptr;
         return ret;
     }
     return S_OK;
 }
 
-/// <summary>
-/// Uninitializes and unloads the desktop CLR
-/// </summary>
-void UninitializeDesktopClrHost()
-{
-    if (g_clrHost != nullptr)
-    {
-        g_clrHost->Stop();
-        g_clrHost->Release();
-        g_clrHost = nullptr;
-    }
-}
