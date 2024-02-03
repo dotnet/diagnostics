@@ -10,7 +10,7 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
     <GalleryManifestName>$(ArtifactsPackagesDir)\GalleryManifest.xml</GalleryManifestName>
-    <BeforePack>GenerateGalleryZip;GenerateSymbolsZip</BeforePack>
+    <BeforePack>GenerateGalleryManifest</BeforePack>
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
@@ -75,95 +75,6 @@
     <ItemGroup>
       <FileWrites Include="$(GalleryManifestName)" />
     </ItemGroup>
-  </Target>
-
-  <Target Name="GenerateGalleryZip" DependsOnTargets="GenerateGalleryManifest">
-    <PropertyGroup>
-      <GalleryDir>$(ArtifactsBinDir)\gallery</GalleryDir>
-      <GallerySubDir>$(GalleryDir)\$(FileVersion)</GallerySubDir>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <ZipSourceFiles Include="$(GalleryManifestName)">
-         <TargetPath>$(GalleryDir)</TargetPath>
-      </ZipSourceFiles>
-
-      <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.x64.$(Configuration)\sos.dll">
-         <TargetPath>$(GallerySubDir)\win-x64</TargetPath>
-      </ZipSourceFiles>
-      <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.x64.$(Configuration)\Microsoft.DiaSymReader.Native.amd64.dll">
-         <TargetPath>$(GallerySubDir)\win-x64</TargetPath>
-      </ZipSourceFiles>
-      <ZipSourceFiles Include="$(SOSExtensionsBinaries)">
-         <TargetPath>$(GallerySubDir)\win-x64</TargetPath>
-      </ZipSourceFiles>
-
-      <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.x86.$(Configuration)\sos.dll">
-         <TargetPath>$(GallerySubDir)\win-x86</TargetPath>
-      </ZipSourceFiles>
-      <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.x86.$(Configuration)\Microsoft.DiaSymReader.Native.x86.dll">
-         <TargetPath>$(GallerySubDir)\win-x86</TargetPath>
-      </ZipSourceFiles>
-      <ZipSourceFiles Include="$(SOSExtensionsBinaries)">
-         <TargetPath>$(GallerySubDir)\win-x86</TargetPath>
-      </ZipSourceFiles>
-
-      <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.arm.$(Configuration)\sos.dll">
-         <TargetPath>$(GallerySubDir)\win-arm</TargetPath>
-      </ZipSourceFiles>
-      <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.arm.$(Configuration)\Microsoft.DiaSymReader.Native.arm.dll">
-         <TargetPath>$(GallerySubDir)\win-arm</TargetPath>
-      </ZipSourceFiles>
-      <ZipSourceFiles Include="$(SOSExtensionsBinaries)">
-         <TargetPath>$(GallerySubDir)\win-arm</TargetPath>
-      </ZipSourceFiles>
-
-      <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.arm64.$(Configuration)\sos.dll">
-         <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
-      </ZipSourceFiles>
-      <ZipSourceFiles Include="$(ArtifactsBinDir)Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll">
-         <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
-      </ZipSourceFiles>
-      <ZipSourceFiles Include="$(SOSExtensionsBinaries)">
-         <TargetPath>$(GallerySubDir)\win-arm64</TargetPath>
-      </ZipSourceFiles>
-    </ItemGroup>
-
-    <Copy SourceFiles="@(ZipSourceFiles)" DestinationFolder="%(ZipSourceFiles.TargetPath)" />
-
-    <ZipDirectory DestinationFile="$(ArtifactsPackagesDir)$(FileVersion).zip" SourceDirectory="$(GalleryDir)" Overwrite="true" />
-  </Target>
-
-  <Target Name="GenerateSymbolsZip">
-    <PropertyGroup>
-      <SymbolsDir>$(ArtifactsBinDir)\symbols</SymbolsDir>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <ZipSymbolFiles Include="$(ArtifactsSymStoreDirectory)\SOS.Extensions\netstandard2.0\publish\*.pdb">
-         <TargetPath>$(SymbolsDir)</TargetPath>
-      </ZipSymbolFiles>
-
-      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.x64.$(Configuration)\PDB\sos.pdb">
-         <TargetPath>$(SymbolsDir)\win-x64</TargetPath>
-      </ZipSymbolFiles>
-
-      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.x86.$(Configuration)\PDB\sos.pdb">
-         <TargetPath>$(SymbolsDir)\win-x86</TargetPath>
-      </ZipSymbolFiles>
-
-      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.arm.$(Configuration)\PDB\sos.pdb">
-         <TargetPath>$(SymbolsDir)\win-arm</TargetPath>
-      </ZipSymbolFiles>
-
-      <ZipSymbolFiles Include="$(ArtifactsBinDir)Windows_NT.arm64.$(Configuration)\PDB\sos.pdb">
-         <TargetPath>$(SymbolsDir)\win-arm64</TargetPath>
-      </ZipSymbolFiles>
-    </ItemGroup>
-
-    <Copy SourceFiles="@(ZipSymbolFiles)" DestinationFolder="%(ZipSymbolFiles.TargetPath)" />
-
-    <ZipDirectory DestinationFile="$(ArtifactsPackagesDir)$(FileVersion).symbols.zip" SourceDirectory="$(SymbolsDir)" Overwrite="true" />
   </Target>
 
 </Project>

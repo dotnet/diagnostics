@@ -21,6 +21,7 @@
   <CliPath>$(DotNetRoot)/dotnet</CliPath>
 
   <NuGetPackageFeeds>
+      dotnet9=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet9/nuget/v3/index.json;
       dotnet8=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet8/nuget/v3/index.json;
       dotnet7=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet7/nuget/v3/index.json;
       dotnet6=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet6/nuget/v3/index.json;

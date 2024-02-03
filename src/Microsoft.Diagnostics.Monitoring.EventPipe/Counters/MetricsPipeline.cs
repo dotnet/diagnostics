@@ -57,7 +57,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 SessionId = _sessionId,
                 ClientId = _clientId,
                 MaxHistograms = Settings.MaxHistograms,
-                MaxTimeseries = Settings.MaxTimeSeries
+                MaxTimeseries = Settings.MaxTimeSeries,
+                UseCounterRateAndValuePayload = Settings.UseCounterRateAndValuePayloads
             };
 
             return config;

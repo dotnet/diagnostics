@@ -18,6 +18,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public int MaxTimeSeries { get; set; }
 
         public bool UseSharedSession { get; set; }
+
+        // Starting in .NET 8 MetricsEventSource reports both absolute value and rate for Counter instruments
+        // If this is false the pipeline will produce RatePayload objects
+        // If this is true and the new absolute value field is available the pipeline will produce CounterRateAndValuePayload instead
+        public bool UseCounterRateAndValuePayloads { get; set; }
     }
 
     [Flags]

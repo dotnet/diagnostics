@@ -250,7 +250,7 @@ namespace DotnetCounters.UnitTests
             string tagSeparator = format == CountersExportFormat.csv ? ";" : ",";
             string tag = Constants.TagKey + "=" + Constants.TagValue + tagSeparator + Constants.PercentileKey + "=";
             HashSet<string> expectedTags = new() { $"{tag}{Constants.Quantile50}", $"{tag}{Constants.Quantile95}", $"{tag}{Constants.Quantile99}" };
-            Assert.Equal(expectedTags, metricComponents.Where(c => c.CounterName == Constants.TestHistogramName).Select(c => c.Tags).Distinct());
+            Assert.Equal(expectedTags.AsEnumerable(), metricComponents.Where(c => c.CounterName == Constants.TestHistogramName).Select(c => c.Tags).Distinct());
             Assert.Empty(metricComponents.Where(c => c.CounterName == Constants.TestCounterName).Where(c => c.Tags != string.Empty));
 
             var actualCounterValues = metricComponents.Where(c => c.CounterName == Constants.TestCounterName).Select(c => c.Value);

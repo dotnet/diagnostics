@@ -110,23 +110,11 @@ namespace SOS
 
                 // Copy native SOS files
                 WriteLine($"Copying files from {SOSNativeSourcePath}");
-                RetryOperation("Problem installing native SOS binaries", () => {
-                    foreach (string file in Directory.EnumerateFiles(SOSNativeSourcePath))
-                    {
-                        string destinationFile = Path.Combine(InstallLocation, Path.GetFileName(file));
-                        File.Copy(file, destinationFile, overwrite: true);
-                    }
-                });
+                RetryOperation("Problem installing native SOS binaries", () => CopyFiles(SOSNativeSourcePath, InstallLocation));
 
                 // Copy managed SOS files
                 WriteLine($"Copying files from {SOSManagedSourcePath}");
-                RetryOperation("Problem installing managed SOS binaries", () => {
-                    foreach (string file in Directory.EnumerateFiles(SOSManagedSourcePath))
-                    {
-                        string destinationFile = Path.Combine(InstallLocation, Path.GetFileName(file));
-                        File.Copy(file, destinationFile, overwrite: true);
-                    }
-                });
+                RetryOperation("Problem installing managed SOS binaries", () => CopyFiles(SOSManagedSourcePath, InstallLocation));
 
                 // Configure lldb
                 if (LLDBInitFile != null)
@@ -354,6 +342,21 @@ namespace SOS
             }
             string architectureString = (architecture.HasValue ? architecture : RuntimeInformation.ProcessArchitecture).ToString().ToLowerInvariant();
             return $"{os}-{architectureString}";
+        }
+
+        private static void CopyFiles(string sourcePath, string destinationPath)
+        {
+            foreach (string path in Directory.EnumerateDirectories(sourcePath))
+            {
+                string directory = Path.Combine(destinationPath, Path.GetFileName(path));
+                Directory.CreateDirectory(directory);
+                CopyFiles(path, directory);
+            }
+            foreach (string file in Directory.EnumerateFiles(sourcePath))
+            {
+                string destinationFile = Path.Combine(destinationPath, Path.GetFileName(file));
+                File.Copy(file, destinationFile, overwrite: true);
+            }
         }
 
         private void WriteLine(string format, params object[] args)

@@ -81,6 +81,7 @@
 
   <ItemGroup Condition="!$(InternalReleaseTesting) and !$(PrivateBuildTesting)">
     <TestVersions Include="Latest" RuntimeVersion="$(VSRedistCommonNetCoreSharedFrameworkx6480Version)" AspNetVersion="$(MicrosoftAspNetCoreAppRefInternalVersion)" />
+    <TestVersions Include="SingleFileLatest" RuntimeVersion="$(SingleFileRuntimeLatestVersion)" />
     <TestVersions Include="70" RuntimeVersion="$(MicrosoftNETCoreApp70Version)" AspNetVersion="$(MicrosoftAspNetCoreApp70Version)" />
     <TestVersions Include="SingleFile70" RuntimeVersion="$(SingleFileRuntime70Version)" />
     <TestVersions Include="60" RuntimeVersion="$(MicrosoftNETCoreApp60Version)" AspNetVersion="$(MicrosoftAspNetCoreApp60Version)" />
