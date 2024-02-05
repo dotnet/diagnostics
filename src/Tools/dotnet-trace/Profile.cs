@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public string Description { get; }
 
-        public bool Rundown { get; set;  }
+        public bool Rundown { get; set; } = true;
 
         public static void MergeProfileAndProviders(Profile selectedProfile, List<EventPipeProvider> providerCollection, Dictionary<string, string> enabledBy)
         {
