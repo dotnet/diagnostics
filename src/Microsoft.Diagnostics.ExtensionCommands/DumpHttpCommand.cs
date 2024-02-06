@@ -29,9 +29,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-completed", Help = "Show only requests with response")]
         public bool Completed { get; set; }
 
-        [Option(Name = "-gen")]
-        public string? Generation { get; set; }
-
         private HeapWithFilters? FilteredHeap { get; set; }
 
         private static readonly Column s_httpMethodColumn = new(Align.Left, 6, Formats.Text);
@@ -219,23 +216,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             FilteredHeap = new HeapWithFilters(Runtime.Heap);
-
-            // TODO: duplicate from dumpheap and dumpexceptions. Add [Option] attribute handler for Generation type
-            if (!string.IsNullOrWhiteSpace(Generation))
-            {
-                Generation generation = Generation!.ToLowerInvariant() switch {
-                    "gen0" => Diagnostics.Runtime.Generation.Generation0,
-                    "gen1" => Diagnostics.Runtime.Generation.Generation1,
-                    "gen2" => Diagnostics.Runtime.Generation.Generation2,
-                    "loh" or "large" => Diagnostics.Runtime.Generation.Large,
-                    "poh" or "pinned" => Diagnostics.Runtime.Generation.Pinned,
-                    "foh" or "frozen" => Diagnostics.Runtime.Generation.Frozen,
-                    _ => throw new ArgumentException(
-                        $"Unknown generation: {Generation}. Only gen0, gen1, gen2, loh (large), poh (pinned) and foh (frozen) are supported")
-                };
-
-                FilteredHeap.Generation = generation;
-            }
         }
 
         /// <summary>Gets detailed help for the command.</summary>
@@ -243,7 +223,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public static string GetDetailedHelp() =>
             @"Examples:
     Summarize all http requests:        dumphttp --stats
-    Show http requests in Generation1:  dumphttp -gen gen1
     Show only completed http requests:  dumphttp -completed
 ";
 
