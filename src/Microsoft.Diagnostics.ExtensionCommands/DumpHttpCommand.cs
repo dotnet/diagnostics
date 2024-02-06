@@ -22,11 +22,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public bool Summarize { get; set; }
 
         /// <summary>Gets whether to show only requests without response.</summary>
-        [Option(Name = "-pending", Help = "Show only requests without response")]
+        [Option(Name = "--pending", Help = "Show only requests without response")]
         public bool Pending { get; set; }
 
         /// <summary>Gets whether to show only requests with response.</summary>
-        [Option(Name = "-completed", Help = "Show only requests with response")]
+        [Option(Name = "--completed", Help = "Show only requests with response")]
         public bool Completed { get; set; }
 
         private HeapWithFilters? FilteredHeap { get; set; }
@@ -222,8 +222,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [HelpInvoke]
         public static string GetDetailedHelp() =>
             @"Examples:
-    Summarize all http requests:        dumphttp --stats
-    Show only completed http requests:  dumphttp -completed
+    Summarize all http requests:            dumphttp --stats
+    Show only completed http requests:      dumphttp --completed
 ";
 
         private sealed class HttpRequestInfo
