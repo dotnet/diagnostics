@@ -98,6 +98,10 @@
           "operator": "and",
           "operands": [
             {
+              "name": "isIssue",
+              "parameters": {}
+            },
+            {
               "operator": "not",
               "operands": [
                 {
@@ -195,6 +199,10 @@
               "parameters": {
                 "label": "Needs: Author Feedback"
               }
+            },
+            {
+              "name": "isIssue",
+              "parameters": {}
             },
             {
               "name": "isOpen",
@@ -789,6 +797,10 @@
               ]
             },
             {
+              "name": "isIssue",
+              "parameters": {}
+            },
+            {
               "name": "hasLabel",
               "parameters": {
                 "label": "Status: No Recent Activity"
@@ -822,6 +834,10 @@
           "operator": "and",
           "operands": [
             {
+              "name": "isIssue",
+              "parameters": {}
+            },
+            {
               "name": "hasLabel",
               "parameters": {
                 "label": "Status: No Recent Activity"
@@ -852,6 +868,10 @@
         "conditions": {
           "operator": "and",
           "operands": [
+            {
+              "name": "isIssue",
+              "parameters": {}
+            },
             {
               "name": "labelAdded",
               "parameters": {
