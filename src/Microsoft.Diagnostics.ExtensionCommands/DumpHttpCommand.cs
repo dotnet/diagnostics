@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
@@ -17,6 +18,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// <summary>The name of the command.</summary>
         private const string CommandName = "dumphttp";
 
+        // Field names to get System.Net.Http.HttpRequestMessage.Method
+        private static readonly string[] s_httpMethodFieldNames =["_method", "method"];
+
+        // Field names to get System.Net.Http.HttpMethod.Method
+        private static readonly string[] s_methodFieldNames =["_method", "method"];
+
+        private static readonly string[] s_requestMessageFieldNames =["_requestMessage", "requestMessage"];
+        private static readonly string[] s_statusCodeFieldNames =["_statusCode", "statusCode"];
+        private static readonly string[] s_requestUriFieldNames =["_requestUri", "requestUri"];
+        private static readonly string[] s_uriStringFieldNames =["_string", "m_String"];
+
         /// <summary>Gets whether to summarize all httpRequests found rather than showing detailed info.</summary>
         [Option(Name = "--stats", Help = "Summarize all HTTP requests found rather than showing detailed info.")]
         public bool Summarize { get; set; }
@@ -28,6 +40,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// <summary>Gets whether to show only requests with response.</summary>
         [Option(Name = "--completed", Help = "Show only requests with response")]
         public bool Completed { get; set; }
+
+        /// <summary>Gets whether to show only requests with with specified request uri.</summary>
+        [Option(Name = "--uri", Help = "Show only requests with with specified request uri")]
+        public string? Uri { get; set; }
+
+        /// <summary>Gets whether to show only requests with with specified response status codei.</summary>
+        [Option(Name = "--statuscode", Help = "Show only requests with with specified response status code")]
+        public int? StatusCode { get; set; }
 
         private HeapWithFilters? FilteredHeap { get; set; }
 
@@ -42,10 +62,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // Enumerate the heap, gathering up all relevant HTTP request related httpRequests.
             IEnumerable<HttpRequestInfo> httpRequests = CollectHttpRequests();
             httpRequests = FilterDuplicates(httpRequests);
-            if (Pending || Completed)
-            {
-                httpRequests = FilterByStatus(httpRequests);
-            }
+            httpRequests = FilterByOptions(httpRequests);
 
             // Render the data according to the options specified.
             if (Summarize)
@@ -97,10 +114,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Table output = new(Console, ColumnKind.Pointer, ColumnKind.Pointer, s_httpMethodColumn, s_statusCodeColumn, ColumnKind.Text);
                 output.WriteHeader("Address", "MethodTable", "Method", "StatusCode", "Uri");
 
+                int total = 0;
                 foreach (HttpRequestInfo httpRequest in httpRequests)
                 {
                     output.WriteRow(httpRequest.Address, httpRequest.MethodTable, httpRequest.HttpMethod, httpRequest.StatusCode, httpRequest.Url);
+                    total++;
                 }
+                WriteLine($"Total {total} requests");
             }
         }
 
@@ -120,55 +140,69 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 if (clrObject.Type?.Name == "System.Net.Http.HttpResponseMessage")
                 {
-                    ClrObject request = GetRequest(clrObject);
+                    ClrObject request = ReadAnyObjectField(clrObject, s_requestMessageFieldNames, "Unable to read HttpResponseMessage");
                     yield return BuildRequest(request, clrObject);
                 }
 
                 // TODO handle System.Net.HttpWebRequest for .NET Framework dumps
             }
+        }
 
-            yield break;
+        private static HttpRequestInfo BuildRequest(ClrObject request, ClrObject? response)
+        {
+            string httpMethod = GetHttpMethod(request);
+            string uri = GetRequestUri(request);
+            int? statusCode = response != null ? ReadAnyField<int>(response.Value, s_statusCodeFieldNames, "Unable to read status code") : null;
 
-            HttpRequestInfo BuildRequest(ClrObject request, ClrObject? response)
+            return new HttpRequestInfo(
+                request.Address,
+                request.Type!.MethodTable,
+                httpMethod,
+                uri, statusCode);
+        }
+
+        private static string GetHttpMethod(ClrObject request)
+        {
+            ClrObject httpMethodObject = ReadAnyObjectField(request, s_httpMethodFieldNames, "Unable to read HTTP Method");
+            return ReadAnyObjectField(httpMethodObject, s_methodFieldNames, "Unable to read Method").AsString()!;
+        }
+
+        private static string GetRequestUri(ClrObject request)
+        {
+            ClrObject requestUriObject = ReadAnyObjectField(request, s_requestUriFieldNames, "Unable to read request uri");
+            return ReadAnyObjectField(requestUriObject, s_uriStringFieldNames, "Unable to read uri string").AsString()!;
+        }
+
+        private static T ReadAnyField<T>(ClrObject clrObject, string[] fieldNames, string errorMessage)
+            where T : unmanaged
+        {
+            foreach (string fieldName in fieldNames)
             {
-                string httpMethod = GetHttpMethod(request);
-                string uri = GetUri(request);
-                int? statusCode = response != null ? GetStatusCode(response.Value) : null;
-
-                return new HttpRequestInfo(
-                    request.Address,
-                    request.Type!.MethodTable,
-                    httpMethod,
-                    uri, statusCode);
+                if (clrObject.TryReadField(fieldName, out T result))
+                {
+                    return result;
+                }
             }
 
-            string GetHttpMethod(ClrObject request)
+            throw new ArgumentException(BuildMissingFieldMessage(clrObject, fieldNames, errorMessage));
+        }
+
+        private static ClrObject ReadAnyObjectField(ClrObject clrObject, string[] fieldNames, string errorMessage)
+        {
+            foreach (string fieldName in fieldNames)
             {
-                return Runtime.ClrInfo.Flavor == ClrFlavor.Core
-                    ? request.ReadObjectField("_method").ReadStringField("_method")!
-                    : request.ReadObjectField("method").ReadStringField("method")!;
+                if (clrObject.TryReadObjectField(fieldName, out ClrObject result))
+                {
+                    return result;
+                }
             }
 
-            ClrObject GetRequest(ClrObject request)
-            {
-                return Runtime.ClrInfo.Flavor == ClrFlavor.Core
-                    ? request.ReadObjectField("_requestMessage")
-                    : request.ReadObjectField("requestMessage");
-            }
+            throw new ArgumentException(BuildMissingFieldMessage(clrObject, fieldNames, errorMessage));
+        }
 
-            string GetUri(ClrObject request)
-            {
-                return Runtime.ClrInfo.Flavor == ClrFlavor.Core
-                    ? request.ReadObjectField("_requestUri").ReadStringField("_string")!
-                    : request.ReadObjectField("requestUri").ReadStringField("m_String")!;
-            }
-
-            int GetStatusCode(ClrObject response)
-            {
-                return Runtime.ClrInfo.Flavor == ClrFlavor.Core
-                    ? response.ReadField<int>("_statusCode")
-                    : response.ReadField<int>("statusCode");
-            }
+        private static string BuildMissingFieldMessage(ClrObject clrObject, string[] fieldNames, string errorMessage)
+        {
+            return $"{errorMessage}. Type '{clrObject.Type?.Name}' does not contain any field named {string.Join(" or ", fieldNames)}";
         }
 
         /// <summary>
@@ -193,14 +227,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private IEnumerable<HttpRequestInfo> FilterByStatus(IEnumerable<HttpRequestInfo> requests)
+        private IEnumerable<HttpRequestInfo> FilterByOptions(IEnumerable<HttpRequestInfo> requests)
         {
             foreach (HttpRequestInfo request in requests)
             {
-                bool matchFilter = Pending && request.StatusCode == null
-                                   || Completed && request.StatusCode != null;
+                bool matchesPendingCompletedFilter = !Pending && !Completed
+                                                     || Pending && request.StatusCode == null
+                                                     || Completed && request.StatusCode != null;
 
-                if (matchFilter)
+                bool matchesUriFilter = Uri == null || request.Url.IndexOf(Uri, StringComparison.OrdinalIgnoreCase) >= 0;
+                bool matchesStatusCodeFilter = StatusCode == null || request.StatusCode == StatusCode;
+
+                if (matchesPendingCompletedFilter && matchesUriFilter && matchesStatusCodeFilter)
                 {
                     yield return request;
                 }
@@ -222,8 +260,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [HelpInvoke]
         public static string GetDetailedHelp() =>
             @"Examples:
-    Summarize all http requests:            dumphttp --stats
-    Show only completed http requests:      dumphttp --completed
+    Summarize all http requests:                                dumphttp --stats
+    Show only completed http requests:                          dumphttp --completed
+    Show failed request with request uri contains weather:      dumphttp --statuscode 500 --uri weather
 ";
 
         private sealed class HttpRequestInfo
@@ -231,9 +270,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             public ulong Address { get; }
             public ulong MethodTable { get; }
             public string HttpMethod { get; }
-            public int? StatusCode{ get; }
+            public int? StatusCode { get; }
             public string Url { get; }
-            public string Host{ get; }
+            public string Host { get; }
 
             // TODO add response content-type header?
             // TODO add response length? (can be difficult to calculate)
