@@ -85,6 +85,8 @@ namespace RuntimeHostingConstants
         "DOTNET_ROOT_ARM";
 #elif defined(HOST_ARM64)
         "DOTNET_ROOT_ARM64";
+#elif defined(HOST_RISCV64)
+        "DOTNET_ROOT_RISCV64";
 #else
         "Error";
 #error Hosting layer doesn't support target arch
@@ -105,6 +107,8 @@ namespace RuntimeHostingConstants
         "/etc/dotnet/install_location_arm";
 #elif defined(HOST_ARM64)
         "/etc/dotnet/install_location_arm64";
+#elif defined(HOST_RISCV64)
+        "/etc/dotnet/install_location_riscv64";
 #else
         "ERROR";
 #error Hosting layer doesn't support target arch
@@ -636,7 +640,7 @@ static HRESULT InitializeNetCoreHost()
         char* exePath = minipal_getexepath();
         if (!exePath)
         {
-            TraceError("Could not get full path to current executable");
+            TraceError("Could not get full path to current executable\n");
             return E_FAIL;
         }
 

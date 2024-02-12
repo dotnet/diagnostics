@@ -19,14 +19,3 @@ bool lldb::PluginInitialize(lldb::SBDebugger debugger)
     sethostruntimeCommandInitialize(debugger);
     return true;
 }
-
-/// <summary>
-/// Internal trace output for extensions library
-/// </summary>
-void TraceError(PCSTR format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    g_services->InternalOutputVaList(DEBUG_OUTPUT_ERROR, format, args);
-    va_end(args);
-}

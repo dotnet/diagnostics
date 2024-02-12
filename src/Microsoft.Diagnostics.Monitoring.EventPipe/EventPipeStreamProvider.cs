@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             _stopProcessingSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
-        public async Task<Stream> ProcessEvents(DiagnosticsClient client, TimeSpan duration, CancellationToken cancellationToken)
+        public async Task<Stream> ProcessEvents(DiagnosticsClient client, TimeSpan duration, bool resumeRuntime, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -29,6 +29,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             try
             {
                 session = await client.StartEventPipeSessionAsync(_sourceConfig.GetProviders(), _sourceConfig.RequestRundown, _sourceConfig.BufferSizeInMB, cancellationToken).ConfigureAwait(false);
+                if (resumeRuntime)
+                {
+                    try
+                    {
+                        await client.ResumeRuntimeAsync(cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (UnsupportedCommandException)
+                    {
+                        // Noop if the command is unknown since the target process is most likely a 3.1 app.
+                    }
+                }
             }
             catch (EndOfStreamException e)
             {

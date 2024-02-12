@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
     internal static class Program
     {
-        private delegate Task<int> CollectDelegate(
+        private delegate Task<ReturnCode> CollectDelegate(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             int maxTimeSeries,
             TimeSpan duration);
 
-        private delegate Task<int> MonitorDelegate(
+        private delegate Task<ReturnCode> MonitorDelegate(
             CancellationToken ct,
             List<string> counter_list,
             string counters,
@@ -49,7 +49,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             bool resumeRuntime,
             int maxHistograms,
             int maxTimeSeries,
-            TimeSpan duration);
+            TimeSpan duration,
+            bool showDeltas);
 
         private static Command MonitorCommand() =>
             new(
@@ -68,7 +69,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ResumeRuntimeOption(),
                 MaxHistogramOption(),
                 MaxTimeSeriesOption(),
-                DurationOption()
+                DurationOption(),
+                ShowDeltasOption()
             };
 
         private static Command CollectCommand() =>
@@ -206,6 +208,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => default)
             };
+
+        private static Option ShowDeltasOption() =>
+            new(
+                alias: "--showDeltas",
+                description: @"Shows an extra column in the metrics table that displays the delta between the previous metric value and the most recent value." +
+               " This is useful to monitor the rate of change for a metric.")
+            { };
 
         private static readonly string[] s_SupportedRuntimeVersions = KnownData.s_AllVersions;
 

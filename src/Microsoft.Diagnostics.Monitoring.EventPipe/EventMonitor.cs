@@ -24,6 +24,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private readonly bool _leaveEventStreamOpen;
         private EventPipeEventSource _eventSource;
 
+        private TraceEventParser _eventParser;
+
         private readonly string _providerName;
         private readonly string _eventName;
 
@@ -78,8 +80,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 token.ThrowIfCancellationRequested();
                 using IDisposable registration = token.Register(() => _eventSource.Dispose());
 
-                _eventSource.Dynamic.AddCallbackForProviderEvent(_providerName, _eventName, TraceEventCallback);
+                if (string.Equals(_providerName, "Microsoft-Windows-DotNETRuntime", StringComparison.Ordinal))
+                {
+                    _eventParser = _eventSource.Clr;
+                }
+                else
+                {
+                    _eventParser = _eventSource.Dynamic;
+                }
 
+                _eventParser.AddCallbackForProviderEvent(_providerName, _eventName, TraceEventCallback);
                 _eventSource.Process();
                 token.ThrowIfCancellationRequested();
             }, token);
@@ -91,7 +101,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         /// </summary>
         private void StopMonitoringForEvent()
         {
-            _eventSource?.Dynamic.RemoveCallback<TraceEvent>(TraceEventCallback);
+            _eventParser?.RemoveCallback<TraceEvent>(TraceEventCallback);
         }
 
         private void TraceEventCallback(TraceEvent obj)

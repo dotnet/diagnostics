@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 if (InitializeValue(Module.Flags.InitializeVersion))
                 {
-                    if (!_moduleInfo.Version.Equals(Utilities.EmptyVersion))
+                    if (_moduleInfo.Version != null && !_moduleInfo.Version.Equals(Utilities.EmptyVersion))
                     {
                         _version = _moduleInfo.Version;
                     }

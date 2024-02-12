@@ -109,18 +109,9 @@ VERIFY:\s*Class Name:\s+SymbolTestApp.Program\s+
 VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
 
 # Verify DumpMT
-!IFDEF:MAJOR_RUNTIME_VERSION_GE_7
-# https://github.com/dotnet/diagnostics/issues/3516
 SOSCOMMAND:DumpMT <POUT>\s*Method Table:\s+(<HEXVAL>)\s+<POUT>
 VERIFY:\s*Name:\s+SymbolTestApp.Program\s+
 VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
-ENDIF:MAJOR_RUNTIME_VERSION_GE_7
-
-IFDEF:MAJOR_RUNTIME_VERSION_GE_8
-SOSCOMMAND:DumpMT <POUT>\s*Method Table:\s+(<HEXVAL>)\s+<POUT>
-VERIFY:\s*Name:\s+SymbolTestApp.Program\s+
-VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
-ENDIF:MAJOR_RUNTIME_VERSION_GE_8
 
 SOSCOMMAND:FinalizeQueue
 VERIFY:\s*SyncBlocks to be cleaned up:\s+<DECVAL>\s+

@@ -5,6 +5,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
@@ -70,11 +71,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
                 builder
                     .Append(payload.Timestamp.ToString()).Append(',')
-                    .Append(payload.ProviderName).Append(',')
-                    .Append(payload.DisplayName);
-                if (!string.IsNullOrEmpty(payload.Tags))
+                    .Append(payload.CounterMetadata.ProviderName).Append(',')
+                    .Append(payload.GetDisplay());
+
+                string tags = payload.CombineTags();
+                if (!string.IsNullOrEmpty(tags))
                 {
-                    builder.Append('[').Append(payload.Tags.Replace(',', ';')).Append(']');
+                    builder.Append('[').Append(tags.Replace(',', ';')).Append(']');
                 }
                 builder.Append(',')
                     .Append(payload.CounterType).Append(',')

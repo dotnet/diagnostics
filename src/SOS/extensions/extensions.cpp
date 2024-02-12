@@ -12,7 +12,6 @@
 // Error output.
 #define DEBUG_OUTPUT_ERROR             0x00000002
 
-extern void UninitializeDesktopClrHost();
 extern bool g_hostingInitialized;
 
 Extensions* Extensions::s_extensions = nullptr;
@@ -233,4 +232,46 @@ bool GetAbsolutePath(const char* path, std::string& absolutePath)
         return true;
     }
     return false;
+}
+
+/// <summary>
+/// Internal output helper function
+/// </summary>
+void InternalOutputVaList(
+    ULONG mask,
+    PCSTR format,
+    va_list args)
+{
+    char str[1024];
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+
+    // Try and format our string into a fixed buffer first and see if it fits
+    size_t length = vsnprintf(str, sizeof(str), format, args);
+    if (length < sizeof(str))
+    {
+        Extensions::GetInstance()->GetDebuggerServices()->OutputString(mask, str);
+    }
+    else
+    {
+        // Our stack buffer wasn't big enough to contain the entire formatted string
+        char *str_ptr = (char*)::malloc(length + 1);
+        if (str_ptr != nullptr)
+        {
+            vsnprintf(str_ptr, length + 1, format, argsCopy);
+            Extensions::GetInstance()->GetDebuggerServices()->OutputString(mask, str_ptr);
+            ::free(str_ptr);
+        }
+    }
+}
+
+/// <summary>
+/// Internal trace output for extensions library
+/// </summary>
+void TraceError(PCSTR format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    InternalOutputVaList(DEBUG_OUTPUT_ERROR, format, args);
+    va_end(args);
 }

@@ -1,3 +1,5 @@
+The newest documentation is now being maintained at [debug-deadlock](https://learn.microsoft.com/dotnet/core/diagnostics/debug-deadlock). This documentation is no longer being updated.
+
 # App stops responding
 
 **IMPORTANT: This tutorial uses API/methods available in dotnet core preview 5. These API/methods are _subject to change._** 

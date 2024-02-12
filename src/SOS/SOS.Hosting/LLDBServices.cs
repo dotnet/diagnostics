@@ -13,10 +13,10 @@ using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Hosting
 {
-    internal sealed unsafe class LLDBServices : COMCallableIUnknown
+    public sealed unsafe class LLDBServices : COMCallableIUnknown
     {
-        private static readonly Guid IID_ILLDBServices = new("2E6C569A-9E14-4DA4-9DFC-CDB73A532566");
-        private static readonly Guid IID_ILLDBServices2 = new("012F32F0-33BA-4E8E-BC01-037D382D8A5E");
+        public static readonly Guid IID_ILLDBServices = new("2E6C569A-9E14-4DA4-9DFC-CDB73A532566");
+        public static readonly Guid IID_ILLDBServices2 = new("012F32F0-33BA-4E8E-BC01-037D382D8A5E");
 
         public IntPtr ILLDBServices { get; }
 

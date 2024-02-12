@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Condition="'$(DotNetBuildFromSource)' != 'true'" Project="$(RepositoryEngineeringDir)Analyzers.props" />
+  <Import Condition="'$(DotNetBuildSourceOnly)' != 'true'" Project="$(RepositoryEngineeringDir)Analyzers.props" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>

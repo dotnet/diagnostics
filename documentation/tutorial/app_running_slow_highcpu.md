@@ -1,3 +1,5 @@
+The newest documentation is now being maintained at [debug-highcpu](https://learn.microsoft.com/dotnet/core/diagnostics/debug-highcpu). This documentation is no longer being updated.
+
 # App is running slow (due to high CPU)
 
 http://localhost:5000/api/diagscenario/highcpu/{milliseconds}

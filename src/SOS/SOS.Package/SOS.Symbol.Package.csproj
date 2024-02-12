@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <None Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\netstandard2.0\publish\*.pdb" Pack="true" Visible="false">
-      <PackagePath>$(SOSPackagePathPrefix)</PackagePath>
+      <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
     </None>
 
     <None Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false">

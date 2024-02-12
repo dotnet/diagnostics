@@ -32,6 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         private readonly CounterFilter _filter;
         private readonly EventCounterTriggerImpl _impl;
         private readonly string _providerName;
+        private CounterConfiguration _counterConfiguration;
 
         public EventCounterTrigger(EventCounterTriggerSettings settings)
         {
@@ -44,6 +45,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
 
             _filter = new CounterFilter(settings.CounterIntervalSeconds);
             _filter.AddFilter(settings.ProviderName, new string[] { settings.CounterName });
+
+            _counterConfiguration = new CounterConfiguration(_filter);
 
             _impl = new EventCounterTriggerImpl(settings);
 
@@ -58,7 +61,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         public bool HasSatisfiedCondition(TraceEvent traceEvent)
         {
             // Filter to the counter of interest before forwarding to the implementation
-            if (traceEvent.TryGetCounterPayload(_filter, null, null, out ICounterPayload payload))
+            if (traceEvent.TryGetCounterPayload(_counterConfiguration, out ICounterPayload payload))
             {
                 return _impl.HasSatisfiedCondition(payload);
             }

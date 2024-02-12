@@ -132,6 +132,12 @@ GetTargetMachine(ULONG processorType)
         targetMachine = ARM64Machine::GetInstance();
     }
 #endif // SOS_TARGET_ARM64
+#ifdef SOS_TARGET_RISCV64
+    if (processorType == IMAGE_FILE_MACHINE_RISCV64)
+    {
+        targetMachine = RISCV64Machine::GetInstance();
+    }
+#endif // SOS_TARGET_RISCV64
     return targetMachine;
 }
 
@@ -160,6 +166,9 @@ ArchQuery(void)
                 break;
             case IMAGE_FILE_MACHINE_ARM64:
                 architecture = "arm64";
+                break;
+            case IMAGE_FILE_MACHINE_RISCV64:
+                architecture = "riscv64";
                 break;
         }
         ExtErr("SOS does not support the current target architecture '%s' (0x%04x). A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.\n",
@@ -264,20 +273,6 @@ DACMessage(HRESULT Status)
 BOOL IsMiniDumpFileNODAC();
 extern HMODULE g_hInstance;
 
-// This function throws an exception that can be caught by the debugger,
-// instead of allowing the default CRT behavior of invoking Watson to failfast.
-void __cdecl _SOS_invalid_parameter(
-   const WCHAR * expression,
-   const WCHAR * function, 
-   const WCHAR * file, 
-   unsigned int line,
-   uintptr_t pReserved
-)
-{
-    ExtErr("\nSOS failure!\n");
-    throw "SOS failure";
-}
-
 bool g_Initialized = false;
 const char* g_sosPrefix = "";
 
@@ -344,12 +339,6 @@ DebugExtensionInitialize(PULONG Version, PULONG Flags)
             "----------------------------------------------------------------------------\n");
     }
     ExtRelease();
-    
-#ifndef _ARM_
-    // Make sure we do not tear down the debugger when a security function fails
-    // Since we link statically against CRT this will only affect the SOS module.
-    _set_invalid_parameter_handler(_SOS_invalid_parameter);
-#endif
     
     return S_OK;
 }

@@ -219,6 +219,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Debug
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{BE45F03E-D700-404F-A890-8ED7D8969958}"
 	ProjectSection(SolutionItems) = preProject
+		src\SOS\inc\clrma.h = src\SOS\inc\clrma.h
+		src\SOS\inc\clrma.idl = src\SOS\inc\clrma.idl
 		src\SOS\inc\debuggerservices.h = src\SOS\inc\debuggerservices.h
 		src\SOS\inc\host.h = src\SOS\inc\host.h
 		src\SOS\inc\hostservices.h = src\SOS\inc\hostservices.h

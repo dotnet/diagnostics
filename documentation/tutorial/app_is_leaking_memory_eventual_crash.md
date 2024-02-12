@@ -1,3 +1,5 @@
+The newest documentation is now being maintained at [debug-memory-leak](https://learn.microsoft.com/dotnet/core/diagnostics/debug-memory-leak). This documentation is no longer being updated.
+
 # App is leaking memory (eventual crash/stops responding)
 
 http://localhost:5000/api/diagscenario/memleak/{kb}

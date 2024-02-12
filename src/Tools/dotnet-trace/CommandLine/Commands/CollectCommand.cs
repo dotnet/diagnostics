@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
 using Microsoft.Tools.Common;
@@ -31,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime);
+        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown);
 
         /// <summary>
         /// Collects a diagnostic trace from a currently running process or launch a child process and trace it.
@@ -52,8 +53,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="diagnosticPort">Path to the diagnostic port to be used.</param>
         /// <param name="showchildio">Should IO from a child process be hidden.</param>
         /// <param name="resumeRuntime">Resume runtime once session has been initialized.</param>
+        /// <param name="stoppingEventProviderName">A string, parsed as-is, that will stop the trace upon hitting an event with the matching provider name. For a more specific stopping event, additionally provide `--stopping-event-event-name` and/or `--stopping-event-payload-filter`.</param>
+        /// <param name="stoppingEventEventName">A string, parsed as-is, that will stop the trace upon hitting an event with the matching event name. Requires `--stopping-event-provider-name` to be set. For a more specific stopping event, additionally provide `--stopping-event-payload-filter`.</param>
+        /// <param name="stoppingEventPayloadFilter">A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.</param>
+        /// <param name="rundown">Collect rundown events.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime)
+        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -121,6 +126,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     enabledBy[providerCollectionProvider.Name] = "--providers ";
                 }
 
+                bool collectRundownEvents = true;
+
                 if (profile.Length != 0)
                 {
                     Profile selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
@@ -131,7 +138,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return (int)ReturnCode.ArgumentError;
                     }
 
+                    collectRundownEvents = selectedProfile.Rundown;
+
                     Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
+                }
+
+                if (rundown.HasValue)
+                {
+                    collectRundownEvents = rundown.Value;
                 }
 
                 // Parse --clrevents parameter
@@ -158,6 +172,39 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
 
                 PrintProviders(providerCollection, enabledBy);
+
+                // Validate and parse stoppingEvent parameters: stoppingEventProviderName, stoppingEventEventName, stoppingEventPayloadFilter
+
+                bool hasStoppingEventProviderName = !string.IsNullOrEmpty(stoppingEventProviderName);
+                bool hasStoppingEventEventName = !string.IsNullOrEmpty(stoppingEventEventName);
+                bool hasStoppingEventPayloadFilter = !string.IsNullOrEmpty(stoppingEventPayloadFilter);
+                if (!hasStoppingEventProviderName && (hasStoppingEventEventName || hasStoppingEventPayloadFilter))
+                {
+                    Console.Error.WriteLine($"`{nameof(stoppingEventProviderName)}` is required to stop tracing after a specific event for a particular `{nameof(stoppingEventEventName)}` event name or `{nameof(stoppingEventPayloadFilter)}` payload filter.");
+                    return (int)ReturnCode.ArgumentError;
+                }
+                if (!hasStoppingEventEventName && hasStoppingEventPayloadFilter)
+                {
+                    Console.Error.WriteLine($"`{nameof(stoppingEventEventName)}` is required to stop tracing after a specific event for a particular `{nameof(stoppingEventPayloadFilter)}` payload filter.");
+                    return (int)ReturnCode.ArgumentError;
+                }
+
+                Dictionary<string, string> payloadFilter = new();
+                if (hasStoppingEventPayloadFilter)
+                {
+                    string[] payloadFieldNameValuePairs = stoppingEventPayloadFilter.Split(',');
+                    foreach (string pair in payloadFieldNameValuePairs)
+                    {
+                        string[] payloadFieldNameValuePair = pair.Split(':');
+                        if (payloadFieldNameValuePair.Length != 2)
+                        {
+                            Console.Error.WriteLine($"`{nameof(stoppingEventPayloadFilter)}` does not have valid format. Ensure that it has `payload_field_name:payload_field_value` pairs separated by commas.");
+                            return (int)ReturnCode.ArgumentError;
+                        }
+
+                        payloadFilter[payloadFieldNameValuePair[0]] = payloadFieldNameValuePair[1];
+                    }
+                }
 
                 DiagnosticsClient diagnosticsClient;
                 Process process = null;
@@ -220,13 +267,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     bool rundownRequested = false;
                     System.Timers.Timer durationTimer = null;
 
-
                     using (VirtualTerminalMode vTermMode = printStatusOverTime ? VirtualTerminalMode.TryEnable() : null)
                     {
                         EventPipeSession session = null;
                         try
                         {
-                            session = diagnosticsClient.StartEventPipeSession(providerCollection, true, (int)buffersize);
+                            session = diagnosticsClient.StartEventPipeSession(providerCollection, collectRundownEvents, (int)buffersize);
                             if (resumeRuntime)
                             {
                                 try
@@ -281,7 +327,31 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             ConsoleWriteLine("\n\n");
 
                             FileInfo fileInfo = new(output.FullName);
-                            Task copyTask = session.EventStream.CopyToAsync(fs);
+                            EventMonitor eventMonitor = null;
+                            Task copyTask = null;
+                            if (hasStoppingEventProviderName)
+                            {
+                                eventMonitor = new(
+                                    stoppingEventProviderName,
+                                    stoppingEventEventName,
+                                    payloadFilter,
+                                    onEvent: (traceEvent) =>
+                                    {
+                                        shouldExit.Set();
+                                    },
+                                    onPayloadFilterMismatch: (traceEvent) =>
+                                    {
+                                        ConsoleWriteLine($"One or more field names specified in the payload filter for event '{traceEvent.ProviderName}/{traceEvent.EventName}' do not match any of the known field names: '{string.Join(' ', traceEvent.PayloadNames)}'. As a result the requested stopping event is unreachable; will continue to collect the trace for the remaining specified duration.");
+                                    },
+                                    eventStream: new PassthroughStream(session.EventStream, fs, (int)buffersize, leaveDestinationStreamOpen: true),
+                                    callOnEventOnlyOnce: true);
+
+                                copyTask = eventMonitor.ProcessAsync(CancellationToken.None);
+                            }
+                            else
+                            {
+                                copyTask = session.EventStream.CopyToAsync(fs);
+                            }
                             Task shouldExitTask = copyTask.ContinueWith(
                                 (task) => shouldExit.Set(),
                                 CancellationToken.None,
@@ -339,6 +409,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 {
                                     printStatus();
                                 } while (!copyTask.Wait(100));
+
+                                if (eventMonitor != null)
+                                {
+                                    await eventMonitor.DisposeAsync().ConfigureAwait(false);
+                                }
                             }
                             // At this point the copyTask will have finished, so wait on the shouldExitTask in case it threw
                             // an exception or had some other interesting behavior
@@ -455,7 +530,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.NameOption(),
                 DiagnosticPortOption(),
                 ShowChildIOOption(),
-                ResumeRuntimeOption()
+                ResumeRuntimeOption(),
+                StoppingEventProviderNameOption(),
+                StoppingEventEventNameOption(),
+                StoppingEventPayloadFilterOption(),
+                RundownOption()
             };
 
         private static uint DefaultCircularBufferSizeInMB() => 256;
@@ -545,6 +624,37 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
             {
                 Argument = new Argument<bool>(name: "resumeRuntime", getDefaultValue: () => true)
+            };
+
+        private static Option StoppingEventProviderNameOption() =>
+            new(
+                alias: "--stopping-event-provider-name",
+                description: @"A string, parsed as-is, that will stop the trace upon hitting an event with the matching provider name. For a more specific stopping event, additionally provide `--stopping-event-event-name` and/or `--stopping-event-payload-filter`.")
+            {
+                Argument = new Argument<string>(name: "stoppingEventProviderName", getDefaultValue: () => null)
+            };
+
+        private static Option StoppingEventEventNameOption() =>
+            new(
+                alias: "--stopping-event-event-name",
+                description: @"A string, parsed as-is, that will stop the trace upon hitting an event with the matching event name. Requires `--stopping-event-provider-name` to be set. For a more specific stopping event, additionally provide `--stopping-event-payload-filter`.")
+            {
+                Argument = new Argument<string>(name: "stoppingEventEventName", getDefaultValue: () => null)
+            };
+
+        private static Option StoppingEventPayloadFilterOption() =>
+            new(
+                alias: "--stopping-event-payload-filter",
+                description: @"A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.")
+            {
+                Argument = new Argument<string>(name: "stoppingEventPayloadFilter", getDefaultValue: () => null)
+            };
+        private static Option RundownOption() =>
+            new(
+                alias: "--rundown",
+                description: @"Collect rundown events unless specified false.")
+            {
+                Argument = new Argument<bool?>(name: "rundown")
             };
     }
 }

@@ -25,6 +25,7 @@ namespace SOS.Hosting
                 wrapper.ReleaseWithCheck();
             }
             _wrappers.Clear();
+            _factories.Clear();
         }
 
         /// <summary>
@@ -48,12 +49,11 @@ namespace SOS.Hosting
         }
 
         /// <summary>
-        /// Remove the service instance
+        /// Remove the service instance (doesn't release it) but not the factory.
         /// </summary>
         /// <param name="serviceId">guid</param>
         public void RemoveServiceWrapper(in Guid serviceId)
         {
-            _factories.Remove(serviceId);
             _wrappers.Remove(serviceId);
         }
 

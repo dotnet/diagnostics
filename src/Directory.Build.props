@@ -27,6 +27,6 @@
   </PropertyGroup>
 
   <Import Project="$(RepositoryEngineeringDir)native\naming.props" />
-  <Import Condition="'$(DotNetBuildFromSource)' != 'true'"
+  <Import Condition="'$(DotNetBuildSourceOnly)' != 'true'"
           Project="$(RepositoryEngineeringDir)Analyzers.props" />
 </Project>

@@ -7,9 +7,6 @@ include_directories("$ENV{VSInstallDir}/DIA SDK/include")
 
 add_definitions(-DUSE_STL)
 
-#use static crt
-add_definitions(-MT) 
-
 set(RUNCOMMAND_SOURCES
     runcommand.cpp
 )

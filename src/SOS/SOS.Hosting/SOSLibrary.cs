@@ -17,7 +17,7 @@ namespace SOS.Hosting
     public sealed class SOSLibrary : IDisposable
     {
        /// <summary>
-       /// Provides the SOS module handle
+       /// Provides the SOS module path and handle
        /// </summary>
        public interface ISOSModule
        {

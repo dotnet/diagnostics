@@ -102,7 +102,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 Span<byte> buffer = new byte[triageBufferSize];
                 if (services.GetService<IMemoryService>().ReadMemory(triageBufferAddress, buffer, out int bytesRead) && bytesRead == triageBufferSize)
                 {
-                    return CrashInfoService.Create(hresult, buffer);
+                    return CrashInfoService.Create(hresult, buffer, services.GetService<IModuleService>());
                 }
                 else
                 {
