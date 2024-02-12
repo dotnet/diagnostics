@@ -24,7 +24,7 @@
     <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>8.0.0</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.2.24103.2</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.2.24112.1</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
