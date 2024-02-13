@@ -20,6 +20,8 @@ VERIFY:<HEXVAL>\s+<HEXVAL>\s+[Rr]eflection[Tt]est.*!(\$0_)?RefLoader(\.|::)Loade
 VERIFY:(StackTraceString: <none>\s+)?
 VERIFY:HResult:\s+80131604
 
+# Disabled until stack unwinding is fixed in .NET 9
+!IFDEF:MAJOR_RUNTIME_VERSION_GE_9
 # 6) Verifying that the Exception Object/ID gives us the same output about the reflected exception.
 SOSCOMMAND:PrintException <POUT>InnerException:\s+System\.Exception, Use !?printexception (<HEXVAL>) to see more<POUT>
 VERIFY:Exception object:\s+<HEXVAL>\s+
@@ -30,6 +32,7 @@ VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Rr]eflection[Tt]est.*!(\$0_)?RefLoader(\.|::)Invoked\.ExceptionNoHandler(\(\))?\+0x<HEXVAL>
 VERIFY:(StackTraceString: <none>\s+)?
 VERIFY:HResult:\s+80131500
+ENDIF:MAJOR_RUNTIME_VERSION_GE_9
 
 # 7) Verifying that there is source file and line number info
 SOSCOMMAND:PrintException -lines

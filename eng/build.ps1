@@ -8,8 +8,6 @@ Param(
     [switch] $skipmanaged,
     [switch] $skipnative,
     [switch] $bundletools,
-    [string] $privatebuildpath = "",
-    [switch] $cleanupprivatebuild,
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimedownloadversion= 'default',
     [string] $runtimesourcefeed = '',
@@ -51,12 +49,6 @@ if ($bundletools) {
     $test = $False
 }
 
-# Remove the private build registry keys
-if ($cleanupprivatebuild) {
-    Invoke-Expression "& `"$engroot\common\msbuild.ps1`" $engroot\CleanupPrivateBuild.proj /v:$verbosity /t:CleanupPrivateBuild /p:BuildArch=$architecture /p:TestArchitectures=$architecture"
-    exit $lastExitCode
-}
-
 # Install sdk for building, restore and build managed components.
 if (-not $skipmanaged) {
     Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity /p:BuildArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
@@ -84,7 +76,6 @@ if ($test) {
           /bl:$logdir\Test.binlog `
           /p:BuildArch=$architecture `
           /p:TestArchitectures=$architecture `
-          /p:PrivateBuildPath="$privatebuildpath" `
           /p:DotnetRuntimeVersion="$dotnetruntimeversion" `
           /p:DotnetRuntimeDownloadVersion="$dotnetruntimedownloadversion" `
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
