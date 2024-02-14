@@ -11,6 +11,10 @@
           "operator": "and",
           "operands": [
             {
+              "name": "isPr",
+              "parameters": {}
+            },
+            {
               "name": "isAction",
               "parameters": {
                 "action": "opened"
