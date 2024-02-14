@@ -14,7 +14,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static string CLREventProviderName = "Microsoft-Windows-DotNETRuntime";
 
-        private static EventLevel defaultEventLevel = EventLevel.Verbose;
+        private const EventLevel defaultEventLevel = EventLevel.Informational;
+        private const long defaultKeywords = 0;
+
         // Keep this in sync with runtime repo's clretwall.man
         private static Dictionary<string, long> CLREventKeywords = new(StringComparer.InvariantCultureIgnoreCase)
         {
@@ -151,7 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // Keywords
             long keywords = tokens.Length > 1 && !string.IsNullOrWhiteSpace(tokens[1]) ?
-                Convert.ToInt64(tokens[1], 16) : -1;
+                Convert.ToInt64(tokens[1], 16) : defaultKeywords;
 
             // Level
             EventLevel eventLevel = tokens.Length > 2 && !string.IsNullOrWhiteSpace(tokens[2]) ?
