@@ -3,47 +3,6 @@
   "tasks": [
     {
       "taskType": "trigger",
-      "capabilityId": "AutoMerge",
-      "subCapability": "AutoMerge",
-      "version": "1.0",
-      "config": {
-        "taskName": "Automatically merge pull requests",
-        "label": "auto-merge",
-        "silentMode": false,
-        "minMinutesOpen": "1",
-        "mergeType": "squash",
-        "deleteBranches": true,
-        "allowAutoMergeInstructionsWithoutLabel": true,
-        "enforceDMPAsStatus": true,
-        "removeLabelOnPush": true,
-        "usePrDescriptionAsCommitMessage": false,
-        "conditionalMergeTypes": [
-          {
-            "mergeType": "merge",
-            "condition": {
-              "placeholder": "branch",
-              "operator": "equals",
-              "value": "release/stable"
-            }
-          }
-        ],
-        "requireAllStatuses": true,
-        "requireSpecificCheckRuns": true,
-        "requireSpecificCheckRunsList": [
-          "diagnostics-public-ci"
-        ],
-        "minimumNumberOfStatuses": 1,
-        "minimumNumberOfCheckRuns": 1,
-        "requireAllStatuses_exemptList": [
-          "codecov",
-          "Dependabot",
-          "DotNet Maestro",
-          "DotNet Maestro - Int"
-        ]
-      }
-    },
-    {
-      "taskType": "trigger",
       "capabilityId": "IssueResponder",
       "subCapability": "PullRequestResponder",
       "version": "1.0",
