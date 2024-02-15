@@ -76,13 +76,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void ValidProviderEventLevel_CorrectlyParses(string providerToParse)
         {
             List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providerToParse);
-            Assert.True(parsedProviders.Count == 1);
+            Assert.Equal(1, parsedProviders.Count);
             EventPipeProvider provider = parsedProviders.First();
-            Assert.True(provider.Name == "VeryCoolProvider");
-            Assert.True(provider.Keywords == (long)(-1));
-            Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Verbose);
-            Assert.True(provider.Arguments.Count == 1);
-            Assert.True(provider.Arguments["FilterAndPayloadSpecs"] == "QuotedValue");
+            Assert.Equal("VeryCoolProvider", provider.Name);
+            Assert.Equal(0, provider.Keywords);
+            Assert.Equal(System.Diagnostics.Tracing.EventLevel.Informational, provider.EventLevel);
+            Assert.Equal(1, provider.Arguments.Count);
+            Assert.Equal("QuotedValue", provider.Arguments["FilterAndPayloadSpecs"]);
         }
 
         [Theory]
