@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [Theory]
-        [InlineData("VeryCoolProvider::5:FilterAndPayloadSpecs=\"QuotedValue\"")]
+        [InlineData("VeryCoolProvider::4:FilterAndPayloadSpecs=\"QuotedValue\"")]
         [InlineData("VeryCoolProvider:::FilterAndPayloadSpecs=\"QuotedValue\"")]
         public void ValidProviderEventLevel_CorrectlyParses(string providerToParse)
         {
