@@ -12,7 +12,7 @@ using Microsoft.Diagnostics.Tracing.Stacks.Formats;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal enum TraceFileFormat { NetTrace, Speedscope, Chromium };
+    internal enum TraceFileFormat { NetTrace = 1, Speedscope, Chromium };
 
     internal static class TraceFileFormatConverter
     {

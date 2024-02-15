@@ -3,7 +3,9 @@
 
 using System;
 using System.CommandLine;
+using System.CommandLine.IO;
 using System.IO;
+using System.Linq;
 using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace
@@ -12,21 +14,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static int ConvertFile(IConsole console, FileInfo inputFilename, TraceFileFormat format, FileInfo output)
         {
-            if ((int)format <= 0)
+            if (!Enum.IsDefined(format))
             {
-                Console.Error.WriteLine("--format is required.");
+                string options = string.Join(", ", Enum.GetNames(typeof(TraceFileFormat)).Where(x => x != TraceFileFormat.NetTrace.ToString()));
+                console.Error.WriteLine($"Please specify a valid option for the --format. Valid options are: {options}.");
                 return ErrorCodes.ArgumentError;
             }
 
             if (format == TraceFileFormat.NetTrace)
             {
-                Console.Error.WriteLine("Cannot convert a nettrace file to nettrace format.");
+                console.Error.WriteLine("Cannot convert a nettrace file to nettrace format.");
                 return ErrorCodes.ArgumentError;
             }
 
             if (!inputFilename.Exists)
             {
-                Console.Error.WriteLine($"File '{inputFilename}' does not exist.");
+                console.Error.WriteLine($"File '{inputFilename}' does not exist.");
                 return ErrorCodes.ArgumentError;
             }
 
