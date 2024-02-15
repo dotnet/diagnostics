@@ -306,5 +306,36 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             Assert.Throws<ArgumentException>(() => Extensions.ToProviders(providerToParse));
         }
+
+        [Theory]
+        [InlineData("DupeProvider,DupeProvider:0xF:LogAlways")]
+        public void DeDupeProviders_DefaultAndSpecified(string providersToParse)
+        {
+            List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providersToParse);
+            Assert.Equal("DupeProvider", parsedProviders.First().Name);
+            Assert.Equal(1, parsedProviders.Count);
+            Assert.Equal(0xF, parsedProviders.First().Keywords);
+            Assert.Equal(System.Diagnostics.Tracing.EventLevel.LogAlways, parsedProviders.First().EventLevel);
+            Assert.Null(parsedProviders.First().Arguments);
+        }
+
+        [Theory]
+        [InlineData("DupeProvider:0xF0:Informational,DupeProvider:0xF:Verbose")]
+        public void DeDupeProviders_BothSpecified(string providersToParse)
+        {
+            List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providersToParse);
+            Assert.Equal("DupeProvider", parsedProviders.First().Name);
+            Assert.Equal(1, parsedProviders.Count);
+            Assert.Equal(0xFF, parsedProviders.First().Keywords);
+            Assert.Equal(System.Diagnostics.Tracing.EventLevel.Verbose, parsedProviders.First().EventLevel);
+            Assert.Null(parsedProviders.First().Arguments);
+        }
+
+        [Theory]
+        [InlineData("DupeProvider:::key=value,DupeProvider:::key=value")]
+        public void DeDupeProviders_FilterDataThrows(string providersToParse)
+        {
+            Assert.Throws<ArgumentException>(() => Extensions.ToProviders(providersToParse));
+        }
     }
 }
