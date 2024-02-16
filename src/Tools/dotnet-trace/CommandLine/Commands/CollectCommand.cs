@@ -21,8 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        internal static bool IsQuiet
-        { get; set; }
+        internal static bool IsQuiet{ get; set; }
 
         private static void ConsoleWriteLine(string str)
         {
@@ -424,7 +423,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         if (format != TraceFileFormat.NetTrace)
                         {
-                            TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
+                            string outputFilename = TraceFileFormatConverter.GetConvertedFilename(output.FullName, outputfile: null, format);
+                            TraceFileFormatConverter.ConvertToFormat(console, format, fileToConvert: output.FullName, outputFilename);
                         }
                     }
 

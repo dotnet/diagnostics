@@ -5,7 +5,6 @@ using System;
 using System.CommandLine;
 using System.CommandLine.IO;
 using System.IO;
-using System.Linq;
 using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace
@@ -16,26 +15,30 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             if (!Enum.IsDefined(format))
             {
-                string options = string.Join(", ", Enum.GetNames(typeof(TraceFileFormat)).Where(x => x != TraceFileFormat.NetTrace.ToString()));
-                console.Error.WriteLine($"Please specify a valid option for the --format. Valid options are: {options}.");
+                console.Error.WriteLine($"Please specify a valid option for the --format. Valid options are: {string.Join(", ", Enum.GetNames<TraceFileFormat>())}.");
                 return ErrorCodes.ArgumentError;
             }
 
-            if (format == TraceFileFormat.NetTrace)
+            string outputFilename = TraceFileFormatConverter.GetConvertedFilename(inputFilename.FullName, output?.FullName, format);
+
+            if (format != TraceFileFormat.NetTrace)
             {
-                console.Error.WriteLine("Cannot convert a nettrace file to nettrace format.");
-                return ErrorCodes.ArgumentError;
+                TraceFileFormatConverter.ConvertToFormat(console, format, inputFilename.FullName, output.FullName);
             }
-
-            if (!inputFilename.Exists)
+            else
             {
-                console.Error.WriteLine($"File '{inputFilename}' does not exist.");
-                return ErrorCodes.ArgumentError;
+                console.Out.WriteLine($"Copying nettrace to:\t{outputFilename}");
+                try
+                {
+                    File.Copy(inputFilename.FullName, outputFilename);
+                }
+                catch (Exception ex)
+                {
+                    console.Error.WriteLine($"Error copying nettrace to {outputFilename}: {ex.Message}");
+                    return ErrorCodes.UnknownError;
+                }
             }
 
-            output ??= inputFilename;
-
-            TraceFileFormatConverter.ConvertToFormat(format, inputFilename.FullName, output.FullName);
             return 0;
         }
 
