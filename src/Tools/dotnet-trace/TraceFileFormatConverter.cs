@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         internal static void ConvertToFormat(IConsole console, TraceFileFormat format, string fileToConvert, string outputFilename)
         {
-            Console.Out.WriteLine($"Writing:\t{outputFilename}");
+            console.Out.WriteLine($"Writing:\t{outputFilename}");
 
             switch (format)
             {

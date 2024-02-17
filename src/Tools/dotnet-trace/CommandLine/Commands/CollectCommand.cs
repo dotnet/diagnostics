@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        internal static bool IsQuiet{ get; set; }
+        internal static bool IsQuiet { get; set; }
 
         private static void ConsoleWriteLine(string str)
         {
