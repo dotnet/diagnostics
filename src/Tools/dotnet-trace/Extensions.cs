@@ -14,7 +14,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static string CLREventProviderName = "Microsoft-Windows-DotNETRuntime";
 
-        private static EventLevel defaultEventLevel = EventLevel.Verbose;
+        private const EventLevel defaultEventLevel = EventLevel.Informational;
+        private const long defaultKeywords = 0;
+
         // Keep this in sync with runtime repo's clretwall.man
         private static Dictionary<string, long> CLREventKeywords = new(StringComparer.InvariantCultureIgnoreCase)
         {
@@ -55,15 +57,53 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { "typediagnostic", 0x8000000000 },
         };
 
-        public static List<EventPipeProvider> ToProviders(string providers)
+        public static List<EventPipeProvider> ToProviders(string providersRawInput)
         {
-            if (providers == null)
+            if (providersRawInput == null)
             {
-                throw new ArgumentNullException(nameof(providers));
+                throw new ArgumentNullException(nameof(providersRawInput));
             }
 
-            return string.IsNullOrWhiteSpace(providers) ?
-                new List<EventPipeProvider>() : providers.Split(',').Select(ToProvider).ToList();
+            if (string.IsNullOrWhiteSpace(providersRawInput))
+            {
+                return new List<EventPipeProvider>();
+            }
+
+            IEnumerable<EventPipeProvider> providers = providersRawInput.Split(',').Select(ToProvider).ToList();
+
+            // Dedupe the entries
+            providers = providers.GroupBy(p => p.Name)
+                                 .Select(p => {
+                                     string providerName = p.Key;
+                                     EventLevel providerLevel = EventLevel.Critical;
+                                     long providerKeywords = 0;
+                                     IDictionary<string, string> providerFilterArgs = null;
+
+                                     foreach (EventPipeProvider currentProvider in p)
+                                     {
+                                         providerKeywords |= currentProvider.Keywords;
+
+                                         if ((currentProvider.EventLevel == EventLevel.LogAlways)
+                                             || (providerLevel != EventLevel.LogAlways && currentProvider.EventLevel > providerLevel))
+                                         {
+                                             providerLevel = currentProvider.EventLevel;
+                                         }
+
+                                         if (currentProvider.Arguments != null)
+                                         {
+                                             if (providerFilterArgs != null)
+                                             {
+                                                 throw new ArgumentException($"Provider \"{providerName}\" is declared multiple times with filter arguments.");
+                                             }
+
+                                             providerFilterArgs = currentProvider.Arguments;
+                                         }
+                                     }
+
+                                     return new EventPipeProvider(providerName, providerLevel, providerKeywords, providerFilterArgs);
+                                 });
+
+            return providers.ToList();
         }
 
         public static EventPipeProvider ToCLREventPipeProvider(string clreventslist, string clreventlevel)
@@ -151,7 +191,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // Keywords
             long keywords = tokens.Length > 1 && !string.IsNullOrWhiteSpace(tokens[1]) ?
-                Convert.ToInt64(tokens[1], 16) : -1;
+                Convert.ToInt64(tokens[1], 16) : defaultKeywords;
 
             // Level
             EventLevel eventLevel = tokens.Length > 2 && !string.IsNullOrWhiteSpace(tokens[2]) ?
