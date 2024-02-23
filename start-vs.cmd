@@ -6,14 +6,15 @@ set "SLN_OR_PROJ=%~dp0diagnostics.sln"
 
 set "DOTNET_ROOT=%SDK_LOC%"
 set "DOTNET_ROOT(x86)=%SDK_LOC%\x86"
+set DOTNET_MULTILEVEL_LOOKUP=0
 set "DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR=%DOTNET_ROOT%"
 
 set PATH=%DOTNET_ROOT%;%PATH%
 
 :: Restore before doing this
 
-IF NOT EXIST "%DOTNET_ROOT%\dotnet.exe" (
-    echo [ERROR] .NET Core has not yet been installed. Run `%~dp0dotnet.cmd` to install tools
+if not exist "%DOTNET_ROOT%\dotnet.exe" (
+    echo [ERROR] SDK has not yet been installed.
     exit /b 1
 )
 

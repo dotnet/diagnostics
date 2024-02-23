@@ -16,7 +16,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
         // The first 8 bytes of a nettrace file are the ASCII string "Nettrace"
         private static readonly byte[] NetTraceHeader = [0x4E, 0x65, 0x74, 0x74, 0x72, 0x61, 0x63, 0x65];
 
-
         public static int ConvertFile(IConsole console, FileInfo inputFilename, TraceFileFormat format, FileInfo output)
         {
             if (!Enum.IsDefined(format))
