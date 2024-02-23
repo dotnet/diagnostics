@@ -2,38 +2,92 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.IO;
 using System.IO;
+using System.Linq;
 using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class ConvertCommandHandler
     {
+        // The first 8 bytes of a nettrace file are the ASCII string "Nettrace"
+        private static readonly byte[] NetTraceHeader = [0x4E, 0x65, 0x74, 0x74, 0x72, 0x61, 0x63, 0x65];
+
         public static int ConvertFile(IConsole console, FileInfo inputFilename, TraceFileFormat format, FileInfo output)
         {
-            if ((int)format <= 0)
+            if (!Enum.IsDefined(format))
             {
-                Console.Error.WriteLine("--format is required.");
+                console.Error.WriteLine($"Please specify a valid option for the --format. Valid options are: {string.Join(", ", Enum.GetNames<TraceFileFormat>())}.");
                 return ErrorCodes.ArgumentError;
             }
 
-            if (format == TraceFileFormat.NetTrace)
+            if (!ValidateNetTraceHeader(console, inputFilename.FullName))
             {
-                Console.Error.WriteLine("Cannot convert a nettrace file to nettrace format.");
                 return ErrorCodes.ArgumentError;
             }
 
-            if (!inputFilename.Exists)
+            string outputFilename = TraceFileFormatConverter.GetConvertedFilename(inputFilename.FullName, output?.FullName, format);
+
+            if (format != TraceFileFormat.NetTrace)
             {
-                Console.Error.WriteLine($"File '{inputFilename}' does not exist.");
-                return ErrorCodes.ArgumentError;
+                TraceFileFormatConverter.ConvertToFormat(console, format, inputFilename.FullName, outputFilename);
+                return 0;
             }
 
-            output ??= inputFilename;
+            return CopyNetTrace(console, inputFilename.FullName, outputFilename);
 
-            TraceFileFormatConverter.ConvertToFormat(format, inputFilename.FullName, output.FullName);
-            return 0;
+            static bool ValidateNetTraceHeader(IConsole console, string filename)
+            {
+                try
+                {
+                    using FileStream fs = new(filename, FileMode.Open, FileAccess.Read);
+                    Span<byte> header = stackalloc byte[NetTraceHeader.Length];
+                    Span<byte> readBuffer = header;
+                    int bytesRead = 0;
+                    while (readBuffer.Length > 0 && (bytesRead = fs.Read(readBuffer)) > 0)
+                    {
+                        readBuffer = readBuffer.Slice(bytesRead);
+                    }
+
+                    if (readBuffer.Length != 0 || !header.SequenceEqual(NetTraceHeader))
+                    {
+                        console.Error.WriteLine($"'{filename}' is not a valid nettrace file.");
+                        return false;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    console.Error.WriteLine($"Error reading '{filename}': {ex.Message}");
+                    return false;
+                }
+
+                return true;
+            }
+
+            static int CopyNetTrace(IConsole console, string inputfile, string outputfile)
+            {
+                if (inputfile == outputfile)
+                {
+                    console.Error.WriteLine("Input and output filenames are the same. Skipping copy.");
+                    return 0;
+                }
+
+                console.Out.WriteLine($"Copying nettrace to:\t{outputfile}");
+                try
+                {
+                    File.Copy(inputfile, outputfile);
+                }
+                catch (Exception ex)
+                {
+                    console.Error.WriteLine($"Error copying nettrace to {outputfile}: {ex.Message}");
+                    return ErrorCodes.UnknownError;
+                }
+
+                return 0;
+            }
         }
 
         public static Command ConvertCommand() =>
