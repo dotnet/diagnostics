@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (command.Services.GetService<ITarget>().OperatingSystem != OSPlatform.Windows)
             {
                 ulong address = SpecialDiagInfoHeader.GetAddress(command.Services);
-                command.Console.Write($"{indent}SpecialDiagInfoHeader ({address:X16}):");
+                command.Console.Write($"{indent}SpecialDiagInfoHeader   : {address:X16}");
                 if (SpecialDiagInfoHeader.TryRead(command.Services, address, out SpecialDiagInfoHeader info))
                 {
                     command.Console.WriteLine(info.IsValid ? "" : " <INVALID>");
@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         IModule runtimeModule = command.Services.GetService<IModuleService>().GetModuleFromBaseAddress(info.RuntimeBaseAddress);
                         if (runtimeModule != null)
                         {
-                            command.DisplayRuntimeExports(runtimeModule, error: true, indent);
+                            command.DisplayRuntimeExports(runtimeModule, error: true, indent + "    ");
                         }
                     }
                 }
@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             IExportSymbols symbols = module.Services.GetService<IExportSymbols>();
             if (symbols != null && symbols.TryGetSymbolAddress(RuntimeInfo.RUNTIME_INFO_SYMBOL, out ulong infoAddress))
             {
-                Console().Write($"{indent}{RuntimeInfo.RUNTIME_INFO_SYMBOL,-24}: ({infoAddress:X16})");
+                Console().Write($"{indent}{RuntimeInfo.RUNTIME_INFO_SYMBOL,-24}: {infoAddress:X16}");
                 if (RuntimeInfo.TryRead(command.Services, infoAddress, out RuntimeInfo info))
                 {
                     Console().WriteLine(info.IsValid ? "" : " <INVALID>");
