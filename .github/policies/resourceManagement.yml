@@ -132,7 +132,6 @@ configuration:
       - isIssue
       - not:
           isOpen
-      - isUnlocked
       then:
       - addLabel:
           label: 'Needs: Attention :wave:'
