@@ -131,7 +131,9 @@ configuration:
           label: 'Status: No Recent Activity'
       - isIssue
       - not:
-          isOpen
+          and:
+          - isOpen
+          - isLocked
       then:
       - addLabel:
           label: 'Needs: Attention :wave:'
