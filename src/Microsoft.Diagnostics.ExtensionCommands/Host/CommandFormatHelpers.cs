@@ -10,7 +10,7 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    public static class CommandExtensions
+    public static class CommandFormatHelpers
     {
         public const string DacTableSymbol = "g_dacTable";
         public const string DebugHeaderSymbol = "DotNetRuntimeDebugHeader";
