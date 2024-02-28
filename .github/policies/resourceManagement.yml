@@ -123,16 +123,8 @@ configuration:
       - payloadType: Issue_Comment
       - isAction:
           action: Created
-      - hasLabel:
-          label: 'Needs: Author Feedback'
-      - hasLabel:
-          label: 'Status: No Recent Activity'
-      - isIssue
-      - not:
-            isOpen
-      - isUnlocked
       - isActivitySender:
-          issueAuthor: True
+          issueAuthor: true
       then:
       - addLabel:
           label: 'Needs: Attention :wave:'
