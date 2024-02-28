@@ -130,6 +130,8 @@ configuration:
       - hasLabel:
           label: 'Status: No Recent Activity'
       - isIssue
+      - not:
+          isOpen
       - isUnlocked
       then:
       - addLabel:
