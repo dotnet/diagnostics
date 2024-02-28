@@ -129,7 +129,7 @@ configuration:
           label: 'Status: No Recent Activity'
       - isIssue
       - not:
-            isClosed
+            isOpen
       - isUnlocked
       - isActivitySender:
           issueAuthor: True
@@ -142,7 +142,7 @@ configuration:
           label: 'Needs: Author Feedback'
       - reopenIssue
       triggerOnOwnActions: false
-    - description: '[Idle Issue Management] Remove no recent activity label when an issue is commented on'
+    - description: '[Closed Issue Management] Remove no recent activity label from issues'
       if:
       - payloadType: Issues
       - not:
@@ -155,7 +155,8 @@ configuration:
       - removeLabel:
           label: 'Status: No Recent Activity'
       triggerOnOwnActions: false
-    - if:
+    - description: '[Idle Issue Management] Remove no recent activity label when an issue is commented on'
+      if:
       - payloadType: Issue_Comment
       - isIssue
       - hasLabel:
@@ -164,7 +165,8 @@ configuration:
       - removeLabel:
           label: 'Status: No Recent Activity'
       triggerOnOwnActions: false
-    - if:
+    - description: Add comment when 'Needs Author Feedback' is applied to issue
+      if:
       - payloadType: Issues
       - isIssue
       - labelAdded:
@@ -172,7 +174,6 @@ configuration:
       then:
       - addReply:
           reply: 'Hi @${issueAuthor}. We have added the "Needs: Author Feedback" label to this issue, which indicates that we have an open question for you before we can take further action. This issue will be closed automatically in 7 days if we do not hear back from you by then - please feel free to re-open it if you come back to this issue after that time.'
-      description: Add comment when 'Needs Author Feedback' is applied to issue
       triggerOnOwnActions: false
 onFailure: 
 onSuccess: 
