@@ -35,6 +35,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
+                IRuntime currentRuntime = ContextService.GetCurrentRuntime();
                 foreach (ITarget target in Host.EnumerateTargets())
                 {
                     WriteLine(target.ToString());
@@ -43,7 +44,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     // Display the current runtime star ("*") only if there is more than one runtime
                     bool displayStar = runtimeService.EnumerateRuntimes().Count() > 1;
-                    IRuntime currentRuntime = ContextService.GetCurrentRuntime();
 
                     foreach (IRuntime runtime in runtimeService.EnumerateRuntimes())
                     {

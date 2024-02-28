@@ -137,7 +137,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Create the file format reader used to read and layout TStruct derived structures from memory
         /// </summary>
-        private Reader CreateReader(IServiceProvider services)
+        private static Reader CreateReader(IServiceProvider services)
         {
             IMemoryService memoryService = services.GetService<IMemoryService>();
             Stream stream = memoryService.CreateMemoryStream();
