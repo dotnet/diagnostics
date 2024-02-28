@@ -125,6 +125,12 @@ configuration:
           action: Created
       - isActivitySender:
           issueAuthor: true
+      - hasLabel:
+          label: 'Needs: Author Feedback'
+      - hasLabel:
+          label: 'Status: No Recent Activity'
+      - isIssue
+      - isUnlocked
       then:
       - addLabel:
           label: 'Needs: Attention :wave:'
