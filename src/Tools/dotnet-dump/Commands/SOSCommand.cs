@@ -15,9 +15,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
         [ServiceImport]
         public CommandService CommandService { get; set; }
 
-        [ServiceImport]
-        public IServiceProvider Services { get; set; }
-
         [ServiceImport(Optional = true)]
         public SOSHost SOSHost { get; set; }
 
