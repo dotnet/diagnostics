@@ -84,6 +84,97 @@ configuration:
       - addReply:
           reply: This issue has been resolved and has not had any activity for **1 day**. It will be closed for housekeeping purposes.
       - closeIssue
-    eventResponderTasks: []
+    eventResponderTasks:
+    - description: Auto approve dependencies
+      if:
+      - payloadType: Pull_Request
+      - isPullRequest
+      - isAction:
+          action: Opened
+      - titleContains:
+          pattern: Update dependencies
+          isRegex: False
+      - isActivitySender:
+          user: dotnet-maestro[bot]
+          issueAuthor: False
+      then:
+      - approvePullRequest:
+          comment: Automatically approving dependency update.
+      triggerOnOwnActions: false
+    - description: '[Idle Issue Management] Replace needs author feedback label with needs attention label when the author comments on an issue'
+      if:
+      - payloadType: Issue_Comment
+      - isAction:
+          action: Created
+      - hasLabel:
+          label: 'Needs: Author Feedback'
+      - isIssue
+      - isOpen
+      - isActivitySender:
+          issueAuthor: True
+      then:
+      - addLabel:
+          label: 'Needs: Attention :wave:'
+      - removeLabel:
+          label: 'Needs: Author Feedback'
+      triggerOnOwnActions: false
+    - description: '[Idle Issue Management] Reopen issues with author feedback within 30 days of closure'
+      if:
+      - payloadType: Issue_Comment
+      - isAction:
+          action: Created
+      - isActivitySender:
+          issueAuthor: true
+      - hasLabel:
+          label: 'Needs: Author Feedback'
+      - hasLabel:
+          label: 'Status: No Recent Activity'
+      - isIssue
+      - not:
+          and:
+          - isOpen
+          - isLocked
+      then:
+      - addLabel:
+          label: 'Needs: Attention :wave:'
+      - removeLabel:
+          label: 'Status: No Recent Activity'
+      - removeLabel:
+          label: 'Needs: Author Feedback'
+      - reopenIssue
+      triggerOnOwnActions: false
+    - description: '[Closed Issue Management] Remove no recent activity label from issues'
+      if:
+      - payloadType: Issues
+      - not:
+          isAction:
+            action: Closed
+      - isIssue
+      - hasLabel:
+          label: 'Status: No Recent Activity'
+      then:
+      - removeLabel:
+          label: 'Status: No Recent Activity'
+      triggerOnOwnActions: false
+    - description: '[Idle Issue Management] Remove no recent activity label when an issue is commented on'
+      if:
+      - payloadType: Issue_Comment
+      - isIssue
+      - hasLabel:
+          label: 'Status: No Recent Activity'
+      then:
+      - removeLabel:
+          label: 'Status: No Recent Activity'
+      triggerOnOwnActions: false
+    - description: Add comment when 'Needs Author Feedback' is applied to issue
+      if:
+      - payloadType: Issues
+      - isIssue
+      - labelAdded:
+          label: 'Needs: Author Feedback'
+      then:
+      - addReply:
+          reply: 'Hi @${issueAuthor}. We have added the "Needs: Author Feedback" label to this issue, which indicates that we have an open question for you before we can take further action. This issue will be closed automatically in 7 days if we do not hear back from you by then - please feel free to re-open it if you come back to this issue after that time.'
+      triggerOnOwnActions: false
 onFailure: 
 onSuccess: 
