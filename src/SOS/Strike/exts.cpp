@@ -209,7 +209,7 @@ ExecuteCommand(PCSTR commandName, PCSTR args)
         IHostServices* hostServices = GetHostServices();
         if (hostServices != nullptr)
         {
-            return hostServices->DispatchCommand(commandName, args);
+            return hostServices->DispatchCommand(commandName, args, /* displayCommandNotFound */ false);
         }
     }
     return E_NOTIMPL;

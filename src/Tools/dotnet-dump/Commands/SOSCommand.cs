@@ -39,15 +39,18 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 command = "help";
                 arguments = null;
             }
-            if (CommandService.Execute(command, arguments, Services))
+            try
             {
-                return;
+                CommandService.Execute(command, arguments, Services);
             }
-            if (SOSHost is null)
+            catch (CommandNotFoundException)
             {
-                throw new CommandNotFoundException($"{CommandNotFoundException.NotFoundMessage} '{command}'");
+                if (SOSHost is null)
+                {
+                    throw;
+                }
+                SOSHost.ExecuteCommand(command, arguments);
             }
-            SOSHost.ExecuteCommand(command, arguments);
         }
     }
 }

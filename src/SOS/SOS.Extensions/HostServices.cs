@@ -345,7 +345,8 @@ namespace SOS.Extensions
         private int DispatchCommand(
             IntPtr self,
             string commandName,
-            string commandArguments)
+            string commandArguments,
+            bool displayCommandNotFound)
         {
             if (string.IsNullOrWhiteSpace(commandName))
             {
@@ -353,25 +354,26 @@ namespace SOS.Extensions
             }
             try
             {
-                if (_commandService.Execute(commandName, commandArguments, commandName == "help" ? _contextService.Services : _servicesWithManagedOnlyFilter))
-                {
-                    return HResult.S_OK;
-                }
-                else
-                {
-                    // The command was not found or supported
-                    return HResult.E_NOTIMPL;
-                }
+                _commandService.Execute(commandName, commandArguments, string.Equals(commandName, "help", StringComparison.OrdinalIgnoreCase) ? _contextService.Services : _servicesWithManagedOnlyFilter);
             }
             catch (Exception ex)
             {
+                if (!displayCommandNotFound)
+                {
+                    if (ex is CommandNotFoundException)
+                    {
+                        // Returning E_NOTIMPL means no managed command or it filtered away so execute the C++ version if one
+                        return HResult.E_NOTIMPL;
+                    }
+                }
                 Trace.TraceError(ex.ToString());
                 IConsoleService consoleService = Services.GetService<IConsoleService>();
                 // TODO: when we can figure out how to deal with error messages in the scripts that are displayed on STDERROR under lldb
                 //consoleService.WriteLineError(ex.Message);
                 consoleService.WriteLine(ex.Message);
+                return HResult.E_FAIL;
             }
-            return HResult.E_FAIL;
+            return HResult.S_OK;
         }
 
         private void Uninitialize(
@@ -450,7 +452,8 @@ namespace SOS.Extensions
         private delegate int DispatchCommandDelegate(
             [In] IntPtr self,
             [In, MarshalAs(UnmanagedType.LPStr)] string commandName,
-            [In, MarshalAs(UnmanagedType.LPStr)] string commandArguments);
+            [In, MarshalAs(UnmanagedType.LPStr)] string commandArguments,
+            bool displayCommandNotFound);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate void UninitializeDelegate(

@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -31,15 +33,13 @@ namespace Microsoft.Diagnostics.DebugServices
     /// </summary>
     public class CommandNotFoundException : DiagnosticsException
     {
-        public const string NotFoundMessage = $"Unrecognized SOS command";
-
-        public CommandNotFoundException(string message)
-            : base(message)
+        public CommandNotFoundException(string command)
+            : base($"Unrecognized SOS command '{command}'")
         {
         }
 
-        public CommandNotFoundException(string message, Exception innerException)
-            : base(message, innerException)
+        public CommandNotFoundException(IEnumerable<string> messages)
+            : base(string.Concat(messages.Select(s => s + Environment.NewLine)))
         {
         }
     }

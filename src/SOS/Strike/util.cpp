@@ -1507,7 +1507,6 @@ HRESULT FileNameForModule(const DacpModuleData* const pModuleData, __out_ecount(
 
 void AssemblyInfo(DacpAssemblyData *pAssembly)
 {
-    ExtOut("ClassLoader:        %p\n", SOS_PTR(pAssembly->ClassLoader));
     if ((ULONG64)pAssembly->AssemblySecDesc != NULL)
         ExtOut("SecurityDescriptor: %p\n", SOS_PTR(pAssembly->AssemblySecDesc));
     ExtOut("  Module\n");
