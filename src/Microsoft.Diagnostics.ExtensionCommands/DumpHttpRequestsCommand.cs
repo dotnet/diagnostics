@@ -12,7 +12,7 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumphttprequests", Aliases = new string[] { "DumpHttpRequests" }, Help = "Dump all active http requests")]
+    [Command(Name = "dumphttprequests", Aliases = new string[] { "DumpHttpRequests" }, Help = "Shows all currently active incoming HTTP requests.")]
     public class DumpHttpRequestsCommand : ClrRuntimeCommandBase
     {
         public override void Invoke()
