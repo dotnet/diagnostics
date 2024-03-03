@@ -29,6 +29,8 @@ EXPORTS
     DumpDomain
     dumpdomain=DumpDomain
     dumpexceptions
+    DumpHttpRequests
+    dumphttprequests=DumpHttpRequests
 #ifdef TRACE_GC
     DumpGCLog
     dumpgclog=DumpGCLog
