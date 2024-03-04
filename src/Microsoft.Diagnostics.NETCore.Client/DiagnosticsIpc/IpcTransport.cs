@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
@@ -287,7 +288,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    defaultAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
+                    string status = File.ReadAllText($"/proc/{pid}/status");
+
+                    Regex regex = new Regex(@"^NSpid:.*(\d+)$", RegexOptions.Multiline);
+                    Match match = regex.Match(status);
+
+                    int nspid = pid;
+                    if (match.Success)
+                    {
+                        nspid = int.Parse(match.Groups[1].Value);
+                    }
+
+                    defaultAddress = Directory.GetFiles($"/proc/{pid}/root/tmp", $"dotnet-diagnostic-{nspid}-*-socket") // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
