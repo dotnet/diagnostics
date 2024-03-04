@@ -173,7 +173,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("dumpdomain", new sosCommand("DumpDomain"), "Displays information about the all assemblies within all the AppDomains or the specified one.");
     g_services->AddCommand("dumpgcdata", new sosCommand("DumpGCData"), "Displays information about the GC data.");
     g_services->AddManagedCommand("dumpheap", "Displays info about the garbage-collected heap and collection statistics about objects.");
-    g_services->AddCommand("dumphttprequests", new sosCommand("DumpHttpRequests"), "Shows all currently active incoming HTTP requests.");
+    g_services->AddManagedCommand("dumphttprequests", "Shows all currently active incoming HTTP requests.");
     g_services->AddCommand("dumpil", new sosCommand("DumpIL"), "Displays the Microsoft intermediate language (MSIL) that's associated with a managed method.");
     g_services->AddCommand("dumplog", new sosCommand("DumpLog"), "Writes the contents of an in-memory stress log to the specified file.");
     g_services->AddCommand("dumpmd", new sosCommand("DumpMD"), "Displays information about a MethodDesc structure at the specified address.");

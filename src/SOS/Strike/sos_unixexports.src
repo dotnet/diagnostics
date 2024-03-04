@@ -12,7 +12,6 @@ DumpClass
 DumpDelegate
 DumpDomain
 DumpGCData
-DumpHttpRequests
 DumpIL
 DumpLog
 DumpMD
