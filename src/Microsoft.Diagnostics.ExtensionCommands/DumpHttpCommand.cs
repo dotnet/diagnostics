@@ -12,12 +12,9 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = CommandName, Aliases = new string[] { "DumpHttp" }, Help = "Displays information about HTTP requests")]
+    [Command(Name = "dumphttp", Aliases = new string[] { "DumpHttp" }, Help = "Displays information about HTTP requests.")]
     public sealed class DumpHttpCommand : ClrRuntimeCommandBase
     {
-        /// <summary>The name of the command.</summary>
-        private const string CommandName = "dumphttp";
-
         // Field names to get System.Net.Http.HttpRequestMessage.Method
         private static readonly string[] s_httpMethodFieldNames =["_method", "method"];
 
