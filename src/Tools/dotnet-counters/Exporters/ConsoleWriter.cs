@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
+using Microsoft.Diagnostics.Tracing.StackSources;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
@@ -61,6 +62,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private readonly bool _showDeltaColumn;
         private const int Indent = 4; // Counter name indent size.
         private const int CounterValueLength = 15;
+        private const int MinimalColumnHeaderLength = 5;
 
         private int _nameColumnWidth; // fixed width of the name column. Names will be truncated if needed to fit in this space.
         private int _statusRow; // Row # of where we print the status of dotnet-counters
@@ -127,7 +129,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             _consoleHeight = _console.WindowHeight;
             // Truncate the name column if needed to prevent line wrapping
             int numValueColumns = _showDeltaColumn ? 2 : 1;
-            _nameColumnWidth = Math.Max(Math.Min(80, _consoleWidth) - numValueColumns * (CounterValueLength + 1), 0);
+            _nameColumnWidth = Math.Max(_consoleWidth - numValueColumns * (CounterValueLength + 1), 0);
 
 
             int row = _console.CursorTop;
@@ -157,7 +159,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                         counter.Row = row;
                         if (counter.RenderValueInline)
                         {
-                            if (!RenderCounterValueRow(ref row, indentLevel:1, counter.DisplayName, counter.LastValue, 0))
+                            if (!RenderCounterValueRow(ref row, indentLevel: 1, counter.DisplayName, counter.LastValue, 0))
                             {
                                 break;
                             }
@@ -168,13 +170,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                             {
                                 break;
                             }
-                            foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
+                            if (!RenderTagSetsInColumnMode(ref row, counter))
                             {
-                                tagSet.Row = row;
-                                if (!RenderCounterValueRow(ref row, indentLevel: 2, tagSet.Tags, tagSet.LastValue, 0))
-                                {
-                                    break;
-                                }
+                                break;
                             }
                         }
                     }
@@ -182,6 +180,110 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
 
             _maxRow = Math.Max(_maxRow, row);
+        }
+
+        private bool RenderTagSetsInColumnMode(ref int row, ObservedCounter counter)
+        {
+            string[] header = null;
+            string[,] values = null;
+            int[] columnHeaderLen = null;
+            int[] maxValueColumnLen = null;
+            int headerPos = 0;
+            int tagsCount = 0;
+            foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
+            {
+                string[] tags = tagSet.DisplayTags.Split(',');
+                if (header == null)
+                {
+                    header = new string[tags.Length];
+                    values = new string[counter.TagSets.Values.Count, tags.Length];
+                    maxValueColumnLen = new int[tags.Length];
+                    columnHeaderLen = new int[tags.Length];
+                }
+                for (int i = 0; i < tags.Length; i++)
+                {
+                    string tag = tags[i];
+                    string[] keyValue = tag.Split("=");
+                    if (headerPos != tags.Length)
+                    {
+                        header[i] = keyValue[0];
+                        columnHeaderLen[i] = keyValue[0].Length;
+                        headerPos++;
+                    }
+                    values[tagsCount, i] = keyValue[1];
+                    maxValueColumnLen[i] = Math.Max(maxValueColumnLen[i], keyValue[1].Length);
+                }
+                tagsCount++;
+            }
+            AdjustColumnsLength(columnHeaderLen, maxValueColumnLen);
+            //print the header
+            string headerRow = "";
+            for (int i = 0; i < header.Length; i++)
+            {
+                string headerItem = header[i];
+                string headerWithSpaces = MakeFixedWidth(headerItem, Math.Max(maxValueColumnLen[i], columnHeaderLen[i]), splitLeft: true);
+                headerWithSpaces += " ";
+                headerRow += headerWithSpaces;
+            }
+            if (!RenderCounterNameRow(ref row, headerRow, indentLevel: 2))
+            {
+                return false;
+            }
+            //print each line
+            int linePos = 0;
+            foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
+            {
+                tagSet.Row = row;
+                string tagRow = "";
+                for (int i = 0; i < header.Length; i++)
+                {
+                    string tagItem = values[linePos, i];
+                    string tagWithSpaces = MakeFixedWidth(tagItem, Math.Max(maxValueColumnLen[i], columnHeaderLen[i]));
+                    tagWithSpaces += " ";
+                    tagRow += tagWithSpaces;
+                }
+                if (!RenderCounterValueRow(ref row, indentLevel: 2, tagRow, tagSet.LastValue, 0))
+                {
+                    return false;
+                }
+                linePos++;
+            }
+            return true;
+        }
+
+        private void AdjustColumnsLength(int[] columnHeaderLen, int[] maxValueColumnLen)
+        {
+            int totalColumnLength = 0;
+            bool startReduceValueColumnLength = false;
+            for (int i = 0; i < columnHeaderLen.Length; i++)
+            {
+                totalColumnLength += Math.Max(columnHeaderLen[i] + 1, maxValueColumnLen[i] + 1);
+            }
+
+            int needsToReduce = totalColumnLength - (_nameColumnWidth - Indent * 2);
+            while (needsToReduce > 0)
+            {
+                bool changed = false;
+                int needsToReducePerColumn = Math.Max((needsToReduce / columnHeaderLen.Length), 1);
+                for (int i = 0; needsToReduce > 0 && i < columnHeaderLen.Length; i++)
+                {
+                    if (columnHeaderLen[i] > maxValueColumnLen[i] && columnHeaderLen[i] - needsToReducePerColumn > MinimalColumnHeaderLength)
+                    {
+                        columnHeaderLen[i] -= needsToReducePerColumn;
+                        needsToReduce -= needsToReducePerColumn;
+                        changed = true;
+                    }
+                    if (startReduceValueColumnLength)
+                    {
+                        maxValueColumnLen[i] -= needsToReducePerColumn;
+                        needsToReduce -= needsToReducePerColumn;
+                    }
+                }
+                if (!changed) //cannot reduce header anymore, start reducing the value
+                {
+                    startReduceValueColumnLength = true;
+                }
+            }
         }
 
         public void ToggleStatus(bool pauseCmdSet)
@@ -336,9 +438,9 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             return RenderTableRow(ref row, $"{new string(' ', Indent * indentLevel)}{name}", FormatValue(value), deltaText);
         }
 
-        private bool RenderCounterNameRow(ref int row, string name)
+        private bool RenderCounterNameRow(ref int row, string name, int indentLevel = 1)
         {
-            return RenderTableRow(ref row, $"{new string(' ', Indent)}{name}");
+            return RenderTableRow(ref row, $"{new string(' ', Indent * indentLevel)}{name}");
         }
 
         private bool RenderTableRow(ref int row, string name, string value = null, string delta = null)
@@ -444,7 +546,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             return valueText;
         }
 
-        private static string MakeFixedWidth(string text, int width, bool alignRight = false)
+        private static string MakeFixedWidth(string text, int width, bool alignRight = false, bool splitLeft = false)
         {
             if (text == null)
             {
@@ -456,6 +558,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
             else if (text.Length > width)
             {
+                if (splitLeft)
+                {
+                    return text.Substring(text.Length-width, width);
+                }
                 return text.Substring(0, width);
             }
             else
