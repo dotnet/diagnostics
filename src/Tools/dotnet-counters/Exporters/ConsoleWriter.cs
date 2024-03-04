@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
-using Microsoft.Diagnostics.Tracing.StackSources;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
@@ -221,7 +220,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             for (int i = 0; i < header.Length; i++)
             {
                 string headerItem = header[i];
-                string headerWithSpaces = MakeFixedWidth(headerItem, Math.Max(maxValueColumnLen[i], columnHeaderLen[i]), splitLeft: true);
+                string headerWithSpaces = MakeFixedWidth(headerItem, Math.Max(maxValueColumnLen[i], columnHeaderLen[i]), truncateLeft: true);
                 headerWithSpaces += " ";
                 headerRow += headerWithSpaces;
             }
@@ -546,7 +545,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             return valueText;
         }
 
-        private static string MakeFixedWidth(string text, int width, bool alignRight = false, bool splitLeft = false)
+        private static string MakeFixedWidth(string text, int width, bool alignRight = false, bool truncateLeft = false)
         {
             if (text == null)
             {
@@ -558,7 +557,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
             else if (text.Length > width)
             {
-                if (splitLeft)
+                if (truncateLeft)
                 {
                     return text.Substring(text.Length-width, width);
                 }
