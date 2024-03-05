@@ -183,44 +183,37 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         private bool RenderTagSetsInColumnMode(ref int row, ObservedCounter counter)
         {
-            string[] header = null;
-            string[,] values = null;
-            int[] columnHeaderLen = null;
-            int[] maxValueColumnLen = null;
-            int headerPos = 0;
+            List<(string header, string[] values)> observedTags = new();
+            List<int> columnHeaderLen = new();
+            List<int> maxValueColumnLen = new();
             int tagsCount = 0;
             foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
             {
                 string[] tags = tagSet.DisplayTags.Split(',');
-                if (header == null)
-                {
-                    header = new string[tags.Length];
-                    values = new string[counter.TagSets.Values.Count, tags.Length];
-                    maxValueColumnLen = new int[tags.Length];
-                    columnHeaderLen = new int[tags.Length];
-                }
                 for (int i = 0; i < tags.Length; i++)
                 {
                     string tag = tags[i];
                     string[] keyValue = tag.Split("=");
-                    if (headerPos != tags.Length)
+                    int posTag = observedTags.FindIndex (tag => tag.header == keyValue[0]);
+                    if (posTag == -1)
                     {
-                        header[i] = keyValue[0];
-                        columnHeaderLen[i] = keyValue[0].Length;
-                        headerPos++;
+                        observedTags.Add((keyValue[0], new string[counter.TagSets.Count]));
+                        columnHeaderLen.Add(keyValue[0].Length);
+                        maxValueColumnLen.Add(default(int));
+                        posTag = observedTags.Count - 1;
                     }
-                    values[tagsCount, i] = keyValue[1];
-                    maxValueColumnLen[i] = Math.Max(maxValueColumnLen[i], keyValue[1].Length);
+                    observedTags[posTag].values[tagsCount] = keyValue[1];
+                    maxValueColumnLen[posTag] = Math.Max(keyValue[1].Length, maxValueColumnLen[posTag]);
                 }
                 tagsCount++;
             }
             AdjustColumnsLength(columnHeaderLen, maxValueColumnLen);
             //print the header
             string headerRow = "";
-            for (int i = 0; i < header.Length; i++)
+            for (int i = 0; i < observedTags.Count; i++)
             {
-                string headerItem = header[i];
-                string headerWithSpaces = MakeFixedWidth(headerItem, Math.Max(maxValueColumnLen[i], columnHeaderLen[i]), truncateLeft: true);
+                (string header, string[] values) observedTag = observedTags[i];
+                string headerWithSpaces = MakeFixedWidth(observedTag.header, Math.Max(maxValueColumnLen[i], columnHeaderLen[i]), truncateLeft: true);
                 headerWithSpaces += " ";
                 headerRow += headerWithSpaces;
             }
@@ -234,9 +227,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             {
                 tagSet.Row = row;
                 string tagRow = "";
-                for (int i = 0; i < header.Length; i++)
+                for (int i = 0; i < observedTags.Count; i++)
                 {
-                    string tagItem = values[linePos, i];
+                    (string header, string[] values) observedTag = observedTags[i];
+                    string tagItem = observedTag.values[linePos];
                     string tagWithSpaces = MakeFixedWidth(tagItem, Math.Max(maxValueColumnLen[i], columnHeaderLen[i]));
                     tagWithSpaces += " ";
                     tagRow += tagWithSpaces;
@@ -250,11 +244,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             return true;
         }
 
-        private void AdjustColumnsLength(int[] columnHeaderLen, int[] maxValueColumnLen)
+        private void AdjustColumnsLength(List<int> columnHeaderLen, List<int> maxValueColumnLen)
         {
             int totalColumnLength = 0;
             bool startReduceValueColumnLength = false;
-            for (int i = 0; i < columnHeaderLen.Length; i++)
+            for (int i = 0; i < columnHeaderLen.Count; i++)
             {
                 totalColumnLength += Math.Max(columnHeaderLen[i] + 1, maxValueColumnLen[i] + 1);
             }
@@ -263,8 +257,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             while (needsToReduce > 0)
             {
                 bool changed = false;
-                int needsToReducePerColumn = Math.Max((needsToReduce / columnHeaderLen.Length), 1);
-                for (int i = 0; needsToReduce > 0 && i < columnHeaderLen.Length; i++)
+                int needsToReducePerColumn = Math.Max((needsToReduce / columnHeaderLen.Count), 1);
+                for (int i = 0; needsToReduce > 0 && i < columnHeaderLen.Count; i++)
                 {
                     if (columnHeaderLen[i] > maxValueColumnLen[i] && columnHeaderLen[i] - needsToReducePerColumn > MinimalColumnHeaderLength)
                     {
