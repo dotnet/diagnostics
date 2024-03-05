@@ -116,8 +116,8 @@
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
 -->
-      <RuntimeDownload>9.0.0-preview.3.24129.2</RuntimeDownload>
-      <Runtime>9.0.0-preview.3.24129.2</Runtime>
+      <RuntimeDownload>9.0.0-preview.3.24155.3</RuntimeDownload>
+      <Runtime>9.0.0-preview.3.24155.3</Runtime>
       <AspNetDownload>9.0.0-preview.3.24151.1</AspNetDownload>
       <AspNet>9.0.0-preview.3.24151.1</AspNet>
       <TargetFramework>net9.0</TargetFramework>
