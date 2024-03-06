@@ -186,6 +186,12 @@ DECLARE_API(DumpHttp)
     return ExecuteManagedOnlyCommand("dumphttp", args);
 }
 
+DECLARE_API(DumpRequests)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumprequests", args);
+}
+
 typedef HRESULT (*PFN_COMMAND)(PDEBUG_CLIENT client, PCSTR args);
 
 //
