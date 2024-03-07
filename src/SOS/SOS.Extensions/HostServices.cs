@@ -358,13 +358,10 @@ namespace SOS.Extensions
             }
             catch (Exception ex)
             {
-                if (!displayCommandNotFound)
+                if (!displayCommandNotFound && ex is CommandNotFoundException)
                 {
-                    if (ex is CommandNotFoundException)
-                    {
-                        // Returning E_NOTIMPL means no managed command or it filtered away so execute the C++ version if one
-                        return HResult.E_NOTIMPL;
-                    }
+                    // Returning E_NOTIMPL means no managed command or it filtered away so execute the C++ version if one
+                    return HResult.E_NOTIMPL;
                 }
                 Trace.TraceError(ex.ToString());
                 IConsoleService consoleService = Services.GetService<IConsoleService>();

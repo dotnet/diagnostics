@@ -26,8 +26,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     return new ClrMDHelper(clrRuntime);
                 }
             }
-            catch (NotSupportedException)
+            catch (NotSupportedException ex)
             {
+                Trace.TraceError(ex.ToString());
             }
             return null;
         }

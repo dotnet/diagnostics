@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices
         }
 
         public CommandNotFoundException(IEnumerable<string> messages)
-            : base(string.Concat(messages.Select(s => s + Environment.NewLine)))
+            : base(string.Join(Environment.NewLine, messages))
         {
         }
     }
