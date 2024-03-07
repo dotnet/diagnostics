@@ -576,42 +576,77 @@ void DisplayDataMember (DacpFieldDescData* pFD, DWORD_PTR dwAddr, BOOL fAlign=TR
     }
 }
 
-void GetStaticFieldPTR(DWORD_PTR* pOutPtr, DacpDomainLocalModuleData* pDLMD, DacpMethodTableData* pMTD, DacpFieldDescData* pFDD, BYTE* pFlags = 0)
+HRESULT GetStaticFieldPTR(DWORD_PTR* pOutPtr, DacpDomainLocalModuleData* pDLMD, ISOSDacInterface14* pSOS14, CLRDATA_ADDRESS cdaMT, DacpMethodTableData* pMTD, DacpFieldDescData* pFDD, BYTE* pFlags = 0)
 {
     DWORD_PTR dwTmp;
+    CLRDATA_ADDRESS pBaseAddress;
 
-    if (pFDD->Type == ELEMENT_TYPE_VALUETYPE
-            || pFDD->Type == ELEMENT_TYPE_CLASS)
+    BOOL isGCStatic = pFDD->Type == ELEMENT_TYPE_VALUETYPE || pFDD->Type == ELEMENT_TYPE_CLASS;
+
+    if (pSOS14)
     {
-        dwTmp = (DWORD_PTR) pDLMD->pGCStaticDataStart + pFDD->dwOffset;
+        HRESULT hr = pSOS14->GetStaticBaseAddress(cdaMT, isGCStatic, &pBaseAddress);
+        if (FAILED(hr))
+        {
+            ExtOut("GetStaticBaseAddress failed");
+            return hr;
+        }
     }
     else
     {
-        dwTmp = (DWORD_PTR) pDLMD->pNonGCStaticDataStart + pFDD->dwOffset;
+        if (isGCStatic)
+        {
+            pBaseAddress = pDLMD->pGCStaticDataStart;
+        }
+        else
+        {
+            pBaseAddress = pDLMD->pNonGCStaticDataStart;
+        }
     }
+
+    dwTmp = (DWORD_PTR)pBaseAddress + pFDD->dwOffset;
 
     *pOutPtr = 0;
 
-    if (pMTD->bIsDynamic)
+    if (pSOS14)
     {
-        ExtOut("dynamic statics NYI");
-        return;
+        MethodTableInitializationFlags initFlags;
+        if (pFlags)
+            *pFlags = 0;
+        HRESULT hr = pSOS14->GetMethodTableInitializationFlags(cdaMT, &initFlags);
+        if (FAILED(hr))
+        {
+            ExtOut("GetMethodTableInitializationFlags failed");
+        }
+        else
+        {
+            if (pFlags)
+                *pFlags = (BYTE)initFlags; // It so happens that these two types of flags match up
+        }
+        *pOutPtr = dwTmp;
     }
     else
     {
-        if (pFlags && pMTD->bIsShared)
+        if (pMTD->bIsDynamic)
         {
-            BYTE flags;
-            DWORD_PTR pTargetFlags = (DWORD_PTR) pDLMD->pClassData + RidFromToken(pMTD->cl) - 1;
-            move_xp (flags, pTargetFlags);
-
-            *pFlags = flags;
+            ExtOut("dynamic statics NYI");
+            return E_FAIL;
         }
+        else
+        {
+            if (pFlags && pMTD->bIsShared)
+            {
+                BYTE flags;
+                DWORD_PTR pTargetFlags = (DWORD_PTR) pDLMD->pClassData + RidFromToken(pMTD->cl) - 1;
+                move_xp_retHRESULT (flags, pTargetFlags);
 
+                *pFlags = flags;
+            }
 
-        *pOutPtr = dwTmp;
+            *pOutPtr = dwTmp;
+        }
     }
-    return;
+    return S_OK;
 }
 
 void GetDLMFlags(DacpDomainLocalModuleData* pDLMD, DacpMethodTableData* pMTD, BYTE* pFlags)
@@ -635,44 +670,84 @@ void GetDLMFlags(DacpDomainLocalModuleData* pDLMD, DacpMethodTableData* pMTD, BY
     return;
 }
 
-void GetThreadStaticFieldPTR(DWORD_PTR* pOutPtr, DacpThreadLocalModuleData* pTLMD, DacpMethodTableData* pMTD, DacpFieldDescData* pFDD, BYTE* pFlags = 0)
+HRESULT GetThreadStaticFieldPTR(DWORD_PTR* pOutPtr, CLRDATA_ADDRESS cdaThread, DacpThreadLocalModuleData* pTLMD, ISOSDacInterface14* pSOS14, CLRDATA_ADDRESS cdaMT, DacpMethodTableData* pMTD, DacpFieldDescData* pFDD, BYTE* pFlags = 0)
 {
     DWORD_PTR dwTmp;
+    CLRDATA_ADDRESS pBase;
+    BOOL isGCStatic = pFDD->Type == ELEMENT_TYPE_VALUETYPE || pFDD->Type == ELEMENT_TYPE_CLASS;
+    if (pFlags)
+        *pFlags = 0;
 
-    if (pFDD->Type == ELEMENT_TYPE_VALUETYPE
-            || pFDD->Type == ELEMENT_TYPE_CLASS)
+    if (pSOS14)
     {
-        dwTmp = (DWORD_PTR) pTLMD->pGCStaticDataStart + pFDD->dwOffset;
+        HRESULT hr = pSOS14->GetThreadStaticBaseAddress(cdaMT, cdaThread, isGCStatic, &pBase);
+        if (FAILED(hr))
+        {
+            ExtOut("GetThreadStaticBaseAddress failed");
+            return hr;
+        }
+
+        if (pBase != 0)
+        {
+            if (pFlags)
+                *pFlags = 4; // Flag 4 indicates that the thread static data is allocated
+        }
     }
     else
     {
-        dwTmp = (DWORD_PTR) pTLMD->pNonGCStaticDataStart + pFDD->dwOffset;
+        if (isGCStatic)
+        {
+            pBase = pTLMD->pGCStaticDataStart;
+        }
+        else
+        {
+            pBase = pTLMD->pNonGCStaticDataStart;
+        }
     }
+
+    dwTmp = (DWORD_PTR)pBase + pFDD->dwOffset;
 
     *pOutPtr = 0;
 
-    if (pMTD->bIsDynamic)
+    if (pSOS14)
     {
-        ExtOut("dynamic thread statics NYI");
-        return;
+        MethodTableInitializationFlags initFlags;
+        HRESULT hr = pSOS14->GetMethodTableInitializationFlags(cdaMT, &initFlags);
+        if (FAILED(hr))
+        {
+            ExtOut("GetMethodTableInitializationFlags failed");
+        }
+        else
+        {
+            *pFlags |= (BYTE)initFlags; // It so happens that these two types of flags match up
+        }
+        *pOutPtr = dwTmp;
     }
     else
     {
-        if (pFlags)
+        if (pMTD->bIsDynamic)
         {
-            BYTE flags;
-            DWORD_PTR pTargetFlags = (DWORD_PTR) pTLMD->pClassData + RidFromToken(pMTD->cl) - 1;
-            move_xp (flags, pTargetFlags);
-
-            *pFlags = flags;
+            ExtOut("dynamic thread statics NYI");
+            return E_FAIL;
         }
+        else
+        {
+            if (pFlags)
+            {
+                BYTE flags;
+                DWORD_PTR pTargetFlags = (DWORD_PTR) pTLMD->pClassData + RidFromToken(pMTD->cl) - 1;
+                move_xp_retHRESULT (flags, pTargetFlags);
 
-        *pOutPtr = dwTmp;
+                *pFlags = flags;
+            }
+
+            *pOutPtr = dwTmp;
+        }
     }
-    return;
+    return S_OK;
 }
 
-void DisplaySharedStatic(ULONG64 dwModuleDomainID, DacpMethodTableData* pMT, DacpFieldDescData *pFD)
+void DisplaySharedStatic(ULONG64 dwModuleDomainID, CLRDATA_ADDRESS cdaMT, DacpMethodTableData* pMT, DacpFieldDescData *pFD)
 {
     DacpAppDomainStoreData adsData;
     if (adsData.Request(g_sos)!=S_OK)
@@ -721,7 +796,7 @@ void DisplaySharedStatic(ULONG64 dwModuleDomainID, DacpMethodTableData* pMT, Dac
 
         DWORD_PTR dwTmp;
         BYTE Flags = 0;
-        GetStaticFieldPTR(&dwTmp, &vDomainLocalModule , pMT, pFD, &Flags);
+        GetStaticFieldPTR(&dwTmp, &vDomainLocalModule, NULL, cdaMT, pMT, pFD, &Flags);
 
         if ((Flags&1) == 0) {
             // We have not initialized this yet.
@@ -740,7 +815,7 @@ void DisplaySharedStatic(ULONG64 dwModuleDomainID, DacpMethodTableData* pMT, Dac
     ExtOut(" <<\n");
 }
 
-void DisplayThreadStatic (DacpModuleData* pModule, DacpMethodTableData* pMT, DacpFieldDescData *pFD, BOOL fIsShared)
+void DisplayThreadStatic (DacpModuleData* pModule, CLRDATA_ADDRESS cdaMT, DacpMethodTableData* pMT, DacpFieldDescData *pFD, BOOL fIsShared)
 {
     SIZE_T dwModuleIndex = (SIZE_T)pModule->dwModuleIndex;
     SIZE_T dwModuleDomainID = (SIZE_T)pModule->dwModuleID;
@@ -763,69 +838,86 @@ void DisplayThreadStatic (DacpModuleData* pModule, DacpMethodTableData* pMT, Dac
         {
             CLRDATA_ADDRESS appDomainAddr = vThread.domain;
 
-            // Get the DLM (we need this to check the ClassInit flags).
-            // It's annoying that we have to issue one request for
-            // domain-neutral modules and domain-specific modules.
-            DacpDomainLocalModuleData vDomainLocalModule;
-            if (fIsShared)
+            ISOSDacInterface14 *pSOS14 = nullptr;
+            HRESULT hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface14), reinterpret_cast<LPVOID*>(&pSOS14));
+            if (SUCCEEDED(hr))
             {
-                if (g_sos->GetDomainLocalModuleDataFromAppDomain(appDomainAddr, (int)dwModuleDomainID, &vDomainLocalModule) != S_OK)
+                DWORD_PTR dwTmp;
+                BYTE Flags = 0;
+                HRESULT hr = GetThreadStaticFieldPTR(&dwTmp, CurThread, NULL, pSOS14, cdaMT, pMT, pFD, &Flags);
+                pSOS14->Release();
+                if (SUCCEEDED(hr) && (Flags&4))
                 {
-                    // On .NET Core, dwModuleDomainID is the address of the DomainLocalModule.
-                    if (vDomainLocalModule.Request(g_sos, dwModuleDomainID) != S_OK)
-                    {
-                        // Not initialized, go to next thread and continue looping
-                        CurThread = vThread.nextThread;
-                        continue;
-                    }
+                    ExtOut(" %x:", vThread.osThreadId);
+                    DisplayDataMember(pFD, dwTmp, FALSE);
                 }
             }
             else
             {
-                if (g_sos->GetDomainLocalModuleDataFromModule(pMT->Module, &vDomainLocalModule) != S_OK)
+                // Get the DLM (we need this to check the ClassInit flags).
+                // It's annoying that we have to issue one request for
+                // domain-neutral modules and domain-specific modules.
+                DacpDomainLocalModuleData vDomainLocalModule;
+                if (fIsShared)
+                {
+                    if (g_sos->GetDomainLocalModuleDataFromAppDomain(appDomainAddr, (int)dwModuleDomainID, &vDomainLocalModule) != S_OK)
+                    {
+                        // On .NET Core, dwModuleDomainID is the address of the DomainLocalModule.
+                        if (vDomainLocalModule.Request(g_sos, dwModuleDomainID) != S_OK)
+                        {
+                            // Not initialized, go to next thread and continue looping
+                            CurThread = vThread.nextThread;
+                            continue;
+                        }
+                    }
+                }
+                else
+                {
+                    if (g_sos->GetDomainLocalModuleDataFromModule(pMT->Module, &vDomainLocalModule) != S_OK)
+                    {
+                        // Not initialized, go to next thread
+                        // and continue looping
+                        CurThread = vThread.nextThread;
+                        continue;
+                    }
+                }
+
+                // Get the TLM
+                DacpThreadLocalModuleData vThreadLocalModule;
+                if (g_sos->GetThreadLocalModuleData(CurThread, (int)dwModuleIndex, &vThreadLocalModule) != S_OK)
                 {
                     // Not initialized, go to next thread
                     // and continue looping
                     CurThread = vThread.nextThread;
                     continue;
                 }
+
+                DWORD_PTR dwTmp;
+                BYTE Flags = 0;
+                GetThreadStaticFieldPTR(&dwTmp, CurThread, &vThreadLocalModule, NULL, cdaMT, pMT, pFD, &Flags);
+
+                if ((Flags&4) == 0)
+                {
+                    // Not allocated, go to next thread
+                    // and continue looping
+                    CurThread = vThread.nextThread;
+                    continue;
+                }
+
+                Flags = 0;
+                GetDLMFlags(&vDomainLocalModule, pMT, &Flags);
+
+                if ((Flags&1) == 0)
+                {
+                    // Not initialized, go to next thread
+                    // and continue looping
+                    CurThread = vThread.nextThread;
+                    continue;
+                }
+
+                ExtOut(" %x:", vThread.osThreadId);
+                DisplayDataMember(pFD, dwTmp, FALSE);
             }
-
-            // Get the TLM
-            DacpThreadLocalModuleData vThreadLocalModule;
-            if (g_sos->GetThreadLocalModuleData(CurThread, (int)dwModuleIndex, &vThreadLocalModule) != S_OK)
-            {
-                // Not initialized, go to next thread
-                // and continue looping
-                CurThread = vThread.nextThread;
-                continue;
-            }
-
-            DWORD_PTR dwTmp;
-            BYTE Flags = 0;
-            GetThreadStaticFieldPTR(&dwTmp, &vThreadLocalModule, pMT, pFD, &Flags);
-
-            if ((Flags&4) == 0)
-            {
-                // Not allocated, go to next thread
-                // and continue looping
-                CurThread = vThread.nextThread;
-                continue;
-            }
-
-            Flags = 0;
-            GetDLMFlags(&vDomainLocalModule, pMT, &Flags);
-
-            if ((Flags&1) == 0)
-            {
-                // Not initialized, go to next thread
-                // and continue looping
-                CurThread = vThread.nextThread;
-                continue;
-            }
-
-            ExtOut(" %x:", vThread.osThreadId);
-            DisplayDataMember(pFD, dwTmp, FALSE);
         }
 
         // Go to next thread
@@ -1045,7 +1137,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
                     DacpModuleData vModule;
                     if (vModule.Request(g_sos,pMTD->Module) == S_OK)
                     {
-                        DisplayThreadStatic(&vModule, pMTD, &vFieldDesc, fIsShared);
+                        DisplayThreadStatic(&vModule, cdaMT, pMTD, &vFieldDesc, fIsShared);
                     }
                 }
                 else if (vFieldDesc.bIsContextLocal)
@@ -1075,7 +1167,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
                     DacpModuleData vModule;
                     if (vModule.Request(g_sos,pMTD->Module) == S_OK)
                     {
-                        DisplaySharedStatic(vModule.dwModuleID, pMTD, &vFieldDesc);
+                        DisplaySharedStatic(vModule.dwModuleID, cdaMT, pMTD, &vFieldDesc);
                     }
                 }
             }
@@ -1084,21 +1176,38 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
                 ExtOut("%8s ", "static");
 
                 DacpDomainLocalModuleData vDomainLocalModule;
+                DWORD_PTR dwTmp = 0;
+                bool calledGetStaticFieldPTR = false;
 
                 // The MethodTable isn't shared, so the module must not be loaded domain neutral.  We can
                 // get the specific DomainLocalModule instance without needing to know the AppDomain in advance.
                 if (g_sos->GetDomainLocalModuleDataFromModule(pMTD->Module, &vDomainLocalModule) != S_OK)
                 {
-                    ExtOut(" <no information>\n");
+                    // If there is no DomainLocalModule, then attempt to get the statics from ISOSDacInterface14,
+                    // which was added to support statics access when DomainLocalModules were remove from the product
+                    ISOSDacInterface14 *pSOS14 = nullptr;
+                    HRESULT hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface14), reinterpret_cast<LPVOID*>(&pSOS14));
+                    if (SUCCEEDED(hr))
+                    {
+                        calledGetStaticFieldPTR = SUCCEEDED(GetStaticFieldPTR(&dwTmp, NULL, pSOS14, cdaMT, pMTD, &vFieldDesc));
+                        pSOS14->Release();
+                    }
                 }
                 else
                 {
-                    DWORD_PTR dwTmp;
-                    GetStaticFieldPTR(&dwTmp, &vDomainLocalModule, pMTD, &vFieldDesc);
+                    calledGetStaticFieldPTR = SUCCEEDED(GetStaticFieldPTR(&dwTmp, &vDomainLocalModule, NULL, cdaMT, pMTD, &vFieldDesc));
+                }
+
+                if (calledGetStaticFieldPTR)
+                {
                     DisplayDataMember(&vFieldDesc, dwTmp);
 
                     NameForToken_s(TokenFromRid(vFieldDesc.mb, mdtFieldDef), pImport, g_mdName, mdNameLen, false);
                     ExtOut(" %S\n", g_mdName);
+                }
+                else
+                {
+                    ExtOut(" <no information>\n");
                 }
             }
         }
