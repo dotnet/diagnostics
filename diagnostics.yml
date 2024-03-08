@@ -6,7 +6,6 @@ parameters:
   values:
   - default
   - custom
-  - msrc-feed
   - dotnetclimsrc-feed
 - name: runtimeFeedToken
   displayName: Base 64 SAS Token for runtime installation
@@ -15,7 +14,6 @@ parameters:
   values:
   - default
   - custom
-  - msrc-feed-sas-token-base64
   - dotnetclimsrc-sas-token-base64
 
 trigger: none
@@ -33,50 +31,34 @@ pr:
     - LICENSE.TXT
 
 variables:
-  - name: _TeamName
-    value: DotNetCore
-  - name: _InternalBuildArgs
-    value: ''
-  - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+- template : /eng/pipelines/global-variables.yml
+  parameters:
+    runtimeFeed: ${{ parameters.runtimeFeed }}
+    runtimeFeedToken: ${{ parameters.runtimeFeedToken }}
+- name: _InternalBuildArgs
+  value: ''
+- ${{ if ne(variables['System.TeamProject'], 'public') }}:
+  - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+    # DotNet-Diagnostics-SDL-Params provides Tsa* variables for SDL checks.
     - name: _SignType
       value: real
-    # DotNet-Diagnostics-SDL-Params provides Tsa* variables for SDL checks.
-    - group: DotNet-Diagnostics-SDL-Params
     - name: _InternalBuildArgs
       value: /p:DotNetSignType=$(_SignType)
         /p:TeamName=$(_TeamName)
         /p:DotNetPublishUsingPipelines=true
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-    - group: DotNet-MSRC-Storage
-    # Custom feed and token
-    - ${{ if eq(parameters.runtimeFeed, 'custom') }}:
-      - name: RuntimeFeedUrl
-        value: $(DotnetRuntimeDownloadFeed)
-    - ${{ if eq(parameters.runtimeFeedToken, 'custom') }}:
-      - name: RuntimeFeedBase64SasToken
-        value: $(DotnetRuntimeDownloadBase64SasToken)
-    # MSRC dotnet feed. Usually on orchestrated 2.1 releases.
-    - ${{ if eq(parameters.runtimeFeed, 'msrc-feed') }}:
-      - name: RuntimeFeedUrl
-        value: https://dotnetfeedmsrc.blob.core.windows.net
-    - ${{ if eq(parameters.runtimeFeedToken, 'msrc-feed-sas-token-base64') }}:
-      - name: RuntimeFeedBase64SasToken
-        value: $(dotnetfeedmsrc-read-sas-token-base64)
-    # dotnetclimsrc contains 3.1+
-    - ${{ if eq(parameters.runtimeFeed, 'dotnetclimsrc-feed') }}:
-      - name: RuntimeFeedUrl
-        value: https://dotnetclimsrc.blob.core.windows.net/dotnet
-    - ${{ if eq(parameters.runtimeFeedToken, 'dotnetclimsrc-sas-token-base64') }}:
-      - name: RuntimeFeedBase64SasToken
-        value: $(dotnetclimsrc-read-sas-token-base64)
 
 extends:
-  template:  /eng/pipelines/pipeline-resources.yml
+  template: /eng/pipelines/pipeline-resources.yml
   parameters:
+    ${{ if eq(variables['System.TeamProject'], 'public') }}:
+      isOfficialBuild: false 
+    ${{ else }}:
+      isOfficialBuild: true 
     stages:
-      - stage: build
-        displayName: Build and Test Diagnostics
-        jobs:
+    - stage: build
+      displayName: Build and Test Diagnostics
+      jobs:
 
         ############################
         #                          #
@@ -84,408 +66,303 @@ extends:
         #                          #
         ############################
 
-        - template: /eng/common/templates/job/source-build.yml
-          parameters:
-            platform:
-              name: Complete
-              buildScript: ./eng/common/build.sh
+      - template: ${{ variables.sourceBuildTemplate }}
+        parameters:
+          platform:
+            name: Complete
+            buildScript: ./eng/common/build.sh
 
-        ############################
-        #                          #
-        #        Build legs        #
-        #                          #
-        ############################
+      ############################
+      #                          #
+      #        Build legs        #
+      #                          #
+      ############################
 
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          name: Windows
+          osGroup: Windows_NT
+          buildConfigs:
+          - configuration: Debug
+            architecture: x64
+          - configuration: Release
+            architecture: x64
+            artifactUploadPath: bin
+          - configuration: Release
+            architecture: x86
+            artifactUploadPath: bin/Windows_NT.x86.Release
+          - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+            - configuration: Release
+              architecture: arm
+              artifactUploadPath: bin/Windows_NT.arm.Release
+          - configuration: Release
+            architecture: arm64
+            artifactUploadPath: bin/Windows_NT.arm64.Release
+
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          osGroup: Linux
+          nativeBuildContainer: linux_x64
+          buildOnly: true
+          buildConfigs:
+          - configuration: Release
+            architecture: x64
+            artifactUploadPath: bin/linux.x64.Release
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: x64
+              artifactUploadPath: bin/linux.x64.Debug
+
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          name: Linux_musl
+          osGroup: Linux
+          osSuffix: -musl
+          nativeBuildContainer: linux_musl_x64
+          buildOnly: true
+          buildConfigs:
+          - configuration: Release
+            architecture: x64
+            artifactUploadPath: bin/linux.x64.Release
+            artifactTargetPath: bin/linux-musl.x64.Release
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: x64
+              artifactUploadPath: bin/linux.x64.Debug
+              artifactTargetPath: bin/linux-musl.x64.Debug
+
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          osGroup: MacOS
+          buildConfigs:
+          - configuration: Release
+            architecture: x64
+            artifactUploadPath: bin/osx.x64.Release
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: x64
+
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          osGroup: MacOS
+          crossBuild: true
+          buildOnly: true
+          buildConfigs:
+          - configuration: Release
+            architecture: arm64
+            artifactUploadPath: bin/osx.arm64.Release
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: arm64
+
+      - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         - template: /eng/pipelines/build.yml
           parameters:
-            name: Windows
-            osGroup: Windows_NT
-            strategy:
-              matrix:
-                Build_Debug:
-                  _BuildConfig: Debug
-                  _BuildArch: x64
-                Build_Release:
-                  _BuildConfig: Release
-                  _BuildArch: x64
-                  _PublishArtifacts: bin
-                Build_Release_x86:
-                  _BuildConfig: Release
-                  _BuildArch: x86
-                  _PublishArtifacts: bin/Windows_NT.x86.Release
-                ${{ if ne(variables['System.TeamProject'], 'public') }}:
-                   Build_Release_arm:
-                     _BuildConfig: Release
-                     _BuildArch: arm
-                     _PublishArtifacts: bin/Windows_NT.arm.Release
-                   Build_Release_arm64:
-                     _BuildConfig: Release
-                     _BuildArch: arm64
-                     _PublishArtifacts: bin/Windows_NT.arm64.Release
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            name: Linux_x64
+            jobTemplate: ${{ variables.jobTemplate }}
             osGroup: Linux
-            nativeBuildContainer: linux_x64
+            nativeBuildContainer: linux_arm
+            crossBuild: true
             buildOnly: true
-            strategy:
-              matrix:
-                Build_Release:
-                  _BuildConfig: Release
-                  _BuildArch: x64
-                  _PublishArtifacts: bin/linux.x64.Release
-                ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                  Build_Debug:
-                    _BuildConfig: Debug
-                    _BuildArch: x64
-                    _PublishArtifacts: bin/linux.x64.Debug
+            buildConfigs:
+            - configuration: Release
+              architecture: arm
+              artifactUploadPath: bin/linux.arm.Release
 
         - template: /eng/pipelines/build.yml
           parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            osGroup: Linux
+            nativeBuildContainer: linux_arm64
+            crossBuild: true
+            buildOnly: true
+            buildConfigs:
+            - configuration: Release
+              architecture: arm64
+              artifactUploadPath: bin/linux.arm64.Release
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
             name: Linux_musl
             osGroup: Linux
             osSuffix: -musl
-            nativeBuildContainer: linux_musl_x64
-            buildOnly: true
-            strategy:
-              matrix:
-                Build_Release:
-                  _BuildConfig: Release
-                  _BuildArch: x64
-                  _PublishArtifacts: bin/linux.x64.Release
-                  _ArtifactsTargetPath: bin/linux-musl.x64.Release
-                ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                  Build_Debug:
-                    _BuildConfig: Debug
-                    _BuildArch: x64
-                    _PublishArtifacts: bin/linux.x64.Debug
-                    _ArtifactsTargetPath: bin/linux-musl.x64.Debug
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            name: MacOS
-            osGroup: MacOS
-            strategy:
-              matrix:
-                Build_Release:
-                  _BuildConfig: Release
-                  _BuildArch: x64
-                  _PublishArtifacts: bin/osx.x64.Release
-                ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                  Build_Debug:
-                    _BuildConfig: Debug
-                    _BuildArch: x64
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            name: MacOS_arm64
-            osGroup: MacOS_cross
+            nativeBuildContainer: linux_musl_arm
             crossBuild: true
             buildOnly: true
-            strategy:
-              matrix:
-                Build_Release:
-                  _BuildConfig: Release
-                  _BuildArch: arm64
-                  _PublishArtifacts: bin/osx.arm64.Release
-                ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                  Build_Debug:
-                    _BuildConfig: Debug
-                    _BuildArch: arm64
-
-        - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-          - template: /eng/pipelines/build.yml
-            parameters:
-              name: Linux_arm
-              osGroup: Linux
-              nativeBuildContainer: linux_arm
-              crossBuild: true
-              buildOnly: true
-              strategy:
-                matrix:
-                  Build_Release:
-                    _BuildConfig: Release
-                    _BuildArch: arm
-                    _PublishArtifacts: bin/linux.arm.Release
-
-          - template: /eng/pipelines/build.yml
-            parameters:
-              name: Linux_arm64
-              osGroup: Linux
-              nativeBuildContainer: linux_arm64
-              crossBuild: true
-              buildOnly: true
-              strategy:
-                matrix:
-                  Build_Release:
-                    _BuildConfig: Release
-                    _BuildArch: arm64
-                    _PublishArtifacts: bin/linux.arm64.Release
-
-          - template: /eng/pipelines/build.yml
-            parameters:
-              name: Linux_musl_arm
-              osGroup: Linux
-              osSuffix: -musl
-              nativeBuildContainer: linux_musl_arm
-              crossBuild: true
-              buildOnly: true
-              strategy:
-                matrix:
-                  Build_Release:
-                    _BuildConfig: Release
-                    _BuildArch: arm
-                    _PublishArtifacts: bin/linux.arm.Release
-                    _ArtifactsTargetPath: bin/linux-musl.arm.Release
-
-          - template: /eng/pipelines/build.yml
-            parameters:
-              name: Linux_musl_arm64
-              osGroup: Linux
-              osSuffix: -musl
-              nativeBuildContainer: linux_musl_arm64
-              crossBuild: true
-              buildOnly: true
-              strategy:
-                matrix:
-                  Build_Release:
-                    _BuildConfig: Release
-                    _BuildArch: arm64
-                    _PublishArtifacts: bin/linux.arm64.Release
-                    _ArtifactsTargetPath: bin/linux-musl.arm64.Release
-
-        ############################
-        #                          #
-        #      Test only legs      #
-        #                          #
-        ############################
+            buildConfigs:
+            - configuration: Release
+              architecture: arm
+              artifactUploadPath: bin/linux.arm.Release
+              artifactTargetPath: bin/linux-musl.arm.Release
 
         - template: /eng/pipelines/build.yml
           parameters:
-            name: Ubuntu_20_04
-            osGroup: Linux
-            container: test_ubuntu_20_04
-            dependsOn: Linux_x64
-            testOnly: true
-            strategy:
-              matrix:
-                Build_Release:
-                  _BuildConfig: Release
-                  _BuildArch: x64
-                ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                  Build_Debug:
-                    _BuildConfig: Debug
-                    _BuildArch: x64
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            name: Alpine3_13
+            jobTemplate: ${{ variables.jobTemplate }}
+            name: Linux_musl
             osGroup: Linux
             osSuffix: -musl
-            container: test_linux_musl_x64
-            dependsOn: Linux_musl
-            testOnly: true
-            strategy:
-              matrix:
-                Build_Release:
-                  _BuildConfig: Release
-                  _BuildArch: x64
-                ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                  Build_Debug:
-                    _BuildConfig: Debug
-                    _BuildArch: x64
+            nativeBuildContainer: linux_musl_arm64
+            crossBuild: true
+            buildOnly: true
+            buildConfigs:
+            - configuration: Release
+              architecture: arm64
+              artifactUploadPath: bin/linux.arm64.Release
+              artifactTargetPath: bin/linux-musl.arm64.Release
 
-        - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-          - template: /eng/pipelines/build.yml
-            parameters:
-              name: Debian_Bullseye
-              osGroup: Linux
-              container: test_debian_11_amd64
-              dependsOn: Linux_x64
-              testOnly: true
-              strategy:
-                matrix:
-                  Build_Release:
-                    _BuildConfig: Release
-                    _BuildArch: x64
-                  ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                    Build_Debug:
-                      _BuildConfig: Debug
-                      _BuildArch: x64
+      ############################
+      #                          #
+      #      Test only legs      #
+      #                          #
+      ############################
 
-          - template: /eng/pipelines/build.yml
-            parameters:
-              name: Fedora_36
-              osGroup: Linux
-              container: test_fedora_36
-              dependsOn: Linux_x64
-              testOnly: true
-              strategy:
-                matrix:
-                  Build_Release:
-                    _BuildConfig: Release
-                    _BuildArch: x64
-                  ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                    Build_Debug:
-                      _BuildConfig: Debug
-                      _BuildArch: x64
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          name: Ubuntu_20_04
+          osGroup: Linux
+          container: test_ubuntu_20_04
+          dependsOn: Linux
+          testOnly: true
+          buildConfigs:
+          - configuration: Release
+            architecture: x64
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: x64
 
-          #- template: /eng/pipelines/build.yml
-          #  parameters:
-          #    name: OpenSuse_15_2
-          #    osGroup: Linux
-          #    container: test_opensuse_15_2
-          #    dependsOn: Linux_x64
-          #    testOnly: true
-          #    strategy:
-          #      matrix:
-          #        Build_Release:
-          #          _BuildConfig: Release
-          #          _BuildArch: x64
-          #        ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-          #          Build_Debug:
-          #            _BuildConfig: Debug
-          #            _BuildArch: x64
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          name: Alpine3_13
+          osGroup: Linux
+          osSuffix: -musl
+          container: test_linux_musl_x64
+          dependsOn: Linux_musl
+          testOnly: true
+          buildConfigs:
+          - configuration: Release
+            architecture: x64
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: x64
 
-          #- template: /eng/pipelines/build.yml
-          #  parameters:
-          #    name: Ubuntu_18_04
-          #    osGroup: Linux
-          #    container: test_ubuntu_18_04
-          #    dependsOn: Linux_x64
-          #    testOnly: true
-          #    strategy:
-          #      matrix:
-          #        Build_Release:
-          #          _BuildConfig: Release
-          #          _BuildArch: x64
-          #        ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-          #          Build_Debug:
-          #            _BuildConfig: Debug
-          #            _BuildArch: x64
-
-          - template: /eng/pipelines/build.yml
-            parameters:
-              name: Ubuntu_22_04
-              osGroup: Linux
-              container: test_ubuntu_22_04
-              dependsOn: Linux_x64
-              testOnly: true
-              strategy:
-                matrix:
-                  Build_Release:
-                    _BuildConfig: Release
-                    _BuildArch: x64
-                  ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                    Build_Debug:
-                      _BuildConfig: Debug
-                      _BuildArch: x64
-
-        # Download, sign, package and publish
-        - ${{ if ne(variables['System.TeamProject'], 'public') }}:  
-          - template: /eng/common/templates/job/job.yml
-            parameters:
-              name: Sign_Package_Publish
-              displayName: Sign, Package, and Generate BAR Manifests
-              dependsOn:
-              - Windows
-              - MacOS
-              - MacOS_arm64
-              - Linux_x64
-              - Linux_musl
-              - Linux_arm
-              - Linux_arm64
-              - Linux_musl_arm
-              - Linux_musl_arm64
-              condition: succeeded()
-              pool:
-                name: NetCore1ESPool-Internal
-                demands: ImageOverride -equals windows.vs2022.amd64
-              enablePublishUsingPipelines: true
-              enableMicrobuild: true
-              artifacts:
-                publish:
-                  logs:
-                    name: Logs_Packaging_Signing
-              steps:
-              - task: DownloadBuildArtifacts@0
-                displayName: 'Download release builds'
-                inputs:
-                  downloadPath: '$(Build.ArtifactStagingDirectory)/__download__'
-                  artifactName: Build_Release
-                  checkDownloadedFiles: true
-              - task: CopyFiles@2
-                displayName: 'Binplace Product'
-                inputs:
-                  sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_Release
-                  targetFolder: '$(Build.SourcesDirectory)/artifacts/'
-
-              # Windows x64 download. Everything under "bin" is published for the Windows x64 build.
-              # Create nuget packages, sign binaries and publish to blob feed
-              - script: $(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd $(_InternalBuildArgs)
-                displayName: Package, Sign, and Publish
-                continueOnError: false
-                condition: succeeded()
-
-              # Publish package and log build artifacts
-              - task: PublishBuildArtifacts@1
-                displayName: Publish Package Artifacts
-                inputs:
-                  publishLocation: Container
-                  pathtoPublish: '$(Build.SourcesDirectory)/artifacts/packages'
-                  artifactName: Packages
-                continueOnError: true
-                condition: always()
-
-              - task: PublishBuildArtifacts@1
-                displayName: Publish Bundled Tools
-                inputs:
-                  publishLocation: Container
-                  pathtoPublish: '$(Build.SourcesDirectory)/artifacts/bundledtools'
-                  artifactName: BundledTools
-                continueOnError: true
-                condition: always()
-
-          - template: /eng/common/templates/job/publish-build-assets.yml
-            parameters:
-              configuration: Release
-              dependsOn: Sign_Package_Publish
-              publishUsingPipelines: true
-              pool:
-                name: NetCore1ESPool-Internal
-                demands: ImageOverride -equals windows.vs2022.amd64
-
-      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-        - template: /eng/common/templates/post-build/post-build.yml
+      - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+        - template: /eng/pipelines/build.yml
           parameters:
-            # This is to enable SDL runs part of Post-Build Validation Stage.
-            # as well as NuGet, SourceLink, and signing validation.
-            # The variables get imported from group dotnet-diagnostics-sdl-params
-            publishingInfraVersion: 3
-            enableSourceLinkValidation: true
-            enableSigningValidation: false
-            enableSymbolValidation: false
-            enableNugetValidation: true
-            symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
-            publishInstallersAndChecksums: true
-            SDLValidationParameters:
-              enable: true
-              continueOnError: true
-              params: ' -SourceToolsList @("policheck","credscan")
-              -ArtifactToolsList @("binskim")
-              -BinskimAdditionalRunConfigParams @("IgnorePdbLoadError < True","Recurse < True")
-              -TsaInstanceURL $(_TsaInstanceURL)
-              -TsaProjectName $(_TsaProjectName)
-              -TsaNotificationEmail $(_TsaNotificationEmail)
-              -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-              -TsaBugAreaPath $(_TsaBugAreaPath)
-              -TsaIterationPath $(_TsaIterationPath)
-              -TsaRepositoryName "diagnostics"
-              -TsaCodebaseName "diagnostics"
-              -TsaPublish $True'
-              artifactNames:
-              - 'Packages'
+            jobTemplate: ${{ variables.jobTemplate }}
+            name: Debian_Bullseye
+            osGroup: Linux
+            container: test_debian_11_amd64
+            dependsOn: Linux
+            testOnly: true
+            buildConfigs:
+            - configuration: Release
+              architecture: x64
+            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+              - configuration: Debug
+                architecture: x64
 
-      # This sets up the bits to do a Release.
-      - template: /eng/pipelines/prepare-release.yml
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            name: Fedora_36
+            osGroup: Linux
+            container: test_fedora_36
+            dependsOn: Linux
+            testOnly: true
+            buildConfigs:
+            - configuration: Release
+              architecture: x64
+            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+              - configuration: Debug
+                architecture: x64
+
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+      - stage: package
+        displayName: Package, Sign, and Generate BAR Manifests
+        jobs:
+        - template: /eng/common/templates-official/job/job.yml
+          parameters:
+            name: Sign_Package_Publish
+            displayName: Packaging
+            condition: succeeded()
+            enablePublishUsingPipelines: true
+            enableMicrobuild: true
+            templateContext:
+              outputs:
+              - output: pipelineArtifact
+                artifact: BundledTools
+                path: '$(Build.SourcesDirectory)/artifacts/bundledtools'
+                displayName: 'Publish Bundled Tools'
+                condition: succeeded()
+              - output: pipelineArtifact
+                artifact: Logs_Packaging_Signing
+                path: '$(Build.SourcesDirectory)/artifacts/log'
+                displayName: 'Publish Signing and Packaging Logs'
+                condition: always()
+            steps:
+            - task: DownloadPipelineArtifact@2
+              displayName: 'Download release builds'
+              inputs:
+                patterns: |
+                  Build_Linux_*_Release/bin/**
+                  Build_Linux_musl_*_Release/bin/**
+                  Build_Windows_*_Release/bin/**
+                  Build_MacOS_*_Release/bin/**
+                downloadPath: '$(Build.ArtifactStagingDirectory)/__download__'
+                checkDownloadedFiles: true
+                cleanDestinationFolder: true
+
+            - powershell: |
+                cd $(Build.ArtifactStagingDirectory)/__download__
+
+                $dirs = Get-ChildItem -Directory
+                if ($dirs.Count -ne 12) {
+                  throw "Expected 12 release platforms to be present. 3 Linux glibc, 3 Linux musl, 4 Windows, and 2 macOS."
+                }
+
+                $targetDir = "$(Build.SourcesDirectory)/artifacts/bin"
+                if (!(Test-Path $targetDir)) {
+                  New-Item $targetDir -ItemType Directory
+                }
+
+                $dirs | ForEach-Object {
+                  $sourceDir = "$($_.FullName)/bin"
+                  Move-Item -Path $sourceDir/* -Destination $targetDir -Verbose
+                }
+              displayName: 'Setup layout for packaging'
+
+            # Create nuget packages, sign binaries and publish to blob feed
+            - script: $(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd $(_InternalBuildArgs)
+              displayName: Package, Sign, and Publish
+              continueOnError: false
+              condition: succeeded()
+
+        - template: /eng/common/templates-official/job/publish-build-assets.yml
+          parameters:
+            configuration: Release
+            dependsOn: Sign_Package_Publish
+            publishUsingPipelines: true
+
+      - template: /eng/common/templates-official/post-build/post-build.yml@self
+        parameters:
+          # This is to enable SDL runs part of Post-Build Validation Stage.
+          # as well as NuGet, SourceLink, and signing validation.
+          # The variables get imported from group dotnet-diagnostics-sdl-params
+          validateDependsOn: package
+          publishingInfraVersion: 3
+          enableSourceLinkValidation: true
+          enableSigningValidation: false
+          enableSymbolValidation: false
+          enableNugetValidation: true
+          symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
+          publishInstallersAndChecksums: true
+
+    # This sets up the bits to do a Release.
+    - template: /eng/pipelines/prepare-release.yml
