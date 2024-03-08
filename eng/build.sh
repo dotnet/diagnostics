@@ -21,7 +21,6 @@ __ManagedBuildArgs=
 __NativeBuild=1
 __NumProc=1
 __PortableBuild=1
-__PrivateBuildPath=
 __RootBinDir="$__RepoRootDir"/artifacts
 __RuntimeSourceFeed=
 __RuntimeSourceFeedKey=
@@ -32,7 +31,6 @@ __UnprocessedBuildArgs=
 
 usage_list+=("-skipmanaged: do not build managed components.")
 usage_list+=("-skipnative: do not build native components.")
-usage_list+=("-privatebuildpath: path to local private runtime build to test.")
 usage_list+=("-test: run xunit tests")
 
 handle_arguments() {
@@ -67,10 +65,6 @@ handle_arguments() {
         -dotnetruntimedownloadversion)
             __DotnetRuntimeDownloadVersion="$2"
             __ShiftArgs=1
-            ;;
-
-        privatebuildpath|-privatebuildpath)
-            __PrivateBuildPath="$1"
             ;;
 
         -runtimesourcefeed)
@@ -279,7 +273,6 @@ if [[ "$__Test" == 1 ]]; then
         --configuration "$__BuildType" \
         /bl:"$__LogsDir"/Test.binlog \
         /p:BuildArch="$__TargetArch" \
-        /p:PrivateBuildPath="$__PrivateBuildPath" \
         /p:DotnetRuntimeVersion="$__DotnetRuntimeVersion" \
         /p:DotnetRuntimeDownloadVersion="$__DotnetRuntimeDownloadVersion" \
         /p:RuntimeSourceFeed="$__RuntimeSourceFeed" \
