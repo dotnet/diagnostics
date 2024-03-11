@@ -243,7 +243,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
             return true;
         }
-
+        // This method attempts to truncate column header content while prioritizing the actual content. 
+        // Initially, we evenly divide the available space among columns, aiming to reduce the size 
+        // of each column header until it fits on the screen. If this isn't possible due to headers 
+        // reaching a minimal length (MinimalColumnHeaderLength), we then truncate the values 
+        // themselves until we achieve the desired width that fits within the screen.
         private void AdjustColumnsLength(List<int> columnHeaderLen, List<int> maxValueColumnLen)
         {
             int totalColumnLength = 0;
