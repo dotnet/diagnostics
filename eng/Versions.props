@@ -25,6 +25,18 @@
     <MicrosoftAspNetCoreAppRefVersion>8.0.0</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.3.24157.7</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.3.24161.2</MicrosoftDotnetSdkInternalVersion>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- Runtime versions to test -->
+    <MicrosoftNETCoreApp60Version>6.0.24</MicrosoftNETCoreApp60Version>
+    <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
+    <MicrosoftNETCoreApp70Version>7.0.16</MicrosoftNETCoreApp70Version>
+    <MicrosoftAspNetCoreApp70Version>$(MicrosoftNETCoreApp70Version)</MicrosoftAspNetCoreApp70Version>
+    <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
+    <SingleFileRuntime60Version>$(MicrosoftNETCoreApp60Version)</SingleFileRuntime60Version>
+    <SingleFileRuntime70Version>7.0.16</SingleFileRuntime70Version>
+    <SingleFileRuntimeLatestVersion>8.0.2</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -38,6 +50,7 @@
     <MicrosoftDiaSymReaderNativeVersion>16.11.27-beta1.23180.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.0.7</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingAbstractionsVersion>6.0.4</MicrosoftExtensionsLoggingAbstractionsVersion>
     <MicrosoftExtensionsLoggingConsoleVersion>6.0.0</MicrosoftExtensionsLoggingConsoleVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
@@ -50,11 +63,12 @@
     <SystemTextEncodingsWebVersion>6.0.0</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>6.0.8</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetCodeAnalysisVersion>9.0.0-beta.24151.5</MicrosoftDotNetCodeAnalysisVersion>
+    <MicrosoftDotNetCodeAnalysisVersion>9.0.0-beta.24159.1</MicrosoftDotNetCodeAnalysisVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.406</StyleCopAnalyzersVersion>
     <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
     <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
+    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>9.0.0-alpha.1.24112.3</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
     <!-- Roslyn and analyzers -->
     <!-- Compatibility with VS 16.11/.NET SDK 5.0.4xx -->
     <MicrosoftCodeAnalysisVersion_3_11>3.11.0</MicrosoftCodeAnalysisVersion_3_11>
