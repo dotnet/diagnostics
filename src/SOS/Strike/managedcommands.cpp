@@ -181,10 +181,16 @@ DECLARE_API(sizestats)
     return ExecuteManagedOnlyCommand("sizestats", args);
 }
 
-DECLARE_API(DumpHttpRequests)
+DECLARE_API(DumpHttp)
 {
     INIT_API_EXT();
-    return ExecuteManagedOnlyCommand("dumphttprequests", args);
+    return ExecuteManagedOnlyCommand("dumphttp", args);
+}
+
+DECLARE_API(DumpRequests)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumprequests", args);
 }
 
 typedef HRESULT (*PFN_COMMAND)(PDEBUG_CLIENT client, PCSTR args);

@@ -1,9 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
@@ -12,8 +10,8 @@ using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "dumphttprequests", Aliases = new string[] { "DumpHttpRequests" }, Help = "Shows all currently active incoming HTTP requests.")]
-    public class DumpHttpRequestsCommand : ClrRuntimeCommandBase
+    [Command(Name = "dumprequests", Aliases = new string[] { "DumpRequests" }, Help = "Displays all currently active incoming HTTP requests.")]
+    public class DumpRequestsCommand : ClrRuntimeCommandBase
     {
         public override void Invoke()
         {
