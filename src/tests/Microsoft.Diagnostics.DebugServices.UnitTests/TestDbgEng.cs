@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.Diagnostics.TestHelpers;
@@ -22,6 +24,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             : base(config)
         {
         }
+
+        public override ImmutableArray<string> ExecuteCommand(string commandLine) => HostServices.Instance.ExecuteCommand(commandLine);
+
+        public override ImmutableArray<string> ExecuteHostCommand(string commandLine) => HostServices.Instance.ExecuteHostCommand(commandLine);
 
         protected override ITarget GetTarget()
         {

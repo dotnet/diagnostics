@@ -3943,23 +3943,11 @@ HRESULT LoadClrDebugDll(void)
     HRESULT hr = g_pRuntime->GetClrDataProcess(&g_clrData);
     if (FAILED(hr))
     {
-#ifdef FEATURE_PAL
-        return hr;
-#else
-        // Fail if ExtensionApis wasn't initialized because we are hosted under dotnet-dump
-        if (Ioctl == nullptr) {
+        g_clrData = GetClrDataFromDbgEng();
+        if (g_clrData == nullptr)
+        {
             return hr;
         }
-        // Try getting the DAC interface from dbgeng if the above fails on Windows
-        WDBGEXTS_CLR_DATA_INTERFACE Query;
-
-        Query.Iid = &__uuidof(IXCLRDataProcess);
-        if (!Ioctl(IG_GET_CLR_DATA_INTERFACE, &Query, sizeof(Query))) {
-            return hr;
-        }
-        g_clrData = (IXCLRDataProcess*)Query.Iface;
-        g_clrData->Flush();
-#endif
     }
     else
     {

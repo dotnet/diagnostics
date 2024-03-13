@@ -3,11 +3,12 @@
 
 #include "sos.h"
 #include "datatarget.h"
-#include "corhdr.h"
-#include "cor.h"
-#include "dacprivate.h"
-#include "sospriv.h"
-#include "corerror.h"
+#include <corhdr.h>
+#include <cor.h>
+#include <dacprivate.h>
+#include <sospriv.h>
+#include <corerror.h>
+#include <remotememoryservice.h>
 
 #define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
 
@@ -88,11 +89,7 @@ HRESULT STDMETHODCALLTYPE
 DataTarget::GetMachineType(
     /* [out] */ ULONG32 *machine)
 {
-    if (g_ExtControl == NULL)
-    {
-        return E_UNEXPECTED;
-    }
-    return g_ExtControl->GetExecutingProcessorType((PULONG)machine);
+    return GetDebuggerServices()->GetExecutingProcessorType((PULONG)machine);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -115,10 +112,6 @@ DataTarget::GetImageBase(
     /* [string][in] */ LPCWSTR name,
     /* [out] */ CLRDATA_ADDRESS *base)
 {
-    if (g_ExtSymbols == NULL)
-    {
-        return E_UNEXPECTED;
-    }
     CHAR lpstr[MAX_LONGPATH];
     int name_length = WideCharToMultiByte(CP_ACP, 0, name, -1, lpstr, MAX_LONGPATH, NULL, NULL);
     if (name_length == 0)
@@ -133,7 +126,7 @@ DataTarget::GetImageBase(
         *lp = '\0';
     }
 #endif
-    return g_ExtSymbols->GetModuleByModuleName(lpstr, 0, NULL, base);
+    return GetDebuggerServices()->GetModuleByModuleName(lpstr, 0, NULL, base);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -143,10 +136,6 @@ DataTarget::ReadVirtual(
     /* [in] */ ULONG32 request,
     /* [optional][out] */ ULONG32 *done)
 {
-    if (g_ExtData == NULL)
-    {
-        return E_UNEXPECTED;
-    }
     address = CONVERT_FROM_SIGN_EXTENDED(address);
 #ifdef FEATURE_PAL
     if (g_sos != nullptr)
@@ -164,7 +153,7 @@ DataTarget::ReadVirtual(
         }
     }
 #endif
-    HRESULT hr = g_ExtData->ReadVirtual(address, (PVOID)buffer, request, (PULONG)done);
+    HRESULT hr = GetDebuggerServices()->ReadVirtual(address, (PVOID)buffer, request, (PULONG)done);
     if (FAILED(hr)) 
     {
         ExtDbgOut("DataTarget::ReadVirtual FAILED %08x address %08llx size %08x\n", hr, address, request);
@@ -179,11 +168,7 @@ DataTarget::WriteVirtual(
     /* [in] */ ULONG32 request,
     /* [optional][out] */ ULONG32 *done)
 {
-    if (g_ExtData == NULL)
-    {
-        return E_UNEXPECTED;
-    }
-    return g_ExtData->WriteVirtual(address, (PVOID)buffer, request, (PULONG)done);
+    return GetDebuggerServices()->WriteVirtual(address, (PVOID)buffer, request, (PULONG)done);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -208,11 +193,7 @@ HRESULT STDMETHODCALLTYPE
 DataTarget::GetCurrentThreadID(
     /* [out] */ ULONG32 *threadID)
 {
-    if (g_ExtSystem == NULL)
-    {
-        return E_UNEXPECTED;
-    }
-    return g_ExtSystem->GetCurrentThreadSystemId((PULONG)threadID);
+    return GetDebuggerServices()->GetCurrentThreadSystemId((PULONG)threadID);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -222,55 +203,7 @@ DataTarget::GetThreadContext(
     /* [in] */ ULONG32 contextSize,
     /* [out, size_is(contextSize)] */ PBYTE context)
 {
-    HRESULT hr;
-#ifdef FEATURE_PAL
-    if (g_ExtServices == NULL)
-    {
-        return E_UNEXPECTED;
-    }
-    hr = g_ExtServices->GetThreadContextBySystemId(threadID, contextFlags, contextSize, context);
-#else
-    if (g_ExtSystem == NULL || g_ExtAdvanced == NULL)
-    {
-        return E_UNEXPECTED;
-    }
-    ULONG ulThreadIDOrig;
-    ULONG ulThreadIDRequested;
-
-    hr = g_ExtSystem->GetCurrentThreadId(&ulThreadIDOrig);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    hr = g_ExtSystem->GetThreadIdBySystemId(threadID, &ulThreadIDRequested);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    hr = g_ExtSystem->SetCurrentThreadId(ulThreadIDRequested);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    // Prepare context structure
-    ZeroMemory(context, contextSize);
-    g_targetMachine->SetContextFlags(context, contextFlags);
-
-    // Ok, do it!
-    hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
-
-    // This is cleanup; failure here doesn't mean GetThreadContext should fail
-    // (that's determined by hr).
-    g_ExtSystem->SetCurrentThreadId(ulThreadIDOrig);
-#endif
-
-    // GetThreadContext clears ContextFlags or sets them incorrectly and DBI needs it set to know what registers to copy
-    g_targetMachine->SetContextFlags(context, contextFlags);
-
-    return hr;
+    return GetDebuggerServices()->GetThreadContextBySystemId(threadID, contextFlags, contextSize, context);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -303,21 +236,13 @@ DataTarget::AllocVirtual(
     /* [in] */ ULONG32 protectFlags,
     /* [out] */ CLRDATA_ADDRESS* virt)
 {
-#ifdef FEATURE_PAL
-    return E_NOTIMPL;
-#else
-    ULONG64 hProcess;
-    HRESULT hr = g_ExtSystem->GetCurrentProcessHandle(&hProcess);
-    if (FAILED(hr)) {
+    HRESULT hr;
+    ReleaseHolder<IRemoteMemoryService> remote;
+    if (FAILED(hr = GetDebuggerServices()->QueryInterface(__uuidof(IRemoteMemoryService), (void**)&remote)))
+    {
         return hr;
     }
-    LPVOID allocation = ::VirtualAllocEx((HANDLE)hProcess, (LPVOID)addr, size, typeFlags, protectFlags);
-    if (allocation == NULL) {
-        return HRESULT_FROM_WIN32(::GetLastError());
-    }
-    *virt = (CLRDATA_ADDRESS)allocation;
-    return S_OK;
-#endif
+    return remote->AllocVirtual(addr, size, typeFlags, protectFlags, virt);
 }
         
 HRESULT STDMETHODCALLTYPE 
@@ -326,17 +251,13 @@ DataTarget::FreeVirtual(
     /* [in] */ ULONG32 size,
     /* [in] */ ULONG32 typeFlags)
 {
-#ifdef FEATURE_PAL
-    return E_NOTIMPL;
-#else
-    ULONG64 hProcess;
-    HRESULT hr = g_ExtSystem->GetCurrentProcessHandle(&hProcess);
-    if (FAILED(hr)) {
+    HRESULT hr;
+    ReleaseHolder<IRemoteMemoryService> remote;
+    if (FAILED(hr = GetDebuggerServices()->QueryInterface(__uuidof(IRemoteMemoryService), (void**)&remote)))
+    {
         return hr;
     }
-    ::VirtualFreeEx((HANDLE)hProcess, (LPVOID)addr, size, typeFlags);
-    return S_OK;
-#endif
+    return remote->FreeVirtual(addr, size, typeFlags);
 }
 
 // ICorDebugDataTarget4
@@ -348,11 +269,7 @@ DataTarget::VirtualUnwind(
     /* [in, out, size_is(contextSize)] */ PBYTE context)
 {
 #ifdef FEATURE_PAL
-    if (g_ExtServices == NULL)
-    {
-        return E_UNEXPECTED;
-    }
-    return g_ExtServices->VirtualUnwind(threadId, contextSize, context);
+    return GetDebuggerServices()->VirtualUnwind(threadId, contextSize, context);
 #else
     return E_NOTIMPL;
 #endif

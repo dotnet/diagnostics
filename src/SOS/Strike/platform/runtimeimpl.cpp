@@ -62,26 +62,19 @@ extern "C" bool TryGetSymbolWithCallback(
 bool ReaderReadMemory(void* address, void* buffer, size_t size)
 {
     ULONG read = 0;
-    return SUCCEEDED(g_ExtData->ReadVirtual((ULONG64)address, buffer, (ULONG)size, &read));
+    return SUCCEEDED(GetDebuggerServices()->ReadVirtual((ULONG64)address, buffer, (ULONG)size, &read));
 }
 
 /**********************************************************************\
  * Search all the modules in the process for the single-file host
 \**********************************************************************/
-static HRESULT GetSingleFileInfo(ITarget* target, PULONG pModuleIndex, PULONG64 pModuleAddress, RuntimeInfo** ppRuntimeInfo)
+static HRESULT GetSingleFileInfo(IDebuggerServices* debuggerServices, PULONG pModuleIndex, PULONG64 pModuleAddress, RuntimeInfo** ppRuntimeInfo)
 {
     _ASSERTE(pModuleIndex != nullptr);
     _ASSERTE(pModuleAddress != nullptr);
 
-    // No debugger service instance means that SOS is hosted by dotnet-dump,
-    // which does runtime enumeration in CLRMD. We should never get here.
-    IDebuggerServices* debuggerServices = GetDebuggerServices();
-    if (debuggerServices == nullptr) {
-        return E_NOINTERFACE;
-    }
-
     ULONG loaded, unloaded;
-    HRESULT hr = g_ExtSymbols->GetNumberModules(&loaded, &unloaded);
+    HRESULT hr = debuggerServices->GetNumberModules(&loaded, &unloaded);
     if (FAILED(hr)) {
         return hr;
     }
@@ -90,13 +83,18 @@ static HRESULT GetSingleFileInfo(ITarget* target, PULONG pModuleIndex, PULONG64 
     for (ULONG index = 0; index < loaded; index++)
     {
         ULONG64 baseAddress;
-        hr = g_ExtSymbols->GetModuleByIndex(index, &baseAddress);
+        hr = debuggerServices->GetModuleByIndex(index, &baseAddress);
+        if (FAILED(hr)) {
+            return hr;
+        }
+        IDebuggerServices::OperatingSystem operatingSystem;
+        hr = debuggerServices->GetOperatingSystem(&operatingSystem);
         if (FAILED(hr)) {
             return hr;
         }
         ULONG64 symbolAddress;
-        if (target->GetOperatingSystem() == ITarget::OperatingSystem::Linux ||
-            target->GetOperatingSystem() == ITarget::OperatingSystem::OSX)
+        if (operatingSystem == IDebuggerServices::OperatingSystem::Linux ||
+            operatingSystem == IDebuggerServices::OperatingSystem::OSX)
         {
             if (!::TryGetSymbolWithCallback(ReaderReadMemory, baseAddress, symbolName, &symbolAddress)) {
                 continue;
@@ -111,11 +109,11 @@ static HRESULT GetSingleFileInfo(ITarget* target, PULONG pModuleIndex, PULONG64 
         }
         ULONG read = 0;
         ArrayHolder<BYTE> buffer = new BYTE[sizeof(RuntimeInfo)];
-        hr = g_ExtData->ReadVirtual(symbolAddress, buffer, sizeof(RuntimeInfo), &read);
+        hr = debuggerServices->ReadVirtual(symbolAddress, buffer, sizeof(RuntimeInfo), &read);
         if (FAILED(hr)) {
             return hr;
         }
-        if (strcmp(((RuntimeInfo*)buffer.GetPtr())->Signature, "DotNetRuntimeInfo") != 0) {
+        if (strcmp(((RuntimeInfo*)buffer.GetPtr())->Signature, RUNTIME_INFO_SIGNATURE) != 0) {
             break;
         }
         if (((RuntimeInfo*)buffer.GetPtr())->Version <= 0) {
@@ -144,31 +142,28 @@ HRESULT Runtime::CreateInstance(ITarget* target, RuntimeConfiguration configurat
 
     if (*ppRuntime == nullptr)
     {
+        // No debugger service instance means that SOS is hosted by dotnet-dump,
+        // which does runtime enumeration in CLRMD. We should never get here.
+        IDebuggerServices* debuggerServices = GetDebuggerServices();
+        if (debuggerServices == nullptr) {
+            return E_NOINTERFACE;
+        }
+
         // Check if the normal runtime module (coreclr.dll, libcoreclr.so, etc.) is loaded
-        hr = g_ExtSymbols->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
+        hr = debuggerServices->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
         if (FAILED(hr))
         {
             // If the standard runtime module isn't loaded, try looking for a single-file program
             if (configuration != IRuntime::WindowsDesktop)
             {
-                hr = GetSingleFileInfo(target, &moduleIndex, &moduleAddress, &runtimeInfo);
+                hr = GetSingleFileInfo(debuggerServices, &moduleIndex, &moduleAddress, &runtimeInfo);
             }
         }
 
         // If the previous operations were successful, get the size of the runtime module
         if (SUCCEEDED(hr))
         {
-#ifdef FEATURE_PAL
-            hr = g_ExtServices2->GetModuleInfo(moduleIndex, nullptr, &moduleSize, nullptr, nullptr);
-#else
-            _ASSERTE(moduleAddress != 0);
-            DEBUG_MODULE_PARAMETERS params;
-            hr = g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &params);
-            if (SUCCEEDED(hr))
-            {
-                moduleSize = params.Size;
-            }
-#endif
+            hr = debuggerServices->GetModuleInfo(moduleIndex, nullptr, &moduleSize, nullptr, nullptr);
         }
 
         // If the previous operations were successful, create the Runtime instance
@@ -180,7 +175,7 @@ HRESULT Runtime::CreateInstance(ITarget* target, RuntimeConfiguration configurat
             }
             else 
             {
-                ExtOut("Runtime (%s) module size == 0\n", runtimeModuleName);
+                ExtDbgOut("Runtime (%s) module size == 0\n", runtimeModuleName);
                 hr = E_INVALIDARG;
             }
         }
@@ -211,7 +206,7 @@ Runtime::Runtime(ITarget* target, RuntimeConfiguration configuration, ULONG inde
     _ASSERTE(size != 0);
 
     ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
-    HRESULT hr = g_ExtSymbols->GetModuleNames(index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+    HRESULT hr = GetDebuggerServices()->GetModuleNames(index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
     if (SUCCEEDED(hr))
     {
         m_name = szModuleName.Detach();
@@ -631,9 +626,8 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 HRESULT Runtime::GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes)
 {
     _ASSERTE(pFileInfo);
-    _ASSERTE(g_ExtSymbols2 != nullptr);
 
-    HRESULT hr = g_ExtSymbols2->GetModuleVersionInformation(
+    HRESULT hr = GetDebuggerServices()->GetModuleVersionInformation(
         m_index, 0, "\\", pFileInfo, sizeof(VS_FIXEDFILEINFO), NULL);
 
     // 0.0.0.0 is not a valid version. This is sometime returned by windbg for Linux core dumps
@@ -648,7 +642,7 @@ HRESULT Runtime::GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuff
             fileVersionBuffer[0] = '\0';
         }
         // We can assume the English/CP_UNICODE lang/code page for the runtime modules
-        g_ExtSymbols2->GetModuleVersionInformation(
+        GetDebuggerServices()->GetModuleVersionInformation(
             m_index, 0, "\\StringFileInfo\\040904B0\\FileVersion", fileVersionBuffer, fileVersionBufferSizeInBytes, NULL);
     }
 

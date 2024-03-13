@@ -174,7 +174,7 @@ namespace SOS.Hosting
                     *type = IMAGE_FILE_MACHINE.I386;
                     break;
                 case Architecture.Arm:
-                    *type = IMAGE_FILE_MACHINE.THUMB2;
+                    *type = IMAGE_FILE_MACHINE.ARMNT;
                     break;
                 case Architecture.Arm64:
                     *type = IMAGE_FILE_MACHINE.ARM64;

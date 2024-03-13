@@ -124,6 +124,7 @@
 #include "ExpressionNode.h"
 #include "WatchCmd.h"
 #include "tls.h"
+#include "clrma/managedanalysis.h"
 
 typedef struct _VM_COUNTERS {
     SIZE_T PeakVirtualSize;
@@ -4949,7 +4950,7 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
         sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%p", SOS_PTR(addr));
 #endif
         ExtOut("Setting breakpoint: %s [%S]\n", buffer, wszNameBuffer);
-        g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
+        g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
 
         if (curLimit < MaxBPsCached)
         {
@@ -5710,7 +5711,7 @@ public:
 #else
                 sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%p", SOS_PTR(startAddr+catcherNativeOffset));
 #endif
-                g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
+                g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
             }
             g_stopOnNextCatch = FALSE;
         }
@@ -5809,7 +5810,7 @@ HRESULT HandleCLRNotificationEvent()
         ExtOut("Expecting first chance CLRN exception\n");
         return E_FAIL;
 #else
-        g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "process continue", 0);
+        g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "process continue", 0);
         return S_OK;
 #endif
     }
@@ -5830,9 +5831,9 @@ HRESULT HandleCLRNotificationEvent()
             case DEBUG_STATUS_GO_HANDLED:
             case DEBUG_STATUS_GO_NOT_HANDLED:
 #ifndef FEATURE_PAL
-                g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "g", 0);
+                g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "g", 0);
 #else
-                g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "process continue", 0);
+                g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "process continue", 0);
 #endif
                 break;
             default:
@@ -5866,7 +5867,7 @@ HRESULT HandleRuntimeLoadedNotification(IDebugClient* client)
 {
     INIT_API_EFN();
     EnableModuleLoadUnloadCallbacks();
-    return g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
+    return g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
 }
 
 #else // FEATURE_PAL
@@ -6221,7 +6222,7 @@ DECLARE_API(bpmd)
                 SOS_PTR(MethodDescData.AddressOfNativeCodeSlot),
                 SOS_PTR(MethodDescData.AddressOfNativeCodeSlot));
 
-            Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
+            Status = g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
             if (FAILED(Status))
             {
                 ExtOut("Unable to set breakpoint with IDebugControl::Execute: %x\n",Status);
@@ -6253,7 +6254,7 @@ DECLARE_API(bpmd)
     {
         ExtOut("Adding pending breakpoints...\n");
 #ifndef FEATURE_PAL
-        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
+        Status = g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
 #else
         Status = g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
 #endif // FEATURE_PAL
@@ -8621,7 +8622,7 @@ DECLARE_API(FindRoots)
         idp2->SetGcNotification(gea);
         // ... and register the notification handler
 #ifndef FEATURE_PAL
-        g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
+        g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
 #else
         g_ExtServices->SetExceptionCallback(HandleExceptionNotification);
 #endif // FEATURE_PAL
@@ -9140,7 +9141,7 @@ DECLARE_API(TraceToCode)
         }
         else
         {
-            Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "thr; .echo wait" ,0);
+            Status = g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "thr; .echo wait" ,0);
             if (FAILED(Status))
             {
                 ExtOut("Error tracing instruction\n");
@@ -9194,7 +9195,7 @@ DECLARE_API(GetCodeTypeFlags)
     sprintf_s(buffer, ARRAY_SIZE(buffer),
         "r$t%d=0",
         preg);
-    Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer ,0);
+    Status = g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer ,0);
     if (FAILED(Status))
     {
         ExtOut("Error initialized register $t%d to zero\n", preg);
@@ -9245,7 +9246,7 @@ DECLARE_API(GetCodeTypeFlags)
     sprintf_s(buffer, ARRAY_SIZE(buffer),
         "r$t%d=%x",
         preg, codeType);
-    Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
+    Status = g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
     if (FAILED(Status))
     {
         ExtOut("Error setting register $t%d\n", preg);
@@ -9314,7 +9315,7 @@ DECLARE_API(StopOnException)
     sprintf_s(buffer, ARRAY_SIZE(buffer),
         "r$t%d=0",
         preg);
-    Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
+    Status = g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
     if (FAILED(Status))
     {
         ExtOut("Error initialized register $t%d to zero\n", preg);
@@ -9334,7 +9335,7 @@ DECLARE_API(StopOnException)
             EXCEPTION_COMPLUS
             );
 
-        Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
+        Status = g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
         if (FAILED(Status))
         {
             ExtOut("Error setting breakpoint: %s\n", buffer);
@@ -9380,7 +9381,7 @@ DECLARE_API(StopOnException)
                 sprintf_s(buffer, ARRAY_SIZE(buffer),
                     "r$t%d=1",
                     preg);
-                Status = g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, buffer, 0);
+                Status = g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
                 if (FAILED(Status))
                 {
                     ExtOut("Failed to execute the following command: %s\n", buffer);
@@ -12379,6 +12380,10 @@ HRESULT CALLBACK _EFN_StackTrace(
     size_t uiSizeOfContext,
     DWORD Flags)
 {
+    if ((g_clrmaGlobalFlags & ClrmaGlobalFlags::StackTraceEnabled) == 0)
+    {
+        return E_FAIL;
+    }
     INIT_API_EFN();
 
     Status = ImplementEFNStackTraceTry(client, wszTextOut, puiTextLength,
@@ -12922,7 +12927,7 @@ DECLARE_API(SuppressJitOptimization)
         else
         {
             g_fAllowJitOptimization = FALSE;
-            g_ExtControl->Execute(DEBUG_EXECUTE_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
+            g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "sxe -c \"!SOSHandleCLRN\" clrn", 0);
             ExtOut("JIT optimization will be suppressed\n");
         }
     }
@@ -13556,7 +13561,7 @@ DECLARE_API(SetClrPath)
 //
 DECLARE_API(runtimes)
 {
-    INIT_API_NOEE_PROBE_MANAGED("runtimes");
+    INIT_API_NODAC_PROBE_MANAGED("runtimes");
 
     BOOL bNetFx = FALSE;
     BOOL bNetCore = FALSE;
