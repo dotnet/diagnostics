@@ -5,12 +5,12 @@
       "dotnet": [
         "$(MicrosoftNETCoreApp60Version)",
         "$(MicrosoftNETCoreApp70Version)",
-        "$(VSRedistCommonNetCoreSharedFrameworkx6480Version)"
+        "$(MicrosoftNETCoreApp80Version)"
       ],
       "dotnet/x86": [
         "$(MicrosoftNETCoreApp60Version)",
         "$(MicrosoftNETCoreApp70Version)",
-        "$(VSRedistCommonNetCoreSharedFrameworkx6480Version)"
+        "$(MicrosoftNETCoreApp80Version)"
       ]
     }
   },

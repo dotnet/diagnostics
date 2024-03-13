@@ -195,7 +195,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 },
                 circularBufferSizeMB: 256,
                 requestRundown: true,
-                requestStackwalk: true);
+                requestStackwalk: false);
 
             string nettraceFileName = Path.GetTempFileName();
             using (EventPipeSession session = await clientShim.StartEventPipeSession(config))

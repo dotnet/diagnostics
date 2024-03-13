@@ -4,7 +4,8 @@
   <PropertyGroup>
     <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
     <BuildArch Condition="'$(BuildArch)' == 'AnyCpu'">$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</BuildArch>
-    <UnitTestTargetFrameworks>net6.0;net7.0</UnitTestTargetFrameworks>
+    <UnitTestTargetFrameworks>net6.0;net7.0;net8.0</UnitTestTargetFrameworks>
+    <BuildTargetFrameworks>net6.0;net7.0;net8.0;net9.0</BuildTargetFrameworks>
   </PropertyGroup>
 
 </Project>

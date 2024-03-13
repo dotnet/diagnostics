@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     command.Console.WriteLine($"{indent}    ExceptionRecordAddress: {info.ExceptionRecordAddress:X16}");
                     command.Console.WriteLine($"{indent}    RuntimeBaseAddress:     {info.RuntimeBaseAddress:X16}");
 
-                    if (info.Version >= SpecialDiagInfoHeader.SPECIAL_DIAGINFO_RUNTIME_BASEADDRESS)
+                    if (info.Version >= SpecialDiagInfoHeader.SPECIAL_DIAGINFO_RUNTIME_BASEADDRESS && info.RuntimeBaseAddress != 0)
                     {
                         IModule runtimeModule = command.Services.GetService<IModuleService>().GetModuleFromBaseAddress(info.RuntimeBaseAddress);
                         if (runtimeModule != null)

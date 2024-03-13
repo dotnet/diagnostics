@@ -1,0 +1,4 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\..\Directory.Build.props"/>
+  <Import Project="$(RepoRoot)eng/AuxMsbuildFiles/SdkPackOverrides.targets"/>
+</Project>

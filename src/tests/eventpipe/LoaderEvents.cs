@@ -60,7 +60,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
                             }
 
                             AssemblyLoad assemblyLoad = new();
-                            assemblyLoad.LoadFromAssemblyPath(assemblyPath + "\\Microsoft.Diagnostics.Runtime.dll");
+                            assemblyLoad.LoadFromAssemblyPath(Path.Combine(assemblyPath, "Microsoft.Diagnostics.Runtime.dll"));
                             assemblyLoad.Unload();
                         }
                         GC.Collect();
