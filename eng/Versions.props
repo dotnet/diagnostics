@@ -45,7 +45,7 @@
     <SystemCollectionsImmutableVersion>6.0.0</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>6.0.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>3.1.516101</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>3.1.516302</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativeVersion>16.11.27-beta1.23180.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.0.7</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
@@ -113,17 +113,15 @@
     <MicrosoftNETCoreApp70Version>7.0.16</MicrosoftNETCoreApp70Version>
     <MicrosoftNETCoreApp60Version>6.0.27</MicrosoftNETCoreApp60Version>
   </PropertyGroup>
-
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
     <InternalReleaseTesting>false</InternalReleaseTesting>
     <InternalReleaseTesting Condition="'$(DotnetRuntimeVersion)' != 'default'">true</InternalReleaseTesting>
     <ExtraInstallArgs>-runtimesourcefeed '$(RuntimeSourceFeed)' -runtimesourcefeedkey '$(RuntimeSourceFeedKey)'</ExtraInstallArgs>
   </PropertyGroup>
-
   <ItemGroup Condition="!$(InternalReleaseTesting)">
     <RuntimeTestVersions Include="Latest">
-<!--
+      <!--
       <RuntimeDownload>$(VSRedistCommonNetCoreSharedFrameworkx6490Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreAppRuntimewinx64Version)</Runtime>
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
@@ -135,7 +133,6 @@
       <AspNet>9.0.0-preview.3.24158.2</AspNet>
       <TargetFramework>net9.0</TargetFramework>
     </RuntimeTestVersions>
-
     <RuntimeTestVersions Include="Servicing1">
       <RuntimeDownload>$(MicrosoftNETCoreApp80Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreApp80Version)</Runtime>
@@ -143,7 +140,6 @@
       <AspNet>$(MicrosoftNETCoreApp80Version)</AspNet>
       <TargetFramework>net8.0</TargetFramework>
     </RuntimeTestVersions>
-
     <RuntimeTestVersions Include="Servicing2">
       <RuntimeDownload>$(MicrosoftNETCoreApp70Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreApp70Version)</Runtime>
@@ -151,7 +147,6 @@
       <AspNet>$(MicrosoftNETCoreApp70Version)</AspNet>
       <TargetFramework>net7.0</TargetFramework>
     </RuntimeTestVersions>
-
     <RuntimeTestVersions Include="Servicing3">
       <RuntimeDownload>$(MicrosoftNETCoreApp60Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreApp60Version)</Runtime>
@@ -160,20 +155,17 @@
       <TargetFramework>net6.0</TargetFramework>
     </RuntimeTestVersions>
   </ItemGroup>
-
   <!-- Internal service release testing -->
   <ItemGroup Condition="$(InternalReleaseTesting)">
-    <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' != 'default'" >
+    <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' != 'default'">
       <RuntimeDownload>$(DotnetRuntimeDownloadVersion)</RuntimeDownload>
       <Runtime>$(DotnetRuntimeDownloadVersion)</Runtime>
       <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
     </RuntimeTestVersions>
-
-    <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' == 'default'" >
+    <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' == 'default'">
       <RuntimeDownload>$(DotnetRuntimeVersion)</RuntimeDownload>
       <Runtime>$(DotnetRuntimeVersion)</Runtime>
       <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
     </RuntimeTestVersions>
   </ItemGroup>
-
 </Project>
