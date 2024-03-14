@@ -5,10 +5,4 @@
     <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(BuildTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)testCert.pfx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>
