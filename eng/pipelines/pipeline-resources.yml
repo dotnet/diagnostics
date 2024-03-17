@@ -18,7 +18,7 @@ resources:
           ROOTFS_DIR: /crossrootfs/arm64
 
       - container: linux_musl_x64
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.19-WithNode
 
       - container: linux_musl_arm
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-cross-arm-alpine
@@ -34,7 +34,7 @@ resources:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7
 
       - container: test_linux_musl_x64
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.19-WithNode
         options: --cap-add=SYS_PTRACE
 
       - container: test_debian_11_amd64
