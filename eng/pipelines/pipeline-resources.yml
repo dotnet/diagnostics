@@ -5,7 +5,9 @@ parameters:
 resources:
   containers:
       - container: linux_x64
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-amd64
+        env:
+          ROOTFS_DIR: /crossrootfs/x64
 
       - container: linux_arm
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-arm
@@ -34,7 +36,7 @@ resources:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7
 
       - container: test_linux_musl_x64
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.19-WithNode
         options: --cap-add=SYS_PTRACE
 
       - container: test_debian_11_amd64
