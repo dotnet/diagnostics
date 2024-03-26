@@ -10,7 +10,7 @@ steps:
   - task: 1es.PublishPipelineArtifact@1
     inputs:
       targetPath: ${{ parameters.inputs.targetPath }}
-      artifact: ${{ parameters.inputs.artifact }}
+      artifactName: ${{ parameters.inputs.artifactName }}
     condition: ${{ parameters.condition }}
     displayName: ${{ parameters.displayName }}
     continueOnError: ${{ parameters.continueOnError }}
@@ -19,7 +19,7 @@ steps:
   - task: PublishPipelineArtifact@1
     inputs:
       targetPath: ${{ parameters.inputs.targetPath }}
-      artifact: ${{ parameters.inputs.artifact }}
+      artifactName: ${{ parameters.inputs.artifactName }}
     condition: ${{ parameters.condition }}
     displayName: ${{ parameters.displayName }}
     continueOnError: ${{ parameters.continueOnError }}
