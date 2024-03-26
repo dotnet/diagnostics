@@ -24,7 +24,7 @@
     <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>8.0.0</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.3.24161.2</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.4.24175.4</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
@@ -127,10 +127,10 @@
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
 -->
-      <RuntimeDownload>9.0.0-preview.3.24160.3</RuntimeDownload>
-      <Runtime>9.0.0-preview.3.24160.3</Runtime>
-      <AspNetDownload>9.0.0-preview.3.24158.2</AspNetDownload>
-      <AspNet>9.0.0-preview.3.24158.2</AspNet>
+      <RuntimeDownload>9.0.0-preview.4.24173.6</RuntimeDownload>
+      <Runtime>9.0.0-preview.4.24173.6</Runtime>
+      <AspNetDownload>9.0.0-preview.4.24173.3</AspNetDownload>
+      <AspNet>9.0.0-preview.4.24173.3</AspNet>
       <TargetFramework>net9.0</TargetFramework>
     </RuntimeTestVersions>
     <RuntimeTestVersions Include="Servicing1">
