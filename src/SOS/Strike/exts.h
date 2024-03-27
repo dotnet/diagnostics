@@ -579,6 +579,12 @@ extern ReadVirtualCache *rvCache;
     if (FAILED(ret)) return;                          \
 }
 
+#define move_xp_retHRESULT(dst, src)                  \
+{                                                     \
+    HRESULT ret = MOVE(dst, src);                     \
+    if (FAILED(ret)) return ret;                      \
+}
+
 #define moveBlock(dst, src, size)                     \
 {                                                     \
     HRESULT ret = MOVEBLOCK(dst, src, size);          \
