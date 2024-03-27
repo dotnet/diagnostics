@@ -10,8 +10,8 @@ parameters:
   - /eng/pipelines/pipeline-public-template.yml@self
 
 resources:
-  repositories:
-    - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+  ${{ if eq(variables['System.TeamProject'], 'public') }}:
+    repositories:
       - repository: 1ESPipelineTemplates
         type: git
         name: 1ESPipelineTemplates/1ESPipelineTemplates
