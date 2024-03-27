@@ -1179,12 +1179,8 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
                 DWORD_PTR dwTmp = 0;
                 bool calledGetStaticFieldPTR = false;
 
-                // The MethodTable isn't shared, so the module must not be loaded domain neutral.  We can
-                // get the specific DomainLocalModule instance without needing to know the AppDomain in advance.
-                if (g_sos->GetDomainLocalModuleDataFromModule(pMTD->Module, &vDomainLocalModule) != S_OK)
-                {
-                    // If there is no DomainLocalModule, then attempt to get the statics from ISOSDacInterface14,
-                    // which was added to support statics access when DomainLocalModules were remove from the product
+                // If there is support for ISOSDacInterface14 there may be no DomainLocalModule, so attempt to get the statics from ISOSDacInterface14,
+                // which was added to support statics access when DomainLocalModules were removed from the product
                     ISOSDacInterface14 *pSOS14 = nullptr;
                     HRESULT hr = g_sos->QueryInterface(__uuidof(ISOSDacInterface14), reinterpret_cast<LPVOID*>(&pSOS14));
                     if (SUCCEEDED(hr))
@@ -1192,8 +1188,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
                         calledGetStaticFieldPTR = SUCCEEDED(GetStaticFieldPTR(&dwTmp, NULL, pSOS14, cdaMT, pMTD, &vFieldDesc));
                         pSOS14->Release();
                     }
-                }
-                else
+                else if (SUCCEEDED(g_sos->GetDomainLocalModuleDataFromModule(pMTD->Module, &vDomainLocalModule)))
                 {
                     calledGetStaticFieldPTR = SUCCEEDED(GetStaticFieldPTR(&dwTmp, &vDomainLocalModule, NULL, cdaMT, pMTD, &vFieldDesc));
                 }
