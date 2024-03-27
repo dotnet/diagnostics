@@ -80,7 +80,6 @@ extends:
           jobTemplate: ${{ variables.jobTemplate }}
           name: Windows
           osGroup: Windows_NT
-          buildOnly: true
           buildConfigs:
           - configuration: Debug
             architecture: x64
@@ -136,7 +135,6 @@ extends:
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
-          buildOnly: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -214,77 +212,77 @@ extends:
               artifactUploadPath: bin/linux.arm64.Release
               artifactTargetPath: bin/linux-musl.arm64.Release
 
-        # ############################
-        # #                          #
-        # #      Test only legs      #
-        # #                          #
-        # ############################
+        ############################
+        #                          #
+        #      Test only legs      #
+        #                          #
+        ############################
 
-      # - template: /eng/pipelines/build.yml
-      #   parameters:
-      #     jobTemplate: ${{ variables.jobTemplate }}
-      #     name: Ubuntu_20_04
-      #     osGroup: Linux
-      #     container: test_ubuntu_20_04
-      #     dependsOn: Linux
-      #     testOnly: true
-      #     buildConfigs:
-      #     - configuration: Release
-      #       architecture: x64
-      #     - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-      #       - configuration: Debug
-      #         architecture: x64
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            name: Ubuntu_20_04
+            osGroup: Linux
+            container: test_ubuntu_20_04
+            dependsOn: Linux
+            testOnly: true
+            buildConfigs:
+            - configuration: Release
+              architecture: x64
+            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+              - configuration: Debug
+                architecture: x64
 
-      # - template: /eng/pipelines/build.yml
-      #   parameters:
-      #     jobTemplate: ${{ variables.jobTemplate }}
-      #     name: Alpine3_13
-      #     osGroup: Linux
-      #     osSuffix: -musl
-      #     container: test_linux_musl_x64
-      #     dependsOn: Linux_musl
-      #     testOnly: true
-      #     buildConfigs:
-      #     - configuration: Release
-      #       architecture: x64
-      #     - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-      #       - configuration: Debug
-      #         architecture: x64
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            name: Alpine3_13
+            osGroup: Linux
+            osSuffix: -musl
+            container: test_linux_musl_x64
+            dependsOn: Linux_musl
+            testOnly: true
+            buildConfigs:
+            - configuration: Release
+              architecture: x64
+            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+              - configuration: Debug
+                architecture: x64
 
-      # - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-      #   - template: /eng/pipelines/build.yml
-      #     parameters:
-      #       jobTemplate: ${{ variables.jobTemplate }}
-      #       name: Debian_Bullseye
-      #       osGroup: Linux
-      #       container: test_debian_11_amd64
-      #       dependsOn: Linux
-      #       testOnly: true
-      #       buildConfigs:
-      #       - configuration: Release
-      #         architecture: x64
-      #       - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-      #         - configuration: Debug
-      #           architecture: x64
-      #   - template: /eng/pipelines/build.yml
-      #     parameters:
-      #       jobTemplate: ${{ variables.jobTemplate }}
-      #       name: Fedora_36
-      #       osGroup: Linux
-      #       container: test_fedora_36
-      #       dependsOn: Linux
-      #       testOnly: true
-      #       buildConfigs:
-      #       - configuration: Release
-      #         architecture: x64
-      #       - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-      #         - configuration: Debug
-      #           architecture: x64
+        - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: Debian_Bullseye
+              osGroup: Linux
+              container: test_debian_11_amd64
+              dependsOn: Linux
+              testOnly: true
+              buildConfigs:
+              - configuration: Release
+                architecture: x64
+              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                - configuration: Debug
+                  architecture: x64
+
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: Fedora_36
+              osGroup: Linux
+              container: test_fedora_36
+              dependsOn: Linux
+              testOnly: true
+              buildConfigs:
+              - configuration: Release
+                architecture: x64
+              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                - configuration: Debug
+                  architecture: x64
 
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - stage: package
-        displayName: Sign, Package, and Generate BAR Manifests
-        # Download, sign, package and publish
+        displayName: Package, Sign, and Generate BAR Manifests
         jobs:
         - template: /eng/common/templates-official/job/job.yml
           parameters:
@@ -335,7 +333,7 @@ extends:
                   $sourceDir = "$($_.FullName)/bin"
                   Move-Item -Path $sourceDir/* -Destination $targetDir -Verbose
                 }
-              displayName: 'Set up bit layout for packaging'
+              displayName: 'Setup layout for packaging'
 
             # Create nuget packages, sign binaries and publish to blob feed
             - script: $(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd $(_InternalBuildArgs)
@@ -362,25 +360,6 @@ extends:
           enableNugetValidation: true
           symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
           publishInstallersAndChecksums: true
-          #  Is this still needed with 1ES?
-          # SDLValidationParameters:
-          #   enable: true
-          #   continueOnError: true
-          #   params: ' -SourceToolsList @("policheck","credscan")
-          #   -ArtifactToolsList @("binskim")
-          #   -BinskimAdditionalRunConfigParams @("IgnorePdbLoadError < True","Recurse < True")
-          #   -TsaInstanceURL $(_TsaInstanceURL)
-          #   -TsaProjectName $(_TsaProjectName)
-          #   -TsaNotificationEmail $(_TsaNotificationEmail)
-          #   -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-          #   -TsaBugAreaPath $(_TsaBugAreaPath)
-          #   -TsaIterationPath $(_TsaIterationPath)
-          #   -TsaRepositoryName "diagnostics"
-          #   -TsaCodebaseName "diagnostics"
-          #   -TsaPublish $True'
-          #   artifactNames:
-          #   - 'Packages'
 
     # This sets up the bits to do a Release.
-
     - template: /eng/pipelines/prepare-release.yml
