@@ -309,8 +309,8 @@ extends:
               inputs:
                 patterns: |
                   Build_Linux_*_Release/bin/**
-                  Build_Linux-musl_*_Release/bin/**
-                  Build_Windows_NT_*_Release/bin/**
+                  Build_Linux_musl_*_Release/bin/**
+                  Build_Windows_*_Release/bin/**
                   Build_MacOS_*_Release/bin/**
                 downloadPath: '$(Build.ArtifactStagingDirectory)/__download__'
                 checkDownloadedFiles: true
