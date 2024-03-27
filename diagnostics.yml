@@ -49,6 +49,9 @@ variables:
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
 
 extends:
+${{ if eq(variables['System.TeamProject'], 'public') }}:
+  template:  /eng/pipelines/pipeline-public-resources.yml
+${{ else }}:
   template:  /eng/pipelines/pipeline-resources.yml
   parameters:
     template: ${{ variables.TemplateToExpand }}
