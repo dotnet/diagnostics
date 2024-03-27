@@ -35,6 +35,12 @@ variables:
   parameters:
     runtimeFeed: ${{ parameters.runtimeFeed }}
     runtimeFeedToken: ${{ parameters.runtimeFeedToken }}
+- ${{ if eq(variables['System.TeamProject'], 'public') }}:
+  - name: ResourcesTemplate
+    value: /eng/pipelines/pipeline-public-resources.yml
+- ${{ else }}:
+  - name: ResourcesTemplate
+    value: /eng/pipelines/pipeline-resources.yml
 - name: _InternalBuildArgs
   value: ''
 - ${{ if ne(variables['System.TeamProject'], 'public') }}:
@@ -49,10 +55,7 @@ variables:
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
 
 extends:
-${{ if eq(variables['System.TeamProject'], 'public') }}:
-  template:  /eng/pipelines/pipeline-public-resources.yml
-${{ else }}:
-  template:  /eng/pipelines/pipeline-resources.yml
+  template: ${{ variables.ResourcesTemplate }}
   parameters:
     template: ${{ variables.TemplateToExpand }}
     stages:
