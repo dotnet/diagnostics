@@ -1,0 +1,55 @@
+parameters:
+- name: stages
+  type: stageList
+  default: []
+
+- name: pool
+  type: object
+  default: {}
+
+- name: containers
+  type: object
+  default: {}
+
+  # User specified / applied across the pipeline, can be overridden by job specific sdl setting
+- name: sdl
+  type: object
+  default: {}
+
+  # SDL enforcements from Spoke ES teams especially for the tools not enforced by 1ES PT. Spoke ES teams should not be exposing this to their customers
+- name: spokeEsEnforcedSdl
+  type: object
+  default: {}
+
+- name: settings
+  type: object
+  default: {}
+
+- name: authenticatedContainerRegistries
+  type: object
+  default: null
+
+- name: customBuildTags
+  type: object
+  default: null
+
+- name: customLogIssues
+  type: object
+  default: null
+
+- name: featureFlags
+  type: object
+  default: {}
+
+resources:
+  containers:
+  - ${{ each container_pair in parameters.containers }}:
+    - ${{ if container_pair.value.image }}:
+      - container: ${{ container_pair.key }}
+        ${{ each pair in container_pair.value }}:
+            ${{ pair.key }}: ${{ pair.value }}
+
+${{ if ne(length(parameters.pool), 0) }}:
+  pool: ${{ parameters.pool }}
+
+stages: ${{ parameters.stages }}

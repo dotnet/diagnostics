@@ -1,0 +1,70 @@
+parameters:
+  runtimeFeed: default
+  runtimeFeedToken: default
+  isCodeQLRun: false
+
+variables:
+- name: _TeamName
+  value: DotNetCore
+
+# # Internal build pools.
+- ${{ if ne(variables['System.TeamProject'], 'public') }}:
+  - group: DotNet-Diagnostics-SDL-Params
+  - group: DotNet-MSRC-Storage
+  - template: /eng/common/templates/variables/pool-providers.yml@self
+  - name: BuildPool
+    value: $(DncEngInternalBuildPool)
+  - name: WindowsImage
+    value: windows.vs2022.amd64
+  - name: LinuxImage
+    value: 1es-ubuntu-2204-pt
+  - name: macOSImage
+    value: macOS-latest
+  - name: jobTemplate
+    value: /eng/common/templates-official/job/job.yml@self
+  - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
+    - name: Codeql.Enabled
+      value: True
+    - name: Codeql.Cadence
+      value: 0
+    - name: Codeql.TSAEnabled
+      value: True
+    - name: Codeql.BuildIdentifier
+      value: $(System.JobDisplayName)
+    - name: Codeql.Language
+      value: csharp,cpp
+  - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+    - name: TemplateToExpand
+      value: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  - ${{ else }}:
+    - name: TemplateToExpand
+      value: v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates
+# Public build settings
+- ${{ else }}:
+  - template: /eng/common/templates/variables/pool-providers.yml@self
+  - name: BuildPool
+    value: $(DncEngPublicBuildPool)
+  - name: TemplateToExpand
+    value: /eng/pipelines/pipeline-public-template.yml@self
+  - name: jobTemplate
+    value: /eng/common/templates/job/job.yml@self
+  - name: WindowsImage
+    value: windows.vs2022.amd64.open
+  - name: LinuxImage
+    value: Build.Ubuntu.2204.Amd64
+  - name: macOSImage
+    value: macOS-latest
+
+# Custom feed and token
+- ${{ if eq(parameters.runtimeFeed, 'custom') }}:
+  - name: RuntimeFeedUrl
+    value: $(DotnetRuntimeDownloadFeed)
+- ${{ if eq(parameters.runtimeFeedToken, 'custom') }}:
+  - name: RuntimeFeedBase64SasToken
+    value: $(DotnetRuntimeDownloadBase64SasToken)
+- ${{ if eq(parameters.runtimeFeed, 'dotnetclimsrc-feed') }}:
+  - name: RuntimeFeedUrl
+    value: https://dotnetclimsrc.blob.core.windows.net/dotnet
+- ${{ if eq(parameters.runtimeFeedToken, 'dotnetclimsrc-sas-token-base64') }}:
+  - name: RuntimeFeedBase64SasToken
+    value: $(dotnetclimsrc-read-sas-token-base64)
