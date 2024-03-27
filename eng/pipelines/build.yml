@@ -129,7 +129,7 @@ jobs:
       variables:
       - ${{ insert }}: ${{ parameters.variables }}
 
-      - _PhaseName: ${{ parameters.osGroup }}${{ parameters.osSuffix }}_${{ config.architecture }}_${{ config.configuration }}
+      - _PhaseName: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
       - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/${{ config.configuration }}/streams
 
       - _ExtraBuildParams: ''
