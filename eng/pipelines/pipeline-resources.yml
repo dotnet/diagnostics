@@ -7,14 +7,15 @@ parameters:
   values:
   - v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   - v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates
+  - /eng/pipelines/pipeline-public-template.yml@self
 
-
-resources:
-  repositories:
-  - repository: 1ESPipelineTemplates
-    type: git
-    name: 1ESPipelineTemplates/1ESPipelineTemplates
-    ref: refs/tags/release
+${{ if eq(variables['System.TeamProject'], 'public') }}:
+  resources:
+    repositories:
+    - repository: 1ESPipelineTemplates
+      type: git
+      name: 1ESPipelineTemplates/1ESPipelineTemplates
+      ref: refs/tags/release
 
 extends:
   template: ${{ parameters.template }}
