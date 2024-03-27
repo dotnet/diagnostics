@@ -181,12 +181,12 @@ jobs:
           inputs:
             targetPath: '$(Build.ArtifactStagingDirectory)/__download__'
             itemPattern: |
-              Build_Linux${{ parameters.osSuffix }}_${{ config.architecture }}_${{ config.configuration }}/bin/**
+              Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/**
             checkDownloadedFiles: true
         - task: CopyFiles@2
           displayName: 'Binplace Downloaded Product'
           inputs:
-            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_Linux${{ parameters.osSuffix }}_${{ config.architecture }}_${{ config.configuration }}/bin/linux${{ parameters.osSuffix }}.${{ config.architecture }}.${{ config.configuration }}
+            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/linux${{ parameters.osSuffix }}.${{ config.architecture }}.${{ config.configuration }}
             targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/linux.${{ config.architecture }}.${{ config.configuration }}'
 
       - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
