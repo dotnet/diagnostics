@@ -579,13 +579,13 @@ void DisplayDataMember (DacpFieldDescData* pFD, DWORD_PTR dwAddr, BOOL fAlign=TR
 HRESULT GetStaticFieldPTR(DWORD_PTR* pOutPtr, DacpDomainLocalModuleData* pDLMD, ISOSDacInterface14* pSOS14, CLRDATA_ADDRESS cdaMT, DacpMethodTableData* pMTD, DacpFieldDescData* pFDD, BYTE* pFlags = 0)
 {
     DWORD_PTR dwTmp;
-    CLRDATA_ADDRESS pBaseAddress;
+    CLRDATA_ADDRESS pBaseAddress = 0;
 
     BOOL isGCStatic = pFDD->Type == ELEMENT_TYPE_VALUETYPE || pFDD->Type == ELEMENT_TYPE_CLASS;
 
     if (pSOS14)
     {
-        HRESULT hr = pSOS14->GetStaticBaseAddress(cdaMT, isGCStatic, &pBaseAddress);
+        HRESULT hr = pSOS14->GetStaticBaseAddress(cdaMT, !isGCStatic ? &pBaseAddress : NULL, isGCStatic ? &pBaseAddress : NULL);
         if (FAILED(hr))
         {
             ExtOut("GetStaticBaseAddress failed");
@@ -673,14 +673,14 @@ void GetDLMFlags(DacpDomainLocalModuleData* pDLMD, DacpMethodTableData* pMTD, BY
 HRESULT GetThreadStaticFieldPTR(DWORD_PTR* pOutPtr, CLRDATA_ADDRESS cdaThread, DacpThreadLocalModuleData* pTLMD, ISOSDacInterface14* pSOS14, CLRDATA_ADDRESS cdaMT, DacpMethodTableData* pMTD, DacpFieldDescData* pFDD, BYTE* pFlags = 0)
 {
     DWORD_PTR dwTmp;
-    CLRDATA_ADDRESS pBase;
+    CLRDATA_ADDRESS pBase = 0;
     BOOL isGCStatic = pFDD->Type == ELEMENT_TYPE_VALUETYPE || pFDD->Type == ELEMENT_TYPE_CLASS;
     if (pFlags)
         *pFlags = 0;
 
     if (pSOS14)
     {
-        HRESULT hr = pSOS14->GetThreadStaticBaseAddress(cdaMT, cdaThread, isGCStatic, &pBase);
+        HRESULT hr = pSOS14->GetThreadStaticBaseAddress(cdaMT, cdaThread, !isGCStatic ? &pBase : NULL, isGCStatic ? &pBase : NULL);
         if (FAILED(hr))
         {
             ExtOut("GetThreadStaticBaseAddress failed");
