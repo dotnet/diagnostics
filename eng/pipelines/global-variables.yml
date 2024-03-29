@@ -7,6 +7,9 @@ variables:
 - name: _TeamName
   value: DotNetCore
 
+- name: _SignType
+  value: ''
+
 # # Internal build pools.
 - ${{ if ne(variables['System.TeamProject'], 'public') }}:
   - group: DotNet-Diagnostics-SDL-Params
@@ -35,6 +38,9 @@ variables:
       value: $(System.JobDisplayName)
     - name: Codeql.Language
       value: csharp,cpp
+  - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+    - name: _SignType
+      value: real
 # Public build settings
 - ${{ else }}:
   - template: /eng/common/templates/variables/pool-providers.yml@self

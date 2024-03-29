@@ -35,18 +35,6 @@ variables:
   parameters:
     runtimeFeed: ${{ parameters.runtimeFeed }}
     runtimeFeedToken: ${{ parameters.runtimeFeedToken }}
-- name: _InternalBuildArgs
-  value: ''
-- ${{ if ne(variables['System.TeamProject'], 'public') }}:
-  - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-    # DotNet-Diagnostics-SDL-Params provides Tsa* variables for SDL checks.
-    - name: _SignType
-      value: real
-    - name: _InternalBuildArgs
-      value: /p:DotNetSignType=$(_SignType)
-        /p:TeamName=$(_TeamName)
-        /p:DotNetPublishUsingPipelines=true
-        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
 
 extends:
   template: /eng/pipelines/pipeline-resources.yml
@@ -339,7 +327,7 @@ extends:
               displayName: 'Setup layout for packaging'
 
             # Create nuget packages, sign binaries and publish to blob feed
-            - script: $(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd $(_InternalBuildArgs)
+            - script: $(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName) /p:DotNetPublishUsingPipelines=true /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
               displayName: Package, Sign, and Publish
               continueOnError: false
               condition: succeeded()
