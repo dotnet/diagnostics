@@ -110,7 +110,7 @@ jobs:
           os: freebsd
 
         ${{ else }}:
-          'Unable to identify pool for required build': error
+          'error, Unable to identify pool for required build': error
 
       ${{ if ne(parameters.container, '') }}:
         container: ${{ parameters.container }}
@@ -260,7 +260,7 @@ jobs:
           displayName: Publish diagnostic artifacts on failure
           inputs:
             targetPath: $(Build.ArtifactStagingDirectory)/diagnostics
-            artifactName: DiagnosticArtifacts_$(_PhaseName)
+            artifactName: DiagnosticArtifacts_$(_PhaseName)_Attempt$(System.JobAttempt)
           continueOnError: true
           condition: failed()
 
@@ -278,7 +278,7 @@ jobs:
           displayName: Publish Logs
           inputs:
             targetPath: '$(Build.StagingDirectory)/BuildLogs'
-            artifactName: Logs_$(_PhaseName)
+            artifactName: Logs_$(_PhaseName)_Attempt$(System.JobAttempt)
           continueOnError: true
           condition: always()
 
