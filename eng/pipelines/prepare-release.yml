@@ -4,7 +4,7 @@ stages:
   jobs:
   - job: PrepareReleaseJob
     displayName: Prepare release with Darc
-    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'],'refs/heads/juhoyosa/1es-migration'))) }}:
+    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/') }}:
       templateContext:
         outputs:
         - output: pipelineArtifact
@@ -22,7 +22,7 @@ stages:
       - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release /bl'
         workingDirectory: '$(System.ArtifactsDirectory)'
         displayName: 'Build Manifest generation and asset publishing tool'
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'],'refs/heads/juhoyosa/1es-migration'))) }}:
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
       - task: UseDotNet@2
         displayName: 'Use .NET Core runtime 6.x'
         inputs:
@@ -45,7 +45,7 @@ stages:
             -ReleaseVersion "$(Build.BuildNumber)"
           workingDirectory: '$(Build.Repository.LocalPath)'
       - script: >-
-          dotnet.cmd run --project $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release
+          $(Build.Repository.LocalPath)\dotnet.cmd run --project $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release
           --
           prepare-release
           --input-drop-path "$(System.ArtifactsDirectory)\ReleaseTarget"

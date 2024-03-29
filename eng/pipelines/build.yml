@@ -30,7 +30,6 @@ parameters:
   default: {}
 
   # Optional: Job timeout
-
 - name: timeoutInMinutes
   type: number
   default: 180

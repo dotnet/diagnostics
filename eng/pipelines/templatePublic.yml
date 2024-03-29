@@ -1,4 +1,3 @@
-
 parameters:
   - name: templatePath
     type: string

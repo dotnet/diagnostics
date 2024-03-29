@@ -96,9 +96,9 @@ extends:
             - configuration: Release
               architecture: arm
               artifactUploadPath: bin/Windows_NT.arm.Release
-          - configuration: Release
-            architecture: arm64
-            artifactUploadPath: bin/Windows_NT.arm64.Release
+            - configuration: Release
+              architecture: arm64
+              artifactUploadPath: bin/Windows_NT.arm64.Release
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -289,7 +289,7 @@ extends:
         jobs:
         - template: /eng/common/templates-official/job/job.yml
           parameters:
-            name: Sign_Package_Publish
+            name: Package_Sign_Publish
             displayName: Packaging
             condition: succeeded()
             enablePublishUsingPipelines: true
@@ -347,7 +347,7 @@ extends:
         - template: /eng/common/templates-official/job/publish-build-assets.yml
           parameters:
             configuration: Release
-            dependsOn: Sign_Package_Publish
+            dependsOn: Package_Sign_Publish
             publishUsingPipelines: true
 
       - template: /eng/common/templates-official/post-build/post-build.yml@self
@@ -364,5 +364,5 @@ extends:
           symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
           publishInstallersAndChecksums: true
 
-    # This sets up the bits to do a Release.
-    - template: /eng/pipelines/prepare-release.yml
+      # This sets up the bits to do a Release.
+      - template: /eng/pipelines/prepare-release.yml
