@@ -44,9 +44,9 @@
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
       <Sha>a30417ff05a91ac7a69be1c6d2a6fc0c73593ca0</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="8.0.0">
+    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="9.0.0-preview.4.24201.5">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>59edaad404d1b8e47080015ae8d0787f94c970df</Sha>
+      <Sha>a027afb198c787fbfbca0b1d272ce41d9ab7d27a</Sha>
     </Dependency>
     <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.8.0" Version="8.0.0-rtm.23524.7">
       <Uri>https://github.com/dotnet/runtime</Uri>
