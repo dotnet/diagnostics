@@ -36,8 +36,8 @@ public class DumpGenerationFixture : IDisposable
                 }
             }
 
-            try
-            {
+            //try
+            //{
                 using RegistryKey auxiliaryKey = Registry.LocalMachine.CreateSubKey(_auxiliaryNode, writable: true);
                 using RegistryKey knownKey = Registry.LocalMachine.CreateSubKey(_knownNode, writable: true);
 
@@ -51,10 +51,10 @@ public class DumpGenerationFixture : IDisposable
 
                 // Save the paths after writing them successfully to registry
                 _paths = paths;
-            }
-            catch (Exception ex) when (ex is UnauthorizedAccessException)
-            {
-            }
+            //}
+            //catch (Exception ex) when (ex is UnauthorizedAccessException)
+            //{
+            //}
         }
     }
 
