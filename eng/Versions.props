@@ -16,13 +16,13 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.516801</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.517501</MicrosoftSymbolStoreVersion>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6480Version>8.0.0</VSRedistCommonNetCoreSharedFrameworkx6480Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>8.0.0</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-preview.4.24202.16</VSRedistCommonNetCoreSharedFrameworkx6490Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-preview.4.24202.16</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>8.0.0</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>9.0.0-preview.4.24202.33</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>9.0.0-preview.4.24202.33</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.3.24161.2</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
@@ -45,7 +45,7 @@
     <SystemCollectionsImmutableVersion>6.0.0</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>6.0.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>3.1.516302</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>3.1.520301</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativeVersion>16.11.27-beta1.23180.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.0.7</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
@@ -62,7 +62,7 @@
     <SystemTextEncodingsWebVersion>6.0.0</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>6.0.8</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetCodeAnalysisVersion>9.0.0-beta.24165.6</MicrosoftDotNetCodeAnalysisVersion>
+    <MicrosoftDotNetCodeAnalysisVersion>9.0.0-beta.24179.6</MicrosoftDotNetCodeAnalysisVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.406</StyleCopAnalyzersVersion>
     <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
@@ -126,7 +126,7 @@
       <Runtime>$(MicrosoftNETCoreAppRuntimewinx64Version)</Runtime>
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
--->
+      -->
       <RuntimeDownload>9.0.0-preview.3.24160.3</RuntimeDownload>
       <Runtime>9.0.0-preview.3.24160.3</Runtime>
       <AspNetDownload>9.0.0-preview.3.24158.2</AspNetDownload>

@@ -1,19 +1,17 @@
 stages:
 - stage: PrepareReleaseStage
   displayName: Release Preparation
-  ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
-    dependsOn:
-    - publish_using_darc
   jobs:
   - job: PrepareReleaseJob
     displayName: Prepare release with Darc
-    pool:
-      ${{ if eq(variables['System.TeamProject'], 'public') }}:
-        name: NetCore-Public
-        demands: ImageOverride -equals windows.vs2022.amd64.open
-      ${{ if eq(variables['System.TeamProject'], 'internal') }}:
-        name: NetCore1ESPool-Internal
-        demands: ImageOverride -equals windows.vs2022.amd64
+    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
+      templateContext:
+        outputs:
+        - output: pipelineArtifact
+          path: '$(System.ArtifactsDirectory)\ReleaseStaging'
+          artifact: DiagnosticsRelease
+          displayName: 'Publish Release Drop'
+          condition: succeeded()
     variables:
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
       - group: DotNet-Diagnostics-Storage
@@ -24,11 +22,6 @@ stages:
       - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release /bl'
         workingDirectory: '$(System.ArtifactsDirectory)'
         displayName: 'Build Manifest generation and asset publishing tool'
-      - task: PublishPipelineArtifact@1
-        inputs:
-          targetPath: '$(System.ArtifactsDirectory)'
-          publishLocation: 'pipeline'
-          artifact: 'DiagnosticsReleaseToolBin'
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
       - task: UseDotNet@2
         displayName: 'Use .NET Core runtime 6.x'
@@ -52,7 +45,7 @@ stages:
             -ReleaseVersion "$(Build.BuildNumber)"
           workingDirectory: '$(Build.Repository.LocalPath)'
       - script: >-
-          dotnet.cmd run --project $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release
+          $(Build.Repository.LocalPath)\dotnet.cmd run --project $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release
           --
           prepare-release
           --input-drop-path "$(System.ArtifactsDirectory)\ReleaseTarget"
@@ -66,8 +59,3 @@ stages:
           -v True
         workingDirectory: '$(Build.Repository.LocalPath)\'
         displayName: 'Manifest generation and asset publishing'
-      - task: PublishPipelineArtifact@1
-        inputs:
-          targetPath: '$(System.ArtifactsDirectory)\ReleaseStaging'
-          publishLocation: 'pipeline'
-          artifact: 'DiagnosticsRelease'

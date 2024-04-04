@@ -1,272 +1,298 @@
 parameters:
   # Job name
-  name: ''
-  # Agent OS (Windows_NT, Linux, MacOS, FreeBSD)
-  osGroup: Windows_NT
-  # Optional: OS suffix like -musl
-  osSuffix: ''
+- name: name
+  type: string
+  default: ''
+
+- name: jobTemplate
+  type: string
+  default: /eng/common/templates-official/job/job.yml@self
+  values:
+  - /eng/common/templates-official/job/job.yml@self
+  - /eng/common/templates/job/job.yml@self
+
+- name: osGroup
+  type: string
+  default: Windows_NT
+  values:
+  - Windows_NT
+  - Linux
+  - MacOS
+  - FreeBSD
+
+- name: osSuffix
+  type: string
+  default: ''
+
   # Additional variables
-  variables: {}
-  # Build strategy - matrix
-  strategy: ''
+- name: variables
+  type: object
+  default: {}
+
   # Optional: Job timeout
-  timeoutInMinutes: 180
+- name: timeoutInMinutes
+  type: number
+  default: 180
+
+  # Optional: Build container to use
+- name: templateContext
+  type: object
+  default: {}
+
+# Build configs. An object with the following properties: configuration, architecture.
+# Optionally it can also contain artifactUploadPath, artifactTargetPath
+- name: buildConfigs
+  type: object
+  default: {}
+
   # Optional: native build container resource name
-  nativeBuildContainer: ''
+- name: nativeBuildContainer
+  type: string
+  default: ''
+
   # Optional: container resource name
-  container: ''
+- name: container
+  type: string
+  default: ''
+
   # Optional: build only job if true
-  buildOnly: false
+- name: buildOnly
+  type: boolean
+  default: false
+
   # Optional: test only job if true
-  testOnly: false
-  # Optional: architecture cross build if true
-  crossBuild: false
-  # Depends on
-  dependsOn: ''
-  isCodeQLRun: false
+- name: testOnly
+  type: boolean
+  default: false
+
+# Optional: architecture cross build if true
+- name: crossBuild
+  type: boolean
+  default: false
+
+- name: dependsOn
+  type: string
+  default: ''
+
+- name: isCodeQLRun
+  type: boolean
+  default: false
 
 jobs:
-- template: /eng/common/templates/job/job.yml
-  parameters:
-    name: ${{ parameters.name }}
-    timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
-    enableMicrobuild: true
-    enableTelemetry: true
-    helixRepo: dotnet/diagnostics
-    runAsPublic: ${{ parameters.isCodeQLRun }}
+- ${{ each config in parameters.buildConfigs }}:
+  - template: ${{ parameters.jobTemplate }}
+    parameters:
+      name: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
+      timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
+      enableMicrobuild: true
+      runAsPublic: ${{ parameters.isCodeQLRun }}
+      templateContext: ${{ parameters.templateContext }}
 
-    pool:
-      # Public Linux Build Pool
-      ${{ if and(eq(parameters.osGroup, 'Linux'), eq(variables['System.TeamProject'], 'public')) }}:
-        name:  NetCore-Public
-        demands: ImageOverride -equals Build.Ubuntu.1804.Amd64.Open
+      pool:
+        # Public Linux Build Pool
+        ${{ if eq(parameters.osGroup, 'Linux') }}:
+          name: $(BuildPool)
+          demands: ImageOverride -equals $(LinuxImage)
+          os: linux
 
-      # Official Build Linux Pool
-      ${{ if and(eq(parameters.osGroup, 'Linux'), ne(variables['System.TeamProject'], 'public')) }}:
-        name: NetCore1ESPool-Internal
-        demands: ImageOverride -equals Build.Ubuntu.1804.Amd64
+        ${{ elseif eq(parameters.osGroup, 'Windows_NT') }}:
+          name: $(BuildPool)
+          demands: ImageOverride -equals $(WindowsImage)
+          os: windows
 
-      # FreeBSD builds only in the internal project
-      ${{ if and(eq(parameters.osGroup, 'FreeBSD'), ne(variables['System.TeamProject'], 'public')) }}:
-        name: dnceng-freebsd-internal
+        ${{ elseif in(parameters.osGroup, 'MacOS') }}:
+          name: Azure Pipelines
+          vmImage: $(macOSImage)
+          os: macOS
 
-      # Build OSX Pool  (we don't have on-prem OSX BuildPool)
-      ${{ if in(parameters.osGroup, 'MacOS', 'MacOS_cross') }}:
-        vmImage: macOS-latest
+        ${{ elseif and(eq(parameters.osGroup, 'FreeBSD'), ne(variables['System.TeamProject'], 'public')) }}:
+          name: dnceng-freebsd-internal
+          os: freebsd
 
-      # Official Build Windows Pool
-      ${{ if and(eq(parameters.osGroup, 'Windows_NT'), ne(variables['System.TeamProject'], 'public')) }}:
-        name: NetCore1ESPool-Internal
-        demands: ImageOverride -equals windows.vs2022.amd64
+        ${{ else }}:
+          'error, Unable to identify pool for required build': error
 
-      # Public Windows Build Pool
-      ${{ if and(eq(parameters.osGroup, 'Windows_NT'), eq(variables['System.TeamProject'], 'public')) }}:
-        name: NetCore-Public
-        demands: ImageOverride -equals windows.vs2022.amd64.open
+      ${{ if ne(parameters.container, '') }}:
+        container: ${{ parameters.container }}
 
-    ${{ if ne(parameters.container, '') }}:
-      container: ${{ parameters.container }}
+      ${{ if ne(parameters.strategy, '') }}:
+        'error, we can no longer support the strategy feature in the new pipeline system. Please remove the strategy from the job template.'
 
-    ${{ if ne(parameters.strategy, '') }}:
-      strategy: ${{ parameters.strategy }}
+      ${{ if ne(parameters.dependsOn, '') }}:
+        dependsOn: ${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
 
-    ${{ if ne(parameters.dependsOn, '') }}:
-      dependsOn: ${{ parameters.dependsOn }}
+      workspace:
+        clean: all
 
-    workspace:
-      clean: all
+      variables:
+      - ${{ insert }}: ${{ parameters.variables }}
 
-    variables: 
-    - ${{ insert }}: ${{ parameters.variables }}
-    - _PhaseName : ${{ parameters.name }}
-    - _HelixType: build/product
-    - _HelixBuildConfig: $(_BuildConfig)
-    - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/streams
+      - _PhaseName: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
+      - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/${{ config.configuration }}/streams
 
-    - _BuildDisplayName: 'Build / Test'
-    - _ExtraBuildParams: ''
-    - _TestArgs: '-test'
-    - _Cross: ''
+      - _ExtraBuildParams: ''
+      - _TestArgs: '-test'
+      - _Cross: ''
 
-    - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
-      - _buildScript: $(Build.SourcesDirectory)\build.cmd
-    - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
-      - _buildScript: $(Build.SourcesDirectory)/build.sh
+      - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+        - _buildScript: $(Build.SourcesDirectory)\build.cmd
+      - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
+        - _buildScript: $(Build.SourcesDirectory)/build.sh
 
-    - ${{ if eq(parameters.testOnly, 'true') }}:
-      - _TestArgs: '-test -skipnative'
-      - _BuildDisplayName: Test
+      - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
+        'error, testOnly and buildOnly cannot be true at the same time': error
 
-    - ${{ if or(eq(parameters.buildOnly, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
-      - _TestArgs: ''
-
-    - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
-      - name: Codeql.Enabled
-        value: True
-      - name: Codeql.Cadence
-        value: 0
-      - name: Codeql.TSAEnabled
-        value: True
-      - name: Codeql.BuildIdentifier
-        value: $(System.JobDisplayName)
-      - name: Codeql.Language
-        value: csharp,cpp
-
-    # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
-    - _InternalInstallArgs: ''
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(parameters.isCodeQLRun, 'false')) }}:
-      - _InternalInstallArgs:
-          -dotnetruntimeversion '$(DotnetRuntimeVersion)'
-          -dotnetruntimedownloadversion '$(DotnetRuntimeDownloadVersion)'
-          -runtimesourcefeed '$(RuntimeFeedUrl)'
-          -runtimesourcefeedkey '$(RuntimeFeedBase64SasToken)'
-
-    # Only enable publishing in non-public, non PR scenarios.
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-      - _HelixSource: official/dotnet/arcade/$(Build.SourceBranch)
-    - ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
-      - _HelixSource: pr/dotnet/arcade/$(Build.SourceBranch)
-
-    # This is only required for cross builds.
-    - ${{ if eq(parameters.crossBuild, true) }}:
-      - _Cross: -cross
-
-    # If there is a native build container, build managed in the host vm/container and native in the nativeBuildContainer
-    - ${{ if ne(parameters.nativeBuildContainer, '') }}:
-      - _ExtraBuildParams: -skipnative
-      - _BuildDisplayName: 'Build Managed'
-
-    # Only add the cross build option if a combined build/test managed/native build (i.e. MacOS arm64)
-    - ${{ if eq(parameters.nativeBuildContainer, '') }}:
-      - _ExtraBuildParams: $(_Cross)
-
-    steps:
-    - ${{ if eq(parameters.osGroup, 'Linux') }}:
       - ${{ if eq(parameters.testOnly, 'true') }}:
-        - task: DownloadBuildArtifacts@0
+        - _TestArgs: '-test -skipnative'
+
+      - ${{ if or(eq(parameters.buildOnly, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
+        - _TestArgs: ''
+
+      # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
+      - _InternalInstallArgs: ''
+      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(parameters.isCodeQLRun, 'false')) }}:
+        - _InternalInstallArgs:
+            -dotnetruntimeversion '$(DotnetRuntimeVersion)'
+            -dotnetruntimedownloadversion '$(DotnetRuntimeDownloadVersion)'
+            -runtimesourcefeed '$(RuntimeFeedUrl)'
+            -runtimesourcefeedkey '$(RuntimeFeedBase64SasToken)'
+
+      # This is only required for cross builds.
+      - ${{ if eq(parameters.crossBuild, true) }}:
+        - _Cross: -cross
+
+      # If there is a native build container, build managed in the host vm/container and native in the nativeBuildContainer
+      - ${{ if ne(parameters.nativeBuildContainer, '') }}:
+        - _ExtraBuildParams: -skipnative
+
+      # TODO: remove this once we move to crossroot builds for all containers. We are currently blocked
+      # on mariner cross containers not supporting glibc versions supported in 6.0.
+      # Only add the cross build option if a combined build/test managed/native build (i.e. MacOS arm64)
+      - ${{ if eq(parameters.nativeBuildContainer, '') }}:
+        - _ExtraBuildParams: $(_Cross)
+
+      steps:
+      - ${{ if eq(parameters.testOnly, true) }}:
+        - ${{ if ne(parameters.osGroup, 'Linux') }}:
+          - 'error, testOnly is only supported on Linux': error
+        - task: DownloadPipelineArtifact@2
           displayName: 'Download Build Artifacts'
           inputs:
-            downloadPath: '$(Build.ArtifactStagingDirectory)/__download__'
-            downloadType: specific
+            targetPath: '$(Build.ArtifactStagingDirectory)/__download__'
             itemPattern: |
-              Build_$(_BuildConfig)/bin/linux${{ parameters.osSuffix }}.$(_BuildArch).$(_BuildConfig)/**
+              Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/**
             checkDownloadedFiles: true
         - task: CopyFiles@2
-          displayName: 'Binplace Product'
+          displayName: 'Binplace Downloaded Product'
           inputs:
-            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_$(_BuildConfig)/bin/linux${{ parameters.osSuffix }}.$(_BuildArch).$(_BuildConfig)
-            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/linux.$(_BuildArch).$(_BuildConfig)'
+            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/linux${{ parameters.osSuffix }}.${{ config.architecture }}.${{ config.configuration }}
+            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/linux.${{ config.architecture }}.${{ config.configuration }}'
 
-    - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
-      - task: CodeQL3000Init@0
-        displayName: CodeQL Initialize
+      - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
+        - task: CodeQL3000Init@0
+          displayName: CodeQL Initialize
 
-    - script: $(_buildScript)
-        -ci
-        -configuration $(_BuildConfig)
-        -architecture $(_BuildArch)
-        $(_ExtraBuildParams)
-        $(_TestArgs)
-        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-        $(_InternalInstallArgs)
-      displayName: $(_BuildDisplayName)
-      condition: succeeded()
-
-    - ${{ if ne(parameters.nativeBuildContainer, '') }}:
       - script: $(_buildScript)
           -ci
-          -configuration $(_BuildConfig)
-          -architecture $(_BuildArch)
-          -skipmanaged
-          $(_Cross)
+          -configuration ${{ config.configuration }}
+          -architecture ${{ config.architecture }}
+          $(_ExtraBuildParams)
+          $(_TestArgs)
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
           $(_InternalInstallArgs)
-        displayName: Build Native
-        target: ${{ parameters.nativeBuildContainer }}
+        ${{ if eq(parameters.testOnly, 'true') }}:
+          displayName: Test
+        ${{ elseif eq(parameters.buildOnly, 'true') }}:
+          displayName: Build
+        ${{ elseif ne(parameters.nativeBuildContainer, '') }}:
+          displayName: Build Managed
+        ${{ else }}:
+          displayName: Build / Test
+        condition: succeeded()
 
-    - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
-      - task: CodeQL3000Finalize@0
-        displayName: CodeQL Finalize
+      - ${{ if ne(parameters.nativeBuildContainer, '') }}:
+        - script: $(_buildScript)
+            -ci
+            -configuration ${{ config.configuration }}
+            -architecture ${{ config.architecture }}
+            -skipmanaged
+            $(_Cross)
+            /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+            $(_InternalInstallArgs)
+          displayName: Build Native
+          target: ${{ parameters.nativeBuildContainer }}
 
-    - task: CopyFiles@2
-      displayName: Gather binaries for publish to special artifacts path
-      inputs:
-        SourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
-        Contents: '**'
-        TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/$(_ArtifactsTargetPath)
-      condition: and(ne(variables['_PublishArtifacts'], ''), ne(variables['_ArtifactsTargetPath'], ''))
+      - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
+        - task: CodeQL3000Finalize@0
+          displayName: CodeQL Finalize
 
-    - task: CopyFiles@2
-      displayName: Gather binaries for publish to artifacts
-      inputs:
-        SourceFolder: '$(Build.SourcesDirectory)/artifacts/$(_PublishArtifacts)'
-        Contents: '**'
-        TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/$(_PublishArtifacts)
-      condition: and(ne(variables['_PublishArtifacts'], ''), eq(variables['_ArtifactsTargetPath'], ''))
+      - ${{ if ne(config.artifactUploadPath, '') }}:
+        - task: CopyFiles@2
+          displayName: Gather binaries for publish
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/artifacts/${{ config.artifactUploadPath }}'
+            Contents: '**'
+            TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/${{ coalesce(config.artifactTargetPath, config.artifactUploadPath) }}
 
-    - task: PublishBuildArtifacts@1
-      displayName: Publish Build Artifacts
-      inputs:
-        pathtoPublish: '$(Build.ArtifactStagingDirectory)/artifacts'
-        artifactName: Build_$(_BuildConfig)
-      condition: ne(variables['_PublishArtifacts'], '')
+        - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+          parameters:
+            displayName: Publish Build Artifacts
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
+              artifactName: Build_$(_PhaseName)
 
-    - task: PublishBuildArtifacts@1
-      displayName: Publish Artifacts on failure
-      inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/bin'
-        PublishLocation: Container
-        ArtifactName: Artifacts_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
-      continueOnError: true
-      condition: failed()
-
-    - task: PublishBuildArtifacts@1
-      displayName: Publish Dump Artifacts on failure
-      inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/tmp/$(_BuildConfig)/dumps'
-        PublishLocation: Container
-        ArtifactName: Dumps_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
-      continueOnError: true
-      condition: failed()
-
-    - task: PublishBuildArtifacts@1
-      displayName: Publish Stream Artifacts on failure
-      inputs:
-        PathtoPublish: $(_Pipeline_StreamDumpDir)
-        PublishLocation: Container
-        ArtifactName: Streams_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
-      continueOnError: true
-      condition: failed()
-
-    - task: CopyFiles@2
-      displayName: Gather Logs
-      inputs:
-        sourceFolder: '$(Build.SourcesDirectory)/artifacts'
-        contents: '?(log|TestResults)/**'
-        targetFolder: '$(Build.StagingDirectory)/BuildLogs'
-      continueOnError: true
-      condition: always()
-
-    - task: PublishBuildArtifacts@1
-      displayName: Publish Logs
-      inputs:
-        PathtoPublish: '$(Build.StagingDirectory)/BuildLogs'
-        PublishLocation: Container
-        ArtifactName: Logs_$(_PhaseName)_$(_BuildArch)_$(_BuildConfig)
-      continueOnError: true
-      condition: always()
-
-    - ${{ if and(eq(parameters.buildOnly, 'false'), eq(parameters.isCodeQLRun, 'false')) }}:
-      # Publish test results to Azure Pipelines
-      - task: PublishTestResults@2
+      - task: CopyFiles@2
+        displayName: Gather diagnostic artifacts on failure
         inputs:
-          testResultsFormat: xUnit
-          testResultsFiles: '**/*UnitTests*.xml'
-          searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
-          failTaskOnFailedTests: true
-          testRunTitle: 'Tests $(_PhaseName) $(_BuildArch) $(_BuildConfig)'
-          publishRunAttachments: true
-          mergeTestResults: true
-          buildConfiguration: ${{ parameters.name }}
+          SourceFolder: '$(Build.SourcesDirectory)/artifacts'
+          TargetFolder: $(Build.ArtifactStagingDirectory)/diagnostics
+          Contents: |
+            bin/**
+            log/**
+            TestResults/**
+            tmp/${{ config.configuration }}/dumps/**
+            tmp/${{ config.configuration }}/streams/**
+        continueOnError: true
+        condition: failed()
+
+      - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+        parameters:
+          displayName: Publish diagnostic artifacts on failure
+          inputs:
+            targetPath: $(Build.ArtifactStagingDirectory)/diagnostics
+            artifactName: DiagnosticArtifacts_$(_PhaseName)_Attempt$(System.JobAttempt)
+          continueOnError: true
+          condition: failed()
+
+      - task: CopyFiles@2
+        displayName: Gather Logs
+        inputs:
+          sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+          contents: '?(log|TestResults)/**'
+          targetFolder: '$(Build.StagingDirectory)/BuildLogs'
         continueOnError: true
         condition: always()
+
+      - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+        parameters:
+          displayName: Publish Logs
+          inputs:
+            targetPath: '$(Build.StagingDirectory)/BuildLogs'
+            artifactName: Logs_$(_PhaseName)_Attempt$(System.JobAttempt)
+          continueOnError: true
+          condition: always()
+
+      - ${{ if and(eq(parameters.buildOnly, 'false'), eq(parameters.isCodeQLRun, 'false')) }}:
+        # Publish test results to Azure Pipelines
+        - task: PublishTestResults@2
+          inputs:
+            testResultsFormat: xUnit
+            testResultsFiles: '**/*UnitTests*.xml'
+            searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
+            failTaskOnFailedTests: true
+            testRunTitle: 'Tests $(_PhaseName)'
+            publishRunAttachments: true
+            mergeTestResults: true
+            buildConfiguration: ${{ parameters.name }}
+          continueOnError: true
+          condition: always()
