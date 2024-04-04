@@ -31,7 +31,7 @@ extends:
           ROOTFS_DIR: /crossrootfs/arm64
 
       linux_musl_x64:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.19-WithNode
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode
 
       linux_musl_arm:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-arm-alpine
@@ -47,7 +47,7 @@ extends:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-9
 
       test_linux_musl_x64:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.14-WithNode
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.13-WithNode
         options: --cap-add=SYS_PTRACE
 
       test_debian_11_amd64:
