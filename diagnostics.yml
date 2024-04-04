@@ -227,7 +227,7 @@ extends:
       - template: /eng/pipelines/build.yml
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
-          name: Alpine3_13
+          name: Alpine3_19
           osGroup: Linux
           osSuffix: -musl
           container: test_linux_musl_x64
@@ -259,9 +259,9 @@ extends:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
-            name: Fedora_36
+            name: Fedora_39
             osGroup: Linux
-            container: test_fedora_36
+            container: test_fedora
             dependsOn: Linux
             testOnly: true
             buildConfigs:
