@@ -16,9 +16,7 @@ extends:
 
     containers:
       linux_x64:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-amd64
-        env:
-          ROOTFS_DIR: /crossrootfs/x64
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7
 
       linux_arm:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:cbl-mariner-2.0-cross-arm
