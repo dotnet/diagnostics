@@ -8,7 +8,6 @@ parameters:
   - name: containers
     type: object
 
-
 resources:
   repositories:
   - repository: 1ESPipelineTemplates
@@ -21,7 +20,7 @@ extends:
   parameters:
     pool:
       name: netcore1espool-internal
-      image: 1es-windows-2022-pt
+      image: 1es-windows-2022
       os: windows
 
     containers:
