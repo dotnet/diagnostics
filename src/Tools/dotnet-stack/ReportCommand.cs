@@ -15,8 +15,8 @@ using Microsoft.Diagnostics.Symbols;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Diagnostics.Tracing.Stacks;
+using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Stack
 {

@@ -9,8 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Graphs;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {

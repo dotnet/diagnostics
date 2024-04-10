@@ -8,8 +8,8 @@ using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
@@ -260,7 +260,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 .AddCommand(IOSRouterCommand())
                 .AddCommand(AndroidEmulatorRouterCommand())
                 .AddCommand(AndroidRouterCommand())
-                .UseDefaults()
+                .UseToolsDefaults()
                 .Build();
 
             ParseResult parseResult = parser.Parse(args);

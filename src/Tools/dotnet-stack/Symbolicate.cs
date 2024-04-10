@@ -12,7 +12,7 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Text.RegularExpressions;
-using Microsoft.Tools.Common;
+using Microsoft.Internal.Common;
 
 namespace Microsoft.Diagnostics.Tools.Stack
 {

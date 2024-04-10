@@ -7,7 +7,7 @@ using System.CommandLine;
 using System.CommandLine.IO;
 using System.IO;
 using System.Linq;
-using Microsoft.Tools.Common;
+using Microsoft.Internal.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
