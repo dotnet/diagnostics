@@ -26,7 +26,7 @@ namespace Microsoft.FileFormats.Minidump
 #pragma warning disable 0649
 #pragma warning disable 0169
 
-    internal class MinidumpHeader : TStruct
+    internal sealed class MinidumpHeader : TStruct
     {
         public const int MinidumpVersion = 0x504d444d;
 
@@ -50,7 +50,7 @@ namespace Microsoft.FileFormats.Minidump
         }
     }
 
-    internal class MinidumpDirectory : TStruct
+    internal sealed class MinidumpDirectory : TStruct
     {
         public MinidumpStreamType StreamType;
         public uint DataSize;
@@ -81,7 +81,7 @@ namespace Microsoft.FileFormats.Minidump
     }
 
 
-    internal class MinidumpSystemInfo : TStruct
+    internal sealed class MinidumpSystemInfo : TStruct
     {
         public ProcessorArchitecture ProcessorArchitecture;
         public ushort ProcessorLevel;
@@ -147,8 +147,10 @@ namespace Microsoft.FileFormats.Minidump
         public FixedFileInfo VersionInfo;
         public MinidumpLocationDescriptor CvRecord;
         public MinidumpLocationDescriptor MiscRecord;
+#pragma warning disable CA1823 // Avoid unused private fields
         private ulong _reserved0;
         private ulong _reserved1;
+#pragma warning restore CA1823 // Avoid unused private fields
     }
 
     internal sealed class MinidumpMemoryDescriptor : TStruct

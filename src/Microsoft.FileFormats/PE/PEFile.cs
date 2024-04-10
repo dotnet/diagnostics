@@ -36,7 +36,7 @@ namespace Microsoft.FileFormats.PE
         private const int PESignatureOffsetLocation = 0x3C;
         private const uint ExpectedPESignature = 0x00004550;    // PE00
         private const int ImageDataDirectoryCount = 15;
-        
+
         public const uint ChecksumLength = 4;
         public const uint CertDirectoryLength = 8;
         public const int CertDirectoryIndex = 4;
@@ -221,7 +221,7 @@ namespace Microsoft.FileFormats.PE
         private List<ImageSectionHeader> ReadSectionHeaders()
         {
             ulong offset = PEOptionalHeaderOffset + FileHeader.SizeOfOptionalHeader;
-            List<ImageSectionHeader> result = new List<ImageSectionHeader>(_headerReader.ReadArray<ImageSectionHeader>(offset, FileHeader.NumberOfSections));
+            List<ImageSectionHeader> result = new(_headerReader.ReadArray<ImageSectionHeader>(offset, FileHeader.NumberOfSections));
             return result;
         }
 
@@ -260,7 +260,7 @@ namespace Microsoft.FileFormats.PE
                     uint sizeOfData = directory.SizeOfData;
                     ulong position = directory.AddressOfRawData;
                     string algorithmName = RelativeVirtualAddressReader.Read<string>(position);
-                    var algorithmLength = (uint)algorithmName.Length;
+                    uint algorithmLength = (uint)algorithmName.Length;
                     uint length = sizeOfData - algorithmLength - 1; // -1 for null terminator
                     byte[] checksum = RelativeVirtualAddressReader.ReadArray<byte>(position + algorithmLength + 1 /* +1 for null terminator */, length);
                     yield return new PdbChecksum(algorithmName, checksum);
@@ -289,18 +289,15 @@ namespace Microsoft.FileFormats.PE
             }
         }
 
-        const uint VersionResourceType = 16;
-        const uint VersionResourceName = 1;
-        const uint VersionResourceLanguage = 0x409;
+        private const uint VersionResourceType = 16;
+        private const uint VersionResourceName = 1;
+        private const uint VersionResourceLanguage = 0x409;
 
         private VsFixedFileInfo ReadVersionResource()
         {
             ImageResourceDataEntry dataEntry = GetResourceDataEntry(VersionResourceType, VersionResourceName, VersionResourceLanguage);
-            if (dataEntry == null)
-            {
-                // If the version resource can't be found under the 0x409 language, try as language "neutral" (0)
-                dataEntry = GetResourceDataEntry(VersionResourceType, VersionResourceName, 0);
-            }
+            // If the version resource can't be found under the 0x409 language, try as language "neutral" (0)
+            dataEntry ??= GetResourceDataEntry(VersionResourceType, VersionResourceName, 0);
             if (dataEntry != null)
             {
                 VsVersionInfo info = RelativeVirtualAddressReader.Read<VsVersionInfo>(dataEntry.OffsetToData);
@@ -365,9 +362,13 @@ namespace Microsoft.FileFormats.PE
         private Reader CreateVirtualAddressReader()
         {
             if (_isDataSourceVirtualAddressSpace)
+            {
                 return _fileReader.Value;
+            }
             else
+            {
                 return _fileReader.Value.WithAddressSpace(new PEAddressSpace(_headerReader.DataSource, 0, Segments));
+            }
         }
 
         #region Validation Rules
@@ -418,8 +419,9 @@ namespace Microsoft.FileFormats.PE
         {
             ImageSectionHeader segment = _segments.Where(header => header.VirtualAddress <= position && position <= header.VirtualAddress + header.VirtualSize).FirstOrDefault();
             if (segment == null)
+            {
                 return 0;
-
+            }
             ulong offset = _baseAddress + position - segment.VirtualAddress + segment.PointerToRawData;
             uint result = _addressSpace.Read(offset, buffer, bufferOffset, count);
             return result;

@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+
 namespace Microsoft.FileFormats
 {
     internal static class Helpers
@@ -9,32 +11,31 @@ namespace Microsoft.FileFormats
         public static bool TryConvertHexStringToBytes(string hexString, out byte[] bytes)
         {
             bytes = null;
-
             if (hexString is null)
+            {
                 return false;
-
+            }
             if (hexString.Length % 2 != 0)
+            {
                 return false;
-
+            }
             if (hexString.Length == 0)
             {
-                bytes = new byte[0];
+                bytes = Array.Empty<byte>();
                 return true;
             }
-
             bytes = new byte[hexString.Length >> 1];
-
-            for(int i = 0; i < hexString.Length; i += 2)
+            for (int i = 0; i < hexString.Length; i += 2)
             {
                 byte byteHigh = byte.MaxValue >= (int)hexString[i] ? CharToHexLookup[hexString[i]] : (byte)0xFF;
                 byte byteLow = byte.MaxValue >= (int)hexString[i+1] ? CharToHexLookup[hexString[i+1]] : (byte)0xFF;
 
                 if ((byteLow | byteHigh) == 0xFF)
+                {
                     return false;
-
+                }
                 bytes[i >> 1] = (byte)(byteHigh << 4 | byteLow);
             }
-
             return true;
         }
 

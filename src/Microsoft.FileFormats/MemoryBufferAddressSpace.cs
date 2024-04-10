@@ -13,7 +13,7 @@ namespace Microsoft.FileFormats
     /// </summary>
     public sealed class MemoryBufferAddressSpace : IAddressSpace
     {
-        public MemoryBufferAddressSpace(IEnumerable<Byte> bytes)
+        public MemoryBufferAddressSpace(IEnumerable<byte> bytes)
         {
             _bytes = bytes.ToArray();
             Length = (ulong)_bytes.Length;

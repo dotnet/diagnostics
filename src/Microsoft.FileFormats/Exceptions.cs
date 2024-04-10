@@ -13,7 +13,7 @@ namespace Microsoft.FileFormats
     /// </summary>
     public abstract class InputParsingException : Exception
     {
-        public InputParsingException(String message)
+        public InputParsingException(string message)
             : base(message)
         {
         }
@@ -24,7 +24,7 @@ namespace Microsoft.FileFormats
     /// </summary>
     public class BadInputFormatException : InputParsingException
     {
-        public BadInputFormatException(String message)
+        public BadInputFormatException(string message)
             : base(message)
         {
         }
@@ -35,7 +35,7 @@ namespace Microsoft.FileFormats
     /// </summary>
     public class InvalidVirtualAddressException : InputParsingException
     {
-        public InvalidVirtualAddressException(String message)
+        public InvalidVirtualAddressException(string message)
             : base(message)
         {
         }
@@ -47,7 +47,7 @@ namespace Microsoft.FileFormats
     /// </summary>
     public class LayoutException : Exception
     {
-        public LayoutException(String message)
+        public LayoutException(string message)
             : base(message)
         {
         }

@@ -55,7 +55,7 @@ namespace Microsoft.FileFormats.PDB
             PDBPagedAddressSpace secondLevelPageList = CreatePagedAddressSpace(_reader.DataSource, pageIndicesOffset, secondLevelPageCount * sizeof(uint));
             PDBPagedAddressSpace directoryContent = CreatePagedAddressSpace(secondLevelPageList, 0, Header.DirectorySize);
 
-            Reader directoryReader = new Reader(directoryContent);
+            Reader directoryReader = new(directoryContent);
             ulong position = 0;
             uint countStreams = directoryReader.Read<uint>(ref position);
             uint[] streamSizes = directoryReader.ReadArray<uint>(ref position, countStreams);
@@ -87,18 +87,18 @@ namespace Microsoft.FileFormats.PDB
     /// <remarks>
     /// A paged address space is an address space where any address A can be converted
     /// to a page index and a page offset. A = index*page_size + offset.
-    /// 
+    ///
     /// This paged address space maps each virtual address to a physical address by
     /// remapping each virtual page to potentially different physical page. If V is
     /// the virtual page index then pageIndices[V] is the physical page index.
-    /// 
+    ///
     /// For example if pageSize is 0x100 and pageIndices is { 0x7, 0x9 } then
     /// virtual address 0x156 is:
     /// virtual page index 0x1, virtual offset 0x56
     /// physical page index 0x9, physical offset 0x56
     /// physical address is 0x956
     /// </remarks>
-    internal class PDBPagedAddressSpace : IAddressSpace
+    internal sealed class PDBPagedAddressSpace : IAddressSpace
     {
         private readonly IAddressSpace _physicalAddresses;
         private readonly uint[] _pageIndices;

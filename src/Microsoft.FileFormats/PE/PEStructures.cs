@@ -259,7 +259,7 @@ namespace Microsoft.FileFormats.PE
     };
 
     /// <summary>
-    /// IMAGE_RESOURCE_DIRECTORY_ENTRY for the resources by id 
+    /// IMAGE_RESOURCE_DIRECTORY_ENTRY for the resources by id
     /// </summary>
     public class ImageResourceDirectoryEntry : TStruct
     {

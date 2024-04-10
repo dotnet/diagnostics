@@ -58,7 +58,7 @@ namespace Microsoft.FileFormats.ELF
         {
             if (_reader.Length > (_position + _reader.SizeOf<ELFHeaderIdent>()))
             {
-                try 
+                try
                 {
                     return Ident.IsIdentMagicValid.Check();
                 }
@@ -95,9 +95,9 @@ namespace Microsoft.FileFormats.ELF
             {
                 ulong minAddr = ulong.MaxValue;
 
-                foreach (var segment in Segments)
+                foreach (ELFProgramSegment segment in Segments)
                 {
-                    if(segment.Header.Type == ELFProgramHeaderType.Load)
+                    if (segment.Header.Type == ELFProgramHeaderType.Load)
                     {
                         minAddr = Math.Min(minAddr, segment.Header.VirtualAddress);
                     }
@@ -141,7 +141,7 @@ namespace Microsoft.FileFormats.ELF
             }
 
             // Build the program segments
-            List<ELFProgramSegment> segments = new List<ELFProgramSegment>();
+            List<ELFProgramSegment> segments = new();
             for (uint i = 0; i < Header.ProgramHeaderCount; i++)
             {
                 ulong programHeaderOffset = _position + Header.ProgramHeaderOffset + i * Header.ProgramHeaderEntrySize;
@@ -156,7 +156,7 @@ namespace Microsoft.FileFormats.ELF
             IsHeaderSectionHeaderOffsetValid.CheckThrowing();
             IsHeaderSectionHeaderEntrySizeValid.CheckThrowing();
 
-            List<ELFSection> sections = new List<ELFSection>();
+            List<ELFSection> sections = new();
             for (uint i = 0; i < Header.SectionHeaderCount; i++)
             {
                 sections.Add(new ELFSection(this, DataSourceReader, _position, _position + Header.SectionHeaderOffset + i * Header.SectionHeaderEntrySize));
@@ -167,9 +167,13 @@ namespace Microsoft.FileFormats.ELF
         private Reader CreateVirtualAddressReader()
         {
             if (_isDataSourceVirtualAddressSpace)
+            {
                 return DataSourceReader;
+            }
             else
+            {
                 return DataSourceReader.WithAddressSpace(new ELFVirtualAddressSpace(Segments));
+            }
         }
 
         private byte[] ReadBuildId()
@@ -198,7 +202,7 @@ namespace Microsoft.FileFormats.ELF
             }
 
             if (buildId == null)
-            { 
+            {
                 // Use sections to find build id if there isn't any program headers (i.e. some FreeBSD .dbg files)
                 try
                 {
@@ -222,11 +226,11 @@ namespace Microsoft.FileFormats.ELF
             return buildId;
         }
 
-        private byte[] ReadBuildIdNote(Reader noteReader)
+        private static byte[] ReadBuildIdNote(Reader noteReader)
         {
             if (noteReader != null)
             {
-                var noteList = new ELFNoteList(noteReader);
+                ELFNoteList noteList = new(noteReader);
                 foreach (ELFNote note in noteList.Notes)
                 {
                     ELFNoteType type = note.Header.Type;
@@ -267,7 +271,7 @@ namespace Microsoft.FileFormats.ELF
             {
                 return new ValidationRule("ELF Header ProgramHeaderOffset is invalid or elf file is incomplete", () =>
                 {
-                    return Header.ProgramHeaderOffset < _reader.Length && 
+                    return Header.ProgramHeaderOffset < _reader.Length &&
                         Header.ProgramHeaderOffset + (ulong)(Header.ProgramHeaderEntrySize * Header.ProgramHeaderCount) <= _reader.Length;
                 },
                 IsHeaderProgramHeaderEntrySizeValid,
@@ -285,8 +289,7 @@ namespace Microsoft.FileFormats.ELF
         {
             get
             {
-                return new ValidationRule("ELF Header SectionHeaderOffset is invalid or elf file is incomplete", () => 
-                {
+                return new ValidationRule("ELF Header SectionHeaderOffset is invalid or elf file is incomplete", () => {
                     return Header.SectionHeaderOffset < _reader.Length &&
                         Header.SectionHeaderOffset + (ulong)(Header.SectionHeaderEntrySize * Header.SectionHeaderCount) <= _reader.Length;
                 },
@@ -388,7 +391,7 @@ namespace Microsoft.FileFormats.ELF
         private readonly Lazy<string> _name;
         private readonly Lazy<Reader> _contents;
 
-        private static readonly ASCIIEncoding _decoder = new ASCIIEncoding();
+        private static readonly ASCIIEncoding _decoder = new();
 
         public ELFSection(ELFFile elfFile, Reader dataSourceReader, ulong elfOffset, ulong sectionHeaderOffset)
         {
@@ -407,21 +410,21 @@ namespace Microsoft.FileFormats.ELF
         {
             if (Header.Type == ELFSectionHeaderType.Null)
             {
-                return String.Empty;
+                return string.Empty;
             }
             byte[] sectionNameTable = _elfFile.SectionNameTable;
             if (sectionNameTable == null || sectionNameTable.Length == 0)
             {
-                return String.Empty;
+                return string.Empty;
             }
             if (Header.NameIndex > sectionNameTable.Length)
             {
-                return String.Empty;
+                return string.Empty;
             }
             int index = (int)Header.NameIndex;
             if (index == 0)
             {
-                return String.Empty;
+                return string.Empty;
             }
             int count = 0;
             for (; (index + count) < sectionNameTable.Length; count++)
@@ -450,11 +453,11 @@ namespace Microsoft.FileFormats.ELF
 
         private IEnumerable<ELFNote> ReadNotes()
         {
-            List<ELFNote> notes = new List<ELFNote>();
+            List<ELFNote> notes = new();
             ulong position = 0;
             while (position < _elfSegmentReader.Length)
             {
-                ELFNote note = new ELFNote(_elfSegmentReader, position);
+                ELFNote note = new(_elfSegmentReader, position);
                 notes.Add(note);
                 position += note.Size;
             }
@@ -502,7 +505,7 @@ namespace Microsoft.FileFormats.ELF
             return _elfSegmentReader.WithRelativeAddressSpace(contentsOffset, Align4(Header.ContentSize));
         }
 
-        private uint Align4(uint x)
+        private static uint Align4(uint x)
         {
             return (x + 3U) & ~3U;
         }

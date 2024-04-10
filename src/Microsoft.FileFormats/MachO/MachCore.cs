@@ -60,12 +60,14 @@ namespace Microsoft.FileFormats.MachO
             {
                 ulong start = 0;
                 ulong end = segment.LoadCommand.FileSize;
-
                 if (firstPass)
+                {
                     end = skip * firstPassAttemptCount;
+                }
                 else
+                {
                     start = skip * firstPassAttemptCount;
-
+                }
                 for (ulong offset = start; offset < end; offset += skip)
                 {
                     ulong possibleDylinker = segment.LoadCommand.VMAddress + offset;
@@ -82,7 +84,7 @@ namespace Microsoft.FileFormats.MachO
 
         private bool IsValidDylinkerAddress(ulong possibleDylinkerAddress)
         {
-            MachOFile dylinker = new MachOFile(VirtualAddressReader.DataSource, possibleDylinkerAddress, true);
+            MachOFile dylinker = new(VirtualAddressReader.DataSource, possibleDylinkerAddress, true);
             return dylinker.IsValid() && dylinker.Header.FileType == MachHeaderFileType.Dylinker;
         }
 

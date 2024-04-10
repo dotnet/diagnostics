@@ -17,7 +17,6 @@ namespace Microsoft.FileFormats.Minidump
         public static T[] ReadCountedArray<T>(this Reader self, ulong position)
         {
             uint elementCount = self.Read<uint>(ref position);
-            var layout = self.LayoutManager.GetArrayLayout<T[]>(elementCount);
             return (T[])self.LayoutManager.GetArrayLayout<T[]>(elementCount).Read(self.DataSource, position);
         }
     }

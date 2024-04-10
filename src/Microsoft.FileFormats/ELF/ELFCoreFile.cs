@@ -39,7 +39,7 @@ namespace Microsoft.FileFormats.ELF
             {
                 if (seg.Header.Type == ELFProgramHeaderType.Note)
                 {
-                    ELFNoteList noteList = new ELFNoteList(seg.Contents);
+                    ELFNoteList noteList = new(seg.Contents);
                     foreach (ELFNote note in noteList.Notes)
                     {
                         if (note.Header.Type == ELFNoteType.File)
@@ -107,8 +107,9 @@ namespace Microsoft.FileFormats.ELF
             // assemblies, there can be more than one PageOffset == 0 entry and the first one is the base
             // address.
             if (_loadAddress == 0 && entry.PageOffset == 0)
+            {
                 _loadAddress = entry.LoadAddress;
-
+            }
             // If no load address was found, will use the lowest start address. There has to be at least one
             // entry. This fixes the .NET 5.0 MacOS ELF dumps which have modules with no PageOffset == 0 entries.
             _minimumPointer = Math.Min(entry.LoadAddress, _minimumPointer);
@@ -145,7 +146,7 @@ namespace Microsoft.FileFormats.ELF
 
         private IEnumerable<ELFFileTableEntry> ReadFiles()
         {
-            List<ELFFileTableEntry> files = new List<ELFFileTableEntry>();
+            List<ELFFileTableEntry> files = new();
             ulong readPosition = 0;
             ELFFileTableHeader header = _noteReader.Read<ELFFileTableHeader>(ref readPosition);
 

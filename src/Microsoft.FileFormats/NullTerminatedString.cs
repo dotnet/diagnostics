@@ -26,19 +26,19 @@ namespace Microsoft.FileFormats
         public NullTerminatedStringLayout(Encoding encoding)
         {
             // Make sure we are scanning something where a single 0 byte means end of string.
-            // Although UTF8 does have code points that encode with more than one byte, 
-            // byte 0 is never used except to encode code point 0. 
+            // Although UTF8 does have code points that encode with more than one byte,
+            // byte 0 is never used except to encode code point 0.
             if (encoding != Encoding.UTF8 && encoding != Encoding.ASCII)
             {
                 throw new NotSupportedException("PEReader.ReadNullTerminatedString: Only UTF8 or ascii are supported for now");
             }
             _encoding = encoding;
 
-            // We could implement this for multi-byte encodings, there hasn't been a 
+            // We could implement this for multi-byte encodings, there hasn't been a
             // need yet. If you do change it, make sure to adjust NaturalAlignment too
         }
 
-        public IEnumerable<IField> Fields { get { return new IField[0]; } }
+        public IEnumerable<IField> Fields { get { return Array.Empty<IField>(); } }
         public uint NaturalAlignment { get { return 1U; } }
 
         public bool IsFixedSize { get { return false; } }
@@ -63,14 +63,12 @@ namespace Microsoft.FileFormats
 
         public object Read(IAddressSpace dataSource, ulong position)
         {
-            uint bytesReadUnused;
-            return Read(dataSource, position, out bytesReadUnused);
+            return Read(dataSource, position, out uint _);
         }
 
         public object Read(IAddressSpace dataSource, ulong position, out uint bytesRead)
         {
-            List<byte> stringBytes = new List<byte>();
-            byte[] buffer = new byte[1];
+            List<byte> stringBytes = new();
             uint offset = 0;
             for (; ; offset++)
             {

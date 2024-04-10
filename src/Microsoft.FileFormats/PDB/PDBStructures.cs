@@ -10,7 +10,7 @@ namespace Microsoft.FileFormats.PDB
 {
     public class PDBFileHeader : TStruct
     {
-        private byte[] ExpectedMagic
+        private static byte[] ExpectedMagic
         {
             get
             {
@@ -52,8 +52,8 @@ namespace Microsoft.FileFormats.PDB
 
     public class DbiStreamHeader : TStruct
     {
-        const uint CurrentSignature = uint.MaxValue;
-        const uint CurrentVersion = 19990903;          // DBIImpvV70
+        private const uint CurrentSignature = uint.MaxValue;
+        private const uint CurrentVersion = 19990903;          // DBIImpvV70
 
         public uint Signature;
         public uint Version;
@@ -62,7 +62,7 @@ namespace Microsoft.FileFormats.PDB
         // This is not the complete DBI header, but it is enough to get the Age.
 
         #region Validation Rules
-        public ValidationRule IsHeaderValid 
+        public ValidationRule IsHeaderValid
         {
             get { return new ValidationRule("DBI header is invalid", () => Signature == CurrentSignature && Version == CurrentVersion); }
         }

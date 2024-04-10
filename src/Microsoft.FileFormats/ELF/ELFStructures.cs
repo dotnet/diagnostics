@@ -1,10 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats;
-using System;
-using System.IO;
-
 namespace Microsoft.FileFormats.ELF
 {
     public class FileOffset<T> : Pointer<T, SizeT> { }
@@ -45,7 +41,7 @@ namespace Microsoft.FileFormats.ELF
     /// </summary>
     /// <remarks>
     /// Although normally this is described as being part of the ELFHeader, its
-    /// useful to parse this independently. The endianess and bitness 
+    /// useful to parse this independently. The endianess and bitness
     /// described in the identity bytes are needed to calculate the size of and
     /// offset of fields in the remainder of the header
     /// </remarks>

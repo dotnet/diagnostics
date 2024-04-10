@@ -32,7 +32,7 @@ namespace Microsoft.FileFormats
     }
 
     /// <summary>
-    /// A pointer layout that can create pointers from the System.UInt64 storage type 
+    /// A pointer layout that can create pointers from the System.UInt64 storage type
     /// </summary>
     public class UInt64PointerLayout : PointerLayout
     {
@@ -55,7 +55,7 @@ namespace Microsoft.FileFormats
     }
 
     /// <summary>
-    /// A pointer layout that can create pointers from the System.UInt32 storage type 
+    /// A pointer layout that can create pointers from the System.UInt32 storage type
     /// </summary>
     public class UInt32PointerLayout : PointerLayout
     {
@@ -78,7 +78,7 @@ namespace Microsoft.FileFormats
     }
 
     /// <summary>
-    /// A pointer layout that can create pointers from the SizeT storage type 
+    /// A pointer layout that can create pointers from the SizeT storage type
     /// </summary>
     public class SizeTPointerLayout : PointerLayout
     {
@@ -148,9 +148,10 @@ namespace Microsoft.FileFormats
         public TargetType Element(IAddressSpace addressSpace, uint index)
         {
             if (Value != 0)
+            {
                 return (TargetType)_targetLayout.Read(addressSpace, Value + index * _targetLayout.Size);
-            else
-                return default;
+            }
+            return default;
         }
     }
 
@@ -191,9 +192,9 @@ namespace Microsoft.FileFormats
             Type storageType = genericPointerTypeInfo.GetGenericArguments()[1];
             ILayout storageLayout = layoutManager.GetLayout(storageType);
 
-            // Unfortunately the storageLayout.Read returns a boxed object that can't be 
-            // casted to a ulong without first being unboxed. These three Pointer layout 
-            // types are identical other than unboxing to a different type. Generics 
+            // Unfortunately the storageLayout.Read returns a boxed object that can't be
+            // casted to a ulong without first being unboxed. These three Pointer layout
+            // types are identical other than unboxing to a different type. Generics
             // doesn't work, there is no constraint that ensures the type parameter defines
             // a casting operator to ulong. Specifying a Func<object,ulong> parameter
             // would work, but I opted to write each class separately so that we don't

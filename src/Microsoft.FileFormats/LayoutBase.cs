@@ -16,7 +16,7 @@ namespace Microsoft.FileFormats
         public LayoutBase(Type type) : this(type, 0) { }
         public LayoutBase(Type type, uint size) : this(type, size, size) { }
         public LayoutBase(Type type, uint size, uint naturalAlignment) : this(type, size, naturalAlignment, size) { }
-        public LayoutBase(Type type, uint size, uint naturalAlignment, uint sizeAsBaseType) : this(type, size, naturalAlignment, sizeAsBaseType, new IField[0]) { }
+        public LayoutBase(Type type, uint size, uint naturalAlignment, uint sizeAsBaseType) : this(type, size, naturalAlignment, sizeAsBaseType, Array.Empty<IField>()) { }
         public LayoutBase(Type type, uint size, uint naturalAlignment, uint sizeAsBaseType, IField[] fields)
         {
             Type = type;

@@ -15,9 +15,9 @@ namespace Microsoft.FileFormats
     /// </summary>
     public class LayoutManager
     {
-        private Dictionary<Type, ILayout> _layouts = new Dictionary<Type, ILayout>();
-        private List<Func<Type, LayoutManager, ILayout>> _layoutProviders = new List<Func<Type, LayoutManager, ILayout>>();
-        private Dictionary<Tuple<Type, uint>, ILayout> _arrayLayouts = new Dictionary<Tuple<Type, uint>, ILayout>();
+        private Dictionary<Type, ILayout> _layouts = new();
+        private List<Func<Type, LayoutManager, ILayout>> _layoutProviders = new();
+        private Dictionary<Tuple<Type, uint>, ILayout> _arrayLayouts = new();
 
         public LayoutManager() { }
 
@@ -43,7 +43,7 @@ namespace Microsoft.FileFormats
             }
 
             ILayout layout;
-            Tuple<Type, uint> key = new Tuple<Type, uint>(arrayType, numElements);
+            Tuple<Type, uint> key = new(arrayType, numElements);
             if (!_arrayLayouts.TryGetValue(key, out layout))
             {
                 Type elemType = arrayType.GetElementType();

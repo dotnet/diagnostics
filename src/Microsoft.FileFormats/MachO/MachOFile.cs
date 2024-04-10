@@ -224,7 +224,7 @@ namespace Microsoft.FileFormats.MachO
                 position += 4; // the 64 bit version has an extra padding field to align at an
                                // 8 byte boundary
             }
-            List<Tuple<MachLoadCommand, ulong>> cmds = new List<Tuple<MachLoadCommand, ulong>>();
+            List<Tuple<MachLoadCommand, ulong>> cmds = new();
             for (uint i = 0; i < Header.NumberCommands; i++)
             {
                 MachLoadCommand cmd = DataSourceReader.Read<MachLoadCommand>(position);
@@ -248,7 +248,7 @@ namespace Microsoft.FileFormats.MachO
 
         private MachSegment[] ReadSegments()
         {
-            List<MachSegment> segs = new List<MachSegment>();
+            List<MachSegment> segs = new();
             foreach (Tuple<MachLoadCommand, ulong> cmdAndPos in _loadCommands.Value)
             {
                 LoadCommandType segType = Is64Bit ? LoadCommandType.Segment64 : LoadCommandType.Segment;
@@ -256,7 +256,7 @@ namespace Microsoft.FileFormats.MachO
                 {
                     continue;
                 }
-                MachSegment seg = new MachSegment(DataSourceReader, cmdAndPos.Item2, _dataSourceIsVirtualAddressSpace);
+                MachSegment seg = new(DataSourceReader, cmdAndPos.Item2, _dataSourceIsVirtualAddressSpace);
                 segs.Add(seg);
             }
 
@@ -432,7 +432,7 @@ namespace Microsoft.FileFormats.MachO
 
         private static PiecewiseAddressSpaceRange ToRange(IAddressSpace virtualAddressSpace, ulong preferredVMBaseAddress, MachSegment segment)
         {
-            ulong actualSegmentLoadAddress = preferredVMBaseAddress + segment.LoadCommand.VMAddress - segment.LoadCommand.FileOffset; 
+            ulong actualSegmentLoadAddress = preferredVMBaseAddress + segment.LoadCommand.VMAddress - segment.LoadCommand.FileOffset;
             return new PiecewiseAddressSpaceRange()
             {
                 AddressSpace = new RelativeAddressSpace(virtualAddressSpace, actualSegmentLoadAddress, segment.LoadCommand.FileSize),
@@ -480,12 +480,13 @@ namespace Microsoft.FileFormats.MachO
         public bool TryLookupSymbol(string symbol, out ulong offset)
         {
             if (symbol is null)
+            {
                 throw new ArgumentNullException(nameof(symbol));
-
+            }
             MachSymtabLoadCommand symtabLoadCommand = _symtabLoadCommand.Value;
             MachDySymtabLoadCommand dysymtabLoadCommand = _dysymtabLoadCommand.Value;
 
-            // First, search just the "external" export symbols 
+            // First, search just the "external" export symbols
             if (TryLookupSymbol(dysymtabLoadCommand.IExtDefSym, dysymtabLoadCommand.NextDefSym, symbol, out offset))
             {
                 return true;
@@ -508,7 +509,7 @@ namespace Microsoft.FileFormats.MachO
             {
                 for (uint i = 0; i < nsyms && start + i < symTable.Length; i++)
                 {
-                    string name = _stringReader.Value.Read<string>(symTable[start + i].StringIndex); 
+                    string name = _stringReader.Value.Read<string>(symTable[start + i].StringIndex);
                     if (name.Length > 0)
                     {
                         // Skip the leading underscores to match Linux externs

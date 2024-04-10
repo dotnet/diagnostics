@@ -16,20 +16,20 @@ namespace Microsoft.FileFormats
     /// <remarks>
     /// TStructs primarily declare public instance fields. The type of each field must be a type
     /// for which a ILayout exists within the LayoutManager used to read it.
-    /// 
+    ///
     /// Although a LayoutManager isn't required to have any particular types, it is often configured to support
     /// at least these types:
     ///
     ///   Byte/SByte/[U]Int[16/32/64]    - One of the fixed-size integral types. (In particular, *not* IntPtr)
     ///   Enum                           - Any enum whose underlying type is one of the fixed-size integral type.
     ///   TStruct                        - Another TStruct. Note that this describes a *nested* struct, not a pointer
-    ///                                    to another struct. 
-    /// 
+    ///                                    to another struct.
+    ///
     /// Binding to a LayoutManager object:
     /// --------------------------
     ///    A TStruct is not actually parsable until a LayoutManager produces an ILayout for it. The LayoutManager
     ///    provides the extra information (e.g. pointer size) that permit the parser to compute the final
-    ///    offsets and size of the TStruct fields. 
+    ///    offsets and size of the TStruct fields.
     ///
     /// Non-instance fields:
     /// --------------------
@@ -72,17 +72,17 @@ namespace Microsoft.FileFormats
         public ILayout DeclaringLayout { get; set; }
         public string Name { get { return FieldInfo.Name; } }
 
-        public Object GetValue(TStruct tStruct)
+        public object GetValue(TStruct tStruct)
         {
             return FieldInfo.GetValue(tStruct);
         }
 
-        public override String ToString()
+        public override string ToString()
         {
             return DeclaringLayout.Type.FullName + "." + FieldInfo.Name + " [+0x" + Offset.ToString("x") + "]";
         }
 
-        public void SetValue(TStruct tStruct, Object newValue)
+        public void SetValue(TStruct tStruct, object newValue)
         {
             FieldInfo.SetValue(tStruct, newValue);
         }
@@ -102,7 +102,7 @@ namespace Microsoft.FileFormats
             TStruct blank = (TStruct)Activator.CreateInstance(Type);
             foreach (IField field in Fields)
             {
-                Object fieldValue = field.Layout.Read(dataTarget, position + field.Offset);
+                object fieldValue = field.Layout.Read(dataTarget, position + field.Offset);
                 field.SetValue(blank, fieldValue);
             }
             return blank;
@@ -168,10 +168,10 @@ namespace Microsoft.FileFormats
             });
             return layouts;
         }
- 
+
         private static ILayout GetTStructLayout(Type tStructType, LayoutManager layoutManager, IEnumerable<string> enabledDefines)
         {
-            enabledDefines ??= new string[0];
+            enabledDefines ??= Array.Empty<string>();
 
             TypeInfo typeInfo = tStructType.GetTypeInfo();
 
@@ -214,8 +214,9 @@ namespace Microsoft.FileFormats
 
             uint sizeAsBaseType = curOffset;
             if (curOffset == 0)
+            {
                 curOffset = 1;    // As with C++, zero-length struct not allowed (except as parent of another struct).
-
+            }
             IField[] totalFields;
             if (parentLayout != null)
             {
@@ -225,7 +226,7 @@ namespace Microsoft.FileFormats
             {
                 totalFields = tFields;
             }
-            TLayout layout = new TLayout(tStructType, curOffset, biggestAlignmentSoFar, sizeAsBaseType, totalFields);
+            TLayout layout = new(tStructType, curOffset, biggestAlignmentSoFar, sizeAsBaseType, totalFields);
             foreach (TField field in tFields)
             {
                 field.DeclaringLayout = layout;
@@ -248,7 +249,7 @@ namespace Microsoft.FileFormats
 
         private static ILayout GetFieldLayout(FieldInfo fieldInfo, LayoutManager layoutManager)
         {
-            ILayout fieldLayout = null;
+            ILayout fieldLayout;
             Type fieldType = fieldInfo.FieldType;
             if (fieldType.IsArray)
             {

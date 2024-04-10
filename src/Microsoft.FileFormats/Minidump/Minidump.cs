@@ -32,7 +32,7 @@ namespace Microsoft.FileFormats.Minidump
         /// <returns>True if the address space is a minidump, false otherwise.</returns>
         public static bool IsValid(IAddressSpace addressSpace, ulong position = 0)
         {
-            Reader headerReader = new Reader(addressSpace);
+            Reader headerReader = new(addressSpace);
             return headerReader.TryRead(position, out MinidumpHeader header) && header.IsSignatureValid.Check();
         }
 
@@ -46,7 +46,7 @@ namespace Microsoft.FileFormats.Minidump
         {
             _position = position;
 
-            Reader headerReader = new Reader(dataSource);
+            Reader headerReader = new(dataSource);
             _header = headerReader.Read<MinidumpHeader>(_position);
             _header.IsSignatureValid.CheckThrowing();
 
@@ -57,7 +57,7 @@ namespace Microsoft.FileFormats.Minidump
             {
                 _directory[i] = headerReader.Read<MinidumpDirectory>(ref streamPos);
 
-                var streamType = _directory[i].StreamType;
+                MinidumpStreamType streamType = _directory[i].StreamType;
                 if (streamType == MinidumpStreamType.SystemInfoStream)
                 {
                     Debug.Assert(systemIndex == -1);
@@ -71,8 +71,9 @@ namespace Microsoft.FileFormats.Minidump
             }
 
             if (systemIndex == -1)
+            {
                 throw new BadInputFormatException("Minidump does not contain a MINIDUMP_SYSTEM_INFO stream");
-
+            }
             _systemInfo = headerReader.Read<MinidumpSystemInfo>(_position + _directory[systemIndex].Rva);
 
             _dataSourceReader = new Reader(dataSource, new LayoutManager().AddCrashDumpTypes(false, Is64Bit));
@@ -113,7 +114,7 @@ namespace Microsoft.FileFormats.Minidump
         {
             get
             {
-                var arch = _systemInfo.ProcessorArchitecture;
+                ProcessorArchitecture arch = _systemInfo.ProcessorArchitecture;
                 return arch == ProcessorArchitecture.Alpha64 || arch == ProcessorArchitecture.Amd64 || arch == ProcessorArchitecture.Ia64;
             }
         }
@@ -126,15 +127,16 @@ namespace Microsoft.FileFormats.Minidump
         private List<MinidumpLoadedImage> CreateLoadedImageList()
         {
             if (_moduleListStream == -1)
+            {
                 throw new BadInputFormatException("Minidump does not contain a ModuleStreamList in its directory.");
-            
+            }
             MinidumpModule[] modules = _dataSourceReader.ReadCountedArray<MinidumpModule>(_position + _directory[_moduleListStream].Rva);
             return new List<MinidumpLoadedImage>(modules.Select(module => new MinidumpLoadedImage(this, module)));
         }
 
         private List<MinidumpSegment> CreateSegmentList()
         {
-            List<MinidumpSegment> ranges = new List<MinidumpSegment>();
+            List<MinidumpSegment> ranges = new();
 
             foreach (MinidumpDirectory item in _directory)
             {
@@ -142,9 +144,9 @@ namespace Microsoft.FileFormats.Minidump
                 {
                     MinidumpMemoryDescriptor[] memoryRegions = _dataSourceReader.ReadCountedArray<MinidumpMemoryDescriptor>(_position + item.Rva);
 
-                    foreach (var region in memoryRegions)
+                    foreach (MinidumpMemoryDescriptor region in memoryRegions)
                     {
-                        MinidumpSegment range = new MinidumpSegment(region);
+                        MinidumpSegment range = new(region);
                         ranges.Add(range);
                     }
 
@@ -156,9 +158,9 @@ namespace Microsoft.FileFormats.Minidump
                     ulong rva = _dataSourceReader.Read<ulong>(ref position);
 
                     MinidumpMemoryDescriptor64[] memoryRegions = _dataSourceReader.ReadArray<MinidumpMemoryDescriptor64>(position + _position, checked((uint)count));
-                    foreach (var region in memoryRegions)
+                    foreach (MinidumpMemoryDescriptor64 region in memoryRegions)
                     {
-                        MinidumpSegment range = new MinidumpSegment(region, rva);
+                        MinidumpSegment range = new(region, rva);
                         ranges.Add(range);
 
                         rva += region.DataSize;

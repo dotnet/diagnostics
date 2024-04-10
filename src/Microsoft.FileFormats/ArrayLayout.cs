@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.FileFormats
 {
-    internal class ArrayLayout : LayoutBase
+    internal sealed class ArrayLayout : LayoutBase
     {
         public ArrayLayout(Type arrayType, ILayout elementLayout, uint numElements) :
             base(arrayType, numElements * elementLayout.Size, elementLayout.NaturalAlignment)

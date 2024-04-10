@@ -35,12 +35,14 @@ namespace Microsoft.FileFormats.Minidump
         public uint Read(ulong position, byte[] buffer, uint bufferOffset, uint count)
         {
             if (count == 0)
+            {
                 return 0;
-            
+            }
             MinidumpSegment seg = FindSegment(position);
             if (seg == null)
+            {
                 return 0;
-            
+            }
             // TODO: What if they read past the end of the segment?
             Debug.Assert(position >= seg.VirtualAddress);
             ulong offset = position - seg.VirtualAddress + seg.FileOffset;
@@ -51,7 +53,7 @@ namespace Microsoft.FileFormats.Minidump
         {
             int min = 0;
             int max = _segments.Count - 1;
-            
+
             while (min <= max)
             {
                 int mid = (min + max) / 2;

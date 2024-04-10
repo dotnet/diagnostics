@@ -12,13 +12,13 @@ namespace Microsoft.FileFormats.PerfMap
     public sealed class PerfMapFile
     {
         // See format of the perfmap file at https://github.com/dotnet/runtime/blob/main/docs/design/coreclr/botr/r2r-perfmap-format.md
-        private static readonly int PerfMapV1SigLength = 16;
-        
-        private static readonly int PerfMapV1HeaderRecordCount = 5;
+        private const int PerfMapV1SigLength = 16;
 
-        public static readonly int MaxKnownPerfMapVersion = 1;
+        private const int PerfMapV1HeaderRecordCount = 5;
 
-        private static readonly int HeaderRecordPseudoLength = 0;
+        public const int MaxKnownPerfMapVersion = 1;
+
+        private const int HeaderRecordPseudoLength = 0;
 
         private enum PerfMapPseudoRVAToken : uint
         {
@@ -70,18 +70,24 @@ namespace Microsoft.FileFormats.PerfMap
                 ThrowIfInvalid();
 
                 if (Header.Version > MaxKnownPerfMapVersion)
+                {
                     throw new NotImplementedException($"Format version {Header.Version} unknown. Max known format is {MaxKnownPerfMapVersion}");
-
-                using StreamReader reader = new StreamReader(_stream, Encoding.UTF8, false, 1024, leaveOpen: true);
+                }
+                using StreamReader reader = new(_stream, Encoding.UTF8, false, 1024, leaveOpen: true);
 
                 // Skip over the header.
                 // For now this is V1, the length will need to be a lookup on the version.
-                for (int i = 0; i < PerfMapV1HeaderRecordCount; ++i) _ = reader.ReadLine();
-
-                while(true)
+                for (int i = 0; i < PerfMapV1HeaderRecordCount; ++i)
+                {
+                    _ = reader.ReadLine();
+                }
+                while (true)
                 {
                     PerfMapFile.PerfMapRecord cur = ReadRecord(reader);
-                    if (cur is null) yield break;
+                    if (cur is null)
+                    {
+                        yield break;
+                    }
                     yield return cur;
                 }
             }
@@ -90,7 +96,9 @@ namespace Microsoft.FileFormats.PerfMap
         private void ThrowIfInvalid()
         {
             if (!IsValid)
+            {
                 throw new BadInputFormatException("The PerfMap is not valid");
+            }
         }
 
         public PerfMapFile(Stream stream)
@@ -102,7 +110,7 @@ namespace Microsoft.FileFormats.PerfMap
 
         private PerfMapHeader ReadHeader()
         {
-            bool IsValidHeaderRecord(PerfMapPseudoRVAToken expectedToken, PerfMapRecord record)
+            static bool IsValidHeaderRecord(PerfMapPseudoRVAToken expectedToken, PerfMapRecord record)
                 => record is not null && (uint)expectedToken == record.Rva
                     && record.Length == HeaderRecordPseudoLength;
 
@@ -111,34 +119,39 @@ namespace Microsoft.FileFormats.PerfMap
             {
                 _stream.Position = 0;
                 // Headers don't need much of a buffer.
-                using StreamReader reader = new StreamReader(_stream, Encoding.UTF8, false, 256, leaveOpen: true);
+                using StreamReader reader = new(_stream, Encoding.UTF8, false, 256, leaveOpen: true);
 
                 PerfMapRecord sigRecord = ReadRecord(reader);
-                if (!IsValidHeaderRecord(PerfMapPseudoRVAToken.OutputSignature, sigRecord)
-                    || !Helpers.TryConvertHexStringToBytes(sigRecord.Name, out byte[] sigBytes)
-                    || sigBytes?.Length != PerfMapV1SigLength)
+                if (!IsValidHeaderRecord(PerfMapPseudoRVAToken.OutputSignature, sigRecord) ||
+                    !Helpers.TryConvertHexStringToBytes(sigRecord.Name, out byte[] sigBytes) ||
+                     sigBytes?.Length != PerfMapV1SigLength)
+                {
                     return null;
-
+                }
                 PerfMapRecord versionRecord = ReadRecord(reader);
-                if (!IsValidHeaderRecord(PerfMapPseudoRVAToken.FormatVersion, versionRecord)
-                    || !uint.TryParse(versionRecord.Name, out uint version))
+                if (!IsValidHeaderRecord(PerfMapPseudoRVAToken.FormatVersion, versionRecord) ||
+                    !uint.TryParse(versionRecord.Name, out uint version))
+                {
                     return null;
-
+                }
                 PerfMapRecord osRecord = ReadRecord(reader);
-                if (!IsValidHeaderRecord(PerfMapPseudoRVAToken.TargetOS, osRecord)
-                    || !uint.TryParse(osRecord.Name, out uint os))
+                if (!IsValidHeaderRecord(PerfMapPseudoRVAToken.TargetOS, osRecord) ||
+                    !uint.TryParse(osRecord.Name, out uint os))
+                {
                     return null;
-
+                }
                 PerfMapRecord archRecord = ReadRecord(reader);
-                if (!IsValidHeaderRecord(PerfMapPseudoRVAToken.TargetArchitecture, archRecord)
-                    || !uint.TryParse(archRecord.Name, out uint arch))
+                if (!IsValidHeaderRecord(PerfMapPseudoRVAToken.TargetArchitecture, archRecord) ||
+                    !uint.TryParse(archRecord.Name, out uint arch))
+                {
                     return null;
-
+                }
                 PerfMapRecord abiRecord = ReadRecord(reader);
-                if (!IsValidHeaderRecord(PerfMapPseudoRVAToken.TargetABI, abiRecord)
-                    || !uint.TryParse(abiRecord.Name, out uint abi))
+                if (!IsValidHeaderRecord(PerfMapPseudoRVAToken.TargetABI, abiRecord) ||
+                    !uint.TryParse(abiRecord.Name, out uint abi))
+                {
                     return null;
-
+                }
                 return new PerfMapHeader(sigBytes, version, os, arch, abi);
                 // Append as necessary as revisions get added here.
                 // We don't return null on a higher versioned heder than the max known as they are backwards compatible and they are not necessary for indexing.
@@ -159,17 +172,21 @@ namespace Microsoft.FileFormats.PerfMap
             string[] segments = reader.ReadLine()?.Split();
 
             if (segments is null)
+            {
                 return null;
-
+            }
             if (segments.Length != 3)
+            {
                 throw new BadInputFormatException("Entry on perfmap record doesn't have 3 segments.");
-
+            }
             if (!uint.TryParse(segments[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint rva))
+            {
                 throw new BadInputFormatException("Record's RVA is not a valid hex unsigned int.");
-
+            }
             if (!ushort.TryParse(segments[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ushort length))
+            {
                 throw new BadInputFormatException("Record's Length is not a valid hex unsigned int.");
-
+            }
             return new PerfMapRecord(rva, length, segments[2]);
         }
 
