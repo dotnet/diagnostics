@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
+    <NoWarn>;1591;1701</NoWarn>
+    <IsPackable>true</IsPackable>
+    <Description>Symbol server key generation and access protocol</Description>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <PackageTags>Symbol Indexing</PackageTags>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IsShippingAssembly>true</IsShippingAssembly>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Condition="'$(TargetFramework)' != 'net45'" Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
+    <PackageReference Condition="'$(TargetFramework)' == 'net45'" Include="System.Reflection.Metadata" Version="1.6.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="'$(TargetFramework)' == 'net45'">
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+</Project>
