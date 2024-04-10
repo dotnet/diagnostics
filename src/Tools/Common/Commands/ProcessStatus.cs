@@ -14,7 +14,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
+using Microsoft.Internal.Common;
 using Process = System.Diagnostics.Process;
 
 namespace Microsoft.Internal.Common.Commands

@@ -4,6 +4,7 @@
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.Threading.Tasks;
+using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Commands;
 
 namespace Microsoft.Diagnostics.Tools.Stack
@@ -16,7 +17,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 .AddCommand(ReportCommandHandler.ReportCommand())
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that stack traces can be collected from."))
                 .AddCommand(SymbolicateHandler.SymbolicateCommand())
-                .UseDefaults()
+                .UseToolsDefaults()
                 .Build();
 
             return parser.InvokeAsync(args);

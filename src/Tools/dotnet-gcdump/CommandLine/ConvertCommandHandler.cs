@@ -5,7 +5,7 @@ using System;
 using System.CommandLine;
 using System.IO;
 using Graphs;
-using Microsoft.Tools.Common;
+using Microsoft.Internal.Common;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {

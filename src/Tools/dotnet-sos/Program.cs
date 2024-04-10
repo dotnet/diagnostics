@@ -8,7 +8,7 @@ using System.CommandLine.IO;
 using System.CommandLine.Parsing;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Microsoft.Tools.Common;
+using Microsoft.Internal.Common;
 using SOS;
 
 namespace Microsoft.Diagnostics.Tools.SOS
@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
             Parser parser = new CommandLineBuilder()
                 .AddCommand(InstallCommand())
                 .AddCommand(UninstallCommand())
-                .UseDefaults()
+                .UseToolsDefaults()
                 .Build();
 
             return parser.InvokeAsync(args);
