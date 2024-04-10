@@ -8,8 +8,8 @@ using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Commands;
-using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 .AddCommand(CollectCommand())
                 .AddCommand(AnalyzeCommand())
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that dumps can be collected from."))
-                .UseDefaults()
+                .UseToolsDefaults()
                 .Build();
 
             return parser.InvokeAsync(args);

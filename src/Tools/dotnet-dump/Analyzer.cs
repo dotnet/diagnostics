@@ -137,10 +137,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 {
                     foreach (string commandLine in command)
                     {
-                        if (!_commandService.Execute(commandLine, contextService.Services))
-                        {
-                            throw new CommandNotFoundException($"{CommandNotFoundException.NotFoundMessage} '{commandLine}'");
-                        }
+                        _commandService.Execute(commandLine, contextService.Services);
                         if (_consoleService.Shutdown)
                         {
                             break;
@@ -157,10 +154,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
                     _consoleService.Start((string prompt, string commandLine, CancellationToken cancellation) => {
                         _fileLoggingConsoleService.WriteLine("{0}{1}", prompt, commandLine);
-                        if (!_commandService.Execute(commandLine, contextService.Services))
-                        {
-                            throw new CommandNotFoundException($"{CommandNotFoundException.NotFoundMessage} '{commandLine}'");
-                        }
+                        _commandService.Execute(commandLine, contextService.Services);
                     });
                 }
             }

@@ -7,7 +7,7 @@ SOS is a debugger extension that allows a developer to inspect the managed state
 
 ## Getting lldb
 
-Getting a version of lldb that works for your platform can be a problem sometimes. The version has to be at least 3.9 or greater because of a bug running SOS on a core dump that was fixed. Some Linux distros like Ubuntu it is easy as `sudo apt-get install lldb-3.9 python-lldb-3.9`. On other distros, you will need to build lldb. The directions below should give you some guidance.
+Getting a version of lldb depends on your platform and distro. Check the links below for more details:
 
 * [Linux Instructions](lldb/linux-instructions.md)
 * [MacOS Instructions](lldb/osx-instructions.md)

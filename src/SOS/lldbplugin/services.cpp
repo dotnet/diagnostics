@@ -2153,6 +2153,7 @@ public:
         IHostServices* hostservices = GetHostServices();
         if (hostservices == nullptr)
         {
+            g_services->Output(DEBUG_OUTPUT_ERROR, "Unrecognized command '%s' because managed hosting failed or was disabled. See sethostruntime command for details.\n", m_commandName);
             result.SetStatus(lldb::eReturnStatusFailed);
             return false;
         }
@@ -2166,7 +2167,7 @@ public:
             }
         }
         g_services->FlushCheck();
-        HRESULT hr = hostservices->DispatchCommand(m_commandName, commandArguments.c_str());
+        HRESULT hr = hostservices->DispatchCommand(m_commandName, commandArguments.c_str(), /* displayCommandNotFound */ true);
         if (hr != S_OK)
         {
             result.SetStatus(lldb::eReturnStatusFailed);
@@ -2999,7 +3000,7 @@ LLDBServices::ExecuteCommand(
     if (hostservices != nullptr)
     {
         g_services->FlushCheck();
-        HRESULT hr = hostservices->DispatchCommand(commandName, commandArguments.c_str());
+        HRESULT hr = hostservices->DispatchCommand(commandName, commandArguments.c_str(), /* displayCommandNotFound */ false);
         if (hr != E_NOTIMPL)
         {
             result.SetStatus(hr == S_OK ? lldb::eReturnStatusSuccessFinishResult : lldb::eReturnStatusFailed);

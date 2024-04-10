@@ -62,21 +62,5 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         #endregion
-
-        public override string ToString()
-        {
-            StringBuilder sb = new();
-            if (_runtimes is not null)
-            {
-                IRuntime currentRuntime = _services.GetService<IContextService>()?.GetCurrentRuntime();
-                foreach (IRuntime runtime in _runtimes)
-                {
-                    string current = _runtimes.Count > 1 ? runtime == currentRuntime ? "*" : " " : "";
-                    sb.Append(current);
-                    sb.AppendLine(runtime.ToString());
-                }
-            }
-            return sb.ToString();
-        }
     }
 }

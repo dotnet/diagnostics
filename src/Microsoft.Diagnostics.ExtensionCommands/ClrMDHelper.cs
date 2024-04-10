@@ -19,7 +19,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceExport(Scope = ServiceScope.Runtime)]
         public static ClrMDHelper TryCreate([ServiceImport(Optional = true)] ClrRuntime clrRuntime)
         {
-            return clrRuntime != null ? new ClrMDHelper(clrRuntime) : null;
+            try
+            {
+                if (clrRuntime != null)
+                {
+                    return new ClrMDHelper(clrRuntime);
+                }
+            }
+            catch (NotSupportedException ex)
+            {
+                Trace.TraceError(ex.ToString());
+            }
+            return null;
         }
 
         private ClrMDHelper(ClrRuntime clr)

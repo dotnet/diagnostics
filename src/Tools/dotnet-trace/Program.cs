@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.Threading.Tasks;
+using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Commands;
 using Microsoft.Internal.Common.Utils;
 
@@ -20,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 .AddCommand(ListProfilesCommandHandler.ListProfilesCommand())
                 .AddCommand(ConvertCommandHandler.ConvertCommand())
                 .AddCommand(ReportCommandHandler.ReportCommand())
-                .UseDefaults()
+                .UseToolsDefaults()
                 .Build();
             ParseResult parseResult = parser.Parse(args);
             string parsedCommandName = parseResult.CommandResult.Command.Name;

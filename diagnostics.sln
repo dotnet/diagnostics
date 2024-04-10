@@ -227,6 +227,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{BE45F03E-D70
 		src\SOS\inc\lldbservices.h = src\SOS\inc\lldbservices.h
 		src\SOS\inc\remotememoryservice.h = src\SOS\inc\remotememoryservice.h
 		src\SOS\inc\runtime.h = src\SOS\inc\runtime.h
+		src\SOS\inc\specialdiaginfo.h = src\SOS\inc\specialdiaginfo.h
 		src\SOS\inc\specialthreadinfo.h = src\SOS\inc\specialthreadinfo.h
 		src\SOS\inc\symbolservice.h = src\SOS\inc\symbolservice.h
 		src\SOS\inc\target.h = src\SOS\inc\target.h

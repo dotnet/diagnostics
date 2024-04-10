@@ -17,9 +17,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public ICommandService CommandService { get; set; }
 
-        [ServiceImport]
-        public IServiceProvider Services { get; set; }
-
         public override void Invoke()
         {
             if (string.IsNullOrWhiteSpace(Command))

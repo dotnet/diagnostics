@@ -5,7 +5,7 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "threads", Aliases = new string[] { "setthread" }, Help = "Displays threads or sets the current thread.")]
+    [Command(Name = "threads", Aliases = new string[] { "setthread" }, Help = "Lists the threads in the target or sets the current thread.")]
     public class ThreadsCommand : CommandBase
     {
         [Argument(Help = "The thread index or id to set, otherwise displays the list of threads.")]
@@ -16,9 +16,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }
-
-        [ServiceImport(Optional = true)]
-        public IThread CurrentThread { get; set; }
 
         [ServiceImport]
         public IThreadService ThreadService { get; set; }
@@ -43,10 +40,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                uint currentThreadId = CurrentThread != null ? CurrentThread.ThreadId : uint.MaxValue;
+                IThread currentThread = ContextService.GetCurrentThread();
                 foreach (IThread thread in ThreadService.EnumerateThreads())
                 {
-                    WriteLine("{0}{1} 0x{2:X4} ({2})", thread.ThreadId == currentThreadId ? "*" : " ", thread.ThreadIndex, thread.ThreadId);
+                    WriteLine("{0}{1} 0x{2:X4} ({2})", thread == currentThread ? "*" : " ", thread.ThreadIndex, thread.ThreadId);
                     if (Verbose)
                     {
                         thread.TryGetRegisterValue(ThreadService.InstructionPointerIndex, out ulong ip);

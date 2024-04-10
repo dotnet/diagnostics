@@ -11,9 +11,9 @@ using System.CommandLine.Parsing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Commands;
 using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -250,7 +250,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 .AddCommand(CollectCommand())
                 .AddCommand(ListCommand())
                 .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that can be monitored."))
-                .UseDefaults()
+                .UseToolsDefaults()
                 .Build();
 
             ParseResult parseResult = parser.Parse(args);

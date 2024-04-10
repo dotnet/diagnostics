@@ -77,10 +77,12 @@ public:
     /// </summary>
     /// <param name="commandName">command name</param>
     /// <param name="arguments">command arguments</param>
+    /// <param name="displayCommandNotFound">if true, display command not found error message; if false, return E_NOTIMPL</param>
     /// <returns>error code</returns>
     virtual HRESULT STDMETHODCALLTYPE DispatchCommand( 
         PCSTR commandName,
-        PCSTR arguments) = 0;
+        PCSTR arguments,
+        bool displayCommandNotFound) = 0;
 
     /// <summary>
     /// Uninitialize the extension infrastructure

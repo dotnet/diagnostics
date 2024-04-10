@@ -35,13 +35,13 @@ HRESULT InitializeDesktopClrHost()
     ArrayHolder<WCHAR> wszSOSModulePath = new WCHAR[MAX_LONGPATH + 1];
     if (GetModuleFileNameW(g_hInstance, wszSOSModulePath, MAX_LONGPATH) == 0)
     {
-        TraceError("Error: Failed to get SOS module directory\n");
+        TraceError("SOS_HOSTING: Failed to get SOS module directory\n");
         return HRESULT_FROM_WIN32(GetLastError());
     }
     ArrayHolder<WCHAR> wszManagedModulePath = new WCHAR[MAX_LONGPATH + 1];
     if (wcscpy_s(wszManagedModulePath.GetPtr(), MAX_LONGPATH, wszSOSModulePath.GetPtr()) != 0)
     {
-        TraceError("Error: Failed to copy module name\n");
+        TraceError("SOS_HOSTING: Failed to copy module name\n");
         return E_FAIL;
     }
     WCHAR* lastSlash = wcsrchr(wszManagedModulePath.GetPtr(), DIRECTORY_SEPARATOR_CHAR_W);
@@ -51,7 +51,7 @@ HRESULT InitializeDesktopClrHost()
     }
     if (wcscat_s(wszManagedModulePath.GetPtr(), MAX_LONGPATH, ExtensionsDllNameW) != 0)
     {
-        TraceError("Error: Failed to append SOS module name\n");
+        TraceError("SOS_HOSTING: Failed to append SOS module name\n");
         return E_FAIL;
     }
     if (g_clrHost == nullptr)
@@ -59,7 +59,7 @@ HRESULT InitializeDesktopClrHost()
         hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
         if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
         {
-            TraceError("Error: CoInitializeEx failed. %08x\n", hr);
+            TraceError("SOS_HOSTING: CoInitializeEx failed. %08x\n", hr);
             return hr;
         }
         // Loads the CLR and then initializes the managed debugger extensions.
@@ -67,26 +67,26 @@ HRESULT InitializeDesktopClrHost()
         hr = CLRCreateInstance(CLSID_CLRMetaHost, IID_ICLRMetaHost, (PVOID*)&metaHost);
         if (FAILED(hr) || metaHost == nullptr)
         {
-            TraceError("Error: CLRCreateInstance failed %08x\n", hr);
+            TraceError("SOS_HOSTING: CLRCreateInstance failed %08x\n", hr);
             return hr;
         }
         ReleaseHolder<ICLRRuntimeInfo> runtimeInfo;
         hr = metaHost->GetRuntime(CLR_VERSION, IID_ICLRRuntimeInfo, (PVOID*)&runtimeInfo);
         if (FAILED(hr) || runtimeInfo == nullptr)
         {
-            TraceError("Error: ICLRMetaHost::GetRuntime failed %08x\n", hr);
+            TraceError("SOS_HOSTING: ICLRMetaHost::GetRuntime failed %08x\n", hr);
             return hr;
         }
         hr = runtimeInfo->GetInterface(CLSID_CLRRuntimeHost, IID_ICLRRuntimeHost, (PVOID*)&g_clrHost);
         if (FAILED(hr) || g_clrHost == nullptr)
         {
-            TraceError("Error: ICLRRuntimeInfo::GetInterface failed %08x\n", hr);
+            TraceError("SOS_HOSTING: ICLRRuntimeInfo::GetInterface failed %08x\n", hr);
             return hr;
         }
         hr = g_clrHost->Start();
         if (FAILED(hr))
         {
-            TraceError("Error: ICLRRuntimeHost::Start failed %08x\n", hr);
+            TraceError("SOS_HOSTING: ICLRRuntimeHost::Start failed %08x\n", hr);
             g_clrHost->Release();
             g_clrHost = nullptr;
             return hr;
@@ -96,14 +96,14 @@ HRESULT InitializeDesktopClrHost()
     hr = g_clrHost->ExecuteInDefaultAppDomain(wszManagedModulePath.GetPtr(), ExtensionsClassNameW, ExtensionsInitializeFunctionNameW, wszSOSModulePath.GetPtr(), (DWORD *)&ret);
     if (FAILED(hr)) 
     {
-        TraceError("Error: ICLRRuntimeHost::ExecuteInDefaultAppDomain failed %08x\n", hr);
+        TraceError("SOS_HOSTING: ICLRRuntimeHost::ExecuteInDefaultAppDomain failed %08x\n", hr);
         g_clrHost->Release();
         g_clrHost = nullptr;
         return hr;
     }
     if (ret != 0)
     { 
-        TraceError("Error: InitializeSymbolReader failed %08x\n", ret);
+        TraceError("SOS_HOSTING: Extension initialization failed %08x\n", ret);
         g_clrHost->Release();
         g_clrHost = nullptr;
         return ret;
