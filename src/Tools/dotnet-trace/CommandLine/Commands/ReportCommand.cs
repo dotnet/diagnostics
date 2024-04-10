@@ -14,7 +14,7 @@ using Microsoft.Diagnostics.Tools.Trace.CommandLine;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Diagnostics.Tracing.Stacks;
-using Microsoft.Tools.Common;
+using Microsoft.Internal.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {

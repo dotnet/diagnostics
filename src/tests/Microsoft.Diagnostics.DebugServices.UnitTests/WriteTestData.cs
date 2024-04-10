@@ -9,9 +9,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     [Command(Name = "writetestdata", Help = "Writes the test data xml file.")]
     public class WriteTestDataCommand : CommandBase
     {
-        [ServiceImport]
-        public IServiceProvider Services { get; set; }
-
         [Argument(Name = "FileName", Help = "Test data file path.")]
         public string FileName { get; set; }
 

@@ -15,7 +15,7 @@ extern "C" {
 
 /// <summary>
 /// ISymbolService
-/// 
+///
 /// Provides symbol related services to SOS.
 /// </summary>
 MIDL_INTERFACE("7EE88D46-F8B3-4645-AD3E-01FE7D4F70F1")
@@ -24,7 +24,7 @@ ISymbolService : public IUnknown
 public:
     virtual bool STDMETHODCALLTYPE ParseSymbolPath(
         const char* windowsSymbolPath) = 0;
-    
+
     virtual PVOID STDMETHODCALLTYPE LoadSymbolsForModule(
         LPCWSTR,
         BOOL,
@@ -35,7 +35,7 @@ public:
 
     virtual void STDMETHODCALLTYPE Dispose(
         PVOID) = 0;
-    
+
     virtual BOOL STDMETHODCALLTYPE ResolveSequencePoint(
         PVOID,
         const char*,
@@ -59,7 +59,7 @@ public:
     virtual ULONG64 STDMETHODCALLTYPE GetExpressionValue(
         PCSTR) = 0;
 
-    virtual BOOL STDMETHODCALLTYPE GetMetadataLocator(
+    virtual HRESULT STDMETHODCALLTYPE GetMetadataLocator(
         LPCWSTR imagePath,
         unsigned int imageTimestamp,
         unsigned int imageSize,
@@ -70,7 +70,7 @@ public:
         PVOID pMetadata,
         unsigned int* pMetadataSize) = 0;
 
-    virtual BOOL STDMETHODCALLTYPE GetICorDebugMetadataLocator(
+    virtual HRESULT STDMETHODCALLTYPE GetICorDebugMetadataLocator(
         LPCWSTR imagePath,
         unsigned int imageTimestamp,
         unsigned int imageSize,

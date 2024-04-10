@@ -14,15 +14,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Utils;
-using Microsoft.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CollectCommandHandler
     {
-        internal static bool IsQuiet
-        { get; set; }
+        internal static bool IsQuiet { get; set; }
 
         private static void ConsoleWriteLine(string str)
         {
@@ -424,7 +423,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         if (format != TraceFileFormat.NetTrace)
                         {
-                            TraceFileFormatConverter.ConvertToFormat(format, output.FullName);
+                            string outputFilename = TraceFileFormatConverter.GetConvertedFilename(output.FullName, outputfile: null, format);
+                            TraceFileFormatConverter.ConvertToFormat(console, format, fileToConvert: output.FullName, outputFilename);
                         }
                     }
 

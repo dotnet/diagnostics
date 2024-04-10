@@ -1,9 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
+using System;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -76,13 +77,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             WriteLine($"        {library.Kind} {library.FileName} {library.Platform} {library.TargetArchitecture} {library.ArchivedUnder} {index}");
                         }
                     }
+                    this.DisplayResources(runtime.RuntimeModule, all: false, indent: "    ");
+                    this.DisplayRuntimeExports(runtime.RuntimeModule, error: true, indent: "    ");
                 }
             }
         }
-    }
-
-    public static class CommandUtilities
-    {
-        public static string ToHex(this ImmutableArray<byte> array) => string.Concat(array.Select((b) => b.ToString("x2")));
     }
 }

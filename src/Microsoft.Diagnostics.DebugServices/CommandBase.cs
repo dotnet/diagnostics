@@ -11,6 +11,12 @@ namespace Microsoft.Diagnostics.DebugServices
     public abstract class CommandBase
     {
         /// <summary>
+        /// The services provided to this command
+        /// </summary>
+        [ServiceImport]
+        public IServiceProvider Services { get; set; }
+
+        /// <summary>
         /// Console service
         /// </summary>
         [ServiceImport]

@@ -67,7 +67,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             TestCommand2.Invoked = false;
             TestCommand3.FilterValue = false;
             TestCommand3.Invoked = false;
-            Assert.True(commandService.Execute("testcommand", testDump.Target.Services));
+            commandService.Execute("testcommand", testDump.Target.Services);
             Assert.True(TestCommand1.Invoked);
             Assert.False(TestCommand2.Invoked);
             Assert.False(TestCommand3.Invoked);
@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             TestCommand2.Invoked = false;
             TestCommand3.FilterValue = false;
             TestCommand3.Invoked = false;
-            Assert.True(commandService.Execute("testcommand", testDump.Target.Services));
+            commandService.Execute("testcommand", testDump.Target.Services);
             Assert.False(TestCommand1.Invoked);
             Assert.True(TestCommand2.Invoked);
             Assert.False(TestCommand3.Invoked);
@@ -98,7 +98,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             TestCommand2.Invoked = false;
             TestCommand3.FilterValue = true;
             TestCommand3.Invoked = false;
-            Assert.True(commandService.Execute("testcommand", "--foo 23", testDump.Target.Services));
+            commandService.Execute("testcommand", "--foo 23", testDump.Target.Services);
             Assert.False(TestCommand1.Invoked);
             Assert.False(TestCommand2.Invoked);
             Assert.True(TestCommand3.Invoked);
@@ -118,7 +118,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             TestCommand3.Invoked = false;
             try
             {
-                Assert.False(commandService.Execute("testcommand", testDump.Target.Services));
+                commandService.Execute("testcommand", testDump.Target.Services);
             }
             catch (DiagnosticsException ex)
             {

@@ -192,12 +192,12 @@ namespace SOS.Hosting
             SOSCommandDelegate commandFunc = SOSHost.GetDelegateFunction<SOSCommandDelegate>(_sosLibrary, command);
             if (commandFunc == null)
             {
-                throw new CommandNotFoundException($"{CommandNotFoundException.NotFoundMessage} '{command}'");
+                throw new CommandNotFoundException(command);
             }
             int result = commandFunc(client, arguments ?? "");
             if (result == HResult.E_NOTIMPL)
             {
-                throw new CommandNotFoundException($"{CommandNotFoundException.NotFoundMessage} '{command}'");
+                throw new CommandNotFoundException(command);
             }
             if (result != HResult.S_OK)
             {

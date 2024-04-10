@@ -41,11 +41,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="commandLine">command line text</param>
         /// <param name="services">services for the command</param>
-        /// <returns>true - found command, false - command not found</returns>
         /// <exception cref="ArgumentException">empty command line</exception>
-        /// <exception cref="DiagnosticsException">other errors</exception>
+        /// <exception cref="CommandNotFoundException">command not found</exception>
         /// <exception cref="CommandParsingException ">parsing error</exception>
-        public bool Execute(string commandLine, IServiceProvider services)
+        /// <exception cref="DiagnosticsException">other errors</exception>
+        public void Execute(string commandLine, IServiceProvider services)
         {
             string[] commandLineArray = CommandLineStringSplitter.Instance.Split(commandLine).ToArray();
             if (commandLineArray.Length <= 0)
@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 throw new ArgumentException("Empty command line", nameof(commandLine));
             }
             string commandName = commandLineArray[0].Trim();
-            return Execute(commandName, commandLineArray, services);
+            Execute(commandName, commandLineArray, services);
         }
 
         /// <summary>
@@ -62,11 +62,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="commandName">command name</param>
         /// <param name="commandArguments">command arguments/options</param>
         /// <param name="services">services for the command</param>
-        /// <returns>true - found command, false - command not found</returns>
         /// <exception cref="ArgumentException">empty command name or arguments</exception>
-        /// <exception cref="DiagnosticsException">other errors</exception>
+        /// <exception cref="CommandNotFoundException">command not found</exception>
         /// <exception cref="CommandParsingException ">parsing error</exception>
-        public bool Execute(string commandName, string commandArguments, IServiceProvider services)
+        /// <exception cref="DiagnosticsException">other errors</exception>
+        public void Execute(string commandName, string commandArguments, IServiceProvider services)
         {
             commandName = commandName.Trim();
             string[] commandLineArray = CommandLineStringSplitter.Instance.Split(commandName + " " + (commandArguments ?? "")).ToArray();
@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 throw new ArgumentException("Empty command name or arguments", nameof(commandArguments));
             }
-            return Execute(commandName, commandLineArray, services);
+            Execute(commandName, commandLineArray, services);
         }
 
         /// <summary>
@@ -83,11 +83,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="commandName">command name</param>
         /// <param name="commandLineArray">command line</param>
         /// <param name="services">services for the command</param>
-        /// <returns>true - found command, false - command not found</returns>
         /// <exception cref="ArgumentException">empty command name</exception>
-        /// <exception cref="DiagnosticsException">other errors</exception>
+        /// <exception cref="CommandNotFoundException">command not found</exception>
         /// <exception cref="CommandParsingException ">parsing error</exception>
-        private bool Execute(string commandName, string[] commandLineArray, IServiceProvider services)
+        /// <exception cref="DiagnosticsException">other errors</exception>
+        private void Execute(string commandName, string[] commandLineArray, IServiceProvider services)
         {
             if (string.IsNullOrEmpty(commandName))
             {
@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         {
                             if (group.Execute(commandLineArray, services))
                             {
-                                return true;
+                                return;
                             }
                         }
                         if (handler.FilterInvokeMessage != null)
@@ -120,9 +120,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             if (messages.Count > 0)
             {
-                throw new CommandNotFoundException(string.Concat(messages.Select(s => s + Environment.NewLine)));
+                throw new CommandNotFoundException(messages);
             }
-            return false;
+            else
+            {
+                throw new CommandNotFoundException(commandName);
+            }
         }
 
         /// <summary>

@@ -7,12 +7,13 @@
 
 HRESULT ExecuteManagedOnlyCommand(PCSTR commandName, PCSTR args)
 {
-    HRESULT hr = ExecuteCommand(commandName, args);
-    if (hr == E_NOTIMPL)
+    IHostServices* hostServices = GetHostServices();
+    if (hostServices != nullptr)
     {
-        ExtErr("Unrecognized command '%s'\n", commandName);
+        return hostServices->DispatchCommand(commandName, args, /* displayCommandNotFound */ true);
     }
-    return hr;
+    ExtErr("Unrecognized command '%s' because managed hosting failed or was disabled. See !sethostruntime command for details.\n", commandName);
+    return E_NOTIMPL;
 }
 
 DECLARE_API(DumpStackObjects)
@@ -178,6 +179,18 @@ DECLARE_API(sizestats)
 {
     INIT_API_EXT();
     return ExecuteManagedOnlyCommand("sizestats", args);
+}
+
+DECLARE_API(DumpHttp)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumphttp", args);
+}
+
+DECLARE_API(DumpRequests)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("dumprequests", args);
 }
 
 typedef HRESULT (*PFN_COMMAND)(PDEBUG_CLIENT client, PCSTR args);

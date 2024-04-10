@@ -38,7 +38,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 alias: "--format",
                 description: $"Sets the output format for the trace file conversion.")
             {
-                Argument = new Argument<TraceFileFormat>(name: "trace-file-format")
+                Argument = new Argument<TraceFileFormat>(name: "trace-file-format"),
+                IsRequired = true
             };
     }
 }

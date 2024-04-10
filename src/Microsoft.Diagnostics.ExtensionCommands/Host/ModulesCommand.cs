@@ -5,8 +5,10 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
@@ -22,6 +24,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--segments", Aliases = new string[] { "-s" }, Help = "Displays the module segments.")]
         public bool Segment { get; set; }
 
+        [Option(Name = "--resources", Aliases = new string[] { "-r" }, Help = "Displays the module resources.")]
+        public bool Resources { get; set; }
+
         [Option(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on module name (path not included).")]
         public string ModuleName { get; set; }
 
@@ -29,7 +34,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public ulong? Address { get; set; }
 
         [ServiceImport]
+        public ITarget Target { get; set; }
+
+        [ServiceImport]
         public IModuleService ModuleService { get; set; }
+
+        [ServiceImport]
+        public IMemoryService MemoryService { get; set; }
 
         public override void Invoke()
         {
@@ -84,6 +95,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     WriteLine("    PdbInfo:         {0}", pdbFileInfo);
                 }
                 WriteLine("    BuildId:         {0}", !module.BuildId.IsDefaultOrEmpty ? string.Concat(module.BuildId.Select((b) => b.ToString("x2"))) : "<none>");
+
+                this.DisplayRuntimeExports(module, error: false, indent: "    ");
             }
             else
             {
@@ -93,13 +106,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 DisplaySegments(module);
             }
+            if (Resources)
+            {
+                this.DisplayResources(module, all: true, indent: "    ");
+            }
         }
-
-        [ServiceImport]
-        public ITarget Target { get; set; }
-
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
 
         private void DisplaySegments(IModule module)
         {

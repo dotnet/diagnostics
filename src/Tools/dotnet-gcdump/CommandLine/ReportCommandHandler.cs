@@ -7,10 +7,10 @@ using System.CommandLine.Binding;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Diagnostics.Tools.GCDump.CommandLine;
-using Microsoft.Tools.Common;
-using Microsoft.Internal.Common.Utils;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools.GCDump.CommandLine;
+using Microsoft.Internal.Common;
+using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.GCDump
 {

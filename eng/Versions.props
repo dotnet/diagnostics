@@ -16,40 +16,40 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.507901</MicrosoftSymbolStoreVersion>
+    <MicrosoftSymbolStoreVersion>1.0.517501</MicrosoftSymbolStoreVersion>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6480Version>8.0.0</VSRedistCommonNetCoreSharedFrameworkx6480Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>8.0.0</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-preview.4.24208.10</VSRedistCommonNetCoreSharedFrameworkx6490Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-preview.4.24208.10</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>8.0.0</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>8.0.0</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>9.0.0-preview.4.24208.6</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>9.0.0-preview.4.24208.6</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.2.24078.1</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.3.24161.2</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
     <MicrosoftNETCoreApp60Version>6.0.24</MicrosoftNETCoreApp60Version>
     <MicrosoftAspNetCoreApp60Version>$(MicrosoftNETCoreApp60Version)</MicrosoftAspNetCoreApp60Version>
-    <MicrosoftNETCoreApp70Version>7.0.15</MicrosoftNETCoreApp70Version>
+    <MicrosoftNETCoreApp70Version>7.0.16</MicrosoftNETCoreApp70Version>
     <MicrosoftAspNetCoreApp70Version>$(MicrosoftNETCoreApp70Version)</MicrosoftAspNetCoreApp70Version>
     <!-- The SDK runtime version used to build single-file apps (currently hardcoded) -->
     <SingleFileRuntime60Version>$(MicrosoftNETCoreApp60Version)</SingleFileRuntime60Version>
-    <SingleFileRuntime70Version>7.0.15</SingleFileRuntime70Version>
-    <SingleFileRuntimeLatestVersion>8.0.1</SingleFileRuntimeLatestVersion>
+    <SingleFileRuntime70Version>7.0.16</SingleFileRuntime70Version>
+    <SingleFileRuntimeLatestVersion>8.0.2</SingleFileRuntimeLatestVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
-    <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>5.0.0</SystemReflectionMetadataVersion>
     <SystemCollectionsImmutableVersion>6.0.0</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>6.0.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>3.1.506101</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>3.1.520301</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativeVersion>16.11.27-beta1.23180.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.0.7</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingAbstractionsVersion>6.0.4</MicrosoftExtensionsLoggingAbstractionsVersion>
     <MicrosoftExtensionsLoggingConsoleVersion>6.0.0</MicrosoftExtensionsLoggingConsoleVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
@@ -62,11 +62,12 @@
     <SystemTextEncodingsWebVersion>6.0.0</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>6.0.8</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetCodeAnalysisVersion>9.0.0-beta.24076.5</MicrosoftDotNetCodeAnalysisVersion>
+    <MicrosoftDotNetCodeAnalysisVersion>9.0.0-beta.24207.1</MicrosoftDotNetCodeAnalysisVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.406</StyleCopAnalyzersVersion>
     <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.18362</cdbsosversion>
     <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
+    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>9.0.0-alpha.1.24162.2</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
     <!-- Roslyn and analyzers -->
     <!-- Compatibility with VS 16.11/.NET SDK 5.0.4xx -->
     <MicrosoftCodeAnalysisVersion_3_11>3.11.0</MicrosoftCodeAnalysisVersion_3_11>
@@ -96,4 +97,75 @@
     <MicrosoftCodeAnalysisVersion>4.8.0-2.23422.14</MicrosoftCodeAnalysisVersion>
     <MicrosoftNetCompilersToolsetVersion>4.8.0-2.23422.14</MicrosoftNetCompilersToolsetVersion>
   </PropertyGroup>
+  <!-- 
+    SOS test runtime versions
+
+    Internal service release testing:
+
+    $(DotnetRuntimeVersion)         - the service release version to test against (fx-version option value) i.e. 2.1.17, 3.1.3 or "default"
+    $(DotnetRuntimeDownloadVersion) - the service release package version i.e. 2.1.17, 3.1.3-servicing.20128.1 or "default"
+    $(RuntimeSourceFeed)            - the service release internal blob storage link
+    $(RuntimeSourceFeedKey)         - the service release blob feed token
+     
+  -->
+  <PropertyGroup>
+    <MicrosoftNETCoreApp80Version>8.0.2</MicrosoftNETCoreApp80Version>
+    <MicrosoftNETCoreApp70Version>7.0.16</MicrosoftNETCoreApp70Version>
+    <MicrosoftNETCoreApp60Version>6.0.27</MicrosoftNETCoreApp60Version>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
+    <InternalReleaseTesting>false</InternalReleaseTesting>
+    <InternalReleaseTesting Condition="'$(DotnetRuntimeVersion)' != 'default'">true</InternalReleaseTesting>
+    <ExtraInstallArgs>-runtimesourcefeed '$(RuntimeSourceFeed)' -runtimesourcefeedkey '$(RuntimeSourceFeedKey)'</ExtraInstallArgs>
+  </PropertyGroup>
+  <ItemGroup Condition="!$(InternalReleaseTesting)">
+    <RuntimeTestVersions Include="Latest">
+      <!--
+      <RuntimeDownload>$(VSRedistCommonNetCoreSharedFrameworkx6490Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreAppRuntimewinx64Version)</Runtime>
+      <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
+      <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
+      -->
+      <RuntimeDownload>9.0.0-preview.3.24160.3</RuntimeDownload>
+      <Runtime>9.0.0-preview.3.24160.3</Runtime>
+      <AspNetDownload>9.0.0-preview.3.24158.2</AspNetDownload>
+      <AspNet>9.0.0-preview.3.24158.2</AspNet>
+      <TargetFramework>net9.0</TargetFramework>
+    </RuntimeTestVersions>
+    <RuntimeTestVersions Include="Servicing1">
+      <RuntimeDownload>$(MicrosoftNETCoreApp80Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreApp80Version)</Runtime>
+      <AspNetDownload>$(MicrosoftNETCoreApp80Version)</AspNetDownload>
+      <AspNet>$(MicrosoftNETCoreApp80Version)</AspNet>
+      <TargetFramework>net8.0</TargetFramework>
+    </RuntimeTestVersions>
+    <RuntimeTestVersions Include="Servicing2">
+      <RuntimeDownload>$(MicrosoftNETCoreApp70Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreApp70Version)</Runtime>
+      <AspNetDownload>$(MicrosoftNETCoreApp70Version)</AspNetDownload>
+      <AspNet>$(MicrosoftNETCoreApp70Version)</AspNet>
+      <TargetFramework>net7.0</TargetFramework>
+    </RuntimeTestVersions>
+    <RuntimeTestVersions Include="Servicing3">
+      <RuntimeDownload>$(MicrosoftNETCoreApp60Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreApp60Version)</Runtime>
+      <AspNetDownload>$(MicrosoftNETCoreApp60Version)</AspNetDownload>
+      <AspNet>$(MicrosoftNETCoreApp60Version)</AspNet>
+      <TargetFramework>net6.0</TargetFramework>
+    </RuntimeTestVersions>
+  </ItemGroup>
+  <!-- Internal service release testing -->
+  <ItemGroup Condition="$(InternalReleaseTesting)">
+    <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' != 'default'">
+      <RuntimeDownload>$(DotnetRuntimeDownloadVersion)</RuntimeDownload>
+      <Runtime>$(DotnetRuntimeDownloadVersion)</Runtime>
+      <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
+    </RuntimeTestVersions>
+    <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' == 'default'">
+      <RuntimeDownload>$(DotnetRuntimeVersion)</RuntimeDownload>
+      <Runtime>$(DotnetRuntimeVersion)</Runtime>
+      <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
+    </RuntimeTestVersions>
+  </ItemGroup>
 </Project>
