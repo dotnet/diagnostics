@@ -8,9 +8,11 @@ extends:
     ${{ if eq(variables['System.TeamProject'], 'public') }}:
       templatePath: templatePublic.yml
     ${{ elseif notin(variables['Build.Reason'], 'PullRequest') }}:
-      templatePath: templateOfficial.yml
+      templatePath: templateInternal.yml
+      pipelineTemplate: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
     ${{ else }}:
-      templatePath: templateUnofficial.yml
+      templatePath: templateInternal.yml
+      pipelineTemplate: v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates
 
     stages: ${{ parameters.stages }}
 

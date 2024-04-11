@@ -3,6 +3,8 @@ parameters:
   - name: templatePath
     type: string
     default: no
+  - name: pipelineTemplate
+    type: string
   - name: stages
     type: stageList
   - name: containers
@@ -16,11 +18,11 @@ resources:
     ref: refs/tags/release
 
 extends:
-  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  template: ${{ parameters.pipelineTemplate }}
   parameters:
     pool:
-      name: netcore1espool-internal
-      image: 1es-windows-2022
+      name: $(BuildPool)
+      image: $(WindowsImage)
       os: windows
 
     containers:
