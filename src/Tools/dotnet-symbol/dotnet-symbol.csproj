@@ -1,14 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <OutputType>Exe</OutputType>
     <ToolCommandName>dotnet-symbol</ToolCommandName>
-    <RootNamespace>dotnet.symbol</RootNamespace>
-    <IsPackable>true</IsPackable>
-    <PackAsTool>true</PackAsTool>
-    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
-    <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <RootNamespace>Microsoft.Diagnostic.Tools.Symbol</RootNamespace>
     <Description>Symbols download utility</Description>
     <PackageTags>Symbols</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
@@ -16,7 +10,7 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj">
       <PrivateAssets>All</PrivateAssets>
     </ProjectReference>
   </ItemGroup>

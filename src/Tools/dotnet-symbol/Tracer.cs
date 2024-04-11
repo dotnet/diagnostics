@@ -3,7 +3,7 @@
 
 using System;
 
-namespace dotnet.symbol
+namespace Microsoft.Diagnostics.Tools.Symbol
 {
     /// <summary>
     /// Simple trace/logging support.
@@ -43,10 +43,10 @@ namespace dotnet.symbol
         {
             if (Enabled)
             {
-                Console.WriteLine("WARNING: " + message); 
+                Console.WriteLine("WARNING: " + message);
             }
         }
-            
+
         public void Warning(string format, params object[] arguments)
         {
             if (Enabled)

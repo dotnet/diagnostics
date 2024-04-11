@@ -1,14 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using dotnet.symbol.Properties;
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
-using Microsoft.FileFormats.MachO;
-using Microsoft.FileFormats.PE;
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
-using Microsoft.SymbolStore.SymbolStores;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,21 +8,29 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostic.Tools.Symbol.Properties;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.PE;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
+using Microsoft.SymbolStore.SymbolStores;
 
-namespace dotnet.symbol
+namespace Microsoft.Diagnostics.Tools.Symbol
 {
     public class Program
     {
-        struct ServerInfo
+        private struct ServerInfo
         {
             public Uri Uri;
             public string PersonalAccessToken;
             public bool InternalSymwebServer;
         }
 
-        private readonly List<string> InputFilePaths = new List<string>();
-        private readonly List<string> CacheDirectories = new List<string>();
-        private readonly List<ServerInfo> SymbolServers = new List<ServerInfo>();
+        private readonly List<string> InputFilePaths = new();
+        private readonly List<string> CacheDirectories = new();
+        private readonly List<ServerInfo> SymbolServers = new();
         private string OutputDirectory;
         private TimeSpan? Timeout;
         private bool Overwrite;
@@ -49,8 +49,8 @@ namespace dotnet.symbol
             {
                 goto usage;
             }
-            var program = new Program();
-            var tracer = new Tracer();
+            Program program = new();
+            Tracer tracer = new();
             program.Tracer = tracer;
 
             for (int i = 0; i < args.Length; i++)
@@ -71,10 +71,13 @@ namespace dotnet.symbol
 
                     case "--authenticated-server-path":
                         if (++i < args.Length)
+                        {
                             personalAccessToken = args[i];
+                        }
                         else
+                        {
                             goto usage;
-
+                        }
                         if (string.IsNullOrEmpty(personalAccessToken))
                         {
                             tracer.Error("No personal access token option");
@@ -96,15 +99,21 @@ namespace dotnet.symbol
                             program.SymbolServers.Add(new ServerInfo { Uri = uri, PersonalAccessToken = personalAccessToken });
                         }
                         else
+                        {
                             goto usage;
+                        }
                         break;
 
                     case "-o":
                     case "--output":
                         if (++i < args.Length)
+                        {
                             program.OutputDirectory = args[i];
+                        }
                         else
+                        {
                             goto usage;
+                        }
                         break;
 
                     case "--overwrite":
@@ -118,14 +127,20 @@ namespace dotnet.symbol
                             program.Timeout = TimeSpan.FromMinutes(timeoutInMinutes);
                         }
                         else
+                        {
                             goto usage;
+                        }
                         break;
 
                     case "--cache-directory":
                         if (++i < args.Length)
+                        {
                             program.CacheDirectories.Add(args[i]);
+                        }
                         else
+                        {
                             goto usage;
+                        }
                         break;
 
                     case "--recurse-subdirectories":
@@ -222,18 +237,18 @@ namespace dotnet.symbol
 
         internal async Task DownloadFiles()
         {
-            using (SymbolStore symbolStore = BuildSymbolStore())
+            using (Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore = BuildSymbolStore())
             {
                 foreach (SymbolStoreKeyWrapper wrapper in GetKeys().Distinct())
                 {
                     SymbolStoreKey key = wrapper.Key;
                     if (symbolStore != null)
                     {
-                        using (SymbolStoreFile symbolFile = await symbolStore.GetFile(key, CancellationToken.None))
+                        using (SymbolStoreFile symbolFile = await symbolStore.GetFile(key, CancellationToken.None).ConfigureAwait(false))
                         {
                             if (symbolFile != null)
                             {
-                                await WriteFile(symbolFile, wrapper);
+                                await WriteFile(symbolFile, wrapper).ConfigureAwait(false);
                             }
                         }
                     }
@@ -241,9 +256,9 @@ namespace dotnet.symbol
             }
         }
 
-        private SymbolStore BuildSymbolStore()
+        private Microsoft.SymbolStore.SymbolStores.SymbolStore BuildSymbolStore()
         {
-            SymbolStore store = null;
+            Microsoft.SymbolStore.SymbolStores.SymbolStore store = null;
 
             foreach (ServerInfo server in ((IEnumerable<ServerInfo>)SymbolServers).Reverse())
             {
@@ -275,7 +290,7 @@ namespace dotnet.symbol
             return store;
         }
 
-        class SymbolStoreKeyWrapper
+        private sealed class SymbolStoreKeyWrapper
         {
             public readonly SymbolStoreKey Key;
             public readonly string InputFile;
@@ -300,7 +315,7 @@ namespace dotnet.symbol
             /// </summary>
             public override bool Equals(object obj)
             {
-                var wrapper = (SymbolStoreKeyWrapper)obj;
+                SymbolStoreKeyWrapper wrapper = (SymbolStoreKeyWrapper)obj;
                 return Key.Equals(wrapper.Key);
             }
         }
@@ -347,7 +362,7 @@ namespace dotnet.symbol
                     {
                         flags |= KeyTypeFlags.ForceWindowsPdbs;
                     }
-                    foreach (var wrapper in generator.GetKeys(flags).Select((key) => new SymbolStoreKeyWrapper(key, inputFile)))
+                    foreach (SymbolStoreKeyWrapper wrapper in generator.GetKeys(flags).Select((key) => new SymbolStoreKeyWrapper(key, inputFile)))
                     {
                         yield return wrapper;
                     }
@@ -359,7 +374,7 @@ namespace dotnet.symbol
         {
             using (Stream inputStream = File.Open(inputFile, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
-                SymbolStoreFile file = new SymbolStoreFile(inputStream, inputFile);
+                SymbolStoreFile file = new(inputStream, inputFile);
                 string extension = Path.GetExtension(inputFile);
                 yield return new FileKeyGenerator(Tracer, file);
             }
@@ -369,11 +384,11 @@ namespace dotnet.symbol
         {
             if (OutputDirectory != null)
             {
-                await WriteFileToDirectory(file.Stream, wrapper.Key.FullPathName, OutputDirectory);
+                await WriteFileToDirectory(file.Stream, wrapper.Key.FullPathName, OutputDirectory).ConfigureAwait(false);
             }
             else
             {
-                await WriteFileToDirectory(file.Stream, wrapper.Key.FullPathName, Path.GetDirectoryName(wrapper.InputFile));
+                await WriteFileToDirectory(file.Stream, wrapper.Key.FullPathName, Path.GetDirectoryName(wrapper.InputFile)).ConfigureAwait(false);
             }
         }
 
@@ -390,7 +405,7 @@ namespace dotnet.symbol
                 Tracer.WriteLine(Resources.WritingFile, destination);
                 using (Stream destinationStream = File.OpenWrite(destination))
                 {
-                    await stream.CopyToAsync(destinationStream);
+                    await stream.CopyToAsync(destinationStream).ConfigureAwait(false);
                 }
             }
         }
@@ -414,8 +429,8 @@ namespace dotnet.symbol
                 Console.WriteLine($"{inputFile}");
 
                 using Stream inputStream = File.Open(inputFile, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var dataSource = new StreamAddressSpace(inputStream);
-                var core = new ELFCoreFile(dataSource);
+                StreamAddressSpace dataSource = new(inputStream);
+                ELFCoreFile core = new(dataSource);
 
                 if (Tracer.Enabled)
                 {
@@ -486,7 +501,7 @@ namespace dotnet.symbol
                     IAddressSpace addressSpace = new RelativeAddressSpace(core.DataSource, image.LoadAddress, core.DataSource.Length);
                     try
                     {
-                        var machoFile = new MachOFile(addressSpace);
+                        MachOFile machoFile = new(addressSpace);
                         if (machoFile.IsValid())
                         {
                             try
@@ -528,7 +543,7 @@ namespace dotnet.symbol
 
                     try
                     {
-                        var peFile = new PEFile(addressSpace, true);
+                        PEFile peFile = new(addressSpace, true);
                         if (peFile.IsValid())
                         {
                             // The PE module was valid try next module
