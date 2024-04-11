@@ -1,12 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.SymbolStore
 {
@@ -34,7 +34,7 @@ namespace Microsoft.SymbolStore
         /// <summary>
         /// Empty array of keys
         /// </summary>
-        public static SymbolStoreKey[] EmptyArray = new SymbolStoreKey[0];
+        public static SymbolStoreKey[] EmptyArray = Array.Empty<SymbolStoreKey>();
 
         /// <summary>
         /// The checksums of the pdb file (if any)
@@ -84,7 +84,7 @@ namespace Microsoft.SymbolStore
             return string.Equals(Index, right.Index);
         }
 
-        private static HashSet<char> s_invalidChars = new HashSet<char>(Path.GetInvalidFileNameChars());
+        private static HashSet<char> s_invalidChars = new(Path.GetInvalidFileNameChars());
 
         /// <summary>
         /// Validates a symbol index.
@@ -113,7 +113,7 @@ namespace Microsoft.SymbolStore
                     }
                     return false;
                 }
-                // We need to support files with . in the name, but we don't want identifiers that 
+                // We need to support files with . in the name, but we don't want identifiers that
                 // are meaningful to the filesystem
                 if (parts[i] == "." || parts[i] == "..") {
                     return false;

@@ -1,13 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.PE;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.SymbolStore.KeyGenerators
 {
@@ -15,14 +14,14 @@ namespace Microsoft.SymbolStore.KeyGenerators
     {
         private const string CoreClrFileName = "coreclr.dll";
 
-        private static readonly HashSet<string> s_longNameBinaryPrefixes = new HashSet<string>(new string[] { "mscordaccore_", "sos_" });
-        private static readonly HashSet<string> s_daclongNameBinaryPrefixes = new HashSet<string>(new string[] { "mscordaccore_" });
+        private static readonly HashSet<string> s_longNameBinaryPrefixes = new(new string[] { "mscordaccore_", "sos_" });
+        private static readonly HashSet<string> s_daclongNameBinaryPrefixes = new(new string[] { "mscordaccore_" });
 
         private static readonly string[] s_specialFiles = new string[] { "mscordaccore.dll", "mscordbi.dll" };
         private static readonly string[] s_sosSpecialFiles = new string[] { "sos.dll", "SOS.NETCore.dll" };
 
-        private static readonly HashSet<string> s_coreClrSpecialFiles = new HashSet<string>(s_specialFiles.Concat(s_sosSpecialFiles));
-        private static readonly HashSet<string> s_dacdbiSpecialFiles = new HashSet<string>(s_specialFiles);
+        private static readonly HashSet<string> s_coreClrSpecialFiles = new(s_specialFiles.Concat(s_sosSpecialFiles));
+        private static readonly HashSet<string> s_dacdbiSpecialFiles = new(s_specialFiles);
 
         private readonly PEFile _peFile;
         private readonly string _path;
@@ -58,7 +57,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 }
                 if ((flags & KeyTypeFlags.SymbolKey) != 0)
                 {
-                    PEPdbRecord[] pdbs = new PEPdbRecord[0]; 
+                    PEPdbRecord[] pdbs = System.Array.Empty<PEPdbRecord>();
                     try
                     {
                         pdbs = _peFile.Pdbs.ToArray();
@@ -83,11 +82,13 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
                 if ((flags & KeyTypeFlags.PerfMapKeys) != 0)
                 {
-                    foreach(PEPerfMapRecord perfmapRecord in _peFile.PerfMapsV1)
+                    foreach (PEPerfMapRecord perfmapRecord in _peFile.PerfMapsV1)
                     {
                         if (perfmapRecord.Version > FileFormats.PerfMap.PerfMapFile.MaxKnownPerfMapVersion)
-                            Tracer.Warning("Trying to get key for PerfmapFile {0} associated with PE {1} with version {2}, higher than max known version {3}", 
+                        {
+                            Tracer.Warning("Trying to get key for PerfmapFile {0} associated with PE {1} with version {2}, higher than max known version {3}",
                                 perfmapRecord.Path, _path, perfmapRecord.Version, FileFormats.PerfMap.PerfMapFile.MaxKnownPerfMapVersion);
+                        }
                         yield return PerfMapFileKeyGenerator.GetKey(perfmapRecord.Path, perfmapRecord.Signature, perfmapRecord.Version);
                     }
                 }
@@ -121,7 +122,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
         private IEnumerable<string> GetSpecialFiles(KeyTypeFlags flags)
         {
-            var specialFiles = new List<string>((flags & KeyTypeFlags.ClrKeys) != 0 ? s_coreClrSpecialFiles : s_dacdbiSpecialFiles);
+            List<string> specialFiles = new((flags & KeyTypeFlags.ClrKeys) != 0 ? s_coreClrSpecialFiles : s_dacdbiSpecialFiles);
 
             VsFixedFileInfo fileVersion = _peFile.VersionInfo;
             if (fileVersion != null)
@@ -131,7 +132,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 ushort build = fileVersion.ProductVersionBuild;
                 ushort revision = fileVersion.ProductVersionRevision;
 
-                var hostArchitectures = new List<string>();
+                List<string> hostArchitectures = new();
                 string targetArchitecture = null;
 
                 ImageFileMachine machine = (ImageFileMachine)_peFile.FileHeader.Machine;
@@ -205,10 +206,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
         {
             Debug.Assert(path != null);
 
-            // The clr special file flag can not be based on the GetSpecialFiles() list because 
+            // The clr special file flag can not be based on the GetSpecialFiles() list because
             // that is only valid when "path" is the coreclr.dll.
             string fileName = GetFileName(path);
-            bool clrSpecialFile = s_coreClrSpecialFiles.Contains(fileName) || 
+            bool clrSpecialFile = s_coreClrSpecialFiles.Contains(fileName) ||
                 (s_longNameBinaryPrefixes.Any((prefix) => fileName.StartsWith(prefix)) && Path.GetExtension(fileName) == ".dll");
 
             string id = string.Format("{0:X8}{1:x}", timestamp, sizeOfImage);

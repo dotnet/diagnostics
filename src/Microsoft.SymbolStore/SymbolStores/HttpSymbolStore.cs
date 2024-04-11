@@ -77,11 +77,11 @@ namespace Microsoft.SymbolStore.SymbolStores
 
             if (hasPAT)
             {
-                var handler = new HttpClientHandler()
+                HttpClientHandler handler = new()
                 {
                     AllowAutoRedirect = false
                 };
-                var client = new HttpClient(handler)
+                HttpClient client = new(handler)
                 {
                     Timeout = TimeSpan.FromMinutes(4)
                 };
@@ -136,7 +136,7 @@ namespace Microsoft.SymbolStore.SymbolStores
         }
 
         /// <summary>
-        /// Resets the sticky client failure flag. This client instance will now 
+        /// Resets the sticky client failure flag. This client instance will now
         /// attempt to download again instead of automatically failing.
         /// </summary>
         public void ResetClientFailure()
@@ -158,7 +158,7 @@ namespace Microsoft.SymbolStore.SymbolStores
                 client.DefaultRequestHeaders.Add("SymbolChecksum", checksumHeader);
             }
 
-            Stream stream = await GetFileStream(key.FullPathName, uri, token);
+            Stream stream = await GetFileStream(key.FullPathName, uri, token).ConfigureAwait(false);
             if (stream != null)
             {
                 if (needsChecksumMatch)
@@ -176,11 +176,11 @@ namespace Microsoft.SymbolStore.SymbolStores
             index = string.Join("/", index.Split('/').Select(part => Uri.EscapeDataString(part)));
             if (!Uri.TryCreate(Uri, index, out Uri requestUri))
             {
-                throw new ArgumentException(nameof(index));
+                throw new ArgumentException(message: null, paramName: nameof(index));
             }
             if (requestUri.IsFile)
             {
-                throw new ArgumentException(nameof(index));
+                throw new ArgumentException(message: null, paramName: nameof(index));
             }
             return requestUri;
         }
@@ -203,27 +203,27 @@ namespace Microsoft.SymbolStore.SymbolStores
                 {
                     // Can not dispose the response (like via using) on success because then the content stream
                     // is disposed and it is returned by this function.
-                    HttpResponseMessage response = await client.GetAsync(requestUri, token);
+                    HttpResponseMessage response = await client.GetAsync(requestUri, token).ConfigureAwait(false);
                     if (response.StatusCode == HttpStatusCode.OK)
                     {
-                        return await response.Content.ReadAsStreamAsync();
+                        return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                     }
                     if (response.StatusCode == HttpStatusCode.Found)
                     {
                         Uri location = response.Headers.Location;
                         response.Dispose();
 
-                        response = await _client.GetAsync(location, token);
+                        response = await _client.GetAsync(location, token).ConfigureAwait(false);
                         if (response.StatusCode == HttpStatusCode.OK)
                         {
-                            return await response.Content.ReadAsStreamAsync();
+                            return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                         }
                     }
                     HttpStatusCode statusCode = response.StatusCode;
                     string reasonPhrase = response.ReasonPhrase;
                     response.Dispose();
 
-                    // The GET failed 
+                    // The GET failed
 
                     if (statusCode == HttpStatusCode.NotFound)
                     {
@@ -279,7 +279,7 @@ namespace Microsoft.SymbolStore.SymbolStores
                 Tracer.Information($"HttpSymbolStore: retry #{retries}");
 
                 // Delay for a while before doing the retry
-                await Task.Delay(TimeSpan.FromMilliseconds((Math.Pow(2, retries) * 100) + new Random().Next(200)));
+                await Task.Delay(TimeSpan.FromMilliseconds((Math.Pow(2, retries) * 100) + new Random().Next(200)), token).ConfigureAwait(false);
             }
             return null;
         }
@@ -287,14 +287,11 @@ namespace Microsoft.SymbolStore.SymbolStores
         public override void Dispose()
         {
             _client.Dispose();
-            if (_authenticatedClient != null)
-            {
-                _authenticatedClient.Dispose();
-            }
+            _authenticatedClient?.Dispose();
             base.Dispose();
         }
 
-        private HashSet<HttpStatusCode> s_retryableStatusCodes = new HashSet<HttpStatusCode>
+        private HashSet<HttpStatusCode> s_retryableStatusCodes = new()
         {
             HttpStatusCode.RequestTimeout,
             HttpStatusCode.InternalServerError,
@@ -308,7 +305,7 @@ namespace Microsoft.SymbolStore.SymbolStores
         /// </summary>
         protected bool IsRetryableStatus(HttpStatusCode status) => s_retryableStatusCodes.Contains(status);
 
-        private HashSet<SocketError> s_retryableSocketErrors = new HashSet<SocketError>
+        private HashSet<SocketError> s_retryableSocketErrors = new()
         {
             SocketError.ConnectionReset,
             SocketError.ConnectionAborted,
@@ -320,7 +317,7 @@ namespace Microsoft.SymbolStore.SymbolStores
         protected bool IsRetryableSocketError(SocketError se) => s_retryableSocketErrors.Contains(se);
 
         /// <summary>
-        /// Marks this client as a failure where any subsequent calls to 
+        /// Marks this client as a failure where any subsequent calls to
         /// GetFileStream() will return null.
         /// </summary>
         protected void MarkClientFailure()

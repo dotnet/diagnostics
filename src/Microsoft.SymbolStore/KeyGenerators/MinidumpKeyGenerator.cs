@@ -1,11 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.Minidump;
-using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.Minidump;
 
 namespace Microsoft.SymbolStore.KeyGenerators
 {
@@ -35,7 +34,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
             {
                 try
                 {
-                    var dump = new Minidump(_dataSource);
+                    Minidump dump = new(_dataSource);
                     return dump.LoadedImages
                         .Select((MinidumpLoadedImage loadedImage) => new PEFileKeyGenerator(Tracer, loadedImage.Image, loadedImage.ModuleName))
                         .SelectMany((KeyGenerator generator) => generator.GetKeys(flags));

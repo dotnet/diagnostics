@@ -1,15 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
 
 namespace Microsoft.SymbolStore.KeyGenerators
 {
@@ -20,7 +16,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         public MachCoreKeyGenerator(ITracer tracer, SymbolStoreFile file)
             : base(tracer)
         {
-            StreamAddressSpace dataSource = new StreamAddressSpace(file.Stream);
+            StreamAddressSpace dataSource = new(file.Stream);
             _core = new MachCore(dataSource);
         }
 
@@ -57,7 +53,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 // TODO - mikem 7/1/17 - need to figure out a better way to determine the file vs loaded layout
                 bool layout = loadedImage.Path.StartsWith("/");
                 IAddressSpace dataSource = _core.VirtualAddressReader.DataSource;
-                var peFile = new PEFile(new RelativeAddressSpace(dataSource, loadedImage.LoadAddress, dataSource.Length), layout);
+                PEFile peFile = new(new RelativeAddressSpace(dataSource, loadedImage.LoadAddress, dataSource.Length), layout);
                 if (peFile.IsValid())
                 {
                     return new PEFileKeyGenerator(Tracer, peFile, loadedImage.Path);

@@ -1,12 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.PDB;
-using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.PDB;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.SymbolStore.KeyGenerators
 {
@@ -18,7 +18,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         public PDBFileKeyGenerator(ITracer tracer, SymbolStoreFile file)
             : base(tracer)
         {
-            StreamAddressSpace dataSource = new StreamAddressSpace(file.Stream);
+            StreamAddressSpace dataSource = new(file.Stream);
             _pdbFile = new PDBFile(dataSource);
             _path = file.FileName;
         }

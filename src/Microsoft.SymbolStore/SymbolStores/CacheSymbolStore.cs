@@ -40,7 +40,7 @@ namespace Microsoft.SymbolStore.SymbolStores
                     Directory.CreateDirectory(Path.GetDirectoryName(cacheFile));
                     using (Stream destinationStream = File.OpenWrite(cacheFile))
                     {
-                        await file.Stream.CopyToAsync(destinationStream);
+                        await file.Stream.CopyToAsync(destinationStream).ConfigureAwait(false);
                         Tracer.Verbose("Cached: {0}", cacheFile);
                     }
                 }

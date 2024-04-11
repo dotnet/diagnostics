@@ -26,7 +26,9 @@ namespace Microsoft.SymbolStore.KeyGenerators
         {
             if ((flags & KeyTypeFlags.IdentityKey) != 0)
             {
+#pragma warning disable CA5350 // Do Not Use Weak Cryptographic Algorithms
                 byte[] hash = SHA1.Create().ComputeHash(_file.Stream);
+#pragma warning restore CA5350 // Do Not Use Weak Cryptographic Algorithms
                 yield return GetKey(_file.FileName, hash);
             }
         }

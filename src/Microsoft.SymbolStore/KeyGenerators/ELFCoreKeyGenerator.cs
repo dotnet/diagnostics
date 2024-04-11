@@ -1,13 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
 using Microsoft.FileFormats.PE;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Microsoft.SymbolStore.KeyGenerators
 {
@@ -18,7 +17,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         public ELFCoreKeyGenerator(ITracer tracer, SymbolStoreFile file)
             : base(tracer)
         {
-            StreamAddressSpace dataSource = new StreamAddressSpace(file.Stream);
+            StreamAddressSpace dataSource = new(file.Stream);
             _core = new ELFCoreFile(dataSource);
         }
 
@@ -54,14 +53,14 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 }
                 // TODO - mikem 7/1/17 - need to figure out a better way to determine the file vs loaded layout
                 bool layout = loadedImage.Path.StartsWith("/");
-                var reader = new RelativeAddressSpace(_core.DataSource, loadedImage.LoadAddress, _core.DataSource.Length);
-                var peFile = new PEFile(reader, layout);
+                RelativeAddressSpace reader = new(_core.DataSource, loadedImage.LoadAddress, _core.DataSource.Length);
+                PEFile peFile = new(reader, layout);
                 if (peFile.IsValid())
                 {
                     return new PEFileKeyGenerator(Tracer, peFile, loadedImage.Path);
                 }
                 // Check if this is a macho module in a ELF 5.0.x MacOS dump
-                var machOFile = new MachOFile(reader, 0, true);
+                MachOFile machOFile = new(reader, 0, true);
                 if (machOFile.IsValid())
                 {
                     return new MachOFileKeyGenerator(Tracer, machOFile, loadedImage.Path);

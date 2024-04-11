@@ -1,13 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.KeyGenerators;
-using Microsoft.SymbolStore.SymbolStores;
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
+using Microsoft.SymbolStore.SymbolStores;
 
 namespace SOS
 {
@@ -44,8 +44,8 @@ namespace SOS
                     try
                     {
                         Stream fileStream = File.OpenRead(filePath);
-                        var file = new SymbolStoreFile(fileStream, filePath);
-                        var generator = new FileKeyGenerator(Tracer, file);
+                        SymbolStoreFile file = new(fileStream, filePath);
+                        FileKeyGenerator generator = new(Tracer, file);
 
                         foreach (SymbolStoreKey targetKey in generator.GetKeys(KeyTypeFlags.IdentityKey))
                         {

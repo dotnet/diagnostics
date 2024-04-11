@@ -1,11 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.MachO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.MachO;
 
 namespace Microsoft.SymbolStore.KeyGenerators
 {
@@ -24,8 +24,8 @@ namespace Microsoft.SymbolStore.KeyGenerators
         private static readonly string[] s_specialFiles = new string[] { "libmscordaccore.dylib", "libmscordbi.dylib" };
         private static readonly string[] s_sosSpecialFiles = new string[] { "libsos.dylib", "SOS.NETCore.dll" };
 
-        private static readonly HashSet<string> s_coreClrSpecialFiles = new HashSet<string>(s_specialFiles.Concat(s_sosSpecialFiles));
-        private static readonly HashSet<string> s_dacdbiSpecialFiles = new HashSet<string>(s_specialFiles);
+        private static readonly HashSet<string> s_coreClrSpecialFiles = new(s_specialFiles.Concat(s_sosSpecialFiles));
+        private static readonly HashSet<string> s_dacdbiSpecialFiles = new(s_specialFiles);
 
         private readonly MachOFile _machoFile;
         private readonly string _path;
@@ -44,8 +44,8 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
         public override bool IsValid()
         {
-            return _machoFile.IsValid() && 
-                (_machoFile.Header.FileType == MachHeaderFileType.Execute || 
+            return _machoFile.IsValid() &&
+                (_machoFile.Header.FileType == MachHeaderFileType.Execute ||
                  _machoFile.Header.FileType == MachHeaderFileType.Dylib ||
                  _machoFile.Header.FileType == MachHeaderFileType.Dsym ||
                  _machoFile.Header.FileType == MachHeaderFileType.Bundle);

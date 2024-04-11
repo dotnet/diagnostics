@@ -1,14 +1,17 @@
-﻿using Microsoft.FileFormats.PE;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.SymbolStore
 {
-    class ChecksumValidator
+    internal sealed class ChecksumValidator
     {
         private const string pdbStreamName = "#Pdb";
         private const uint pdbIdSize = 20;
@@ -44,15 +47,15 @@ namespace Microsoft.SymbolStore
             }
 
             bool algorithmNameKnown = false;
-            foreach (var checksum in pdbChecksums)
+            foreach (PdbChecksum checksum in pdbChecksums)
             {
                 tracer.Information($"Testing checksum: {checksum}");
 
-                var algorithm = HashAlgorithm.Create(checksum.AlgorithmName);
+                HashAlgorithm algorithm = HashAlgorithm.Create(checksum.AlgorithmName);
                 if (algorithm != null)
                 {
                     algorithmNameKnown = true;
-                    var hash = algorithm.ComputeHash(bytes);
+                    byte[] hash = algorithm.ComputeHash(bytes);
                     if (hash.SequenceEqual(checksum.Checksum))
                     {
                         // If any of the checksums are OK, we're good
@@ -67,9 +70,9 @@ namespace Microsoft.SymbolStore
                 }
             }
 
-            if(!algorithmNameKnown)
+            if (!algorithmNameKnown)
             {
-                var algorithmNames = string.Join(" ", pdbChecksums.Select(c => c.AlgorithmName));
+                string algorithmNames = string.Join(" ", pdbChecksums.Select(c => c.AlgorithmName));
                 throw new InvalidChecksumException($"Unknown hash algorithm: {algorithmNames}");
             }
 
@@ -79,7 +82,7 @@ namespace Microsoft.SymbolStore
         private static uint GetPdbStreamOffset(Stream pdbStream)
         {
             pdbStream.Position = 0;
-            using (var reader = new BinaryReader(pdbStream, Encoding.UTF8, leaveOpen: true))
+            using (BinaryReader reader = new(pdbStream, Encoding.UTF8, leaveOpen: true))
             {
                 pdbStream.Seek(4 + // Signature
                                2 + // Version Major
@@ -102,7 +105,6 @@ namespace Microsoft.SymbolStore
 
                 for (int i = 0; i < streamCount; i++)
                 {
-                    var pos = pdbStream.Position;
                     streamOffset = reader.ReadUInt32();
                     // stream size
                     pdbStream.Seek(4, SeekOrigin.Current);
@@ -126,14 +128,16 @@ namespace Microsoft.SymbolStore
         }
     }
 
-    static class BinaryReaderExtensions
+    public static class BinaryReaderExtensions
     {
         public static string ReadNullTerminatedString(this BinaryReader stream)
         {
-            var builder = new StringBuilder();
+            StringBuilder builder = new();
             char ch;
             while ((ch = stream.ReadChar()) != 0)
+            {
                 builder.Append(ch);
+            }
             return builder.ToString();
         }
     }

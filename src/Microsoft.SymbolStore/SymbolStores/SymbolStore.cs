@@ -2,10 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 
 namespace Microsoft.SymbolStore.SymbolStores
 {
@@ -38,21 +37,21 @@ namespace Microsoft.SymbolStore.SymbolStores
         /// <param name="key">symbol index to retrieve</param>
         /// <param name="token">to cancel requests</param>
         /// <exception cref="InvalidChecksumException">
-        /// Thrown for a pdb file when its checksum 
+        /// Thrown for a pdb file when its checksum
         /// does not match the expected value.
         /// </exception>
         /// <returns>file or null if not found</returns>
         public async Task<SymbolStoreFile> GetFile(SymbolStoreKey key, CancellationToken token)
         {
-            SymbolStoreFile file = await GetFileInner(key, token);
+            SymbolStoreFile file = await GetFileInner(key, token).ConfigureAwait(false);
             if (file == null)
             {
                 if (BackingStore != null)
                 {
-                    file = await BackingStore.GetFile(key, token);
+                    file = await BackingStore.GetFile(key, token).ConfigureAwait(false);
                     if (file != null)
                     {
-                        await WriteFileInner(key, file);
+                        await WriteFileInner(key, file).ConfigureAwait(false);
                     }
                 }
             }
@@ -77,10 +76,7 @@ namespace Microsoft.SymbolStore.SymbolStores
 
         public virtual void Dispose()
         {
-            if (BackingStore != null)
-            {
-                BackingStore.Dispose();
-            }
+            BackingStore?.Dispose();
         }
 
         /// <summary>
@@ -88,8 +84,8 @@ namespace Microsoft.SymbolStore.SymbolStores
         /// </summary>
         internal static bool IsPathEqual(string path1, string path2)
         {
-#if !NET45
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
+#if !NET462
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return string.Equals(path1, path2);
             }
@@ -99,8 +95,8 @@ namespace Microsoft.SymbolStore.SymbolStores
 
         internal static int HashPath(string path)
         {
-#if !NET45
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) 
+#if !NET462
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 return path.GetHashCode();
             }

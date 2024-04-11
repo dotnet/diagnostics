@@ -27,13 +27,13 @@ namespace Microsoft.SymbolStore.SymbolStores
 
         protected override async Task<SymbolStoreFile> GetFileInner(SymbolStoreKey key, CancellationToken token)
         {
-            SymbolStoreFile file = await base.GetFileInner(key, token);
+            SymbolStoreFile file = await base.GetFileInner(key, token).ConfigureAwait(false);
             if (file != null)
             {
                 return file;
             }
             Uri filePtrUri = GetRequestUri(key.IndexPrefix + "file.ptr");
-            Stream filePtrStream = await GetFileStream(key.FullPathName, filePtrUri, token);
+            Stream filePtrStream = await GetFileStream(key.FullPathName, filePtrUri, token).ConfigureAwait(false);
             if (filePtrStream != null)
             {
                 using (filePtrStream)
@@ -42,7 +42,7 @@ namespace Microsoft.SymbolStore.SymbolStores
                     {
                         using (TextReader reader = new StreamReader(filePtrStream))
                         {
-                            string filePtr = await reader.ReadToEndAsync();
+                            string filePtr = await reader.ReadToEndAsync().ConfigureAwait(false);
                             Tracer.Verbose("SymwebHttpSymbolStore: file.ptr '{0}'", filePtr);
                             if (filePtr.StartsWith("PATH:"))
                             {

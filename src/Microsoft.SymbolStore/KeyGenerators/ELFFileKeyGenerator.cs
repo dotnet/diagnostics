@@ -1,13 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats;
-using Microsoft.FileFormats.ELF;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
 
 namespace Microsoft.SymbolStore.KeyGenerators
 {
@@ -22,15 +22,15 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// Symbol file extensions. The first one is the default symbol file extension used by .NET Core.
         /// </summary>
         private static readonly string[] s_symbolFileExtensions = { ".dbg", ".debug" };
-        
+
         /// <summary>
         /// List of special clr files that are also indexed with libcoreclr.so's key.
         /// </summary>
         private static readonly string[] s_specialFiles = new string[] { "libmscordaccore.so", "libmscordbi.so", "mscordaccore.dll", "mscordbi.dll" };
         private static readonly string[] s_sosSpecialFiles = new string[] { "libsos.so", "SOS.NETCore.dll" };
 
-        private static readonly HashSet<string> s_coreClrSpecialFiles = new HashSet<string>(s_specialFiles.Concat(s_sosSpecialFiles));
-        private static readonly HashSet<string> s_dacdbiSpecialFiles = new HashSet<string>(s_specialFiles);
+        private static readonly HashSet<string> s_coreClrSpecialFiles = new(s_specialFiles.Concat(s_sosSpecialFiles));
+        private static readonly HashSet<string> s_dacdbiSpecialFiles = new(s_specialFiles);
 
         private readonly ELFFile _elfFile;
         private readonly string _path;
@@ -65,7 +65,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     {
                         symbolFile = Array.Exists(_elfFile.Sections, section => (section.Name.StartsWith(".debug_info") || section.Name.StartsWith(".zdebug_info")));
                     }
-                    catch (Exception ex) when 
+                    catch (Exception ex) when
                        (ex is InvalidVirtualAddressException ||
                         ex is ArgumentOutOfRangeException ||
                         ex is IndexOutOfRangeException ||
@@ -130,7 +130,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 }
                 if (!symbolFile)
                 {
-                    // This is a workaround for 5.0 where the ELF file type of dotnet isn't Executable but 
+                    // This is a workaround for 5.0 where the ELF file type of dotnet isn't Executable but
                     // Shared. It doesn't work for self-contained apps (apphost renamed to host program).
                     if ((flags & KeyTypeFlags.HostKeys) != 0 && fileName == "dotnet")
                     {
@@ -177,12 +177,11 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     return section.Contents.Read<string>(0);
                 }
             }
-            catch (Exception ex) when 
+            catch (Exception ex) when
                (ex is InvalidVirtualAddressException ||
                 ex is ArgumentOutOfRangeException ||
                 ex is IndexOutOfRangeException ||
                 ex is BadInputFormatException)
- 
             {
                 Tracer.Verbose("ELF .gnu_debuglink section in {0}: {1}", _path, ex.Message);
             }

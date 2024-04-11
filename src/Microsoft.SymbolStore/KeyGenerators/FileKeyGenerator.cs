@@ -1,14 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Microsoft.SymbolStore.KeyGenerators
 {
     /// <summary>
-    /// Generates a key for any kind of file (ELF core/MachO core/Minidump, 
+    /// Generates a key for any kind of file (ELF core/MachO core/Minidump,
     /// ELF/MachO/PE binary, PDB, etc).
     /// </summary>
     public class FileKeyGenerator : KeyGenerator

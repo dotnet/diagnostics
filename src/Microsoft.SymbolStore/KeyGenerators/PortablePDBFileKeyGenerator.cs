@@ -1,11 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection.Metadata;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.SymbolStore.KeyGenerators
 {
@@ -48,7 +48,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     using (MetadataReaderProvider provider = MetadataReaderProvider.FromPortablePdbStream(_file.Stream, MetadataStreamOptions.LeaveOpen))
                     {
                         MetadataReader reader = provider.GetMetadataReader();
-                        var blob = new BlobContentId(reader.DebugMetadataHeader.Id);
+                        BlobContentId blob = new(reader.DebugMetadataHeader.Id);
                         if ((flags & KeyTypeFlags.ForceWindowsPdbs) == 0)
                         {
                             key = GetKey(_file.FileName, blob.Guid);

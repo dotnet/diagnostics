@@ -1,12 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats.PE;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Microsoft.FileFormats.PE;
 
 namespace Microsoft.SymbolStore.KeyGenerators
 {
@@ -45,19 +45,19 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
         /// <summary>
         /// Generate keys for the host program. This includes the exe or main
-        /// module key (usually "dotnet") and an "apphost" symbol index using 
+        /// module key (usually "dotnet") and an "apphost" symbol index using
         /// the exe or main module's build id for self-contained apps.
         /// </summary>
         HostKeys = 0x10,
 
         /// <summary>
-        /// Return only the DAC (including any cross-OS DACs) and DBI module 
+        /// Return only the DAC (including any cross-OS DACs) and DBI module
         /// keys. Does not including any SOS binaries.
         /// </summary>
         DacDbiKeys = 0x20,
 
         /// <summary>
-        /// Include the runtime modules (coreclr.dll, clrjit.dll, clrgc.dll, 
+        /// Include the runtime modules (coreclr.dll, clrjit.dll, clrgc.dll,
         /// libcoreclr.so, libclrjit.so, libcoreclr.dylib, etc.)
         /// </summary>
         RuntimeKeys = 0x40,
@@ -163,16 +163,16 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// <returns>key</returns>
         protected static SymbolStoreKey BuildKey(string path, string prefix, string id, string file, bool clrSpecialFile = false, IEnumerable<PdbChecksum> pdbChecksums = null)
         {
-            var key = new StringBuilder();
+            StringBuilder key = new();
             key.Append(file);
-            key.Append("/");
+            key.Append('/');
             if (prefix != null)
             {
                 key.Append(prefix);
-                key.Append("-");
+                key.Append('-');
             }
             key.Append(id);
-            key.Append("/");
+            key.Append('/');
             key.Append(file);
             return new SymbolStoreKey(key.ToString(), path, clrSpecialFile, pdbChecksums);
         }
@@ -189,7 +189,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         }
 
         /// <summary>
-        /// The back slashes are changed to forward slashes because Path.GetFileName doesn't work 
+        /// The back slashes are changed to forward slashes because Path.GetFileName doesn't work
         /// on Linux /MacOS if there are backslashes. Both back and forward slashes work on Windows.
         /// </summary>
         /// <param name="path">possible windows path</param>

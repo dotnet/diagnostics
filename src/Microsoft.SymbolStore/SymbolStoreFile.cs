@@ -9,7 +9,7 @@ namespace Microsoft.SymbolStore
 {
     /// <summary>
     /// Symbol store file.
-    /// 
+    ///
     /// Key generation: input file stream and file name/path.
     /// Symbol store: output file stream and the file name/path it came.
     /// </summary>
@@ -22,7 +22,7 @@ namespace Microsoft.SymbolStore
         public readonly Stream Stream;
 
         /// <summary>
-        /// The name of the input file for key generation or the name of where 
+        /// The name of the input file for key generation or the name of where
         /// the output file came for symbol stores i.e. cached file name, file.ptr
         /// UNC path or http request URL.
         /// </summary>
