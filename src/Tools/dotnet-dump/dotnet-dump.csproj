@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
-    <PackageReference Include="Microsoft.SymbolStore" Version="$(MicrosoftSymbolStoreVersion)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,6 +35,7 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.ExtensionCommands\Microsoft.Diagnostics.ExtensionCommands.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
   </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />

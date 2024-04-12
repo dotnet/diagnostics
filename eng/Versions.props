@@ -15,8 +15,6 @@
     <SkipPackagePublishingVersionChecks>true</SkipPackagePublishingVersionChecks>
   </PropertyGroup>
   <PropertyGroup>
-    <!-- Latest symstore version updated by darc -->
-    <MicrosoftSymbolStoreVersion>1.0.517501</MicrosoftSymbolStoreVersion>
     <!-- Latest shared runtime version updated by darc -->
     <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-preview.4.24215.19</VSRedistCommonNetCoreSharedFrameworkx6490Version>
     <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-preview.4.24215.19</MicrosoftNETCoreAppRuntimewinx64Version>

@@ -16,7 +16,6 @@
   
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
-    <PackageReference Include="Microsoft.SymbolStore" Version="$(MicrosoftSymbolStoreVersion)" />
     <PackageReference Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
     <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
     <PackageReference Include="System.Memory" Version="$(SystemMemoryVersion)" />
@@ -26,5 +25,6 @@
   
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
   </ItemGroup>
 </Project>
