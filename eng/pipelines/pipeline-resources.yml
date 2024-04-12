@@ -1,16 +1,18 @@
 parameters:
 - name: stages
   type: stageList
-- name: isOfficialBuild
-  type: boolean
 
 extends:
   template: templateDispatch.yml
   parameters:
-    ${{ if parameters.isOfficialBuild }}:
-      templatePath: template1es.yml
-    ${{ else }}:
+    ${{ if eq(variables['System.TeamProject'], 'public') }}:
       templatePath: templatePublic.yml
+    ${{ elseif notin(variables['Build.Reason'], 'PullRequest') }}:
+      templatePath: templateInternal.yml
+      pipelineTemplate: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+    ${{ else }}:
+      templatePath: templateInternal.yml
+      pipelineTemplate: v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates
 
     stages: ${{ parameters.stages }}
 

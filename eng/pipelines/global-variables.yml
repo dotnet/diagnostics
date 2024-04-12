@@ -18,9 +18,9 @@ variables:
   - name: BuildPool
     value: $(DncEngInternalBuildPool)
   - name: WindowsImage
-    value: 1es-windows-2022-pt
+    value: 1es-windows-2022
   - name: LinuxImage
-    value: 1es-ubuntu-2204-pt
+    value: 1es-ubuntu-2204
   - name: macOSImage
     value: macOS-latest
   - name: sourceBuildTemplate

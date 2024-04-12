@@ -39,10 +39,6 @@ variables:
 extends:
   template: /eng/pipelines/pipeline-resources.yml
   parameters:
-    ${{ if eq(variables['System.TeamProject'], 'public') }}:
-      isOfficialBuild: false 
-    ${{ else }}:
-      isOfficialBuild: true 
     stages:
     - stage: build
       displayName: Build and Test Diagnostics
