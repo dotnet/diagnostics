@@ -15,6 +15,8 @@ public class DumpGenerationFixture : IDisposable
     private static readonly string _nodePath = _root + @"Microsoft\Windows NT\CurrentVersion\";
     private static readonly string _auxiliaryNode = _nodePath + "MiniDumpAuxiliaryDlls";
     private static readonly string _knownNode = _nodePath + "KnownManagedDebuggingDlls";
+    private static readonly string _settingsNode = _nodePath + "MiniDumpSettings";
+    private static readonly string _disableCheckValue = "DisableAuxProviderSignatureCheck";
 
     private HashSet<string> _paths;
 
@@ -22,6 +24,16 @@ public class DumpGenerationFixture : IDisposable
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
+            // Create the key for the newer Windows (11 or greater) 
+            try
+            {
+                using RegistryKey settingsKey = Registry.LocalMachine.CreateSubKey(_settingsNode, writable: true);
+                settingsKey.SetValue(_disableCheckValue, 1, RegistryValueKind.DWord);
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException)
+            {
+            }
+
             // Create a unique list of all the runtime paths used by the tests
             HashSet<string> paths = new();
             foreach (TestConfiguration config in TestRunConfiguration.Instance.Configurations)
@@ -36,8 +48,9 @@ public class DumpGenerationFixture : IDisposable
                 }
             }
 
-            //try
-            //{
+            // Now try to create the keys for the older Windows versions 
+            try
+            {
                 using RegistryKey auxiliaryKey = Registry.LocalMachine.CreateSubKey(_auxiliaryNode, writable: true);
                 using RegistryKey knownKey = Registry.LocalMachine.CreateSubKey(_knownNode, writable: true);
 
@@ -50,11 +63,11 @@ public class DumpGenerationFixture : IDisposable
                 }
 
                 // Save the paths after writing them successfully to registry
-                _paths = paths;
-            //}
-            //catch (Exception ex) when (ex is UnauthorizedAccessException)
-            //{
-            //}
+               _paths = paths;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException)
+            {
+            }
         }
     }
 
