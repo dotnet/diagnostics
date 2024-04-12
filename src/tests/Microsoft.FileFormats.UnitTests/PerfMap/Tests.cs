@@ -31,7 +31,7 @@ FFFFFFFB 00 1
         {
             using (var s = new MemoryStream(Encoding.UTF8.GetBytes(s_validV1PerfMap)))
             {
-                var perfMap = new PerfMapFile(s);
+                PerfMapFile perfMap  = new(s);
                 Assert.True(perfMap.IsValid);
                 Assert.True(perfMap.Header is not null);
                 Assert.True(TestHelpers.TestUtilities.ToHexString(perfMap.Header.Signature) == "734d59d6de0e96aa3c77b3e2ed498097");
@@ -44,7 +44,7 @@ FFFFFFFB 00 1
         {
             using (var s = new MemoryStream(Encoding.UTF8.GetBytes(s_validV1PerfMap)))
             {
-                var perfMap = new PerfMapFile(s);
+                PerfMapFile perfMap = new(s);
                 Assert.True(perfMap.IsValid);
                 Assert.True(perfMap.Header is not null);
                 Assert.True(TestHelpers.TestUtilities.ToHexString(perfMap.Header.Signature) == "734d59d6de0e96aa3c77b3e2ed498097");
@@ -60,7 +60,7 @@ FFFFFFFB 00 1
         {
             using (var s = new MemoryStream(Encoding.UTF8.GetBytes(s_validV1PerfMap)))
             {
-                var perfMap = new PerfMapFile(s);
+                PerfMapFile perfMap = new(s);
                 PerfMapFile.PerfMapRecord record = perfMap.PerfRecords.Single();
                 Assert.True(record.Rva == 0x115D0);
                 Assert.True(record.Length == 0x0D);
@@ -82,7 +82,7 @@ FFFFFFFB 00 1
             // Reading the vNext header is valid as long as the signature and fields remain compatible.
             using (var s = new MemoryStream(Encoding.UTF8.GetBytes(s_VNextPerfMapValid)))
             {
-                var perfMap = new PerfMapFile(s);
+                PerfMapFile perfMap = new(s);
                 Assert.True(perfMap.IsValid);
                 Assert.True(perfMap.Header is not null);
                 Assert.True(TestHelpers.TestUtilities.ToHexString(perfMap.Header.Signature) == "734d59d6de0e96aa3c77b3e2ed498097");
@@ -99,7 +99,7 @@ FFFFFFFB 00 1
             // Reading the vNext records is invalid as .
             using (var s = new MemoryStream(Encoding.UTF8.GetBytes(s_VNextPerfMapValid)))
             {
-                var perfMap = new PerfMapFile(s);
+                PerfMapFile perfMap = new(s);
                 Assert.True(perfMap.IsValid);
                 Assert.True(perfMap.Header is not null);
                 Assert.True(perfMap.Header.Version == 99);

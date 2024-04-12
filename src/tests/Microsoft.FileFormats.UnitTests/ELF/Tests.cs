@@ -15,8 +15,8 @@ namespace Microsoft.FileFormats.ELF.Tests
         {
             using (Stream libcoreclr = TestUtilities.OpenCompressedFile("TestBinaries/libcoreclr.so.gz"))
             {
-                StreamAddressSpace dataSource = new StreamAddressSpace(libcoreclr);
-                ELFFile elf = new ELFFile(dataSource);
+                StreamAddressSpace dataSource = new(libcoreclr);
+                ELFFile elf = new(dataSource);
                 Assert.True(elf.IsValid());
                 Assert.True(elf.Header.Type == ELFHeaderType.Shared);
                 string buildId = TestUtilities.ToHexString(elf.BuildID);
@@ -29,8 +29,8 @@ namespace Microsoft.FileFormats.ELF.Tests
             // 32 bit arm ELF binary
             using (Stream apphost = TestUtilities.OpenCompressedFile("TestBinaries/apphost.gz"))
             {
-                StreamAddressSpace dataSource = new StreamAddressSpace(apphost);
-                ELFFile elf = new ELFFile(dataSource);
+                StreamAddressSpace dataSource = new(apphost);
+                ELFFile elf = new(dataSource);
                 Assert.True(elf.IsValid());
                 Assert.True(elf.Header.Type == ELFHeaderType.Executable);
                 string buildId = TestUtilities.ToHexString(elf.BuildID);
@@ -46,8 +46,8 @@ namespace Microsoft.FileFormats.ELF.Tests
         {
             using (Stream stream = TestUtilities.OpenCompressedFile("TestBinaries/libcoreclrtraceptprovider.so.dbg.gz"))
             {
-                StreamAddressSpace dataSource = new StreamAddressSpace(stream);
-                ELFFile elf = new ELFFile(dataSource);
+                StreamAddressSpace dataSource = new(stream);
+                ELFFile elf = new(dataSource);
                 Assert.True(elf.IsValid());
                 Assert.True(elf.Header.Type == ELFHeaderType.Shared);
                 string buildId = TestUtilities.ToHexString(elf.BuildID);
@@ -60,8 +60,8 @@ namespace Microsoft.FileFormats.ELF.Tests
         {
             using (Stream stream = File.OpenRead("TestBinaries/ilasm.dbg"))
             {
-                StreamAddressSpace dataSource = new StreamAddressSpace(stream);
-                ELFFile elf = new ELFFile(dataSource);
+                StreamAddressSpace dataSource = new(stream);
+                ELFFile elf = new(dataSource);
                 Assert.True(elf.IsValid());
                 Assert.True(elf.Header.Type == ELFHeaderType.Executable);
                 string buildId = TestUtilities.ToHexString(elf.BuildID);
@@ -74,8 +74,8 @@ namespace Microsoft.FileFormats.ELF.Tests
         {
             using (Stream stream = File.OpenRead("TestBinaries/renamed_build_id_section"))
             {
-                StreamAddressSpace dataSource = new StreamAddressSpace(stream);
-                ELFFile elf = new ELFFile(dataSource);
+                StreamAddressSpace dataSource = new(stream);
+                ELFFile elf = new(dataSource);
                 Assert.True(elf.IsValid());
                 Assert.True(elf.Header.Type == ELFHeaderType.Shared);
                 string buildId = TestUtilities.ToHexString(elf.BuildID);
@@ -88,8 +88,8 @@ namespace Microsoft.FileFormats.ELF.Tests
         {
             using (Stream core = TestUtilities.OpenCompressedFile("TestBinaries/core.gz"))
             {
-                StreamAddressSpace dataSource = new StreamAddressSpace(core);
-                ELFCoreFile coreReader = new ELFCoreFile(dataSource);
+                StreamAddressSpace dataSource = new(core);
+                ELFCoreFile coreReader = new(dataSource);
                 Assert.True(coreReader.IsValid());
                 ELFLoadedImage loadedImage = coreReader.LoadedImages.Where(i => i.Path.EndsWith("librt-2.17.so")).First();
                 Assert.True(loadedImage.Image.IsValid());
@@ -104,8 +104,8 @@ namespace Microsoft.FileFormats.ELF.Tests
         {
             using (Stream core = TestUtilities.OpenCompressedFile("TestBinaries/triagedump.gz"))
             {
-                StreamAddressSpace dataSource = new StreamAddressSpace(core);
-                ELFCoreFile coreReader = new ELFCoreFile(dataSource);
+                StreamAddressSpace dataSource = new(core);
+                ELFCoreFile coreReader = new(dataSource);
                 Assert.True(coreReader.IsValid());
                 ELFLoadedImage loadedImage = coreReader.LoadedImages.Where(i => i.Path.EndsWith("libcoreclr.so")).First();
                 Assert.True(loadedImage.Image.IsValid());

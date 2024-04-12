@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.FileFormats;
 using Xunit;
 
 namespace Microsoft.FileFormats.Tests
@@ -11,7 +10,7 @@ namespace Microsoft.FileFormats.Tests
         [Fact]
         public void ReadPrimitives()
         {
-            MemoryBufferAddressSpace dataSource = new MemoryBufferAddressSpace(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
+            MemoryBufferAddressSpace dataSource = new(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
             Reader reader = new Reader(dataSource);
             Assert.Equal(0x0201, reader.Read<ushort>(0));
             Assert.Equal(0x5, reader.Read<byte>(4));
@@ -28,8 +27,8 @@ namespace Microsoft.FileFormats.Tests
         [Fact]
         public void ReadTStruct()
         {
-            MemoryBufferAddressSpace dataSource = new MemoryBufferAddressSpace(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
-            Reader reader = new Reader(dataSource);
+            MemoryBufferAddressSpace dataSource = new(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
+            Reader reader = new(dataSource);
             SimpleStruct s = reader.Read<SimpleStruct>(1);
             Assert.Equal(0x05040302, s.X);
             Assert.Equal(0x0706, s.Y);
@@ -43,8 +42,8 @@ namespace Microsoft.FileFormats.Tests
         [Fact]
         public void ReadDerivedTStruct()
         {
-            MemoryBufferAddressSpace dataSource = new MemoryBufferAddressSpace(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 });
-            Reader reader = new Reader(dataSource);
+            MemoryBufferAddressSpace dataSource = new(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 });
+            Reader reader = new(dataSource);
             DerivedStruct s = reader.Read<DerivedStruct>(1);
             Assert.Equal(0x05040302, s.X);
             Assert.Equal(0x0706, s.Y);
@@ -61,8 +60,8 @@ namespace Microsoft.FileFormats.Tests
         [Fact]
         public void ReadArrayTStructTest()
         {
-            MemoryBufferAddressSpace dataSource = new MemoryBufferAddressSpace(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 });
-            Reader reader = new Reader(dataSource);
+            MemoryBufferAddressSpace dataSource = new(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 });
+            Reader reader = new(dataSource);
             ArrayStruct s = reader.Read<ArrayStruct>(1);
             Assert.Equal(3, s.array.Length);
             Assert.Equal(0x0302, s.array[0]);
@@ -85,8 +84,8 @@ namespace Microsoft.FileFormats.Tests
         [Fact]
         public void EnumTStructTest()
         {
-            MemoryBufferAddressSpace dataSource = new MemoryBufferAddressSpace(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 });
-            Reader reader = new Reader(dataSource);
+            MemoryBufferAddressSpace dataSource = new(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 });
+            Reader reader = new(dataSource);
             EnumStruct s = reader.Read<EnumStruct>(1);
             Assert.Equal(FooEnum.ThreeTwo, s.E);
             Assert.Equal(0x09080706, s.X);
@@ -105,9 +104,9 @@ namespace Microsoft.FileFormats.Tests
         [Fact]
         public void PointerTStructTest()
         {
-            MemoryBufferAddressSpace dataSource = new MemoryBufferAddressSpace(new byte[] { 4, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0 });
+            MemoryBufferAddressSpace dataSource = new(new byte[] { 4, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0 });
             LayoutManager mgr = new LayoutManager().AddPrimitives().AddSizeT(4).AddPointerTypes().AddTStructTypes();
-            Reader reader = new Reader(dataSource, mgr);
+            Reader reader = new(dataSource, mgr);
             PointerStruct s = reader.Read<PointerStruct>(0);
             Assert.Equal((ulong)0x4, s.P.Value);
             Assert.False(s.P.IsNull);
@@ -130,14 +129,14 @@ namespace Microsoft.FileFormats.Tests
         [Fact]
         public void DefineTest()
         {
-            MemoryBufferAddressSpace dataSource = new MemoryBufferAddressSpace(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 });
+            MemoryBufferAddressSpace dataSource = new(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 });
             LayoutManager a = new LayoutManager().AddPrimitives().AddTStructTypes(new string[] { "A" });
-            Reader readerA = new Reader(dataSource, a);
+            Reader readerA = new(dataSource, a);
             OptionalField fA = readerA.Read<OptionalField>(0);
             Assert.Equal(0x08070605, fA.Y);
             Assert.Equal(0x0c0b0a09, fA.Z);
 
-            Reader readerB = new Reader(dataSource);
+            Reader readerB = new(dataSource);
             OptionalField fB = readerB.Read<OptionalField>(0);
             Assert.Equal(0x0, fB.Y);
             Assert.Equal(0x08070605, fB.Z);

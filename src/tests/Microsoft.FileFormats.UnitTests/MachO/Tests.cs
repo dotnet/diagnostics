@@ -17,8 +17,8 @@ namespace Microsoft.FileFormats.MachO.Tests
             // https://dotnet.myget.org/feed/dotnet-core/package/nuget/runtime.osx.10.12-x64.Microsoft.NETCore.Runtime.CoreCLR/1.1.2
             using (Stream dylib = TestUtilities.OpenCompressedFile("TestBinaries/libcoreclr.dylib.gz"))
             {
-                StreamAddressSpace dataSource = new StreamAddressSpace(dylib);
-                MachOFile machO = new MachOFile(dataSource);
+                StreamAddressSpace dataSource = new(dylib);
+                MachOFile machO = new(dataSource);
                 Assert.True(machO.IsValid());
                 Assert.Equal(Guid.Parse("da2b37b5-cdbc-f838-899b-6a782ceca847"), new Guid(machO.Uuid));
             }
@@ -30,8 +30,8 @@ namespace Microsoft.FileFormats.MachO.Tests
             // From a local build
             using (Stream dwarf = TestUtilities.OpenCompressedFile("TestBinaries/libclrjit.dylib.dwarf.gz"))
             {
-                StreamAddressSpace dataSource = new StreamAddressSpace(dwarf);
-                MachOFile machO = new MachOFile(dataSource);
+                StreamAddressSpace dataSource = new(dwarf);
+                MachOFile machO = new(dataSource);
                 Assert.True(machO.IsValid());
                 Assert.Equal(Guid.Parse("0c235eb3-e98e-ef32-b6e6-e6ed18a604a8"), new Guid(machO.Uuid));
             }
@@ -42,10 +42,10 @@ namespace Microsoft.FileFormats.MachO.Tests
         {
             using (Stream core = TestUtilities.DecompressFile("TestBinaries/core.gz", "TestBinaries/core"))
             {
-                StreamAddressSpace dataSource = new StreamAddressSpace(core);
+                StreamAddressSpace dataSource = new(core);
                 // hard-coding the dylinker position so we don't pay to search for it each time
                 // the code is capable of finding it by brute force search even if we don't provide the hint
-                MachCore coreReader = new MachCore(dataSource, 0x000000010750c000);
+                MachCore coreReader = new(dataSource, 0x000000010750c000);
                 Assert.True(coreReader.IsValid());
                 MachLoadedImage[] images = coreReader.LoadedImages.Where(i => i.Path.EndsWith("libcoreclr.dylib")).ToArray();
                 MachOFile libCoreclr = images[0].Image;

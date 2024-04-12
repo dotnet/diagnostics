@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
@@ -13,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
-    <ProjectReference Include="..\TestHelpers\TestHelpers.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\TestHelpers\TestHelpers.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,67 +28,67 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.dll" Link="TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.dll">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.dll" Link="TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.ni.r2rmap" Link="TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.ni.r2rmap">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.ni.r2rmap" Link="TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.ni.r2rmap">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\triagedump.gz" Link="TestBinaries\triagedump.gz">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\triagedump.gz" Link="TestBinaries\triagedump.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\libcoreclr.so.gz" Link="TestBinaries\libcoreclr.so.gz">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\libcoreclr.so.gz" Link="TestBinaries\libcoreclr.so.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\libcoreclr.dylib.gz" Link="TestBinaries\libcoreclr.dylib.gz">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\libcoreclr.dylib.gz" Link="TestBinaries\libcoreclr.dylib.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\libcoreclrtraceptprovider.so.dbg.gz" Link="TestBinaries\libcoreclrtraceptprovider.so.dbg.gz">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\libcoreclrtraceptprovider.so.dbg.gz" Link="TestBinaries\libcoreclrtraceptprovider.so.dbg.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\libclrjit.dylib.dwarf.gz" Link="TestBinaries\libclrjit.dylib.dwarf.gz">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\libclrjit.dylib.dwarf.gz" Link="TestBinaries\libclrjit.dylib.dwarf.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\minidump_x64.dmp.gz" Link="TestBinaries\minidump_x64.dmp.gz">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\minidump_x64.dmp.gz" Link="TestBinaries\minidump_x64.dmp.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\HelloWorld.pdb" Link="TestBinaries\HelloWorld.pdb">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\HelloWorld.pdb" Link="TestBinaries\HelloWorld.pdb">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\HelloWorld.exe" Link="TestBinaries\HelloWorld.exe">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\HelloWorld.exe" Link="TestBinaries\HelloWorld.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\Microsoft.FileFormats.UnitTests\TestBinaries\System.Diagnostics.StackTrace.dll" Link="TestBinaries\System.Diagnostics.StackTrace.dll">
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\System.Diagnostics.StackTrace.dll" Link="TestBinaries\System.Diagnostics.StackTrace.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\dir1\System.Threading.Thread.dll">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\dir1\System.Threading.Thread.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\dir1\System.Threading.Thread.pdb">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\dir1\System.Threading.Thread.pdb">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\dir2\System.Threading.Thread.dll">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\dir2\System.Threading.Thread.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\dir2\System.Threading.Thread.pdb">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\dir2\System.Threading.Thread.pdb">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\coreclr.dll.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\coreclr.dll.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\libSystem.Security.Cryptography.Native.Apple.dylib.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\libSystem.Security.Cryptography.Native.Apple.dylib.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\md5_build_id">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\md5_build_id">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\StackTraceSymbols.CoreCLR.cs.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\StackTraceSymbols.CoreCLR.cs.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\stripped_executable">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\stripped_executable">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\symbolized_executable">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\symbolized_executable">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

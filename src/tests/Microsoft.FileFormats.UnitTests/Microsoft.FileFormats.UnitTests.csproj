@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
@@ -8,55 +8,55 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Content Include="TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.dll" Link="TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.dll">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.dll" Link="TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\apphost.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\apphost.gz">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\core.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\core.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\HelloWorld.exe">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\HelloWorld.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\HelloWorld.pdb">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\HelloWorld.pdb">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\libclrjit.dylib.dwarf.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\libclrjit.dylib.dwarf.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\libcoreclr.dylib.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\libcoreclr.dylib.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\libcoreclr.so.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\libcoreclr.so.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\libcoreclrtraceptprovider.so.dbg.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\libcoreclrtraceptprovider.so.dbg.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\minidump_x64.dmp.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\minidump_x64.dmp.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\minidump_x86.dmp.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\minidump_x86.dmp.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\renamed_build_id_section">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\renamed_build_id_section">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\System.Diagnostics.StackTrace.dll">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\System.Diagnostics.StackTrace.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\triagedump.gz">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\triagedump.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="TestBinaries\ilasm.dbg">
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\ilasm.dbg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
-    <ProjectReference Include="..\TestHelpers\TestHelpers.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\TestHelpers\TestHelpers.csproj" />
   </ItemGroup>
 </Project>

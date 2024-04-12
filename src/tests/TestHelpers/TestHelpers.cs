@@ -11,10 +11,10 @@ namespace TestHelpers
     {
         public static Stream OpenCompressedFile(string path)
         {
-            MemoryStream ms = new MemoryStream();
+            MemoryStream ms = new();
             using (FileStream fs = File.OpenRead(path))
             {
-                using (GZipStream gs = new GZipStream(fs, CompressionMode.Decompress))
+                using (GZipStream gs = new(fs, CompressionMode.Decompress))
                 {
                     gs.CopyTo(ms);
                 }
@@ -30,7 +30,7 @@ namespace TestHelpers
             {
                 using (FileStream s = File.OpenRead(source))
                 {
-                    using (GZipStream gs = new GZipStream(s, CompressionMode.Decompress))
+                    using (GZipStream gs = new(s, CompressionMode.Decompress))
                     {
                         gs.CopyTo(destStream);
                     }

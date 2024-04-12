@@ -17,8 +17,8 @@ namespace Microsoft.FileFormats.PDB.Tests
         {
             using (Stream s = File.OpenRead("TestBinaries/HelloWorld.pdb"))
             {
-                StreamAddressSpace fileContent = new StreamAddressSpace(s);
-                PDBFile pdb = new PDBFile(fileContent);
+                StreamAddressSpace fileContent = new(s);
+                PDBFile pdb = new(fileContent);
                 Assert.True(pdb.Header.IsMagicValid.Check());
                 Assert.True(pdb.IsValid());
                 Assert.Equal((uint)1, pdb.Age);

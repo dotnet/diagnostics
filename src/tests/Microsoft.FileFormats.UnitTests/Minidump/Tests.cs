@@ -194,8 +194,8 @@ namespace Microsoft.FileFormats.Minidump
 
         private static Minidump GetMinidumpFromStream(Stream stream)
         {
-            IAddressSpace sas = new StreamAddressSpace(stream);
-            return new Minidump(sas);
+            StreamAddressSpace sas = new(stream);
+            return new(sas);
         }
     }
 }

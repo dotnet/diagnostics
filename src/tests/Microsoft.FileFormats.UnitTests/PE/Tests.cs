@@ -17,8 +17,8 @@ namespace Microsoft.FileFormats.PE.Tests
         {
             using (Stream s = File.OpenRead("TestBinaries/HelloWorld.exe"))
             {
-                StreamAddressSpace fileContent = new StreamAddressSpace(s);
-                PEFile pe = new PEFile(fileContent);
+                StreamAddressSpace fileContent = new(s);
+                PEFile pe = new(fileContent);
                 Assert.True(pe.IsValid());
                 Assert.Equal((uint)0x8000, pe.SizeOfImage);
                 Assert.Equal((uint)0x577F5919, pe.Timestamp);
@@ -30,8 +30,8 @@ namespace Microsoft.FileFormats.PE.Tests
         {
             using (Stream s = File.OpenRead("TestBinaries/HelloWorld.exe"))
             {
-                StreamAddressSpace fileContent = new StreamAddressSpace(s);
-                PEFile pe = new PEFile(fileContent);
+                StreamAddressSpace fileContent = new(s);
+                PEFile pe = new(fileContent);
 
                 // There should only be one pdb record entry
                 foreach (PEPdbRecord pdb in pe.Pdbs)
@@ -48,8 +48,8 @@ namespace Microsoft.FileFormats.PE.Tests
         {
             using (Stream s = File.OpenRead("TestBinaries/System.Diagnostics.StackTrace.dll"))
             {
-                StreamAddressSpace fileContent = new StreamAddressSpace(s);
-                PEFile pe = new PEFile(fileContent);
+                StreamAddressSpace fileContent = new(s);
+                PEFile pe = new(fileContent);
                 Assert.True(pe.IsValid());
                 Assert.Equal((uint)0x35a00, pe.SizeOfImage);
                 Assert.Equal((uint)0x595cd91b, pe.Timestamp);
@@ -61,8 +61,8 @@ namespace Microsoft.FileFormats.PE.Tests
         {
             using (Stream s = File.OpenRead("TestBinaries/System.Diagnostics.StackTrace.dll"))
             {
-                StreamAddressSpace fileContent = new StreamAddressSpace(s);
-                PEFile pe = new PEFile(fileContent);
+                StreamAddressSpace fileContent = new(s);
+                PEFile pe = new(fileContent);
 
                 bool first = true;
                 foreach (PEPdbRecord pdb in pe.Pdbs)

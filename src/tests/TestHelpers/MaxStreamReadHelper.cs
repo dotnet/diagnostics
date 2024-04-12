@@ -7,7 +7,7 @@ namespace TestHelpers
 {
     public class MaxStreamReadHelper : IAddressSpace
     {
-        private IAddressSpace _addressSpace;
+        private readonly IAddressSpace _addressSpace;
 
         public ulong Max { get; private set; }
 
@@ -15,7 +15,6 @@ namespace TestHelpers
         {
             _addressSpace = address;
         }
-        
 
         public ulong Length
         {
@@ -29,8 +28,9 @@ namespace TestHelpers
         {
             ulong max = position + count;
             if (max > Max)
+            {
                 Max = max;
-
+            }
             return _addressSpace.Read(position, buffer, bufferOffset, count);
         }
     }
