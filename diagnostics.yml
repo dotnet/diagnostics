@@ -347,24 +347,6 @@ extends:
           enableNugetValidation: true
           symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
           publishInstallersAndChecksums: true
-          SDLValidationParameters:
-            enable: false
-            continueOnError: true
-            artifactNames:
-            - PackageArtifacts
-            - BlobArtifacts
-            params: ' -SourceToolsList @("policheck","credscan")
-              -ArtifactToolsList @("binskim")
-              -BinskimAdditionalRunConfigParams @("IgnorePdbLoadError < True","Recurse < True")
-              -TsaInstanceURL "$(TsaInstanceURL)"
-              -TsaProjectName "$(TsaProjectName)"
-              -TsaNotificationEmail "$(TsaNotificationEmail)"
-              -TsaCodebaseAdmin "$(TsaCodebaseAdmin)"
-              -TsaBugAreaPath "$(TsaBugAreaPath)"
-              -TsaIterationPath "$(TsaIterationPath)"
-              -TsaRepositoryName "diagnostics"
-              -TsaCodebaseName "diagnostics"
-              -TsaPublish $True'
 
       # This sets up the bits to do a Release.
       - template: /eng/pipelines/prepare-release.yml
