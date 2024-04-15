@@ -281,13 +281,13 @@ jobs:
           continueOnError: true
           condition: always()
 
-      - ${{ if and(eq(parameters.buildOnly, 'false'), eq(parameters.isCodeQLRun, 'false')) }}:
+      - ${{ if and(ne(parameters.buildOnly, 'true'), ne(parameters.isCodeQLRun, 'true')) }}:
         # Publish test results to Azure Pipelines
         - task: PublishTestResults@2
           inputs:
             testResultsFormat: xUnit
             testResultsFiles: '**/*.xml'
-            searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/${{ config.configuration }}'
+            searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
             testRunTitle: 'Tests $(_PhaseName)'
             failTaskOnFailedTests: true
             publishRunAttachments: true
