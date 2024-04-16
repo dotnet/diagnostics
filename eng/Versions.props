@@ -22,7 +22,7 @@
     <MicrosoftAspNetCoreAppRefInternalVersion>9.0.0-preview.4.24216.3</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>9.0.0-preview.4.24216.3</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.3.24161.2</MicrosoftDotnetSdkInternalVersion>
+    <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.4.24215.2</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Runtime versions to test -->
@@ -119,16 +119,16 @@
   </PropertyGroup>
   <ItemGroup Condition="!$(InternalReleaseTesting)">
     <RuntimeTestVersions Include="Latest">
-      <!--
+<!--
       <RuntimeDownload>$(VSRedistCommonNetCoreSharedFrameworkx6490Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreAppRuntimewinx64Version)</Runtime>
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
-      -->
-      <RuntimeDownload>9.0.0-preview.3.24160.3</RuntimeDownload>
-      <Runtime>9.0.0-preview.3.24160.3</Runtime>
-      <AspNetDownload>9.0.0-preview.3.24158.2</AspNetDownload>
-      <AspNet>9.0.0-preview.3.24158.2</AspNet>
+-->
+      <RuntimeDownload>9.0.0-preview.4.24211.4</RuntimeDownload>
+      <Runtime>9.0.0-preview.4.24211.4</Runtime>
+      <AspNetDownload>9.0.0-preview.4.24213.1</AspNetDownload>
+      <AspNet>9.0.0-preview.4.24213.1</AspNet>
       <TargetFramework>net9.0</TargetFramework>
     </RuntimeTestVersions>
     <RuntimeTestVersions Include="Servicing1">
