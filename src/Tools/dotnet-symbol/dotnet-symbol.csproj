@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ToolCommandName>dotnet-symbol</ToolCommandName>
+    <RootNamespace>Microsoft.Diagnostic.Tools.Symbol</RootNamespace>
+    <Description>Symbols download utility</Description>
+    <PackageTags>Symbols</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <NoWarn>;1591;1701</NoWarn>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj">
+      <PrivateAssets>All</PrivateAssets>
+    </ProjectReference>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>

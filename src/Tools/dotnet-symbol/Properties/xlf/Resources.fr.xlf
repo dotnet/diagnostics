@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 xliff-core-1.2-transitional.xsd">
+  <file datatype="xml" source-language="en" target-language="fr" original="../Resources.resx">
+    <body>
+      <trans-unit id="DownloadFromUri">
+        <source>"Downloading from {0}"</source>
+        <target state="new">"Downloading from {0}"</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="FileAlreadyExists">
+        <source>"{0} already exists, file not written"</source>
+        <target state="new">"{0} already exists, file not written"</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="InvalidCommandLineOption">
+        <source>"Invalid option {0}"</source>
+        <target state="new">"Invalid option {0}"</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="InvalidServerPath">
+        <source>"Invalid server path '{0}'"</source>
+        <target state="new">"Invalid server path '{0}'"</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="NoInputFiles">
+        <source>"Input files not found"</source>
+        <target state="new">"Input files not found"</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="WritingFile">
+        <source>"Writing: {0}"</source>
+        <target state="new">"Writing: {0}"</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="WritingFilesToOutput">
+        <source>"Writing files to {0}"</source>
+        <target state="new">"Writing files to {0}"</target>
+        <note />
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

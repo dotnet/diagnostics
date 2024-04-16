@@ -16,10 +16,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
-    <PackageReference Include="Microsoft.SymbolStore" Version="$(MicrosoftSymbolStoreVersion)" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
   </ItemGroup>
 </Project>
