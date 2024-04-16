@@ -99,13 +99,13 @@ namespace sos
 
     TADDR Object::GetMT() const
     {
-        if (mMT == NULL)
+        if (mMT == (TADDR)0)
         {
             TADDR temp;
             if (FAILED(MOVE(temp, mAddress)))
                 sos::Throw<DataRead>("Object %s has an invalid method table.", DMLListNearObj(mAddress));
 
-            if (temp == NULL)
+            if (temp == (TADDR)0)
                 sos::Throw<HeapCorruption>("Object %s has an invalid method table.", DMLListNearObj(mAddress));
 
             mMT = temp & ~METHODTABLE_PTR_LOW_BITMASK;
@@ -116,14 +116,14 @@ namespace sos
 
     TADDR Object::GetComponentMT() const
     {
-        if (mMT != NULL && mMT != sos::MethodTable::GetArrayMT())
-            return NULL;
+        if (mMT != (TADDR)0 && mMT != sos::MethodTable::GetArrayMT())
+            return (TADDR)0;
 
         DacpObjectData objData;
         if (FAILED(objData.Request(g_sos, TO_CDADDR(mAddress))))
             sos::Throw<DataRead>("Failed to request object data for %s.", DMLListNearObj(mAddress));
 
-        if (mMT == NULL)
+        if (mMT == (TADDR)0)
             mMT = TO_TADDR(objData.MethodTable) & ~METHODTABLE_PTR_LOW_BITMASK;
 
         return TO_TADDR(objData.ElementTypeHandle);
@@ -271,7 +271,7 @@ namespace sos
                     if (FAILED(MOVE(dwTmp, dwTmp)))
                         return false;
 
-                    if (dwTmp != NULL)
+                    if (dwTmp != (TADDR)0)
                     {
                         DacpObjectData objData;
                         if (FAILED(objData.Request(g_sos, TO_CDADDR(dwTmp))))
@@ -338,17 +338,17 @@ namespace sos
         out.ThreadId = header & SBLK_MASK_LOCK_THREADID;
         out.Recursion = (header & SBLK_MASK_LOCK_RECLEVEL) >> SBLK_RECLEVEL_SHIFT;
 
-        CLRDATA_ADDRESS threadPtr = NULL;
+        CLRDATA_ADDRESS threadPtr = (TADDR)0;
         if (g_sos->GetThreadFromThinlockID(out.ThreadId, &threadPtr) != S_OK)
         {
-            out.ThreadPtr = NULL;
+            out.ThreadPtr = (TADDR)0;
         }
         else
         {
             out.ThreadPtr = TO_TADDR(threadPtr);
         }
 
-        return out.ThreadId != 0 && out.ThreadPtr != NULL;
+        return out.ThreadId != 0 && out.ThreadPtr != (TADDR)0;
     }
 
     bool Object::GetStringData(__out_ecount(size) WCHAR *buffer, size_t size) const
@@ -369,8 +369,8 @@ namespace sos
             sos::Throw<DataRead>("Failed to read object data at %p.", mAddress);
 
         // We get the method table for free here, if we don't have it already.
-        SOS_Assert((mMT == NULL) || (mMT == TO_TADDR(stInfo.methodTable)));
-        if (mMT == NULL)
+        SOS_Assert((mMT == (TADDR)0) || (mMT == TO_TADDR(stInfo.methodTable)));
+        if (mMT == (TADDR)0)
             mMT = TO_TADDR(stInfo.methodTable);
 
         return (size_t)stInfo.m_StringLength;

@@ -610,7 +610,7 @@ DECLARE_API(DumpMD)
     INIT_API_PROBE_MANAGED("dumpmd");
     MINIDUMP_NOT_SUPPORTED();
 
-    DWORD_PTR dwStartAddr = NULL;
+    DWORD_PTR dwStartAddr = (TADDR)0;
     BOOL dml = FALSE;
 
     CMDOption option[] =
@@ -725,8 +725,8 @@ DECLARE_API(DumpIL)
 {
     INIT_API_PROBE_MANAGED("dumpil");
     MINIDUMP_NOT_SUPPORTED();
-    DWORD_PTR dwStartAddr = NULL;
-    DWORD_PTR dwDynamicMethodObj = NULL;
+    DWORD_PTR dwStartAddr = (TADDR)0;
+    DWORD_PTR dwDynamicMethodObj = (TADDR)0;
     BOOL dml = FALSE;
     BOOL fILPointerDirectlySpecified = FALSE;
 
@@ -748,7 +748,7 @@ DECLARE_API(DumpIL)
     }
 
     EnableDMLHolder dmlHolder(dml);
-    if (dwStartAddr == NULL)
+    if (dwStartAddr == (TADDR)0)
     {
         ExtOut("Must pass a valid expression\n");
         return Status;
@@ -764,7 +764,7 @@ DECLARE_API(DumpIL)
         dwDynamicMethodObj = dwStartAddr;
     }
 
-    if (dwDynamicMethodObj == NULL)
+    if (dwDynamicMethodObj == (TADDR)0)
     {
         // We have been given a MethodDesc
         DacpMethodDescData MethodDescData;
@@ -777,7 +777,7 @@ DECLARE_API(DumpIL)
         if (MethodDescData.bIsDynamic && MethodDescData.managedDynamicMethodObject)
         {
             dwDynamicMethodObj = TO_TADDR(MethodDescData.managedDynamicMethodObject);
-            if (dwDynamicMethodObj == NULL)
+            if (dwDynamicMethodObj == (TADDR)0)
             {
                 ExtOut("Unable to print IL for DynamicMethodDesc %p\n", SOS_PTR(dwDynamicMethodObj));
                 return Status;
@@ -786,7 +786,7 @@ DECLARE_API(DumpIL)
         else
         {
             GetILAddressResult result = GetILAddress(MethodDescData);
-            if (std::get<0>(result) == NULL)
+            if (std::get<0>(result) == (TADDR)0)
             {
                 ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
                 return E_FAIL;
@@ -798,7 +798,7 @@ DECLARE_API(DumpIL)
         }
     }
 
-    if (dwDynamicMethodObj != NULL)
+    if (dwDynamicMethodObj != (TADDR)0)
     {
         // We have a DynamicMethod managed object, let us visit the town and paint.
         DacpObjectData codeArray;
@@ -1068,7 +1068,7 @@ DECLARE_API(DumpClass)
     ExtOut("mdToken:         %p\n", SOS_PTR(mtdata.cl));
     ExtOut("File:            %S\n", fileName);
 
-    CLRDATA_ADDRESS ParentEEClass = NULL;
+    CLRDATA_ADDRESS ParentEEClass = (TADDR)0;
     if (mtdata.ParentMethodTable)
     {
         DacpMethodTableData mtdataparent;
@@ -1117,7 +1117,7 @@ DECLARE_API(DumpClass)
 
         if (vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
         {
-            DisplayFields(methodTable, &mtdata, &vMethodTableFields, NULL, TRUE, FALSE);
+            DisplayFields(methodTable, &mtdata, &vMethodTableFields, (TADDR)0, TRUE, FALSE);
         }
     }
 
@@ -1200,7 +1200,7 @@ DECLARE_API(DumpMT)
     table.WriteRow("mdToken:", Pointer(vMethTable.cl));
     table.WriteRow("File:", fileName[0] ? fileName : W("Unknown Module"));
 
-    if (vMethTableCollectible.LoaderAllocatorObjectHandle != NULL)
+    if (vMethTableCollectible.LoaderAllocatorObjectHandle != (TADDR)0)
     {
         TADDR loaderAllocator;
         if (SUCCEEDED(MOVE(loaderAllocator, vMethTableCollectible.LoaderAllocatorObjectHandle)))
@@ -1264,7 +1264,7 @@ DECLARE_API(DumpMT)
             table.WriteColumn(0, entry);
             table.WriteColumn(1, MethodDescPtr(methodDesc));
 
-            if (jitType == TYPE_UNKNOWN && methodDesc != NULL)
+            if (jitType == TYPE_UNKNOWN && methodDesc != (TADDR)0)
             {
                 // We can get a more accurate jitType from NativeCodeAddr of the methoddesc,
                 // because the methodtable entry hasn't always been patched.
@@ -1425,11 +1425,11 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         return Status;
     }
 
-    if (objData.RCW != NULL)
+    if (objData.RCW != (TADDR)0)
     {
         DMLOut("RCW:         %s\n", DMLRCWrapper(objData.RCW));
     }
-    if (objData.CCW != NULL)
+    if (objData.CCW != (TADDR)0)
     {
         DMLOut("CCW:         %s\n", DMLCCWrapper(objData.CCW));
     }
@@ -1489,7 +1489,7 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
             ExtOut("Tracked Type: %s\n", isTrackedType ? "true" : "false");
             if (hasTaggedMemory)
             {
-                CLRDATA_ADDRESS taggedMemory = NULL;
+                CLRDATA_ADDRESS taggedMemory = (TADDR)0;
                 size_t taggedMemorySizeInBytes = 0;
                 (void)sos11->GetTaggedMemory(objAddr, &taggedMemory, &taggedMemorySizeInBytes);
                 DMLOut("Tagged Memory: %s (%" POINTERSIZE_TYPE "d(0x%" POINTERSIZE_TYPE "x) bytes)\n",
@@ -1742,7 +1742,7 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
     {
         TADDR tbSetPtr;
         MOVE(tbSetPtr, p_PermSet + iOffset);
-        if (tbSetPtr != NULL)
+        if (tbSetPtr != (TADDR)0)
         {
             DacpObjectData tbSetData;
             if ((Status=tbSetData.Request(g_sos, TO_CDADDR(tbSetPtr))) != S_OK)
@@ -1756,7 +1756,7 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
             {
                 DWORD_PTR PermsArrayPtr;
                 MOVE(PermsArrayPtr, tbSetPtr + iOffset);
-                if (PermsArrayPtr != NULL)
+                if (PermsArrayPtr != (TADDR)0)
                 {
                     // Print all the permissions in the array
                     DacpObjectData objData;
@@ -1776,7 +1776,7 @@ HRESULT PrintPermissionSet (TADDR p_PermSet)
             {
                 DWORD_PTR PermObjPtr;
                 MOVE(PermObjPtr, tbSetPtr + iOffset);
-                if (PermObjPtr != NULL)
+                if (PermObjPtr != (TADDR)0)
                 {
                     // Print the permission object
                     return PrintObj(PermObjPtr);
@@ -1959,7 +1959,7 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
         }
 
         TADDR elementAddress = TO_TADDR(objData.ArrayDataPtr + offset * objData.dwComponentSize);
-        TADDR p_Element = NULL;
+        TADDR p_Element = (TADDR)0;
         if (isElementValueType)
         {
             p_Element = elementAddress;
@@ -1998,7 +1998,7 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
             {
                 PrintVC(TO_TADDR(objData.ElementTypeHandle), elementAddress, !flags.bNoFieldsForElement);
             }
-            else if (p_Element != NULL)
+            else if (p_Element != (TADDR)0)
             {
                 PrintObj(p_Element, !flags.bNoFieldsForElement);
             }
@@ -2198,7 +2198,7 @@ DECLARE_API(DumpDelegate)
                                 int invocationCount;
                                 MOVE(invocationCount, delegateObj.GetAddress() + offset);
 
-                                if (invocationList == NULL)
+                                if (invocationList == (TADDR)0)
                                 {
                                     CLRDATA_ADDRESS md;
                                     DMLOut("%s ", DMLObject(target));
@@ -2224,7 +2224,7 @@ DECLARE_API(DumpDelegate)
                                         {
                                             CLRDATA_ADDRESS elementPtr;
                                             MOVE(elementPtr, TO_CDADDR(objData.ArrayDataPtr + (i * objData.dwComponentSize)));
-                                            if (elementPtr != NULL && sos::IsObject(elementPtr, false))
+                                            if (elementPtr != (TADDR)0 && sos::IsObject(elementPtr, false))
                                             {
                                                 delegatesRemaining.push_back(elementPtr);
                                             }
@@ -2252,7 +2252,7 @@ CLRDATA_ADDRESS isExceptionObj(CLRDATA_ADDRESS mtObj)
     // We want to follow back until we get the mt for System.Exception
     DacpMethodTableData dmtd;
     CLRDATA_ADDRESS walkMT = mtObj;
-    while(walkMT != NULL)
+    while(walkMT != (TADDR)0)
     {
         if (dmtd.Request(g_sos, walkMT) != S_OK)
         {
@@ -2264,7 +2264,7 @@ CLRDATA_ADDRESS isExceptionObj(CLRDATA_ADDRESS mtObj)
         }
         walkMT = dmtd.ParentMethodTable;
     }
-    return NULL;
+    return (TADDR)0;
 }
 
 CLRDATA_ADDRESS isSecurityExceptionObj(CLRDATA_ADDRESS mtObj)
@@ -2272,7 +2272,7 @@ CLRDATA_ADDRESS isSecurityExceptionObj(CLRDATA_ADDRESS mtObj)
     // We want to follow back until we get the mt for System.Exception
     DacpMethodTableData dmtd;
     CLRDATA_ADDRESS walkMT = mtObj;
-    while(walkMT != NULL)
+    while(walkMT != (TADDR)0)
     {
         if (dmtd.Request(g_sos, walkMT) != S_OK)
         {
@@ -2285,7 +2285,7 @@ CLRDATA_ADDRESS isSecurityExceptionObj(CLRDATA_ADDRESS mtObj)
         }
         walkMT = dmtd.ParentMethodTable;
     }
-    return NULL;
+    return (TADDR)0;
 }
 
 // Fill the passed in buffer with a text header for generated exception information.
@@ -2624,7 +2624,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 
     // Make sure it is an exception object, and get the MT of Exception
     CLRDATA_ADDRESS exceptionMT = isExceptionObj(objData.MethodTable);
-    if (exceptionMT == NULL)
+    if (exceptionMT == (TADDR)0)
     {
         ExtOut("Not a valid exception object\n");
         return Status;
@@ -2822,7 +2822,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
         ExtOut("HResult: %lx\n", hResult);
     }
 
-    if (isSecurityExceptionObj(objData.MethodTable) != NULL)
+    if (isSecurityExceptionObj(objData.MethodTable) != (TADDR)0)
     {
         // We have a SecurityException Object: print out the debugString if present
         int iOffset = GetObjFieldOffset (taObj, objData.MethodTable, W("m_debugString"));
@@ -2890,7 +2890,7 @@ DECLARE_API(PrintException)
     }
 
     EnableDMLHolder dmlHolder(dml);
-    DWORD_PTR p_Object = NULL;
+    DWORD_PTR p_Object = (TADDR)0;
     if (nArg == 0)
     {
         if (bCCW)
@@ -2904,16 +2904,16 @@ DECLARE_API(PrintException)
         CLRDATA_ADDRESS threadAddr = GetCurrentManagedThread();
         DacpThreadData Thread;
 
-        if ((threadAddr == NULL) || (Thread.Request(g_sos, threadAddr) != S_OK))
+        if ((threadAddr == (TADDR)0) || (Thread.Request(g_sos, threadAddr) != S_OK))
         {
             ExtOut("The current thread is unmanaged\n");
             return Status;
         }
 
-        DWORD_PTR dwAddr = NULL;
+        DWORD_PTR dwAddr = (TADDR)0;
         if ((!SafeReadMemory(TO_TADDR(Thread.lastThrownObjectHandle),
                             &dwAddr,
-                            sizeof(dwAddr), NULL)) || (dwAddr==NULL))
+                            sizeof(dwAddr), NULL)) || (dwAddr==(TADDR)0))
         {
             ExtOut("There is no current managed exception on this thread\n");
         }
@@ -2959,7 +2959,7 @@ DECLARE_API(PrintException)
     CLRDATA_ADDRESS threadAddr = GetCurrentManagedThread();
     DacpThreadData Thread;
 
-    if ((threadAddr == NULL) || (Thread.Request(g_sos, threadAddr) != S_OK))
+    if ((threadAddr == (TADDR)0) || (Thread.Request(g_sos, threadAddr) != S_OK))
     {
         ExtOut("The current thread is unmanaged\n");
         return E_INVALIDARG;
@@ -3000,7 +3000,7 @@ DECLARE_API(PrintException)
 
             currentNested = next;
         }
-        while(currentNested != NULL);
+        while(currentNested != (TADDR)0);
     }
     return Status;
 }
@@ -3017,8 +3017,8 @@ DECLARE_API(DumpVC)
     INIT_API_PROBE_MANAGED("dumpvc");
     MINIDUMP_NOT_SUPPORTED();
 
-    DWORD_PTR p_MT = NULL;
-    DWORD_PTR p_Object = NULL;
+    DWORD_PTR p_MT = (TADDR)0;
+    DWORD_PTR p_Object = (TADDR)0;
     BOOL dml = FALSE;
 
     CMDOption option[] =
@@ -3610,7 +3610,7 @@ DECLARE_API(SyncBlk)
                 {
                     ExtOut(" orphaned ");
                 }
-                else if (syncBlockData.HoldingThread != NULL)
+                else if (syncBlockData.HoldingThread != (TADDR)0)
                 {
                     DacpThreadData Thread;
                     if ((Status = Thread.Request(g_sos, syncBlockData.HoldingThread)) != S_OK)
@@ -3871,7 +3871,7 @@ DECLARE_API(DumpModule)
     MINIDUMP_NOT_SUPPORTED();
 
 
-    DWORD_PTR p_ModuleAddr = NULL;
+    DWORD_PTR p_ModuleAddr = (TADDR)0;
     BOOL bMethodTables = FALSE;
     BOOL bProfilerModified = FALSE;
     BOOL dml = FALSE;
@@ -4111,7 +4111,7 @@ DECLARE_API(DumpDomain)
     }
     DomainInfo(&appDomain);
 
-    if (adsData.sharedDomain != NULL)
+    if (adsData.sharedDomain != (TADDR)0)
     {
         ExtOut("--------------------------------------\n");
         DMLOut("Shared Domain:      %s\n", DMLDomain(adsData.sharedDomain));
@@ -4634,11 +4634,11 @@ HRESULT SwitchToExceptionThread()
         }
 
         TADDR taLTOH;
-        if (Thread.lastThrownObjectHandle != NULL)
+        if (Thread.lastThrownObjectHandle != (TADDR)0)
         {
             if (SafeReadMemory(TO_TADDR(Thread.lastThrownObjectHandle), &taLTOH, sizeof(taLTOH), NULL))
             {
-                if (taLTOH != NULL)
+                if (taLTOH != (TADDR)0)
                 {
                     ULONG id;
                     if (g_ExtSystem->GetThreadIdBySystemId(Thread.osThreadId, &id) == S_OK)
@@ -5382,7 +5382,7 @@ private:
     HRESULT ResolvePendingNonModuleBoundBreakpoint(TADDR mod, PendingBreakpoint *pCur, SymbolReader* pSymbolReader)
     {
         // This function only works with pending breakpoints that are not module bound.
-        if (pCur->pModule == NULL)
+        if (pCur->pModule == (TADDR)0)
         {
             if (pCur->szModuleName[0] != L'\0')
             {
@@ -5884,7 +5884,7 @@ DECLARE_API(bpmd)
     int lineNumber = 0;
     size_t Offset = 0;
 
-    DWORD_PTR pMD = NULL;
+    DWORD_PTR pMD = (TADDR)0;
     BOOL fNoFutureModule = FALSE;
     BOOL fList = FALSE;
     size_t clearItem = 0;
@@ -5913,7 +5913,7 @@ DECLARE_API(bpmd)
     bool fIsFilename = false;
     int commandsParsed = 0;
 
-    if (pMD != NULL)
+    if (pMD != (TADDR)0)
     {
         if (nArg != 0)
         {
@@ -6009,7 +6009,7 @@ DECLARE_API(bpmd)
 
     BOOL bNeedNotificationExceptions = FALSE;
 
-    if (pMD == NULL)
+    if (pMD == (TADDR)0)
     {
         int numModule = 0;
         int numMethods = 0;
@@ -6139,11 +6139,11 @@ DECLARE_API(bpmd)
             // wait for the module load notification.
             if (!fIsFilename)
             {
-                g_bpoints.Add(ModuleName, FunctionName, NULL, (DWORD)Offset);
+                g_bpoints.Add(ModuleName, FunctionName, (TADDR)0, (DWORD)Offset);
             }
             else
             {
-                g_bpoints.Add(Filename, lineNumber, NULL);
+                g_bpoints.Add(Filename, lineNumber, (TADDR)0);
             }
             if (g_clrData != nullptr)
             {
@@ -6243,7 +6243,7 @@ DECLARE_API(FindAppDomain)
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
-    DWORD_PTR p_Object = NULL;
+    DWORD_PTR p_Object = (TADDR)0;
     BOOL dml = FALSE;
 
     CMDOption option[] =
@@ -6278,7 +6278,7 @@ DECLARE_API(FindAppDomain)
 
     CLRDATA_ADDRESS appDomain = GetAppDomain (TO_CDADDR(p_Object));
 
-    if (appDomain != NULL)
+    if (appDomain != (TADDR)0)
     {
         DMLOut("AppDomain: %s\n", DMLDomain(appDomain));
         if (appDomain == adstore.sharedDomain)
@@ -6511,7 +6511,7 @@ DECLARE_API(EHInfo)
     INIT_API_PROBE_MANAGED("ehinfo");
     MINIDUMP_NOT_SUPPORTED();
 
-    DWORD_PTR dwStartAddr = NULL;
+    DWORD_PTR dwStartAddr = (TADDR)0;
     BOOL dml = FALSE;
 
     CMDOption option[] =
@@ -6592,7 +6592,7 @@ DECLARE_API(GCInfo)
     INIT_API_PROBE_MANAGED("gcinfo");
     MINIDUMP_NOT_SUPPORTED();
 
-    TADDR taStartAddr = NULL;
+    TADDR taStartAddr = (TADDR)0;
     TADDR taGCInfoAddr;
     BOOL dml = FALSE;
 
@@ -6813,8 +6813,8 @@ HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderDat
 
 GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
 {
-    GetILAddressResult error = std::make_tuple(NULL, nullptr);
-    TADDR ilAddr = NULL;
+    GetILAddressResult error = std::make_tuple((TADDR)0, nullptr);
+    TADDR ilAddr = (TADDR)0;
     struct DacpProfilerILData ilData;
     ReleaseHolder<ISOSDacInterface7> sos7;
     if (SUCCEEDED(g_sos->QueryInterface(__uuidof(ISOSDacInterface7), &sos7)) &&
@@ -6847,7 +6847,7 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
         return error;
     }
 
-    if (ilAddr == NULL)
+    if (ilAddr == (TADDR)0)
     {
         ULONG pRva;
         DWORD dwFlags;
@@ -6867,7 +6867,7 @@ GetILAddressResult GetILAddress(const DacpMethodDescData& MethodDescData)
         ilAddr = TO_TADDR(ilAddrClr);
     }
 
-    if (ilAddr == NULL)
+    if (ilAddr == (TADDR)0)
     {
         ExtOut("Unknown error in reading function IL\n");
         return error;
@@ -6888,7 +6888,7 @@ DECLARE_API(u)
     INIT_API();
     MINIDUMP_NOT_SUPPORTED();
 
-    DWORD_PTR dwStartAddr = NULL;
+    DWORD_PTR dwStartAddr = (TADDR)0;
     BOOL fWithGCInfo = FALSE;
     BOOL fWithEHInfo = FALSE;
     BOOL bSuppressLines = FALSE;
@@ -6977,7 +6977,7 @@ DECLARE_API(u)
     }
 
     GetILAddressResult result = GetILAddress(MethodDescData);
-    if (std::get<0>(result) == NULL)
+    if (std::get<0>(result) == (TADDR)0)
     {
         ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
         return E_FAIL;
@@ -7089,7 +7089,7 @@ DECLARE_API(u)
                 }
     };
 
-    if (codeHeaderData.ColdRegionStart != NULL)
+    if (codeHeaderData.ColdRegionStart != (TADDR)0)
     {
         ExtOut("Begin %p, size %x. Cold region begin %p, size %x\n",
             SOS_PTR(codeHeaderData.MethodStart), codeHeaderData.HotRegionSize,
@@ -7122,7 +7122,7 @@ DECLARE_API(u)
         }
     }
 
-    if (codeHeaderData.ColdRegionStart == NULL)
+    if (codeHeaderData.ColdRegionStart == (TADDR)0)
     {
         g_targetMachine->Unassembly (
                 (DWORD_PTR) codeHeaderData.MethodStart,
@@ -7188,7 +7188,7 @@ inline ExtractionCodeHeaderResult extractCodeHeaderData(DWORD_PTR methodDesc, DW
     HRESULT Status =
         g_sos->GetMethodDescData(
             TO_CDADDR(methodDesc),
-            dwStartAddr == methodDesc ? NULL : dwStartAddr,
+            dwStartAddr == methodDesc ? (TADDR)0 : dwStartAddr,
             &MethodDescData,
             0, // cRevertedRejitVersions
             NULL, // rgRevertedRejitData
@@ -7433,7 +7433,7 @@ DECLARE_API(DumpLog)
     LoadRuntimeSymbols();
 
     const char* fileName = "StressLog.txt";
-    CLRDATA_ADDRESS StressLogAddress = NULL;
+    CLRDATA_ADDRESS StressLogAddress = (TADDR)0;
 
     StringHolder sFileName, sLogAddr;
     CMDOption option[] =
@@ -7460,7 +7460,7 @@ DECLARE_API(DumpLog)
         StressLogAddress = GetExpression(sLogAddr.data);
     }
 
-    if (StressLogAddress == NULL)
+    if (StressLogAddress == (TADDR)0)
     {
         if (g_bDacBroken)
         {
@@ -7485,7 +7485,7 @@ DECLARE_API(DumpLog)
         }
     }
 
-    if (StressLogAddress == NULL)
+    if (StressLogAddress == (TADDR)0)
     {
         ExtOut("Please provide the -addr argument for the address of the stress log, since no recognized runtime is loaded.\n");
         return E_FAIL;
@@ -8543,7 +8543,7 @@ DECLARE_API(FindRoots)
 
     LONG_PTR gen = -100; // initialized outside the legal range: [-1, 2]
     StringHolder sgen;
-    TADDR taObj = NULL;
+    TADDR taObj = (TADDR)0;
     BOOL dml = FALSE;
     size_t nArg;
 
@@ -8659,14 +8659,14 @@ public:
             if (adsData.Request(g_sos) != S_OK)
                 return FALSE;
 
-            LONG numSpecialDomains = (adsData.sharedDomain != NULL) ? 2 : 1;
+            LONG numSpecialDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
             m_numDomains = adsData.DomainCount + numSpecialDomains;
             ArrayHolder<CLRDATA_ADDRESS> pArray = new NOTHROW CLRDATA_ADDRESS[m_numDomains];
             if (pArray == NULL)
                 return FALSE;
 
             int i = 0;
-            if (adsData.sharedDomain != NULL)
+            if (adsData.sharedDomain != (TADDR)0)
             {
                 pArray[i++] = adsData.sharedDomain;
             }
@@ -9322,7 +9322,7 @@ DECLARE_API(StopOnException)
     CLRDATA_ADDRESS threadAddr = GetCurrentManagedThread();
     DacpThreadData Thread;
 
-    if ((threadAddr == NULL) || (Thread.Request(g_sos, threadAddr) != S_OK))
+    if ((threadAddr == (TADDR)0) || (Thread.Request(g_sos, threadAddr) != S_OK))
     {
         ExtOut("The current thread is unmanaged\n");
         return Status;
