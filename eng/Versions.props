@@ -16,8 +16,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-preview.4.24215.19</VSRedistCommonNetCoreSharedFrameworkx6490Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-preview.4.24215.19</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-preview.4.24217.1</VSRedistCommonNetCoreSharedFrameworkx6490Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-preview.4.24217.1</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
     <MicrosoftAspNetCoreAppRefInternalVersion>9.0.0-preview.4.24216.3</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>9.0.0-preview.4.24216.3</MicrosoftAspNetCoreAppRefVersion>
@@ -119,7 +119,7 @@
   </PropertyGroup>
   <ItemGroup Condition="!$(InternalReleaseTesting)">
     <RuntimeTestVersions Include="Latest">
-<!--
+      <!--
       <RuntimeDownload>$(VSRedistCommonNetCoreSharedFrameworkx6490Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreAppRuntimewinx64Version)</Runtime>
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
