@@ -34,6 +34,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public virtual bool RequestRundown { get; set; } = true;
 
+        public virtual long? RundownKeyword { get; set; }
+
         public virtual int BufferSizeInMB => 256;
     }
 }

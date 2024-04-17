@@ -30,15 +30,43 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal static EventPipeSession Start(IpcEndpoint endpoint, EventPipeSessionConfiguration config)
         {
-            IpcMessage requestMessage = CreateStartMessage(config);
-            IpcResponse? response = IpcClient.SendMessageGetContinuation(endpoint, requestMessage);
+            bool retry = false;
+            IpcResponse? response = null;
+            do
+            {
+                IpcMessage requestMessage = CreateStartMessage(config);
+                response = IpcClient.SendMessageGetContinuation(endpoint, requestMessage);
+                if (config.RundownKeyword.HasValue && response != null && response.Value.Message.Header.CommandId == (byte)DiagnosticsServerResponseId.Error)
+                {
+                    config.RundownKeyword = null;
+                    retry = true;
+                }
+                else
+                {
+                    retry = false;
+                }
+            } while (retry);
             return CreateSessionFromResponse(endpoint, ref response, nameof(Start));
         }
 
         internal static async Task<EventPipeSession> StartAsync(IpcEndpoint endpoint, EventPipeSessionConfiguration config, CancellationToken cancellationToken)
         {
-            IpcMessage requestMessage = CreateStartMessage(config);
-            IpcResponse? response = await IpcClient.SendMessageGetContinuationAsync(endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
+            bool retry = false;
+            IpcResponse? response = null;
+            do
+            {
+                IpcMessage requestMessage = CreateStartMessage(config);
+                response = await IpcClient.SendMessageGetContinuationAsync(endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
+                if (config.RundownKeyword.HasValue && response != null && response.Value.Message.Header.CommandId == (byte)DiagnosticsServerResponseId.Error)
+                {
+                    config.RundownKeyword = null;
+                    retry = true;
+                }
+                else
+                {
+                    retry = false;
+                }
+            } while (retry);
             return CreateSessionFromResponse(endpoint, ref response, nameof(StartAsync));
         }
 
@@ -84,10 +112,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private static IpcMessage CreateStartMessage(EventPipeSessionConfiguration config)
         {
             // To keep backward compatibility with older runtimes we only use newer serialization format when needed
-            // V3 has added support to disable the stacktraces
-            bool shouldUseV3 = !config.RequestStackwalk;
-            EventPipeCommandId command = shouldUseV3 ? EventPipeCommandId.CollectTracing3 : EventPipeCommandId.CollectTracing2;
-            byte[] payload = shouldUseV3 ? config.SerializeV3() : config.SerializeV2();
+            EventPipeCommandId command;
+            byte[] payload;
+            if (config.RundownKeyword.HasValue)
+            {
+                // V4 has added support to specify rundown keyword
+                command = EventPipeCommandId.CollectTracing4;
+                payload = config.SerializeV4();
+            }
+            else if (!config.RequestStackwalk)
+            {
+                // V3 has added support to disable the stacktraces
+                command = EventPipeCommandId.CollectTracing3;
+                payload = config.SerializeV3();
+            }
+            else
+            {
+                command = EventPipeCommandId.CollectTracing2;
+                payload = config.SerializeV2();
+            }
+
             return new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)command, payload);
         }
 

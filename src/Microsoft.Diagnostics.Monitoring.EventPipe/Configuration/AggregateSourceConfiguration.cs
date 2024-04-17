@@ -28,5 +28,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             get => _configurations.Any(c => c.RequestRundown);
             set => throw new NotSupportedException();
         }
+
+        public override long? RundownKeyword
+        {
+            get => _configurations.Select(c => c.RundownKeyword).Aggregate((x, y) => x | y);
+            set => throw new NotSupportedException();
+        }
     }
 }

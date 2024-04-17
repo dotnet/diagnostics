@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (_useAsync)
             {
                 CancellationTokenSource cancellation = new(timeout);
-                return await _client.StartEventPipeSessionAsync(providers, true, circularBufferMB: 256, cancellation.Token).ConfigureAwait(false);
+                return await _client.StartEventPipeSessionAsync(providers, true, circularBufferMB: 256, rundownKeyword: null, cancellation.Token).ConfigureAwait(false);
             }
             else
             {
@@ -92,7 +92,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (_useAsync)
             {
                 CancellationTokenSource cancellation = new(timeout);
-                return await _client.StartEventPipeSessionAsync(provider, true, circularBufferMB: 256, cancellation.Token).ConfigureAwait(false);
+                return await _client.StartEventPipeSessionAsync(provider, true, circularBufferMB: 256, rundownKeyword: null, cancellation.Token).ConfigureAwait(false);
             }
             else
             {

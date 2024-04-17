@@ -65,12 +65,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
         /// <param name="requestRundown">If true, request rundown events from the runtime</param>
         /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="rundownKeyword">If not null, override the default keyword for rundown events.</param>
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns>
-        public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown = true, int circularBufferMB = DefaultCircularBufferMB)
+        public EventPipeSession StartEventPipeSession(IEnumerable<EventPipeProvider> providers, bool requestRundown = true, int circularBufferMB = DefaultCircularBufferMB, long? rundownKeyword = null)
         {
-            EventPipeSessionConfiguration config = new(providers, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true);
+            EventPipeSessionConfiguration config = new(providers, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true, rundownKeyword: rundownKeyword);
             return EventPipeSession.Start(_endpoint, config);
         }
 
@@ -80,12 +81,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="provider">An EventPipeProvider to turn on.</param>
         /// <param name="requestRundown">If true, request rundown events from the runtime</param>
         /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="rundownKeyword">If not null, override the default keyword for rundown events.</param>
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns>
-        public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown = true, int circularBufferMB = DefaultCircularBufferMB)
+        public EventPipeSession StartEventPipeSession(EventPipeProvider provider, bool requestRundown = true, int circularBufferMB = DefaultCircularBufferMB, long? rundownKeyword = null)
         {
-            EventPipeSessionConfiguration config = new(new[] {provider}, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true);
+            EventPipeSessionConfiguration config = new(new[] {provider}, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true, rundownKeyword: rundownKeyword);
             return EventPipeSession.Start(_endpoint, config);
         }
 
@@ -95,14 +97,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
         /// <param name="requestRundown">If true, request rundown events from the runtime</param>
         /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="rundownKeyword">If not null, override the default keyword for rundown events.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns>
         public Task<EventPipeSession> StartEventPipeSessionAsync(IEnumerable<EventPipeProvider> providers, bool requestRundown,
-            int circularBufferMB = DefaultCircularBufferMB, CancellationToken token = default)
+            int circularBufferMB = DefaultCircularBufferMB, long? rundownKeyword = null, CancellationToken token = default)
         {
-            EventPipeSessionConfiguration config = new(providers, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true);
+            EventPipeSessionConfiguration config = new(providers, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true, rundownKeyword: rundownKeyword);
             return EventPipeSession.StartAsync(_endpoint, config, token);
         }
 
@@ -112,14 +115,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="provider">An EventPipeProvider to turn on.</param>
         /// <param name="requestRundown">If true, request rundown events from the runtime</param>
         /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="rundownKeyword">If not null, override the default keyword for rundown events.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <returns>
         /// An EventPipeSession object representing the EventPipe session that just started.
         /// </returns>
         public Task<EventPipeSession> StartEventPipeSessionAsync(EventPipeProvider provider, bool requestRundown,
-            int circularBufferMB = DefaultCircularBufferMB, CancellationToken token = default)
+            int circularBufferMB = DefaultCircularBufferMB, long? rundownKeyword = null, CancellationToken token = default)
         {
-            EventPipeSessionConfiguration config = new(new[] {provider}, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true);
+            EventPipeSessionConfiguration config = new(new[] {provider}, circularBufferMB, requestRundown: requestRundown, requestStackwalk: true, rundownKeyword: rundownKeyword);
             return EventPipeSession.StartAsync(_endpoint, config, token);
         }
 
