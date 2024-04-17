@@ -1554,7 +1554,7 @@ inline BOOL SafeReadMemory (CLRDATA_ADDRESS offset, PVOID lpBuffer, ULONG cb, PU
 BOOL NameForMD_s (DWORD_PTR pMD, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName);
 BOOL NameForMT_s (DWORD_PTR MTAddr, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName);
 
-WCHAR *CreateMethodTableName(TADDR mt, TADDR cmt = NULL);
+WCHAR *CreateMethodTableName(TADDR mt, TADDR cmt = (TADDR)0);
 
 void isRetAddr(DWORD_PTR retAddr, DWORD_PTR* whereCalled);
 DWORD_PTR GetValueFromExpression (___in __in_z const char *const str);
@@ -1647,7 +1647,7 @@ protected:
             info.GCInfo = NULL;
             info.ArrayOfVC = false;
             info.GCInfoBuffer = NULL;
-            info.LoaderAllocatorObjectHandle = NULL;
+            info.LoaderAllocatorObjectHandle = (TADDR)0;
         }
     };
     Node *head;
@@ -2056,7 +2056,7 @@ int  _ui64toa_s( unsigned __int64 inValue, char* outBuffer, size_t inDestBufferS
 
 struct MemRange
 {
-    MemRange (ULONG64 s = NULL, size_t l = 0, MemRange * n = NULL)
+    MemRange (ULONG64 s = (TADDR)0, size_t l = 0, MemRange * n = NULL)
         : start(s), len (l), next (n)
         {}
 
