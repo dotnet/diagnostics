@@ -13,12 +13,14 @@ namespace Microsoft.SymbolStore.KeyGenerators
     public class PEFileKeyGenerator : KeyGenerator
     {
         private const string CoreClrFileName = "coreclr.dll";
+        private const string ClrFileName = "clr.dll";
 
         private const string SosFileName = "SOS.dll";
         private const string CoreClrDACFileName = "mscordaccore.dll";
+        private const string ClrDACFileName = "mscordacwks.dll";
         private const string DbiFileName = "mscordbi.dll";
-        private static readonly string[] s_knownFilesWithLongNameVariant = new string[] { SosFileName, CoreClrDACFileName };
-        private static readonly string[] s_knownRuntimeSpecialFiles = new string[] { SosFileName, CoreClrDACFileName, DbiFileName };
+        private static readonly string[] s_knownFilesWithLongNameVariant = new string[] { SosFileName, CoreClrDACFileName, ClrDACFileName };
+        private static readonly string[] s_knownRuntimeSpecialFiles = new string[] { CoreClrDACFileName, ClrDACFileName, DbiFileName };
 
         private readonly PEFile _peFile;
         private readonly string _path;
@@ -48,7 +50,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 {
                     yield return GetKey(_path, _peFile.Timestamp, _peFile.SizeOfImage);
                 }
-                if ((flags & KeyTypeFlags.RuntimeKeys) != 0 && GetFileName(_path) == CoreClrFileName)
+                if ((flags & KeyTypeFlags.RuntimeKeys) != 0 && (GetFileName(_path) == CoreClrFileName || GetFileName(_path) == ClrFileName))
                 {
                     yield return GetKey(_path, _peFile.Timestamp, _peFile.SizeOfImage);
                 }
@@ -90,17 +92,26 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     }
                 }
 
-                if ((flags & (KeyTypeFlags.ClrKeys | KeyTypeFlags.DacDbiKeys)) != 0)
+                // Return keys for SOS modules for a given runtime module
+                if ((flags & (KeyTypeFlags.ClrKeys)) != 0)
                 {
-                    if (GetFileName(_path) == CoreClrFileName)
+                    string coreclrId = string.Format("{0:X8}{1:x}", _peFile.Timestamp, _peFile.SizeOfImage);
+                    foreach (string specialFileName in GetSOSFiles(GetFileName(_path)))
                     {
-                        string coreclrId = string.Format("{0:X8}{1:x}", _peFile.Timestamp, _peFile.SizeOfImage);
-                        foreach (string specialFileName in GetSpecialFiles(flags))
-                        {
-                            yield return BuildKey(specialFileName, coreclrId);
-                        }
+                        yield return BuildKey(specialFileName, coreclrId);
                     }
                 }
+
+                // Return keys for DAC and DBI modules for a given runtime module
+                if ((flags & (KeyTypeFlags.ClrKeys | KeyTypeFlags.DacDbiKeys)) != 0)
+                {
+                    string coreclrId = string.Format("{0:X8}{1:x}", _peFile.Timestamp, _peFile.SizeOfImage);
+                    foreach (string specialFileName in GetDACFiles(GetFileName(_path)))
+                    {
+                        yield return BuildKey(specialFileName, coreclrId);
+                    }
+                }
+
                 if ((flags & KeyTypeFlags.HostKeys) != 0)
                 {
                     if ((_peFile.FileHeader.Characteristics & (ushort)ImageFile.Dll) == 0 && !_peFile.IsILImage)
@@ -119,6 +130,11 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
         private IEnumerable<string> GetSOSFiles(string runtimeFileName)
         {
+            if (runtimeFileName == ClrFileName)
+            {
+                return GetFilesLongNameVariants(SosFileName);
+            }
+
             return Enumerable.Empty<string>();
         }
 
@@ -129,6 +145,13 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 string[] coreClrDACFiles = new string[] { CoreClrDACFileName, DbiFileName };
                 IEnumerable<string> longNameDACFiles = GetFilesLongNameVariants(CoreClrDACFileName);
                 return coreClrDACFiles.Concat(longNameDACFiles);
+            }
+
+            if (runtimeFileName == ClrFileName)
+            {
+                string[] clrDACFiles = new string[] { ClrDACFileName, DbiFileName };
+                IEnumerable<string> longNameDACFiles = GetFilesLongNameVariants(ClrDACFileName);
+                return clrDACFiles.Concat(longNameDACFiles);
             }
 
             return Enumerable.Empty<string>();
@@ -195,81 +218,6 @@ namespace Microsoft.SymbolStore.KeyGenerators
             return longNameFileVariants;
         }
 
-        private IEnumerable<string> GetSpecialFiles(KeyTypeFlags flags)
-        {
-            List<string> specialFiles = new((flags & KeyTypeFlags.ClrKeys) != 0 ? s_coreClrSpecialFiles : s_dacdbiSpecialFiles);
-
-            VsFixedFileInfo fileVersion = _peFile.VersionInfo;
-            if (fileVersion != null)
-            {
-                ushort major = fileVersion.ProductVersionMajor;
-                ushort minor = fileVersion.ProductVersionMinor;
-                ushort build = fileVersion.ProductVersionBuild;
-                ushort revision = fileVersion.ProductVersionRevision;
-
-                List<string> hostArchitectures = new();
-                string targetArchitecture = null;
-
-                ImageFileMachine machine = (ImageFileMachine)_peFile.FileHeader.Machine;
-                switch (machine)
-                {
-                    case ImageFileMachine.Amd64:
-                        targetArchitecture = "amd64";
-                        break;
-
-                    case ImageFileMachine.I386:
-                        targetArchitecture = "x86";
-                        break;
-
-                    case ImageFileMachine.ArmNT:
-                        targetArchitecture = "arm";
-                        hostArchitectures.Add("x86");
-                        break;
-
-                    case ImageFileMachine.Arm64:
-                        targetArchitecture = "arm64";
-                        hostArchitectures.Add("amd64");
-                        break;
-                }
-
-                if (targetArchitecture != null)
-                {
-                    hostArchitectures.Add(targetArchitecture);
-
-                    foreach (string hostArchitecture in hostArchitectures)
-                    {
-                        string buildFlavor = "";
-
-                        if ((fileVersion.FileFlags & FileInfoFlags.Debug) != 0)
-                        {
-                            if ((fileVersion.FileFlags & FileInfoFlags.SpecialBuild) != 0)
-                            {
-                                buildFlavor = ".dbg";
-                            }
-                            else
-                            {
-                                buildFlavor = ".chk";
-                            }
-                        }
-
-                        foreach (string name in (flags & KeyTypeFlags.ClrKeys) != 0 ? s_longNameBinaryPrefixes : s_daclongNameBinaryPrefixes)
-                        {
-                            // The name prefixes include the trailing "_".
-                            string longName = string.Format("{0}{1}_{2}_{3}.{4}.{5}.{6:00}{7}.dll",
-                                name, hostArchitecture, targetArchitecture, major, minor, build, revision, buildFlavor);
-                            specialFiles.Add(longName);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                Tracer.Warning("{0} has no version resource", _path);
-            }
-
-            return specialFiles;
-        }
-
         /// <summary>
         /// Creates a PE file symbol store key identity key.
         /// </summary>
@@ -285,7 +233,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
             // that is only valid when "path" is the coreclr.dll.
             string fileName = GetFileName(path);
             bool clrSpecialFile = s_knownRuntimeSpecialFiles.Contains(fileName) ||
-                                  (s_knownFilesWithLongNameVariant.Any((file) => fileName.StartsWith(Path.GetFileNameWithoutExtension(file))) && Path.GetExtension(fileName) == ".dll");
+                                  (s_knownFilesWithLongNameVariant.Any((file) => fileName.StartsWith(Path.GetFileNameWithoutExtension(file).ToLowerInvariant() + "_")) && Path.GetExtension(fileName) == ".dll");
 
             string id = string.Format("{0:X8}{1:x}", timestamp, sizeOfImage);
             return BuildKey(path, id, clrSpecialFile);
