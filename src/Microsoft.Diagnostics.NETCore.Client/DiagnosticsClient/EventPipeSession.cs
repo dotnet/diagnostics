@@ -13,6 +13,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     public class EventPipeSession : IDisposable
     {
+        //! This is CoreCLR specific keywords for native ETW events (ending up in event pipe).
+        //! The keywords below seems to correspond to:
+        //!  GCKeyword                          (0x00000001)
+        //!  LoaderKeyword                      (0x00000008)
+        //!  JitKeyword                         (0x00000010)
+        //!  NgenKeyword                        (0x00000020)
+        //!  unused_keyword                     (0x00000100)
+        //!  JittedMethodILToNativeMapKeyword   (0x00020000)
+        //!  ThreadTransferKeyword              (0x80000000)
+        public const long DefaultRundownKeyword = 0x80020139;
+
         private ulong _sessionId;
         private IpcEndpoint _endpoint;
         private bool _disposedValue; // To detect redundant calls
@@ -30,43 +41,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         internal static EventPipeSession Start(IpcEndpoint endpoint, EventPipeSessionConfiguration config)
         {
-            bool retry = false;
-            IpcResponse? response = null;
-            do
-            {
-                IpcMessage requestMessage = CreateStartMessage(config);
-                response = IpcClient.SendMessageGetContinuation(endpoint, requestMessage);
-                if (config.RundownKeyword.HasValue && response != null && response.Value.Message.Header.CommandId == (byte)DiagnosticsServerResponseId.Error)
-                {
-                    config.RundownKeyword = null;
-                    retry = true;
-                }
-                else
-                {
-                    retry = false;
-                }
-            } while (retry);
+            IpcMessage requestMessage = CreateStartMessage(config);
+            IpcResponse? response = IpcClient.SendMessageGetContinuation(endpoint, requestMessage);
             return CreateSessionFromResponse(endpoint, ref response, nameof(Start));
         }
 
         internal static async Task<EventPipeSession> StartAsync(IpcEndpoint endpoint, EventPipeSessionConfiguration config, CancellationToken cancellationToken)
         {
-            bool retry = false;
-            IpcResponse? response = null;
-            do
-            {
-                IpcMessage requestMessage = CreateStartMessage(config);
-                response = await IpcClient.SendMessageGetContinuationAsync(endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
-                if (config.RundownKeyword.HasValue && response != null && response.Value.Message.Header.CommandId == (byte)DiagnosticsServerResponseId.Error)
-                {
-                    config.RundownKeyword = null;
-                    retry = true;
-                }
-                else
-                {
-                    retry = false;
-                }
-            } while (retry);
+            IpcMessage requestMessage = CreateStartMessage(config);
+            IpcResponse? response = await IpcClient.SendMessageGetContinuationAsync(endpoint, requestMessage, cancellationToken).ConfigureAwait(false);
             return CreateSessionFromResponse(endpoint, ref response, nameof(StartAsync));
         }
 
@@ -114,7 +97,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // To keep backward compatibility with older runtimes we only use newer serialization format when needed
             EventPipeCommandId command;
             byte[] payload;
-            if (config.RundownKeyword.HasValue)
+            if (config.RundownKeyword.HasValue && config.RundownKeyword.Value != DefaultRundownKeyword && config.RundownKeyword.Value != 0)
             {
                 // V4 has added support to specify rundown keyword
                 command = EventPipeCommandId.CollectTracing4;

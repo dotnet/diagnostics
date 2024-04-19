@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,7 +30,45 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             EventPipeSession session = null;
             try
             {
-                session = await client.StartEventPipeSessionAsync(_sourceConfig.GetProviders(), _sourceConfig.RequestRundown, _sourceConfig.BufferSizeInMB, _sourceConfig.RundownKeyword, cancellationToken).ConfigureAwait(false);
+                IEnumerable<EventPipeProvider> providers = _sourceConfig.GetProviders();
+                int bufferSizeInMB = _sourceConfig.BufferSizeInMB;
+                bool requestRundown = _sourceConfig.RequestRundown;
+                long? rundownKeyword = _sourceConfig.RundownKeyword;
+                RetryStrategy retryStrategy = _sourceConfig.RetryStrategy;
+                bool retry = true;
+                while (retry)
+                {
+                    retry = false;
+                    try
+                    {
+                        EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, requestRundown, true, rundownKeyword);
+                        session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (DiagnosticsClientException e)
+                    {
+                        if (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
+                        {
+                            Debug.Assert(rundownKeyword.HasValue);
+                            retry = true;
+                            retryStrategy = RetryStrategy.DoNotRetry;
+                            requestRundown = true;
+                            rundownKeyword = null;
+                        }
+                        else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
+                        {
+                            Debug.Assert(rundownKeyword.HasValue);
+                            retry = true;
+                            retryStrategy = RetryStrategy.DoNotRetry;
+                            requestRundown = false;
+                            rundownKeyword = null;
+                        }
+                        else
+                        {
+                            Debug.Assert(!rundownKeyword.HasValue);
+                            throw e;
+                        }
+                    }
+                }
                 if (resumeRuntime)
                 {
                     try

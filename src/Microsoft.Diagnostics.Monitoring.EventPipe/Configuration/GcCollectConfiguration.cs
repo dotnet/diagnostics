@@ -11,6 +11,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public GcCollectConfiguration()
         {
             RundownKeyword = (long)Tracing.Parsers.ClrTraceEventParser.Keywords.GC;
+            RetryStrategy = RetryStrategy.DropKeywordDropRundown;
         }
 
         public override IList<EventPipeProvider> GetProviders() =>

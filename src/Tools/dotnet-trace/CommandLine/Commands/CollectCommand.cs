@@ -127,6 +127,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 bool collectRundownEvents = true;
                 long? rundownKeyword = null;
+                RetryStrategy retryStrategy = RetryStrategy.DoNotRetry;
 
                 if (profile.Length != 0)
                 {
@@ -140,6 +141,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     collectRundownEvents = selectedProfile.Rundown;
                     rundownKeyword = selectedProfile.RundownKeyword;
+                    retryStrategy = selectedProfile.RetryStrategy;
 
                     Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
                 }
@@ -147,6 +149,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (rundown.HasValue)
                 {
                     collectRundownEvents = rundown.Value;
+                    rundownKeyword = null;
+                    if (rundown.Value)
+                    {
+                        retryStrategy = RetryStrategy.DropKeywordKeepRundown;
+                    }
                 }
 
                 // Parse --clrevents parameter
@@ -271,30 +278,56 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     using (VirtualTerminalMode vTermMode = printStatusOverTime ? VirtualTerminalMode.TryEnable() : null)
                     {
                         EventPipeSession session = null;
-                        try
+                        bool retry = true;
+                        while (retry)
                         {
-                            session = diagnosticsClient.StartEventPipeSession(providerCollection, collectRundownEvents, (int)buffersize, rundownKeyword);
-                            if (resumeRuntime)
+                            retry = false;
+                            try
                             {
-                                try
+                                EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, requestRundown: collectRundownEvents, requestStackwalk: true, rundownKeyword: rundownKeyword);
+                                session = diagnosticsClient.StartEventPipeSession(config);
+                                if (resumeRuntime)
                                 {
-                                    diagnosticsClient.ResumeRuntime();
-                                }
-                                catch (UnsupportedCommandException)
-                                {
-                                    // Noop if command is unsupported, since the target is most likely a 3.1 app.
+                                    try
+                                    {
+                                        diagnosticsClient.ResumeRuntime();
+                                    }
+                                    catch (UnsupportedCommandException)
+                                    {
+                                        // Noop if command is unsupported, since the target is most likely a 3.1 app.
+                                    }
                                 }
                             }
-                        }
-                        catch (DiagnosticsClientException e)
-                        {
-                            Console.Error.WriteLine($"Unable to start a tracing session: {e}");
-                            return (int)ReturnCode.SessionCreationError;
-                        }
-                        catch (UnauthorizedAccessException e)
-                        {
-                            Console.Error.WriteLine($"dotnet-trace does not have permission to access the specified app: {e.GetType()}");
-                            return (int)ReturnCode.SessionCreationError;
+                            catch (DiagnosticsClientException e)
+                            {
+                                if (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
+                                {
+                                    Debug.Assert(rundownKeyword.HasValue);
+                                    retry = true;
+                                    retryStrategy = RetryStrategy.DoNotRetry;
+                                    collectRundownEvents = true;
+                                    rundownKeyword = null;
+                                }
+                                else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
+                                {
+                                    Debug.Assert(rundownKeyword.HasValue);
+                                    retry = true;
+                                    retryStrategy = RetryStrategy.DoNotRetry;
+                                    collectRundownEvents = false;
+                                    rundownKeyword = null;
+                                }
+                                else
+                                {
+                                    Debug.Assert(!rundownKeyword.HasValue);
+                                    Console.Error.WriteLine($"Unable to start a tracing session: {e}");
+                                    return (int)ReturnCode.SessionCreationError;
+                                }
+                            }
+                            catch (UnauthorizedAccessException e)
+                            {
+                                Console.Error.WriteLine($"dotnet-trace does not have permission to access the specified app: {e.GetType()}");
+                                return (int)ReturnCode.SessionCreationError;
+                            }
                         }
 
                         if (session == null)
