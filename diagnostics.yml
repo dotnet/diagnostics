@@ -106,6 +106,7 @@ extends:
           osGroup: Linux
           osSuffix: -musl
           nativeBuildContainer: linux_musl_x64
+          crossBuild: true
           buildOnly: true
           buildConfigs:
           - configuration: Release
