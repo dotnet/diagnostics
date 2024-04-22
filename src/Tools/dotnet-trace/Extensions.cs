@@ -55,6 +55,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { "compilationdiagnostic", 0x2000000000 },
             { "methoddiagnostic", 0x4000000000 },
             { "typediagnostic", 0x8000000000 },
+            { "waithandle", 0x40000000000 },
         };
 
         public static List<EventPipeProvider> ToProviders(string providersRawInput)
