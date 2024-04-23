@@ -34,39 +34,56 @@ public class DumpGenerationFixture : IDisposable
             {
             }
 
-            // Create a unique list of all the runtime paths used by the tests
+            // Create a unique list of all the installed test runtime paths
             HashSet<string> paths = new();
             foreach (TestConfiguration config in TestRunConfiguration.Instance.Configurations)
             {
-                if (config.IsNETCore && config.RuntimeFrameworkVersionMajor >= 8)
+                // Enumerate configs until we see this property
+                if (config.AllSettings.TryGetValue("MicrosoftNETCoreAppPath", out string path))
                 {
-                    string path = config.RuntimeSymbolsPath;
                     if (!string.IsNullOrEmpty(path))
                     {
-                        paths.Add(path);
+                        path = TestConfiguration.MakeCanonicalPath(path);
+                        try
+                        {
+                            foreach (string directory in Directory.GetDirectories(path))
+                            {
+                                if (Path.GetFileName(directory).StartsWith("9"))
+                                {
+                                    paths.Add(directory);
+                                }
+                            }
+                        }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                        {
+                        }
+                        break;
                     }
                 }
             }
 
-            // Now try to create the keys for the older Windows versions 
-            try
+            if (paths.Count > 0)
             {
-                using RegistryKey auxiliaryKey = Registry.LocalMachine.CreateSubKey(_auxiliaryNode, writable: true);
-                using RegistryKey knownKey = Registry.LocalMachine.CreateSubKey(_knownNode, writable: true);
-
-                foreach (string path in paths)
+                // Now try to create the keys for the older Windows versions 
+                try
                 {
-                    string dacPath = Path.Combine(path, "mscordaccore.dll");
-                    string runtimePath = Path.Combine(path, "coreclr.dll");
-                    knownKey.SetValue(dacPath, 0, RegistryValueKind.DWord);
-                    auxiliaryKey.SetValue(runtimePath, dacPath, RegistryValueKind.String);
-                }
+                    using RegistryKey auxiliaryKey = Registry.LocalMachine.CreateSubKey(_auxiliaryNode, writable: true);
+                    using RegistryKey knownKey = Registry.LocalMachine.CreateSubKey(_knownNode, writable: true);
 
-                // Save the paths after writing them successfully to registry
-               _paths = paths;
-            }
-            catch (Exception ex) when (ex is UnauthorizedAccessException)
-            {
+                    foreach (string path in paths)
+                    {
+                        string dacPath = Path.Combine(path, "mscordaccore.dll");
+                        string runtimePath = Path.Combine(path, "coreclr.dll");
+                        knownKey.SetValue(dacPath, 0, RegistryValueKind.DWord);
+                        auxiliaryKey.SetValue(runtimePath, dacPath, RegistryValueKind.String);
+                    }
+
+                    // Save the paths after writing them successfully to registry
+                    _paths = paths;
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException)
+                {
+                }
             }
         }
     }
