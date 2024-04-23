@@ -125,10 +125,10 @@
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
 -->
-      <RuntimeDownload>9.0.0-preview.4.24211.4</RuntimeDownload>
-      <Runtime>9.0.0-preview.4.24211.4</Runtime>
-      <AspNetDownload>9.0.0-preview.4.24213.1</AspNetDownload>
-      <AspNet>9.0.0-preview.4.24213.1</AspNet>
+      <RuntimeDownload>9.0.0-preview.4.24218.7</RuntimeDownload>
+      <Runtime>9.0.0-preview.4.24218.7</Runtime>
+      <AspNetDownload>9.0.0-preview.4.24218.1</AspNetDownload>
+      <AspNet>9.0.0-preview.4.24218.1</AspNet>
       <TargetFramework>net9.0</TargetFramework>
     </RuntimeTestVersions>
     <RuntimeTestVersions Include="Servicing1">
