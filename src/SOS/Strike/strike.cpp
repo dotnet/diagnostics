@@ -2607,6 +2607,46 @@ void SosExtOutLargeString(__inout_z __inout_ecount_opt(len) WCHAR * pwszLargeStr
     ExtOut("%S", pwsz);
 }
 
+DWORD_PTR GetFirstArrayElementPointer(TADDR taArray)
+{
+#ifdef _TARGET_WIN64_
+    return taArray + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
+#else
+    return taArray + sizeof(DWORD_PTR) + sizeof(DWORD);
+#endif // _TARGET_WIN64_
+}
+
+TADDR GetStackTraceArray(CLRDATA_ADDRESS taExceptionObj, DacpObjectData *pExceptionObjData, DacpExceptionObjectData *pExcData)
+{
+    TADDR taStackTrace = 0;
+    if (pExcData)
+    {
+        taStackTrace = TO_TADDR(pExcData->StackTrace);
+    }
+    else
+    {
+        int iOffset = GetObjFieldOffset (taExceptionObj, pExceptionObjData->MethodTable, W("_stackTrace"));
+        if (iOffset > 0)
+        {
+            MOVE(taStackTrace, taExceptionObj + iOffset);
+        }
+    }
+
+    if (taStackTrace)
+    {
+        // If the stack trace is object[], the stack trace array is actually referenced by its first element
+        sos::Object objStackTrace(taStackTrace);
+        TADDR stackTraceComponentMT = objStackTrace.GetComponentMT();
+        if (stackTraceComponentMT == g_special_usefulGlobals.ObjectMethodTable)
+        {
+            DWORD_PTR arrayDataPtr = GetFirstArrayElementPointer(taStackTrace);
+            MOVE(taStackTrace, arrayDataPtr);
+        }
+    }
+
+    return taStackTrace;
+}
+
 HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 {
     HRESULT Status = S_OK;
@@ -2718,19 +2758,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
                               : IsAsyncException(taObj, objData.MethodTable);
 
     {
-        TADDR taStackTrace = 0;
-        if (bGotExcData)
-        {
-            taStackTrace = TO_TADDR(excData.StackTrace);
-        }
-        else
-        {
-            int iOffset = GetObjFieldOffset (taObj, objData.MethodTable, W("_stackTrace"));
-            if (iOffset > 0)
-            {
-                MOVE(taStackTrace, taObj + iOffset);
-            }
-        }
+        TADDR taStackTrace = GetStackTraceArray(taObj, &objData, bGotExcData ? &excData : NULL);
 
         ExtOut("StackTrace (generated):\n");
         if (taStackTrace)
@@ -2740,13 +2768,7 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 
             if (arrayLen != 0 && hr == S_OK)
             {
-                // This code is accessing the StackTraceInfo class in the runtime.
-                // See: https://github.com/dotnet/runtime/blob/main/src/coreclr/vm/clrex.h
-#ifdef _TARGET_WIN64_
-                DWORD_PTR dataPtr = taStackTrace + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
-#else
-                DWORD_PTR dataPtr = taStackTrace + sizeof(DWORD_PTR) + sizeof(DWORD);
-#endif // _TARGET_WIN64_
+                DWORD_PTR dataPtr = GetFirstArrayElementPointer(taStackTrace);
                 size_t stackTraceSize = 0;
                 MOVE (stackTraceSize, dataPtr);
 
@@ -12508,16 +12530,7 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
     BOOL bAsync = bGotExcData ? IsAsyncException(excData)
                               : IsAsyncException(cdaObj, objData.MethodTable);
 
-    DWORD_PTR arrayPtr;
-    if (bGotExcData)
-    {
-        arrayPtr = TO_TADDR(excData.StackTrace);
-    }
-    else
-    {
-        iOffset = GetObjFieldOffset (cdaObj, objData.MethodTable, W("_stackTrace"));
-        MOVE (arrayPtr, TO_TADDR(cdaObj) + iOffset);
-    }
+    DWORD_PTR arrayPtr = GetStackTraceArray(cdaObj, &objData, bGotExcData ? &excData : NULL);
 
     if (arrayPtr)
     {
@@ -12526,13 +12539,7 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
 
         if (arrayLen)
         {
-            // This code is accessing the StackTraceInfo class in the runtime.
-            // See: https://github.com/dotnet/runtime/blob/main/src/coreclr/vm/clrex.h
-#ifdef _TARGET_WIN64_
-            DWORD_PTR dataPtr = arrayPtr + sizeof(DWORD_PTR) + sizeof(DWORD) + sizeof(DWORD);
-#else
-            DWORD_PTR dataPtr = arrayPtr + sizeof(DWORD_PTR) + sizeof(DWORD);
-#endif // _TARGET_WIN64_
+            DWORD_PTR dataPtr = GetFirstArrayElementPointer(arrayPtr);
             size_t stackTraceSize = 0;
             MOVE (stackTraceSize, dataPtr); // data length is stored at the beginning of the array in this case
 
