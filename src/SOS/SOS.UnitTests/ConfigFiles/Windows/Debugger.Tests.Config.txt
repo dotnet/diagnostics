@@ -21,6 +21,7 @@
   <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
+  <MicrosoftNETCoreAppPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\</MicrosoftNETCoreAppPath>
 
   <SetHostExe>true</SetHostExe>
   <SetFxVersion>true</SetFxVersion>
