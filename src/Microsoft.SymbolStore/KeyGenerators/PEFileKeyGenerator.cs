@@ -14,12 +14,11 @@ namespace Microsoft.SymbolStore.KeyGenerators
     {
         private const string CoreClrFileName = "coreclr.dll";
 
-        private const string SosFileName = "sos.dll";
-        private const string CoreClrSosFileName = "sos.NETCore.dll";
+        private const string SosFileName = "SOS.dll";
         private const string CoreClrDACFileName = "mscordaccore.dll";
         private const string DbiFileName = "mscordbi.dll";
         private static readonly string[] s_knownFilesWithLongNameVariant = new string[] { SosFileName, CoreClrDACFileName };
-        private static readonly string[] s_knownRuntimeSpecialFiles = new string[] { SosFileName, CoreClrSosFileName, CoreClrDACFileName, DbiFileName };
+        private static readonly string[] s_knownRuntimeSpecialFiles = new string[] { SosFileName, CoreClrDACFileName, DbiFileName };
 
         private readonly PEFile _peFile;
         private readonly string _path;
@@ -120,13 +119,6 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
         private IEnumerable<string> GetSOSFiles(string runtimeFileName)
         {
-            if (runtimeFileName == CoreClrFileName)
-            {
-                string[] coreClrSOSFiles = new string[] { SosFileName, CoreClrSosFileName };
-                IEnumerable<string> longNameSOSFiles = GetFilesLongNameVariants(SosFileName);
-                return coreClrSOSFiles.Concat(longNameSOSFiles);
-            }
-
             return Enumerable.Empty<string>();
         }
 

@@ -456,16 +456,16 @@ namespace Microsoft.SymbolStore.Tests
                 Assert.True(symbolKey.First().Index == "coreclr.pdb/3f3d5a3258e64ae8b86b31ff776949351/coreclr.pdb");
 
                 Dictionary<string, SymbolStoreKey> clrKeys = generator.GetKeys(KeyTypeFlags.ClrKeys).ToDictionary((key) => key.Index);
+                Assert.True(clrKeys.Count() == 3);
                 Assert.True(clrKeys.ContainsKey("mscordaccore.dll/595EBCD5538000/mscordaccore.dll"));
+                Assert.True(clrKeys.ContainsKey("mscordaccore_amd64_amd64_4_6_25505.00.dll/595EBCD5538000/mscordaccore_amd64_amd64_4_6_25505.00.dll"));
                 Assert.True(clrKeys.ContainsKey("mscordbi.dll/595EBCD5538000/mscordbi.dll"));
-                Assert.True(clrKeys.ContainsKey("sos.dll/595EBCD5538000/sos.dll"));
-                Assert.True(clrKeys.ContainsKey("sos.netcore.dll/595EBCD5538000/sos.netcore.dll"));
 
                 Dictionary<string, SymbolStoreKey> dacdbiKeys = generator.GetKeys(KeyTypeFlags.DacDbiKeys).ToDictionary((key) => key.Index);
+                Assert.True(dacdbiKeys.Count() == 3);
                 Assert.True(dacdbiKeys.ContainsKey("mscordaccore.dll/595EBCD5538000/mscordaccore.dll"));
+                Assert.True(dacdbiKeys.ContainsKey("mscordaccore_amd64_amd64_4_6_25505.00.dll/595EBCD5538000/mscordaccore_amd64_amd64_4_6_25505.00.dll"));
                 Assert.True(dacdbiKeys.ContainsKey("mscordbi.dll/595EBCD5538000/mscordbi.dll"));
-                Assert.False(dacdbiKeys.ContainsKey("sos.dll/595EBCD5538000/sos.dll"));
-                Assert.False(dacdbiKeys.ContainsKey("sos.netcore.dll/595EBCD5538000/sos.netcore.dll"));
 
                 IEnumerable<SymbolStoreKey> perfMapKey = generator.GetKeys(KeyTypeFlags.PerfMapKeys);
                 Assert.True(perfMapKey.Count() == 0);
