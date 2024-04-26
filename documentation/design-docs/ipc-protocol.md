@@ -666,38 +666,6 @@ Payload
 ```
 Followed by an Optional Continuation of a `nettrace` format stream of events.
 
-##### Details:
-
-Input:
-```
-Payload
-{
-    uint circularBufferMB,
-    uint format,
-    ulong rundownKeyword,
-    bool requestStackwalk,
-    array<provider_config> providers
-}
-
-provider_config
-{
-    ulong keywords,
-    uint logLevel,
-    string provider_name,
-    string filter_data (optional)
-}
-```
-
-Returns:
-```c
-Payload
-{
-    ulong sessionId
-}
-```
-Followed by an Optional Continuation of a `nettrace` format stream of events.
-
-
 ### `StopTracing`
 
 Command Code: `0x0201`

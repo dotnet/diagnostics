@@ -32,8 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 IEnumerable<EventPipeProvider> providers = _sourceConfig.GetProviders();
                 int bufferSizeInMB = _sourceConfig.BufferSizeInMB;
-                bool requestRundown = _sourceConfig.RequestRundown;
-                long? rundownKeyword = _sourceConfig.RundownKeyword;
+                long rundownKeyword = _sourceConfig.RundownKeyword;
                 RetryStrategy retryStrategy = _sourceConfig.RetryStrategy;
                 bool retry = true;
                 while (retry)
@@ -41,30 +40,30 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     retry = false;
                     try
                     {
-                        EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, requestRundown, true, rundownKeyword);
+                        EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, (rundownKeyword != 0), true, rundownKeyword);
                         session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
                     }
-                    catch (DiagnosticsClientException e)
+                    catch (UnsupportedCommandException e)
                     {
                         if (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
                         {
-                            Debug.Assert(rundownKeyword.HasValue);
+                            Debug.Assert(rundownKeyword != 0);
+                            Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                             retry = true;
                             retryStrategy = RetryStrategy.DoNotRetry;
-                            requestRundown = true;
-                            rundownKeyword = null;
+                            rundownKeyword = 0;
                         }
                         else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
                         {
-                            Debug.Assert(rundownKeyword.HasValue);
+                            Debug.Assert(rundownKeyword != 0);
+                            Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                             retry = true;
                             retryStrategy = RetryStrategy.DoNotRetry;
-                            requestRundown = false;
-                            rundownKeyword = null;
+                            rundownKeyword = 0;
                         }
                         else
                         {
-                            Debug.Assert(!rundownKeyword.HasValue);
+                            Debug.Assert((rundownKeyword == 0) || (rundownKeyword == EventPipeSession.DefaultRundownKeyword));
                             throw e;
                         }
                     }

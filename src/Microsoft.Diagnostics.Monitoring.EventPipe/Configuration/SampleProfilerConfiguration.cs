@@ -10,6 +10,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     public sealed class SampleProfilerConfiguration : MonitoringSourceConfiguration
     {
+        public SampleProfilerConfiguration()
+        {
+            RundownKeyword = 0;
+        }
+
         public override IList<EventPipeProvider> GetProviders() =>
             new EventPipeProvider[]
             {
@@ -17,11 +22,5 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             };
 
         public override int BufferSizeInMB => 1;
-
-        public override bool RequestRundown
-        {
-            get => false;
-            set => throw new NotSupportedException();
-        }
     }
 }

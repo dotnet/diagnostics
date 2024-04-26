@@ -22,9 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public string Description { get; }
 
-        public bool Rundown { get; set; } = true;
-
-        public long? RundownKeyword { get; set; }
+        public long RundownKeyword { get; set; }
 
         public RetryStrategy RetryStrategy { get; set; } = RetryStrategy.DropKeywordKeepRundown;
 

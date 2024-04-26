@@ -28,52 +28,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public const string EventPipeProviderName = "Microsoft-DotNETCore-EventPipe";
         public const string SystemDiagnosticsMetricsProviderName = "System.Diagnostics.Metrics";
 
-        private bool _requestRundown = true;
-        private long _rundownKeyword = EventPipeSession.DefaultRundownKeyword;
-
         public static IEnumerable<string> DefaultMetricProviders => new[] { SystemRuntimeEventSourceName, MicrosoftAspNetCoreHostingEventSourceName, GrpcAspNetCoreServer };
 
         public abstract IList<EventPipeProvider> GetProviders();
 
-        public virtual bool RequestRundown
-        {
-            get => _requestRundown;
-            set
-            {
-                _requestRundown = value;
-                if (_requestRundown)
-                {
-                    if (_rundownKeyword == 0)
-                    {
-                        _rundownKeyword = EventPipeSession.DefaultRundownKeyword;
-                    }
-                }
-                else
-                {
-                    _rundownKeyword = 0;
-                    RetryStrategy = RetryStrategy.DoNotRetry;
-                }
-            }
-        }
-
-        public virtual long RundownKeyword
-        {
-            get => _rundownKeyword;
-            set
-            {
-                _rundownKeyword = value;
-                if (_rundownKeyword == 0)
-                {
-                    _requestRundown = false;
-                    RetryStrategy = RetryStrategy.DoNotRetry;
-                }
-                else
-                {
-                    RetryStrategy = RetryStrategy.DropKeywordKeepRundown;
-                    _requestRundown = true;
-                }
-            }
-        }
+        public virtual long RundownKeyword { get; set; } = EventPipeSession.DefaultRundownKeyword;
 
         public virtual int BufferSizeInMB => 256;
 

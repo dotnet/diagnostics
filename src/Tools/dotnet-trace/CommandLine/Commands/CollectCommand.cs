@@ -125,8 +125,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     enabledBy[providerCollectionProvider.Name] = "--providers ";
                 }
 
-                bool collectRundownEvents = true;
-                long? rundownKeyword = null;
+                long rundownKeyword = EventPipeSession.DefaultRundownKeyword;
                 RetryStrategy retryStrategy = RetryStrategy.DoNotRetry;
 
                 if (profile.Length != 0)
@@ -139,7 +138,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return (int)ReturnCode.ArgumentError;
                     }
 
-                    collectRundownEvents = selectedProfile.Rundown;
                     rundownKeyword = selectedProfile.RundownKeyword;
                     retryStrategy = selectedProfile.RetryStrategy;
 
@@ -148,11 +146,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (rundown.HasValue)
                 {
-                    collectRundownEvents = rundown.Value;
-                    rundownKeyword = null;
                     if (rundown.Value)
                     {
+                        rundownKeyword = EventPipeSession.DefaultRundownKeyword;
                         retryStrategy = RetryStrategy.DropKeywordKeepRundown;
+                    }
+                    else
+                    {
+                        rundownKeyword = 0;
+                        retryStrategy = RetryStrategy.DoNotRetry;
                     }
                 }
 
@@ -284,41 +286,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             retry = false;
                             try
                             {
-                                EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, requestRundown: collectRundownEvents, requestStackwalk: true, rundownKeyword: rundownKeyword);
+                                EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, requestRundown: (rundownKeyword != 0), requestStackwalk: true, rundownKeyword: rundownKeyword);
                                 session = diagnosticsClient.StartEventPipeSession(config);
-                                if (resumeRuntime)
-                                {
-                                    try
-                                    {
-                                        diagnosticsClient.ResumeRuntime();
-                                    }
-                                    catch (UnsupportedCommandException)
-                                    {
-                                        // Noop if command is unsupported, since the target is most likely a 3.1 app.
-                                    }
-                                }
                             }
-                            catch (DiagnosticsClientException e)
+                            catch (UnsupportedCommandException e)
                             {
                                 if (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
                                 {
-                                    Debug.Assert(rundownKeyword.HasValue);
+                                    Console.Error.WriteLine("The runtime is too old to support this tracing config, retrying with the standard rundown keyword");
+                                    Debug.Assert(rundownKeyword != 0);
+                                    Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                                     retry = true;
                                     retryStrategy = RetryStrategy.DoNotRetry;
-                                    collectRundownEvents = true;
-                                    rundownKeyword = null;
+                                    rundownKeyword = EventPipeSession.DefaultRundownKeyword;
                                 }
                                 else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
                                 {
-                                    Debug.Assert(rundownKeyword.HasValue);
+                                    Console.Error.WriteLine("The runtime is too old to support this tracing config, retrying with the rundown omitted");
+                                    Debug.Assert(rundownKeyword != 0);
+                                    Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                                     retry = true;
                                     retryStrategy = RetryStrategy.DoNotRetry;
-                                    collectRundownEvents = false;
-                                    rundownKeyword = null;
+                                    rundownKeyword = 0;
                                 }
                                 else
                                 {
-                                    Debug.Assert(!rundownKeyword.HasValue);
+                                    Debug.Assert((rundownKeyword == 0) || (rundownKeyword == EventPipeSession.DefaultRundownKeyword));
                                     Console.Error.WriteLine($"Unable to start a tracing session: {e}");
                                     return (int)ReturnCode.SessionCreationError;
                                 }
@@ -329,7 +322,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 return (int)ReturnCode.SessionCreationError;
                             }
                         }
-
+                        if (resumeRuntime)
+                        {
+                            try
+                            {
+                                diagnosticsClient.ResumeRuntime();
+                            }
+                            catch (UnsupportedCommandException)
+                            {
+                                // Noop if command is unsupported, since the target is most likely a 3.1 app.
+                            }
+                        }
                         if (session == null)
                         {
                             Console.Error.WriteLine("Unable to create session.");
