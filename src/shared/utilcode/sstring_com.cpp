@@ -28,7 +28,7 @@ HRESULT SString::LoadResourceAndReturnHR(CCompRC::ResourceCategory eCategory, in
 
 HRESULT SString::LoadResourceAndReturnHR(CCompRC* pResourceDLL, CCompRC::ResourceCategory eCategory, int resourceID)
 {
-    CONTRACT(BOOL)
+    CONTRACT(HRESULT)
     {
         INSTANCE_CHECK;
         NOTHROW;
