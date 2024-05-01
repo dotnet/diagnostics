@@ -50,20 +50,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                             Debug.Assert(rundownKeyword != 0);
                             Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                             retry = true;
-                            retryStrategy = RetryStrategy.DoNotRetry;
-                            rundownKeyword = 0;
+                            retryStrategy = RetryStrategy.NothingToRetry;
+                            rundownKeyword = EventPipeSession.DefaultRundownKeyword;
                         }
                         else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
                         {
                             Debug.Assert(rundownKeyword != 0);
                             Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                             retry = true;
-                            retryStrategy = RetryStrategy.DoNotRetry;
+                            retryStrategy = RetryStrategy.NothingToRetry;
                             rundownKeyword = 0;
                         }
                         else
                         {
-                            Debug.Assert((rundownKeyword == 0) || (rundownKeyword == EventPipeSession.DefaultRundownKeyword));
                             throw e;
                         }
                     }

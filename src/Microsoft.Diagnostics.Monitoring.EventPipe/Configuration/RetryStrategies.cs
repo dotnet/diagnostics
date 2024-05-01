@@ -17,8 +17,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     public enum RetryStrategy
     {
-        DoNotRetry = 0,
+        NothingToRetry = 0,
         DropKeywordKeepRundown = 1,
         DropKeywordDropRundown = 2,
+        ForbiddenToRetry = 3
     }
 }

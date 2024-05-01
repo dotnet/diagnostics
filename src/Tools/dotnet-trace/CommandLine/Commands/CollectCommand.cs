@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
 
                 long rundownKeyword = EventPipeSession.DefaultRundownKeyword;
-                RetryStrategy retryStrategy = RetryStrategy.DoNotRetry;
+                RetryStrategy retryStrategy = RetryStrategy.NothingToRetry;
 
                 if (profile.Length != 0)
                 {
@@ -148,13 +148,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     if (rundown.Value)
                     {
-                        rundownKeyword = EventPipeSession.DefaultRundownKeyword;
+                        rundownKeyword |= EventPipeSession.DefaultRundownKeyword;
                         retryStrategy = RetryStrategy.DropKeywordKeepRundown;
                     }
                     else
                     {
                         rundownKeyword = 0;
-                        retryStrategy = RetryStrategy.DoNotRetry;
+                        retryStrategy = RetryStrategy.NothingToRetry;
                     }
                 }
 
@@ -293,25 +293,24 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             {
                                 if (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
                                 {
-                                    Console.Error.WriteLine("The runtime is too old to support this tracing config, retrying with the standard rundown keyword");
+                                    Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the standard rundown keyword");
                                     Debug.Assert(rundownKeyword != 0);
                                     Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                                     retry = true;
-                                    retryStrategy = RetryStrategy.DoNotRetry;
+                                    retryStrategy = RetryStrategy.NothingToRetry;
                                     rundownKeyword = EventPipeSession.DefaultRundownKeyword;
                                 }
                                 else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
                                 {
-                                    Console.Error.WriteLine("The runtime is too old to support this tracing config, retrying with the rundown omitted");
+                                    Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the rundown omitted");
                                     Debug.Assert(rundownKeyword != 0);
                                     Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                                     retry = true;
-                                    retryStrategy = RetryStrategy.DoNotRetry;
+                                    retryStrategy = RetryStrategy.NothingToRetry;
                                     rundownKeyword = 0;
                                 }
                                 else
                                 {
-                                    Debug.Assert((rundownKeyword == 0) || (rundownKeyword == EventPipeSession.DefaultRundownKeyword));
                                     Console.Error.WriteLine($"Unable to start a tracing session: {e}");
                                     return (int)ReturnCode.SessionCreationError;
                                 }

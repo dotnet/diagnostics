@@ -33,13 +33,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             get
             {
-                RetryStrategy result = RetryStrategy.DropKeywordDropRundown;
+                RetryStrategy result = RetryStrategy.NothingToRetry;
                 foreach (MonitoringSourceConfiguration configuration in _configurations)
                 {
-                    if (result == RetryStrategy.DoNotRetry)
+                    if (configuration.RetryStrategy == RetryStrategy.ForbiddenToRetry)
                     {
-                        // Nothing overrides DoNotRetry
-                        return RetryStrategy.DoNotRetry;
+                        // Nothing overrides ForbiddenToRetry
+                        return RetryStrategy.ForbiddenToRetry;
+                    }
+                    else if (result == RetryStrategy.NothingToRetry)
+                    {
+                        // Anything override NothingToRetry
+                        result  = configuration.RetryStrategy;
                     }
                     else if (result == RetryStrategy.DropKeywordDropRundown)
                     {

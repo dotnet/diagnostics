@@ -15,7 +15,8 @@
 //
 internal enum RetryStrategy
 {
-    DoNotRetry = 0,
-    DropKeywordKeepRundown = 1,
-    DropKeywordDropRundown = 2,
+        NothingToRetry = 0,
+        DropKeywordKeepRundown = 1,
+        DropKeywordDropRundown = 2,
+        ForbiddenToRetry = 3
 }
