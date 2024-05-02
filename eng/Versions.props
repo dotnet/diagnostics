@@ -16,8 +16,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-preview.4.24230.15</VSRedistCommonNetCoreSharedFrameworkx6490Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-preview.4.24230.15</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-preview.5.24251.8</VSRedistCommonNetCoreSharedFrameworkx6490Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-preview.5.24251.8</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
     <MicrosoftAspNetCoreAppRefInternalVersion>9.0.0-preview.4.24222.16</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>9.0.0-preview.4.24222.16</MicrosoftAspNetCoreAppRefVersion>
