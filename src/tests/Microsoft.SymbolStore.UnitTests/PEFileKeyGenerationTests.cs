@@ -24,7 +24,7 @@ namespace Microsoft.SymbolStore.Tests
         {
             public string Path { get; }
             public string FileName { get; }
-            public string Guid { get; }
+            public string Id { get; }
             public bool IsRuntimeModule { get; }
             public bool IsSpecialFile { get; }
             public string[] DacDbiFiles { get; }
@@ -34,7 +34,7 @@ namespace Microsoft.SymbolStore.Tests
             {
                 Path = path;
                 FileName = fileName;
-                Guid = guid;
+                Id = guid;
                 IsRuntimeModule = isRuntimeModule;
                 IsSpecialFile = isSpecialFile;
                 DacDbiFiles = dacDbiFiles;
@@ -79,7 +79,7 @@ namespace Microsoft.SymbolStore.Tests
 
             var identityKeys = generator.GetKeys(KeyTypeFlags.IdentityKey);
             Assert.True(identityKeys.Count() == 1);
-            Assert.True(identityKeys.First().Index == $"{mockPEFile.FileName}/{mockPEFile.Guid}/{mockPEFile.FileName}");
+            Assert.True(identityKeys.First().Index == $"{mockPEFile.FileName}/{mockPEFile.Id}/{mockPEFile.FileName}");
             Assert.True(identityKeys.First().IsClrSpecialFile == mockPEFile.IsSpecialFile);
         }
 
@@ -96,7 +96,7 @@ namespace Microsoft.SymbolStore.Tests
             Assert.True(clrKeys.Count() == specialFiles.Count());
             foreach (var specialFileName in specialFiles)
             {
-                Assert.True(clrKeys.ContainsKey($"{specialFileName}/{mockPEFile.Guid}/{specialFileName}"));
+                Assert.True(clrKeys.ContainsKey($"{specialFileName}/{mockPEFile.Id}/{specialFileName}"));
             }
         }
 
@@ -112,7 +112,7 @@ namespace Microsoft.SymbolStore.Tests
             Assert.True(dacdbiKeys.Count() == mockPEFile.DacDbiFiles.Count());
             foreach (var specialFileName in mockPEFile.DacDbiFiles)
             {
-                Assert.True(dacdbiKeys.ContainsKey($"{specialFileName}/{mockPEFile.Guid}/{specialFileName}"));
+                Assert.True(dacdbiKeys.ContainsKey($"{specialFileName}/{mockPEFile.Id}/{specialFileName}"));
             }
         }
 
@@ -128,7 +128,7 @@ namespace Microsoft.SymbolStore.Tests
             if (mockPEFile.IsRuntimeModule)
             {
                 Assert.True(runtimeKeys.Count() == 1);
-                Assert.True(runtimeKeys.First().Index == $"{mockPEFile.FileName}/{mockPEFile.Guid}/{mockPEFile.FileName}");
+                Assert.True(runtimeKeys.First().Index == $"{mockPEFile.FileName}/{mockPEFile.Id}/{mockPEFile.FileName}");
             }
             else
             {
