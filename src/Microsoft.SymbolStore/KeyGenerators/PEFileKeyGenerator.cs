@@ -157,15 +157,12 @@ namespace Microsoft.SymbolStore.KeyGenerators
             return Enumerable.Empty<string>();
         }
 
-        private IEnumerable<string> GetFilesLongNameVariants(params string[] filesWithLongNameVariant)
+        private IEnumerable<string> GetFilesLongNameVariants(string fileWithLongNameVariant)
         {
-            foreach (string name in filesWithLongNameVariant)
+            if (!s_knownFilesWithLongNameVariant.Contains(fileWithLongNameVariant))
             {
-                if (!s_knownFilesWithLongNameVariant.Contains(name))
-                {
-                    Tracer.Warning("{0} is not a recognized file with a long name variant", name);
-                    return Enumerable.Empty<string>();
-                }
+                Tracer.Warning("{0} is not a recognized file with a long name variant", fileWithLongNameVariant);
+                return Enumerable.Empty<string>();
             }
 
             VsFixedFileInfo fileVersionInfo = _peFile.VersionInfo;
@@ -206,13 +203,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
                                  (fileVersionInfo.FileFlags & FileInfoFlags.SpecialBuild) != 0 ? ".dbg" : ".chk";
 
             List<string> longNameFileVariants = new();
-            foreach (string fileWithLongNameVariant in filesWithLongNameVariant)
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileWithLongNameVariant);
+            foreach (string hostArchitecture in hostArchitectures)
             {
-                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileWithLongNameVariant);
-                foreach (string hostArchitecture in hostArchitectures)
-                {
-                    longNameFileVariants.Add($"{fileNameWithoutExtension}_{hostArchitecture}_{targetArchitecture}_{fileVersion}{buildFlavor}.dll");
-                }
+                longNameFileVariants.Add($"{fileNameWithoutExtension}_{hostArchitecture}_{targetArchitecture}_{fileVersion}{buildFlavor}.dll");
             }
 
             return longNameFileVariants;
