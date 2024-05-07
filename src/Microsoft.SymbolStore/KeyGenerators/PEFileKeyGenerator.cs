@@ -95,7 +95,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 // Return keys for SOS modules for a given runtime module
                 if ((flags & (KeyTypeFlags.ClrKeys)) != 0)
                 {
-                    string coreclrId = string.Format("{0:X8}{1:x}", _peFile.Timestamp, _peFile.SizeOfImage);
+                    string coreclrId = BuildId(_peFile.Timestamp, _peFile.SizeOfImage);
                     foreach (string specialFileName in GetSOSFiles(GetFileName(_path)))
                     {
                         yield return BuildKey(specialFileName, coreclrId);
@@ -105,7 +105,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 // Return keys for DAC and DBI modules for a given runtime module
                 if ((flags & (KeyTypeFlags.ClrKeys | KeyTypeFlags.DacDbiKeys)) != 0)
                 {
-                    string coreclrId = string.Format("{0:X8}{1:x}", _peFile.Timestamp, _peFile.SizeOfImage);
+                    string coreclrId = BuildId(_peFile.Timestamp, _peFile.SizeOfImage);
                     foreach (string specialFileName in GetDACFiles(GetFileName(_path)))
                     {
                         yield return BuildKey(specialFileName, coreclrId);
@@ -116,7 +116,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 {
                     if ((_peFile.FileHeader.Characteristics & (ushort)ImageFile.Dll) == 0 && !_peFile.IsILImage)
                     {
-                        string id = string.Format("{0:X8}{1:x}", _peFile.Timestamp, _peFile.SizeOfImage);
+                        string id = BuildId(_peFile.Timestamp, _peFile.SizeOfImage);
 
                         // The host program as itself (usually dotnet.exe)
                         yield return BuildKey(_path, id);
@@ -235,8 +235,13 @@ namespace Microsoft.SymbolStore.KeyGenerators
             bool clrSpecialFile = s_knownRuntimeSpecialFiles.Contains(fileName) ||
                                   (s_knownFilesWithLongNameVariant.Any((file) => fileName.StartsWith(Path.GetFileNameWithoutExtension(file).ToLowerInvariant() + "_")) && Path.GetExtension(fileName) == ".dll");
 
-            string id = string.Format("{0:X8}{1:x}", timestamp, sizeOfImage);
+            string id = BuildId(timestamp, sizeOfImage);
             return BuildKey(path, id, clrSpecialFile);
+        }
+
+        private static string BuildId(uint timestamp, uint sizeOfImage)
+        {
+            return string.Format("{0:X8}{1:x}", timestamp, sizeOfImage);
         }
     }
 }
