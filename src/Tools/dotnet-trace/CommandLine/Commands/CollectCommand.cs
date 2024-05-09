@@ -282,7 +282,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         EventPipeSession session = null;
                         try
                         {
-                            EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, requestRundown: (rundownKeyword != 0), requestStackwalk: true, rundownKeyword: rundownKeyword);
+                            EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: rundownKeyword, requestStackwalk: true);
                             session = diagnosticsClient.StartEventPipeSession(config);
                         }
                         catch (UnsupportedCommandException e)
@@ -292,7 +292,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the standard rundown keyword");
                                 Debug.Assert(rundownKeyword != 0);
                                 Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
-                                EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, requestRundown: true, requestStackwalk: true, rundownKeyword: EventPipeSession.DefaultRundownKeyword);
+                                EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: EventPipeSession.DefaultRundownKeyword, requestStackwalk: true);
                                 session = diagnosticsClient.StartEventPipeSession(config);
                             }
                             else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
@@ -300,7 +300,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the rundown omitted");
                                 Debug.Assert(rundownKeyword != 0);
                                 Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
-                                EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, requestRundown: false, requestStackwalk: true, rundownKeyword: 0);
+                                EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: 0, requestStackwalk: true);
                                 session = diagnosticsClient.StartEventPipeSession(config);
                             }
                             else

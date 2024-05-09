@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         //!  unused_keyword                     (0x00000100)
         //!  JittedMethodILToNativeMapKeyword   (0x00020000)
         //!  ThreadTransferKeyword              (0x80000000)
-        public const long DefaultRundownKeyword = 0x80020139;
+        internal const long DefaultRundownKeyword = 0x80020139;
 
         private ulong _sessionId;
         private IpcEndpoint _endpoint;
@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // To keep backward compatibility with older runtimes we only use newer serialization format when needed
             EventPipeCommandId command;
             byte[] payload;
-            if (config.RundownKeyword.HasValue && config.RundownKeyword.Value != DefaultRundownKeyword && config.RundownKeyword.Value != 0)
+            if (config.RundownKeyword != DefaultRundownKeyword && config.RundownKeyword != 0)
             {
                 // V4 has added support to specify rundown keyword
                 command = EventPipeCommandId.CollectTracing4;

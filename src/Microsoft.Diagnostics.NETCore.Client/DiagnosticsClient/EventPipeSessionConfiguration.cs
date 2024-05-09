@@ -24,22 +24,34 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="circularBufferSizeMB">The size of the runtime's buffer for collecting events in MB</param>
         /// <param name="requestRundown">If true, request rundown events from the runtime.</param>
         /// <param name="requestStackwalk">If true, record a stacktrace for every emitted event.</param>
-        /// <param name="rundownKeyword">If not null, override the default keyword for rundown events.</param>
         public EventPipeSessionConfiguration(
             IEnumerable<EventPipeProvider> providers,
             int circularBufferSizeMB = 256,
             bool requestRundown = true,
-            bool requestStackwalk = true,
-            long? rundownKeyword = null) : this(circularBufferSizeMB, EventPipeSerializationFormat.NetTrace, providers, requestRundown, requestStackwalk, rundownKeyword)
+            bool requestStackwalk = true) : this(circularBufferSizeMB, EventPipeSerializationFormat.NetTrace, providers, requestStackwalk, (requestRundown ? EventPipeSession.DefaultRundownKeyword : 0))
+        {}
+
+        /// <summary>
+        /// Creates a new configuration object for the EventPipeSession.
+        /// For details, see the documentation of each property of this object.
+        /// </summary>
+        /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
+        /// <param name="circularBufferSizeMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="rundownKeyword">The keyword for rundown events.</param>
+        /// <param name="requestStackwalk">If true, record a stacktrace for every emitted event.</param>
+        public EventPipeSessionConfiguration(
+            IEnumerable<EventPipeProvider> providers,
+            int circularBufferSizeMB,
+            long rundownKeyword,
+            bool requestStackwalk = true) : this(circularBufferSizeMB, EventPipeSerializationFormat.NetTrace, providers, requestStackwalk, rundownKeyword)
         {}
 
         private EventPipeSessionConfiguration(
             int circularBufferSizeMB,
             EventPipeSerializationFormat format,
             IEnumerable<EventPipeProvider> providers,
-            bool requestRundown,
             bool requestStackwalk,
-            long? rundownKeyword)
+            long rundownKeyword)
         {
             if (circularBufferSizeMB == 0)
             {
@@ -64,7 +76,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             CircularBufferSizeInMB = circularBufferSizeMB;
             Format = format;
-            RequestRundown = requestRundown;
             RequestStackwalk = requestStackwalk;
             RundownKeyword = rundownKeyword;
         }
@@ -77,7 +88,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <item>Consider to set this parameter to false if you don't need stacktrace information or if you're analyzing events on the fly.</item>
         /// </list>
         /// </summary>
-        public bool RequestRundown { get; }
+        public bool RequestRundown => this.RundownKeyword != 0;
 
         /// <summary>
         /// The size of the runtime's buffer for collecting events in MB.
@@ -99,7 +110,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// If not null, override the default keyword for rundown events.
         /// </summary>
-        public long? RundownKeyword { get; internal set; }
+        public long RundownKeyword { get; internal set; }
 
         /// <summary>
         /// Providers to enable for this session.
@@ -160,7 +171,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 writer.Write(config.CircularBufferSizeInMB);
                 writer.Write((uint)config.Format);
-                writer.Write(config.RundownKeyword.Value);
+                writer.Write(config.RundownKeyword);
                 writer.Write(config.RequestStackwalk);
 
                 SerializeProviders(config, writer);
