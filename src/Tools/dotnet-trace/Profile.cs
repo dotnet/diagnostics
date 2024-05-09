@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public long RundownKeyword { get; set; }
 
-        public RetryStrategy RetryStrategy { get; set; } = RetryStrategy.DropKeywordKeepRundown;
+        public RetryStrategy RetryStrategy { get; set; } = RetryStrategy.NothingToRetry;
 
         public static void MergeProfileAndProviders(Profile selectedProfile, List<EventPipeProvider> providerCollection, Dictionary<string, string> enabledBy)
         {

@@ -13,10 +13,13 @@
 // how we should retry. So this give us a way to encode the retry strategy in the
 // profiles without having to introducing new concepts.
 //
-internal enum RetryStrategy
+namespace Microsoft.Diagnostics.Tools.Trace
 {
+    internal enum RetryStrategy
+    {
         NothingToRetry = 0,
         DropKeywordKeepRundown = 1,
         DropKeywordDropRundown = 2,
         ForbiddenToRetry = 3
+    }
 }
