@@ -34,38 +34,24 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 int bufferSizeInMB = _sourceConfig.BufferSizeInMB;
                 long rundownKeyword = _sourceConfig.RundownKeyword;
                 RetryStrategy retryStrategy = _sourceConfig.RetryStrategy;
-                bool retry = true;
-                while (retry)
+                try
                 {
-                    retry = false;
-                    try
-                    {
-                        EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, (rundownKeyword != 0), true, rundownKeyword);
-                        session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
-                    }
-                    catch (UnsupportedCommandException e)
-                    {
-                        if (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
-                        {
-                            Debug.Assert(rundownKeyword != 0);
-                            Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
-                            retry = true;
-                            retryStrategy = RetryStrategy.NothingToRetry;
-                            rundownKeyword = EventPipeSession.DefaultRundownKeyword;
-                        }
-                        else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
-                        {
-                            Debug.Assert(rundownKeyword != 0);
-                            Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
-                            retry = true;
-                            retryStrategy = RetryStrategy.NothingToRetry;
-                            rundownKeyword = 0;
-                        }
-                        else
-                        {
-                            throw e;
-                        }
-                    }
+                    EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, (rundownKeyword != 0), true, rundownKeyword);
+                    session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
+                }
+                catch (UnsupportedCommandException) when (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
+                {
+                    Debug.Assert(rundownKeyword != 0);
+                    Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                    EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, true, true, EventPipeSession.DefaultRundownKeyword);
+                    session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
+                }
+                catch (UnsupportedCommandException) when (retryStrategy == RetryStrategy.DropKeywordDropRundown)
+                {
+                    Debug.Assert(rundownKeyword != 0);
+                    Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                    EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, false, true, 0);
+                    session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
                 }
                 if (resumeRuntime)
                 {

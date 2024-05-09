@@ -36,6 +36,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public virtual int BufferSizeInMB => 256;
 
-        public virtual RetryStrategy RetryStrategy { get; set; } = RetryStrategy.DropKeywordKeepRundown;
+        public virtual RetryStrategy RetryStrategy { get; set; } = RetryStrategy.NothingToRetry;
     }
 }

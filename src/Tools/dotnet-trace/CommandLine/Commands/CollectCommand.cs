@@ -280,46 +280,39 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     using (VirtualTerminalMode vTermMode = printStatusOverTime ? VirtualTerminalMode.TryEnable() : null)
                     {
                         EventPipeSession session = null;
-                        bool retry = true;
-                        while (retry)
+                        try
                         {
-                            retry = false;
-                            try
+                            EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, requestRundown: (rundownKeyword != 0), requestStackwalk: true, rundownKeyword: rundownKeyword);
+                            session = diagnosticsClient.StartEventPipeSession(config);
+                        }
+                        catch (UnsupportedCommandException e)
+                        {
+                            if (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
                             {
-                                EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, requestRundown: (rundownKeyword != 0), requestStackwalk: true, rundownKeyword: rundownKeyword);
+                                Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the standard rundown keyword");
+                                Debug.Assert(rundownKeyword != 0);
+                                Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                                EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, requestRundown: true, requestStackwalk: true, rundownKeyword: EventPipeSession.DefaultRundownKeyword);
                                 session = diagnosticsClient.StartEventPipeSession(config);
                             }
-                            catch (UnsupportedCommandException e)
+                            else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
                             {
-                                if (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
-                                {
-                                    Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the standard rundown keyword");
-                                    Debug.Assert(rundownKeyword != 0);
-                                    Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
-                                    retry = true;
-                                    retryStrategy = RetryStrategy.NothingToRetry;
-                                    rundownKeyword = EventPipeSession.DefaultRundownKeyword;
-                                }
-                                else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
-                                {
-                                    Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the rundown omitted");
-                                    Debug.Assert(rundownKeyword != 0);
-                                    Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
-                                    retry = true;
-                                    retryStrategy = RetryStrategy.NothingToRetry;
-                                    rundownKeyword = 0;
-                                }
-                                else
-                                {
-                                    Console.Error.WriteLine($"Unable to start a tracing session: {e}");
-                                    return (int)ReturnCode.SessionCreationError;
-                                }
+                                Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the rundown omitted");
+                                Debug.Assert(rundownKeyword != 0);
+                                Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                                EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, requestRundown: false, requestStackwalk: true, rundownKeyword: 0);
+                                session = diagnosticsClient.StartEventPipeSession(config);
                             }
-                            catch (UnauthorizedAccessException e)
+                            else
                             {
-                                Console.Error.WriteLine($"dotnet-trace does not have permission to access the specified app: {e.GetType()}");
+                                Console.Error.WriteLine($"Unable to start a tracing session: {e}");
                                 return (int)ReturnCode.SessionCreationError;
                             }
+                        }
+                        catch (UnauthorizedAccessException e)
+                        {
+                            Console.Error.WriteLine($"dotnet-trace does not have permission to access the specified app: {e.GetType()}");
+                            return (int)ReturnCode.SessionCreationError;
                         }
                         if (resumeRuntime)
                         {
