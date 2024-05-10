@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         public GCDumpSourceConfiguration()
         {
-            RequestRundown = false;
+            RundownKeyword = 0;
         }
 
         public override IList<EventPipeProvider> GetProviders()

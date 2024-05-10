@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         keywords: (long)ClrTraceEventParser.Keywords.GC |
                                   (long)ClrTraceEventParser.Keywords.GCHandle |
                                   (long)ClrTraceEventParser.Keywords.Exception
-                    ),
+                    )
                 },
                 "Tracks GC collections and samples object allocations."),
             new Profile(
@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         keywords: (long)ClrTraceEventParser.Keywords.GC
                     )
                 },
-                "Tracks GC collections only at very low overhead.") { Rundown = false },
+                "Tracks GC collections only at very low overhead.") { RundownKeyword = (long)ClrTraceEventParser.Keywords.GC, RetryStrategy = RetryStrategy.DropKeywordDropRundown },
             new Profile(
                 "database",
                 new EventPipeProvider[] {
