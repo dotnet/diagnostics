@@ -41,15 +41,31 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
                 catch (UnsupportedCommandException) when (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
                 {
-                    Debug.Assert(rundownKeyword != 0);
-                    Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                    //
+                    // If you are building new profiles or options, you can test with these asserts to make sure you are writing
+                    // the retry strategies correctly.
+                    //
+                    // If these assert ever fires, it means something is wrong with the option generation logic leading to unnecessary retries.
+                    // unnecessary retries is not fatal.
+                    //
+                    // Debug.Assert(rundownKeyword != 0);
+                    // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                    //
                     EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, EventPipeSession.DefaultRundownKeyword, true);
                     session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
                 }
                 catch (UnsupportedCommandException) when (retryStrategy == RetryStrategy.DropKeywordDropRundown)
                 {
-                    Debug.Assert(rundownKeyword != 0);
-                    Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                    //
+                    // If you are building new profiles or options, you can test with these asserts to make sure you are writing
+                    // the retry strategies correctly.
+                    //
+                    // If these assert ever fires, it means something is wrong with the option generation logic leading to unnecessary retries.
+                    // unnecessary retries is not fatal.
+                    //
+                    // Debug.Assert(rundownKeyword != 0);
+                    // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                    //
                     EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, 0, true);
                     session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
                 }

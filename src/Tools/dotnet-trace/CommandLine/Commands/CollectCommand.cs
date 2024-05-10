@@ -149,7 +149,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (rundown.Value)
                     {
                         rundownKeyword |= EventPipeSession.DefaultRundownKeyword;
-                        retryStrategy = RetryStrategy.DropKeywordKeepRundown;
+                        retryStrategy = (rundownKeyword == EventPipeSession.DefaultRundownKeyword) ? RetryStrategy.NothingToRetry : RetryStrategy.DropKeywordKeepRundown;
                     }
                     else
                     {
@@ -290,16 +290,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             if (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
                             {
                                 Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the standard rundown keyword");
-                                Debug.Assert(rundownKeyword != 0);
-                                Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                                //
+                                // If you are building new profiles or options, you can test with these asserts to make sure you are writing
+                                // the retry strategies correctly.
+                                //
+                                // If these assert ever fires, it means something is wrong with the option generation logic leading to unnecessary retries.
+                                // unnecessary retries is not fatal.
+                                //
+                                // Debug.Assert(rundownKeyword != 0);
+                                // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                                //
                                 EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: EventPipeSession.DefaultRundownKeyword, requestStackwalk: true);
                                 session = diagnosticsClient.StartEventPipeSession(config);
                             }
                             else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
                             {
                                 Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the rundown omitted");
-                                Debug.Assert(rundownKeyword != 0);
-                                Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                                //
+                                // If you are building new profiles or options, you can test with these asserts to make sure you are writing
+                                // the retry strategies correctly.
+                                //
+                                // If these assert ever fires, it means something is wrong with the option generation logic leading to unnecessary retries.
+                                // unnecessary retries is not fatal.
+                                //
+                                // Debug.Assert(rundownKeyword != 0);
+                                // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                                //
                                 EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: 0, requestStackwalk: true);
                                 session = diagnosticsClient.StartEventPipeSession(config);
                             }

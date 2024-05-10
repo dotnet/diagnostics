@@ -108,7 +108,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public bool RequestStackwalk { get; }
 
         /// <summary>
-        /// If not null, override the default keyword for rundown events.
+        /// The keywords enabled for the rundown provider.
         /// </summary>
         public long RundownKeyword { get; internal set; }
 
