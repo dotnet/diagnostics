@@ -608,7 +608,10 @@ Followed by an Optional Continuation of a `nettrace` format stream of events.
 
 Command Code: `0x0205`
 
-The `CollectTracing4` command is an extension of the `CollectTracing3` command - its behavior is the same as `CollectTracing3` command, except the requestRundown field is replaced by the rundownKeyword field to allow customizing the set of rundown events to be fired.
+The `CollectTracing4` command is an extension of the `CollectTracing3` command - its behavior is the same as `CollectTracing3` command, except the requestRundown field is replaced by the rundownKeyword field to allow customizing the set of rundown events to be fired. 
+
+A rundown keyword of `0x80020139` has the equivalent behavior as `CollectTracing3` with `requestRundown=true` and rundown keyword of `0` has the equivalent behavior as `requestRundown=false`.
+
 
 > Note available for .NET 9.0 and later.
 
