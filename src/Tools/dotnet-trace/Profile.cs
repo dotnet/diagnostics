@@ -22,7 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public string Description { get; }
 
-        public long RundownKeyword { get; set; }
+        public long RundownKeyword { get; set; } = EventPipeSession.DefaultRundownKeyword;
 
         public RetryStrategy RetryStrategy { get; set; } = RetryStrategy.NothingToRetry;
 
