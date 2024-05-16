@@ -51,7 +51,7 @@ namespace DiagnosticsReleaseTool.Impl
             DirectoryInfo basePublishDirectory = darcLayoutHelper.GetShippingDirectoryForSingleProjectVariants(DiagnosticsRepoHelpers.ProductNames);
             string publishManifestPath = Path.Combine(releaseConfig.StagingDirectory.FullName, ManifestName);
 
-            IPublisher releasePublisher = new AzureBlobBublisher(releaseConfig.AccountName, releaseConfig.AccountKey, releaseConfig.ContainerName, releaseConfig.ReleaseName, releaseConfig.SasValidDays, logger);
+            IPublisher releasePublisher = new AzureBlobBublisher(releaseConfig.AccountName, releaseConfig.ClientId, releaseConfig.ContainerName, releaseConfig.ReleaseName, logger);
             IManifestGenerator manifestGenerator = new DiagnosticsManifestGenerator(releaseMetadata, releaseConfig.ToolManifest, logger);
 
             using Release diagnosticsRelease = new(

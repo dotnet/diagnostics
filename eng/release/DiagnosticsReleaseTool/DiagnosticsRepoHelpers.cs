@@ -10,8 +10,8 @@ namespace DiagnosticsReleaseTool.Util
 {
     public static class DiagnosticsRepoHelpers
     {
-        public static readonly string[] ProductNames = new[] { "diagnostics", "dotnet-diagnostics" };
-        public static readonly string[] RepositoryUrls = new[] { "https://github.com/dotnet/diagnostics", "https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics" };
+        public static readonly string[] ProductNames = ["diagnostics", "dotnet-diagnostics"];
+        public static readonly string[] RepositoryUrls = ["https://github.com/dotnet/diagnostics", "https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics"];
         public static string BundleToolsPathInDrop => System.IO.Path.Combine("diagnostics", "bundledtools");
         public const string BundledToolsPrefix = "diagnostic-tools-";
         public const string BundledToolsCategory = "ToolBundleAssets";
