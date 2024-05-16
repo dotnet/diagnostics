@@ -53,10 +53,12 @@ ClrmaThread::Initialize()
         }
         if (thread.osThreadId == m_osThreadId)
         {
-            if (FAILED(hr = m_managedAnalysis->ReadPointer(thread.lastThrownObjectHandle, &m_lastThrownObject)))
+            if (thread.lastThrownObjectHandle != 0)
             {
-                TraceError("ClrmaThread::Initialize ReadPointer FAILED %08x\n", hr);
-                return hr;
+                if (FAILED(hr = m_managedAnalysis->ReadPointer(thread.lastThrownObjectHandle, &m_lastThrownObject)))
+                {
+                    TraceError("ClrmaThread::Initialize ReadPointer FAILED %08x\n", hr);
+                }
             }
             m_firstNestedException = thread.firstNestedException;
             return S_OK;
