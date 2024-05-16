@@ -203,10 +203,21 @@ ClrmaThread::get_FrameCount(
                     {
                         frame.SP = frameData.frameAddr;
 
-                        // Format special frame
-                        if (FAILED(hr = GetFrameFromAddress(pStackWalk, frame)))
+                        // Get special stack frame name
+                        CLRDATA_ADDRESS methodDesc = 0;
+                        if (SUCCEEDED(hr = m_managedAnalysis->SosDacInterface()->GetMethodDescPtrFromFrame(frame.SP, &methodDesc)))
                         {
-                            continue;
+                            if (FAILED(hr = m_managedAnalysis->GetMethodDescInfo(methodDesc, frame)))
+                            {
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            if (FAILED(hr = GetFrameFromStackWalk(pStackWalk, frame)))
+                            {
+                                continue;
+                            }
                         }
                     }
                     else
@@ -222,13 +233,11 @@ ClrmaThread::get_FrameCount(
                         }
                         else
                         {
-                            frame.Function = L"<unknown>";
+                            if (FAILED(hr = GetFrameFromStackWalk(pStackWalk, frame)))
+                            {
+                                continue;
+                            }
                         }
-                    }
-
-                    if (frame.Module.empty())
-                    {
-                        // TODO: from built-in SOS CLRMA provider
                     }
 
                     m_stackFrames.push_back(frame);
@@ -524,44 +533,31 @@ ClrmaThread::GetFrameLocation(
 }
 
 HRESULT
-ClrmaThread::GetFrameFromAddress(
+ClrmaThread::GetFrameFromStackWalk(
     IXCLRDataStackWalk* pStackWalk,
     StackFrame& frame
 )
 {
-    ArrayHolder<WCHAR> wszNameBuffer = new WCHAR[MAX_LONGPATH + 1];
-    CLRDATA_ADDRESS methodDesc = 0;
     HRESULT hr;
-
-    if (SUCCEEDED(hr = m_managedAnalysis->SosDacInterface()->GetMethodDescPtrFromFrame(frame.SP, &methodDesc)))
+    ReleaseHolder<IXCLRDataFrame> clrDataFrame;
+    if (SUCCEEDED(hr = pStackWalk->GetFrame((IXCLRDataFrame**)&clrDataFrame)))
     {
-        if (SUCCEEDED(hr = m_managedAnalysis->SosDacInterface()->GetMethodDescName(methodDesc, MAX_LONGPATH, wszNameBuffer, nullptr)))
+        ReleaseHolder<IXCLRDataMethodInstance> methodInstance;
+        if (SUCCEEDED(hr = clrDataFrame->GetMethodInstance((IXCLRDataMethodInstance**)&methodInstance)))
         {
-            frame.Function.append(wszNameBuffer);
+            ArrayHolder<WCHAR> wszNameBuffer = new WCHAR[MAX_LONGPATH + 1];
+            if (SUCCEEDED(hr = methodInstance->GetName(0, MAX_LONGPATH, nullptr, wszNameBuffer)))
+            {
+                frame.Function.append(wszNameBuffer);
+
+                // Strip off the function parameters
+                size_t parameterStart = frame.Function.find_first_of(L'(');
+                if (parameterStart != -1)
+                {
+                    frame.Function = frame.Function.substr(0, parameterStart);
+                }
+            }
         }
-    }
-    else
-    {
-         // The Frame did not have direct function info, so try to get the method instance
-         // (in this case a MethodDesc), and read the name from it.
-         ReleaseHolder<IXCLRDataFrame> clrDataFrame;
-         if (SUCCEEDED(hr = pStackWalk->GetFrame((IXCLRDataFrame**)&clrDataFrame)))
-         {
-             ReleaseHolder<IXCLRDataMethodInstance> methodInstance;
-             if (SUCCEEDED(hr = clrDataFrame->GetMethodInstance((IXCLRDataMethodInstance**)&methodInstance)))
-             {
-                 if (SUCCEEDED(hr = methodInstance->GetName(0, MAX_LONGPATH, nullptr, wszNameBuffer)))
-                 {
-                     frame.Function.append(wszNameBuffer);
-                 }
-             }
-         }
-    }
-    // Strip off the function parameters
-    size_t parameterStart = frame.Function.find_first_of(L'(');
-    if (parameterStart != -1)
-    {
-        frame.Function = frame.Function.substr(0, parameterStart);
     }
     return hr;
 }
