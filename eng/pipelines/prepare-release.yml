@@ -4,7 +4,7 @@ stages:
   jobs:
   - job: PrepareReleaseJob
     displayName: Prepare release with Darc
-    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
+    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/reltest/'))) }}:
       templateContext:
         outputs:
         - output: pipelineArtifact
@@ -13,16 +13,15 @@ stages:
           displayName: 'Publish Release Drop'
           condition: succeeded()
     variables:
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/reltest/'))) }}:
       - group: DotNet-Diagnostics-Storage
-      - group: DotNet-DotNetStage-Storage
       - group: Release-Pipeline
     steps:
     - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
       - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release /bl'
         workingDirectory: '$(System.ArtifactsDirectory)'
         displayName: 'Build Manifest generation and asset publishing tool'
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
+    - ${{ elseif and(ne(variables['System.TeamProject'], 'public'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/reltest/'))) }}:
       - task: UseDotNet@2
         displayName: 'Use .NET Core runtime 6.x'
         inputs:
@@ -44,6 +43,19 @@ stages:
             -SasSuffixes "$(dotnetclichecksumsmsrc-dotnet-read-list-sas-token),$(dotnetclimsrc-read-sas-token)"
             -ReleaseVersion "$(Build.BuildNumber)"
           workingDirectory: '$(Build.Repository.LocalPath)'
+      - task: AzureCLI@2
+        displayName: 'Use WIF to obtain credentials for Azure CLI'
+        inputs:
+          azureSubscription: 'dotnetstage-diagnostics-tools-rw'
+          scriptType: pscore
+          scriptLocation: inlineScript
+          addSpnToEnvironment: true
+          inlineScript: |
+              echo "##vso[task.setvariable variable=ARM_CLIENT_ID]$env:servicePrincipalId"
+              echo "##vso[task.setvariable variable=ARM_ID_TOKEN]$env:idToken"
+              echo "##vso[task.setvariable variable=ARM_TENANT_ID]$env:tenantId"
+      - script: az login --service-principal -u $(ARM_CLIENT_ID) --tenant $(ARM_TENANT_ID) --allow-no-subscriptions --federated-token $(ARM_ID_TOKEN)
+        displayName: 'Use az to authenticate using managed identity'
       - script: >-
           $(Build.Repository.LocalPath)\dotnet.cmd run --project $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release
           --
@@ -53,9 +65,8 @@ stages:
           --staging-directory "$(System.ArtifactsDirectory)\ReleaseStaging"
           --release-name "$(Build.BuildNumber)"
           --account-name "$(dotnet-diagnostics-storage-accountname)"
-          --account-key "$(dotnetstage-storage-key)"
+          --client-id $(ARM_CLIENT_ID)
           --container-name "$(dotnet-diagnostics-container-name)"
-          --sas-valid-days "$(dotnet-diagnostics-storage-retentiondays)"
           -v True
         workingDirectory: '$(Build.Repository.LocalPath)\'
         displayName: 'Manifest generation and asset publishing'
