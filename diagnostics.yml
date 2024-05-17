@@ -287,10 +287,11 @@ extends:
                 displayName: 'Publish Bundled Tools'
                 condition: succeeded()
               - output: pipelineArtifact
-                artifact: Logs_Packaging_Signing
+                artifact: Logs_Packaging_Signing_Attempt$(System.JobAttempt)
                 path: '$(Build.SourcesDirectory)/artifacts/log'
                 displayName: 'Publish Signing and Packaging Logs'
                 condition: always()
+                continueOnError: true
             steps:
             - task: DownloadPipelineArtifact@2
               displayName: 'Download release builds'
