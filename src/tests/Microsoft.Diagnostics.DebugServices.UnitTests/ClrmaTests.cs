@@ -166,7 +166,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     }
                 }
                 // First try the built-in CLRMA provider. The EFN_StackTrace results doesn't seem to affect the !analyze output
-                host.ExecuteHostCommand("!sos clrmaconfig -disable -dac");
+                host.ExecuteHostCommand("!sos clrmaconfig -disable -logging -dac");
                 IEnumerable<string> builtIn = Filter(host.ExecuteHostCommand("!analyze -v6"));
 
                 // Now try the direct DAC CLRMA provider in SOS
