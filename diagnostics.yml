@@ -224,6 +224,21 @@ extends:
       - template: /eng/pipelines/build.yml
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
+          name: Ubuntu_22_04
+          osGroup: Linux
+          container: test_ubuntu_22_04
+          dependsOn: Linux
+          testOnly: true
+          buildConfigs:
+          - configuration: Release
+            architecture: x64
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: x64
+
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
           name: Alpine3_19
           osGroup: Linux
           osSuffix: -musl
