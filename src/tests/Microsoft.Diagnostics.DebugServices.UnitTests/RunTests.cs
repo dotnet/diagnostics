@@ -148,22 +148,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             _commandService = services.GetService<CommandService>();
         }
 
-        public override ImmutableArray<string> ExecuteCommand(string commandLine)
-        {
-            if (_commandService != null)
-            {
-                return _commandService.ExecuteAndCapture(commandLine, _services);
-            }
-            else if (HostServices.Instance != null)
-            {
-                return HostServices.Instance.ExecuteCommand(commandLine);
-            }
-            else
-            {
-                throw new NotSupportedException("ExecuteCommand");
-            }
-        }
-
         public override ImmutableArray<string> ExecuteHostCommand(string commandLine)
         {
             if (HostServices.Instance != null)

@@ -14,6 +14,7 @@ SOSExtensions::SOSExtensions(IDebuggerServices* debuggerServices, IHost* host) :
 }
 
 #ifndef FEATURE_PAL
+
 SOSExtensions::~SOSExtensions()
 {
     if (m_pDebuggerServices != nullptr)
@@ -23,9 +24,7 @@ SOSExtensions::~SOSExtensions()
         m_pDebuggerServices = nullptr;
     }
 }
-#endif
 
-#ifndef FEATURE_PAL
 HRESULT
 SOSExtensions::Initialize(IDebugClient* client)
 {
@@ -40,6 +39,7 @@ SOSExtensions::Initialize(IDebugClient* client)
     }
     return S_OK;
 }
+
 #endif
 
 HRESULT

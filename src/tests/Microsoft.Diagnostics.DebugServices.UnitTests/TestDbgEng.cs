@@ -25,8 +25,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
         }
 
-        public override ImmutableArray<string> ExecuteCommand(string commandLine) => HostServices.Instance.ExecuteCommand(commandLine);
-
         public override ImmutableArray<string> ExecuteHostCommand(string commandLine) => HostServices.Instance.ExecuteHostCommand(commandLine);
 
         protected override ITarget GetTarget()
