@@ -3,7 +3,7 @@ stages:
   displayName: Release Preparation
   jobs:
   - job: PrepareReleaseJob
-    displayName: Prepare release with Darc
+    displayName: Prepare Release
     ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/reltest/'))) }}:
       templateContext:
         outputs:
@@ -15,7 +15,8 @@ stages:
     variables:
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/reltest/'))) }}:
       - group: DotNet-Diagnostics-Storage
-      - group: Release-Pipeline
+      - group: DotNetBuilds storage account read tokens
+      - group: Publish-Build-Assets
     steps:
     - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
       - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release /bl'
@@ -36,12 +37,11 @@ stages:
           filePath: '$(Build.Repository.LocalPath)/eng/release/Scripts/AcquireBuild.ps1'
           arguments: >-
             -BarBuildId "$(BARBuildId)"
-            -AzdoToken "$(dn-bot-dotnet-all-scopes)"
-            -MaestroToken "$(MaestroAccessToken)"
-            -GitHubToken "$(BotAccount-dotnet-bot-repo-PAT)"
-            -DownloadTargetPath "$(System.ArtifactsDirectory)\ReleaseTarget"
-            -SasSuffixes "$(dotnetclichecksumsmsrc-dotnet-read-list-sas-token),$(dotnetclimsrc-read-sas-token)"
             -ReleaseVersion "$(Build.BuildNumber)"
+            -DownloadTargetPath "$(System.ArtifactsDirectory)\ReleaseTarget"
+            -AzdoToken "$(publishing-dnceng-devdiv-code-r-build-re)"
+            -MaestroToken "$(MaestroAccessToken)"
+            -SasSuffixes "$(dotnetbuilds-internal-checksums-container-read-token),$(dotnetbuilds-internal-container-read-token)"
           workingDirectory: '$(Build.Repository.LocalPath)'
       - task: AzureCLI@2
         displayName: 'Use WIF to obtain credentials for Azure CLI'
