@@ -494,7 +494,7 @@ ClrmaManagedAnalysis::get_ObjectInspection(
 }
 
 HRESULT
-ClrmaManagedAnalysis::GetMethodDescInfo(CLRDATA_ADDRESS methodDesc, StackFrame& frame)
+ClrmaManagedAnalysis::GetMethodDescInfo(CLRDATA_ADDRESS methodDesc, StackFrame& frame, bool stripFunctionParameters)
 {
     HRESULT hr;
     DacpMethodDescData methodDescData;
@@ -593,10 +593,13 @@ ClrmaManagedAnalysis::GetMethodDescInfo(CLRDATA_ADDRESS methodDesc, StackFrame& 
             }
 
             // Strip off the function parameters
-            size_t parameterStart = frame.Function.find_first_of(L'(');
-            if (parameterStart != -1)
+            if (stripFunctionParameters)
             {
-                frame.Function = frame.Function.substr(0, parameterStart);
+                size_t parameterStart = frame.Function.find_first_of(L'(');
+                if (parameterStart != -1)
+                {
+                    frame.Function = frame.Function.substr(0, parameterStart);
+                }
             }
         }
         else

@@ -209,7 +209,7 @@ ClrmaThread::get_FrameCount(
                         CLRDATA_ADDRESS methodDesc = 0;
                         if (SUCCEEDED(hr = m_managedAnalysis->SosDacInterface()->GetMethodDescPtrFromFrame(frame.SP, &methodDesc)))
                         {
-                            if (FAILED(hr = m_managedAnalysis->GetMethodDescInfo(methodDesc, frame)))
+                            if (FAILED(hr = m_managedAnalysis->GetMethodDescInfo(methodDesc, frame, /* stripFunctionParameters */ false)))
                             {
                                 continue;
                             }
@@ -228,7 +228,7 @@ ClrmaThread::get_FrameCount(
                         CLRDATA_ADDRESS methodDesc = 0;
                         if (SUCCEEDED(hr = m_managedAnalysis->SosDacInterface()->GetMethodDescPtrFromIP(frame.IP, &methodDesc)))
                         {
-                            if (FAILED(hr = m_managedAnalysis->GetMethodDescInfo(methodDesc, frame)))
+                            if (FAILED(hr = m_managedAnalysis->GetMethodDescInfo(methodDesc, frame, /* stripFunctionParameters */ false)))
                             {
                                 continue;
                             }
@@ -551,13 +551,6 @@ ClrmaThread::GetFrameFromStackWalk(
             if (SUCCEEDED(hr = methodInstance->GetName(0, MAX_LONGPATH, nullptr, wszNameBuffer)))
             {
                 frame.Function.append(wszNameBuffer);
-
-                // Strip off the function parameters
-                size_t parameterStart = frame.Function.find_first_of(L'(');
-                if (parameterStart != -1)
-                {
-                    frame.Function = frame.Function.substr(0, parameterStart);
-                }
             }
         }
     }

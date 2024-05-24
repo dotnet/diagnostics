@@ -303,7 +303,7 @@ ClrmaException::get_FrameCount(
                                 {
                                     frame.IP++;
                                 }
-                                if (SUCCEEDED(hr = m_managedAnalysis->GetMethodDescInfo(stackTraceElement.pFunc, frame)))
+                                if (SUCCEEDED(hr = m_managedAnalysis->GetMethodDescInfo(stackTraceElement.pFunc, frame, /* stripFunctionParameters */ true)))
                                 {
                                     m_stackFrames.push_back(frame);
                                 }
@@ -342,7 +342,7 @@ ClrmaException::get_FrameCount(
                                 {
                                     frame.IP++;
                                 }
-                                if (SUCCEEDED(hr = m_managedAnalysis->GetMethodDescInfo(stackTraceElement.pFunc, frame)))
+                                if (SUCCEEDED(hr = m_managedAnalysis->GetMethodDescInfo(stackTraceElement.pFunc, frame, /* stripFunctionParameters */ true)))
                                 {
                                     m_stackFrames.push_back(frame);
                                 }

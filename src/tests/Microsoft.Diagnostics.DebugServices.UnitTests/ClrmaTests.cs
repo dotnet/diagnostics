@@ -46,6 +46,14 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
         }
 
+        private static readonly (string, int)[] s_clrmaFilterList = [
+            ( "Command: ", 1 ),
+            ( "OSThreadId: ", 1 ),
+            ( "Integrated managed debugging does not support enumeration of symbols.", 1 ),
+            ( "See https://aka.ms/ManagedDebuggingWithSos for more details.", 1 ),
+            ( "Unable to load image ", 1 ),
+        ];
+
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void BangClrmaTests(TestHost host)
         {
@@ -62,18 +70,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             logging.Disable();
             try
             {
-                bool Filter(string line)
-                {
-                    return !string.IsNullOrWhiteSpace(line) && !line.Contains("Command: ");
-                }
-                // First try the built-in CLRMA provider and turn off the EFN_StackTrace extension API so
-                // the built-in provider fallbacks back to using !clrstack to get thread stack traces.
-                host.ExecuteHostCommand("!sos clrmaconfig -disable -logging -dac -stacktrace");
-                IEnumerable<string> builtIn = host.ExecuteHostCommand("!clrma").Where(Filter);
+                host.ExecuteHostCommand("!sos clrmaconfig -disable -logging -dac");
+                IEnumerable<string> builtIn = Filter(host.ExecuteHostCommand("!clrma"), s_clrmaFilterList);
 
                 // Now try the direct DAC CLRMA provider in SOS
-                host.ExecuteHostCommand("!sos clrmaconfig -enable -dac -stacktrace");
-                IEnumerable<string> directDac = host.ExecuteHostCommand("!clrma").Where(Filter);
+                host.ExecuteHostCommand("!sos clrmaconfig -enable -dac");
+                IEnumerable<string> directDac = Filter(host.ExecuteHostCommand("!clrma"), s_clrmaFilterList);
 
                 IEnumerable<string> diff1 = builtIn.Except(directDac);
                 IEnumerable<string> diff2 = directDac.Except(builtIn);
@@ -114,8 +116,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         // The !analyze lines containing this text and the number of lines to skip
-        private static List<(string, int)> s_filterList = new()
-        {
+        private static readonly (string, int)[] s_analyzeFilterList = [
             ( "Key  : Analysis.CPU.mSec", 2 ),
             ( "Key  : Analysis.Elapsed.mSec", 2 ),
             ( "Key  : Analysis.IO.Other.Mb", 2 ),
@@ -131,7 +132,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             ( "Stack_Frames_Extraction_Time_(ms):", 1 ),
             ( "Stack_Attribute_Extraction_Time_(ms):", 1 ),
             ( "ANALYSIS_SESSION_ELAPSED_TIME:", 1 ),
-        };
+            ( "STACK_COMMAND:", 1 ),
+            ( "ManagedExceptionCommand:", 1 ),
+            ( "DebuggerCommand:", 1 ),
+            ( "Integrated managed debugging does not support enumeration of symbols.", 1 ),
+            ( "See https://aka.ms/ManagedDebuggingWithSos for more details.", 1 ),
+            ( "Unable to load image ", 1 ),
+        ];
 
         [SkippableTheory, MemberData(nameof(GetConfigurations))]
         public void BangAnalyzeTests(TestHost host)
@@ -149,29 +156,18 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             logging.Disable();
             try
             {
-                IEnumerable<string> Filter(ImmutableArray<string> lines)
-                {
-                    for (int i = 0; i < lines.Length;)
-                    {
-                        foreach ((string key, int skip) skipItem in s_filterList)
-                        {
-                            if (lines[i].Contains(skipItem.key))
-                            {
-                                i += skipItem.skip;
-                                continue;
-                            }
-                        }
-                        yield return lines[i];
-                        i++;
-                    }
-                }
-                // First try the built-in CLRMA provider. The EFN_StackTrace results doesn't seem to affect the !analyze output
+                // Flush/reload to workaround k command issue
+                host.ExecuteHostCommand(".reload");
+
                 host.ExecuteHostCommand("!sos clrmaconfig -disable -logging -dac");
-                IEnumerable<string> builtIn = Filter(host.ExecuteHostCommand("!analyze -v6"));
+                IEnumerable<string> builtIn = Filter(host.ExecuteHostCommand("!analyze -v6"), s_analyzeFilterList);
+
+                // Flush/reload to workaround k command issue
+                host.ExecuteHostCommand(".reload");
 
                 // Now try the direct DAC CLRMA provider in SOS
                 host.ExecuteHostCommand("!sos clrmaconfig -enable -dac");
-                IEnumerable<string> directDac = Filter(host.ExecuteHostCommand("!analyze -v6"));
+                IEnumerable<string> directDac = Filter(host.ExecuteHostCommand("!analyze -v6"), s_analyzeFilterList);
 
                 IEnumerable<string> diff1 = builtIn.Except(directDac);
                 IEnumerable<string> diff2 = directDac.Except(builtIn);
@@ -208,6 +204,33 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 {
                     logging.Enable(filePath);
                 }
+            }
+        }
+
+        private static IEnumerable<string> Filter(ImmutableArray<string> lines, (string, int)[] filterList)
+        {
+            for (int i = 0; i < lines.Length;)
+            {
+                string line = lines[i];
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    bool skip = false;
+                    foreach ((string key, int skip) skipItem in filterList)
+                    {
+                        if (line.Contains(skipItem.key))
+                        {
+                            i += skipItem.skip;
+                            skip = true;
+                            break;
+                        }
+                    }
+                    if (skip)
+                    {
+                        continue;
+                    }
+                    yield return line;
+                }
+                i++;
             }
         }
     }

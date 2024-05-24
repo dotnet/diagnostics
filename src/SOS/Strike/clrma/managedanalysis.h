@@ -84,7 +84,7 @@ public:
     /// <summary>
     /// Fills in the frame.Module and frame.Function from the MethodDesc.
     /// </summary>
-    HRESULT GetMethodDescInfo(CLRDATA_ADDRESS methodDesc, StackFrame& frame);
+    HRESULT GetMethodDescInfo(CLRDATA_ADDRESS methodDesc, StackFrame& frame, bool stripFunctionParameters);
 
     /// <summary>
     /// Returns base Exception MT address if exception derived MT
