@@ -4,7 +4,7 @@ stages:
   jobs:
   - job: PrepareReleaseJob
     displayName: Prepare Release
-    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/reltest/'))) }}:
+    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'))) }}:
       templateContext:
         outputs:
         - output: pipelineArtifact
