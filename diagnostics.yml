@@ -292,6 +292,7 @@ extends:
                 displayName: 'Publish Signing and Packaging Logs'
                 condition: always()
                 continueOnError: true
+                sbomEnabled: false # we don't need SBOM for logs
             steps:
             - task: DownloadPipelineArtifact@2
               displayName: 'Download release builds'
