@@ -19,14 +19,16 @@
     <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-preview.5.24273.1</VSRedistCommonNetCoreSharedFrameworkx6490Version>
     <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-preview.5.24273.1</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>9.0.0-preview.4.24222.16</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>9.0.0-preview.4.24222.16</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>9.0.0-preview.6.24272.7</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>9.0.0-preview.6.24272.7</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkInternalVersion>9.0.100-preview.5.24253.16</MicrosoftDotnetSdkInternalVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
+    <!-- Uncomment this line to use the custom version of roslyn as needed. -->
+    <!-- <UsingToolMicrosoftNetCompilers Condition="'$(DotNetBuildSourceOnly)' != 'true'">true</UsingToolMicrosoftNetCompilers> -->
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>5.0.0</SystemReflectionMetadataVersion>
     <SystemCollectionsImmutableVersion>6.0.0</SystemCollectionsImmutableVersion>
@@ -56,6 +58,15 @@
     <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
     <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>9.0.0-alpha.1.24270.1</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
     <!-- Roslyn and analyzers -->
+    <!-- dotnet/roslyn dependencies -->
+    <!--
+      These versions should not be used by any project that contributes to the design-time experience in VS, such as an analyzer, code-fix, or generator assembly.
+      Any tools that contribute to the design-time experience should use the MicrosoftCodeAnalysisVersion_LatestVS property above to ensure
+      they do not break the local dev experience.
+    -->
+    <MicrosoftCodeAnalysisCSharpVersion>4.11.0-2.24271.11</MicrosoftCodeAnalysisCSharpVersion>
+    <MicrosoftCodeAnalysisVersion>4.11.0-2.24271.11</MicrosoftCodeAnalysisVersion>
+    <MicrosoftNetCompilersToolsetVersion>4.11.0-2.24271.11</MicrosoftNetCompilersToolsetVersion>
     <!-- Compatibility with VS 16.11/.NET SDK 5.0.4xx -->
     <MicrosoftCodeAnalysisVersion_3_11>3.11.0</MicrosoftCodeAnalysisVersion_3_11>
     <!-- Compatibility with VS 17.0/.NET SDK 6.0.1xx  -->
@@ -66,7 +77,7 @@
       It should never go ahead of the Roslyn version included in the SDK version in dotnet/arcade's global.json to avoid causing breaks in product construction.
     -->
     <MicrosoftCodeAnalysisVersion_4_4>4.4.0</MicrosoftCodeAnalysisVersion_4_4>
-    <MicrosoftCodeAnalysisVersion_LatestVS>4.4.0</MicrosoftCodeAnalysisVersion_LatestVS>
+    <MicrosoftCodeAnalysisVersion_LatestVS>4.8.0</MicrosoftCodeAnalysisVersion_LatestVS>
     <MicrosoftCodeAnalysisVersion_LatestVS Condition="'$(DotNetBuildSourceOnly)' == 'true'">$(MicrosoftCodeAnalysisVersion)</MicrosoftCodeAnalysisVersion_LatestVS>
     <MicrosoftCodeAnalysisAnalyzersVersion>3.11.0-beta1.23420.2</MicrosoftCodeAnalysisAnalyzersVersion>
     <MicrosoftCodeAnalysisNetAnalyzersVersion>8.0.0-preview.23420.2</MicrosoftCodeAnalysisNetAnalyzersVersion>
@@ -74,17 +85,8 @@
       These packages affect the design-time experience in VS, so we update them at the same cadance as the MicrosoftCodeAnalysisVersion_LatestVS version.
     -->
     <MicrosoftCodeAnalysisCSharpCodeStyleVersion>$(MicrosoftCodeAnalysisVersion_LatestVS)</MicrosoftCodeAnalysisCSharpCodeStyleVersion>
-    <!-- dotnet/roslyn dependencies -->
-    <!--
-      These versions should not be used by any project that contributes to the design-time experience in VS, such as an analyzer, code-fix, or generator assembly.
-      Any tools that contribute to the design-time experience should use the MicrosoftCodeAnalysisVersion_LatestVS property above to ensure
-      they do not break the local dev experience.
-    -->
-    <MicrosoftCodeAnalysisCSharpVersion>4.8.0-2.23422.14</MicrosoftCodeAnalysisCSharpVersion>
-    <MicrosoftCodeAnalysisVersion>4.8.0-2.23422.14</MicrosoftCodeAnalysisVersion>
-    <MicrosoftNetCompilersToolsetVersion>4.8.0-2.23422.14</MicrosoftNetCompilersToolsetVersion>
   </PropertyGroup>
-  <!-- 
+  <!--
     SOS test runtime versions
 
     Internal service release testing:
@@ -93,7 +95,7 @@
     $(DotnetRuntimeDownloadVersion) - the service release package version i.e. 2.1.17, 3.1.3-servicing.20128.1 or "default"
     $(RuntimeSourceFeed)            - the service release internal blob storage link
     $(RuntimeSourceFeedKey)         - the service release blob feed token
-     
+
   -->
   <PropertyGroup>
     <MicrosoftNETCoreApp80Version>8.0.5</MicrosoftNETCoreApp80Version>

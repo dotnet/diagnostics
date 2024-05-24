@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public override IList<EventPipeProvider> GetProviders() =>
             new EventPipeProvider[]
             {
-                new EventPipeProvider(SampleProfilerProviderName, EventLevel.Informational)
+                new(SampleProfilerProviderName, EventLevel.Informational)
             };
 
         public override int BufferSizeInMB => 1;
