@@ -245,7 +245,7 @@ ClrmaThread::get_FrameCount(
                     m_stackFrames.push_back(frame);
                     index++;
 
-                } while (pStackWalk->Next() == S_OK);
+                } while (index < MAX_STACK_FRAMES && pStackWalk->Next() == S_OK);
             }
             else
             {

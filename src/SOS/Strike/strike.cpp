@@ -12380,10 +12380,6 @@ HRESULT CALLBACK _EFN_StackTrace(
     size_t uiSizeOfContext,
     DWORD Flags)
 {
-    if ((g_clrmaGlobalFlags & ClrmaGlobalFlags::StackTraceEnabled) == 0)
-    {
-        return E_FAIL;
-    }
     INIT_API_EFN();
 
     Status = ImplementEFNStackTraceTry(client, wszTextOut, puiTextLength,

@@ -34,8 +34,9 @@ enum ClrmaGlobalFlags
     LoggingEnabled = 0x01,                  // CLRMA logging enabled
     DacClrmaEnabled = 0x02,                 // Direct DAC CLRMA code enabled
     ManagedClrmaEnabled = 0x04,             // Native AOT managed support enabled
-    StackTraceEnabled = 0x08,               // The EFN_StackTrace extension API enabled (disabled only for testing)
 };
+
+#define MAX_STACK_FRAMES    1000            // Max number of stack frames returned from thread stackwalk
 
 typedef struct StackFrame
 {
