@@ -16,7 +16,7 @@ stages:
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/reltest/'))) }}:
       - group: DotNet-Diagnostics-Storage
       - group: DotNetBuilds storage account read tokens
-      - group: Publish-Build-Assets
+      - group: Release-Pipeline
     steps:
     - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
       - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release /bl'
@@ -39,7 +39,7 @@ stages:
             -BarBuildId "$(BARBuildId)"
             -ReleaseVersion "$(Build.BuildNumber)"
             -DownloadTargetPath "$(System.ArtifactsDirectory)\ReleaseTarget"
-            -AzdoToken "$(publishing-dnceng-devdiv-code-r-build-re)"
+            -AzdoToken "$(dn-bot-all-drop-rw-code-rw-release-all)"
             -MaestroToken "$(MaestroAccessToken)"
             -SasSuffixes "$(dotnetbuilds-internal-checksums-container-read-token),$(dotnetbuilds-internal-container-read-token)"
           workingDirectory: '$(Build.Repository.LocalPath)'
