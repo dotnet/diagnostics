@@ -218,10 +218,14 @@ ClrmaException::get_Type(
         return hr;
     }
 
-    if (m_typeName != nullptr)
+    const WCHAR* typeName = m_typeName;
+    if (typeName == nullptr)
     {
-        *pValue = SysAllocString(m_typeName);
+        // To match the built-in SOS provider that scrapes !pe output
+        typeName = L"<Unknown>";
     }
+
+    *pValue = SysAllocString(typeName);
 
     return ((*pValue) != nullptr) ? S_OK : S_FALSE;
 }
@@ -245,10 +249,14 @@ ClrmaException::get_Message(
         return hr;
     }
 
-    if (m_message != nullptr)
+    const WCHAR* message = m_message;
+    if (message == nullptr)
     {
-        *pValue = SysAllocString(m_message);
+        // To match the built-in SOS provider that scrapes !pe output
+        message = L"<none>";
     }
+
+    *pValue = SysAllocString(message);
 
     return ((*pValue) != nullptr) ? S_OK : S_FALSE;
 }
@@ -290,7 +298,7 @@ ClrmaException::get_FrameCount(
                     if (stackTrace.m_NumComponents > 0 && stackTrace.m_size > 0)
                     {
                         CLRDATA_ADDRESS dataPtr = m_exceptionData.StackTrace + offsetof(StackTrace64, m_elements);
-                        for (ULONG i = 0; i < stackTrace.m_size; i++)
+                        for (ULONG i = 0; i < MAX_STACK_FRAMES && i < stackTrace.m_size; i++)
                         {
                             StackTraceElement64 stackTraceElement;
                             if (SUCCEEDED(hr = m_managedAnalysis->ReadMemory(dataPtr, &stackTraceElement, sizeof(StackTraceElement64))))
@@ -329,7 +337,7 @@ ClrmaException::get_FrameCount(
                     if (stackTrace.m_NumComponents > 0 && stackTrace.m_size > 0)
                     {
                         CLRDATA_ADDRESS dataPtr = m_exceptionData.StackTrace + offsetof(StackTrace32, m_elements);
-                        for (ULONG i = 0; i < stackTrace.m_size; i++)
+                        for (ULONG i = 0; i < MAX_STACK_FRAMES && i < stackTrace.m_size; i++)
                         {
                             StackTraceElement32 stackTraceElement;
                             if (SUCCEEDED(hr = m_managedAnalysis->ReadMemory(dataPtr, &stackTraceElement, sizeof(StackTraceElement32))))

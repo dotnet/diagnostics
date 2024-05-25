@@ -192,6 +192,7 @@ ClrmaThread::get_FrameCount(
             {
                 // For each managed stack frame
                 int index = 0;
+                int count = 0;
                 do
                 {
                     StackFrame frame;
@@ -245,7 +246,7 @@ ClrmaThread::get_FrameCount(
                     m_stackFrames.push_back(frame);
                     index++;
 
-                } while (index < MAX_STACK_FRAMES && pStackWalk->Next() == S_OK);
+                } while (count++ < MAX_STACK_FRAMES && pStackWalk->Next() == S_OK);
             }
             else
             {
@@ -547,12 +548,67 @@ ClrmaThread::GetFrameFromStackWalk(
         ReleaseHolder<IXCLRDataMethodInstance> methodInstance;
         if (SUCCEEDED(hr = clrDataFrame->GetMethodInstance((IXCLRDataMethodInstance**)&methodInstance)))
         {
+            // Don't compute the method displacement if IP is 0
+            if (frame.IP > 0)
+            {
+                CLRDATA_ADDRESS startAddr;
+                if (SUCCEEDED(hr = methodInstance->GetRepresentativeEntryAddress(&startAddr)))
+                {
+                    frame.Displacement = (frame.IP - startAddr);
+                }
+                else
+                {
+                    TraceError("GetFrameFromStackWalk: IXCLRDataMethodInstance::GetRepresentativeEntryAddress FAILED %08x\n", hr);
+                }
+            }
+
             ArrayHolder<WCHAR> wszNameBuffer = new WCHAR[MAX_LONGPATH + 1];
             if (SUCCEEDED(hr = methodInstance->GetName(0, MAX_LONGPATH, nullptr, wszNameBuffer)))
             {
-                frame.Function.append(wszNameBuffer);
+                frame.Function = wszNameBuffer;
+            }
+            else
+            {
+                TraceError("GetFrameFromStackWalk: IXCLRDataMethodInstance::GetName FAILED %08x\n", hr);
+            }
+
+            mdMethodDef token;
+            IXCLRDataModule* pModule;
+            if (SUCCEEDED(hr = methodInstance->GetTokenAndScope(&token, &pModule)))
+            {
+                wszNameBuffer[0] = L'\0';
+
+                ULONG32 nameLen = 0;
+                if (SUCCEEDED(hr = pModule->GetFileName(MAX_LONGPATH, &nameLen, wszNameBuffer)))
+                {
+                    frame.Module = wszNameBuffer;
+                }
+                else
+                {
+                    TraceError("GetFrameFromStackWalk: IXCLRDataModule::GetFileName FAILED %08x\n", hr);
+                }
+            }
+            else
+            {
+                TraceError("GetFrameFromStackWalk: IXCLRDataMethodInstance::GetTokenAndScope FAILED %08x\n", hr);
             }
         }
+        else
+        {
+            TraceError("GetFrameFromStackWalk: IXCLRDataFrame::GetMethodInstance FAILED %08x\n", hr);
+        }
+    }
+    else
+    {
+        TraceError("GetFrameFromStackWalk: IXCLRDataStackWalk::GetFrame FAILED %08x\n", hr);
+    }
+    if (frame.Module.empty())
+    {
+        frame.Module = L"UNKNOWN";
+    }
+    if (frame.Function.empty())
+    {
+        frame.Function = L"UNKNOWN";
     }
     return hr;
 }
