@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
+using Azure.Identity;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -17,17 +19,14 @@ namespace ReleaseTool.Core
 {
     public class AzureBlobBublisher : IPublisher
     {
-        private const int ClockSkewSec = 15 * 60;
         private const int MaxRetries = 15;
         private const int MaxFullLoopRetries = 5;
         private readonly TimeSpan FullLoopRetryDelay = TimeSpan.FromSeconds(1);
-        private const string AccessPolicyDownloadId = "DownloadDrop";
 
         private readonly string _accountName;
-        private readonly string _accountKey;
+        private readonly string _clientId;
         private readonly string _containerName;
         private readonly string _releaseName;
-        private readonly int _sasValidDays;
         private readonly ILogger _logger;
 
         private BlobContainerClient _client;
@@ -40,12 +39,17 @@ namespace ReleaseTool.Core
             }
         }
 
-        private StorageSharedKeyCredential AccountCredential
+        private TokenCredential Credentials
         {
             get
             {
-                StorageSharedKeyCredential credential = new(_accountName, _accountKey);
-                return credential;
+                if (_clientId == null)
+                {
+                    // Local development scenario. Use the default credential.
+                    return new DefaultAzureCredential();
+                }
+
+                return new DefaultAzureCredential(new DefaultAzureCredentialOptions { ManagedIdentityClientId = _clientId });
             }
         }
 
@@ -68,13 +72,12 @@ namespace ReleaseTool.Core
             }
         }
 
-        public AzureBlobBublisher(string accountName, string accountKey, string containerName, string releaseName, int sasValidDays, ILogger logger)
+        public AzureBlobBublisher(string accountName, string clientId, string containerName, string releaseName, ILogger logger)
         {
             _accountName = accountName;
-            _accountKey = accountKey;
+            _clientId = clientId;
             _containerName = containerName;
             _releaseName = releaseName;
-            _sasValidDays = sasValidDays;
             _logger = logger;
         }
 
@@ -107,20 +110,11 @@ namespace ReleaseTool.Core
 
                     await blobClient.UploadAsync(srcStream, overwrite: true, ct);
 
-                    BlobSasBuilder sasBuilder = new()
-                    {
-                        BlobContainerName = client.Name,
-                        BlobName = blobClient.Name,
-                        Identifier = AccessPolicyDownloadId,
-                        Protocol = SasProtocol.Https
-                    };
-                    Uri accessUri = blobClient.GenerateSasUri(sasBuilder);
-
                     using BlobDownloadStreamingResult blobStream = (await blobClient.DownloadStreamingAsync(cancellationToken: ct)).Value;
                     srcStream.Position = 0;
                     completed = await VerifyFileStreamsMatchAsync(srcStream, blobStream, ct);
 
-                    result = accessUri;
+                    result = blobClient.Uri;
                 }
                 catch (IOException ioEx) when (ioEx is not PathTooLongException)
                 {
@@ -155,7 +149,7 @@ namespace ReleaseTool.Core
         {
             if (_client == null)
             {
-                BlobServiceClient serviceClient = new(AccountBlobUri, AccountCredential, BlobOptions);
+                BlobServiceClient serviceClient = new(AccountBlobUri, Credentials, BlobOptions);
                 _logger.LogInformation($"Attempting to connect to {serviceClient.Uri} to store blobs.");
 
                 BlobContainerClient newClient;
@@ -165,39 +159,14 @@ namespace ReleaseTool.Core
                     try
                     {
                         newClient = serviceClient.GetBlobContainerClient(_containerName);
-                        if (!(await newClient.ExistsAsync(ct)).Value)
+                        if (!await newClient.ExistsAsync(ct))
                         {
-                            newClient = (await serviceClient.CreateBlobContainerAsync(_containerName, PublicAccessType.None, metadata: null, ct));
+                            newClient = await serviceClient.CreateBlobContainerAsync(_containerName, PublicAccessType.None, metadata: null, ct);
                         }
                     }
                     catch (Exception ex)
                     {
                         _logger.LogWarning(ex, $"Failed to create or access {_containerName}, retrying with new name.");
-                        continue;
-                    }
-
-                    try
-                    {
-                        DateTime baseTime = DateTime.UtcNow;
-                        // Add the new (or update existing) "download" policy to the container
-                        // This is used to mint the SAS tokens without an expiration policy
-                        // Expiration can be added later by modifying this policy
-                        BlobSignedIdentifier downloadPolicyIdentifier = new()
-                        {
-                            Id = AccessPolicyDownloadId,
-                            AccessPolicy = new BlobAccessPolicy()
-                            {
-                                Permissions = "r",
-                                PolicyStartsOn = new DateTimeOffset(baseTime.AddSeconds(-ClockSkewSec)),
-                                PolicyExpiresOn = new DateTimeOffset(DateTime.UtcNow.AddDays(_sasValidDays).AddSeconds(ClockSkewSec)),
-                            }
-                        };
-                        _logger.LogInformation($"Writing download access policy: {AccessPolicyDownloadId} to {_containerName}.");
-                        await newClient.SetAccessPolicyAsync(PublicAccessType.None, new BlobSignedIdentifier[] { downloadPolicyIdentifier }, cancellationToken: ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, $"Failed to write access policy for {_containerName}, retrying.");
                         continue;
                     }
 

@@ -21,7 +21,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
 
-    <PackageReference Include="Azure.Storage.Blobs" Version="[12.13.0]" />
+    <PackageReference Include="Azure.Identity" Version="[1.11.3]" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="[12.20.0]" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta1.20468.1" />
   </ItemGroup>
 
