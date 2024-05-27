@@ -66,7 +66,7 @@ ClrmaException::Initialize()
         {
             if (FAILED(hr = m_exceptionData.Request(m_managedAnalysis->SosDacInterface(), m_address)))
             {
-                TraceError("ClrmaException::Initialize GetObjectData FAILED %08x\n", hr);
+                TraceError("ClrmaException::Initialize GetObjectExceptionData FAILED %08x\n", hr);
                 return hr;
             }
             UINT cbTypeName = 0;

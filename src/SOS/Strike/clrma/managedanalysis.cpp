@@ -630,7 +630,7 @@ ClrmaManagedAnalysis::IsExceptionObj(CLRDATA_ADDRESS mtObj)
     HRESULT hr;
 
     // We want to follow back until we get the mt for System.Exception
-    while(walkMT != NULL)
+    while (walkMT != NULL)
     {
         if (FAILED(hr = dmtd.Request(SosDacInterface(), walkMT)))
         {
@@ -650,6 +650,10 @@ ClrmaManagedAnalysis::IsExceptionObj(CLRDATA_ADDRESS mtObj)
 WCHAR*
 ClrmaManagedAnalysis::GetStringObject(CLRDATA_ADDRESS stringObject)
 {
+    if (stringObject == 0)
+    {
+        return nullptr;
+    }
     DacpObjectData objData;
     HRESULT hr;
     if (FAILED(hr = objData.Request(SosDacInterface(), stringObject)))
