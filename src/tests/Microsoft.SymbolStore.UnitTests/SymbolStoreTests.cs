@@ -97,34 +97,18 @@ namespace Microsoft.SymbolStore.Tests
             {
                 using (Stream compareStream = File.OpenRead("TestBinaries/dir1/System.Threading.Thread.pdb"))
                 {
-                    await DownloadFile(downloadStream, compareStream, ms: true, mi: false, KeyTypeFlags.SymbolKey);
+                    await DownloadFile(downloadStream, compareStream, flags: KeyTypeFlags.SymbolKey);
                 }
             }
         }
 
-        [Fact]
-        public async Task SymwebHttpSymbolStore()
-        {
-            using (FileStream downloadStream = File.OpenRead("TestBinaries/dir2/System.Threading.Thread.dll"))
-            {
-                await DownloadFile(downloadStream, downloadStream, ms: false, mi: true, KeyTypeFlags.IdentityKey);
-            }
-        }
-
-        private async Task DownloadFile(FileStream downloadStream, Stream compareStream, bool ms, bool mi, KeyTypeFlags flags)
+        private async Task DownloadFile(FileStream downloadStream, Stream compareStream, KeyTypeFlags flags)
         {
             SymbolStoreFile file = new SymbolStoreFile(downloadStream, downloadStream.Name);
-            SymbolStores.SymbolStore store = null;
-            if (ms)
-            {
-                Uri.TryCreate("https://msdl.microsoft.com/download/symbols/", UriKind.Absolute, out Uri uri);
-                store = new HttpSymbolStore(_tracer, store, uri);
-            }
-            if (mi)
-            {
-                Uri.TryCreate("https://symweb/", UriKind.Absolute, out Uri uri);
-                store = new SymwebHttpSymbolStore(_tracer, store, uri);
-            }
+
+            Uri.TryCreate("https://msdl.microsoft.com/download/symbols/", UriKind.Absolute, out Uri uri);
+            SymbolStores.SymbolStore store = new HttpSymbolStore(_tracer, backingStore: null, uri);
+
             var generator = new FileKeyGenerator(_tracer, file);
 
             IEnumerable<SymbolStoreKey> keys = generator.GetKeys(flags);

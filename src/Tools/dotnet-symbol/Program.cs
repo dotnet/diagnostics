@@ -25,7 +25,6 @@ namespace Microsoft.Diagnostics.Tools.Symbol
         {
             public Uri Uri;
             public string PersonalAccessToken;
-            public bool InternalSymwebServer;
         }
 
         private readonly List<string> InputFilePaths = new();
@@ -62,11 +61,6 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                     case "--microsoft-symbol-server":
                         Uri.TryCreate("https://msdl.microsoft.com/download/symbols/", UriKind.Absolute, out uri);
                         program.SymbolServers.Add(new ServerInfo { Uri = uri, PersonalAccessToken = null });
-                        break;
-
-                    case "--internal-server":
-                        Uri.TryCreate("https://symweb/", UriKind.Absolute, out uri);
-                        program.SymbolServers.Add(new ServerInfo { Uri = uri, PersonalAccessToken = null, InternalSymwebServer = true });
                         break;
 
                     case "--authenticated-server-path":
@@ -262,14 +256,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
 
             foreach (ServerInfo server in ((IEnumerable<ServerInfo>)SymbolServers).Reverse())
             {
-                if (server.InternalSymwebServer)
-                {
-                    store = new SymwebHttpSymbolStore(Tracer, store, server.Uri, server.PersonalAccessToken);
-                }
-                else
-                {
-                    store = new HttpSymbolStore(Tracer, store, server.Uri, server.PersonalAccessToken);
-                }
+                store = new HttpSymbolStore(Tracer, store, server.Uri, server.PersonalAccessToken);
                 if (Timeout.HasValue && store is HttpSymbolStore http)
                 {
                     http.Timeout = Timeout.Value;

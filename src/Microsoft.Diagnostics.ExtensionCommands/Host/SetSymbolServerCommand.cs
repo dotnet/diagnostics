@@ -18,9 +18,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--ms", Aliases = new string[] { "-ms" }, Help = "Use the public Microsoft symbol server.")]
         public bool MicrosoftSymbolServer { get; set; }
 
-        [Option(Name = "--mi", Aliases = new string[] { "-mi" }, Help = "Use the internal symweb symbol server.")]
-        public bool InternalSymbolServer { get; set; }
-
         [Option(Name = "--disable", Aliases = new string[] { "-disable" }, Help = "Clear or disable symbol download support.")]
         public bool Disable { get; set; }
 
@@ -50,13 +47,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            if (MicrosoftSymbolServer && InternalSymbolServer)
+            if (MicrosoftSymbolServer && !string.IsNullOrEmpty(SymbolServerUrl))
             {
-                throw new DiagnosticsException("Cannot have both -ms and -mi options");
-            }
-            if ((MicrosoftSymbolServer || InternalSymbolServer) && !string.IsNullOrEmpty(SymbolServerUrl))
-            {
-                throw new DiagnosticsException("Cannot have -ms or -mi option and a symbol server path");
+                throw new DiagnosticsException("Cannot have -ms option and a symbol server path");
             }
             if (Disable)
             {
@@ -66,13 +59,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 SymbolService.Reset();
             }
-            if (MicrosoftSymbolServer || InternalSymbolServer || !string.IsNullOrEmpty(SymbolServerUrl))
+            if (MicrosoftSymbolServer || !string.IsNullOrEmpty(SymbolServerUrl))
             {
                 if (string.IsNullOrEmpty(Cache))
                 {
                     Cache = SymbolService.DefaultSymbolCache;
                 }
-                SymbolService.AddSymbolServer(MicrosoftSymbolServer, InternalSymbolServer, SymbolServerUrl, AccessToken, Timeout, RetryCount);
+                SymbolService.AddSymbolServer(SymbolServerUrl, AccessToken, Timeout, RetryCount);
             }
             if (!string.IsNullOrEmpty(Cache))
             {

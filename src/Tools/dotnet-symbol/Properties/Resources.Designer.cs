@@ -113,9 +113,10 @@ namespace Microsoft.Diagnostic.Tools.Symbol.Properties {
         ///
         ///Options:
         ///  --microsoft-symbol-server                         Add &apos;https://msdl.microsoft.com/download/symbols&apos; symbol server path (default).
-        ///  --internal-server                                 Add &apos;https://symweb&apos; internal symbol server path.
         ///  --server-path &lt;symbol server path&gt;                Add a http server path.
-        ///  --authenticated-server-path &lt;pat&gt; &lt;server path&gt;   Add a http PAT authenticated s [rest of string was truncated]&quot;;.
+        ///  --authenticated-server-path &lt;pat&gt; &lt;server path&gt;   Add a http PAT authenticated server path.
+        ///  --cache-directory &lt;file cache directory&gt;          Add a cache directory.
+        ///  --timeout &lt;m [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string UsageOptions {
             get {

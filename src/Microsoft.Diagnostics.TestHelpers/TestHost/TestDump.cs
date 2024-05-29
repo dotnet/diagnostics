@@ -41,7 +41,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             _serviceContainer.AddService<ISymbolService>(_symbolService);
 
             // Automatically enable symbol server support
-            _symbolService.AddSymbolServer(msdl: true, symweb: false, timeoutInMinutes: 6, retryCount: 5);
+            _symbolService.AddSymbolServer(timeoutInMinutes: 6, retryCount: 5);
             _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
         }
 
