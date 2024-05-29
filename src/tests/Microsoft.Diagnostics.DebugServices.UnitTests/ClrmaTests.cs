@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         private static readonly (string, int)[] s_clrmaFilterList = [
             ( "Command: ", 1 ),
-            ( "OSThreadId: ", 1 ),
+            //( "OSThreadId: ", 1 ),
             ( "Integrated managed debugging does not support enumeration of symbols.", 1 ),
             ( "See https://aka.ms/ManagedDebuggingWithSos for more details.", 1 ),
             ( "Unable to load image ", 1 ),

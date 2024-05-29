@@ -89,7 +89,16 @@ ClrmaException::Initialize()
             {
                 TraceError("ClrmaException::Initialize GetMethodTableName(%016x) 1 FAILED %08x\n", objData.MethodTable, hr);
             }
-            m_message = m_managedAnalysis->GetStringObject(m_exceptionData.Message);
+            if (m_exceptionData.Message == 0)
+            {
+                // To match the built-in SOS provider that scrapes !pe output.
+                m_message = new (std::nothrow)WCHAR[8];
+                wcscpy(m_message, L"<none>");
+            }
+            else
+            {
+                m_message = m_managedAnalysis->GetStringObject(m_exceptionData.Message);
+            }
         }
         m_exceptionDataInitialized = true;
     }
@@ -249,14 +258,10 @@ ClrmaException::get_Message(
         return hr;
     }
 
-    const WCHAR* message = m_message;
-    if (message == nullptr)
+    if (m_message != nullptr)
     {
-        // To match the built-in SOS provider that scrapes !pe output
-        message = L"<none>";
+        *pValue = SysAllocString(m_message);
     }
-
-    *pValue = SysAllocString(message);
 
     return ((*pValue) != nullptr) ? S_OK : S_FALSE;
 }
