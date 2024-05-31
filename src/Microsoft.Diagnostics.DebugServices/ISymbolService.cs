@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// The default symbol server URL (normally msdl) when not overridden in AddSymbolServer.
         /// </summary>
-        string DefaultSymbolPath { get; set; }
+        string DefaultSymbolPath { get; }
 
         /// <summary>
         /// The default symbol cache path:
@@ -29,17 +29,17 @@ namespace Microsoft.Diagnostics.DebugServices
         /// * dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
         /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache
         /// </summary>
-        string DefaultSymbolCache { get; set; }
+        string DefaultSymbolCache { get; }
 
         /// <summary>
         /// The time out in minutes passed to the HTTP symbol store when not overridden in AddSymbolServer.
         /// </summary>
-        int DefaultTimeout { get; set; }
+        int DefaultTimeout { get; }
 
         /// <summary>
         /// The retry count passed to the HTTP symbol store when not overridden in AddSymbolServer.
         /// </summary>
-        int DefaultRetryCount { get; set; }
+        int DefaultRetryCount { get; }
 
         /// <summary>
         /// Reset any HTTP symbol stores marked with a client failure
