@@ -19,23 +19,27 @@ namespace Microsoft.Diagnostics.DebugServices
         bool IsSymbolStoreEnabled { get; }
 
         /// <summary>
+        /// The default symbol server URL (normally msdl) when not overridden in AddSymbolServer.
+        /// </summary>
+        string DefaultSymbolPath { get; }
+
+        /// <summary>
         /// The default symbol cache path:
-        ///
         /// * dbgeng on Windows uses the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
         /// * dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
         /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache
         /// </summary>
-        string DefaultSymbolCache { get; set; }
+        string DefaultSymbolCache { get; }
 
         /// <summary>
         /// The time out in minutes passed to the HTTP symbol store when not overridden in AddSymbolServer.
         /// </summary>
-        int DefaultTimeout { get; set; }
+        int DefaultTimeout { get; }
 
         /// <summary>
         /// The retry count passed to the HTTP symbol store when not overridden in AddSymbolServer.
         /// </summary>
-        int DefaultRetryCount { get; set; }
+        int DefaultRetryCount { get; }
 
         /// <summary>
         /// Reset any HTTP symbol stores marked with a client failure
@@ -52,14 +56,12 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Add symbol server to search path.
         /// </summary>
-        /// <param name="msdl">if true, use the public Microsoft server</param>
-        /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
-        /// <param name="symbolServerPath">symbol server url (optional)</param>
+        /// <param name="symbolServerPath">symbol server url (optional, uses <see cref="DefaultSymbolPath"/> if null)</param>
         /// <param name="authToken">PAT for secure symbol server (optional)</param>
-        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
-        /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional, uses <see cref="DefaultTimeout"/> if null)</param>
+        /// <param name="retryCount">number of retries (optional, uses <see cref="DefaultRetryCount"/> if null)</param>
         /// <returns>if false, failure</returns>
-        bool AddSymbolServer(bool msdl, bool symweb, string symbolServerPath = null, string authToken = null, int? timeoutInMinutes = null, int? retryCount = null);
+        bool AddSymbolServer(string symbolServerPath = null, string authToken = null, int? timeoutInMinutes = null, int? retryCount = null);
 
         /// <summary>
         /// Add cache path to symbol search path

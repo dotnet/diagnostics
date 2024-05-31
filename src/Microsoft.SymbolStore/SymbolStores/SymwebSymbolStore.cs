@@ -11,6 +11,7 @@ namespace Microsoft.SymbolStore.SymbolStores
     /// <summary>
     /// The symbol store for the internal symweb symbol server that handles the "file.ptr" support.
     /// </summary>
+    [Obsolete]
     public sealed class SymwebHttpSymbolStore : HttpSymbolStore
     {
         /// <summary>

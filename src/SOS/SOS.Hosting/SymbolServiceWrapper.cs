@@ -336,54 +336,9 @@ namespace SOS.Hosting
         #region Symbol service delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate bool IsSymbolStoreEnabledDelegate(
-            [In] IntPtr self);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate bool InitializeSymbolStoreDelegate(
-            [In] IntPtr self,
-            [In] bool msdl,
-            [In] bool symweb,
-            [In] string symbolServerPath,
-            [In] string authToken,
-            [In] int timeoutInMinutes,
-            [In] string symbolCachePath,
-            [In] string symbolDirectoryPath);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate bool ParseSymbolPathDelegate(
             [In] IntPtr self,
             [In] string windowsSymbolPath);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate void DisplaySymbolStoreDelegate(
-            [In] IntPtr self,
-            [In] WriteLine writeLine);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate void DisableSymbolStoreDelegate(
-            [In] IntPtr self);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate void LoadNativeSymbolsDelegate(
-            [In] IntPtr self,
-            [In] SymbolFileCallback callback,
-            [In] IntPtr parameter,
-            [In] RuntimeConfiguration config,
-            [In] string moduleFilePath,
-            [In] ulong address,
-            [In] uint size);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate void LoadNativeSymbolsFromIndexDelegate(
-            [In] IntPtr self,
-            [In] SymbolFileCallback callback,
-            [In] IntPtr parameter,
-            [In] RuntimeConfiguration config,
-            [In] string moduleFilePath,
-            [In] bool specialKeys,
-            [In] int moduleIndexSize,
-            [In] IntPtr moduleIndex);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate IntPtr LoadSymbolsForModuleDelegate(

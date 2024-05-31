@@ -127,7 +127,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 contextService.SetCurrentTarget(target);
 
                 // Automatically enable symbol server support, default cache and search for symbols in the dump directory
-                symbolService.AddSymbolServer(msdl: true, symweb: false, retryCount: 3);
+                symbolService.AddSymbolServer(retryCount: 3);
                 symbolService.AddCachePath(symbolService.DefaultSymbolCache);
                 symbolService.AddDirectoryPath(Path.GetDirectoryName(dump_path.FullName));
 

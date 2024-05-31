@@ -140,7 +140,6 @@ Arguments:
 
 Options:
   --microsoft-symbol-server                         Add 'https://msdl.microsoft.com/download/symbols' symbol server path (default).
-  --internal-server                                 Add 'https://symweb' internal symbol server path.
   --server-path &lt;symbol server path&gt;                Add a http server path.
   --authenticated-server-path &lt;pat&gt; &lt;server path&gt;   Add a http PAT authenticated server path.
   --cache-directory &lt;file cache directory&gt;          Add a cache directory.
