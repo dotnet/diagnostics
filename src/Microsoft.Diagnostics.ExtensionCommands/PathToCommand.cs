@@ -21,14 +21,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            if (TryParseAddress(SourceAddress, out ulong source))
+            if (!TryParseAddress(SourceAddress, out ulong source))
             {
                 throw new ArgumentException($"Could not parse argument 'source': {source}");
             }
 
-            if (TryParseAddress(TargetAddress, out ulong target))
+            if (!TryParseAddress(TargetAddress, out ulong target))
             {
-                throw new ArgumentException($"Could not parse argument 'source': {target}");
+                throw new ArgumentException($"Could not parse argument 'target': {target}");
             }
 
             ClrHeap heap = Runtime.Heap;
