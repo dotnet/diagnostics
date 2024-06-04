@@ -68,7 +68,8 @@ namespace Microsoft.SymbolManifestGenerator
 
         private static FileInfo GetSymbolFileToAddAdditionalDebugEntry(IEnumerable<FileInfo> files, SymbolStoreKey clrKey)
         {
-            string keyFileNameToMatch = clrKey.FullPathName;
+            string filePath = clrKey.FullPathName;
+            string keyFileNameToMatch = Path.GetFileName(filePath);
 
             FileInfo matchingSymbolFileOnDisk = files.SingleOrDefault(f => f.Name.Equals(keyFileNameToMatch, StringComparison.OrdinalIgnoreCase));
 
