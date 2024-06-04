@@ -20,7 +20,8 @@ namespace Microsoft.SymbolManifestGenerator
         {
             ManifestDataV1 manifestData = new();
 
-            foreach (FileInfo file in dir.GetFiles("*", SearchOption.AllDirectories))
+            IEnumerable<FileInfo> files = dir.GetFiles("*", SearchOption.AllDirectories);
+            foreach (FileInfo file in files)
             {
                 using FileStream fileStream = file.OpenRead();
                 SymbolStoreFile symbolStoreFile = new(fileStream, file.FullName);
@@ -34,7 +35,7 @@ namespace Microsoft.SymbolManifestGenerator
                 foreach (SymbolStoreKey clrKey in generator.GetKeys(KeyTypeFlags.ClrKeys))
                 {
                     string runtimeModuleDirectory = file.DirectoryName;
-                    FileInfo specialFile = GetSymbolFileToAddAdditionalDebugEntry(dir, clrKey);
+                    FileInfo specialFile = GetSymbolFileToAddAdditionalDebugEntry(files, clrKey);
                     if (specialFile == null)
                     {
                         tracer.Information($"Known special file '{clrKey.FullPathName}' for runtime module '{file.FullName}' does not exist in directory '{runtimeModuleDirectory}'. Skipping.");
@@ -65,14 +66,13 @@ namespace Microsoft.SymbolManifestGenerator
             File.WriteAllText(manifestFileName, manifestDataContent);
         }
 
-        private static FileInfo GetSymbolFileToAddAdditionalDebugEntry(DirectoryInfo basedir, SymbolStoreKey clrKey)
+        private static FileInfo GetSymbolFileToAddAdditionalDebugEntry(IEnumerable<FileInfo> files, SymbolStoreKey clrKey)
         {
             string keyFileNameToMatch = clrKey.FullPathName;
 
-            FileInfo fileOnDisk = basedir.GetFiles("*", SearchOption.AllDirectories)
-                                         .SingleOrDefault(f => f.Name.Equals(keyFileNameToMatch, StringComparison.OrdinalIgnoreCase));
+            FileInfo matchingSymbolFileOnDisk = files.SingleOrDefault(f => f.Name.Equals(keyFileNameToMatch, StringComparison.OrdinalIgnoreCase));
 
-            return fileOnDisk;
+            return matchingSymbolFileOnDisk;
         }
 
         private static string CalculateSHA512(FileInfo file)
