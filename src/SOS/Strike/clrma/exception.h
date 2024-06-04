@@ -32,6 +32,7 @@ public:
 
 private:
     HRESULT Initialize();
+    HRESULT GetStackFrames();
 
     LONG m_lRefs;
     ClrmaManagedAnalysis* m_managedAnalysis;
@@ -71,15 +72,13 @@ struct StackTraceElement64
     INT             flags;  // This is StackTraceElementFlags but it needs to always be "int" sized for backward compatibility.
 };
 
-// This is the layout of the _stackTrace pointer in an exception object. It is a
-// managed array of bytes. The layout is target bitness dependent.
+// This is the layout of the _stackTrace pointer in an exception object. It is a managed array of bytes or if .NET 9.0 or greater
+// an array of objects where the first entry is the address of stack trace element array. The layout is target bitness dependent.
 
 #pragma warning(disable:4200)
 
 struct StackTrace32
 {
-    ULONG32         m_pMethTab;         // ARRAYBASE_SIZE
-    ULONG32         m_NumComponents;    //
     ULONG32         m_size;             // ArrayHeader
     ULONG32         m_thread;           //
     StackTraceElement32 m_elements[0];
@@ -87,9 +86,6 @@ struct StackTrace32
 
 struct StackTrace64
 {
-    ULONG64         m_pMethTab;         // ARRAYBASE_SIZE
-    ULONG32         m_NumComponents;    //
-    ULONG32         m_pad;              //
     ULONG64         m_size;             // ArrayHeader
     ULONG64         m_thread;           //
     StackTraceElement64 m_elements[0];

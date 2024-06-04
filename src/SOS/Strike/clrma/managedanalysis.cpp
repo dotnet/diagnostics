@@ -654,8 +654,8 @@ ClrmaManagedAnalysis::GetStringObject(CLRDATA_ADDRESS stringObject)
     {
         return nullptr;
     }
-    DacpObjectData objData;
     HRESULT hr;
+    DacpObjectData objData;
     if (FAILED(hr = objData.Request(SosDacInterface(), stringObject)))
     {
         TraceError("GetStringObject ISOSDacInterface::GetObjectData FAILED %08x\n", hr);

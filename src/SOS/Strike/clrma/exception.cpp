@@ -289,92 +289,7 @@ ClrmaException::get_FrameCount(
 
     if (!m_stackFramesInitialized)
     {
-        m_stackFrames.clear();
-
-        if (m_exceptionData.StackTrace != 0)
-        {
-            bool bAsync = IsAsyncException(m_exceptionData);
-
-            if (m_managedAnalysis->PointerSize() == 8)
-            {
-                StackTrace64 stackTrace;
-                if (SUCCEEDED(hr = m_managedAnalysis->ReadMemory(m_exceptionData.StackTrace, &stackTrace, sizeof(StackTrace64))))
-                {
-                    if (stackTrace.m_NumComponents > 0 && stackTrace.m_size > 0)
-                    {
-                        CLRDATA_ADDRESS dataPtr = m_exceptionData.StackTrace + offsetof(StackTrace64, m_elements);
-                        for (ULONG i = 0; i < MAX_STACK_FRAMES && i < stackTrace.m_size; i++)
-                        {
-                            StackTraceElement64 stackTraceElement;
-                            if (SUCCEEDED(hr = m_managedAnalysis->ReadMemory(dataPtr, &stackTraceElement, sizeof(StackTraceElement64))))
-                            {
-                                StackFrame frame;
-                                frame.Frame = i;
-                                frame.SP = stackTraceElement.sp;
-                                frame.IP = stackTraceElement.ip;
-                                if ((m_managedAnalysis->ProcessorType() == IMAGE_FILE_MACHINE_AMD64) && bAsync)
-                                {
-                                    frame.IP++;
-                                }
-                                if (SUCCEEDED(hr = m_managedAnalysis->GetMethodDescInfo(stackTraceElement.pFunc, frame, /* stripFunctionParameters */ true)))
-                                {
-                                    m_stackFrames.push_back(frame);
-                                }
-                            }
-                            else
-                            {
-                                TraceError("ClrmaException::get_FrameCount ReadMemory(%016llx) StackTraceElement64 FAILED %08x\n", dataPtr, hr);
-                            }
-                            dataPtr += sizeof(StackTraceElement64);
-                        }
-                    }
-                }
-                else
-                {
-                    TraceError("ClrmaException::get_FrameCount ReadMemory(%016llx) StackTrace64 FAILED %08x\n", m_exceptionData.StackTrace, hr);
-                }
-            }
-            else
-            {
-                StackTrace32 stackTrace;
-                if (SUCCEEDED(hr = m_managedAnalysis->ReadMemory(m_exceptionData.StackTrace, &stackTrace, sizeof(StackTrace32))))
-                {
-                    if (stackTrace.m_NumComponents > 0 && stackTrace.m_size > 0)
-                    {
-                        CLRDATA_ADDRESS dataPtr = m_exceptionData.StackTrace + offsetof(StackTrace32, m_elements);
-                        for (ULONG i = 0; i < MAX_STACK_FRAMES && i < stackTrace.m_size; i++)
-                        {
-                            StackTraceElement32 stackTraceElement;
-                            if (SUCCEEDED(hr = m_managedAnalysis->ReadMemory(dataPtr, &stackTraceElement, sizeof(StackTraceElement32))))
-                            {
-                                StackFrame frame;
-                                frame.Frame = i;
-                                frame.SP = stackTraceElement.sp;
-                                frame.IP = stackTraceElement.ip;
-                                if ((m_managedAnalysis->ProcessorType() == IMAGE_FILE_MACHINE_I386) && (!bAsync || i != 0))
-                                {
-                                    frame.IP++;
-                                }
-                                if (SUCCEEDED(hr = m_managedAnalysis->GetMethodDescInfo(stackTraceElement.pFunc, frame, /* stripFunctionParameters */ true)))
-                                {
-                                    m_stackFrames.push_back(frame);
-                                }
-                            }
-                            else
-                            {
-                                TraceError("ClrmaException::get_FrameCount ReadMemory(%016llx) StackTraceElement32 FAILED %08x\n", dataPtr, hr);
-                            }
-                            dataPtr += sizeof(StackTraceElement32);
-                        }
-                    }
-                }
-                else
-                {
-                    TraceError("ClrmaException::get_FrameCount ReadMemory(%016llx) StackTrace32 FAILED %08x\n", m_exceptionData.StackTrace, hr);
-                }
-            }
-        }
-
+        GetStackFrames();
         m_stackFramesInitialized = true;
     }
 
@@ -514,6 +429,122 @@ ClrmaException::InnerException(
     if (FAILED(hr = exception->QueryInterface(__uuidof(ICLRMAClrException), (void**)ppClrException)))
     {
         return hr;
+    }
+
+    return S_OK;
+}
+
+HRESULT
+ClrmaException::GetStackFrames()
+{
+    HRESULT hr;
+
+    m_stackFrames.clear();
+
+    if (m_exceptionData.StackTrace == 0)
+    {
+        return S_OK;
+    }
+
+    DacpObjectData arrayObjData;
+    if (FAILED(hr = arrayObjData.Request(m_managedAnalysis->SosDacInterface(), m_exceptionData.StackTrace)))
+    {
+        TraceError("ClrmaException::GetStackFrames GetObjectData(%016llx) FAILED %08x\n", m_exceptionData.StackTrace, hr);
+        return hr;
+    }
+        
+    if (arrayObjData.ObjectType != OBJ_ARRAY || arrayObjData.dwNumComponents == 0)
+    {
+        TraceError("ClrmaException::GetStackFrames StackTrace not array or empty\n");
+        return E_FAIL;
+    }
+    CLRDATA_ADDRESS arrayDataPtr = arrayObjData.ArrayDataPtr;
+
+    // If the stack trace is object[] (.NET 9 or greater), the StackTraceElement array is referenced by the first entry
+    if (arrayObjData.ElementTypeHandle == m_managedAnalysis->ObjectMethodTable())
+    {
+        if (FAILED(hr = m_managedAnalysis->ReadPointer(arrayDataPtr, &arrayDataPtr)))
+        {
+            TraceError("ClrmaException::GetStackFrames ReadPointer(%016llx) FAILED %08x\n", arrayDataPtr, hr);
+            return hr;
+        }
+    }
+
+    bool bAsync = IsAsyncException(m_exceptionData);
+
+    if (m_managedAnalysis->PointerSize() == 8)
+    {
+        StackTrace64 stackTrace;
+        if (FAILED(hr = m_managedAnalysis->ReadMemory(arrayDataPtr, &stackTrace, sizeof(StackTrace64))))
+        {
+            TraceError("ClrmaException::GetStackFrames ReadMemory(%016llx) StackTrace64 FAILED %08x\n", arrayDataPtr, hr);
+            return hr;
+        }
+        if (stackTrace.m_size > 0)
+        {
+            CLRDATA_ADDRESS elementPtr = arrayDataPtr + offsetof(StackTrace64, m_elements);
+            for (ULONG i = 0; i < MAX_STACK_FRAMES && i < stackTrace.m_size; i++)
+            {
+                StackTraceElement64 stackTraceElement;
+                if (SUCCEEDED(hr = m_managedAnalysis->ReadMemory(elementPtr, &stackTraceElement, sizeof(StackTraceElement64))))
+                {
+                    StackFrame frame;
+                    frame.Frame = i;
+                    frame.SP = stackTraceElement.sp;
+                    frame.IP = stackTraceElement.ip;
+                    if ((m_managedAnalysis->ProcessorType() == IMAGE_FILE_MACHINE_AMD64) && bAsync)
+                    {
+                        frame.IP++;
+                    }
+                    if (SUCCEEDED(hr = m_managedAnalysis->GetMethodDescInfo(stackTraceElement.pFunc, frame, /* stripFunctionParameters */ true)))
+                    {
+                        m_stackFrames.push_back(frame);
+                    }
+                }
+                else
+                {
+                    TraceError("ClrmaException::GetStackFrames ReadMemory(%016llx) StackTraceElement64 FAILED %08x\n", elementPtr, hr);
+                }
+                elementPtr += sizeof(StackTraceElement64);
+            }
+        }
+    }
+    else
+    {
+        StackTrace32 stackTrace;
+        if (FAILED(hr = m_managedAnalysis->ReadMemory(arrayDataPtr, &stackTrace, sizeof(StackTrace32))))
+        {
+            TraceError("ClrmaException::GetStackFrames ReadMemory(%016llx) StackTrace32 FAILED %08x\n", arrayDataPtr, hr);
+            return hr;
+        }
+        if (stackTrace.m_size > 0)
+        {
+            CLRDATA_ADDRESS elementPtr = arrayDataPtr + offsetof(StackTrace32, m_elements);
+            for (ULONG i = 0; i < MAX_STACK_FRAMES && i < stackTrace.m_size; i++)
+            {
+                StackTraceElement32 stackTraceElement;
+                if (SUCCEEDED(hr = m_managedAnalysis->ReadMemory(elementPtr, &stackTraceElement, sizeof(StackTraceElement32))))
+                {
+                    StackFrame frame;
+                    frame.Frame = i;
+                    frame.SP = stackTraceElement.sp;
+                    frame.IP = stackTraceElement.ip;
+                    if ((m_managedAnalysis->ProcessorType() == IMAGE_FILE_MACHINE_I386) && (!bAsync || i != 0))
+                    {
+                        frame.IP++;
+                    }
+                    if (SUCCEEDED(hr = m_managedAnalysis->GetMethodDescInfo(stackTraceElement.pFunc, frame, /* stripFunctionParameters */ true)))
+                    {
+                        m_stackFrames.push_back(frame);
+                    }
+                }
+                else
+                {
+                    TraceError("ClrmaException::GetStackFrames ReadMemory(%016llx) StackTraceElement32 FAILED %08x\n", elementPtr, hr);
+                }
+                elementPtr += sizeof(StackTraceElement32);
+            }
+        }
     }
 
     return S_OK;

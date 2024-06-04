@@ -80,7 +80,8 @@ public:
     inline IXCLRDataProcess* ClrData() { return m_clrData; }
     inline ISOSDacInterface* SosDacInterface() { return m_sosDac; }
     inline int PointerSize() { return m_pointerSize; }
-    inline ULONG ProcessorType () { return m_processorType; }
+    inline ULONG ProcessorType() { return m_processorType; }
+    inline CLRDATA_ADDRESS ObjectMethodTable() { return m_usefulGlobals.ObjectMethodTable; }
 
     /// <summary>
     /// Fills in the frame.Module and frame.Function from the MethodDesc.
