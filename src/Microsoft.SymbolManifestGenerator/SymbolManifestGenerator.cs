@@ -72,11 +72,6 @@ namespace Microsoft.SymbolManifestGenerator
             FileInfo fileOnDisk = basedir.GetFiles("*", SearchOption.AllDirectories)
                                          .SingleOrDefault(f => f.Name.Equals(keyFileNameToMatch, StringComparison.OrdinalIgnoreCase));
 
-            if (fileOnDisk == null)
-            {
-                return null;
-            }
-
             return fileOnDisk;
         }
 
