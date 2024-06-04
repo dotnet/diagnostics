@@ -20,8 +20,8 @@ namespace Microsoft.SymbolManifestGenerator
         {
             ManifestDataV1 manifestData = new();
 
-            IEnumerable<FileInfo> files = dir.GetFiles("*", SearchOption.AllDirectories);
-            foreach (FileInfo file in files)
+            FileInfo[] allFiles = dir.GetFiles("*", SearchOption.AllDirectories);
+            foreach (FileInfo file in allFiles)
             {
                 using FileStream fileStream = file.OpenRead();
                 SymbolStoreFile symbolStoreFile = new(fileStream, file.FullName);
@@ -34,11 +34,10 @@ namespace Microsoft.SymbolManifestGenerator
 
                 foreach (SymbolStoreKey clrKey in generator.GetKeys(KeyTypeFlags.ClrKeys))
                 {
-                    string runtimeModuleDirectory = file.DirectoryName;
-                    FileInfo specialFile = GetSymbolFileToAddAdditionalDebugEntry(files, clrKey);
+                    FileInfo specialFile = ResolveClrKeyToUniqueFileFromAllFiles(allFiles, clrKey);
                     if (specialFile == null)
                     {
-                        tracer.Information($"Known special file '{clrKey.FullPathName}' for runtime module '{file.FullName}' does not exist in directory '{runtimeModuleDirectory}'. Skipping.");
+                        tracer.Information($"Known special file '{clrKey.FullPathName}' for runtime module '{file.FullName}' does not exist in directory '{file.DirectoryName}'. Skipping.");
                         continue;
                     }
 
@@ -66,14 +65,20 @@ namespace Microsoft.SymbolManifestGenerator
             File.WriteAllText(manifestFileName, manifestDataContent);
         }
 
-        private static FileInfo GetSymbolFileToAddAdditionalDebugEntry(IEnumerable<FileInfo> files, SymbolStoreKey clrKey)
+        // Special files associated with a particular runtime module have not been guaranteed to be in the same directory as the runtime module.
+        // As such, the directory for which a manifest is being generated must guarantee that at most one file exists with the same name as the special file.
+        private static FileInfo ResolveClrKeyToUniqueFileFromAllFiles(FileInfo[] allFiles, SymbolStoreKey clrKey)
         {
-            string filePath = clrKey.FullPathName;
-            string keyFileNameToMatch = Path.GetFileName(filePath);
+            string clrKeyFileName = Path.GetFileName(clrKey.FullPathName);
 
-            FileInfo matchingSymbolFileOnDisk = files.SingleOrDefault(f => f.Name.Equals(keyFileNameToMatch, StringComparison.OrdinalIgnoreCase));
+            FileInfo matchingSymbolFileOnDisk = allFiles.SingleOrDefault(file => FileHasClrKeyFileName(file, clrKeyFileName));
 
             return matchingSymbolFileOnDisk;
+
+            static bool FileHasClrKeyFileName(FileInfo file, string clrKeyFileName)
+            {
+                return file.Name.Equals(clrKeyFileName, StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         private static string CalculateSHA512(FileInfo file)
