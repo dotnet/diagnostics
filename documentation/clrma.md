@@ -54,8 +54,7 @@ ISOSDacInterface::GetMethodDescName()
 ISOSDacInterface::GetModuleData()
 ISOSDacInterface::GetPEFileBase()
 ISOSDacInterface::GetPEFileName()
-ISOSDacInterface::GetMethodDescPtrFromIP
-ISOSDacInterface::GetMethodDescPtrFromFrame()
+ISOSDacInterface::GetMethodDescPtrFromIP()
 
 // Module name fallback if debugger and GetPEFileName() can't get the name.
 ISOSDacInterface::GetModule()
@@ -67,14 +66,6 @@ IXCLRDataTask::CreateStackWalk()
 IXCLRDataStackWalk::Request(DACSTACKPRIV_REQUEST_FRAME_DATA, ...)
 IXCLRDataStackWalk::GetContext()
 IXCLRDataStackWalk::Next()
-
-// Fallback if GetMethodDescPtrFromFrame() fails when getting the stack frame method name. Not sure how important this fallback path is.
-IXCLRDataStackWalk::GetFrame()
-IXCLRDataFrame::GetMethodInstance()
-IXCLRDataMethodInstance::GetRepresentativeEntryAddress()
-IXCLRDataMethodInstance::GetTokenAndScope()
-IXCLRDataMethodInstance::GetName()
-IXCLRDataModule::GetFileName 
 ```
 
 ### References

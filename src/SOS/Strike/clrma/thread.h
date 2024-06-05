@@ -49,5 +49,4 @@ private:
     bool m_nestedExceptionsInitialized;
 
     HRESULT GetFrameLocation(IXCLRDataStackWalk* pStackWalk, CLRDATA_ADDRESS* ip, CLRDATA_ADDRESS* sp);
-    HRESULT GetFrameFromStackWalk(IXCLRDataStackWalk* pStackWalk, StackFrame& frame);
 };

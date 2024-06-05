@@ -199,50 +199,28 @@ ClrmaThread::get_FrameCount(
                     frame.Frame = index;
                     if (FAILED(hr = GetFrameLocation(pStackWalk, &frame.IP, &frame.SP)))
                     {
+                        TraceError("Unwind: GetFrameLocation() FAILED %08x\n", hr);
                         break;
                     }
+                    // Only include normal frames, skipping any special frames
                     DacpFrameData frameData;
                     if (SUCCEEDED(hr = frameData.Request(pStackWalk)) && frameData.frameAddr != 0)
                     {
-                        frame.SP = frameData.frameAddr;
-
-                        // Get special stack frame name
-                        CLRDATA_ADDRESS methodDesc = 0;
-                        if (SUCCEEDED(hr = m_managedAnalysis->SosDacInterface()->GetMethodDescPtrFromFrame(frame.SP, &methodDesc)))
-                        {
-                            if (FAILED(hr = m_managedAnalysis->GetMethodDescInfo(methodDesc, frame, /* stripFunctionParameters */ false)))
-                            {
-                                continue;
-                            }
-                        }
-                        else
-                        {
-                            if (FAILED(hr = GetFrameFromStackWalk(pStackWalk, frame)))
-                            {
-                                continue;
-                            }
-                        }
+                        TraceInformation("Unwind: skipping special frame SP %016llx IP %016llx\n", frame.SP, frame.IP);
+                        continue;
                     }
-                    else
+                    CLRDATA_ADDRESS methodDesc = 0;
+                    if (FAILED(hr = m_managedAnalysis->SosDacInterface()->GetMethodDescPtrFromIP(frame.IP, &methodDesc)))
                     {
-                        // Get normal module and method names like MethodNameFromIP() does for !clrstack
-                        CLRDATA_ADDRESS methodDesc = 0;
-                        if (SUCCEEDED(hr = m_managedAnalysis->SosDacInterface()->GetMethodDescPtrFromIP(frame.IP, &methodDesc)))
-                        {
-                            if (FAILED(hr = m_managedAnalysis->GetMethodDescInfo(methodDesc, frame, /* stripFunctionParameters */ false)))
-                            {
-                                continue;
-                            }
-                        }
-                        else
-                        {
-                            if (FAILED(hr = GetFrameFromStackWalk(pStackWalk, frame)))
-                            {
-                                continue;
-                            }
-                        }
+                        TraceInformation("Unwind: skipping frame GetMethodDescPtrFromIP(%016llx) FAILED %08x\n", frame.IP, hr);
+                        continue;
                     }
-
+                    // Get normal module and method names like MethodNameFromIP() does for !clrstack
+                    if (FAILED(hr = m_managedAnalysis->GetMethodDescInfo(methodDesc, frame, /* stripFunctionParameters */ false)))
+                    {
+                        TraceInformation("Unwind: skipping frame GetMethodDescInfo(%016llx) FAILED %08x\n", methodDesc, hr);
+                        continue;
+                    }
                     m_stackFrames.push_back(frame);
                     index++;
 
@@ -533,82 +511,4 @@ ClrmaThread::GetFrameLocation(
             break;
     }
     return S_OK;
-}
-
-HRESULT
-ClrmaThread::GetFrameFromStackWalk(
-    IXCLRDataStackWalk* pStackWalk,
-    StackFrame& frame
-)
-{
-    HRESULT hr;
-    ReleaseHolder<IXCLRDataFrame> clrDataFrame;
-    if (SUCCEEDED(hr = pStackWalk->GetFrame((IXCLRDataFrame**)&clrDataFrame)))
-    {
-        ReleaseHolder<IXCLRDataMethodInstance> methodInstance;
-        if (SUCCEEDED(hr = clrDataFrame->GetMethodInstance((IXCLRDataMethodInstance**)&methodInstance)))
-        {
-            // Don't compute the method displacement if IP is 0
-            if (frame.IP > 0)
-            {
-                CLRDATA_ADDRESS startAddr;
-                if (SUCCEEDED(hr = methodInstance->GetRepresentativeEntryAddress(&startAddr)))
-                {
-                    frame.Displacement = (frame.IP - startAddr);
-                }
-                else
-                {
-                    TraceError("GetFrameFromStackWalk: IXCLRDataMethodInstance::GetRepresentativeEntryAddress FAILED %08x\n", hr);
-                }
-            }
-
-            ArrayHolder<WCHAR> wszNameBuffer = new WCHAR[MAX_LONGPATH + 1];
-            if (SUCCEEDED(hr = methodInstance->GetName(0, MAX_LONGPATH, nullptr, wszNameBuffer)))
-            {
-                frame.Function = wszNameBuffer;
-            }
-            else
-            {
-                TraceError("GetFrameFromStackWalk: IXCLRDataMethodInstance::GetName FAILED %08x\n", hr);
-            }
-
-            mdMethodDef token;
-            IXCLRDataModule* pModule;
-            if (SUCCEEDED(hr = methodInstance->GetTokenAndScope(&token, &pModule)))
-            {
-                wszNameBuffer[0] = L'\0';
-
-                ULONG32 nameLen = 0;
-                if (SUCCEEDED(hr = pModule->GetFileName(MAX_LONGPATH, &nameLen, wszNameBuffer)))
-                {
-                    frame.Module = wszNameBuffer;
-                }
-                else
-                {
-                    TraceError("GetFrameFromStackWalk: IXCLRDataModule::GetFileName FAILED %08x\n", hr);
-                }
-            }
-            else
-            {
-                TraceError("GetFrameFromStackWalk: IXCLRDataMethodInstance::GetTokenAndScope FAILED %08x\n", hr);
-            }
-        }
-        else
-        {
-            TraceError("GetFrameFromStackWalk: IXCLRDataFrame::GetMethodInstance FAILED %08x\n", hr);
-        }
-    }
-    else
-    {
-        TraceError("GetFrameFromStackWalk: IXCLRDataStackWalk::GetFrame FAILED %08x\n", hr);
-    }
-    if (frame.Module.empty())
-    {
-        frame.Module = L"UNKNOWN";
-    }
-    if (frame.Function.empty())
-    {
-        frame.Function = L"UNKNOWN";
-    }
-    return hr;
 }
