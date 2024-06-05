@@ -115,13 +115,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
             try
             {
                 using DataTarget dataTarget = DataTarget.LoadDump(dump_path.FullName);
-
                 OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
-                if (targetPlatform != OSPlatform.OSX &&
-                    (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ||
-                     dataTarget.DataReader.EnumerateModules().Any((module) => Path.GetExtension(module.FileName) == ".dylib")))
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && (targetPlatform != OSPlatform.OSX))
                 {
-                    targetPlatform = OSPlatform.OSX;
+                    throw new NotSupportedException("Windows or Linux dumps not supported on MacOS");
+                }
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && (targetPlatform != OSPlatform.Linux))
+                {
+                    throw new NotSupportedException("Windows or MacOS dumps not supported on Linux");
                 }
                 TargetFromDataReader target = new(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
                 contextService.SetCurrentTarget(target);
