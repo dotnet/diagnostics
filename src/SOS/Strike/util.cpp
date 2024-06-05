@@ -3391,9 +3391,9 @@ bool CheckBreakingRuntimeChange(int* pVersion)
             {
                 if (version > SOS_BREAKING_CHANGE_VERSION)
                 {
-                    ExtWarn("WARNING: SOS needs to be upgraded for this version of the runtime. Some commands may not work correctly.\n");
-                    ExtWarn("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
-                    ExtWarn("\n");
+                    ExtErr("SOS needs to be upgraded for this version of the runtime. Some commands may not work correctly.\n");
+                    ExtErr("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
+                    ExtErr("\n");
                     result = true;
                 }
             }
