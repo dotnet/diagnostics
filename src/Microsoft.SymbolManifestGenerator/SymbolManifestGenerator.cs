@@ -49,7 +49,8 @@ namespace Microsoft.SymbolManifestGenerator
                         BasedirRelativePath = basedirRelativePath,
                         SymbolKey = clrKey.Index,
                         Sha512 = fileHash,
-                        DebugInformationLevel = Private
+                        DebugInformationLevel = Private,
+                        LegacyDebugInformationLevel = Private
                     };
 
                     manifestData.Entries.Add(manifestDataEntry);
@@ -111,6 +112,8 @@ namespace Microsoft.SymbolManifestGenerator
             public string SymbolKey { get; set; }
             public string Sha512 { get; set; }
             public int DebugInformationLevel { get; set; }
+            [JsonPropertyName("DebugInformationLevel")]
+            public int LegacyDebugInformationLevel { get; set; }
         }
     }
 }
