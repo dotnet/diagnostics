@@ -13,7 +13,6 @@ variables:
 # # Internal build pools.
 - ${{ if ne(variables['System.TeamProject'], 'public') }}:
   - group: DotNet-Diagnostics-SDL-Params
-  - group: DotNet-MSRC-Storage
   - template: /eng/common/templates-official/variables/pool-providers.yml@self
   - name: BuildPool
     value: $(DncEngInternalBuildPool)
