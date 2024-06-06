@@ -2892,7 +2892,10 @@ DECLARE_API(PrintException)
         return E_INVALIDARG;
     }
 
-    CheckBreakingRuntimeChange();
+    if (CheckBreakingRuntimeChange())
+    {
+        return E_FAIL;
+    }
 
     if (bLineNumbers)
     {
@@ -4802,8 +4805,10 @@ DECLARE_API(Threads)
 
             if (bSupported)
             {
-                CheckBreakingRuntimeChange();
-
+                if (CheckBreakingRuntimeChange())
+                {
+                    return E_FAIL;
+                }
                 HRESULT Status2 = PrintSpecialThreads();
                 if (!SUCCEEDED(Status2))
                     Status = Status2;
@@ -7451,7 +7456,11 @@ DECLARE_API(DumpLog)
         return E_FAIL;
     }
 
-    CheckBreakingRuntimeChange();
+    if (CheckBreakingRuntimeChange())
+    {
+        return E_FAIL;
+    }
+
     LoadRuntimeSymbols();
 
     const char* fileName = "StressLog.txt";
