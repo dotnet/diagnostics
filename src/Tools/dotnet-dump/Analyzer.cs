@@ -118,11 +118,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 OSPlatform targetPlatform = dataTarget.DataReader.TargetPlatform;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && (targetPlatform != OSPlatform.OSX))
                 {
-                    throw new NotSupportedException("Windows or Linux dumps not supported on MacOS");
+                    throw new NotSupportedException("Analyzing Windows or Linux dumps not supported when running on MacOS");
                 }
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && (targetPlatform != OSPlatform.Linux))
                 {
-                    throw new NotSupportedException("Windows or MacOS dumps not supported on Linux");
+                    throw new NotSupportedException("Analyzing Windows or MacOS dumps not supported when running on Linux");
                 }
                 TargetFromDataReader target = new(dataTarget.DataReader, targetPlatform, this, _targetIdFactory++, dump_path.FullName);
                 contextService.SetCurrentTarget(target);
