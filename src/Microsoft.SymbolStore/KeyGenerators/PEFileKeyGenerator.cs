@@ -15,7 +15,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         private const string CoreClrFileName = "coreclr.dll";
         private const string ClrFileName = "clr.dll";
 
-        private const string SosFileName = "SOS.dll";
+        private const string SosFileName = "sos.dll";
         private const string CoreClrDACFileName = "mscordaccore.dll";
         private const string ClrDACFileName = "mscordacwks.dll";
         private const string DbiFileName = "mscordbi.dll";
