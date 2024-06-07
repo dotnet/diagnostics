@@ -10,7 +10,9 @@
 #include <corerror.h>
 #include <remotememoryservice.h>
 
-#define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
+#ifndef IMAGE_FILE_MACHINE_LOONGARCH64
+#define IMAGE_FILE_MACHINE_LOONGARCH64      0x6264  // LOONGARCH64
+#endif
 
 DataTarget::DataTarget(ULONG64 baseAddress) :
     m_ref(0),
@@ -96,14 +98,27 @@ HRESULT STDMETHODCALLTYPE
 DataTarget::GetPointerSize(
     /* [out] */ ULONG32 *size)
 {
-#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64) || defined(SOS_TARGET_MIPS64) || defined(SOS_TARGET_RISCV64)
-    *size = 8;
-#elif defined(SOS_TARGET_ARM) || defined(SOS_TARGET_X86)
-    *size = 4;
-#else
-  #error Unsupported architecture
-#endif
-
+    ULONG machine;
+    HRESULT hr = GetDebuggerServices()->GetExecutingProcessorType(&machine);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    switch (machine)
+    {
+        case IMAGE_FILE_MACHINE_AMD64:
+        case IMAGE_FILE_MACHINE_ARM64:
+        case IMAGE_FILE_MACHINE_RISCV64:
+        case IMAGE_FILE_MACHINE_LOONGARCH64:
+            *size = 8;
+            break;
+        case IMAGE_FILE_MACHINE_ARM:
+        case IMAGE_FILE_MACHINE_THUMB:
+        case IMAGE_FILE_MACHINE_ARMNT:
+        case IMAGE_FILE_MACHINE_I386:
+            *size = 4;
+            break;
+    }
     return S_OK;
 }
 
