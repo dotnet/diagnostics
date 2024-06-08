@@ -22,7 +22,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public string Description { get; }
 
-        public bool Rundown { get; set; } = true;
+        public long RundownKeyword { get; set; } = EventPipeSession.DefaultRundownKeyword;
+
+        public RetryStrategy RetryStrategy { get; set; } = RetryStrategy.NothingToRetry;
 
         public static void MergeProfileAndProviders(Profile selectedProfile, List<EventPipeProvider> providerCollection, Dictionary<string, string> enabledBy)
         {

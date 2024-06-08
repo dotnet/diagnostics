@@ -11,7 +11,7 @@ if(NOT ${NUGET_PACKAGES} STREQUAL "")
         set(DIASYMREADER_ARCH amd64)
     endif()
 
-    install(FILES ${NUGET_PACKAGES}/microsoft.diasymreader.native/16.11.27-beta1.23180.1/runtimes/win/native/Microsoft.DiaSymReader.Native.${DIASYMREADER_ARCH}.dll DESTINATION . )
+    install(FILES ${NUGET_PACKAGES}/microsoft.diasymreader.native/17.10.0-beta1.24272.1/runtimes/win/native/Microsoft.DiaSymReader.Native.${DIASYMREADER_ARCH}.dll DESTINATION . )
 endif()
 
 if(NOT ${CLR_MANAGED_BINARY_DIR} STREQUAL "")

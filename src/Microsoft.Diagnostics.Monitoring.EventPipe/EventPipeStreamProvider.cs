@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,7 +30,45 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             EventPipeSession session = null;
             try
             {
-                session = await client.StartEventPipeSessionAsync(_sourceConfig.GetProviders(), _sourceConfig.RequestRundown, _sourceConfig.BufferSizeInMB, cancellationToken).ConfigureAwait(false);
+                IEnumerable<EventPipeProvider> providers = _sourceConfig.GetProviders();
+                int bufferSizeInMB = _sourceConfig.BufferSizeInMB;
+                long rundownKeyword = _sourceConfig.RundownKeyword;
+                RetryStrategy retryStrategy = _sourceConfig.RetryStrategy;
+                try
+                {
+                    EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, rundownKeyword, true);
+                    session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
+                }
+                catch (UnsupportedCommandException) when (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
+                {
+                    //
+                    // If you are building new profiles or options, you can test with these asserts to make sure you are writing
+                    // the retry strategies correctly.
+                    //
+                    // If these assert ever fires, it means something is wrong with the option generation logic leading to unnecessary retries.
+                    // unnecessary retries is not fatal.
+                    //
+                    // Debug.Assert(rundownKeyword != 0);
+                    // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                    //
+                    EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, EventPipeSession.DefaultRundownKeyword, true);
+                    session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
+                }
+                catch (UnsupportedCommandException) when (retryStrategy == RetryStrategy.DropKeywordDropRundown)
+                {
+                    //
+                    // If you are building new profiles or options, you can test with these asserts to make sure you are writing
+                    // the retry strategies correctly.
+                    //
+                    // If these assert ever fires, it means something is wrong with the option generation logic leading to unnecessary retries.
+                    // unnecessary retries is not fatal.
+                    //
+                    // Debug.Assert(rundownKeyword != 0);
+                    // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
+                    //
+                    EventPipeSessionConfiguration config = new(providers, bufferSizeInMB, 0, true);
+                    session = await client.StartEventPipeSessionAsync(config, cancellationToken).ConfigureAwait(false);
+                }
                 if (resumeRuntime)
                 {
                     try

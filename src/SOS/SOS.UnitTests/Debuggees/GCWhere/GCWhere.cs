@@ -44,7 +44,7 @@ internal class GCWhere
         Debugger.Break();   // GCWhere should temp in Gen2                
         GC.Collect();
         int genFourthTime = GC.GetGeneration(temp);
-        Console.WriteLine("1st: {0} 2nd: {1}, 3rd: {2} 4th: {3}", genFirstTime, genSecondTime, genThirdTime, genFourthTime);
+        Console.WriteLine($"1st: {genFirstTime} 2nd: {genSecondTime}, 3rd: {genThirdTime} 4th: {genFourthTime}");
         Debugger.Break();   // GCWhere should temp in Gen2                
         PrintIt(temp);
         GC.KeepAlive(temp);

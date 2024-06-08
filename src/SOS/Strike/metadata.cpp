@@ -488,7 +488,7 @@ HRESULT MDInfo::GetFullNameForMD(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, LON
 {
     ULONG       cbCur = 0;
     ULONG       cb;
-    ULONG       ulData = NULL;
+    ULONG       ulData = (TADDR)0;
     ULONG       ulArgs;
     HRESULT     hr = NOERROR;
 

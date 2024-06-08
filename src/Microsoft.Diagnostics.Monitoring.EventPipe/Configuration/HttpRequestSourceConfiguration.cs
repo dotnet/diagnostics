@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public HttpRequestSourceConfiguration()
         {
             //CONSIDER removing rundown for this scenario.
-            RequestRundown = true;
+            RundownKeyword = EventPipeSession.DefaultRundownKeyword;
         }
 
         // This string is shared between HttpRequestSourceConfiguration and AspNetTriggerSourceConfiguration

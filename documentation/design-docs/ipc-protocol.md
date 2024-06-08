@@ -349,6 +349,8 @@ enum class EventPipeCommandId : uint8_t
     StopTracing     = 0x01, // stop a given session
     CollectTracing  = 0x02, // create/start a given session
     CollectTracing2 = 0x03, // create/start a given session with/without rundown
+    CollectTracing3 = 0x04, // create/start a given session with/without collecting stacks
+    CollectTracing4 = 0x05, // create/start a given session with specific rundown keyword
 }
 ```
 See: [EventPipe Commands](#EventPipe-Commands)
@@ -402,6 +404,8 @@ enum class EventPipeCommandId : uint8_t
     StopTracing     = 0x01, // stop a given session
     CollectTracing  = 0x02, // create/start a given session
     CollectTracing2 = 0x03, // create/start a given session with/without rundown
+    CollectTracing3 = 0x04, // create/start a given session with/without collecting stacks
+    CollectTracing4 = 0x05, // create/start a given session with specific rundown keyword
 }
 ```
 EventPipe Payloads are encoded with the following rules:
@@ -566,7 +570,7 @@ A `provider_config` is composed of the following data:
 
 Header: `{ Magic; 28; 0xFF00; 0x0000; }`
 
-`CollectTracing2` returns:
+`CollectTracing3` returns:
 * `ulong sessionId`: the ID for the stream session starting on the current connection
 
 ##### Details:
@@ -600,6 +604,70 @@ Payload
 ```
 Followed by an Optional Continuation of a `nettrace` format stream of events.
 
+### `CollectTracing4`
+
+Command Code: `0x0205`
+
+The `CollectTracing4` command is an extension of the `CollectTracing3` command - its behavior is the same as `CollectTracing3` command, except the requestRundown field is replaced by the rundownKeyword field to allow customizing the set of rundown events to be fired. 
+
+A rundown keyword of `0x80020139` has the equivalent behavior as `CollectTracing3` with `requestRundown=true` and rundown keyword of `0` has the equivalent behavior as `requestRundown=false`.
+
+
+> Note available for .NET 9.0 and later.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0205; 0x0000 }`
+
+* `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `ulong rundownKeyword`: Indicates the keyword for the rundown provider
+* `array<provider_config> providers`: The providers to turn on for the streaming session
+
+A `provider_config` is composed of the following data:
+* `ulong keywords`: The keywords to turn on with this providers
+* `uint logLevel`: The level of information to turn on
+* `string provider_name`: The name of the provider
+* `string filter_data` (optional): Filter information
+
+> see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
+>
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`CollectTracing4` returns:
+* `ulong sessionId`: the ID for the stream session starting on the current connection
+
+##### Details:
+
+Input:
+```
+Payload
+{
+    uint circularBufferMB,
+    uint format,
+    ulong rundownKeyword
+    array<provider_config> providers
+}
+
+provider_config
+{
+    ulong keywords,
+    uint logLevel,
+    string provider_name,
+    string filter_data (optional)
+}
+```
+
+Returns:
+```c
+Payload
+{
+    ulong sessionId
+}
+```
+Followed by an Optional Continuation of a `nettrace` format stream of events.
 
 ### `StopTracing`
 

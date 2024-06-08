@@ -32,7 +32,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Symbol server URLs
         /// </summary>
         public const string MsdlSymbolServer = "https://msdl.microsoft.com/download/symbols/";
-        public const string SymwebSymbolServer = "https://symweb/";
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
@@ -59,8 +58,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public bool IsSymbolStoreEnabled => _symbolStore != null;
 
         /// <summary>
+        /// The default symbol server URL (normally msdl) when not overridden in AddSymbolServer.
+        /// </summary>
+        public string DefaultSymbolPath { get; set; } = MsdlSymbolServer;
+
+        /// <summary>
         /// The default symbol cache path:
-        ///
         /// * dbgeng on Windows uses the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
         /// * dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
         /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache
@@ -204,7 +207,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     if (symbolServerPath != null)
                     {
-                        if (!AddSymbolServer(msdl: false, symweb: false, symbolServerPath.Trim()))
+                        if (!AddSymbolServer(symbolServerPath: symbolServerPath.Trim()))
                         {
                             return false;
                         }
@@ -226,47 +229,19 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Add symbol server to search path.
         /// </summary>
-        /// <param name="msdl">if true, use the public Microsoft server</param>
-        /// <param name="symweb">if true, use symweb internal server and protocol (file.ptr)</param>
-        /// <param name="symbolServerPath">symbol server url (optional)</param>
+        /// <param name="symbolServerPath">symbol server url (optional, uses <see cref="DefaultSymbolPath"/> if null)</param>
         /// <param name="authToken">PAT for secure symbol server (optional)</param>
         /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
         /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
         /// <returns>if false, failure</returns>
         public bool AddSymbolServer(
-            bool msdl,
-            bool symweb,
             string symbolServerPath = null,
             string authToken = null,
             int? timeoutInMinutes = null,
             int? retryCount = null)
         {
-            bool internalServer = false;
-
             // Add symbol server URL if exists
-            if (symbolServerPath == null)
-            {
-                if (msdl)
-                {
-                    symbolServerPath = MsdlSymbolServer;
-                }
-                else if (symweb)
-                {
-                    symbolServerPath = SymwebSymbolServer;
-                    internalServer = true;
-                }
-            }
-            else
-            {
-                // Use the internal symbol store for symweb
-                internalServer = symbolServerPath.Contains("symweb");
-            }
-
-            // Return error if symbol server path is null and msdl and symweb are false.
-            if (symbolServerPath == null)
-            {
-                return false;
-            }
+            symbolServerPath ??= DefaultSymbolPath;
 
             // Validate symbol server path
             if (!Uri.TryCreate(symbolServerPath.TrimEnd('/') + '/', UriKind.Absolute, out Uri uri))
@@ -285,15 +260,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
                 {
                     // Create http symbol server store
-                    HttpSymbolStore httpSymbolStore;
-                    if (internalServer)
-                    {
-                        httpSymbolStore = new SymwebHttpSymbolStore(Tracer.Instance, store, uri);
-                    }
-                    else
-                    {
-                        httpSymbolStore = new HttpSymbolStore(Tracer.Instance, store, uri, personalAccessToken: authToken);
-                    }
+                    HttpSymbolStore httpSymbolStore = new(Tracer.Instance, store, uri, personalAccessToken: authToken);
                     httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes.GetValueOrDefault(DefaultTimeout));
                     httpSymbolStore.RetryCount = retryCount.GetValueOrDefault(DefaultRetryCount);
                     SetSymbolStore(httpSymbolStore);

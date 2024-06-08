@@ -348,8 +348,8 @@ void IP2MethodDesc (DWORD_PTR IP, DWORD_PTR &methodDesc, JITTypes &jitType,
     CLRDATA_ADDRESS EIP = TO_CDADDR(IP);
     DacpCodeHeaderData codeHeaderData;
 
-    methodDesc = NULL;
-    gcinfoAddr = NULL;
+    methodDesc = (TADDR)0;
+    gcinfoAddr = (TADDR)0;
 
     if (codeHeaderData.Request(g_sos, EIP) != S_OK)
     {
@@ -1237,7 +1237,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
 //              > 0 = offset to field from objAddr
 int GetObjFieldOffset(CLRDATA_ADDRESS cdaObj, __in_z LPCWSTR wszFieldName, BOOL bFirst)
 {
-    TADDR mt = NULL;
+    TADDR mt = (TADDR)0;
     if FAILED(GetMTOfObject(TO_TADDR(cdaObj), &mt))
         return -1;
 
@@ -1319,45 +1319,45 @@ int GetObjFieldOffset(CLRDATA_ADDRESS cdaObj, CLRDATA_ADDRESS cdaMT, __in_z LPCW
 // returns NULL
 CLRDATA_ADDRESS IsInOneDomainOnly(CLRDATA_ADDRESS AssemblyPtr)
 {
-    CLRDATA_ADDRESS appDomain = NULL;
+    CLRDATA_ADDRESS appDomain = (TADDR)0;
 
     DacpAppDomainStoreData adstore;
     if (adstore.Request(g_sos) != S_OK)
     {
         ExtOut("Unable to get appdomain store\n");
-        return NULL;
+        return (TADDR)0;
     }
 
     size_t AllocSize;
     if (!ClrSafeInt<size_t>::multiply(sizeof(CLRDATA_ADDRESS), adstore.DomainCount, AllocSize))
     {
         ReportOOM();
-        return NULL;
+        return (TADDR)0;
     }
 
     ArrayHolder<CLRDATA_ADDRESS> pArray = new CLRDATA_ADDRESS[adstore.DomainCount];
     if (pArray==NULL)
     {
         ReportOOM();
-        return NULL;
+        return (TADDR)0;
     }
 
     if (g_sos->GetAppDomainList(adstore.DomainCount, pArray, NULL)!=S_OK)
     {
         ExtOut ("Failed to get appdomain list\n");
-        return NULL;
+        return (TADDR)0;
     }
 
     for (int i = 0; i < adstore.DomainCount; i++)
     {
         if (IsInterrupt())
-            return NULL;
+            return (TADDR)0;
 
         DacpAppDomainData dadd;
         if (dadd.Request(g_sos, pArray[i]) != S_OK)
         {
             ExtOut ("Unable to get AppDomain %p\n", SOS_PTR(pArray[i]));
-            return NULL;
+            return (TADDR)0;
         }
 
         if (dadd.AssemblyCount)
@@ -1366,34 +1366,34 @@ CLRDATA_ADDRESS IsInOneDomainOnly(CLRDATA_ADDRESS AssemblyPtr)
             if (!ClrSafeInt<size_t>::multiply(sizeof(CLRDATA_ADDRESS), dadd.AssemblyCount, AssemblyAllocSize))
             {
                 ReportOOM();
-                return NULL;
+                return (TADDR)0;
             }
 
             ArrayHolder<CLRDATA_ADDRESS> pAsmArray = new CLRDATA_ADDRESS[dadd.AssemblyCount];
             if (pAsmArray==NULL)
             {
                 ReportOOM();
-                return NULL;
+                return (TADDR)0;
             }
 
             if (g_sos->GetAssemblyList(dadd.AppDomainPtr,dadd.AssemblyCount,pAsmArray, NULL)!=S_OK)
             {
                 ExtOut("Unable to get array of Assemblies\n");
-                return NULL;
+                return (TADDR)0;
             }
 
             for (LONG n = 0; n < dadd.AssemblyCount; n ++)
             {
                 if (IsInterrupt())
-                    return NULL;
+                    return (TADDR)0;
 
                 if (AssemblyPtr == pAsmArray[n])
                 {
-                    if (appDomain != NULL)
+                    if (appDomain != (TADDR)0)
                     {
                         // We have found more than one AppDomain that loaded this
                         // assembly, we must return NULL.
-                        return NULL;
+                        return (TADDR)0;
                     }
                     appDomain = dadd.AppDomainPtr;
                 }
@@ -1410,25 +1410,25 @@ CLRDATA_ADDRESS GetAppDomainForMT(CLRDATA_ADDRESS mtPtr)
     DacpMethodTableData mt;
     if (mt.Request(g_sos, mtPtr) != S_OK)
     {
-        return NULL;
+        return (TADDR)0;
     }
 
     DacpModuleData module;
     if (module.Request(g_sos, mt.Module) != S_OK)
     {
-        return NULL;
+        return (TADDR)0;
     }
 
     DacpAssemblyData assembly;
     if (assembly.Request(g_sos, module.Assembly) != S_OK)
     {
-        return NULL;
+        return (TADDR)0;
     }
 
     DacpAppDomainStoreData adstore;
     if (adstore.Request(g_sos) != S_OK)
     {
-        return NULL;
+        return (TADDR)0;
     }
 
     return (assembly.ParentDomain == adstore.sharedDomain) ?
@@ -1438,12 +1438,12 @@ CLRDATA_ADDRESS GetAppDomainForMT(CLRDATA_ADDRESS mtPtr)
 
 CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr)
 {
-    CLRDATA_ADDRESS appDomain = NULL;
+    CLRDATA_ADDRESS appDomain = (TADDR)0;
 
     DacpObjectData objData;
     if (objData.Request(g_sos,objPtr) != S_OK)
     {
-        return NULL;
+        return (TADDR)0;
     }
 
     // First check  eeclass->module->assembly->domain.
@@ -1453,25 +1453,25 @@ CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr)
     DacpMethodTableData mt;
     if (mt.Request(g_sos,objData.MethodTable) != S_OK)
     {
-        return NULL;
+        return (TADDR)0;
     }
 
     DacpModuleData module;
     if (module.Request(g_sos,mt.Module) != S_OK)
     {
-        return NULL;
+        return (TADDR)0;
     }
 
     DacpAssemblyData assembly;
     if (assembly.Request(g_sos,module.Assembly) != S_OK)
     {
-        return NULL;
+        return (TADDR)0;
     }
 
     DacpAppDomainStoreData adstore;
     if (adstore.Request(g_sos) != S_OK)
     {
-        return NULL;
+        return (TADDR)0;
     }
 
     if (assembly.ParentDomain == adstore.sharedDomain)
@@ -1480,7 +1480,7 @@ CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr)
         ULONG value = 0;
         if (!obj.TryGetHeader(value))
         {
-            return NULL;
+            return (TADDR)0;
         }
 
         DWORD adIndex = (value >> SBLK_APPDOMAIN_SHIFT) & SBLK_MASK_APPDOMAININDEX;
@@ -1491,7 +1491,7 @@ CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr)
             // being in domain X if the only other domain that has the assembly
             // loaded is domain X.
             appDomain = IsInOneDomainOnly(assembly.AssemblyPtr);
-            if (appDomain == NULL && ((value & BIT_SBLK_IS_HASH_OR_SYNCBLKINDEX) != 0))
+            if (appDomain == (TADDR)0 && ((value & BIT_SBLK_IS_HASH_OR_SYNCBLKINDEX) != 0))
             {
                 if ((value & BIT_SBLK_IS_HASHCODE) == 0)
                 {
@@ -1510,18 +1510,18 @@ CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr)
             size_t AllocSize;
             if (!ClrSafeInt<size_t>::multiply(sizeof(CLRDATA_ADDRESS), adstore.DomainCount, AllocSize))
             {
-                return NULL;
+                return (TADDR)0;
             }
             // we know we have a non-zero adIndex. Find the appdomain.
             ArrayHolder<CLRDATA_ADDRESS> pArray = new CLRDATA_ADDRESS[adstore.DomainCount];
             if (pArray==NULL)
             {
-                return NULL;
+                return (TADDR)0;
             }
 
             if (g_sos->GetAppDomainList(adstore.DomainCount, pArray, NULL)!=S_OK)
             {
-                return NULL;
+                return (TADDR)0;
             }
 
             for (int i = 0; i < adstore.DomainCount; i++)
@@ -1529,7 +1529,7 @@ CLRDATA_ADDRESS GetAppDomain(CLRDATA_ADDRESS objPtr)
                 DacpAppDomainData dadd;
                 if (dadd.Request(g_sos, pArray[i]) != S_OK)
                 {
-                    return NULL;
+                    return (TADDR)0;
                 }
                 if (dadd.dwId == adIndex)
                 {
@@ -1611,7 +1611,7 @@ HRESULT FileNameForModule(const DacpModuleData* const pModuleData, __out_ecount(
 
 void AssemblyInfo(DacpAssemblyData *pAssembly)
 {
-    if ((ULONG64)pAssembly->AssemblySecDesc != NULL)
+    if ((ULONG64)pAssembly->AssemblySecDesc != (TADDR)0)
         ExtOut("SecurityDescriptor: %p\n", SOS_PTR(pAssembly->AssemblySecDesc));
     ExtOut("  Module\n");
 
@@ -1698,7 +1698,7 @@ void DomainInfo (DacpAppDomainData *pDomain)
     ExtOut("HighFrequencyHeap:  %p\n", SOS_PTR(pDomain->pHighFrequencyHeap));
     ExtOut("StubHeap:           %p\n", SOS_PTR(pDomain->pStubHeap));
     ExtOut("Stage:              %s\n", GetStageText(pDomain->appDomainStage));
-    if ((ULONG64)pDomain->AppSecDesc != NULL)
+    if ((ULONG64)pDomain->AppSecDesc != (TADDR)0)
         ExtOut("SecurityDescriptor: %p\n", SOS_PTR(pDomain->AppSecDesc));
     ExtOut("Name:               ");
 
@@ -1811,7 +1811,7 @@ WCHAR *CreateMethodTableName(TADDR mt, TADDR cmt)
         return res;
     }
 
-    if (mt == sos::MethodTable::GetArrayMT() && cmt != NULL)
+    if (mt == sos::MethodTable::GetArrayMT() && cmt != (TADDR)0)
     {
         mt = cmt;
         array = true;
@@ -1937,7 +1937,7 @@ BOOL IsObjectArray (DacpObjectData *pData)
 
 BOOL IsObjectArray (DWORD_PTR obj)
 {
-    DWORD_PTR mtAddr = NULL;
+    DWORD_PTR mtAddr = (TADDR)0;
     if (SUCCEEDED(GetMTOfObject(obj, &mtAddr)))
         return TO_TADDR(g_special_usefulGlobals.ArrayMethodTable) == mtAddr;
 
@@ -1946,7 +1946,7 @@ BOOL IsObjectArray (DWORD_PTR obj)
 
 BOOL IsStringObject (size_t obj)
 {
-    DWORD_PTR mtAddr = NULL;
+    DWORD_PTR mtAddr = (TADDR)0;
 
     if (SUCCEEDED(GetMTOfObject(obj, &mtAddr)))
         return TO_TADDR(g_special_usefulGlobals.StringMethodTable) == mtAddr;
@@ -1958,7 +1958,7 @@ BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, __in_z LPCWSTR baseString)
 {
     DacpMethodTableData dmtd;
     CLRDATA_ADDRESS walkMT = mtObj;
-    while (walkMT != NULL)
+    while (walkMT != (TADDR)0)
     {
         if (dmtd.Request(g_sos, walkMT) != S_OK)
         {
@@ -1982,7 +1982,7 @@ BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, DWORD_PTR modulePtr, mdTypeDef typeDef
     DacpMethodTableData dmtd;
 
     for (CLRDATA_ADDRESS walkMT = mtObj;
-         walkMT != NULL && dmtd.Request(g_sos, walkMT) == S_OK;
+         walkMT != (TADDR)0 && dmtd.Request(g_sos, walkMT) == S_OK;
          walkMT = dmtd.ParentMethodTable)
     {
         if (dmtd.Module == modulePtr && dmtd.cl == typeDef)
@@ -2010,7 +2010,7 @@ BOOL TryGetMethodDescriptorForDelegate(CLRDATA_ADDRESS delegateAddr, CLRDATA_ADD
         {
             CLRDATA_ADDRESS methodPtr;
             MOVE(methodPtr, delegateObj.GetAddress() + offset);
-            if (methodPtr != NULL)
+            if (methodPtr != (TADDR)0)
             {
                 if (g_sos->GetMethodDescPtrFromIP(methodPtr, pMD) == S_OK)
                 {
@@ -2157,7 +2157,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
     ArrayHolder<CLRDATA_ADDRESS> pAssemblyArray = NULL;
     ArrayHolder<CLRDATA_ADDRESS> pModules = NULL;
     int arrayLength = 0;
-    int numSpecialDomains = (adsData.sharedDomain != NULL) ? 2 : 1;
+    int numSpecialDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
     if (!ClrSafeInt<int>::addition(adsData.DomainCount, numSpecialDomains, arrayLength))
     {
         ExtOut("<integer overflow>\n");
@@ -2171,7 +2171,7 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
     }
 
     pArray[0] = adsData.systemDomain;
-    if (adsData.sharedDomain != NULL)
+    if (adsData.sharedDomain != (TADDR)0)
     {
         pArray[1] = adsData.sharedDomain;
     }
@@ -2426,7 +2426,7 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
 \**********************************************************************/
 void GetInfoFromName(DWORD_PTR ModulePtr, const char* name, mdTypeDef* retMdTypeDef)
 {
-    DWORD_PTR ignoredModuleInfoRet = NULL;
+    DWORD_PTR ignoredModuleInfoRet = (TADDR)0;
     if (retMdTypeDef)
         *retMdTypeDef = 0;
 
@@ -2549,12 +2549,12 @@ void GetInfoFromName(DWORD_PTR ModulePtr, const char* name, mdTypeDef* retMdType
 DWORD_PTR GetMethodDescFromModule(DWORD_PTR ModuleAddr, ULONG token)
 {
     if (TypeFromToken(token) != mdtMethodDef)
-        return NULL;
+        return (TADDR)0;
 
     CLRDATA_ADDRESS md = 0;
     if (FAILED(g_sos->GetMethodDescFromToken(ModuleAddr, token, &md)))
     {
-        return NULL;
+        return (TADDR)0;
     }
     else if (0 == md)
     {
@@ -2563,7 +2563,7 @@ DWORD_PTR GetMethodDescFromModule(DWORD_PTR ModuleAddr, ULONG token)
     }
     else if ( !IsMethodDesc((DWORD_PTR)md))
     {
-        return NULL;
+        return (TADDR)0;
     }
 
     return (DWORD_PTR)md;
@@ -2672,9 +2672,9 @@ HRESULT GetMethodDescsFromName(TADDR ModulePtr, IXCLRDataModule* mod, const char
             {
                 mdTypeDef token;
                 if (pMeth->GetTokenAndScope(&token, NULL) != S_OK)
-                    (*pOut)[i] = NULL;
+                    (*pOut)[i] = (TADDR)0;
                 (*pOut)[i] = GetMethodDescFromModule(ModulePtr, token);
-                if ((*pOut)[i] == NULL)
+                if ((*pOut)[i] == (TADDR)0)
                 {
                     *numMethods = 0;
                     return E_FAIL;
@@ -3124,7 +3124,7 @@ void GetDomainList (DWORD_PTR *&domainList, int &numDomain)
     // Do prefast integer checks before the malloc.
     size_t AllocSize;
     LONG DomainAllocCount;
-    LONG NumExtraDomains = (adsData.sharedDomain != NULL) ? 2 : 1;
+    LONG NumExtraDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
     if (!ClrSafeInt<LONG>::addition(adsData.DomainCount, NumExtraDomains, DomainAllocCount) ||
         !ClrSafeInt<size_t>::multiply(DomainAllocCount, sizeof(PVOID), AllocSize) ||
         (domainList = new DWORD_PTR[DomainAllocCount]) == NULL)
@@ -3133,7 +3133,7 @@ void GetDomainList (DWORD_PTR *&domainList, int &numDomain)
     }
 
     domainList[numDomain++] = (DWORD_PTR) adsData.systemDomain;
-    if (adsData.sharedDomain != NULL)
+    if (adsData.sharedDomain != (TADDR)0)
     {
         domainList[numDomain++] = (DWORD_PTR) adsData.sharedDomain;
     }
@@ -3188,7 +3188,7 @@ HRESULT GetThreadList(DWORD_PTR **threadList, int *numThread)
     }
 
     CLRDATA_ADDRESS CurThread = ThreadStore.firstThread;
-    while (CurThread != NULL)
+    while (CurThread != (TADDR)0)
     {
         if (IsInterrupt())
             return S_FALSE;
@@ -3221,7 +3221,7 @@ CLRDATA_ADDRESS GetCurrentManagedThread ()
         DacpThreadData Thread;
         if (Thread.Request(g_sos, CurThread) != S_OK)
         {
-            return NULL;
+            return (TADDR)0;
         }
 
         if (Thread.osThreadId == Tid)
@@ -3231,7 +3231,7 @@ CLRDATA_ADDRESS GetCurrentManagedThread ()
 
         CurThread = Thread.nextThread;
     }
-    return NULL;
+    return (TADDR)0;
 }
 
 #define MSCOREE_SHIM_A                "mscoree.dll"
@@ -3391,9 +3391,9 @@ bool CheckBreakingRuntimeChange(int* pVersion)
             {
                 if (version > SOS_BREAKING_CHANGE_VERSION)
                 {
-                    ExtWarn("WARNING: SOS needs to be upgraded for this version of the runtime. Some commands may not work correctly.\n");
-                    ExtWarn("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
-                    ExtWarn("\n");
+                    ExtErr("SOS needs to be upgraded for this version of the runtime. Some commands may not work correctly.\n");
+                    ExtErr("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
+                    ExtErr("\n");
                     result = true;
                 }
             }

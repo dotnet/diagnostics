@@ -26,7 +26,7 @@ jobs:
         with:
           repository: "microsoft/vscode-github-triage-actions"
           path: ./actions
-          ref: cd16cd2aad6ba2da74bb6c6f7293adddd579a90e # locker action commit sha
+          ref: 858022dfd0ed0511dd13456cb2fa1517253c6378 # locker action commit sha
       - name: Install Actions
         run: npm install --production --prefix ./actions
       - name: Run Locker
