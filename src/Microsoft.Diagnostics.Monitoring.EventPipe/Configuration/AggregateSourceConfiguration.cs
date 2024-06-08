@@ -23,9 +23,40 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return _configurations.SelectMany(c => c.GetProviders()).ToList();
         }
 
-        public override bool RequestRundown
+        public override long RundownKeyword
         {
-            get => _configurations.Any(c => c.RequestRundown);
+            get => _configurations.Select(c => c.RundownKeyword).Aggregate((x, y) => x | y);
+            set => throw new NotSupportedException();
+        }
+
+        public override RetryStrategy RetryStrategy
+        {
+            get
+            {
+                RetryStrategy result = RetryStrategy.NothingToRetry;
+                foreach (MonitoringSourceConfiguration configuration in _configurations)
+                {
+                    if (configuration.RetryStrategy == RetryStrategy.ForbiddenToRetry)
+                    {
+                        // Nothing overrides ForbiddenToRetry
+                        return RetryStrategy.ForbiddenToRetry;
+                    }
+                    else if (result == RetryStrategy.NothingToRetry)
+                    {
+                        // Anything override NothingToRetry
+                        result  = configuration.RetryStrategy;
+                    }
+                    else if (result == RetryStrategy.DropKeywordDropRundown)
+                    {
+                        if (configuration.RetryStrategy == RetryStrategy.DropKeywordKeepRundown)
+                        {
+                            // DropKeywordKeepRundown overrides DropKeywordDropRundown
+                            result = RetryStrategy.DropKeywordKeepRundown;
+                        }
+                    }
+                }
+                return result;
+            }
             set => throw new NotSupportedException();
         }
     }

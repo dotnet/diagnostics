@@ -3,6 +3,7 @@ parameters:
   displayName: 'Publish Pipeline Artifact'
   condition: succeeded()
   continueOnError: true
+  enableSbom: true
 
 steps:
 - ${{ if ne(variables['System.TeamProject'], 'public') }}:
@@ -11,6 +12,7 @@ steps:
     inputs:
       targetPath: ${{ parameters.inputs.targetPath }}
       artifactName: ${{ parameters.inputs.artifactName }}
+      enableSbom: ${{ parameters.enableSbom }}
     condition: ${{ parameters.condition }}
     displayName: ${{ parameters.displayName }}
     continueOnError: ${{ parameters.continueOnError }}

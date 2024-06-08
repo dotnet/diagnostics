@@ -3,7 +3,7 @@ stages:
   displayName: Release Preparation
   jobs:
   - job: PrepareReleaseJob
-    displayName: Prepare release with Darc
+    displayName: Prepare Release
     ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
       templateContext:
         outputs:
@@ -15,14 +15,14 @@ stages:
     variables:
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
       - group: DotNet-Diagnostics-Storage
-      - group: DotNet-DotNetStage-Storage
+      - group: DotNetBuilds storage account read tokens
       - group: Release-Pipeline
     steps:
     - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
       - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release /bl'
         workingDirectory: '$(System.ArtifactsDirectory)'
         displayName: 'Build Manifest generation and asset publishing tool'
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
+    - ${{ elseif and(ne(variables['System.TeamProject'], 'public'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
       - task: UseDotNet@2
         displayName: 'Use .NET Core runtime 6.x'
         inputs:
@@ -37,13 +37,25 @@ stages:
           filePath: '$(Build.Repository.LocalPath)/eng/release/Scripts/AcquireBuild.ps1'
           arguments: >-
             -BarBuildId "$(BARBuildId)"
-            -AzdoToken "$(dn-bot-dotnet-all-scopes)"
-            -MaestroToken "$(MaestroAccessToken)"
-            -GitHubToken "$(BotAccount-dotnet-bot-repo-PAT)"
-            -DownloadTargetPath "$(System.ArtifactsDirectory)\ReleaseTarget"
-            -SasSuffixes "$(dotnetclichecksumsmsrc-dotnet-read-list-sas-token),$(dotnetclimsrc-read-sas-token)"
             -ReleaseVersion "$(Build.BuildNumber)"
+            -DownloadTargetPath "$(System.ArtifactsDirectory)\ReleaseTarget"
+            -AzdoToken "$(dn-bot-all-drop-rw-code-rw-release-all)"
+            -MaestroToken "$(MaestroAccessToken)"
+            -SasSuffixes "$(dotnetbuilds-internal-checksums-container-read-token),$(dotnetbuilds-internal-container-read-token)"
           workingDirectory: '$(Build.Repository.LocalPath)'
+      - task: AzureCLI@2
+        displayName: 'Use WIF to obtain credentials for Azure CLI'
+        inputs:
+          azureSubscription: 'dotnetstage-diagnostics-tools-rw'
+          scriptType: pscore
+          scriptLocation: inlineScript
+          addSpnToEnvironment: true
+          inlineScript: |
+              echo "##vso[task.setvariable variable=ARM_CLIENT_ID]$env:servicePrincipalId"
+              echo "##vso[task.setvariable variable=ARM_ID_TOKEN]$env:idToken"
+              echo "##vso[task.setvariable variable=ARM_TENANT_ID]$env:tenantId"
+      - script: az login --service-principal -u $(ARM_CLIENT_ID) --tenant $(ARM_TENANT_ID) --allow-no-subscriptions --federated-token $(ARM_ID_TOKEN)
+        displayName: 'Use az to authenticate using managed identity'
       - script: >-
           $(Build.Repository.LocalPath)\dotnet.cmd run --project $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release
           --
@@ -53,9 +65,8 @@ stages:
           --staging-directory "$(System.ArtifactsDirectory)\ReleaseStaging"
           --release-name "$(Build.BuildNumber)"
           --account-name "$(dotnet-diagnostics-storage-accountname)"
-          --account-key "$(dotnetstage-storage-key)"
+          --client-id $(ARM_CLIENT_ID)
           --container-name "$(dotnet-diagnostics-container-name)"
-          --sas-valid-days "$(dotnet-diagnostics-storage-retentiondays)"
           -v True
         workingDirectory: '$(Build.Repository.LocalPath)\'
         displayName: 'Manifest generation and asset publishing'

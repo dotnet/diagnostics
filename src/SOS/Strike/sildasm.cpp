@@ -553,7 +553,7 @@ DWORD_PTR GetObj(DacpObjectData& tokenArray, UINT item)
             return objPtr;
         }
     }
-    return NULL;
+    return (TADDR)0;
 }
 
 
@@ -570,12 +570,12 @@ void DisassembleToken(DacpObjectData& tokenArray,
         {
             DWORD_PTR runtimeTypeHandle = GetObj(tokenArray, RidFromToken(token));
 
-            DWORD_PTR runtimeType = NULL;
+            DWORD_PTR runtimeType = (TADDR)0;
             MOVE(runtimeType, runtimeTypeHandle + sizeof(DWORD_PTR));
 
             int offset = GetObjFieldOffset(runtimeType, W("m_handle"));
 
-            DWORD_PTR methodTable = NULL;
+            DWORD_PTR methodTable = (TADDR)0;
             MOVE(methodTable, runtimeType + offset);
 
             if (NameForMT_s(methodTable, g_mdName,mdNameLen))
@@ -607,12 +607,12 @@ void DisassembleToken(DacpObjectData& tokenArray,
             CLRDATA_ADDRESS runtimeMethodHandle = GetObj(tokenArray, RidFromToken(token));            
             int offset = GetObjFieldOffset(runtimeMethodHandle, W("m_value"));
 
-            TADDR runtimeMethodInfo = NULL;
+            TADDR runtimeMethodInfo = (TADDR)0;
             MOVE(runtimeMethodInfo, runtimeMethodHandle+offset);
 
             offset = GetObjFieldOffset(runtimeMethodInfo, W("m_handle"));
 
-            TADDR methodDesc = NULL;
+            TADDR methodDesc = (TADDR)0;
             MOVE(methodDesc, runtimeMethodInfo+offset);
 
             NameForMD_s((DWORD_PTR)methodDesc, g_mdName, mdNameLen);

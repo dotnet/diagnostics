@@ -116,7 +116,7 @@ jobs:
         container: ${{ parameters.container }}
 
       ${{ if ne(parameters.strategy, '') }}:
-        'error, we can no longer support the strategy feature in the new pipeline system. Please remove the strategy from the job template.'
+        'error, we can no longer support the strategy feature in the new pipeline system. Please remove the strategy from the job template.': error
 
       ${{ if ne(parameters.dependsOn, '') }}:
         dependsOn: ${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
@@ -179,8 +179,7 @@ jobs:
           displayName: 'Download Build Artifacts'
           inputs:
             targetPath: '$(Build.ArtifactStagingDirectory)/__download__'
-            itemPattern: |
-              Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/**
+            itemPattern: Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/**
             checkDownloadedFiles: true
         - task: CopyFiles@2
           displayName: 'Binplace Downloaded Product'
@@ -198,8 +197,8 @@ jobs:
           -architecture ${{ config.architecture }}
           $(_ExtraBuildParams)
           $(_TestArgs)
-          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
           $(_InternalInstallArgs)
+          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         ${{ if eq(parameters.testOnly, 'true') }}:
           displayName: Test
         ${{ elseif eq(parameters.buildOnly, 'true') }}:
@@ -217,8 +216,8 @@ jobs:
             -architecture ${{ config.architecture }}
             -skipmanaged
             $(_Cross)
-            /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
             $(_InternalInstallArgs)
+            /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
           displayName: Build Native
           target: ${{ parameters.nativeBuildContainer }}
 
@@ -245,7 +244,7 @@ jobs:
         displayName: Gather diagnostic artifacts on failure
         inputs:
           SourceFolder: '$(Build.SourcesDirectory)/artifacts'
-          TargetFolder: $(Build.ArtifactStagingDirectory)/diagnostics
+          TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts_on_failure
           Contents: |
             bin/**
             log/**
@@ -259,8 +258,9 @@ jobs:
         parameters:
           displayName: Publish diagnostic artifacts on failure
           inputs:
-            targetPath: $(Build.ArtifactStagingDirectory)/diagnostics
-            artifactName: DiagnosticArtifacts_$(_PhaseName)_Attempt$(System.JobAttempt)
+            targetPath: $(Build.ArtifactStagingDirectory)/artifacts_on_failure
+            artifactName: Artifacts_On_Failure_$(_PhaseName)_$(System.JobAttempt)
+            sbomEnabled: false # we don't need SBOM for non-shipping diagnostics assets
           continueOnError: true
           condition: failed()
 
@@ -278,21 +278,22 @@ jobs:
           displayName: Publish Logs
           inputs:
             targetPath: '$(Build.StagingDirectory)/BuildLogs'
-            artifactName: Logs_$(_PhaseName)_Attempt$(System.JobAttempt)
+            artifactName: Logs_$(_PhaseName)_$(System.JobAttempt)
+            sbomEnabled: false # we don't need SBOM for logs
           continueOnError: true
           condition: always()
 
-      - ${{ if and(eq(parameters.buildOnly, 'false'), eq(parameters.isCodeQLRun, 'false')) }}:
+      - ${{ if and(ne(parameters.buildOnly, 'true'), ne(parameters.isCodeQLRun, 'true')) }}:
         # Publish test results to Azure Pipelines
         - task: PublishTestResults@2
           inputs:
             testResultsFormat: xUnit
-            testResultsFiles: '**/*UnitTests*.xml'
+            testResultsFiles: '**/*.xml'
             searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
-            failTaskOnFailedTests: true
             testRunTitle: 'Tests $(_PhaseName)'
+            failTaskOnFailedTests: true
             publishRunAttachments: true
             mergeTestResults: true
-            buildConfiguration: ${{ parameters.name }}
+            buildConfiguration: ${{ config.configuration }}
           continueOnError: true
           condition: always()

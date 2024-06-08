@@ -13,14 +13,13 @@ variables:
 # # Internal build pools.
 - ${{ if ne(variables['System.TeamProject'], 'public') }}:
   - group: DotNet-Diagnostics-SDL-Params
-  - group: DotNet-MSRC-Storage
   - template: /eng/common/templates-official/variables/pool-providers.yml@self
   - name: BuildPool
     value: $(DncEngInternalBuildPool)
   - name: WindowsImage
-    value: 1es-windows-2022-pt
+    value: 1es-windows-2022
   - name: LinuxImage
-    value: 1es-ubuntu-2204-pt
+    value: 1es-ubuntu-2204
   - name: macOSImage
     value: macOS-latest
   - name: sourceBuildTemplate

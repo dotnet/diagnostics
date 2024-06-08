@@ -2,6 +2,8 @@ parameters:
   - name: templatePath
     type: string
     default: no
+  - name: pipelineTemplate
+    type: string
   - name: stages
     type: stageList
   - name: containers

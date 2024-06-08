@@ -92,6 +92,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Start tracing the application and return an EventPipeSession object
         /// </summary>
+        /// <param name="config">The configuration for start tracing.</param>
+        /// <returns>
+        /// An EventPipeSession object representing the EventPipe session that just started.
+        /// </returns>
+        public EventPipeSession StartEventPipeSession(EventPipeSessionConfiguration config)
+        {
+            return EventPipeSession.Start(_endpoint, config);
+        }
+
+        /// <summary>
+        /// Start tracing the application and return an EventPipeSession object
+        /// </summary>
         /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
         /// <param name="requestRundown">If true, request rundown events from the runtime</param>
         /// <param name="circularBufferMB">The size of the runtime's buffer for collecting events in MB</param>
