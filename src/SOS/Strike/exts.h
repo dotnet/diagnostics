@@ -496,7 +496,7 @@ extern IMachine* g_targetMachine;
 inline BOOL IsDbgTargetX86()    { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_I386; }
 inline BOOL IsDbgTargetAmd64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_AMD64; }
 inline BOOL IsDbgTargetArm()    { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARMNT; }
-inline BOOL IsDbgTargetArm64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64; }
+inline BOOL IsDbgTargetArm64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64 || g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64EC || g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64X; }
 inline BOOL IsDbgTargetRiscV64(){ return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_RISCV64; }
 inline BOOL IsDbgTargetWin64()  { return IsDbgTargetAmd64(); }
 
