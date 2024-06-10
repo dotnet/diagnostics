@@ -78,6 +78,10 @@ parameters:
   type: boolean
   default: false
 
+- name: disableComponentGovernance
+  type: boolean
+  default: false
+
 jobs:
 - ${{ each config in parameters.buildConfigs }}:
   - template: ${{ parameters.jobTemplate }}
@@ -86,6 +90,7 @@ jobs:
       timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
       enableMicrobuild: true
       runAsPublic: ${{ parameters.isCodeQLRun }}
+      disableComponentGovernance: ${{ parameters.disableComponentGovernance }}
       templateContext: ${{ parameters.templateContext }}
 
       pool:
