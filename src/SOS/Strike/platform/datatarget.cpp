@@ -3,16 +3,13 @@
 
 #include "sos.h"
 #include "datatarget.h"
-#include <corhdr.h>
-#include <cor.h>
-#include <dacprivate.h>
-#include <sospriv.h>
-#include <corerror.h>
-#include <remotememoryservice.h>
+#include "corhdr.h"
+#include "cor.h"
+#include "dacprivate.h"
+#include "sospriv.h"
+#include "corerror.h"
 
-#ifndef IMAGE_FILE_MACHINE_LOONGARCH64
-#define IMAGE_FILE_MACHINE_LOONGARCH64      0x6264  // LOONGARCH64
-#endif
+#define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
 
 DataTarget::DataTarget(ULONG64 baseAddress) :
     m_ref(0),
@@ -91,34 +88,25 @@ HRESULT STDMETHODCALLTYPE
 DataTarget::GetMachineType(
     /* [out] */ ULONG32 *machine)
 {
-    return GetDebuggerServices()->GetExecutingProcessorType((PULONG)machine);
+    if (g_ExtControl == NULL)
+    {
+        return E_UNEXPECTED;
+    }
+    return g_ExtControl->GetExecutingProcessorType((PULONG)machine);
 }
 
 HRESULT STDMETHODCALLTYPE
 DataTarget::GetPointerSize(
     /* [out] */ ULONG32 *size)
 {
-    ULONG machine;
-    HRESULT hr = GetDebuggerServices()->GetExecutingProcessorType(&machine);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-    switch (machine)
-    {
-        case IMAGE_FILE_MACHINE_AMD64:
-        case IMAGE_FILE_MACHINE_ARM64:
-        case IMAGE_FILE_MACHINE_RISCV64:
-        case IMAGE_FILE_MACHINE_LOONGARCH64:
-            *size = 8;
-            break;
-        case IMAGE_FILE_MACHINE_ARM:
-        case IMAGE_FILE_MACHINE_THUMB:
-        case IMAGE_FILE_MACHINE_ARMNT:
-        case IMAGE_FILE_MACHINE_I386:
-            *size = 4;
-            break;
-    }
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64) || defined(SOS_TARGET_MIPS64) || defined(SOS_TARGET_RISCV64)
+    *size = 8;
+#elif defined(SOS_TARGET_ARM) || defined(SOS_TARGET_X86)
+    *size = 4;
+#else
+  #error Unsupported architecture
+#endif
+
     return S_OK;
 }
 
@@ -127,6 +115,10 @@ DataTarget::GetImageBase(
     /* [string][in] */ LPCWSTR name,
     /* [out] */ CLRDATA_ADDRESS *base)
 {
+    if (g_ExtSymbols == NULL)
+    {
+        return E_UNEXPECTED;
+    }
     CHAR lpstr[MAX_LONGPATH];
     int name_length = WideCharToMultiByte(CP_ACP, 0, name, -1, lpstr, MAX_LONGPATH, NULL, NULL);
     if (name_length == 0)
@@ -141,7 +133,7 @@ DataTarget::GetImageBase(
         *lp = '\0';
     }
 #endif
-    return GetDebuggerServices()->GetModuleByModuleName(lpstr, 0, NULL, base);
+    return g_ExtSymbols->GetModuleByModuleName(lpstr, 0, NULL, base);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -151,6 +143,10 @@ DataTarget::ReadVirtual(
     /* [in] */ ULONG32 request,
     /* [optional][out] */ ULONG32 *done)
 {
+    if (g_ExtData == NULL)
+    {
+        return E_UNEXPECTED;
+    }
     address = CONVERT_FROM_SIGN_EXTENDED(address);
 #ifdef FEATURE_PAL
     if (g_sos != nullptr)
@@ -168,7 +164,7 @@ DataTarget::ReadVirtual(
         }
     }
 #endif
-    HRESULT hr = GetDebuggerServices()->ReadVirtual(address, (PVOID)buffer, request, (PULONG)done);
+    HRESULT hr = g_ExtData->ReadVirtual(address, (PVOID)buffer, request, (PULONG)done);
     if (FAILED(hr)) 
     {
         ExtDbgOut("DataTarget::ReadVirtual FAILED %08x address %08llx size %08x\n", hr, address, request);
@@ -183,7 +179,11 @@ DataTarget::WriteVirtual(
     /* [in] */ ULONG32 request,
     /* [optional][out] */ ULONG32 *done)
 {
-    return GetDebuggerServices()->WriteVirtual(address, (PVOID)buffer, request, (PULONG)done);
+    if (g_ExtData == NULL)
+    {
+        return E_UNEXPECTED;
+    }
+    return g_ExtData->WriteVirtual(address, (PVOID)buffer, request, (PULONG)done);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -208,7 +208,11 @@ HRESULT STDMETHODCALLTYPE
 DataTarget::GetCurrentThreadID(
     /* [out] */ ULONG32 *threadID)
 {
-    return GetDebuggerServices()->GetCurrentThreadSystemId((PULONG)threadID);
+    if (g_ExtSystem == NULL)
+    {
+        return E_UNEXPECTED;
+    }
+    return g_ExtSystem->GetCurrentThreadSystemId((PULONG)threadID);
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -218,7 +222,55 @@ DataTarget::GetThreadContext(
     /* [in] */ ULONG32 contextSize,
     /* [out, size_is(contextSize)] */ PBYTE context)
 {
-    return GetDebuggerServices()->GetThreadContextBySystemId(threadID, contextFlags, contextSize, context);
+    HRESULT hr;
+#ifdef FEATURE_PAL
+    if (g_ExtServices == NULL)
+    {
+        return E_UNEXPECTED;
+    }
+    hr = g_ExtServices->GetThreadContextBySystemId(threadID, contextFlags, contextSize, context);
+#else
+    if (g_ExtSystem == NULL || g_ExtAdvanced == NULL)
+    {
+        return E_UNEXPECTED;
+    }
+    ULONG ulThreadIDOrig;
+    ULONG ulThreadIDRequested;
+
+    hr = g_ExtSystem->GetCurrentThreadId(&ulThreadIDOrig);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    hr = g_ExtSystem->GetThreadIdBySystemId(threadID, &ulThreadIDRequested);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    hr = g_ExtSystem->SetCurrentThreadId(ulThreadIDRequested);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    // Prepare context structure
+    ZeroMemory(context, contextSize);
+    g_targetMachine->SetContextFlags(context, contextFlags);
+
+    // Ok, do it!
+    hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
+
+    // This is cleanup; failure here doesn't mean GetThreadContext should fail
+    // (that's determined by hr).
+    g_ExtSystem->SetCurrentThreadId(ulThreadIDOrig);
+#endif
+
+    // GetThreadContext clears ContextFlags or sets them incorrectly and DBI needs it set to know what registers to copy
+    g_targetMachine->SetContextFlags(context, contextFlags);
+
+    return hr;
 }
 
 HRESULT STDMETHODCALLTYPE
@@ -251,13 +303,21 @@ DataTarget::AllocVirtual(
     /* [in] */ ULONG32 protectFlags,
     /* [out] */ CLRDATA_ADDRESS* virt)
 {
-    HRESULT hr;
-    ReleaseHolder<IRemoteMemoryService> remote;
-    if (FAILED(hr = GetDebuggerServices()->QueryInterface(__uuidof(IRemoteMemoryService), (void**)&remote)))
-    {
+#ifdef FEATURE_PAL
+    return E_NOTIMPL;
+#else
+    ULONG64 hProcess;
+    HRESULT hr = g_ExtSystem->GetCurrentProcessHandle(&hProcess);
+    if (FAILED(hr)) {
         return hr;
     }
-    return remote->AllocVirtual(addr, size, typeFlags, protectFlags, virt);
+    LPVOID allocation = ::VirtualAllocEx((HANDLE)hProcess, (LPVOID)addr, size, typeFlags, protectFlags);
+    if (allocation == NULL) {
+        return HRESULT_FROM_WIN32(::GetLastError());
+    }
+    *virt = (CLRDATA_ADDRESS)allocation;
+    return S_OK;
+#endif
 }
         
 HRESULT STDMETHODCALLTYPE 
@@ -266,13 +326,17 @@ DataTarget::FreeVirtual(
     /* [in] */ ULONG32 size,
     /* [in] */ ULONG32 typeFlags)
 {
-    HRESULT hr;
-    ReleaseHolder<IRemoteMemoryService> remote;
-    if (FAILED(hr = GetDebuggerServices()->QueryInterface(__uuidof(IRemoteMemoryService), (void**)&remote)))
-    {
+#ifdef FEATURE_PAL
+    return E_NOTIMPL;
+#else
+    ULONG64 hProcess;
+    HRESULT hr = g_ExtSystem->GetCurrentProcessHandle(&hProcess);
+    if (FAILED(hr)) {
         return hr;
     }
-    return remote->FreeVirtual(addr, size, typeFlags);
+    ::VirtualFreeEx((HANDLE)hProcess, (LPVOID)addr, size, typeFlags);
+    return S_OK;
+#endif
 }
 
 // ICorDebugDataTarget4
@@ -284,7 +348,11 @@ DataTarget::VirtualUnwind(
     /* [in, out, size_is(contextSize)] */ PBYTE context)
 {
 #ifdef FEATURE_PAL
-    return GetDebuggerServices()->VirtualUnwind(threadId, contextSize, context);
+    if (g_ExtServices == NULL)
+    {
+        return E_UNEXPECTED;
+    }
+    return g_ExtServices->VirtualUnwind(threadId, contextSize, context);
 #else
     return E_NOTIMPL;
 #endif

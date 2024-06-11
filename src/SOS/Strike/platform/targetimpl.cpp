@@ -96,32 +96,36 @@ ITarget* Target::GetInstance()
 HRESULT 
 Target::CreateInstance(IRuntime **ppRuntime)
 {
-    HRESULT hr = Runtime::CreateInstance(this, IRuntime::Core, &m_netcore);
-#ifdef FEATURE_PAL
-    *ppRuntime = m_netcore;
-#else
-    ITarget::OperatingSystem os = this->GetOperatingSystem();
-    switch (os)
+    HRESULT hr = S_OK;
+    if (*ppRuntime == nullptr)
     {
-        case ITarget::OperatingSystem::Linux:
-        case ITarget::OperatingSystem::OSX:
-            // Only attempt to create linux/OSX core runtime if above failed
-            if (m_netcore == nullptr)
-            {
-                hr = Runtime::CreateInstance(this, IRuntime::UnixCore, &m_netcore);
-            }
-            break;
-        case ITarget::OperatingSystem::Windows:
-            // Always attempt to create desktop clr, but only return result the if the .NET Core create failed
-            HRESULT hrDesktop = Runtime::CreateInstance(this, IRuntime::WindowsDesktop, &m_desktop);
-            if (m_netcore == nullptr)
-            {
-                hr = hrDesktop;
-            }
-            break;
-    }
-    *ppRuntime = m_netcore != nullptr ? m_netcore : m_desktop;
+        hr = Runtime::CreateInstance(this, IRuntime::Core, &m_netcore);
+#ifdef FEATURE_PAL
+        * ppRuntime = m_netcore;
+#else
+        ITarget::OperatingSystem os = this->GetOperatingSystem();
+        switch (os)
+        {
+            case ITarget::OperatingSystem::Linux:
+            case ITarget::OperatingSystem::OSX:
+                // Only attempt to create linux/OSX core runtime if above failed
+                if (m_netcore == nullptr)
+                {
+                    hr = Runtime::CreateInstance(this, IRuntime::UnixCore, &m_netcore);
+                }
+                break;
+            case ITarget::OperatingSystem::Windows:
+                // Always attempt to create desktop clr, but only return result the if the .NET Core create failed
+                HRESULT hrDesktop = Runtime::CreateInstance(this, IRuntime::WindowsDesktop, &m_desktop);
+                if (m_netcore == nullptr)
+                {
+                    hr = hrDesktop;
+                }
+                break;
+        }
+        *ppRuntime = m_netcore != nullptr ? m_netcore : m_desktop;
 #endif
+    }
     return hr;
 }
 
@@ -211,27 +215,29 @@ ULONG Target::Release()
 // ITarget
 //----------------------------------------------------------------------------
 
+#define VER_PLATFORM_UNIX 10 
+
 ITarget::OperatingSystem Target::GetOperatingSystem()
 {
-    IDebuggerServices::OperatingSystem operatingSystem;
-    if (SUCCEEDED(GetDebuggerServices()->GetOperatingSystem(&operatingSystem)))
+#ifdef FEATURE_PAL
+#if defined(__APPLE__)
+    return OperatingSystem::OSX;
+#elif defined(__linux__)
+    return OperatingSystem::Linux;
+#else
+    return OperatingSystem::Unknown;
+#endif
+#else
+    ULONG platformId, major, minor, servicePack;
+    if (SUCCEEDED(g_ExtControl->GetSystemVersion(&platformId, &major, &minor, nullptr, 0, nullptr, &servicePack, nullptr, 0, nullptr)))
     {
-        switch (operatingSystem)
+        if (platformId == VER_PLATFORM_UNIX)
         {
-            case IDebuggerServices::OperatingSystem::Windows:
-                return ITarget::OperatingSystem::Windows;
-
-            case IDebuggerServices::OperatingSystem::Linux:
-                return ITarget::OperatingSystem::Linux;
-
-            case IDebuggerServices::OperatingSystem::OSX:
-                return ITarget::OperatingSystem::OSX;
-
-            default:
-                break;
+            return OperatingSystem::Linux;
         }
     }
-    return OperatingSystem::Unknown;
+    return OperatingSystem::Windows;
+#endif
 }
 
 HRESULT Target::GetService(REFIID serviceId, PVOID* ppService)

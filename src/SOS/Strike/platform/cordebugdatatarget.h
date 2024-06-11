@@ -70,8 +70,7 @@ public:
     // ICorDebugDataTarget.
     //
 
-    virtual HRESULT STDMETHODCALLTYPE GetPlatform(
-        CorDebugPlatform * pPlatform)
+    virtual HRESULT STDMETHODCALLTYPE GetPlatform(CorDebugPlatform * pPlatform)
     {
         ULONG platformKind = g_targetMachine->GetPlatform();
         if (IsWindowsTarget())
@@ -112,6 +111,10 @@ public:
         ULONG32 request,
         ULONG32 * pcbRead)
     {
+        if (g_ExtData == NULL)
+        {
+            return E_UNEXPECTED;
+        }
         address = CONVERT_FROM_SIGN_EXTENDED(address);
 #ifdef FEATURE_PAL
         if (g_sos != nullptr)
@@ -129,7 +132,7 @@ public:
             }
         }
 #endif
-        HRESULT hr = GetDebuggerServices()->ReadVirtual(address, pBuffer, request, (PULONG)pcbRead);
+        HRESULT hr = g_ExtData->ReadVirtual(address, pBuffer, request, (PULONG) pcbRead);
         if (FAILED(hr)) 
         {
             ExtDbgOut("CorDebugDataTarget::ReadVirtual FAILED %08x address %p size %08x\n", hr, address, request);
@@ -143,32 +146,77 @@ public:
         ULONG32 contextSize,
         BYTE * context)
     {
-        return GetDebuggerServices()->GetThreadContextBySystemId(dwThreadOSID, contextFlags, contextSize, context);
+        HRESULT hr;
+#ifdef FEATURE_PAL
+        if (g_ExtServices == NULL)
+        {
+            return E_UNEXPECTED;
+        }
+        hr = g_ExtServices->GetThreadContextBySystemId(dwThreadOSID, contextFlags, contextSize, context);
+#else
+        ULONG ulThreadIDOrig;
+        ULONG ulThreadIDRequested;
+
+        hr = g_ExtSystem->GetCurrentThreadId(&ulThreadIDOrig);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        hr = g_ExtSystem->GetThreadIdBySystemId(dwThreadOSID, &ulThreadIDRequested);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        hr = g_ExtSystem->SetCurrentThreadId(ulThreadIDRequested);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        // Prepare context structure
+        ZeroMemory(context, contextSize);
+        g_targetMachine->SetContextFlags(context, contextFlags);
+
+        // Ok, do it!
+        hr = g_ExtAdvanced->GetThreadContext((LPVOID) context, contextSize);
+
+        // This is cleanup; failure here doesn't mean GetThreadContext should fail
+        // (that's determined by hr).
+        g_ExtSystem->SetCurrentThreadId(ulThreadIDOrig);
+#endif // FEATURE_PAL
+
+        // GetThreadContext clears ContextFlags or sets them incorrectly and DBI needs it set to know what registers to copy
+        g_targetMachine->SetContextFlags(context, contextFlags);
+
+        return hr;
     }
 
     //
     // ICorDebugMutableDataTarget.
     //
 
-    virtual HRESULT STDMETHODCALLTYPE WriteVirtual(
-        CORDB_ADDRESS address,
-        const BYTE * pBuffer,
-        ULONG32 bytesRequested)
+    virtual HRESULT STDMETHODCALLTYPE WriteVirtual(CORDB_ADDRESS address,
+                                                   const BYTE * pBuffer,
+                                                   ULONG32 bytesRequested)
     {
-        return GetDebuggerServices()->WriteVirtual(address, (PVOID)pBuffer, bytesRequested, NULL);
+        if (g_ExtData == NULL)
+        {
+            return E_UNEXPECTED;
+        }
+        return g_ExtData->WriteVirtual(address, (PVOID)pBuffer, bytesRequested, NULL);
     }
 
-    virtual HRESULT STDMETHODCALLTYPE SetThreadContext(
-        DWORD dwThreadID,
-        ULONG32 contextSize,
-        const BYTE * pContext)
+    virtual HRESULT STDMETHODCALLTYPE SetThreadContext(DWORD dwThreadID,
+                                                       ULONG32 contextSize,
+                                                       const BYTE * pContext)
     {
         return E_NOTIMPL;
     }
 
-    virtual HRESULT STDMETHODCALLTYPE ContinueStatusChanged(
-        DWORD dwThreadId,
-        CORDB_CONTINUE_STATUS continueStatus)
+    virtual HRESULT STDMETHODCALLTYPE ContinueStatusChanged(DWORD dwThreadId,
+                                                            CORDB_CONTINUE_STATUS continueStatus)
     {
         return E_NOTIMPL;
     }
@@ -193,13 +241,14 @@ public:
     //
     // ICorDebugDataTarget4
     //
-    virtual HRESULT STDMETHODCALLTYPE VirtualUnwind(
-        DWORD threadId,
-        ULONG32 contextSize,
-        PBYTE context)
+    virtual HRESULT STDMETHODCALLTYPE VirtualUnwind(DWORD threadId, ULONG32 contextSize, PBYTE context)
     {
 #ifdef FEATURE_PAL
-        return GetDebuggerServices()->VirtualUnwind(threadId, contextSize, context);
+        if (g_ExtServices == NULL)
+        {
+            return E_UNEXPECTED;
+        }
+        return g_ExtServices->VirtualUnwind(threadId, contextSize, context);
 #else 
         return E_NOTIMPL;
 #endif
