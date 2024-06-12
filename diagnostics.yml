@@ -245,6 +245,7 @@ extends:
           container: test_linux_musl_x64
           dependsOn: Linux_musl
           testOnly: true
+          disableComponentGovernance: true
           buildConfigs:
           - configuration: Release
             architecture: x64
