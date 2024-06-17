@@ -14,7 +14,7 @@ namespace Microsoft.SymbolManifestGenerator
 {
     public static class SymbolManifestGenerator
     {
-        private const int Private = 340;
+        private const int Private = 341;
 
         public static void GenerateManifest(ITracer tracer, DirectoryInfo dir, string manifestFileName)
         {
