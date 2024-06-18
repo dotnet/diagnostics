@@ -1586,8 +1586,12 @@ public class SOSRunner : IDisposable
 
         private void AddTask()
         {
-            _taskSource = new TaskCompletionSource<CommandResult>();
-            _taskQueue.Add(_taskSource.Task);
+            TaskCompletionSource<CommandResult> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (this)
+            {
+                _taskQueue.Add(tcs.Task);
+                _taskSource = tcs;
+            }
         }
 
         public async Task<bool> WaitForCommandPrompt()
