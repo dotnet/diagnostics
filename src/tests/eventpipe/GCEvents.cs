@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
@@ -35,7 +36,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         }
 
         [Fact]
-        public async void GCCollect_ProducesEvents()
+        public async Task GCCollect_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
@@ -117,7 +118,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         }
 
         [Fact]
-        public async void GCWaitForPendingFinalizers_ProducesEvents()
+        public async Task GCWaitForPendingFinalizers_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
@@ -167,7 +168,7 @@ namespace EventPipe.UnitTests.GCEventsValidation
         }
 
         [Fact]
-        public async void GCCollect_ProducesVerboseEvents()
+        public async Task GCCollect_ProducesVerboseEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()

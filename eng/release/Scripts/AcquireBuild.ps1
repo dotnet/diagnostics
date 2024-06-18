@@ -4,8 +4,6 @@ param(
   [Parameter(Mandatory=$true)][string] $DownloadTargetPath,
   [Parameter(Mandatory=$true)][string] $SasSuffixes,
   [Parameter(Mandatory=$true)][string] $AzdoToken,
-  [Parameter(Mandatory=$true)][string] $MaestroToken,
-  [Parameter(Mandatory=$false)][string] $MaestroApiEndPoint = 'https://maestro-prod.westus2.cloudapp.azure.com',
   [Parameter(Mandatory=$false)][string] $DarcVersion = $null,
   [switch] $help,
   [Parameter(ValueFromRemainingArguments=$true)][String[]]$properties
@@ -17,8 +15,6 @@ function Write-Help() {
     Write-Host "  -DownloadTargetPath <value>       Path to download the build to."
     Write-Host "  -SasSuffixes <value>              Comma separated list of potential uri suffixes that can be used if anonymous access to a blob uri fails. Appended directly to the end of the URI. Use full SAS syntax with ?."
     Write-Host "  -AzdoToken <value>                Azure DevOps token to use for builds queries"
-    Write-Host "  -MaestroToken <value>             Maestro token to use for querying BAR"
-    Write-Host "  -MaestroApiEndPoint <value>       BAR endpoint to use for build queries."
     Write-Host ""
 }
 
@@ -54,9 +50,8 @@ try {
         --overwrite `
         --sas-suffixes $SasSuffixes `
         --azdev-pat $AzdoToken `
-        --bar-uri $MaestroApiEndPoint `
-        --password $MaestroToken `
         --separated `
+        --ci `
         --verbose
 
     if ($LastExitCode -ne 0) {
