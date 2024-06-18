@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Threading.Tasks;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Xunit;
@@ -30,7 +31,7 @@ namespace EventPipe.UnitTests.CustomEventsValidation
         }
 
         [Fact]
-        public async void CustomEventProducesEventsWithNoKeywords()
+        public async Task CustomEventProducesEventsWithNoKeywords()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()

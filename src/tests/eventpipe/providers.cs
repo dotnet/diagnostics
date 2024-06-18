@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
+using System.Threading.Tasks;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Xunit;
@@ -31,7 +32,7 @@ namespace EventPipe.UnitTests.ProviderValidation
         }
 
         [Fact]
-        public async void UserDefinedEventSource_ProducesEvents()
+        public async Task UserDefinedEventSource_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> expectedEventCounts = new()
