@@ -24,7 +24,7 @@ namespace EventPipe.UnitTests.ThreadPoolValidation
         }
 
         [Fact]
-        public async void ThreadPool_ProducesEvents()
+        public async Task ThreadPool_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()
