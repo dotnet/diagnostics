@@ -47,7 +47,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Returns the list of runtimes in the target
         /// </summary>
-        public IEnumerable<IRuntime> EnumerateRuntimes()
+        /// <param name="flags">Enumeration control flags</param>
+        public IEnumerable<IRuntime> EnumerateRuntimes(RuntimeEnumerationFlags flags)
         {
             if (_runtimes is null)
             {
@@ -55,7 +56,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 foreach (ServiceFactory factory in _serviceManager.EnumerateProviderFactories(typeof(IRuntimeProvider)))
                 {
                     IRuntimeProvider provider = (IRuntimeProvider)factory(_services);
-                    _runtimes.AddRange(provider.EnumerateRuntimes(_runtimes.Count));
+                    _runtimes.AddRange(provider.EnumerateRuntimes(_runtimes.Count, flags));
                 }
             }
             return _runtimes;
