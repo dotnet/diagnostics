@@ -13,6 +13,7 @@ namespace SOS.Extensions
 {
     internal sealed class MemoryRegionServiceFromDebuggerServices : IMemoryRegionService
     {
+        private const string AddressCommand = "!address";
         private readonly DebuggerServices _debuggerServices;
 
         public MemoryRegionServiceFromDebuggerServices(DebuggerServices debuggerServices)
@@ -25,7 +26,7 @@ namespace SOS.Extensions
             bool foundHeader = false;
             bool skipped = false;
 
-            ImmutableArray<string> lines = _debuggerServices.ExecuteHostCommand("!address");
+            ImmutableArray<string> lines = _debuggerServices.ExecuteHostCommand(AddressCommand);
             foreach (string line in lines)
             {
                 if (line.Length == 0)
@@ -188,7 +189,7 @@ namespace SOS.Extensions
 
             if (!foundHeader)
             {
-                throw new InvalidOperationException($"!address did not produce a standard header.\nThis may mean symbols could not be resolved for ntdll.\nPlease run !address and make sure the output looks correct.");
+                throw new InvalidOperationException($"{AddressCommand} did not produce a standard header.\nThis may mean symbols could not be resolved for ntdll.\nPlease run {AddressCommand} and make sure the output looks correct.");
             }
         }
 

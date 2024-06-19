@@ -92,8 +92,9 @@ ClrmaException::Initialize()
             if (m_exceptionData.Message == 0)
             {
                 // To match the built-in SOS provider that scrapes !pe output.
-                m_message = new (std::nothrow)WCHAR[8];
-                wcscpy(m_message, L"<none>");
+                const WCHAR* none = L"<none>";
+                m_message = new (std::nothrow) WCHAR[wcslen(none) + 1];
+                wcscpy(m_message, none);
             }
             else
             {

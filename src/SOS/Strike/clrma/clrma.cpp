@@ -109,9 +109,9 @@ DECLARE_API(clrmaconfig)
         }
     }
 
-    ExtOut("CLRMA logging:              %s\n", g_clrmaGlobalFlags & ClrmaGlobalFlags::LoggingEnabled ? "enabled (disable with '-disable -logging')" : "disabled (enable with '-enable -logging')");
-    ExtOut("CLRMA direct DAC support:   %s\n", g_clrmaGlobalFlags & ClrmaGlobalFlags::DacClrmaEnabled ? "enabled (disable with '-disable -dac')" : "disabled (enable with '-enable -dac')");
-    ExtOut("CLRMA managed support:      %s\n", g_clrmaGlobalFlags & ClrmaGlobalFlags::ManagedClrmaEnabled ? "enabled (disable with '-disable -managed')" : "disabled (enable with '-enable -managed')");
+    ExtOut("CLRMA logging:              %s\n", (g_clrmaGlobalFlags & ClrmaGlobalFlags::LoggingEnabled) ? "enabled (disable with '-disable -logging')" : "disabled (enable with '-enable -logging')");
+    ExtOut("CLRMA direct DAC support:   %s\n", (g_clrmaGlobalFlags & ClrmaGlobalFlags::DacClrmaEnabled) ? "enabled (disable with '-disable -dac')" : "disabled (enable with '-enable -dac')");
+    ExtOut("CLRMA managed support:      %s\n", (g_clrmaGlobalFlags & ClrmaGlobalFlags::ManagedClrmaEnabled) ? "enabled (disable with '-disable -managed')" : "disabled (enable with '-enable -managed')");
 
     return Status;
 }
