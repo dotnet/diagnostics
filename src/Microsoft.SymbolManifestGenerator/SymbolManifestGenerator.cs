@@ -20,8 +20,6 @@ public static class SymbolManifestGenerator
     {
         ManifestDataV1 manifestData = new();
 
-        Dictionary<string, List<SymbolStoreKey>> directoriesWithRuntimes = new();
-
         FileInfo[] allFiles = dir.GetFiles("*", SearchOption.AllDirectories);
         foreach (FileInfo file in allFiles)
         {
