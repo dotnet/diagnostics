@@ -16,9 +16,11 @@ public static class SymbolManifestGenerator
 {
     private const int Private = 340;
 
-    public static void GenerateManifest(ITracer tracer, DirectoryInfo dir, string manifestFileName)
+    public static bool GenerateManifest(ITracer tracer, DirectoryInfo dir, string manifestFileName, bool specialFilesRequireAdjacentRuntime = true)
     {
         ManifestDataV1 manifestData = new();
+
+        Dictionary<string, List<SymbolStoreKey>> directoriesWithRuntimes = new();
 
         FileInfo[] allFiles = dir.GetFiles("*", SearchOption.AllDirectories);
         foreach (FileInfo file in allFiles)
@@ -32,22 +34,36 @@ public static class SymbolManifestGenerator
                 continue;
             }
 
-            foreach (SymbolStoreKey clrKey in generator.GetKeys(KeyTypeFlags.ClrKeys))
+            // For any given runtime that's found - enumerate all possible special keys.
+            foreach (SymbolStoreKey runtimeCorrelatedKey in generator.GetKeys(KeyTypeFlags.ClrKeys))
             {
-                FileInfo specialFile = ResolveClrKeyToUniqueFileFromAllFiles(allFiles, clrKey);
-                if (specialFile == null)
+                (bool foundMultipleCandidates, FileInfo correlatedFile) = FindCorrelatedFileForRuntimeModule(tracer, allFiles, file, runtimeCorrelatedKey, specialFilesRequireAdjacentRuntime);
+
+                if (foundMultipleCandidates)
                 {
-                    tracer.Information($"Known special file '{clrKey.FullPathName}' for runtime module '{file.FullName}' does not exist in directory '{file.DirectoryName}'. Skipping.");
+                    tracer.Error("Multiple files with same name to be indexed under same runtime - aborting manifest creation.");
+                    return false;
+                }
+
+                if (correlatedFile is null)
+                {
+                    tracer.Information($"Unique special file '{runtimeCorrelatedKey.FullPathName}' for runtime module '{file.FullName}' could not be found under '{file.DirectoryName}'. Skipping.");
                     continue;
                 }
 
-                string basedirRelativePath = specialFile.FullName.Replace(dir.FullName, string.Empty).TrimStart(Path.DirectorySeparatorChar);
-                string fileHash = CalculateSHA512(specialFile);
+                string basedirRelativePath = correlatedFile.FullName.Replace(dir.FullName, string.Empty).TrimStart(Path.DirectorySeparatorChar);
+                string fileHash = CalculateSHA512(correlatedFile);
+
+                if (manifestData.Entries.Any(x => x.BasedirRelativePath == basedirRelativePath))
+                {
+                    tracer.Error($"Special module '{correlatedFile.FullName}' cannot be associated with a single runtime unambiguously. Multiple runtimes found in lookup scope. Aborting manifest creation.");
+                    return false;
+                }
 
                 ManifestDataEntry manifestDataEntry = new()
                 {
                     BasedirRelativePath = basedirRelativePath,
-                    SymbolKey = clrKey.Index,
+                    SymbolKey = runtimeCorrelatedKey.Index,
                     Sha512 = fileHash,
                     DebugInformationLevel = Private,
                     LegacyDebugInformationLevel = Private
@@ -62,23 +78,40 @@ public static class SymbolManifestGenerator
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = true
         };
+
         string manifestDataContent = JsonSerializer.Serialize(manifestData, serializeOptions);
         File.WriteAllText(manifestFileName, manifestDataContent);
-    }
 
-    // Special files associated with a particular runtime module have not been guaranteed to be in the same directory as the runtime module.
-    // As such, the directory for which a manifest is being generated must guarantee that at most one file exists with the same name as the special file.
-    private static FileInfo ResolveClrKeyToUniqueFileFromAllFiles(FileInfo[] allFiles, SymbolStoreKey clrKey)
-    {
-        string clrKeyFileName = Path.GetFileName(clrKey.FullPathName);
+        return true;
 
-        FileInfo matchingSymbolFileOnDisk = allFiles.SingleOrDefault(file => FileHasClrKeyFileName(file, clrKeyFileName));
-
-        return matchingSymbolFileOnDisk;
-
-        static bool FileHasClrKeyFileName(FileInfo file, string clrKeyFileName)
+        // Special files associated with a particular runtime module have not been guaranteed to be in the same directory as the runtime module.
+        // in some scenarios (e.g. the ARM64 long-name binaries in the runtime pack for .NET/.NET Core).
+        // - In cases where we require the file to be collocated (CLR), just validate existence.
+        // - In cases where collocation is not guaranteed, guarantee at most one module under said name exists.
+        static (bool FoundMultipleCandidates, FileInfo File) FindCorrelatedFileForRuntimeModule(ITracer tracer, FileInfo[] allFiles, FileInfo runtimeModule, SymbolStoreKey correlatedKey, bool specialFilesRequireAdjacentRuntime)
         {
-            return file.Name.Equals(clrKeyFileName, StringComparison.OrdinalIgnoreCase);
+            string correlatedFileName = Path.GetFileName(correlatedKey.FullPathName);
+
+            if (specialFilesRequireAdjacentRuntime)
+            {
+                FileInfo correlatedFile = new(Path.Combine(runtimeModule.DirectoryName, correlatedFileName));
+                return (FoundMultipleCandidates: false,
+                        File: correlatedFile.Exists ? correlatedFile : default);
+            }
+
+            FileInfo[] correlatedFiles = allFiles.Where(file => file.Name.Equals(correlatedFileName, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+            if (correlatedFiles.Length > 1)
+            {
+                tracer.Error($"Multiple files '${correlatedFileName}' found for runtime '{runtimeModule.FullName}': {string.Join<FileInfo>(", ", correlatedFiles)}.");
+            }
+
+            return correlatedFiles.Length switch
+            {
+                0 => (FoundMultipleCandidates: false, default),
+                1 => (FoundMultipleCandidates: false, correlatedFiles[0]),
+                _ => (FoundMultipleCandidates: true, default)
+            };
         }
     }
 
