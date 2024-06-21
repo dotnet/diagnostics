@@ -13438,6 +13438,7 @@ DECLARE_API(SetHostRuntime)
     BOOL bNetCore = FALSE;
     BOOL bNone = FALSE;
     BOOL bClear = FALSE;
+    DWORD_PTR majorRuntimeVersion = 0;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-netfx", &bNetFx, COBOOL, FALSE},
@@ -13446,6 +13447,7 @@ DECLARE_API(SetHostRuntime)
         {"-c", &bNetCore, COBOOL, FALSE},
         {"-none", &bNone, COBOOL, FALSE},
         {"-clear", &bClear, COBOOL, FALSE},
+        {"-major", &majorRuntimeVersion, COSIZE_T, TRUE},
     };
     StringHolder hostRuntimeDirectory;
     CMDValue arg[] =
@@ -13457,56 +13459,55 @@ DECLARE_API(SetHostRuntime)
     {
         return E_INVALIDARG;
     }
-    if (narg > 0 || bNetCore || bNetFx || bNone)
+    HostRuntimeFlavor flavor = HostRuntimeFlavor::NetCore;
+    int major = 0, minor = 0;
+    if (narg > 0 || majorRuntimeVersion > 0 || bClear || bNetCore || bNetFx || bNone)
     {
         if (IsHostingInitialized())
         {
             ExtErr("Runtime hosting already initialized\n");
             goto exit;
         }
-    }
-    if (bClear)
-    {
-        SetHostRuntimeDirectory(nullptr);
-    }
-    else if (bNone)
-    {
-        SetHostRuntimeFlavor(HostRuntimeFlavor::None);
-    }
-    else if (bNetCore)
-    {
-        SetHostRuntimeFlavor(HostRuntimeFlavor::NetCore);
-    }
-    else if (bNetFx)
-    {
-        SetHostRuntimeFlavor(HostRuntimeFlavor::NetFx);
-    }
-    if (narg > 0)
-    {
-        if (!SetHostRuntimeDirectory(hostRuntimeDirectory.data))
+        if (bClear)
+        {
+            SetHostRuntime(HostRuntimeFlavor::NetCore, 0, 0, nullptr);
+        }
+        if (bNone)
+        {
+            flavor = HostRuntimeFlavor::None;
+        }
+        else if (bNetCore)
+        {
+            flavor = HostRuntimeFlavor::NetCore;
+        }
+        else if (bNetFx)
+        {
+            flavor = HostRuntimeFlavor::NetFx;
+        }
+        major = (int)majorRuntimeVersion;
+        if (!SetHostRuntime(flavor, major, minor, hostRuntimeDirectory.data))
         {
             ExtErr("Invalid host runtime path %s\n", hostRuntimeDirectory.data);
             return E_FAIL;
         }
     }
 exit:
-    const char* flavor = "<unknown>";
-    switch (GetHostRuntimeFlavor())
+    LPCSTR directory = nullptr;
+    GetHostRuntime(flavor, major, minor, directory);
+    switch (flavor)
     {
         case HostRuntimeFlavor::None:
-            flavor = "no";
+            ExtOut("Using no runtime to host the managed SOS code\n");
             break;
         case HostRuntimeFlavor::NetCore:
-            flavor = ".NET Core";
+            ExtOut("Using .NET Core runtime (version %d.%d) to host the managed SOS code\n", major, minor);
             break;
         case HostRuntimeFlavor::NetFx:
-            flavor = "desktop .NET Framework";
+            ExtOut("Using desktop .NET Framework runtime to host the managed SOS code\n");
             break;
         default:
             break;
     }
-    ExtOut("Using %s runtime to host the managed SOS code\n", flavor);
-    const char* directory = GetHostRuntimeDirectory();
     if (directory != nullptr)
     {
         ExtOut("Host runtime path: %s\n", directory);
