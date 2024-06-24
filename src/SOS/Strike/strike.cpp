@@ -3966,9 +3966,6 @@ DECLARE_API(DumpModule)
     DMLOut("Assembly:                %s\n", DMLAssembly(module.Assembly));
 
     ExtOut("BaseAddress:             %p\n", SOS_PTR(module.ilBase));
-    ExtOut("PEAssembly:              %p\n", SOS_PTR(module.PEAssembly));
-    ExtOut("ModuleId:                %p\n", SOS_PTR(module.dwModuleID));
-    ExtOut("ModuleIndex:             %p\n", SOS_PTR(module.dwModuleIndex));
     ExtOut("LoaderHeap:              %p\n", SOS_PTR(module.pLookupTableHeap));
     ExtOut("TypeDefToMethodTableMap: %p\n", SOS_PTR(module.TypeDefToMethodTableMap));
     ExtOut("TypeRefToMethodTableMap: %p\n", SOS_PTR(module.TypeRefToMethodTableMap));
