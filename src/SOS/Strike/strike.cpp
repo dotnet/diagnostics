@@ -1046,8 +1046,9 @@ DECLARE_API(DumpClass)
 
     EnableDMLHolder dmlHolder(dml);
 
+    BOOL net9preferMT = FALSE;
     CLRDATA_ADDRESS methodTable;
-    if ((Status=g_sos->GetMethodTableForEEClass(TO_CDADDR(dwStartAddr), &methodTable)) != S_OK)
+    if ((Status = PreferCanonMTOverEEClassForNET9(TO_CDADDR(dwStartAddr), net9preferMT, &methodTable)) != S_OK)
     {
         ExtOut("Invalid EEClass address\n");
         return Status;
@@ -1080,7 +1081,14 @@ DECLARE_API(DumpClass)
         ParentEEClass = mtdataparent.Class;
     }
 
-    DMLOut("Parent Class:    %s\n", DMLClass(ParentEEClass));
+    if (!net9preferMT)
+    {
+        DMLOut("Parent Class:    %s\n", DMLClass(ParentEEClass));
+    }
+    else
+    {
+        DMLOut("Parent Method Table: %s\n", DMLMethodTable(mtdata.ParentMethodTable));
+    }
     DMLOut("Module:          %s\n", DMLModule(mtdata.Module));
     DMLOut("Method Table:    %s\n", DMLMethodTable(methodTable));
     ExtOut("Vtable Slots:    %x\n", mtdata.wNumVirtuals);
@@ -1188,7 +1196,15 @@ DECLARE_API(DumpMT)
     DacpMethodTableCollectibleData vMethTableCollectible;
     vMethTableCollectible.Request(g_sos, TO_CDADDR(dwStartAddr));
 
-    table.WriteRow("EEClass:", EEClassPtr(vMethTable.Class));
+    // Since .NET 9, DacpMethodTableData:Class is the canonical method table for the given method table.
+    // We can check if the Class member is the same as the result of GetMethodTableForEEClass to determine if we're on .NET9+
+    BOOL net9PreferCanonMT = FALSE;
+    if (PreferCanonMTOverEEClassForNET9(vMethTable.Class, net9PreferCanonMT) != S_OK)
+    {
+        net9PreferCanonMT = FALSE;
+    }
+
+    table.WriteRow(net9PreferCanonMT ? "Canonical Method Table" : "EEClass:", EEClassPtr(vMethTable.Class));
 
     table.WriteRow("Module:", ModulePtr(vMethTable.Module));
 
@@ -1322,9 +1338,22 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
     if ((Status=g_sos->GetMethodTableName(TO_CDADDR(taMT), mdNameLen, g_mdName, NULL))!=S_OK)
         return Status;
 
+    BOOL net9PreferCanonMT = FALSE;
+    if (PreferCanonMTOverEEClassForNET9(TO_CDADDR(taMT), net9PreferCanonMT) != S_OK)
+    {
+        net9PreferCanonMT = FALSE;
+    }
+
     ExtOut("Name:        %S\n", g_mdName);
     DMLOut("MethodTable: %s\n", DMLMethodTable(taMT));
-    DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
+    if (!net9PreferCanonMT)
+    {
+        DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
+    }
+    else
+    {
+        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
+    }
     ExtOut("Size:        %d(0x%x) bytes\n", size, size);
 
     FileNameForModule(TO_TADDR(mtabledata.Module), g_mdName);
@@ -1417,7 +1446,19 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     DacpMethodTableData mtabledata;
     if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) == S_OK)
     {
-        DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
+        BOOL net9preferCanonMT = FALSE;
+        if (PreferCanonMTOverEEClassForNET9(mtabledata.Class, net9preferCanonMT) != S_OK)
+        {
+            net9preferCanonMT = FALSE;
+        }
+        if (!net9preferCanonMT)
+        {
+            DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
+        }
+        else
+        {
+            DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
+        }
     }
     else
     {
@@ -5763,7 +5804,7 @@ BOOL CheckCLRNotificationEvent(DEBUG_LAST_EVENT_INFO_EXCEPTION* pdle)
         return FALSE;
     }
 
-    // The new DAC based interface doesn't exists so ask the debugger for the last exception information. 
+    // The new DAC based interface doesn't exists so ask the debugger for the last exception information.
 
 #ifdef HOST_WINDOWS
     ULONG Type, ProcessId, ThreadId;
