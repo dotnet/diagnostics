@@ -5731,20 +5731,18 @@ HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buf
 *    Detect that situation by calling GetMethodTableForEEClass and     *
 *    comparing the result to the EEClass itself.                       *
 *                                                                      *
+*    Results: S_OK if we're using canonical MethodTables, S_FALSE      *
+*    if we're using EEClass pointers. Otherwise returns an error code. *
+*                                                                      *
 \**********************************************************************/
 
-HRESULT PreferCanonMTOverEEClass(CLRDATA_ADDRESS eeClassPtr, BOOL *preferCanonMT, CLRDATA_ADDRESS *outCanonMT)
+HRESULT PreferCanonMTOverEEClass(CLRDATA_ADDRESS eeClassPtr, CLRDATA_ADDRESS *outCanonMT)
 {
-    HRESULT Status;
+    HRESULT Result;
     CLRDATA_ADDRESS canonMT = 0;
-    if ((Status = g_sos->GetMethodTableForEEClass(eeClassPtr, &canonMT)) != S_OK)
+    if (!SUCCEEDED(Result = g_sos->GetMethodTableForEEClass(eeClassPtr, &canonMT)))
     {
         return Status;
     }
-    *preferCanonMT = eeClassPtr == canonMT;
-    if (outCanonMT)
-    {
-        *outCanonMT = canonMT;
-    }
-    return S_OK;
+    return (eeClassPtr == canonMT) ? S_OK : S_FALSE;
 }
