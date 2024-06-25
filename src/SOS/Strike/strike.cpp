@@ -1047,12 +1047,12 @@ DECLARE_API(DumpClass)
     EnableDMLHolder dmlHolder(dml);
 
     CLRDATA_ADDRESS methodTable;
-    if (!SUCCEEDED(Status = PreferCanonMTOverEEClass(TO_CDADDR(dwStartAddr), &methodTable)))
+    BOOL preferMT = FALSE;
+    if (!SUCCEEDED(Status = PreferCanonMTOverEEClass(TO_CDADDR(dwStartAddr), &preferMT, &methodTable)))
     {
         ExtOut("Invalid EEClass address\n");
         return Status;
     }
-    BOOL net9preferMT = (Status == S_OK);
 
     DacpMethodTableData mtdata;
     if ((Status=mtdata.Request(g_sos, TO_CDADDR(methodTable)))!=S_OK)
@@ -1081,7 +1081,7 @@ DECLARE_API(DumpClass)
         ParentEEClass = mtdataparent.Class;
     }
 
-    if (!net9preferMT)
+    if (!preferMT)
     {
         DMLOut("Parent Class:    %s\n", DMLClass(ParentEEClass));
     }
@@ -1091,7 +1091,7 @@ DECLARE_API(DumpClass)
     }
     DMLOut("Module:          %s\n", DMLModule(mtdata.Module));
     DMLOut("Method Table:    %s\n", DMLMethodTable(methodTable));
-    if (net9preferMT)
+    if (preferMT)
     {
         DMLOut("Canonical MethodTable: %s\n", DMLClass(mtdata.Class));
     }
@@ -1200,7 +1200,8 @@ DECLARE_API(DumpMT)
     DacpMethodTableCollectibleData vMethTableCollectible;
     vMethTableCollectible.Request(g_sos, TO_CDADDR(dwStartAddr));
 
-    if (PreferCanonMTOverEEClass(vMethTable.Class) == S_OK)
+    BOOL preferCanonMT = FALSE;
+    if (SUCCEEDED(PreferCanonMTOverEEClass(vMethTable.Class, &preferCanonMT)) && preferCanonMT)
     {
         table.WriteRow("Canonical MethodTable", EEClassPtr(vMethTable.Class));
     }
@@ -1343,7 +1344,8 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
 
     ExtOut("Name:        %S\n", g_mdName);
     DMLOut("MethodTable: %s\n", DMLMethodTable(taMT));
-    if (PreferCanonMTOverEEClass(TO_CDADDR(taMT)) == S_OK)
+    BOOL preferCanonMT = FALSE;
+    if (SUCCEEDED(PreferCanonMTOverEEClass(TO_CDADDR(taMT), &preferCanonMT)) && preferCanonMT)
     {
         DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
     }
@@ -1443,7 +1445,8 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     DacpMethodTableData mtabledata;
     if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) == S_OK)
     {
-        if (PreferCanonMTOverEEClass(mtabledata.Class) == S_OK)
+        BOOL preferCanonMT = FALSE;
+        if (SUCCEEDED(PreferCanonMTOverEEClass(mtabledata.Class, &preferCanonMT)) && preferCanonMT)
         {
             DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
         }
