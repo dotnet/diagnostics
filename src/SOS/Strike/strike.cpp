@@ -1200,15 +1200,14 @@ DECLARE_API(DumpMT)
     DacpMethodTableCollectibleData vMethTableCollectible;
     vMethTableCollectible.Request(g_sos, TO_CDADDR(dwStartAddr));
 
-    // Since .NET 9, DacpMethodTableData:Class is the canonical method table for the given method table.
-    // We can check if the Class member is the same as the result of GetMethodTableForEEClass to determine if we're on .NET9+
-    BOOL net9PreferCanonMT = FALSE;
     if (PreferCanonMTOverEEClass(vMethTable.Class) == S_OK)
     {
-        net9PreferCanonMT = TRUE;
+        table.WriteRow("Canonical MethodTable", EEClassPtr(vMethTable.Class));
     }
-
-    table.WriteRow(net9PreferCanonMT ? "Canonical MethodTable" : "EEClass:", EEClassPtr(vMethTable.Class));
+    else
+    {
+        table.WriteRow("EEClass:", EEClassPtr(vMethTable.Class));
+    }
 
     table.WriteRow("Module:", ModulePtr(vMethTable.Module));
 
@@ -1342,21 +1341,15 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
     if ((Status=g_sos->GetMethodTableName(TO_CDADDR(taMT), mdNameLen, g_mdName, NULL))!=S_OK)
         return Status;
 
-    BOOL net9PreferCanonMT = FALSE;
-    if (PreferCanonMTOverEEClass(TO_CDADDR(taMT)) == S_OK)
-    {
-        net9PreferCanonMT = TRUE;
-    }
-
     ExtOut("Name:        %S\n", g_mdName);
     DMLOut("MethodTable: %s\n", DMLMethodTable(taMT));
-    if (!net9PreferCanonMT)
+    if (PreferCanonMTOverEEClass(TO_CDADDR(taMT)) == S_OK)
     {
-        DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
+        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
     }
     else
     {
-        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
+        DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
     }
     ExtOut("Size:        %d(0x%x) bytes\n", size, size);
 
@@ -1450,18 +1443,13 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     DacpMethodTableData mtabledata;
     if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) == S_OK)
     {
-        BOOL net9preferCanonMT = FALSE;
         if (PreferCanonMTOverEEClass(mtabledata.Class) == S_OK)
         {
-            net9preferCanonMT = TRUE;
-        }
-        if (!net9preferCanonMT)
-        {
-            DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
+            DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
         }
         else
         {
-            DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
+            DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
         }
     }
     else
