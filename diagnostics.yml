@@ -274,7 +274,6 @@ extends:
             name: Debian_Bullseye
             osGroup: Linux
             container: test_debian_11_amd64
-            dependsOn: Linux
             buildConfigs:
             - configuration: Release
               architecture: x64
