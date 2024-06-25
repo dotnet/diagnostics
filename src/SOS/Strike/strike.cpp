@@ -1203,7 +1203,7 @@ DECLARE_API(DumpMT)
     BOOL preferCanonMT = FALSE;
     if (SUCCEEDED(PreferCanonMTOverEEClass(vMethTable.Class, &preferCanonMT)) && preferCanonMT)
     {
-        table.WriteRow("Canonical MethodTable", EEClassPtr(vMethTable.Class));
+        table.WriteRow("Canonical MethodTable:", EEClassPtr(vMethTable.Class));
     }
     else
     {
