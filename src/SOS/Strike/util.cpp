@@ -5742,5 +5742,9 @@ HRESULT PreferCanonMTOverEEClass(CLRDATA_ADDRESS eeClassPtr, BOOL *preferCanonMT
         return Status;
     }
     *preferCanonMT = (eeClassPtr == canonMT);
+    if (outCanonMT)
+    {
+        *outCanonMT = canonMT;
+    }
     return S_OK;
 }
