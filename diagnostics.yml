@@ -381,5 +381,5 @@ extends:
           publishInstallersAndChecksums: true
           publishAssetsImmediately: true
 
-      # This sets up the bits to do a Release.
-      - template: /eng/pipelines/prepare-release.yml
+    # This sets up the bits to do a Release.
+    - template: /eng/pipelines/prepare-release.yml
