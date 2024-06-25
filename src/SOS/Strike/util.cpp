@@ -5742,7 +5742,7 @@ HRESULT PreferCanonMTOverEEClass(CLRDATA_ADDRESS eeClassPtr, CLRDATA_ADDRESS *ou
     CLRDATA_ADDRESS canonMT = 0;
     if (!SUCCEEDED(Result = g_sos->GetMethodTableForEEClass(eeClassPtr, &canonMT)))
     {
-        return Status;
+        return Result;
     }
     return (eeClassPtr == canonMT) ? S_OK : S_FALSE;
 }
