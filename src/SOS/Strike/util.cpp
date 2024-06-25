@@ -5733,7 +5733,7 @@ HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buf
 *                                                                      *
 \**********************************************************************/
 
-HRESULT PreferCanonMTOverEEClassForNET9(CLRDATA_ADDRESS eeClassPtr, BOOL &preferCanonMT, CLRDATA_ADDRESS *outCanonMT)
+HRESULT PreferCanonMTOverEEClass(CLRDATA_ADDRESS eeClassPtr, BOOL *preferCanonMT, CLRDATA_ADDRESS *outCanonMT)
 {
     HRESULT Status;
     CLRDATA_ADDRESS canonMT = 0;
@@ -5741,7 +5741,7 @@ HRESULT PreferCanonMTOverEEClassForNET9(CLRDATA_ADDRESS eeClassPtr, BOOL &prefer
     {
         return Status;
     }
-    preferCanonMT = eeClassPtr == canonMT;
+    *preferCanonMT = eeClassPtr == canonMT;
     if (outCanonMT)
     {
         *outCanonMT = canonMT;

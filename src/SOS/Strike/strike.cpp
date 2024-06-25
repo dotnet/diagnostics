@@ -1048,7 +1048,7 @@ DECLARE_API(DumpClass)
 
     BOOL net9preferMT = FALSE;
     CLRDATA_ADDRESS methodTable;
-    if ((Status = PreferCanonMTOverEEClassForNET9(TO_CDADDR(dwStartAddr), net9preferMT, &methodTable)) != S_OK)
+    if ((Status = PreferCanonMTOverEEClass(TO_CDADDR(dwStartAddr), &net9preferMT, &methodTable)) != S_OK)
     {
         ExtOut("Invalid EEClass address\n");
         return Status;
@@ -1087,10 +1087,14 @@ DECLARE_API(DumpClass)
     }
     else
     {
-        DMLOut("Parent Method Table: %s\n", DMLMethodTable(mtdata.ParentMethodTable));
+        DMLOut("Parent MethodTable: %s\n", DMLMethodTable(mtdata.ParentMethodTable));
     }
     DMLOut("Module:          %s\n", DMLModule(mtdata.Module));
     DMLOut("Method Table:    %s\n", DMLMethodTable(methodTable));
+    if (net9preferMT)
+    {
+        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtdata.Class));
+    }
     ExtOut("Vtable Slots:    %x\n", mtdata.wNumVirtuals);
     ExtOut("Total Method Slots:  %x\n", mtdata.wNumVtableSlots);
     ExtOut("Class Attributes:    %x  ", mtdata.dwAttrClass);
@@ -1199,7 +1203,7 @@ DECLARE_API(DumpMT)
     // Since .NET 9, DacpMethodTableData:Class is the canonical method table for the given method table.
     // We can check if the Class member is the same as the result of GetMethodTableForEEClass to determine if we're on .NET9+
     BOOL net9PreferCanonMT = FALSE;
-    if (PreferCanonMTOverEEClassForNET9(vMethTable.Class, net9PreferCanonMT) != S_OK)
+    if (PreferCanonMTOverEEClass(vMethTable.Class, &net9PreferCanonMT) != S_OK)
     {
         net9PreferCanonMT = FALSE;
     }
@@ -1339,7 +1343,7 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
         return Status;
 
     BOOL net9PreferCanonMT = FALSE;
-    if (PreferCanonMTOverEEClassForNET9(TO_CDADDR(taMT), net9PreferCanonMT) != S_OK)
+    if (PreferCanonMTOverEEClass(TO_CDADDR(taMT), &net9PreferCanonMT) != S_OK)
     {
         net9PreferCanonMT = FALSE;
     }
@@ -1447,7 +1451,7 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) == S_OK)
     {
         BOOL net9preferCanonMT = FALSE;
-        if (PreferCanonMTOverEEClassForNET9(mtabledata.Class, net9preferCanonMT) != S_OK)
+        if (PreferCanonMTOverEEClass(mtabledata.Class, &net9preferCanonMT) != S_OK)
         {
             net9preferCanonMT = FALSE;
         }
