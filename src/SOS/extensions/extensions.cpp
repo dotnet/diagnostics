@@ -235,6 +235,24 @@ bool GetAbsolutePath(const char* path, std::string& absolutePath)
 }
 
 /// <summary>
+//  Returns just the file name portion of a file path
+/// </summary>
+/// <param name="filePath">full path to get file name</param>
+/// <returns>just the file name</returns>
+const std::string
+GetFileName(const std::string& filePath)
+{
+    size_t last = filePath.rfind(DIRECTORY_SEPARATOR_STR_A);
+    if (last != std::string::npos) {
+        last++;
+    }
+    else {
+        last = 0;
+    }
+    return filePath.substr(last);
+}
+
+/// <summary>
 /// Internal output helper function
 /// </summary>
 void InternalOutputVaList(
