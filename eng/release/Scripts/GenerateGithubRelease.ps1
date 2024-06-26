@@ -3,7 +3,7 @@ param(
   [Parameter(Mandatory=$false)][string] $ReleaseNotes,
   [Parameter(Mandatory=$true)][string] $GhOrganization,
   [Parameter(Mandatory=$true)][string] $GhRepository,
-  [Parameter(Mandatory=$false)][string] $GhCliLink = "https://github.com/cli/cli/releases/download/v1.2.0/gh_1.2.0_windows_amd64.zip",
+  [Parameter(Mandatory=$false)][string] $GhCliLink = "https://github.com/cli/cli/releases/download/v2.52.0/gh_2.52.0_windows_amd64.zip",
   [Parameter(Mandatory=$true)][string] $TagName,
   [bool] $DraftRelease = $false,
   [switch] $help,
@@ -50,7 +50,7 @@ function Get-DownloadLinksAndChecksums($manifest)
     $linkTable += "</details>`n`n"
 
     $filePublishData = @{}
-    $manifest.PublishInstructions | %{ $filePublishData.Add($_.FilePath, $_) }
+    $manifest.PublishInstructions | %{ $filePublishData.Add($_.Sha512, $_) }
 
     $sortedTools = $manifest.ToolBundleAssets | Sort-Object -Property @{ Expression = "Rid" }, @{ Expression = "ToolName" }
 
@@ -65,11 +65,11 @@ function Get-DownloadLinksAndChecksums($manifest)
 
     foreach ($toolBundle in $sortedTools)
     {
-        $hash = $filePublishData[$toolBundle.PublishedPath].Sha512
+        $hash = $toolBundle.Sha512
         $name = $toolBundle.ToolName
         $rid = $toolBundle.Rid
 
-        $link = "https://download.visualstudio.microsoft.com/download/pr/" + $filePublishData[$toolBundle.PublishedPath].PublishUrlSubPath
+        $link = "https://download.visualstudio.microsoft.com/download/pr/" + $filePublishData[$hash].PublishUrlSubPath
         $linkTable += "| $name | $rid | [Download]($link) |`n";
 
         $checksumCsv += "`"$name`",`"$rid`",`"$link`",`"$hash`"`n"
@@ -93,7 +93,7 @@ function Post-GithubRelease($manifest, [string]$releaseBody, [string]$checksumCs
         Expand-Archive -Path $zipPath -DestinationPath $extractionPath
         $progressPreference = 'Continue'
     }
-    catch 
+    catch
     {
         Write-Error "Unable to get GitHub CLI for release"
         exit 1
