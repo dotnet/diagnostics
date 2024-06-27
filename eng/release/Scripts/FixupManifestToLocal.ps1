@@ -1,7 +1,7 @@
 param(
   [Parameter(Mandatory=$true)][string] $ManifestPath,
   [Parameter(Mandatory=$true)][string] $StagingPath,
-  [Parameter(Mandatory=$true)][string] $DelegationSasToken,
+  [Parameter(Mandatory=$false)][string] $DelegationSasToken,
   [switch] $help,
   [Parameter(ValueFromRemainingArguments=$true)][String[]]$properties
 )
@@ -55,9 +55,31 @@ foreach ($nugetPack in $manifestJson.NugetAssets)
     Add-Member -InputObject $nugetPack -MemberType NoteProperty -Name LocalPath -Value $packagePath
 }
 
+$toolHashToLocalPath = @{}
+
+foreach ($tool in $manifestJson.ToolBundleAssets)
+{
+    $toolPath = Join-Path $StagingPath $tool.PublishRelativePath
+    if (!(Test-Path $toolPath))
+    {
+        Write-Error "Error: unable to find package at '$toolPath'."
+        continue
+    }
+    Add-Member -InputObject $tool -MemberType NoteProperty -Name LocalPath -Value $toolPath
+    $toolHashToLocalPath.Add($tool.Sha512, $toolPath)
+}
+
 foreach ($asset in $manifestJson.PublishInstructions)
 {
-    $asset.FilePath += "?" + $DelegationSasToken
+    $remotePath = $asset.FilePath
+
+    if ($DelegationSasToken -ne "")
+    {
+        $remotePath = "$remotePath?$DelegationSasToken"
+    }
+
+    Add-Member -InputObject $asset -MemberType NoteProperty -Name RemotePath -Value $remotePath
+    $asset.FilePath = $toolHashToLocalPath[$asset.Sha512]
 }
 
 Copy-Item $ManifestPath "$ManifestPath.bak"
