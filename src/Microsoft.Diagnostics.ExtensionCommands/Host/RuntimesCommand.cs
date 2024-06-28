@@ -30,16 +30,28 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--netcore", Aliases = new string[] { "-netcore", "-c" }, Help = "Switches to the .NET Core or .NET 5+ runtime if exists.")]
         public bool NetCore { get; set; }
 
+        [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Forces all runtimes to be enumerated.")]
+        public bool All { get; set; }
+
         public override void Invoke()
         {
             if (NetFx && NetCore)
             {
                 throw new DiagnosticsException("Cannot specify both -netfx and -netcore options");
             }
+            RuntimeEnumerationFlags flags = RuntimeEnumerationFlags.Default;
+
+            if (All)
+            {
+                // Force all runtimes to be enumerated. This requires a target flush.
+                flags = RuntimeEnumerationFlags.All;
+                Target.Flush();
+            }
+
             if (NetFx || NetCore)
             {
                 string name = NetFx ? "desktop .NET Framework" : ".NET Core";
-                foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
+                foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes(flags))
                 {
                     if (NetFx && runtime.RuntimeType == RuntimeType.Desktop ||
                         NetCore && runtime.RuntimeType == RuntimeType.NetCore)
@@ -59,10 +71,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             else
             {
                 // Display the current runtime star ("*") only if there is more than one runtime and it is the current one
-                bool displayStar = RuntimeService.EnumerateRuntimes().Count() > 1;
+                bool displayStar = RuntimeService.EnumerateRuntimes(flags).Count() > 1;
                 IRuntime currentRuntime = ContextService.GetCurrentRuntime();
 
-                foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes())
+                foreach (IRuntime runtime in RuntimeService.EnumerateRuntimes(flags))
                 {
                     string current = displayStar ? (runtime == currentRuntime ? "*" : " ") : "";
                     Write(current);
