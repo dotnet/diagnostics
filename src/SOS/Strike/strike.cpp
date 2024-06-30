@@ -1083,8 +1083,14 @@ DECLARE_API(DumpClass)
     DMLOut("Parent Class:    %s\n", DMLClass(ParentEEClass));
     DMLOut("Module:          %s\n", DMLModule(mtdata.Module));
     DMLOut("Method Table:    %s\n", DMLMethodTable(methodTable));
-    ExtOut("Vtable Slots:    %x\n", mtdata.wNumVirtuals);
-    ExtOut("Total Method Slots:  %x\n", mtdata.wNumVtableSlots);
+    if (mtdata.wNumVirtuals != 0)
+    {
+        ExtOut("Vtable Slots:    %x\n", mtdata.wNumVirtuals);
+    }
+    if (mtdata.wNumVtableSlots != 0)
+    {
+        ExtOut("Total Method Slots:  %x\n", mtdata.wNumVtableSlots);
+    }
     ExtOut("Class Attributes:    %x  ", mtdata.dwAttrClass);
 
     if (IsTdInterface(mtdata.dwAttrClass))
@@ -1231,7 +1237,7 @@ DECLARE_API(DumpMT)
     table.WriteRow("ComponentSize:", PrefixHex(vMethTable.ComponentSize));
     table.WriteRow("DynamicStatics:", vMethTable.bIsDynamic ? "true" : "false");
     table.WriteRow("ContainsPointers:", vMethTable.bContainsPointers ? "true" : "false");
-    table.WriteRow("Slots in VTable:", Decimal(vMethTable.wNumMethods));
+    table.WriteRow("Number of Methods:", Decimal(vMethTable.wNumMethods));
 
     table.SetColWidth(0, 29);
     table.WriteRow("Number of IFaces in IFaceMap:", Decimal(vMethTable.wNumInterfaces));
