@@ -1238,72 +1238,94 @@ DECLARE_API(DumpMT)
 
     if (bDumpMDTable)
     {
-        table.ReInit(4, POINTERSIZE_HEX, AlignRight);
+        table.ReInit(5, POINTERSIZE_HEX, AlignRight);
         table.SetColAlignment(3, AlignLeft);
         table.SetColWidth(2, 6);
 
         Print("--------------------------------------\n");
         Print("MethodDesc Table\n");
 
-        table.WriteRow("Entry", "MethodDesc", "JIT", "Name");
+        table.WriteRow("Entry", "MethodDesc", "JIT", "Slot", "Name");
 
-        for (DWORD n = 0; n < vMethTable.wNumMethods; n++)
+        ISOSMethodEnum *pMethodEnumerator;
+        if (SUCCEEDED(g_sos15->GetMethodTableSlotEnumerator(dwStartAddr, &pMethodEnumerator)))
         {
-            JITTypes jitType;
-            DWORD_PTR methodDesc=0;
-            DWORD_PTR gcinfoAddr;
-
-            CLRDATA_ADDRESS entry;
-            if (g_sos->GetMethodTableSlot(dwStartAddr, n, &entry) != S_OK)
+            SOSMethodData entry;
+            unsigned int fetched;
+            while (SUCCEEDED(pMethodEnumerator->Next(1, &entry, &fetched)) && fetched != 0)
             {
-                PrintLn("<error getting slot ", Decimal(n), ">");
-                continue;
-            }
+                JITTypes jitType = TYPE_UNKNOWN;
+                DWORD_PTR methodDesc = entry.MethodDesc;
+                DWORD_PTR methodDescFromIP2MD = 0;
+                DWORD_PTR gcinfoAddr = 0;
 
-            IP2MethodDesc((DWORD_PTR)entry, methodDesc, jitType, gcinfoAddr);
-            table.WriteColumn(0, entry);
-            table.WriteColumn(1, MethodDescPtr(methodDesc));
-
-            if (jitType == TYPE_UNKNOWN && methodDesc != (TADDR)0)
-            {
-                // We can get a more accurate jitType from NativeCodeAddr of the methoddesc,
-                // because the methodtable entry hasn't always been patched.
-                DacpMethodDescData tmpMethodDescData;
-                if (tmpMethodDescData.Request(g_sos, TO_CDADDR(methodDesc)) == S_OK)
+                if (entry.Entrypoint != 0)
                 {
-                    DacpCodeHeaderData codeHeaderData;
-                    if (codeHeaderData.Request(g_sos,tmpMethodDescData.NativeCodeAddr) == S_OK)
+                    IP2MethodDesc((DWORD_PTR)entry.Entrypoint, methodDescFromIP2MD, jitType, gcinfoAddr);
+                    if ((methodDescFromIP2MD != methodDesc) && methodDesc != 0)
                     {
-                        jitType = (JITTypes) codeHeaderData.JITType;
+                        ExtOut("MethodDesc from IP2MD does not match MethodDesc from enumerator\n");
                     }
                 }
-            }
 
-            const char *pszJitType = "NONE";
-            if (jitType == TYPE_JIT)
-                pszJitType = "JIT";
-            else if (jitType == TYPE_PJIT)
-                pszJitType = "PreJIT";
-            else
-            {
-                DacpMethodDescData MethodDescData;
-                if (MethodDescData.Request(g_sos, TO_CDADDR(methodDesc)) == S_OK)
+                table.WriteColumn(0, entry.Entrypoint);
+                table.WriteColumn(1, MethodDescPtr(methodDesc));
+
+                if (jitType == TYPE_UNKNOWN && methodDesc != (TADDR)0)
                 {
-                    // Is it an fcall?
-                    ULONG64 baseAddress = g_pRuntime->GetModuleAddress();
-                    ULONG64 size = g_pRuntime->GetModuleSize();
-                    if ((TO_TADDR(MethodDescData.NativeCodeAddr) >=  TO_TADDR(baseAddress)) &&
-                        ((TO_TADDR(MethodDescData.NativeCodeAddr) <  TO_TADDR(baseAddress + size))))
+                    // We can get a more accurate jitType from NativeCodeAddr of the methoddesc,
+                    // because the methodtable entry hasn't always been patched.
+                    DacpMethodDescData tmpMethodDescData;
+                    if (tmpMethodDescData.Request(g_sos, TO_CDADDR(methodDesc)) == S_OK)
                     {
-                        pszJitType = "FCALL";
+                        DacpCodeHeaderData codeHeaderData;
+                        if (codeHeaderData.Request(g_sos,tmpMethodDescData.NativeCodeAddr) == S_OK)
+                        {
+                            jitType = (JITTypes) codeHeaderData.JITType;
+                        }
                     }
                 }
+
+                const char *pszJitType = "NONE";
+                if (jitType == TYPE_JIT)
+                    pszJitType = "JIT";
+                else if (jitType == TYPE_PJIT)
+                    pszJitType = "PreJIT";
+                else
+                {
+                    DacpMethodDescData MethodDescData;
+                    if (MethodDescData.Request(g_sos, TO_CDADDR(methodDesc)) == S_OK)
+                    {
+                        // Is it an fcall?
+                        ULONG64 baseAddress = g_pRuntime->GetModuleAddress();
+                        ULONG64 size = g_pRuntime->GetModuleSize();
+                        if ((TO_TADDR(MethodDescData.NativeCodeAddr) >=  TO_TADDR(baseAddress)) &&
+                            ((TO_TADDR(MethodDescData.NativeCodeAddr) <  TO_TADDR(baseAddress + size))))
+                        {
+                            pszJitType = "FCALL";
+                        }
+                    }
+                }
+
+                table.WriteColumn(2, pszJitType);
+                table.WriteColumn(3, entry.Slot);
+
+                if (methodDesc != 0)
+                    NameForMD_s(methodDesc,g_mdName,mdNameLen);
+                else
+                {
+                    DacpModuleData moduleData;
+                    if(moduleData.Request(g_sos, entry.DefiningModule)==S_OK)
+                    {
+                        NameForToken_s(&moduleData, entry.Token, g_mdName, mdNameLen, true);
+                    }
+                    else
+                    {
+                        _snwprintf_s(g_mdName, mdNameLen, _TRUNCATE, W("Unknown Module!%08x"), entry.Token);
+                    }
+                }
+                table.WriteColumn(4, g_mdName);
             }
-
-            table.WriteColumn(2, pszJitType);
-
-            NameForMD_s(methodDesc,g_mdName,mdNameLen);
-            table.WriteColumn(3, g_mdName);
         }
     }
     return Status;
