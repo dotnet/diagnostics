@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
@@ -12,13 +13,12 @@ namespace SOS.Extensions
 {
     internal sealed class MemoryRegionServiceFromDebuggerServices : IMemoryRegionService
     {
-        private readonly IDebugClient5 _client;
-        private readonly IDebugControl5 _control;
+        private const string AddressCommand = "!address";
+        private readonly DebuggerServices _debuggerServices;
 
-        public MemoryRegionServiceFromDebuggerServices(IDebugClient5 client)
+        public MemoryRegionServiceFromDebuggerServices(DebuggerServices debuggerServices)
         {
-            _client = client;
-            _control = (IDebugControl5)client;
+            _debuggerServices = debuggerServices;
         }
 
         public IEnumerable<IMemoryRegion> EnumerateRegions()
@@ -26,13 +26,8 @@ namespace SOS.Extensions
             bool foundHeader = false;
             bool skipped = false;
 
-            (int hr, string text) = RunCommandWithOutput("!address");
-            if (hr < 0)
-            {
-                throw new InvalidOperationException($"!address failed with hresult={hr:x}");
-            }
-
-            foreach (string line in text.Split('\n'))
+            IReadOnlyList<string> lines = _debuggerServices.ExecuteHostCommand(AddressCommand);
+            foreach (string line in lines)
             {
                 if (line.Length == 0)
                 {
@@ -134,7 +129,6 @@ namespace SOS.Extensions
                     if (type == MemoryRegionType.MEM_IMAGE && index < parts.Length)
                     {
                         image = parts[index].Substring(1, parts[index].Length - 2);
-                        index++;
                     }
 
                     if (description.Equals("<unknown>", StringComparison.OrdinalIgnoreCase))
@@ -195,7 +189,7 @@ namespace SOS.Extensions
 
             if (!foundHeader)
             {
-                throw new InvalidOperationException($"!address did not produce a standard header.\nThis may mean symbols could not be resolved for ntdll.\nPlease run !address and make sure the output looks correct.");
+                throw new InvalidOperationException($"{AddressCommand} did not produce a standard header.\nThis may mean symbols could not be resolved for ntdll.\nPlease run {AddressCommand} and make sure the output looks correct.");
             }
         }
 
@@ -209,17 +203,6 @@ namespace SOS.Extensions
 
             type = default;
             return false;
-        }
-
-        private (int hresult, string output) RunCommandWithOutput(string command)
-        {
-            using DbgEngOutputHolder dbgengOutput = new(_client);
-            StringBuilder sb = new(1024);
-            dbgengOutput.OutputReceived += (mask, text) => sb.Append(text);
-
-            int hr = _control.ExecuteWide(DEBUG_OUTCTL.THIS_CLIENT, command, DEBUG_EXECUTE.DEFAULT);
-
-            return (hr, sb.ToString());
         }
 
         private sealed class AddressMemoryRange : IMemoryRegion

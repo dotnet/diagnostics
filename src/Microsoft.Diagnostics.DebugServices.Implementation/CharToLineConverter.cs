@@ -4,7 +4,7 @@
 using System;
 using System.Text;
 
-namespace Microsoft.Diagnostics.TestHelpers
+namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public sealed class CharToLineConverter
     {

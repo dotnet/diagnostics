@@ -84,7 +84,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src\shared;$(RepoRoot)src\shared\inc;$(RepoRoot)src\shared\pal\prebuilt\inc;$(RepoRoot)src\shared\pal\inc;$(RepoRoot)src\shared\pal\inc\rt;$(SolutionDir)src\shared\gcdump;$(SolutionDir)src\SOS\Strike\platform;$(SolutionDir)src\SOS\inc;$(SolutionDir)src\SOS\extensions;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src\shared;$(RepoRoot)src\shared\inc;$(RepoRoot)src\shared\pal\prebuilt\inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;$(SolutionDir)src\SOS\Strike\;$(SolutionDir)src\SOS\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\shared\gcdump;$(SolutionDir)src\SOS\Strike\platform;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8 /homeparams</AdditionalOptions>
       <AssemblerListingLocation>Debug/</AssemblerListingLocation>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -385,7 +385,10 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="clrma.cpp" />
+    <ClCompile Include="clrma\exception.cpp" />
+    <ClCompile Include="clrma\clrma.cpp" />
+    <ClCompile Include="clrma\thread.cpp" />
+    <ClCompile Include="clrma\managedanalysis.cpp" />
     <ClCompile Include="dbgengservices.cpp" />
     <ClCompile Include="disasm.cpp" />
     <ClCompile Include="dllsext.cpp" />
@@ -402,6 +405,7 @@
     <ClCompile Include="platform\targetimpl.cpp" />
     <ClCompile Include="sildasm.cpp" />
     <ClCompile Include="sos.cpp" />
+    <ClCompile Include="sosextensions.cpp" />
     <ClCompile Include="stressLogDump.cpp" />
     <ClCompile Include="strike.cpp" />
     <ClCompile Include="symbols.cpp" />
@@ -415,6 +419,9 @@
     <ClCompile Include="disasmARM64.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="clrma\exception.h" />
+    <ClInclude Include="clrma\thread.h" />
+    <ClInclude Include="clrma\managedanalysis.h" />
     <ClInclude Include="data.h" />
     <ClInclude Include="dbgengservices.h" />
     <ClInclude Include="disasm.h" />
@@ -428,6 +435,7 @@
     <ClInclude Include="platform\runtimeimpl.h" />
     <ClInclude Include="platform\targetimpl.h" />
     <ClInclude Include="sos.h" />
+    <ClInclude Include="sosextensions.h" />
     <ClInclude Include="sos_md.h" />
     <ClInclude Include="sos_stacktrace.h" />
     <ClInclude Include="strike.h" />

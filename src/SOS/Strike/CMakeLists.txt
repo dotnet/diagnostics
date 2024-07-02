@@ -82,7 +82,6 @@ if (CLR_CMAKE_HOST_WIN32)
   add_definitions(-DUSE_STL)
 
   set(SOS_SOURCES
-    clrma.cpp
     disasm.cpp
     dllsext.cpp
     eeheap.cpp
@@ -97,12 +96,17 @@ if (CLR_CMAKE_HOST_WIN32)
     sigparser.cpp
     sildasm.cpp
     sos.cpp
+    sosextensions.cpp
     stressLogDump.cpp
     strike.cpp
     util.cpp
     vm.cpp
     WatchCmd.cpp
     Native.rc
+    clrma/clrma.cpp
+    clrma/managedanalysis.cpp
+    clrma/exception.cpp
+    clrma/thread.cpp
     platform/datatarget.cpp
     platform/hostimpl.cpp
     platform/targetimpl.cpp
@@ -162,6 +166,7 @@ else(CLR_CMAKE_HOST_WIN32)
     stressLogDump.cpp
     strike.cpp
     sos.cpp
+    sosextensions.cpp
     util.cpp
     platform/datatarget.cpp
     platform/hostimpl.cpp

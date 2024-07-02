@@ -114,7 +114,7 @@ namespace SOS.Extensions.Clrma
             }
             catch (ArgumentOutOfRangeException)
             {
-                return ManagedAnalysisWrapper.E_BOUNDS;
+                return ClrmaServiceWrapper.E_BOUNDS;
             }
             ip = frame.InstructionPointer;
             sp = frame.StackPointer;
@@ -140,7 +140,7 @@ namespace SOS.Extensions.Clrma
             clrmaClrException = IntPtr.Zero;
             if (index >= InnerExceptions.Length)
             {
-                return ManagedAnalysisWrapper.E_BOUNDS;
+                return ClrmaServiceWrapper.E_BOUNDS;
             }
             ExceptionWrapper exception = InnerExceptions[index];
             exception.AddRef();

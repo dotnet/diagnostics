@@ -51,14 +51,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             CaptureConsoleService consoleService = new();
             testDump.ServiceContainer.AddService<IConsoleService>(consoleService);
 
-            CommandService commandService = new();
-            testDump.ServiceContainer.AddService<ICommandService>(commandService);
-
             // Add all the test commands
-            commandService.AddCommands(typeof(TestCommand1).Assembly);
+            testDump.CommandService.AddCommands(typeof(TestCommand1).Assembly);
 
             // See if the test commands exists
-            Assert.Contains(commandService.Commands, ((string name, string help, IEnumerable<string> aliases) cmd) => cmd.name == "testcommand");
+            Assert.Contains(testDump.CommandService.Commands, ((string name, string help, IEnumerable<string> aliases) cmd) => cmd.name == "testcommand");
 
             // Invoke only TestCommand1
             TestCommand1.FilterValue = true;
@@ -67,13 +64,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             TestCommand2.Invoked = false;
             TestCommand3.FilterValue = false;
             TestCommand3.Invoked = false;
-            commandService.Execute("testcommand", testDump.Target.Services);
+            testDump.CommandService.Execute("testcommand", testDump.Target.Services);
             Assert.True(TestCommand1.Invoked);
             Assert.False(TestCommand2.Invoked);
             Assert.False(TestCommand3.Invoked);
 
             // Check for TestCommand1 help
-            string help1 = commandService.GetDetailedHelp("testcommand", testDump.Target.Services, consoleWidth: int.MaxValue);
+            string help1 = testDump.CommandService.GetDetailedHelp("testcommand", testDump.Target.Services, consoleWidth: int.MaxValue);
             Assert.NotNull(help1);
             Output.WriteLine(help1);
             Assert.Contains("Test command #1", help1);
@@ -85,7 +82,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             TestCommand2.Invoked = false;
             TestCommand3.FilterValue = false;
             TestCommand3.Invoked = false;
-            commandService.Execute("testcommand", testDump.Target.Services);
+            testDump.CommandService.Execute("testcommand", testDump.Target.Services);
             Assert.False(TestCommand1.Invoked);
             Assert.True(TestCommand2.Invoked);
             Assert.False(TestCommand3.Invoked);
@@ -98,13 +95,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             TestCommand2.Invoked = false;
             TestCommand3.FilterValue = true;
             TestCommand3.Invoked = false;
-            commandService.Execute("testcommand", "--foo 23", testDump.Target.Services);
+            testDump.CommandService.Execute("testcommand", "--foo 23", testDump.Target.Services);
             Assert.False(TestCommand1.Invoked);
             Assert.False(TestCommand2.Invoked);
             Assert.True(TestCommand3.Invoked);
 
             // Check for TestCommand3 help
-            string help3 = commandService.GetDetailedHelp("testcommand", testDump.Target.Services, consoleWidth: int.MaxValue);
+            string help3 = testDump.CommandService.GetDetailedHelp("testcommand", testDump.Target.Services, consoleWidth: int.MaxValue);
             Assert.NotNull(help3);
             Output.WriteLine(help3);
             Assert.Contains("Test command #3", help3);
@@ -118,7 +115,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             TestCommand3.Invoked = false;
             try
             {
-                commandService.Execute("testcommand", testDump.Target.Services);
+                testDump.CommandService.Execute("testcommand", testDump.Target.Services);
             }
             catch (DiagnosticsException ex)
             {

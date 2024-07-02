@@ -242,6 +242,14 @@ DbgEngServices::GetNumberModules(
     return m_symbols->GetNumberModules(loaded, unloaded);
 }
 
+HRESULT
+DbgEngServices::GetModuleByIndex(
+    ULONG index,
+    PULONG64 base)
+{
+    return m_symbols->GetModuleByIndex(index, base);
+}
+
 HRESULT 
 DbgEngServices::GetModuleNames(
     ULONG index,
@@ -268,14 +276,18 @@ DbgEngServices::GetModuleInfo(
     PULONG timestamp,
     PULONG checksum)
 {
-    HRESULT hr = m_symbols->GetModuleByIndex(index, moduleBase);
+    ULONG64 base;
+    HRESULT hr = m_symbols->GetModuleByIndex(index, &base);
     if (FAILED(hr)) {
         return hr;
     }
     DEBUG_MODULE_PARAMETERS params;
-    hr = m_symbols->GetModuleParameters(1, moduleBase, 0, &params);
+    hr = m_symbols->GetModuleParameters(1, &base, 0, &params);
     if (FAILED(hr)) {
         return hr;
+    }
+    if (moduleBase) {
+        *moduleBase = base;
     }
     if (moduleSize) {
         *moduleSize = params.Size;
@@ -299,6 +311,16 @@ DbgEngServices::GetModuleVersionInformation(
     PULONG versionInfoSize)
 {
     return m_symbols->GetModuleVersionInformation(index, base, item, buffer, bufferSize, versionInfoSize);
+}
+
+HRESULT
+DbgEngServices::GetModuleByModuleName(
+    PCSTR name,
+    ULONG startIndex,
+    PULONG index,
+    PULONG64 base)
+{
+    return m_symbols->GetModuleByModuleName(name, startIndex, index, base);
 }
 
 HRESULT 
@@ -536,6 +558,26 @@ DbgEngServices::GetLastEventInformation(
         descriptionUsed);
 }
 
+void 
+DbgEngServices::FlushCheck()
+{
+    // Flush the target when the debugger target breaks
+    if (m_flushNeeded)
+    {
+        m_flushNeeded = false;
+        Extensions::GetInstance()->FlushTarget();
+    }
+}
+
+HRESULT
+DbgEngServices::ExecuteHostCommand(
+    PCSTR commandLine,
+    PEXECUTE_COMMAND_OUTPUT_CALLBACK callback)
+{
+    OutputCaptureHolder holder(m_client, callback);
+    return m_control->Execute(DEBUG_OUTCTL_THIS_CLIENT, commandLine, DEBUG_EXECUTE_NO_REPEAT);
+}
+
 //----------------------------------------------------------------------------
 // IRemoteMemoryService
 //----------------------------------------------------------------------------
@@ -707,17 +749,6 @@ HRESULT DbgEngServices::UnloadModule(
 //----------------------------------------------------------------------------
 // Helper Functions
 //----------------------------------------------------------------------------
-
-void 
-DbgEngServices::FlushCheck(Extensions* extensions)
-{
-    // Flush the target when the debugger target breaks
-    if (m_flushNeeded)
-    {
-        m_flushNeeded = false;
-        extensions->FlushTarget();
-    }
-}
 
 IMachine*
 DbgEngServices::GetMachine()

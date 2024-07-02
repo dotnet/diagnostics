@@ -415,13 +415,17 @@ public:
         ULONG mask,
         PCSTR str);
 
+    void STDMETHODCALLTYPE FlushCheck();
+
+    HRESULT STDMETHODCALLTYPE ExecuteHostCommand(
+        PCSTR commandLine,
+        PEXECUTE_COMMAND_OUTPUT_CALLBACK callback);
+
     //----------------------------------------------------------------------------
     // LLDBServices (internal)
     //----------------------------------------------------------------------------
 
     PCSTR GetPluginModuleDirectory();
-
-    void FlushCheck();
 
     lldb::SBCommand AddCommand(const char *name, lldb::SBCommandPluginInterface *impl, const char *help);
 

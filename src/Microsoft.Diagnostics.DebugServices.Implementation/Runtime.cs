@@ -79,7 +79,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public string RuntimeModuleDirectory { get; set; }
 
-
         public Version RuntimeVersion
         {
             get

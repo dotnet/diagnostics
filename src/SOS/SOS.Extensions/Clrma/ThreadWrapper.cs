@@ -133,7 +133,7 @@ namespace SOS.Extensions.Clrma
             clrmaClrException = IntPtr.Zero;
             if (index >= NestedExceptions.Length)
             {
-                return ManagedAnalysisWrapper.E_BOUNDS;
+                return ClrmaServiceWrapper.E_BOUNDS;
             }
             ExceptionWrapper exception = NestedExceptions[index];
             exception.AddRef();

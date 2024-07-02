@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+typedef bool (*PEXECUTE_COMMAND_OUTPUT_CALLBACK)(ULONG mask, const char *text);
+
 /// <summary>
 /// IDebuggerServices 
 /// 
@@ -64,6 +66,10 @@ public:
         PULONG loaded,
         PULONG unloaded) = 0;
 
+    virtual HRESULT STDMETHODCALLTYPE GetModuleByIndex(
+        ULONG index,
+        PULONG64 base) = 0;
+
     virtual HRESULT STDMETHODCALLTYPE GetModuleNames(
         ULONG index,
         ULONG64 base,
@@ -91,6 +97,12 @@ public:
         PVOID buffer,
         ULONG bufferSize,
         PULONG versionInfoSize) = 0;
+
+    virtual HRESULT STDMETHODCALLTYPE GetModuleByModuleName(
+        PCSTR name,
+        ULONG startIndex,
+        PULONG index,
+        PULONG64 base) = 0;
 
     virtual HRESULT STDMETHODCALLTYPE GetNumberThreads(
         PULONG number) = 0;
@@ -177,6 +189,12 @@ public:
         PSTR description,
         ULONG descriptionSize,
         PULONG descriptionUsed) = 0;
+
+    virtual void STDMETHODCALLTYPE FlushCheck() = 0;
+
+    virtual HRESULT STDMETHODCALLTYPE ExecuteHostCommand(
+        PCSTR commandLine,
+        PEXECUTE_COMMAND_OUTPUT_CALLBACK callback) = 0;
 };
 
 #ifdef __cplusplus
