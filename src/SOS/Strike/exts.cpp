@@ -127,7 +127,9 @@ GetTargetMachine(ULONG processorType)
     }
 #endif // SOS_TARGET_ARM
 #ifdef SOS_TARGET_ARM64
-    if (processorType == IMAGE_FILE_MACHINE_ARM64)
+    if (processorType == IMAGE_FILE_MACHINE_ARM64
+        || processorType == IMAGE_FILE_MACHINE_ARM64X
+        || processorType == IMAGE_FILE_MACHINE_ARM64EC)
     {
         targetMachine = ARM64Machine::GetInstance();
     }
@@ -165,6 +167,8 @@ ArchQuery(void)
                 architecture = "arm32";
                 break;
             case IMAGE_FILE_MACHINE_ARM64:
+            case IMAGE_FILE_MACHINE_ARM64EC:
+            case IMAGE_FILE_MACHINE_ARM64X:
                 architecture = "arm64";
                 break;
             case IMAGE_FILE_MACHINE_RISCV64:

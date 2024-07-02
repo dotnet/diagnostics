@@ -81,7 +81,9 @@ public:
                 *pPlatform = CORDB_PLATFORM_WINDOWS_AMD64;
             else if (platformKind == IMAGE_FILE_MACHINE_ARMNT)
                 *pPlatform = CORDB_PLATFORM_WINDOWS_ARM;
-            else if (platformKind == IMAGE_FILE_MACHINE_ARM64)
+            else if (platformKind == IMAGE_FILE_MACHINE_ARM64
+                    || platformKind == IMAGE_FILE_MACHINE_ARM64EC
+                    || platformKind == IMAGE_FILE_MACHINE_ARM64X)
                 *pPlatform = CORDB_PLATFORM_WINDOWS_ARM64;
             else
                 return E_FAIL;
