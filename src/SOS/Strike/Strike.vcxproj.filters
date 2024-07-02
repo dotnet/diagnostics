@@ -33,7 +33,19 @@
       <Filter>platform</Filter>
     </ClCompile>
     <ClCompile Include="managedcommands.cpp" />
-    <ClCompile Include="clrma.cpp" />
+    <ClCompile Include="clrma\clrma.cpp">
+      <Filter>clrma</Filter>
+    </ClCompile>
+    <ClCompile Include="clrma\managedanalysis.cpp">
+      <Filter>clrma</Filter>
+    </ClCompile>
+    <ClCompile Include="clrma\exception.cpp">
+      <Filter>clrma</Filter>
+    </ClCompile>
+    <ClCompile Include="clrma\thread.cpp">
+      <Filter>clrma</Filter>
+    </ClCompile>
+    <ClCompile Include="sosextensions.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="data.h" />
@@ -74,6 +86,16 @@
     <ClInclude Include="platform\targetimpl.h">
       <Filter>platform</Filter>
     </ClInclude>
+    <ClInclude Include="clrma\managedanalysis.h">
+      <Filter>clrma</Filter>
+    </ClInclude>
+    <ClInclude Include="clrma\exception.h">
+      <Filter>clrma</Filter>
+    </ClInclude>
+    <ClInclude Include="clrma\thread.h">
+      <Filter>clrma</Filter>
+    </ClInclude>
+    <ClInclude Include="sosextensions.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Native.rc" />
@@ -88,6 +110,9 @@
     </Filter>
     <Filter Include="platform">
       <UniqueIdentifier>{8340fe5a-df30-45ca-8a4e-7811ac6ebbd2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="clrma">
+      <UniqueIdentifier>{e8809ec7-01fb-4c2b-b1fe-6be4f9c1a91a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

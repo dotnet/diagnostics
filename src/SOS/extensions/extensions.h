@@ -85,6 +85,11 @@ public:
     ISymbolService* GetSymbolService();
 
     /// <summary>
+    /// Check if a target flush is needed
+    /// </summary>
+    void FlushCheck();
+
+    /// <summary>
     /// Create a new target with the extension services for  
     /// </summary>
     /// <returns>error result</returns>

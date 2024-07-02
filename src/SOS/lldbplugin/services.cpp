@@ -2532,6 +2532,42 @@ LLDBServices::OutputDmlString(
     OutputString(mask, str);
 }
 
+void
+LLDBServices::FlushCheck()
+{
+    // The infrastructure expects a target to only be created if there is a valid process.
+    lldb::SBProcess process = GetCurrentProcess();
+    if (process.IsValid())
+    {
+        InitializeThreadInfo(process);
+
+        // Has the process changed since the last commmand?
+        Extensions::GetInstance()->UpdateTarget(GetProcessId(process));
+
+        // Has the target "moved" (been continued) since the last command? Flush the target.
+        uint32_t stopId = process.GetStopID();
+        if (stopId != m_currentStopId)
+        {
+            m_currentStopId = stopId;
+            Extensions::GetInstance()->FlushTarget();
+        }
+    }
+    else 
+    {
+        Extensions::GetInstance()->DestroyTarget();
+        m_threadInfoInitialized = false;
+        m_processId = 0;
+    }
+}
+
+HRESULT
+LLDBServices::ExecuteHostCommand(
+    PCSTR commandLine,
+    PEXECUTE_COMMAND_OUTPUT_CALLBACK callback)
+{
+    return Execute(DEBUG_OUTCTL_THIS_CLIENT, commandLine, DEBUG_EXECUTE_NO_REPEAT);
+}
+
 //----------------------------------------------------------------------------
 // Helper functions
 //----------------------------------------------------------------------------
@@ -2908,34 +2944,6 @@ LLDBServices::ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, 
     }
 
     return true;
-}
-
-void
-LLDBServices::FlushCheck()
-{
-    // The infrastructure expects a target to only be created if there is a valid process.
-    lldb::SBProcess process = GetCurrentProcess();
-    if (process.IsValid())
-    {
-        InitializeThreadInfo(process);
-
-        // Has the process changed since the last commmand?
-        Extensions::GetInstance()->UpdateTarget(GetProcessId(process));
-
-        // Has the target "moved" (been continued) since the last command? Flush the target.
-        uint32_t stopId = process.GetStopID();
-        if (stopId != m_currentStopId)
-        {
-            m_currentStopId = stopId;
-            Extensions::GetInstance()->FlushTarget();
-        }
-    }
-    else 
-    {
-        Extensions::GetInstance()->DestroyTarget();
-        m_threadInfoInitialized = false;
-        m_processId = 0;
-    }
 }
 
 lldb::SBCommand

@@ -12,6 +12,7 @@ EXPORTS
     ClrStack
     clrstack=ClrStack
     CLRStack=ClrStack
+    clrmaconfig
     crashinfo
     DumpALC
     dumpalc=DumpALC

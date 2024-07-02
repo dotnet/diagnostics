@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
@@ -15,6 +16,8 @@ namespace Microsoft.Diagnostics.TestHelpers
     {
         private readonly ServiceManager _serviceManager;
         private readonly ServiceContainer _serviceContainer;
+        private readonly ContextService _contextService;
+        private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private DataTarget _dataTarget;
         private int _targetIdFactory;
@@ -34,10 +37,13 @@ namespace Microsoft.Diagnostics.TestHelpers
             _serviceContainer.AddService<IServiceManager>(_serviceManager);
             _serviceContainer.AddService<IHost>(this);
 
-            ContextService contextService = new(this);
-            _serviceContainer.AddService<IContextService>(contextService);
+            _contextService = new(this);
+            _serviceContainer.AddService<IContextService>(_contextService);
 
-            _symbolService = new SymbolService(this);
+            _commandService = new();
+            _serviceContainer.AddService<ICommandService>(_commandService);
+
+            _symbolService = new(this);
             _serviceContainer.AddService<ISymbolService>(_symbolService);
 
             // Automatically enable symbol server support
@@ -55,6 +61,10 @@ namespace Microsoft.Diagnostics.TestHelpers
         public ServiceManager ServiceManager => _serviceManager;
 
         public ServiceContainer ServiceContainer => _serviceContainer;
+
+        public CommandService CommandService => _commandService;
+
+        public override IReadOnlyList<string> ExecuteHostCommand(string commandLine) => _commandService.ExecuteAndCapture(commandLine, _contextService.Services);
 
         protected override ITarget GetTarget()
         {
