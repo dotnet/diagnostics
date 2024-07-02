@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Threading;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -17,7 +16,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public void Clear() => _builder.Clear();
 
-        public ImmutableArray<string> OutputLines => _builder.ToImmutableArray();
+        public IReadOnlyList<string> OutputLines => _builder;
 
         public override string ToString() => string.Concat(_builder);
 

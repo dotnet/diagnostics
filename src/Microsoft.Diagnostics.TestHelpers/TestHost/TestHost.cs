@@ -44,7 +44,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        public abstract ImmutableArray<string> ExecuteHostCommand(string commandLine);
+        public abstract IReadOnlyList<string> ExecuteHostCommand(string commandLine);
 
         protected abstract ITarget GetTarget();
 

@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <exception cref="CommandNotFoundException">command not found</exception>
         /// <exception cref="CommandParsingException ">parsing error</exception>
         /// <exception cref="DiagnosticsException">other errors</exception>
-        public ImmutableArray<string> ExecuteAndCapture(string commandLine, IServiceProvider services)
+        public IReadOnlyList<string> ExecuteAndCapture(string commandLine, IServiceProvider services)
         {
             CaptureConsoleService consoleService = new();
             ServiceContainer serviceContainer = new(services);

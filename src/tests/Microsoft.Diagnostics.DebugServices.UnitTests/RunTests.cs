@@ -148,7 +148,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             _commandService = services.GetService<CommandService>();
         }
 
-        public override ImmutableArray<string> ExecuteHostCommand(string commandLine)
+        public override IReadOnlyList<string> ExecuteHostCommand(string commandLine)
         {
             if (HostServices.Instance != null)
             {

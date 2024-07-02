@@ -485,7 +485,7 @@ namespace SOS.Extensions
             VTable.FlushCheck(Self);
         }
 
-        public ImmutableArray<string> ExecuteHostCommand(string commandLine, DEBUG_OUTPUT interestMask = DEBUG_OUTPUT.NORMAL)
+        public IReadOnlyList<string> ExecuteHostCommand(string commandLine, DEBUG_OUTPUT interestMask = DEBUG_OUTPUT.NORMAL)
         {
             CaptureConsoleService console = new();
             ExecuteHostCommand(commandLine, (DEBUG_OUTPUT mask, string text) =>

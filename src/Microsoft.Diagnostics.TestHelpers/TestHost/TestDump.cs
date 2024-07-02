@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public CommandService CommandService => _commandService;
 
-        public override ImmutableArray<string> ExecuteHostCommand(string commandLine) => _commandService.ExecuteAndCapture(commandLine, _contextService.Services);
+        public override IReadOnlyList<string> ExecuteHostCommand(string commandLine) => _commandService.ExecuteAndCapture(commandLine, _contextService.Services);
 
         protected override ITarget GetTarget()
         {

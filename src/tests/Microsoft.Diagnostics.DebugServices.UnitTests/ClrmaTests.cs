@@ -4,11 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
@@ -207,9 +204,9 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
         }
 
-        private static IEnumerable<string> Filter(ImmutableArray<string> lines, (string, int)[] filterList)
+        private static IEnumerable<string> Filter(IReadOnlyList<string> lines, (string, int)[] filterList)
         {
-            for (int i = 0; i < lines.Length;)
+            for (int i = 0; i < lines.Count;)
             {
                 string line = lines[i];
                 if (!string.IsNullOrWhiteSpace(line))

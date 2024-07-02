@@ -147,9 +147,9 @@ namespace SOS.Extensions
             _hostWrapper.ReleaseWithCheck();
         }
 
-        public ImmutableArray<string> ExecuteCommand(string commandLine) => _commandService.ExecuteAndCapture(commandLine, _contextService.Services);
+        public IReadOnlyList<string> ExecuteCommand(string commandLine) => _commandService.ExecuteAndCapture(commandLine, _contextService.Services);
 
-        public ImmutableArray<string> ExecuteHostCommand(string commandLine) => DebuggerServices.ExecuteHostCommand(commandLine, DEBUG_OUTPUT.NORMAL | DEBUG_OUTPUT.ERROR);
+        public IReadOnlyList<string> ExecuteHostCommand(string commandLine) => DebuggerServices.ExecuteHostCommand(commandLine, DEBUG_OUTPUT.NORMAL | DEBUG_OUTPUT.ERROR);
 
         #region IHost
 

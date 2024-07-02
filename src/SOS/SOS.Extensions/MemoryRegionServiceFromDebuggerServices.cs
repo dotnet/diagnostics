@@ -26,7 +26,7 @@ namespace SOS.Extensions
             bool foundHeader = false;
             bool skipped = false;
 
-            ImmutableArray<string> lines = _debuggerServices.ExecuteHostCommand(AddressCommand);
+            IReadOnlyList<string> lines = _debuggerServices.ExecuteHostCommand(AddressCommand);
             foreach (string line in lines)
             {
                 if (line.Length == 0)
