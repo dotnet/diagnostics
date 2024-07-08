@@ -5,13 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Etlx;
-using Microsoft.Diagnostics.Tracing.Session;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -117,7 +115,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 streamTask.Wait(10000);
                 runner.WriteLine("Done waiting for stream Task");
 
-                Assert.True(evntCnt > 0);
+                Assert.True(Volatile.Read(ref evntCnt) > 0);
             }
         }
 
