@@ -173,7 +173,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             runner.Stop();
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4717"), MemberData(nameof(Configurations))]
         public async Task StartEventPipeSessionWithoutStackwalkTestAsync(TestConfiguration testConfig)
         {
             if (testConfig.RuntimeFrameworkVersionMajor < 9)

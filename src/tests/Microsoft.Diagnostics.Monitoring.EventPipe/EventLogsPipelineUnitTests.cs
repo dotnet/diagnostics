@@ -169,7 +169,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Test that log events are collected for the categories and levels specified by the application
         /// and for the categories and levels specified in the filter specs.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4718"), MemberData(nameof(Configurations))]
         public async Task TestLogsUseAppFiltersAndFilterSpecs(TestConfiguration config)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
