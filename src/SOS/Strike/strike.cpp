@@ -2774,7 +2774,15 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
                 MOVE (stackTraceSize, dataPtr);
 
                 DWORD cbStackSize = static_cast<DWORD>(stackTraceSize * sizeof(StackTraceElement));
-                dataPtr += sizeof(size_t) + sizeof(size_t); // skip the array header, then goes the data
+
+                if (IsRuntimeVersionAtLeast(9))
+                {
+                    dataPtr += sizeof(uint32_t) + sizeof(uint32_t) + sizeof(DWORD_PTR); // skip the 9.0 array header
+                }
+                else
+                {
+                    dataPtr += sizeof(size_t) + sizeof(DWORD_PTR);                      // skip the array header, then goes the data
+                }
 
                 if (stackTraceSize == 0)
                 {
