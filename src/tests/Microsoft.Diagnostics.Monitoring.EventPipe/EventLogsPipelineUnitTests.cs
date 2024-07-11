@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events at or above the default level are collected.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4718"), MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevel(TestConfiguration config)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
