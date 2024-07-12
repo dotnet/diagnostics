@@ -226,12 +226,12 @@ struct REGDISPLAY : public REGDISPLAY_BASE {
 
 inline TADDR GetRegdisplayFP(REGDISPLAY *display) {
     LIMITED_METHOD_CONTRACT;
-    return NULL;
+    return (TADDR)NULL;
 }
 
 inline TADDR GetRegdisplayFPAddress(REGDISPLAY *display) {
     LIMITED_METHOD_CONTRACT;
-    return NULL;
+    return (TADDR)NULL;
 }
 
 // This function tells us if the given stack pointer is in one of the frames of the functions called by the given frame
@@ -255,7 +255,7 @@ inline TADDR GetRegdisplayStackMark(REGDISPLAY *display)
 
 #else  // TARGET_AMD64
     PORTABILITY_ASSERT("GetRegdisplayStackMark NYI for this platform (Regdisp.h)");
-    return NULL;
+    return (TADDR)NULL;
 #endif // TARGET_AMD64
 }
 
