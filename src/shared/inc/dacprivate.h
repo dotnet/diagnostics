@@ -467,7 +467,7 @@ struct MSLAYOUT DacpAssemblyData
 
     HRESULT Request(ISOSDacInterface *sos, CLRDATA_ADDRESS addr)
     {
-        return Request(sos, addr, (TADDR)0);
+        return Request(sos, addr, 0);
     }
 };
 
@@ -577,7 +577,7 @@ struct MSLAYOUT DacpMethodDescData
     {
         return sos->GetMethodDescData(
             addr,
-            (TADDR)0,   // IP address
+            0,      // IP address
             this,
             0,      // cRejitData
             NULL,   // rejitData[]

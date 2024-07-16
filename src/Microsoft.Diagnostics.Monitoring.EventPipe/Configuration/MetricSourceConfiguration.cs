@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 throw new ArgumentNullException(nameof(providers));
             }
 
-            RequestRundown = false;
+            RundownKeyword = 0;
 
             _eventPipeProviders = providers.Where(provider => provider.Type.HasFlag(MetricType.EventCounter))
                 .Select((MetricEventPipeProvider provider) => new EventPipeProvider(provider.Provider,

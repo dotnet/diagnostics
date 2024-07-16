@@ -8,6 +8,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
+using System.Threading.Tasks;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
@@ -32,7 +33,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
         }
 
         [Fact]
-        public async void AssemblyLoad_ProducesEvents()
+        public async Task AssemblyLoad_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {
                 Dictionary<string, ExpectedEventCount> _expectedEventCounts = new()

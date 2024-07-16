@@ -224,12 +224,28 @@ extends:
       - template: /eng/pipelines/build.yml
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
+          name: Ubuntu_22_04
+          osGroup: Linux
+          container: test_ubuntu_22_04
+          dependsOn: Linux
+          testOnly: true
+          buildConfigs:
+          - configuration: Release
+            architecture: x64
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: x64
+
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
           name: Alpine3_19
           osGroup: Linux
           osSuffix: -musl
           container: test_linux_musl_x64
           dependsOn: Linux_musl
           testOnly: true
+          disableComponentGovernance: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -287,10 +303,12 @@ extends:
                 displayName: 'Publish Bundled Tools'
                 condition: succeeded()
               - output: pipelineArtifact
-                artifact: Logs_Packaging_Signing
+                artifact: Logs_Packaging_Signing_Attempt$(System.JobAttempt)
                 path: '$(Build.SourcesDirectory)/artifacts/log'
                 displayName: 'Publish Signing and Packaging Logs'
                 condition: always()
+                continueOnError: true
+                sbomEnabled: false # we don't need SBOM for logs
             steps:
             - task: DownloadPipelineArtifact@2
               displayName: 'Download release builds'

@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.TestHelpers
@@ -28,7 +30,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             get
             {
-                _testData ??= new TestDataReader(TestDataFile);
+                _testData ??= TestDataFile != null ? new TestDataReader(TestDataFile) : null;
                 return _testData;
             }
         }
@@ -42,19 +44,19 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        public bool IsTestDbgEng => Config.AllSettings.TryGetValue("TestDbgEng", out string value) && value == "true";
+        public abstract IReadOnlyList<string> ExecuteHostCommand(string commandLine);
 
         protected abstract ITarget GetTarget();
 
         public string DumpFile => TestConfiguration.MakeCanonicalPath(Config.AllSettings["DumpFile"]);
 
-        public string TestDataFile => TestConfiguration.MakeCanonicalPath(Config.AllSettings["TestDataFile"]);
+        public string TestDataFile => TestConfiguration.MakeCanonicalPath(Config.AllSettings.GetValueOrDefault("TestDataFile"));
 
         public override string ToString() => DumpFile;
     }
 
     public static class TestHostExtensions
     {
-        public static bool IsTestDbgEng(this TestConfiguration config) => config.AllSettings.TryGetValue("TestDbgEng", out string value) && value == "true";
+        public static bool IsTestDbgEng(this TestConfiguration config) => config.AllSettings.GetValueOrDefault("TestDbgEng", string.Empty) == "true";
     }
 }

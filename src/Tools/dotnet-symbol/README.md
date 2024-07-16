@@ -9,7 +9,6 @@ This tool can download all the files needed for debugging (symbols, modules, SOS
 
     Options:
       --microsoft-symbol-server                         Add 'https://msdl.microsoft.com/download/symbols' symbol server path (default).
-      --internal-server                                 Add 'https://symweb' internal symbol server path.
       --server-path <symbol server path>                Add a http server path.
       --authenticated-server-path <pat> <server path>   Add a http PAT authenticated server path.
       --cache-directory <file cache directory>          Add a cache directory.
@@ -45,7 +44,7 @@ This downloads just the host program needed to load a core dump on Linux or macO
 
 To download the symbol files for a specific assembly:
 
-    dotnet-symbol --symbols --cache-directory c:\temp\symcache --server-path https://symweb --output c:\temp\symout System.Threading.dll
+    dotnet-symbol --symbols --cache-directory c:\temp\symcache --server-path https://msdl.microsoft.com/download/symbols --output c:\temp\symout System.Threading.dll
 
 Downloads all the symbol files for the shared runtime:
 

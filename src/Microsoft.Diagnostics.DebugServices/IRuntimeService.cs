@@ -13,6 +13,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Returns the list of runtimes in the target
         /// </summary>
-        IEnumerable<IRuntime> EnumerateRuntimes();
+        /// <param name="flags">Enumeration control flags</param>
+        IEnumerable<IRuntime> EnumerateRuntimes(RuntimeEnumerationFlags flags = RuntimeEnumerationFlags.Default);
     }
 }

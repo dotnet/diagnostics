@@ -78,6 +78,10 @@ parameters:
   type: boolean
   default: false
 
+- name: disableComponentGovernance
+  type: boolean
+  default: false
+
 jobs:
 - ${{ each config in parameters.buildConfigs }}:
   - template: ${{ parameters.jobTemplate }}
@@ -86,6 +90,7 @@ jobs:
       timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
       enableMicrobuild: true
       runAsPublic: ${{ parameters.isCodeQLRun }}
+      disableComponentGovernance: ${{ parameters.disableComponentGovernance }}
       templateContext: ${{ parameters.templateContext }}
 
       pool:
@@ -260,6 +265,7 @@ jobs:
           inputs:
             targetPath: $(Build.ArtifactStagingDirectory)/artifacts_on_failure
             artifactName: Artifacts_On_Failure_$(_PhaseName)_$(System.JobAttempt)
+            sbomEnabled: false # we don't need SBOM for non-shipping diagnostics assets
           continueOnError: true
           condition: failed()
 
@@ -278,6 +284,7 @@ jobs:
           inputs:
             targetPath: '$(Build.StagingDirectory)/BuildLogs'
             artifactName: Logs_$(_PhaseName)_$(System.JobAttempt)
+            sbomEnabled: false # we don't need SBOM for logs
           continueOnError: true
           condition: always()
 

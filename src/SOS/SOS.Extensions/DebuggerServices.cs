@@ -3,12 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting;
@@ -478,6 +480,40 @@ namespace SOS.Extensions
             return hr;
         }
 
+        public void FlushCheck()
+        {
+            VTable.FlushCheck(Self);
+        }
+
+        public IReadOnlyList<string> ExecuteHostCommand(string commandLine, DEBUG_OUTPUT interestMask = DEBUG_OUTPUT.NORMAL)
+        {
+            CaptureConsoleService console = new();
+            ExecuteHostCommand(commandLine, (DEBUG_OUTPUT mask, string text) =>
+            {
+                if ((mask & interestMask) != 0)
+                {
+                    console.Write(text);
+                }
+            });
+            return console.OutputLines;
+        }
+
+        public delegate void ExecuteHostCommandCallback(DEBUG_OUTPUT mask, string text);
+
+        public void ExecuteHostCommand(string commandLine, ExecuteHostCommandCallback outputCallback)
+        {
+            IntPtr callbackPtr = Marshal.GetFunctionPointerForDelegate(outputCallback);
+            byte[] commandLineBytes = Encoding.ASCII.GetBytes(commandLine + "\0");
+            fixed (byte* ptr = commandLineBytes)
+            {
+                HResult hr = VTable.ExecuteHostCommand(Self, ptr, callbackPtr);
+                if (!hr.IsOK)
+                {
+                    throw new DiagnosticsException($"{commandLine} FAILED {hr}");
+                }
+            }
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct IDebuggerServicesVTable
         {
@@ -489,9 +525,11 @@ namespace SOS.Extensions
             public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, int> ReadVirtual;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, int> WriteVirtual;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, out uint, int> GetNumberModules;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, int> GetModuleByIndex;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, uint, out uint, byte*, uint, uint*, byte*, uint, uint*, int> GetModuleNames;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, out ulong, out ulong, out uint, out uint, int> GetModuleInfo;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, ulong, byte*, byte*, uint, uint*, int> GetModuleVersionInformation;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, uint, out uint, out ulong, int> GetModuleByModuleName;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, int> GetNumberThreads;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint*, uint*, int> GetThreadIdsByIndex;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, uint, uint, byte*, int> GetThreadContextBySystemId;
@@ -510,6 +548,8 @@ namespace SOS.Extensions
             public readonly delegate* unmanaged[Stdcall]<IntPtr, DEBUG_OUTPUT, byte*, void> OutputDmlString;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, IntPtr, byte*, int> AddModuleSymbol;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, out uint, out int, void*, int, uint*, byte*, int, uint*, int> GetLastEventInformation;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, void> FlushCheck;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, IntPtr, int> ExecuteHostCommand;
         }
     }
 }

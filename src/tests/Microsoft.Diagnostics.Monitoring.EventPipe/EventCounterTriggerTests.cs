@@ -321,7 +321,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Tests that the trigger condition can be detected on a live application
         /// using the EventPipeTriggerPipeline.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4782"), MemberData(nameof(Configurations))]
         public async Task EventCounterTriggerWithEventPipePipelineTest(TestConfiguration config)
         {
             if (config.RuntimeFrameworkVersionMajor < 6)

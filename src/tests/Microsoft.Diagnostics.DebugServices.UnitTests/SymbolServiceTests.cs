@@ -55,8 +55,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Equal(defaultPath, symbolService.FormatSymbolStores());
             symbolService.DisableSymbolStore();
 
-            Assert.True(symbolService.ParseSymbolPath($"srv*{localSymbolCache}*{SymbolService.SymwebSymbolServer}"));
-            string testpath1 = $"Cache: {localSymbolCache} Server: {SymbolService.SymwebSymbolServer}";
+            Assert.True(symbolService.ParseSymbolPath($"srv*{localSymbolCache}*https://symweb/"));
+            string testpath1 = $"Cache: {localSymbolCache} Server: https://symweb/";
             Assert.Equal(testpath1, symbolService.FormatSymbolStores());
             symbolService.DisableSymbolStore();
 

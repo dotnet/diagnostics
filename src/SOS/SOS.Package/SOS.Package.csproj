@@ -54,6 +54,13 @@
                 <TriggerSet>
                     <ModuleTrigger Name="libcoreclr.so" />
                 </TriggerSet>
+                <TriggerSet>
+                  <ExceptionTrigger ExceptionCode="0xC0000409" >
+                    <Parameters>
+                      <Parameter Index="0" Value="0x48"/>
+                    </Parameters>
+                  </ExceptionTrigger>
+                </TriggerSet>
             </LoadTriggers>
             <EngineCommands>
                 <EngineCommand Name="soshelp">

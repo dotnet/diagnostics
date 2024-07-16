@@ -32,8 +32,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public abstract IList<EventPipeProvider> GetProviders();
 
-        public virtual bool RequestRundown { get; set; } = true;
+        public virtual long RundownKeyword { get; set; } = EventPipeSession.DefaultRundownKeyword;
 
         public virtual int BufferSizeInMB => 256;
+
+        public virtual RetryStrategy RetryStrategy { get; set; } = RetryStrategy.NothingToRetry;
     }
 }
