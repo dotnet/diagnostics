@@ -1256,7 +1256,7 @@ DECLARE_API(DumpMT)
             while (SUCCEEDED(pMethodEnumerator->Next(1, &entry, &fetched)) && fetched != 0)
             {
                 JITTypes jitType = TYPE_UNKNOWN;
-                DWORD_PTR methodDesc = entry.MethodDesc;
+                DWORD_PTR methodDesc = (DWORD_PTR)entry.MethodDesc;
                 DWORD_PTR methodDescFromIP2MD = 0;
                 DWORD_PTR gcinfoAddr = 0;
 

@@ -3944,6 +3944,8 @@ class SOSDacInterface15Simulator : public ISOSDacInterface15
         {
         }
 
+        virtual ~SOSMethodEnum() {}
+
         virtual HRESULT STDMETHODCALLTYPE Reset()
         {
             index = 0;
