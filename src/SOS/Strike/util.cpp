@@ -3948,7 +3948,9 @@ class SOSDacInterface15Simulator : public ISOSDacInterface15
         {
             index = 0;
             DacpMethodTableData vMethTable;
-            vMethTable.Request(g_sos, pMT);
+            HRESULT hr = vMethTable.Request(g_sos, pMT);
+            if (FAILED(hr))
+                return hr;
 
             slotCount = vMethTable.wNumMethods;
             return S_OK;
