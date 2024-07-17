@@ -59,6 +59,7 @@ const char * const CorElementTypeNamespace[ELEMENT_TYPE_MAX]=
 
 IXCLRDataProcess *g_clrData = NULL;
 ISOSDacInterface *g_sos = NULL;
+ISOSDacInterface15 *g_sos15 = NULL;
 
 #ifndef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
@@ -3930,6 +3931,154 @@ void ResetGlobals(void)
     Output::ResetIndent();
 }
 
+class SOSDacInterface15Simulator : public ISOSDacInterface15
+{
+    class SOSMethodEnum : public ISOSMethodEnum
+    {
+        CLRDATA_ADDRESS pMT;
+        unsigned int index;
+        unsigned int slotCount;
+        ULONG refCount;
+    public:
+        SOSMethodEnum(CLRDATA_ADDRESS mt) : pMT(mt), refCount(1)
+        {
+        }
+
+        virtual ~SOSMethodEnum() {}
+
+        virtual HRESULT STDMETHODCALLTYPE Reset()
+        {
+            index = 0;
+            DacpMethodTableData vMethTable;
+            HRESULT hr = vMethTable.Request(g_sos, pMT);
+            if (FAILED(hr))
+                return hr;
+
+            slotCount = vMethTable.wNumMethods;
+            return S_OK;
+        }
+
+        virtual HRESULT STDMETHODCALLTYPE GetCount(unsigned int *pc)
+        {
+            *pc = slotCount;
+            return S_OK;
+        }
+
+        virtual HRESULT STDMETHODCALLTYPE Skip(unsigned int skipCount)
+        {
+            index += skipCount;
+            return S_OK;
+        }
+
+        virtual HRESULT STDMETHODCALLTYPE Next( 
+            /* [in] */ unsigned int count,
+            /* [length_is][size_is][out] */ SOSMethodData methods[  ],
+            /* [out] */ unsigned int *pFetched)
+        {
+            if (!pFetched)
+                return E_POINTER;
+
+            if (!methods)
+                return E_POINTER;
+
+            unsigned int i = 0;
+            while (i < count && index < slotCount)
+            {
+                SOSMethodData methodData = { 0 };
+
+                JITTypes jitType;
+                DWORD_PTR methodDesc=0;
+                DWORD_PTR gcinfoAddr;
+
+                CLRDATA_ADDRESS entry;
+                methodData.Slot = index;
+                HRESULT hr = g_sos->GetMethodTableSlot(pMT, index++, &entry);
+                if (hr != S_OK)
+                {
+                    PrintLn("<error getting slot ", Decimal(index - 1), ">");
+                    continue;
+                }
+
+                IP2MethodDesc((DWORD_PTR)entry, methodDesc, jitType, gcinfoAddr);
+
+                methodData.MethodDesc = methodDesc;
+                methodData.Entrypoint = entry;
+
+                methods[i++] = methodData;
+            }
+
+            *pFetched = i;
+            return i < count ? S_FALSE : S_OK;
+        }
+
+        STDMETHOD_(ULONG, AddRef)() { return ++refCount; }
+        STDMETHOD_(ULONG, Release)()
+        {
+            --refCount;
+            if (refCount == 0)
+            {
+                delete this;
+                return 0;
+            }
+            return refCount;
+        }
+
+        STDMETHOD(QueryInterface)(
+            THIS_
+            ___in REFIID InterfaceId,
+            ___out PVOID* Interface
+            )
+        {
+            if (InterfaceId == IID_IUnknown ||
+                InterfaceId == IID_ISOSMethodEnum)
+            {
+                *Interface = (ISOSMethodEnum*)this;
+                AddRef();
+                return S_OK;
+            }
+            *Interface = NULL;
+            return E_NOINTERFACE;
+        }
+    };
+
+public:
+    STDMETHOD_(ULONG, AddRef)() { return 1; };
+    STDMETHOD_(ULONG, Release)() { return 1; };
+    STDMETHOD(QueryInterface)(
+        THIS_
+        ___in REFIID InterfaceId,
+        ___out PVOID* Interface
+        )
+    {
+        if (InterfaceId == IID_IUnknown ||
+            InterfaceId == IID_ISOSDacInterface15)
+        {
+            *Interface = (ISOSDacInterface15*)this;
+            return S_OK;
+        }
+        *Interface = NULL;
+        return E_NOINTERFACE;
+    }
+
+    virtual HRESULT STDMETHODCALLTYPE GetMethodTableSlotEnumerator( 
+            CLRDATA_ADDRESS mt,
+            ISOSMethodEnum **enumerator)
+    {
+        SOSMethodEnum *simulator = new(std::nothrow) SOSMethodEnum(mt);
+        *enumerator = simulator;
+        if (simulator == NULL)
+        {
+            return E_OUTOFMEMORY;
+        }
+        HRESULT hr = simulator->Reset();
+        if (FAILED(hr))
+        {
+            simulator->Release();
+        }
+        return hr;
+    }
+} SOSDacInterface15Simulator_Instance;
+
 //---------------------------------------------------------------------------------------
 //
 // Loads private DAC interface, and points g_clrData to it.
@@ -3959,6 +4108,13 @@ HRESULT LoadClrDebugDll(void)
     {
         g_sos = NULL;
         return hr;
+    }
+
+    // Always have an instance of the MethodTable enumerator
+    hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface15), (void**)&g_sos15);
+    if (FAILED(hr))
+    {
+        g_sos15 = &SOSDacInterface15Simulator_Instance;
     }
     return S_OK;
 }
