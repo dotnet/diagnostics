@@ -21,7 +21,7 @@ public static class SOSTestHelpers
 {
     public static IEnumerable<object[]> GetConfigurations(string key, string value)
     {
-        return TestRunConfiguration.Instance.Configurations.Where((c) => key == null || c.AllSettings.GetValueOrDefault(key) == value).Select(c => new[] { c });
+        return TestRunConfiguration.Instance.Configurations.Where((c) => key == null || c.AllSettings.GetValueOrDefault(key) == value).DefaultIfEmpty(TestConfiguration.Empty).Select(c => new[] { c });
     }
 
     internal static void SkipIfArm(TestConfiguration config)
@@ -397,35 +397,40 @@ public class SOS
             UsePipeSync = true,
             DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
         },
-                Output);
+        Output);
     }
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.DualRuntimes", MemberType = typeof(SOSTestHelpers))]
     public async Task DualRuntimes(TestConfiguration config)
     {
-        if (config.PublishSingleFile)
+        // This test on linux/macOS can be called with an empty config because vstest and dotnet test fail/complain about no test parameters. The
+        // linux/macOS config file doesn't contain a SOS.DualRuntimes TestName because this is Windows only.
+        if (!config.IsEmpty)
         {
-            throw new SkipTestException("Single file not supported");
-        }
-        // The assembly path, class and function name of the desktop test code to load/run
-        string desktopTestParameters = TestConfiguration.MakeCanonicalPath(config.GetValue("DesktopTestParameters"));
-        if (string.IsNullOrEmpty(desktopTestParameters))
-        {
-            throw new SkipTestException("DesktopTestParameters config value does not exists");
-        }
-        await SOSTestHelpers.RunTest(
-            scriptName: "DualRuntimes.script",
-            new SOSRunner.TestInformation
+            if (config.PublishSingleFile)
             {
-                TestConfiguration = config,
-                TestLive = false,
-                TestName = "SOS.DualRuntimes",
-                DebuggeeName = "WebApp3",
-                DebuggeeArguments = desktopTestParameters,
-                UsePipeSync = true,
-                DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
-            },
-            Output);
+                throw new SkipTestException("Single file not supported");
+            }
+            // The assembly path, class and function name of the desktop test code to load/run
+            string desktopTestParameters = TestConfiguration.MakeCanonicalPath(config.GetValue("DesktopTestParameters"));
+            if (string.IsNullOrEmpty(desktopTestParameters))
+            {
+                throw new SkipTestException("DesktopTestParameters config value does not exists");
+            }
+            await SOSTestHelpers.RunTest(
+                scriptName: "DualRuntimes.script",
+                new SOSRunner.TestInformation
+                {
+                    TestConfiguration = config,
+                    TestLive = false,
+                    TestName = "SOS.DualRuntimes",
+                    DebuggeeName = "WebApp3",
+                    DebuggeeArguments = desktopTestParameters,
+                    UsePipeSync = true,
+                    DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
+                },
+                Output);
+        }
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]

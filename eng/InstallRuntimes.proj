@@ -7,6 +7,7 @@
 
     $(MicrosoftDotnetSdkInternalVersion) - .NET SDK to use for testing
     $(InternalReleaseTesting) - if true, internal service release testing
+    $(PrivateBuildTesting) - if true, test against a locally built runtime 
     @(RuntimeTestVersions) - runtime/aspnetcore versions to install and test against
 
     From Arcade:
@@ -35,9 +36,6 @@
     <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(BuildArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
     <DotNetInstallDir>$([MSBuild]::NormalizeDirectory('$(DotNetInstallRoot)', 'shared', 'Microsoft.NETCore.App', '$(MicrosoftNETCoreAppRuntimewinx64Version)'))</DotNetInstallDir>
     <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
-    <AddRegeditFileName>$(DotNetInstallRoot)AddPrivateTesting.reg</AddRegeditFileName>
-    <RemoveRegeditFileName>$(DotNetInstallRoot)RemovePrivateTesting.reg</RemoveRegeditFileName>
-    <RegeditCommand>regedit.exe</RegeditCommand>
   </PropertyGroup>
 
   <Choose>
@@ -113,6 +111,7 @@
 <![CDATA[
 <Configuration>
   <InternalReleaseTesting>$(InternalReleaseTesting)</InternalReleaseTesting>
+  <PrivateBuildTesting>$(PrivateBuildTesting)</PrivateBuildTesting>
 ]]>
         </ConfigFileEntry>
       </TestConfigFileLines>
@@ -147,7 +146,7 @@
 -->
 
   <Target Name="CleanupVersionManifest"
-          Condition="$(InternalReleaseTesting)">
+          Condition="$(InternalReleaseTesting) or $(PrivateBuildTesting)">
 
     <!-- Make sure the config file gets regenerated in the WriteTestVersionManifest target -->
     <Delete Files="$(TestConfigFileName)" />
