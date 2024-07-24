@@ -66,7 +66,7 @@ namespace DotnetCounters.UnitTests
             ValidateCustomMetrics(metricComponents, CountersExportFormat.csv);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4806"), MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorSystemRuntimeMetricsJSON(TestConfiguration configuration)
         {
             CheckRuntimeOS();
@@ -76,7 +76,7 @@ namespace DotnetCounters.UnitTests
             ValidateSystemRuntimeMetrics(metricComponents);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4806"), MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorSystemRuntimeMetricsCSV(TestConfiguration configuration)
         {
             CheckRuntimeOS();
