@@ -1140,6 +1140,18 @@ LPCSTR RISCV64Machine::s_SPName           = "sp";
 
 #endif // SOS_TARGET_RISCV64
 
+#ifdef SOS_TARGET_LOONGARCH64
+///
+/// LOONGARCH64Machine implementation
+///
+LPCSTR LOONGARCH64Machine::s_DumpStackHeading = "ChildFP          RetAddr          Caller, Callee\n";
+LPCSTR LOONGARCH64Machine::s_GCRegs[30]       = {"r0", "ra", "tp", "a0", "a1", "a2", "a3", "a4", "a5",
+                                                 "a6", "a7", "t0", "t1", "t2", "t3", "t4", "t5", "t6",
+                                                 "t7", "t8", "x0", "s0", "s1", "s2", "s3", "s4", "s5",
+                                                 "s6", "s7", "s8"};
+LPCSTR LOONGARCH64Machine::s_SPName           = "sp";
+#endif // SOS_TARGET_LOONGARCH64
+
 //
 // GCEncodingInfo class member implementations
 //

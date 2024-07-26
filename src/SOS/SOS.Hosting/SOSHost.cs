@@ -179,6 +179,9 @@ namespace SOS.Hosting
                 case Architecture.Arm64:
                     *type = IMAGE_FILE_MACHINE.ARM64;
                     break;
+                case (Architecture)6 /* Architecture.LoongArch64 */:
+                    *type = IMAGE_FILE_MACHINE.LOONGARCH64;
+                    break;
                 case (Architecture)9 /* Architecture.RiscV64 */:
                     *type = IMAGE_FILE_MACHINE.RISCV64;
                     break;

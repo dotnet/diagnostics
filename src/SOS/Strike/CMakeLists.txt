@@ -69,6 +69,11 @@ elseif(CLR_CMAKE_HOST_ARCH_RISCV64)
   add_definitions(-D_TARGET_WIN64_=1)
   add_definitions(-DDBG_TARGET_64BIT)
   add_definitions(-DDBG_TARGET_WIN64=1)
+elseif(CLR_CMAKE_HOST_ARCH_LOONGARCH64)
+  add_definitions(-DSOS_TARGET_LOONGARCH64=1)
+  add_definitions(-D_TARGET_WIN64_=1)
+  add_definitions(-DDBG_TARGET_64BIT)
+  add_definitions(-DDBG_TARGET_WIN64=1)
 endif()
 
 add_definitions(-DSTRIKE)  
@@ -228,6 +233,10 @@ elseif(CLR_CMAKE_HOST_ARCH_ARM64)
 elseif(CLR_CMAKE_HOST_ARCH_RISCV64)
   set(SOS_SOURCES_ARCH
     disasmRISCV64.cpp
+  )
+elseif(CLR_CMAKE_HOST_ARCH_LOONGARCH64)
+  set(SOS_SOURCES_ARCH
+    disasmLOONGARCH64.cpp
   )
 endif()
 
