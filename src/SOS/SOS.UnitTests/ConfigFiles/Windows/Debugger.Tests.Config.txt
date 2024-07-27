@@ -195,16 +195,15 @@
             </Option>
           </Options>
           <Options>
-            <Option Condition="'$(TestSingleFile)' == 'true'">
-              <Options>
-                <Option Condition="'$(RuntimeLatestVersion)' != ''">
-                  <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-                  <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-                  <RuntimeFrameworkVersion>$(RuntimeLatestVersion)</RuntimeFrameworkVersion>
-                  <PublishSingleFile>true</PublishSingleFile>
-                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-                </Option> 
-              </Options>
+            <TestWebApp3_SingleFile>true</TestWebApp3_SingleFile>
+            <TestWebApp3_SingleFile Condition="'$(TestSingleFile)' == 'true'">false</TestWebApp3_SingleFile>
+            <TestWebApp3_SingleFile Condition="'$(RuntimeLatestVersion)' == ''">false</TestWebApp3_SingleFile>
+            <Option Condition="'$(TestWebApp3_SingleFile)' == 'true'">
+              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <RuntimeFrameworkVersion>$(RuntimeLatestVersion)</RuntimeFrameworkVersion>
+              <PublishSingleFile>true</PublishSingleFile>
+              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
             </Option>
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
