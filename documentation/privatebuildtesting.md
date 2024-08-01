@@ -4,7 +4,7 @@ Private runtime build testing
 Here are some instructions on how to run the diagnostics repo's tests against a locally built private .NET Core runtime based on CoreCLR. These directions will work on Windows, Linux and MacOS. The testing is currently scoped to just the runtime not the libraries and not single-file apps.
 
 1. Build the runtime repo (see [Workflow Guide](https://github.com/dotnet/runtime/blob/main/docs/workflow/README.md)) with `-configuration release -subset clr`. A release build is highly recommended.
-2. Build the diagnostics repo (see [Building the Repository](../README.md)). It should be a clean build starting with no `artifacts`, `.dotnet` or `.dotnet-test` subdirectories.
+2. Build the diagnostics repo (see [Building the Repository](../README.md)).
 3. Run the `eng\privatebuild.cmd` or `eng/privatebuild.sh` test runtime install script. This installs and sets up to run (just) the latest test runtimes (currently 9.0) into the `.dotnet-test` directory.
 4. On Windows 11 (this doesn't work on Windows 10), add the following DWORD registry key: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\MiniDumpSettings\DisableAuxProviderSignatureCheck` and set it to 1. This allows the unsigned privately built DAC to be used to generate dumps.
 5. Copy the private runtime binaries over the test SDK/runtimes installed in `.dotnet-test`. This step is hard to automate because there are usually 3 versions of the runtime installed: one as part of the .NET SDK, one as part of the AspNetCore runtime and one from latest runtime DARC update.
