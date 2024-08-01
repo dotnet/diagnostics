@@ -2614,31 +2614,33 @@ COMMAND: sethostruntime.
 -c, -netcore - switch to hosting on the .NET Core runtime
 -f, -netfx   - switch to hosting on the desktop .NET Framework runtime if loaded.
 -none        - disable hosting managed code (for testing).
+-major       - set the .NET Core's runtime version (used with the <runtime-directory> argument).
 -clear       - clear the .NET Core host runtime path.
 
-This command controls the runtime that is used to host the maanged code that
-runs as part of SOS in the debugger (cdb/windbg). The default is the desktop
-.NET Framework. The "-netcore" option allows the installed .NET Core runtime
-be used. The "-netfx" option allows switches back to the .NET Framework runtime. 
+This command controls the runtime that is used to host the manged code that
+runs as part of SOS in the debugger (cdb/windbg). The default is the .NET Core
+runtime. The "-netfx" option allows the .NET Framework runtime to be used to
+host the managed SOS code.  The "-netcore" option switches the installed .NET 
+Core runtime.
 
 If a <runtime-directory> is given, the command assumes it is a path to a .NET 
-Core runtime which needs to be at least version 2.1.0 or greater. If there are 
+Core runtime which needs to be at least version 6.0 or greater. If there are 
 spaces in directory, it needs to be single-quoted (').
 
 Normally, SOS attempts to find an installed .NET Core runtime to run its
 managed code automatically but this command is available if it fails. The
 default is to use the same runtime (coreclr.dll) being debugged. Use this
 command if the default runtime being debugged isn't working enough to run
-the SOS code or if the version is less than 2.1.0.
+the SOS code or if the version is less than 6.0.
 
 If you received the following error message when running a SOS command, use
-this command to set the path to 2.0.0 or greater .NET Core runtime.
+this command to set the path to 6.0 or greater .NET Core runtime.
 
     0:000> !clrstack
     Error: Fail to initialize CoreCLR 80004005
     ClrStack  failed
 
-    0:000> sethostruntime "C:\Program Files\dotnet\shared\Microsoft.NETCore.App\2.1.6"
+    0:000> sethostruntime -major 6 "C:\Program Files\dotnet\shared\Microsoft.NETCore.App\6.0.30"
 
 You can use the "dotnet --info" in a command shell to find the path of an installed
 .NET Core runtime.

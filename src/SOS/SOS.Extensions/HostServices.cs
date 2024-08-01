@@ -3,10 +3,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.ExtensionCommands;
@@ -144,6 +146,10 @@ namespace SOS.Extensions
             _hostWrapper.ServiceWrapper.RemoveServiceWrapper(IID_IHostServices);
             _hostWrapper.ReleaseWithCheck();
         }
+
+        public IReadOnlyList<string> ExecuteCommand(string commandLine) => _commandService.ExecuteAndCapture(commandLine, _contextService.Services);
+
+        public IReadOnlyList<string> ExecuteHostCommand(string commandLine) => DebuggerServices.ExecuteHostCommand(commandLine, DEBUG_OUTPUT.NORMAL | DEBUG_OUTPUT.ERROR);
 
         #region IHost
 

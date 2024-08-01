@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.DebugServices
@@ -14,6 +15,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// Returns the list of runtimes in the target
         /// </summary>
         /// <param name="startingRuntimeId">The starting runtime id for this provider</param>
-        IEnumerable<IRuntime> EnumerateRuntimes(int startingRuntimeId);
+        /// <param name="flags">Enumeration control flags</param>
+        IEnumerable<IRuntime> EnumerateRuntimes(int startingRuntimeId, RuntimeEnumerationFlags flags);
     }
 }

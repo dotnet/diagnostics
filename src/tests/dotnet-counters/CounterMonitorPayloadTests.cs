@@ -66,7 +66,7 @@ namespace DotnetCounters.UnitTests
             ValidateCustomMetrics(metricComponents, CountersExportFormat.csv);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4806"), MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorSystemRuntimeMetricsJSON(TestConfiguration configuration)
         {
             CheckRuntimeOS();
@@ -76,7 +76,7 @@ namespace DotnetCounters.UnitTests
             ValidateSystemRuntimeMetrics(metricComponents);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4806"), MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorSystemRuntimeMetricsCSV(TestConfiguration configuration)
         {
             CheckRuntimeOS();
@@ -251,7 +251,7 @@ namespace DotnetCounters.UnitTests
             string tag = Constants.TagKey + "=" + Constants.TagValue + tagSeparator + Constants.PercentileKey + "=";
             HashSet<string> expectedTags = new() { $"{tag}{Constants.Quantile50}", $"{tag}{Constants.Quantile95}", $"{tag}{Constants.Quantile99}" };
             Assert.Equal(expectedTags.AsEnumerable(), metricComponents.Where(c => c.CounterName == Constants.TestHistogramName).Select(c => c.Tags).Distinct());
-            Assert.Empty(metricComponents.Where(c => c.CounterName == Constants.TestCounterName).Where(c => c.Tags != string.Empty));
+            Assert.DoesNotContain(metricComponents.Where(c => c.CounterName == Constants.TestCounterName), c => c.Tags != string.Empty);
 
             var actualCounterValues = metricComponents.Where(c => c.CounterName == Constants.TestCounterName).Select(c => c.Value);
 

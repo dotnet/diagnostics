@@ -44,6 +44,12 @@
 #define DT_LNK 10
 #endif
 
+struct RuntimeVersion
+{
+    uint32_t Major;
+    uint32_t Minor;
+};
+
 #if !defined(FEATURE_PAL) && !defined(HOST_ARM64) && !defined(HOST_ARM)
 extern HRESULT InitializeDesktopClrHost();
 #endif
@@ -52,26 +58,21 @@ extern HRESULT InitializeDesktopClrHost();
 extern HMODULE g_hInstance;
 #endif
 
-extern void TraceError(PCSTR format, ...);
+extern void TraceHostingError(PCSTR format, ...);
 
-static HostRuntimeFlavor g_hostRuntimeFlavor = HostRuntimeFlavor::NetCore;
 bool g_hostingInitialized = false;
+static HostRuntimeFlavor g_hostRuntimeFlavor = HostRuntimeFlavor::NetCore;
+static RuntimeVersion g_hostRuntimeVersion = { };
 static LPCSTR g_hostRuntimeDirectory = nullptr;
 static ExtensionsInitializeDelegate g_extensionsInitializeFunc = nullptr;
-
-struct RuntimeVersion
-{
-    uint32_t Major;
-    uint32_t Minor;
-};
 
 namespace RuntimeHostingConstants
 {
     // This list is in probing order.
     constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
+        {8, 0},
         {7, 0},
         {6, 0},
-        {8, 0},
         {9, 0},
     };
 
@@ -333,6 +334,12 @@ static std::string GetTpaListForRuntimeVersion(
     //               ...
     //           }
 
+    if (hostRuntimeVersion.Major > 0 && hostRuntimeVersion.Major < 8)
+    {
+        AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
+        AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
+    }
+
     // Trust the runtime assemblies that are newer than the ones needed and provided by SOS's managed
     // components.
     AddFilesFromDirectoryToTpaList(hostRuntimeDirectory.c_str(), tpaList);
@@ -379,7 +386,6 @@ static bool FindDotNetVersion(const RuntimeVersion& runtimeVersion, std::string&
         return true;
     }
 
-
     return false;
 }
 
@@ -397,7 +403,7 @@ static HRESULT ProbeInstallationMarkerFile(const char* const markerName, std::st
 
     if (getline(&line, &lineLen, locationFile) == -1)
     {
-        TraceError("SOS_HOSTING: Unable to read .NET installation marker at %s\n", markerName);
+        TraceHostingError("Unable to read .NET installation marker at %s\n", markerName);
         free(line);
         return E_FAIL;
     }
@@ -467,7 +473,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     if (g_hostRuntimeDirectory == nullptr)
     {
 #if defined(HOST_FREEBSD)
-        TraceError("SOS_HOSTING: FreeBSD not supported\n");
+        TraceHostingError("FreeBSD not supported\n");
         return E_FAIL;
 #else
 
@@ -490,7 +496,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
         ArrayHolder<CHAR> programFiles = new CHAR[MAX_LONGPATH];
         if (GetEnvironmentVariableA("PROGRAMFILES", programFiles, MAX_LONGPATH) == 0)
         {
-            TraceError("SOS_HOSTING: PROGRAMFILES environment variable not found\n");
+            TraceHostingError("PROGRAMFILES environment variable not found\n");
             return E_FAIL;
         }
         std::string windowsInstallPath(programFiles);
@@ -504,7 +510,7 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
 
         if (Status != S_OK)
         {
-            TraceError("SOS_HOSTING: Failed to find runtime directory\n");
+            TraceHostingError("Failed to find runtime directory\n");
             return E_FAIL;
         }
 
@@ -521,14 +527,17 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
 
         if (hostRuntimeVersion.Major == 0)
         {
-            TraceError("SOS_HOSTING: Failed to find a supported runtime within %s\n", hostRuntimeDirectory.c_str());
+            TraceHostingError("Failed to find a supported runtime within %s\n", hostRuntimeDirectory.c_str());
             return E_FAIL;
         }
 
         // Save away the runtime version we are going to use to host the SOS managed code
         g_hostRuntimeDirectory = _strdup(hostRuntimeDirectory.c_str());
+        g_hostRuntimeVersion = hostRuntimeVersion;
     }
     hostRuntimeDirectory.assign(g_hostRuntimeDirectory);
+    hostRuntimeVersion = g_hostRuntimeVersion;
+
     coreClrPath.assign(g_hostRuntimeDirectory);
     coreClrPath.append(DIRECTORY_SEPARATOR_STR_A);
     coreClrPath.append(MAKEDLLNAME_A("coreclr"));
@@ -548,7 +557,7 @@ static HRESULT InitializeNetCoreHost()
     Dl_info info;
     if (dladdr((PVOID)&InitializeNetCoreHost, &info) == 0)
     {
-        TraceError("SOS_HOSTING: Failed to get SOS module directory with dladdr()\n");
+        TraceHostingError("Failed to get SOS module directory with dladdr()\n");
         return E_FAIL;
     }
     sosModulePath = info.dli_fname;
@@ -556,7 +565,7 @@ static HRESULT InitializeNetCoreHost()
     ArrayHolder<char> szSOSModulePath = new char[MAX_LONGPATH + 1];
     if (GetModuleFileNameA(g_hInstance, szSOSModulePath, MAX_LONGPATH) == 0)
     {
-        TraceError("SOS_HOSTING: Failed to get SOS module directory\n");
+        TraceHostingError("Failed to get SOS module directory\n");
         return HRESULT_FROM_WIN32(GetLastError());
     }
     sosModulePath = szSOSModulePath;
@@ -580,7 +589,7 @@ static HRESULT InitializeNetCoreHost()
         void* coreclrLib = dlopen(coreClrPath.c_str(), RTLD_NOW | RTLD_LOCAL);
         if (coreclrLib == nullptr)
         {
-            TraceError("SOS_HOSTING: Failed to load runtime module %s\n", coreClrPath.c_str());
+            TraceHostingError("Failed to load runtime module %s\n", coreClrPath.c_str());
             return E_FAIL;
         }
         initializeCoreCLR = (coreclr_initialize_ptr)dlsym(coreclrLib, "coreclr_initialize");
@@ -589,7 +598,7 @@ static HRESULT InitializeNetCoreHost()
         HMODULE coreclrLib = LoadLibraryA(coreClrPath.c_str());
         if (coreclrLib == nullptr)
         {
-            TraceError("SOS_HOSTING: Failed to load runtime module %s\n", coreClrPath.c_str());
+            TraceHostingError("Failed to load runtime module %s\n", coreClrPath.c_str());
             return E_FAIL;
         }
         initializeCoreCLR = (coreclr_initialize_ptr)GetProcAddress(coreclrLib, "coreclr_initialize");
@@ -598,7 +607,7 @@ static HRESULT InitializeNetCoreHost()
 
         if (initializeCoreCLR == nullptr || createDelegate == nullptr)
         {
-            TraceError("SOS_HOSTING: coreclr_initialize or coreclr_create_delegate not found in %s\n", coreClrPath.c_str());
+            TraceHostingError("coreclr_initialize or coreclr_create_delegate not found in %s\n", coreClrPath.c_str());
             return E_FAIL;
         }
 
@@ -607,7 +616,7 @@ static HRESULT InitializeNetCoreHost()
         size_t lastSlash = sosModuleDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
         if (lastSlash == std::string::npos)
         {
-            TraceError("SOS_HOSTING: Failed to parse SOS module name\n");
+            TraceHostingError("Failed to parse SOS module name\n");
             return E_FAIL;
         }
         sosModuleDirectory.erase(lastSlash);
@@ -642,7 +651,7 @@ static HRESULT InitializeNetCoreHost()
         char* exePath = minipal_getexepath();
         if (!exePath)
         {
-            TraceError("SOS_HOSTING: Could not get full path to current executable\n");
+            TraceHostingError("Could not get full path to current executable\n");
             return E_FAIL;
         }
 
@@ -652,14 +661,14 @@ static HRESULT InitializeNetCoreHost()
         free(exePath);
         if (FAILED(hr))
         {
-            TraceError("SOS_HOSTING: Fail to initialize hosting runtime '%s' %08x\n", coreClrPath.c_str(), hr);
+            TraceHostingError("Fail to initialize hosting runtime '%s' %08x\n", coreClrPath.c_str(), hr);
             return hr;
         }
 
         hr = createDelegate(hostHandle, domainId, ExtensionsDllName, ExtensionsClassName, ExtensionsInitializeFunctionName, (void**)&g_extensionsInitializeFunc);
         if (FAILED(hr))
         {
-            TraceError("SOS_HOSTING: Fail to create hosting delegate %08x\n", hr);
+            TraceHostingError("Fail to create hosting delegate %08x\n", hr);
             return hr;
         }
     }
@@ -673,33 +682,16 @@ static HRESULT InitializeNetCoreHost()
     }
     if (FAILED(hr))
     {
-        TraceError("SOS_HOSTING: Extension host initialization FAILED %08x\n", hr);
+        TraceHostingError("Extension host initialization FAILED %08x\n", hr);
         return hr;
     }
     return hr;
 }
 
 /**********************************************************************\
- * Gets the host runtime flavor
+ * Sets the host runtime info
 \**********************************************************************/
-HostRuntimeFlavor GetHostRuntimeFlavor()
-{
-    return g_hostRuntimeFlavor;
-}
-
-/**********************************************************************\
- * Sets the host runtime flavor
-\**********************************************************************/
-bool SetHostRuntimeFlavor(HostRuntimeFlavor flavor)
-{
-    g_hostRuntimeFlavor = flavor;
-    return true;
-}
-
-/**********************************************************************\
- * Sets the host runtime directory path
-\**********************************************************************/
-bool SetHostRuntimeDirectory(LPCSTR hostRuntimeDirectory)
+bool SetHostRuntime(HostRuntimeFlavor flavor, int major, int minor, LPCSTR hostRuntimeDirectory)
 {
     if (hostRuntimeDirectory != nullptr)
     {
@@ -709,22 +701,40 @@ bool SetHostRuntimeDirectory(LPCSTR hostRuntimeDirectory)
             return false;
         }
         hostRuntimeDirectory = _strdup(fullPath.c_str());
+
+        // Try to get the runtime version from the host runtime directory
+        if (major == 0)
+        {
+            uint32_t majorVersion = 0;
+            uint32_t minorVersion = 0;
+            uint32_t revision = 0;
+            if (sscanf(GetFileName(fullPath).c_str(), "%d.%d.%d", &majorVersion, &minorVersion, &revision) == 3)
+            {
+                major = majorVersion;
+                minor = minorVersion;
+            }
+        }
     }
     if (g_hostRuntimeDirectory != nullptr)
     {
         free((void*)g_hostRuntimeDirectory);
     }
+    g_hostRuntimeFlavor = flavor;
+    g_hostRuntimeVersion.Major = major;
+    g_hostRuntimeVersion.Minor = minor;
     g_hostRuntimeDirectory = hostRuntimeDirectory;
-    g_hostRuntimeFlavor = HostRuntimeFlavor::NetCore;
     return true;
 }
 
 /**********************************************************************\
- * Gets the current host runtime directory path or null if not set
+ * Gets the current host runtime information
 \**********************************************************************/
-LPCSTR GetHostRuntimeDirectory()
+void GetHostRuntime(HostRuntimeFlavor& flavor, int& major, int& minor, LPCSTR& hostRuntimeDirectory)
 {
-    return g_hostRuntimeDirectory;
+    flavor = g_hostRuntimeFlavor;
+    major = g_hostRuntimeVersion.Major;
+    minor = g_hostRuntimeVersion.Minor;
+    hostRuntimeDirectory = g_hostRuntimeDirectory;
 }
 
 /**********************************************************************\

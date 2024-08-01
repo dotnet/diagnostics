@@ -19,7 +19,7 @@
 EXTERN_GUID(CLSID_CLRRuntimeHost, 0x90F1A06E, 0x7712, 0x4762, 0x86, 0xB5, 0x7A, 0x5E, 0xBA, 0x6B, 0xDB, 0x02);
 
 extern HMODULE g_hInstance;
-extern void TraceError(PCSTR format, ...);
+extern void TraceHostingError(PCSTR format, ...);
 
 ICLRRuntimeHost* g_clrHost = nullptr;
 
@@ -35,13 +35,13 @@ HRESULT InitializeDesktopClrHost()
     ArrayHolder<WCHAR> wszSOSModulePath = new WCHAR[MAX_LONGPATH + 1];
     if (GetModuleFileNameW(g_hInstance, wszSOSModulePath, MAX_LONGPATH) == 0)
     {
-        TraceError("SOS_HOSTING: Failed to get SOS module directory\n");
+        TraceHostingError("Failed to get SOS module directory\n");
         return HRESULT_FROM_WIN32(GetLastError());
     }
     ArrayHolder<WCHAR> wszManagedModulePath = new WCHAR[MAX_LONGPATH + 1];
     if (wcscpy_s(wszManagedModulePath.GetPtr(), MAX_LONGPATH, wszSOSModulePath.GetPtr()) != 0)
     {
-        TraceError("SOS_HOSTING: Failed to copy module name\n");
+        TraceHostingError("Failed to copy module name\n");
         return E_FAIL;
     }
     WCHAR* lastSlash = wcsrchr(wszManagedModulePath.GetPtr(), DIRECTORY_SEPARATOR_CHAR_W);
@@ -51,7 +51,7 @@ HRESULT InitializeDesktopClrHost()
     }
     if (wcscat_s(wszManagedModulePath.GetPtr(), MAX_LONGPATH, ExtensionsDllNameW) != 0)
     {
-        TraceError("SOS_HOSTING: Failed to append SOS module name\n");
+        TraceHostingError("Failed to append SOS module name\n");
         return E_FAIL;
     }
     if (g_clrHost == nullptr)
@@ -59,7 +59,7 @@ HRESULT InitializeDesktopClrHost()
         hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
         if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
         {
-            TraceError("SOS_HOSTING: CoInitializeEx failed. %08x\n", hr);
+            TraceHostingError("CoInitializeEx failed. %08x\n", hr);
             return hr;
         }
         // Loads the CLR and then initializes the managed debugger extensions.
@@ -67,26 +67,26 @@ HRESULT InitializeDesktopClrHost()
         hr = CLRCreateInstance(CLSID_CLRMetaHost, IID_ICLRMetaHost, (PVOID*)&metaHost);
         if (FAILED(hr) || metaHost == nullptr)
         {
-            TraceError("SOS_HOSTING: CLRCreateInstance failed %08x\n", hr);
+            TraceHostingError("CLRCreateInstance failed %08x\n", hr);
             return hr;
         }
         ReleaseHolder<ICLRRuntimeInfo> runtimeInfo;
         hr = metaHost->GetRuntime(CLR_VERSION, IID_ICLRRuntimeInfo, (PVOID*)&runtimeInfo);
         if (FAILED(hr) || runtimeInfo == nullptr)
         {
-            TraceError("SOS_HOSTING: ICLRMetaHost::GetRuntime failed %08x\n", hr);
+            TraceHostingError("ICLRMetaHost::GetRuntime failed %08x\n", hr);
             return hr;
         }
         hr = runtimeInfo->GetInterface(CLSID_CLRRuntimeHost, IID_ICLRRuntimeHost, (PVOID*)&g_clrHost);
         if (FAILED(hr) || g_clrHost == nullptr)
         {
-            TraceError("SOS_HOSTING: ICLRRuntimeInfo::GetInterface failed %08x\n", hr);
+            TraceHostingError("ICLRRuntimeInfo::GetInterface failed %08x\n", hr);
             return hr;
         }
         hr = g_clrHost->Start();
         if (FAILED(hr))
         {
-            TraceError("SOS_HOSTING: ICLRRuntimeHost::Start failed %08x\n", hr);
+            TraceHostingError("ICLRRuntimeHost::Start failed %08x\n", hr);
             g_clrHost->Release();
             g_clrHost = nullptr;
             return hr;
@@ -96,14 +96,14 @@ HRESULT InitializeDesktopClrHost()
     hr = g_clrHost->ExecuteInDefaultAppDomain(wszManagedModulePath.GetPtr(), ExtensionsClassNameW, ExtensionsInitializeFunctionNameW, wszSOSModulePath.GetPtr(), (DWORD *)&ret);
     if (FAILED(hr)) 
     {
-        TraceError("SOS_HOSTING: ICLRRuntimeHost::ExecuteInDefaultAppDomain failed %08x\n", hr);
+        TraceHostingError("ICLRRuntimeHost::ExecuteInDefaultAppDomain failed %08x\n", hr);
         g_clrHost->Release();
         g_clrHost = nullptr;
         return hr;
     }
     if (ret != 0)
     { 
-        TraceError("SOS_HOSTING: Extension initialization failed %08x\n", ret);
+        TraceHostingError("Extension initialization failed %08x\n", ret);
         g_clrHost->Release();
         g_clrHost = nullptr;
         return ret;

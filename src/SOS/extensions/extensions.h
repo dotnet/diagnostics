@@ -21,11 +21,10 @@ enum HostRuntimeFlavor
 
 extern BOOL IsHostingInitialized();
 extern HRESULT InitializeHosting();
-extern LPCSTR GetHostRuntimeDirectory();
-extern bool SetHostRuntimeDirectory(LPCSTR hostRuntimeDirectory);
-extern HostRuntimeFlavor GetHostRuntimeFlavor();
-extern bool SetHostRuntimeFlavor(HostRuntimeFlavor flavor);
+extern bool SetHostRuntime(HostRuntimeFlavor flavor, int major, int minor, LPCSTR hostRuntimeDirectory);
+extern void GetHostRuntime(HostRuntimeFlavor& flavor, int& major, int& minor, LPCSTR& hostRuntimeDirectory);
 extern bool GetAbsolutePath(const char* path, std::string& absolutePath);
+extern const std::string GetFileName(const std::string& filePath);
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,6 +83,11 @@ public:
     /// Returns the symbol service instance
     /// </summary>
     ISymbolService* GetSymbolService();
+
+    /// <summary>
+    /// Check if a target flush is needed
+    /// </summary>
+    void FlushCheck();
 
     /// <summary>
     /// Create a new target with the extension services for  
