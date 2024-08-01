@@ -2142,6 +2142,8 @@ WString MethodNameFromIP(CLRDATA_ADDRESS methodDesc, BOOL bSuppressLines = FALSE
 HRESULT GetGCRefs(ULONG osID, SOSStackRefData **ppRefs, unsigned int *pRefCnt, SOSStackRefError **ppErrors, unsigned int *pErrCount);
 WString GetFrameFromAddress(TADDR frameAddr, IXCLRDataStackWalk *pStackwalk = NULL, BOOL bAssemblyName = FALSE);
 
+HRESULT PreferCanonMTOverEEClass(CLRDATA_ADDRESS eeClassPtr, BOOL *preferCanonMT, CLRDATA_ADDRESS *outCanonMT = NULL);
+
 /* This cache is used to read data from the target process if the reads are known
  * to be sequential.
  */

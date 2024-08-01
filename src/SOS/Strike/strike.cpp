@@ -1048,7 +1048,8 @@ DECLARE_API(DumpClass)
     EnableDMLHolder dmlHolder(dml);
 
     CLRDATA_ADDRESS methodTable;
-    if ((Status=g_sos->GetMethodTableForEEClass(TO_CDADDR(dwStartAddr), &methodTable)) != S_OK)
+    BOOL preferMT = FALSE;
+    if (!SUCCEEDED(Status = PreferCanonMTOverEEClass(TO_CDADDR(dwStartAddr), &preferMT, &methodTable)))
     {
         ExtOut("Invalid EEClass address\n");
         return Status;
@@ -1081,9 +1082,20 @@ DECLARE_API(DumpClass)
         ParentEEClass = mtdataparent.Class;
     }
 
-    DMLOut("Parent Class:    %s\n", DMLClass(ParentEEClass));
+    if (!preferMT)
+    {
+        DMLOut("Parent Class:    %s\n", DMLClass(ParentEEClass));
+    }
+    else
+    {
+        DMLOut("Parent MethodTable: %s\n", DMLMethodTable(mtdata.ParentMethodTable));
+    }
     DMLOut("Module:          %s\n", DMLModule(mtdata.Module));
     DMLOut("Method Table:    %s\n", DMLMethodTable(methodTable));
+    if (preferMT)
+    {
+        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtdata.Class));
+    }
     ExtOut("Vtable Slots:    %x\n", mtdata.wNumVirtuals);
     ExtOut("Total Method Slots:  %x\n", mtdata.wNumVtableSlots);
     ExtOut("Class Attributes:    %x  ", mtdata.dwAttrClass);
@@ -1189,7 +1201,15 @@ DECLARE_API(DumpMT)
     DacpMethodTableCollectibleData vMethTableCollectible;
     vMethTableCollectible.Request(g_sos, TO_CDADDR(dwStartAddr));
 
-    table.WriteRow("EEClass:", EEClassPtr(vMethTable.Class));
+    BOOL preferCanonMT = FALSE;
+    if (SUCCEEDED(PreferCanonMTOverEEClass(vMethTable.Class, &preferCanonMT)) && preferCanonMT)
+    {
+        table.WriteRow("Canonical MethodTable:", EEClassPtr(vMethTable.Class));
+    }
+    else
+    {
+        table.WriteRow("EEClass:", EEClassPtr(vMethTable.Class));
+    }
 
     table.WriteRow("Module:", ModulePtr(vMethTable.Module));
 
@@ -1347,7 +1367,15 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
 
     ExtOut("Name:        %S\n", g_mdName);
     DMLOut("MethodTable: %s\n", DMLMethodTable(taMT));
-    DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
+    BOOL preferCanonMT = FALSE;
+    if (SUCCEEDED(PreferCanonMTOverEEClass(TO_CDADDR(taMT), &preferCanonMT)) && preferCanonMT)
+    {
+        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
+    }
+    else
+    {
+        DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
+    }
     ExtOut("Size:        %d(0x%x) bytes\n", size, size);
 
     FileNameForModule(TO_TADDR(mtabledata.Module), g_mdName);
@@ -1440,7 +1468,15 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     DacpMethodTableData mtabledata;
     if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) == S_OK)
     {
-        DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
+        BOOL preferCanonMT = FALSE;
+        if (SUCCEEDED(PreferCanonMTOverEEClass(mtabledata.Class, &preferCanonMT)) && preferCanonMT)
+        {
+            DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
+        }
+        else
+        {
+            DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
+        }
     }
     else
     {
@@ -5791,7 +5827,7 @@ BOOL CheckCLRNotificationEvent(DEBUG_LAST_EVENT_INFO_EXCEPTION* pdle)
         return FALSE;
     }
 
-    // The new DAC based interface doesn't exists so ask the debugger for the last exception information. 
+    // The new DAC based interface doesn't exists so ask the debugger for the last exception information.
 
 #ifdef HOST_WINDOWS
     ULONG Type, ProcessId, ThreadId;

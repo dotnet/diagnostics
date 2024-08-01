@@ -5865,3 +5865,30 @@ HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buf
 }
 
 #endif // FEATURE_PAL
+
+/**********************************************************************\
+* Routine Description:                                                 *
+*                                                                      *
+*    Since .NET 9+ the runtime does not expose EEClass, but instead    *
+*    returns a pointer to the canonical MethodTable in                 *
+*    DacpMethodTableData:Class.                                        *
+*    Detect that situation by calling GetMethodTableForEEClass and     *
+*    comparing the result to the EEClass itself.                       *
+*                                                                      *
+\**********************************************************************/
+
+HRESULT PreferCanonMTOverEEClass(CLRDATA_ADDRESS eeClassPtr, BOOL *preferCanonMT, CLRDATA_ADDRESS *outCanonMT)
+{
+    HRESULT Status;
+    CLRDATA_ADDRESS canonMT = 0;
+    if (!SUCCEEDED(Status = g_sos->GetMethodTableForEEClass(eeClassPtr, &canonMT)))
+    {
+        return Status;
+    }
+    *preferCanonMT = (eeClassPtr == canonMT);
+    if (outCanonMT)
+    {
+        *outCanonMT = canonMT;
+    }
+    return S_OK;
+}
