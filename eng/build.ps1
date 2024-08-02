@@ -72,7 +72,7 @@ if ($installruntimes -or $privatebuild) {
     if ($privatebuild) {
         $privatebuildtesting = "true"
     }
-    Remove-Item -Recurse "$reporoot\.dotnet-test"
+    Remove-Item -Force -Recurse -ErrorAction SilentlyContinue "$reporoot\.dotnet-test"
     & "$engroot\common\msbuild.ps1" `
       $engroot\InstallRuntimes.proj `
       -verbosity $verbosity `

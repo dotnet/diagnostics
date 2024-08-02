@@ -243,7 +243,7 @@ if [[ "$__InstallRuntimes" == 1 || "$__PrivateBuild" == 1 ]]; then
     if [[ "$__PrivateBuild" == 1 ]]; then
         __privateBuildTesting=true
     fi
-    rm -r "$__RepoRootDir/.dotnet-test"
+    rm -fr "$__RepoRootDir/.dotnet-test" || true
     "$__RepoRootDir/eng/common/msbuild.sh" \
         $__RepoRootDir/eng/InstallRuntimes.proj \
         /t:InstallTestRuntimes \
