@@ -26,6 +26,8 @@ __RuntimeSourceFeed=
 __RuntimeSourceFeedKey=
 __SkipConfigure=0
 __SkipGenerateVersion=0
+__InstallRuntimes=0
+__PrivateBuild=0
 __Test=0
 __UnprocessedBuildArgs=
 
@@ -83,6 +85,14 @@ handle_arguments() {
 
         skipnative|-skipnative)
             __NativeBuild=0
+            ;;
+
+        installruntimes|-installruntimes)
+            __InstallRuntimes=1
+            ;;
+
+        privatebuild|-privatebuild)
+            __PrivateBuild=1
             ;;
 
         test|-test)
@@ -222,6 +232,25 @@ if [[ "$__NativeBuild" == 1 || "$__Test" == 1 ]]; then
 
     cp "$__BinDir"/* "$__dotnet_dump"
     echo "Copied SOS to $__dotnet_dump"
+fi
+
+#
+# Install test runtimes and set up for private runtime build
+#
+
+if [[ "$__InstallRuntimes" == 1 || "$__PrivateBuild" == 1 ]]; then
+    __privateBuildTesting=false
+    if [[ "$__PrivateBuild" == 1 ]]; then
+        __privateBuildTesting=true
+    fi
+    rm -fr "$__RepoRootDir/.dotnet-test" || true
+    "$__RepoRootDir/eng/common/msbuild.sh" \
+        $__RepoRootDir/eng/InstallRuntimes.proj \
+        /t:InstallTestRuntimes \
+        /bl:"$__LogsDir/InstallRuntimes.binlog" \
+        /p:PrivateBuildTesting="$__privateBuildTesting" \
+        /p:BuildArch="$__TargetArch" \
+        /p:TestArchitectures="$__TargetArch"
 fi
 
 #

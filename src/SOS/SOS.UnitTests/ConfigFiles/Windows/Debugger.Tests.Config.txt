@@ -30,8 +30,12 @@
   <TestWebApp3 Condition="'$(InternalReleaseTesting)' == 'true'">false</TestWebApp3>
 
   <TestDesktop>true</TestDesktop>
+  <TestDesktop Condition="'$(PrivateBuildTesting)' == 'true'">false</TestDesktop>
   <TestDesktop Condition="'$(InternalReleaseTesting)' == 'true'">false</TestDesktop>
   <TestDesktop Condition="'$(TargetArchitecture)' == 'arm64'">false</TestDesktop>
+
+  <TestSingleFile>true</TestSingleFile>
+  <TestSingleFile Condition="'$(PrivateBuildTesting)' == 'true'">false</TestSingleFile>
 
   <DesktopFrameworkPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFrameworkPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</DesktopFrameworkPath>
@@ -59,33 +63,37 @@
         <!--
             Single file (debuggees cli built)
          -->
-        <Option Condition="'$(RuntimeVersionLatest)' != ''">
-          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-          <PublishSingleFile>true</PublishSingleFile>
-          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-          <PublishSingleFile>true</PublishSingleFile>
-          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-          <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-          <PublishSingleFile>true</PublishSingleFile>
-          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-          <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
-        </Option>
-        <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-          <PublishSingleFile>true</PublishSingleFile>
-          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-          <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+        <Option Condition="'$(TestSingleFile)' == 'true'">
+          <Options>
+            <Option Condition="'$(RuntimeVersionLatest)' != ''">
+              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <PublishSingleFile>true</PublishSingleFile>
+              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+            </Option>
+            <Option Condition="'$(RuntimeVersionServicing1)' != ''">
+              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <PublishSingleFile>true</PublishSingleFile>
+              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+              <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
+            </Option>
+            <Option Condition="'$(RuntimeVersionServicing2)' != ''">
+              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <PublishSingleFile>true</PublishSingleFile>
+              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+              <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
+            </Option>
+            <Option Condition="'$(RuntimeVersionServicing3)' != ''">
+              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <PublishSingleFile>true</PublishSingleFile>
+              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+              <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+            </Option>
+          </Options>
         </Option>
         <!--
             Default (prebuilt)
@@ -129,29 +137,33 @@
           <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
           <TestName>SOS.StackAndOtherTests</TestName>
           <Options>
-            <Option Condition="'$(RuntimeVersionLatest)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-              <PublishSingleFile>true</PublishSingleFile>
-              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-              <PublishSingleFile>true</PublishSingleFile>
-              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-              <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-              <PublishSingleFile>true</PublishSingleFile>
-              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-              <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
-            </Option>
-            <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-              <PublishSingleFile>true</PublishSingleFile>
-              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-              <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+            <Option Condition="'$(TestSingleFile)' == 'true'">
+              <Options>
+                <Option Condition="'$(RuntimeVersionLatest)' != ''">
+                  <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+                  <PublishSingleFile>true</PublishSingleFile>
+                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+                  <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+                </Option>
+                <Option Condition="'$(RuntimeVersionServicing1)' != ''">
+                  <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+                  <PublishSingleFile>true</PublishSingleFile>
+                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+                  <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
+                </Option>
+                <Option Condition="'$(RuntimeVersionServicing2)' != ''">
+                  <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+                  <PublishSingleFile>true</PublishSingleFile>
+                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+                  <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
+                </Option>
+                <Option Condition="'$(RuntimeVersionServicing3)' != ''">
+                  <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+                  <PublishSingleFile>true</PublishSingleFile>
+                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+                  <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+                </Option>
+              </Options>
             </Option>
             <Option Condition="'$(RuntimeVersionLatest)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
@@ -183,13 +195,16 @@
             </Option>
           </Options>
           <Options>
-            <Option Condition="'$(RuntimeLatestVersion)' != ''">
+            <TestWebApp3_SingleFile>true</TestWebApp3_SingleFile>
+            <TestWebApp3_SingleFile Condition="'$(TestSingleFile)' == 'true'">false</TestWebApp3_SingleFile>
+            <TestWebApp3_SingleFile Condition="'$(RuntimeLatestVersion)' == ''">false</TestWebApp3_SingleFile>
+            <Option Condition="'$(TestWebApp3_SingleFile)' == 'true'">
               <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
               <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <RuntimeFrameworkVersion>$(RuntimeLatestVersion)</RuntimeFrameworkVersion>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-            </Option> 
+            </Option>
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <!-- This turns off the -fx-version to the dotnet host allowing it use the correct runtime version -->

@@ -382,6 +382,8 @@ namespace Microsoft.Diagnostics.TestHelpers
         private const string DebugTypeKey = "DebugType";
         private const string DebuggeeBuildRootKey = "DebuggeeBuildRoot";
 
+        public static TestConfiguration Empty { get; } = new TestConfiguration();
+
         public static string BaseDir { get; set; } = Path.GetFullPath(".");
 
         private static readonly Regex versionRegex = new(@"^(\d+\.\d+\.\d+)(-.*)?", RegexOptions.Compiled);
@@ -486,10 +488,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
         }
 
-        public IReadOnlyDictionary<string, string> AllSettings
-        {
-            get { return _settings; }
-        }
+        public bool IsEmpty => _settings.Count == 0;
+
+        public IReadOnlyDictionary<string, string> AllSettings => _settings;
 
         /// <summary>
         /// Creates a new test config with the new PDB type (full, portable or embedded)

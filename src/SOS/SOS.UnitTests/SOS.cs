@@ -21,7 +21,7 @@ public static class SOSTestHelpers
 {
     public static IEnumerable<object[]> GetConfigurations(string key, string value)
     {
-        return TestRunConfiguration.Instance.Configurations.Where((c) => key == null || c.AllSettings.GetValueOrDefault(key) == value).Select(c => new[] { c });
+        return TestRunConfiguration.Instance.Configurations.Where((c) => key == null || c.AllSettings.GetValueOrDefault(key) == value).DefaultIfEmpty(TestConfiguration.Empty).Select(c => new[] { c });
     }
 
     internal static void SkipIfArm(TestConfiguration config)
@@ -397,12 +397,18 @@ public class SOS
             UsePipeSync = true,
             DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
         },
-                Output);
+        Output);
     }
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.DualRuntimes", MemberType = typeof(SOSTestHelpers))]
     public async Task DualRuntimes(TestConfiguration config)
     {
+        // This test on linux/macOS can be called with an empty config because vstest and dotnet test fail/complain about no test parameters. The
+        // linux/macOS config file doesn't contain a SOS.DualRuntimes TestName because this is Windows only.
+        if (config.IsEmpty)
+        {
+            throw new SkipTestException("Skipping DualRuntimes test");
+        }
         if (config.PublishSingleFile)
         {
             throw new SkipTestException("Single file not supported");

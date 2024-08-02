@@ -4,6 +4,8 @@ Param(
     [ValidateSet("Debug","Release")][string][Alias('c')] $configuration = "Debug",
     [string][Alias('v')] $verbosity = "minimal",
     [switch][Alias('t')] $test,
+    [switch] $installruntimes,
+    [switch] $privatebuild,
     [switch] $ci,
     [switch] $skipmanaged,
     [switch] $skipnative,
@@ -63,6 +65,22 @@ if (-not $skipnative) {
     if ($lastExitCode -ne 0) {
         exit $lastExitCode
     }
+}
+
+if ($installruntimes -or $privatebuild) {
+    $privatebuildtesting = "false"
+    if ($privatebuild) {
+        $privatebuildtesting = "true"
+    }
+    Remove-Item -Force -Recurse -ErrorAction SilentlyContinue "$reporoot\.dotnet-test"
+    & "$engroot\common\msbuild.ps1" `
+      $engroot\InstallRuntimes.proj `
+      -verbosity $verbosity `
+      /t:InstallTestRuntimes `
+      /bl:$logdir\InstallRuntimes.binlog `
+      /p:PrivateBuildTesting=$privatebuildtesting `
+      /p:BuildArch=$architecture `
+      /p:TestArchitectures=$architecture
 }
 
 # Run the xunit tests

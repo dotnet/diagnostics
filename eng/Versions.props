@@ -104,11 +104,12 @@
   </PropertyGroup>
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
+    <PrivateBuildTesting Condition="'$(PrivateBuildTesting)' == ''">false</PrivateBuildTesting>
     <InternalReleaseTesting>false</InternalReleaseTesting>
     <InternalReleaseTesting Condition="'$(DotnetRuntimeVersion)' != 'default'">true</InternalReleaseTesting>
     <ExtraInstallArgs>-runtimesourcefeed '$(RuntimeSourceFeed)' -runtimesourcefeedkey '$(RuntimeSourceFeedKey)'</ExtraInstallArgs>
   </PropertyGroup>
-  <ItemGroup Condition="!$(InternalReleaseTesting)">
+  <ItemGroup Condition="!$(PrivateBuildTesting) AND !$(InternalReleaseTesting)">
     <RuntimeTestVersions Include="Latest">
       <RuntimeDownload>$(VSRedistCommonNetCoreSharedFrameworkx6490Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreAppRuntimewinx64Version)</Runtime>
@@ -136,6 +137,16 @@
       <AspNetDownload>$(MicrosoftNETCoreApp60Version)</AspNetDownload>
       <AspNet>$(MicrosoftNETCoreApp60Version)</AspNet>
       <TargetFramework>net6.0</TargetFramework>
+    </RuntimeTestVersions>
+  </ItemGroup>
+  <!-- Private build testing -->
+  <ItemGroup Condition="$(PrivateBuildTesting)">
+    <RuntimeTestVersions Include="Latest">
+      <RuntimeDownload>$(VSRedistCommonNetCoreSharedFrameworkx6490Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreAppRuntimewinx64Version)</Runtime>
+      <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
+      <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
+      <TargetFramework>net9.0</TargetFramework>
     </RuntimeTestVersions>
   </ItemGroup>
   <!-- Internal service release testing -->
