@@ -96,7 +96,8 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             }
 
             int n = nodesToReport.Count;
-            if (n == 0) {
+            if (n == 0)
+            {
                 Console.Error.WriteLine("[WARNING] No method calls found");
                 return;
             }
