@@ -15,10 +15,6 @@
 
   <ItemGroup>
     <PackageReference Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
-<!--
-    <PackageReference Condition="'$(TargetFramework)' != 'net462'" Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
-    <PackageReference Condition="'$(TargetFramework)' == 'net462'" Include="System.Reflection.Metadata" Version="1.6.0" />
--->
   </ItemGroup>
 
   <ItemGroup>

@@ -27,6 +27,7 @@
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
+    <AzureIdentityVersion>1.11.4</AzureIdentityVersion>
     <!-- Uncomment this line to use the custom version of roslyn as needed. -->
     <!-- <UsingToolMicrosoftNetCompilers Condition="'$(DotNetBuildSourceOnly)' != 'true'">true</UsingToolMicrosoftNetCompilers> -->
     <!-- CoreFX -->
