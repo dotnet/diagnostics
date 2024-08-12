@@ -209,6 +209,7 @@ typedef struct _LoongArch64VolatileContextPointer
     PDWORD64 X0;
 } LoongArch64VolatileContextPointer;
 #endif
+
 #if defined(TARGET_RISCV64)
 typedef struct _RiscV64VolatileContextPointer
 {

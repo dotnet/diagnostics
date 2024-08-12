@@ -130,7 +130,7 @@ GcInfoDecoder::GcInfoDecoder(
     int hasStackBaseRegister   = headerFlags & GC_INFO_HAS_STACK_BASE_REGISTER;
 #ifdef TARGET_AMD64
     m_WantsReportOnlyLeaf      = ((headerFlags & GC_INFO_WANTS_REPORT_ONLY_LEAF) != 0);
-#elif defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
+#elif defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
     m_HasTailCalls             = ((headerFlags & GC_INFO_HAS_TAILCALLS) != 0);
 #endif // TARGET_AMD64
     int hasSizeOfEditAndContinuePreservedArea = headerFlags & GC_INFO_HAS_EDIT_AND_CONTINUE_PRESERVED_SLOTS;
@@ -361,7 +361,7 @@ bool GcInfoDecoder::IsSafePoint(UINT32 codeOffset)
     if(m_NumSafePoints == 0)
         return false;
 
-#if defined(TARGET_AMD64) || defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
+#if defined(TARGET_AMD64) || defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
     // Safepoints are encoded with a -1 adjustment
     codeOffset--;
 #endif
@@ -381,7 +381,7 @@ UINT32 GcInfoDecoder::FindSafePoint(UINT32 breakOffset)
     const UINT32 numBitsPerOffset = CeilOfLog2(NORMALIZE_CODE_OFFSET(m_CodeLength));
     UINT32 result = m_NumSafePoints;
 
-#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
     // Safepoints are encoded with a -1 adjustment
     // but normalizing them masks off the low order bit
     // Thus only bother looking if the address is odd
@@ -428,7 +428,7 @@ void GcInfoDecoder::EnumerateSafePoints(EnumerateSafePointsCallback *pCallback, 
         UINT32 normOffset = (UINT32)m_Reader.Read(numBitsPerOffset);
         UINT32 offset = DENORMALIZE_CODE_OFFSET(normOffset) + 2;
 
-#if defined(TARGET_AMD64) || defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
+#if defined(TARGET_AMD64) || defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
         // Safepoints are encoded with a -1 adjustment
         offset--;
 #endif

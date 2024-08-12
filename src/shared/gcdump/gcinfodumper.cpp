@@ -284,7 +284,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
     iSPRegister = (FIELD_OFFSET(T_CONTEXT, Sp) - FIELD_OFFSET(T_CONTEXT, R0)) / sizeof(ULONGLONG);
 #endif
 
-#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
     BYTE* pContext = (BYTE*)&(pRD->volatileCurrContextPointers);
 #else
     BYTE* pContext = (BYTE*)pRD->pCurrentContext;
@@ -396,7 +396,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
                     pReg = *(SIZE_T**)((BYTE*)pRD->pCurrentContextPointers + rgRegisters[iEncodedReg].cbContextOffset);
                 }
 
-#elif defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
+#elif defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
                 pReg = *(SIZE_T**)(pContext + rgRegisters[iReg].cbContextOffset);
                 if (iEncodedReg == iSPRegister)
                 {
@@ -469,14 +469,14 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
                 GcStackSlotBase base;
                 if (iSPRegister == iEncodedReg)
                 {
-#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
                     base = GC_SP_REL;
 #else
                     if (0 == ctx)
                         base = GC_SP_REL;
                     else
                         base = GC_CALLER_SP_REL;
-#endif //defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
+#endif //defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
                 }
                 else
                 {
@@ -498,7 +498,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
             }
         }
 
-#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
         pContext = (BYTE*)pRD->pCurrentContextPointers;
 #else
         pContext = (BYTE*)pRD->pCallerContext;

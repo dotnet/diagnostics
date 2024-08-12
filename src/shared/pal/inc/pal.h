@@ -2810,7 +2810,7 @@ BitScanReverse64(
 
 FORCEINLINE void PAL_InterlockedOperationBarrier()
 {
-#if defined(HOST_ARM64) || defined(HOST_RISCV64) || defined(HOST_LOONGARCH64)
+#if defined(HOST_ARM64) || defined(HOST_LOONGARCH64) || defined(HOST_RISCV64)
     // On arm64, most of the __sync* functions generate a code sequence like:
     //   loop:
     //     ldaxr (load acquire exclusive)
