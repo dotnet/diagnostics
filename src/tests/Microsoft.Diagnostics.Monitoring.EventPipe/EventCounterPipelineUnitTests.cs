@@ -88,6 +88,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterEventPipeline(TestConfiguration config)
         {
+            if (config.RuntimeFrameworkVersionMajor > 8)
+            {
+                throw new SkipTestException("Not supported on .NET 9.0 and greater");
+            }
             string[] expectedCounters = new[] { "cpu-usage", "working-set" };
             string expectedProvider = "System.Runtime";
 
