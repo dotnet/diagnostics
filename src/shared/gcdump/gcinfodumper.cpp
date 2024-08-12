@@ -185,6 +185,44 @@ BOOL GcInfoDumper::ReportPointerRecord (
         REG(Lr,  Lr),
         { FIELD_OFFSET(T_CONTEXT, Sp) },
 #undef REG
+#elif defined(TARGET_LOONGARCH64)
+#undef REG
+#define REG(reg, field) { FIELD_OFFSET(T_KNONVOLATILE_CONTEXT_POINTERS, field) }
+#define vREG(reg, field) { FIELD_OFFSET(LoongArch64VolatileContextPointer, field) }
+        vREG(zero, R0),
+        REG(ra, Ra),
+        REG(tp, Tp),
+        { FIELD_OFFSET(T_CONTEXT, Sp) },
+        vREG(a0, A0),
+        vREG(a1, A1),
+        vREG(a2, A2),
+        vREG(a3, A3),
+        vREG(a4, A4),
+        vREG(a5, A5),
+        vREG(a6, A6),
+        vREG(a7, A7),
+        vREG(t0, T0),
+        vREG(t1, T1),
+        vREG(t2, T2),
+        vREG(t3, T3),
+        vREG(t4, T4),
+        vREG(t5, T5),
+        vREG(t6, T6),
+        vREG(t7, T7),
+        vREG(t8, T8),
+        vREG(x0, X0),
+        REG(fp, Fp),
+        REG(s0, S0),
+        REG(s1, S1),
+        REG(s2, S2),
+        REG(s3, S3),
+        REG(s4, S4),
+        REG(s5, S5),
+        REG(s6, S6),
+        REG(s7, S7),
+        REG(s8, S8),
+#undef vREG
+#undef REG
 #elif defined(TARGET_RISCV64)
 #undef REG
 #define REG(reg, field) { FIELD_OFFSET(T_KNONVOLATILE_CONTEXT_POINTERS, field) }
@@ -240,11 +278,13 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
 #elif defined(TARGET_ARM)
     iSPRegister = (FIELD_OFFSET(T_CONTEXT, Sp) - FIELD_OFFSET(T_CONTEXT, R0)) / sizeof(ULONG);
     UINT iBFRegister = m_StackBaseRegister;
+#elif defined(TARGET_LOONGARCH64)
+    iSPRegister = (FIELD_OFFSET(T_CONTEXT, Sp) - FIELD_OFFSET(T_CONTEXT, R0)) / sizeof(ULONGLONG);
 #elif defined(TARGET_RISCV64)
     iSPRegister = (FIELD_OFFSET(T_CONTEXT, Sp) - FIELD_OFFSET(T_CONTEXT, R0)) / sizeof(ULONGLONG);
 #endif
 
-#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
     BYTE* pContext = (BYTE*)&(pRD->volatileCurrContextPointers);
 #else
     BYTE* pContext = (BYTE*)pRD->pCurrentContext;
@@ -312,6 +352,19 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
             {
                 break;
             }
+#elif defined(TARGET_LOONGARCH64)
+            bool isVolatile = (iReg == 0 || (iReg >= 4 && iReg <= 21));
+            if (ctx == 0)
+            {
+                if (!isVolatile)
+                {
+                    continue;
+                }
+            }
+            else if (isVolatile) // skip volatile registers for second context
+            {
+                continue;
+            }
 #elif defined(TARGET_RISCV64)
             bool isVolatile = (iReg == 0 || (iReg >= 5 && iReg <= 7) || (iReg >= 10 && iReg <= 17) || iReg >= 28);
             if (ctx == 0)
@@ -343,7 +396,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
                     pReg = *(SIZE_T**)((BYTE*)pRD->pCurrentContextPointers + rgRegisters[iEncodedReg].cbContextOffset);
                 }
 
-#elif defined(TARGET_ARM64) || defined(TARGET_RISCV64)
+#elif defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
                 pReg = *(SIZE_T**)(pContext + rgRegisters[iReg].cbContextOffset);
                 if (iEncodedReg == iSPRegister)
                 {
@@ -416,14 +469,14 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
                 GcStackSlotBase base;
                 if (iSPRegister == iEncodedReg)
                 {
-#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
                     base = GC_SP_REL;
 #else
                     if (0 == ctx)
                         base = GC_SP_REL;
                     else
                         base = GC_CALLER_SP_REL;
-#endif //defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64)
+#endif //defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
                 }
                 else
                 {
@@ -445,7 +498,7 @@ PORTABILITY_ASSERT("GcInfoDumper::ReportPointerRecord is not implemented on this
             }
         }
 
-#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
         pContext = (BYTE*)pRD->pCurrentContextPointers;
 #else
         pContext = (BYTE*)pRD->pCallerContext;
@@ -650,6 +703,37 @@ GcInfoDumper::EnumerateStateChangesResults GcInfoDumper::EnumerateStateChanges (
     {
         *(ppVolatileReg+iReg) = &regdisp.pCurrentContext->X0 + iReg;
     }
+#elif defined(TARGET_LOONGARCH64)
+    FILL_REGS(pCurrentContext->R0, 33);
+    FILL_REGS(pCallerContext->R0, 33);
+
+    regdisp.pCurrentContextPointers = &regdisp.ctxPtrsOne;
+    regdisp.pCallerContextPointers = &regdisp.ctxPtrsTwo;
+
+    ULONG64 **ppCurrentReg = &regdisp.pCurrentContextPointers->S0;
+    ULONG64 **ppCallerReg  = &regdisp.pCallerContextPointers->S0;
+
+    // Set S0-S8
+    for (iReg = 0; iReg < 9; iReg++)
+    {
+        *(ppCurrentReg + iReg) = &regdisp.pCurrentContext->S0 + iReg;
+        *(ppCallerReg  + iReg) = &regdisp.pCallerContext->S0 + iReg;
+    }
+
+    // Set Ra, Tp, Fp
+    regdisp.pCurrentContextPointers->Ra = &regdisp.pCurrentContext->Ra;
+    regdisp.pCallerContextPointers->Ra  = &regdisp.pCallerContext->Ra;
+    regdisp.pCurrentContextPointers->Tp = &regdisp.pCurrentContext->Tp;
+    regdisp.pCallerContextPointers->Tp  = &regdisp.pCallerContext->Tp;
+    regdisp.pCurrentContextPointers->Fp = &regdisp.pCurrentContext->Fp;
+    regdisp.pCallerContextPointers->Fp  = &regdisp.pCallerContext->Fp;
+
+    ULONG64 **ppVolatileReg = &regdisp.volatileCurrContextPointers.A0;
+    for (iReg = 0; iReg < 18; iReg++)
+    {
+        *(ppVolatileReg+iReg) = &regdisp.pCurrentContext->A0 + iReg;
+    }
+    regdisp.volatileCurrContextPointers.R0 = &regdisp.pCurrentContext->R0;
 #elif defined(TARGET_RISCV64)
     FILL_REGS(pCurrentContext->R0, 33);
     FILL_REGS(pCallerContext->R0, 33);
@@ -703,7 +787,7 @@ GcInfoDumper::EnumerateStateChangesResults GcInfoDumper::EnumerateStateChanges (
     regdisp.volatileCurrContextPointers.T5 = &regdisp.pCurrentContext->T5;
     regdisp.volatileCurrContextPointers.T6 = &regdisp.pCurrentContext->T6;
 #else
-PORTABILITY_ASSERT("GcInfoDumper::EnumerateStateChanges is not implemented on this platform.")
+PORTABILITY_ASSERT("GcInfoDumper::EnumerateStateChanges is not implemented on this platform.");
 #endif
 
 #undef FILL_REGS
@@ -749,9 +833,9 @@ PORTABILITY_ASSERT("GcInfoDumper::EnumerateStateChanges is not implemented on th
                                (GcInfoDecoderFlags)(  DECODE_SECURITY_OBJECT
                                                     | DECODE_CODE_LENGTH
                                                     | DECODE_VARARG
-#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64)
+#if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
                                                     | DECODE_HAS_TAILCALLS
-#endif // TARGET_ARM || TARGET_ARM64 || TARGET_RISCV64
+#endif // TARGET_ARM || TARGET_ARM64 || TARGET_LOONGARCH64 || TARGET_RISCV64
 
                                                     | DECODE_INTERRUPTIBILITY),
                                offset);
@@ -770,7 +854,7 @@ PORTABILITY_ASSERT("GcInfoDumper::EnumerateStateChanges is not implemented on th
 
 #ifdef PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED
         UINT32 safePointOffset = offset;
-#if defined(TARGET_AMD64) || defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64)
+#if defined(TARGET_AMD64) || defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
         safePointOffset++;
 #endif
         if(safePointDecoder.IsSafePoint(safePointOffset))
