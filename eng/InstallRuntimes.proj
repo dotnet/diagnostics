@@ -5,9 +5,9 @@
 
     From Versions.props:
 
-    $(MicrosoftDotnetSdkInternalVersion) - .NET SDK to use for testing
+    $(MicrosoftDotnetSdkVersion) - .NET SDK to use for testing
     $(InternalReleaseTesting) - if true, internal service release testing
-    $(PrivateBuildTesting) - if true, test against a locally built runtime 
+    $(PrivateBuildTesting) - if true, test against a locally built runtime
     @(RuntimeTestVersions) - runtime/aspnetcore versions to install and test against
 
     From Arcade:
@@ -56,7 +56,7 @@
     Installs the runtimes for the SOS tests, handles private runtime build support or cleans up the private build registry keys
 -->
 
-  <Target Name="InstallTestRuntimes" 
+  <Target Name="InstallTestRuntimes"
           DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest;" />
 
 <!--
@@ -67,7 +67,7 @@
           Condition="$([MSBuild]::IsOsPlatform(Windows))"
           Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
 
-    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(MicrosoftDotnetSdkInternalVersion) }&quot;"
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(MicrosoftDotnetSdkVersion) }&quot;"
           IgnoreStandardErrorWarningFormat="true" />
 
     <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) %(RuntimeTestVersions.ExtraInstallArgs) -Version %(RuntimeTestVersions.RuntimeDownload) -Runtime dotnet }&quot;"
@@ -85,7 +85,7 @@
           Condition="!$([MSBuild]::IsOsPlatform(Windows))"
           Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
 
-    <Exec Command="bash $(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(MicrosoftDotnetSdkInternalVersion)"
+    <Exec Command="bash $(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(MicrosoftDotnetSdkVersion)"
           IgnoreStandardErrorWarningFormat="true" />
 
     <Exec Command="bash $(DotnetInstallScriptCmd) $(CommonInstallArgs) %(RuntimeTestVersions.ExtraInstallArgs) -Version %(RuntimeTestVersions.RuntimeDownload) -Runtime dotnet"
@@ -101,8 +101,8 @@
     Writes the Debugger.Tests.Versions.txt file used by the SOS test harness
 -->
 
-  <Target Name="WriteTestVersionManifest" 
-          Inputs="$(VersionsPropsPath)" 
+  <Target Name="WriteTestVersionManifest"
+          Inputs="$(VersionsPropsPath)"
           Outputs="$(TestConfigFileName)">
 
     <ItemGroup>
@@ -131,7 +131,7 @@
         </ConfigFileEntry>
       </TestConfigFileLines>
     </ItemGroup>
-    
+
     <WriteLinesToFile File="$(TestConfigFileName)" Lines="@(TestConfigFileLines->Metadata('ConfigFileEntry'))" Overwrite="true" WriteOnlyWhenDifferent="true" />
 
     <Message Importance="High" Text="Created config file $(TestConfigFileName)" />
