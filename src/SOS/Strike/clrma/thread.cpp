@@ -464,6 +464,11 @@ ClrmaThread::GetFrameLocation(
             contextFlags = 0x01000001;
             break;
 
+        case IMAGE_FILE_MACHINE_LOONGARCH64:
+            contextSize = sizeof(LOONGARCH64_CONTEXT);
+            contextFlags = 0x00800001;
+            break;
+
         default:
             TraceError("GetFrameLocation: Invalid processor type %04x\n", processorType);
             return E_FAIL;
@@ -508,6 +513,11 @@ ClrmaThread::GetFrameLocation(
         case IMAGE_FILE_MACHINE_RISCV64:
             *ip = context.RiscV64Context.Pc;
             *sp = context.RiscV64Context.Sp;
+            break;
+
+        case IMAGE_FILE_MACHINE_LOONGARCH64:
+            *ip = context.LoongArch64Context.Pc;
+            *sp = context.LoongArch64Context.Sp;
             break;
     }
     return S_OK;

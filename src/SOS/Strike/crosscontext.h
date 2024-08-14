@@ -332,6 +332,56 @@ typedef struct {
 
 } RISCV64_CONTEXT;
 
+///LOONGARCH64 Context
+#define LOONGARCH64_MAX_BREAKPOINTS     8
+#define LOONGARCH64_MAX_WATCHPOINTS     2
+typedef struct {
+
+    DWORD ContextFlags;
+
+    DWORD64 R0;
+    DWORD64 Ra;
+    DWORD64 Tp;
+    DWORD64 Sp;
+    DWORD64 A0;
+    DWORD64 A1;
+    DWORD64 A2;
+    DWORD64 A3;
+    DWORD64 A4;
+    DWORD64 A5;
+    DWORD64 A6;
+    DWORD64 A7;
+    DWORD64 T0;
+    DWORD64 T1;
+    DWORD64 T2;
+    DWORD64 T3;
+    DWORD64 T4;
+    DWORD64 T5;
+    DWORD64 T6;
+    DWORD64 T7;
+    DWORD64 T8;
+    DWORD64 X0;
+    DWORD64 Fp;
+    DWORD64 S0;
+    DWORD64 S1;
+    DWORD64 S2;
+    DWORD64 S3;
+    DWORD64 S4;
+    DWORD64 S5;
+    DWORD64 S6;
+    DWORD64 S7;
+    DWORD64 S8;
+    DWORD64 Pc;
+
+    //
+    // Floating Point Registers: FPR64/LSX/LASX.
+    //
+    ULONGLONG F[4*32];
+    DWORD64 Fcc;
+    DWORD   Fcsr;
+
+} LOONGARCH64_CONTEXT;
+
 typedef struct _CROSS_PLATFORM_CONTEXT {
 
     _CROSS_PLATFORM_CONTEXT() {}
@@ -342,6 +392,7 @@ typedef struct _CROSS_PLATFORM_CONTEXT {
         ARM_CONTEXT       ArmContext;
         ARM64_CONTEXT     Arm64Context;
         RISCV64_CONTEXT   RiscV64Context;
+        LOONGARCH64_CONTEXT   LoongArch64Context;
     };
 
 } CROSS_PLATFORM_CONTEXT, *PCROSS_PLATFORM_CONTEXT;

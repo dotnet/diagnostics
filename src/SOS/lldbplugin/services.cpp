@@ -233,6 +233,8 @@ LLDBServices::VirtualUnwind(
     DWORD64 spToFind = dtcontext->Sp;
 #elif DBG_TARGET_RISCV64
     DWORD64 spToFind = dtcontext->Sp;
+#elif DBG_TARGET_LOONGARCH64
+    DWORD64 spToFind = dtcontext->Sp;
 #else
 #error "spToFind undefined for this platform"
 #endif
@@ -458,6 +460,8 @@ LLDBServices::GetExecutingProcessorType(
     *type = IMAGE_FILE_MACHINE_I386;
 #elif DBG_TARGET_RISCV64
     *type = IMAGE_FILE_MACHINE_RISCV64;
+#elif DBG_TARGET_LOONGARCH64
+    *type = IMAGE_FILE_MACHINE_LOONGARCH64;
 #else
 #error "Unsupported target"
 #endif
@@ -1726,6 +1730,41 @@ LLDBServices::GetContextFromFrame(
     dtcontext->SegEs = GetRegister(frame, "es");
     dtcontext->SegFs = GetRegister(frame, "fs");
     dtcontext->SegGs = GetRegister(frame, "gs");
+#elif DBG_TARGET_LOONGARCH64
+    dtcontext->Pc = frame.GetPC();
+    dtcontext->Sp = frame.GetSP();
+    dtcontext->Ra = GetRegister(frame, "ra");
+    dtcontext->Fp = GetRegister(frame, "fp");
+
+    dtcontext->R0 = GetRegister(frame, "r0");
+    dtcontext->Tp = GetRegister(frame, "tp");
+    dtcontext->A0 = GetRegister(frame, "a0");
+    dtcontext->A1 = GetRegister(frame, "a1");
+    dtcontext->A2 = GetRegister(frame, "a2");
+    dtcontext->A3 = GetRegister(frame, "a3");
+    dtcontext->A4 = GetRegister(frame, "a4");
+    dtcontext->A5 = GetRegister(frame, "a5");
+    dtcontext->A6 = GetRegister(frame, "a6");
+    dtcontext->A7 = GetRegister(frame, "a7");
+    dtcontext->T0 = GetRegister(frame, "t0");
+    dtcontext->T1 = GetRegister(frame, "t1");
+    dtcontext->T2 = GetRegister(frame, "t2");
+    dtcontext->T3 = GetRegister(frame, "t3");
+    dtcontext->T4 = GetRegister(frame, "t4");
+    dtcontext->T5 = GetRegister(frame, "t5");
+    dtcontext->T6 = GetRegister(frame, "t6");
+    dtcontext->T7 = GetRegister(frame, "t7");
+    dtcontext->T8 = GetRegister(frame, "t8");
+    dtcontext->X0 = GetRegister(frame, "x0");
+    dtcontext->S0 = GetRegister(frame, "s0");
+    dtcontext->S1 = GetRegister(frame, "s1");
+    dtcontext->S2 = GetRegister(frame, "s2");
+    dtcontext->S3 = GetRegister(frame, "s3");
+    dtcontext->S4 = GetRegister(frame, "s4");
+    dtcontext->S5 = GetRegister(frame, "s5");
+    dtcontext->S6 = GetRegister(frame, "s6");
+    dtcontext->S7 = GetRegister(frame, "s7");
+    dtcontext->S8 = GetRegister(frame, "s8");
 #endif
 }
 

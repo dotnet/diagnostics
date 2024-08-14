@@ -59,6 +59,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     contextType = typeof(ArmContext);
                     break;
 
+                case (Architecture)6 /* Architecture.LoongArch64 */:
+                    _contextSize = LoongArch64Context.Size;
+                    _contextFlags = LoongArch64Context.ContextControl | LoongArch64Context.ContextInteger | LoongArch64Context.ContextFloatingPoint;
+                    contextType = typeof(LoongArch64Context);
+                    break;
+
                 case (Architecture)9 /* Architecture.RiscV64 */:
                     _contextSize = RiscV64Context.Size;
                     _contextFlags = RiscV64Context.ContextControl | RiscV64Context.ContextInteger | RiscV64Context.ContextFloatingPoint;

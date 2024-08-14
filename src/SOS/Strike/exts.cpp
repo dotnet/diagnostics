@@ -158,6 +158,12 @@ GetTargetMachine(ULONG processorType)
         targetMachine = RISCV64Machine::GetInstance();
     }
 #endif // SOS_TARGET_RISCV64
+#ifdef SOS_TARGET_LOONGARCH64
+    if (processorType == IMAGE_FILE_MACHINE_LOONGARCH64)
+    {
+        targetMachine = LOONGARCH64Machine::GetInstance();
+    }
+#endif // SOS_TARGET_LOONGARCH64
     return targetMachine;
 }
 
@@ -189,6 +195,8 @@ ArchQuery(void)
                 break;
             case IMAGE_FILE_MACHINE_RISCV64:
                 architecture = "riscv64";
+            case IMAGE_FILE_MACHINE_LOONGARCH64:
+                architecture = "loongarch64";
                 break;
         }
         ExtErr("SOS does not support the current target architecture '%s' (0x%04x). A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.\n",

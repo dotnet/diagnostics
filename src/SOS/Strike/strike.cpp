@@ -10593,7 +10593,7 @@ public:
         InternalFrameManager internalFrameManager;
         IfFailRet(internalFrameManager.Init(pThread3));
 
-    #if defined(_AMD64_) || defined(_ARM64_) || defined(_RISCV64_)
+    #if defined(_AMD64_) || defined(_ARM64_) || defined(_RISCV64_) || defined(_LOONGARCH64_)
         ExtOut("%-16s %-16s %s\n", "Child SP", "IP", "Call Site");
     #elif defined(_X86_) || defined(_ARM_)
         ExtOut("%-8s %-8s %s\n", "Child SP", "IP", "Call Site");
@@ -11079,6 +11079,24 @@ public:
             ExtOut(outputFormat3, "s8", context.RiscV64Context.S8, "s9", context.RiscV64Context.S9, "s10", context.RiscV64Context.S10);
             ExtOut(outputFormat3, "s11", context.RiscV64Context.S11, "t3", context.RiscV64Context.T3, "t4", context.RiscV64Context.T4);
             ExtOut(outputFormat3, "t5", context.RiscV64Context.T5, "t6", context.RiscV64Context.T6, "pc", context.RiscV64Context.Pc);
+        }
+#endif
+#if defined(SOS_TARGET_LOONGARCH64)
+        if (IsDbgTargetLoongArch64())
+        {
+            foundPlatform = true;
+            String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
+            ExtOut(outputFormat3, "r0", context.LoongArch64Context.R0, "ra", context.LoongArch64Context.Ra, "tp", context.LoongArch64Context.Tp);
+            ExtOut(outputFormat3, "sp", context.LoongArch64Context.Sp, "a0", context.LoongArch64Context.A0, "a1", context.LoongArch64Context.A1);
+            ExtOut(outputFormat3, "a2", context.LoongArch64Context.A2, "a3", context.LoongArch64Context.A3, "a4", context.LoongArch64Context.A4);
+            ExtOut(outputFormat3, "a5", context.LoongArch64Context.A5, "a6", context.LoongArch64Context.A6, "a7", context.LoongArch64Context.A7);
+            ExtOut(outputFormat3, "t0", context.LoongArch64Context.T0, "t1", context.LoongArch64Context.T1, "t2", context.LoongArch64Context.T2);
+            ExtOut(outputFormat3, "t3", context.LoongArch64Context.T3, "t4", context.LoongArch64Context.T4, "t5", context.LoongArch64Context.T5);
+            ExtOut(outputFormat3, "t6", context.LoongArch64Context.T6, "t7", context.LoongArch64Context.T7, "t8", context.LoongArch64Context.T8);
+            ExtOut(outputFormat3, "x0", context.LoongArch64Context.X0, "fp", context.LoongArch64Context.Fp, "s0", context.LoongArch64Context.S0);
+            ExtOut(outputFormat3, "s1", context.LoongArch64Context.S1, "s2", context.LoongArch64Context.S2, "s3", context.LoongArch64Context.S3);
+            ExtOut(outputFormat3, "s4", context.LoongArch64Context.S4, "s5", context.LoongArch64Context.S5, "s6", context.LoongArch64Context.S6);
+            ExtOut(outputFormat3, "s7", context.LoongArch64Context.S7, "s8", context.LoongArch64Context.S8, "pc", context.LoongArch64Context.Pc);
         }
 #endif
 
