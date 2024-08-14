@@ -102,9 +102,9 @@
 
   -->
   <PropertyGroup>
-    <MicrosoftNETCoreApp80Version>8.0.5</MicrosoftNETCoreApp80Version>
-    <MicrosoftNETCoreApp70Version>7.0.19</MicrosoftNETCoreApp70Version>
-    <MicrosoftNETCoreApp60Version>6.0.30</MicrosoftNETCoreApp60Version>
+    <MicrosoftNETCoreApp90Version></MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp80Version>8.0.8</MicrosoftNETCoreApp80Version>
+    <MicrosoftNETCoreApp60Version>6.0.33</MicrosoftNETCoreApp60Version>
   </PropertyGroup>
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
@@ -121,19 +121,21 @@
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
       <TargetFramework>net9.0</TargetFramework>
     </RuntimeTestVersions>
+<!--
     <RuntimeTestVersions Include="Servicing1">
+      <RuntimeDownload>$(MicrosoftNETCoreApp90Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreApp90Version)</Runtime>
+      <AspNetDownload>$(MicrosoftNETCoreApp90Version)</AspNetDownload>
+      <AspNet>$(MicrosoftNETCoreApp90Version)</AspNet>
+      <TargetFramework>net9.0</TargetFramework>
+    </RuntimeTestVersions>
+-->
+    <RuntimeTestVersions Include="Servicing2">
       <RuntimeDownload>$(MicrosoftNETCoreApp80Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreApp80Version)</Runtime>
       <AspNetDownload>$(MicrosoftNETCoreApp80Version)</AspNetDownload>
       <AspNet>$(MicrosoftNETCoreApp80Version)</AspNet>
       <TargetFramework>net8.0</TargetFramework>
-    </RuntimeTestVersions>
-    <RuntimeTestVersions Include="Servicing2">
-      <RuntimeDownload>$(MicrosoftNETCoreApp70Version)</RuntimeDownload>
-      <Runtime>$(MicrosoftNETCoreApp70Version)</Runtime>
-      <AspNetDownload>$(MicrosoftNETCoreApp70Version)</AspNetDownload>
-      <AspNet>$(MicrosoftNETCoreApp70Version)</AspNet>
-      <TargetFramework>net7.0</TargetFramework>
     </RuntimeTestVersions>
     <RuntimeTestVersions Include="Servicing3">
       <RuntimeDownload>$(MicrosoftNETCoreApp60Version)</RuntimeDownload>

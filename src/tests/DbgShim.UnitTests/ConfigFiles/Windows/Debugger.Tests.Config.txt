@@ -120,9 +120,9 @@
 
   <RuntimeModuleDir>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeModuleDir>
 
+  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '10')">net10.0</BuildProjectFramework>
   <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '9')">net9.0</BuildProjectFramework>
   <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '8')">net8.0</BuildProjectFramework>
-  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '7')">net7.0</BuildProjectFramework>
   <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '6')">net6.0</BuildProjectFramework>
 
   <DbgShimPath>$(InstallDir)\dbgshim.dll</DbgShimPath>
