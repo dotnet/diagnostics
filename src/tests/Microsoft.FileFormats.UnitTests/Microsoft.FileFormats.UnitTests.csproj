@@ -59,4 +59,10 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\TestHelpers\TestHelpers.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Update="TestBinaries\HelloWorld.pdz">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

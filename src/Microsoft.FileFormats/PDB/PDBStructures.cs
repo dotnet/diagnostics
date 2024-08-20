@@ -33,9 +33,9 @@ namespace Microsoft.FileFormats.PDB
         public uint Reserved;
 
         #region Validation Rules
-        public ValidationRule IsMagicValid
+        public bool IsMagicValid
         {
-            get { return new ValidationRule("PDB header magic is invalid", () => Magic.SequenceEqual(ExpectedMagic)); }
+            get { return Magic.SequenceEqual(ExpectedMagic); }
         }
         #endregion
     }
@@ -52,8 +52,8 @@ namespace Microsoft.FileFormats.PDB
 
     public class DbiStreamHeader : TStruct
     {
-        private const uint CurrentSignature = uint.MaxValue;
-        private const uint CurrentVersion = 19990903;          // DBIImpvV70
+        public const uint CurrentSignature = uint.MaxValue;
+        public const uint CurrentVersion = 19990903;          // DBIImpvV70
 
         public uint Signature;
         public uint Version;
