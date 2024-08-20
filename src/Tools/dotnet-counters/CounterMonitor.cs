@@ -23,8 +23,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
     internal class CounterMonitor : ICountersLogger
     {
         private const int BufferDelaySecs = 1;
+        private const string EventCountersProviderPrefix = "EventCounters\\";
         private int _processId;
-        private CounterSet _counterList;
+        private List<EventPipeCounterGroup> _counterList;
         private IConsole _console;
         private ICounterRenderer _renderer;
         private string _output;
@@ -66,6 +67,13 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         private void HandleDiagnosticCounter(ICounterPayload payload)
         {
+            // if EventCounters were explicitly requested on the command-line then show them always
+            if (_counterList.Where(group => group.ProviderName == payload.CounterMetadata.ProviderName && group.Type == CounterGroupType.EventCounter).Any())
+            {
+                CounterPayloadReceived((CounterPayload)payload);
+                return;
+            }
+
             // init providerEventState if this is the first time we've seen an event from this provider
             if (!_providerEventStates.TryGetValue(payload.CounterMetadata.ProviderName, out ProviderEventState providerState))
             {
@@ -206,7 +214,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _settings.MaxTimeSeries = maxTimeSeries;
                         _settings.CounterIntervalSeconds = refreshInterval;
                         _settings.ResumeRuntime = resumeRuntime;
-                        _settings.CounterGroups = GetEventPipeProviders();
+                        _settings.CounterGroups = _counterList.ToArray();
                         _settings.UseCounterRateAndValuePayloads = true;
 
                         bool useSharedSession = false;
@@ -290,7 +298,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _settings.MaxTimeSeries = maxTimeSeries;
                         _settings.CounterIntervalSeconds = refreshInterval;
                         _settings.ResumeRuntime = resumeRuntime;
-                        _settings.CounterGroups = GetEventPipeProviders();
+                        _settings.CounterGroups = _counterList.ToArray();
                         _output = output;
                         _diagnosticsClient = holder.Client;
                         if (_output.Length == 0)
@@ -354,9 +362,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        internal CounterSet ConfigureCounters(string commaSeparatedProviderListText, List<string> providerList)
+        internal List<EventPipeCounterGroup> ConfigureCounters(string commaSeparatedProviderListText, List<string> providerList)
         {
-            CounterSet counters = new();
+            List<EventPipeCounterGroup> counters = new();
             try
             {
                 if (commaSeparatedProviderListText != null)
@@ -388,24 +396,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
             }
 
-            if (counters.IsEmpty)
+            if (counters.Count == 0)
             {
                 _console.Out.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
-                counters.AddAllProviderCounters("System.Runtime");
+                ParseCounterProvider("System.Runtime", counters);
             }
             return counters;
         }
 
         // parses a comma separated list of providers
-        internal static CounterSet ParseProviderList(string providerListText)
+        internal static List<EventPipeCounterGroup> ParseProviderList(string providerListText)
         {
-            CounterSet set = new();
+            List<EventPipeCounterGroup> set = new();
             ParseProviderList(providerListText, set);
             return set;
         }
 
         // parses a comma separated list of providers
-        internal static void ParseProviderList(string providerListText, CounterSet counters)
+        internal static void ParseProviderList(string providerListText, List<EventPipeCounterGroup> counters)
         {
             bool inParen = false;
             int startIdx = -1;
@@ -457,7 +465,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         //   System.Runtime
         //   System.Runtime[exception-count]
         //   System.Runtime[exception-count,cpu-usage]
-        private static void ParseCounterProvider(string providerText, CounterSet counters)
+        private static void ParseCounterProvider(string providerText, List<EventPipeCounterGroup> counters)
         {
             string[] tokens = providerText.Split('[');
             if (tokens.Length == 0)
@@ -468,12 +476,24 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 throw new FormatException("Expected at most one '[' in counter_provider");
             }
+
             string providerName = tokens[0];
-            if (tokens.Length == 1)
+            CounterGroupType groupType = CounterGroupType.All;
+            // EventCounters\ is a special prefix for a provider that marks it as an EventCounter provider.
+            if (providerName.StartsWith(EventCountersProviderPrefix))
             {
-                counters.AddAllProviderCounters(providerName); // Only a provider name was specified
+                providerName = providerName.Substring(EventCountersProviderPrefix.Length);
+                groupType = CounterGroupType.EventCounter;
             }
-            else
+
+            // An empty set of counters means all counters are enabled.
+            string[] enabledCounters = Array.Empty<string>();
+            EventPipeCounterGroup preExistingGroup = counters.FirstOrDefault(group => group.ProviderName == providerName);
+            if (preExistingGroup != null && preExistingGroup.Type != groupType)
+            {
+                throw new FormatException("Using the same provider name with and without the EventCounters\\ prefix in the counter list is not supported.");
+            }
+            if (tokens.Length == 2)
             {
                 string counterNames = tokens[1];
                 if (!counterNames.EndsWith(']'))
@@ -487,17 +507,34 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         throw new FormatException("Unexpected characters after closing ']' in counter_provider");
                     }
                 }
-                string[] enabledCounters = counterNames.Substring(0, counterNames.Length - 1).Split(',', StringSplitOptions.RemoveEmptyEntries);
-                counters.AddProviderCounters(providerName, enabledCounters);
+                enabledCounters = counterNames.Substring(0, counterNames.Length - 1).Split(',', StringSplitOptions.RemoveEmptyEntries);
+            }
+
+            // haven't seen this provider yet so add it
+            if (preExistingGroup == null)
+            {
+                counters.Add(new EventPipeCounterGroup
+                {
+                    ProviderName = providerName,
+                    CounterNames = enabledCounters,
+                    Type = groupType
+                });
+            }
+            // we've already seen the provider so merge the configurations
+            else
+            {
+                // If the previous config had some specific counters and the new one also has specific counters then merge them.
+                // Otherwise one of the two requested all counters so the union is also all counters.
+                if (preExistingGroup.CounterNames.Length == 0 || enabledCounters.Length == 0)
+                {
+                    preExistingGroup.CounterNames = Array.Empty<string>();
+                }
+                else
+                {
+                    preExistingGroup.CounterNames = preExistingGroup.CounterNames.Union(enabledCounters).ToArray();
+                }
             }
         }
-
-        private EventPipeCounterGroup[] GetEventPipeProviders() =>
-            _counterList.Providers.Select(provider => new EventPipeCounterGroup
-            {
-                ProviderName = provider,
-                CounterNames = _counterList.GetCounters(provider).ToArray()
-            }).ToArray();
 
         private async Task<ReturnCode> Start(MetricsPipeline pipeline, CancellationToken token)
         {

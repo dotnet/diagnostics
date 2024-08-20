@@ -34,7 +34,7 @@ namespace DotnetCounters.UnitTests
 
         private ITestOutputHelper _outputHelper;
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(2);
-        private static readonly string SystemRuntimeName = "System.Runtime";
+        private static readonly string EventCounterSystemRuntimeName = "EventCounters\\System.Runtime";
         private static readonly string TagStart = "[";
 
         private static HashSet<CounterTypes> ExpectedCounterTypes = new() { CounterTypes.Metric, CounterTypes.Rate };
@@ -66,27 +66,27 @@ namespace DotnetCounters.UnitTests
             ValidateCustomMetrics(metricComponents, CountersExportFormat.csv);
         }
 
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4806"), MemberData(nameof(Configurations))]
-        public async Task TestCounterMonitorSystemRuntimeMetricsJSON(TestConfiguration configuration)
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public async Task TestCounterMonitorEventCounterSystemRuntimeMetricsJSON(TestConfiguration configuration)
         {
             CheckRuntimeOS();
 
-            List<MetricComponents> metricComponents = await GetCounterTraceJSON(configuration, new List<string> { SystemRuntimeName });
+            List<MetricComponents> metricComponents = await GetCounterTraceJSON(configuration, new List<string> { EventCounterSystemRuntimeName });
 
-            ValidateSystemRuntimeMetrics(metricComponents);
+            ValidateEventCounterSystemRuntimeMetrics(metricComponents);
         }
 
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4806"), MemberData(nameof(Configurations))]
-        public async Task TestCounterMonitorSystemRuntimeMetricsCSV(TestConfiguration configuration)
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public async Task TestCounterMonitorEventCounterSystemRuntimeMetricsCSV(TestConfiguration configuration)
         {
             CheckRuntimeOS();
 
-            List<MetricComponents> metricComponents = await GetCounterTraceCSV(configuration, new List<string> { SystemRuntimeName });
+            List<MetricComponents> metricComponents = await GetCounterTraceCSV(configuration, new List<string> { EventCounterSystemRuntimeName });
 
-            ValidateSystemRuntimeMetrics(metricComponents);
+            ValidateEventCounterSystemRuntimeMetrics(metricComponents);
         }
 
-        private void ValidateSystemRuntimeMetrics(List<MetricComponents> metricComponents)
+        private void ValidateEventCounterSystemRuntimeMetrics(List<MetricComponents> metricComponents)
         {
             string[] ExpectedProviders = { "System.Runtime" };
             Assert.Equal(ExpectedProviders, metricComponents.Select(c => c.ProviderName).ToHashSet());

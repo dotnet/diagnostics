@@ -138,7 +138,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private static Option CounterOption() =>
             new(
                 alias: "--counters",
-                description: "A comma-separated list of counter providers. Counter providers can be specified as <provider_name> or <provider_name>[comma_separated_counter_names]. If the provider_name is used without qualifying counter_names then all counters will be shown. For example \"System.Runtime[cpu-usage,working-set],Microsoft.AspNetCore.Hosting\" includes the cpu-usage and working-set counters from the System.Runtime provider and all the counters from the Microsoft.AspNetCore.Hosting provider. To discover provider and counter names, use the list command.")
+                description: "A comma-separated list of counter providers. Counter providers can be specified as <provider_name> or <provider_name>[comma_separated_counter_names]. If the provider_name" +
+                " is used without qualifying counter_names then all counters will be shown. For example \"System.Runtime[dotnet.assembly.count,dotnet.gc.pause.time],Microsoft.AspNetCore.Hosting\"" +
+                " includes the dotnet.assembly.count and dotnet.gc.pause.time counters from the System.Runtime provider and all the counters from the Microsoft.AspNetCore.Hosting provider. Provider" +
+                " names can either refer to the name of a Meter for the System.Diagnostics.Metrics API or the name of an EventSource for the EventCounters API. If the monitored application has both" +
+                " a Meter and an EventSource with the same name, the Meter is automatically preferred. Use the prefix \'EventCounters\\\' in front of a provider name to only show the EventCounters." +
+                " To discover well-known provider and counter names, please visit https://learn.microsoft.com/dotnet/core/diagnostics/built-in-metrics.")
             {
                 Argument = new Argument<string>(name: "counters")
             };
@@ -216,30 +221,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                " This is useful to monitor the rate of change for a metric.")
             { };
 
-        private static readonly string[] s_SupportedRuntimeVersions = KnownData.s_AllVersions;
-
         public static int List(IConsole console, string runtimeVersion)
         {
-            if (!s_SupportedRuntimeVersions.Contains(runtimeVersion))
-            {
-                Console.WriteLine($"{runtimeVersion} is not a supported version string or a supported runtime version.");
-                Console.WriteLine("Supported version strings: 3.0, 3.1, 5.0, 6.0, 7.0, 8.0");
-                return 0;
-            }
-            IReadOnlyList<CounterProvider> profiles = KnownData.GetAllProviders(runtimeVersion);
-            int maxNameLength = profiles.Max(p => p.Name.Length);
-            Console.WriteLine($"Showing well-known counters for .NET (Core) version {runtimeVersion} only. Specific processes may support additional counters.");
-            foreach (CounterProvider profile in profiles)
-            {
-                IReadOnlyList<CounterProfile> counters = profile.GetAllCounters();
-                int maxCounterNameLength = counters.Max(c => c.Name.Length);
-                Console.WriteLine($"{profile.Name.PadRight(maxNameLength)}");
-                foreach (CounterProfile counter in profile.Counters.Values)
-                {
-                    Console.WriteLine($"    {counter.Name.PadRight(maxCounterNameLength)} \t\t {counter.Description}");
-                }
-                Console.WriteLine("");
-            }
+            Console.WriteLine("Counter information has been moved to the online .NET documentation.");
+            Console.WriteLine("Please visit https://learn.microsoft.com/dotnet/core/diagnostics/built-in-metrics.");
             return 1;
         }
 

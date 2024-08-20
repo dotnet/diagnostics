@@ -21,12 +21,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             public ObservedProvider(string name)
             {
                 Name = name;
-                KnownData.TryGetProvider(name, out KnownProvider);
             }
 
             public string Name { get; } // Name of the category.
             public Dictionary<string, ObservedCounter> Counters { get; } = new Dictionary<string, ObservedCounter>(); // Counters in this category.
-            public readonly CounterProvider KnownProvider;
         }
 
         /// <summary>Information about an observed counter.</summary>
@@ -146,7 +144,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             if (RenderRow(ref row) &&                                            // Blank line.
                 RenderTableRow(ref row, "Name", "Current Value", "Last Delta"))  // Table header
             {
-                foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.KnownProvider == null).ThenBy(p => p.Name)) // Known providers first.
+                foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.Name))
                 {
                     if (!RenderTableRow(ref row, $"[{provider.Name}]"))
                     {
