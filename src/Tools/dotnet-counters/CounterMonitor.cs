@@ -489,7 +489,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             // An empty set of counters means all counters are enabled.
             string[] enabledCounters = Array.Empty<string>();
             EventPipeCounterGroup preExistingGroup = counters.FirstOrDefault(group => group.ProviderName == providerName);
-            if ( preExistingGroup != null && preExistingGroup.Type != groupType)
+            if (preExistingGroup != null && preExistingGroup.Type != groupType)
             {
                 throw new FormatException("Using the same provider name with and without the EventCounters\\ prefix in the counter list is not supported.");
             }
