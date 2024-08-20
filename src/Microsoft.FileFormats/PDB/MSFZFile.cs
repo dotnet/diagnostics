@@ -36,13 +36,19 @@ namespace Microsoft.FileFormats.PDB
         /// </summary>
         private readonly uint[] _streamDirStarts;
 
-        private MSFZFile(Reader reader, uint numStreams, uint[] streamDir, uint[] streamDirStarts)
+        /// <summary>
+        /// The value of the "version" field from the MSFZ header.
+        /// </summary>
+        private readonly ulong _msfzVersion;
+
+        private MSFZFile(Reader reader, uint numStreams, uint[] streamDir, uint[] streamDirStarts, ulong msfzVersion)
         {
             Debug.Assert(numStreams == streamDirStarts.Length);
             this._numStreams = numStreams;
             this._reader = reader;
             this._streamDir = streamDir;
             this._streamDirStarts = streamDirStarts;
+            this._msfzVersion = msfzVersion;
         }
 
         public uint NumStreams
@@ -120,6 +126,9 @@ namespace Microsoft.FileFormats.PDB
             uint streamDirSizeCompressed = fileHeader.StreamDirSizeCompressed;
             uint streamDirSizeUncompressed = fileHeader.StreamDirSizeUncompressed;
 
+            // Validate the MSFZ file header version. We keep track of the version in a variable,
+            // even though the only version that is actually supported is V0. This is to minimize
+            // code changes in future versions of this code that would parse V1, V2, etc.
             if (headerVersion != MSFZFileHeader.VersionV0)
             {
                 // Wrong version
@@ -154,7 +163,7 @@ namespace Microsoft.FileFormats.PDB
             // We do not read the Chunk Table because this implementation does not support
             // compression. Since the Chunk Table describes compressed chunks, we will never use it.
 
-            return new MSFZFile(reader, numStreams, streamDirEncoded, streamStarts);
+            return new MSFZFile(reader, numStreams, streamDirEncoded, streamStarts, headerVersion);
         }
 
         /// <summary>
@@ -277,6 +286,15 @@ namespace Microsoft.FileFormats.PDB
             return totalBytesTransferred;
         }
 
+        public PDBContainerKind ContainerKind
+        {
+            get { return PDBContainerKind.MSFZ; }
+        }
+
+        public string ContainerKindSpecString
+        {
+            get { return $"msfz{_msfzVersion}"; }
+        }
 
         public void Dispose()
         {
