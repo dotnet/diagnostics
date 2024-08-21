@@ -67,5 +67,15 @@ namespace Microsoft.FileFormats.PDB
         {
             return _streams[index];
         }
+
+        public PDBContainerKind ContainerKind
+        {
+            get { return PDBContainerKind.MSF; }
+        }
+
+        public string ContainerKindSpecString
+        {
+            get { return "msf"; }
+        }
     }
 }

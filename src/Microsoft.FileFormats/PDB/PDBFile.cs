@@ -146,6 +146,34 @@ namespace Microsoft.FileFormats.PDB
             }
             return streamReaders;
         }
+
+        /// <summary>
+        /// Returns the container kind used for this PDB file.
+        /// </summary>
+        public PDBContainerKind ContainerKind
+        {
+            get
+            {
+                CheckValid();
+                return _msfFile.ContainerKind;
+            }
+        }
+
+        /// <summary>
+        /// Returns a string which identifies the container kind, using a backward-compatible naming scheme.
+        /// <summary>
+        /// <para>
+        /// The existing PDB format is identified as "pdb", while PDZ (MSFZ) is identified as "msfz0".
+        /// This allows new versions of MSFZ to be identified and deployed without updating clients of this API.
+        /// </para>
+        public string ContainerKindSpecString
+        {
+            get
+            {
+                CheckValid();
+                return _msfFile.ContainerKindSpecString;
+            }
+        }
     }
 
     /// <summary>
@@ -251,5 +279,21 @@ namespace Microsoft.FileFormats.PDB
         }
 
         public DbiStreamHeader Header { get { _header.Value.IsHeaderValid.CheckThrowing(); return _header.Value; } }
+    }
+
+    /// <summary>
+    /// Specifies the kinds of PDB container formats.
+    /// </summary>
+    public enum PDBContainerKind
+    {
+        /// <summary>
+        /// An uncompressed PDB.
+        /// </summary>
+        MSF,
+
+        /// <summary>
+        /// A compressed PDB, also known as a PDBZ or "PDB using MSFZ container".
+        /// </summary>
+        MSFZ,
     }
 }
