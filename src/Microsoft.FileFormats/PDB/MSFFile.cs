@@ -75,7 +75,7 @@ namespace Microsoft.FileFormats.PDB
 
         public string ContainerKindSpecString
         {
-            get { return "pdb"; }
+            get { return "msf"; }
         }
     }
 }

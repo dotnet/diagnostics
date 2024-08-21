@@ -23,7 +23,7 @@ namespace Microsoft.FileFormats.PDB.Tests
                 Assert.Equal(Guid.Parse("99891B3E-D7AE-4C3B-ABFF-8A2B4A9B0C43"), pdb.Signature);
 
                 Assert.Equal(PDBContainerKind.MSF, pdb.ContainerKind);
-                Assert.Equal("pdb", pdb.ContainerKindSpecString);
+                Assert.Equal("msf", pdb.ContainerKindSpecString);
 
                 // Also read the PDBI stream directly, using the downlevel API.
 #pragma warning disable CS0618 // Type or member is obsolete
