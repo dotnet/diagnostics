@@ -2,7 +2,7 @@
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 # Verify minimum required version
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.15)
 
 cmake_policy(SET CMP0042 NEW) # MACOSX_RPATH is enabled by default.
 
