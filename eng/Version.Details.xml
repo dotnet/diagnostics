@@ -32,13 +32,13 @@
       <Uri>https://github.com/dotnet/sdk</Uri>
       <Sha>df308001e5fe3c7180182e603bcda0590beac331</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="9.0.0-rc.2.24420.12">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="9.0.0-rc.2.24422.3">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>36332c8183f0205ec098822545dbe65d17d93405</Sha>
+      <Sha>d11493ff125bffff4cb0db74dd62c8dc87c936d6</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="9.0.0-rc.2.24420.12">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="9.0.0-rc.2.24422.3">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>36332c8183f0205ec098822545dbe65d17d93405</Sha>
+      <Sha>d11493ff125bffff4cb0db74dd62c8dc87c936d6</Sha>
     </Dependency>
     <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="9.0.0-rc.2.24422.9">
       <Uri>https://github.com/dotnet/runtime</Uri>
