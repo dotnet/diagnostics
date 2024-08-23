@@ -247,7 +247,7 @@ VOID DbgAssertDialog(const char *szFile, int iLine, const char *szExpr)
     STATIC_CONTRACT_FORBID_FAULT;
     STATIC_CONTRACT_SUPPORTS_DAC_HOST_ONLY;
 
-    DEBUG_ONLY_FUNCTION;
+    //DEBUG_ONLY_FUNCTION;
 
 #ifdef DACCESS_COMPILE
     // In the DAC case, asserts can mean one of two things.
