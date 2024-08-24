@@ -19,7 +19,9 @@ set(CMAKE_TRY_COMPILE_CONFIGURATION Release)
 
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
-#include(CheckLinkerFlag)
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+    include(CheckLinkerFlag)
+endif()
 
 # "configureoptimization.cmake" must be included after CLR_CMAKE_HOST_UNIX has been set.
 include(${CMAKE_CURRENT_LIST_DIR}/configureoptimization.cmake)
