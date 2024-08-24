@@ -22,6 +22,12 @@ if(CLR_CMAKE_HOST_UNIX)
   add_compile_options(-fvisibility=default)
 endif(CLR_CMAKE_HOST_UNIX)
 
+if (CMAKE_VERSION VERSION_LESS "3.16")
+  # Provide a no-op polyfill for precompiled headers on old CMake versions
+  function(target_precompile_headers)
+  endfunction()
+endif()
+
 # Register the default component
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME diagnostics)
 add_component(diagnostics)
