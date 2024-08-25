@@ -260,7 +260,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "utilcode", "src\shared\util
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "minipal", "minipal", "{795B7A50-1B1F-406E-94E0-F9B35104EF22}"
 	ProjectSection(SolutionItems) = preProject
-		src\shared\minipal\utils.h = src\shared\minipal\utils.h
+		src\shared\minipal\CMakeLists.txt = src\shared\minipal\CMakeLists.txt
+		src\shared\minipal\dn-u16.h = src\shared\minipal\dn-u16.h
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DbgShim.UnitTests", "src\tests\DbgShim.UnitTests\DbgShim.UnitTests.csproj", "{DD60B7C4-BECC-4C7D-A53B-FCDD4C92B728}"
@@ -304,6 +305,42 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dump", "dump", "{3B26AB4F-8129-4DAF-8BB0-A6075663F6D2}"
 	ProjectSection(SolutionItems) = preProject
 		src\shared\debug\inc\dump\dumpcommon.h = src\shared\debug\inc\dump\dumpcommon.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Unix", "Unix", "{8944D9BF-69ED-4798-B533-559CAB011B07}"
+	ProjectSection(SolutionItems) = preProject
+		src\shared\minipal\Unix\CMakeLists.txt = src\shared\minipal\Unix\CMakeLists.txt
+		src\shared\minipal\Unix\dn-u16.cpp = src\shared\minipal\Unix\dn-u16.cpp
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Windows", "Windows", "{06FB18BC-F4DD-4DB9-A566-551254CD1064}"
+	ProjectSection(SolutionItems) = preProject
+		src\shared\minipal\Windows\CMakeLists.txt = src\shared\minipal\Windows\CMakeLists.txt
+		src\shared\minipal\Windows\dn-u16.cpp = src\shared\minipal\Windows\dn-u16.cpp
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "native", "native", "{641F00F0-2693-451B-A96A-13E4E115BF0F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "minipal", "minipal", "{D9A91544-CDF8-4C68-BAD2-47F4968A8652}"
+	ProjectSection(SolutionItems) = preProject
+		src\shared\native\minipal\asansupport.cpp = src\shared\native\minipal\asansupport.cpp
+		src\shared\native\minipal\configure.cmake = src\shared\native\minipal\configure.cmake
+		src\shared\native\minipal\cpufeatures.c = src\shared\native\minipal\cpufeatures.c
+		src\shared\native\minipal\cpufeatures.h = src\shared\native\minipal\cpufeatures.h
+		src\shared\native\minipal\cpuid.h = src\shared\native\minipal\cpuid.h
+		src\shared\native\minipal\entrypoints.h = src\shared\native\minipal\entrypoints.h
+		src\shared\native\minipal\getexepath.h = src\shared\native\minipal\getexepath.h
+		src\shared\native\minipal\minipalconfig.h.in = src\shared\native\minipal\minipalconfig.h.in
+		src\shared\native\minipal\random.c = src\shared\native\minipal\random.c
+		src\shared\native\minipal\random.h = src\shared\native\minipal\random.h
+		src\shared\native\minipal\strings.h = src\shared\native\minipal\strings.h
+		src\shared\native\minipal\time.c = src\shared\native\minipal\time.c
+		src\shared\native\minipal\time.h = src\shared\native\minipal\time.h
+		src\shared\native\minipal\types.h = src\shared\native\minipal\types.h
+		src\shared\native\minipal\unicodedata.c = src\shared\native\minipal\unicodedata.c
+		src\shared\native\minipal\utf8.c = src\shared\native\minipal\utf8.c
+		src\shared\native\minipal\utf8.h = src\shared\native\minipal\utf8.h
+		src\shared\native\minipal\utils.h = src\shared\native\minipal\utils.h
 	EndProjectSection
 EndProject
 Global
@@ -2335,6 +2372,10 @@ Global
 		{00D9021E-A202-4BCB-9A59-13D5BEEBF423} = {7852EDE4-93DF-4DB1-8A86-C521703811AF}
 		{19663AE5-3EEA-472E-B157-37C2C7C6BACB} = {00D9021E-A202-4BCB-9A59-13D5BEEBF423}
 		{3B26AB4F-8129-4DAF-8BB0-A6075663F6D2} = {19663AE5-3EEA-472E-B157-37C2C7C6BACB}
+		{8944D9BF-69ED-4798-B533-559CAB011B07} = {795B7A50-1B1F-406E-94E0-F9B35104EF22}
+		{06FB18BC-F4DD-4DB9-A566-551254CD1064} = {795B7A50-1B1F-406E-94E0-F9B35104EF22}
+		{641F00F0-2693-451B-A96A-13E4E115BF0F} = {7852EDE4-93DF-4DB1-8A86-C521703811AF}
+		{D9A91544-CDF8-4C68-BAD2-47F4968A8652} = {641F00F0-2693-451B-A96A-13E4E115BF0F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {46465737-C938-44FC-BE1A-4CE139EBB5E0}
