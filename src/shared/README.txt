@@ -36,7 +36,7 @@ there is functions that the diagnostics repo doesn't need (i.e. Mutexes) and fun
 from the runtime PAL that the diagnostics repo needs (i.e. RemoveDirectoryA).
 
 diagnostics\src\shared\inc\arrayholder.h                - needs #pragma once
-diagnostics\src\shared\inc\daccess.h                    - mostly stripped down except for macros the other shared/inc files need
+diagnostics\src\shared\inc\daccess.h                    - mostly stripped down except for macros the other shared/inc files need, TADDR needs to be ULONG_PTR for x86
 diagnostics\src\shared\inc\ex.h                         - stripped some parts of the EX_* macros out
 diagnostics\src\shared\inc\holder.h                     - needs ReleaseHolder #ifndef SOS_INCLUDE out
 diagnostics\src\shared\inc\predeftlsslot.h              - SOS needs all the old enums for older runtimes

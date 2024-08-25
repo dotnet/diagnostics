@@ -19,6 +19,10 @@
 namespace X86GCDump
 {
 #include "gcdump.h"
+#undef CONTRACTL
+#undef CONTRACTL_END
+#undef NOTHROW
+#undef GC_NOTRIGGER
 #undef assert
 #define assert(a)
 #define CONTRACTL

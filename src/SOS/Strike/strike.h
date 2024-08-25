@@ -24,13 +24,17 @@
 #include <minipal/utils.h>
 #include <dn-u16.h>
 
-#define _wcslen     u16_strlen
 #define _wcsrchr    u16_strrchr
 #define _wcscmp     u16_strcmp
 #define _wcsncmp    u16_strncmp
 #define _wcschr     u16_strchr
 #define _wcscat     u16_strcat
 #define _wcsstr     u16_strstr
+
+inline size_t __cdecl _wcslen(const WCHAR* str)
+{
+    return u16_strlen(str);
+}
 
 #define KDEXT_64BIT
 #include <wdbgexts.h>

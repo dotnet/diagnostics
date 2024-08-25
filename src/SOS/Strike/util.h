@@ -604,7 +604,6 @@ private:
 typedef BaseString<char, strlen, strcpy_s> String;
 typedef BaseString<WCHAR, _wcslen, wcscpy_s> WString;
 
-
 template<class T>
 void Flatten(__out_ecount(len) T *data, unsigned int len)
 {
