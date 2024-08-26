@@ -26,10 +26,11 @@ Needed by dbgshim:
 
 diagnostics/src/shared/palrt/bstr.cpp
 
-HAVE_PROCFS_MAPS is needed by diagnostics/src/shared/pal/src/thread/process.cpp
+HAVE_PROCFS_MAPS is needed by diagnostics/src/shared/pal/src/thread/process.cpp:
 
 diagnostics/src/shared/pal/src/configure.cmake
 diagnostics/src/shared/pal/src/config.h.in
+diagnostics/eng/native/tryrun.cmake
 
 There are a lot of include and source files that need to be carefully merged from the runtime because 
 there is functions that the diagnostics repo doesn't need (i.e. Mutexes) and functions that were removed
