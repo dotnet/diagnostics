@@ -31,13 +31,13 @@
 #define LODWORD(_qw)    ((ULONG)(_qw))
 
 #if defined(MIDL_PASS) || defined(RC_INVOKED) || defined(_M_CEE_PURE) \
-    || defined(TARGET_AMD64) || defined(TARGET_ARM) || defined(TARGET_S390X) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
+    || defined(TARGET_AMD64) || defined(TARGET_ARM64) || defined(TARGET_S390X) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
 
 #ifndef UInt32x32To64
 #define UInt32x32To64(a, b) ((uint64_t)((ULONG)(a)) * (uint64_t)((ULONG)(b)))
 #endif
 
-#elif defined(TARGET_X86)
+#elif defined(TARGET_X86) || defined(TARGET_ARM)
 
 #ifndef UInt32x32To64
 #define UInt32x32To64(a, b) (uint64_t)((uint64_t)(ULONG)(a) * (ULONG)(b))
