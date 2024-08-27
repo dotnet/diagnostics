@@ -20,11 +20,13 @@ runtime/src/coreclr/minipal                             -> diagnostics/src/share
 runtime/src/coreclr/pal                                 -> diagnostics/src/shared/pal
 runtime/src/coreclr/palrt                               -> diagnostics/src/shared/palrt
 runtime/src/coreclr/utilcode                            -> diagnostics/src/shared/utilcode
+
 runtime/src/native/minipal                              -> diagnostics/src/shared/native/minipal
 
-Needed by dbgshim:
-
-diagnostics/src/shared/palrt/bstr.cpp
+runtime/src/coreclr/utilcode/sigparser.cpp              -> diagnostics/src/SOS/Strike/sigparser.cpp                - contracts removed
+runtime/src/coreclr/gcdump                              -> diagnostics/src/shared/gcdump/gcdump.cpp                - SOS can't include utilcode.h
+runtime/src/coreclr/gcdump                              -> diagnostics/src/shared/gcdump/i386/gcdumpx86.cpp        - SOS can't include utilcode.h
+runtime/src/coreclr/gcdump                              -> diagnostics/src/shared/palrt/bstr.cpp                   - needed by dbgshim
 
 HAVE_PROCFS_MAPS is needed by diagnostics/src/shared/pal/src/thread/process.cpp:
 

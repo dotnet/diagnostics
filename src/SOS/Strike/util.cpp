@@ -5284,7 +5284,7 @@ ULONG __stdcall PEOffsetMemoryReader::Release()
 // IDiaReadExeAtOffsetCallback implementation
 HRESULT __stdcall PEOffsetMemoryReader::ReadExecutableAt(DWORDLONG fileOffset, DWORD cbData, DWORD* pcbData, BYTE data[])
 {
-    return SafeReadMemory(m_moduleBaseAddress + fileOffset, data, cbData, pcbData) ? S_OK : E_FAIL;
+    return SafeReadMemory(m_moduleBaseAddress + TO_TADDR(fileOffset), data, cbData, pcbData) ? S_OK : E_FAIL;
 }
 
 PERvaMemoryReader::PERvaMemoryReader(TADDR moduleBaseAddress) :

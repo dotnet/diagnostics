@@ -252,9 +252,9 @@ static TADDR MDForCall (TADDR callee)
 {
     // call managed code?
     JITTypes jitType;
-    TADDR methodDesc;
     TADDR PC = callee;
-    TADDR gcinfoAddr;
+    DWORD_PTR methodDesc;
+    DWORD_PTR gcinfoAddr;
 
     PC = GetRealCallTarget(callee);
     if (!PC)

@@ -77,7 +77,7 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #define _ASSERTE(expr)         \
     do { if (!(expr) ) { ExtErr("_ASSERTE fired:\n\t%s\n", #expr); if (IsDebuggerPresent()) DebugBreak(); } } while (0)
 #else
-#define _ASSERTE(x)
+#define _ASSERTE(expr) ((void)0)
 #endif
 
 #undef _ASSERT
@@ -1539,12 +1539,6 @@ BOOL IsMiniDumpFile();
 void ReportOOM();
 
 BOOL SafeReadMemory (TADDR offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead);
-#if !defined(_TARGET_WIN64_) && !defined(_ARM64_) && !defined(_MIPS64_) && !defined(_RISCV64_) && !defined(_LOONGARCH64_)
-// on 64-bit platforms TADDR and CLRDATA_ADDRESS are identical
-inline BOOL SafeReadMemory (CLRDATA_ADDRESS offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead)
-{ return SafeReadMemory(TO_TADDR(offset), lpBuffer, cb, lpcbBytesRead); }
-#endif
-
 BOOL NameForMD_s (DWORD_PTR pMD, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName);
 BOOL NameForMT_s (DWORD_PTR MTAddr, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName);
 

@@ -26,7 +26,6 @@ namespace X86GCDump
 #undef assert
 #define assert(a)
 #define CONTRACTL
-#define DAC_ARG(x)
 #define CONTRACTL_END
 #undef NOTHROW
 #define NOTHROW

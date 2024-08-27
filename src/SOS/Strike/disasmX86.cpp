@@ -1172,14 +1172,13 @@ void PrintReg (Register *reg)
 
 struct CallInfo
 {
-    DWORD_PTR stackPos;
-    DWORD_PTR retAddr;
-    DWORD_PTR whereCalled;
+    TADDR stackPos;
+    TADDR retAddr;
+    TADDR whereCalled;
 };
 
 // Search for a Return address on stack.
-BOOL GetNextRetAddr (DWORD_PTR stackBegin, DWORD_PTR stackEnd,
-                     CallInfo &callInfo)
+BOOL GetNextRetAddr (DWORD_PTR stackBegin, DWORD_PTR stackEnd, CallInfo &callInfo)
 {
     for (callInfo.stackPos = stackBegin;
          callInfo.stackPos <= stackEnd;
@@ -1209,8 +1208,7 @@ struct FrameInfo
 };
 
 // if a EBP frame, return TRUE if EBP has been setup
-void GetFrameBaseHelper (DWORD_PTR IPBegin, DWORD_PTR IPEnd,
-                         INT_PTR &StackChange)
+void GetFrameBaseHelper (DWORD_PTR IPBegin, DWORD_PTR IPEnd, INT_PTR &StackChange)
 {
     char line[256];
     char *ptr;
@@ -1626,8 +1624,8 @@ void RestoreFrameUnmanaged (Register *reg, DWORD_PTR CurIP)
         {
             NextTerm (ptr);
             // check the value on stack is a return address.
-            DWORD_PTR retAddr;
-            DWORD_PTR whereCalled;
+            TADDR retAddr;
+            TADDR whereCalled;
             move_xp (retAddr, reg[ESP].value);
             int ESPAdjustCount = 0;
             while (1)

@@ -391,6 +391,9 @@
     <ClCompile Include="clrma\managedanalysis.cpp" />
     <ClCompile Include="dbgengservices.cpp" />
     <ClCompile Include="disasm.cpp" />
+    <ClCompile Include="disasmARM.cpp" />
+    <ClCompile Include="disasmLOONGARCH64.cpp" />
+    <ClCompile Include="disasmRISCV64.cpp" />
     <ClCompile Include="dllsext.cpp" />
     <ClCompile Include="eeheap.cpp" />
     <ClCompile Include="ExpressionNode.cpp" />

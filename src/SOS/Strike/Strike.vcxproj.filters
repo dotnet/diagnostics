@@ -46,6 +46,9 @@
       <Filter>clrma</Filter>
     </ClCompile>
     <ClCompile Include="sosextensions.cpp" />
+    <ClCompile Include="disasmARM.cpp" />
+    <ClCompile Include="disasmLOONGARCH64.cpp" />
+    <ClCompile Include="disasmRISCV64.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="data.h" />

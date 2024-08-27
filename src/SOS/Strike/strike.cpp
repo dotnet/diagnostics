@@ -1980,14 +1980,14 @@ HRESULT PrintArray(DacpObjectData& objData, DumpArrayFlags& flags, BOOL isPermSe
     }
 
     DWORD *lowerBounds = (DWORD *)alloca(dwRankAllocSize);
-    if (!SafeReadMemory(objData.ArrayLowerBoundsPtr, lowerBounds, dwRankAllocSize, NULL))
+    if (!SafeReadMemory(TO_TADDR(objData.ArrayLowerBoundsPtr), lowerBounds, dwRankAllocSize, NULL))
     {
         ExtOut("Failed to read lower bounds info from the array\n");
         return S_OK;
     }
 
     DWORD *bounds = (DWORD *)alloca(dwRankAllocSize);
-    if (!SafeReadMemory (objData.ArrayBoundsPtr, bounds, dwRankAllocSize, NULL))
+    if (!SafeReadMemory(TO_TADDR(objData.ArrayBoundsPtr), bounds, dwRankAllocSize, NULL))
     {
         ExtOut("Failed to read bounds info from the array\n");
         return S_OK;
@@ -4452,12 +4452,12 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
 #ifndef FEATURE_PAL
         DWORD_PTR OleTlsDataAddr;
         if (IsWindowsTarget() && !bSwitchedOutFiber
-                && SafeReadMemory(Thread.teb + offsetof(TEB, ReservedForOle),
+                && SafeReadMemory(TO_TADDR(Thread.teb + offsetof(TEB, ReservedForOle)),
                             &OleTlsDataAddr,
                             sizeof(OleTlsDataAddr), NULL) && OleTlsDataAddr != 0)
         {
             DWORD AptState;
-            if (SafeReadMemory(OleTlsDataAddr+offsetof(SOleTlsData,dwFlags),
+            if (SafeReadMemory(TO_TADDR(OleTlsDataAddr+offsetof(SOleTlsData,dwFlags)),
                                &AptState,
                                sizeof(AptState), NULL))
             {
@@ -9430,7 +9430,7 @@ DECLARE_API(StopOnException)
     }
 
     TADDR taLTOH;
-    if (!SafeReadMemory(Thread.lastThrownObjectHandle,
+    if (!SafeReadMemory(TO_TADDR(Thread.lastThrownObjectHandle),
                         &taLTOH,
                         sizeof(taLTOH), NULL))
     {

@@ -12,7 +12,6 @@ project(diagnostics)
 # include shared compiler configs
 include(eng/native/configurepaths.cmake)
 include(${CLR_ENG_NATIVE_DIR}/configurecompiler.cmake)
-set(CLR_SHARED_DIR ${CLR_REPO_ROOT_DIR}/src/shared)
 
 if(CLR_CMAKE_HOST_UNIX)
   # The -fms-extensions enable the stuff like __if_exists, __declspec(uuid()), etc.
