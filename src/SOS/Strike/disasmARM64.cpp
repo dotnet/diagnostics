@@ -143,7 +143,7 @@ void ARM64Machine::Unassembly (
     BOOL bDisplayOffsets,
     std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const
 {
-    TADDR PC = PCBegin;
+    ULONG_PTR PC = PCBegin;
     char line[1024];
     ULONG lineNum;
     ULONG curLine = -1;

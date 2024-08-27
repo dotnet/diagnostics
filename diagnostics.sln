@@ -106,7 +106,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{41BDFD6D-D16
 		src\shared\inc\dacprivate.h = src\shared\inc\dacprivate.h
 		src\shared\inc\dbgenginemetrics.h = src\shared\inc\dbgenginemetrics.h
 		src\shared\inc\dbgportable.h = src\shared\inc\dbgportable.h
-		src\shared\inc\dbgtargetcontext.h = src\shared\inc\dbgtargetcontext.h
 		src\shared\inc\dbgutil.h = src\shared\inc\dbgutil.h
 		src\shared\inc\debugmacros.h = src\shared\inc\debugmacros.h
 		src\shared\inc\debugmacrosext.h = src\shared\inc\debugmacrosext.h
