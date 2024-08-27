@@ -37,7 +37,7 @@
 #include "cor.h"
 #include "corhdr.h"
 
-//#include "corcompile.h"
+#include "corcompile.h"
 
 #include "readytorun.h"
 typedef DPTR(struct READYTORUN_CORE_HEADER) PTR_READYTORUN_CORE_HEADER;

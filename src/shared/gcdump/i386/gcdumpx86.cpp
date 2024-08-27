@@ -8,6 +8,9 @@
 #ifdef TARGET_X86
 /*****************************************************************************/
 
+#if !defined(TARGET_UNIX) && !defined(SOS_INCLUDE)
+#include "utilcode.h"           // For _ASSERTE()
+#endif
 #include "gcdump.h"
 
 

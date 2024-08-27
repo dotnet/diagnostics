@@ -12,10 +12,13 @@
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif // _MSC_VER
-// ******************************************************************************
-// WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcinfotypes.h
-// ******************************************************************************
+
+// *****************************************************************************
+// WARNING!!!: These values and code are used in the runtime repo and SOS in the 
+// diagnostics repo. Should updated in a backwards and forwards compatible way.
+// See: https://github.com/dotnet/diagnostics/blob/main/src/shared/inc/gcinfotypes.h
+//      https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcinfotypes.h
+// *****************************************************************************
 
 #define PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED
 

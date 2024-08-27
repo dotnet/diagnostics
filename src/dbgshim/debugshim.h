@@ -88,7 +88,7 @@ struct ClrInfo
 #else
         WindowsTarget = TRUE;
 #endif
-        IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Unknown; 
+        IndexType = LIBRARY_PROVIDER_INDEX_TYPE::UnknownIndex; 
 
         memset(&RuntimeBuildId, 0, sizeof(RuntimeBuildId));
         RuntimeBuildIdSize = 0;

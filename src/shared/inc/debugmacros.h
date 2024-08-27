@@ -10,7 +10,7 @@
 #ifndef __DebugMacros_h__
 #define __DebugMacros_h__
 
-//#include "stacktrace.h"
+#include "stacktrace.h"
 #include "debugmacrosext.h"
 #include "palclr.h"
 
