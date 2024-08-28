@@ -318,13 +318,13 @@ public:
     {
         if (lpApplicationGroupId != NULL)
         {
-            int size = wcslen(lpApplicationGroupId) + 1;
+            int size = u16_strlen(lpApplicationGroupId) + 1;
             m_applicationGroupId = new (nothrow) WCHAR[size];
             if (m_applicationGroupId == NULL)
             {
                 return E_OUTOFMEMORY;
             }
-            wcscpy_s(m_applicationGroupId, size, lpApplicationGroupId);
+            u16_strcpy_s(m_applicationGroupId, size, lpApplicationGroupId);
         }
 
         DWORD pe = PAL_RegisterForRuntimeStartup(m_processId, m_applicationGroupId, RuntimeStartupHandler, this, &m_unregisterToken);
@@ -379,7 +379,7 @@ public:
             else
             {
                 // Fallback to loading DBI side-by-side the runtime module
-                char *pszLast = strrchr(pszModulePath, DIRECTORY_SEPARATOR_CHAR_A);
+                const char *pszLast = strrchr(pszModulePath, DIRECTORY_SEPARATOR_CHAR_A);
                 if (pszLast == NULL)
                 {
                     _ASSERT(!"InvokeStartupCallback: can find separator in coreclr path\n");
@@ -1059,9 +1059,9 @@ IsCoreClr(
 
     //strip off everything up to and including the last slash in the path to get name
     const WCHAR* pModuleName = pModulePath;
-    while(wcschr(pModuleName, DIRECTORY_SEPARATOR_CHAR_W) != NULL)
+    while(u16_strchr(pModuleName, DIRECTORY_SEPARATOR_CHAR_W) != NULL)
     {
-        pModuleName = wcschr(pModuleName, DIRECTORY_SEPARATOR_CHAR_W);
+        pModuleName = u16_strchr(pModuleName, DIRECTORY_SEPARATOR_CHAR_W);
         pModuleName++; // pass the slash
     }
 
@@ -1388,7 +1388,7 @@ EnumProcessModulesInternal(
         // above EnumProcessModules calls. If this actually happens, then give
         // up on trying to get the whole module list and risk missing the coreclr
         // module.
-        cbNeeded = min(cbNeeded, cbNeeded2);
+        cbNeeded = std::min(cbNeeded, cbNeeded2);
     }
 
     *pCountModules = cbNeeded / sizeof(HMODULE);
@@ -1545,7 +1545,7 @@ EnumerateCLRs(
 
         LPWSTR* pStringArray = (LPWSTR*) &pOutBuffer[cbEventArrayData];
         pStringArray[0] = (WCHAR*) &pOutBuffer[cbEventArrayData + cbStringArrayData];
-        wcscpy_s(pStringArray[0], MAX_LONGPATH, clrRuntimeInfo.ClrInfo.RuntimeModulePath);
+        u16_strcpy_s(pStringArray[0], MAX_LONGPATH, clrRuntimeInfo.ClrInfo.RuntimeModulePath);
 
         *pdwArrayLengthOut = 1;
         *ppHandleArrayOut = pEventArray;
@@ -1688,7 +1688,7 @@ const WCHAR *c_versionStrFormat = W("%08x;%08x;%p");
 //
 // Notes:
 //   The null-terminated version string including null, is
-//   copied to pVersion on output. Thus *pdwLength == wcslen(pBuffer)+1.
+//   copied to pVersion on output. Thus *pdwLength == u16_strlen(pBuffer)+1.
 //   The version string is an opaque string that can only be passed back to other
 //   DbgShim APIs.
 //-----------------------------------------------------------------------------
@@ -1785,7 +1785,7 @@ ParseVersionString(
     if ((piDebuggerVersion == NULL) ||
         (pdwPidDebuggee == NULL) ||
         (phmodTargetCLR == NULL) ||
-        (wcslen(szDebuggeeVersion) < c_iMinVersionStringLen) ||
+        (u16_strlen(szDebuggeeVersion) < c_iMinVersionStringLen) ||
         (W(';') != szDebuggeeVersion[c_idxFirstSemi]) ||
         (W(';') != szDebuggeeVersion[c_idxSecondSemi]))
     {
@@ -1855,7 +1855,7 @@ GetDbiFilenameNextToRuntime(
     // Step 2: 'Coreclr.dll' --> 'mscordbi.dll'
     //
     WCHAR * pCoreClrPath = modulePath;
-    WCHAR * pLast = wcsrchr(pCoreClrPath, DIRECTORY_SEPARATOR_CHAR_W);
+    const WCHAR * pLast = u16_strrchr(pCoreClrPath, DIRECTORY_SEPARATOR_CHAR_W);
     if (pLast == NULL)
     {
         ThrowHR(E_FAIL);
@@ -1872,7 +1872,7 @@ GetDbiFilenameNextToRuntime(
 
     AppendDbiDllName(szFullDbiPath);
 
-    szFullCoreClrPath.Set(pCoreClrPath, (COUNT_T)wcslen(pCoreClrPath));
+    szFullCoreClrPath.Set(pCoreClrPath, (COUNT_T)u16_strlen(pCoreClrPath));
 }
 
 

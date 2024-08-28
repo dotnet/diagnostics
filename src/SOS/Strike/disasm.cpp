@@ -19,10 +19,13 @@
 namespace X86GCDump
 {
 #include "gcdump.h"
+#undef CONTRACTL
+#undef CONTRACTL_END
+#undef NOTHROW
+#undef GC_NOTRIGGER
 #undef assert
 #define assert(a)
 #define CONTRACTL
-#define DAC_ARG(x)
 #define CONTRACTL_END
 #undef NOTHROW
 #define NOTHROW
@@ -33,8 +36,6 @@ namespace X86GCDump
 #undef CONTRACTL_END
 #undef NOTHROW
 #undef GC_NOTRIGGER
-#undef _ASSERTE
-#define _ASSERTE(a) do {} while (0)
 
 #include "gcdump.cpp"
 #include "i386/gcdumpx86.cpp"
@@ -126,7 +127,7 @@ GenOpenMapping(
         return NULL;
     }
     
-    hMappedFile = CreateFileMapping (
+    hMappedFile = CreateFileMappingA (
                         hFile,
                         NULL,
                         PAGE_READONLY,
@@ -990,8 +991,8 @@ void DumpStackWorker (DumpStackFlag &DSFlag)
     {
         if (IsInterrupt())
             return;
-        DWORD_PTR retAddr;
-        DWORD_PTR whereCalled;
+        TADDR retAddr;
+        TADDR whereCalled;
         move_xp(retAddr, ptr);
         g_targetMachine->IsReturnAddress(retAddr, &whereCalled);
         if (whereCalled)
@@ -1008,9 +1009,9 @@ void DumpStackWorker (DumpStackFlag &DSFlag)
             if (bOutput)
                 ExtOut ("\n");
             
-            DWORD_PTR cxrAddr;
+            TADDR cxrAddr;
             CROSS_PLATFORM_CONTEXT cxr;
-            DWORD_PTR exrAddr;
+            TADDR exrAddr;
             EXCEPTION_RECORD exr;
 
             if (g_targetMachine->GetExceptionContext(ptr,retAddr,&cxrAddr,&cxr,&exrAddr,&exr))

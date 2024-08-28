@@ -19,7 +19,7 @@
 
 inline SBuffer::SBuffer(PreallocFlag flag, void *buffer, COUNT_T size)
   : m_size(0),
-    m_allocation(NULL),
+    m_allocation(0),
     m_flags(0),
     m_buffer(NULL)
 {
@@ -114,6 +114,32 @@ inline SBuffer::SBuffer(const SBuffer &buffer)
     RETURN;
 }
 
+inline SBuffer::SBuffer(SBuffer &&buffer)
+{
+    CONTRACT_VOID
+    {
+        CONSTRUCTOR_CHECK;
+        PRECONDITION(buffer.Check());
+        POSTCONDITION(Check());
+        THROWS;
+        GC_NOTRIGGER;
+    }
+    CONTRACT_END;
+
+    m_size = buffer.m_size;
+    m_allocation = buffer.m_allocation;
+    m_flags = buffer.m_flags;
+    m_buffer = buffer.m_buffer;
+
+#ifdef _DEBUG
+    m_revision = buffer.m_revision;
+#endif
+
+    buffer.InitializeInstance();
+
+    RETURN;
+}
+
 inline SBuffer::SBuffer(const BYTE *buffer, COUNT_T size)
   : m_size(0),
     m_allocation(0),
@@ -189,6 +215,18 @@ inline SBuffer::~SBuffer()
     RETURN;
 }
 
+inline void SBuffer::InitializeInstance()
+{
+    m_size = 0;
+    m_allocation = 0;
+    m_flags = 0;
+    m_buffer = NULL;
+
+#ifdef _DEBUG
+    m_revision = 0;
+#endif
+}
+
 inline void SBuffer::Set(const SBuffer &buffer)
 {
     CONTRACT_VOID
@@ -258,7 +296,8 @@ inline void SBuffer::Set(const BYTE *buffer, COUNT_T size)
     // From the code for Resize, this is clearly impossible.
     PREFIX_ASSUME( (this->m_buffer != NULL) || (size == 0) );
 
-    MoveMemory(m_buffer, buffer, size);
+    if (size != 0)
+        MoveMemory(m_buffer, buffer, size);
 
     RETURN;
 }
@@ -343,7 +382,7 @@ inline COUNT_T SBuffer::GetAllocation() const
     RETURN m_allocation;
 }
 
-inline void SBuffer::Preallocate(COUNT_T allocation) const
+inline void SBuffer::Preallocate(COUNT_T allocation)
 {
     CONTRACT_VOID
     {
@@ -357,12 +396,12 @@ inline void SBuffer::Preallocate(COUNT_T allocation) const
     CONTRACT_END;
 
     if (allocation > m_allocation)
-        const_cast<SBuffer *>(this)->ReallocateBuffer(allocation, PRESERVE);
+        ReallocateBuffer(allocation, PRESERVE);
 
     RETURN;
 }
 
-inline void SBuffer::Trim() const
+inline void SBuffer::Trim()
 {
     CONTRACT_VOID
     {
@@ -373,7 +412,7 @@ inline void SBuffer::Trim() const
     CONTRACT_END;
 
     if (!IsImmutable())
-        const_cast<SBuffer *>(this)->ReallocateBuffer(m_size, PRESERVE);
+        ReallocateBuffer(m_size, PRESERVE);
 
     RETURN;
 }
@@ -907,7 +946,6 @@ static const UINT64 SBUFFER_CANARY_VALUE = UI64(0xD00BED00BED00BAA);
 #ifdef ALIGN_ACCESS
 static const int SBUFFER_ALIGNMENT = ALIGN_ACCESS;
 #else
-// This is only 4 bytes on win98 and below
 static const int SBUFFER_ALIGNMENT = 4;
 #endif
 

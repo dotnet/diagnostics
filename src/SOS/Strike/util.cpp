@@ -10,32 +10,33 @@
 #include "disasm.h"
 #include <dbghelp.h>
 
-#include "corhdr.h"
-#include "cor.h"
-#include "dacprivate.h"
-#include "sospriv.h"
-#include "corerror.h"
-#include "safemath.h"
+#include <corhdr.h>
+#include <cor.h>
+#include <dacprivate.h>
+#include "dacprivate2x.h"
+#include <sospriv.h>
+#include <corerror.h>
+#include <safemath.h>
 
 #include <psapi.h>
 #include <cordebug.h>
 #include <xcordebug.h>
 #include <mscoree.h>
-#include <tchar.h>
-#include "gcinfo.h"
+#include <gcinfo.h>
 
 #ifndef STRESS_LOG
 #define STRESS_LOG
 #endif // STRESS_LOG
 #define STRESS_LOG_READONLY
-#include "stresslog.h"
+#include <stresslog.h>
 
 #ifdef FEATURE_PAL
 #include <sys/stat.h>
 #include <dlfcn.h>
+#include <wctype.h>
 #endif // !FEATURE_PAL
 
-#include "coreclrhost.h"
+#include <coreclrhost.h>
 #include <set>
 #include <string>
 
@@ -61,9 +62,8 @@ IXCLRDataProcess *g_clrData = NULL;
 ISOSDacInterface *g_sos = NULL;
 ISOSDacInterface15 *g_sos15 = NULL;
 
-#ifndef IfFailRet
+#undef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
-#endif
 
 // Max number of reverted rejit versions that !dumpmd and !ip2md will print
 const UINT kcMaxRevertedRejitData   = 10;
@@ -998,7 +998,7 @@ void ComposeName_s(CorElementType Type, __out_ecount(capacity_buffer) LPSTR buff
 LPWSTR FormatTypeName (__out_ecount (maxChars) LPWSTR pszName, UINT maxChars)
 {
     UINT iStart = 0;
-    UINT iLen = (int) _wcslen(pszName);
+    UINT iLen = (int) u16_strlen(pszName);
     if (iLen > maxChars)
     {
         iStart = iLen - maxChars;
@@ -1295,7 +1295,7 @@ int GetObjFieldOffset(CLRDATA_ADDRESS cdaObj, CLRDATA_ADDRESS cdaMT, __in_z LPCW
         {
             DWORD offset = vFieldDesc.dwOffset + sizeof(BaseObject);
             NameForToken_s (TokenFromRid(vFieldDesc.mb, mdtFieldDef), pImport, g_mdName, mdNameLen, false);
-            if (_wcscmp (wszFieldName, g_mdName) == 0)
+            if (u16_strcmp (wszFieldName, g_mdName) == 0)
             {
                 if (pDacpFieldDescData != NULL)
                 {
@@ -1938,7 +1938,7 @@ BOOL IsObjectArray (DacpObjectData *pData)
 
 BOOL IsObjectArray (DWORD_PTR obj)
 {
-    DWORD_PTR mtAddr = (TADDR)0;
+    TADDR mtAddr = (TADDR)0;
     if (SUCCEEDED(GetMTOfObject(obj, &mtAddr)))
         return TO_TADDR(g_special_usefulGlobals.ArrayMethodTable) == mtAddr;
 
@@ -1947,7 +1947,7 @@ BOOL IsObjectArray (DWORD_PTR obj)
 
 BOOL IsStringObject (size_t obj)
 {
-    DWORD_PTR mtAddr = (TADDR)0;
+    TADDR mtAddr = (TADDR)0;
 
     if (SUCCEEDED(GetMTOfObject(obj, &mtAddr)))
         return TO_TADDR(g_special_usefulGlobals.StringMethodTable) == mtAddr;
@@ -1967,7 +1967,7 @@ BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, __in_z LPCWSTR baseString)
         }
 
         NameForMT_s(TO_TADDR(walkMT), g_mdName, mdNameLen);
-        if (_wcscmp(baseString, g_mdName) == 0)
+        if (u16_strcmp(baseString, g_mdName) == 0)
         {
             return TRUE;
         }
@@ -2477,8 +2477,8 @@ void GetInfoFromName(DWORD_PTR ModulePtr, const char* name, mdTypeDef* retMdType
     mdToken tkEnclose = mdTokenNil;
     WCHAR *pName;
     WCHAR *pHead = wszName;
-    while ( ((pName = _wcschr (pHead,L'+')) != NULL) ||
-             ((pName = _wcschr (pHead,L'/')) != NULL)) {
+    while ( ((pName = (WCHAR*)u16_strchr (pHead,L'+')) != NULL) ||
+            ((pName = (WCHAR*)u16_strchr (pHead,L'/')) != NULL)) {
         pName[0] = L'\0';
         if (FAILED(pImport->FindTypeDefByName(pHead,tkEnclose,&tkEnclose)))
             return;
@@ -2499,7 +2499,7 @@ void GetInfoFromName(DWORD_PTR ModulePtr, const char* name, mdTypeDef* retMdType
 
     // See if it is a method
     WCHAR *pwzMethod;
-    if ((pwzMethod = _wcsrchr(pName, L'.')) == NULL)
+    if ((pwzMethod = (WCHAR*)u16_strrchr(pName, L'.')) == NULL)
         return;
 
     if (pwzMethod[-1] == L'.')
@@ -2628,7 +2628,7 @@ HRESULT GetMethodDefinitionsFromName(TADDR ModulePtr, IXCLRDataModule* mod, cons
 *    Find the EE data given a name.                                    *
 *                                                                      *
 \**********************************************************************/
-HRESULT GetMethodDescsFromName(TADDR ModulePtr, IXCLRDataModule* mod, const char *name, DWORD_PTR **pOut,int *numMethods)
+HRESULT GetMethodDescsFromName(DWORD_PTR ModulePtr, IXCLRDataModule* mod, const char *name, DWORD_PTR **pOut,int *numMethods)
 {
     if (name == NULL || pOut == NULL || numMethods == NULL)
         return E_FAIL;
@@ -2656,7 +2656,7 @@ HRESULT GetMethodDescsFromName(TADDR ModulePtr, IXCLRDataModule* mod, const char
 
     if (methodCount > 0)
     {
-        *pOut = new TADDR[methodCount];
+        *pOut = new DWORD_PTR[methodCount];
         if (*pOut==NULL)
         {
             ReportOOM();
@@ -3359,18 +3359,8 @@ bool IsRuntimeVersionAtLeast(VS_FIXEDFILEINFO& fileInfo, DWORD major)
             {
                 return true;
             }
-            // fall through
-
-        default:
-            if (HIWORD(fileInfo.dwFileVersionMS) >= major)
-            {
-                return true;
-            }
-            // fall through
-
-            break;
     }
-    return false;
+    return HIWORD(fileInfo.dwFileVersionMS) >= major;
 }
 
 // Returns true if there is a change in the data structures that SOS depends on like
@@ -3555,7 +3545,7 @@ void StringObjectContent(size_t obj, BOOL fLiteral, const int length)
             ULONG j,k=0;
             for (j = 0; j < wcharsRead; j ++)
             {
-                if (_iswprint (buffer[j])) {
+                if (iswprint (buffer[j])) {
                     out[k] = buffer[j];
                     k ++;
                 }
@@ -3640,8 +3630,8 @@ __int64 str64hex(const char *ptr)
             break;
         }
 
-        if (nCount>15) {
-            return _UI64_MAX;     // would be an overflow
+        if (nCount > 15) {
+            return UINT64_MAX;     // would be an overflow
         }
 
         value = value << 4;
@@ -4838,7 +4828,7 @@ CachedString Output::BuildManagedVarValue(__in_z LPCWSTR expansionName, ULONG fr
         numFrameDigits = 1;
     }
 
-    size_t totalStringLength = strlen(DMLFormats[type]) + _wcslen(expansionName) + numFrameDigits + _wcslen(simpleName) + 1;
+    size_t totalStringLength = strlen(DMLFormats[type]) + u16_strlen(expansionName) + numFrameDigits + u16_strlen(simpleName) + 1;
     if (totalStringLength > ret.GetStrLen())
     {
         ret.Allocate(static_cast<int>(totalStringLength));
@@ -5294,7 +5284,7 @@ ULONG __stdcall PEOffsetMemoryReader::Release()
 // IDiaReadExeAtOffsetCallback implementation
 HRESULT __stdcall PEOffsetMemoryReader::ReadExecutableAt(DWORDLONG fileOffset, DWORD cbData, DWORD* pcbData, BYTE data[])
 {
-    return SafeReadMemory(m_moduleBaseAddress + fileOffset, data, cbData, pcbData) ? S_OK : E_FAIL;
+    return SafeReadMemory(m_moduleBaseAddress + TO_TADDR(fileOffset), data, cbData, pcbData) ? S_OK : E_FAIL;
 }
 
 PERvaMemoryReader::PERvaMemoryReader(TADDR moduleBaseAddress) :
@@ -5362,7 +5352,7 @@ static void AddAssemblyName(WString& methodOutput, CLRDATA_ADDRESS mdesc)
                 {
                     if (wszFileName[0] != W('\0'))
                     {
-                        WCHAR *pJustName = _wcsrchr(wszFileName, GetTargetDirectorySeparatorW());
+                        const WCHAR *pJustName = u16_strrchr(wszFileName, GetTargetDirectorySeparatorW());
                         if (pJustName == NULL)
                             pJustName = wszFileName - 1;
                         methodOutput += (pJustName + 1);

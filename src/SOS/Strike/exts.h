@@ -14,13 +14,8 @@
 #include <windows.h>
 #include <winternl.h>
 
-#if defined(_MSC_VER)
-#pragma warning(disable:4245)   // signed/unsigned mismatch
-#pragma warning(disable:4100)   // unreferenced formal parameter
-#pragma warning(disable:4201)   // nonstandard extension used : nameless struct/union
-#pragma warning(disable:4127)   // conditional expression is constant
-#pragma warning(disable:4430)   // missing type specifier: C++ doesn't support default-int
-#endif
+#undef CreateProcess
+
 #include "strike.h"
 #include <wdbgexts.h>
 #include <dbgeng.h>
@@ -33,6 +28,10 @@
 // system that use the StackTrace identifier
 #ifdef StackTrace 
 #undef StackTrace
+#endif
+
+#ifndef FEATURE_PAL
+#include "dbgengservices.h"
 #endif
 
 #include "platformspecific.h"

@@ -68,8 +68,8 @@
 #error The Volatile type is currently only defined for Visual C++ and GNU C++
 #endif
 
-#if defined(__GNUC__) && !defined(HOST_X86) && !defined(HOST_AMD64) && !defined(HOST_ARM) && !defined(HOST_ARM64) && !defined(HOST_LOONGARCH64) && !defined(HOST_RISCV64) && !defined(HOST_S390X)
-#error The Volatile type is currently only defined for GCC when targeting x86, AMD64, ARM, ARM64, LOONGARCH64, RISCV64, or S390X CPUs
+#if defined(__GNUC__) && !defined(HOST_X86) && !defined(HOST_AMD64) && !defined(HOST_ARM) && !defined(HOST_ARM64) && !defined(HOST_LOONGARCH64) && !defined(HOST_RISCV64) && !defined(HOST_S390X) && !defined(HOST_POWERPC64)
+#error The Volatile type is currently only defined for GCC when targeting x86, AMD64, ARM, ARM64, LOONGARCH64, RISCV64, PPC64LE, or S390X CPUs
 #endif
 
 #if defined(__GNUC__)
@@ -81,6 +81,8 @@
 #define VOLATILE_MEMORY_BARRIER() asm volatile ("dmb ish" : : : "memory")
 #elif defined(HOST_LOONGARCH64)
 #define VOLATILE_MEMORY_BARRIER() asm volatile ("dbar 0 " : : : "memory")
+#elif defined(HOST_RISCV64)
+#define VOLATILE_MEMORY_BARRIER() asm volatile ("fence rw,rw" : : : "memory")
 #else
 //
 // For GCC, we prevent reordering by the compiler by inserting the following after a volatile
@@ -101,8 +103,6 @@
 // currently don't have a cheap way to determine the number of CPUs from this header file. Revisit this if it
 // turns out to be a performance issue for the uni-proc case.
 #define VOLATILE_MEMORY_BARRIER() MemoryBarrier()
-#elif defined(HOST_RISCV64)
-#define VOLATILE_MEMORY_BARRIER() asm volatile ("fence rw,rw" : : : "memory")
 #else
 //
 // On VC++, reorderings at the compiler and machine level are prevented by the use of the
@@ -161,7 +161,6 @@ T VolatileLoad(T const * pt)
 #elif defined(HOST_ARM64) && defined(_MSC_VER)
 // silence warnings on casts in branches that are not taken.
 #pragma warning(push)
-#pragma warning(disable : 4302)
 #pragma warning(disable : 4311)
 #pragma warning(disable : 4312)
     T val;
@@ -169,16 +168,16 @@ T VolatileLoad(T const * pt)
     switch (sizeof(T))
     {
     case 1:
-        *(unsigned __int8* )pv = __ldar8 ((unsigned __int8   volatile*)pt);
+        *(uint8_t* )pv = __ldar8 ((uint8_t   volatile*)pt);
         break;
     case 2:
-        *(unsigned __int16*)pv = __ldar16((unsigned __int16  volatile*)pt);
+        *(uint16_t*)pv = __ldar16((uint16_t  volatile*)pt);
         break;
     case 4:
-        *(unsigned __int32*)pv = __ldar32((unsigned __int32  volatile*)pt);
+        *(uint32_t*)pv = __ldar32((uint32_t  volatile*)pt);
         break;
     case 8:
-        *(unsigned __int64*)pv = __ldar64((unsigned __int64  volatile*)pt);
+        *(uint64_t*)pv = __ldar64((uint64_t  volatile*)pt);
         break;
     default:
         val = *(T volatile const*)pt;
@@ -220,7 +219,7 @@ T VolatileLoad(Volatile<T> const * pt)
 }
 
 //
-// VolatileStore stores a T into the target of a pointer to T.  Is is guaranteed that this store will
+// VolatileStore stores a T into the target of a pointer to T.  It is guaranteed that this store will
 // not be optimized away by the compiler, and that any operation that occurs before this store, in program
 // order, will not be moved after this store.  In general, it is not guaranteed that the store will be
 // atomic, though this is the case for most aligned scalar data types.  If you need atomic loads or stores,
@@ -247,23 +246,22 @@ void VolatileStore(T* pt, T val)
 #elif defined(HOST_ARM64) && defined(_MSC_VER)
 // silence warnings on casts in branches that are not taken.
 #pragma warning(push)
-#pragma warning(disable : 4302)
 #pragma warning(disable : 4311)
 #pragma warning(disable : 4312)
     T* pv = &val;
     switch (sizeof(T))
     {
     case 1:
-        __stlr8 ((unsigned __int8  volatile*)pt, *(unsigned __int8* )pv);
+        __stlr8 ((uint8_t  volatile*)pt, *(uint8_t* )pv);
         break;
     case 2:
-        __stlr16((unsigned __int16 volatile*)pt, *(unsigned __int16*)pv);
+        __stlr16((uint16_t volatile*)pt, *(uint16_t*)pv);
         break;
     case 4:
-        __stlr32((unsigned __int32 volatile*)pt, *(unsigned __int32*)pv);
+        __stlr32((uint32_t volatile*)pt, *(uint32_t*)pv);
         break;
     case 8:
-        __stlr64((unsigned __int64 volatile*)pt, *(unsigned __int64*)pv);
+        __stlr64((uint64_t volatile*)pt, *(uint64_t*)pv);
         break;
     default:
         __dmb(_ARM64_BARRIER_ISH);
@@ -310,7 +308,7 @@ void VolatileLoadBarrier()
     __dmb(_ARM64_BARRIER_ISHLD);
 #else
     VOLATILE_MEMORY_BARRIER();
-#endif   
+#endif
 }
 
 //
@@ -333,6 +331,9 @@ void VolatileLoadBarrier()
 template <typename T>
 class Volatile
 {
+    // To enable the DAC table to correctly handle volatile DAC-ized statics while also being computed at compile time, we need to
+    // give the dac table type access to the internal field directly to take the address of it.
+    friend struct _DacGlobals;
 private:
     //
     // The data which we are treating as volatile
@@ -341,12 +342,9 @@ private:
 
 public:
     //
-    // Default constructor.  Results in an unitialized value!
+    // Default constructor.
     //
-    inline Volatile()
-    {
-        STATIC_CONTRACT_SUPPORTS_DAC;
-    }
+    inline Volatile() = default;
 
     //
     // Allow initialization of Volatile<T> from a T

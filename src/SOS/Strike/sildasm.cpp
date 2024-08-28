@@ -31,7 +31,6 @@
 #include "sos_md.h"
 
 #define _BLD_CLR 1
-#define SOS_INCLUDE 1
 #include "corhlpr.h"
 #include "corhlpr.cpp"
 

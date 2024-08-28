@@ -15,11 +15,45 @@
 
 #include "log.h"
 
+#ifdef HOST_WINDOWS
 extern "C" _CRTIMP int __cdecl _flushall(void);
+#endif
 
+// Global state counter to implement SUPPRESS_ALLOCATION_ASSERTS_IN_THIS_SCOPE.
 Volatile<LONG> g_DbgSuppressAllocationAsserts = 0;
 
-#ifdef _DEBUG
+static void GetExecutableFileNameUtf8(SString& value)
+{
+    CONTRACTL
+    {
+        THROWS;
+        GC_NOTRIGGER;
+    }
+    CONTRACTL_END;
+
+    SString tmp;
+    WCHAR * pCharBuf = tmp.OpenUnicodeBuffer(_MAX_PATH);
+    DWORD numChars = GetModuleFileNameW(0 /* Get current executable */, pCharBuf, _MAX_PATH);
+    tmp.CloseBuffer(numChars);
+
+    tmp.ConvertToUTF8(value);
+}
+
+static void DECLSPEC_NORETURN FailFastOnAssert()
+{
+    WRAPPER_NO_CONTRACT; // If we're calling this, we're well past caring about contract consistency!
+
+    FlushLogging(); // make certain we get the last part of the log
+#ifdef HOST_WINDOWS
+    _flushall();
+#else
+    fflush(NULL);
+#endif
+
+    ShutdownLogging();
+    RaiseFailFastException(NULL, NULL, 0);
+}
+
 
 VOID LogAssert(
     LPCSTR      szFile,
@@ -33,7 +67,7 @@ VOID LogAssert(
 
     // Log asserts to the stress log. Note that we can't include the szExpr b/c that
     // may not be a string literal (particularly for formatt-able asserts).
-    STRESS_LOG2(LF_ASSERT, LL_ALWAYS, "ASSERT:%s, line:%d\n", szFile, iLine);
+    STRESS_LOG2(LF_ASSERT, LL_ALWAYS, "ASSERT:%s:%d\n", szFile, iLine);
 
     SYSTEMTIME st;
 #ifndef TARGET_UNIX
@@ -42,8 +76,8 @@ VOID LogAssert(
     GetSystemTime(&st);
 #endif
 
-    PathString exename;
-    WszGetModuleFileName(NULL, exename);
+    SString exename;
+    GetExecutableFileNameUtf8(exename);
 
     LOG((LF_ASSERT,
          LL_FATALERROR,
@@ -62,7 +96,7 @@ VOID LogAssert(
          szFile,
          iLine,
          szExpr));
-    LOG((LF_ASSERT, LL_FATALERROR, "RUNNING EXE: %ws\n", exename.GetUnicode()));
+    LOG((LF_ASSERT, LL_FATALERROR, "RUNNING EXE: %s\n", exename.GetUTF8()));
 }
 
 //*****************************************************************************
@@ -70,7 +104,7 @@ VOID LogAssert(
 // failed hresult.  But this code will check what environment you are running
 // in and give an assert for running in a debug build environment.  Usually
 // out of memory on a dev machine is a bogus allocation, and this allows you
-// to catch such errors.  But when run in a stress envrionment where you are
+// to catch such errors.  But when run in a stress environment where you are
 // trying to get out of memory, assert behavior stops the tests.
 //*****************************************************************************
 HRESULT _OutOfMemory(LPCSTR szFile, int iLine)
@@ -78,10 +112,11 @@ HRESULT _OutOfMemory(LPCSTR szFile, int iLine)
     STATIC_CONTRACT_NOTHROW;
     STATIC_CONTRACT_GC_NOTRIGGER;
     STATIC_CONTRACT_DEBUG_ONLY;
+
+    printf("WARNING: Out of memory condition being issued from: %s, line %d\n", szFile, iLine);
     return (E_OUTOFMEMORY);
 }
 
-int _DbgBreakCount = 0;
 static const char * szLowMemoryAssertMessage = "Assert failure (unable to format)";
 
 //*****************************************************************************
@@ -90,7 +125,7 @@ static const char * szLowMemoryAssertMessage = "Assert failure (unable to format
 bool _DbgBreakCheck(
     LPCSTR      szFile,
     int         iLine,
-    LPCSTR      szExpr,
+    LPCUTF8     szExpr,
     BOOL        fConstrained)
 {
     STATIC_CONTRACT_THROWS;
@@ -100,11 +135,9 @@ bool _DbgBreakCheck(
 
     CONTRACT_VIOLATION(FaultNotFatal | GCViolation | TakesLockViolation);
 
-    SString debugOutput;
-    SString dialogOutput;
+    char formatBuffer[4096];
+
     SString modulePath;
-    SString dialogTitle;
-    SString dialogIgnoreMessage;
     BOOL formattedMessages = FALSE;
 
     // If we are low on memory we cannot even format a message. If this happens we want to
@@ -113,29 +146,15 @@ bool _DbgBreakCheck(
     {
         EX_TRY
         {
-            ClrGetModuleFileName(0, modulePath);
-            debugOutput.Printf(
-                W("\nAssert failure(PID %d [0x%08x], Thread: %d [0x%04x]): %hs\n")
-                W("    File: %hs Line: %d\n")
-                W("    Image: "),
+            GetExecutableFileNameUtf8(modulePath);
+
+            sprintf_s(formatBuffer, sizeof(formatBuffer),
+                "\nAssert failure(PID %d [0x%08x], Thread: %d [0x%04x]): %s\n"
+                "    File: %s:%d\n"
+                "    Image: %s\n\n",
                 GetCurrentProcessId(), GetCurrentProcessId(),
                 GetCurrentThreadId(), GetCurrentThreadId(),
-                szExpr, szFile, iLine);
-            debugOutput.Append(modulePath);
-            debugOutput.Append(W("\n\n"));
-
-            // Change format for message box.  The extra spaces in the title
-            // are there to get around format truncation.
-            dialogOutput.Printf(
-                W("%hs\n\n%hs, Line: %d\n\nAbort - Kill program\nRetry - Debug\nIgnore - Keep running\n")
-                W("\n\nImage:\n"), szExpr, szFile, iLine);
-            dialogOutput.Append(modulePath);
-            dialogOutput.Append(W("\n"));
-            dialogTitle.Printf(W("Assert Failure (PID %d, Thread %d/0x%04x)"),
-                GetCurrentProcessId(), GetCurrentThreadId(), GetCurrentThreadId());
-
-            dialogIgnoreMessage.Printf(W("Ignore the assert for the rest of this run?\nYes - Assert will never fire again.\nNo - Assert will continue to fire.\n\n%hs\nLine: %d\n"),
-                szFile, iLine);
+                szExpr, szFile, iLine, modulePath.GetUTF8());
 
             formattedMessages = TRUE;
         }
@@ -148,37 +167,36 @@ bool _DbgBreakCheck(
     // Emit assert in debug output and console for easy access.
     if (formattedMessages)
     {
-        WszOutputDebugString(debugOutput);
-        fwprintf(stderr, W("%s"), (const WCHAR*)debugOutput);
+        OutputDebugStringUtf8(formatBuffer);
+        fprintf(stderr, "%s", formatBuffer);
     }
     else
     {
         // Note: we cannot convert to unicode or concatenate in this situation.
-        OutputDebugStringA(szLowMemoryAssertMessage);
-        OutputDebugStringA("\n");
-        OutputDebugStringA(szFile);
-        OutputDebugStringA("\n");
-        OutputDebugStringA(szExpr);
-        OutputDebugStringA("\n");
-        printf(szLowMemoryAssertMessage);
+        OutputDebugStringUtf8(szLowMemoryAssertMessage);
+        OutputDebugStringUtf8("\n");
+        OutputDebugStringUtf8(szFile);
+        OutputDebugStringUtf8("\n");
+        OutputDebugStringUtf8(szExpr);
+        OutputDebugStringUtf8("\n");
+        printf("%s", szLowMemoryAssertMessage);
         printf("\n");
-        printf(szFile);
+        printf("%s", szFile);
         printf("\n");
         printf("%s", szExpr);
         printf("\n");
     }
 
     LogAssert(szFile, iLine, szExpr);
-    FlushLogging();         // make certain we get the last part of the log
-    _flushall();
+
 
     if (IsDebuggerPresent())
     {
         return true;       // like a retry
     }
 
-    TerminateProcess(GetCurrentProcess(), 1);
-    return false;
+    FailFastOnAssert();
+    UNREACHABLE();
 }
 
 bool _DbgBreakCheckNoThrow(
@@ -211,15 +229,6 @@ bool _DbgBreakCheckNoThrow(
     return result;
 }
 
-// Called from within the IfFail...() macros.  Set a breakpoint here to break on
-// errors.
-VOID DebBreak()
-{
-  STATIC_CONTRACT_LEAF;
-  static int i = 0;  // add some code here so that we'll be able to set a BP
-  i++;
-}
-
 VOID DebBreakHr(HRESULT hr)
 {
   STATIC_CONTRACT_LEAF;
@@ -238,7 +247,7 @@ VOID DbgAssertDialog(const char *szFile, int iLine, const char *szExpr)
     STATIC_CONTRACT_FORBID_FAULT;
     STATIC_CONTRACT_SUPPORTS_DAC_HOST_ONLY;
 
-    DEBUG_ONLY_FUNCTION;
+    //DEBUG_ONLY_FUNCTION;
 
 #ifdef DACCESS_COMPILE
     // In the DAC case, asserts can mean one of two things.
@@ -266,12 +275,6 @@ VOID DbgAssertDialog(const char *szFile, int iLine, const char *szExpr)
 
     SUPPRESS_ALLOCATION_ASSERTS_IN_THIS_SCOPE;
 
-    // Raising the assert dialog can cause us to re-enter the host when allocating
-    // memory for the string.  Since this is debug-only code, we can safely skip
-    // violation asserts here, particularly since they can also cause infinite
-    // recursion.
-    PERMANENT_CONTRACT_VIOLATION(HostViolation, ReasonDebugOnly);
-
     dbgForceToMemory = &szFile;     //make certain these args are available in the debugger
     dbgForceToMemory = &iLine;
     dbgForceToMemory = &szExpr;
@@ -295,5 +298,3 @@ VOID DbgAssertDialog(const char *szFile, int iLine, const char *szExpr)
         g_BufferLock = 0;
     }
 } // DbgAssertDialog
-
-#endif // _DEBUG

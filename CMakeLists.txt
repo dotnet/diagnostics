@@ -2,7 +2,7 @@
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 # Verify minimum required version
-cmake_minimum_required(VERSION 3.6.2)
+cmake_minimum_required(VERSION 3.15)
 
 cmake_policy(SET CMP0042 NEW) # MACOSX_RPATH is enabled by default.
 
@@ -13,18 +13,19 @@ project(diagnostics)
 include(eng/native/configurepaths.cmake)
 include(${CLR_ENG_NATIVE_DIR}/configurecompiler.cmake)
 
-# override some global configs
-if (MSVC)
-  add_compile_options(/wd4960 /wd4961 /wd4603 /wd4627 /wd4838 /wd4456 /wd4457 /wd4458 /wd4459 /wd4091 /we4640)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/EHsc>)
-  add_compile_options($<$<OR:$<CONFIG:Release>,$<CONFIG:Relwithdebinfo>>:/MT>)
-  add_compile_options($<$<OR:$<CONFIG:Debug>,$<CONFIG:Checked>>:/MTd>)
-else (MSVC)
-  add_compile_options(-Wno-unused-parameter)
-  add_compile_options(-Wno-unused-variable)
-  add_compile_options(-Wno-implicit-fallthrough)
+if(CLR_CMAKE_HOST_UNIX)
+  # The -fms-extensions enable the stuff like __if_exists, __declspec(uuid()), etc.
+  add_compile_options(-fms-extensions)
+  #-fms-compatibility      Enable full Microsoft Visual C++ compatibility
+  #-fms-extensions         Accept some non-standard constructs supported by the Microsoft compiler
   add_compile_options(-fvisibility=default)
-endif (MSVC)
+endif(CLR_CMAKE_HOST_UNIX)
+
+if (CMAKE_VERSION VERSION_LESS "3.16")
+  # Provide a no-op polyfill for precompiled headers on old CMake versions
+  function(target_precompile_headers)
+  endfunction()
+endif()
 
 # Register the default component
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME diagnostics)
@@ -48,7 +49,7 @@ endif(CLR_CMAKE_HOST_UNIX)
 
 # Where _version.h for Windows is generated
 if(CLR_CMAKE_HOST_WIN32)
-include_directories(${CLR_ARTIFACTS_OBJ_DIR})
+  include_directories(${CLR_ARTIFACTS_OBJ_DIR})
 endif(CLR_CMAKE_HOST_WIN32)
 
 set(CORECLR_SET_RPATH ON)
@@ -182,41 +183,13 @@ if(CLR_CMAKE_HOST_WIN32)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif(CLR_CMAKE_HOST_WIN32)
 
-add_definitions(-DUNICODE)
-add_definitions(-D_UNICODE)
-
 #--------------------------------------
 # FEATURE Defines
 #--------------------------------------
 
-add_definitions(-DFEATURE_CORESYSTEM)
-
 if(CLR_CMAKE_HOST_UNIX)
-    add_definitions(-DPLATFORM_UNIX=1)
     add_definitions(-DFEATURE_PAL)
-    add_definitions(-DFEATURE_PAL_ANSI)
 endif(CLR_CMAKE_HOST_UNIX)
-
-if(CLR_CMAKE_HOST_WIN32)
-    add_definitions(-DFEATURE_COMINTEROP)
-endif(CLR_CMAKE_HOST_WIN32)
-
-if(NOT CMAKE_SYSTEM_NAME STREQUAL NetBSD)
-    add_definitions(-DFEATURE_HIJACK)
-endif(NOT CMAKE_SYSTEM_NAME STREQUAL NetBSD)
-
-if(FEATURE_EVENT_TRACE)
-    add_definitions(-DFEATURE_EVENT_TRACE=1)
-    add_definitions(-DFEATURE_PERFTRACING=1)
-endif(FEATURE_EVENT_TRACE)
-
-if(CLR_CMAKE_HOST_UNIX_AMD64)
-    add_definitions(-DFEATURE_MULTIREG_RETURN)
-endif (CLR_CMAKE_HOST_UNIX_AMD64)
-
-if(CLR_CMAKE_HOST_UNIX AND CLR_CMAKE_TARGET_ARCH_AMD64)
-    add_definitions(-DUNIX_AMD64_ABI)
-endif(CLR_CMAKE_HOST_UNIX AND CLR_CMAKE_TARGET_ARCH_AMD64)
 
 #-----------------------------------------
 # Native Projects

@@ -163,7 +163,7 @@ LPCWSTR GetPalErrorString(DWORD code)
     ErrorString *stringEntry = (ErrorString *)bsearch(
         &searchEntry,
         palErrorStrings,
-        ARRAY_SIZE(palErrorStrings),
+        sizeof(palErrorStrings) / sizeof(palErrorStrings[0]),
         sizeof(ErrorString),
         CompareErrorStrings);
 

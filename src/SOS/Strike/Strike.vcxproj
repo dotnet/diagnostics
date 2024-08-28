@@ -234,7 +234,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\shared;..\..\shared\minipal;..\..\shared\pal\prebuilt\inc;..\..\shared\inc;..\..\shared\gcdump;..\inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
       <AssemblerListingLocation>Release/</AssemblerListingLocation>
       <BufferSecurityCheck>true</BufferSecurityCheck>
@@ -391,6 +391,9 @@
     <ClCompile Include="clrma\managedanalysis.cpp" />
     <ClCompile Include="dbgengservices.cpp" />
     <ClCompile Include="disasm.cpp" />
+    <ClCompile Include="disasmARM.cpp" />
+    <ClCompile Include="disasmLOONGARCH64.cpp" />
+    <ClCompile Include="disasmRISCV64.cpp" />
     <ClCompile Include="dllsext.cpp" />
     <ClCompile Include="eeheap.cpp" />
     <ClCompile Include="ExpressionNode.cpp" />

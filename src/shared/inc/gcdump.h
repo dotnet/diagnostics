@@ -11,11 +11,6 @@
  * to the standard code-manager spec.
  */
 
-// ******************************************************************************
-// WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcdump.h
-// ******************************************************************************
-
 /*****************************************************************************/
 #ifndef __GCDUMP_H__
 #define __GCDUMP_H__

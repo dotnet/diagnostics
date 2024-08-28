@@ -9,37 +9,7 @@
 #ifndef __strike_h__
 #define __strike_h__
 
-#include <minipal/utils.h>
-
-#if defined(_MSC_VER)
-#pragma warning(disable:4245)   // signed/unsigned mismatch
-#pragma warning(disable:4100)   // unreferenced formal parameter
-#pragma warning(disable:4201)   // nonstandard extension used : nameless struct/union
-#pragma warning(disable:4127)   // conditional expression is constant
-#pragma warning(disable:6255)   // Prefast: alloca indicates failure by raising a stack overflow exception
-#endif
-
-#ifdef PAL_STDCPP_COMPAT
-#define _iswprint   PAL_iswprint
-#define _wcslen     PAL_wcslen
-#define _wcsncmp    PAL_wcsncmp
-#define _wcsrchr    PAL_wcsrchr
-#define _wcscmp     PAL_wcscmp
-#define _wcschr     PAL_wcschr
-#define _wcscspn    PAL_wcscspn
-#define _wcscat     PAL_wcscat
-#define _wcsstr     PAL_wcsstr
-#else // PAL_STDCPP_COMPAT
-#define _iswprint   iswprint
-#define _wcslen     wcslen
-#define _wcsncmp    wcsncmp
-#define _wcsrchr    wcsrchr
-#define _wcscmp     wcscmp
-#define _wcschr     wcschr
-#define _wcscspn    wcscspn
-#define _wcscat     wcscat
-#define _wcsstr     wcsstr
-#endif // !PAL_STDCPP_COMPAT
+#include "warningcontrol.h"
 
 #define ___in       _SAL1_Source_(__in, (), _In_)
 #define ___out      _SAL1_Source_(__out, (), _Out_)
@@ -50,10 +20,22 @@
 #include <winternl.h>
 #include <winver.h>
 #include <windows.h>
-    
 #include <wchar.h>
+#include <minipal/utils.h>
+#include <dn-u16.h>
 
-//#define NOEXTAPI
+#define _wcsrchr    u16_strrchr
+#define _wcscmp     u16_strcmp
+#define _wcsncmp    u16_strncmp
+#define _wcschr     u16_strchr
+#define _wcscat     u16_strcat
+#define _wcsstr     u16_strstr
+
+inline size_t __cdecl _wcslen(const WCHAR* str)
+{
+    return u16_strlen(str);
+}
+
 #define KDEXT_64BIT
 #include <wdbgexts.h>
 #undef DECLARE_API
@@ -70,10 +52,6 @@
 #include <string.h>
 #include "host.h"
 #include "hostservices.h"
-
-#ifndef PAL_STDCPP_COMPAT
-#include <malloc.h>
-#endif
 
 #ifdef FEATURE_PAL
 #ifndef alloca

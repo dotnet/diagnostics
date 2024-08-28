@@ -156,12 +156,10 @@ if [[ "$__ManagedBuild" == 1 ]]; then
     __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
 
     "$__RepoRootDir/eng/common/msbuild.sh" \
-        $__RepoRootDir/eng/CreateVersionFile.proj \
+        $__RepoRootDir/eng/native-prereqs.proj \
         /bl:$__GenerateVersionLog \
-        /t:GenerateVersionFiles \
+        /t:BuildPrereqs \
         /restore \
-        /p:GenerateVersionSourceFile=true \
-        /p:NativeVersionSourceFile="$__ArtifactsIntermediatesDir/_version.c" \
         /p:Configuration="$__BuildType" \
         /p:Platform="$__TargetArch" \
         $__UnprocessedBuildArgs

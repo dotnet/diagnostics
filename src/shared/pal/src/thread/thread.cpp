@@ -38,15 +38,11 @@ SET_DEFAULT_DEBUG_CHANNEL(THREAD); // some headers have code with asserts, so do
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <kvm.h>
-#elif defined(__sun)
-#ifndef _KERNEL
-#define _KERNEL
-#define UNDEF_KERNEL
 #endif
-#include <sys/procfs.h>
-#ifdef UNDEF_KERNEL
-#undef _KERNEL
-#endif
+
+#if defined(__sun)
+#include <procfs.h>
+#include <fcntl.h>
 #endif
 
 #include <signal.h>
@@ -58,6 +54,7 @@ SET_DEFAULT_DEBUG_CHANNEL(THREAD); // some headers have code with asserts, so do
 #include <errno.h>
 #include <stddef.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #if HAVE_MACH_THREADS
 #include <mach/mach.h>
 #endif // HAVE_MACH_THREADS
@@ -67,6 +64,7 @@ SET_DEFAULT_DEBUG_CHANNEL(THREAD); // some headers have code with asserts, so do
 #include "pal/fakepoll.h"
 #endif  // HAVE_POLL
 #include <limits.h>
+#include <algorithm>
 
 #if HAVE_SYS_LWP_H
 #include <sys/lwp.h>
@@ -74,12 +72,23 @@ SET_DEFAULT_DEBUG_CHANNEL(THREAD); // some headers have code with asserts, so do
 #if HAVE_LWP_H
 #include <lwp.h>
 #endif
-// If we don't have sys/lwp.h but do expect to use _lwp_self, declare it to silence compiler warnings
-#if HAVE__LWP_SELF && !HAVE_SYS_LWP_H && !HAVE_LWP_H
-extern "C" int _lwp_self ();
+
+#if HAVE_CPUSET_T
+typedef cpuset_t cpu_set_t;
 #endif
 
 using namespace CorUnix;
+
+#ifdef __APPLE__
+#define MAX_THREAD_NAME_SIZE 63
+#elif defined(__FreeBSD__)
+#define MAX_THREAD_NAME_SIZE MAXCOMLEN
+#else
+#define MAX_THREAD_NAME_SIZE 15
+#endif
+
+/* ------------------- Definitions ------------------------------*/
+
 
 void
 ThreadCleanupRoutine(
@@ -299,7 +308,7 @@ CorUnix::InternalCreateThread(
             // When coming here from the public API surface, the incoming value is originally a nonnegative signed int32, so
             // this shouldn't happen
             ASSERT(
-                "Couldn't align the requested stack size (%Iu) to the page size because the stack size was too large\n",
+                "Couldn't align the requested stack size (%zu) to the page size because the stack size was too large\n",
                 alignedStackSize);
             palError = ERROR_INVALID_PARAMETER;
             goto EXIT;
@@ -372,10 +381,10 @@ CorUnix::InternalCreateThread(
             alignedStackSize = MinStackSize;
         }
 
-        TRACE("setting thread stack size to %Iu\n", alignedStackSize);
+        TRACE("setting thread stack size to %zu\n", alignedStackSize);
         if (0 != pthread_attr_setstacksize(&pthreadAttr, alignedStackSize))
         {
-            ERROR("couldn't set pthread stack size to %Iu\n", alignedStackSize);
+            ERROR("couldn't set pthread stack size to %zu\n", alignedStackSize);
             palError = ERROR_INTERNAL_ERROR;
             goto EXIT;
         }

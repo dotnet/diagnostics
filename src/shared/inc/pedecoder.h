@@ -37,6 +37,8 @@
 #include "cor.h"
 #include "corhdr.h"
 
+#include "corcompile.h"
+
 #include "readytorun.h"
 typedef DPTR(struct READYTORUN_CORE_HEADER) PTR_READYTORUN_CORE_HEADER;
 typedef DPTR(struct READYTORUN_HEADER) PTR_READYTORUN_HEADER;
@@ -58,7 +60,7 @@ class Module;
 typedef DWORD RVA;
 
 #ifdef _MSC_VER
-// Wrapper to suppress ambigous overload problems with MSVC.
+// Wrapper to suppress ambiguous overload problems with MSVC.
 inline CHECK CheckOverflow(RVA value1, COUNT_T value2)
 {
     WRAPPER_NO_CONTRACT;
@@ -81,6 +83,8 @@ inline CHECK CheckOverflow(RVA value1, COUNT_T value2)
 #define IMAGE_FILE_MACHINE_NATIVE   IMAGE_FILE_MACHINE_ARM64
 #elif defined(TARGET_LOONGARCH64)
 #define IMAGE_FILE_MACHINE_NATIVE   IMAGE_FILE_MACHINE_LOONGARCH64
+#elif defined(TARGET_POWERPC64)
+#define IMAGE_FILE_MACHINE_NATIVE   IMAGE_FILE_MACHINE_POWERPC
 #elif defined(TARGET_S390X)
 #define IMAGE_FILE_MACHINE_NATIVE   IMAGE_FILE_MACHINE_UNKNOWN
 #elif defined(TARGET_RISCV64)
@@ -175,8 +179,6 @@ class PEDecoder
     DWORD GetCheckSum() const;
     WORD GetMachine() const;
     WORD GetCharacteristics() const;
-    DWORD GetFileAlignment() const;
-    DWORD GetSectionAlignment() const;
     SIZE_T GetSizeOfStackReserve() const;
     SIZE_T GetSizeOfStackCommit() const;
     SIZE_T GetSizeOfHeapReserve() const;
@@ -307,14 +309,18 @@ class PEDecoder
     BOOL HasReadyToRunHeader() const;
     READYTORUN_HEADER *GetReadyToRunHeader() const;
 
-    void  GetEXEStackSizes(SIZE_T *PE_SizeOfStackReserve, SIZE_T *PE_SizeOfStackCommit) const;
-
     // Native DLLMain Entrypoint
     BOOL HasNativeEntryPoint() const;
     void *GetNativeEntryPoint() const;
 
     // Look up a named symbol in the export directory
     PTR_VOID GetExport(LPCSTR exportName) const;
+
+#ifdef _DEBUG
+    // Stress mode for relocations
+    static BOOL GetForceRelocs();
+    static BOOL ForceRelocForDLL(LPCWSTR lpFileName);
+#endif
 
 #ifdef DACCESS_COMPILE
     void EnumMemoryRegions(CLRDataEnumMemoryFlags flags, bool enumThis);
@@ -326,7 +332,7 @@ class PEDecoder
     // Protected API for subclass use
     // ------------------------------------------------------------
 
-    // Checking utilites
+    // Checking utilities
     static CHECK CheckBounds(RVA rangeBase, COUNT_T rangeSize, RVA rva);
     static CHECK CheckBounds(RVA rangeBase, COUNT_T rangeSize, RVA rva, COUNT_T size);
 

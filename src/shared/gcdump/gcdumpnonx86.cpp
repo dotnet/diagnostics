@@ -69,7 +69,6 @@ PCSTR GetRegName (UINT32 regnum)
     static CHAR szRegName[16];
     _snprintf_s(szRegName, ARRAY_SIZE(szRegName), sizeof(szRegName), "r%u", regnum);
     return szRegName;
-
 #elif defined(TARGET_LOONGARCH64)
     switch (regnum)
     {
@@ -369,32 +368,12 @@ size_t      GCDump::DumpGCTable(PTR_CBYTE      gcInfoBlock,
                                                  ),
                              0);
 
-    if (NO_SECURITY_OBJECT != hdrdecoder.GetSecurityObjectStackSlot() ||
-        NO_GENERICS_INST_CONTEXT != hdrdecoder.GetGenericsInstContextStackSlot() ||
+    if (NO_GENERICS_INST_CONTEXT != hdrdecoder.GetGenericsInstContextStackSlot() ||
         NO_GS_COOKIE == hdrdecoder.GetGSCookieStackSlot())
     {
         gcPrintf("Prolog size: ");
         UINT32 prologSize = hdrdecoder.GetPrologSize();
         gcPrintf("%d\n", prologSize);
-    }
-
-    gcPrintf("Security object: ");
-    if (NO_SECURITY_OBJECT == hdrdecoder.GetSecurityObjectStackSlot())
-    {
-        gcPrintf("<none>\n");
-    }
-    else
-    {
-        INT32 ofs = hdrdecoder.GetSecurityObjectStackSlot();
-        char sign = '+';
-
-        if (ofs < 0)
-        {
-            sign = '-';
-            ofs = -ofs;
-        }
-
-        gcPrintf("caller.sp%c%x\n", sign, ofs);
     }
 
     gcPrintf("GS cookie: ");
@@ -608,5 +587,5 @@ void    GCDump::DumpPtrsInFrame(PTR_CBYTE   gcInfoBlock,
 #define GET_CALLER_SP(pREGDISPLAY) ((size_t)GetSP(pREGDISPLAY->pCallerContext))
 #define VALIDATE_OBJECTREF(objref, fDeep) ((void)0)
 #define VALIDATE_ROOT(isInterior, hCallBack, pObjRef) ((void)0)
-#include "gcinfodecoder.cpp"
-#include "gcinfodumper.cpp"
+#include "../vm/gcinfodecoder.cpp"
+#include "../gcinfo/gcinfodumper.cpp"

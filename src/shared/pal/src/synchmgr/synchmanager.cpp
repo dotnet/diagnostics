@@ -28,6 +28,7 @@ SET_DEFAULT_DEBUG_CHANNEL(SYNC); // some headers have code with asserts, so do t
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <sched.h>
 #include <signal.h>
@@ -322,7 +323,7 @@ namespace CorUnix
                 break;
             }
             case WaitSucceeded:
-            case MutexAbondoned:
+            case MutexAbandoned:
                 *pdwSignaledObject = dwSigObjIdx;
                 break;
             default:
@@ -1123,7 +1124,7 @@ namespace CorUnix
 
         if ((NULL == pSynchManager) || ((LONG)SynchMgrStatusRunning != s_lInitStatus))
         {
-            ERROR("Trying to to create worker thread in invalid state\n");
+            ERROR("Trying to create worker thread in invalid state\n");
             return ERROR_INTERNAL_ERROR;
         }
 
@@ -1418,7 +1419,7 @@ namespace CorUnix
                         // resetting the data by acquiring the object ownership
                         if (psdSynchData->IsAbandoned())
                         {
-                            twrWakeUpReason = MutexAbondoned;
+                            twrWakeUpReason = MutexAbandoned;
                         }
 
                         // Acquire ownership
@@ -1909,7 +1910,7 @@ namespace CorUnix
                 }
                 else if (0 > iRet)
                 {
-                    ERROR("Unable to read %d bytes from the the process pipe "
+                    ERROR("Unable to read %d bytes from the process pipe "
                           "[pipe=%d ret=%d errno=%d (%s)]\n", iBytes - iBytesRead,
                           m_iProcessPipeRead, iRet, errno, strerror(errno));
                     goto RBFPP_exit;
@@ -2557,7 +2558,7 @@ namespace CorUnix
     Method:
       CPalSynchronizationManager::MarkWaitForDelegatedObjectSignalingInProgress
 
-    Marks all the thread waiting list nodes involved in the the current wait-all
+    Marks all the thread waiting list nodes involved in the current wait-all
     for "delegated object signaling in progress", so that this wait cannot be
     involved in another delegated object signaling that may happen while the
     current object singaling is being tranfered to the target process (while
