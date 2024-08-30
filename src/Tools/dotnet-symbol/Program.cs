@@ -294,7 +294,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
             return store;
         }
 
-        private async Task<AuthenticationHeaderValue> SymwebAuthenticationFunc(CancellationToken token)
+        private async ValueTask<AuthenticationHeaderValue> SymwebAuthenticationFunc(CancellationToken token)
         {
             try
             {

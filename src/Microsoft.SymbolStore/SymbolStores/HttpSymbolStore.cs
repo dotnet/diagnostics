@@ -16,12 +16,12 @@ using System.Threading.Tasks;
 namespace Microsoft.SymbolStore.SymbolStores
 {
     /// <summary>
-    /// Basic http symbol store. The request can be authentication with a PAT or bearer token for Azure symbol stores.
+    /// Basic http symbol store. The request can be authentication with a PAT or bearer token.
     /// </summary>
     public class HttpSymbolStore : SymbolStore
     {
         private readonly HttpClient _client;
-        private readonly Func<CancellationToken, Task<AuthenticationHeaderValue>> _authenticationFunc;
+        private readonly Func<CancellationToken, ValueTask<AuthenticationHeaderValue>> _authenticationFunc;
         private bool _clientFailure;
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Microsoft.SymbolStore.SymbolStores
         /// <param name="backingStore">next symbol store or null</param>
         /// <param name="symbolServerUri">symbol server url</param>
         /// <param name="authenticationFunc">function that returns the authentication value for a request</param>
-        public HttpSymbolStore(ITracer tracer, SymbolStore backingStore, Uri symbolServerUri, Func<CancellationToken, Task<AuthenticationHeaderValue>> authenticationFunc)
+        public HttpSymbolStore(ITracer tracer, SymbolStore backingStore, Uri symbolServerUri, Func<CancellationToken, ValueTask<AuthenticationHeaderValue>> authenticationFunc)
             : base(tracer, backingStore)
         {
             Uri = symbolServerUri ?? throw new ArgumentNullException(nameof(symbolServerUri));
@@ -81,7 +81,7 @@ namespace Microsoft.SymbolStore.SymbolStores
         /// </summary>
         /// <param name="tracer">logger</param>
         /// <param name="backingStore">next symbol store or null</param>
-        /// <param name="symbolServerUri">symbol server url or null</param>
+        /// <param name="symbolServerUri">symbol server url</param>
         /// <param name="accessToken">optional Basic Auth PAT or null if no authentication</param>
         public HttpSymbolStore(ITracer tracer, SymbolStore backingStore, Uri symbolServerUri, string accessToken = null)
             : this(tracer, backingStore, symbolServerUri, string.IsNullOrEmpty(accessToken) ? null : GetAuthenticationFunc("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($":{accessToken}"))))
@@ -93,7 +93,7 @@ namespace Microsoft.SymbolStore.SymbolStores
         /// </summary>
         /// <param name="tracer">logger</param>
         /// <param name="backingStore">next symbol store or null</param>
-        /// <param name="symbolServerUri">symbol server url or null</param>
+        /// <param name="symbolServerUri">symbol server url</param>
         /// <param name="scheme">The scheme information to use for the AuthenticationHeaderValue</param>
         /// <param name="parameter">The parameter information to use for the AuthenticationHeaderValue</param>
         public HttpSymbolStore(ITracer tracer, SymbolStore backingStore, Uri symbolServerUri, string scheme, string parameter)
@@ -109,10 +109,10 @@ namespace Microsoft.SymbolStore.SymbolStores
             }
         }
 
-        private static Func<CancellationToken, Task<AuthenticationHeaderValue>> GetAuthenticationFunc(string scheme, string parameter)
+        private static Func<CancellationToken, ValueTask<AuthenticationHeaderValue>> GetAuthenticationFunc(string scheme, string parameter)
         {
             AuthenticationHeaderValue authenticationValue = new(scheme, parameter);
-            return (_) => Task.FromResult(authenticationValue);
+            return (_) => new ValueTask<AuthenticationHeaderValue>(authenticationValue);
         }
 
         /// <summary>

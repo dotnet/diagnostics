@@ -257,7 +257,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             int? retryCount = null)
         {
             TokenCredential tokenCredential = new DefaultAzureCredential(includeInteractiveCredentials);
-            async Task<AuthenticationHeaderValue> authenticationFunc(CancellationToken token)
+            async ValueTask<AuthenticationHeaderValue> authenticationFunc(CancellationToken token)
             {
                 try
                 {
@@ -292,7 +292,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 throw new ArgumentNullException(nameof(accessToken));
             }
             AuthenticationHeaderValue authenticationValue = new("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($":{accessToken}")));
-            return AddSymbolServer(symbolServerPath, timeoutInMinutes, retryCount, (token) => Task.FromResult(authenticationValue));
+            return AddSymbolServer(symbolServerPath, timeoutInMinutes, retryCount, (_) => new ValueTask<AuthenticationHeaderValue>(authenticationValue));
         }
 
         /// <summary>
@@ -322,7 +322,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string symbolServerPath,
             int? timeoutInMinutes,
             int? retryCount,
-            Func<CancellationToken, Task<AuthenticationHeaderValue>> authenticationFunc)
+            Func<CancellationToken, ValueTask<AuthenticationHeaderValue>> authenticationFunc)
         {
             // Add symbol server URL if exists
             symbolServerPath ??= DefaultSymbolPath;
