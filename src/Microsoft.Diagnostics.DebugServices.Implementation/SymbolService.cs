@@ -257,11 +257,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             int? retryCount = null)
         {
             TokenCredential tokenCredential = new DefaultAzureCredential(includeInteractiveCredentials);
+            AccessToken accessToken;
             async ValueTask<AuthenticationHeaderValue> authenticationFunc(CancellationToken token)
             {
                 try
                 {
-                    AccessToken accessToken = await tokenCredential.GetTokenAsync(new TokenRequestContext(["api://af9e1c69-e5e9-4331-8cc5-cdf93d57bafa/.default"]), token).ConfigureAwait(false);
+                    if (accessToken.ExpiresOn <= DateTimeOffset.UtcNow.AddMinutes(2))
+                    {
+                        accessToken = await tokenCredential.GetTokenAsync(new TokenRequestContext(["api://af9e1c69-e5e9-4331-8cc5-cdf93d57bafa/.default"]), token).ConfigureAwait(false);
+                    }
                     return new AuthenticationHeaderValue("Bearer", accessToken.Token);
                 }
                 catch (Exception ex) when (ex is CredentialUnavailableException or AuthenticationFailedException)
