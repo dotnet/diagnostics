@@ -54,14 +54,42 @@ namespace Microsoft.Diagnostics.DebugServices
         bool ParseSymbolPath(string symbolPath);
 
         /// <summary>
+        /// Add the cloud symweb symbol server with authentication.
+        /// </summary>
+        /// <param name="includeInteractiveCredentials">specifies whether credentials requiring user interaction will be included in the default authentication flow</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
+        /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
+        /// <returns>if false, failure</returns>
+        public bool AddSymwebSymbolServer(
+            bool includeInteractiveCredentials = false,
+            int? timeoutInMinutes = null,
+            int? retryCount = null);
+
+        /// <summary>
+        /// Add symbol server to search path with a PAT.
+        /// </summary>
+        /// <param name="accessToken">PAT or access token</param>
+        /// <param name="symbolServerPath">symbol server url (optional, uses <see cref="DefaultSymbolPath"/> if null)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
+        /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
+        /// <returns>if false, failure</returns>
+        public bool AddAuthenticatedSymbolServer(
+            string accessToken,
+            string symbolServerPath = null,
+            int? timeoutInMinutes = null,
+            int? retryCount = null);
+
+        /// <summary>
         /// Add symbol server to search path.
         /// </summary>
         /// <param name="symbolServerPath">symbol server url (optional, uses <see cref="DefaultSymbolPath"/> if null)</param>
-        /// <param name="authToken">PAT for secure symbol server (optional)</param>
-        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional, uses <see cref="DefaultTimeout"/> if null)</param>
-        /// <param name="retryCount">number of retries (optional, uses <see cref="DefaultRetryCount"/> if null)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
+        /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
         /// <returns>if false, failure</returns>
-        bool AddSymbolServer(string symbolServerPath = null, string authToken = null, int? timeoutInMinutes = null, int? retryCount = null);
+        public bool AddSymbolServer(
+            string symbolServerPath = null,
+            int? timeoutInMinutes = null,
+            int? retryCount = null);
 
         /// <summary>
         /// Add cache path to symbol search path

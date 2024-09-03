@@ -16,12 +16,12 @@ using System.Threading.Tasks;
 namespace Microsoft.SymbolStore.SymbolStores
 {
     /// <summary>
-    /// Basic http symbol store. The request can be authentication with a PAT for VSTS symbol stores.
+    /// Basic http symbol store. The request can be authentication with a PAT or bearer token.
     /// </summary>
     public class HttpSymbolStore : SymbolStore
     {
         private readonly HttpClient _client;
-        private readonly HttpClient _authenticatedClient;
+        private readonly Func<CancellationToken, ValueTask<AuthenticationHeaderValue>> _authenticationFunc;
         private bool _clientFailure;
 
         /// <summary>
@@ -41,10 +41,6 @@ namespace Microsoft.SymbolStore.SymbolStores
             set
             {
                 _client.Timeout = value;
-                if (_authenticatedClient != null)
-                {
-                    _authenticatedClient.Timeout = value;
-                }
             }
         }
 
@@ -59,36 +55,25 @@ namespace Microsoft.SymbolStore.SymbolStores
         /// <param name="tracer">logger</param>
         /// <param name="backingStore">next symbol store or null</param>
         /// <param name="symbolServerUri">symbol server url</param>
-        /// <param name="hasPAT">flag to indicate to create an authenticatedClient if there is a PAT</param>
-        private HttpSymbolStore(ITracer tracer, SymbolStore backingStore, Uri symbolServerUri, bool hasPAT)
+        /// <param name="authenticationFunc">function that returns the authentication value for a request</param>
+        public HttpSymbolStore(ITracer tracer, SymbolStore backingStore, Uri symbolServerUri, Func<CancellationToken, ValueTask<AuthenticationHeaderValue>> authenticationFunc)
             : base(tracer, backingStore)
         {
             Uri = symbolServerUri ?? throw new ArgumentNullException(nameof(symbolServerUri));
             if (!symbolServerUri.IsAbsoluteUri || symbolServerUri.IsFile)
             {
-                throw new ArgumentException(nameof(symbolServerUri));
+                throw new ArgumentException(null, nameof(symbolServerUri));
             }
+            _authenticationFunc = authenticationFunc;
 
-            // Normal unauthenticated client
+            // Create client
             _client = new HttpClient
             {
                 Timeout = TimeSpan.FromMinutes(4)
             };
 
-            if (hasPAT)
-            {
-                HttpClientHandler handler = new()
-                {
-                    AllowAutoRedirect = false
-                };
-                HttpClient client = new(handler)
-                {
-                    Timeout = TimeSpan.FromMinutes(4)
-                };
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                // Authorization is set in associated constructors.
-                _authenticatedClient = client;
-            }
+            // Force redirect logins to fail.
+            _client.DefaultRequestHeaders.Add("X-TFS-FedAuthRedirect", "Suppress");
         }
 
         /// <summary>
@@ -97,15 +82,10 @@ namespace Microsoft.SymbolStore.SymbolStores
         /// <param name="tracer">logger</param>
         /// <param name="backingStore">next symbol store or null</param>
         /// <param name="symbolServerUri">symbol server url</param>
-        /// <param name="personalAccessToken">optional Basic Auth PAT or null if no authentication</param>
-        public HttpSymbolStore(ITracer tracer, SymbolStore backingStore, Uri symbolServerUri, string personalAccessToken = null)
-            : this(tracer, backingStore, symbolServerUri, !string.IsNullOrEmpty(personalAccessToken))
+        /// <param name="accessToken">optional Basic Auth PAT or null if no authentication</param>
+        public HttpSymbolStore(ITracer tracer, SymbolStore backingStore, Uri symbolServerUri, string accessToken = null)
+            : this(tracer, backingStore, symbolServerUri, string.IsNullOrEmpty(accessToken) ? null : GetAuthenticationFunc("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($":{accessToken}"))))
         {
-            // If PAT, create authenticated client with Basic Auth
-            if (!string.IsNullOrEmpty(personalAccessToken))
-            {
-                _authenticatedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(ASCIIEncoding.ASCII.GetBytes(string.Format("{0}:{1}", "", personalAccessToken))));
-            }
         }
 
         /// <summary>
@@ -117,22 +97,22 @@ namespace Microsoft.SymbolStore.SymbolStores
         /// <param name="scheme">The scheme information to use for the AuthenticationHeaderValue</param>
         /// <param name="parameter">The parameter information to use for the AuthenticationHeaderValue</param>
         public HttpSymbolStore(ITracer tracer, SymbolStore backingStore, Uri symbolServerUri, string scheme, string parameter)
-            : this(tracer, backingStore, symbolServerUri, true)
+            : this(tracer, backingStore, symbolServerUri, GetAuthenticationFunc(scheme, parameter))
         {
             if (string.IsNullOrEmpty(scheme))
             {
                 throw new ArgumentNullException(nameof(scheme));
             }
-
             if (string.IsNullOrEmpty(parameter))
             {
                 throw new ArgumentNullException(nameof(parameter));
             }
+        }
 
-            // Create authenticated header with given SymbolAuthHeader
-            _authenticatedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(scheme, parameter);
-            // Force redirect logins to fail.
-            _authenticatedClient.DefaultRequestHeaders.Add("X-TFS-FedAuthRedirect", "Suppress");
+        private static Func<CancellationToken, ValueTask<AuthenticationHeaderValue>> GetAuthenticationFunc(string scheme, string parameter)
+        {
+            AuthenticationHeaderValue authenticationValue = new(scheme, parameter);
+            return (_) => new ValueTask<AuthenticationHeaderValue>(authenticationValue);
         }
 
         /// <summary>
@@ -149,13 +129,11 @@ namespace Microsoft.SymbolStore.SymbolStores
             Uri uri = GetRequestUri(key.Index);
 
             bool needsChecksumMatch = key.PdbChecksums.Any();
-
             if (needsChecksumMatch)
             {
                 string checksumHeader = string.Join(";", key.PdbChecksums);
-                HttpClient client = _authenticatedClient ?? _client;
                 Tracer.Information($"SymbolChecksum: {checksumHeader}");
-                client.DefaultRequestHeaders.Add("SymbolChecksum", checksumHeader);
+                _client.DefaultRequestHeaders.Add("SymbolChecksum", checksumHeader);
             }
 
             Stream stream = await GetFileStream(key.FullPathName, uri, token).ConfigureAwait(false);
@@ -193,7 +171,6 @@ namespace Microsoft.SymbolStore.SymbolStores
                 return null;
             }
             string fileName = Path.GetFileName(path);
-            HttpClient client = _authenticatedClient ?? _client;
             int retries = 0;
             while (true)
             {
@@ -203,25 +180,19 @@ namespace Microsoft.SymbolStore.SymbolStores
                 {
                     // Can not dispose the response (like via using) on success because then the content stream
                     // is disposed and it is returned by this function.
-                    HttpResponseMessage response = await client.GetAsync(requestUri, token).ConfigureAwait(false);
+                    using HttpRequestMessage request = new(HttpMethod.Get, requestUri);
+                    if (_authenticationFunc is not null)
+                    {
+                        request.Headers.Authorization = await _authenticationFunc(token).ConfigureAwait(false);
+                    }
+                    using HttpResponseMessage response = await _client.SendAsync(request, token).ConfigureAwait(false);
                     if (response.StatusCode == HttpStatusCode.OK)
                     {
-                        return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                    }
-                    if (response.StatusCode == HttpStatusCode.Found)
-                    {
-                        Uri location = response.Headers.Location;
-                        response.Dispose();
-
-                        response = await _client.GetAsync(location, token).ConfigureAwait(false);
-                        if (response.StatusCode == HttpStatusCode.OK)
-                        {
-                            return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                        }
+                        byte[] buffer = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+                        return new MemoryStream(buffer);
                     }
                     HttpStatusCode statusCode = response.StatusCode;
                     string reasonPhrase = response.ReasonPhrase;
-                    response.Dispose();
 
                     // The GET failed
 
@@ -287,7 +258,6 @@ namespace Microsoft.SymbolStore.SymbolStores
         public override void Dispose()
         {
             _client.Dispose();
-            _authenticatedClient?.Dispose();
             base.Dispose();
         }
 

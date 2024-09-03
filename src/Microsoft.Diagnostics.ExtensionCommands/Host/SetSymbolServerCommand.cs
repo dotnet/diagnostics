@@ -1,6 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Net.Http.Headers;
+using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -18,7 +21,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--ms", Aliases = new string[] { "-ms" }, Help = "Use the public Microsoft symbol server.")]
         public bool MicrosoftSymbolServer { get; set; }
 
-        [Option(Name = "--disable", Aliases = new string[] { "-disable" }, Help = "Clear or disable symbol download support.")]
+        [Option(Name = "--mi", Aliases = new string[] { "-mi" }, Help = "Use the internal symweb symbol server.")]
+        public bool InternalSymbolServer { get; set; }
+
+        [Option(Name = "--interactive", Aliases = new string[] { "-interactive" }, Help = "Allows user interaction will be included in the authentication flow.")]
+        public bool Interactive { get; set; }
+
+        [Option(Name = "--disable", Aliases = new string[] { "-disable", "-clear" }, Help = "Clear or disable symbol download support.")]
         public bool Disable { get; set; }
 
         [Option(Name = "--reset", Aliases = new string[] { "-reset" }, Help = "Reset the HTTP symbol servers clearing any cached failures.")]
@@ -26,6 +35,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [Option(Name = "--cache", Aliases = new string[] { "-cache" }, Help = "Specify a symbol cache directory.")]
         public string Cache { get; set; }
+
+        [Option(Name = "--nocache", Aliases = new string[] { "-nocache" }, Help = "Do not automatically add the default cache before a server.")]
+        public bool NoCache { get; set; }
 
         [Option(Name = "--directory", Aliases = new string[] { "-directory" }, Help = "Specify a directory to search for symbols.")]
         public string Directory { get; set; }
@@ -47,9 +59,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            if (MicrosoftSymbolServer && !string.IsNullOrEmpty(SymbolServerUrl))
+            if (MicrosoftSymbolServer && InternalSymbolServer)
             {
-                throw new DiagnosticsException("Cannot have -ms option and a symbol server path");
+                throw new DiagnosticsException("Cannot have both -ms and -mi options");
+            }
+            if ((MicrosoftSymbolServer || InternalSymbolServer) && !string.IsNullOrEmpty(SymbolServerUrl))
+            {
+                throw new DiagnosticsException("Cannot have -ms or -mi option and a symbol server path");
             }
             if (Disable)
             {
@@ -59,13 +75,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 SymbolService.Reset();
             }
-            if (MicrosoftSymbolServer || !string.IsNullOrEmpty(SymbolServerUrl))
+            if (MicrosoftSymbolServer || InternalSymbolServer || !string.IsNullOrEmpty(SymbolServerUrl))
             {
-                if (string.IsNullOrEmpty(Cache))
+                if (string.IsNullOrEmpty(Cache) && !NoCache)
                 {
                     Cache = SymbolService.DefaultSymbolCache;
                 }
-                SymbolService.AddSymbolServer(SymbolServerUrl, AccessToken, Timeout, RetryCount);
+                if (InternalSymbolServer)
+                {
+                    SymbolService.AddSymwebSymbolServer(includeInteractiveCredentials: Interactive, Timeout, RetryCount);
+                }
+                else if (AccessToken is not null)
+                {
+                    SymbolService.AddAuthenticatedSymbolServer(AccessToken, SymbolServerUrl, Timeout, RetryCount);
+                }
+                else
+                {
+                    SymbolService.AddSymbolServer(SymbolServerUrl, Timeout, RetryCount);
+                }
             }
             if (!string.IsNullOrEmpty(Cache))
             {

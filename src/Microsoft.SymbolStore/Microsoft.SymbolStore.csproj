@@ -15,10 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
-<!--
-    <PackageReference Condition="'$(TargetFramework)' != 'net462'" Include="System.Reflection.Metadata" Version="$(SystemReflectionMetadataVersion)" />
-    <PackageReference Condition="'$(TargetFramework)' == 'net462'" Include="System.Reflection.Metadata" Version="1.6.0" />
--->
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="$(SystemThreadingTasksExtensionsVersion)" />
   </ItemGroup>
 
   <ItemGroup>
