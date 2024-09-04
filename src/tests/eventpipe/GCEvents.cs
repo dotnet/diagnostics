@@ -206,8 +206,11 @@ namespace EventPipe.UnitTests.GCEventsValidation
                 Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
                     int GCCreateSegmentEvents = 0;
                     int GCFreeSegmentEvents = 0;
-                    source.Clr.GCCreateSegment += (eventData) => GCCreateSegmentEvents += 1;
-                    source.Clr.GCFreeSegment += (eventData) => GCFreeSegmentEvents += 1;
+                    if (Environment.Version.Major < 7)
+                    {
+                        source.Clr.GCCreateSegment += (eventData) => GCCreateSegmentEvents += 1;
+                        source.Clr.GCFreeSegment += (eventData) => GCFreeSegmentEvents += 1;
+                    }
 
                     int GCAllocationTickEvents = 0;
                     source.Clr.GCAllocationTick += (eventData) => GCAllocationTickEvents += 1;
@@ -215,12 +218,15 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     return () => {
                         Logger.logger.Log("Event counts validation");
 
-                        Logger.logger.Log("GCCreateSegmentEvents: " + GCCreateSegmentEvents);
-                        Logger.logger.Log("GCFreeSegmentEvents: " + GCFreeSegmentEvents);
+                        bool GCSegmentResult = true;
+                        if (Environment.Version.Major < 7)
+                        {
+                            Logger.logger.Log("GCCreateSegmentEvents: " + GCCreateSegmentEvents);
+                            Logger.logger.Log("GCFreeSegmentEvents: " + GCFreeSegmentEvents);
 
-                        // Disable checking GCFreeSegmentEvents on .NET 7.0 issue: https://github.com/dotnet/diagnostics/issues/3143
-                        bool GCSegmentResult = GCCreateSegmentEvents > 0 && (GCFreeSegmentEvents > 0 || Environment.Version.Major >= 7);
-                        Logger.logger.Log("GCSegmentResult: " + GCSegmentResult);
+                            GCSegmentResult = GCCreateSegmentEvents > 0 && GCFreeSegmentEvents > 0;
+                            Logger.logger.Log("GCSegmentResult: " + GCSegmentResult);
+                        }
 
                         Logger.logger.Log("GCAllocationTickEvents: " + GCAllocationTickEvents);
                         bool GCAllocationTickResult = GCAllocationTickEvents > 0;
