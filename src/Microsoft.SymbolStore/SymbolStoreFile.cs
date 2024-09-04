@@ -35,10 +35,14 @@ namespace Microsoft.SymbolStore
         /// <param name="fileName">name of the file</param>
         public SymbolStoreFile(Stream stream, string fileName)
         {
-            Debug.Assert(stream != null);
-            Debug.Assert(stream.CanSeek);
-            Debug.Assert(fileName != null);
-
+            if (stream is null || !stream.CanSeek)
+            {
+                throw new ArgumentException("Stream null or not seekable", nameof(stream));
+            }
+            if (fileName is null or "")
+            {
+                throw new ArgumentNullException(nameof(fileName));
+            }
             Stream = stream;
             FileName = fileName;
         }

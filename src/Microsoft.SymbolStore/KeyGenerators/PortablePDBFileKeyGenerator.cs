@@ -16,7 +16,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         public PortablePDBFileKeyGenerator(ITracer tracer, SymbolStoreFile file)
             : base(tracer)
         {
-            _file = file;
+            _file = file ?? throw new ArgumentNullException(nameof(file));
         }
 
         public override bool IsValid()
@@ -56,7 +56,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                         else
                         {
                             // Force the Windows PDB index
-                            key = PDBFileKeyGenerator.GetKey(_file.FileName, blob.Guid, 1);
+                            key = PDBFileKeyGenerator.GetKey(_file.FileName, blob.Guid, age: 1);
                         }
                     }
                 }

@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -16,7 +17,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         public PerfMapFileKeyGenerator(ITracer tracer, SymbolStoreFile file)
             : base(tracer)
         {
-            _file = file;
+            _file = file ?? throw new ArgumentNullException(nameof(file));
             _perfmapFile = new PerfMapFile(_file.Stream);
         }
 
