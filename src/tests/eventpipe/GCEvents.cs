@@ -212,11 +212,6 @@ namespace EventPipe.UnitTests.GCEventsValidation
                     int GCAllocationTickEvents = 0;
                     source.Clr.GCAllocationTick += (eventData) => GCAllocationTickEvents += 1;
 
-                    int GCCreateConcurrentThreadEvents = 0;
-                    int GCTerminateConcurrentThreadEvents = 0;
-                    source.Clr.GCCreateConcurrentThread += (eventData) => GCCreateConcurrentThreadEvents += 1;
-                    source.Clr.GCTerminateConcurrentThread += (eventData) => GCTerminateConcurrentThreadEvents += 1;
-
                     return () => {
                         Logger.logger.Log("Event counts validation");
 
