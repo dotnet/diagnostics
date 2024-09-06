@@ -23,6 +23,9 @@
     <Content Include="$(MSBuildThisFileDirectory)TestBinaries\HelloWorld.pdb">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\HelloWorld.pdz">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="$(MSBuildThisFileDirectory)TestBinaries\libclrjit.dylib.dwarf.gz">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -60,9 +63,4 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\TestHelpers\TestHelpers.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="TestBinaries\HelloWorld.pdz">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
 </Project>

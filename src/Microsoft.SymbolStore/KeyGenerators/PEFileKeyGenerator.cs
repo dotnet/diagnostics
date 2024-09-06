@@ -29,8 +29,8 @@ namespace Microsoft.SymbolStore.KeyGenerators
         public PEFileKeyGenerator(ITracer tracer, PEFile peFile, string path)
             : base(tracer)
         {
-            _peFile = peFile;
-            _path = path;
+            _peFile = peFile ?? throw new ArgumentNullException(nameof(peFile));
+            _path = path ?? throw new ArgumentNullException(nameof(path));
         }
 
         public PEFileKeyGenerator(ITracer tracer, SymbolStoreFile file)

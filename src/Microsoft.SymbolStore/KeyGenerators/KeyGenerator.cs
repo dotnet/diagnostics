@@ -118,7 +118,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         protected static SymbolStoreKey BuildKey(string path, string id, bool clrSpecialFile = false, IEnumerable<PdbChecksum> pdbChecksums = null)
         {
             string file = GetFileName(path).ToLowerInvariant();
-            return BuildKey(path, null, id, file, clrSpecialFile, pdbChecksums);
+            return BuildKey(path, prefix: null, id, type: null, file, clrSpecialFile, pdbChecksums);
         }
 
         /// <summary>
@@ -148,7 +148,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// <returns>key</returns>
         protected static SymbolStoreKey BuildKey(string path, string prefix, byte[] id, string file, bool clrSpecialFile = false, IEnumerable<PdbChecksum> pdbChecksums = null)
         {
-            return BuildKey(path, prefix, ToHexString(id), file, clrSpecialFile, pdbChecksums);
+            return BuildKey(path, prefix, ToHexString(id), type: null, file, clrSpecialFile, pdbChecksums);
         }
 
         /// <summary>
@@ -163,15 +163,44 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// <returns>key</returns>
         protected static SymbolStoreKey BuildKey(string path, string prefix, string id, string file, bool clrSpecialFile = false, IEnumerable<PdbChecksum> pdbChecksums = null)
         {
+            return BuildKey(path, prefix, id, type: null, file, clrSpecialFile, pdbChecksums);
+        }
+
+        /// <summary>
+        /// Base key building helper for "file/{prefix}-id/{type}/file" indexes.
+        /// </summary>
+        /// <param name="path">full path of file or binary</param>
+        /// <param name="prefix">optional id prefix</param>
+        /// <param name="id">build id or uuid</param>
+        /// <param name="type">optional type or format piece</param>
+        /// <param name="file">file name only</param>
+        /// <param name="clrSpecialFile">if true, the file is one the clr special files</param>
+        /// <param name="pdbChecksums">Checksums of pdb file. May be null.</param>
+        /// <returns>key</returns>
+        internal static SymbolStoreKey BuildKey(string path, string prefix, string id, string type, string file, bool clrSpecialFile, IEnumerable<PdbChecksum> pdbChecksums)
+        {
+            if (id is null or "")
+            {
+                throw new ArgumentNullException(nameof(id));
+            }
+            if (file is null or "")
+            {
+                throw new ArgumentNullException(nameof(file));
+            }
             StringBuilder key = new();
             key.Append(file);
             key.Append('/');
-            if (prefix != null)
+            if (prefix is not null)
             {
                 key.Append(prefix);
                 key.Append('-');
             }
             key.Append(id);
+            if (type is not null)
+            {
+                key.Append('/');
+                key.Append(type);
+            }
             key.Append('/');
             key.Append(file);
             return new SymbolStoreKey(key.ToString(), path, clrSpecialFile, pdbChecksums);
@@ -181,7 +210,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// <returns>hex string</returns>
         public static string ToHexString(byte[] bytes)
         {
-            if (bytes == null)
+            if (bytes is null)
             {
                 throw new ArgumentNullException(nameof(bytes));
             }
@@ -196,6 +225,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// <returns>just the file name</returns>
         internal static string GetFileName(string path)
         {
+            if (path is null or "")
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
             return Path.GetFileName(path.Replace('\\', '/'));
         }
     }
