@@ -651,7 +651,11 @@ BOOL GatherDynamicInfo(TADDR DynamicMethodObj, DacpObjectData *codeArray,
 
     iOffset = GetObjFieldOffset(TO_CDADDR(DynamicMethodObj), objData.MethodTable, W("m_resolver"));
     if (iOffset <= 0)
-        return bRet;
+    {
+        iOffset = GetObjFieldOffset(TO_CDADDR(DynamicMethodObj), objData.MethodTable, W("_resolver"));
+        if (iOffset <= 0)
+            return bRet;
+    }
 
     TADDR resolverPtr;
     if (FAILED(MOVE(resolverPtr, DynamicMethodObj + iOffset)))
