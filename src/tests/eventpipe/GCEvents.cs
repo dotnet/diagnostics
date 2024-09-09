@@ -204,17 +204,23 @@ namespace EventPipe.UnitTests.GCEventsValidation
                 };
 
                 Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
+                    int GCCommittedUsageEvents = 0;
+                    source.Clr.GCDynamicEvent.GCCommittedUsage += (eventData) => GCCommittedUsageEvents += 1;
+
                     int GCAllocationTickEvents = 0;
                     source.Clr.GCAllocationTick += (eventData) => GCAllocationTickEvents += 1;
 
                     return () => {
                         Logger.logger.Log("Event counts validation");
 
+                        bool GCCommittedUsageResult = GCCommittedUsageEvents > 0;
+                        Logger.logger.Log("GCCommittedUsageResult: " + GCCommittedUsageEvents);
+
                         Logger.logger.Log("GCAllocationTickEvents: " + GCAllocationTickEvents);
                         bool GCAllocationTickResult = GCAllocationTickEvents > 0;
                         Logger.logger.Log("GCAllocationTickResult: " + GCAllocationTickResult);
 
-                        bool GCCollectResults = GCAllocationTickResult;
+                        bool GCCollectResults = GCCommittedUsageResult && GCAllocationTickResult;
                         Logger.logger.Log("GCCollectResults: " + GCCollectResults);
 
                         return GCCollectResults ? 100 : -1;
