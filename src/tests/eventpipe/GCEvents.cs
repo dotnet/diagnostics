@@ -204,35 +204,17 @@ namespace EventPipe.UnitTests.GCEventsValidation
                 };
 
                 Func<EventPipeEventSource, Func<int>> _DoesTraceContainEvents = (source) => {
-                    int GCCreateSegmentEvents = 0;
-                    int GCFreeSegmentEvents = 0;
-                    if (Environment.Version.Major < 7)
-                    {
-                        source.Clr.GCCreateSegment += (eventData) => GCCreateSegmentEvents += 1;
-                        source.Clr.GCFreeSegment += (eventData) => GCFreeSegmentEvents += 1;
-                    }
-
                     int GCAllocationTickEvents = 0;
                     source.Clr.GCAllocationTick += (eventData) => GCAllocationTickEvents += 1;
 
                     return () => {
                         Logger.logger.Log("Event counts validation");
 
-                        bool GCSegmentResult = true;
-                        if (Environment.Version.Major < 7)
-                        {
-                            Logger.logger.Log("GCCreateSegmentEvents: " + GCCreateSegmentEvents);
-                            Logger.logger.Log("GCFreeSegmentEvents: " + GCFreeSegmentEvents);
-
-                            GCSegmentResult = GCCreateSegmentEvents > 0 && GCFreeSegmentEvents > 0;
-                            Logger.logger.Log("GCSegmentResult: " + GCSegmentResult);
-                        }
-
                         Logger.logger.Log("GCAllocationTickEvents: " + GCAllocationTickEvents);
                         bool GCAllocationTickResult = GCAllocationTickEvents > 0;
                         Logger.logger.Log("GCAllocationTickResult: " + GCAllocationTickResult);
 
-                        bool GCCollectResults = GCSegmentResult && GCAllocationTickResult;
+                        bool GCCollectResults = GCAllocationTickResult;
                         Logger.logger.Log("GCCollectResults: " + GCCollectResults);
 
                         return GCCollectResults ? 100 : -1;
