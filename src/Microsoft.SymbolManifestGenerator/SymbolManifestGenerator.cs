@@ -14,7 +14,7 @@ namespace Microsoft.SymbolManifestGenerator;
 
 public static class SymbolManifestGenerator
 {
-    private const int Private = 341;
+    private const int TargetDebugLevel = 0x154 | 0x1 | 0x500; // Private | Binary | SourceIndexed
 
     public static bool GenerateManifest(ITracer tracer, DirectoryInfo dir, string manifestFileName, bool specialFilesRequireAdjacentRuntime = true)
     {
@@ -63,8 +63,8 @@ public static class SymbolManifestGenerator
                     BasedirRelativePath = basedirRelativePath,
                     SymbolKey = runtimeCorrelatedKey.Index,
                     Sha512 = fileHash,
-                    DebugInformationLevel = Private,
-                    LegacyDebugInformationLevel = Private
+                    DebugInformationLevel = TargetDebugLevel,
+                    LegacyDebugInformationLevel = TargetDebugLevel
                 };
 
                 manifestData.Entries.Add(manifestDataEntry);
