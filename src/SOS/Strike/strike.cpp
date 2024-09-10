@@ -8887,6 +8887,8 @@ public:
                 mType = HNDTYPE_DEPENDENT;
             else if (_stricmp(type, "WeakWinRT") == 0)
                 mType = HNDTYPE_WEAK_WINRT;
+            else if (_stricmp(type, "WeakInteriorPointer") == 0)
+                mType = HNDTYPE_WEAK_INTERIOR_POINTER;
             else
                 sos::Throw<sos::Exception>("Unknown handle type '%s'.", type.GetPtr());
         }
@@ -9055,6 +9057,10 @@ private:
                     type = "WeakWinRT";
                     if (pStats) pStats->weakWinRTHandleCount++;
                     break;
+                case HNDTYPE_WEAK_INTERIOR_POINTER:
+                    type = "WeakInteriorPointer";
+                    if (pStats) pStats->weakInteriorPointerHandleCount++;
+                    break;
                 default:
                     DebugBreak();
                     type = "Unknown";
@@ -9073,6 +9079,8 @@ private:
                 else if (data[i].Type == HNDTYPE_DEPENDENT)
                     mOut.WriteRow(data[i].Handle, type, ObjectPtr(objAddr), Decimal(size), ObjectPtr(data[i].Secondary), mtName);
                 else if (data[i].Type == HNDTYPE_WEAK_WINRT)
+                    mOut.WriteRow(data[i].Handle, type, ObjectPtr(objAddr), Decimal(size), Pointer(data[i].Secondary), mtName);
+                else if (data[i].Type == HNDTYPE_WEAK_INTERIOR_POINTER)
                     mOut.WriteRow(data[i].Handle, type, ObjectPtr(objAddr), Decimal(size), Pointer(data[i].Secondary), mtName);
                 else
                     mOut.WriteRow(data[i].Handle, type, ObjectPtr(objAddr), Decimal(size), "", mtName);
@@ -9098,6 +9106,7 @@ private:
         PrintHandleRow("Weak Long Handles:", pStats->weakLongHandleCount);
         PrintHandleRow("Weak Short Handles:", pStats->weakShortHandleCount);
         PrintHandleRow("Weak WinRT Handles:", pStats->weakWinRTHandleCount);
+        PrintHandleRow("Weak Interior Pointer Handles:", pStats->weakInteriorPointerHandleCount);
         PrintHandleRow("Variable Handles:", pStats->variableCount);
         PrintHandleRow("SizedRef Handles:", pStats->sizedRefCount);
         PrintHandleRow("Dependent Handles:", pStats->dependentCount);
