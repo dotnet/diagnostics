@@ -115,6 +115,8 @@ class MethodTable;
 #define HNDTYPE_ASYNCPINNED                     (7)
 #define HNDTYPE_SIZEDREF                        (8)
 #define HNDTYPE_WEAK_WINRT                      (9)
+#define HNDTYPE_WEAK_INTERIOR_POINTER           (10)
+
 
 class BaseObject
 {
@@ -1708,11 +1710,12 @@ struct GCHandleStatistics
     DWORD sizedRefCount;
     DWORD dependentCount;
     DWORD weakWinRTHandleCount;
+    DWORD weakInteriorPointerHandleCount;
     DWORD unknownHandleCount;
     GCHandleStatistics()
         : strongHandleCount(0), pinnedHandleCount(0), asyncPinnedHandleCount(0), refCntHandleCount(0),
           weakLongHandleCount(0), weakShortHandleCount(0), variableCount(0), sizedRefCount(0),
-          dependentCount(0), weakWinRTHandleCount(0), unknownHandleCount(0)
+          dependentCount(0), weakWinRTHandleCount(0), weakInteriorPointerHandleCount(0), unknownHandleCount(0)
     {}
     ~GCHandleStatistics()
     {
