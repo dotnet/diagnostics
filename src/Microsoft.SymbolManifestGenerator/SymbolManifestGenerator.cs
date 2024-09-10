@@ -63,8 +63,7 @@ public static class SymbolManifestGenerator
                     BasedirRelativePath = basedirRelativePath,
                     SymbolKey = runtimeCorrelatedKey.Index,
                     Sha512 = fileHash,
-                    DebugInformationLevel = TargetDebugLevel,
-                    LegacyDebugInformationLevel = TargetDebugLevel
+                    DebugInformationLevel = TargetDebugLevel
                 };
 
                 manifestData.Entries.Add(manifestDataEntry);
@@ -143,7 +142,5 @@ public static class SymbolManifestGenerator
         public string SymbolKey { get; set; }
         public string Sha512 { get; set; }
         public int DebugInformationLevel { get; set; }
-        [JsonPropertyName("DebugInformationLevel")]
-        public int LegacyDebugInformationLevel { get; set; }
     }
 }
