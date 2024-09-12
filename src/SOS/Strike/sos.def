@@ -52,7 +52,7 @@ EXPORTS
     DumpIL
     dumpil=DumpIL
     dumplocks
-    dumplocks=DumpLocks
+    DumpLocks=dumplocks
     DumpLog
     dumplog=DumpLog
     Dumplog=DumpLog
