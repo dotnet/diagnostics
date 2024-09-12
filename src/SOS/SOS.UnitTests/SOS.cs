@@ -255,6 +255,16 @@ public class SOS
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
+    public async Task DynamicMethod(TestConfiguration config)
+    {
+        if (config.PublishSingleFile || config.IsDesktop)
+        {
+            throw new SkipTestException("Single file and desktop framework not supported");
+        }
+        await SOSTestHelpers.RunTest(config, debuggeeName: "DynamicMethod", scriptName: "DynamicMethod.script", Output);
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task Reflection(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(config, debuggeeName: "ReflectionTest", scriptName: "Reflection.script", Output, testTriage: true);
