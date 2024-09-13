@@ -1,12 +1,12 @@
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.24462.1">
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.24462.3">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>4a723647a85d87988e690029cb2cc21a6c752876</Sha>
+      <Sha>ba67d64822073ef86bc2baea3bccd0a109760b29</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.0.0-beta.24462.1">
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.0.0-beta.24462.3">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>4a723647a85d87988e690029cb2cc21a6c752876</Sha>
+      <Sha>ba67d64822073ef86bc2baea3bccd0a109760b29</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
