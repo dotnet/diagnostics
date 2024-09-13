@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     else
                     {
-                        Console.WriteLine($"Calculating live objects: {live.Count:n0} found - {(maxCount - todo.Count) * 100 / (float)maxCount:0.0}% complete");
+                        Console.WriteLine($"Calculating live objects: {live.Count:n0} found - {(maxCount - todo.Count) * 100.0f / maxCount:0.0}% complete");
                     }
 
                     maxCount = Math.Max(maxCount, todo.Count);
