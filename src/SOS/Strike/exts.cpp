@@ -230,7 +230,7 @@ ArchQuery(void)
 #if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
         if (processorType == IMAGE_FILE_MACHINE_ARM64EC)
         {
-            message = "arm64ec targets require a x64 SOS and debugger.";
+            message = "Arm64ec targets require a x64 compatible SOS and debugger.";
         }
         else
 #endif

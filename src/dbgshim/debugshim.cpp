@@ -769,18 +769,14 @@ HRESULT CLRDebuggingImpl::FormatLongDacModuleName(_Inout_updates_z_(cchBuffer) W
         return E_UNEXPECTED;
     }
 
-    _ASSERTE(targetImageFileMachine != IMAGE_FILE_MACHINE_ARM64X);
+    _ASSERTE(targetImageFileMachine != IMAGE_FILE_MACHINE_ARM64X && targetImageFileMachine != IMAGE_FILE_MACHINE_ARM64EC);
 
     const WCHAR* pTargetArch = NULL;
     if (targetImageFileMachine == IMAGE_FILE_MACHINE_I386)
     {
         pTargetArch = W("x86");
     }
-    else if (targetImageFileMachine == IMAGE_FILE_MACHINE_AMD64
-#ifdef HOST_AMD64
-             || targetImageFileMachine == IMAGE_FILE_MACHINE_ARM64EC
-#endif
-        )
+    else if (targetImageFileMachine == IMAGE_FILE_MACHINE_AMD64)
     {
         pTargetArch = W("amd64");
     }
@@ -788,11 +784,7 @@ HRESULT CLRDebuggingImpl::FormatLongDacModuleName(_Inout_updates_z_(cchBuffer) W
     {
         pTargetArch = W("arm");
     }
-    else if (targetImageFileMachine == IMAGE_FILE_MACHINE_ARM64
-#ifdef HOST_ARM64
-             || targetImageFileMachine == IMAGE_FILE_MACHINE_ARM64EC
-#endif
-        )
+    else if (targetImageFileMachine == IMAGE_FILE_MACHINE_ARM64)
     {
         pTargetArch = W("arm64");
     }
