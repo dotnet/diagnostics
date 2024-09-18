@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             }
 
-            // no pre-existing counter metadata was found, add a new one
+            // no pre-existing counter metadata was found, create a new one
             metadata = new CounterMetadata(providerName, counterName, meterTags, instrumentTags, scopeHash);
             if (id.HasValue)
             {
@@ -92,8 +92,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return metadata;
             }
 
-            // This should never happen if all the events are present and properly emitted. But in case of missing events we
-            // fallback to creating a new metadata object with the limited info we have.
+            // For EventCounter based events we expect to fall through here the first time a new counter is observed
+            // For MetricsEventSource events we should never reach here unless the BeginInstrumentRecording event was dropped.
             return AddCounterMetadata(providerName, counterName, id, null, null, null);
         }
 
@@ -413,6 +413,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string quantilesText = (string)obj.PayloadValue(6);
+            //int count - unused arg 7
+            //double sum - unused arg 8
             int? id = null;
             if (obj.Version >= 2)
             {
