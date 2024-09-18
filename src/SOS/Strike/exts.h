@@ -151,6 +151,9 @@ ExtQuery(PDEBUG_CLIENT client);
 HRESULT
 ExtInit(PDEBUG_CLIENT client);
 
+const char*
+GetProcessorName(ULONG type);
+
 HRESULT 
 ArchQuery(void);
 

@@ -13618,6 +13618,27 @@ exit:
     return S_OK;
 }
 
+DECLARE_API(processor)
+{
+    INIT_API_EXT();
+    ULONG executingType;
+    if (SUCCEEDED(g_ExtControl->GetExecutingProcessorType(&executingType)))
+    {
+        ExtOut("Executing processor type: %04x '%s'\n", executingType, GetProcessorName(executingType));
+    }
+    ULONG actualType;
+    if (SUCCEEDED(g_ExtControl->GetActualProcessorType(&actualType)))
+    {
+        ExtOut("Actual processor type:    %04x '%s'\n", actualType, GetProcessorName(actualType));
+    }
+    ULONG effectiveType;
+    if (SUCCEEDED(g_ExtControl->GetEffectiveProcessorType(&effectiveType)))
+    {
+        ExtOut("Effective processor type: %04x '%s'\n", effectiveType, GetProcessorName(effectiveType));
+    }
+    return S_OK;
+}
+
 #endif // FEATURE_PAL
 
 //

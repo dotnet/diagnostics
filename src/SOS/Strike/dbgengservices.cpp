@@ -198,9 +198,10 @@ DbgEngServices::GetProcessorType(
     {
         return hr;
     }
+    _ASSERTE(executingType != IMAGE_FILE_MACHINE_ARM64X);
     *type = executingType;
 #if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
-    if (executingType == IMAGE_FILE_MACHINE_ARM64X || executingType == IMAGE_FILE_MACHINE_ARM64EC)
+    if (executingType == IMAGE_FILE_MACHINE_ARM64EC)
     {
         ULONG actualType;
         if (SUCCEEDED(m_control->GetActualProcessorType(&actualType)))

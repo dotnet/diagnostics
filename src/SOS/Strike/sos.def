@@ -141,6 +141,7 @@ EXPORTS
     pe=PrintException    
     printexception=PrintException
     Printexception=PrintException
+    processor
     SaveModule
     savemodule=SaveModule
     SetHostRuntime
