@@ -156,22 +156,9 @@ GetTargetMachine(ULONG processorType)
 #if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
     if (processorType == IMAGE_FILE_MACHINE_ARM64EC)
     {
-        ULONG actualType;
-        if (SUCCEEDED(g_ExtControl->GetActualProcessorType(&actualType)))
-        {
 #ifdef SOS_TARGET_AMD64
-            if (actualType == IMAGE_FILE_MACHINE_AMD64)
-            {
-                targetMachine = AMD64Machine::GetInstance();
-            }
+        targetMachine = AMD64Machine::GetInstance();
 #endif // SOS_TARGET_AMD64
-#ifdef SOS_TARGET_ARM64
-            if (actualType == IMAGE_FILE_MACHINE_ARM64)
-            {
-                targetMachine = ARM64Machine::GetInstance();
-            }
-#endif // SOS_TARGET_ARM64
-        }
     }
 #endif // defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
 #ifdef SOS_TARGET_RISCV64
