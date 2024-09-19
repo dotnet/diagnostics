@@ -324,7 +324,8 @@ ClrmaException::Frame(
     *pDisplacement = 0;
 
     UINT nCount = 0;
-    if (HRESULT hr = get_FrameCount(&nCount))
+    HRESULT hr;
+    if (FAILED(hr = get_FrameCount(&nCount)))
     {
         return hr;
     }
@@ -411,7 +412,7 @@ ClrmaException::InnerException(
 
     HRESULT hr;
     USHORT nCount = 0;
-    if (hr = get_InnerExceptionCount(&nCount))
+    if (FAILED(hr = get_InnerExceptionCount(&nCount)))
     {
         return hr;
     }
@@ -453,7 +454,7 @@ ClrmaException::GetStackFrames()
         TraceError("ClrmaException::GetStackFrames GetObjectData(%016llx) FAILED %08x\n", m_exceptionData.StackTrace, hr);
         return hr;
     }
-        
+
     if (arrayObjData.ObjectType != OBJ_ARRAY || arrayObjData.dwNumComponents == 0)
     {
         TraceError("ClrmaException::GetStackFrames StackTrace not array or empty\n");
