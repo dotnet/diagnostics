@@ -125,6 +125,17 @@ IHostServices* Extensions::GetHostServices()
 }
 
 /// <summary>
+/// Check if a target flush is needed
+/// </summary>
+void Extensions::FlushCheck()
+{
+    if (m_pDebuggerServices != nullptr)
+    {
+        m_pDebuggerServices->FlushCheck();
+    }
+}
+
+/// <summary>
 /// Returns the symbol service instance
 /// </summary>
 ISymbolService* Extensions::GetSymbolService()
@@ -235,6 +246,24 @@ bool GetAbsolutePath(const char* path, std::string& absolutePath)
 }
 
 /// <summary>
+//  Returns just the file name portion of a file path
+/// </summary>
+/// <param name="filePath">full path to get file name</param>
+/// <returns>just the file name</returns>
+const std::string
+GetFileName(const std::string& filePath)
+{
+    size_t last = filePath.rfind(DIRECTORY_SEPARATOR_STR_A);
+    if (last != std::string::npos) {
+        last++;
+    }
+    else {
+        last = 0;
+    }
+    return filePath.substr(last);
+}
+
+/// <summary>
 /// Internal output helper function
 /// </summary>
 void InternalOutputVaList(
@@ -250,7 +279,7 @@ void InternalOutputVaList(
     size_t length = vsnprintf(str, sizeof(str), format, args);
     if (length < sizeof(str))
     {
-        Extensions::GetInstance()->GetDebuggerServices()->OutputString(mask, str);
+        GetDebuggerServices()->OutputString(mask, str);
     }
     else
     {
@@ -259,7 +288,7 @@ void InternalOutputVaList(
         if (str_ptr != nullptr)
         {
             vsnprintf(str_ptr, length + 1, format, argsCopy);
-            Extensions::GetInstance()->GetDebuggerServices()->OutputString(mask, str_ptr);
+            GetDebuggerServices()->OutputString(mask, str_ptr);
             ::free(str_ptr);
         }
     }
@@ -268,10 +297,11 @@ void InternalOutputVaList(
 /// <summary>
 /// Internal trace output for extensions library
 /// </summary>
-void TraceError(PCSTR format, ...)
+void TraceHostingError(PCSTR format, ...)
 {
     va_list args;
     va_start(args, format);
+    GetDebuggerServices()->OutputString(DEBUG_OUTPUT_ERROR, "SOS_HOSTING: ");
     InternalOutputVaList(DEBUG_OUTPUT_ERROR, format, args);
     va_end(args);
 }

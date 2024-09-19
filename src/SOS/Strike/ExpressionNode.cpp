@@ -3,9 +3,8 @@
 
 #include "ExpressionNode.h"
 
-#ifndef IfFailRet
+#undef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
-#endif
 
 ICorDebugProcess* ExpressionNode::s_pCorDebugProcess = nullptr;
 
@@ -480,8 +479,8 @@ BOOL ExpressionNode::ShouldExpandVariable(__in_z WCHAR* varToExpand)
     if(pAbsoluteExpression == NULL || varToExpand == NULL) return FALSE;
 
     // if there is a cast operation, move past it
-    WCHAR* pEndCast = _wcschr(varToExpand, L')');
-    varToExpand = (pEndCast == NULL) ? varToExpand : pEndCast+1; 
+    const WCHAR* pEndCast = _wcschr(varToExpand, L')');
+    varToExpand = (pEndCast == NULL) ? varToExpand : (WCHAR*)(pEndCast+1);
 
     size_t varToExpandLen = _wcslen(varToExpand);
     size_t currentExpansionLen = _wcslen(pAbsoluteExpression);
@@ -634,8 +633,8 @@ HRESULT ExpressionNode::ExpandFields(ICorDebugValue* pInnerValue, __in_z WCHAR* 
     if(pBaseTypeNode == NULL) return Status;
     if(fieldExpanded) return Status;
 
-    WCHAR* pEndCast = _wcschr(varToExpand, L')');
-    WCHAR* pNonCast = (pEndCast == NULL) ? varToExpand : pEndCast+1;
+    const WCHAR* pEndCast = _wcschr(varToExpand, L')');
+    const WCHAR* pNonCast = (pEndCast == NULL) ? varToExpand : pEndCast+1;
     if(_wcscmp(pNonCast, pAbsoluteExpression) != 0)
     {
         pBaseTypeNode->Expand(varToExpand);
@@ -1579,12 +1578,12 @@ HRESULT ExpressionNode::ParseNextIdentifier(__in_z WCHAR** expression, __inout_e
 
     WCHAR* expressionStart = *expression;
     DWORD currentCharsParsed = *charactersParsed;
-    DWORD identifierLen = (DWORD) _wcscspn(expressionStart, L".[");
+    DWORD identifierLen = (DWORD) wcscspn(expressionStart, L".[");
     // if the first character was a . or [ skip over it. Note that we don't
     // do this always in case the first WCHAR was part of a surrogate pair
     if(identifierLen == 0)
     {
-        identifierLen = (DWORD) _wcscspn(expressionStart+1, L".[") + 1;
+        identifierLen = (DWORD) wcscspn(expressionStart+1, L".[") + 1;
     }
 
     *expression += identifierLen;
@@ -2062,7 +2061,7 @@ HRESULT ExpressionNode::FindTypeByName(ICorDebugModule* pModule, __in_z const WC
     WCHAR rootName[mdNameLen];
     const WCHAR* pRootName = NULL;
     int typeNameLen = (int) _wcslen(pTypeName);
-    int genericParamListStart = (int) _wcscspn(pTypeName, L"<");
+    int genericParamListStart = (int) wcscspn(pTypeName, L"<");
     if(genericParamListStart != typeNameLen)
     {
         if(pTypeName[typeNameLen-1] != L'>' || genericParamListStart > mdNameLen)

@@ -18,7 +18,10 @@ namespace Microsoft.FileFormats
 
         public StreamAddressSpace(Stream stream)
         {
-            System.Diagnostics.Debug.Assert(stream.CanSeek);
+            if (stream is null || !stream.CanSeek)
+            {
+                throw new ArgumentException("Stream null or not seekable", nameof(stream));
+            }
             _stream = stream;
             Length = (ulong)stream.Length;
         }

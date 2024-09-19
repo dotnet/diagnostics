@@ -14,7 +14,13 @@ namespace Microsoft.SymbolManifestGenerator;
 
 public static class SymbolManifestGenerator
 {
-    private const int Private = 340;
+    private const int TargetDebugLevel = 0x154 | 0x1 | 0x500; // Private | Binary | SourceIndexed
+
+    private static readonly JsonSerializerOptions s_serializeOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+    };
 
     public static bool GenerateManifest(ITracer tracer, DirectoryInfo dir, string manifestFileName, bool specialFilesRequireAdjacentRuntime = true)
     {
@@ -58,26 +64,39 @@ public static class SymbolManifestGenerator
                     return false;
                 }
 
-                ManifestDataEntry manifestDataEntry = new()
+                // This is the special module for the runtime in runtimeCorrelatedKey that's under the special index.
+                manifestData.Entries.Add(new()
                 {
                     BasedirRelativePath = basedirRelativePath,
                     SymbolKey = runtimeCorrelatedKey.Index,
                     Sha512 = fileHash,
-                    DebugInformationLevel = Private,
-                    LegacyDebugInformationLevel = Private
-                };
+                    DebugInformationLevel = TargetDebugLevel
+                });
 
-                manifestData.Entries.Add(manifestDataEntry);
+                using FileStream fs = correlatedFile.OpenRead();
+                SymbolStoreFile specialDiagnosticFile = new(fs, correlatedFile.FullName);
+                FileKeyGenerator correlatedGenerator = new(tracer, specialDiagnosticFile);
+
+                if (!correlatedGenerator.IsValid())
+                {
+                    tracer.Error("Unable to get a key generator for special diagnostic file '{0}' of runtime '{1}'", file.FullName, correlatedFile.FullName);
+                    return false;
+                }
+
+                SymbolStoreKey diagnosticFileIdentityKey = correlatedGenerator.GetKeys(KeyTypeFlags.IdentityKey).Single();
+                // This is the special module for the runtime in runtimeCorrelatedKey that's under its own identity key
+                // with the upgraded debug information level.
+                manifestData.Entries.Add(new()
+                {
+                    BasedirRelativePath = basedirRelativePath,
+                    SymbolKey = diagnosticFileIdentityKey.Index,
+                    Sha512 = fileHash,
+                    DebugInformationLevel = TargetDebugLevel
+                });
             }
         }
 
-        JsonSerializerOptions serializeOptions = new()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
-        };
-
-        string manifestDataContent = JsonSerializer.Serialize(manifestData, serializeOptions);
+        string manifestDataContent = JsonSerializer.Serialize(manifestData, s_serializeOptions);
         File.WriteAllText(manifestFileName, manifestDataContent);
 
         return true;
@@ -121,20 +140,17 @@ public static class SymbolManifestGenerator
         return BitConverter.ToString(hashValueBytes).Replace("-", "");
     }
 
-    private class ManifestFileVersion
+    private interface IManifestFile
     {
-        public string Version { get; set; }
+        string Version { get; }
     }
 
-    private class ManifestDataV1 : ManifestFileVersion
+    private sealed class ManifestDataV1 : IManifestFile
     {
-        public List<ManifestDataEntry> Entries { get; set; }
+        public List<ManifestDataEntry> Entries { get; } = [];
 
-        public ManifestDataV1()
-        {
-            Version = "1";
-            Entries = new List<ManifestDataEntry>();
-        }
+        [JsonInclude]
+        public string Version => "1";
     }
 
     private class ManifestDataEntry
@@ -143,7 +159,5 @@ public static class SymbolManifestGenerator
         public string SymbolKey { get; set; }
         public string Sha512 { get; set; }
         public int DebugInformationLevel { get; set; }
-        [JsonPropertyName("DebugInformationLevel")]
-        public int LegacyDebugInformationLevel { get; set; }
     }
 }

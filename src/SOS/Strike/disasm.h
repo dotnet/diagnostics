@@ -402,7 +402,6 @@ private:
 
 #endif // SOS_TARGET_ARM64
 
-
 #ifdef SOS_TARGET_RISCV64
 
 /// RISCV64 Machine specific code
@@ -470,6 +469,74 @@ private:
 }; // class RISCV64Machine
 
 #endif // SOS_TARGET_RISCV64
+
+#ifdef SOS_TARGET_LOONGARCH64
+
+/// LOONGARCH64 Machine specific code
+class LOONGARCH64Machine : public IMachine
+{
+public:
+    typedef LOONGARCH64_CONTEXT TGT_CTXT;
+
+    static IMachine* GetInstance()
+    { static LOONGARCH64Machine s_LOONGARCH64MachineInstance; return &s_LOONGARCH64MachineInstance; }
+
+    ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_LOONGARCH64; }
+    ULONG GetContextSize()          const { return sizeof(LOONGARCH64_CONTEXT); }
+    ULONG GetFullContextFlags()     const { return 0x00800007L; }
+    void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((LOONGARCH64_CONTEXT*)context)->ContextFlags = contextFlags; };
+
+    virtual void Unassembly(
+                TADDR IPBegin,
+                TADDR IPEnd,
+                TADDR IPAskedFor,
+                TADDR GCStressCodeCopy,
+                GCEncodingInfo *pGCEncodingInfo,
+                SOSEHInfo *pEHInfo,
+                BOOL bSuppressLines,
+                BOOL bDisplayOffsets,
+                std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const;
+    virtual void IsReturnAddress(
+                TADDR retAddr,
+                TADDR* whereCalled) const;
+    virtual BOOL GetExceptionContext (
+                TADDR stack,
+                TADDR PC,
+                TADDR *cxrAddr,
+                CROSS_PLATFORM_CONTEXT * cxr,
+                TADDR *exrAddr,
+                PEXCEPTION_RECORD exr) const;
+
+    // retrieve stack pointer, frame pointer, and instruction pointer from the target context
+    virtual TADDR GetSP(const CROSS_PLATFORM_CONTEXT & ctx) const  { return ctx.LoongArch64Context.Sp; }
+    virtual TADDR GetBP(const CROSS_PLATFORM_CONTEXT & ctx) const  { return ctx.LoongArch64Context.Fp; }
+    virtual TADDR GetIP(const CROSS_PLATFORM_CONTEXT & ctx) const  { return ctx.LoongArch64Context.Pc; }
+
+    virtual void  FillSimpleContext(StackTrace_SimpleContext * dest, LPVOID srcCtx) const;
+    virtual void  FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int idx = 0) const;
+
+    virtual LPCSTR GetDumpStackHeading() const          { return s_DumpStackHeading; }
+    virtual LPCSTR GetSPName() const                    { return s_SPName; }
+    virtual void GetGCRegisters(LPCSTR** regNames, unsigned int* cntRegs) const
+    { _ASSERTE(cntRegs != NULL); *regNames = s_GCRegs; *cntRegs = ARRAY_SIZE(s_GCRegs);}
+
+    virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const;
+
+    int StackWalkIPAdjustOffset() const { return 4; }
+
+private:
+    LOONGARCH64Machine()  {}
+    ~LOONGARCH64Machine() {}
+    LOONGARCH64Machine(const LOONGARCH64Machine& machine);      // undefined
+    LOONGARCH64Machine & operator=(const LOONGARCH64Machine&);  // undefined
+
+    static LPCSTR     s_DumpStackHeading;
+    static LPCSTR     s_GCRegs[30];
+    static LPCSTR     s_SPName;
+
+}; // class LOONGARCH64Machine
+
+#endif // SOS_TARGET_LOONGARCH64
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -563,4 +630,21 @@ inline void RISCV64Machine::FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int
     *dest = *(TGT_CTXT*)srcCtx;
 }
 #endif // SOS_TARGET_RISCV64
+
+#ifdef SOS_TARGET_LOONGARCH64
+inline void LOONGARCH64Machine::FillSimpleContext(StackTrace_SimpleContext * dest, LPVOID srcCtx) const
+{
+    TGT_CTXT& src = *(TGT_CTXT*) srcCtx;
+    dest->StackOffset = src.Sp;
+    dest->FrameOffset = src.Fp;
+    dest->InstructionOffset = src.Pc;
+}
+
+inline void LOONGARCH64Machine::FillTargetContext(LPVOID destCtx, LPVOID srcCtx, int idx /*= 0*/) const
+{
+    TGT_CTXT* dest = (TGT_CTXT*)destCtx + idx;
+    *dest = *(TGT_CTXT*)srcCtx;
+}
+#endif // SOS_TARGET_LOONGARCH64
+
 #endif // __disasm_h__

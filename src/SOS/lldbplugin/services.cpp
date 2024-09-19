@@ -223,13 +223,17 @@ LLDBServices::VirtualUnwind(
     DT_CONTEXT *dtcontext = (DT_CONTEXT*)context;
     lldb::SBFrame frameFound;
 
-#ifdef DBG_TARGET_AMD64
+#ifdef TARGET_AMD64
     DWORD64 spToFind = dtcontext->Rsp;
-#elif DBG_TARGET_X86
+#elif TARGET_X86
     DWORD spToFind = dtcontext->Esp;
-#elif DBG_TARGET_ARM
+#elif TARGET_ARM
     DWORD spToFind = dtcontext->Sp;
-#elif DBG_TARGET_ARM64
+#elif TARGET_ARM64
+    DWORD64 spToFind = dtcontext->Sp;
+#elif TARGET_RISCV64
+    DWORD64 spToFind = dtcontext->Sp;
+#elif TARGET_LOONGARCH64
     DWORD64 spToFind = dtcontext->Sp;
 #else
 #error "spToFind undefined for this platform"
@@ -443,17 +447,21 @@ LLDBServices::GetPageSize(
 }
 
 HRESULT 
-LLDBServices::GetExecutingProcessorType(
+LLDBServices::GetProcessorType(
     PULONG type)
 {
-#ifdef DBG_TARGET_AMD64
+#ifdef TARGET_AMD64
     *type = IMAGE_FILE_MACHINE_AMD64;
-#elif DBG_TARGET_ARM
+#elif TARGET_ARM
     *type = IMAGE_FILE_MACHINE_ARMNT;
-#elif DBG_TARGET_ARM64
+#elif TARGET_ARM64
     *type = IMAGE_FILE_MACHINE_ARM64;
-#elif DBG_TARGET_X86
+#elif TARGET_X86
     *type = IMAGE_FILE_MACHINE_I386;
+#elif TARGET_RISCV64
+    *type = IMAGE_FILE_MACHINE_RISCV64;
+#elif TARGET_LOONGARCH64
+    *type = IMAGE_FILE_MACHINE_LOONGARCH64;
 #else
 #error "Unsupported target"
 #endif
@@ -1621,7 +1629,7 @@ LLDBServices::GetContextFromFrame(
     /* const */ lldb::SBFrame& frame,
     DT_CONTEXT *dtcontext)
 {
-#ifdef DBG_TARGET_AMD64
+#ifdef TARGET_AMD64
     dtcontext->Rip = frame.GetPC();
     dtcontext->Rsp = frame.GetSP();
     dtcontext->Rbp = frame.GetFP();
@@ -1648,7 +1656,7 @@ LLDBServices::GetContextFromFrame(
     dtcontext->SegEs = GetRegister(frame, "es");
     dtcontext->SegFs = GetRegister(frame, "fs");
     dtcontext->SegGs = GetRegister(frame, "gs");
-#elif DBG_TARGET_ARM
+#elif TARGET_ARM
     dtcontext->Pc = frame.GetPC();
     dtcontext->Sp = frame.GetSP();
     dtcontext->Lr = GetRegister(frame, "lr");
@@ -1667,7 +1675,7 @@ LLDBServices::GetContextFromFrame(
     dtcontext->R10 = GetRegister(frame, "r10");
     dtcontext->R11 = GetRegister(frame, "r11");
     dtcontext->R12 = GetRegister(frame, "r12");
-#elif DBG_TARGET_ARM64
+#elif TARGET_ARM64
     dtcontext->Pc = frame.GetPC();
     dtcontext->Sp = frame.GetSP();
     dtcontext->Lr = GetRegister(frame, "x30");
@@ -1703,7 +1711,7 @@ LLDBServices::GetContextFromFrame(
     dtcontext->X26 = GetRegister(frame, "x26");
     dtcontext->X27 = GetRegister(frame, "x27");
     dtcontext->X28 = GetRegister(frame, "x28");
-#elif DBG_TARGET_X86
+#elif TARGET_X86
     dtcontext->Eip = frame.GetPC();
     dtcontext->Esp = frame.GetSP();
     dtcontext->Ebp = frame.GetFP();
@@ -1722,6 +1730,41 @@ LLDBServices::GetContextFromFrame(
     dtcontext->SegEs = GetRegister(frame, "es");
     dtcontext->SegFs = GetRegister(frame, "fs");
     dtcontext->SegGs = GetRegister(frame, "gs");
+#elif TARGET_LOONGARCH64
+    dtcontext->Pc = frame.GetPC();
+    dtcontext->Sp = frame.GetSP();
+    dtcontext->Ra = GetRegister(frame, "ra");
+    dtcontext->Fp = GetRegister(frame, "fp");
+
+    dtcontext->R0 = GetRegister(frame, "r0");
+    dtcontext->Tp = GetRegister(frame, "tp");
+    dtcontext->A0 = GetRegister(frame, "a0");
+    dtcontext->A1 = GetRegister(frame, "a1");
+    dtcontext->A2 = GetRegister(frame, "a2");
+    dtcontext->A3 = GetRegister(frame, "a3");
+    dtcontext->A4 = GetRegister(frame, "a4");
+    dtcontext->A5 = GetRegister(frame, "a5");
+    dtcontext->A6 = GetRegister(frame, "a6");
+    dtcontext->A7 = GetRegister(frame, "a7");
+    dtcontext->T0 = GetRegister(frame, "t0");
+    dtcontext->T1 = GetRegister(frame, "t1");
+    dtcontext->T2 = GetRegister(frame, "t2");
+    dtcontext->T3 = GetRegister(frame, "t3");
+    dtcontext->T4 = GetRegister(frame, "t4");
+    dtcontext->T5 = GetRegister(frame, "t5");
+    dtcontext->T6 = GetRegister(frame, "t6");
+    dtcontext->T7 = GetRegister(frame, "t7");
+    dtcontext->T8 = GetRegister(frame, "t8");
+    dtcontext->X0 = GetRegister(frame, "x0");
+    dtcontext->S0 = GetRegister(frame, "s0");
+    dtcontext->S1 = GetRegister(frame, "s1");
+    dtcontext->S2 = GetRegister(frame, "s2");
+    dtcontext->S3 = GetRegister(frame, "s3");
+    dtcontext->S4 = GetRegister(frame, "s4");
+    dtcontext->S5 = GetRegister(frame, "s5");
+    dtcontext->S6 = GetRegister(frame, "s6");
+    dtcontext->S7 = GetRegister(frame, "s7");
+    dtcontext->S8 = GetRegister(frame, "s8");
 #endif
 }
 
@@ -2532,6 +2575,42 @@ LLDBServices::OutputDmlString(
     OutputString(mask, str);
 }
 
+void
+LLDBServices::FlushCheck()
+{
+    // The infrastructure expects a target to only be created if there is a valid process.
+    lldb::SBProcess process = GetCurrentProcess();
+    if (process.IsValid())
+    {
+        InitializeThreadInfo(process);
+
+        // Has the process changed since the last commmand?
+        Extensions::GetInstance()->UpdateTarget(GetProcessId(process));
+
+        // Has the target "moved" (been continued) since the last command? Flush the target.
+        uint32_t stopId = process.GetStopID();
+        if (stopId != m_currentStopId)
+        {
+            m_currentStopId = stopId;
+            Extensions::GetInstance()->FlushTarget();
+        }
+    }
+    else 
+    {
+        Extensions::GetInstance()->DestroyTarget();
+        m_threadInfoInitialized = false;
+        m_processId = 0;
+    }
+}
+
+HRESULT
+LLDBServices::ExecuteHostCommand(
+    PCSTR commandLine,
+    PEXECUTE_COMMAND_OUTPUT_CALLBACK callback)
+{
+    return Execute(DEBUG_OUTCTL_THIS_CLIENT, commandLine, DEBUG_EXECUTE_NO_REPEAT);
+}
+
 //----------------------------------------------------------------------------
 // Helper functions
 //----------------------------------------------------------------------------
@@ -2908,34 +2987,6 @@ LLDBServices::ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, 
     }
 
     return true;
-}
-
-void
-LLDBServices::FlushCheck()
-{
-    // The infrastructure expects a target to only be created if there is a valid process.
-    lldb::SBProcess process = GetCurrentProcess();
-    if (process.IsValid())
-    {
-        InitializeThreadInfo(process);
-
-        // Has the process changed since the last commmand?
-        Extensions::GetInstance()->UpdateTarget(GetProcessId(process));
-
-        // Has the target "moved" (been continued) since the last command? Flush the target.
-        uint32_t stopId = process.GetStopID();
-        if (stopId != m_currentStopId)
-        {
-            m_currentStopId = stopId;
-            Extensions::GetInstance()->FlushTarget();
-        }
-    }
-    else 
-    {
-        Extensions::GetInstance()->DestroyTarget();
-        m_threadInfoInitialized = false;
-        m_processId = 0;
-    }
 }
 
 lldb::SBCommand

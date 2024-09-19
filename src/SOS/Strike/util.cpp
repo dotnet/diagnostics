@@ -10,32 +10,33 @@
 #include "disasm.h"
 #include <dbghelp.h>
 
-#include "corhdr.h"
-#include "cor.h"
-#include "dacprivate.h"
-#include "sospriv.h"
-#include "corerror.h"
-#include "safemath.h"
+#include <corhdr.h>
+#include <cor.h>
+#include <dacprivate.h>
+#include "dacprivate2x.h"
+#include <sospriv.h>
+#include <corerror.h>
+#include <safemath.h>
 
 #include <psapi.h>
 #include <cordebug.h>
 #include <xcordebug.h>
 #include <mscoree.h>
-#include <tchar.h>
-#include "gcinfo.h"
+#include <gcinfo.h>
 
 #ifndef STRESS_LOG
 #define STRESS_LOG
 #endif // STRESS_LOG
 #define STRESS_LOG_READONLY
-#include "stresslog.h"
+#include <stresslog.h>
 
 #ifdef FEATURE_PAL
 #include <sys/stat.h>
 #include <dlfcn.h>
+#include <wctype.h>
 #endif // !FEATURE_PAL
 
-#include "coreclrhost.h"
+#include <coreclrhost.h>
 #include <set>
 #include <string>
 
@@ -59,10 +60,10 @@ const char * const CorElementTypeNamespace[ELEMENT_TYPE_MAX]=
 
 IXCLRDataProcess *g_clrData = NULL;
 ISOSDacInterface *g_sos = NULL;
+ISOSDacInterface15 *g_sos15 = NULL;
 
-#ifndef IfFailRet
+#undef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
-#endif
 
 // Max number of reverted rejit versions that !dumpmd and !ip2md will print
 const UINT kcMaxRevertedRejitData   = 10;
@@ -997,7 +998,7 @@ void ComposeName_s(CorElementType Type, __out_ecount(capacity_buffer) LPSTR buff
 LPWSTR FormatTypeName (__out_ecount (maxChars) LPWSTR pszName, UINT maxChars)
 {
     UINT iStart = 0;
-    UINT iLen = (int) _wcslen(pszName);
+    UINT iLen = (int) u16_strlen(pszName);
     if (iLen > maxChars)
     {
         iStart = iLen - maxChars;
@@ -1294,7 +1295,7 @@ int GetObjFieldOffset(CLRDATA_ADDRESS cdaObj, CLRDATA_ADDRESS cdaMT, __in_z LPCW
         {
             DWORD offset = vFieldDesc.dwOffset + sizeof(BaseObject);
             NameForToken_s (TokenFromRid(vFieldDesc.mb, mdtFieldDef), pImport, g_mdName, mdNameLen, false);
-            if (_wcscmp (wszFieldName, g_mdName) == 0)
+            if (u16_strcmp (wszFieldName, g_mdName) == 0)
             {
                 if (pDacpFieldDescData != NULL)
                 {
@@ -1937,7 +1938,7 @@ BOOL IsObjectArray (DacpObjectData *pData)
 
 BOOL IsObjectArray (DWORD_PTR obj)
 {
-    DWORD_PTR mtAddr = (TADDR)0;
+    TADDR mtAddr = (TADDR)0;
     if (SUCCEEDED(GetMTOfObject(obj, &mtAddr)))
         return TO_TADDR(g_special_usefulGlobals.ArrayMethodTable) == mtAddr;
 
@@ -1946,7 +1947,7 @@ BOOL IsObjectArray (DWORD_PTR obj)
 
 BOOL IsStringObject (size_t obj)
 {
-    DWORD_PTR mtAddr = (TADDR)0;
+    TADDR mtAddr = (TADDR)0;
 
     if (SUCCEEDED(GetMTOfObject(obj, &mtAddr)))
         return TO_TADDR(g_special_usefulGlobals.StringMethodTable) == mtAddr;
@@ -1966,7 +1967,7 @@ BOOL IsDerivedFrom(CLRDATA_ADDRESS mtObj, __in_z LPCWSTR baseString)
         }
 
         NameForMT_s(TO_TADDR(walkMT), g_mdName, mdNameLen);
-        if (_wcscmp(baseString, g_mdName) == 0)
+        if (u16_strcmp(baseString, g_mdName) == 0)
         {
             return TRUE;
         }
@@ -2476,8 +2477,8 @@ void GetInfoFromName(DWORD_PTR ModulePtr, const char* name, mdTypeDef* retMdType
     mdToken tkEnclose = mdTokenNil;
     WCHAR *pName;
     WCHAR *pHead = wszName;
-    while ( ((pName = _wcschr (pHead,L'+')) != NULL) ||
-             ((pName = _wcschr (pHead,L'/')) != NULL)) {
+    while ( ((pName = (WCHAR*)u16_strchr (pHead,L'+')) != NULL) ||
+            ((pName = (WCHAR*)u16_strchr (pHead,L'/')) != NULL)) {
         pName[0] = L'\0';
         if (FAILED(pImport->FindTypeDefByName(pHead,tkEnclose,&tkEnclose)))
             return;
@@ -2498,7 +2499,7 @@ void GetInfoFromName(DWORD_PTR ModulePtr, const char* name, mdTypeDef* retMdType
 
     // See if it is a method
     WCHAR *pwzMethod;
-    if ((pwzMethod = _wcsrchr(pName, L'.')) == NULL)
+    if ((pwzMethod = (WCHAR*)u16_strrchr(pName, L'.')) == NULL)
         return;
 
     if (pwzMethod[-1] == L'.')
@@ -2627,7 +2628,7 @@ HRESULT GetMethodDefinitionsFromName(TADDR ModulePtr, IXCLRDataModule* mod, cons
 *    Find the EE data given a name.                                    *
 *                                                                      *
 \**********************************************************************/
-HRESULT GetMethodDescsFromName(TADDR ModulePtr, IXCLRDataModule* mod, const char *name, DWORD_PTR **pOut,int *numMethods)
+HRESULT GetMethodDescsFromName(DWORD_PTR ModulePtr, IXCLRDataModule* mod, const char *name, DWORD_PTR **pOut,int *numMethods)
 {
     if (name == NULL || pOut == NULL || numMethods == NULL)
         return E_FAIL;
@@ -2655,7 +2656,7 @@ HRESULT GetMethodDescsFromName(TADDR ModulePtr, IXCLRDataModule* mod, const char
 
     if (methodCount > 0)
     {
-        *pOut = new TADDR[methodCount];
+        *pOut = new DWORD_PTR[methodCount];
         if (*pOut==NULL)
         {
             ReportOOM();
@@ -3358,18 +3359,8 @@ bool IsRuntimeVersionAtLeast(VS_FIXEDFILEINFO& fileInfo, DWORD major)
             {
                 return true;
             }
-            // fall through
-
-        default:
-            if (HIWORD(fileInfo.dwFileVersionMS) >= major)
-            {
-                return true;
-            }
-            // fall through
-
-            break;
     }
-    return false;
+    return HIWORD(fileInfo.dwFileVersionMS) >= major;
 }
 
 // Returns true if there is a change in the data structures that SOS depends on like
@@ -3554,7 +3545,7 @@ void StringObjectContent(size_t obj, BOOL fLiteral, const int length)
             ULONG j,k=0;
             for (j = 0; j < wcharsRead; j ++)
             {
-                if (_iswprint (buffer[j])) {
+                if (iswprint (buffer[j])) {
                     out[k] = buffer[j];
                     k ++;
                 }
@@ -3639,8 +3630,8 @@ __int64 str64hex(const char *ptr)
             break;
         }
 
-        if (nCount>15) {
-            return _UI64_MAX;     // would be an overflow
+        if (nCount > 15) {
+            return UINT64_MAX;     // would be an overflow
         }
 
         value = value << 4;
@@ -3930,6 +3921,154 @@ void ResetGlobals(void)
     Output::ResetIndent();
 }
 
+class SOSDacInterface15Simulator : public ISOSDacInterface15
+{
+    class SOSMethodEnum : public ISOSMethodEnum
+    {
+        CLRDATA_ADDRESS pMT;
+        unsigned int index;
+        unsigned int slotCount;
+        ULONG refCount;
+    public:
+        SOSMethodEnum(CLRDATA_ADDRESS mt) : pMT(mt), refCount(1)
+        {
+        }
+
+        virtual ~SOSMethodEnum() {}
+
+        virtual HRESULT STDMETHODCALLTYPE Reset()
+        {
+            index = 0;
+            DacpMethodTableData vMethTable;
+            HRESULT hr = vMethTable.Request(g_sos, pMT);
+            if (FAILED(hr))
+                return hr;
+
+            slotCount = vMethTable.wNumMethods;
+            return S_OK;
+        }
+
+        virtual HRESULT STDMETHODCALLTYPE GetCount(unsigned int *pc)
+        {
+            *pc = slotCount;
+            return S_OK;
+        }
+
+        virtual HRESULT STDMETHODCALLTYPE Skip(unsigned int skipCount)
+        {
+            index += skipCount;
+            return S_OK;
+        }
+
+        virtual HRESULT STDMETHODCALLTYPE Next( 
+            /* [in] */ unsigned int count,
+            /* [length_is][size_is][out] */ SOSMethodData methods[  ],
+            /* [out] */ unsigned int *pFetched)
+        {
+            if (!pFetched)
+                return E_POINTER;
+
+            if (!methods)
+                return E_POINTER;
+
+            unsigned int i = 0;
+            while (i < count && index < slotCount)
+            {
+                SOSMethodData methodData = { 0 };
+
+                JITTypes jitType;
+                DWORD_PTR methodDesc=0;
+                DWORD_PTR gcinfoAddr;
+
+                CLRDATA_ADDRESS entry;
+                methodData.Slot = index;
+                HRESULT hr = g_sos->GetMethodTableSlot(pMT, index++, &entry);
+                if (hr != S_OK)
+                {
+                    PrintLn("<error getting slot ", Decimal(index - 1), ">");
+                    continue;
+                }
+
+                IP2MethodDesc((DWORD_PTR)entry, methodDesc, jitType, gcinfoAddr);
+
+                methodData.MethodDesc = methodDesc;
+                methodData.Entrypoint = entry;
+
+                methods[i++] = methodData;
+            }
+
+            *pFetched = i;
+            return i < count ? S_FALSE : S_OK;
+        }
+
+        STDMETHOD_(ULONG, AddRef)() { return ++refCount; }
+        STDMETHOD_(ULONG, Release)()
+        {
+            --refCount;
+            if (refCount == 0)
+            {
+                delete this;
+                return 0;
+            }
+            return refCount;
+        }
+
+        STDMETHOD(QueryInterface)(
+            THIS_
+            ___in REFIID InterfaceId,
+            ___out PVOID* Interface
+            )
+        {
+            if (InterfaceId == IID_IUnknown ||
+                InterfaceId == IID_ISOSMethodEnum)
+            {
+                *Interface = (ISOSMethodEnum*)this;
+                AddRef();
+                return S_OK;
+            }
+            *Interface = NULL;
+            return E_NOINTERFACE;
+        }
+    };
+
+public:
+    STDMETHOD_(ULONG, AddRef)() { return 1; };
+    STDMETHOD_(ULONG, Release)() { return 1; };
+    STDMETHOD(QueryInterface)(
+        THIS_
+        ___in REFIID InterfaceId,
+        ___out PVOID* Interface
+        )
+    {
+        if (InterfaceId == IID_IUnknown ||
+            InterfaceId == IID_ISOSDacInterface15)
+        {
+            *Interface = (ISOSDacInterface15*)this;
+            return S_OK;
+        }
+        *Interface = NULL;
+        return E_NOINTERFACE;
+    }
+
+    virtual HRESULT STDMETHODCALLTYPE GetMethodTableSlotEnumerator( 
+            CLRDATA_ADDRESS mt,
+            ISOSMethodEnum **enumerator)
+    {
+        SOSMethodEnum *simulator = new(std::nothrow) SOSMethodEnum(mt);
+        *enumerator = simulator;
+        if (simulator == NULL)
+        {
+            return E_OUTOFMEMORY;
+        }
+        HRESULT hr = simulator->Reset();
+        if (FAILED(hr))
+        {
+            simulator->Release();
+        }
+        return hr;
+    }
+} SOSDacInterface15Simulator_Instance;
+
 //---------------------------------------------------------------------------------------
 //
 // Loads private DAC interface, and points g_clrData to it.
@@ -3943,23 +4082,11 @@ HRESULT LoadClrDebugDll(void)
     HRESULT hr = g_pRuntime->GetClrDataProcess(&g_clrData);
     if (FAILED(hr))
     {
-#ifdef FEATURE_PAL
-        return hr;
-#else
-        // Fail if ExtensionApis wasn't initialized because we are hosted under dotnet-dump
-        if (Ioctl == nullptr) {
+        g_clrData = GetClrDataFromDbgEng();
+        if (g_clrData == nullptr)
+        {
             return hr;
         }
-        // Try getting the DAC interface from dbgeng if the above fails on Windows
-        WDBGEXTS_CLR_DATA_INTERFACE Query;
-
-        Query.Iid = &__uuidof(IXCLRDataProcess);
-        if (!Ioctl(IG_GET_CLR_DATA_INTERFACE, &Query, sizeof(Query))) {
-            return hr;
-        }
-        g_clrData = (IXCLRDataProcess*)Query.Iface;
-        g_clrData->Flush();
-#endif
     }
     else
     {
@@ -3971,6 +4098,13 @@ HRESULT LoadClrDebugDll(void)
     {
         g_sos = NULL;
         return hr;
+    }
+
+    // Always have an instance of the MethodTable enumerator
+    hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface15), (void**)&g_sos15);
+    if (FAILED(hr))
+    {
+        g_sos15 = &SOSDacInterface15Simulator_Instance;
     }
     return S_OK;
 }
@@ -4694,7 +4828,7 @@ CachedString Output::BuildManagedVarValue(__in_z LPCWSTR expansionName, ULONG fr
         numFrameDigits = 1;
     }
 
-    size_t totalStringLength = strlen(DMLFormats[type]) + _wcslen(expansionName) + numFrameDigits + _wcslen(simpleName) + 1;
+    size_t totalStringLength = strlen(DMLFormats[type]) + u16_strlen(expansionName) + numFrameDigits + u16_strlen(simpleName) + 1;
     if (totalStringLength > ret.GetStrLen())
     {
         ret.Allocate(static_cast<int>(totalStringLength));
@@ -5150,7 +5284,7 @@ ULONG __stdcall PEOffsetMemoryReader::Release()
 // IDiaReadExeAtOffsetCallback implementation
 HRESULT __stdcall PEOffsetMemoryReader::ReadExecutableAt(DWORDLONG fileOffset, DWORD cbData, DWORD* pcbData, BYTE data[])
 {
-    return SafeReadMemory(m_moduleBaseAddress + fileOffset, data, cbData, pcbData) ? S_OK : E_FAIL;
+    return SafeReadMemory(m_moduleBaseAddress + TO_TADDR(fileOffset), data, cbData, pcbData) ? S_OK : E_FAIL;
 }
 
 PERvaMemoryReader::PERvaMemoryReader(TADDR moduleBaseAddress) :
@@ -5218,7 +5352,7 @@ static void AddAssemblyName(WString& methodOutput, CLRDATA_ADDRESS mdesc)
                 {
                     if (wszFileName[0] != W('\0'))
                     {
-                        WCHAR *pJustName = _wcsrchr(wszFileName, GetTargetDirectorySeparatorW());
+                        const WCHAR *pJustName = u16_strrchr(wszFileName, GetTargetDirectorySeparatorW());
                         if (pJustName == NULL)
                             pJustName = wszFileName - 1;
                         methodOutput += (pJustName + 1);
@@ -5721,3 +5855,30 @@ HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buf
 }
 
 #endif // FEATURE_PAL
+
+/**********************************************************************\
+* Routine Description:                                                 *
+*                                                                      *
+*    Since .NET 9+ the runtime does not expose EEClass, but instead    *
+*    returns a pointer to the canonical MethodTable in                 *
+*    DacpMethodTableData:Class.                                        *
+*    Detect that situation by calling GetMethodTableForEEClass and     *
+*    comparing the result to the EEClass itself.                       *
+*                                                                      *
+\**********************************************************************/
+
+HRESULT PreferCanonMTOverEEClass(CLRDATA_ADDRESS eeClassPtr, BOOL *preferCanonMT, CLRDATA_ADDRESS *outCanonMT)
+{
+    HRESULT Status;
+    CLRDATA_ADDRESS canonMT = 0;
+    if (!SUCCEEDED(Status = g_sos->GetMethodTableForEEClass(eeClassPtr, &canonMT)))
+    {
+        return Status;
+    }
+    *preferCanonMT = (eeClassPtr == canonMT);
+    if (outCanonMT)
+    {
+        *outCanonMT = canonMT;
+    }
+    return S_OK;
+}

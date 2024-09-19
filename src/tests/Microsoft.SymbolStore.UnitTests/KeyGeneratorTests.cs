@@ -28,7 +28,8 @@ namespace Microsoft.SymbolStore.Tests
             //MachCoreKeyGeneratorInternal(fileGenerator: true);
             MachOFileKeyGeneratorInternal(fileGenerator: true);
             MinidumpKeyGeneratorInternal(fileGenerator: true);
-            PDBFileKeyGeneratorInternal(fileGenerator: true);
+            PDBFileKeyGeneratorInternal(fileGenerator: true, pdz: false);
+            PDBFileKeyGeneratorInternal(fileGenerator: true, pdz: true);
             PEFileKeyGeneratorInternal(fileGenerator: true);
             PortablePDBFileKeyGeneratorInternal(fileGenerator: true);
             PerfMapFileKeyGeneratorInternal(fileGenerator: true);
@@ -348,20 +349,30 @@ namespace Microsoft.SymbolStore.Tests
         [Fact]
         public void PDBFileKeyGenerator()
         {
-            PDBFileKeyGeneratorInternal(fileGenerator: false);
+            PDBFileKeyGeneratorInternal(fileGenerator: false, pdz: false);
         }
 
-        private void PDBFileKeyGeneratorInternal(bool fileGenerator)
+        [Fact]
+        public void PDZFileKeyGenerator()
         {
-            const string TestBinary = "TestBinaries/HelloWorld.pdb";
-            using (Stream pdb = File.OpenRead(TestBinary))
+            PDBFileKeyGeneratorInternal(fileGenerator: false, pdz: true);
+        }
+
+        private void PDBFileKeyGeneratorInternal(bool fileGenerator, bool pdz)
+        {
+            using (Stream pdb = File.OpenRead(pdz ? "TestBinaries/HelloWorld.pdz" : "TestBinaries/HelloWorld.pdb"))
             {
-                var file = new SymbolStoreFile(pdb, TestBinary);
+                var file = new SymbolStoreFile(pdb, "TestBinaries/HelloWorld.pdb");
                 KeyGenerator generator = fileGenerator ? (KeyGenerator)new FileKeyGenerator(_tracer, file) : new PDBFileKeyGenerator(_tracer, file);
 
                 IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
                 Assert.True(identityKey.Count() == 1);
-                Assert.True(identityKey.First().Index == "helloworld.pdb/99891b3ed7ae4c3babff8a2b4a9b0c431/helloworld.pdb");
+
+                string index = pdz ?
+                    "helloworld.pdb/99891b3ed7ae4c3babff8a2b4a9b0c431/msfz0/helloworld.pdb" :
+                    "helloworld.pdb/99891b3ed7ae4c3babff8a2b4a9b0c431/helloworld.pdb";
+
+                Assert.True(identityKey.First().Index == index);
 
                 IEnumerable<SymbolStoreKey> symbolKey = generator.GetKeys(KeyTypeFlags.SymbolKey);
                 Assert.True(symbolKey.Count() == 0);

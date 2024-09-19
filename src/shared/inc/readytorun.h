@@ -14,11 +14,15 @@
 
 #define READYTORUN_SIGNATURE 0x00525452 // 'RTR'
 
-// Keep these in sync with src/coreclr/tools/Common/Internal/Runtime/ModuleHeaders.cs
-#define READYTORUN_MAJOR_VERSION 0x0006
-#define READYTORUN_MINOR_VERSION 0x0000
+// Keep these in sync with
+//  src/coreclr/tools/Common/Internal/Runtime/ModuleHeaders.cs
+//  src/coreclr/nativeaot/Runtime/inc/ModuleHeaders.h
+// If you update this, ensure you run `git grep MINIMUM_READYTORUN_MAJOR_VERSION`
+// and handle pending work.
+#define READYTORUN_MAJOR_VERSION 10
+#define READYTORUN_MINOR_VERSION 0x0001
 
-#define MINIMUM_READYTORUN_MAJOR_VERSION 0x006
+#define MINIMUM_READYTORUN_MAJOR_VERSION 10
 
 // R2R Version 2.1 adds the InliningInfo section
 // R2R Version 2.2 adds the ProfileDataInfo section
@@ -26,6 +30,14 @@
 //     R2R 3.0 is not backward compatible with 2.x.
 // R2R Version 6.0 changes managed layout for sequential types with any unmanaged non-blittable fields.
 //     R2R 6.0 is not backward compatible with 5.x or earlier.
+// R2R Version 8.0 Changes the alignment of the Int128 type
+// R2R Version 9.0 adds support for the Vector512 type
+// R2R Version 9.1 adds new helpers to allocate objects on frozen segments
+// R2R Version 9.2 adds MemZero and NativeMemSet helpers
+// R2R Version 9.3 adds BulkWriteBarrier helper
+//                 uses GCInfo v3, which makes safe points in partially interruptible code interruptible.
+// R2R Version 10.0 adds support for the statics being allocated on a per type basis instead of on a per module basis
+// R2R Version 10.1 adds Unbox_TypeTest helper
 
 struct READYTORUN_CORE_HEADER
 {
@@ -60,6 +72,8 @@ enum ReadyToRunFlag
     READYTORUN_FLAG_NONSHARED_PINVOKE_STUBS     = 0x00000008,   // PInvoke stubs compiled into image are non-shareable (no secret parameter)
     READYTORUN_FLAG_EMBEDDED_MSIL               = 0x00000010,   // MSIL is embedded in the composite R2R executable
     READYTORUN_FLAG_COMPONENT                   = 0x00000020,   // This is the header describing a component assembly of composite R2R
+    READYTORUN_FLAG_MULTIMODULE_VERSION_BUBBLE  = 0x00000040,   // This R2R module has multiple modules within its version bubble (For versions before version 6.2, all modules are assumed to possibly have this characteristic)
+    READYTORUN_FLAG_UNRELATED_R2R_CODE          = 0x00000080,   // This R2R module has code in it that would not be naturally encoded into this module
 };
 
 enum class ReadyToRunSectionType : uint32_t
@@ -83,6 +97,11 @@ enum class ReadyToRunSectionType : uint32_t
     OwnerCompositeExecutable    = 116, // Added in V4.1
     PgoInstrumentationData      = 117, // Added in V5.2
     ManifestAssemblyMvids       = 118, // Added in V5.3
+    CrossModuleInlineInfo       = 119, // Added in V6.2
+    HotColdMap                  = 120, // Added in V8.0
+    MethodIsGenericMap          = 121, // Added in V9.0
+    EnclosingTypeMap            = 122, // Added in V9.0
+    TypeGenericInfoMap          = 123, // Added in V9.0
 
     // If you add a new section consider whether it is a breaking or non-breaking change.
     // Usually it is non-breaking, but if it is preferable to have older runtimes fail
@@ -97,6 +116,43 @@ struct READYTORUN_SECTION
     IMAGE_DATA_DIRECTORY    Section;
 };
 
+enum class ReadyToRunImportSectionType : uint8_t
+{
+    Unknown      = 0,
+    StubDispatch = 2,
+    StringHandle = 3,
+    ILBodyFixups = 7,
+};
+
+enum class ReadyToRunImportSectionFlags : uint16_t
+{
+    None     = 0x0000,
+    Eager    = 0x0001, // Section at module load time.
+    PCode    = 0x0004, // Section contains pointers to code
+};
+
+// All values in this enum should within a nibble (4 bits).
+enum class ReadyToRunTypeGenericInfo : uint8_t
+{
+    GenericCountMask = 0x3,
+    HasConstraints = 0x4,
+    HasVariance = 0x8,
+};
+
+// All values in this enum should fit within 2 bits.
+enum class ReadyToRunGenericInfoGenericCount : uint32_t
+{
+    Zero = 0,
+    One = 1,
+    Two = 2,
+    MoreThanTwo = 3
+};
+
+enum class ReadyToRunEnclosingTypeMap
+{
+    MaxTypeCount = 0xFFFE
+};
+
 //
 // READYTORUN_IMPORT_SECTION describes image range with references to code or runtime data structures
 //
@@ -105,22 +161,12 @@ struct READYTORUN_SECTION
 //
 struct READYTORUN_IMPORT_SECTION
 {
-    IMAGE_DATA_DIRECTORY    Section;            // Section containing values to be fixed up
-    USHORT                  Flags;              // One or more of ReadyToRunImportSectionFlags
-    BYTE                    Type;               // One of ReadyToRunImportSectionType
-    BYTE                    EntrySize;
-    DWORD                   Signatures;         // RVA of optional signature descriptors
-    DWORD                   AuxiliaryData;      // RVA of optional auxiliary data (typically GC info)
-};
-
-enum ReadyToRunImportSectionType
-{
-    READYTORUN_IMPORT_SECTION_TYPE_UNKNOWN   = 0,
-};
-
-enum ReadyToRunImportSectionFlags
-{
-    READYTORUN_IMPORT_SECTION_FLAGS_EAGER    = 0x0001,
+    IMAGE_DATA_DIRECTORY         Section;            // Section containing values to be fixed up
+    ReadyToRunImportSectionFlags Flags;              // One or more of ReadyToRunImportSectionFlags
+    ReadyToRunImportSectionType  Type;               // One of ReadyToRunImportSectionType
+    BYTE                         EntrySize;
+    DWORD                        Signatures;         // RVA of optional signature descriptors
+    DWORD                        AuxiliaryData;      // RVA of optional auxiliary data (typically GC info)
 };
 
 //
@@ -141,7 +187,6 @@ enum ReadyToRunMethodSigFlags
 
 enum ReadyToRunFieldSigFlags
 {
-    READYTORUN_FIELD_SIG_IndexInsteadOfToken    = 0x08,
     READYTORUN_FIELD_SIG_MemberRefToken         = 0x10,
     READYTORUN_FIELD_SIG_OwnerType              = 0x40,
 };
@@ -158,7 +203,17 @@ enum ReadyToRunTypeLayoutFlags
 enum ReadyToRunVirtualFunctionOverrideFlags
 {
     READYTORUN_VIRTUAL_OVERRIDE_None = 0x00,
-    READYTORUN_VIRTUAL_OVERRIDE_VirtualFunctionOverriden = 0x01,
+    READYTORUN_VIRTUAL_OVERRIDE_VirtualFunctionOverridden = 0x01,
+};
+
+enum class ReadyToRunCrossModuleInlineFlags : uint32_t
+{
+    CrossModuleInlinee           = 0x1,
+    HasCrossModuleInliners       = 0x2,
+    CrossModuleInlinerIndexShift = 2,
+
+    InlinerRidHasModule          = 0x1,
+    InlinerRidShift              = 1,
 };
 
 //
@@ -223,6 +278,9 @@ enum ReadyToRunFixupKind
 
     READYTORUN_FIXUP_Check_VirtualFunctionOverride = 0x33, /* Generate a runtime check to ensure that virtual function resolution has equivalent behavior at runtime as at compile time. If not equivalent, code will not be used */
     READYTORUN_FIXUP_Verify_VirtualFunctionOverride = 0x34, /* Generate a runtime check to ensure that virtual function resolution has equivalent behavior at runtime as at compile time. If not equivalent, generate runtime failure. */
+
+    READYTORUN_FIXUP_Check_IL_Body              = 0x35, /* Check to see if an IL method is defined the same at runtime as at compile time. A failed match will cause code not to be used. */
+    READYTORUN_FIXUP_Verify_IL_Body             = 0x36, /* Verify an IL body is defined the same at compile time and runtime. A failed match will cause a hard runtime failure. */
 };
 
 //
@@ -266,12 +324,15 @@ enum ReadyToRunHelper
     READYTORUN_HELPER_WriteBarrier              = 0x30,
     READYTORUN_HELPER_CheckedWriteBarrier       = 0x31,
     READYTORUN_HELPER_ByRefWriteBarrier         = 0x32,
+    READYTORUN_HELPER_BulkWriteBarrier          = 0x33,
 
     // Array helpers
     READYTORUN_HELPER_Stelem_Ref                = 0x38,
     READYTORUN_HELPER_Ldelema_Ref               = 0x39,
 
-    READYTORUN_HELPER_MemSet                    = 0x40,
+    READYTORUN_HELPER_MemZero                   = 0x3E,
+    READYTORUN_HELPER_MemSet                    = 0x3F,
+    READYTORUN_HELPER_NativeMemSet              = 0x40,
     READYTORUN_HELPER_MemCpy                    = 0x41,
 
     // PInvoke helpers
@@ -297,6 +358,7 @@ enum ReadyToRunHelper
     READYTORUN_HELPER_Unbox                     = 0x5A,
     READYTORUN_HELPER_Unbox_Nullable            = 0x5B,
     READYTORUN_HELPER_NewMultiDimArr            = 0x5C,
+    READYTORUN_HELPER_Unbox_TypeTest            = 0x5D,
 
     // Helpers used with generic handle lookup cases
     READYTORUN_HELPER_NewObject                 = 0x60,
@@ -308,6 +370,9 @@ enum ReadyToRunHelper
     READYTORUN_HELPER_GenericGcTlsBase          = 0x66,
     READYTORUN_HELPER_GenericNonGcTlsBase       = 0x67,
     READYTORUN_HELPER_VirtualFuncPtr            = 0x68,
+    READYTORUN_HELPER_IsInstanceOfException     = 0x69,
+    READYTORUN_HELPER_NewMaybeFrozenArray       = 0x6A,
+    READYTORUN_HELPER_NewMaybeFrozenObject      = 0x6B,
 
     // Long mul/div/shift ops
     READYTORUN_HELPER_LMul                      = 0xC0,
@@ -342,11 +407,13 @@ enum ReadyToRunHelper
     // Floating point ops
     READYTORUN_HELPER_DblRem                    = 0xE0,
     READYTORUN_HELPER_FltRem                    = 0xE1,
+
+    // Unused since READYTORUN_MAJOR_VERSION 10.0
     READYTORUN_HELPER_DblRound                  = 0xE2,
     READYTORUN_HELPER_FltRound                  = 0xE3,
 
 #ifdef FEATURE_EH_FUNCLETS
-    // Personality rountines
+    // Personality routines
     READYTORUN_HELPER_PersonalityRoutine        = 0xF0,
     READYTORUN_HELPER_PersonalityRoutineFilterFunclet = 0xF1,
 #endif

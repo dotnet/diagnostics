@@ -38,8 +38,8 @@ namespace Microsoft.SymbolStore.KeyGenerators
         public ELFFileKeyGenerator(ITracer tracer, ELFFile elfFile, string path)
             : base(tracer)
         {
-            _elfFile = elfFile;
-            _path = path;
+            _elfFile = elfFile ?? throw new ArgumentNullException(nameof(elfFile));
+            _path = path ?? throw new ArgumentNullException(nameof(path));
         }
 
         public ELFFileKeyGenerator(ITracer tracer, SymbolStoreFile file)

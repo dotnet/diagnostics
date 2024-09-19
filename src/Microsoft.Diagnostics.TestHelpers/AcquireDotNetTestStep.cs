@@ -168,7 +168,12 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ZipArchive zip = new(zipStream);
                 foreach (ZipArchiveEntry entry in zip.Entries)
                 {
-                    string extractedFilePath = Path.Combine(expandedDirPath, entry.FullName);
+                    string extractedFilePath = Path.GetFullPath(Path.Combine(expandedDirPath, entry.FullName));
+                    string fullExtractedDirPath = Path.GetFullPath(expandedDirPath + Path.DirectorySeparatorChar);
+                    if (!extractedFilePath.StartsWith(fullExtractedDirPath))
+                    {
+                        throw new InvalidDataException("Entry is outside of the target dir: " + entry.FullName);
+                    }
                     Directory.CreateDirectory(Path.GetDirectoryName(extractedFilePath));
                     using (Stream zipFileStream = entry.Open())
                     {

@@ -36,14 +36,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         internal static void ConvertToFormat(IConsole console, TraceFileFormat format, string fileToConvert, string outputFilename)
         {
-            console.Out.WriteLine($"Writing:\t{outputFilename}");
-
             switch (format)
             {
                 case TraceFileFormat.NetTrace:
                     break;
                 case TraceFileFormat.Speedscope:
                 case TraceFileFormat.Chromium:
+                    console.Out.WriteLine($"Processing trace data file '{fileToConvert}' to create a new {format} file '{outputFilename}'.");
                     try
                     {
                         Convert(console, format, fileToConvert, outputFilename);

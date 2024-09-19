@@ -467,22 +467,15 @@ inline bool isCallConv(unsigned sigByte, CorCallingConvention conv)
     return ((sigByte & IMAGE_CEE_CS_CALLCONV_MASK) == (unsigned) conv); 
 }
 
-#ifndef IfFailGoto
+#undef IfFailGoto
 #define IfFailGoto(EXPR, LABEL) \
 do { hr = (EXPR); if(FAILED(hr)) { goto LABEL; } } while (0)
-#endif
 
-#ifndef IfFailGo
+#undef IfFailGo
 #define IfFailGo(EXPR) IfFailGoto(EXPR, ErrExit)
-#endif
 
-#ifndef IfFailRet
+#undef IfFailRet
 #define IfFailRet(EXPR) do { hr = (EXPR); if(FAILED(hr)) { return (hr); } } while (0)
-#endif
-
-#ifndef _ASSERTE
-#define _ASSERTE(expr)
-#endif
 
 HRESULT MDInfo::GetFullNameForMD(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, LONG *plSigBlobRemaining)
 {

@@ -14,13 +14,8 @@
 #include <windows.h>
 #include <winternl.h>
 
-#if defined(_MSC_VER)
-#pragma warning(disable:4245)   // signed/unsigned mismatch
-#pragma warning(disable:4100)   // unreferenced formal parameter
-#pragma warning(disable:4201)   // nonstandard extension used : nameless struct/union
-#pragma warning(disable:4127)   // conditional expression is constant
-#pragma warning(disable:4430)   // missing type specifier: C++ doesn't support default-int
-#endif
+#undef CreateProcess
+
 #include "strike.h"
 #include <wdbgexts.h>
 #include <dbgeng.h>
@@ -33,6 +28,10 @@
 // system that use the StackTrace identifier
 #ifdef StackTrace 
 #undef StackTrace
+#endif
+
+#ifndef FEATURE_PAL
+#include "dbgengservices.h"
 #endif
 
 #include "platformspecific.h"
@@ -56,10 +55,6 @@
 // printing CDA values.
 #define CDA_TO_UL64(cda) ((ULONG64)(TO_TADDR(cda)))
 
-#ifndef IMAGE_FILE_MACHINE_RISCV64
-#define IMAGE_FILE_MACHINE_RISCV64        0x5064  // RISCV64
-#endif // !IMAGE_FILE_MACHINE_RISCV64
-
 typedef struct _TADDR_RANGE
 {
     TADDR start;
@@ -73,11 +68,8 @@ typedef struct _TADDR_SEGINFO
     TADDR end;
 } TADDR_SEGINFO;
 
+#include "sosextensions.h"
 #include "util.h"
-
-#ifndef FEATURE_PAL
-#include "dbgengservices.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -122,86 +114,6 @@ private:
     static OnUnloadTask *s_pUnloadTaskList;
 };
 
-//-----------------------------------------------------------------------------------------
-// Extension helper class
-//-----------------------------------------------------------------------------------------
-class SOSExtensions : public Extensions
-{
-    SOSExtensions(IDebuggerServices* debuggerServices, IHost* host) :
-        Extensions(debuggerServices)
-    {
-        m_pHost = host;
-        OnUnloadTask::Register(SOSExtensions::Uninitialize);
-    }
-
-#ifndef FEATURE_PAL
-    ~SOSExtensions()
-    {
-        if (m_pDebuggerServices != nullptr)
-        {
-            ((DbgEngServices*)m_pDebuggerServices)->Uninitialize();
-            m_pDebuggerServices->Release();
-            m_pDebuggerServices = nullptr;
-        }
-    }
-#endif
-
-public:
-
-#ifndef FEATURE_PAL
-    static HRESULT Initialize(IDebugClient* client)
-    {
-        if (s_extensions == nullptr)
-        {
-            DbgEngServices* debuggerServices = new DbgEngServices(client);
-            HRESULT hr = debuggerServices->Initialize();
-            if (FAILED(hr)) {
-                return hr;
-            }
-            s_extensions = new SOSExtensions(debuggerServices, nullptr);
-        }
-        return S_OK;
-    }
-#endif
-
-    static HRESULT Initialize(IHost* host, IDebuggerServices* debuggerServices)
-    {
-        if (s_extensions == nullptr) 
-        {
-            s_extensions = new SOSExtensions(debuggerServices, host);
-        }
-        return S_OK;
-    }
-
-    static void Uninitialize()
-    {
-        if (s_extensions != nullptr)
-        {
-            delete s_extensions;
-            s_extensions = nullptr;
-        }
-    }
-
-#ifndef FEATURE_PAL
-    void FlushCheck()
-    {
-        if (m_pDebuggerServices != nullptr)
-        {
-            ((DbgEngServices*)m_pDebuggerServices)->FlushCheck(this);
-        }
-    }
-#endif
-
-    IHost* GetHost();
-};
-
-extern HRESULT GetRuntime(IRuntime** ppRuntime);
-extern void FlushCheck();
-
-#ifndef MINIDUMP
- 
-#define EXIT_API     ExtRelease
-
 // Safe release and NULL.
 #define EXT_RELEASE(Unk) \
     ((Unk) != NULL ? ((Unk)->Release(), (Unk) = NULL) : NULL)
@@ -236,6 +148,12 @@ extern BOOL InitializePAL();
 HRESULT
 ExtQuery(PDEBUG_CLIENT client);
 
+HRESULT
+ExtInit(PDEBUG_CLIENT client);
+
+const char*
+GetProcessorName(ULONG type);
+
 HRESULT 
 ArchQuery(void);
 
@@ -250,6 +168,9 @@ EENotLoadedMessage(HRESULT Status);
 
 void 
 DACMessage(HRESULT Status);
+
+IXCLRDataProcess*
+GetClrDataFromDbgEng();
 
 extern BOOL ControlC;
 
@@ -282,12 +203,7 @@ public:
 #define INIT_API_EXT()                                          \
     HRESULT Status;                                             \
     __ExtensionCleanUp __extensionCleanUp;                      \
-    if ((Status = ExtQuery(client)) != S_OK) return Status;     \
-    ControlC = FALSE;                                           \
-    g_bDacBroken = TRUE;                                        \
-    g_clrData = NULL;                                           \
-    g_sos = NULL;                                               \
-    FlushCheck();
+    if ((Status = ExtInit(client)) != S_OK) return Status;
 
 // Also initializes the target machine
 #define INIT_API_NOEE()                                         \
@@ -498,6 +414,7 @@ inline BOOL IsDbgTargetAmd64()  { return g_targetMachine->GetPlatform() == IMAGE
 inline BOOL IsDbgTargetArm()    { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARMNT; }
 inline BOOL IsDbgTargetArm64()  { return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64; }
 inline BOOL IsDbgTargetRiscV64(){ return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_RISCV64; }
+inline BOOL IsDbgTargetLoongArch64(){ return g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_LOONGARCH64; }
 inline BOOL IsDbgTargetWin64()  { return IsDbgTargetAmd64(); }
 
 /* Returns the instruction pointer for the given CONTEXT.  We need this and its family of
@@ -595,8 +512,6 @@ extern ReadVirtualCache *rvCache;
 #define CPPMOD extern "C"
 #else
 #define CPPMOD
-#endif
-
 #endif
 
 #ifdef __cplusplus

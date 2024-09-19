@@ -29,6 +29,19 @@ namespace ParallelStacks.Runtime
                 return;
             }
 
+            // Sometimes a stack can be shared in a way where some threads top frame is the current frame but there are still frames/threads present in the stack
+            // In this case print the unique thread ids in the current stack frame e.g.
+            // ~~ Thread_T1 - this one is the unique thread id for the current frame
+            //   ~~ Thread_T2
+            //   1 Next_Stack_Frame
+            // 2 Current_Stack_Frame
+            if (stack.Stacks.Count == 1 && stack.Stacks[0].ThreadIds.Count != stack.ThreadIds.Count)
+            {
+                List<uint> uniqueThreads = stack.ThreadIds.Except(stack.Stacks[0].ThreadIds).ToList();
+                visitor.Write($"{Environment.NewLine}{alignment}");
+                visitor.WriteFrameSeparator($" ~~~~ {FormatThreadIdList(visitor, uniqueThreads)}");
+            }
+
             foreach (ParallelStack nextStackFrame in stack.Stacks.OrderBy(s => s.ThreadIds.Count))
             {
                 RenderStack(nextStackFrame, visitor,

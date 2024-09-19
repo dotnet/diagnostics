@@ -81,7 +81,9 @@ namespace CorUnix
         {
         };
 
-        ~CProcProcessLocalData();
+        ~CProcProcessLocalData()
+        {
+        };
 
         DWORD dwProcessId;
         PROCESS_STATE ps;

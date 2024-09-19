@@ -2,31 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 //
 // sigparser.h
-//
-
-//
 
 #ifndef _H_SIGPARSER
 #define _H_SIGPARSER
 
-#ifndef LIMITED_METHOD_DAC_CONTRACT 
-#define LIMITED_METHOD_DAC_CONTRACT ((void)0)
-#endif
-#ifndef LIMITED_METHOD_CONTRACT 
-#define LIMITED_METHOD_CONTRACT ((void)0)
-#endif
-#ifndef WRAPPER_NO_CONTRACT 
-#define WRAPPER_NO_CONTRACT ((void)0)
-#endif
-#ifndef SUPPORTS_DAC 
-#define SUPPORTS_DAC ((void)0)
-#endif
-#ifndef _ASSERT
-#define _ASSERT _ASSERTE
-#endif
-
+//#include "utilcode.h"
 #include "corhdr.h"
-
+//#include "corinfo.h"
+//#include "corpriv.h"
 #include <minipal/utils.h>
 
 //---------------------------------------------------------------------------------------
@@ -41,34 +24,6 @@
 #else
 #define STACK_GROWS_UP_ON_ARGS_WALK
 #endif
-
-//////////////////////////////////////////////////////////////////////////////
-// enum CorElementTypeZapSig defines some additional internal ELEMENT_TYPE's
-// values that are only used by ZapSig signatures.
-//////////////////////////////////////////////////////////////////////////////
-typedef enum CorElementTypeZapSig
-{
-    // ZapSig encoding for ELEMENT_TYPE_VAR and ELEMENT_TYPE_MVAR. It is always followed
-    // by the RID of a GenericParam token, encoded as a compressed integer.
-    ELEMENT_TYPE_VAR_ZAPSIG = 0x3b,
-
-    // UNUSED = 0x3c,
-
-    // ZapSig encoding for native value types in IL stubs. IL stub signatures may contain
-    // ELEMENT_TYPE_INTERNAL followed by ParamTypeDesc with ELEMENT_TYPE_VALUETYPE element
-    // type. It acts like a modifier to the underlying structure making it look like its
-    // unmanaged view (size determined by unmanaged layout, blittable, no GC pointers).
-    //
-    // ELEMENT_TYPE_NATIVE_VALUETYPE_ZAPSIG is used when encoding such types to NGEN images.
-    // The signature looks like this: ET_NATIVE_VALUETYPE_ZAPSIG ET_VALUETYPE <token>.
-    // See code:ZapSig.GetSignatureForTypeHandle and code:SigPointer.GetTypeHandleThrowing
-    // where the encoding/decoding takes place.
-    ELEMENT_TYPE_NATIVE_VALUETYPE_ZAPSIG = 0x3d,
-
-    ELEMENT_TYPE_CANON_ZAPSIG            = 0x3e,     // zapsig encoding for System.__Canon
-    ELEMENT_TYPE_MODULE_ZAPSIG           = 0x3f,     // zapsig encoding for external module id#
-
-} CorElementTypeZapSig;
 
 //------------------------------------------------------------------------
 // Encapsulates how compressed integers and typeref tokens are encoded into
@@ -530,7 +485,7 @@ class SigParser
         }
 
         //------------------------------------------------------------------------
-        // Is this at the Sentinal (the ... in a varargs signature) that marks
+        // Is this at the Sentinel (the ... in a varargs signature) that marks
         // the beginning of varguments that are not decared at the target
 
         bool AtSentinel() const
@@ -758,7 +713,7 @@ class SigParser
         // the arguments.
         //------------------------------------------------------------------------
         __checkReturn
-        HRESULT SkipMethodHeaderSignature(uint32_t *pcArgs);
+        HRESULT SkipMethodHeaderSignature(uint32_t *pcArgs, bool skipReturnType = true);
 
         //------------------------------------------------------------------------
         // Skip a sub signature (as immediately follows an ELEMENT_TYPE_FNPTR).

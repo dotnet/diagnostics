@@ -21,8 +21,6 @@
   <ItemGroup>
     <ClCompile Include="gcdump.cpp" />
     <ClCompile Include="gcdumpnonx86.cpp" />
-    <ClCompile Include="gcinfodecoder.cpp" />
-    <ClCompile Include="gcinfodumper.cpp" />
     <ClCompile Include="i386\gcdumpx86.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

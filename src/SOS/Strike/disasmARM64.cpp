@@ -24,9 +24,6 @@
 namespace ARM64GCDump
 {
 #undef TARGET_X86
-#undef LIMITED_METHOD_CONTRACT
-#define LIMITED_METHOD_DAC_CONTRACT ((void)0)
-#define SUPPORTS_DAC ((void)0)
 #define LF_GCROOTS
 #define LL_INFO1000
 #define LOG(x)
@@ -146,7 +143,7 @@ void ARM64Machine::Unassembly (
     BOOL bDisplayOffsets,
     std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const
 {
-    TADDR PC = PCBegin;
+    ULONG_PTR PC = PCBegin;
     char line[1024];
     ULONG lineNum;
     ULONG curLine = -1;

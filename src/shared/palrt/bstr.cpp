@@ -21,6 +21,7 @@ Revision History:
 
 #include "common.h"
 #include "intsafe.h"
+#include <dn-u16.h>
 
 #define CCH_BSTRMAX 0x7FFFFFFF  // 4 + (0x7ffffffb + 1 ) * 2 ==> 0xFFFFFFFC
 #define CB_BSTRMAX 0xFFFFFFFa   // 4 + (0xfffffff6 + 2) ==> 0xFFFFFFFC
@@ -79,7 +80,7 @@ STDAPI_(BSTR) SysAllocStringLen(const OLECHAR *psz, UINT len)
     if (FAILED(CbSysStringSize(len, FALSE, &cbTotal)))
         return NULL;
 
-    bstr = (OLECHAR *)PAL_malloc(cbTotal);
+    bstr = (OLECHAR *)malloc(cbTotal);
 
     if(bstr != NULL){
 
@@ -120,7 +121,7 @@ STDAPI_(BSTR) SysAllocString(const OLECHAR* psz)
     if(psz == NULL)
       return NULL;
 
-    return SysAllocStringLen(psz, (DWORD)wcslen(psz));
+    return SysAllocStringLen(psz, (DWORD)u16_strlen(psz));
 }
 
 STDAPI_(BSTR)
@@ -132,7 +133,7 @@ SysAllocStringByteLen(const char FAR* psz, unsigned int len)
     if (FAILED(CbSysStringSize(len, TRUE, &cbTotal)))
         return FALSE;
 
-    bstr = (OLECHAR *)PAL_malloc(cbTotal);
+    bstr = (OLECHAR *)malloc(cbTotal);
 
     if (bstr != NULL) {
 #if defined(HOST_64BIT)

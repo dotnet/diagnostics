@@ -231,6 +231,9 @@ inline SString::SString(const WCHAR *string)
 
     Set(string);
 
+    _ASSERTE(IsRepresentation(REPRESENTATION_UNICODE));
+    SetNormalized();
+
     SS_RETURN;
 }
 
@@ -248,6 +251,9 @@ inline SString::SString(const WCHAR *string, COUNT_T count)
     SS_CONTRACT_END;
 
     Set(string, count);
+
+    _ASSERTE(IsRepresentation(REPRESENTATION_UNICODE));
+    SetNormalized();
 
     SS_RETURN;
 }
@@ -327,41 +333,6 @@ inline SString::SString(tagUTF8 dummytag, const UTF8 *string, COUNT_T count)
     SS_RETURN;
 }
 
-inline SString::SString(tagANSI dummytag, const ANSI *string)
-  : SBuffer(Immutable, s_EmptyBuffer, sizeof(s_EmptyBuffer))
-{
-    SS_CONTRACT_VOID
-    {
-        SS_CONSTRUCTOR_CHECK;
-        PRECONDITION(CheckPointer(string, NULL_OK));
-        THROWS;
-        GC_NOTRIGGER;
-    }
-    SS_CONTRACT_END;
-
-    SetANSI(string);
-
-    SS_RETURN;
-}
-
-inline SString::SString(tagANSI dummytag, const ANSI *string, COUNT_T count)
-  : SBuffer(Immutable, s_EmptyBuffer, sizeof(s_EmptyBuffer))
-{
-    SS_CONTRACT_VOID
-    {
-        SS_CONSTRUCTOR_CHECK;
-        PRECONDITION(CheckPointer(string, NULL_OK));
-        PRECONDITION(CheckCount(count));
-        THROWS;
-        GC_NOTRIGGER;
-    }
-    SS_CONTRACT_END;
-
-    SetANSI(string, count);
-
-    SS_RETURN;
-}
-
 inline SString::SString(WCHAR character)
   : SBuffer(Immutable, s_EmptyBuffer, sizeof(s_EmptyBuffer))
 {
@@ -415,7 +386,7 @@ inline SString::SString(tagUTF8Literal dummytag, const UTF8 *literal)
 }
 
 inline SString::SString(tagLiteral dummytag, const WCHAR *literal)
-  : SBuffer(Immutable, (const BYTE *) literal, (COUNT_T) (wcslen(literal)+1)*sizeof(WCHAR))
+  : SBuffer(Immutable, (const BYTE *) literal, (COUNT_T) (u16_strlen(literal)+1)*sizeof(WCHAR))
 {
     SS_CONTRACT_VOID
     {
@@ -651,8 +622,27 @@ inline const WCHAR *SString::GetUnicode() const
     SS_RETURN GetRawUnicode();
 }
 
+// Get a const pointer to the internal buffer as a UTF8 string.
+inline const UTF8 *SString::GetUTF8() const
+{
+    SS_CONTRACT(const UTF8 *)
+    {
+        GC_NOTRIGGER;
+        PRECONDITION(CheckPointer(this));
+        SS_POSTCONDITION(CheckPointer(RETVAL));
+        if (IsRepresentation(REPRESENTATION_UTF8)) NOTHROW; else THROWS;
+        GC_NOTRIGGER;
+        SUPPORTS_DAC;
+    }
+    SS_CONTRACT_END;
+
+    ConvertToUTF8();
+
+    SS_RETURN GetRawUTF8();
+}
+
 // Normalize the string to unicode.  This will make many operations nonfailing.
-inline void SString::Normalize() const
+inline void SString::Normalize()
 {
     SS_CONTRACT_VOID
     {
@@ -800,7 +790,7 @@ inline void SString::AppendUTF8(const CHAR c)
 
 // Helpers for CRT function equivalance.
 /* static */
-inline int __cdecl SString::_stricmp(const CHAR *buffer1, const CHAR *buffer2) {
+inline int SString::_stricmp(const CHAR *buffer1, const CHAR *buffer2) {
     WRAPPER_NO_CONTRACT;
     int returnValue = CaseCompareHelperA(buffer1, buffer2, 0, TRUE, FALSE);
 #ifdef VERIFY_CRT_EQUIVALNCE
@@ -811,7 +801,7 @@ inline int __cdecl SString::_stricmp(const CHAR *buffer1, const CHAR *buffer2) {
 }
 
 /* static */
-inline int __cdecl SString::_strnicmp(const CHAR *buffer1, const CHAR *buffer2, COUNT_T count) {
+inline int SString::_strnicmp(const CHAR *buffer1, const CHAR *buffer2, COUNT_T count) {
     WRAPPER_NO_CONTRACT;
     int returnValue = CaseCompareHelperA(buffer1, buffer2, count, TRUE, TRUE);
 #ifdef VERIFY_CRT_EQUIVALNCE
@@ -821,7 +811,7 @@ inline int __cdecl SString::_strnicmp(const CHAR *buffer1, const CHAR *buffer2, 
 }
 
 /* static */
-inline int __cdecl SString::_wcsicmp(const WCHAR *buffer1, const WCHAR *buffer2) {
+inline int SString::_wcsicmp(const WCHAR *buffer1, const WCHAR *buffer2) {
     WRAPPER_NO_CONTRACT;
     int returnValue = CaseCompareHelper(buffer1, buffer2, 0, TRUE, FALSE);
 #ifdef VERIFY_CRT_EQUIVALNCE
@@ -832,7 +822,7 @@ inline int __cdecl SString::_wcsicmp(const WCHAR *buffer1, const WCHAR *buffer2)
 }
 
 /* static */
-inline int __cdecl SString::_wcsnicmp(const WCHAR *buffer1, const WCHAR *buffer2, COUNT_T count) {
+inline int SString::_wcsnicmp(const WCHAR *buffer1, const WCHAR *buffer2, COUNT_T count) {
     WRAPPER_NO_CONTRACT;
     int returnValue = CaseCompareHelper(buffer1, buffer2, count, TRUE, TRUE);
 #ifdef VERIFY_CRT_EQUIVALNCE
@@ -1113,7 +1103,7 @@ inline void SString::Delete(const Iterator &i, COUNT_T length)
 }
 
 // Preallocate some space for the string buffer
-inline void SString::Preallocate(COUNT_T characters) const
+inline void SString::Preallocate(COUNT_T characters)
 {
     WRAPPER_NO_CONTRACT;
 
@@ -1122,14 +1112,14 @@ inline void SString::Preallocate(COUNT_T characters) const
 }
 
 // Trim unused space from the buffer
-inline void SString::Trim() const
+inline void SString::Trim()
 {
     WRAPPER_NO_CONTRACT;
 
     if (GetRawCount() == 0)
     {
         // Share the global empty string buffer.
-        const_cast<SString *>(this)->SBuffer::SetImmutable(s_EmptyBuffer, sizeof(s_EmptyBuffer));
+        SBuffer::SetImmutable(s_EmptyBuffer, sizeof(s_EmptyBuffer));
     }
     else
     {
@@ -1504,7 +1494,7 @@ inline COUNT_T SString::GetBufferSizeInCharIncludeNullChar() const
 
 //----------------------------------------------------------------------------
 // Assert helper
-// Asser that the iterator is within the given string.
+// Assert that the iterator is within the given string.
 //----------------------------------------------------------------------------
 inline CHECK SString::CheckIteratorRange(const CIterator &i) const
 {
@@ -1516,7 +1506,7 @@ inline CHECK SString::CheckIteratorRange(const CIterator &i) const
 
 //----------------------------------------------------------------------------
 // Assert helper
-// Asser that the iterator is within the given string.
+// Assert that the iterator is within the given string.
 //----------------------------------------------------------------------------
 inline CHECK SString::CheckIteratorRange(const CIterator &i, COUNT_T length) const
 {
@@ -1555,8 +1545,7 @@ inline CHECK SString::CheckRepresentation(int representation)
     CHECK(representation == REPRESENTATION_EMPTY
           || representation == REPRESENTATION_UNICODE
           || representation == REPRESENTATION_ASCII
-          || representation == REPRESENTATION_UTF8
-          || representation == REPRESENTATION_ANSI);
+          || representation == REPRESENTATION_UTF8);
     CHECK((representation & REPRESENTATION_MASK) == representation);
 
     CHECK_OK;
@@ -1666,28 +1655,25 @@ inline WCHAR *SString::GetCopyOfUnicodeString()
 }
 
 //----------------------------------------------------------------------------
-// Return a writeable buffer that can store 'countChars'+1 ansi characters.
-// Call CloseBuffer when done.
+// Return a copy of the underlying  buffer, the caller is responsible for managing
+// the returned memory
 //----------------------------------------------------------------------------
-inline ANSI *SString::OpenANSIBuffer(COUNT_T countChars)
+inline UTF8 *SString::GetCopyOfUTF8String()
 {
-    SS_CONTRACT(ANSI*)
+    SS_CONTRACT(UTF8*)
     {
         GC_NOTRIGGER;
         PRECONDITION(CheckPointer(this));
-        PRECONDITION(CheckCount(countChars));
-#if _DEBUG
-        SS_POSTCONDITION(IsBufferOpen());
-#endif
-        SS_POSTCONDITION(GetRawCount() == countChars);
-        SS_POSTCONDITION(GetRepresentation() == REPRESENTATION_ANSI || countChars == 0);
-        SS_POSTCONDITION(CheckPointer(RETVAL));
+        SS_POSTCONDITION(CheckPointer(buffer));
         THROWS;
     }
     SS_CONTRACT_END;
+    NewArrayHolder<UTF8> buffer = NULL;
 
-    OpenBuffer(REPRESENTATION_ANSI, countChars);
-    SS_RETURN GetRawANSI();
+    buffer = new UTF8[GetSize()];
+    strncpy(buffer, GetUTF8(), GetSize());
+
+    SS_RETURN buffer.Extract();
 }
 
 //----------------------------------------------------------------------------
@@ -1878,7 +1864,7 @@ inline void SString::ConvertToFixed() const
 
 //-----------------------------------------------------------------------------
 // Convert the internal representation to be an iteratable one (current
-// requirements here are that it be trivially convertable to unicode chars.)
+// requirements here are that it be trivially convertible to unicode chars.)
 //-----------------------------------------------------------------------------
 inline void SString::ConvertToIteratable() const
 {
@@ -1904,44 +1890,6 @@ inline void SString::ConvertToIteratable() const
     ConvertToUnicode();
 
     SS_RETURN;
-}
-
-//-----------------------------------------------------------------------------
-// Create iterators on the string.
-//-----------------------------------------------------------------------------
-
-inline SString::UIterator SString::BeginUnicode()
-{
-    SS_CONTRACT(SString::UIterator)
-    {
-        GC_NOTRIGGER;
-        PRECONDITION(CheckPointer(this));
-        SS_POSTCONDITION(CheckValue(RETVAL));
-        THROWS;
-    }
-    SS_CONTRACT_END;
-
-    ConvertToUnicode();
-    EnsureWritable();
-
-    SS_RETURN UIterator(this, 0);
-}
-
-inline SString::UIterator SString::EndUnicode()
-{
-    SS_CONTRACT(SString::UIterator)
-    {
-        GC_NOTRIGGER;
-        PRECONDITION(CheckPointer(this));
-        SS_POSTCONDITION(CheckValue(RETVAL));
-        THROWS;
-    }
-    SS_CONTRACT_END;
-
-    ConvertToUnicode();
-    EnsureWritable();
-
-    SS_RETURN UIterator(this, GetCount());
 }
 
 //-----------------------------------------------------------------------------
@@ -1975,6 +1923,7 @@ FORCEINLINE SString::CIterator SString::End() const
     }
     SS_CONTRACT_END;
 
+    ConvertToIteratable();
     ConvertToIteratable();
 
     SS_RETURN CIterator(this, GetCount());
@@ -2133,92 +2082,6 @@ inline WCHAR SString::Index::operator[](int index) const
         return *(CHAR*)&GetAt(index);
     else
         return *(WCHAR*)&GetAt(index);
-}
-
-//-----------------------------------------------------------------------------
-// Iterator support routines
-//-----------------------------------------------------------------------------
-
-inline SString::UIndex::UIndex()
-{
-    LIMITED_METHOD_CONTRACT;
-}
-
-inline SString::UIndex::UIndex(SString *string, SCOUNT_T index)
-  : SBuffer::Index(string, index*sizeof(WCHAR))
-{
-    SS_CONTRACT_VOID
-    {
-        GC_NOTRIGGER;
-        PRECONDITION(CheckPointer(string));
-        PRECONDITION(string->IsRepresentation(REPRESENTATION_UNICODE));
-        PRECONDITION(DoCheck(0));
-        SS_POSTCONDITION(CheckPointer(this));
-        NOTHROW;
-        CANNOT_TAKE_LOCK;
-    }
-    SS_CONTRACT_END;
-
-    SS_RETURN;
-}
-
-inline WCHAR &SString::UIndex::GetAt(SCOUNT_T delta) const
-{
-    LIMITED_METHOD_CONTRACT;
-
-    return ((WCHAR*)m_ptr)[delta];
-}
-
-inline void SString::UIndex::Skip(SCOUNT_T delta)
-{
-    LIMITED_METHOD_CONTRACT;
-
-    m_ptr += delta * sizeof(WCHAR);
-}
-
-inline SCOUNT_T SString::UIndex::Subtract(const UIndex &i) const
-{
-    WRAPPER_NO_CONTRACT;
-
-    return (SCOUNT_T) (GetUnicode() - i.GetUnicode());
-}
-
-inline CHECK SString::UIndex::DoCheck(SCOUNT_T delta) const
-{
-    CANNOT_HAVE_CONTRACT;
-#if _DEBUG
-    const SString *string = (const SString *) GetContainerDebug();
-
-    CHECK(GetUnicode() + delta >= string->GetRawUnicode());
-    CHECK(GetUnicode() + delta <= string->GetRawUnicode() + string->GetCount());
-#endif
-
-    CHECK_OK;
-}
-
-inline WCHAR *SString::UIndex::GetUnicode() const
-{
-    LIMITED_METHOD_CONTRACT;
-
-    return (WCHAR*) m_ptr;
-}
-
-//-----------------------------------------------------------------------------
-// Opaque scratch buffer class routines
-//-----------------------------------------------------------------------------
-inline SString::AbstractScratchBuffer::AbstractScratchBuffer(void *buffer, COUNT_T size)
-  : SString(buffer, size)
-{
-    SS_CONTRACT_VOID
-    {
-        GC_NOTRIGGER;
-        PRECONDITION(CheckPointer(buffer));
-        PRECONDITION(CheckCount(size));
-        NOTHROW;
-    }
-    SS_CONTRACT_END;
-
-    SS_RETURN;
 }
 
 #ifdef _MSC_VER

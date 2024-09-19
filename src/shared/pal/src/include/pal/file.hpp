@@ -77,12 +77,6 @@ namespace CorUnix
         );
 
     PAL_ERROR
-    InternalSetEndOfFile(
-        CPalThread *pThread,
-        HANDLE hFile
-        );
-
-    PAL_ERROR
     InternalGetFileSize(
         CPalThread *pThread,
         HANDLE hFile,
@@ -133,31 +127,6 @@ namespace CorUnix
         );
 
     /*++
-    InternalFgets
-    Wraps fgets
-    --*/
-    char *
-    InternalFgets(
-        char *sz,
-        int nSize,
-        FILE *f,
-        bool fTextMode
-        );
-
-    /*++
-    InternalFwrite
-    Wraps fwrite
-    --*/
-    size_t
-    InternalFwrite(
-        const void *pvBuffer,
-        size_t nSize,
-        size_t nCount,
-        FILE *f,
-        INT *pnErrorCode
-        );
-
-    /*++
     InternalOpen
     Wraps open
     --*/
@@ -174,7 +143,7 @@ extern "C"
 
 //
 // These routines should all be separated out into something along the lines
-// of fileutils.* (instead of being commingled with the core file object
+// of fileutils.* (instead of being comingled with the core file object
 // code).
 //
 
@@ -195,19 +164,6 @@ Notes :
  realpath() requires the given path to be valid and GetFullPathName does not.
 --*/
 void FILECanonicalizePath(LPSTR lpUnixPath);
-
-/*++
-Function:
-  FileDosToUnixPathA
-
-Abstract:
-  Change a DOS path to a Unix path. Replace '\' by '/'.
-
-Parameter:
-  IN/OUT lpPath: path to be modified
---*/
-void
-FILEDosToUnixPathA(LPSTR lpPath);
 
 /*++
 Function:
@@ -242,15 +198,6 @@ Return value:
     TRUE on success, FALSE on failure
 --*/
 BOOL FILEInitStdHandles(void);
-
-/*++
-FILECleanupStdHandles
-
-Close primary handles for stdin, stdout and stderr
-
-(no parameters, no return value)
---*/
-void FILECleanupStdHandles(void);
 
 /*++
 

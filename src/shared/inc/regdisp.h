@@ -44,7 +44,11 @@ struct REGDISPLAY_BASE {
 #endif // DEBUG_REGDISPLAY
 
     TADDR SP;
-    TADDR ControlPC;
+    TADDR ControlPC; // LOONGARCH: use RA for PC
+
+#if defined(TARGET_AMD64) && defined(TARGET_WINDOWS)
+    TADDR SSP;
+#endif
 };
 
 inline PCODE GetControlPC(const REGDISPLAY_BASE *pRD) {
@@ -131,6 +135,12 @@ inline LPVOID GetRegdisplayFPAddress(REGDISPLAY *display) {
     return (LPVOID)display->GetEbpLocation();
 }
 
+inline void SetRegdisplayPCTAddr(REGDISPLAY *display, TADDR addr)
+{
+    display->PCTAddr = addr;
+    display->ControlPC = *PTR_PCODE(addr);
+}
+
 
 // This function tells us if the given stack pointer is in one of the frames of the functions called by the given frame
 inline BOOL IsInCalleesFrames(REGDISPLAY *display, LPVOID stackPointer) {
@@ -185,6 +195,31 @@ typedef struct _Arm64VolatileContextPointer
 } Arm64VolatileContextPointer;
 #endif //TARGET_ARM64
 
+#if defined(TARGET_LOONGARCH64)
+typedef struct _LoongArch64VolatileContextPointer
+{
+    PDWORD64 R0;
+    PDWORD64 A0;
+    PDWORD64 A1;
+    PDWORD64 A2;
+    PDWORD64 A3;
+    PDWORD64 A4;
+    PDWORD64 A5;
+    PDWORD64 A6;
+    PDWORD64 A7;
+    PDWORD64 T0;
+    PDWORD64 T1;
+    PDWORD64 T2;
+    PDWORD64 T3;
+    PDWORD64 T4;
+    PDWORD64 T5;
+    PDWORD64 T6;
+    PDWORD64 T7;
+    PDWORD64 T8;
+    PDWORD64 X0;
+} LoongArch64VolatileContextPointer;
+#endif
+
 #if defined(TARGET_RISCV64)
 typedef struct _RiscV64VolatileContextPointer
 {
@@ -212,6 +247,10 @@ struct REGDISPLAY : public REGDISPLAY_BASE {
     Arm64VolatileContextPointer     volatileCurrContextPointers;
 #endif
 
+#ifdef TARGET_LOONGARCH64
+    LoongArch64VolatileContextPointer    volatileCurrContextPointers;
+#endif
+
 #ifdef TARGET_RISCV64
     RiscV64VolatileContextPointer    volatileCurrContextPointers;
 #endif
@@ -226,12 +265,12 @@ struct REGDISPLAY : public REGDISPLAY_BASE {
 
 inline TADDR GetRegdisplayFP(REGDISPLAY *display) {
     LIMITED_METHOD_CONTRACT;
-    return NULL;
+    return 0;
 }
 
 inline TADDR GetRegdisplayFPAddress(REGDISPLAY *display) {
     LIMITED_METHOD_CONTRACT;
-    return NULL;
+    return 0;
 }
 
 // This function tells us if the given stack pointer is in one of the frames of the functions called by the given frame
@@ -248,7 +287,7 @@ inline TADDR GetRegdisplayStackMark(REGDISPLAY *display)
     _ASSERTE(GetRegdisplaySP(display) == GetSP(display->pCurrentContext));
     return GetRegdisplaySP(display);
 
-#elif defined(TARGET_ARM64)
+#elif defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
 
     _ASSERTE(display->IsCallerContextValid);
     return GetSP(display->pCallerContext);
@@ -289,7 +328,7 @@ struct REGDISPLAY : public REGDISPLAY_BASE {
         memset(this, 0, sizeof(REGDISPLAY));
 
         // Setup the pointer to ControlPC field
-        pPC = &ControlPC;
+        pPC = (DWORD *)&ControlPC;
     }
 };
 
@@ -324,6 +363,8 @@ inline LPVOID GetRegdisplayReturnValue(REGDISPLAY *display)
     return (LPVOID)((TADDR)display->pCurrentContext->R0);
 #elif defined(TARGET_X86)
     return (LPVOID)display->pCurrentContext->Eax;
+#elif defined(TARGET_LOONGARCH64)
+    return (LPVOID)display->pCurrentContext->A0;
 #elif defined(TARGET_RISCV64)
     return (LPVOID)display->pCurrentContext->A0;
 #else
@@ -370,7 +411,20 @@ inline void FillContextPointers(PT_KNONVOLATILE_CONTEXT_POINTERS pCtxPtrs, PT_CO
     {
         *(&pCtxPtrs->X19 + i) = (&pCtx->X19 + i);
     }
-#elif defined(TARGET_ARM) // TARGET_ARM64
+#elif defined(TARGET_LOONGARCH64)  // TARGET_ARM64
+    *(&pCtxPtrs->S0) = &pCtx->S0;
+    *(&pCtxPtrs->S1) = &pCtx->S1;
+    *(&pCtxPtrs->S2) = &pCtx->S2;
+    *(&pCtxPtrs->S3) = &pCtx->S3;
+    *(&pCtxPtrs->S4) = &pCtx->S4;
+    *(&pCtxPtrs->S5) = &pCtx->S5;
+    *(&pCtxPtrs->S6) = &pCtx->S6;
+    *(&pCtxPtrs->S7) = &pCtx->S7;
+    *(&pCtxPtrs->S8) = &pCtx->S8;
+    *(&pCtxPtrs->Tp) = &pCtx->Tp;
+    *(&pCtxPtrs->Fp) = &pCtx->Fp;
+    *(&pCtxPtrs->Ra) = &pCtx->Ra;
+#elif defined(TARGET_ARM) // TARGET_LOONGARCH64
     // Copy over the nonvolatile integer registers (R4-R11)
     for (int i = 0; i < 8; i++)
     {
@@ -403,7 +457,7 @@ inline void FillContextPointers(PT_KNONVOLATILE_CONTEXT_POINTERS pCtxPtrs, PT_CO
 }
 #endif // FEATURE_EH_FUNCLETS
 
-inline void FillRegDisplay(const PREGDISPLAY pRD, PT_CONTEXT pctx, PT_CONTEXT pCallerCtx = NULL)
+inline void FillRegDisplay(const PREGDISPLAY pRD, PT_CONTEXT pctx, PT_CONTEXT pCallerCtx = NULL, bool fLightUnwind = false)
 {
     WRAPPER_NO_CONTRACT;
 
@@ -453,6 +507,22 @@ inline void FillRegDisplay(const PREGDISPLAY pRD, PT_CONTEXT pctx, PT_CONTEXT pC
         pRD->IsCallerSPValid      = TRUE;        // Don't add usage of this field.  This is only temporary.
     }
 
+#ifdef DEBUG_REGDISPLAY
+    pRD->_pThread = NULL;
+#endif // DEBUG_REGDISPLAY
+
+    // This will setup the PC and SP
+    SyncRegDisplayToCurrentContext(pRD);
+
+#if !defined(DACCESS_COMPILE)
+#if defined(TARGET_AMD64) && defined(TARGET_WINDOWS)
+    pRD->SSP = GetSSP(pctx);
+#endif
+#endif // !DACCESS_COMPILE
+
+    if (fLightUnwind)
+        return;
+
     FillContextPointers(&pRD->ctxPtrsOne, pctx);
 
 #if defined(TARGET_ARM)
@@ -469,7 +539,26 @@ inline void FillRegDisplay(const PREGDISPLAY pRD, PT_CONTEXT pctx, PT_CONTEXT pC
     // Fill volatile context pointers. They can be used by GC in the case of the leaf frame
     for (int i=0; i < 18; i++)
         pRD->volatileCurrContextPointers.X[i] = &pctx->X[i];
-#elif defined(TARGET_RISCV64) // TARGET_ARM64
+#elif defined(TARGET_LOONGARCH64) // TARGET_ARM64
+    pRD->volatileCurrContextPointers.A0 = &pctx->A0;
+    pRD->volatileCurrContextPointers.A1 = &pctx->A1;
+    pRD->volatileCurrContextPointers.A2 = &pctx->A2;
+    pRD->volatileCurrContextPointers.A3 = &pctx->A3;
+    pRD->volatileCurrContextPointers.A4 = &pctx->A4;
+    pRD->volatileCurrContextPointers.A5 = &pctx->A5;
+    pRD->volatileCurrContextPointers.A6 = &pctx->A6;
+    pRD->volatileCurrContextPointers.A7 = &pctx->A7;
+    pRD->volatileCurrContextPointers.T0 = &pctx->T0;
+    pRD->volatileCurrContextPointers.T1 = &pctx->T1;
+    pRD->volatileCurrContextPointers.T2 = &pctx->T2;
+    pRD->volatileCurrContextPointers.T3 = &pctx->T3;
+    pRD->volatileCurrContextPointers.T4 = &pctx->T4;
+    pRD->volatileCurrContextPointers.T5 = &pctx->T5;
+    pRD->volatileCurrContextPointers.T6 = &pctx->T6;
+    pRD->volatileCurrContextPointers.T7 = &pctx->T7;
+    pRD->volatileCurrContextPointers.T8 = &pctx->T8;
+    pRD->volatileCurrContextPointers.X0 = &pctx->X0;
+#elif defined(TARGET_RISCV64) // TARGET_LOONGARCH64
     pRD->volatileCurrContextPointers.A0 = &pctx->A0;
     pRD->volatileCurrContextPointers.A1 = &pctx->A1;
     pRD->volatileCurrContextPointers.A2 = &pctx->A2;
@@ -487,12 +576,6 @@ inline void FillRegDisplay(const PREGDISPLAY pRD, PT_CONTEXT pctx, PT_CONTEXT pC
     pRD->volatileCurrContextPointers.T6 = &pctx->T6;
 #endif // TARGET_RISCV64
 
-#ifdef DEBUG_REGDISPLAY
-    pRD->_pThread = NULL;
-#endif // DEBUG_REGDISPLAY
-
-    // This will setup the PC and SP
-    SyncRegDisplayToCurrentContext(pRD);
 #endif // !FEATURE_EH_FUNCLETS
 }
 
@@ -558,13 +641,16 @@ inline size_t * getRegAddr (unsigned regNum, PTR_CONTEXT regs)
     return (PTR_size_t)(PTR_BYTE(regs) + OFFSET_OF_REGISTERS[regNum]);
 #elif defined(TARGET_AMD64)
     _ASSERTE(regNum < 16);
-    return &regs->Rax + regNum;
+    return (size_t *)&regs->Rax + regNum;
 #elif defined(TARGET_ARM)
         _ASSERTE(regNum < 16);
         return (size_t *)&regs->R0 + regNum;
 #elif defined(TARGET_ARM64)
     _ASSERTE(regNum < 31);
     return (size_t *)&regs->X0 + regNum;
+#elif defined(TARGET_LOONGARCH64)
+    _ASSERTE(regNum < 32);
+    return (size_t *)&regs->R0 + regNum;
 #elif defined(TARGET_RISCV64)
     _ASSERTE(regNum < 32);
     return (size_t *)&regs->R0 + regNum;

@@ -30,45 +30,36 @@ if(CLR_CMAKE_HOST_ARCH_AMD64)
   message(STATUS "CLR_CMAKE_HOST_ARCH_AMD64")
   add_definitions(-DSOS_TARGET_AMD64=1)
   add_definitions(-D_TARGET_WIN64_=1)
-  add_definitions(-DDBG_TARGET_64BIT)
-  add_definitions(-DDBG_TARGET_WIN64=1)
   if (CLR_CMAKE_HOST_WIN32)
     add_definitions(-DSOS_TARGET_ARM64=1)
   endif(CLR_CMAKE_HOST_WIN32)
   remove_definitions(-D_TARGET_ARM64_=1)
   add_definitions(-D_TARGET_AMD64_)
-  add_definitions(-DDBG_TARGET_AMD64)
 elseif(CLR_CMAKE_HOST_ARCH_I386)
   message(STATUS "CLR_CMAKE_HOST_ARCH_I386")
   add_definitions(-DSOS_TARGET_X86=1)
   add_definitions(-D_TARGET_X86_=1)
   add_definitions(-DTARGET_X86)
-  add_definitions(-DDBG_TARGET_32BIT)
   if (CLR_CMAKE_HOST_WIN32)
     add_definitions(-DSOS_TARGET_ARM=1)
   endif(CLR_CMAKE_HOST_WIN32)
 elseif(CLR_CMAKE_HOST_ARCH_ARM)
   message(STATUS "CLR_CMAKE_HOST_ARCH_ARM")
   add_definitions(-DSOS_TARGET_ARM=1)
-  add_definitions(-D_TARGET_WIN32_=1)
   add_definitions(-D_TARGET_ARM_=1)
-  add_definitions(-DDBG_TARGET_32BIT)
 elseif(CLR_CMAKE_HOST_ARCH_ARM64)
   message(STATUS "CLR_CMAKE_HOST_ARCH_ARM64")
   add_definitions(-DSOS_TARGET_ARM64=1)
   add_definitions(-D_TARGET_WIN64_=1)
-  add_definitions(-DDBG_TARGET_64BIT)
-  add_definitions(-DDBG_TARGET_WIN64=1)
 elseif(CLR_CMAKE_HOST_ARCH_MIPS64)
   add_definitions(-DSOS_TARGET_MIPS64=1)
   add_definitions(-D_TARGET_WIN64_=1)
-  add_definitions(-DDBG_TARGET_64BIT)
-  add_definitions(-DDBG_TARGET_WIN64=1)
 elseif(CLR_CMAKE_HOST_ARCH_RISCV64)
   add_definitions(-DSOS_TARGET_RISCV64=1)
   add_definitions(-D_TARGET_WIN64_=1)
-  add_definitions(-DDBG_TARGET_64BIT)
-  add_definitions(-DDBG_TARGET_WIN64=1)
+elseif(CLR_CMAKE_HOST_ARCH_LOONGARCH64)
+  add_definitions(-DSOS_TARGET_LOONGARCH64=1)
+  add_definitions(-D_TARGET_WIN64_=1)
 endif()
 
 add_definitions(-DSTRIKE)  
@@ -82,7 +73,6 @@ if (CLR_CMAKE_HOST_WIN32)
   add_definitions(-DUSE_STL)
 
   set(SOS_SOURCES
-    clrma.cpp
     disasm.cpp
     dllsext.cpp
     eeheap.cpp
@@ -97,12 +87,17 @@ if (CLR_CMAKE_HOST_WIN32)
     sigparser.cpp
     sildasm.cpp
     sos.cpp
+    sosextensions.cpp
     stressLogDump.cpp
     strike.cpp
     util.cpp
     vm.cpp
     WatchCmd.cpp
     Native.rc
+    clrma/clrma.cpp
+    clrma/managedanalysis.cpp
+    clrma/exception.cpp
+    clrma/thread.cpp
     platform/datatarget.cpp
     platform/hostimpl.cpp
     platform/targetimpl.cpp
@@ -119,6 +114,7 @@ if (CLR_CMAKE_HOST_WIN32)
     extensions
     corguids
     dbgutil
+    coreclrminipal
     ${STATIC_MT_CRT_LIB}
     ${STATIC_MT_CPP_LIB}
     ${STATIC_MT_VCRT_LIB}
@@ -142,8 +138,6 @@ if (CLR_CMAKE_HOST_WIN32)
   endif(NOT CLR_CMAKE_HOST_ARCH_ARM64 AND NOT CLR_CMAKE_HOST_ARCH_ARM)
 
 else(CLR_CMAKE_HOST_WIN32)
-  add_definitions(-DFEATURE_ENABLE_HARDWARE_EXCEPTIONS)
-  add_definitions(-DPAL_STDCPP_COMPAT=1)
   add_compile_options(-Wno-null-arithmetic)
   add_compile_options(-Wno-format)
 
@@ -162,6 +156,7 @@ else(CLR_CMAKE_HOST_WIN32)
     stressLogDump.cpp
     strike.cpp
     sos.cpp
+    sosextensions.cpp
     util.cpp
     platform/datatarget.cpp
     platform/hostimpl.cpp
@@ -188,6 +183,7 @@ else(CLR_CMAKE_HOST_WIN32)
     dbgutil
     palrt
     coreclrpal
+    coreclrminipal
   )
 
 endif(CLR_CMAKE_HOST_WIN32)
@@ -223,6 +219,10 @@ elseif(CLR_CMAKE_HOST_ARCH_ARM64)
 elseif(CLR_CMAKE_HOST_ARCH_RISCV64)
   set(SOS_SOURCES_ARCH
     disasmRISCV64.cpp
+  )
+elseif(CLR_CMAKE_HOST_ARCH_LOONGARCH64)
+  set(SOS_SOURCES_ARCH
+    disasmLOONGARCH64.cpp
   )
 endif()
 

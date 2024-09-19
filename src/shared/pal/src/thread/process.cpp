@@ -40,6 +40,7 @@ SET_DEFAULT_DEBUG_CHANNEL(PROCESS); // some headers have code with asserts, so d
 #endif  // HAVE_POLL
 
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -70,6 +71,8 @@ SET_DEFAULT_DEBUG_CHANNEL(PROCESS); // some headers have code with asserts, so d
 #   define __NR_membarrier  389
 #  elif defined(__aarch64__)
 #   define __NR_membarrier  283
+#  elif defined(__loongarch64)
+#   define __NR_membarrier  283
 #  else
 #   error Unknown architecture
 #  endif
@@ -78,13 +81,14 @@ SET_DEFAULT_DEBUG_CHANNEL(PROCESS); // some headers have code with asserts, so d
 
 #ifdef __APPLE__
 #include <libproc.h>
+#include <pwd.h>
 #include <sys/sysctl.h>
 #include <sys/posix_sem.h>
 #include <mach/task.h>
 #include <mach/vm_map.h>
 extern "C"
 {
-    #include <mach/thread_state.h>
+#  include <mach/thread_state.h>
 }
 #endif // __APPLE__
 
@@ -692,7 +696,7 @@ CorUnix::InternalCreateProcess(
             }
         }
         EnvironmentEntries++;
-        EnvironmentArray = (char **)InternalMalloc(EnvironmentEntries * sizeof(char *));
+        EnvironmentArray = (char **)malloc(EnvironmentEntries * sizeof(char *));
 
         EnvironmentEntries = 0;
         // Convert the environment block to array of strings
@@ -723,7 +727,7 @@ CorUnix::InternalCreateProcess(
 
     if (NO_ERROR != palError)
     {
-        ERROR("Unable to allocate object for new proccess\n");
+        ERROR("Unable to allocate object for new process\n");
         goto InternalCreateProcessExit;
     }
 
@@ -950,7 +954,7 @@ CorUnix::InternalCreateProcess(
         pobjFileErr = NULL;
     }
 
-    /* fill PROCESS_INFORMATION strucutre */
+    /* fill PROCESS_INFORMATION structure */
     lpProcessInformation->hProcess = hProcess;
     lpProcessInformation->hThread = hDummyThread;
     lpProcessInformation->dwProcessId = processId;
@@ -1078,6 +1082,7 @@ See MSDN doc.
 --*/
 VOID
 PALAPI
+DECLSPEC_NORETURN
 RaiseFailFastException(
     IN PEXCEPTION_RECORD pExceptionRecord,
     IN PCONTEXT pContextRecord,
@@ -1087,7 +1092,7 @@ RaiseFailFastException(
     ENTRY("RaiseFailFastException");
 
     TerminateCurrentProcessNoExit(TRUE);
-    PROCAbort();
+    for (;;) PROCAbort();
 
     LOGEXIT("RaiseFailFastException");
     PERF_EXIT(RaiseFailFastException);
@@ -1837,6 +1842,7 @@ GetProcessIdDisambiguationKey(DWORD processId, UINT64 *disambiguationKey)
         TRACE("GetProcessIdDisambiguationKey: getline() FAILED");
         SetLastError(ERROR_INVALID_HANDLE);
         free(line);
+        fclose(statFile);
         return FALSE;
     }
 
@@ -1853,14 +1859,14 @@ GetProcessIdDisambiguationKey(DWORD processId, UINT64 *disambiguationKey)
         "%*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %*u %*u %*d %*d %*d %*d %*d %*d %llu \n",
          &starttime);
 
+    free(line);
+    fclose(statFile);
+
     if (sscanfRet != 1)
     {
         _ASSERTE(!"Failed to parse stat file contents with sscanf_s.");
         return FALSE;
     }
-
-    free(line);
-    fclose(statFile);
 
     *disambiguationKey = starttime;
     return TRUE;
@@ -2368,7 +2374,7 @@ CreateProcessModules(
         if (!dup)
         {
             int cbModuleName = strlen(moduleName) + 1;
-            ProcessModules *entry = (ProcessModules *)InternalMalloc(sizeof(ProcessModules) + cbModuleName);
+            ProcessModules *entry = (ProcessModules *)malloc(sizeof(ProcessModules) + cbModuleName);
             if (entry == NULL)
             {
                 DestroyProcessModules(listHead);
@@ -2451,7 +2457,7 @@ CreateProcessModules(
                 if (!dup)
                 {
                     int cbModuleName = strlen(moduleName) + 1;
-                    ProcessModules *entry = (ProcessModules *)InternalMalloc(sizeof(ProcessModules) + cbModuleName);
+                    ProcessModules *entry = (ProcessModules *)malloc(sizeof(ProcessModules) + cbModuleName);
                     if (entry == NULL)
                     {
                         DestroyProcessModules(listHead);
@@ -2520,9 +2526,11 @@ Parameters:
 
   Does not return
 --*/
+#if !defined(HOST_ARM)
 PAL_NORETURN
+#endif
 VOID
-PROCAbort()
+PROCAbort(int signal, siginfo_t* siginfo)
 {
     // Abort the process after waiting for the core dump to complete
     abort();
@@ -3031,8 +3039,7 @@ getFileName(
                                             NULL, 0, NULL, NULL);
 
         /* if only a file name is specified, prefix it with "./" */
-        if ((*lpApplicationName != '.') && (*lpApplicationName != '/') &&
-            (*lpApplicationName != '\\'))
+        if ((*lpApplicationName != '.') && (*lpApplicationName != '/'))
         {
             length += 2;
             lpTemp = lpPathFileName.OpenStringBuffer(length);
@@ -3061,9 +3068,6 @@ getFileName(
         }
 
         lpPathFileName.CloseBuffer(length -1);
-
-        /* Replace '\' by '/' */
-        FILEDosToUnixPathA(lpTemp);
 
         return TRUE;
     }
@@ -3135,8 +3139,6 @@ getFileName(
         /* restore last character */
         *lpEnd = wcEnd;
 
-        /* Replace '\' by '/' */
-        FILEDosToUnixPathA(lpFileName);
         if (!getPath(lpFileNamePS, lpPathFileName))
         {
             /* file is not in the path */
@@ -3206,7 +3208,7 @@ Abstract:
 
 Parameters:
     IN  lpCommandLine: second parameter from CreateProcessW (an unicode string)
-    IN  lpAppPath: cannonical name of the application to launched
+    IN  lpAppPath: canonical name of the application to launched
     OUT lppArgv: array of arguments to be passed to the new process
 
 Return:
@@ -3254,7 +3256,7 @@ buildArgv(
     pThread = InternalGetCurrentThread();
     /* make sure to allocate enough space, up for the worst case scenario */
     int iLength = (iWlen + lpAppPath.GetCount() + 2);
-    lpAsciiCmdLine = (char *) InternalMalloc(iLength);
+    lpAsciiCmdLine = (char *) malloc(iLength);
 
     if (lpAsciiCmdLine == NULL)
     {
@@ -3264,7 +3266,7 @@ buildArgv(
 
     pChar = lpAsciiCmdLine;
 
-    /* put the cannonical name of the application as the first parameter */
+    /* put the canonical name of the application as the first parameter */
     if ((strcpy_s(lpAsciiCmdLine, iLength, "\"") != SAFECRT_SUCCESS) ||
         (strcat_s(lpAsciiCmdLine, iLength, lpAppPath) != SAFECRT_SUCCESS) ||
         (strcat_s(lpAsciiCmdLine, iLength,  "\"") != SAFECRT_SUCCESS) ||
@@ -3434,7 +3436,7 @@ buildArgv(
 
     /* allocate lppargv according to the number of arguments
        in the command line */
-    lppArgv = (char **) InternalMalloc((((*pnArg)+1) * sizeof(char *)));
+    lppArgv = (char **) malloc((((*pnArg)+1) * sizeof(char *)));
 
     if (lppArgv == NULL)
     {
@@ -3658,18 +3660,3 @@ getPath(
     TRACE("File %s not found in $PATH\n", lpFileName);
     return FALSE;
 }
-
-/*++
-Function:
-    ~CProcProcessLocalData
-
-Process data destructor
---*/
-CorUnix::CProcProcessLocalData::~CProcProcessLocalData()
-{
-    if (pProcessModules != NULL)
-    {
-        DestroyProcessModules(pProcessModules);
-    }
-}
-

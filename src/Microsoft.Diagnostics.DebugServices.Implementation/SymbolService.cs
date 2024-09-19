@@ -7,11 +7,15 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using Azure.Core;
+using Azure.Identity;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
@@ -32,6 +36,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Symbol server URLs
         /// </summary>
         public const string MsdlSymbolServer = "https://msdl.microsoft.com/download/symbols/";
+        public const string SymwebSymbolServer = "https://symweb.azurefd.net/";
+
+        private static string _symwebHost = new Uri(SymwebSymbolServer).Host;
 
         private readonly IHost _host;
         private string _defaultSymbolCache;
@@ -207,9 +214,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     if (symbolServerPath != null)
                     {
-                        if (!AddSymbolServer(symbolServerPath: symbolServerPath.Trim()))
+                        symbolServerPath = symbolServerPath.Trim();
+                        if (IsSymweb(symbolServerPath))
                         {
-                            return false;
+                            if (!AddSymwebSymbolServer(includeInteractiveCredentials: false))
+                            {
+                                return false;
+                            }
+                        }
+                        else
+                        {
+                            if (!AddSymbolServer(symbolServerPath))
+                            {
+                                return false;
+                            }
                         }
                     }
                     foreach (string symbolCachePath in symbolCachePaths.Reverse<string>())
@@ -227,18 +245,88 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// Add the cloud symweb symbol server with authentication.
+        /// </summary>
+        /// <param name="includeInteractiveCredentials">specifies whether credentials requiring user interaction will be included in the default authentication flow</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
+        /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
+        /// <returns>if false, failure</returns>
+        public bool AddSymwebSymbolServer(
+            bool includeInteractiveCredentials = false,
+            int? timeoutInMinutes = null,
+            int? retryCount = null)
+        {
+            TokenCredential tokenCredential = new DefaultAzureCredential(includeInteractiveCredentials);
+            AccessToken accessToken;
+            async ValueTask<AuthenticationHeaderValue> authenticationFunc(CancellationToken token)
+            {
+                try
+                {
+                    if (accessToken.ExpiresOn <= DateTimeOffset.UtcNow.AddMinutes(2))
+                    {
+                        accessToken = await tokenCredential.GetTokenAsync(new TokenRequestContext(["api://af9e1c69-e5e9-4331-8cc5-cdf93d57bafa/.default"]), token).ConfigureAwait(false);
+                    }
+                    return new AuthenticationHeaderValue("Bearer", accessToken.Token);
+                }
+                catch (Exception ex) when (ex is CredentialUnavailableException or AuthenticationFailedException)
+                {
+                    Trace.TraceError($"AddSymwebSymbolServer: {ex}");
+                    return null;
+                }
+            }
+            return AddSymbolServer(SymwebSymbolServer, timeoutInMinutes, retryCount, authenticationFunc);
+        }
+
+        /// <summary>
+        /// Add symbol server to search path. The server URL can be the cloud symweb.
+        /// </summary>
+        /// <param name="accessToken">PAT or access token</param>
+        /// <param name="symbolServerPath">symbol server url (optional, uses <see cref="DefaultSymbolPath"/> if null)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
+        /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
+        /// <returns>if false, failure</returns>
+        public bool AddAuthenticatedSymbolServer(
+            string accessToken,
+            string symbolServerPath = null,
+            int? timeoutInMinutes = null,
+            int? retryCount = null)
+        {
+            if (accessToken == null)
+            {
+                throw new ArgumentNullException(nameof(accessToken));
+            }
+            AuthenticationHeaderValue authenticationValue = new("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($":{accessToken}")));
+            return AddSymbolServer(symbolServerPath, timeoutInMinutes, retryCount, (_) => new ValueTask<AuthenticationHeaderValue>(authenticationValue));
+        }
+
+        /// <summary>
         /// Add symbol server to search path.
         /// </summary>
         /// <param name="symbolServerPath">symbol server url (optional, uses <see cref="DefaultSymbolPath"/> if null)</param>
-        /// <param name="authToken">PAT for secure symbol server (optional)</param>
         /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
         /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
         /// <returns>if false, failure</returns>
         public bool AddSymbolServer(
             string symbolServerPath = null,
-            string authToken = null,
             int? timeoutInMinutes = null,
             int? retryCount = null)
+        {
+            return AddSymbolServer(symbolServerPath, timeoutInMinutes, retryCount, authenticationFunc: null);
+        }
+
+        /// <summary>
+        /// Add symbol server to search path.
+        /// </summary>
+        /// <param name="symbolServerPath">symbol server url (optional, uses <see cref="DefaultSymbolPath"/> if null)</param>
+        /// <param name="timeoutInMinutes">symbol server timeout in minutes (optional uses <see cref="DefaultTimeout"/> if null)</param>
+        /// <param name="retryCount">number of retries (optional uses <see cref="DefaultRetryCount"/> if null)</param>
+        /// <param name="authenticationFunc">function that returns the authentication value for a request</param>
+        /// <returns>if false, failure</returns>
+        public bool AddSymbolServer(
+            string symbolServerPath,
+            int? timeoutInMinutes,
+            int? retryCount,
+            Func<CancellationToken, ValueTask<AuthenticationHeaderValue>> authenticationFunc)
         {
             // Add symbol server URL if exists
             symbolServerPath ??= DefaultSymbolPath;
@@ -260,9 +348,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (!IsDuplicateSymbolStore<HttpSymbolStore>(store, (httpSymbolStore) => uri.Equals(httpSymbolStore.Uri)))
                 {
                     // Create http symbol server store
-                    HttpSymbolStore httpSymbolStore = new(Tracer.Instance, store, uri, personalAccessToken: authToken);
-                    httpSymbolStore.Timeout = TimeSpan.FromMinutes(timeoutInMinutes.GetValueOrDefault(DefaultTimeout));
-                    httpSymbolStore.RetryCount = retryCount.GetValueOrDefault(DefaultRetryCount);
+                    HttpSymbolStore httpSymbolStore = new(Tracer.Instance, store, uri, authenticationFunc)
+                    {
+                        Timeout = TimeSpan.FromMinutes(timeoutInMinutes.GetValueOrDefault(DefaultTimeout)),
+                        RetryCount = retryCount.GetValueOrDefault(DefaultRetryCount)
+                    };
                     SetSymbolStore(httpSymbolStore);
                 }
             }
@@ -951,6 +1041,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             });
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Returns true if cloud symweb server
+        /// </summary>
+        /// <param name="server"></param>
+        private static bool IsSymweb(string server)
+        {
+            try
+            {
+                Uri uri = new(server);
+                return uri.Host.Equals(_symwebHost, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex) when (ex is UriFormatException or InvalidOperationException)
+            {
+                return false;
+            }
         }
 
         /// <summary>

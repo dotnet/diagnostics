@@ -27,26 +27,8 @@
 
 #include "sos.h"
 #include "disasm.h"
-
-#ifdef _ASSERTE
-#undef _ASSERTE
-#endif
-
-#define _ASSERTE(a) {;}
-
 #include "gcdesc.h"
-
 #include "safemath.h"
-
-
-#undef _ASSERTE
-
-#ifdef _DEBUG
-#define _ASSERTE(expr)         \
-    do { if (!(expr) ) { ExtErr("_ASSERTE fired:\n\t%s\n", #expr); if (IsDebuggerPresent()) DebugBreak(); } } while (0)
-#else
-#define _ASSERTE(x)
-#endif
 
 inline size_t ALIGN_DOWN( size_t val, size_t alignment )
 {

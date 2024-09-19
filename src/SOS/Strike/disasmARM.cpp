@@ -28,9 +28,6 @@
 namespace ARMGCDump
 {
 #undef TARGET_X86
-#undef LIMITED_METHOD_CONTRACT
-#define LIMITED_METHOD_DAC_CONTRACT ((void)0)
-#define SUPPORTS_DAC ((void)0)
 #define LF_GCROOTS
 #define LL_INFO1000
 #define LOG(x)
@@ -255,9 +252,9 @@ static TADDR MDForCall (TADDR callee)
 {
     // call managed code?
     JITTypes jitType;
-    TADDR methodDesc;
     TADDR PC = callee;
-    TADDR gcinfoAddr;
+    DWORD_PTR methodDesc;
+    DWORD_PTR gcinfoAddr;
 
     PC = GetRealCallTarget(callee);
     if (!PC)

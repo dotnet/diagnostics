@@ -398,7 +398,7 @@ namespace CorUnix
         friend class CPalSynchronizationManager;
 
         // NB: For perforformance purposes this class is supposed
-        //     to have no virtual methods, contructor and
+        //     to have no virtual methods, constructor and
         //     destructor
     public:
         enum ControllerType { WaitController, StateController };
@@ -489,7 +489,7 @@ namespace CorUnix
     class CPalSynchronizationManager : public IPalSynchronizationManager
     {
         friend class CPalSynchMgrController;
-        template <class T> friend T *CorUnix::InternalNew();
+        template <class T, class... Ts> friend T *CorUnix::InternalNew(Ts... args);
 
     public:
         // types

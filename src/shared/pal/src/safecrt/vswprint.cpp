@@ -16,12 +16,11 @@
 #include <errno.h>
 #include <limits.h>
 #include "internal_securecrt.h"
-
 #include "mbusafecrt_internal.h"
 
 typedef int (*WOUTPUTFN)(miniFILE *, const char16_t *, va_list);
 
-static int _vswprintf_helper( WOUTPUTFN outfn, char16_t *string, size_t count, const char16_t *format, va_list ap );
+static int _vswprintf_helper(WOUTPUTFN outfn, char16_t *string, size_t count, const char16_t *format, va_list ap);
 
 /***
 *int vswprintf_s(string, sizeInWords, format, ap) - print formatted data to string from arg ptr

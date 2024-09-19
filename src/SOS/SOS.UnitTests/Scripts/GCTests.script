@@ -53,7 +53,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 SOSCOMMAND:DumpObj <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
 VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
-VERIFY:\s+EEClass:\s+<HEXVAL>\s+
+VERIFY:\s+(EEClass|Canonical MethodTable):\s+<HEXVAL>\s+
 VERIFY:\s+Fields:\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
@@ -61,12 +61,12 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _stati
 SOSCOMMAND:DumpObj -nofields <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
 VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
-VERIFY:\s+EEClass:\s+<HEXVAL>\s+
+VERIFY:\s+(EEClass|Canonical MethodTable):\s+<HEXVAL>\s+
 
 SOSCOMMAND:DumpObj -refs <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
 VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
-VERIFY:\s+EEClass:\s+<HEXVAL>\s+
+VERIFY:\s+(EEClass|Canonical MethodTable):\s+<HEXVAL>\s+
 VERIFY:\s+Fields:\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
@@ -133,7 +133,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+GCWhere\.Main\(\)\s+
 SOSCOMMAND:DumpObj <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
 VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
-VERIFY:\s+EEClass:\s+<HEXVAL>\s+
+VERIFY:\s+(EEClass|Canonical MethodTable):\s+<HEXVAL>\s+
 VERIFY:\s+Fields:\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+
@@ -141,12 +141,12 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _stati
 SOSCOMMAND:DumpObj -nofields <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
 VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
-VERIFY:\s+EEClass:\s+<HEXVAL>\s+
+VERIFY:\s+(EEClass|Canonical MethodTable):\s+<HEXVAL>\s+
 
 SOSCOMMAND:DumpObj -refs <PREVPOUT>
 VERIFY:\s*Name:\s+GCWhere\s+
 VERIFY:\s+MethodTable:\s+<HEXVAL>\s+
-VERIFY:\s+EEClass:\s+<HEXVAL>\s+
+VERIFY:\s+(EEClass|Canonical MethodTable):\s+<HEXVAL>\s+
 VERIFY:\s+Fields:\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.String.*_string\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.UInt64.*52704621242434 _static\s+

@@ -8,23 +8,110 @@ namespace Microsoft.FileFormats.PDB
 {
     public class PDBFile : IDisposable
     {
-        private readonly Reader _reader;
-        private readonly Lazy<PDBFileHeader> _header;
+        /// <summary>
+        /// This provides access to the container file, which may be either MSF (uncompressed PDB)
+        /// or MSFZ (compressed PDB). If this field is null, then this PDBFile is invalid.
+        /// </summary>
+        private readonly IMSFFile _msfFile;
+
         private readonly Lazy<Reader[]> _streams;
         private readonly Lazy<PDBNameStream> _nameStream;
         private readonly Lazy<DbiStream> _dbiStream;
 
         public PDBFile(IAddressSpace dataSource)
         {
-            _reader = new Reader(dataSource);
-            _header = new Lazy<PDBFileHeader>(() => _reader.Read<PDBFileHeader>(0));
+            Reader reader = new(dataSource);
             _streams = new Lazy<Reader[]>(ReadDirectory);
-            _nameStream = new Lazy<PDBNameStream>(() => new PDBNameStream(Streams[1]));
-            _dbiStream = new Lazy<DbiStream>(() => new DbiStream(Streams[3]));
+            _nameStream = new Lazy<PDBNameStream>(() => {
+                CheckValid();
+                return new PDBNameStream(_msfFile.GetStream(1));
+            });
+            _dbiStream = new Lazy<DbiStream>(() => {
+                CheckValid();
+                return new DbiStream(_msfFile.GetStream(3));
+            });
+
+            if (reader.Length > reader.SizeOf<PDBFileHeader>())
+            {
+                PDBFileHeader msfFileHeader = reader.Read<PDBFileHeader>(0);
+                if (msfFileHeader.IsMagicValid)
+                {
+                    MSFFile msfFile = MSFFile.OpenInternal(reader, msfFileHeader);
+                    if (msfFile != null)
+                    {
+                        _msfFile = msfFile;
+                        return;
+                    }
+                }
+            }
+
+            if (reader.Length > reader.SizeOf<MSFZFileHeader>())
+            {
+                MSFZFileHeader msfzFileHeader = reader.Read<MSFZFileHeader>(0);
+                if (msfzFileHeader.IsMagicValid)
+                {
+                    MSFZFile msfzFile = MSFZFile.Open(dataSource);
+                    if (msfzFile != null)
+                    {
+                        _msfFile = msfzFile;
+                        return;
+                    }
+                }
+            }
         }
 
-        public PDBFileHeader Header { get { return _header.Value; } }
+        /// <summary>
+        /// Opens a PDB file. If the operation is not successful, this method will throw an exception, rather
+        /// than return an invalid PDBFile object.
+        /// </summary>
+        public static PDBFile Open(IAddressSpace dataSource)
+        {
+            PDBFile pdbFile = new(dataSource);
+            if (pdbFile.IsValid())
+            {
+                return pdbFile;
+            }
+            else
+            {
+                throw new BadInputFormatException("The specified file is not a PDB (uses neither MSF nor MSFZ container format).");
+            }
+        }
+
+        [Obsolete("Switch to using NumStreams and GetStream. The 'Streams' collection is inefficient.")]
         public IList<Reader> Streams { get { return _streams.Value; } }
+
+        private void CheckValid()
+        {
+            if (_msfFile == null)
+            {
+                throw new Exception("Object is not valid");
+            }
+        }
+
+        /// <summary>
+        /// The number of streams stored in the file. This will always be at least 1.
+        /// </summary>
+        public uint NumStreams
+        {
+            get
+            {
+                CheckValid();
+                return _msfFile.NumStreams;
+            }
+        }
+
+        /// <summary>
+        /// Gets an object which can read the given stream.
+        /// </summary>
+        /// <param name="stream">The index of the stream. This must be less than NumStreams.</param>
+        /// <returns>A Reader which can read the stream.</returns>
+        public Reader GetStream(uint stream)
+        {
+            CheckValid();
+            return _msfFile.GetStream(stream);
+        }
+
+
         public PDBNameStream NameStream { get { return _nameStream.Value; } }
         public DbiStream DbiStream { get { return _dbiStream.Value; } }
         public uint Age { get { return NameStream.Header.Age; } }
@@ -33,50 +120,59 @@ namespace Microsoft.FileFormats.PDB
 
         public void Dispose()
         {
-            if (_reader.DataSource is IDisposable disposable)
-            {
-                disposable.Dispose();
-            }
+            IDisposable msfFile = _msfFile as IDisposable;
+            msfFile?.Dispose();
         }
 
         public bool IsValid()
         {
-            if (_reader.Length > _reader.SizeOf<PDBFileHeader>()) {
-                return Header.IsMagicValid.Check();
-            }
-            return false;
+            return _msfFile != null;
         }
 
         private Reader[] ReadDirectory()
         {
-            Header.IsMagicValid.CheckThrowing();
-            uint secondLevelPageCount = ToPageCount(Header.DirectorySize);
-            ulong pageIndicesOffset = _reader.SizeOf<PDBFileHeader>();
-            PDBPagedAddressSpace secondLevelPageList = CreatePagedAddressSpace(_reader.DataSource, pageIndicesOffset, secondLevelPageCount * sizeof(uint));
-            PDBPagedAddressSpace directoryContent = CreatePagedAddressSpace(secondLevelPageList, 0, Header.DirectorySize);
+            // We have already read the Stream Directory, in the constructor of PDBFile.
+            // The purpose of this function is to provide backward compatibility with the old
+            // 'Streams' property.  New code should not use `Streams`; instead, new code should
+            // directly call `ReadStream`.
 
-            Reader directoryReader = new(directoryContent);
-            ulong position = 0;
-            uint countStreams = directoryReader.Read<uint>(ref position);
-            uint[] streamSizes = directoryReader.ReadArray<uint>(ref position, countStreams);
-            Reader[] streams = new Reader[countStreams];
-            for (uint i = 0; i < streamSizes.Length; i++)
+            int numStreams = (int)this.NumStreams;
+
+            Reader[] streamReaders = new Reader[numStreams];
+
+            for (int i = 1; i < numStreams; ++i)
             {
-                streams[i] = new Reader(CreatePagedAddressSpace(directoryContent, position, streamSizes[i]));
-                position += ToPageCount(streamSizes[i]) * sizeof(uint);
+                streamReaders[i] = GetStream((uint)i);
             }
-            return streams;
+            return streamReaders;
         }
 
-        private PDBPagedAddressSpace CreatePagedAddressSpace(IAddressSpace indicesData, ulong offset, uint length)
+        /// <summary>
+        /// Returns the container kind used for this PDB file.
+        /// </summary>
+        public PDBContainerKind ContainerKind
         {
-            uint[] indices = new Reader(indicesData).ReadArray<uint>(offset, ToPageCount(length));
-            return new PDBPagedAddressSpace(_reader.DataSource, indices, Header.PageSize, length);
+            get
+            {
+                CheckValid();
+                return _msfFile.ContainerKind;
+            }
         }
 
-        private uint ToPageCount(uint size)
+        /// <summary>
+        /// Returns a string which identifies the container kind, using a backward-compatible naming scheme.
+        /// <summary>
+        /// <para>
+        /// The existing PDB format is identified as "pdb", while PDZ (MSFZ) is identified as "msfz0".
+        /// This allows new versions of MSFZ to be identified and deployed without updating clients of this API.
+        /// </para>
+        public string ContainerKindSpecString
         {
-            return unchecked((Header.PageSize + size - 1) / Header.PageSize);
+            get
+            {
+                CheckValid();
+                return _msfFile.ContainerKindSpecString;
+            }
         }
     }
 
@@ -183,5 +279,21 @@ namespace Microsoft.FileFormats.PDB
         }
 
         public DbiStreamHeader Header { get { _header.Value.IsHeaderValid.CheckThrowing(); return _header.Value; } }
+    }
+
+    /// <summary>
+    /// Specifies the kinds of PDB container formats.
+    /// </summary>
+    public enum PDBContainerKind
+    {
+        /// <summary>
+        /// An uncompressed PDB.
+        /// </summary>
+        MSF,
+
+        /// <summary>
+        /// A compressed PDB, also known as a PDBZ or "PDB using MSFZ container".
+        /// </summary>
+        MSFZ,
     }
 }

@@ -138,7 +138,7 @@ FindFirstFileA(
         goto done;
     }
 
-    find_data = (find_obj *)InternalMalloc(sizeof(find_obj));
+    find_data = (find_obj *)malloc(sizeof(find_obj));
     if ( find_data == NULL )
     {
         ERROR("Unable to allocate memory for find_data\n");
@@ -177,7 +177,6 @@ FindFirstFileA(
                 SetLastError( ERROR_INTERNAL_ERROR );
                 goto done;
             }
-            FILEDosToUnixPathA( lpTemp );
             FILEGetProperNotFoundError( lpTemp, &dwLastError );
 
             if ( ERROR_PATH_NOT_FOUND == dwLastError )
@@ -907,11 +906,6 @@ static BOOL FILEDosGlobA( CPalThread *pthrCurrent,
         SetLastError(ERROR_PATH_NOT_FOUND);
         result = FALSE;
         goto done;
-    }
-
-    if (Dir[0] != 0)
-    {
-         FILEDosToUnixPathA( Dir );
     }
 
     /* The meat of the routine happens below. Basically, there are three

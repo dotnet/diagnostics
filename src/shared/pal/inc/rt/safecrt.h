@@ -86,15 +86,6 @@
 #endif
 #endif
 
-/* NULL */
-#if !defined(NULL)
-#if !defined(__cplusplus)
-#define NULL 0
-#else
-#define NULL ((void *)0)
-#endif
-#endif
-
 /* _W64 */
 #if !defined(_W64)
 #if !defined(__midl) && (defined(HOST_X86) || defined(_M_IX86)) && _MSC_VER >= 1300
@@ -102,16 +93,6 @@
 #else
 #define _W64
 #endif
-#endif
-
-/* uintptr_t */
-#if !defined(_UINTPTR_T_DEFINED)
-#if defined(HOST_64BIT)
-typedef unsigned __int64    uintptr_t;
-#else
-typedef _W64 unsigned int   uintptr_t;
-#endif
-#define _UINTPTR_T_DEFINED
 #endif
 
 #ifdef __GNUC__
@@ -370,7 +351,6 @@ void __cdecl _invalid_parameter(const WCHAR *_Message, const WCHAR *_FunctionNam
 #define _tcsncat_s      strncat_s
 #define _tcsset_s       _strset_s
 #define _tcsnset_s      _strnset_s
-#define _tcstok_s       strtok_s
 #define _vsntprintf_s   _vsnprintf_s
 
 #elif defined(_UNICODE) || defined(UNICODE)
@@ -381,11 +361,8 @@ void __cdecl _invalid_parameter(const WCHAR *_Message, const WCHAR *_FunctionNam
 #define _tcsncat_s      wcsncat_s
 #define _tcsset_s       _wcsset_s
 #define _tcsnset_s      _wcsnset_s
-#define _tcstok_s       wcstok_s
 #define _tmakepath_s    _wmakepath_s
-#define _tsplitpath_s   _wsplitpath_s
 #define _stprintf_s     swprintf_s
-#define _vsntprintf_s   _vsnwprintf_s
 #define _tscanf_s       wscanf_s
 #define _tsscanf_s      swscanf_s
 
@@ -1120,205 +1097,6 @@ errno_t __cdecl _wcsnset_s(WCHAR *_Dst, size_t _SizeInWords, WCHAR _Value, size_
 
 #endif
 
-/* strtok_s */
-/*
- * strtok_s, wcstok_s ;
- * uses _Context to keep track of the position in the string.
- */
-_SAFECRT__EXTERN_C
-char * __cdecl strtok_s(char *_String, const char *_Control, char **_Context);
-
-#if _SAFECRT_USE_INLINES || _SAFECRT_IMPL
-
-_SAFECRT__INLINE
-char * __cdecl strtok_s(char *_String, const char *_Control, char **_Context)
-{
-    unsigned char *str;
-    const unsigned char *ctl = (const unsigned char *)_Control;
-    unsigned char map[32];
-    int count;
-
-    /* validation section */
-    _SAFECRT__VALIDATE_POINTER_ERROR_RETURN(_Context, EINVAL, nullptr);
-    _SAFECRT__VALIDATE_POINTER_ERROR_RETURN(_Control, EINVAL, nullptr);
-    _SAFECRT__VALIDATE_CONDITION_ERROR_RETURN(_String != nullptr || *_Context != nullptr, EINVAL, nullptr);
-
-    /* Clear control map */
-    for (count = 0; count < 32; count++)
-    {
-        map[count] = 0;
-    }
-
-    /* Set bits in delimiter table */
-    do {
-        map[*ctl >> 3] |= (1 << (*ctl & 7));
-    } while (*ctl++);
-
-    /* If string is nullptr, set str to the saved
-    * pointer (i.e., continue breaking tokens out of the string
-    * from the last strtok call) */
-    if (_String != nullptr)
-    {
-        str = (unsigned char *)_String;
-    }
-    else
-    {
-        str = (unsigned char *)*_Context;
-    }
-
-    /* Find beginning of token (skip over leading delimiters). Note that
-    * there is no token iff this loop sets str to point to the terminal
-    * null (*str == 0) */
-    while ((map[*str >> 3] & (1 << (*str & 7))) && *str != 0)
-    {
-        str++;
-    }
-
-    _String = (char *)str;
-
-    /* Find the end of the token. If it is not the end of the string,
-    * put a null there. */
-    for ( ; *str != 0 ; str++ )
-    {
-        if (map[*str >> 3] & (1 << (*str & 7)))
-        {
-            *str++ = 0;
-            break;
-        }
-    }
-
-    /* Update context */
-    *_Context = (char *)str;
-
-    /* Determine if a token has been found. */
-    if (_String == (char *)str)
-    {
-        return nullptr;
-    }
-    else
-    {
-        return _String;
-    }
-}
-#endif
-
-/* wcstok_s */
-_SAFECRT__EXTERN_C
-WCHAR * __cdecl wcstok_s(WCHAR *_String, const WCHAR *_Control, WCHAR **_Context);
-
-#if _SAFECRT_USE_INLINES || _SAFECRT_IMPL
-
-_SAFECRT__INLINE
-WCHAR * __cdecl wcstok_s(WCHAR *_String, const WCHAR *_Control, WCHAR **_Context)
-{
-    WCHAR *token;
-    const WCHAR *ctl;
-
-    /* validation section */
-    _SAFECRT__VALIDATE_POINTER_ERROR_RETURN(_Context, EINVAL, nullptr);
-    _SAFECRT__VALIDATE_POINTER_ERROR_RETURN(_Control, EINVAL, nullptr);
-    _SAFECRT__VALIDATE_CONDITION_ERROR_RETURN(_String != nullptr || *_Context != nullptr, EINVAL, nullptr);
-
-    /* If string==nullptr, continue with previous string */
-    if (!_String)
-    {
-        _String = *_Context;
-    }
-
-    /* Find beginning of token (skip over leading delimiters). Note that
-    * there is no token iff this loop sets string to point to the terminal null. */
-    for ( ; *_String != 0 ; _String++)
-    {
-        for (ctl = _Control; *ctl != 0 && *ctl != *_String; ctl++)
-            ;
-        if (*ctl == 0)
-        {
-            break;
-        }
-    }
-
-    token = _String;
-
-    /* Find the end of the token. If it is not the end of the string,
-    * put a null there. */
-    for ( ; *_String != 0 ; _String++)
-    {
-        for (ctl = _Control; *ctl != 0 && *ctl != *_String; ctl++)
-            ;
-        if (*ctl != 0)
-        {
-            *_String++ = 0;
-            break;
-        }
-    }
-
-    /* Update the context */
-    *_Context = _String;
-
-    /* Determine if a token has been found. */
-    if (token == _String)
-    {
-        return nullptr;
-    }
-    else
-    {
-        return token;
-    }
-}
-#endif
-
-#ifndef PAL_STDCPP_COMPAT
-/* strnlen */
-/*
- * strnlen, wcsnlen ;
- * returns inMaxSize if the null character is not found.
- */
-_SAFECRT__EXTERN_C
-size_t __cdecl strnlen(const char* inString, size_t inMaxSize);
-
-#if _SAFECRT_USE_INLINES || _SAFECRT_IMPL
-
-_SAFECRT__INLINE
-size_t __cdecl strnlen(const char* inString, size_t inMaxSize)
-{
-    size_t n;
-
-    /* Note that we do not check if s == nullptr, because we do not
-     * return errno_t...
-     */
-
-    for (n = 0; n < inMaxSize && *inString; n++, inString++)
-        ;
-
-    return n;
-}
-
-#endif
-
-/* wcsnlen */
-_SAFECRT__EXTERN_C
-size_t __cdecl wcsnlen(const WCHAR *inString, size_t inMaxSize);
-
-#if _SAFECRT_USE_INLINES || _SAFECRT_IMPL
-
-_SAFECRT__INLINE
-size_t __cdecl wcsnlen(const WCHAR *inString, size_t inMaxSize)
-{
-    size_t n;
-
-    /* Note that we do not check if s == nullptr, because we do not
-     * return errno_t...
-     */
-
-    for (n = 0; n < inMaxSize && *inString; n++, inString++)
-        ;
-
-    return n;
-}
-
-#endif
-#endif // PAL_STDCPP_COMPAT
-
 /* _wmakepath_s */
 _SAFECRT__EXTERN_C
 errno_t __cdecl _wmakepath_s(WCHAR *_Dst, size_t _SizeInWords, const WCHAR *_Drive, const WCHAR *_Dir, const WCHAR *_Filename, const WCHAR *_Ext);
@@ -1371,13 +1149,13 @@ errno_t __cdecl _wmakepath_s(WCHAR *_Dst, size_t _SizeInWords, const WCHAR *_Dri
         } while (*p != 0);
 
         p = p - 1;
-        if (*p != L'/' && *p != L'\\')
+        if (*p != L'/')
         {
             if(++written >= _SizeInWords)
             {
                 goto error_return;
             }
-            *d++ = L'\\';
+            *d++ = L'/';
         }
     }
 
@@ -1433,228 +1211,10 @@ error_return:
 }
 #endif
 
-/* _wsplitpath_s */
-_SAFECRT__EXTERN_C
-errno_t __cdecl _wsplitpath_s(
-    const WCHAR *_Path,
-    WCHAR *_Drive, size_t _DriveSize,
-    WCHAR *_Dir, size_t _DirSize,
-    WCHAR *_Filename, size_t _FilenameSize,
-    WCHAR *_Ext, size_t _ExtSize
-);
-
-/* no C++ overload for _wsplitpath_s */
-
-#if _SAFECRT_USE_INLINES || _SAFECRT_IMPL
-
-_SAFECRT__INLINE
-errno_t __cdecl _wsplitpath_s(
-    const WCHAR *_Path,
-    WCHAR *_Drive, size_t _DriveSize,
-    WCHAR *_Dir, size_t _DirSize,
-    WCHAR *_Filename, size_t _FilenameSize,
-    WCHAR *_Ext, size_t _ExtSize
-)
-{
-    const WCHAR *tmp;
-    const WCHAR *last_slash;
-    const WCHAR *dot;
-    int drive_set = 0;
-    size_t length = 0;
-    int bEinval = 0;
-
-    /* validation section */
-    _SAFECRT__VALIDATE_POINTER(_Path);
-    if ((_Drive == nullptr && _DriveSize != 0) || (_Drive != nullptr && _DriveSize == 0))
-    {
-        goto error_einval;
-    }
-    if ((_Dir == nullptr && _DirSize != 0) || (_Dir != nullptr && _DirSize == 0))
-    {
-        goto error_einval;
-    }
-    if ((_Filename == nullptr && _FilenameSize != 0) || (_Filename != nullptr && _FilenameSize == 0))
-    {
-        goto error_einval;
-    }
-    if ((_Ext == nullptr && _ExtSize != 0) || (_Ext != nullptr && _ExtSize == 0))
-    {
-        goto error_einval;
-    }
-
-    /* check if _Path begins with the longpath prefix */
-    if (_Path[0] == L'\\' && _Path[1] == L'\\' && _Path[2] == L'?' && _Path[3] == L'\\')
-    {
-        _Path += 4;
-    }
-
-    /* extract drive letter and ':', if any */
-    if (!drive_set)
-    {
-        size_t skip = _MAX_DRIVE - 2;
-        tmp = _Path;
-        while (skip > 0 && *tmp != 0)
-        {
-            skip--;
-            tmp++;
-        }
-        if (*tmp == L':')
-        {
-            if (_Drive != nullptr)
-            {
-                if (_DriveSize < _MAX_DRIVE)
-                {
-                    goto error_erange;
-                }
-                wcsncpy_s(_Drive, _DriveSize, _Path, _MAX_DRIVE - 1);
-            }
-            _Path = tmp + 1;
-        }
-        else
-        {
-            if (_Drive != nullptr)
-            {
-                _SAFECRT__RESET_STRING(_Drive, _DriveSize);
-            }
-        }
-    }
-
-    /* extract path string, if any. _Path now points to the first character
-     * of the path, if any, or the filename or extension, if no path was
-     * specified.  Scan ahead for the last occurrence, if any, of a '/' or
-     * '\' path separator character.  If none is found, there is no path.
-     * We will also note the last '.' character found, if any, to aid in
-     * handling the extension.
-     */
-    last_slash = nullptr;
-    dot = nullptr;
-    tmp = _Path;
-    for (; *tmp != 0; ++tmp)
-    {
-        {
-            if (*tmp == L'/' || *tmp == L'\\')
-            {
-                /* point to one beyond for later copy */
-                last_slash = tmp + 1;
-            }
-            else if (*tmp == L'.')
-            {
-                dot = tmp;
-            }
-        }
-    }
-
-    if (last_slash != nullptr)
-    {
-        /* found a path - copy up through last_slash or max characters
-         * allowed, whichever is smaller
-         */
-        if (_Dir != nullptr) {
-            length = (size_t)(last_slash - _Path);
-            if (_DirSize <= length)
-            {
-                goto error_erange;
-            }
-            wcsncpy_s(_Dir, _DirSize, _Path, length);
-        }
-        _Path = last_slash;
-    }
-    else
-    {
-        /* there is no path */
-        if (_Dir != nullptr)
-        {
-            _SAFECRT__RESET_STRING(_Dir, _DirSize);
-        }
-    }
-
-    /* extract file name and extension, if any.  Path now points to the
-     * first character of the file name, if any, or the extension if no
-     * file name was given.  Dot points to the '.' beginning the extension,
-     * if any.
-     */
-    if (dot != nullptr && (dot >= _Path))
-    {
-        /* found the marker for an extension - copy the file name up to the '.' */
-        if (_Filename)
-        {
-            length = (size_t)(dot - _Path);
-            if (_FilenameSize <= length)
-            {
-                goto error_erange;
-            }
-            wcsncpy_s(_Filename, _FilenameSize, _Path, length);
-        }
-        /* now we can get the extension - remember that tmp still points
-         * to the terminating nullptr character of path.
-         */
-        if (_Ext)
-        {
-            length = (size_t)(tmp - dot);
-            if (_ExtSize <= length)
-            {
-                goto error_erange;
-            }
-            wcsncpy_s(_Ext, _ExtSize, dot, length);
-        }
-    }
-    else
-    {
-        /* found no extension, give empty extension and copy rest of
-         * string into fname.
-         */
-        if (_Filename)
-        {
-            length = (size_t)(tmp - _Path);
-            if (_FilenameSize <= length)
-            {
-                goto error_erange;
-            }
-            wcsncpy_s(_Filename, _FilenameSize, _Path, length);
-        }
-        if (_Ext)
-        {
-            _SAFECRT__RESET_STRING(_Ext, _ExtSize);
-        }
-    }
-
-    return 0;
-
-error_einval:
-    bEinval = 1;
-
-error_erange:
-    if (_Drive != nullptr && _DriveSize > 0)
-    {
-        _SAFECRT__RESET_STRING(_Drive, _DriveSize);
-    }
-    if (_Dir != nullptr && _DirSize > 0)
-    {
-        _SAFECRT__RESET_STRING(_Dir, _DirSize);
-    }
-    if (_Filename != nullptr && _FilenameSize > 0)
-    {
-        _SAFECRT__RESET_STRING(_Filename, _FilenameSize);
-    }
-    if (_Ext != nullptr && _ExtSize > 0)
-    {
-        _SAFECRT__RESET_STRING(_Ext, _ExtSize);
-    }
-
-    if (bEinval)
-    {
-        _SAFECRT__RETURN_EINVAL;
-    }
-
-    _SAFECRT__RETURN_BUFFER_TOO_SMALL(_Strings, _StringSizes);
-    /* should never happen, but compiler can't tell */
-    return EINVAL;
-}
-#endif
 
 /* vsprintf_s */
 /*
- * swprintf_s, vsprintf_s, vswprintf_s format a string and copy it into _Dst;
+ * swprintf_s, vsprintf_s format a string and copy it into _Dst;
  * need safecrt.lib and msvcrt.dll;
  * will call _SAFECRT_INVALID_PARAMETER if there is not enough space in _Dst;
  * will call _SAFECRT_INVALID_PARAMETER if the format string is malformed;
@@ -1709,7 +1269,7 @@ int __cdecl vswprintf_s(WCHAR (&_Dst)[_SizeInWords], const WCHAR *_Format, va_li
 
 /* _vsnprintf_s */
 /*
- * _snwprintf_s, _vsnprintf_s, _vsnwprintf_s format a string and copy at max _Count characters into _Dst;
+ * _vsnprintf_s formats a string and copy at max _Count characters into _Dst;
  * need safecrt.lib and msvcrt.dll;
  * string _Dst will always be null-terminated;
  * will call _SAFECRT_INVALID_PARAMETER if there is not enough space in _Dst;

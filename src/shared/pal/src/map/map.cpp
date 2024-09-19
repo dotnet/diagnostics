@@ -35,6 +35,7 @@ Abstract:
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 
 #include "rt/ntimage.h"
@@ -472,7 +473,7 @@ CorUnix::InternalCreateFileMapping(
         palError = ERROR_INVALID_PARAMETER;
         goto ExitInternalCreateFileMapping;
     }
-    
+
     maximumSize = ((off_t)dwMaximumSizeHigh << 32) | (off_t)dwMaximumSizeLow;
 
     palError = g_pObjectManager->AllocateObject(
@@ -784,50 +785,6 @@ ExitInternalCreateFileMapping:
     }
 
     return palError;
-}
-
-/*++
-Function:
-  OpenFileMappingW
-
-See MSDN doc.
---*/
-HANDLE
-PALAPI
-OpenFileMappingW(
-         IN DWORD dwDesiredAccess,
-         IN BOOL bInheritHandle,
-         IN LPCWSTR lpName)
-{
-    HANDLE hFileMapping = NULL;
-    PAL_ERROR palError = NO_ERROR;
-    CPalThread *pThread = NULL;
-
-    PERF_ENTRY(OpenFileMappingW);
-    ENTRY("OpenFileMappingW(dwDesiredAccess=%#x, bInheritHandle=%d, lpName=%p (%S)\n",
-          dwDesiredAccess, bInheritHandle, lpName?lpName:W16_NULLSTRING, lpName?lpName:W16_NULLSTRING);
-
-    pThread = InternalGetCurrentThread();
-
-    /* validate parameters */
-    if (lpName == nullptr)
-    {
-        ERROR("name is NULL\n");
-        palError = ERROR_INVALID_PARAMETER;
-    }
-    else
-    {
-        ASSERT("lpName: Cross-process named objects are not supported in PAL");
-        palError = ERROR_NOT_SUPPORTED;
-    }
-
-    if (NO_ERROR != palError)
-    {
-        pThread->SetLastError(palError);
-    }
-    LOGEXIT("OpenFileMappingW returning %p.\n", hFileMapping);
-    PERF_EXIT(OpenFileMappingW);
-    return hFileMapping;
 }
 
 /*++
@@ -1217,7 +1174,7 @@ CorUnix::InternalMapViewOfFile(
         // the global list.
         //
 
-        PMAPPED_VIEW_LIST pNewView = (PMAPPED_VIEW_LIST)InternalMalloc(sizeof(*pNewView));
+        PMAPPED_VIEW_LIST pNewView = (PMAPPED_VIEW_LIST)malloc(sizeof(*pNewView));
         if (NULL != pNewView)
         {
             pNewView->lpAddress = pvBaseAddress;
@@ -1645,11 +1602,11 @@ static PAL_ERROR MAPGrowLocalFile( INT UnixFD, off_t NewSize )
 
     /* ftruncate is a standard function, but the behavior of enlarging files is
     non-standard.  So I will try to enlarge a file, and if that fails try the
-    less efficent way.*/
+    less efficient way.*/
     TruncateRetVal = ftruncate( UnixFD, NewSize );
     fstat( UnixFD, &FileInfo );
 
-    if ( TruncateRetVal != 0 || FileInfo.st_size != (int) NewSize )
+    if ( TruncateRetVal != 0 || FileInfo.st_size != NewSize )
     {
         INT OrigSize;
         CONST UINT  BUFFER_SIZE = 128;
@@ -1657,7 +1614,7 @@ static PAL_ERROR MAPGrowLocalFile( INT UnixFD, off_t NewSize )
         UINT x = 0;
         UINT CurrentPosition = 0;
 
-        TRACE( "Trying the less efficent way.\n" );
+        TRACE( "Trying the less efficient way.\n" );
 
         CurrentPosition = lseek( UnixFD, 0, SEEK_CUR );
         OrigSize = lseek( UnixFD, 0, SEEK_END );
@@ -1675,22 +1632,30 @@ static PAL_ERROR MAPGrowLocalFile( INT UnixFD, off_t NewSize )
         }
 
         memset( buf, 0, BUFFER_SIZE );
-
-        for ( x = 0; x < NewSize - OrigSize - BUFFER_SIZE; x += BUFFER_SIZE )
+        if (NewSize - OrigSize - BUFFER_SIZE >= 0 && BUFFER_SIZE > 0)
         {
-            if ( write( UnixFD, (LPVOID)buf, BUFFER_SIZE ) == -1 )
+            for ( x = 0; x < NewSize - OrigSize - BUFFER_SIZE; x += BUFFER_SIZE )
             {
-                ERROR( "Unable to grow the file. Reason=%s\n", strerror( errno ) );
-                if((errno == ENOSPC) || (errno == EDQUOT))
+                if ( write( UnixFD, (LPVOID)buf, BUFFER_SIZE ) == -1 )
                 {
-                    palError = ERROR_DISK_FULL;
+                    ERROR( "Unable to grow the file. Reason=%s\n", strerror( errno ) );
+                    if((errno == ENOSPC) || (errno == EDQUOT))
+                    {
+                        palError = ERROR_DISK_FULL;
+                    }
+                    else
+                    {
+                        palError = ERROR_INTERNAL_ERROR;
+                    }
+                    goto done;
                 }
-                else
-                {
-                    palError = ERROR_INTERNAL_ERROR;
-                }
-                goto done;
             }
+        }
+        else
+        {
+            //This will be an infinite loop because it did not pass the check.
+            palError = ERROR_INTERNAL_ERROR;
+            goto done;
         }
         /* Catch any left overs. */
         if ( x != NewSize )
@@ -1921,7 +1886,7 @@ static PMAPPED_VIEW_LIST FindSharedMappingReplacement(
                 /* The new desired mapping is fully contained in the
                    one just found: we can reuse this one */
 
-                pNewView = (PMAPPED_VIEW_LIST)InternalMalloc(sizeof(MAPPED_VIEW_LIST));
+                pNewView = (PMAPPED_VIEW_LIST)malloc(sizeof(MAPPED_VIEW_LIST));
                 if (pNewView)
                 {
                     memcpy(pNewView, pView, sizeof(*pNewView));
@@ -1956,7 +1921,7 @@ static NativeMapHolder * NewNativeMapHolder(CPalThread *pThread, LPVOID address,
     }
 
     pThisMapHolder =
-        (NativeMapHolder *)InternalMalloc(sizeof(NativeMapHolder));
+        (NativeMapHolder *)malloc(sizeof(NativeMapHolder));
 
     if (pThisMapHolder)
     {

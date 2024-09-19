@@ -96,6 +96,12 @@ namespace Microsoft.Diagnostics.Tools.Trace.CommandLine
             }
 
             int n = nodesToReport.Count;
+            if (n == 0)
+            {
+                Console.Error.WriteLine("[WARNING] No method calls found");
+                return;
+            }
+
             int maxDigit = (int)Math.Log10(n) + 1;
             string extra = new(' ', maxDigit - 1);
 

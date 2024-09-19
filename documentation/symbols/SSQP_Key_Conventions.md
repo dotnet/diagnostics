@@ -49,6 +49,25 @@ Example:
 
 **Lookup key**: `foo.pdb/497b72f6390a44fc878e5a2d63b6cc4b1/foo.pdb`
 
+### PDZ-Signature-Age
+
+This applies to the Microsoft C++ Symbol Format with compressed streams, known as PDZ or msfz, also commonly saved with the pdb extension. 
+
+Like regular C++ PDBs, the key also uses values extracted from the GUID stream which is uncompressed. Additionally, the index contains a marker for the type ('msfz') and version (currently only '0'):
+
+`<filename>/<Signature><Age>/msfz<version>/<filename>`
+
+Example:
+
+**File name:** `Foo.pdb`
+
+**Signature field:** `{ 0x497B72F6, 0x390A, 0x44FC, { 0x87, 0x8E, 0x5A, 0x2D, 0x63, 0xB6, 0xCC, 0x4B } }`
+
+**Age field:** `0x1`
+
+**Format version:** `0`
+
+**Lookup key**: `foo.pdb/497b72f6390a44fc878e5a2d63b6cc4b1/msfz0/foo.pdb`
 
 ### Portable-Pdb-Signature
 
