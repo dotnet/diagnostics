@@ -165,30 +165,16 @@ namespace SOS.Hosting
             IntPtr self,
             IMAGE_FILE_MACHINE* type)
         {
-            switch (Target.Architecture)
+            *type = Target.Architecture switch
             {
-                case Architecture.X64:
-                    *type = IMAGE_FILE_MACHINE.AMD64;
-                    break;
-                case Architecture.X86:
-                    *type = IMAGE_FILE_MACHINE.I386;
-                    break;
-                case Architecture.Arm:
-                    *type = IMAGE_FILE_MACHINE.ARMNT;
-                    break;
-                case Architecture.Arm64:
-                    *type = IMAGE_FILE_MACHINE.ARM64;
-                    break;
-                case (Architecture)6 /* Architecture.LoongArch64 */:
-                    *type = IMAGE_FILE_MACHINE.LOONGARCH64;
-                    break;
-                case (Architecture)9 /* Architecture.RiscV64 */:
-                    *type = IMAGE_FILE_MACHINE.RISCV64;
-                    break;
-                default:
-                    *type = IMAGE_FILE_MACHINE.UNKNOWN;
-                    break;
-            }
+                Architecture.X64 => IMAGE_FILE_MACHINE.AMD64,
+                Architecture.X86 => IMAGE_FILE_MACHINE.I386,
+                Architecture.Arm => IMAGE_FILE_MACHINE.ARMNT,
+                Architecture.Arm64 => IMAGE_FILE_MACHINE.ARM64,
+                (Architecture)6 /* Architecture.LoongArch64 */=> IMAGE_FILE_MACHINE.LOONGARCH64,
+                (Architecture)9 /* Architecture.RiscV64 */=> IMAGE_FILE_MACHINE.RISCV64,
+                _ => IMAGE_FILE_MACHINE.UNKNOWN,
+            };
             return HResult.S_OK;
         }
 

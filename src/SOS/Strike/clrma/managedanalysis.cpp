@@ -70,8 +70,10 @@ ClrmaManagedAnalysis::QueryDebugClient(IUnknown* pUnknown)
     }
     switch (m_processorType)
     {
-        case IMAGE_FILE_MACHINE_ARM64:
         case IMAGE_FILE_MACHINE_AMD64:
+        case IMAGE_FILE_MACHINE_ARM64:
+        case IMAGE_FILE_MACHINE_ARM64X:
+        case IMAGE_FILE_MACHINE_ARM64EC:
         case IMAGE_FILE_MACHINE_LOONGARCH64:
         case IMAGE_FILE_MACHINE_RISCV64:
             m_pointerSize = 8;

@@ -189,10 +189,24 @@ DbgEngServices::GetDebuggeeType(
 }
 
 HRESULT
-DbgEngServices::GetExecutingProcessorType(
+DbgEngServices::GetProcessorType(
     PULONG type)
 {
-    return m_control->GetExecutingProcessorType(type);
+    ULONG executingType;
+    HRESULT hr = m_control->GetExecutingProcessorType(&executingType);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    _ASSERTE(executingType != IMAGE_FILE_MACHINE_ARM64X);
+    *type = executingType;
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+    if (executingType == IMAGE_FILE_MACHINE_ARM64EC)
+    {
+        *type = IMAGE_FILE_MACHINE_AMD64;
+    }
+#endif // defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+    return S_OK;
 }
 
 HRESULT

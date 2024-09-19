@@ -37,7 +37,7 @@ public:
         PULONG debugClass,
         PULONG qualifier) = 0;
 
-    virtual HRESULT STDMETHODCALLTYPE GetExecutingProcessorType(
+    virtual HRESULT STDMETHODCALLTYPE GetProcessorType(
         PULONG type) = 0;
 
     virtual HRESULT STDMETHODCALLTYPE AddCommand(

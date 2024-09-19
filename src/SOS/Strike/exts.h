@@ -55,14 +55,6 @@
 // printing CDA values.
 #define CDA_TO_UL64(cda) ((ULONG64)(TO_TADDR(cda)))
 
-#ifndef IMAGE_FILE_MACHINE_RISCV64
-#define IMAGE_FILE_MACHINE_RISCV64        0x5064  // RISCV64
-#endif // !IMAGE_FILE_MACHINE_RISCV64
-
-#ifndef IMAGE_FILE_MACHINE_LOONGARCH64
-#define IMAGE_FILE_MACHINE_LOONGARCH64        0x6264  // LOONGARCH64
-#endif // !IMAGE_FILE_MACHINE_LOONGARCH64
-
 typedef struct _TADDR_RANGE
 {
     TADDR start;
@@ -158,6 +150,9 @@ ExtQuery(PDEBUG_CLIENT client);
 
 HRESULT
 ExtInit(PDEBUG_CLIENT client);
+
+const char*
+GetProcessorName(ULONG type);
 
 HRESULT 
 ArchQuery(void);

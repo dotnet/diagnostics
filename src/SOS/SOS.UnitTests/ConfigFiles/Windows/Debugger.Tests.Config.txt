@@ -124,7 +124,7 @@
             <Option>
               <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
             </Option>
-            <Option>
+            <Option Condition="'$(TargetArchitecture)' != 'arm64'">
               <SetHostRuntime>-netfx</SetHostRuntime>
             </Option>
           </Options>

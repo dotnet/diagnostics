@@ -72,7 +72,7 @@ public:
         PULONG debugClass,
         PULONG qualifier);
 
-    HRESULT STDMETHODCALLTYPE GetExecutingProcessorType(
+    HRESULT STDMETHODCALLTYPE GetProcessorType(
         PULONG type);
 
     HRESULT STDMETHODCALLTYPE AddCommand(

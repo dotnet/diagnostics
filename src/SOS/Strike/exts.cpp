@@ -152,6 +152,15 @@ GetTargetMachine(ULONG processorType)
         targetMachine = ARM64Machine::GetInstance();
     }
 #endif // SOS_TARGET_ARM64
+    _ASSERTE(processorType != IMAGE_FILE_MACHINE_ARM64X);
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+    if (processorType == IMAGE_FILE_MACHINE_ARM64EC)
+    {
+#ifdef SOS_TARGET_AMD64
+        targetMachine = AMD64Machine::GetInstance();
+#endif // SOS_TARGET_AMD64
+    }
+#endif // defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
 #ifdef SOS_TARGET_RISCV64
     if (processorType == IMAGE_FILE_MACHINE_RISCV64)
     {
@@ -167,6 +176,46 @@ GetTargetMachine(ULONG processorType)
     return targetMachine;
 }
 
+const char*
+GetProcessorName(ULONG type)
+{
+    const char* architecture = "unknown";
+    switch (type)
+    {
+        case IMAGE_FILE_MACHINE_AMD64:
+            architecture = "x64";
+            break;
+        case IMAGE_FILE_MACHINE_I386:
+            architecture = "x86";
+            break;
+        case IMAGE_FILE_MACHINE_ARM:
+            architecture = "arm";
+            break;
+        case IMAGE_FILE_MACHINE_THUMB:
+            architecture = "thumb";
+            break;
+        case IMAGE_FILE_MACHINE_ARMNT:
+            architecture = "armnt";
+            break;
+        case IMAGE_FILE_MACHINE_ARM64:
+            architecture = "arm64";
+            break;
+        case IMAGE_FILE_MACHINE_ARM64EC:
+            architecture = "arm64ec";
+            break;
+        case IMAGE_FILE_MACHINE_ARM64X:
+            architecture = "arm64x";
+            break;
+        case IMAGE_FILE_MACHINE_RISCV64:
+            architecture = "riscv64";
+            break;
+        case IMAGE_FILE_MACHINE_LOONGARCH64:
+            architecture = "loongarch64";
+            break;
+    }
+    return architecture;
+}
+
 HRESULT
 ArchQuery(void)
 {
@@ -176,32 +225,19 @@ ArchQuery(void)
     g_targetMachine = GetTargetMachine(processorType);
     if (g_targetMachine == NULL)
     {
-        const char* architecture = "";
-        switch (processorType)
+        const char* architecture = GetProcessorName(processorType);
+        const char* message = "";
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+        if (processorType == IMAGE_FILE_MACHINE_ARM64EC)
         {
-            case IMAGE_FILE_MACHINE_AMD64:
-                architecture = "x64";
-                break;
-            case IMAGE_FILE_MACHINE_I386:
-                architecture = "x86";
-                break;
-            case IMAGE_FILE_MACHINE_ARM:
-            case IMAGE_FILE_MACHINE_THUMB:
-            case IMAGE_FILE_MACHINE_ARMNT:
-                architecture = "arm32";
-                break;
-            case IMAGE_FILE_MACHINE_ARM64:
-                architecture = "arm64";
-                break;
-            case IMAGE_FILE_MACHINE_RISCV64:
-                architecture = "riscv64";
-                break;
-            case IMAGE_FILE_MACHINE_LOONGARCH64:
-                architecture = "loongarch64";
-                break;
+            message = "Arm64ec targets require a x64 compatible SOS and debugger.";
         }
-        ExtErr("SOS does not support the current target architecture '%s' (0x%04x). A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.\n",
-            architecture, processorType);
+        else
+#endif
+        {
+            message = "A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.";
+        }
+        ExtErr("SOS does not support the current target architecture '%s' (0x%04x). %s\n", architecture, processorType, message);
         return E_FAIL;
     }
     return S_OK;

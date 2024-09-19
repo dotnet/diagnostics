@@ -44,9 +44,10 @@ namespace SOS.Extensions
                 IsDump = true;
             }
 
-            hr = debuggerServices.GetExecutingProcessorType(out IMAGE_FILE_MACHINE type);
+            hr = debuggerServices.GetProcessorType(out IMAGE_FILE_MACHINE type);
             if (hr == HResult.S_OK)
             {
+                Debug.Assert(type is not IMAGE_FILE_MACHINE.ARM64X and not IMAGE_FILE_MACHINE.ARM64EC);
                 Architecture = type switch
                 {
                     IMAGE_FILE_MACHINE.I386 => Architecture.X86,
@@ -62,7 +63,7 @@ namespace SOS.Extensions
             }
             else
             {
-                throw new PlatformNotSupportedException($"GetExecutingProcessorType() FAILED {hr:X8}");
+                throw new PlatformNotSupportedException($"GetProcessorType() FAILED {hr:X8}");
             }
 
             hr = debuggerServices.GetCurrentProcessId(out uint processId);

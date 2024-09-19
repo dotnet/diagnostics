@@ -82,9 +82,9 @@ namespace SOS.Extensions
             return VTable.GetDebuggeeType(Self, out debugClass, out qualifier);
         }
 
-        public HResult GetExecutingProcessorType(out IMAGE_FILE_MACHINE type)
+        public HResult GetProcessorType(out IMAGE_FILE_MACHINE type)
         {
-            return VTable.GetExecutingProcessorType(Self, out type);
+            return VTable.GetProcessorType(Self, out type);
         }
 
         public HResult AddCommand(string command, string help, IEnumerable<string> aliases)
@@ -519,7 +519,7 @@ namespace SOS.Extensions
         {
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out OperatingSystem, int> GetOperatingSystem;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out DEBUG_CLASS, out DEBUG_CLASS_QUALIFIER, int> GetDebuggeeType;
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, out IMAGE_FILE_MACHINE, int> GetExecutingProcessorType;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, out IMAGE_FILE_MACHINE, int> GetProcessorType;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, byte*, IntPtr*, int, int> AddCommand;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, DEBUG_OUTPUT, byte*, void> OutputString;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, ulong, byte*, uint, out int, int> ReadVirtual;

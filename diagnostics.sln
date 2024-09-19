@@ -155,7 +155,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{41BDFD6D-D16
 		src\shared\inc\readytoruninstructionset.h = src\shared\inc\readytoruninstructionset.h
 		src\shared\inc\regdisp.h = src\shared\inc\regdisp.h
 		src\shared\inc\registrywrapper.h = src\shared\inc\registrywrapper.h
-		src\shared\inc\releaseholder.h = src\shared\inc\releaseholder.h
 		src\shared\inc\resource.h = src\shared\inc\resource.h
 		src\shared\inc\runtimeinfo.h = src\shared\inc\runtimeinfo.h
 		src\shared\inc\safemath.h = src\shared\inc\safemath.h
@@ -331,6 +330,26 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "minipal", "minipal", "{D9A9
 		src\shared\native\minipal\utf8.c = src\shared\native\minipal\utf8.c
 		src\shared\native\minipal\utf8.h = src\shared\native\minipal\utf8.h
 		src\shared\native\minipal\utils.h = src\shared\native\minipal\utils.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "inc", "inc", "{9E51C821-4095-4250-BD8A-2A29396DB1B4}"
+	ProjectSection(SolutionItems) = preProject
+		src\inc\corcompile.h = src\inc\corcompile.h
+		src\inc\ntimageex.h = src\inc\ntimageex.h
+		src\inc\releaseholder.h = src\inc\releaseholder.h
+		src\inc\stacktrace.h = src\inc\stacktrace.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "rt", "rt", "{D2D76252-D225-4B79-9DDB-A36867A4720E}"
+	ProjectSection(SolutionItems) = preProject
+		src\inc\rt\intsafe.h = src\inc\rt\intsafe.h
+		src\inc\rt\oaidl.h = src\inc\rt\oaidl.h
+		src\inc\rt\psapi.h = src\inc\rt\psapi.h
+		src\inc\rt\tchar.h = src\inc\rt\tchar.h
+		src\inc\rt\tlhelp32.h = src\inc\rt\tlhelp32.h
+		src\inc\rt\winapifamily.h = src\inc\rt\winapifamily.h
+		src\inc\rt\winternl.h = src\inc\rt\winternl.h
+		src\inc\rt\winver.h = src\inc\rt\winver.h
 	EndProjectSection
 EndProject
 Global
@@ -2365,6 +2384,8 @@ Global
 		{06FB18BC-F4DD-4DB9-A566-551254CD1064} = {795B7A50-1B1F-406E-94E0-F9B35104EF22}
 		{641F00F0-2693-451B-A96A-13E4E115BF0F} = {7852EDE4-93DF-4DB1-8A86-C521703811AF}
 		{D9A91544-CDF8-4C68-BAD2-47F4968A8652} = {641F00F0-2693-451B-A96A-13E4E115BF0F}
+		{9E51C821-4095-4250-BD8A-2A29396DB1B4} = {19FAB78C-3351-4911-8F0C-8C6056401740}
+		{D2D76252-D225-4B79-9DDB-A36867A4720E} = {9E51C821-4095-4250-BD8A-2A29396DB1B4}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {46465737-C938-44FC-BE1A-4CE139EBB5E0}
