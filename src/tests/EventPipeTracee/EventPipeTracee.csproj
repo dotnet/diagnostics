@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
     <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(BuildTargetFrameworks)</TargetFrameworks>
+    <DefineConstants Condition="'$(TargetFramework)'!='net6.0' and '$(TargetFramework)'!='net7.0'">NET8_0_OR_GREATER</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
