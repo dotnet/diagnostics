@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -28,8 +29,8 @@ namespace Microsoft.SymbolStore.KeyGenerators
         public PEFileKeyGenerator(ITracer tracer, PEFile peFile, string path)
             : base(tracer)
         {
-            _peFile = peFile;
-            _path = path;
+            _peFile = peFile ?? throw new ArgumentNullException(nameof(peFile));
+            _path = path ?? throw new ArgumentNullException(nameof(path));
         }
 
         public PEFileKeyGenerator(ITracer tracer, SymbolStoreFile file)
@@ -61,7 +62,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     {
                         pdbs = _peFile.Pdbs.ToArray();
                     }
-                    catch (InvalidVirtualAddressException ex)
+                    catch (Exception ex) when (ex is InvalidVirtualAddressException || ex is BadInputFormatException)
                     {
                         Tracer.Error("Reading PDB records for {0}: {1}", _path, ex.Message);
                     }

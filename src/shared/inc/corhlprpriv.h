@@ -81,7 +81,7 @@ protected:
     template <BOOL bGrow, BOOL bThrow>
     void *_Alloc(SIZE_T iItems)
     {
-#if defined(_BLD_CLR) && defined(_DEBUG)
+#if defined(_DEBUG)
         {  // Exercise heap for OOM-fault injection purposes
             BYTE * pb = NSQuickBytesHelper::_AllocBytes<bThrow>::Invoke(iItems);
             _ASSERTE(!bThrow || pb != NULL); // _AllocBytes would have thrown if bThrow == TRUE
@@ -294,15 +294,12 @@ public:
     }
 
     // Copy single byte string and hold it
-    const char * SetStringNoThrow(const char * pStr, SIZE_T len)
+    const char * SetString(const char * pStr, SIZE_T len)
     {
-        LPSTR buffer = (LPSTR) AllocNoThrow(len + 1);
+        LPSTR buffer = (LPSTR) AllocThrows(len + 1);
 
-        if (buffer != NULL)
-        {
-            memcpy(buffer, pStr, len);
-            buffer[len] = 0;
-        }
+        memcpy(buffer, pStr, len);
+        buffer[len] = 0;
 
         return buffer;
     }
@@ -477,12 +474,12 @@ private:
 template <class T> class CQuickArray : public CQuickArrayBase<T>
 {
 public:
-    CQuickArray<T>()
+    CQuickArray()
     {
         this->Init();
     }
 
-    ~CQuickArray<T>()
+    ~CQuickArray()
     {
         this->Destroy();
     }
@@ -605,7 +602,7 @@ public:
         HRESULT  hr     = S_OK;
         mdToken  rid    = RidFromToken(token);
         SIZE_T   index  = rid / 8;
-        BYTE     bit    = (1 << (rid % 8));
+        BYTE     bit    = (BYTE)(1 << (rid % 8));
 
         if (index >= buffer.Size())
         {
@@ -623,7 +620,7 @@ public:
     {
         mdToken rid   = RidFromToken(token);
         SIZE_T  index = rid / 8;
-        BYTE    bit   = (1 << (rid % 8));
+        BYTE    bit   = (BYTE)(1 << (rid % 8));
 
         return ((index < buffer.Size()) && (buffer[index] & bit));
     }
@@ -743,7 +740,7 @@ CorSigUncompressPointer_EndPtr(
     // make it easier to catch invalid signatures in trusted code (e.g. IL stubs, NGEN images, etc.)
     if (pData + sizeof(void *) > pDataEnd)
     {   // Not enough data in the buffer
-        _ASSERTE(!"This signature is invalid. Note that caller should check that it is not comming from untrusted source!");
+        _ASSERTE(!"This signature is invalid. Note that caller should check that it is not coming from untrusted source!");
         return META_E_BAD_SIGNATURE;
     }
     *ppvPointerOut = *(void * UNALIGNED *)pData;

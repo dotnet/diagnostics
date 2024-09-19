@@ -50,17 +50,17 @@ namespace Microsoft.SymbolStore
         /// <param name="pdbChecksums">if true, the file is one the clr special files</param>
         public SymbolStoreKey(string index, string fullPathName, bool clrSpecialFile = false, IEnumerable<PdbChecksum> pdbChecksums = null)
         {
-            Debug.Assert(index != null && fullPathName != null);
-            Index = index;
-            FullPathName = fullPathName;
+            Index = index ?? throw new ArgumentNullException(nameof(index));
+            FullPathName = fullPathName ?? throw new ArgumentNullException(nameof(fullPathName));
             IsClrSpecialFile = clrSpecialFile;
             PdbChecksums = pdbChecksums ?? Enumerable.Empty<PdbChecksum>();
         }
 
         /// <summary>
-        /// Returns the first two parts of the index tuple. Allows a different file name
+        /// Returns the first two or three parts of the index. Allows a different file name
         /// to be appended to this symbol key. Includes the trailing "/".
         /// </summary>
+        [Obsolete]
         public string IndexPrefix
         {
             get { return Index.Substring(0, Index.LastIndexOf("/") + 1); }
@@ -98,24 +98,28 @@ namespace Microsoft.SymbolStore
         public static bool IsKeyValid(string index)
         {
             string[] parts = index.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 3) {
+            if (parts.Length < 3 || parts.Length > 4)
+            {
                 return false;
             }
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < parts.Length; i++)
             {
                 foreach (char c in parts[i])
                 {
-                    if (char.IsLetterOrDigit(c)) {
+                    if (char.IsLetterOrDigit(c))
+                    {
                         continue;
                     }
-                    if (!s_invalidChars.Contains(c)) {
+                    if (!s_invalidChars.Contains(c))
+                    {
                         continue;
                     }
                     return false;
                 }
                 // We need to support files with . in the name, but we don't want identifiers that
                 // are meaningful to the filesystem
-                if (parts[i] == "." || parts[i] == "..") {
+                if (parts[i] == "." || parts[i] == "..")
+                {
                     return false;
                 }
             }

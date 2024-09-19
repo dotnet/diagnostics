@@ -12,6 +12,7 @@ EXPORTS
     ClrStack
     clrstack=ClrStack
     CLRStack=ClrStack
+    clrmaconfig
     crashinfo
     DumpALC
     dumpalc=DumpALC
@@ -50,6 +51,8 @@ EXPORTS
     dumpheap=DumpHeap
     DumpIL
     dumpil=DumpIL
+    dumplocks
+    DumpLocks=dumplocks
     DumpLog
     dumplog=DumpLog
     Dumplog=DumpLog
@@ -138,6 +141,7 @@ EXPORTS
     pe=PrintException    
     printexception=PrintException
     Printexception=PrintException
+    processor
     SaveModule
     savemodule=SaveModule
     SetHostRuntime

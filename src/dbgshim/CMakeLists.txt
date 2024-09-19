@@ -1,6 +1,9 @@
+include(${CLR_SHARED_DIR}/shared.cmake)
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 add_definitions(-DFEATURE_NO_HOST)
 add_definitions(-DSELF_NO_HOST)
-add_definitions(-D_BLD_CLR)
 
 set(DBGSHIM_SOURCES
     dbgshim.cpp
@@ -15,6 +18,8 @@ endif(CLR_CMAKE_HOST_WIN32)
 
 if(CLR_CMAKE_HOST_WIN32)
     list(APPEND DBGSHIM_SOURCES
+        securityutil.cpp
+        securitywrapper.cpp
         dbgshim.rc
     )
     preprocess_file(${CMAKE_CURRENT_SOURCE_DIR}/dbgshim.ntdef ${CMAKE_CURRENT_BINARY_DIR}/dbgshim.def)
@@ -47,6 +52,7 @@ endif(CLR_CMAKE_HOST_UNIX)
 set(DBGSHIM_LIBRARIES
     dbgutil
     corguids
+    coreclrminipal
     utilcodestaticnohost
 )
 

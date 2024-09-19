@@ -1,13 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-// ==++==
-// 
- 
-// 
-// ==--==
 #include "exts.h"
 #include "disasm.h"
+
 #ifndef FEATURE_PAL
 
 #define VER_PRODUCTVERSION_W        (0x0100)
@@ -100,6 +96,30 @@ ExtQuery(ILLDBServices* services)
     return Status;
 }
 
+HRESULT
+ExtInit(PDEBUG_CLIENT client)
+{
+    HRESULT hr;
+    if ((hr = ExtQuery(client)) == S_OK)
+    {
+        // Reset some global variables on entry
+        ControlC = FALSE;
+        g_bDacBroken = TRUE;
+        g_clrData = NULL;
+        g_sos = NULL;
+
+        // Flush here only on Windows under dbgeng. The lldb sos plugin handles it for Linux/MacOS.
+#ifndef FEATURE_PAL
+        Extensions* extensions = Extensions::GetInstance();
+        if (extensions != nullptr)
+        {
+            extensions->FlushCheck();
+        }
+#endif // !FEATURE_PAL
+    }
+    return hr;
+}
+
 IMachine*
 GetTargetMachine(ULONG processorType)
 {
@@ -132,13 +152,68 @@ GetTargetMachine(ULONG processorType)
         targetMachine = ARM64Machine::GetInstance();
     }
 #endif // SOS_TARGET_ARM64
+    _ASSERTE(processorType != IMAGE_FILE_MACHINE_ARM64X);
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+    if (processorType == IMAGE_FILE_MACHINE_ARM64EC)
+    {
+#ifdef SOS_TARGET_AMD64
+        targetMachine = AMD64Machine::GetInstance();
+#endif // SOS_TARGET_AMD64
+    }
+#endif // defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
 #ifdef SOS_TARGET_RISCV64
     if (processorType == IMAGE_FILE_MACHINE_RISCV64)
     {
         targetMachine = RISCV64Machine::GetInstance();
     }
 #endif // SOS_TARGET_RISCV64
+#ifdef SOS_TARGET_LOONGARCH64
+    if (processorType == IMAGE_FILE_MACHINE_LOONGARCH64)
+    {
+        targetMachine = LOONGARCH64Machine::GetInstance();
+    }
+#endif // SOS_TARGET_LOONGARCH64
     return targetMachine;
+}
+
+const char*
+GetProcessorName(ULONG type)
+{
+    const char* architecture = "unknown";
+    switch (type)
+    {
+        case IMAGE_FILE_MACHINE_AMD64:
+            architecture = "x64";
+            break;
+        case IMAGE_FILE_MACHINE_I386:
+            architecture = "x86";
+            break;
+        case IMAGE_FILE_MACHINE_ARM:
+            architecture = "arm";
+            break;
+        case IMAGE_FILE_MACHINE_THUMB:
+            architecture = "thumb";
+            break;
+        case IMAGE_FILE_MACHINE_ARMNT:
+            architecture = "armnt";
+            break;
+        case IMAGE_FILE_MACHINE_ARM64:
+            architecture = "arm64";
+            break;
+        case IMAGE_FILE_MACHINE_ARM64EC:
+            architecture = "arm64ec";
+            break;
+        case IMAGE_FILE_MACHINE_ARM64X:
+            architecture = "arm64x";
+            break;
+        case IMAGE_FILE_MACHINE_RISCV64:
+            architecture = "riscv64";
+            break;
+        case IMAGE_FILE_MACHINE_LOONGARCH64:
+            architecture = "loongarch64";
+            break;
+    }
+    return architecture;
 }
 
 HRESULT
@@ -150,29 +225,19 @@ ArchQuery(void)
     g_targetMachine = GetTargetMachine(processorType);
     if (g_targetMachine == NULL)
     {
-        const char* architecture = "";
-        switch (processorType)
+        const char* architecture = GetProcessorName(processorType);
+        const char* message = "";
+#if defined(SOS_TARGET_AMD64) || defined(SOS_TARGET_ARM64)
+        if (processorType == IMAGE_FILE_MACHINE_ARM64EC)
         {
-            case IMAGE_FILE_MACHINE_AMD64:
-                architecture = "x64";
-                break;
-            case IMAGE_FILE_MACHINE_I386:
-                architecture = "x86";
-                break;
-            case IMAGE_FILE_MACHINE_ARM:
-            case IMAGE_FILE_MACHINE_THUMB:
-            case IMAGE_FILE_MACHINE_ARMNT:
-                architecture = "arm32";
-                break;
-            case IMAGE_FILE_MACHINE_ARM64:
-                architecture = "arm64";
-                break;
-            case IMAGE_FILE_MACHINE_RISCV64:
-                architecture = "riscv64";
-                break;
+            message = "Arm64ec targets require a x64 compatible SOS and debugger.";
         }
-        ExtErr("SOS does not support the current target architecture '%s' (0x%04x). A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.\n",
-            architecture, processorType);
+        else
+#endif
+        {
+            message = "A 32 bit target may require a 32 bit debugger or vice versa. In general, try to use the same bitness for the debugger and target process.";
+        }
+        ExtErr("SOS does not support the current target architecture '%s' (0x%04x). %s\n", architecture, processorType, message);
         return E_FAIL;
     }
     return S_OK;
@@ -273,6 +338,33 @@ DACMessage(HRESULT Status)
     }
     ExtOut("\n");
     ExtOut("For more information see https://go.microsoft.com/fwlink/?linkid=2135652\n");
+}
+
+IXCLRDataProcess*
+GetClrDataFromDbgEng()
+{
+#ifdef FEATURE_PAL
+    return nullptr;    
+#else
+    IXCLRDataProcess* clrData = nullptr;
+
+    // Fail if ExtensionApis wasn't initialized because we are hosted under dotnet-dump
+    if (Ioctl != nullptr)
+    {
+        // Try getting the DAC interface from dbgeng if the above fails on Windows
+        WDBGEXTS_CLR_DATA_INTERFACE Query;
+
+        Query.Iid = &__uuidof(IXCLRDataProcess);
+        if (Ioctl(IG_GET_CLR_DATA_INTERFACE, &Query, sizeof(Query)))
+        {
+            // No AddRef needed. IG_GET_CLR_DATA_INTERFACE either creates or QI's the IXCLRDataProcess instance.
+            clrData = (IXCLRDataProcess*)Query.Iface;
+            clrData->Flush();
+        }
+    }
+
+    return clrData;
+#endif
 }
 
 #ifndef FEATURE_PAL
@@ -440,57 +532,3 @@ DebugClient::Release()
 }
 
 #endif // FEATURE_PAL
-
-/// <summary>
-/// Returns the host instance
-/// 
-/// * dotnet-dump - m_pHost has already been set by SOSInitializeByHost by SOS.Hosting
-/// * lldb - m_pHost has already been set by SOSInitializeByHost by libsosplugin which gets it via the InitializeHostServices callback
-/// * dbgeng - SOS.Extensions provides the instance via the InitializeHostServices callback
-/// </summary>
-IHost* SOSExtensions::GetHost()
-{
-    if (m_pHost == nullptr)
-    {
-#ifndef FEATURE_PAL
-        // Initialize the hosting runtime which will call InitializeHostServices and set m_pHost to the host instance
-        InitializeHosting();
-#endif
-        // Otherwise, use the local host instance (hostimpl.*) that creates a local target instance (targetimpl.*)
-        if (m_pHost == nullptr)
-        {
-            m_pHost = Host::GetInstance();
-        }
-    }
-    return m_pHost;
-}
-
-/// <summary>
-/// Returns the runtime or fails if no target or current runtime
-/// </summary>
-/// <param name="ppRuntime">runtime instance</param>
-/// <returns>error code</returns>
-HRESULT GetRuntime(IRuntime** ppRuntime)
-{
-    SOSExtensions* extensions = (SOSExtensions*)Extensions::GetInstance();
-    ITarget* target = extensions->GetTarget();
-    if (target == nullptr)
-    {
-        return E_FAIL;
-    }
-#ifndef FEATURE_PAL
-    extensions->FlushCheck();
-#endif
-    return target->GetRuntime(ppRuntime);
-}
-
-void FlushCheck()
-{
-#ifndef FEATURE_PAL
-    SOSExtensions* extensions = (SOSExtensions*)Extensions::GetInstance();
-    if (extensions != nullptr)
-    {
-        extensions->FlushCheck();
-    }
-#endif // !FEATURE_PAL
-}

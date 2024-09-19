@@ -7,10 +7,12 @@
 #include "gcinfotypes.h"
 #include "gcinfodecoder.h"
 
-// ******************************************************************************
-// WARNING!!!: This header is also used by the runtime repo.
-// See: https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcinfodumper.h
-// ******************************************************************************
+// *****************************************************************************
+// WARNING!!!: These values and code are used in the runtime repo and SOS in the 
+// diagnostics repo. Should updated in a backwards and forwards compatible way.
+// See: https://github.com/dotnet/diagnostics/blob/main/src/shared/inc/gcinfodumper.h
+//      https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/gcinfodumper.h
+// *****************************************************************************
 
 //
 // This class dumps the contents of the gc encodings, providing outputs
@@ -95,7 +97,7 @@ private:
 
     static void LivePointerCallback (
             LPVOID          hCallback,      // callback data
-            OBJECTREF*      pObject,        // address of obect-reference we are reporting
+            OBJECTREF*      pObject,        // address of object-reference we are reporting
             uint32_t        flags           // is this a pinned and/or interior pointer
             DAC_ARG(DacSlotLocation loc));  // the location the pointer came from
 

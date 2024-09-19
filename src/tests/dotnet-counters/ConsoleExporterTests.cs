@@ -70,10 +70,11 @@ namespace DotnetCounters.UnitTests
                                      "    Status: Running",
                                      "",
                                      "Name                                           Current Value",
-                                     "[System.Runtime]",
-                                     "    Allocation Rate (B / 1 sec)                    1,731",
                                      "[Provider2]",
-                                     "    CounterXyz (Doodads)                               0.076");
+                                     "    CounterXyz (Doodads)                               0.076",
+                                     "[System.Runtime]",
+                                     "    Allocation Rate (B / 1 sec)                    1,731");
+
         }
 
         [Fact]
@@ -339,8 +340,6 @@ namespace DotnetCounters.UnitTests
                                      "    Status: Running",
                                      "",
                                      "Name                               Current Value      Last Delta",
-                                     "[System.Runtime]",
-                                     "    Allocation Rate (B / 1 sec)        1,731",
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
@@ -349,7 +348,9 @@ namespace DotnetCounters.UnitTests
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
                                      "        1                                 14",
-                                     "             hot                         160");
+                                     "             hot                         160",
+                                     "[System.Runtime]",
+                                     "    Allocation Rate (B / 1 sec)        1,731");
         }
 
         [Fact]
@@ -368,8 +369,6 @@ namespace DotnetCounters.UnitTests
                                      "    Status: Running",
                                      "",
                                      "Name                               Current Value      Last Delta",
-                                     "[System.Runtime]",
-                                     "    Allocation Rate (B / 1 sec)        1,731",
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
@@ -378,7 +377,9 @@ namespace DotnetCounters.UnitTests
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
                                      "        1                                 14",
-                                     "             hot                         160");
+                                     "             hot                         160",
+                                     "[System.Runtime]",
+                                     "    Allocation Rate (B / 1 sec)        1,731");
 
             exporter.CounterPayloadReceived(CreateIncrementingEventCounter("System.Runtime", "Allocation Rate", "B", 1732), false);
             exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "color=red", 0.2), false);
@@ -388,8 +389,6 @@ namespace DotnetCounters.UnitTests
                                      "    Status: Running",
                                      "",
                                      "Name                               Current Value      Last Delta",
-                                     "[System.Runtime]",
-                                     "    Allocation Rate (B / 1 sec)        1,732               1",
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
@@ -398,7 +397,9 @@ namespace DotnetCounters.UnitTests
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
                                      "        1                                 10              -4",
-                                     "             hot                         160");
+                                     "             hot                         160",
+                                     "[System.Runtime]",
+                                     "    Allocation Rate (B / 1 sec)        1,732               1");
         }
 
         // Starting in .NET 8 MetricsEventSource, Meter counter instruments report both rate of change and

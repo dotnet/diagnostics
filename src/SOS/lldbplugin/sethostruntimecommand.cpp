@@ -20,6 +20,10 @@ public:
                char** arguments,
                lldb::SBCommandReturnObject &result)
     {
+        HostRuntimeFlavor flavor = HostRuntimeFlavor::NetCore;
+        LPCSTR hostRuntimeDirectory = nullptr;
+        int major = 0, minor = 0;
+
         result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
 
         if (arguments != nullptr && arguments[0] != nullptr)
@@ -32,39 +36,58 @@ public:
             }
             else 
             {
-                if (strcmp(arguments[0], "-none") == 0)
+                if (*arguments != nullptr && strcmp(*arguments, "-clear") == 0)
                 {
-                    SetHostRuntimeFlavor(HostRuntimeFlavor::None); 
+                    SetHostRuntime(HostRuntimeFlavor::NetCore, 0, 0, nullptr);
+                    arguments++;
                 }
-                else if (strcmp(arguments[0], "-netcore") == 0)
+                if (*arguments != nullptr && strcmp(*arguments, "-none") == 0)
                 {
-                    SetHostRuntimeFlavor(HostRuntimeFlavor::NetCore); 
+                    flavor = HostRuntimeFlavor::None;
+                    arguments++;
                 }
-                else if (!SetHostRuntimeDirectory(arguments[0])) 
+                else if (*arguments != nullptr && strcmp(*arguments, "-netcore") == 0)
                 {
-                    result.Printf("Invalid host runtime path: %s\n", arguments[0]);
+                    flavor = HostRuntimeFlavor::NetCore; 
+                    arguments++;
+                }
+                if (*arguments != nullptr && strcmp(*arguments, "-major") == 0)
+                {
+                    arguments++;
+                    if (*arguments != nullptr)
+                    {
+                        major = atoi(*arguments);
+                        arguments++;
+                    }
+                }
+                if (*arguments != nullptr)
+                {
+                    hostRuntimeDirectory = *arguments;
+                    arguments++;
+                }
+                if (!SetHostRuntime(flavor, major, minor, hostRuntimeDirectory))
+                {
+                    result.Printf("Invalid host runtime path: %s\n", hostRuntimeDirectory);
                     result.SetStatus(lldb::eReturnStatusFailed);
                     return result.Succeeded();
                 }
             }
         }
-        const char* flavor = "<unknown>";
-        switch (GetHostRuntimeFlavor())
+        GetHostRuntime(flavor, major, minor, hostRuntimeDirectory);
+        switch (flavor)
         {
             case HostRuntimeFlavor::None:
-                flavor = "no";
+                result.Printf("Using no runtime to host the managed SOS code\n");
                 break;
             case HostRuntimeFlavor::NetCore:
-                flavor = ".NET Core";
+                result.Printf("Using .NET Core runtime (version %d.%d) to host the managed SOS code\n", major, minor);
                 break;
             default:
                 break;
         }
-        result.Printf("Using %s runtime to host the managed SOS code\n", flavor);
-        const char* directory = GetHostRuntimeDirectory();
-        if (directory != nullptr)
+        if (hostRuntimeDirectory != nullptr)
         {
-            result.Printf("Host runtime path: %s\n", directory);
+            result.Printf("Host runtime path: %s\n", hostRuntimeDirectory);
         }
         return result.Succeeded();
     }

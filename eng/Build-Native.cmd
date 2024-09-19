@@ -29,16 +29,17 @@ if defined VS160COMNTOOLS (
 
 :: Set the default arguments for build
 
-set __BuildArch=x64
-if /i "%PROCESSOR_ARCHITECTURE%" == "amd64" set __BuildArch=x64
-if /i "%PROCESSOR_ARCHITECTURE%" == "x86" set __BuildArch=x86
+set __TargetArch=x64
+if /i "%PROCESSOR_ARCHITECTURE%" == "amd64" set __TargetArch=x64
+if /i "%PROCESSOR_ARCHITECTURE%" == "arm64" set __TargetArch=arm64
+if /i "%PROCESSOR_ARCHITECTURE%" == "x86" set __TargetArch=x86
+set __HostArch=
 set __BuildType=Debug
-set __BuildOS=Windows_NT
-set __Build=1
+set __TargetOS=Windows_NT
+set __BuildNative=1
 set __CI=0
 set __Verbosity=minimal
-set __BuildCrossArch=0
-set __CrossArch=
+set __Ninja=0
 
 :: Set the various build properties here so that CMake and MSBuild can pick them up
 set "__ProjectDir=%~dp0"
@@ -61,7 +62,7 @@ if /i "%1" == "-help" goto Usage
 if /i "%1" == "--help" goto Usage
 
 if /i "%1" == "-configuration"       (set __BuildType=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
-if /i "%1" == "-architecture"        (set __BuildArch=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
+if /i "%1" == "-architecture"        (set __TargetArch=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-verbosity"           (set __Verbosity=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-ci"                  (set __CI=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 
@@ -88,18 +89,7 @@ if [!processedArgs!] == [] (
 
 :ArgsDone
 
-:: Determine if this is a cross-arch build
-
-if /i "%__BuildArch%" == "arm64" (
-    set __BuildCrossArch=%__Build%
-    set __CrossArch=x64
-)
-
-if /i "%__BuildArch%" == "arm" (
-    set __BuildCrossArch=%__Build%
-    set __CrossArch=x86
-)
-
+if "%__HostArch%" == "" set __HostArch=%__TargetArch%
 if /i "%__BuildType%" == "debug" set __BuildType=Debug
 if /i "%__BuildType%" == "release" set __BuildType=Release
 
@@ -115,22 +105,18 @@ echo %NUGET_PACKAGES%
 
 :: Set the remaining variables based upon the determined build configuration
 set "__RootBinDir=%__ProjectDir%\artifacts"
-set "__BinDir=%__RootBinDir%\bin\%__BuildOS%.%__BuildArch%.%__BuildType%"
-set "__LogDir=%__RootBinDir%\log\%__BuildOS%.%__BuildArch%.%__BuildType%"
+set "__BinDir=%__RootBinDir%\bin\%__TargetOS%.%__TargetArch%.%__BuildType%"
+set "__LogDir=%__RootBinDir%\log\%__TargetOS%.%__TargetArch%.%__BuildType%"
 set "__ArtifactsIntermediatesDir=%__RootBinDir%\obj"
-set "__IntermediatesDir=%__ArtifactsIntermediatesDir%\%__BuildOS%.%__BuildArch%.%__BuildType%"
+set "__IntermediatesDir=%__ArtifactsIntermediatesDir%\%__TargetOS%.%__TargetArch%.%__BuildType%"
 set "__PackagesBinDir=%__RootBinDir%\packages\%__BuildType%\Shipping"
-
-set "__CrossComponentBinDir=%__BinDir%"
-set "__CrossCompIntermediatesDir=%__IntermediatesDir%\crossgen"
-if NOT "%__CrossArch%" == "" set __CrossComponentBinDir=%__CrossComponentBinDir%\%__CrossArch%
 
 :: Generate path to be set for CMAKE_INSTALL_PREFIX to contain forward slash
 set "__CMakeBinDir=%__BinDir%"
 set "__CMakeBinDir=%__CMakeBinDir:\=/%"
 
 :: Common msbuild arguments
-set "__CommonBuildArgs=/v:!__Verbosity! /p:Configuration=%__BuildType% /p:BuildArch=%__BuildArch% %__UnprocessedBuildArgs%"
+set "__CommonBuildArgs=/v:!__Verbosity! /p:Configuration=%__BuildType% /p:BuildArch=%__TargetArch% %__UnprocessedBuildArgs%"
 
 if not exist "%__BinDir%"           md "%__BinDir%"
 if not exist "%__IntermediatesDir%" md "%__IntermediatesDir%"
@@ -157,89 +143,25 @@ set __DotNetCli=%__ProjectDir%\dotnet.cmd
 
 REM =========================================================================================
 REM ===
-REM === Build Cross-Architecture Native Components (if applicable)
-REM ===
-REM =========================================================================================
-
-if /i %__BuildCrossArch% EQU 1 (
-    rem Scope environment changes start {
-    setlocal
-
-    echo %__MsgPrefix%Commencing build of cross architecture native components for %__BuildOS%.%__BuildArch%.%__BuildType%
-
-    :: Set the environment for the native build
-    set __VCBuildArch=x86_amd64
-    if /i "%__CrossArch%" == "x86" ( set __VCBuildArch=x86 )
-
-    echo %__MsgPrefix%Using environment: "%__VCToolsRoot%\vcvarsall.bat" !__VCBuildArch!
-    call                                 "%__VCToolsRoot%\vcvarsall.bat" !__VCBuildArch!
-    @if defined _echo @echo on
-
-    if not exist "%__CrossCompIntermediatesDir%" md "%__CrossCompIntermediatesDir%"
-
-    echo Generating Version Header
-    set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.proj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__ArtifactsIntermediatesDir%\_version.h %__CommonBuildArgs%
-    if not !errorlevel! == 0 (
-        echo Generate Version Header FAILED
-        goto ExitWithError
-    )
-    if defined __SkipConfigure goto SkipConfigureCrossBuild
-
-    set __CMakeBinDir=%__CrossComponentBinDir%
-    set "__CMakeBinDir=!__CMakeBinDir:\=/!"
-
-    set "__ManagedBinaryDir=%__RootBinDir%\bin"
-    set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
-    set __ExtraCmakeArgs="-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DCMAKE_SYSTEM_VERSION=10.0" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
-
-    pushd "%__CrossCompIntermediatesDir%"
-    call "%__ProjectDir%\eng\native\gen-buildsys.cmd" "%__ProjectDir%" "%__CrossCompIntermediatesDir%" %__VSVersion% %__CrossArch% %__BuildOS% !__ExtraCmakeArgs!
-    @if defined _echo @echo on
-    popd
-
-:SkipConfigureCrossBuild
-    if not exist "%__CrossCompIntermediatesDir%\CMakeCache.txt" (
-        echo %__MsgPrefix%Error: failed to generate cross-arch components build project!
-        goto ExitWithError
-    )
-    if defined __ConfigureOnly goto SkipCrossCompBuild
-
-    set __BuildLog="%__LogDir%\Cross.Build.binlog"
-
-    echo running "%CMakePath%" --build %__CrossCompIntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
-    "%CMakePath%" --build %__CrossCompIntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
-
-    if not !ERRORLEVEL! == 0 (
-        echo %__MsgPrefix%Error: cross-arch components build failed. Refer to the build log files for details:
-        echo     !__BuildLog!
-        goto ExitWithError
-    )
-
-:SkipCrossCompBuild
-    rem } Scope environment changes end
-    endlocal
-)
-
-REM =========================================================================================
-REM ===
 REM === Build the native code
 REM ===
 REM =========================================================================================
 
-if %__Build% EQU 1 (
+if %__BuildNative% EQU 1 (
     rem Scope environment changes start {
     setlocal
 
-    echo %__MsgPrefix%Commencing build of native components for %__BuildOS%.%__BuildArch%.%__BuildType%
+    echo %__MsgPrefix%Commencing build of native components for %__TargetOS%.%__TargetArch%.%__BuildType%
 
-    set __VCBuildArch=x86_amd64
-    if /i "%__BuildArch%" == "x86" ( set __VCBuildArch=x86 )
-    if /i "%__BuildArch%" == "arm" (
-        set __VCBuildArch=x86_arm
-    )
-    if /i "%__BuildArch%" == "arm64" (
-        set __VCBuildArch=x86_arm64
+    REM Set the environment for the native build
+    if /i "%PROCESSOR_ARCHITECTURE%" == "ARM64" (
+        set __VCBuildArch=arm64
+        if /i "%__HostArch%" == "x64" ( set __VCBuildArch=arm64_amd64 )
+        if /i "%__HostArch%" == "x86" ( set __VCBuildArch=arm64_x86 )
+    ) else (
+        set __VCBuildArch=amd64
+        if /i "%__HostArch%" == "x86" ( set __VCBuildArch=amd64_x86 )
+        if /i "%__HostArch%" == "arm64" ( set __VCBuildArch=amd64_arm64 )
     )
 
     echo %__MsgPrefix%Using environment: "%__VCToolsRoot%\vcvarsall.bat" !__VCBuildArch!
@@ -251,9 +173,13 @@ if %__Build% EQU 1 (
         goto ExitWithError
     )
 
+    if %__Ninja% EQU 1 (
+        set __ExtraCmakeArgs="-DCMAKE_BUILD_TYPE=!__BuildType!"
+    )
+
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\CreateVersionFile.proj" /bl:!__GenerateVersionLog! /t:GenerateVersionFiles /restore /p:FileVersionFile=%__RootBinDir%\bin\FileVersion.txt /p:GenerateVersionHeader=true /p:NativeVersionHeaderFile=%__ArtifactsIntermediatesDir%\_version.h %__CommonBuildArgs%
+    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__ProjectDir%\eng\common\msbuild.ps1" "%__ProjectDir%\eng\native-prereqs.proj" /bl:!__GenerateVersionLog! /t:BuildPrereqs /restore %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         goto ExitWithError
@@ -264,10 +190,10 @@ if %__Build% EQU 1 (
 
     set "__ManagedBinaryDir=%__RootBinDir%\bin"
     set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
-    set __ExtraCmakeArgs="-DCMAKE_SYSTEM_VERSION=10.0" "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__BuildArch%" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
+    set __ExtraCmakeArgs=!__ExtraCmakeArgs! "-DCMAKE_SYSTEM_VERSION=10.0" "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__TargetArch%" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
 
     pushd "%__IntermediatesDir%"
-    call "%__ProjectDir%\eng\native\gen-buildsys.cmd" "%__ProjectDir%" "%__IntermediatesDir%" %__VSVersion% %__BuildArch% %__BuildOS% !__ExtraCmakeArgs!
+    call "%__ProjectDir%\eng\native\gen-buildsys.cmd" "%__ProjectDir%" "%__IntermediatesDir%" %__VSVersion% %__HostArch% %__TargetOS% !__ExtraCmakeArgs!
     @if defined _echo @echo on
     popd
 
@@ -299,14 +225,14 @@ REM Copy the native SOS binaries to where these tools expect for CI & VS testing
 set "__targetRid=net6.0"
 set "__dotnet_sos=%__RootBinDir%\bin\dotnet-sos\%__BuildType%\%__targetRid%"
 set "__dotnet_dump=%__RootBinDir%\bin\dotnet-dump\%__BuildType%\%__targetRid%"
-mkdir %__dotnet_sos%\win-%__BuildArch%
-mkdir %__dotnet_sos%\publish\win-%__BuildArch%
-mkdir %__dotnet_dump%\win-%__BuildArch%
-mkdir %__dotnet_dump%\publish\win-%__BuildArch%
-xcopy /y /q /i %__BinDir% %__dotnet_sos%\win-%__BuildArch%
-xcopy /y /q /i %__BinDir% %__dotnet_sos%\publish\win-%__BuildArch%
-xcopy /y /q /i %__BinDir% %__dotnet_dump%\win-%__BuildArch%
-xcopy /y /q /i %__BinDir% %__dotnet_dump%\publish\win-%__BuildArch%
+mkdir %__dotnet_sos%\win-%__TargetArch%
+mkdir %__dotnet_sos%\publish\win-%__TargetArch%
+mkdir %__dotnet_dump%\win-%__TargetArch%
+mkdir %__dotnet_dump%\publish\win-%__TargetArch%
+xcopy /y /q /i %__BinDir% %__dotnet_sos%\win-%__TargetArch%
+xcopy /y /q /i %__BinDir% %__dotnet_sos%\publish\win-%__TargetArch%
+xcopy /y /q /i %__BinDir% %__dotnet_dump%\win-%__TargetArch%
+xcopy /y /q /i %__BinDir% %__dotnet_dump%\publish\win-%__TargetArch%
 
 REM =========================================================================================
 REM ===

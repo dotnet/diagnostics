@@ -44,24 +44,26 @@ namespace SOS.Extensions
                 IsDump = true;
             }
 
-            hr = debuggerServices.GetExecutingProcessorType(out IMAGE_FILE_MACHINE type);
+            hr = debuggerServices.GetProcessorType(out IMAGE_FILE_MACHINE type);
             if (hr == HResult.S_OK)
             {
+                Debug.Assert(type is not IMAGE_FILE_MACHINE.ARM64X and not IMAGE_FILE_MACHINE.ARM64EC);
                 Architecture = type switch
                 {
                     IMAGE_FILE_MACHINE.I386 => Architecture.X86,
                     IMAGE_FILE_MACHINE.ARM => Architecture.Arm,
                     IMAGE_FILE_MACHINE.THUMB => Architecture.Arm,
-                    IMAGE_FILE_MACHINE.THUMB2 => Architecture.Arm,
+                    IMAGE_FILE_MACHINE.ARMNT => Architecture.Arm,
                     IMAGE_FILE_MACHINE.AMD64 => Architecture.X64,
                     IMAGE_FILE_MACHINE.ARM64 => Architecture.Arm64,
+                    IMAGE_FILE_MACHINE.LOONGARCH64 => (Architecture)6 /* Architecture.LoongArch64 */,
                     IMAGE_FILE_MACHINE.RISCV64 => (Architecture)9 /* Architecture.RiscV64 */,
                     _ => throw new PlatformNotSupportedException($"Machine type not supported: {type}"),
                 };
             }
             else
             {
-                throw new PlatformNotSupportedException($"GetExecutingProcessorType() FAILED {hr:X8}");
+                throw new PlatformNotSupportedException($"GetProcessorType() FAILED {hr:X8}");
             }
 
             hr = debuggerServices.GetCurrentProcessId(out uint processId);
@@ -101,15 +103,15 @@ namespace SOS.Extensions
             _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => CreateCrashInfoService(services, debuggerServices));
             OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
 
-            if (debuggerServices.DebugClient is not null)
+            if (Host.HostType == HostType.DbgEng)
             {
-                _serviceContainerFactory.AddServiceFactory<IMemoryRegionService>((services) => new MemoryRegionServiceFromDebuggerServices(debuggerServices.DebugClient));
+                _serviceContainerFactory.AddServiceFactory<IMemoryRegionService>((services) => new MemoryRegionServiceFromDebuggerServices(debuggerServices));
             }
 
             Finished();
 
             TargetWrapper targetWrapper = Services.GetService<TargetWrapper>();
-            targetWrapper?.ServiceWrapper.AddServiceWrapper(ManagedAnalysisWrapper.IID_ICLRManagedAnalysis, () => new ManagedAnalysisWrapper(this, Services, targetWrapper.ServiceWrapper));
+            targetWrapper?.ServiceWrapper.AddServiceWrapper(ClrmaServiceWrapper.IID_ICLRMAService, () => new ClrmaServiceWrapper(this, Services, targetWrapper.ServiceWrapper));
         }
 
         private unsafe ICrashInfoService CreateCrashInfoService(IServiceProvider services, DebuggerServices debuggerServices)

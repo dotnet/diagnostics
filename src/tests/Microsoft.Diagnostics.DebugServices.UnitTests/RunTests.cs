@@ -3,63 +3,125 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.TestHelpers;
+using SOS.Extensions;
 using Xunit.Abstractions;
+using Xunit.Extensions;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
 {
     [Command(Name = "runtests", Help = "Runs the debug services xunit tests.")]
     public class RunTestsCommand : CommandBase, ITestOutputHelper
     {
-        [ServiceImport]
-        public ITarget Target { get; set; }
+        [Argument(Help = "Test name: debugservices, clrma or analyze.")]
+        public string[] TestNames { get; set; } = Array.Empty<string>();
 
-        [Argument(Help = "Test data xml file path.")]
-        public string TestDataPath { get; set; }
+        [Option(Name = "--testdata", Help = "Test data xml file path.")]
+        public string TestDataFile { get; set; }
+
+        [Option(Name = "--dumpfile", Help = "Dump file path.")]
+        public string DumpFile { get; set; }
 
         public override void Invoke()
         {
-            IEnumerable<TestHost> configurations;
-            if (TestDataPath != null)
+            ITarget target = Services.GetService<ITarget>();
+            string os;
+            if (target.OperatingSystem == OSPlatform.Linux)
             {
-                Dictionary<string, string> initialConfig = new()
-                {
-                    ["OS"] = OS.Kind.ToString().ToLowerInvariant(),
-                    ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
-                    ["TestDataFile"] = TestDataPath,
-                };
-                configurations = new[] { new TestDebugger(new TestConfiguration(initialConfig), Target) };
+                os = "linux";
+            }
+            else if (target.OperatingSystem == OSPlatform.OSX)
+            {
+                os = "osx";
+            }
+            else if (target.OperatingSystem == OSPlatform.Windows)
+            {
+                os = "windows";
             }
             else
             {
-                TestConfiguration.BaseDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                configurations = TestRunConfiguration.Instance.Configurations.Select((config) => new TestDebugger(config, Target));
+                os = "unknown";
             }
-            using DebugServicesTests debugServicesTests = new(this);
+            Dictionary<string, string> initialConfig = new()
+            {
+                ["OS"] = os,
+                ["TargetArchitecture"] = target.Architecture.ToString().ToLowerInvariant(),
+                ["TestDataFile"] = TestDataFile,
+                ["DumpFile"] = DumpFile
+            };
+            IEnumerable<TestHost> configurations = new[] { new TestDebugger(new TestConfiguration(initialConfig), target, Services) };
+            bool passed = true;
             foreach (TestHost host in configurations)
             {
-                if (!host.Config.IsTestDbgEng())
+                foreach (string testName in TestNames)
                 {
                     try
                     {
-                        debugServicesTests.TargetTests(host);
-                        debugServicesTests.ModuleTests(host);
-                        debugServicesTests.ThreadTests(host);
-                        debugServicesTests.RuntimeTests(host);
+                        switch (testName.ToLower())
+                        {
+                            case "debugservices":
+                                {
+                                    if (host.TestDataFile == null)
+                                    {
+                                        throw new DiagnosticsException("TestDataFile option (--testdata) required");
+                                    }
+                                    if (host.DumpFile == null)
+                                    {
+                                        throw new DiagnosticsException("DumpFile option (--dumpfile) required");
+                                    }
+                                    using DebugServicesTests debugServicesTests = new(this);
+                                    debugServicesTests.TargetTests(host);
+                                    debugServicesTests.ModuleTests(host);
+                                    debugServicesTests.ThreadTests(host);
+                                    debugServicesTests.RuntimeTests(host);
+                                    break;
+                                }
+
+                            case "clrma":
+                                {
+                                    using ClrmaTests clrmaTests = new(this);
+                                    clrmaTests.BangClrmaTests(host);
+                                    break;
+                                }
+
+                            case "analyze":
+                                {
+                                    using ClrmaTests clrmaTests = new(this);
+                                    clrmaTests.BangAnalyzeTests(host);
+                                    break;
+                                }
+
+                            default:
+                                throw new DiagnosticsException($"Invalid test name");
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Trace.TraceError("Tests FAILED:");
-                        Trace.TraceError(ex.ToString());
-                        return;
+                        if (ex is SkipTestException)
+                        {
+                            WriteLineWarning($"Test {testName} SKIPPED - {ex.Message}");
+                        }
+                        else
+                        {
+                            WriteLineError($"Test {testName} FAILED - {ex.Message}");
+                            passed = false;
+                        }
+                        continue;
                     }
+                    WriteLine($"Test {testName} PASSED");
                 }
             }
-            WriteLine("Tests PASSED");
+            if (passed)
+            {
+                WriteLine($"All Tests PASSED");
+            }
         }
 
         #region ITestOutputHelper
@@ -74,11 +136,28 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     internal class TestDebugger : TestHost
     {
         private readonly ITarget _target;
+        private readonly IServiceProvider _services;
+        private readonly CommandService _commandService;
 
-        internal TestDebugger(TestConfiguration config, ITarget target)
+        internal TestDebugger(TestConfiguration config, ITarget target, IServiceProvider services)
             : base(config)
         {
             _target = target;
+            _services = services;
+            // dotnet-dump adds the CommandService implementation class as a service
+            _commandService = services.GetService<CommandService>();
+        }
+
+        public override IReadOnlyList<string> ExecuteHostCommand(string commandLine)
+        {
+            if (HostServices.Instance != null)
+            {
+                return HostServices.Instance.ExecuteHostCommand(commandLine);
+            }
+            else
+            {
+                throw new NotSupportedException("ExecuteHostCommand");
+            }
         }
 
         protected override ITarget GetTarget() => _target;

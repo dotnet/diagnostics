@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Help;
@@ -34,6 +35,25 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // Create default command group (should always be last in this list)
             _commandGroups.Add(new CommandGroup(_commandPrompt));
+        }
+
+        /// <summary>
+        /// Execute the command line and return the captured console output.
+        /// </summary>
+        /// <param name="commandLine">command line text</param>
+        /// <param name="services">services for the command</param>
+        /// <returns>Array of console output lines</returns>
+        /// <exception cref="ArgumentException">empty command line</exception>
+        /// <exception cref="CommandNotFoundException">command not found</exception>
+        /// <exception cref="CommandParsingException ">parsing error</exception>
+        /// <exception cref="DiagnosticsException">other errors</exception>
+        public IReadOnlyList<string> ExecuteAndCapture(string commandLine, IServiceProvider services)
+        {
+            CaptureConsoleService consoleService = new();
+            ServiceContainer serviceContainer = new(services);
+            serviceContainer.AddService(consoleService);
+            Execute(commandLine, services);
+            return consoleService.OutputLines;
         }
 
         /// <summary>

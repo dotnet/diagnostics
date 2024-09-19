@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public static Option FormatOption() =>
             new(
                 alias: "--format",
-                description: $"Sets the output format for the trace file.  Default is {DefaultTraceFileFormat()}.")
+                description: $"If not using the default NetTrace format, an additional file will be emitted with the specified format under the same output name and with the corresponding format extension. The default format is {DefaultTraceFileFormat()}.")
             {
                 Argument = new Argument<TraceFileFormat>(name: "trace-file-format", getDefaultValue: DefaultTraceFileFormat)
             };

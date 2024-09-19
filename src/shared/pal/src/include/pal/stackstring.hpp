@@ -21,7 +21,7 @@ private:
     void DeleteBuffer()
     {
         if (m_innerBuffer != m_buffer)
-            PAL_free(m_buffer);
+            free(m_buffer);
 
         m_buffer = NULL;
         return;
@@ -44,7 +44,7 @@ private:
             m_buffer = NULL;
         }
 
-        T * newBuffer = (T *)PAL_realloc(m_buffer, (count_allocated + 1) * sizeof(T));
+        T * newBuffer = (T *)realloc(m_buffer, (count_allocated + 1) * sizeof(T));
         if (NULL == newBuffer)
         {
             SetLastError(ERROR_NOT_ENOUGH_MEMORY);
@@ -253,15 +253,6 @@ typedef StackString<MAX_PATH, WCHAR> PathWCharString;
 #endif
 
 // Some Helper Definitions
-BOOL 
-PAL_GetPALDirectoryW(
-        PathWCharString& lpDirectoryName);
-BOOL 
-PAL_GetPALDirectoryA(
-        PathCharString& lpDirectoryName);
 DWORD
 GetCurrentDirectoryA(
          PathCharString& lpBuffer);
-void
-FILEDosToUnixPathA(
-        PathCharString& lpPath);

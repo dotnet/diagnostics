@@ -13,7 +13,6 @@
 #include "corerror.h"
 #include "stresslog.h"
 #include "staticcontract.h"
-#include "entrypoints.h"
 
 #if !defined(_DEBUG_IMPL) && defined(_DEBUG) && !defined(DACCESS_COMPILE)
 #define _DEBUG_IMPL 1
@@ -177,11 +176,17 @@ class Exception
  public:
     Exception() {LIMITED_METHOD_DAC_CONTRACT; m_innerException = NULL;}
     virtual ~Exception() {LIMITED_METHOD_DAC_CONTRACT; if (m_innerException != NULL) Exception::Delete(m_innerException); }
+#ifdef DACCESS_COMPILE
+    void * operator new(size_t size);
+    void operator delete(void* ptr);
+#endif
     virtual BOOL IsDomainBound() {return m_innerException!=NULL && m_innerException->IsDomainBound();} ;
     virtual HRESULT GetHR() = 0;
     virtual void GetMessage(SString &s);
+#ifdef FEATURE_COMINTEROP
     virtual IErrorInfo *GetErrorInfo() { LIMITED_METHOD_CONTRACT; return NULL; }
     virtual HRESULT SetErrorInfo() { LIMITED_METHOD_CONTRACT; return S_OK; }
+#endif // FEATURE_COMINTEROP
     void SetInnerException(Exception * pInnerException) { LIMITED_METHOD_CONTRACT; m_innerException = pInnerException; }
 
     // Dynamic type query for catchers
@@ -420,24 +425,32 @@ class COMException : public HRException
 {
     friend bool DebugIsEECxxExceptionPointer(void* pv);
 
+#ifdef FEATURE_COMINTEROP
  private:
     IErrorInfo          *m_pErrorInfo;
+#endif // FEATURE_COMINTEROP
 
  public:
     COMException();
     COMException(HRESULT hr) ;
+#ifdef FEATURE_COMINTEROP
     COMException(HRESULT hr, IErrorInfo *pErrorInfo);
     ~COMException();
 
     // Virtual overrides
     IErrorInfo *GetErrorInfo();
     void GetMessage(SString &result);
+#endif
 
  protected:
     virtual Exception *CloneHelper()
     {
         WRAPPER_NO_CONTRACT;
+#ifdef FEATURE_COMINTEROP
         return new COMException(m_hr, m_pErrorInfo);
+#else
+        return new COMException(m_hr);
+#endif
     }
 };
 
@@ -470,7 +483,9 @@ class SEHException : public Exception
 
     // Virtual overrides
     HRESULT GetHR();
+#ifdef FEATURE_COMINTEROP
     IErrorInfo *GetErrorInfo();
+#endif // FEATURE_COMINTEROP
     void GetMessage(SString &result);
 
  protected:
@@ -515,7 +530,9 @@ class DelegatingException : public Exception
     // Virtual overrides
     virtual BOOL IsDomainBound() {return Exception::IsDomainBound() ||(m_delegatedException!=NULL && m_delegatedException->IsDomainBound());} ;
     HRESULT GetHR();
+#ifdef FEATURE_COMINTEROP
     IErrorInfo *GetErrorInfo();
+#endif // FEATURE_COMINTEROP
     void GetMessage(SString &result);
     virtual Exception *Clone();
 
@@ -1247,25 +1264,31 @@ inline HRMsgException::HRMsgException(HRESULT hr, SString const &s)
 }
 
 inline COMException::COMException()
-  : HRException(),
-  m_pErrorInfo(NULL)
+  : HRException()
+#ifdef FEATURE_COMINTEROP
+  , m_pErrorInfo(NULL)
+#endif // FEATURE_COMINTEROP
 {
     WRAPPER_NO_CONTRACT;
 }
 
 inline COMException::COMException(HRESULT hr)
-  : HRException(hr),
-  m_pErrorInfo(NULL)
+  : HRException(hr)
+#ifdef FEATURE_COMINTEROP
+  , m_pErrorInfo(NULL)
+#endif // FEATURE_COMINTEROP
 {
     LIMITED_METHOD_CONTRACT;
 }
 
+#ifdef FEATURE_COMINTEROP
 inline COMException::COMException(HRESULT hr, IErrorInfo *pErrorInfo)
   : HRException(hr),
   m_pErrorInfo(pErrorInfo)
 {
     LIMITED_METHOD_CONTRACT;
 }
+#endif // FEATURE_COMINTEROP
 
 inline SEHException::SEHException()
 {
@@ -1284,6 +1307,7 @@ inline SEHException::SEHException(EXCEPTION_RECORD *pointers, T_CONTEXT *pContex
 
 void DECLSPEC_NORETURN ThrowHR(HRESULT hr);
 void DECLSPEC_NORETURN ThrowHR(HRESULT hr, SString const &msg);
+void DECLSPEC_NORETURN ThrowHR(HRESULT hr, UINT uText);
 void DECLSPEC_NORETURN ThrowWin32(DWORD err);
 void DECLSPEC_NORETURN ThrowLastError();
 void DECLSPEC_NORETURN ThrowOutOfMemory();

@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -33,8 +34,8 @@ namespace Microsoft.SymbolStore.KeyGenerators
         public MachOFileKeyGenerator(ITracer tracer, MachOFile machoFile, string path)
             : base(tracer)
         {
-            _machoFile = machoFile;
-            _path = path;
+            _machoFile = machoFile ?? throw new ArgumentNullException(nameof(machoFile));
+            _path = path ?? throw new ArgumentNullException(nameof(path));
         }
 
         public MachOFileKeyGenerator(ITracer tracer, SymbolStoreFile file)

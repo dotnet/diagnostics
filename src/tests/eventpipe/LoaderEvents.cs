@@ -32,7 +32,7 @@ namespace EventPipe.UnitTests.LoaderEventsValidation
             output = outputHelper;
         }
 
-        [Fact]
+        [Fact(Skip="https://github.com/dotnet/diagnostics/issues/4655")]
         public async Task AssemblyLoad_ProducesEvents()
         {
             await RemoteTestExecutorHelper.RunTestCaseAsync(() => {

@@ -5,9 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
+using Azure.Identity;
 using Microsoft.Diagnostic.Tools.Symbol.Properties;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
@@ -25,11 +28,13 @@ namespace Microsoft.Diagnostics.Tools.Symbol
         {
             public Uri Uri;
             public string PersonalAccessToken;
+            public bool InternalSymwebServer;
         }
 
         private readonly List<string> InputFilePaths = new();
         private readonly List<string> CacheDirectories = new();
         private readonly List<ServerInfo> SymbolServers = new();
+        private TokenCredential TokenCredential = new DefaultAzureCredential(includeInteractiveCredentials: true);
         private string OutputDirectory;
         private TimeSpan? Timeout;
         private bool Overwrite;
@@ -61,6 +66,11 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                     case "--microsoft-symbol-server":
                         Uri.TryCreate("https://msdl.microsoft.com/download/symbols/", UriKind.Absolute, out uri);
                         program.SymbolServers.Add(new ServerInfo { Uri = uri, PersonalAccessToken = null });
+                        break;
+
+                     case "--internal-server":
+                        Uri.TryCreate("https://symweb.azurefd.net/", UriKind.Absolute, out uri);
+                        program.SymbolServers.Add(new ServerInfo { Uri = uri, PersonalAccessToken = null, InternalSymwebServer = true });
                         break;
 
                     case "--authenticated-server-path":
@@ -256,7 +266,14 @@ namespace Microsoft.Diagnostics.Tools.Symbol
 
             foreach (ServerInfo server in ((IEnumerable<ServerInfo>)SymbolServers).Reverse())
             {
-                store = new HttpSymbolStore(Tracer, store, server.Uri, server.PersonalAccessToken);
+                if (server.InternalSymwebServer)
+                {
+                    store = new HttpSymbolStore(Tracer, store, server.Uri, SymwebAuthenticationFunc);
+                }
+                else
+                {
+                    store = new HttpSymbolStore(Tracer, store, server.Uri, server.PersonalAccessToken);
+                }
                 if (Timeout.HasValue && store is HttpSymbolStore http)
                 {
                     http.Timeout = Timeout.Value;
@@ -275,6 +292,19 @@ namespace Microsoft.Diagnostics.Tools.Symbol
             }
 
             return store;
+        }
+
+        private async ValueTask<AuthenticationHeaderValue> SymwebAuthenticationFunc(CancellationToken token)
+        {
+            try
+            {
+                AccessToken accessToken = await TokenCredential.GetTokenAsync(new TokenRequestContext(["api://af9e1c69-e5e9-4331-8cc5-cdf93d57bafa/.default"]), token).ConfigureAwait(false);
+                return new AuthenticationHeaderValue("Bearer", accessToken.Token);
+            }
+            catch (Exception ex) when (ex is CredentialUnavailableException or AuthenticationFailedException)
+            {
+                return null;
+            }
         }
 
         private sealed class SymbolStoreKeyWrapper

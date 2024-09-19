@@ -4,8 +4,6 @@
 #ifndef __util_h__
 #define __util_h__
 
-#define LIMITED_METHOD_CONTRACT ((void)0)
-
 #define CONVERT_FROM_SIGN_EXTENDED(offset) ((ULONG_PTR)(offset))
 
 // So we can use the PAL_TRY_NAKED family of macros without dependencies on utilcode.
@@ -30,19 +28,22 @@ inline void RestoreSOToleranceState() {}
 #include "data.h"
 #endif //STRIKE
 
-#include "cordebug.h"
-#include "static_assert.h"
+#include <cordebug.h>
+#include <static_assert.h>
 #include <string>
-#include "extensions.h"
-#include "releaseholder.h"
+#include <extensions.h>
+#include <releaseholder.h>
 #include "hostimpl.h"
 #include "targetimpl.h"
 #include "runtimeimpl.h"
 #include "symbols.h"
+#include "crosscontext.h"
 
 typedef LPCSTR  LPCUTF8;
 typedef LPSTR   LPUTF8;
 
+#include "contract.h"
+#undef NOTHROW
 #ifdef FEATURE_PAL
 #define NOTHROW
 #else
@@ -71,19 +72,16 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #define TARGET_POINTER_SIZE POINTERSIZE_BYTES
 #endif // TARGET_POINTER_SIZE
 
-#ifndef _ASSERTE
+#undef _ASSERTE
 #ifdef _DEBUG
 #define _ASSERTE(expr)         \
     do { if (!(expr) ) { ExtErr("_ASSERTE fired:\n\t%s\n", #expr); if (IsDebuggerPresent()) DebugBreak(); } } while (0)
 #else
-#define _ASSERTE(x)
+#define _ASSERTE(expr) ((void)0)
 #endif
-#endif // ASSERTE
 
-#ifdef _DEBUG
-#define ASSERT_CHECK(expr, msg, reason)         \
-        do { if (!(expr) ) { ExtOut(reason); ExtOut(msg); ExtOut(#expr); DebugBreak(); } } while (0)
-#endif
+#undef _ASSERT
+#define _ASSERT _ASSERTE
 
 // The native symbol reader dll name
 #if defined(_AMD64_)
@@ -95,10 +93,6 @@ DECLARE_HANDLE(OBJECTHANDLE);
 #elif defined(_ARM64_)
 #define NATIVE_SYMBOL_READER_DLL "Microsoft.DiaSymReader.Native.arm64.dll"
 #endif
-
-// PREFIX macros - Begin
-#define PREFIX_ASSUME(_condition)
-// PREFIX macros - End
 
 class MethodTable;
 
@@ -121,6 +115,8 @@ class MethodTable;
 #define HNDTYPE_ASYNCPINNED                     (7)
 #define HNDTYPE_SIZEDREF                        (8)
 #define HNDTYPE_WEAK_WINRT                      (9)
+#define HNDTYPE_WEAK_INTERIOR_POINTER           (10)
+
 
 class BaseObject
 {
@@ -149,6 +145,7 @@ enum EEFLAVOR {UNKNOWNEE, MSCOREE, MSCORWKS, MSCOREND};
 #include "sospriv.h"
 extern IXCLRDataProcess *g_clrData;
 extern ISOSDacInterface *g_sos;
+extern ISOSDacInterface15 *g_sos15;
 
 #include "dacprivate.h"
 
@@ -608,7 +605,6 @@ private:
 
 typedef BaseString<char, strlen, strcpy_s> String;
 typedef BaseString<WCHAR, _wcslen, wcscpy_s> WString;
-
 
 template<class T>
 void Flatten(__out_ecount(len) T *data, unsigned int len)
@@ -1545,12 +1541,6 @@ BOOL IsMiniDumpFile();
 void ReportOOM();
 
 BOOL SafeReadMemory (TADDR offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead);
-#if !defined(_TARGET_WIN64_) && !defined(_ARM64_) && !defined(_MIPS64_) && !defined(_RISCV64_)
-// on 64-bit platforms TADDR and CLRDATA_ADDRESS are identical
-inline BOOL SafeReadMemory (CLRDATA_ADDRESS offset, PVOID lpBuffer, ULONG cb, PULONG lpcbBytesRead)
-{ return SafeReadMemory(TO_TADDR(offset), lpBuffer, cb, lpcbBytesRead); }
-#endif
-
 BOOL NameForMD_s (DWORD_PTR pMD, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName);
 BOOL NameForMT_s (DWORD_PTR MTAddr, __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName);
 
@@ -1720,11 +1710,12 @@ struct GCHandleStatistics
     DWORD sizedRefCount;
     DWORD dependentCount;
     DWORD weakWinRTHandleCount;
+    DWORD weakInteriorPointerHandleCount;
     DWORD unknownHandleCount;
     GCHandleStatistics()
         : strongHandleCount(0), pinnedHandleCount(0), asyncPinnedHandleCount(0), refCntHandleCount(0),
           weakLongHandleCount(0), weakShortHandleCount(0), variableCount(0), sizedRefCount(0),
-          dependentCount(0), weakWinRTHandleCount(0), unknownHandleCount(0)
+          dependentCount(0), weakWinRTHandleCount(0), weakInteriorPointerHandleCount(0), unknownHandleCount(0)
     {}
     ~GCHandleStatistics()
     {
@@ -2135,355 +2126,12 @@ private:
 
 #endif // !FEATURE_PAL
 
-/// X86 Context
-#define X86_SIZE_OF_80387_REGISTERS      80
-#define X86_MAXIMUM_SUPPORTED_EXTENSION     512
-
-typedef struct {
-    DWORD   ControlWord;
-    DWORD   StatusWord;
-    DWORD   TagWord;
-    DWORD   ErrorOffset;
-    DWORD   ErrorSelector;
-    DWORD   DataOffset;
-    DWORD   DataSelector;
-    BYTE    RegisterArea[X86_SIZE_OF_80387_REGISTERS];
-    DWORD   Cr0NpxState;
-} X86_FLOATING_SAVE_AREA;
-
-typedef struct {
-
-    DWORD ContextFlags;
-    DWORD   Dr0;
-    DWORD   Dr1;
-    DWORD   Dr2;
-    DWORD   Dr3;
-    DWORD   Dr6;
-    DWORD   Dr7;
-
-    X86_FLOATING_SAVE_AREA FloatSave;
-
-    DWORD   SegGs;
-    DWORD   SegFs;
-    DWORD   SegEs;
-    DWORD   SegDs;
-
-    DWORD   Edi;
-    DWORD   Esi;
-    DWORD   Ebx;
-    DWORD   Edx;
-    DWORD   Ecx;
-    DWORD   Eax;
-
-    DWORD   Ebp;
-    DWORD   Eip;
-    DWORD   SegCs;
-    DWORD   EFlags;
-    DWORD   Esp;
-    DWORD   SegSs;
-
-    BYTE    ExtendedRegisters[X86_MAXIMUM_SUPPORTED_EXTENSION];
-
-} X86_CONTEXT;
-
-typedef struct {
-    ULONGLONG Low;
-    LONGLONG High;
-} M128A_XPLAT;
-
-
-/// AMD64 Context
-typedef struct {
-    WORD   ControlWord;
-    WORD   StatusWord;
-    BYTE  TagWord;
-    BYTE  Reserved1;
-    WORD   ErrorOpcode;
-    DWORD ErrorOffset;
-    WORD   ErrorSelector;
-    WORD   Reserved2;
-    DWORD DataOffset;
-    WORD   DataSelector;
-    WORD   Reserved3;
-    DWORD MxCsr;
-    DWORD MxCsr_Mask;
-    M128A_XPLAT FloatRegisters[8];
-
-#if defined(_WIN64)
-    M128A_XPLAT XmmRegisters[16];
-    BYTE  Reserved4[96];
-#else
-    M128A_XPLAT XmmRegisters[8];
-    BYTE  Reserved4[220];
-
-    DWORD   Cr0NpxState;
-#endif
-
-} AMD64_XMM_SAVE_AREA32;
-
-typedef struct {
-
-    DWORD64 P1Home;
-    DWORD64 P2Home;
-    DWORD64 P3Home;
-    DWORD64 P4Home;
-    DWORD64 P5Home;
-    DWORD64 P6Home;
-
-    DWORD ContextFlags;
-    DWORD MxCsr;
-
-    WORD   SegCs;
-    WORD   SegDs;
-    WORD   SegEs;
-    WORD   SegFs;
-    WORD   SegGs;
-    WORD   SegSs;
-    DWORD EFlags;
-
-    DWORD64 Dr0;
-    DWORD64 Dr1;
-    DWORD64 Dr2;
-    DWORD64 Dr3;
-    DWORD64 Dr6;
-    DWORD64 Dr7;
-
-    DWORD64 Rax;
-    DWORD64 Rcx;
-    DWORD64 Rdx;
-    DWORD64 Rbx;
-    DWORD64 Rsp;
-    DWORD64 Rbp;
-    DWORD64 Rsi;
-    DWORD64 Rdi;
-    DWORD64 R8;
-    DWORD64 R9;
-    DWORD64 R10;
-    DWORD64 R11;
-    DWORD64 R12;
-    DWORD64 R13;
-    DWORD64 R14;
-    DWORD64 R15;
-
-    DWORD64 Rip;
-
-    union {
-        AMD64_XMM_SAVE_AREA32 FltSave;
-        struct {
-            M128A_XPLAT Header[2];
-            M128A_XPLAT Legacy[8];
-            M128A_XPLAT Xmm0;
-            M128A_XPLAT Xmm1;
-            M128A_XPLAT Xmm2;
-            M128A_XPLAT Xmm3;
-            M128A_XPLAT Xmm4;
-            M128A_XPLAT Xmm5;
-            M128A_XPLAT Xmm6;
-            M128A_XPLAT Xmm7;
-            M128A_XPLAT Xmm8;
-            M128A_XPLAT Xmm9;
-            M128A_XPLAT Xmm10;
-            M128A_XPLAT Xmm11;
-            M128A_XPLAT Xmm12;
-            M128A_XPLAT Xmm13;
-            M128A_XPLAT Xmm14;
-            M128A_XPLAT Xmm15;
-        } DUMMYSTRUCTNAME;
-    } DUMMYUNIONNAME;
-
-    M128A_XPLAT VectorRegister[26];
-    DWORD64 VectorControl;
-
-    DWORD64 DebugControl;
-    DWORD64 LastBranchToRip;
-    DWORD64 LastBranchFromRip;
-    DWORD64 LastExceptionToRip;
-    DWORD64 LastExceptionFromRip;
-
-} AMD64_CONTEXT;
-
-typedef struct{
-    __int64 LowPart;
-    __int64 HighPart;
-} FLOAT128_XPLAT;
-
-
-/// ARM Context
-#define ARM_MAX_BREAKPOINTS_CONST     8
-#define ARM_MAX_WATCHPOINTS_CONST     1
-typedef DECLSPEC_ALIGN(8) struct {
-
-    DWORD ContextFlags;
-
-    DWORD R0;
-    DWORD R1;
-    DWORD R2;
-    DWORD R3;
-    DWORD R4;
-    DWORD R5;
-    DWORD R6;
-    DWORD R7;
-    DWORD R8;
-    DWORD R9;
-    DWORD R10;
-    DWORD R11;
-    DWORD R12;
-
-    DWORD Sp;
-    DWORD Lr;
-    DWORD Pc;
-    DWORD Cpsr;
-
-    DWORD Fpscr;
-    DWORD Padding;
-    union {
-        M128A_XPLAT Q[16];
-        ULONGLONG D[32];
-        DWORD S[32];
-    } DUMMYUNIONNAME;
-
-    DWORD Bvr[ARM_MAX_BREAKPOINTS_CONST];
-    DWORD Bcr[ARM_MAX_BREAKPOINTS_CONST];
-    DWORD Wvr[ARM_MAX_WATCHPOINTS_CONST];
-    DWORD Wcr[ARM_MAX_WATCHPOINTS_CONST];
-
-    DWORD Padding2[2];
-
-} ARM_CONTEXT;
-
-// On ARM this mask is or'ed with the address of code to get an instruction pointer
-#ifndef THUMB_CODE
-#define THUMB_CODE 1
-#endif
-
-///ARM64 Context
-#define ARM64_MAX_BREAKPOINTS     8
-#define ARM64_MAX_WATCHPOINTS     2
-typedef struct {
-
-    DWORD ContextFlags;
-    DWORD Cpsr;       // NZVF + DAIF + CurrentEL + SPSel
-    union {
-        struct {
-            DWORD64 X0;
-            DWORD64 X1;
-            DWORD64 X2;
-            DWORD64 X3;
-            DWORD64 X4;
-            DWORD64 X5;
-            DWORD64 X6;
-            DWORD64 X7;
-            DWORD64 X8;
-            DWORD64 X9;
-            DWORD64 X10;
-            DWORD64 X11;
-            DWORD64 X12;
-            DWORD64 X13;
-            DWORD64 X14;
-            DWORD64 X15;
-            DWORD64 X16;
-            DWORD64 X17;
-            DWORD64 X18;
-            DWORD64 X19;
-            DWORD64 X20;
-            DWORD64 X21;
-            DWORD64 X22;
-            DWORD64 X23;
-            DWORD64 X24;
-            DWORD64 X25;
-            DWORD64 X26;
-            DWORD64 X27;
-            DWORD64 X28;
-       };
-
-       DWORD64 X[29];
-   };
-
-   DWORD64 Fp;
-   DWORD64 Lr;
-   DWORD64 Sp;
-   DWORD64 Pc;
-
-
-   M128A_XPLAT V[32];
-   DWORD Fpcr;
-   DWORD Fpsr;
-
-   DWORD Bcr[ARM64_MAX_BREAKPOINTS];
-   DWORD64 Bvr[ARM64_MAX_BREAKPOINTS];
-   DWORD Wcr[ARM64_MAX_WATCHPOINTS];
-   DWORD64 Wvr[ARM64_MAX_WATCHPOINTS];
-
-} ARM64_CONTEXT;
-
-///RISCV64 Context
-#define RISCV64_MAX_BREAKPOINTS     8
-#define RISCV64_MAX_WATCHPOINTS     2
-typedef struct {
-
-    DWORD ContextFlags;
-
-    DWORD64 R0;
-    DWORD64 Ra;
-    DWORD64 Sp;
-    DWORD64 Gp;
-    DWORD64 Tp;
-    DWORD64 T0;
-    DWORD64 T1;
-    DWORD64 T2;
-    DWORD64 Fp;
-    DWORD64 S1;
-    DWORD64 A0;
-    DWORD64 A1;
-    DWORD64 A2;
-    DWORD64 A3;
-    DWORD64 A4;
-    DWORD64 A5;
-    DWORD64 A6;
-    DWORD64 A7;
-    DWORD64 S2;
-    DWORD64 S3;
-    DWORD64 S4;
-    DWORD64 S5;
-    DWORD64 S6;
-    DWORD64 S7;
-    DWORD64 S8;
-    DWORD64 S9;
-    DWORD64 S10;
-    DWORD64 S11;
-    DWORD64 T3;
-    DWORD64 T4;
-    DWORD64 T5;
-    DWORD64 T6;
-    DWORD64 Pc;
-
-    ULONGLONG F[32];
-    DWORD Fcsr;
-
-    DWORD Padding[3];
-
-} RISCV64_CONTEXT;
-
-typedef struct _CROSS_PLATFORM_CONTEXT {
-
-    _CROSS_PLATFORM_CONTEXT() {}
-
-    union {
-        X86_CONTEXT       X86Context;
-        AMD64_CONTEXT     Amd64Context;
-        ARM_CONTEXT       ArmContext;
-        ARM64_CONTEXT     Arm64Context;
-        RISCV64_CONTEXT   RiscV64Context;
-    };
-
-} CROSS_PLATFORM_CONTEXT, *PCROSS_PLATFORM_CONTEXT;
-
-
-
 WString BuildRegisterOutput(const SOSStackRefData &ref, bool printObj = true);
 WString MethodNameFromIP(CLRDATA_ADDRESS methodDesc, BOOL bSuppressLines = FALSE, BOOL bAssemblyName = FALSE, BOOL bDisplacement = FALSE, BOOL bAdjustIPForLineNumber = FALSE);
 HRESULT GetGCRefs(ULONG osID, SOSStackRefData **ppRefs, unsigned int *pRefCnt, SOSStackRefError **ppErrors, unsigned int *pErrCount);
 WString GetFrameFromAddress(TADDR frameAddr, IXCLRDataStackWalk *pStackwalk = NULL, BOOL bAssemblyName = FALSE);
+
+HRESULT PreferCanonMTOverEEClass(CLRDATA_ADDRESS eeClassPtr, BOOL *preferCanonMT, CLRDATA_ADDRESS *outCanonMT = NULL);
 
 /* This cache is used to read data from the target process if the reads are known
  * to be sequential.
@@ -2646,6 +2294,44 @@ public:
 private:
     HRESULT PrintCurrentInternalFrame();
 };
+
+#undef LIMITED_METHOD_DAC_CONTRACT 
+#define LIMITED_METHOD_DAC_CONTRACT ((void)0)
+#undef LIMITED_METHOD_CONTRACT 
+#define LIMITED_METHOD_CONTRACT ((void)0)
+#undef WRAPPER_NO_CONTRACT 
+#define WRAPPER_NO_CONTRACT ((void)0)
+#undef SUPPORTS_DAC 
+#define SUPPORTS_DAC ((void)0)
+
+//////////////////////////////////////////////////////////////////////////////
+// enum CorElementTypeZapSig defines some additional internal ELEMENT_TYPE's
+// values that are only used by ZapSig signatures.
+//////////////////////////////////////////////////////////////////////////////
+typedef enum CorElementTypeZapSig
+{
+    // ZapSig encoding for ELEMENT_TYPE_VAR and ELEMENT_TYPE_MVAR. It is always followed
+    // by the RID of a GenericParam token, encoded as a compressed integer.
+    ELEMENT_TYPE_VAR_ZAPSIG = 0x3b,
+
+    // UNUSED = 0x3c,
+
+    // ZapSig encoding for native value types in IL stubs. IL stub signatures may contain
+    // ELEMENT_TYPE_INTERNAL followed by ParamTypeDesc with ELEMENT_TYPE_VALUETYPE element
+    // type. It acts like a modifier to the underlying structure making it look like its
+    // unmanaged view (size determined by unmanaged layout, blittable, no GC pointers).
+    //
+    // ELEMENT_TYPE_NATIVE_VALUETYPE_ZAPSIG is used when encoding such types to NGEN images.
+    // The signature looks like this: ET_NATIVE_VALUETYPE_ZAPSIG ET_VALUETYPE <token>.
+    // See code:ZapSig.GetSignatureForTypeHandle and code:SigPointer.GetTypeHandleThrowing
+    // where the encoding/decoding takes place.
+    ELEMENT_TYPE_NATIVE_VALUETYPE_ZAPSIG = 0x3d,
+
+    ELEMENT_TYPE_CANON_ZAPSIG            = 0x3e,     // zapsig encoding for System.__Canon
+    ELEMENT_TYPE_MODULE_ZAPSIG           = 0x3f,     // zapsig encoding for external module id#
+
+} CorElementTypeZapSig;
+
 #include "sigparser.h"
 
 #endif // __util_h__

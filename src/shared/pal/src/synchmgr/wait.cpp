@@ -305,7 +305,7 @@ WFMOExIntReleaseControllers:
         case WaitSucceeded:
             dwRet = WAIT_OBJECT_0; // offset added later
             break;
-        case MutexAbondoned:
+        case MutexAbandoned:
             dwRet =  WAIT_ABANDONED_0; // offset added later
             break;
         case WaitTimeout:

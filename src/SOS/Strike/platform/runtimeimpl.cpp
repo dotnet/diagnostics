@@ -25,6 +25,8 @@
 #include <unistd.h>
 #endif // !FEATURE_PAL
 
+#define CORDBG_E_NO_IMAGE_AVAILABLE EMAKEHR(0x1c64)
+
 typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImpl2FnPtr)(ULONG64 clrInstanceId, 
     IUnknown * pDataTarget,
     LPCWSTR pDacModulePath,

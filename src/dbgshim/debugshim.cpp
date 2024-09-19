@@ -11,15 +11,8 @@
 #include "dbgutil.h"
 #include <crtdbg.h>
 #include <clrinternal.h> //has the CLR_ID_V4_DESKTOP guid in it
+#include <ntimageex.h>
 #include "palclr.h"
-
-#ifndef IMAGE_FILE_MACHINE_ARMNT
-#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // ARM Thumb-2 Little-Endian
-#endif
-
-#ifndef IMAGE_FILE_MACHINE_ARM64
-#define IMAGE_FILE_MACHINE_ARM64             0xAA64  // ARM64 Little-Endian
-#endif
 
 //*****************************************************************************
 // CLRDebuggingImpl implementation (ICLRDebugging)
@@ -758,15 +751,17 @@ HRESULT CLRDebuggingImpl::FormatLongDacModuleName(_Inout_updates_z_(cchBuffer) W
     const WCHAR* pHostArch = W("arm64");
 #elif defined(HOST_RISCV64)
     const WCHAR* pHostArch = W("riscv64");
+#elif defined(HOST_LOONGARCH64)
+    const WCHAR* pHostArch = W("loongarch64");
 #else
     _ASSERTE(!"Unknown host arch");
     return E_NOTIMPL;
 #endif
 
     const WCHAR* pDacBaseName = NULL;
-    if(m_skuId == CLR_ID_V4_DESKTOP)
+    if (m_skuId == CLR_ID_V4_DESKTOP)
         pDacBaseName = CLR_DAC_MODULE_NAME_W;
-    else if(m_skuId == CLR_ID_CORECLR || m_skuId == CLR_ID_PHONE_CLR || m_skuId == CLR_ID_ONECORE_CLR)
+    else if (m_skuId == CLR_ID_CORECLR || m_skuId == CLR_ID_PHONE_CLR || m_skuId == CLR_ID_ONECORE_CLR)
         pDacBaseName = CORECLR_DAC_MODULE_NAME_W;
     else
     {
@@ -774,22 +769,32 @@ HRESULT CLRDebuggingImpl::FormatLongDacModuleName(_Inout_updates_z_(cchBuffer) W
         return E_UNEXPECTED;
     }
 
+    _ASSERTE(targetImageFileMachine != IMAGE_FILE_MACHINE_ARM64X && targetImageFileMachine != IMAGE_FILE_MACHINE_ARM64EC);
+
     const WCHAR* pTargetArch = NULL;
-    if(targetImageFileMachine == IMAGE_FILE_MACHINE_I386)
+    if (targetImageFileMachine == IMAGE_FILE_MACHINE_I386)
     {
         pTargetArch = W("x86");
     }
-    else if(targetImageFileMachine == IMAGE_FILE_MACHINE_AMD64)
+    else if (targetImageFileMachine == IMAGE_FILE_MACHINE_AMD64)
     {
         pTargetArch = W("amd64");
     }
-    else if(targetImageFileMachine == IMAGE_FILE_MACHINE_ARMNT)
+    else if (targetImageFileMachine == IMAGE_FILE_MACHINE_ARMNT)
     {
         pTargetArch = W("arm");
     }
-    else if(targetImageFileMachine == IMAGE_FILE_MACHINE_ARM64)
+    else if (targetImageFileMachine == IMAGE_FILE_MACHINE_ARM64)
     {
         pTargetArch = W("arm64");
+    }
+    else if (targetImageFileMachine == IMAGE_FILE_MACHINE_RISCV64)
+    {
+        pTargetArch = W("riscv64");
+    }
+    else if (targetImageFileMachine == IMAGE_FILE_MACHINE_LOONGARCH64)
+    {
+        pTargetArch = W("loongarch64");
     }
     else
     {
@@ -798,9 +803,9 @@ HRESULT CLRDebuggingImpl::FormatLongDacModuleName(_Inout_updates_z_(cchBuffer) W
     }
 
     const WCHAR* pBuildFlavor = W("");
-    if(pVersion->dwFileFlags & VS_FF_DEBUG)
+    if (pVersion->dwFileFlags & VS_FF_DEBUG)
     {
-        if(pVersion->dwFileFlags & VS_FF_SPECIALBUILD)
+        if (pVersion->dwFileFlags & VS_FF_SPECIALBUILD)
             pBuildFlavor = W(".dbg");
         else
             pBuildFlavor = W(".chk");
@@ -811,17 +816,17 @@ HRESULT CLRDebuggingImpl::FormatLongDacModuleName(_Inout_updates_z_(cchBuffer) W
     // have to be a tight estimate, just make sure its >= the biggest possible DAC name
     // and it can be calculated statically
     DWORD minCchBuffer =
-        (DWORD) wcslen(CLR_DAC_MODULE_NAME_W) + (DWORD) wcslen(CORECLR_DAC_MODULE_NAME_W) + // max name
+        (DWORD) u16_strlen(CLR_DAC_MODULE_NAME_W) + (DWORD) u16_strlen(CORECLR_DAC_MODULE_NAME_W) + // max name
         10 + // max host arch
         10 + // max target arch
         40 + // max version
         10 + // max build flavor
-        (DWORD) wcslen(W("name_host_target_version.flavor.dll")) + // max intermediate formatting chars
+        (DWORD) u16_strlen(W("name_host_target_version.flavor.dll")) + // max intermediate formatting chars
         1; // null terminator
 
     // validate the output buffer is larger than our estimate above
     _ASSERTE(cchBuffer >= minCchBuffer);
-    if(!(cchBuffer >= minCchBuffer)) return E_INVALIDARG;
+    if (!(cchBuffer >= minCchBuffer)) return E_INVALIDARG;
 
     swprintf_s(pBuffer, cchBuffer, W("%s_%s_%s_%u.%u.%u.%02u%s.dll"),
         pDacBaseName,

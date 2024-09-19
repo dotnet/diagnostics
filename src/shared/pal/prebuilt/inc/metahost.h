@@ -3,9 +3,9 @@
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.01.0622 */
+ /* File created by MIDL compiler version 8.01.0628 */
 /* Compiler settings for metahost.idl:
-    Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 8.01.0622 
+    Oicf, W1, Zp8, env=Win64 (32b run), target_arch=AMD64 8.01.0628 
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
     VC __declspec() decoration level: 
@@ -39,6 +39,14 @@
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1020)
 #pragma once
+#endif
+
+#ifndef DECLSPEC_XFGVIRT
+#if defined(_CONTROL_FLOW_GUARD_XFG)
+#define DECLSPEC_XFGVIRT(base, func) __declspec(xfg_virtual(base, func))
+#else
+#define DECLSPEC_XFGVIRT(base, func)
+#endif
 #endif
 
 /* Forward Declarations */ 
@@ -122,7 +130,7 @@ typedef void ( __stdcall *RuntimeLoadedCallbackFnPtr )(
 typedef /* [public][public][public] */ 
 enum __MIDL___MIDL_itf_metahost_0000_0000_0001
     {
-        Unknown	= 0,
+        UnknownIndex	= 0,
         Identity	= 1,
         Runtime	= 2
     } 	LIBRARY_PROVIDER_INDEX_TYPE;
@@ -184,24 +192,29 @@ EXTERN_C const IID IID_ICLRMetaHost;
     {
         BEGIN_INTERFACE
         
+        DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
         HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
             ICLRMetaHost * This,
             /* [in] */ REFIID riid,
             /* [annotation][iid_is][out] */ 
             _COM_Outptr_  void **ppvObject);
         
+        DECLSPEC_XFGVIRT(IUnknown, AddRef)
         ULONG ( STDMETHODCALLTYPE *AddRef )( 
             ICLRMetaHost * This);
         
+        DECLSPEC_XFGVIRT(IUnknown, Release)
         ULONG ( STDMETHODCALLTYPE *Release )( 
             ICLRMetaHost * This);
         
+        DECLSPEC_XFGVIRT(ICLRMetaHost, GetRuntime)
         HRESULT ( STDMETHODCALLTYPE *GetRuntime )( 
             ICLRMetaHost * This,
             /* [in] */ LPCWSTR pwzVersion,
             /* [in] */ REFIID riid,
             /* [retval][iid_is][out] */ LPVOID *ppRuntime);
         
+        DECLSPEC_XFGVIRT(ICLRMetaHost, GetVersionFromFile)
         HRESULT ( STDMETHODCALLTYPE *GetVersionFromFile )( 
             ICLRMetaHost * This,
             /* [in] */ LPCWSTR pwzFilePath,
@@ -209,24 +222,29 @@ EXTERN_C const IID IID_ICLRMetaHost;
             _Out_writes_all_(*pcchBuffer)  LPWSTR pwzBuffer,
             /* [out][in] */ DWORD *pcchBuffer);
         
+        DECLSPEC_XFGVIRT(ICLRMetaHost, EnumerateInstalledRuntimes)
         HRESULT ( STDMETHODCALLTYPE *EnumerateInstalledRuntimes )( 
             ICLRMetaHost * This,
             /* [retval][out] */ IEnumUnknown **ppEnumerator);
         
+        DECLSPEC_XFGVIRT(ICLRMetaHost, EnumerateLoadedRuntimes)
         HRESULT ( STDMETHODCALLTYPE *EnumerateLoadedRuntimes )( 
             ICLRMetaHost * This,
             /* [in] */ HANDLE hndProcess,
             /* [retval][out] */ IEnumUnknown **ppEnumerator);
         
+        DECLSPEC_XFGVIRT(ICLRMetaHost, RequestRuntimeLoadedNotification)
         HRESULT ( STDMETHODCALLTYPE *RequestRuntimeLoadedNotification )( 
             ICLRMetaHost * This,
             /* [in] */ RuntimeLoadedCallbackFnPtr pCallbackFunction);
         
+        DECLSPEC_XFGVIRT(ICLRMetaHost, QueryLegacyV2RuntimeBinding)
         HRESULT ( STDMETHODCALLTYPE *QueryLegacyV2RuntimeBinding )( 
             ICLRMetaHost * This,
             /* [in] */ REFIID riid,
             /* [retval][iid_is][out] */ LPVOID *ppUnk);
         
+        DECLSPEC_XFGVIRT(ICLRMetaHost, ExitProcess)
         HRESULT ( STDMETHODCALLTYPE *ExitProcess )( 
             ICLRMetaHost * This,
             /* [in] */ INT32 iExitCode);
@@ -340,18 +358,22 @@ EXTERN_C const IID IID_ICLRDebuggingLibraryProvider;
     {
         BEGIN_INTERFACE
         
+        DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
         HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
             ICLRDebuggingLibraryProvider * This,
             /* [in] */ REFIID riid,
             /* [annotation][iid_is][out] */ 
             _COM_Outptr_  void **ppvObject);
         
+        DECLSPEC_XFGVIRT(IUnknown, AddRef)
         ULONG ( STDMETHODCALLTYPE *AddRef )( 
             ICLRDebuggingLibraryProvider * This);
         
+        DECLSPEC_XFGVIRT(IUnknown, Release)
         ULONG ( STDMETHODCALLTYPE *Release )( 
             ICLRDebuggingLibraryProvider * This);
         
+        DECLSPEC_XFGVIRT(ICLRDebuggingLibraryProvider, ProvideLibrary)
         HRESULT ( STDMETHODCALLTYPE *ProvideLibrary )( 
             ICLRDebuggingLibraryProvider * This,
             /* [in] */ const WCHAR *pwszFileName,
@@ -426,18 +448,22 @@ EXTERN_C const IID IID_ICLRDebuggingLibraryProvider2;
     {
         BEGIN_INTERFACE
         
+        DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
         HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
             ICLRDebuggingLibraryProvider2 * This,
             /* [in] */ REFIID riid,
             /* [annotation][iid_is][out] */ 
             _COM_Outptr_  void **ppvObject);
         
+        DECLSPEC_XFGVIRT(IUnknown, AddRef)
         ULONG ( STDMETHODCALLTYPE *AddRef )( 
             ICLRDebuggingLibraryProvider2 * This);
         
+        DECLSPEC_XFGVIRT(IUnknown, Release)
         ULONG ( STDMETHODCALLTYPE *Release )( 
             ICLRDebuggingLibraryProvider2 * This);
         
+        DECLSPEC_XFGVIRT(ICLRDebuggingLibraryProvider2, ProvideLibrary2)
         HRESULT ( STDMETHODCALLTYPE *ProvideLibrary2 )( 
             ICLRDebuggingLibraryProvider2 * This,
             /* [in] */ const WCHAR *pwszFileName,
@@ -522,18 +548,22 @@ EXTERN_C const IID IID_ICLRDebuggingLibraryProvider3;
     {
         BEGIN_INTERFACE
         
+        DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
         HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
             ICLRDebuggingLibraryProvider3 * This,
             /* [in] */ REFIID riid,
             /* [annotation][iid_is][out] */ 
             _COM_Outptr_  void **ppvObject);
         
+        DECLSPEC_XFGVIRT(IUnknown, AddRef)
         ULONG ( STDMETHODCALLTYPE *AddRef )( 
             ICLRDebuggingLibraryProvider3 * This);
         
+        DECLSPEC_XFGVIRT(IUnknown, Release)
         ULONG ( STDMETHODCALLTYPE *Release )( 
             ICLRDebuggingLibraryProvider3 * This);
         
+        DECLSPEC_XFGVIRT(ICLRDebuggingLibraryProvider3, ProvideWindowsLibrary)
         HRESULT ( STDMETHODCALLTYPE *ProvideWindowsLibrary )( 
             ICLRDebuggingLibraryProvider3 * This,
             /* [in] */ const WCHAR *pwszFileName,
@@ -543,6 +573,7 @@ EXTERN_C const IID IID_ICLRDebuggingLibraryProvider3;
             /* [in] */ DWORD dwSizeOfImage,
             /* [out] */ LPWSTR *ppResolvedModulePath);
         
+        DECLSPEC_XFGVIRT(ICLRDebuggingLibraryProvider3, ProvideUnixLibrary)
         HRESULT ( STDMETHODCALLTYPE *ProvideUnixLibrary )( 
             ICLRDebuggingLibraryProvider3 * This,
             /* [in] */ const WCHAR *pwszFileName,
@@ -629,18 +660,22 @@ EXTERN_C const IID IID_ICLRDebugging;
     {
         BEGIN_INTERFACE
         
+        DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
         HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
             ICLRDebugging * This,
             /* [in] */ REFIID riid,
             /* [annotation][iid_is][out] */ 
             _COM_Outptr_  void **ppvObject);
         
+        DECLSPEC_XFGVIRT(IUnknown, AddRef)
         ULONG ( STDMETHODCALLTYPE *AddRef )( 
             ICLRDebugging * This);
         
+        DECLSPEC_XFGVIRT(IUnknown, Release)
         ULONG ( STDMETHODCALLTYPE *Release )( 
             ICLRDebugging * This);
         
+        DECLSPEC_XFGVIRT(ICLRDebugging, OpenVirtualProcess)
         HRESULT ( STDMETHODCALLTYPE *OpenVirtualProcess )( 
             ICLRDebugging * This,
             /* [in] */ ULONG64 moduleBaseAddress,
@@ -652,6 +687,7 @@ EXTERN_C const IID IID_ICLRDebugging;
             /* [out][in] */ CLR_DEBUGGING_VERSION *pVersion,
             /* [out] */ CLR_DEBUGGING_PROCESS_FLAGS *pdwFlags);
         
+        DECLSPEC_XFGVIRT(ICLRDebugging, CanUnloadNow)
         HRESULT ( STDMETHODCALLTYPE *CanUnloadNow )( 
             ICLRDebugging * This,
             HMODULE hModule);
@@ -773,35 +809,42 @@ EXTERN_C const IID IID_ICLRRuntimeInfo;
     {
         BEGIN_INTERFACE
         
+        DECLSPEC_XFGVIRT(IUnknown, QueryInterface)
         HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
             ICLRRuntimeInfo * This,
             /* [in] */ REFIID riid,
             /* [annotation][iid_is][out] */ 
             _COM_Outptr_  void **ppvObject);
         
+        DECLSPEC_XFGVIRT(IUnknown, AddRef)
         ULONG ( STDMETHODCALLTYPE *AddRef )( 
             ICLRRuntimeInfo * This);
         
+        DECLSPEC_XFGVIRT(IUnknown, Release)
         ULONG ( STDMETHODCALLTYPE *Release )( 
             ICLRRuntimeInfo * This);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, GetVersionString)
         HRESULT ( STDMETHODCALLTYPE *GetVersionString )( 
             ICLRRuntimeInfo * This,
             /* [annotation][size_is][out] */ 
             _Out_writes_all_opt_(*pcchBuffer)  LPWSTR pwzBuffer,
             /* [out][in] */ DWORD *pcchBuffer);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, GetRuntimeDirectory)
         HRESULT ( STDMETHODCALLTYPE *GetRuntimeDirectory )( 
             ICLRRuntimeInfo * This,
             /* [annotation][size_is][out] */ 
             _Out_writes_all_(*pcchBuffer)  LPWSTR pwzBuffer,
             /* [out][in] */ DWORD *pcchBuffer);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, IsLoaded)
         HRESULT ( STDMETHODCALLTYPE *IsLoaded )( 
             ICLRRuntimeInfo * This,
             /* [in] */ HANDLE hndProcess,
             /* [retval][out] */ BOOL *pbLoaded);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, LoadErrorString)
         HRESULT ( STDMETHODCALLTYPE *LoadErrorString )( 
             ICLRRuntimeInfo * This,
             /* [in] */ UINT iResourceID,
@@ -810,31 +853,37 @@ EXTERN_C const IID IID_ICLRRuntimeInfo;
             /* [out][in] */ DWORD *pcchBuffer,
             /* [lcid][in] */ LONG iLocaleID);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, LoadLibrary)
         HRESULT ( STDMETHODCALLTYPE *LoadLibrary )( 
             ICLRRuntimeInfo * This,
             /* [in] */ LPCWSTR pwzDllName,
             /* [retval][out] */ HMODULE *phndModule);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, GetProcAddress)
         HRESULT ( STDMETHODCALLTYPE *GetProcAddress )( 
             ICLRRuntimeInfo * This,
             /* [in] */ LPCSTR pszProcName,
             /* [retval][out] */ LPVOID *ppProc);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, GetInterface)
         HRESULT ( STDMETHODCALLTYPE *GetInterface )( 
             ICLRRuntimeInfo * This,
             /* [in] */ REFCLSID rclsid,
             /* [in] */ REFIID riid,
             /* [retval][iid_is][out] */ LPVOID *ppUnk);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, IsLoadable)
         HRESULT ( STDMETHODCALLTYPE *IsLoadable )( 
             ICLRRuntimeInfo * This,
             /* [retval][out] */ BOOL *pbLoadable);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, SetDefaultStartupFlags)
         HRESULT ( STDMETHODCALLTYPE *SetDefaultStartupFlags )( 
             ICLRRuntimeInfo * This,
             /* [in] */ DWORD dwStartupFlags,
             /* [in] */ LPCWSTR pwzHostConfigFile);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, GetDefaultStartupFlags)
         HRESULT ( STDMETHODCALLTYPE *GetDefaultStartupFlags )( 
             ICLRRuntimeInfo * This,
             /* [out] */ DWORD *pdwStartupFlags,
@@ -842,9 +891,11 @@ EXTERN_C const IID IID_ICLRRuntimeInfo;
             _Out_writes_all_opt_(*pcchHostConfigFile)  LPWSTR pwzHostConfigFile,
             /* [out][in] */ DWORD *pcchHostConfigFile);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, BindAsLegacyV2Runtime)
         HRESULT ( STDMETHODCALLTYPE *BindAsLegacyV2Runtime )( 
             ICLRRuntimeInfo * This);
         
+        DECLSPEC_XFGVIRT(ICLRRuntimeInfo, IsStarted)
         HRESULT ( STDMETHODCALLTYPE *IsStarted )( 
             ICLRRuntimeInfo * This,
             /* [out] */ BOOL *pbStarted,

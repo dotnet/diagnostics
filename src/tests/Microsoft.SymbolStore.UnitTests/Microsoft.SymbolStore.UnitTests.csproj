@@ -55,6 +55,9 @@
     <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\HelloWorld.pdb" Link="TestBinaries\HelloWorld.pdb">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\HelloWorld.pdz" Link="TestBinaries\HelloWorld.pdz">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats.UnitTests\TestBinaries\HelloWorld.exe" Link="TestBinaries\HelloWorld.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

@@ -11,13 +11,8 @@
 #include "volatile.h"
 #include "palclr.h"
 
-#ifdef PAL_STDCPP_COMPAT
 #include <utility>
 #include <type_traits>
-#else
-#include "clr_std/utility"
-#include "clr_std/type_traits"
-#endif
 
 #if defined(FEATURE_COMINTEROP) && !defined(STRIKE)
 #include <Activation.h>
@@ -91,7 +86,7 @@ struct AutoExpVisibleValue
 
 //-----------------------------------------------------------------------------
 // Holder is the base class of all holder objects.  Any backout object should derive from it.
-// (Eventually some additional bookeeping and exception handling code will be placed in this
+// (Eventually some additional bookkeeping and exception handling code will be placed in this
 // base class.)
 //
 // There are several ways to use this class:
@@ -130,12 +125,12 @@ class HolderBase
 
     void DoAcquire()
     {
-        // Insert any global or thread bookeeping here
+        // Insert any global or thread bookkeeping here
     }
 
     void DoRelease()
     {
-        // Insert any global or thread bookeeping here
+        // Insert any global or thread bookkeeping here
     }
 
 #ifdef _DEBUG
@@ -347,7 +342,7 @@ class StateHolder
     FORCEINLINE void Acquire()
     {
         STATIC_CONTRACT_WRAPPER;
-        // Insert any global or thread bookeeping here
+        // Insert any global or thread bookkeeping here
 
         _ASSERTE(!m_acquired);
 
@@ -357,7 +352,7 @@ class StateHolder
     FORCEINLINE void Release()
     {
         STATIC_CONTRACT_WRAPPER;
-        // Insert any global or thread bookeeping here
+        // Insert any global or thread bookkeeping here
 
         if (m_acquired)
         {
@@ -408,7 +403,7 @@ class ConditionalStateHolder
     FORCEINLINE BOOL Acquire()
     {
         STATIC_CONTRACT_WRAPPER;
-        // Insert any global or thread bookeeping here
+        // Insert any global or thread bookkeeping here
 
         _ASSERTE(!m_acquired);
 
@@ -419,7 +414,7 @@ class ConditionalStateHolder
     FORCEINLINE void Release()
     {
         STATIC_CONTRACT_WRAPPER;
-        // Insert any global or thread bookeeping here
+        // Insert any global or thread bookkeeping here
 
         if (m_acquired)
         {
@@ -822,9 +817,9 @@ class Wrapper : public BaseWrapper<TYPE, FunctionBase<TYPE, ACQUIREF, RELEASEF>,
 #endif
 
 template <typename _TYPE, void (*_RELEASEF)(_TYPE*)>
-class SpecializedWrapper : public Wrapper<_TYPE*, DoNothing<_TYPE*>, _RELEASEF, NULL>
+class SpecializedWrapper : public Wrapper<_TYPE*, DoNothing<_TYPE*>, _RELEASEF, 0>
 {
-    using BaseT = Wrapper<_TYPE*, DoNothing<_TYPE*>, _RELEASEF, NULL>;
+    using BaseT = Wrapper<_TYPE*, DoNothing<_TYPE*>, _RELEASEF, 0>;
 public:
     FORCEINLINE SpecializedWrapper() : BaseT(NULL, FALSE)
     {
@@ -914,8 +909,10 @@ FORCEINLINE void DoTheRelease(TYPE *value)
 template<typename _TYPE>
 using DoNothingHolder = SpecializedWrapper<_TYPE, DoNothing<_TYPE*>>;
 
+#ifndef SOS_INCLUDE
 template<typename _TYPE>
 using ReleaseHolder = SpecializedWrapper<_TYPE, DoTheRelease<_TYPE>>;
+#endif // SOS_INCLUDE
 
 template<typename _TYPE>
 using NonVMComHolder = SpecializedWrapper<_TYPE, DoTheRelease<_TYPE>>;
@@ -934,15 +931,25 @@ using NonVMComHolder = SpecializedWrapper<_TYPE, DoTheRelease<_TYPE>>;
 //  } // foo->DecRef() on out of scope
 //
 //-----------------------------------------------------------------------------
-template<typename _TYPE>
-class ExecutableWriterHolder;
 
-template <typename TYPE>
+template<typename _TYPE>
+class ExecutableWriterHolderNoLog;
+
+class ExecutableAllocator;
+
+template <typename TYPE, typename LOGGER=ExecutableAllocator>
 FORCEINLINE void StubRelease(TYPE* value)
 {
     if (value)
     {
-        ExecutableWriterHolder<TYPE> stubWriterHolder(value, sizeof(TYPE));
+#ifdef LOG_EXECUTABLE_ALLOCATOR_STATISTICS
+#ifdef HOST_UNIX
+        LOGGER::LogUsage(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+#else
+        LOGGER::LogUsage(__FILE__, __LINE__, __FUNCTION__);
+#endif
+#endif // LOG_EXECUTABLE_ALLOCATOR_STATISTICS
+        ExecutableWriterHolderNoLog<TYPE> stubWriterHolder(value, sizeof(TYPE));
         stubWriterHolder.GetRW()->DecRef();
     }
 }
@@ -991,19 +998,6 @@ FORCEINLINE void Delete(TYPE *value)
 
 template<typename _TYPE>
 using NewHolder = SpecializedWrapper<_TYPE, Delete<_TYPE>>;
-
- //-----------------------------------------------------------------------------
-// NewExecutableHolder : New'ed memory holder for executable memory.
-//
-//  {
-//      NewExecutableHolder<Foo> foo = (Foo*) new (executable) Byte[num];
-//  } // delete foo on out of scope
-//-----------------------------------------------------------------------------
-// IJW
-template<class T> void DeleteExecutable(T *p);
-
-template<typename _TYPE>
-using NewExecutableHolder = SpecializedWrapper<_TYPE, DeleteExecutable<_TYPE>>;
 
 //-----------------------------------------------------------------------------
 // NewArrayHolder : New []'ed pointer holder
@@ -1134,14 +1128,6 @@ typedef Wrapper<HANDLE, DoNothing<HANDLE>, VoidFindClose, (UINT_PTR) -1> FindHan
 
 typedef Wrapper<void *, DoNothing, VoidUnmapViewOfFile> MapViewHolder;
 
-#ifdef WszDeleteFile
-// Deletes a file with the specified path.  Do not use if you care about failures
-// deleting the file, as failures are ignored by VoidDeleteFile.
-FORCEINLINE void VoidDeleteFile(LPCWSTR wszFilePath) { WszDeleteFile(wszFilePath); }
-typedef Wrapper<LPCWSTR, DoNothing<LPCWSTR>, VoidDeleteFile, NULL> DeleteFileHolder;
-#endif // WszDeleteFile
-
-
 //-----------------------------------------------------------------------------
 // Misc holders
 //-----------------------------------------------------------------------------
@@ -1149,7 +1135,7 @@ typedef Wrapper<LPCWSTR, DoNothing<LPCWSTR>, VoidDeleteFile, NULL> DeleteFileHol
 // A holder for HMODULE.
 FORCEINLINE void HolderFreeLibrary(HMODULE h) { FreeLibrary(h); }
 
-typedef Wrapper<HMODULE, DoNothing<HMODULE>, HolderFreeLibrary, NULL> HModuleHolder;
+typedef Wrapper<HMODULE, DoNothing<HMODULE>, HolderFreeLibrary, 0> HModuleHolder;
 
 template <typename T> FORCEINLINE
 void DoLocalFree(T* pMem)
@@ -1185,13 +1171,24 @@ FORCEINLINE void RegKeyRelease(HKEY k) {RegCloseKey(k);};
 typedef Wrapper<HKEY,DoNothing,RegKeyRelease> RegKeyHolder;
 #endif // HOST_WINDOWS
 
-class ErrorModeHolder
+class ErrorModeHolder final
 {
-    UINT m_oldMode;
+#ifdef HOST_WINDOWS
+    BOOL m_revert;
+    DWORD m_oldMode;
 public:
-    ErrorModeHolder(UINT newMode){m_oldMode=SetErrorMode(newMode);};
-    ~ErrorModeHolder(){SetErrorMode(m_oldMode);};
-    UINT OldMode() {return m_oldMode;};
+    ErrorModeHolder()
+        : m_revert{ FALSE }
+    {
+        DWORD newMode = SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS;
+        m_revert = ::SetThreadErrorMode(newMode, &m_oldMode);
+    }
+    ~ErrorModeHolder() noexcept
+    {
+        if (m_revert != FALSE)
+            (void)::SetThreadErrorMode(m_oldMode, NULL);
+    }
+#endif // HOST_WINDOWS
 };
 
 #ifdef HOST_WINDOWS
@@ -1200,7 +1197,7 @@ public:
 //
 //  {
 //      HKEYHolder hFoo = NULL;
-//      WszRegOpenKeyEx(HKEY_CLASSES_ROOT, L"Interface",0, KEY_READ, hFoo);
+//      RegOpenKeyEx(HKEY_CLASSES_ROOT, L"Interface",0, KEY_READ, hFoo);
 //
 //  } // close key on out of scope via RegCloseKey.
 //-----------------------------------------------------------------------------
@@ -1321,7 +1318,7 @@ class DacHolder
     }
     FORCEINLINE void Release()
     {
-        // Insert any global or thread bookeeping here
+        // Insert any global or thread bookkeeping here
 
         if (m_acquired)
         {
