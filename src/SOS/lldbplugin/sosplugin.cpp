@@ -7,6 +7,11 @@ namespace lldb {
     bool PluginInitialize (lldb::SBDebugger debugger);
 }
 
+#if defined(HOST_ARM64)
+// Flag to check if atomics feature is available on the machine
+bool g_arm64_atomics_present = false;
+#endif
+
 LLDBServices* g_services = nullptr;
 
 bool lldb::PluginInitialize(lldb::SBDebugger debugger)
