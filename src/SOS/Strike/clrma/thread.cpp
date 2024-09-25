@@ -403,7 +403,7 @@ ClrmaThread::NestedException(
 
     HRESULT hr;
     USHORT nCount = 0;
-    if (hr = get_NestedExceptionCount(&nCount))
+    if (FAILED(hr = get_NestedExceptionCount(&nCount)))
     {
         return hr;
     }
