@@ -1,12 +1,12 @@
 Frequently Asked Questions
 ==========================
 
-* On MacOS M1 if you see any of the following errors:
+* On MacOS arm64 if you see any of the following errors:
     ```
     (lldb) plugin load libsosplugin.so
     error: this file does not represent a loadable dylib
     ```
-    or if the sos plugin loads correct but you see this error on any command:
+    or if the sos plugin loads correctly but you see this error on any command:
     ```
     (lldb) setsymbolserver -ms
     Error: Fail to initialize coreclr 80070008
