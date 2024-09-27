@@ -1,7 +1,7 @@
 Frequently Asked Questions
 ==========================
 
-* On MacOS arm64 if you see any of the following errors:
+* On MacOS if you see any of the following errors:
     ```
     (lldb) plugin load libsosplugin.so
     error: this file does not represent a loadable dylib
