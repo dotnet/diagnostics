@@ -14,7 +14,4 @@
     <ProjectReference Include="..\SymbolTestDll\SymbolTestDll.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Condition="'$(TargetFramework)' != 'net462'" Include="System.Runtime.Loader" Version="4.3.0" />
-  </ItemGroup>
 </Project>
