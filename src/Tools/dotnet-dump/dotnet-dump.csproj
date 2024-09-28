@@ -12,10 +12,6 @@
     <SOSPackagePathPrefix>tools/$(TargetFramework)/any</SOSPackagePathPrefix>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <DefineConstants>ClrMD2</DefineConstants>
-  </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
   </ItemGroup>
@@ -27,7 +23,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Repl\Microsoft.Diagnostics.Repl.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
