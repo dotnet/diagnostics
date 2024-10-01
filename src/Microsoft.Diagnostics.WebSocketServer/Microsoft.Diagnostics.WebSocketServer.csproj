@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
     <Description>Provides a WebSocket adapter to allow dotnet-dsrouter to talk to browser-based runtimes</Description>
     <!-- Tentatively create package so other teams can tentatively consume. -->

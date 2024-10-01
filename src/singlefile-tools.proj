@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.Build.NoTargets">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <SupportedRids>win-x64;win-x86;win-arm;win-arm64;linux-x64;linux-musl-arm64;linux-arm64;linux-musl-x64;linux-arm</SupportedRids>
     <ArcadeSdkMSBuildProjectDir>$([System.IO.Path]::GetDirectoryName('$(ArcadeSdkBuildTasksAssembly)'))\..\</ArcadeSdkMSBuildProjectDir>
     <ArcadeSdkSignProject>$(ArcadeSdkMSBuildProjectDir)Sign.proj</ArcadeSdkSignProject>
@@ -46,8 +46,8 @@
 
     <!-- Only include PE files we build. Skip over 3rd party components and dependencies. -->
     <ItemGroup>
-      <ItemsToSign Include="%(ItemsNeedingSigning.FullPath)" 
-          Condition="$([System.String]::new('%(FullPath)').StartsWith('$(ArtifactsDir)')) and 
+      <ItemsToSign Include="%(ItemsNeedingSigning.FullPath)"
+          Condition="$([System.String]::new('%(FullPath)').StartsWith('$(ArtifactsDir)')) and
             ('%(Extension)' == '.exe' or '%(Extension)' == '.dll')" />
 
       <ItemsNeedingSigning Remove="@(ItemsNeedingSigning)"/>
@@ -69,7 +69,7 @@
     <WriteLinesToFile File="$(SignatureManifest)" Lines="@(LinesToWrite)" Overwrite="true" WriteOnlyWhenDifferent="true" />
 
     <!-- Sign all the files to bundle. This project lives inside the arcade SDK and doesn't import
-    most properties. Pass the few we need: the manifest we just generated, SignFilesToBundle=true so 
+    most properties. Pass the few we need: the manifest we just generated, SignFilesToBundle=true so
     only those get signed, and the signing type. -->
     <MSBuild
       Projects="$(ArcadeSdkSignProject)"

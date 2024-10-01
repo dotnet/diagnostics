@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <ToolCommandName>dotnet-symbol</ToolCommandName>
     <RootNamespace>Microsoft.Diagnostic.Tools.Symbol</RootNamespace>
     <Description>Symbols download utility</Description>

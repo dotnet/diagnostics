@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <None Remove="TestBinaries\coreclr.dll.gz" />
     <None Remove="TestBinaries\md5_build_id" />
