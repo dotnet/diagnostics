@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="TestBinaries\renamed_build_id_section" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.dll" Link="TestBinaries\PerfMapEnabled\System.ComponentModel.EventBasedAsync.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

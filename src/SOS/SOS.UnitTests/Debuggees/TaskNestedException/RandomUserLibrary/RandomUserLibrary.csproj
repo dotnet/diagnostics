@@ -2,6 +2,6 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
-    <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(BuildTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 </Project>

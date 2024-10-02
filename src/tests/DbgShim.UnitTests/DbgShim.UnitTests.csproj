@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DbgShimConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</DbgShimConfigFileName>
     <TestAssetsVersion>1.0.351101</TestAssetsVersion>
@@ -26,17 +26,17 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-    
+
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <PackageDownload Include="TestAssets.Windows.x64.6.0" Version="[$(TestAssetsVersion)]" />
     <PackageDownload Include="TestAssets.Windows.x86.6.0" Version="[$(TestAssetsVersion)]" />
   </ItemGroup>
-	
+
   <ItemGroup Condition="'$(OS)' == 'Unix' OR '$(OS)' == 'Windows_NT'">
     <PackageDownload Include="TestAssets.Linux.x64.6.0" Version="[$(TestAssetsVersion)]" />
     <PackageDownload Include="TestAssets.Linux.arm64.6.0" Version="[$(TestAssetsVersion)]" />
   </ItemGroup>
-	
+
   <!--
     Windows test configuration file
   -->
