@@ -28,7 +28,9 @@
     and modify the Debugger.Tests.Configs to reflect the new TFMs -->
     <NetCoreAppMinVersion>6.0</NetCoreAppMinVersion>
     <NetCoreAppMinTargetFramework>net$(NetCoreAppMinVersion)</NetCoreAppMinTargetFramework>
-    <SupportedSubrocessNetTargetFrameworks>net6.0;net7.0;net8.0;net9.0</SupportedSubrocessNetTargetFrameworks>
+    <!-- this is the list of TFMs we build our debuggees and tracees as. -->
+    <SupportedSubProcessTargetFrameworks>net6.0;net7.0;net8.0;net9.0</SupportedSubProcessTargetFrameworks>
+    <!-- this is the list of TFMs we build our unit tests as. -->
     <SupportedXUnitTestTargetFrameworks>net6.0;net7.0;net8.0</SupportedXUnitTestTargetFrameworks>
   </PropertyGroup>
 </Project>
