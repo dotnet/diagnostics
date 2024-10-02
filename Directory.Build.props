@@ -29,6 +29,6 @@
     <NetCoreAppMinVersion>6.0</NetCoreAppMinVersion>
     <NetCoreAppMinTargetFramework>net$(NetCoreAppMinVersion)</NetCoreAppMinTargetFramework>
     <SupportedSubrocessNetTargetFrameworks>net6.0;net7.0;net8.0;net9.0</SupportedSubrocessNetTargetFrameworks>
-    <SupportedXUnitTestTargetFrameworks>net6.0;net7.0;net8.0;net9.0</SupportedXUnitTestTargetFrameworks>
+    <SupportedXUnitTestTargetFrameworks>net6.0;net7.0;net8.0</SupportedXUnitTestTargetFrameworks>
   </PropertyGroup>
 </Project>
