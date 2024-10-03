@@ -4,12 +4,10 @@
     "runtimes": {
       "dotnet": [
         "$(MicrosoftNETCoreApp60Version)",
-        "$(MicrosoftNETCoreApp70Version)",
         "$(MicrosoftNETCoreApp80Version)"
       ],
       "dotnet/x86": [
         "$(MicrosoftNETCoreApp60Version)",
-        "$(MicrosoftNETCoreApp70Version)",
         "$(MicrosoftNETCoreApp80Version)"
       ]
     }
