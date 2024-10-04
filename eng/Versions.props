@@ -16,8 +16,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-rtm.24501.6</VSRedistCommonNetCoreSharedFrameworkx6490Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-rtm.24501.6</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-rtm.24503.8</VSRedistCommonNetCoreSharedFrameworkx6490Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-rtm.24503.8</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
     <MicrosoftAspNetCoreAppRefInternalVersion>9.0.0-rtm.24501.7</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>9.0.0-rtm.24501.7</MicrosoftAspNetCoreAppRefVersion>
@@ -102,7 +102,8 @@
 
   -->
   <PropertyGroup>
-    <MicrosoftNETCoreApp90Version></MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp90Version>
+    </MicrosoftNETCoreApp90Version>
     <MicrosoftNETCoreApp80Version>8.0.8</MicrosoftNETCoreApp80Version>
     <MicrosoftNETCoreApp60Version>6.0.33</MicrosoftNETCoreApp60Version>
   </PropertyGroup>
@@ -121,7 +122,7 @@
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
       <TargetFramework>net9.0</TargetFramework>
     </RuntimeTestVersions>
-<!--
+    <!--
     <RuntimeTestVersions Include="Servicing1">
       <RuntimeDownload>$(MicrosoftNETCoreApp90Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreApp90Version)</Runtime>
