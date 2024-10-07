@@ -276,7 +276,7 @@ HRESULT GetNextLevelResourceEntryRVA(ICorDebugDataTarget* pDataTarget,
         // The ith resource directory entry is at offset 16 + 8i from the beginning of the resource
         // directory table. First come named entries, followed by ID entries. We skip the former.
         WORD idEntriesFirstIndex = resourceDirectory.NumberOfNamedEntries;
-        WORD idEntriesFinalIndex = (WORD)(numNameEntries + resourceDirectory.NumberOfIdEntries);
+        WORD idEntriesFinalIndex = (WORD)(idEntriesFirstIndex + resourceDirectory.NumberOfIdEntries);
 
         for (WORD i = idEntriesFirstIndex; i < idEntriesFinalIndex; i++)
         {
