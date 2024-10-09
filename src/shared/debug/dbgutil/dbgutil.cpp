@@ -275,10 +275,10 @@ HRESULT GetNextLevelResourceEntryRVA(ICorDebugDataTarget* pDataTarget,
     {
         // The ith resource directory entry is at offset 16 + 8i from the beginning of the resource
         // directory table. First come named entries, followed by ID entries. We skip the former.
-        WORD idEntriesFirstIndex = resourceDirectory.NumberOfNamedEntries;
-        WORD idEntriesFinalIndex = (WORD)(idEntriesFirstIndex + resourceDirectory.NumberOfIdEntries);
+        WORD beginIdEntries = resourceDirectory.NumberOfNamedEntries;
+        WORD endIdEntries = (WORD)(beginIdEntries + resourceDirectory.NumberOfIdEntries);
 
-        for (WORD i = idEntriesFirstIndex; i < idEntriesFinalIndex; i++)
+        for (WORD i = beginIdEntries; i < endIdEntries; i++)
         {
             IMAGE_RESOURCE_DIRECTORY_ENTRY entry;
             hr = ReadFromDataTarget(pDataTarget, moduleBaseAddress + resourceDirectoryRVA + sizeof(resourceDirectory) + sizeof(entry)*i,
