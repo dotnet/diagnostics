@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <IsPackable>false</IsPackable>
     <NoWarn>;1591;1701</NoWarn>
     <DefineConstants>$(DefineConstants);CORE_CLR</DefineConstants>
     <NeedsPublishing>true</NeedsPublishing>
     <SOSConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</SOSConfigFileName>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <Compile Remove="Debuggees\**" />
     <EmbeddedResource Remove="Debuggees\**" />
@@ -33,7 +33,7 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\tests\TestExtension\TestExtension.csproj" />
   </ItemGroup>
-    
+
   <ItemGroup>
     <PackageDownload Include="cdb-sos" Version="[$(cdbsosversion)]" />
   </ItemGroup>
@@ -44,19 +44,20 @@
 <![CDATA[
 <Configuration>
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
+  <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <CDBPath>$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\cdb.exe</CDBPath>
 </Configuration>
 ]]>
       </TestConfigFileLines>
     </PropertyGroup>
-      
+
     <WriteLinesToFile File="$(SOSConfigFileName)" Lines="$(TestConfigFileLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
-      
+
     <Message Importance="High" Text="Created config file $(SOSConfigFileName)" />
 
     <ItemGroup>
       <FileWrites Include="$(SOSConfigFileName)" />
     </ItemGroup>
   </Target>
-    
+
 </Project>

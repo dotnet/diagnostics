@@ -3,7 +3,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 
@@ -14,24 +14,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
 
-    <PackageReference Include="Azure.Identity" Version="[1.11.4]" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="[12.20.0]" />
-    <PackageReference Include="System.CommandLine" Version="2.0.0-beta1.20468.1" />
+    <PackageReference Include="Azure.Core" Version="$(AzureCoreVersion)" />
+    <PackageReference Include="Azure.Identity" Version="$(AzureIdentityVersion)" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="$(AzureStorageBlobsVersion)" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageReference Include="System.CommandLine.NamingConventionBinder" Version="2.0.0-beta4.22272.1" />
+    <!-- Upgrade STJ to avoid https://github.com/advisories/GHSA-hh2w-p6rv-4g7w (Azure.Core and Extensions bring a vuln version) -->
+    <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonVersion)" />
   </ItemGroup>
-
-  <ItemGroup>
-    <AdditionalFiles Remove="E:\NuGetCaches\.nuget\packages\microsoft.dotnet.codeanalysis\8.0.0-beta.23120.1\build\..\content\PinvokeAnalyzer_Win32Apis.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <AdditionalFiles Remove="E:\NuGetCaches\.nuget\packages\microsoft.dotnet.codeanalysis\8.0.0-beta.23120.1\build\..\content\PinvokeAnalyzer_Win32Apis.txt" />
-  </ItemGroup>
-
 </Project>

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <RootNamespace>Microsoft.Diagnostics.Tools.Stack</RootNamespace>
     <ToolCommandName>dotnet-stack</ToolCommandName>
     <Description>.NET Stack Printing Tool</Description>

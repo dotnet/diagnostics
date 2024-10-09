@@ -31,6 +31,7 @@ namespace SOS.Extensions
             {
                 case Architecture.X64:
                 case Architecture.Arm64:
+                case (Architecture)6 /* Architecture.LoongArch64 */:
                     PointerSize = 8;
                     break;
                 case Architecture.X86:

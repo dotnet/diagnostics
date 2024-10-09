@@ -24,6 +24,13 @@ extends:
       name: $(BuildPool)
       image: $(WindowsImage)
       os: windows
+    sdl:
+      policheck:
+        enabled: true
+      tsa:
+        enabled: true
+    featureFlags:
+      autoBaseline: true
 
     containers:
       ${{ parameters.containers }}

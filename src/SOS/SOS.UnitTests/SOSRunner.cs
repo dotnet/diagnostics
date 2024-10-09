@@ -1458,7 +1458,7 @@ public class SOSRunner : IDisposable
         {
             defines.Add("32BIT");
         }
-        else if (_config.TargetArchitecture.Equals("x64") || _config.TargetArchitecture.Equals("arm64"))
+        else if (_config.TargetArchitecture.Equals("x64") || _config.TargetArchitecture.Equals("arm64") || _config.TargetArchitecture.Equals("loongarch64"))
         {
             defines.Add("64BIT");
         }

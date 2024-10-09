@@ -16,11 +16,11 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-rtm.24468.5</VSRedistCommonNetCoreSharedFrameworkx6490Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-rtm.24468.5</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx6490Version>9.0.0-rtm.24508.17</VSRedistCommonNetCoreSharedFrameworkx6490Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-rtm.24508.17</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>9.0.0-rtm.24468.6</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>9.0.0-rtm.24468.6</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>9.0.0-rtm.24508.22</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>9.0.0-rtm.24508.22</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <MicrosoftDotnetSdkVersion>9.0.100-rc.1.24409.1</MicrosoftDotnetSdkVersion>
   </PropertyGroup>
@@ -28,6 +28,8 @@
     <!-- Opt-in/out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
     <AzureIdentityVersion>1.12.0</AzureIdentityVersion>
+    <AzureCoreVersion>1.43.0</AzureCoreVersion>
+    <AzureStorageBlobsVersion>12.22.0</AzureStorageBlobsVersion>
     <!-- Uncomment this line to use the custom version of roslyn as needed. -->
     <!-- <UsingToolMicrosoftNetCompilers Condition="'$(DotNetBuildSourceOnly)' != 'true'">true</UsingToolMicrosoftNetCompilers> -->
     <!-- CoreFX -->
@@ -35,7 +37,7 @@
     <SystemCollectionsImmutableVersion>8.0.0</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>6.0.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>4.0.0-beta.24463.1</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>4.0.0-beta.24480.1</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.0.7</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
@@ -51,14 +53,14 @@
     <SystemRuntimeLoaderVersion>4.3.0</SystemRuntimeLoaderVersion>
     <SystemThreadingTasksExtensionsVersion>4.5.4</SystemThreadingTasksExtensionsVersion>
     <SystemTextEncodingsWebVersion>8.0.0</SystemTextEncodingsWebVersion>
-    <SystemTextJsonVersion>8.0.4</SystemTextJsonVersion>
+    <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetCodeAnalysisVersion>10.0.0-beta.24463.4</MicrosoftDotNetCodeAnalysisVersion>
+    <MicrosoftDotNetCodeAnalysisVersion>10.0.0-beta.24504.4</MicrosoftDotNetCodeAnalysisVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.406</StyleCopAnalyzersVersion>
     <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.26100.1</cdbsosversion>
     <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
-    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>10.0.0-alpha.1.24467.1</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
+    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>10.0.0-alpha.1.24507.1</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
     <!-- Roslyn and analyzers -->
     <!-- dotnet/roslyn dependencies -->
     <!--
@@ -100,9 +102,10 @@
 
   -->
   <PropertyGroup>
-    <MicrosoftNETCoreApp80Version>8.0.5</MicrosoftNETCoreApp80Version>
-    <MicrosoftNETCoreApp70Version>7.0.19</MicrosoftNETCoreApp70Version>
-    <MicrosoftNETCoreApp60Version>6.0.30</MicrosoftNETCoreApp60Version>
+    <MicrosoftNETCoreApp90Version>
+    </MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp80Version>8.0.8</MicrosoftNETCoreApp80Version>
+    <MicrosoftNETCoreApp60Version>6.0.33</MicrosoftNETCoreApp60Version>
   </PropertyGroup>
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
@@ -119,19 +122,21 @@
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
       <TargetFramework>net9.0</TargetFramework>
     </RuntimeTestVersions>
+    <!--
     <RuntimeTestVersions Include="Servicing1">
+      <RuntimeDownload>$(MicrosoftNETCoreApp90Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreApp90Version)</Runtime>
+      <AspNetDownload>$(MicrosoftNETCoreApp90Version)</AspNetDownload>
+      <AspNet>$(MicrosoftNETCoreApp90Version)</AspNet>
+      <TargetFramework>net9.0</TargetFramework>
+    </RuntimeTestVersions>
+-->
+    <RuntimeTestVersions Include="Servicing2">
       <RuntimeDownload>$(MicrosoftNETCoreApp80Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreApp80Version)</Runtime>
       <AspNetDownload>$(MicrosoftNETCoreApp80Version)</AspNetDownload>
       <AspNet>$(MicrosoftNETCoreApp80Version)</AspNet>
       <TargetFramework>net8.0</TargetFramework>
-    </RuntimeTestVersions>
-    <RuntimeTestVersions Include="Servicing2">
-      <RuntimeDownload>$(MicrosoftNETCoreApp70Version)</RuntimeDownload>
-      <Runtime>$(MicrosoftNETCoreApp70Version)</Runtime>
-      <AspNetDownload>$(MicrosoftNETCoreApp70Version)</AspNetDownload>
-      <AspNet>$(MicrosoftNETCoreApp70Version)</AspNet>
-      <TargetFramework>net7.0</TargetFramework>
     </RuntimeTestVersions>
     <RuntimeTestVersions Include="Servicing3">
       <RuntimeDownload>$(MicrosoftNETCoreApp60Version)</RuntimeDownload>

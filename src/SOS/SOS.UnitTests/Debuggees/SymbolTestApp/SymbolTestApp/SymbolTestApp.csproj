@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
-    <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(BuildTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
     <DefineConstants Condition="'$(TargetFramework)' == 'net462'">$(DefineConstants);FULL_CLR</DefineConstants>
   </PropertyGroup>
 
@@ -14,7 +14,4 @@
     <ProjectReference Include="..\SymbolTestDll\SymbolTestDll.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Condition="'$(TargetFramework)' != 'net462'" Include="System.Runtime.Loader" Version="4.3.0" />
-  </ItemGroup>
 </Project>
