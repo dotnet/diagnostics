@@ -436,7 +436,7 @@ size_t AlignLarge(size_t nbytes)
 size_t GetNumComponents(TADDR obj)
 {
     // The number of components is always the second pointer in the object.
-    DWORD Value = NULL;
+    DWORD Value = 0;
     HRESULT hr = MOVE(Value, obj + sizeof(size_t));
 
     // If we fail to read out the number of components, let's assume 0 so we don't try to
