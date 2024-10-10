@@ -8,10 +8,8 @@
 -->
 
 <Configuration>
-  <RepoRootDir>../../../../..</RepoRootDir>
-  <DotNetRoot>$(RepoRootDir)/.dotnet-test</DotNetRoot>
-
   <Import ConfigFile="Debugger.Tests.Common.txt" />
+  <DotNetRoot>$(RepoRootDir)/.dotnet-test</DotNetRoot>
   <Import ConfigFile="$(DotNetRoot)/Debugger.Tests.Versions.txt" />
 
   <TestProduct>ProjectK</TestProduct>
@@ -186,9 +184,9 @@
   <RuntimeSymbolsPath>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
   <LLDBHelperScript>$(ScriptRootDir)/lldbhelper.py</LLDBHelperScript>
 
+  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '10')">net10.0</BuildProjectFramework>
   <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '9')">net9.0</BuildProjectFramework>
   <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '8')">net8.0</BuildProjectFramework>
-  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '7')">net7.0</BuildProjectFramework>
   <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '6')">net6.0</BuildProjectFramework>
 
   <!-- Single-file debuggees don't need the host -->

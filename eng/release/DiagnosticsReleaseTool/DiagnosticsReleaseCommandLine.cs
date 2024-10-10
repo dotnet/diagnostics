@@ -4,6 +4,7 @@
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
+using System.CommandLine.NamingConventionBinder;
 using System.CommandLine.Parsing;
 using System.IO;
 using System.Threading;
@@ -17,8 +18,7 @@ namespace DiagnosticsReleaseTool.CommandLine
     {
         private static async Task<int> Main(string[] args)
         {
-            Parser parser = new CommandLineBuilder()
-                .AddCommand(PrepareRelease())
+            Parser parser = new CommandLineBuilder(PrepareRelease())
                 .CancelOnProcessTermination()
                 .UseDefaults()
                 .Build();
@@ -58,7 +58,7 @@ namespace DiagnosticsReleaseTool.CommandLine
 
         private static Option<bool> ToolManifestVerificationOption() =>
             new(
-                alias: "--verify-tool-manifest",
+                aliases: ["--verify-tool-manifest"],
                 description: "Verifies that the assets being published match the manifest",
                 getDefaultValue: () => true);
 

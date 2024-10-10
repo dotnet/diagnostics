@@ -8,11 +8,9 @@
 -->
 
 <Configuration>
-  <RepoRootDir>..\..\..\..\..</RepoRootDir>
+  <Import ConfigFile="Debugger.Tests.Common.txt" />
   <DotNetRoot Condition="'$(TargetArchitecture)' != 'x86'">$(RepoRootDir)\.dotnet-test</DotNetRoot>
   <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet-test\x86</DotNetRoot>
-
-  <Import ConfigFile="Debugger.Tests.Common.txt" />
   <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
 
   <ScriptRootDir>$(RepoRootDir)\src\SOS\SOS.UnitTests\Scripts</ScriptRootDir>
@@ -229,9 +227,9 @@
       <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>
       <RuntimeSymbolsPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
 
+      <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '10')">net10.0</BuildProjectFramework>
       <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '9')">net9.0</BuildProjectFramework>
       <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '8')">net8.0</BuildProjectFramework>
-      <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '7')">net7.0</BuildProjectFramework>
       <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '6')">net6.0</BuildProjectFramework>
 
       <!-- Single-file debuggees don't need the host -->

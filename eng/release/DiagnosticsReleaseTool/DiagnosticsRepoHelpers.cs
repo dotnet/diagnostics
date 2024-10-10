@@ -8,7 +8,7 @@ using ReleaseTool.Core;
 
 namespace DiagnosticsReleaseTool.Util
 {
-    public static class DiagnosticsRepoHelpers
+    public static partial class DiagnosticsRepoHelpers
     {
         public static readonly string[] ProductNames = ["diagnostics", "dotnet-diagnostics"];
         public static readonly string[] RepositoryUrls = ["https://github.com/dotnet/diagnostics", "https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics"];
@@ -17,13 +17,9 @@ namespace DiagnosticsReleaseTool.Util
         public const string BundledToolsCategory = "ToolBundleAssets";
         public const string PdbCategory = "PdbAssets";
 
-        private static readonly Regex s_ridBundledToolsMatcher = new(
-                $@"{BundledToolsPrefix}(?<rid>(\w+-)+\w+)\.zip",
-                RegexOptions.Compiled | RegexOptions.ExplicitCapture);
-
         private static string GetRidFromBundleZip(FileInfo zipFile)
         {
-            MatchCollection matches = s_ridBundledToolsMatcher.Matches(zipFile.Name);
+            MatchCollection matches = RidBundledToolsRegex().Matches(zipFile.Name);
 
             if (matches.Count != 1)
             {
@@ -83,5 +79,8 @@ namespace DiagnosticsReleaseTool.Util
             byte[] checksum = sha.ComputeHash(stream);
             return Convert.ToHexString(checksum);
         }
+
+        [GeneratedRegex(@"diagnostic-tools-(?<rid>(\w+-)+\w+)\.zip", RegexOptions.ExplicitCapture | RegexOptions.Compiled)]
+        private static partial Regex RidBundledToolsRegex();
     }
 }

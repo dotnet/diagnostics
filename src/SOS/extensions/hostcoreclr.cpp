@@ -69,10 +69,9 @@ namespace RuntimeHostingConstants
 {
     // This list is in probing order.
     constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
-        {8, 0},
-        {7, 0},
-        {6, 0},
         {9, 0},
+        {8, 0},
+        {6, 0},
     };
 
     constexpr char DotnetRootEnvVar[] = "DOTNET_ROOT";
@@ -126,10 +125,9 @@ namespace RuntimeHostingConstants
 #endif
         "/usr/local/share/dotnet"
 #else
-        "/rh-dotnet60/root/usr/bin/dotnet",
-        "/rh-dotnet70/root/usr/bin/dotnet",
-        "/rh-dotnet80/root/usr/bin/dotnet",
         "/rh-dotnet90/root/usr/bin/dotnet",
+        "/rh-dotnet80/root/usr/bin/dotnet",
+        "/rh-dotnet60/root/usr/bin/dotnet",
         "/usr/share/dotnet",
 #endif
     };

@@ -3,12 +3,10 @@
 
     <PropertyGroup>
        <RuntimeVersion60>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net6.0')->Metadata('Runtime'))</RuntimeVersion60>
-       <RuntimeVersion70>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net7.0')->Metadata('Runtime'))</RuntimeVersion70>
        <RuntimeVersion80>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net8.0')->Metadata('Runtime'))</RuntimeVersion80>
        <RuntimeVersion90>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net9.0')->Metadata('Runtime'))</RuntimeVersion90>
 
        <AspNetVersion60>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net6.0')->Metadata('AspNet'))</AspNetVersion60>
-       <AspNetVersion70>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net7.0')->Metadata('AspNet'))</AspNetVersion70>
        <AspNetVersion80>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net8.0')->Metadata('AspNet'))</AspNetVersion80>
        <AspNetVersion90>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net9.0')->Metadata('AspNet'))</AspNetVersion90>
     </PropertyGroup>
@@ -19,10 +17,6 @@
        -->
       <KnownCrossgen2Pack Condition="'%(TargetFramework)' == 'net6.0' and '%(Identity)' == 'Microsoft.NETCore.App.Crossgen2'">
         <Crossgen2PackVersion>$(RuntimeVersion60)</Crossgen2PackVersion>
-      </KnownCrossgen2Pack>
-
-      <KnownCrossgen2Pack Condition="'%(TargetFramework)' == 'net7.0' and '%(Identity)' == 'Microsoft.NETCore.App.Crossgen2'">
-        <Crossgen2PackVersion>$(RuntimeVersion70)</Crossgen2PackVersion>
       </KnownCrossgen2Pack>
 
       <KnownCrossgen2Pack Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NETCore.App.Crossgen2'">
@@ -41,11 +35,6 @@
         <LatestRuntimeFrameworkVersion>$(RuntimeVersion60)</LatestRuntimeFrameworkVersion>
       </KnownFrameworkReference>
 
-      <KnownFrameworkReference Condition="'%(TargetFramework)' == 'net7.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
-        <TargetingPackVersion>$(RuntimeVersion70)</TargetingPackVersion>
-        <LatestRuntimeFrameworkVersion>$(RuntimeVersion70)</LatestRuntimeFrameworkVersion>
-      </KnownFrameworkReference>
-
       <KnownFrameworkReference Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
         <TargetingPackVersion>$(RuntimeVersion80)</TargetingPackVersion>
         <LatestRuntimeFrameworkVersion>$(RuntimeVersion80)</LatestRuntimeFrameworkVersion>
@@ -60,10 +49,6 @@
         <AppHostPackVersion>$(RuntimeVersion60)</AppHostPackVersion>
       </KnownAppHostPack>
 
-      <KnownAppHostPack Condition="'%(TargetFramework)' == 'net7.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
-        <AppHostPackVersion>$(RuntimeVersion70)</AppHostPackVersion>
-      </KnownAppHostPack>
-
       <KnownAppHostPack Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
         <AppHostPackVersion>$(RuntimeVersion80)</AppHostPackVersion>
       </KnownAppHostPack>
@@ -74,10 +59,6 @@
 
       <KnownRuntimePack Condition="'%(TargetFramework)' == 'net6.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
         <LatestRuntimeFrameworkVersion>$(RuntimeVersion60)</LatestRuntimeFrameworkVersion>
-      </KnownRuntimePack>
-
-      <KnownRuntimePack Condition="'%(TargetFramework)' == 'net7.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
-        <LatestRuntimeFrameworkVersion>$(RuntimeVersion70)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
 
       <KnownRuntimePack Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
@@ -96,11 +77,6 @@
         <LatestRuntimeFrameworkVersion>$(AspNetVersion60)</LatestRuntimeFrameworkVersion>
       </KnownFrameworkReference>
 
-      <KnownFrameworkReference Condition="'%(TargetFramework)' == 'net7.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
-        <TargetingPackVersion>$(AspNetVersion70)</TargetingPackVersion>
-        <LatestRuntimeFrameworkVersion>$(AspNetVersion70)</LatestRuntimeFrameworkVersion>
-      </KnownFrameworkReference>
-
       <KnownFrameworkReference Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
         <TargetingPackVersion>$(AspNetVersion80)</TargetingPackVersion>
         <LatestRuntimeFrameworkVersion>$(AspNetVersion80)</LatestRuntimeFrameworkVersion>
@@ -115,10 +91,6 @@
         <AppHostPackVersion>$(AspNetVersion60)</AppHostPackVersion>
       </KnownAppHostPack>
 
-      <KnownAppHostPack Condition="'%(TargetFramework)' == 'net7.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
-        <AppHostPackVersion>$(AspNetVersion70)</AppHostPackVersion>
-      </KnownAppHostPack>
-
       <KnownAppHostPack Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
         <AppHostPackVersion>$(AspNetVersion80)</AppHostPackVersion>
       </KnownAppHostPack>
@@ -129,10 +101,6 @@
 
       <KnownRuntimePack Condition="'%(TargetFramework)' == 'net6.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
         <LatestRuntimeFrameworkVersion>$(AspNetVersion60)</LatestRuntimeFrameworkVersion>
-      </KnownRuntimePack>
-
-      <KnownRuntimePack Condition="'%(TargetFramework)' == 'net7.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
-        <LatestRuntimeFrameworkVersion>$(AspNetVersion70)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
 
       <KnownRuntimePack Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">

@@ -9,7 +9,7 @@ Here are some instructions on how to run the diagnostics repo's tests against a 
 4. On Windows 11 (this doesn't work on Windows 10), add the following DWORD registry key: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\MiniDumpSettings\DisableAuxProviderSignatureCheck` and set it to 1. This allows the unsigned privately built DAC to be used to generate dumps.
 5. Copy the private runtime binaries over the test SDK/runtimes installed in `.dotnet-test`. This step is hard to automate because there are usually 3 versions of the runtime installed: one as part of the .NET SDK, one as part of the AspNetCore runtime and one from latest runtime DARC update.
 6. Run the diagnostics repo tests either:
-   a. `test.cmd` or `test.sh` - this runs all the diagnostics tests including SOS's. A html test report will be generated in `artifacts/TestResults/{Debug,Release}/SOS.UnitTests_net6.0_x64.html`.
+   a. `test.cmd` or `test.sh` - this runs all the diagnostics tests including SOS's. A html test report will be generated in `artifacts/TestResults/{Debug,Release}/SOS.UnitTests_net8.0_x64.html`.
    b. Use the VS Test Explorer to run all the SOS tests or a specific one.
    c. Use `eng\testsos.cmd` or `eng/testsos.sh` to run just the SOS tests. The html test report isn't generated in this case, but the SOS test logs are in artifacts/TestResults/{Debug,Release}/sos_*.
 
