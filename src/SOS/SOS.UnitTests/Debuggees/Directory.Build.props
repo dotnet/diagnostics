@@ -1,6 +1,6 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\..\..\Directory.Build.props"/>
-  <Import Project="$(RepoRoot)/eng/AuxMsbuildFiles/SdkPackOverrides.targets"/>
+  <Import Condition="'$(BuildProjectFramework)' != ''" Project="$(RepoRoot)/eng/AuxMsbuildFiles/SdkPackOverrides.targets"/>
 
   <PropertyGroup>
     <EnableAnalyzers>false</EnableAnalyzers>
