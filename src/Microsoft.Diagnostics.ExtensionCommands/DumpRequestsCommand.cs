@@ -63,10 +63,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public void PrintRequests(List<(ulong Address, string Method, string scheme, string Url)> requests)
         {
-            Column methodColumn = Text.GetAppropriateWidth(requests.Select(r => r.Method)).WithAlignment(Align.Left);
-            Column schemeColumn = Text.GetAppropriateWidth(requests.Select(r => r.scheme)).WithAlignment(Align.Left);
-            Column urlColumn = Text.GetAppropriateWidth(requests.Select(r => r.Url)).WithAlignment(Align.Left);
-            Table output = new(Console, DumpObj.WithAlignment(Align.Left), methodColumn, schemeColumn, urlColumn); ;
+            Column addressColumn = DumpObj.GetAppropriateWidth(requests.Select(r => r.Address), 7).WithAlignment(Align.Left);
+            Column methodColumn = Text.GetAppropriateWidth(requests.Select(r => r.Method), 6).WithAlignment(Align.Left);
+            Column schemeColumn = Text.GetAppropriateWidth(requests.Select(r => r.scheme), 6).WithAlignment(Align.Left);
+            Column urlColumn = Text.GetAppropriateWidth(requests.Select(r => r.Url), 3).WithAlignment(Align.Left);
+            Table output = new(Console, addressColumn, methodColumn, schemeColumn, urlColumn); ;
             output.WriteHeader("Address", "Method", "Scheme", "Url");
 
             foreach ((ulong address, string method, string scheme, string url) in requests)
