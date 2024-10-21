@@ -13,8 +13,7 @@ using SOS.Hosting.DbgEng;
 using SOS.Hosting.DbgEng.Interop;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
-namespace SOS.Hosting
-{
+namespace SOS.Hosting {
     /// <summary>
     /// Helper code to hosting the native SOS code
     /// </summary>
@@ -581,21 +580,13 @@ namespace SOS.Hosting
             int contextSize,
             IntPtr context)
         {
-            byte[] registerContext;
             try
             {
-                registerContext = ThreadService.GetThreadFromId(threadId).GetThreadContext();
+                ThreadService.GetThreadFromId(threadId).GetThreadContext(context, contextSize);
             }
-            catch (DiagnosticsException)
+            catch (Exception ex) when (ex is DiagnosticsException or ArgumentOutOfRangeException)
             {
-                return HResult.E_FAIL;
-            }
-            try
-            {
-                Marshal.Copy(registerContext, 0, context, Math.Min(registerContext.Length, contextSize));
-            }
-            catch (Exception ex) when (ex is ArgumentOutOfRangeException or ArgumentNullException)
-            {
+                Trace.TraceError($"SOSHost.GetThreadContext({threadId:X8}) FAILED");
                 return HResult.E_INVALIDARG;
             }
             return HResult.S_OK;

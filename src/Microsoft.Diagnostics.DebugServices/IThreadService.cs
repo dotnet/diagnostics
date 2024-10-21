@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 
 namespace Microsoft.Diagnostics.DebugServices
@@ -45,6 +46,17 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="info">RegisterInfo</param>
         /// <returns>true if index found</returns>
         bool TryGetRegisterInfo(int registerIndex, out RegisterInfo info);
+
+        /// <summary>
+        /// Returns the register value for the thread context and register index. This function
+        /// can only return register values that are 64 bits or less and currently the clrmd data
+        /// targets don't return any floating point or larger registers.
+        /// </summary>
+        /// <param name="context">thread context</param>
+        /// <param name="registerIndex">register index</param>
+        /// <param name="value">value returned</param>
+        /// <returns>true if value found</returns>
+        bool TryGetRegisterValue(ReadOnlySpan<byte> context, int registerIndex, out ulong value);
 
         /// <summary>
         /// Enumerate all the native threads
