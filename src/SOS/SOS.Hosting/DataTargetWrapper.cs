@@ -300,7 +300,7 @@ namespace SOS.Hosting {
         private int VirtualUnwind(
             IntPtr self,
             uint threadId,
-            uint contextSize,
+            int contextSize,
             byte[] context)
         {
             try
@@ -309,7 +309,7 @@ namespace SOS.Hosting {
                 {
                     return HResult.E_NOTIMPL;
                 }
-                return _threadUnwindService.Unwind(threadId, context.AsSpan(0, (int)contextSize));
+                return _threadUnwindService.Unwind(threadId, context.AsSpan(0, contextSize));
             }
             catch (DiagnosticsException)
             {
@@ -455,7 +455,7 @@ namespace SOS.Hosting {
         private delegate int VirtualUnwindDelegate(
             [In] IntPtr self,
             [In] uint threadId,
-            [In] uint contextSize,
+            [In] int contextSize,
             [In, Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] context);
 
         #endregion
