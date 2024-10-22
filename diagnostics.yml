@@ -41,14 +41,8 @@ extends:
   parameters:
     stages:
     - stage: build
-      displayName: Build and Test Diagnostics
+      displayName: Build Diagnostics Assets
       jobs:
-
-        ############################
-        #                          #
-        #    Source Build legs     #
-        #                          #
-        ############################
 
       - template: ${{ variables.sourceBuildTemplate }}
         parameters:
@@ -56,17 +50,11 @@ extends:
             name: Complete
             buildScript: ./eng/common/build.sh
 
-      ############################
-      #                          #
-      #        Build legs        #
-      #                          #
-      ############################
-
       - template: /eng/pipelines/build.yml
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
-          name: Windows
-          osGroup: Windows_NT
+          osGroup: Windows
+          buildOnly: true
           buildConfigs:
           - configuration: Debug
             architecture: x64
@@ -123,6 +111,7 @@ extends:
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
+          buildOnly: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -200,11 +189,39 @@ extends:
               artifactUploadPath: bin/linux.arm64.Release
               artifactTargetPath: bin/linux-musl.arm64.Release
 
-      ############################
-      #                          #
-      #      Test only legs      #
-      #                          #
-      ############################
+    - stage: test
+      displayName: Run Diagnostics Tests
+      jobs:
+
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          osGroup: Windows
+          testOnly: true
+          buildConfigs:
+          - configuration: Debug
+            architecture: x64
+          - configuration: Release
+            architecture: x64
+          - configuration: Release
+            architecture: x86
+          - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+            - configuration: Release
+              architecture: arm
+            - configuration: Release
+              architecture: arm64
+
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          osGroup: MacOS
+          testOnly: true
+          buildConfigs:
+          - configuration: Release
+            architecture: x64
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: x64
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -212,7 +229,6 @@ extends:
           name: Ubuntu_20_04
           osGroup: Linux
           container: test_ubuntu_20_04
-          dependsOn: Linux
           testOnly: true
           buildConfigs:
           - configuration: Release
@@ -227,7 +243,6 @@ extends:
           name: Ubuntu_22_04
           osGroup: Linux
           container: test_ubuntu_22_04
-          dependsOn: Linux
           testOnly: true
           buildConfigs:
           - configuration: Release
@@ -243,7 +258,6 @@ extends:
           osGroup: Linux
           osSuffix: -musl
           container: test_linux_musl_x64
-          dependsOn: Linux_musl
           testOnly: true
           disableComponentGovernance: true
           buildConfigs:
@@ -260,8 +274,6 @@ extends:
             name: Debian_Bullseye
             osGroup: Linux
             container: test_debian_11_amd64
-            dependsOn: Linux
-            testOnly: true
             buildConfigs:
             - configuration: Release
               architecture: x64
@@ -275,7 +287,6 @@ extends:
             name: Fedora_39
             osGroup: Linux
             container: test_fedora
-            dependsOn: Linux
             testOnly: true
             buildConfigs:
             - configuration: Release
@@ -287,6 +298,7 @@ extends:
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - stage: package
         displayName: Package, Sign, and Generate BAR Manifests
+        dependsOn: build
         jobs:
         - template: /eng/common/templates-official/job/job.yml
           parameters:
@@ -366,6 +378,7 @@ extends:
           enableNugetValidation: true
           symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
           publishInstallersAndChecksums: true
+          publishAssetsImmediately: true
 
-      # This sets up the bits to do a Release.
-      - template: /eng/pipelines/prepare-release.yml
+    # This sets up the bits to do a Release.
+    - template: /eng/pipelines/prepare-release.yml
