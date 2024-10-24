@@ -98,18 +98,27 @@ namespace SOS.Hosting
             {
                 return HResult.E_INVALIDARG;
             }
-            IRuntime runtime = _contextService.GetCurrentRuntime();
-            if (runtime is null)
+            *ppRuntime = IntPtr.Zero;
+            try
             {
+                IRuntime runtime = _contextService.GetCurrentRuntime();
+                if (runtime is null)
+                {
+                    return HResult.E_NOINTERFACE;
+                }
+                RuntimeWrapper wrapper = runtime.Services.GetService<RuntimeWrapper>();
+                if (wrapper is null)
+                {
+                    return HResult.E_NOINTERFACE;
+                }
+                *ppRuntime = wrapper.IRuntime;
+                return HResult.S_OK;
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError(ex.ToString());
                 return HResult.E_NOINTERFACE;
             }
-            RuntimeWrapper wrapper = runtime.Services.GetService<RuntimeWrapper>();
-            if (wrapper is null)
-            {
-                return HResult.E_NOINTERFACE;
-            }
-            *ppRuntime = wrapper.IRuntime;
-            return HResult.S_OK;
         }
 
         private void Flush(

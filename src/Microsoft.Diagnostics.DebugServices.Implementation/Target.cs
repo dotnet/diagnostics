@@ -22,11 +22,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected readonly ServiceContainerFactory _serviceContainerFactory;
 
-        public Target(IHost host, int id, string dumpPath)
+        public Target(IHost host, string dumpPath)
         {
-            Trace.TraceInformation($"Creating target #{Id}");
             Host = host;
-            Id = id;
             _dumpPath = dumpPath;
 
             OnFlushEvent = new ServiceEvent();
@@ -40,9 +38,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         protected void Finished()
         {
+            // Add the target to the host
+            Id = Host.AddTarget(this);
+
             // Now the that the target is completely initialized, finalize container and fire event
             _serviceContainer = _serviceContainerFactory.Build();
             Host.OnTargetCreate.Fire(this);
+
+            Trace.TraceInformation($"Created target #{Id} {_dumpPath}");
         }
 
         protected void FlushService<T>() => _serviceContainer?.RemoveService(typeof(T));
@@ -57,7 +60,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The target id
         /// </summary>
-        public int Id { get; }
+        public int Id { get; private set; }
 
         /// <summary>
         /// Returns the target OS (which may be different from the OS this is running on)
@@ -123,7 +126,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Cleans up the target and releases target's resources.
         /// </summary>
-        public void Destroy()
+        public virtual void Destroy()
         {
             Trace.TraceInformation($"Destroy target #{Id}");
             OnDestroyEvent.Fire();

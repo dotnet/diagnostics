@@ -30,7 +30,17 @@ namespace SOS.Extensions
                 Trace.TraceError("GetCurrentThreadId() FAILED {0:X8}", hr);
                 return null;
             }
-            IThread currentThread = ThreadService?.GetThreadFromId(threadId);
+            IThread currentThread;
+            try
+            {
+                currentThread = ThreadService?.GetThreadFromId(threadId);
+
+            }
+            catch (DiagnosticsException ex)
+            {
+                Trace.TraceError(ex.ToString());
+                return null;
+            }
             // This call fires the context change event if the thread obtain by the host debugger differs from the current thread
             base.SetCurrentThread(currentThread);
             return currentThread;

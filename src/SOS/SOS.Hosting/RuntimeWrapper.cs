@@ -212,9 +212,9 @@ namespace SOS.Hosting
                 {
                     _clrDataProcess = CreateClrDataProcess();
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    return HResult.E_NOINTERFACE;
+                    Trace.TraceError(ex.ToString());
                 }
             }
             *ppClrDataProcess = _clrDataProcess;
@@ -235,7 +235,14 @@ namespace SOS.Hosting
             }
             if (_corDebugProcess == IntPtr.Zero)
             {
-                _corDebugProcess = CreateCorDebugProcess();
+                try
+                {
+                    _corDebugProcess = CreateCorDebugProcess();
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceError(ex.ToString());
+                }
             }
             *ppCorDebugProcess = _corDebugProcess;
             if (*ppCorDebugProcess == IntPtr.Zero)
