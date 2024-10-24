@@ -4,7 +4,7 @@ stages:
   jobs:
   - job: PrepareReleaseJob
     displayName: Prepare Release
-    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
+    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/internal/release/'))) }}:
       templateContext:
         outputs:
         - output: pipelineArtifact
@@ -13,7 +13,7 @@ stages:
           displayName: 'Publish Release Drop'
           condition: succeeded()
     variables:
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/internal/release/'))) }}:
       - group: DotNet-Diagnostics-Storage
       - group: Release-Pipeline
     steps:
@@ -21,7 +21,7 @@ stages:
       - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release /bl'
         workingDirectory: '$(System.ArtifactsDirectory)'
         displayName: 'Build Manifest generation and asset publishing tool'
-    - ${{ elseif and(ne(variables['System.TeamProject'], 'public'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
+    - ${{ elseif and(ne(variables['System.TeamProject'], 'public'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/internal/release/'))) }}:
       - task: UseDotNet@2
         displayName: 'Use .NET Core runtime 8.x'
         inputs:
