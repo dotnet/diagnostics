@@ -257,7 +257,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             int? retryCount = null)
         {
             TokenCredential tokenCredential = new DefaultAzureCredential(includeInteractiveCredentials);
-            AccessToken accessToken;
+            AccessToken accessToken = default;
             async ValueTask<AuthenticationHeaderValue> authenticationFunc(CancellationToken token)
             {
                 try

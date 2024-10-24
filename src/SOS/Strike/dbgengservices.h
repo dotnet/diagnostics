@@ -6,6 +6,7 @@
 #include <unknwn.h>
 #include <rpc.h>
 #include <dbgeng.h>
+#include <dbgmodel.h>
 #include "debuggerservices.h"
 #include "remotememoryservice.h"
 #include "extensions.h"
@@ -28,6 +29,7 @@ private:
     PDEBUG_SYMBOLS2       m_symbols;
     PDEBUG_SYSTEM_OBJECTS m_system;
     PDEBUG_ADVANCED       m_advanced;
+    IModelObject*         m_settings;
     IMachine*             m_targetMachine;
     bool                  m_flushNeeded;
 
@@ -231,6 +233,9 @@ public:
     HRESULT STDMETHODCALLTYPE ExecuteHostCommand(
         PCSTR commandLine,
         PEXECUTE_COMMAND_OUTPUT_CALLBACK callback);
+
+    HRESULT STDMETHODCALLTYPE GetDacSignatureVerificationSettings(
+        BOOL* dacSignatureVerificationEnabled);
 
     //----------------------------------------------------------------------------
     // IRemoteMemoryService

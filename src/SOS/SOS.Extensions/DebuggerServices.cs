@@ -514,6 +514,19 @@ namespace SOS.Extensions
             }
         }
 
+        public HResult GetDacSignatureVerificationSettings(out bool value)
+        {
+            value = false;
+            int dacSignatureVerificationEnabled = 0;
+            HResult hr = VTable.GetDacSignatureVerificationSettings(Self, &dacSignatureVerificationEnabled);
+            if (!hr.IsOK)
+            {
+                return hr;
+            }
+            value = dacSignatureVerificationEnabled != 0;
+            return HResult.S_OK;
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         private readonly unsafe struct IDebuggerServicesVTable
         {
@@ -550,6 +563,7 @@ namespace SOS.Extensions
             public readonly delegate* unmanaged[Stdcall]<IntPtr, out uint, out uint, out int, void*, int, uint*, byte*, int, uint*, int> GetLastEventInformation;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, void> FlushCheck;
             public readonly delegate* unmanaged[Stdcall]<IntPtr, byte*, IntPtr, int> ExecuteHostCommand;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, int*, int> GetDacSignatureVerificationSettings;
         }
     }
 }

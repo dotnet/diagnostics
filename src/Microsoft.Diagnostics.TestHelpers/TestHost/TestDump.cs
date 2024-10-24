@@ -12,7 +12,7 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
-    public class TestDump : TestHost, IHost
+    public class TestDump : TestHost, IHost, ISettingsService
     {
         private readonly ServiceManager _serviceManager;
         private readonly ServiceContainer _serviceContainer;
@@ -36,6 +36,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
             _serviceContainer.AddService<IServiceManager>(_serviceManager);
             _serviceContainer.AddService<IHost>(this);
+            _serviceContainer.AddService<ISettingsService>(this);
 
             _contextService = new(this);
             _serviceContainer.AddService<IContextService>(_contextService);
@@ -90,6 +91,12 @@ namespace Microsoft.Diagnostics.TestHelpers
         public IServiceProvider Services => _serviceContainer;
 
         public IEnumerable<ITarget> EnumerateTargets() => Target != null ? new ITarget[] { Target } : Array.Empty<ITarget>();
+
+        #endregion
+
+        #region ISettingsService
+
+        public bool DacSignatureVerificationEnabled { get; set; }
 
         #endregion
     }

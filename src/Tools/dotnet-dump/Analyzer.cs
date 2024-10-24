@@ -19,7 +19,7 @@ using SOS.Hosting;
 
 namespace Microsoft.Diagnostics.Tools.Dump
 {
-    public class Analyzer : IHost
+    public class Analyzer : IHost, ISettingsService
     {
         private readonly ServiceManager _serviceManager;
         private readonly ConsoleService _consoleService;
@@ -100,6 +100,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
             _serviceContainer.AddService<IServiceManager>(_serviceManager);
             _serviceContainer.AddService<IHost>(this);
+            _serviceContainer.AddService<ISettingsService>(this);
             _serviceContainer.AddService<IConsoleService>(_fileLoggingConsoleService);
             _serviceContainer.AddService<IConsoleFileLoggingService>(_fileLoggingConsoleService);
             _serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
@@ -217,6 +218,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
         public IServiceProvider Services => _serviceContainer;
 
         public IEnumerable<ITarget> EnumerateTargets() => _targets.ToArray();
+
+        #endregion
+
+        #region ISettingsService
+
+        public bool DacSignatureVerificationEnabled { get; set; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? true : false;
 
         #endregion
     }

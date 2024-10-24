@@ -555,6 +555,7 @@ public class SOSRunner : IDisposable
 
                     // Turn on source/line numbers
                     initialCommands.Add(".lines");
+                    initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(config.PrivateBuildTesting() ? "false" : "true")}");
                     break;
 
                 case NativeDebugger.Lldb:
@@ -668,6 +669,7 @@ public class SOSRunner : IDisposable
                         }
                     }
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
+                    initialCommands.Add($"runtimes --DacSignatureVerification:{(config.PrivateBuildTesting() || OS.Kind != OSKind.Windows ? "false" : "true")}");
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
                     debuggerPath = config.DotNetDumpHost();
@@ -1777,5 +1779,10 @@ public static class TestConfigurationExtensions
     public static string DebuggeeDumpOutputRootDir(this TestConfiguration config)
     {
         return TestConfiguration.MakeCanonicalPath(config.GetValue("DebuggeeDumpOutputRootDir"));
+    }
+
+    public static bool PrivateBuildTesting(this TestConfiguration config)
+    {
+        return config.GetValue("PrivateBuildTesting")?.ToLowerInvariant() == "true";
     }
 }

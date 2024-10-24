@@ -24,6 +24,7 @@ pr:
     include:
     - main
     - release/*
+    - internal/*
   paths:
     exclude:
     - documentation/*
@@ -46,12 +47,13 @@ extends:
 
         ############################
         #                          #
-        #    Source Build legs     #
+        #    Source Build leg      #
         #                          #
         ############################
 
       - template: ${{ variables.sourceBuildTemplate }}
         parameters:
+          enableInternalSources: true
           platform:
             name: Complete
             buildScript: ./eng/common/build.sh
