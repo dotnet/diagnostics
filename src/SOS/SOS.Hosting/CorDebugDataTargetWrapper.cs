@@ -7,8 +7,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
 
-namespace SOS.Hosting
-{
+namespace SOS.Hosting {
     public sealed unsafe class CorDebugDataTargetWrapper : COMCallableIUnknown
     {
         private static readonly Guid IID_ICorDebugDataTarget = new("FE06DC28-49FB-4636-A4A3-E80DB4AE116C");
@@ -137,7 +136,7 @@ namespace SOS.Hosting
                 address &= _ignoreAddressBitsMask;
                 if (!_memoryService.ReadMemory(address, buffer, unchecked((int)bytesRequested), out read))
                 {
-                    Trace.TraceError("CorDebugDataTargetWrappter.ReadVirtual FAILED address {0:X16} size {1:X8}", address, bytesRequested);
+                    Trace.TraceError("CorDebugDataTargetWrapper.ReadVirtual FAILED address {0:X16} size {1:X8}", address, bytesRequested);
                     return HResult.E_FAIL;
                 }
             }
@@ -152,21 +151,13 @@ namespace SOS.Hosting
             int contextSize,
             IntPtr context)
         {
-            byte[] registerContext;
             try
             {
-                registerContext = _threadService.GetThreadFromId(threadId).GetThreadContext();
+                _threadService.GetThreadFromId(threadId).GetThreadContext(context, contextSize);
             }
-            catch (DiagnosticsException)
+            catch (Exception ex) when (ex is DiagnosticsException or ArgumentOutOfRangeException)
             {
-                return HResult.E_FAIL;
-            }
-            try
-            {
-                Marshal.Copy(registerContext, 0, context, Math.Min(registerContext.Length, contextSize));
-            }
-            catch (Exception ex) when (ex is ArgumentOutOfRangeException or ArgumentNullException)
-            {
+                Trace.TraceError($"CorDebugDataTargetWrapper.GetThreadContext({threadId:X8}) FAILED");
                 return HResult.E_INVALIDARG;
             }
             return HResult.S_OK;
@@ -179,7 +170,7 @@ namespace SOS.Hosting
         private int VirtualUnwind(
             IntPtr self,
             uint threadId,
-            uint contextSize,
+            int contextSize,
             byte[] context)
         {
             try
@@ -188,7 +179,7 @@ namespace SOS.Hosting
                 {
                     return HResult.E_NOTIMPL;
                 }
-                return _threadUnwindService.Unwind(threadId, contextSize, context);
+                return _threadUnwindService.Unwind(threadId, context.AsSpan(0, contextSize));
             }
             catch (DiagnosticsException)
             {
@@ -263,7 +254,7 @@ namespace SOS.Hosting
         private delegate int VirtualUnwindDelegate(
             [In] IntPtr self,
             [In] uint threadId,
-            [In] uint contextSize,
+            [In] int contextSize,
             [In, Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] context);
 
         #endregion

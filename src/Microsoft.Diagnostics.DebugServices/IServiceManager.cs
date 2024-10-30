@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -22,5 +23,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="providerType">type or interface</param>
         /// <returns>the provider factories for the type</returns>
         IEnumerable<ServiceFactory> EnumerateProviderFactories(Type providerType);
+
+        /// <summary>
+        /// Returns the extensions loaded
+        /// </summary>
+        public IEnumerable<Assembly> ExtensionsLoaded { get; }
     }
 }

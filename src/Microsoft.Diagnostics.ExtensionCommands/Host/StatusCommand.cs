@@ -2,7 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -13,6 +16,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         [ServiceImport]
         public IHost Host { get; set; }
+
+        [ServiceImport]
+        public IServiceManager ServiceManager { get; set; }
 
         [ServiceImport]
         public ISymbolService SymbolService { get; set; }
@@ -57,6 +63,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 this.DisplaySpecialInfo();
                 Write(SymbolService.ToString());
+
+                List<Assembly> extensions = new(ServiceManager.ExtensionsLoaded);
+                extensions.Insert(0, Assembly.GetExecutingAssembly());
+
+                WriteLine("Extensions loaded:");
+                foreach (Assembly extension in extensions)
+                {
+                    string path = extension.Location;
+                    FileVersionInfo versionInfo = FileVersionInfo.GetVersionInfo(path);
+                    WriteLine($"-> {versionInfo.ProductVersion} {path}");
+                }
+
                 long memoryUsage = GC.GetTotalMemory(forceFullCollection: true);
                 WriteLine($"GC memory usage for managed SOS components: {memoryUsage:##,#} bytes");
             }

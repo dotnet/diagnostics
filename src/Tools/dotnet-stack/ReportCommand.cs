@@ -78,12 +78,13 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 // is too short in a given environment, e.g., resource constrained systems
                 // N.B. - This trace INCLUDES rundown.  For sufficiently large applications, it may take non-trivial time to collect
                 //        the symbol data in rundown.
-                using (EventPipeSession session = client.StartEventPipeSession(providers))
+                EventPipeSession session = await client.StartEventPipeSessionAsync(providers, requestRundown:true, token:ct).ConfigureAwait(false);
+                using (session)
                 using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
                 {
-                    Task copyTask = session.EventStream.CopyToAsync(fs);
-                    await Task.Delay(duration).ConfigureAwait(false);
-                    session.Stop();
+                    Task copyTask = session.EventStream.CopyToAsync(fs, ct);
+                    await Task.Delay(duration, ct).ConfigureAwait(false);
+                    await session.StopAsync(ct).ConfigureAwait(false);
 
                     // check if rundown is taking more than 5 seconds and add comment to report
                     Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
@@ -146,6 +147,10 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         PrintStack(console, threadId, samples[0], stackSource);
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                return -1;
             }
             catch (Exception ex)
             {

@@ -54,11 +54,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             try
             {
-                byte[] registerContext = ThreadService.GetThreadFromId(threadId).GetThreadContext();
-                registerContext.AsSpan().Slice(0, context.Length).CopyTo(context);
+                ThreadService.GetThreadFromId(threadId).GetThreadContext(context);
                 return true;
             }
-            catch (Exception ex) when (ex is DiagnosticsException or ArgumentException)
+            catch (Exception ex) when (ex is DiagnosticsException or ArgumentOutOfRangeException)
             {
                 Trace.TraceError($"GetThreadContext: {threadId} exception {ex.Message}");
             }

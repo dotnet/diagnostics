@@ -3,8 +3,7 @@
 
 using System;
 
-namespace Microsoft.Diagnostics.DebugServices
-{
+namespace Microsoft.Diagnostics.DebugServices {
     /// <summary>
     /// Details about a thread
     /// </summary>
@@ -45,7 +44,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         /// <returns>register context</returns>
         /// <exception cref="DiagnosticsException">invalid thread</exception>
-        byte[] GetThreadContext();
+        ReadOnlySpan<byte> GetThreadContext();
 
         /// <summary>
         /// Returns the address of the Windows TEB or 0.
