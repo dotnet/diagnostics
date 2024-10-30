@@ -107,7 +107,7 @@ namespace SOS.Hosting
         private int VirtualUnwind(
             IntPtr self,
             uint threadId,
-            uint contextSize,
+            int contextSize,
             byte[] context)
         {
             return HResult.E_NOTIMPL;
@@ -226,7 +226,7 @@ namespace SOS.Hosting
         private delegate int VirtualUnwindDelegate(
             IntPtr self,
             uint threadId,
-            uint contextSize,
+            int contextSize,
             byte[] context);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]

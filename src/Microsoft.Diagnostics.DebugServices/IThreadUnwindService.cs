@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+
 namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
@@ -14,9 +16,8 @@ namespace Microsoft.Diagnostics.DebugServices
         /// return the context will be modified to reflect the parent frame's context.
         /// </summary>
         /// <param name="threadId">thread id to unwind</param>
-        /// <param name="contextSize">register context size</param>
         /// <param name="context">On input, the frame to unwind. On return, the context of the next frame</param>
         /// <returns>HRESULT</returns>
-        int Unwind(uint threadId, uint contextSize, byte[] context);
+        int Unwind(uint threadId, Span<byte> context);
     }
 }
