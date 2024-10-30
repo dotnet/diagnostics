@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
@@ -20,7 +21,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     {
         private readonly Dictionary<Type, ServiceFactory>[] _factories;
         private readonly Dictionary<Type, List<ServiceFactory>> _providerFactories;
-        private readonly List<object> _extensions;
+        private readonly List<(Assembly assembly, object extension)> _extensions;
         private bool _finalized;
 
         /// <summary>
@@ -51,7 +52,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             _factories = new Dictionary<Type, ServiceFactory>[(int)ServiceScope.Max];
             _providerFactories = new Dictionary<Type, List<ServiceFactory>>();
-            _extensions = new List<object>();
+            _extensions = new List<(Assembly assembly, object extension)>();
             NotifyExtensionLoad = new ServiceEvent<Assembly>();
             NotifyExtensionLoadFailure = new ServiceEvent<Exception>();
             for (int i = 0; i < (int)ServiceScope.Max; i++)
@@ -299,6 +300,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
                 {
                     assembly = Assembly.LoadFile(extensionPath);
+                    _extensions.Add((assembly, null));
                 }
                 else
                 {
@@ -308,6 +310,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             catch (Exception ex) when
                 (ex is IOException
                  or ArgumentException
+                 or NotSupportedException
                  or InvalidOperationException
                  or BadImageFormatException
                  or System.Security.SecurityException)
@@ -322,6 +325,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// Returns the extensions loaded
+        /// </summary>
+        public IEnumerable<Assembly> ExtensionsLoaded => _extensions.Select(static ((Assembly assembly, object extension) entry) => entry.assembly);
+
+        /// <summary>
         /// Load the extension using an assembly load context. This needs to be in
         /// a separate method so ExtensionLoadContext class doesn't get referenced
         /// when running on desktop Framework.
@@ -334,8 +342,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Assembly assembly = extension.LoadFromAssemblyPath(extensionPath);
             if (assembly is not null)
             {
-                // This list is just to keep the load context alive
-                _extensions.Add(extension);
+                // This list to track the assemblies loaded and to keep the load context alive (ExtensionLoadContext)
+                _extensions.Add((assembly, extension));
             }
             return assembly;
         }

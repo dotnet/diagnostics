@@ -3,14 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Runtime;
 using Architecture = System.Runtime.InteropServices.Architecture;
 
-namespace Microsoft.Diagnostics.DebugServices.Implementation
-{
+namespace Microsoft.Diagnostics.DebugServices.Implementation {
     /// <summary>
     /// Provides thread and register info and values for the clrmd IDataReader
     /// </summary>
@@ -188,6 +188,43 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
+        /// Returns the register value for the thread context and register index. This function
+        /// can only return register values that are 64 bits or less and currently the clrmd data
+        /// targets don't return any floating point or larger registers.
+        /// </summary>
+        /// <param name="context">thread context</param>
+        /// <param name="registerIndex">register index</param>
+        /// <param name="value">value returned</param>
+        /// <returns>true if value found</returns>
+        public bool TryGetRegisterValue(ReadOnlySpan<byte> context, int registerIndex, out ulong value)
+        {
+            if (TryGetRegisterInfo(registerIndex, out RegisterInfo info))
+            {
+                ReadOnlySpan<byte> threadSpan = context.Slice(info.RegisterOffset, info.RegisterSize);
+                switch (info.RegisterSize)
+                {
+                    case 1:
+                        value = MemoryMarshal.Read<byte>(threadSpan);
+                        return true;
+                    case 2:
+                        value = MemoryMarshal.Read<ushort>(threadSpan);
+                        return true;
+                    case 4:
+                        value = MemoryMarshal.Read<uint>(threadSpan);
+                        return true;
+                    case 8:
+                        value = MemoryMarshal.Read<ulong>(threadSpan);
+                        return true;
+                    default:
+                        Trace.TraceError($"GetRegisterValue: {info.RegisterName} invalid size {info.RegisterSize}");
+                        break;
+                }
+            }
+            value = 0;
+            return false;
+        }
+
+        /// <summary>
         /// Enumerate all the native threads
         /// </summary>
         /// <returns>ThreadInfos for all the threads</returns>
@@ -236,6 +273,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="thread">thread instance</param>
         /// <returns>context array</returns>
+        /// <exception cref="DiagnosticsException">invalid thread id</exception>
         internal byte[] GetThreadContext(Thread thread)
         {
             byte[] threadContext = new byte[_contextSize];

@@ -127,7 +127,192 @@ void LOONGARCH64Machine::Unassembly (
     BOOL bDisplayOffsets,
     std::function<void(ULONG*, UINT*, BYTE*)> displayIL) const
 {
-    _ASSERTE("LOONGARCH64:NYI");
+    ULONG_PTR PC = PCBegin;
+    char line[1024];
+    ULONG lineNum;
+    ULONG curLine = -1;
+    WCHAR fileName[MAX_LONGPATH];
+    char *ptr;
+    ULONG ilPosition = 0;
+    UINT ilIndentCount = 0;
+
+    while(PC < PCEnd)
+    {
+        ULONG_PTR currentPC = PC;
+        DisasmAndClean (PC, line, ARRAY_SIZE(line));
+
+        if (currentPC != PCBegin)
+        {
+            ExtOut ("\n");
+        }
+
+        // This is the new instruction
+
+        if (IsInterrupt())
+            return;
+        //
+        // Print out line numbers if needed
+        //
+        if (!bSuppressLines &&
+            SUCCEEDED(GetLineByOffset(TO_CDADDR(currentPC), &lineNum, fileName, MAX_LONGPATH)))
+        {
+            if (lineNum != curLine)
+            {
+                curLine = lineNum;
+                ExtOut("\n%S @ %d:\n", fileName, lineNum);
+            }
+        }
+        displayIL(&ilPosition, &ilIndentCount, (BYTE*)PC);
+
+        //
+        // Print out any GC information corresponding to the current instruction offset.
+        //
+        if (pGCEncodingInfo)
+        {
+            SIZE_T curOffset = (currentPC - PCBegin) + pGCEncodingInfo->hotSizeToAdd;
+            pGCEncodingInfo->DumpGCInfoThrough(curOffset);
+        }
+
+        //
+        // Print out any EH info corresponding to the current offset
+        //
+        if (pEHInfo)
+        {
+            pEHInfo->FormatForDisassembly(currentPC - PCBegin);
+        }
+
+        if (currentPC == PCAskedFor)
+        {
+            ExtOut (">>> ");
+        }
+
+        //
+        // Print offsets, in addition to actual address.
+        //
+        if (bDisplayOffsets)
+        {
+            ExtOut("%04x ", currentPC - PCBegin);
+        }
+
+        // look at the disassembled bytes
+        ptr = line;
+        NextTerm (ptr);
+
+        //
+        // If there is gcstress info for this method, and this is a 'hlt'
+        // instruction, then gcstress probably put the 'hlt' there.  Look
+        // up the original instruction and print it instead.
+        //
+
+        if (   GCStressCodeCopy
+            && (   !strncmp (ptr, "ffffff0f", 8)
+                || !strncmp (ptr, "ffffff0e", 8)
+                || !strncmp (ptr, "ffffff0d", 8)
+                ))
+        {
+            ULONG_PTR InstrAddr = currentPC;
+
+            //
+            // Compute address into saved copy of the code, and
+            // disassemble the original instruction
+            //
+
+            ULONG_PTR OrigInstrAddr = GCStressCodeCopy + (InstrAddr - PCBegin);
+            ULONG_PTR OrigPC = OrigInstrAddr;
+
+            DisasmAndClean(OrigPC, line, ARRAY_SIZE(line));
+
+            //
+            // Increment the real PC based on the size of the unmodifed
+            // instruction
+            //
+
+            PC = InstrAddr + (OrigPC - OrigInstrAddr);
+
+            //
+            // Print out real code address in place of the copy address
+            //
+
+            ExtOut("%08x`%08x ", (ULONG)(InstrAddr >> 32), (ULONG)InstrAddr);
+
+            ptr = line;
+            NextTerm (ptr);
+
+            //
+            // Print out everything after the code address, and skip the
+            // instruction bytes
+            //
+
+            ExtOut(ptr);
+
+            //
+            // Add an indicator that this address has not executed yet
+            //
+
+            ExtOut(" (gcstress)");
+        }
+        else
+        {
+            ExtOut (line);
+        }
+
+        // Now advance to the opcode
+        NextTerm (ptr);
+
+        if (!strncmp(ptr, "beq ", 4)
+            || !strncmp(ptr, "bne ", 4)
+            || !strncmp(ptr, "blt ", 4)
+            || !strncmp(ptr, "bge ", 4)
+            || !strncmp(ptr, "bltu ", 5)
+            || !strncmp(ptr, "bgeu ", 5)
+            )
+        {
+            char *endptr;
+            NextTerm (ptr);
+            NextTerm (ptr);
+            NextTerm (ptr);
+            ULONG_PTR value = strtoul(ptr, &endptr, 10);
+            ExtOut("(0x%llx)", (value + currentPC));
+        }
+        else if (!strncmp(ptr, "beqz ", 5)
+                || !strncmp(ptr, "bnez ", 5)
+                || !strncmp(ptr, "bceqz ", 6)
+                || !strncmp(ptr, "bcnez ", 6)
+                )
+        {
+            char *endptr;
+            NextTerm (ptr);
+            NextTerm (ptr);
+            ULONG_PTR value = strtoul(ptr, &endptr, 10);
+            ExtOut("(0x%llx)", (value + currentPC));
+        }
+        else if (!strncmp(ptr, "b ", 2) || !strncmp(ptr, "bl ", 3))
+        {
+            char *endptr;
+            NextTerm (ptr);
+            ULONG_PTR value = strtoul(ptr, &endptr, 10);
+            ExtOut("(0x%llx)", (value + currentPC));
+            HandleValue(value + currentPC);
+        }
+
+    }
+    ExtOut ("\n");
+
+    //
+    // Print out any "end" GC info
+    //
+    if (pGCEncodingInfo)
+    {
+        pGCEncodingInfo->DumpGCInfoThrough(PC - PCBegin);
+    }
+
+    //
+    // Print out any "end" EH info (where the end address is the byte immediately following the last instruction)
+    //
+    if (pEHInfo)
+    {
+        pEHInfo->FormatForDisassembly(PC - PCBegin);
+    }
 }
 
 BOOL LOONGARCH64Machine::GetExceptionContext (TADDR stack, TADDR PC, TADDR *cxrAddr, CROSS_PLATFORM_CONTEXT * cxr,

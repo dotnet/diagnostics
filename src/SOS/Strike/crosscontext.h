@@ -379,6 +379,7 @@ typedef struct {
     ULONGLONG F[4*32];
     DWORD64 Fcc;
     DWORD   Fcsr;
+    DWORD Padding[1];
 
 } LOONGARCH64_CONTEXT;
 

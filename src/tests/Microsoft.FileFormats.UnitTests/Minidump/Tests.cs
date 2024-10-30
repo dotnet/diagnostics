@@ -84,7 +84,7 @@ namespace Microsoft.FileFormats.Minidump
 
         private void CheckModuleNamesInternal(Minidump minidump)
         {
-            Assert.Single(minidump.LoadedImages.Where(i => i.ModuleName.EndsWith(@"\clr.dll")));
+            Assert.Single(minidump.LoadedImages, i => i.ModuleName.EndsWith(@"\clr.dll"));
 
             foreach (var module in minidump.LoadedImages)
                 Assert.NotNull(module.ModuleName);
