@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             return contextService.GetCurrentTarget();
         }
 
-        private static IHost Host => HostServices.Instance;
+        private static IHost Host => HostServices.Instance.Host;
 
         private string DbgEngPath => TestConfiguration.MakeCanonicalPath(Config.AllSettings["DbgEngPath"]);
 

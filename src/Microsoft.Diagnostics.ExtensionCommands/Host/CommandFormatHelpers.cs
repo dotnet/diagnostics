@@ -151,12 +151,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 else
                 {
-                    Console().WriteLineError(" <NONE>");
+                    Console().WriteLine(" <NONE>");
                 }
             }
             else if (error)
             {
-                Console().WriteLineError($"{indent}{RuntimeInfo.RUNTIME_INFO_SYMBOL,-24}: <NO SYMBOL>");
+                Console().WriteLine($"{indent}{RuntimeInfo.RUNTIME_INFO_SYMBOL,-24}: <NO SYMBOL>");
             }
 
             // Print the Windows runtime engine metrics (.NET Core and .NET Framework)
@@ -174,12 +174,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     else
                     {
-                        Console().WriteLineError(" <NONE>");
+                        Console().WriteLine(" <NONE>");
                     }
                 }
                 else if (error)
                 {
-                    Console().WriteLineError($"{indent}{ClrEngineMetrics.Symbol,-24}: <NO SYMBOL>");
+                    Console().WriteLine($"{indent}{ClrEngineMetrics.Symbol,-24}: <NO SYMBOL>");
                 }
             }
 
@@ -190,7 +190,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else if (error)
             {
-                Console().WriteLineError($"{indent}{DacTableSymbol,-24}: <NO SYMBOL>");
+                Console().WriteLine($"{indent}{DacTableSymbol,-24}: <NO SYMBOL>");
             }
 
             // Print the Native AOT contract data address (DotNetRuntimeDebugHeader)
@@ -200,7 +200,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else if (error)
             {
-                Console().WriteLineError($"{indent}{DebugHeaderSymbol,-24}: <NO SYMBOL>");
+                Console().WriteLine($"{indent}{DebugHeaderSymbol,-24}: <NO SYMBOL>");
             }
         }
     }

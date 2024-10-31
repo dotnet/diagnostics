@@ -491,15 +491,17 @@ namespace SOS.Hosting
 
         #region IHost
 
-        IServiceEvent IHost.OnShutdownEvent => throw new NotImplementedException();
+        public IServiceEvent OnShutdownEvent => throw new NotImplementedException();
 
-        IServiceEvent<ITarget> IHost.OnTargetCreate => throw new NotImplementedException();
+        public IServiceEvent<ITarget> OnTargetCreate => throw new NotImplementedException();
 
-        HostType IHost.HostType => HostType.DotnetDump;
+        public HostType HostType => HostType.DotnetDump;
 
-        IServiceProvider IHost.Services => throw new NotImplementedException();
+        public IServiceProvider Services => throw new NotImplementedException();
 
-        IEnumerable<ITarget> IHost.EnumerateTargets() => throw new NotImplementedException();
+        public IEnumerable<ITarget> EnumerateTargets() => throw new NotImplementedException();
+
+        public int AddTarget(ITarget target) => throw new NotImplementedException();
 
         #endregion
 

@@ -103,6 +103,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public IEnumerable<ITarget> EnumerateTargets() => throw new NotImplementedException();
 
+        public int AddTarget(ITarget target) => throw new NotImplementedException();
+
         #endregion
     }
 
