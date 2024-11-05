@@ -23,10 +23,10 @@ stages:
         displayName: 'Build Manifest generation and asset publishing tool'
     - ${{ elseif and(ne(variables['System.TeamProject'], 'public'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/internal/release/'))) }}:
       - task: UseDotNet@2
-        displayName: 'Use .NET Core runtime 6.x'
+        displayName: 'Use .NET Core runtime 8.x'
         inputs:
           packageType: runtime
-          version: 6.x
+          version: 8.x
           installationPath: '$(Build.Repository.LocalPath)\.dotnet'
       - template: /eng/common/templates/post-build/setup-maestro-vars.yml
 

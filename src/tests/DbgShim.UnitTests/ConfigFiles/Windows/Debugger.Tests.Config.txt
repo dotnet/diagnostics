@@ -16,11 +16,6 @@
 
   <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
 
-  <NuGetPackageFeeds>
-      dotnet9=https://dnceng.pkgs.visualstudio.com/public/_packaging/dotnet9/nuget/v3/index.json;
-      dotnet-public=https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json
-  </NuGetPackageFeeds>
-
   <RunTestsWindows_x64>true</RunTestsWindows_x64>
   <RunTestsWindows_x64 Condition="'$(TargetArchitecture)' != 'x64'">false</RunTestsWindows_x64>
   

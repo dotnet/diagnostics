@@ -3,14 +3,13 @@
 
 using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     public class Thread : IThread, IDisposable
     {
         private readonly ThreadService _threadService;
-        private byte[] _threadContext;
+        private ReadOnlyMemory<byte> _threadContext;
         private ulong? _teb;
 
         protected readonly ServiceContainer _serviceContainer;
@@ -40,46 +39,28 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public IServiceProvider Services => _serviceContainer;
 
-        public bool TryGetRegisterValue(int index, out ulong value)
+        public bool TryGetRegisterValue(int registerIndex, out ulong value)
         {
-            value = 0;
-
-            if (_threadService.TryGetRegisterInfo(index, out RegisterInfo info))
+            try
             {
-                try
-                {
-                    Span<byte> threadContext = new(GetThreadContext(), info.RegisterOffset, info.RegisterSize);
-                    switch (info.RegisterSize)
-                    {
-                        case 1:
-                            value = MemoryMarshal.Read<byte>(threadContext);
-                            return true;
-                        case 2:
-                            value = MemoryMarshal.Read<ushort>(threadContext);
-                            return true;
-                        case 4:
-                            value = MemoryMarshal.Read<uint>(threadContext);
-                            return true;
-                        case 8:
-                            value = MemoryMarshal.Read<ulong>(threadContext);
-                            return true;
-                        default:
-                            Trace.TraceError($"GetRegisterValue: 0x{ThreadId:X4} {info.RegisterName} invalid size {info.RegisterSize}");
-                            break;
-                    }
-                }
-                catch (DiagnosticsException ex)
-                {
-                    Trace.TraceError($"GetRegisterValue: 0x{ThreadId:X4} {info.RegisterName} {ex}");
-                }
+                ReadOnlySpan<byte> context = GetThreadContext();
+                return _threadService.TryGetRegisterValue(context, registerIndex, out value);
             }
+            catch (DiagnosticsException ex)
+            {
+                Trace.TraceError($"GetRegisterValue: 0x{ThreadId:X4} {ex}");
+            }
+            value = 0;
             return false;
         }
 
-        public byte[] GetThreadContext()
+        public ReadOnlySpan<byte> GetThreadContext()
         {
-            _threadContext ??= _threadService.GetThreadContext(this);
-            return _threadContext;
+            if (_threadContext.IsEmpty)
+            {
+                _threadContext = _threadService.GetThreadContext(this);
+            }
+            return _threadContext.Span;
         }
 
         public ulong GetThreadTeb()

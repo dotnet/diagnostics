@@ -164,15 +164,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         protected virtual void Dispose(bool disposing)
         {
-            // If session being disposed hasn't been stopped, attempt to stop it first
-            if (!_stopped)
-            {
-                try
-                {
-                    Stop();
-                }
-                catch { } // swallow any exceptions that may be thrown from Stop.
-            }
+            // Do not call Stop() here. Trying to do so now might block indefinitely if the runtime is unresponsive and we don't want blocking behavior in Dispose().
+            // If the caller wants to ensure that all rundown events are captured they should call Stop() first, then process the EventStream until it is complete, then call Dispose().
 
             if (!_disposedValue)
             {
