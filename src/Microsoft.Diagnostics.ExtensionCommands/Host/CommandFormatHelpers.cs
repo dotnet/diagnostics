@@ -20,7 +20,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// </summary>
         public static void DisplaySpecialInfo(this CommandBase command, string indent = "")
         {
-            if (command.Services.GetService<ITarget>().OperatingSystem != OSPlatform.Windows)
+            ITarget target = command.Services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
+            if (target.OperatingSystem != OSPlatform.Windows)
             {
                 ulong address = SpecialDiagInfoHeader.GetAddress(command.Services);
                 command.Console.Write($"{indent}SpecialDiagInfoHeader   : {address:X16}");
@@ -57,7 +58,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (module.IsPEImage)
             {
                 command.Console.WriteLine($"{indent}Resources:");
-                IDataReader reader = command.Services.GetService<IDataReader>() ?? throw new DiagnosticsException("IDataReader service needed");
+                IDataReader reader = command.Services.GetService<IDataReader>() ?? throw new DiagnosticsException("IDataReader service required");
                 IResourceNode resourceRoot = ModuleInfo.TryCreateResourceRoot(reader, module.ImageBase, module.ImageSize, module.IsFileLayout.GetValueOrDefault(false));
                 if (resourceRoot != null)
                 {
@@ -160,7 +161,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             // Print the Windows runtime engine metrics (.NET Core and .NET Framework)
-            if (command.Services.GetService<ITarget>().OperatingSystem == OSPlatform.Windows)
+            ITarget target = command.Services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
+            if (target.OperatingSystem == OSPlatform.Windows)
             {
                 if (symbols != null && symbols.TryGetSymbolAddress(ClrEngineMetrics.Symbol, out ulong metricsAddress))
                 {
