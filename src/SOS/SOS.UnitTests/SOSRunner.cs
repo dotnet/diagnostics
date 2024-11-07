@@ -555,7 +555,10 @@ public class SOSRunner : IDisposable
 
                     // Turn on source/line numbers
                     initialCommands.Add(".lines");
-                    initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(config.PrivateBuildTesting() ? "false" : "true")}");
+
+                    string setHostRuntime = config.SetHostRuntime();
+                    bool secureLoadDotNetExtensions = !(config.PrivateBuildTesting() || (setHostRuntime != null && setHostRuntime == "-none"));
+                    initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(secureLoadDotNetExtensions ? "true" : "false")}");
                     break;
 
                 case NativeDebugger.Lldb:
