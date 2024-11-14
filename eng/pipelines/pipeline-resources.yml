@@ -72,7 +72,7 @@ extends:
         options: '--env PYTHONPATH=/usr/bin/python3.9'
 
       test_fedora:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-39
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-41
         options: --cap-add=SYS_PTRACE
 
       test_opensuse_15_2:
