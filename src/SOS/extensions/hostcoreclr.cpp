@@ -72,6 +72,7 @@ namespace RuntimeHostingConstants
         {9, 0},
         {8, 0},
         {6, 0},
+        {10, 0},
     };
 
     constexpr char DotnetRootEnvVar[] = "DOTNET_ROOT";
@@ -128,6 +129,7 @@ namespace RuntimeHostingConstants
         "/rh-dotnet90/root/usr/bin/dotnet",
         "/rh-dotnet80/root/usr/bin/dotnet",
         "/rh-dotnet60/root/usr/bin/dotnet",
+        "/rh-dotnet100/root/usr/bin/dotnet",
         "/usr/share/dotnet",
 #endif
     };
