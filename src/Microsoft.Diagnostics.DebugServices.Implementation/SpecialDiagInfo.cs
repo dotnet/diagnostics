@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public SpecialDiagInfo(ITarget target, IMemoryService memoryService)
         {
-            _target = target;
+            _target = target ?? throw new DiagnosticsException("Dump or live session target required");
             _memoryService = memoryService;
         }
 
