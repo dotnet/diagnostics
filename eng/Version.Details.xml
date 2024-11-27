@@ -1,36 +1,36 @@
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.24558.5">
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.24576.1">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>3fe00b9fa4b6bb879ebbc502c2abc70fd05b771d</Sha>
+      <Sha>fa787489e504e36549cbebac6b4d1e0f79fa80ea</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.0.0-beta.24558.5">
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.0.0-beta.24576.1">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>3fe00b9fa4b6bb879ebbc502c2abc70fd05b771d</Sha>
+      <Sha>fa787489e504e36549cbebac6b4d1e0f79fa80ea</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.24560.1">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.24572.3">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>232061b49ae2157efbb83acde9acae79ef3d6d40</Sha>
+      <Sha>7d955f9f470465e144c76d47fd2596a0e4c02a21</Sha>
     </Dependency>
     <!-- Intermediate is necessary for source build. -->
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.arcade" Version="10.0.0-beta.24560.1">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.arcade" Version="10.0.0-beta.24572.3">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>232061b49ae2157efbb83acde9acae79ef3d6d40</Sha>
+      <Sha>7d955f9f470465e144c76d47fd2596a0e4c02a21</Sha>
       <SourceBuild RepoName="arcade" ManagedOnly="true" />
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="10.0.0-beta.24560.1">
+    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="10.0.0-beta.24572.3">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>232061b49ae2157efbb83acde9acae79ef3d6d40</Sha>
+      <Sha>7d955f9f470465e144c76d47fd2596a0e4c02a21</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.22316.2" Pinned="true">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>ccfe6da198c5f05534863bbb1bff66e830e0c6ab</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NET.Sdk" Version="9.0.101-servicing.24560.2">
+    <Dependency Name="Microsoft.NET.Sdk" Version="9.0.101-servicing.24575.3">
       <Uri>https://github.com/dotnet/sdk</Uri>
-      <Sha>cadc36fee20f31f09abd125c2ceaecb983c67085</Sha>
+      <Sha>5a5ced82d4f2250921581a035f8673591b02cd4b</Sha>
     </Dependency>
     <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="9.0.1-rtm.24576.21">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
@@ -42,16 +42,16 @@
     </Dependency>
     <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="9.0.1">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>940e395337ef32782723b789e530aa4abd72b054</Sha>
+      <Sha>f6615d27fdbef2e7216d9762aaea9a6aa49e1be5</Sha>
     </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.9.0" Version="9.0.1-rtm.24557.9">
+    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.9.0" Version="9.0.1-rtm.24576.8">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>940e395337ef32782723b789e530aa4abd72b054</Sha>
+      <Sha>f6615d27fdbef2e7216d9762aaea9a6aa49e1be5</Sha>
     </Dependency>
     <!-- Intermediate is necessary for source build. -->
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="10.0.0-alpha.1.24561.2">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="10.0.557602">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>92a51d1379daa1fa7892a9d06840ba833fcd6298</Sha>
+      <Sha>450c665d6f838ff0ede862b20e30f80b9d7846a0</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis" Version="4.11.0-2.24271.11">
