@@ -144,6 +144,8 @@ EXPORTS
     processor
     SaveModule
     savemodule=SaveModule
+    SaveAllModules
+    saveallmodules=SaveAllModules
     SetHostRuntime
     sethostruntime=SetHostRuntime
     SetSymbolServer

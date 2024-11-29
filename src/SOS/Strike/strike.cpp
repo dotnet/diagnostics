@@ -11800,6 +11800,277 @@ DECLARE_API( VMStat )
 *    This function saves a dll to a file.                              *
 *                                                                      *
 \**********************************************************************/
+HRESULT SaveModuleToFile(TADDR moduleAddr, LPSTR file)
+    {
+    DWORD_PTR dllBase = 0;
+    ULONG64 base;
+    if (g_ExtSymbols->GetModuleByOffset(TO_CDADDR(moduleAddr), 0, NULL, &base) == S_OK)
+    {
+        dllBase = TO_TADDR(base);
+    }
+    else if (IsModule(moduleAddr))
+    {
+        DacpModuleData module;
+        module.Request(g_sos, TO_CDADDR(moduleAddr));
+        dllBase = TO_TADDR(module.ilBase);
+        if (dllBase == 0)
+        {
+            ExtOut("Module does not have base address\n");
+            return E_INVALIDARG;
+        }
+    }
+    else
+    {
+        ExtOut("%p is not a Module or base address\n", SOS_PTR(moduleAddr));
+        return E_INVALIDARG;
+    }
+
+    MEMORY_BASIC_INFORMATION64 mbi;
+    if (FAILED(g_ExtData2->QueryVirtual(TO_CDADDR(dllBase), &mbi)))
+    {
+        ExtOut("Failed to retrieve information about segment %p", SOS_PTR(dllBase));
+        return E_FAIL;
+    }
+
+    // module loaded as an image or mapped as a flat file?
+    BOOL bIsImage = (mbi.Type == MEM_IMAGE);
+
+    IMAGE_DOS_HEADER DosHeader;
+    if (g_ExtData->ReadVirtual(TO_CDADDR(dllBase), &DosHeader, sizeof(DosHeader), NULL) != S_OK)
+        return S_FALSE;
+
+    IMAGE_NT_HEADERS Header;
+    if (g_ExtData->ReadVirtual(TO_CDADDR(dllBase + DosHeader.e_lfanew), &Header, sizeof(Header), NULL) != S_OK)
+        return S_FALSE;
+
+    DWORD_PTR sectionAddr = dllBase + DosHeader.e_lfanew + offsetof(IMAGE_NT_HEADERS, OptionalHeader)
+            + Header.FileHeader.SizeOfOptionalHeader;
+
+    IMAGE_SECTION_HEADER section;
+    struct MemLocation
+    {
+        DWORD_PTR VAAddr;
+        DWORD_PTR VASize;
+        DWORD_PTR FileAddr;
+        DWORD_PTR FileSize;
+    };
+
+    int nSection = Header.FileHeader.NumberOfSections;
+    ExtOut("%u sections in file\n", nSection);
+    MemLocation* memLoc = (MemLocation*)_alloca(nSection * sizeof(MemLocation));
+    int indxSec = -1;
+    int slot;
+    for (int n = 0; n < nSection; n++)
+    {
+        if (g_ExtData->ReadVirtual(TO_CDADDR(sectionAddr), &section, sizeof(section), NULL) == S_OK)
+        {
+            for (slot = 0; slot <= indxSec; slot++)
+                if (section.PointerToRawData < memLoc[slot].FileAddr)
+                    break;
+
+            for (int k = indxSec; k >= slot; k--)
+                memcpy(&memLoc[k + 1], &memLoc[k], sizeof(MemLocation));
+
+            memLoc[slot].VAAddr = section.VirtualAddress;
+            memLoc[slot].VASize = section.Misc.VirtualSize;
+            memLoc[slot].FileAddr = section.PointerToRawData;
+            memLoc[slot].FileSize = section.SizeOfRawData;
+            ExtOut("section %d - VA=%x, VASize=%x, FileAddr=%x, FileSize=%x\n",
+                n, memLoc[slot].VAAddr, memLoc[slot].VASize, memLoc[slot].FileAddr,
+                memLoc[slot].FileSize);
+            indxSec++;
+        }
+        else
+        {
+            ExtOut("Fail to read PE section info\n");
+            return E_FAIL;
+        }
+        sectionAddr += sizeof(section);
+    }
+
+    char* ptr = file;
+
+    if (ptr[0] == '\0')
+    {
+        ExtOut("File not specified\n");
+        return E_INVALIDARG;
+    }
+
+    ptr += strlen(ptr) - 1;
+    while (isspace(*ptr))
+    {
+        *ptr = '\0';
+        ptr--;
+    }
+
+    HANDLE hFile = CreateFileA(file, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        ExtOut("Fail to create file %s\n", file);
+        return E_FAIL;
+    }
+
+    ULONG pageSize = OSPageSize();
+    char* buffer = (char*)_alloca(pageSize);
+    DWORD nRead;
+    DWORD nWrite;
+
+    // NT PE Headers
+    TADDR dwAddr = dllBase;
+    TADDR dwEnd = dllBase + Header.OptionalHeader.SizeOfHeaders;
+    while (dwAddr < dwEnd)
+    {
+        nRead = pageSize;
+        if (dwEnd - dwAddr < nRead)
+            nRead = (ULONG)(dwEnd - dwAddr);
+
+        if (g_ExtData->ReadVirtual(TO_CDADDR(dwAddr), buffer, nRead, &nRead) == S_OK)
+        {
+            WriteFile(hFile, buffer, nRead, &nWrite, NULL);
+        }
+        else
+        {
+            ExtOut("Fail to read memory\n");
+            goto end;
+        }
+        dwAddr += nRead;
+    }
+
+    for (slot = 0; slot <= indxSec; slot++)
+    {
+        dwAddr = dllBase + (bIsImage ? memLoc[slot].VAAddr : memLoc[slot].FileAddr);
+        dwEnd = memLoc[slot].FileSize + dwAddr - 1;
+
+        while (dwAddr <= dwEnd)
+        {
+            nRead = pageSize;
+            if (dwEnd - dwAddr + 1 < pageSize)
+                nRead = (ULONG)(dwEnd - dwAddr + 1);
+
+            if (g_ExtData->ReadVirtual(TO_CDADDR(dwAddr), buffer, nRead, &nRead) == S_OK)
+            {
+                WriteFile(hFile, buffer, nRead, &nWrite, NULL);
+            }
+            else
+            {
+                ExtOut("Fail to read memory\n");
+                goto end;
+            }
+            dwAddr += pageSize;
+        }
+    }
+end:
+    CloseHandle(hFile);
+    return S_OK;
+}
+
+HRESULT SaveModulesFromDomain(TADDR domain, LPSTR destinationFolder)
+{
+    HRESULT Status;
+
+    DacpAppDomainData appDomain;
+    if ((Status = appDomain.Request(g_sos, domain)) != S_OK)
+    {
+        ExtOut("Failed to get appdomain %p, error %lx\n", SOS_PTR(domain), Status);
+        return Status;
+    }
+
+    ExtOut("--------------------------------------\n");
+    DMLOut("Domain %d:%s          %s\n", appDomain.dwId, (appDomain.dwId >= 10) ? "" : " ", DMLDomain(domain));
+
+    if (appDomain.AssemblyCount == 0)
+    {
+        return Status;
+    }
+
+    ArrayHolder<CLRDATA_ADDRESS> assemblies = new CLRDATA_ADDRESS[appDomain.AssemblyCount];
+    if (assemblies == NULL)
+    {
+        ReportOOM();
+        return Status;
+    }
+
+    if (g_sos->GetAssemblyList(appDomain.AppDomainPtr, appDomain.AssemblyCount, assemblies, NULL) != S_OK)
+    {
+        ExtOut("Unable to get array of Assemblies\n");
+        return Status;
+    }
+
+    for (int i = 0; i < appDomain.AssemblyCount; i++)
+    {
+        DacpAssemblyData assembly;
+        if (assembly.Request(g_sos, assemblies[i], appDomain.AppDomainPtr) == S_OK)
+        {
+            if (assembly.isDynamic)
+            {
+                continue;
+            }
+
+            ArrayHolder<CLRDATA_ADDRESS> modules = new CLRDATA_ADDRESS[assembly.ModuleCount];
+            if (modules == NULL
+                || g_sos->GetAssemblyModuleList(assembly.AssemblyPtr, assembly.ModuleCount, modules, NULL) != S_OK)
+            {
+                ReportOOM();
+                return Status;
+            }
+
+            for (UINT j = 0; j < assembly.ModuleCount; j++)
+            {
+                DacpModuleData module;
+                if (module.Request(g_sos, modules[j]) == S_OK)
+                {
+                    ExtOut("Module %s\n", DMLModule(module.Address));
+
+                    DacpModuleData moduleData;
+                    if (moduleData.Request(g_sos, module.Address) == S_OK)
+                    {
+                        WCHAR fullFileName[MAX_LONGPATH];
+                        FileNameForModule(&moduleData, fullFileName);
+
+                        if (fullFileName[0])
+                        {
+                            std::wstring fullFileNameStr(fullFileName);
+                            std::wstring fileName;
+
+                            size_t pos = fullFileNameStr.find_last_of(L"\\/");
+                            if (pos == std::wstring::npos)
+                            {
+                                fileName = fullFileNameStr; // No directory separator found, return the whole path
+                            }
+                            else
+                            {
+                                fileName = fullFileNameStr.substr(pos + 1);
+                            }
+
+                            WCHAR destinationFolderW[MAX_LONGPATH];
+
+                            // Build the full path
+                            MultiByteToWideChar(CP_ACP, 0, destinationFolder, -1, destinationFolderW, MAX_LONGPATH);
+
+                            WCHAR destinationPath[MAX_LONGPATH];
+                            swprintf_s(destinationPath, MAX_LONGPATH, W("%s\\%s"), destinationFolderW, fileName.c_str());
+
+                            CHAR finalPath[MAX_LONGPATH];
+                            WideCharToMultiByte(CP_ACP, 0, destinationPath, -1, finalPath, MAX_LONGPATH, NULL, NULL);
+
+                            if (SaveModuleToFile(modules[j], finalPath) == S_OK)
+                            {
+                                ExtOut("Saved module to %s\n", finalPath);
+                            }
+                        }
+                        else
+                        {
+                            ExtOut("Skipping module (%s)\n", (moduleData.bIsReflection) ? W("Dynamic Module") : W("Unknown Module"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return Status;
+}
+
 DECLARE_API(SaveModule)
 {
     INIT_API();
@@ -11808,7 +12079,6 @@ DECLARE_API(SaveModule)
 
     StringHolder Location;
     DWORD_PTR moduleAddr = NULL;
-    BOOL bIsImage;
 
     CMDValue arg[] =
     {   // vptr, type
@@ -11826,170 +12096,94 @@ DECLARE_API(SaveModule)
         return E_INVALIDARG;
     }
     if (moduleAddr == 0) {
-        ExtOut ("Invalid arg\n");
+        ExtOut("Invalid arg\n");
         return E_INVALIDARG;
     }
 
-    char* ptr = Location.data;
+    return SaveModuleToFile(moduleAddr, Location.data);
+}
 
-    DWORD_PTR dllBase = 0;
-    ULONG64 base;
-    if (g_ExtSymbols->GetModuleByOffset(TO_CDADDR(moduleAddr),0,NULL,&base) == S_OK)
-    {
-        dllBase = TO_TADDR(base);
-    }
-    else if (IsModule(moduleAddr))
-    {
-        DacpModuleData module;
-        module.Request(g_sos, TO_CDADDR(moduleAddr));
-        dllBase = TO_TADDR(module.ilBase);
-        if (dllBase == 0)
-        {
-            ExtOut ("Module does not have base address\n");
-            return Status;
-        }
-    }
-    else
-    {
-        ExtOut ("%p is not a Module or base address\n", SOS_PTR(moduleAddr));
-        return Status;
-    }
 
-    MEMORY_BASIC_INFORMATION64 mbi;
-    if (FAILED(g_ExtData2->QueryVirtual(TO_CDADDR(dllBase), &mbi)))
-    {
-        ExtOut("Failed to retrieve information about segment %p", SOS_PTR(dllBase));
-        return Status;
-    }
+DECLARE_API(SaveAllModules)
+{
+    INIT_API();
+    MINIDUMP_NOT_SUPPORTED();
+    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
 
-    // module loaded as an image or mapped as a flat file?
-    bIsImage = (mbi.Type == MEM_IMAGE);
+    StringHolder Location;
 
-    IMAGE_DOS_HEADER DosHeader;
-    if (g_ExtData->ReadVirtual(TO_CDADDR(dllBase), &DosHeader, sizeof(DosHeader), NULL) != S_OK)
-        return S_FALSE;
-
-    IMAGE_NT_HEADERS Header;
-    if (g_ExtData->ReadVirtual(TO_CDADDR(dllBase + DosHeader.e_lfanew), &Header, sizeof(Header), NULL) != S_OK)
-        return S_FALSE;
-
-    DWORD_PTR sectionAddr = dllBase + DosHeader.e_lfanew + offsetof(IMAGE_NT_HEADERS,OptionalHeader)
-            + Header.FileHeader.SizeOfOptionalHeader;
-
-    IMAGE_SECTION_HEADER section;
-    struct MemLocation
-    {
-        DWORD_PTR VAAddr;
-        DWORD_PTR VASize;
-        DWORD_PTR FileAddr;
-        DWORD_PTR FileSize;
+    CMDValue arg[] =
+    {   // vptr, type
+        {&Location.data, COSTRING}
     };
 
-    int nSection = Header.FileHeader.NumberOfSections;
-    ExtOut("%u sections in file\n",nSection);
-    MemLocation *memLoc = (MemLocation*)_alloca(nSection*sizeof(MemLocation));
-    int indxSec = -1;
-    int slot;
-    for (int n = 0; n < nSection; n++)
+    size_t nArg;
+    if (!GetCMDOption(args, NULL, 0, arg, ARRAY_SIZE(arg), &nArg))
     {
-        if (g_ExtData->ReadVirtual(TO_CDADDR(sectionAddr), &section, sizeof(section), NULL) == S_OK)
-        {
-            for (slot = 0; slot <= indxSec; slot ++)
-                if (section.PointerToRawData < memLoc[slot].FileAddr)
-                    break;
+        return E_INVALIDARG;
+    }
 
-            for (int k = indxSec; k >= slot; k --)
-                memcpy(&memLoc[k+1], &memLoc[k], sizeof(MemLocation));
+    if (nArg != 1)
+    {
+        ExtOut("Usage: SaveAllModules <destination folder>\n");
+        return E_INVALIDARG;
+    }
 
-            memLoc[slot].VAAddr = section.VirtualAddress;
-            memLoc[slot].VASize = section.Misc.VirtualSize;
-            memLoc[slot].FileAddr = section.PointerToRawData;
-            memLoc[slot].FileSize = section.SizeOfRawData;
-            ExtOut("section %d - VA=%x, VASize=%x, FileAddr=%x, FileSize=%x\n",
-                n, memLoc[slot].VAAddr,memLoc[slot]. VASize,memLoc[slot].FileAddr,
-                memLoc[slot].FileSize);
-            indxSec ++;
-        }
-        else
+    ExtOut("Saving all modules to %s\n", Location.data);
+
+    DacpAppDomainStoreData adsData;
+    if ((Status = adsData.Request(g_sos)) != S_OK)
+    {
+        ExtOut("Unable to get AppDomain information\n");
+        return Status;
+    }
+
+    ArrayHolder<CLRDATA_ADDRESS> pArray = new NOTHROW CLRDATA_ADDRESS[adsData.DomainCount];
+    if (pArray == NULL)
+    {
+        ReportOOM();
+        return Status;
+    }
+
+    if ((Status = g_sos->GetAppDomainList(adsData.DomainCount, pArray, NULL)) != S_OK)
+    {
+        ExtOut("Unable to get array of AppDomains\n");
+        return Status;
+    }
+
+    if (adsData.systemDomain != (TADDR)0)
+    {
+        Status = SaveModulesFromDomain(adsData.systemDomain, Location.data);
+
+        if (Status != S_OK)
         {
-            ExtOut("Fail to read PE section info\n");
             return Status;
         }
-        sectionAddr += sizeof(section);
     }
 
-    if (ptr[0] == '\0')
+    if (adsData.sharedDomain != (TADDR)0)
     {
-        ExtOut ("File not specified\n");
-        return Status;
-    }
+        Status = SaveModulesFromDomain(adsData.sharedDomain, Location.data);
 
-    PCSTR file = ptr;
-    ptr += strlen(ptr)-1;
-    while (isspace(*ptr))
-    {
-        *ptr = '\0';
-        ptr --;
-    }
-
-    HANDLE hFile = CreateFileA(file,GENERIC_WRITE,0,NULL,CREATE_ALWAYS,0,NULL);
-    if (hFile == INVALID_HANDLE_VALUE)
-    {
-        ExtOut ("Fail to create file %s\n", file);
-        return Status;
-    }
-
-    ULONG pageSize = OSPageSize();
-    char *buffer = (char *)_alloca(pageSize);
-    DWORD nRead;
-    DWORD nWrite;
-
-    // NT PE Headers
-    TADDR dwAddr = dllBase;
-    TADDR dwEnd = dllBase + Header.OptionalHeader.SizeOfHeaders;
-    while (dwAddr < dwEnd)
-    {
-        nRead = pageSize;
-        if (dwEnd - dwAddr < nRead)
-            nRead = (ULONG)(dwEnd - dwAddr);
-
-        if (g_ExtData->ReadVirtual(TO_CDADDR(dwAddr), buffer, nRead, &nRead) == S_OK)
+        if (Status != S_OK)
         {
-            WriteFile(hFile,buffer,nRead,&nWrite,NULL);
-        }
-        else
-        {
-            ExtOut ("Fail to read memory\n");
-            goto end;
-        }
-        dwAddr += nRead;
-    }
-
-    for (slot = 0; slot <= indxSec; slot ++)
-    {
-        dwAddr = dllBase + (bIsImage ? memLoc[slot].VAAddr : memLoc[slot].FileAddr);
-        dwEnd = memLoc[slot].FileSize + dwAddr - 1;
-
-        while (dwAddr <= dwEnd)
-        {
-            nRead = pageSize;
-            if (dwEnd - dwAddr + 1 < pageSize)
-                nRead = (ULONG)(dwEnd - dwAddr + 1);
-
-            if (g_ExtData->ReadVirtual(TO_CDADDR(dwAddr), buffer, nRead, &nRead) == S_OK)
-            {
-                WriteFile(hFile,buffer,nRead,&nWrite,NULL);
-            }
-            else
-            {
-                ExtOut ("Fail to read memory\n");
-                goto end;
-            }
-            dwAddr += pageSize;
+            return Status;
         }
     }
-end:
-    CloseHandle (hFile);
+
+    for (int n = 0; n < adsData.DomainCount; n++)
+    {
+        if (IsInterrupt())
+            break;
+
+        Status = SaveModulesFromDomain(pArray[n], Location.data);
+
+        if (Status != S_OK)
+        {
+            break;
+        }
+    }
+
     return Status;
 }
 
