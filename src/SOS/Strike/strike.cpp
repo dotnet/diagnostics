@@ -11808,7 +11808,7 @@ HRESULT SaveModuleToFile(CLRDATA_ADDRESS moduleAddr, LPSTR file)
     {
         dllBase = TO_TADDR(base);
     }
-    else if (IsModule(moduleAddr))
+    else if (IsModule((DWORD_PTR)moduleAddr))
     {
         DacpModuleData module;
         module.Request(g_sos, TO_CDADDR(moduleAddr));
