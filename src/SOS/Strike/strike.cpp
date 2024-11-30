@@ -11800,7 +11800,7 @@ DECLARE_API( VMStat )
 *    This function saves a dll to a file.                              *
 *                                                                      *
 \**********************************************************************/
-HRESULT SaveModuleToFile(TADDR moduleAddr, LPSTR file)
+HRESULT SaveModuleToFile(CLRDATA_ADDRESS moduleAddr, LPSTR file)
     {
     DWORD_PTR dllBase = 0;
     ULONG64 base;
@@ -11964,7 +11964,7 @@ end:
     return S_OK;
 }
 
-HRESULT SaveModulesFromDomain(TADDR domain, LPSTR destinationFolder)
+HRESULT SaveModulesFromDomain(CLRDATA_ADDRESS domain, LPSTR destinationFolder)
 {
     HRESULT Status;
 
