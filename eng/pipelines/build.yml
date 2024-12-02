@@ -13,9 +13,9 @@ parameters:
 
 - name: osGroup
   type: string
-  default: Windows_NT
+  default: Windows
   values:
-  - Windows_NT
+  - Windows
   - Linux
   - MacOS
   - FreeBSD
@@ -74,10 +74,6 @@ parameters:
   type: string
   default: ''
 
-- name: isCodeQLRun
-  type: boolean
-  default: false
-
 - name: disableComponentGovernance
   type: boolean
   default: false
@@ -89,7 +85,7 @@ jobs:
       name: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
       timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
       enableMicrobuild: true
-      runAsPublic: ${{ parameters.isCodeQLRun }}
+      runAsPublic: ${{ eq(variables['System.TeamProject'], 'public') }}
       disableComponentGovernance: ${{ parameters.disableComponentGovernance }}
       templateContext: ${{ parameters.templateContext }}
 
@@ -100,7 +96,7 @@ jobs:
           demands: ImageOverride -equals $(LinuxImage)
           os: linux
 
-        ${{ elseif eq(parameters.osGroup, 'Windows_NT') }}:
+        ${{ elseif eq(parameters.osGroup, 'Windows') }}:
           name: $(BuildPool)
           demands: ImageOverride -equals $(WindowsImage)
           os: windows
@@ -139,9 +135,9 @@ jobs:
       - _TestArgs: '-test'
       - _Cross: ''
 
-      - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+      - ${{ if eq(parameters.osGroup, 'Windows') }}:
         - _buildScript: $(Build.SourcesDirectory)\build.cmd
-      - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
+      - ${{ else }}:
         - _buildScript: $(Build.SourcesDirectory)/build.sh
 
       - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
@@ -150,12 +146,12 @@ jobs:
       - ${{ if eq(parameters.testOnly, 'true') }}:
         - _TestArgs: '-test -skipnative'
 
-      - ${{ if or(eq(parameters.buildOnly, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
+      - ${{ if eq(parameters.buildOnly, 'true') }}:
         - _TestArgs: ''
 
       # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
       - _InternalInstallArgs: ''
-      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(parameters.isCodeQLRun, 'false')) }}:
+      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
         - _InternalInstallArgs:
             -dotnetruntimeversion '$(DotnetRuntimeVersion)'
             -dotnetruntimedownloadversion '$(DotnetRuntimeDownloadVersion)'
@@ -178,23 +174,17 @@ jobs:
 
       steps:
       - ${{ if eq(parameters.testOnly, true) }}:
-        - ${{ if ne(parameters.osGroup, 'Linux') }}:
-          - 'error, testOnly is only supported on Linux': error
         - task: DownloadPipelineArtifact@2
           displayName: 'Download Build Artifacts'
           inputs:
             targetPath: '$(Build.ArtifactStagingDirectory)/__download__'
-            itemPattern: Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/**
+            itemPattern: Build_${{ parameters.osGroup }}${{ replace(parameters.osSuffix, '-', '_') }}_${{ config.architecture }}_${{ config.configuration }}/bin/**
             checkDownloadedFiles: true
         - task: CopyFiles@2
           displayName: 'Binplace Downloaded Product'
           inputs:
             sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/linux${{ parameters.osSuffix }}.${{ config.architecture }}.${{ config.configuration }}
             targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/linux.${{ config.architecture }}.${{ config.configuration }}'
-
-      - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
-        - task: CodeQL3000Init@0
-          displayName: CodeQL Initialize
 
       - script: $(_buildScript)
           -ci
@@ -225,10 +215,6 @@ jobs:
             /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
           displayName: Build Native
           target: ${{ parameters.nativeBuildContainer }}
-
-      - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
-        - task: CodeQL3000Finalize@0
-          displayName: CodeQL Finalize
 
       - ${{ if ne(config.artifactUploadPath, '') }}:
         - task: CopyFiles@2
@@ -288,7 +274,7 @@ jobs:
           continueOnError: true
           condition: always()
 
-      - ${{ if and(ne(parameters.buildOnly, 'true'), ne(parameters.isCodeQLRun, 'true')) }}:
+      - ${{ if ne(parameters.buildOnly, 'true') }}:
         # Publish test results to Azure Pipelines
         - task: PublishTestResults@2
           inputs:
