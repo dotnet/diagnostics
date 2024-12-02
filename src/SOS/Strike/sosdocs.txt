@@ -49,14 +49,15 @@ Token2EE                           GCHandleLeaks
 EEVersion                          FinalizeQueue (fq)
 DumpModule                         FindAppDomain
 ThreadPool (tp)                    SaveModule
-DumpAssembly                       ProcInfo 
-DumpSigElem                        StopOnException (soe)
-DumpRuntimeTypes                   DumpLog
-DumpSig                            VMMap
-RCWCleanupList                     VMStat
-DumpIL                             MinidumpMode 
-DumpRCW                            AnalyzeOOM (ao)
-DumpCCW                            SuppressJitOptimization
+DumpAssembly                       SaveAllModules
+DumpSigElem                        ProcInfo 
+DumpRuntimeTypes                   StopOnException (soe)
+DumpSig                            DumpLog
+RCWCleanupList                     VMMap
+DumpIL                             VMStat
+DumpRCW                            MinidumpMode 
+DumpCCW                            AnalyzeOOM (ao)
+                                   SuppressJitOptimization
 
 Examining the GC history           Other
 -----------------------------      -----------------------------
@@ -2309,6 +2310,14 @@ If I wanted to save a copy of coreclr.dll, I could run:
 
 The diagnostic output indicates that the operation was successful. If 
 c:\pub\out.tmp already exists, it will be overwritten.
+\\
+
+COMMAND: saveallmodules.
+!SaveAllModules <Folder>
+
+This command is equivalent to calling !SaveModule on every module in every appdomain.
+If modules with same names are loaded in different appdomains, the last one will overwrite the previous ones.
+
 \\
 
 COMMAND: gchandles.
