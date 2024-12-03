@@ -1,11 +1,11 @@
-﻿using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.TestHelpers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;

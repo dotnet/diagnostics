@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public static ulong GetAddress(IServiceProvider services)
         {
-            ITarget target = services.GetService<ITarget>();
+            ITarget target = services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
             IMemoryService memoryService = services.GetService<IMemoryService>();
             return target.OperatingSystem == OSPlatform.OSX ? SpecialDiagInfoAddress_OSX : (memoryService.PointerSize == 4 ? SpecialDiagInfoAddress_32BIT : SpecialDiagInfoAddress_64BIT);
         }
