@@ -44,7 +44,6 @@
             <Files>
                 <File Architecture="amd64" Module="win-x64\sos.dll" />
                 <File Architecture="x86"   Module="win-x86\sos.dll" />
-                <File Architecture="arm32" Module="win-arm\sos.dll" />
                 <File Architecture="arm64" Module="win-arm64\sos.dll" />
             </Files>
             <LoadTriggers>

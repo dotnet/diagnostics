@@ -16,9 +16,6 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\Microsoft.DiaSymReader.Native.x86.dll" TargetRid="win-x86" />
       
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm.$(Configuration)\sos.dll" TargetRid="win-arm" />
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm.$(Configuration)\Microsoft.DiaSymReader.Native.arm.dll" TargetRid="win-arm" />
-    
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\sos.dll" TargetRid="win-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll" TargetRid="win-arm64" />
 
