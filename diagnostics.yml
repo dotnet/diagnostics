@@ -78,9 +78,6 @@ extends:
             artifactUploadPath: bin/Windows_NT.x86.Release
           - ${{ if ne(variables['System.TeamProject'], 'public') }}:
             - configuration: Release
-              architecture: arm
-              artifactUploadPath: bin/Windows_NT.arm.Release
-            - configuration: Release
               architecture: arm64
               artifactUploadPath: bin/Windows_NT.arm64.Release
 
