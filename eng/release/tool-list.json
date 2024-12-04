@@ -4,35 +4,35 @@
     "AssetList": [
       {
         "name": "dotnet-counters",
-        "rids": ["win-x64", "win-x86", "win-arm", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
       },
       {
         "name": "dotnet-dump",
-        "rids": ["win-x64", "win-x86", "win-arm", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
       },
       {
         "name": "dotnet-gcdump",
-        "rids": ["win-x64", "win-x86", "win-arm", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
       },
       {
         "name": "dotnet-sos",
-        "rids": ["win-x64", "win-x86", "win-arm", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
       },
       {
         "name": "dotnet-trace",
-        "rids": ["win-x64", "win-x86", "win-arm", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
       },
       {
         "name": "dotnet-stack",
-        "rids": ["win-x64", "win-x86", "win-arm", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
       },
       {
         "name": "dotnet-dsrouter",
-        "rids": ["win-x64", "win-x86", "win-arm", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
       },
       {
         "name": "dotnet-symbol",
-        "rids": ["win-x64", "win-x86", "win-arm", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-musl-arm64", "osx-x64", "linux-arm64", "linux-musl-x64", "linux-arm"]
       }
     ]
   },
