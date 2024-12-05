@@ -337,8 +337,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         /// <param name="startupHookPath">The path to the assembly containing the StartupHook.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="startupHookPath"/> is null or empty.</exception>
-        /// <exception cref="FileNotFoundException">Thrown when the specified assembly does not exist.</exception>
-        /// <exception cref="NotSupportedException">Thrown when the runtime version is less than 8.0.</exception>
         public void ApplyStartupHook(string startupHookPath)
         {
             if (string.IsNullOrEmpty(startupHookPath))
@@ -357,8 +355,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <param name="startupHookPath">The path to the assembly containing the StartupHook.</param>
         /// <param name="token">The token to monitor for cancellation requests.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="startupHookPath"/> is null or empty.</exception>
-        /// <exception cref="FileNotFoundException">Thrown when the specified assembly does not exist.</exception>
-        /// <exception cref="NotSupportedException">Thrown when the runtime version is less than 8.0.</exception>
         public async Task ApplyStartupHookAsync(string startupHookPath, CancellationToken token)
         {
             if (string.IsNullOrEmpty(startupHookPath))
