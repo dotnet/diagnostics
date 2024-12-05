@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public override void Invoke()
         {
-            ITarget target = Services.GetService<ITarget>();
+            ITarget target = Services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
             string os;
             if (target.OperatingSystem == OSPlatform.Linux)
             {

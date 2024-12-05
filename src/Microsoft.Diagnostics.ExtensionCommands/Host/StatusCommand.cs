@@ -54,8 +54,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     foreach (IRuntime runtime in runtimeService.EnumerateRuntimes())
                     {
                         string current = displayStar ? (runtime == currentRuntime ? "*" : " ") : "";
-                        Write($"    {current}");
-                        WriteLine(runtime.ToString());
+                        WriteLine($"    {current}{runtime}");
+
                         string indent = new(' ', 8);
                         this.DisplayResources(runtime.RuntimeModule, all: false, indent);
                         this.DisplayRuntimeExports(runtime.RuntimeModule, error: true, indent);

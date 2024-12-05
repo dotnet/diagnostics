@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -378,6 +379,47 @@ namespace Microsoft.Diagnostics.NETCore.Client
             IpcMessage request = CreateDisablePerfMapMessage();
             IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
             ValidateResponseMessage(response, nameof(DisablePerfMapAsync));
+        }
+
+        /// <summary>
+        /// Create a new DiagnosticsClient instance using the specified diagnostic port.
+        /// </summary>
+        /// <param name="diagnosticPort">The diagnostic port.</param>
+        /// <param name="ct">The token to monitor for cancellation requests.</param>
+        public static async Task<DiagnosticsClient> FromDiagnosticPort(string diagnosticPort, CancellationToken ct)
+        {
+            if (diagnosticPort is null)
+            {
+                throw new ArgumentNullException(nameof(diagnosticPort));
+            }
+
+            IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(diagnosticPort);
+
+            if (portConfig.IsListenConfig)
+            {
+                string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portConfig.Address : Path.GetFullPath(portConfig.Address);
+                ReversedDiagnosticsServer server = new(fullPort);
+                server.Start();
+
+                try
+                {
+                    IpcEndpointInfo endpointInfo = await server.AcceptAsync(ct).ConfigureAwait(false);
+                    return new DiagnosticsClient(endpointInfo.Endpoint);
+                }
+                catch (TaskCanceledException)
+                {
+                    //clean up the server
+                    await server.DisposeAsync().ConfigureAwait(false);
+                    if (!ct.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    return null;
+                }
+            }
+
+            Debug.Assert(portConfig.IsConnectConfig);
+            return new DiagnosticsClient(portConfig);
         }
 
         /// <summary>
