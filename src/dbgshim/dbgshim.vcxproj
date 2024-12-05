@@ -378,7 +378,6 @@
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.osx-x64.proj" />
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.proj" />
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.props" />
-    <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-arm.proj" />
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-arm64.proj" />
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-x64.proj" />
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-x86.proj" />
