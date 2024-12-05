@@ -24,6 +24,7 @@ pr:
     include:
     - main
     - release/*
+    - internal/*
   paths:
     exclude:
     - documentation/*
@@ -46,12 +47,13 @@ extends:
 
         ############################
         #                          #
-        #    Source Build legs     #
+        #    Source Build leg      #
         #                          #
         ############################
 
       - template: ${{ variables.sourceBuildTemplate }}
         parameters:
+          enableInternalSources: true
           platform:
             name: Complete
             buildScript: ./eng/common/build.sh
@@ -323,8 +325,8 @@ extends:
                 cd $(Build.ArtifactStagingDirectory)/__download__
 
                 $dirs = Get-ChildItem -Directory
-                if ($dirs.Count -ne 12) {
-                  throw "Expected 12 release platforms to be present. 3 Linux glibc, 3 Linux musl, 4 Windows, and 2 macOS."
+                if ($dirs.Count -ne 11) {
+                  throw "Expected 11 release platforms to be present. 3 Linux glibc, 3 Linux musl, 3 Windows, and 2 macOS."
                 }
 
                 $targetDir = "$(Build.SourcesDirectory)/artifacts/bin"
