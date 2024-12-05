@@ -346,12 +346,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentNullException(nameof(startupHookPath));
             }
 
-            ProcessInfo processInfo = GetProcessInfo();
-            if (!processInfo.TryGetProcessClrVersion(out Version version) || version.Major < 8)
-            {
-                throw new NotSupportedException($"Startup hooks are only supported on .NET 8.0 and later. Runtime Version: {version}.");
-            }
-
             IpcMessage message = CreateApplyStartupHookMessage(startupHookPath);
             IpcMessage response = IpcClient.SendMessage(_endpoint, message);
             ValidateResponseMessage(response, nameof(ApplyStartupHook));
@@ -370,12 +364,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             if (string.IsNullOrEmpty(startupHookPath))
             {
                 throw new ArgumentNullException(nameof(startupHookPath));
-            }
-
-            ProcessInfo processInfo = await GetProcessInfoAsync(token).ConfigureAwait(false);
-            if (!processInfo.TryGetProcessClrVersion(out Version version) || version.Major < 8)
-            {
-                throw new NotSupportedException($"Startup hooks are only supported on .NET 8.0 and later. Runtime Version: {version}.");
             }
 
             IpcMessage message = CreateApplyStartupHookMessage(startupHookPath);
