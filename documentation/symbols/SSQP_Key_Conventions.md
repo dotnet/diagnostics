@@ -202,6 +202,6 @@ browser via the [buildId property](https://chromedevtools.github.io/devtools-pro
 
 **File name:** `main.wasm`
 
-**SHA-256 of file:** `e3b0c44298fc1c149afbf4c8996fb92427ae41e4`
+**Build ID of file:** `e3b0c44298fc1c149afbf4c8996fb92427ae41e4`
 
 **Lookup key:**: `main.wasm.s/e3b0c44298fc1c149afbf4c8996fb92427ae41e4/main.wasm.s`
