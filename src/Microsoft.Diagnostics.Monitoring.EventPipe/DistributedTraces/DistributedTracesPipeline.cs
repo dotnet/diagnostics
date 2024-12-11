@@ -14,12 +14,12 @@ using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    internal class TracesPipeline : EventSourcePipeline<TracesPipelineSettings>
+    internal class DistributedTracesPipeline : EventSourcePipeline<DistributedTracesPipelineSettings>
     {
         private readonly IActivityLogger[] _loggers;
 
-        public TracesPipeline(DiagnosticsClient client,
-            TracesPipelineSettings settings,
+        public DistributedTracesPipeline(DiagnosticsClient client,
+            DistributedTracesPipelineSettings settings,
             IEnumerable<IActivityLogger> loggers) : base(client, settings)
         {
             _loggers = loggers?.ToArray() ?? throw new ArgumentNullException(nameof(loggers));

@@ -17,18 +17,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     public sealed class ActivitySourceConfiguration : MonitoringSourceConfiguration
     {
-        private readonly double _SamplingRatio;
-        private readonly string[] _ActivitySourceNames;
+        private readonly double _samplingRatio;
+        private readonly string[] _activitySourceNames;
 
         public ActivitySourceConfiguration(
             DiagnosticsClient client,
             double samplingRatio,
             IEnumerable<string>? activitySourceNames)
         {
-            _SamplingRatio = samplingRatio;
-            _ActivitySourceNames = activitySourceNames?.ToArray() ?? Array.Empty<string>();
+            _samplingRatio = samplingRatio;
+            _activitySourceNames = activitySourceNames?.ToArray() ?? Array.Empty<string>();
 
-            if (_SamplingRatio < 1D)
+            if (_samplingRatio < 1D)
             {
                 int majorVersion = 0;
 
@@ -87,7 +87,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public override IList<EventPipeProvider> GetProviders()
         {
             StringBuilder filterAndPayloadSpecs = new();
-            foreach (string activitySource in _ActivitySourceNames)
+            foreach (string activitySource in _activitySourceNames)
             {
                 if (string.IsNullOrEmpty(activitySource))
                 {
@@ -101,9 +101,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                 string sampler = string.Empty;
 
-                if (_SamplingRatio < 1D)
+                if (_samplingRatio < 1D)
                 {
-                    sampler = $"-ParentRatioSampler({_SamplingRatio})";
+                    sampler = $"-ParentRatioSampler({_samplingRatio})";
                 }
 
                 filterAndPayloadSpecs.AppendLine($"[AS]{activitySource}/Stop{sampler}:-TraceId;SpanId;ParentSpanId;ActivityTraceFlags;TraceStateString;Kind;DisplayName;StartTimeTicks=StartTimeUtc.Ticks;DurationTicks=Duration.Ticks;Status;StatusDescription;Tags=TagObjects.*Enumerate;ActivitySourceVersion=Source.Version");

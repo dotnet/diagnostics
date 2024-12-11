@@ -18,13 +18,13 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
-    public class TracesPipelineUnitTests
+    public class DistributedTracesPipelineUnitTests
     {
         private readonly ITestOutputHelper _output;
 
         public static IEnumerable<object[]> Configurations => TestRunner.Configurations;
 
-        public TracesPipelineUnitTests(ITestOutputHelper output)
+        public DistributedTracesPipelineUnitTests(ITestOutputHelper output)
         {
             _output = output;
         }
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             {
                 DiagnosticsClient client = new(testRunner.Pid);
 
-                await using TracesPipeline pipeline = new(client, new TracesPipelineSettings
+                await using DistributedTracesPipeline pipeline = new(client, new DistributedTracesPipelineSettings
                 {
                     Sources = new[] { "*" },
                     SamplingRatio = 1D,
@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             {
                 DiagnosticsClient client = new(testRunner.Pid);
 
-                await using TracesPipeline pipeline = new(client, new TracesPipelineSettings
+                await using DistributedTracesPipeline pipeline = new(client, new DistributedTracesPipelineSettings
                 {
                     Sources = new[] { "*" },
                     SamplingRatio = 0.0D,
