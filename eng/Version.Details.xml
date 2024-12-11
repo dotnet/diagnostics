@@ -42,11 +42,11 @@
     </Dependency>
     <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="9.0.1">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>462630b3c311cade6426c53e9b3ee3b89bf217a2</Sha>
+      <Sha>756e62050722c168cd3b753be73b7cbcd93f06d6</Sha>
     </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.9.0" Version="9.0.1-servicing.24603.13">
+    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.9.0" Version="9.0.1-servicing.24610.11">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>462630b3c311cade6426c53e9b3ee3b89bf217a2</Sha>
+      <Sha>756e62050722c168cd3b753be73b7cbcd93f06d6</Sha>
     </Dependency>
     <!-- Intermediate is necessary for source build. -->
     <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="10.0.560901">
