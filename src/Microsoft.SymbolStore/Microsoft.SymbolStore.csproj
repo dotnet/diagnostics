@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net462;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>$(DesktopTargetFramework);netstandard2.0</TargetFrameworks>
     <NoWarn>;1591;1701</NoWarn>
     <IsPackable>true</IsPackable>
     <Description>Symbol server key generation and access protocol</Description>
@@ -22,7 +22,7 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+  <ItemGroup Condition="'$(TargetFramework)' == '$(DesktopTargetFramework)'">
     <Reference Include="System.Net.Http" />
   </ItemGroup>
 </Project>

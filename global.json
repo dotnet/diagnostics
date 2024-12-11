@@ -3,11 +3,9 @@
     "dotnet": "9.0.100",
     "runtimes": {
       "dotnet": [
-        "$(MicrosoftNETCoreApp60Version)",
         "$(MicrosoftNETCoreApp80Version)"
       ],
       "dotnet/x86": [
-        "$(MicrosoftNETCoreApp60Version)",
         "$(MicrosoftNETCoreApp80Version)"
       ]
     }

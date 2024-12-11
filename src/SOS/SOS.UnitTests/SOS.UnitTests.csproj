@@ -44,6 +44,7 @@
 <![CDATA[
 <Configuration>
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
+  <DesktopFramework>$(DesktopTargetFramework)</DesktopFramework>
   <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <CDBPath>$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\cdb.exe</CDBPath>
 </Configuration>

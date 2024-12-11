@@ -573,7 +573,9 @@ public class DotNetHeapDumpGraphReader
                         }
                     }
                     // TODO FIX NOW these are kind of hacks
+#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
                     typeName = Regex.Replace(typeName, @"`\d+", "");
+#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
                     typeName = typeName.Replace("[", "<");
                     typeName = typeName.Replace("]", ">");
                     typeName = typeName.Replace("<>", "[]");

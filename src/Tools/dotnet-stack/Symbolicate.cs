@@ -16,9 +16,9 @@ using Microsoft.Internal.Common;
 
 namespace Microsoft.Diagnostics.Tools.Stack
 {
-    internal static class SymbolicateHandler
+    internal static partial class SymbolicateHandler
     {
-        private static readonly Regex s_regex = new(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+):token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
+        private static readonly Regex s_regex = GetSymbolRegex();
         private static readonly Dictionary<string, string> s_assemblyFilePathDictionary = new();
         private static readonly Dictionary<string, MetadataReader> s_metadataReaderDictionary = new();
 
@@ -335,5 +335,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
         public static Option<bool> StandardOutOption() =>
             new(new[] { "-c", "--stdout" }, getDefaultValue: () => false, "Output directly to a console");
+
+        [GeneratedRegex(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+):token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled)]
+        private static partial Regex GetSymbolRegex();
     }
 }

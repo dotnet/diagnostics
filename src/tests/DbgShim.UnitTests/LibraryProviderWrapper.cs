@@ -242,6 +242,7 @@ namespace SOS.Hosting
                         modulePath = DownloadModule(DacName, timeStamp, sizeOfImage);
                     }
                 }
+                Trace.TraceInformation($"LibraryProviderWrapper.ProvideWindowsLibrary {modulePath}");
                 TestGetPEInfo(modulePath, timeStamp, sizeOfImage);
                 modulePathOut = Marshal.StringToCoTaskMemUni(modulePath);
                 Trace.TraceInformation($"LibraryProviderWrapper.ProvideWindowsLibrary SUCCEEDED {modulePath}");

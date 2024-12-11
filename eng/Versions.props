@@ -102,10 +102,8 @@
 
   -->
   <PropertyGroup>
-    <MicrosoftNETCoreApp90Version>
-    </MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp90Version>9.0.0</MicrosoftNETCoreApp90Version>
     <MicrosoftNETCoreApp80Version>8.0.8</MicrosoftNETCoreApp80Version>
-    <MicrosoftNETCoreApp60Version>6.0.33</MicrosoftNETCoreApp60Version>
   </PropertyGroup>
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
@@ -123,27 +121,20 @@
       <TargetFramework>net9.0</TargetFramework>
     </RuntimeTestVersions>
     <!--
-    <RuntimeTestVersions Include="Servicing1">
+    <RuntimeTestVersions Include="Servicing2">
       <RuntimeDownload>$(MicrosoftNETCoreApp90Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreApp90Version)</Runtime>
       <AspNetDownload>$(MicrosoftNETCoreApp90Version)</AspNetDownload>
       <AspNet>$(MicrosoftNETCoreApp90Version)</AspNet>
       <TargetFramework>net9.0</TargetFramework>
     </RuntimeTestVersions>
--->
-    <RuntimeTestVersions Include="Servicing2">
+    -->
+    <RuntimeTestVersions Include="Servicing3">
       <RuntimeDownload>$(MicrosoftNETCoreApp80Version)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreApp80Version)</Runtime>
       <AspNetDownload>$(MicrosoftNETCoreApp80Version)</AspNetDownload>
       <AspNet>$(MicrosoftNETCoreApp80Version)</AspNet>
       <TargetFramework>net8.0</TargetFramework>
-    </RuntimeTestVersions>
-    <RuntimeTestVersions Include="Servicing3">
-      <RuntimeDownload>$(MicrosoftNETCoreApp60Version)</RuntimeDownload>
-      <Runtime>$(MicrosoftNETCoreApp60Version)</Runtime>
-      <AspNetDownload>$(MicrosoftNETCoreApp60Version)</AspNetDownload>
-      <AspNet>$(MicrosoftNETCoreApp60Version)</AspNet>
-      <TargetFramework>net6.0</TargetFramework>
     </RuntimeTestVersions>
   </ItemGroup>
   <!-- Private build testing -->

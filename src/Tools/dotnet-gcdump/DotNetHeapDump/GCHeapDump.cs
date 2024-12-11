@@ -1008,6 +1008,7 @@ internal static class XmlGcHeapDump
                             // TODO FIX NOW very inefficient.   Use ReadValueChunk and FastStream to make more efficient.
                             children.Clear();
                             string body = reader.ReadElementContentAsString();
+#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
                             foreach (string num in Regex.Split(body, @"\s+"))
                             {
                                 if (num.Length > 0)
@@ -1015,6 +1016,7 @@ internal static class XmlGcHeapDump
                                     children.Add((NodeIndex)int.Parse(num));
                                 }
                             }
+#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
 
                             if (size == 0)
                             {

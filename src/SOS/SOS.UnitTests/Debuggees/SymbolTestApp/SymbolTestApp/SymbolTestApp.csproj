@@ -3,7 +3,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
     <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
-    <DefineConstants Condition="'$(TargetFramework)' == 'net462'">$(DefineConstants);FULL_CLR</DefineConstants>
+    <DefineConstants Condition="'$(TargetFramework)' == '$(DesktopTargetFramework)'">$(DefineConstants);FULL_CLR</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
