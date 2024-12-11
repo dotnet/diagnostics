@@ -87,7 +87,8 @@ extends:
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: Linux
-          nativeBuildContainer: linux_x64
+          container: linux_x64
+          crossBuild: true
           buildOnly: true
           buildConfigs:
           - configuration: Release
@@ -104,7 +105,7 @@ extends:
           name: Linux_musl
           osGroup: Linux
           osSuffix: -musl
-          nativeBuildContainer: linux_musl_x64
+          container: linux_musl_x64
           crossBuild: true
           buildOnly: true
           buildConfigs:
@@ -149,7 +150,7 @@ extends:
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
             osGroup: Linux
-            nativeBuildContainer: linux_arm
+            container: linux_arm
             crossBuild: true
             buildOnly: true
             buildConfigs:
@@ -161,7 +162,7 @@ extends:
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
             osGroup: Linux
-            nativeBuildContainer: linux_arm64
+            container: linux_arm64
             crossBuild: true
             buildOnly: true
             buildConfigs:
@@ -175,7 +176,7 @@ extends:
             name: Linux_musl
             osGroup: Linux
             osSuffix: -musl
-            nativeBuildContainer: linux_musl_arm
+            container: linux_musl_arm
             crossBuild: true
             buildOnly: true
             buildConfigs:
@@ -190,7 +191,7 @@ extends:
             name: Linux_musl
             osGroup: Linux
             osSuffix: -musl
-            nativeBuildContainer: linux_musl_arm64
+            container: linux_musl_arm64
             crossBuild: true
             buildOnly: true
             buildConfigs:
