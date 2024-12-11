@@ -180,8 +180,8 @@ Example:
 
 ### JavaScript Source Maps
 
-JavaScript source maps, which are used by browser developer tools to provide source-level debugging experiences, are [standardized](https://sourcemaps.info). In 
-Microsoft Edge, source maps can be indexed by the [SHA-256 hash of the script file they map](https://chromedevtools.github.io/devtools-protocol/tot/Debugger/#event-scriptParsed)
+JavaScript source maps, which are used by browser developer tools to provide source-level debugging experiences, are [standardized](https://sourcemaps.info). These can be indexed by the 
+[SHA-256 hash of the script file they map](https://chromedevtools.github.io/devtools-protocol/tot/Debugger/#event-scriptParsed)
 (see the `hash` property of the linked event).
 
 Example:
@@ -195,10 +195,9 @@ Example:
 
 ### WASM (WebAssembly) Modules
 
-WebAssembly symbols, which can be used by browser developer tools to provide source-level debugging experiences, are based on the DWARF format. In Microsoft Edge,
-these symbols files are indexed by their DWARF Build ID (built with `-Wl,--build-id` arguments) and the name of the module being debugged. This is provided to the 
-browser via the [buildId property](https://chromedevtools.github.io/devtools-protocol/tot/Debugger/#event-scriptParsed), and the symbol file itself is suffixed with 
-`.s` to disambiguate from the WASM file.
+WebAssembly symbols, which can be used by browser developer tools to provide source-level debugging experiences, are based on the DWARF format. These are indexed by their DWARF Build ID 
+(built with `-Wl,--build-id` arguments) and the name of the module being debugged via the 
+[buildId property](https://chromedevtools.github.io/devtools-protocol/tot/Debugger/#event-scriptParsed), and the symbol file itself is suffixed with `.s` to disambiguate from the WASM file.
 
 **File name:** `main.wasm`
 
