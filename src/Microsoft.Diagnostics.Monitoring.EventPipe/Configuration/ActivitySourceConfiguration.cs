@@ -8,10 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tracing;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -21,67 +18,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private readonly string[] _activitySourceNames;
 
         public ActivitySourceConfiguration(
-            DiagnosticsClient client,
             double samplingRatio,
             IEnumerable<string>? activitySourceNames)
         {
             _samplingRatio = samplingRatio;
             _activitySourceNames = activitySourceNames?.ToArray() ?? Array.Empty<string>();
-
-            if (_samplingRatio < 1D)
-            {
-                int majorVersion = 0;
-
-                using CancellationTokenSource cancellationTokenSource = new();
-
-                DiagnosticsEventPipeProcessor processor = new(
-                    new ActivitySourceConfiguration(client, 1D, activitySourceNames: null),
-                    async (EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token) => {
-                        eventSource.Dynamic.All += traceEvent => {
-                            try
-                            {
-                                if ("Version".Equals(traceEvent.EventName))
-                                {
-                                    majorVersion = (int)traceEvent.PayloadValue(0);
-                                }
-
-                                if (!cancellationTokenSource.IsCancellationRequested)
-                                {
-                                    // Note: Version should be the first message
-                                    // written so cancel once we have received a
-                                    // message.
-                                    cancellationTokenSource.Cancel();
-                                }
-                            }
-                            catch (Exception)
-                            {
-                            }
-                        };
-
-                        using EventTaskSource<Action> sourceCompletedTaskSource = new(
-                            taskComplete => taskComplete,
-                            handler => eventSource.Completed += handler,
-                            handler => eventSource.Completed -= handler,
-                            token);
-
-                        await sourceCompletedTaskSource.Task.ConfigureAwait(false);
-                    });
-
-                try
-                {
-                    processor.Process(client, TimeSpan.FromSeconds(10), resumeRuntime: false, token: cancellationTokenSource.Token).GetAwaiter().GetResult();
-                }
-                catch (OperationCanceledException)
-                {
-                }
-
-                processor.DisposeAsync().AsTask().GetAwaiter().GetResult();
-
-                if (majorVersion < 9)
-                {
-                    throw new NotSupportedException("Sampling ratio can only be set when listening to processes running System.Diagnostics.DiagnosticSource 9 or greater");
-                }
-            }
         }
 
         public override IList<EventPipeProvider> GetProviders()

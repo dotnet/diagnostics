@@ -98,17 +98,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
                 if (config.RuntimeFrameworkVersionMajor < 9)
                 {
-                    // Note: Pipeline should throw PipelineException with inner
-                    // exception of NotSupportedException when setting
-                    // SamplingRatio on runtimes < .NET 9.
-                    PipelineException exception = await Assert.ThrowsAsync<PipelineException>(
+                    // Note: Pipeline should throw PipelineException when
+                    // setting SamplingRatio on runtimes < .NET 9.
+                    await Assert.ThrowsAsync<PipelineException>(
                         async () => {
                             await PipelineTestUtilities.ExecutePipelineWithTracee(
                                 pipeline,
                                 testRunner);
                         });
-
-                    Assert.IsType<NotSupportedException>(exception.InnerException);
 
                     return;
                 }

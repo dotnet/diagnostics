@@ -26,14 +26,71 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         }
 
         protected override MonitoringSourceConfiguration CreateConfiguration()
+            => new ActivitySourceConfiguration(Settings.SamplingRatio, Settings.Sources);
+
+        protected override async Task OnRun(CancellationToken token)
         {
+            double samplingRatio = Settings.SamplingRatio;
+            if (samplingRatio < 1D)
+            {
+                await ValidateEventSourceVersion().ConfigureAwait(false);
+            }
+
+            await base.OnRun(token).ConfigureAwait(false);
+        }
+
+        private async Task ValidateEventSourceVersion()
+        {
+            int majorVersion = 0;
+
+            using CancellationTokenSource cancellationTokenSource = new();
+
+            DiagnosticsEventPipeProcessor processor = new(
+                new ActivitySourceConfiguration(1D, activitySourceNames: null),
+                async (EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token) => {
+                    eventSource.Dynamic.All += traceEvent => {
+                        try
+                        {
+                            if ("Version".Equals(traceEvent.EventName))
+                            {
+                                majorVersion = (int)traceEvent.PayloadValue(0);
+                            }
+
+                            if (!cancellationTokenSource.IsCancellationRequested)
+                            {
+                                // Note: Version should be the first message
+                                // written so cancel once we have received a
+                                // message.
+                                cancellationTokenSource.Cancel();
+                            }
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    };
+
+                    using EventTaskSource<Action> sourceCompletedTaskSource = new(
+                        taskComplete => taskComplete,
+                        handler => eventSource.Completed += handler,
+                        handler => eventSource.Completed -= handler,
+                        token);
+
+                    await sourceCompletedTaskSource.Task.ConfigureAwait(false);
+                });
+
             try
             {
-                return new ActivitySourceConfiguration(Client, Settings.SamplingRatio, Settings.Sources);
+                await processor.Process(Client, TimeSpan.FromSeconds(10), resumeRuntime: false, token: cancellationTokenSource.Token).ConfigureAwait(false);
             }
-            catch (NotSupportedException ex)
+            catch (OperationCanceledException)
             {
-                throw new PipelineException(ex.Message, ex);
+            }
+
+            await processor.DisposeAsync().ConfigureAwait(false);
+
+            if (majorVersion < 9)
+            {
+                throw new PipelineException("Sampling ratio can only be set when listening to processes running System.Diagnostics.DiagnosticSource 9 or greater");
             }
         }
 
@@ -89,7 +146,5 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 }
             }
         }
-
-
     }
 }
