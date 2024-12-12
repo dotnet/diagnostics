@@ -32,7 +32,7 @@
     <NetCoreAppMinVersion>8.0</NetCoreAppMinVersion>
     <NetCoreAppMinTargetFramework>net$(NetCoreAppMinVersion)</NetCoreAppMinTargetFramework>
     <!-- This is the list of TFMs we build our debuggees and tracees as. -->
-    <SupportedSubProcessTargetFrameworks>net8.0;net9.0</SupportedSubProcessTargetFrameworks>
+    <SupportedSubProcessTargetFrameworks>net8.0;net9.0;net10.0</SupportedSubProcessTargetFrameworks>
     <!-- This is the list of TFMs we build our unit tests as. -->
     <SupportedXUnitTestTargetFrameworks>net8.0</SupportedXUnitTestTargetFrameworks>
   </PropertyGroup>

@@ -1,6 +1,6 @@
 {
   "tools": {
-    "dotnet": "9.0.100",
+    "dotnet": "10.0.100-alpha.1.24611.5",
     "runtimes": {
       "dotnet": [
         "$(MicrosoftNETCoreApp80Version)"
