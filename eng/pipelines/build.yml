@@ -45,11 +45,6 @@ parameters:
   type: object
   default: {}
 
-  # Optional: native build container resource name
-- name: nativeBuildContainer
-  type: string
-  default: ''
-
   # Optional: container resource name
 - name: container
   type: string
@@ -135,7 +130,6 @@ jobs:
       - _PhaseName: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
       - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/${{ config.configuration }}/streams
 
-      - _ExtraBuildParams: ''
       - _TestArgs: '-test'
       - _Cross: ''
 
@@ -166,16 +160,6 @@ jobs:
       - ${{ if eq(parameters.crossBuild, true) }}:
         - _Cross: -cross
 
-      # If there is a native build container, build managed in the host vm/container and native in the nativeBuildContainer
-      - ${{ if ne(parameters.nativeBuildContainer, '') }}:
-        - _ExtraBuildParams: -skipnative
-
-      # TODO: remove this once we move to crossroot builds for all containers. We are currently blocked
-      # on mariner cross containers not supporting glibc versions supported in 6.0.
-      # Only add the cross build option if a combined build/test managed/native build (i.e. MacOS arm64)
-      - ${{ if eq(parameters.nativeBuildContainer, '') }}:
-        - _ExtraBuildParams: $(_Cross)
-
       steps:
       - ${{ if eq(parameters.testOnly, true) }}:
         - ${{ if ne(parameters.osGroup, 'Linux') }}:
@@ -200,31 +184,17 @@ jobs:
           -ci
           -configuration ${{ config.configuration }}
           -architecture ${{ config.architecture }}
-          $(_ExtraBuildParams)
           $(_TestArgs)
+          $(_Cross)
           $(_InternalInstallArgs)
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         ${{ if eq(parameters.testOnly, 'true') }}:
           displayName: Test
         ${{ elseif eq(parameters.buildOnly, 'true') }}:
           displayName: Build
-        ${{ elseif ne(parameters.nativeBuildContainer, '') }}:
-          displayName: Build Managed
         ${{ else }}:
           displayName: Build / Test
         condition: succeeded()
-
-      - ${{ if ne(parameters.nativeBuildContainer, '') }}:
-        - script: $(_buildScript)
-            -ci
-            -configuration ${{ config.configuration }}
-            -architecture ${{ config.architecture }}
-            -skipmanaged
-            $(_Cross)
-            $(_InternalInstallArgs)
-            /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-          displayName: Build Native
-          target: ${{ parameters.nativeBuildContainer }}
 
       - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
         - task: CodeQL3000Finalize@0

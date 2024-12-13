@@ -266,10 +266,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             Debug.Assert(Monitor.IsEntered(_items));
 
+#pragma warning disable CA1513 // Use ObjectDisposedException throw helper
             if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(HandleableCollection<T>));
             }
+#pragma warning restore CA1513 // Use ObjectDisposedException throw helper
         }
 
         protected virtual void OnHandlerBegin()

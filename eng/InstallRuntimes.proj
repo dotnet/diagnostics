@@ -120,6 +120,7 @@
 <![CDATA[
   <RuntimeVersion%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.Runtime)</RuntimeVersion%(RuntimeTestVersions.Identity)>
   <AspNetCoreVersion%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.AspNet)</AspNetCoreVersion%(RuntimeTestVersions.Identity)>
+  <TargetFramework%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.TargetFramework)</TargetFramework%(RuntimeTestVersions.Identity)>
 ]]>
         </ConfigFileEntry>
       </TestConfigFileLines>

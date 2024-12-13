@@ -1930,7 +1930,9 @@ public class SpanningTree
         float[] priorityArray = new float[priorityPatArray.Length];
         for (int i = 0; i < priorityPatArray.Length; i++)
         {
+#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
             Match m = Regex.Match(priorityPatArray[i], @"(.*)->(-?\d+.?\d*)");
+#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
             if (!m.Success)
             {
                 if (string.IsNullOrWhiteSpace(priorityPatArray[i]))

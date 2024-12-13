@@ -176,3 +176,31 @@ Example:
 **Version at pseudo-rva 0xFFFFFFFE:** `1`
 
 **Lookup key:** `system.private.corelib.ni.r2rmap/r2rmap-v1-f5fddf60efb0bee79ef02a19c3decba9/system.private.corelib.ni.r2rmap`
+
+
+### JavaScript Source Maps
+
+JavaScript source maps, which are used by browser developer tools to provide source-level debugging experiences, are [standardized](https://sourcemaps.info). These can be indexed by the 
+[SHA-256 hash of the script file they map](https://chromedevtools.github.io/devtools-protocol/tot/Debugger/#event-scriptParsed)
+(see the `hash` property of the linked event).
+
+Example:
+
+**File name:** `main.js`
+
+**SHA-256 of file:** `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+
+**Lookup key:**: `main.js.map/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855/main.js.map`
+
+
+### WASM (WebAssembly) Modules
+
+WebAssembly symbols, which can be used by browser developer tools to provide source-level debugging experiences, are based on the DWARF format. These are indexed by their DWARF Build ID 
+(built with `-Wl,--build-id` arguments) and the name of the module being debugged via the 
+[buildId property](https://chromedevtools.github.io/devtools-protocol/tot/Debugger/#event-scriptParsed), and the symbol file itself is suffixed with `.s` to disambiguate from the WASM file.
+
+**File name:** `main.wasm`
+
+**Build ID of file:** `e3b0c44298fc1c149afbf4c8996fb92427ae41e4`
+
+**Lookup key:**: `main.wasm.s/e3b0c44298fc1c149afbf4c8996fb92427ae41e4/main.wasm.s`
