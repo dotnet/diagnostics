@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 {
     public partial class Dumper
     {
-        private static class Windows
+        private static partial class Windows
         {
             internal static void CollectDump(int processId, string outputFile, DumpTypeOption type)
             {
@@ -92,18 +92,19 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
             }
 
-            private static class NativeMethods
+            private static partial class NativeMethods
             {
                 public const int HR_ERROR_PARTIAL_COPY = unchecked((int)0x8007012b);
 
                 public const int PROCESS_VM_READ = 0x0010;
                 public const int PROCESS_QUERY_INFORMATION = 0x0400;
 
-                [DllImport("kernel32.dll", SetLastError = true)]
-                public static extern SafeProcessHandle OpenProcess(int access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int processId);
+                [LibraryImport("kernel32.dll", SetLastError = true)]
+                public static partial SafeProcessHandle OpenProcess(int access, [MarshalAs(UnmanagedType.Bool)] bool inherit, int processId);
 
-                [DllImport("Dbghelp.dll", SetLastError = true)]
-                public static extern bool MiniDumpWriteDump(IntPtr hProcess, uint ProcessId, SafeFileHandle hFile, MINIDUMP_TYPE DumpType, IntPtr ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);
+                [LibraryImport("Dbghelp.dll", SetLastError = true)]
+                [return: MarshalAs(UnmanagedType.Bool)]
+                public static partial bool MiniDumpWriteDump(IntPtr hProcess, uint ProcessId, SafeFileHandle hFile, MINIDUMP_TYPE DumpType, IntPtr ExceptionParam, IntPtr UserStreamParam, IntPtr CallbackParam);
 
                 [StructLayout(LayoutKind.Sequential, Pack = 4)]
                 public struct MINIDUMP_EXCEPTION_INFORMATION

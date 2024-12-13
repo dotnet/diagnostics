@@ -377,7 +377,7 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// <summary>
     /// Represents the current test configuration
     /// </summary>
-    public class TestConfiguration
+    public partial class TestConfiguration
     {
         private const string DebugTypeKey = "DebugType";
         private const string DebuggeeBuildRootKey = "DebuggeeBuildRoot";
@@ -386,7 +386,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static string BaseDir { get; set; } = Path.GetFullPath(".");
 
-        private static readonly Regex versionRegex = new(@"^(\d+\.\d+\.\d+)(-.*)?", RegexOptions.Compiled);
+        private static readonly Regex versionRegex = GetVersionRegex();
 
         private readonly ReadOnlyDictionary<string, string> _settings;
         private readonly string _configStringView;
@@ -673,7 +673,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
-        /// The framework type/version used to build the debuggee like "net6.0" or "net8.0"
+        /// The framework type/version used to build the debuggee like "net8.0" or "net10.0"
         /// </summary>
         public string BuildProjectFramework
         {
@@ -902,6 +902,9 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             return _configStringView;
         }
+
+        [GeneratedRegex(@"^(\d+\.\d+\.\d+)(-.*)?", RegexOptions.Compiled)]
+        private static partial Regex GetVersionRegex();
     }
 
     /// <summary>

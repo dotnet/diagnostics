@@ -53,7 +53,7 @@ namespace Microsoft.Internal.Common.Utils
                 int unicodeStringOffset = processBitness == 64 ? 0x70 : 0x40;
 
 
-                if (!ReadIntPtr(processHandle, pPeb + offset, out IntPtr ptr))
+                if (!ReadIntPtr(processHandle, unchecked(pPeb + offset), out IntPtr ptr))
                 {
                     return "[cannot determine command line arguments]";
                 }

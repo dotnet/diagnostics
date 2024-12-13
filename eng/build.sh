@@ -218,7 +218,7 @@ fi
 #
 
 if [[ "$__NativeBuild" == 1 || "$__Test" == 1 ]]; then
-    __targetRid=net6.0
+    __targetRid=net8.0
     __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/$__targetRid/publish/$__OutputRid
     __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/$__targetRid/publish/$__OutputRid
 

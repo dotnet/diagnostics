@@ -1480,10 +1480,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public async void Stop()
         {
+#pragma warning disable CA1513 // Use ObjectDisposedException throw helper
             if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(Router));
             }
+#pragma warning restore CA1513 // Use ObjectDisposedException throw helper
 
             _cancelRouterTokenSource.Cancel();
 
