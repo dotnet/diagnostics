@@ -12,6 +12,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal static partial class TraceEventExtensions
     {
+        private const string DefaultTraceId = "00000000000000000000000000000000";
+        private const string DefaultSpanId = "0000000000000000";
+
         [ThreadStatic]
         private static KeyValuePair<string, object?>[]? s_TagStorage;
         private static readonly Dictionary<string, ActivitySourceData> s_Sources = new(StringComparer.OrdinalIgnoreCase);
@@ -56,7 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         case "TraceId":
                             string? traceIdValue = value as string;
                             if (!string.IsNullOrEmpty(traceIdValue)
-                                && traceIdValue != "00000000000000000000000000000000")
+                                && traceIdValue != DefaultTraceId)
                             {
                                 traceId = ActivityTraceId.CreateFromString(traceIdValue);
                             }
@@ -64,7 +67,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         case "SpanId":
                             string? spanIdValue = value as string;
                             if (!string.IsNullOrEmpty(spanIdValue)
-                                && spanIdValue != "0000000000000000")
+                                && spanIdValue != DefaultSpanId)
                             {
                                 spanId = ActivitySpanId.CreateFromString(spanIdValue);
                             }
@@ -72,7 +75,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         case "ParentSpanId":
                             string? parentSpanIdValue = value as string;
                             if (!string.IsNullOrEmpty(parentSpanIdValue)
-                                && parentSpanIdValue != "0000000000000000")
+                                && parentSpanIdValue != DefaultSpanId)
                             {
                                 parentSpanId = ActivitySpanId.CreateFromString(parentSpanIdValue);
                             }
