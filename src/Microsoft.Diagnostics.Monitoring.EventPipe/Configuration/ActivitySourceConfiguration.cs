@@ -50,6 +50,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 filterAndPayloadSpecs.AppendLine($"[AS]{activitySource}/Stop{sampler}:-TraceId;SpanId;ParentSpanId;ActivityTraceFlags;TraceStateString;Kind;DisplayName;StartTimeTicks=StartTimeUtc.Ticks;DurationTicks=Duration.Ticks;Status;StatusDescription;Tags=TagObjects.*Enumerate;ActivitySourceVersion=Source.Version");
             }
 
+            // Note: Microsoft-Diagnostics-DiagnosticSource only supports a
+            // single listener. There can only be one
+            // ActivitySourceConfiguration, AspNetTriggerSourceConfiguration, or
+            // HttpRequestSourceConfiguration in play.
             return new[] {
                 new EventPipeProvider(
                     DiagnosticSourceEventSource,
