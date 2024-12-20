@@ -40,7 +40,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         private static Dictionary<int, CounterMetadata> counterMetadataById = new();
         private static HashSet<string> inactiveSharedSessions = new(StringComparer.OrdinalIgnoreCase);
 
-        private static CounterMetadata AddCounterMetadata(string providerName, string counterName, int? id, string meterTags, string instrumentTags, string scopeHash)
+        private static CounterMetadata AddCounterMetadata(
+            string providerName,
+            string counterName,
+            int? id,
+            string meterTags,
+            string instrumentTags,
+            string scopeHash,
+            string providerVersion = null,
+            string counterUnit = null,
+            string counterDescription = null)
         {
             CounterMetadata metadata;
             if (id.HasValue && counterMetadataById.TryGetValue(id.Value, out metadata))
@@ -67,7 +76,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             // no pre-existing counter metadata was found, create a new one
-            metadata = new CounterMetadata(providerName, counterName, meterTags, instrumentTags, scopeHash);
+            metadata = new CounterMetadata(providerName, providerVersion, counterName, counterUnit, counterDescription, meterTags, instrumentTags, scopeHash);
             if (id.HasValue)
             {
                 counterMetadataById.TryAdd(id.Value, metadata);
@@ -266,7 +275,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             string meterName = (string)traceEvent.PayloadValue(1);
-            //string meterVersion = (string)obj.PayloadValue(2);
+            string meterVersion = (string)traceEvent.PayloadValue(2);
             string instrumentName = (string)traceEvent.PayloadValue(3);
 
             if (!counterConfiguration.CounterFilter.IsIncluded(meterName, instrumentName))
@@ -274,6 +283,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return;
             }
 
+            string instrumentUnit = null;
+            string instrumentDescription = null;
             string instrumentTags = null;
             string meterTags = null;
             string meterScopeHash = null;
@@ -281,6 +292,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (traceEvent.Version >= 1)
             {
+                // string instrumentType = (string)traceEvent.PayloadValue(4);
+                instrumentUnit = (string)traceEvent.PayloadValue(5);
+                instrumentDescription = (string)traceEvent.PayloadValue(6);
                 instrumentTags = (string)traceEvent.PayloadValue(7);
                 meterTags = (string)traceEvent.PayloadValue(8);
                 meterScopeHash = (string)traceEvent.PayloadValue(9);
@@ -292,7 +306,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // Many different instruments may all share ID zero we don't want to index them by that ID.
                 instrumentID = (id != 0) ? id : null;
             }
-            payload = new BeginInstrumentReportingPayload(AddCounterMetadata(meterName, instrumentName, instrumentID, meterTags, instrumentTags, meterScopeHash), traceEvent.TimeStamp);
+            payload = new BeginInstrumentReportingPayload(
+                AddCounterMetadata(
+                    meterName,
+                    instrumentName,
+                    instrumentID,
+                    meterTags,
+                    instrumentTags,
+                    meterScopeHash,
+                    providerVersion: meterVersion,
+                    counterUnit: instrumentUnit,
+                    counterDescription: instrumentDescription),
+                traceEvent.TimeStamp);
         }
 
         private static void HandleCounterRate(TraceEvent traceEvent, CounterConfiguration counterConfiguration, out ICounterPayload payload)
@@ -367,7 +392,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string instrumentName = (string)traceEvent.PayloadValue(3);
             string unit = (string)traceEvent.PayloadValue(4);
             string tags = (string)traceEvent.PayloadValue(5);
-            //string rateText = (string)traceEvent.PayloadValue(6); // Not currently using rate for UpDownCounters.
+            string rateText = (string)traceEvent.PayloadValue(6);
             string valueText = (string)traceEvent.PayloadValue(7);
             int? id = null;
             if (traceEvent.Version >= 2)
@@ -381,11 +406,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             CounterMetadata metadata = GetCounterMetadata(meterName, instrumentName, id);
-            if (double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate)
+                && double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
             {
                 // UpDownCounter reports the value, not the rate - this is different than how Counter behaves.
-                payload = new UpDownCounterPayload(metadata, null, unit, tags, value, traceEvent.TimeStamp);
-
+                payload = new UpDownCounterPayload(metadata, null, unit, tags, rate, value, traceEvent.TimeStamp);
             }
             else
             {
@@ -413,8 +438,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string quantilesText = (string)obj.PayloadValue(6);
-            //int count - unused arg 7
-            //double sum - unused arg 8
+            int count = (int)obj.PayloadValue(7);
+            double sum = (double)obj.PayloadValue(8);
             int? id = null;
             if (obj.Version >= 2)
             {
@@ -429,7 +454,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //Note quantiles can be empty.
             IList<Quantile> quantiles = ParseQuantiles(quantilesText);
             CounterMetadata metadata = GetCounterMetadata(meterName, instrumentName, id);
-            payload = new AggregatePercentilePayload(metadata, null, unit, tags, quantiles, obj.TimeStamp);
+            payload = new AggregatePercentilePayload(metadata, null, unit, tags, count, sum, quantiles, obj.TimeStamp);
         }
 
         private static void HandleHistogramLimitReached(TraceEvent obj, CounterConfiguration configuration, out ICounterPayload payload)
