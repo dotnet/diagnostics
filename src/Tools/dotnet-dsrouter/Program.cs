@@ -211,7 +211,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 description: "The router WebSocket address using format ws://[host]:[port]/[path] or wss://[host]:[port]/[path]. " +
                                 "Launch app with WasmExtraConfig property specifying diagnostic_options with a server connect_url")
             {
-                Argument = new Argument<string>(name: "webSocketURI", getDefaultValue: () => "")
+                Argument = new Argument<string>(name: "webSocketURI", getDefaultValue: () => "ws://127.0.0.1:8088/diagnostics")
             };
 
         private static Option RuntimeTimeoutOption() =>

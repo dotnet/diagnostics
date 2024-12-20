@@ -172,24 +172,24 @@ public class WebSocketServerImpl : IWebSocketServer
             uriToParse = endPoint;
         }
 
-        string[] supportedSchemes = new string[] { "ws", "wss", "http", "https" };
 
         if (!string.IsNullOrEmpty(uriToParse) && Uri.TryCreate(uriToParse, UriKind.Absolute, out uri))
         {
-            bool supported = false;
-            foreach (string scheme in supportedSchemes)
+            if (uri.Scheme == "ws")
             {
-                if (string.Equals(uri.Scheme, scheme, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    supported = true;
-                    break;
-                }
+                uri = new UriBuilder(uri) { Scheme = "http" }.Uri;
+                return;
             }
-            if (!supported)
+            if (uri.Scheme == "wss")
             {
-                throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme));
+                uri = new UriBuilder(uri) { Scheme = "https" }.Uri;
+                return;
             }
-            return;
+            if (uri.Scheme == "http" || uri.Scheme == "https")
+            {
+                return;
+            }
+            throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme));
         }
         else
         {
