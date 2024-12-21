@@ -71,9 +71,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
             // Check that the ITarget properties match the test data
             host.TestData.CompareMembers(host.TestData.Target, target);
-
-            // Test temp directory
-            AssertX.DirectoryExists("Target temporary directory", target.GetTempDirectory(), Output);
         }
 
         [SkippableTheory, MemberData(nameof(GetConfigurations))]

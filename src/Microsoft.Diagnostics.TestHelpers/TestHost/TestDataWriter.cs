@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             ITarget target = services.GetService<ITarget>();
             Debug.Assert(target is not null);
-            AddMembers(Target, typeof(ITarget), target, nameof(ITarget.Id), nameof(ITarget.GetTempDirectory));
+            AddMembers(Target, typeof(ITarget), target, nameof(ITarget.Id));
 
             XElement modulesElement = new("Modules");
             Target.Add(modulesElement);

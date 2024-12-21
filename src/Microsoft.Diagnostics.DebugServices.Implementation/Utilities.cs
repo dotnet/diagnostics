@@ -29,6 +29,29 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public static string ToHex(this ImmutableArray<byte> array) => string.Concat(array.Select((b) => b.ToString("x2")));
 
         /// <summary>
+        /// Returns the pointer size for a given processor type
+        /// </summary>
+        /// <param name="architecture">processor type</param>
+        /// <returns>pointer size</returns>
+        /// <exception cref="NotSupportedException"></exception>
+        public static int GetPointerSizeFromArchitecture(Architecture architecture)
+        {
+            switch (architecture)
+            {
+                case Architecture.X64:
+                case Architecture.Arm64:
+                case (Architecture)6 /* Architecture.LoongArch64 */:
+                case (Architecture)9 /* Architecture.RiscV64 */:
+                    return 8;
+                case Architecture.X86:
+                case Architecture.Arm:
+                    return 4;
+                default:
+                    throw new NotSupportedException("Architecture not supported");
+            }
+        }
+
+        /// <summary>
         /// Combines two hash codes into a single hash code, in an order-dependent manner.
         /// </summary>
         /// <remarks>
