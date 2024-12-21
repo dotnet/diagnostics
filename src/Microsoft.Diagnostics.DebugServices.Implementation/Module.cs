@@ -73,7 +73,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public virtual uint? IndexTimeStamp { get; protected set; }
 
-        public bool IsPEImage
+        public virtual bool IsPEImage
         {
             get
             {

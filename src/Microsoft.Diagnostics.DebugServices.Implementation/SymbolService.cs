@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The default symbol cache path:
         /// * dbgeng on Windows uses the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
-        /// * dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
+        /// * VS or dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
         /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache
         /// </summary>
         public string DefaultSymbolCache
@@ -86,8 +86,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         _defaultSymbolCache = _host.HostType switch
                         {
                             HostType.DbgEng => Path.Combine(Environment.GetEnvironmentVariable("PROGRAMDATA"), "dbg", "sym"),
-                            HostType.DotnetDump => Path.Combine(Path.GetTempPath(), "SymbolCache"),
-                            _ => throw new NotSupportedException($"Host type not supported {_host.HostType}"),
+                            _ => Path.Combine(Path.GetTempPath(), "SymbolCache"),
                         };
                     }
                     else
@@ -460,6 +459,32 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="index">index to lookup on symbol server</param>
         /// <param name="file">the full path name of the file</param>
         public string DownloadFile(string index, string file) => DownloadFile(new SymbolStoreKey(index, file));
+
+        /// <summary>
+        /// Downloads and returns the metadata for the assembly.
+        /// </summary>
+        /// <param name="module">module assembly</param>
+        /// <returns>metadata bytes</returns>
+        public ImmutableArray<byte> GetMetadata(IModule module)
+        {
+            try
+            {
+                PEReader reader = module.Services.GetService<PEReader>();
+                if (reader is not null && reader.HasMetadata)
+                {
+                    PEMemoryBlock metadataInfo = reader.GetMetadata();
+                    return metadataInfo.GetContent();
+                }
+            }
+            catch (Exception ex) when
+                (ex is InvalidOperationException ||
+                 ex is BadImageFormatException ||
+                 ex is IOException)
+            {
+                Trace.TraceError($"GetMetaData: {ex.Message}");
+            }
+            return ImmutableArray<byte>.Empty;
+        }
 
         /// <summary>
         /// Returns the metadata for the assembly
