@@ -45,5 +45,15 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="moduleName">module name to find</param>
         /// <returns>matching modules</returns>
         IEnumerable<IModule> GetModuleFromModuleName(string moduleName);
+
+        /// <summary>
+        /// Create a module instance from a stream (memory or file).
+        /// </summary>
+        /// <param name="moduleIndex">artifical index</param>
+        /// <param name="imageBase">module base address</param>
+        /// <param name="imageSize">module size</param>
+        /// <param name="imageName">module name</param>
+        /// <returns>IModule</returns>
+        IModule CreateModule(int moduleIndex, ulong imageBase, ulong imageSize, string imageName);
     }
 }

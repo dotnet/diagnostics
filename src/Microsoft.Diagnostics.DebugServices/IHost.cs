@@ -55,5 +55,10 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="target">target instance</param>
         /// <returns>target id</returns>
         int AddTarget(ITarget target);
+
+        /// <summary>
+        /// Returns the unique temporary directory for this instance of SOS
+        /// </summary>
+        string GetTempDirectory();
     }
 }
