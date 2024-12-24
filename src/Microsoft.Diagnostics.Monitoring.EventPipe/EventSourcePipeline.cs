@@ -86,7 +86,19 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // started task. Logically, the run task will not successfully complete before the session
             // started task. Thus, the combined task completes either when the session started task is
             // completed OR the run task has cancelled/failed.
-            await Task.WhenAny(_processor.Value.SessionStarted, runTask).Unwrap().ConfigureAwait(false);
+            try
+            {
+                await Task.WhenAny(_processor.Value.SessionStarted, runTask).Unwrap().ConfigureAwait(false);
+            }
+            catch (TaskCanceledException)
+            {
+                if (runTask.IsFaulted)
+                {
+                    throw runTask.Exception.InnerException;
+                }
+
+                throw;
+            }
 
             return runTask;
         }
