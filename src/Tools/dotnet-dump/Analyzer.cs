@@ -38,8 +38,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public Task<int> Analyze(FileInfo dump_path, string[] command)
         {
-            _fileLoggingConsoleService.WriteLine($"Loading core dump: {dump_path} ...");
-
             // Attempt to load the persisted command history
             string historyFileName = null;
             try
@@ -97,13 +95,17 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
             try
             {
-                ITarget target = dumpTargetFactory.OpenDump(dump_path.FullName);
-                contextService.SetCurrentTarget(target);
-
                 // Automatically enable symbol server support, default cache and search for symbols in the dump directory
                 symbolService.AddSymbolServer(retryCount: 3);
                 symbolService.AddCachePath(symbolService.DefaultSymbolCache);
-                symbolService.AddDirectoryPath(Path.GetDirectoryName(dump_path.FullName));
+
+                if (dump_path is not null)
+                {
+                    _fileLoggingConsoleService.WriteLine($"Loading core dump: {dump_path} ...");
+                    ITarget target = dumpTargetFactory.OpenDump(dump_path.FullName);
+                    contextService.SetCurrentTarget(target);
+                    symbolService.AddDirectoryPath(Path.GetDirectoryName(dump_path.FullName));
+                }
 
                 // Run the commands from the dotnet-dump command line. Any errors/exceptions from the
                 // command execution will be displayed and dotnet-dump exited.
