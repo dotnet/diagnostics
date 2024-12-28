@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Extensions
@@ -26,19 +27,7 @@ namespace SOS.Extensions
             Debug.Assert(target != null);
             Debug.Assert(debuggerServices != null);
             _debuggerServices = debuggerServices;
-
-            switch (target.Architecture)
-            {
-                case Architecture.X64:
-                case Architecture.Arm64:
-                case (Architecture)6 /* Architecture.LoongArch64 */:
-                    PointerSize = 8;
-                    break;
-                case Architecture.X86:
-                case Architecture.Arm:
-                    PointerSize = 4;
-                    break;
-            }
+            PointerSize = Utilities.GetPointerSizeFromArchitecture(target.Architecture);
         }
 
         #region IMemoryService

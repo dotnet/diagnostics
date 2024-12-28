@@ -47,6 +47,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             public override uint? IndexTimeStamp => _moduleInfo.IndexTimeStamp == InvalidTimeStamp ? null : unchecked((uint)_moduleInfo.IndexTimeStamp);
 
+            public override bool IsPEImage => _moduleInfo.Kind == ModuleKind.PortableExecutable;
+
             public override ImmutableArray<byte> BuildId
             {
                 get

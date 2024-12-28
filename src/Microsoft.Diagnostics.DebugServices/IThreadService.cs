@@ -59,6 +59,15 @@ namespace Microsoft.Diagnostics.DebugServices
         bool TryGetRegisterValue(ReadOnlySpan<byte> context, int registerIndex, out ulong value);
 
         /// <summary>
+        /// Change a specific register. Currently only used to set the ContextFlags in certain implementations.
+        /// </summary>
+        /// <param name="context">writeable context span</param>
+        /// <param name="registerIndex">register index</param>
+        /// <param name="value">value to write</param>
+        /// <returns></returns>
+        public bool TrySetRegisterValue(Span<byte> context, int registerIndex, ulong value);
+
+        /// <summary>
         /// Enumerate all the native threads
         /// </summary>
         /// <returns>Get info for all the threads</returns>

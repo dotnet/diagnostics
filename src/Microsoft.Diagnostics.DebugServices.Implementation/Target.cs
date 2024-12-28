@@ -17,7 +17,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public abstract class Target : ITarget
     {
         private readonly string _dumpPath;
-        private string _tempDirectory;
         private ServiceContainer _serviceContainer;
 
         protected readonly ServiceContainerFactory _serviceContainerFactory;
@@ -83,23 +82,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public uint? ProcessId { get; protected set; }
 
         /// <summary>
-        /// Returns the unique temporary directory for this instance of SOS
-        /// </summary>
-        public string GetTempDirectory()
-        {
-            if (_tempDirectory == null)
-            {
-                // Use the SOS process's id if can't get the target's
-                uint processId = ProcessId.GetValueOrDefault((uint)Process.GetCurrentProcess().Id);
-
-                // SOS depends on that the temp directory ends with "/".
-                _tempDirectory = Path.Combine(Path.GetTempPath(), "sos" + processId.ToString()) + Path.DirectorySeparatorChar;
-                Directory.CreateDirectory(_tempDirectory);
-            }
-            return _tempDirectory;
-        }
-
-        /// <summary>
         /// The per target services.
         /// </summary>
         public IServiceProvider Services => _serviceContainer;
@@ -132,7 +114,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             OnDestroyEvent.Fire();
             _serviceContainer.RemoveService(typeof(ITarget));
             _serviceContainer.DisposeServices();
-            CleanupTempDirectory();
         }
 
         #endregion
@@ -154,25 +135,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return new Reader(new StreamAddressSpace(stream), layoutManager);
         }
 
-        private void CleanupTempDirectory()
-        {
-            if (_tempDirectory != null)
-            {
-                try
-                {
-                    foreach (string file in Directory.EnumerateFiles(_tempDirectory))
-                    {
-                        File.Delete(file);
-                    }
-                    Directory.Delete(_tempDirectory);
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                }
-                _tempDirectory = null;
-            }
-        }
-
         public override bool Equals(object obj)
         {
             return Id == ((ITarget)obj).Id;
@@ -191,10 +153,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (_dumpPath != null)
             {
                 sb.Append($" {_dumpPath}");
-            }
-            if (_tempDirectory != null)
-            {
-                sb.Append($" {_tempDirectory}");
             }
             return sb.ToString();
         }

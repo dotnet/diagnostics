@@ -47,12 +47,6 @@ public:
     virtual HRESULT STDMETHODCALLTYPE GetService(REFIID serviceId, PVOID* service) = 0;
 
     /// <summary>
-    /// Returns the unique temporary directory for this instance of SOS
-    /// </summary>
-    /// <returns>temporary directory string</returns>
-    virtual LPCSTR STDMETHODCALLTYPE GetTempDirectory() = 0;
-
-    /// <summary>
     /// Returns the current runtime instance
     /// </summary>
     /// <param name="ppRuntime">pointer to return IRuntime instance</param>
