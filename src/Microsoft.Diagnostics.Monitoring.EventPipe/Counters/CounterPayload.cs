@@ -37,9 +37,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public string Unit { get; }
 
-        public double Value { get; protected set; }
+        public double Value { get; }
 
-        public DateTime Timestamp { get; protected set; }
+        public DateTime Timestamp { get; }
 
         public float Interval { get; }
 
