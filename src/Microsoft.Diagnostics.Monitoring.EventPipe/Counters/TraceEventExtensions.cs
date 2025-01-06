@@ -76,7 +76,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             // no pre-existing counter metadata was found, create a new one
-            metadata = new CounterMetadata(providerName, providerVersion, counterName, counterUnit, counterDescription, meterTags, instrumentTags, scopeHash);
+            metadata = new CounterMetadata(providerName, providerVersion, counterName, counterUnit, counterDescription, id, meterTags, instrumentTags, scopeHash);
             if (id.HasValue)
             {
                 counterMetadataById.TryAdd(id.Value, metadata);
