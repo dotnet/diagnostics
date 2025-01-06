@@ -106,6 +106,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return AddCounterMetadata(providerName, counterName, id, null, null, null);
         }
 
+        public static bool TryGetCounterMetadata(string providerName, string counterName, int? instrumentId, out CounterMetadata counterMetadata)
+        {
+            if (instrumentId.HasValue && counterMetadataById.TryGetValue(instrumentId.Value, out counterMetadata))
+            {
+                return true;
+            }
+
+            ProviderAndCounter providerAndCounter = new(providerName, counterName);
+            return counterMetadataByName.TryGetValue(providerAndCounter, out counterMetadata);
+        }
+
         public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterConfiguration counterConfiguration, out ICounterPayload payload)
         {
             payload = null;
