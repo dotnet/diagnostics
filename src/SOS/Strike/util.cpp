@@ -61,6 +61,7 @@ const char * const CorElementTypeNamespace[ELEMENT_TYPE_MAX]=
 IXCLRDataProcess *g_clrData = NULL;
 ISOSDacInterface *g_sos = NULL;
 ISOSDacInterface15 *g_sos15 = NULL;
+ISOSDacInterface16 *g_sos16 = NULL;
 
 #undef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
@@ -4106,6 +4107,9 @@ HRESULT LoadClrDebugDll(void)
     {
         g_sos15 = &SOSDacInterface15Simulator_Instance;
     }
+
+    // Always have an instance of the MethodTable enumerator
+    hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface16), (void**)&g_sos16);
     return S_OK;
 }
 

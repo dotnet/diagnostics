@@ -448,6 +448,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             Console.WriteLine();
             ClrHeap heap = clrRuntime.Heap;
+            Console.WriteLine("DATAS = " + heap.DynamicAdaptationMode);
 
             Column sizeColumn = Text.GetAppropriateWidth(heap.Segments.Select(seg => FormatMemorySize(seg.CommittedMemory.Length)), max: 32);
             Table gcOutput = new(Console, DumpHeap, Pointer, Pointer, Pointer, sizeColumn, sizeColumn);
