@@ -107,7 +107,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                         case "StartTimeTicks":
                             if (value is string startTimeUtcValue)
                             {
-                                startTimeUtc = DateTime.SpecifyKind(new DateTime(long.Parse(startTimeUtcValue)), DateTimeKind.Utc);
+                                startTimeUtc = new DateTime(long.Parse(startTimeUtcValue), DateTimeKind.Utc);
                             }
                             break;
                         case "DurationTicks":
@@ -192,7 +192,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                 i = commaPosition + 2;
 
-                int endPosition = tagsValue.IndexOf("]", i);
+                int endPosition = tagsValue.IndexOf(']', i);
                 if (endPosition < 0)
                 {
                     break;

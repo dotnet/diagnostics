@@ -96,7 +96,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
-            await ExecuteCounterLoggerActionAsync((logger) => logger.PipelineStarted(token)).ConfigureAwait(false);
+            await ExecuteActivityLoggerActionAsync((logger) => logger.PipelineStarted(token)).ConfigureAwait(false);
 
             eventSource.Dynamic.All += traceEvent => {
                 try
@@ -130,10 +130,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             await sourceCompletedTaskSource.Task.ConfigureAwait(false);
 
-            await ExecuteCounterLoggerActionAsync((logger) => logger.PipelineStopped(token)).ConfigureAwait(false);
+            await ExecuteActivityLoggerActionAsync((logger) => logger.PipelineStopped(token)).ConfigureAwait(false);
         }
 
-        private async Task ExecuteCounterLoggerActionAsync(Func<IActivityLogger, Task> action)
+        private async Task ExecuteActivityLoggerActionAsync(Func<IActivityLogger, Task> action)
         {
             foreach (IActivityLogger logger in _loggers)
             {
