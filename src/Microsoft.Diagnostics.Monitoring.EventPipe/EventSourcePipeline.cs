@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -86,18 +88,28 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // started task. Logically, the run task will not successfully complete before the session
             // started task. Thus, the combined task completes either when the session started task is
             // completed OR the run task has cancelled/failed.
-            try
+
+            await new NoThrowAwaitable(
+                Task.WhenAny(_processor.Value.SessionStarted, runTask),
+                continueOnCapturedContext: false);
+
+            if (_processor.Value.SessionStarted.IsCanceled)
             {
-                await Task.WhenAny(_processor.Value.SessionStarted, runTask).Unwrap().ConfigureAwait(false);
-            }
-            catch (TaskCanceledException)
-            {
+                // Note: If runTask throws it will cancel the SessionStarted
+                // task before completing. We must wait for runTask to also
+                // complete in this case to get the exception.
+                await new NoThrowAwaitable(runTask, continueOnCapturedContext: false);
+
+                Debug.Assert(runTask.IsFaulted);
+
                 if (runTask.IsFaulted)
                 {
-                    throw runTask.Exception.InnerException;
+                    throw runTask.Exception is AggregateException ae
+                        ? ae.InnerException
+                        : runTask.Exception;
                 }
 
-                throw;
+                throw new TaskCanceledException();
             }
 
             return runTask;
@@ -106,6 +118,45 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         protected virtual Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
             return Task.CompletedTask;
+        }
+
+        // Note: This can be removed in favor of
+        // https://learn.microsoft.com/dotnet/api/system.threading.tasks.task.configureawait#system-threading-tasks-task-configureawait(system-threading-tasks-configureawaitoptions)
+        // once a net8.0+ target exists.
+        private readonly struct NoThrowAwaitable
+        {
+            private readonly NoThrowAwaiter _Awaiter;
+
+            public NoThrowAwaitable(Task task, bool continueOnCapturedContext)
+            {
+                _Awaiter = new NoThrowAwaiter(task, continueOnCapturedContext);
+            }
+
+            public NoThrowAwaiter GetAwaiter() => _Awaiter;
+
+            public readonly struct NoThrowAwaiter : ICriticalNotifyCompletion
+            {
+                private readonly ConfiguredTaskAwaitable.ConfiguredTaskAwaiter _Awaiter;
+
+                internal NoThrowAwaiter(Task task, bool continueOnCapturedContext)
+                {
+                    Debug.Assert(task != null);
+
+                    _Awaiter = task.ConfigureAwait(continueOnCapturedContext).GetAwaiter();
+                }
+
+                public bool IsCompleted => _Awaiter.IsCompleted;
+
+                public void GetResult()
+                {
+                }
+
+                public void OnCompleted(Action continuation)
+                    => _Awaiter.OnCompleted(continuation);
+
+                public void UnsafeOnCompleted(Action continuation)
+                    => OnCompleted(continuation);
+            }
         }
     }
 }
