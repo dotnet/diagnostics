@@ -93,7 +93,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 Task.WhenAny(_processor.Value.SessionStarted, runTask),
                 continueOnCapturedContext: false);
 
-            if (_processor.Value.SessionStarted.IsCanceled)
+            if (_processor.Value.SessionStarted.IsCanceled || runTask.IsFaulted)
             {
                 // Note: If runTask throws it will cancel the SessionStarted
                 // task before completing. We must wait for runTask to also
