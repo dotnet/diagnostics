@@ -253,22 +253,22 @@ extends:
             - configuration: Debug
               architecture: x64
 
-      - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Debian_Bullseye
-            osGroup: Linux
-            container: test_debian_11_amd64
-            dependsOn: Linux
-            testOnly: true
-            buildConfigs:
-            - configuration: Release
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          name: Debian_Bookworm
+          osGroup: Linux
+          container: test_debian_12_amd64
+          dependsOn: Linux
+          testOnly: true
+          buildConfigs:
+          - configuration: Release
+            architecture: x64
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
               architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
 
+      - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
