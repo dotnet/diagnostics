@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 byte[] threadContext = new byte[_threadService.ContextSize];
                 if (!GetThreadContextInner(_threadService.ContextFlags, threadContext))
                 {
-                    throw new DiagnosticsException();
+                    throw new DiagnosticsException($"Unable to get the context for thread {ThreadId:X8} with flags {_threadService.ContextFlags:X8}");
                 }
                 _threadContext = threadContext;
             }

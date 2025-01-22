@@ -97,5 +97,11 @@ namespace Microsoft.Diagnostics.DebugServices
         /// </summary>
         /// <returns>the symbol file name</returns>
         string LoadSymbols();
+
+        /// <summary>
+        /// Downloads and returns the metadata for the assembly.
+        /// </summary>
+        /// <returns>metadata bytes</returns>
+        ImmutableArray<byte> GetMetadata();
     }
 }

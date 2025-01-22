@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.DebugServices
         int AddTarget(ITarget target);
 
         /// <summary>
-        /// Returns the unique temporary directory for this instance of SOS
+        /// Returns the unique temporary directory for this debug session
         /// </summary>
         string GetTempDirectory();
     }

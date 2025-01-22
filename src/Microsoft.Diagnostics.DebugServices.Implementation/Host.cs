@@ -109,11 +109,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 try
                 {
-                    foreach (string file in Directory.EnumerateFiles(_tempDirectory))
-                    {
-                        File.Delete(file);
-                    }
-                    Directory.Delete(_tempDirectory);
+                    Directory.Delete(_tempDirectory, recursive: true);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {

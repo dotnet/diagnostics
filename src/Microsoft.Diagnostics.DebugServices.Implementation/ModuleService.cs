@@ -175,7 +175,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Create a module instance
         /// </summary>
-        /// <param name="moduleIndex">artifical index</param>
+        /// <param name="moduleIndex">artificial index</param>
         /// <param name="imageBase">module base address</param>
         /// <param name="imageSize">module size</param>
         /// <param name="imageName">module name</param>

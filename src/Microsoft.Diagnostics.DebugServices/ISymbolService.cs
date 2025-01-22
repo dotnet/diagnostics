@@ -130,13 +130,6 @@ namespace Microsoft.Diagnostics.DebugServices
         string DownloadFile(string index, string file);
 
         /// <summary>
-        /// Downloads and returns the metadata for the assembly.
-        /// </summary>
-        /// <param name="module">module assembly</param>
-        /// <returns>metadata bytes</returns>
-        ImmutableArray<byte> GetMetadata(IModule module);
-
-        /// <summary>
         /// Returns the metadata for the assembly
         /// </summary>
         /// <param name="imagePath">file name and path to module</param>
