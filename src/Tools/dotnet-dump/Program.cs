@@ -101,8 +101,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
             new Argument<FileInfo>(
                 name: "dump_path")
             {
-                Description = "Name of the dump file to analyze.",
-                Arity = ArgumentArity.ZeroOrOne
+                Description = "Name of the dump file to analyze."
             }.ExistingOnly();
 
         private static Option RunCommand() =>
