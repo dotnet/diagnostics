@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 using Microsoft.Diagnostics.DebugServices;
 
@@ -14,6 +15,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly ServiceManager _serviceManager;
         private ServiceContainer _serviceContainer;
         private readonly List<ITarget> _targets = new();
+        private string _tempDirectory;
         private int _targetIdFactory;
 
         public Host(HostType type)
@@ -61,6 +63,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 target.Destroy();
             }
             _targets.Clear();
+            CleanupTempDirectory();
         }
 
         #region IHost
@@ -84,6 +87,35 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return _targetIdFactory++;
         }
 
+        public string GetTempDirectory()
+        {
+            if (_tempDirectory == null)
+            {
+                // Use the SOS process's id if can't get the target's
+                uint processId = (uint)Process.GetCurrentProcess().Id;
+
+                // SOS depends on that the temp directory ends with "/".
+                _tempDirectory = Path.Combine(Path.GetTempPath(), "sos" + processId.ToString()) + Path.DirectorySeparatorChar;
+                Directory.CreateDirectory(_tempDirectory);
+            }
+            return _tempDirectory;
+        }
+
         #endregion
+
+        private void CleanupTempDirectory()
+        {
+            if (_tempDirectory != null)
+            {
+                try
+                {
+                    Directory.Delete(_tempDirectory, recursive: true);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                }
+                _tempDirectory = null;
+            }
+        }
     }
 }

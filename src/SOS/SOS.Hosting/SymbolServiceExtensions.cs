@@ -6,6 +6,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
@@ -70,21 +71,49 @@ namespace SOS.Hosting
             {
                 return HResult.E_INVALIDARG;
             }
-            int hr = HResult.S_OK;
+            int hr = HResult.E_FAIL;
             int dataSize = 0;
 
-            ImmutableArray<byte> metadata = symbolService.GetMetadata(imagePath, imageTimestamp, imageSize);
-            if (!metadata.IsEmpty)
+            if (symbolService.IsSymbolStoreEnabled)
             {
-                dataSize = metadata.Length;
-                int size = Math.Min((int)bufferSize, dataSize);
-                Marshal.Copy(metadata.ToArray(), 0, pMetadata, size);
+                try
+                {
+                    SymbolStoreKey key = PEFileKeyGenerator.GetKey(imagePath, imageTimestamp, imageSize);
+                    string localFilePath = symbolService.DownloadFile(key.Index, key.FullPathName);
+                    if (!string.IsNullOrWhiteSpace(localFilePath))
+                    {
+                        Stream peStream = TryOpenFile(localFilePath);
+                        if (peStream != null)
+                        {
+                            using PEReader peReader = new(peStream, PEStreamOptions.Default);
+                            if (peReader.HasMetadata)
+                            {
+                                PEMemoryBlock metadataInfo = peReader.GetMetadata();
+                                ImmutableArray<byte> metadata = metadataInfo.GetContent();
+                                if (!metadata.IsEmpty)
+                                {
+                                    dataSize = metadata.Length;
+                                    int size = Math.Min((int)bufferSize, dataSize);
+                                    Marshal.Copy(metadata.ToArray(), 0, pMetadata, size);
+                                    hr = HResult.S_OK;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Trace.TraceError($"GetMetaDataLocator: file not download {key.Index}");
+                    }
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or BadImageFormatException or IOException)
+                {
+                    Trace.TraceError($"GetMetaDataLocator: {ex.Message}");
+                }
             }
             else
             {
-                hr = HResult.E_FAIL;
+                Trace.TraceError($"GetMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} symbol store not enabled");
             }
-
             if (pMetadataSize != IntPtr.Zero)
             {
                 Marshal.WriteInt32(pMetadataSize, dataSize);
@@ -115,9 +144,9 @@ namespace SOS.Hosting
             int actualSize = 0;
 
             Debug.Assert(pwszPathBuffer != IntPtr.Zero);
-            try
+            if (symbolService.IsSymbolStoreEnabled)
             {
-                if (symbolService.IsSymbolStoreEnabled)
+                try
                 {
                     SymbolStoreKey key = PEFileKeyGenerator.GetKey(imagePath, imageTimestamp, imageSize);
                     string localFilePath = symbolService.DownloadFile(key.Index, key.FullPathName);
@@ -143,19 +172,19 @@ namespace SOS.Hosting
                         hr = HResult.E_FAIL;
                     }
                 }
-                else
+                catch (Exception ex) when
+                    (ex is UnauthorizedAccessException
+                     or BadImageFormatException
+                     or InvalidVirtualAddressException
+                     or IOException)
                 {
-                    Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} symbol store not enabled");
+                    Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} ERROR {ex.Message}");
                     hr = HResult.E_FAIL;
                 }
             }
-            catch (Exception ex) when
-                (ex is UnauthorizedAccessException or
-                 BadImageFormatException or
-                 InvalidVirtualAddressException or
-                 IOException)
+            else
             {
-                Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} ERROR {ex.Message}");
+                Trace.TraceError($"GetICorDebugMetadataLocator: {imagePath} {imageTimestamp:X8} {imageSize:X8} symbol store not enabled");
                 hr = HResult.E_FAIL;
             }
             if (pPathBufferSize != IntPtr.Zero)
@@ -163,6 +192,28 @@ namespace SOS.Hosting
                 Marshal.WriteInt32(pPathBufferSize, actualSize);
             }
             return hr;
+        }
+
+        /// <summary>
+        /// Attempt to open a file stream.
+        /// </summary>
+        /// <param name="path">file path</param>
+        /// <returns>stream or null if doesn't exist or error</returns>
+        public static Stream TryOpenFile(string path)
+        {
+            if (path is not null && File.Exists(path))
+            {
+                try
+                {
+                    return File.OpenRead(path);
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException or NotSupportedException or IOException)
+                {
+                    Trace.TraceError($"TryOpenFile: {ex.Message}");
+                }
+            }
+
+            return null;
         }
     }
 }

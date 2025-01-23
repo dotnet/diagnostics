@@ -51,7 +51,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public IDisposable RegisterOneShot(Action callback) => Register(oneshot: true, callback);
 
 #pragma warning disable CA1859
-        // Use concrete types when possible for improved performance. Explicitly obscure any functionality other than a duspose token.
+        // Use concrete types when possible for improved performance. Explicitly obscure any functionality other than a dispose token.
         private IDisposable Register(bool oneshot, Action callback)
 #pragma warning restore CA1859
         {

@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
         {
-            // apply any existing policy
+            // Apply any existing policy
             AssemblyName referenceName = new(AppDomain.CurrentDomain.ApplyPolicy(args.Name));
             string fileName = referenceName.Name + ".dll";
             string assemblyPath;
@@ -39,10 +39,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // Look next to the executing assembly
             probingPath = Path.Combine(_defaultAssembliesPath, fileName);
-            Debug.WriteLine($"Considering {probingPath} based on ExecutingAssembly");
+            Trace.TraceInformation($"Considering {probingPath} based on ExecutingAssembly");
             if (Probe(probingPath, referenceName.Version, out assembly))
             {
-                Debug.WriteLine($"Matched {probingPath} based on ExecutingAssembly");
+                Trace.TraceInformation($"Matched {probingPath} based on ExecutingAssembly");
                 return assembly;
             }
 
@@ -51,10 +51,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (!string.IsNullOrEmpty(assemblyPath))
             {
                 probingPath = Path.Combine(Path.GetDirectoryName(assemblyPath), fileName);
-                Debug.WriteLine($"Considering {probingPath} based on RequestingAssembly");
+                Trace.TraceInformation($"Considering {probingPath} based on RequestingAssembly");
                 if (Probe(probingPath, referenceName.Version, out assembly))
                 {
-                    Debug.WriteLine($"Matched {probingPath} based on RequestingAssembly");
+                    Trace.TraceInformation($"Matched {probingPath} based on RequestingAssembly");
                     return assembly;
                 }
             }
