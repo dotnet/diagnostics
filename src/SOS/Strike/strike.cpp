@@ -8064,9 +8064,18 @@ DECLARE_API(EEVersion)
         if (!InitializeHeapData())
             ExtOut("GC Heap not initialized, so GC mode is not determined yet.\n");
         else if (IsServerBuild())
+        {
             ExtOut("Server mode with %d gc heaps\n", GetGcHeapCount());
+            int gcDynamicAdaptationMode;
+            if (g_sos16 && (g_sos16->GetGCDynamicAdaptationMode(&gcDynamicAdaptationMode) == S_OK))
+            {
+                ExtOut("DATAS %d \n", gcDynamicAdaptationMode);
+            }
+        }
         else
             ExtOut("Workstation mode\n");
+
+        
 
         if (!GetGcStructuresValid())
         {
