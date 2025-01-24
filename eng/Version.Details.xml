@@ -40,13 +40,13 @@
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
       <Sha>aa38ac354da344c4b567210f3f37c3ff2e674c9c</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="10.0.0-alpha.1.25072.13">
+    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="10.0.0-alpha.1.25073.13">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>e2874f53ff8ba0d15cc552e380419f2e7c1217fa</Sha>
+      <Sha>f196875c5d0441364f6538d2dd8fc4e3eb1ff108</Sha>
     </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.10.0" Version="10.0.0-alpha.1.25072.13">
+    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.10.0" Version="10.0.0-alpha.1.25073.13">
       <Uri>https://github.com/dotnet/runtime</Uri>
-      <Sha>e2874f53ff8ba0d15cc552e380419f2e7c1217fa</Sha>
+      <Sha>f196875c5d0441364f6538d2dd8fc4e3eb1ff108</Sha>
     </Dependency>
     <!-- Intermediate is necessary for source build. -->
     <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="10.0.607103">
