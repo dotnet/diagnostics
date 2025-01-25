@@ -30,6 +30,8 @@ stages:
           installationPath: '$(Build.Repository.LocalPath)\.dotnet'
       - template: /eng/common/templates/post-build/setup-maestro-vars.yml
 
+      - task: NuGetAuthenticate@1
+
       - task: AzureCLI@2
         displayName: 'DARC Gather build'
         inputs:
