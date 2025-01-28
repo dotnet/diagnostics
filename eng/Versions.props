@@ -22,7 +22,7 @@
     <MicrosoftAspNetCoreAppRefInternalVersion>10.0.0-alpha.2.25075.1</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>10.0.0-alpha.2.25075.1</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftNETSdkVersion>10.0.100-alpha.1.25069.2</MicrosoftNETSdkVersion>
+    <MicrosoftNETSdkVersion>10.0.100-alpha.1.25077.13</MicrosoftNETSdkVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
