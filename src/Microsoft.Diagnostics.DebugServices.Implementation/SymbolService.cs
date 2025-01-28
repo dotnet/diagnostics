@@ -887,7 +887,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
                         if (!File.Exists(downloadFilePath))
                         {
-                            downloadFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + "-" + Path.GetFileName(key.FullPathName));
+                            downloadFilePath = Path.Combine(_host.GetTempDirectory(), Path.GetRandomFileName() + "-" + Path.GetFileName(key.FullPathName));
                             using (Stream destinationStream = File.OpenWrite(downloadFilePath))
                             {
                                 file.Stream.CopyTo(destinationStream);
