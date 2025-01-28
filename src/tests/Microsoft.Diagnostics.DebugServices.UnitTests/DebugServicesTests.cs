@@ -286,7 +286,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             {
                 if (runtimeData.TryGetValue("Id", out int id))
                 {
-                    IRuntime runtime = runtimeService.EnumerateRuntimes().FirstOrDefault((r) => r.Id == id);
+                    IRuntime runtime = runtimeService.EnumerateRuntimes().SingleOrDefault((r) => r.Id == id);
                     Assert.NotNull(runtime);
 
                     host.TestData.CompareMembers(runtimeData, runtime);

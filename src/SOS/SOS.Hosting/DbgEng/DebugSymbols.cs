@@ -412,12 +412,12 @@ namespace SOS.Hosting.DbgEng
             IntPtr self,
             [In] DEBUG_SCOPE_GROUP Flags,
             [In][MarshalAs(UnmanagedType.Interface)] IDebugSymbolGroup Update,
-            [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Symbols);            // out IDebugSymbolGroup
+            [Out] IntPtr Symbols);            // out IDebugSymbolGroup
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int CreateSymbolGroupDelegate(
             IntPtr self,
-            [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Group);              // out IDebugSymbolGroup
+            [Out] IntPtr Group);              // out IDebugSymbolGroup
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int StartSymbolMatchDelegate(
@@ -682,12 +682,12 @@ namespace SOS.Hosting.DbgEng
             IntPtr self,
             [In] DEBUG_SCOPE_GROUP Flags,
             [In][MarshalAs(UnmanagedType.Interface)] IDebugSymbolGroup2 Update,
-            [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Symbols);            // out IDebugSymbolGroup2
+            [Out] IntPtr Symbols);            // out IDebugSymbolGroup2
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int CreateSymbolGroup2Delegate(
             IntPtr self,
-            [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Group);              // out IDebugSymbolGroup2
+            [Out] IntPtr Group);              // out IDebugSymbolGroup2
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int StartSymbolMatchWideDelegate(
@@ -975,7 +975,7 @@ namespace SOS.Hosting.DbgEng
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int RemoveSyntheticSymbolDelegate(
             IntPtr self,
-            [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID Id
+            [In] DEBUG_MODULE_AND_ID* Id
         );
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
@@ -1020,14 +1020,14 @@ namespace SOS.Hosting.DbgEng
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryInformationDelegate(
             IntPtr self,
-            [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID Id,
+            [In] DEBUG_MODULE_AND_ID* Id,
             [Out] DEBUG_SYMBOL_ENTRY* Info
         );
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryStringDelegate(
             IntPtr self,
-            [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID Id,
+            [In] DEBUG_MODULE_AND_ID* Id,
             [In] uint Which,
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder Buffer,
             [In] int BufferSize,
@@ -1037,7 +1037,7 @@ namespace SOS.Hosting.DbgEng
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryStringWideDelegate(
             IntPtr self,
-            [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID Id,
+            [In] DEBUG_MODULE_AND_ID* Id,
             [In] uint Which,
             [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder Buffer,
             [In] int BufferSize,
@@ -1047,7 +1047,7 @@ namespace SOS.Hosting.DbgEng
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryOffsetRegionsDelegate(
             IntPtr self,
-            [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID Id,
+            [In] DEBUG_MODULE_AND_ID* Id,
             [In] uint Flags,
             [Out] DEBUG_OFFSET_REGION* Regions,
             [In] uint RegionsCount,
@@ -1057,7 +1057,7 @@ namespace SOS.Hosting.DbgEng
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSymbolEntryBySymbolEntryDelegate(
             IntPtr self,
-            [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_MODULE_AND_ID FromId,
+            [In] DEBUG_MODULE_AND_ID* FromId,
             [In] uint Flags,
             [Out] DEBUG_MODULE_AND_ID* ToId
         );
@@ -1097,7 +1097,7 @@ namespace SOS.Hosting.DbgEng
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntryStringDelegate(
             IntPtr self,
-            [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_SYMBOL_SOURCE_ENTRY Entry,
+            [In] DEBUG_SYMBOL_SOURCE_ENTRY Entry,
             [In] uint Which,
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder Buffer,
             [In] int BufferSize,
@@ -1107,7 +1107,7 @@ namespace SOS.Hosting.DbgEng
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntryStringWideDelegate(
             IntPtr self,
-            [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_SYMBOL_SOURCE_ENTRY Entry,
+            [In] DEBUG_SYMBOL_SOURCE_ENTRY Entry,
             [In] uint Which,
             [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder Buffer,
             [In] int BufferSize,
@@ -1117,7 +1117,7 @@ namespace SOS.Hosting.DbgEng
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntryOffsetRegionsDelegate(
             IntPtr self,
-            [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_SYMBOL_SOURCE_ENTRY Entry,
+            [In] DEBUG_SYMBOL_SOURCE_ENTRY* Entry,
             [In] uint Flags,
             [Out] DEBUG_OFFSET_REGION* Regions,
             [In] uint RegionsCount,
@@ -1127,7 +1127,7 @@ namespace SOS.Hosting.DbgEng
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetSourceEntryBySourceEntryDelegate(
             IntPtr self,
-            [In][MarshalAs(UnmanagedType.LPStruct)] DEBUG_SYMBOL_SOURCE_ENTRY FromEntry,
+            [In] DEBUG_SYMBOL_SOURCE_ENTRY* FromEntry,
             [In] uint Flags,
             [Out] DEBUG_SYMBOL_SOURCE_ENTRY* ToEntry
         );
