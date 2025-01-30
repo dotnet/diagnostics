@@ -130,15 +130,6 @@ namespace Microsoft.Diagnostics.DebugServices
         string DownloadFile(string index, string file);
 
         /// <summary>
-        /// Returns the metadata for the assembly
-        /// </summary>
-        /// <param name="imagePath">file name and path to module</param>
-        /// <param name="imageTimestamp">module timestamp</param>
-        /// <param name="imageSize">size of PE image</param>
-        /// <returns>metadata</returns>
-        ImmutableArray<byte> GetMetadata(string imagePath, uint imageTimestamp, uint imageSize);
-
-        /// <summary>
         /// Returns the portable PDB reader for the assembly path
         /// </summary>
         /// <param name="assemblyPath">file path of the assembly or null if the module is in-memory or dynamic</param>
