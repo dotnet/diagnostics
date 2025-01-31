@@ -416,11 +416,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return;
             }
 
+            if (rateText == string.Empty)
+            {
+                // Note: Observable counters report empty rate on the first measurement
+                rateText = valueText;
+            }
+
             CounterMetadata metadata = GetCounterMetadata(meterName, instrumentName, id);
             if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate)
                 && double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
             {
-                // UpDownCounter reports the value, not the rate - this is different than how Counter behaves.
                 payload = new UpDownCounterPayload(metadata, null, unit, tags, rate, value, traceEvent.TimeStamp);
             }
             else

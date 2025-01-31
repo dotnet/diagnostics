@@ -7,8 +7,16 @@ namespace DotnetCounters.UnitTests
     {
         public const string TestCounter = "TestCounter";
         public const string TestCounterName = TestCounter + " (dollars / 1 sec)";
+        public const string TestUpDownCounter = "TestUpDownCounter";
+        public const string TestUpDownCounterName = TestUpDownCounter + " (queue size)";
         public const string TestHistogram = "TestHistogram";
         public const string TestHistogramName = TestHistogram + " (feet)";
+        public const string TestObservableCounter = "TestObservableCounter";
+        public const string TestObservableCounterName = TestObservableCounter + " (dollars / 1 sec)";
+        public const string TestObservableUpDownCounter = "TestObservableUpDownCounter";
+        public const string TestObservableUpDownCounterName = TestObservableUpDownCounter + " (queue size)";
+        public const string TestObservableGauge = "TestObservableGauge";
+        public const string TestObservableGaugeName = TestObservableGauge + " (temperature)";
         public const string PercentileKey = "Percentile";
         public const string TagKey = "TestTag";
         public const string TagValue = "5";
