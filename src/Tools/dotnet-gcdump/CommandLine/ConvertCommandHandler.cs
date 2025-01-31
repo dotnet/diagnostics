@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.IO;
+using System.Threading.Tasks;
 using Graphs;
 using Microsoft.Internal.Common;
 
@@ -53,40 +54,42 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             return 0;
         }
 
-        public static System.CommandLine.Command ConvertCommand() =>
-            new(
+        public static Command ConvertCommand()
+        {
+            Command convertCommand = new(
                 name: "convert",
                 description: "Converts nettrace file into .gcdump file handled by analysis tools. Can only convert from the nettrace format.")
             {
-                // Handler
-                System.CommandLine.Invocation.CommandHandler.Create<FileInfo, string, bool>(ConvertFile),
-                // Arguments and Options
-                InputPathArgument(),
-                OutputPathOption(),
-                VerboseOption()
+                InputPathArgument,
+                OutputPathOption,
+                VerboseOption
             };
 
-        private static Argument<FileInfo> InputPathArgument() =>
+            convertCommand.SetAction((parseResult, ct) => Task.FromResult(ConvertFile(
+                input: parseResult.GetValue(InputPathArgument),
+                output: parseResult.GetValue(OutputPathOption) ?? string.Empty,
+                verbose: parseResult.GetValue(VerboseOption))));
+
+            return convertCommand;
+        }
+
+        private static readonly Argument<FileInfo> InputPathArgument =
             new Argument<FileInfo>("input")
             {
                 Description = "Input trace file to be converted.",
                 Arity = new ArgumentArity(0, 1)
-            }.ExistingOnly();
+            }.AcceptExistingOnly();
 
-        private static Option<string> OutputPathOption() =>
-            new(
-                aliases: new[] { "-o", "--output" },
-                description: $@"The path where converted gcdump should be written. Defaults to '<input>.gcdump'")
+        private static readonly Option<string> OutputPathOption =
+            new("--output", "-o")
             {
-                Argument = new Argument<string>(name: "output", getDefaultValue: () => string.Empty)
+                Description = "The path where converted gcdump should be written. Defaults to '<input>.gcdump'",
             };
 
-        private static Option<bool> VerboseOption() =>
-            new(
-                aliases: new[] { "-v", "--verbose" },
-                description: "Output the log while converting the gcdump.")
+        private static readonly Option<bool> VerboseOption =
+            new("--verbose", "-v")
             {
-                Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
+                Description = "Output the log while converting the gcdump."
             };
     }
 }

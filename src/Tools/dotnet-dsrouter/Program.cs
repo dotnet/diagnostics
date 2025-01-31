@@ -3,9 +3,6 @@
 
 using System;
 using System.CommandLine;
-using System.CommandLine.Binding;
-using System.CommandLine.Builder;
-using System.CommandLine.Parsing;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common;
@@ -15,262 +12,315 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
     internal sealed class Program
     {
-        private delegate Task<int> DiagnosticsServerIpcClientTcpServerRouterDelegate(CancellationToken ct, string ipcClient, string tcpServer, int runtimeTimeoutS, string verbose, string forwardPort);
-
-        private delegate Task<int> DiagnosticsServerIpcServerTcpServerRouterDelegate(CancellationToken ct, string ipcServer, string tcpServer, int runtimeTimeoutS, string verbose, string forwardPort);
-
-        private delegate Task<int> DiagnosticsServerIpcServerTcpClientRouterDelegate(CancellationToken ct, string ipcServer, string tcpClient, int runtimeTimeoutS, string verbose, string forwardPort);
-
-        private delegate Task<int> DiagnosticsServerIpcClientTcpClientRouterDelegate(CancellationToken ct, string ipcClient, string tcpClient, int runtimeTimeoutS, string verbose, string forwardPort);
-
-        private delegate Task<int> DiagnosticsServerIpcServerWebSocketServerRouterDelegate(CancellationToken ct, string ipcServer, string webSocket, int runtimeTimeoutS, string verbose);
-
-        private delegate Task<int> DiagnosticsServerIpcClientWebSocketServerRouterDelegate(CancellationToken ct, string ipcClient, string webSocket, int runtimeTimeoutS, string verbose);
-
-        private delegate Task<int> DiagnosticsServerIpcServerIOSSimulatorRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose, bool info);
-
-        private delegate Task<int> DiagnosticsServerIpcServerIOSRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose, bool info);
-
-        private delegate Task<int> DiagnosticsServerIpcServerAndroidEmulatorRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose, bool info);
-
-        private delegate Task<int> DiagnosticsServerIpcServerAndroidRouterDelegate(CancellationToken ct, int runtimeTimeoutS, string verbose, bool info);
-
-        private static Command IpcClientTcpServerRouterCommand() =>
-            new(
+        private static Command IpcClientTcpServerRouterCommand()
+        {
+            Command command = new(
                 name: "client-server",
                 description: "Start a .NET application Diagnostics Server routing local IPC server <--> remote TCP client. " +
                                 "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
-                // Handler
-                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientTcpServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcClientTcpServerRouter).GetCommandHandler(),
-                // Options
-                IpcClientAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
+                IpcClientAddressOption, TcpServerAddressOption, RuntimeTimeoutOption, VerboseOption, ForwardPortOption
             };
 
-        private static Command IpcServerTcpServerRouterCommand() =>
-            new(
+            command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcClientTcpServerRouter(
+                ct,
+                ipcClient: parseResult.GetValue(IpcClientAddressOption) ?? "",
+                tcpServer: parseResult.GetValue(TcpServerAddressOption) ?? "",
+                runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
+                verbose: parseResult.GetValue(VerboseOption),
+                forwardPort: parseResult.GetValue(ForwardPortOption) ?? ""
+            ));
+
+            return command;
+        }
+
+        private static Command IpcServerTcpServerRouterCommand()
+        {
+            Command command = new(
                 name: "server-server",
                 description: "Start a .NET application Diagnostics Server routing local IPC client <--> remote TCP client. " +
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
-                // Handler
-                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpServerRouter).GetCommandHandler(),
-                // Options
-                IpcServerAddressOption(), TcpServerAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
+                IpcServerAddressOption, TcpServerAddressOption, RuntimeTimeoutOption, VerboseOption, ForwardPortOption
             };
 
-        private static Command IpcServerTcpClientRouterCommand() =>
-            new(
+            command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerTcpServerRouter(
+                ct,
+                ipcServer: parseResult.GetValue(IpcServerAddressOption) ?? "",
+                tcpServer: parseResult.GetValue(TcpServerAddressOption) ?? "",
+                runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
+                verbose: parseResult.GetValue(VerboseOption),
+                forwardPort: parseResult.GetValue(ForwardPortOption) ?? ""
+            ));
+
+            return command;
+        }
+
+        private static Command IpcServerTcpClientRouterCommand()
+        {
+            Command command = new(
                 name: "server-client",
                 description: "Start a .NET application Diagnostics Server routing local IPC client <--> remote TCP server. " +
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP client (connecting runtime TCP server).")
             {
-                // Handler
-                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpClientRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerTcpClientRouter).GetCommandHandler(),
-                // Options
-                IpcServerAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
+                IpcServerAddressOption, TcpClientAddressOption, RuntimeTimeoutOption, VerboseOption, ForwardPortOption
             };
 
-        private static Command IpcServerWebSocketServerRouterCommand() =>
-        new(
-            name: "server-websocket",
-            description: "Starts a .NET application Diagnostic Server routing local IPC client <--> remote WebSocket client. " +
-                                "Router is configured using an IPC server (connecting to by diagnostic tools) " +
-                                "and a WebSocket server (accepting runtime WebSocket client).")
-        {
-            HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerWebSocketServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerWebSocketServerRouter).GetCommandHandler(),
-            // Options
-            IpcServerAddressOption(), WebSocketURLAddressOption(), RuntimeTimeoutOption(), VerboseOption()
-        };
+            command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerTcpClientRouter(
+                ct,
+                ipcServer: parseResult.GetValue(IpcServerAddressOption) ?? "",
+                tcpClient: parseResult.GetValue(TcpClientAddressOption) ?? "",
+                runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
+                verbose: parseResult.GetValue(VerboseOption),
+                forwardPort: parseResult.GetValue(ForwardPortOption) ?? ""
+            ));
 
-        private static Command IpcClientWebSocketServerRouterCommand() =>
-        new(
-            name: "client-websocket",
-            description: "Starts a .NET application Diagnostic Server routing local IPC server <--> remote WebSocket client. " +
-                                "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
-                                "and a WebSocket server (accepting runtime WebSocket client).")
-        {
-            // Handler
-            HandlerDescriptor.FromDelegate((DiagnosticsServerIpcClientWebSocketServerRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcClientWebSocketServerRouter).GetCommandHandler(),
-            // Options
-            IpcClientAddressOption(), WebSocketURLAddressOption(), RuntimeTimeoutOption(), VerboseOption()
-        };
+            return command;
+        }
 
-        private static Command IpcClientTcpClientRouterCommand() =>
-            new(
+        private static Command IpcServerWebSocketServerRouterCommand()
+        {
+            Command command = new(
+                name: "server-websocket",
+                description: "Starts a .NET application Diagnostic Server routing local IPC client <--> remote WebSocket client. " +
+                                    "Router is configured using an IPC server (connecting to by diagnostic tools) " +
+                                    "and a WebSocket server (accepting runtime WebSocket client).")
+            {
+                IpcServerAddressOption, WebSocketURLAddressOption, RuntimeTimeoutOption, VerboseOption
+            };
+
+            command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerWebSocketServerRouter(
+                ct,
+                ipcServer: parseResult.GetValue(IpcServerAddressOption) ?? "",
+                webSocket: parseResult.GetValue(WebSocketURLAddressOption) ?? "",
+                runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
+                verbose: parseResult.GetValue(VerboseOption)
+            ));
+
+            return command;
+        }
+
+        private static Command IpcClientWebSocketServerRouterCommand()
+        {
+            Command command = new(
+                name: "client-websocket",
+                description: "Starts a .NET application Diagnostic Server routing local IPC server <--> remote WebSocket client. " +
+                                    "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
+                                    "and a WebSocket server (accepting runtime WebSocket client).")
+            {
+                IpcClientAddressOption, WebSocketURLAddressOption, RuntimeTimeoutOption, VerboseOption
+            };
+
+            command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcClientWebSocketServerRouter(
+                ct,
+                ipcClient: parseResult.GetValue(IpcClientAddressOption) ?? "",
+                webSocket: parseResult.GetValue(WebSocketURLAddressOption) ?? "",
+                runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
+                verbose: parseResult.GetValue(VerboseOption)
+            ));
+
+            return command;
+        }
+
+        private static Command IpcClientTcpClientRouterCommand()
+        {
+            Command command = new(
                 name: "client-client",
                 description: "Start a .NET application Diagnostics Server routing local IPC server <--> remote TCP server. " +
                                 "Router is configured using an IPC client (connecting diagnostic tool IPC server) " +
                                 "and a TCP/IP client (connecting runtime TCP server).")
             {
-                // Handler
-                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerTcpClientRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcClientTcpClientRouter).GetCommandHandler(),
-                // Options
-                IpcClientAddressOption(), TcpClientAddressOption(), RuntimeTimeoutOption(), VerboseOption(), ForwardPortOption()
+                IpcClientAddressOption, TcpClientAddressOption, RuntimeTimeoutOption, VerboseOption, ForwardPortOption
             };
 
-        private static Command IOSSimulatorRouterCommand() =>
-            new(
+            command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcClientTcpClientRouter(
+                ct,
+                ipcClient: parseResult.GetValue(IpcClientAddressOption) ?? "",
+                tcpClient: parseResult.GetValue(TcpClientAddressOption) ?? "",
+                runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
+                verbose: parseResult.GetValue(VerboseOption),
+                forwardPort: parseResult.GetValue(ForwardPortOption) ?? ""
+            ));
+
+            return command;
+        }
+
+        private static Command IOSSimulatorRouterCommand()
+        {
+            Command command = new(
                 name: "ios-sim",
                 description: "Start a .NET application Diagnostics Server routing local IPC server <--> iOS Simulator. " +
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
-                // Handler
-                HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerIOSSimulatorRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerIOSSimulatorRouter).GetCommandHandler(),
-                // Options
-                RuntimeTimeoutOption(), VerboseOption(), InfoOption()
+                RuntimeTimeoutOption, VerboseOption, InfoOption
             };
 
-        private static Command IOSRouterCommand() =>
-            new(
+            command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerIOSSimulatorRouter(
+                ct,
+                runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
+                verbose: parseResult.GetValue(VerboseOption),
+                info: parseResult.GetValue(InfoOption)
+            ));
+
+            return command;
+        }
+
+        private static Command IOSRouterCommand()
+        {
+            Command command = new(
                 name: "ios",
                 description: "Start a .NET application Diagnostics Server routing local IPC server <--> iOS Device over usbmux. " +
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP client (connecting runtime TCP server over usbmux).")
             {
-                        // Handler
-                        HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerIOSRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerIOSRouter).GetCommandHandler(),
-                        // Options
-                        RuntimeTimeoutOption(), VerboseOption(), InfoOption()
+                RuntimeTimeoutOption, VerboseOption, InfoOption
             };
 
-        private static Command AndroidEmulatorRouterCommand() =>
-            new(
+            command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerIOSRouter(
+                ct,
+                runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
+                verbose: parseResult.GetValue(VerboseOption),
+                info: parseResult.GetValue(InfoOption)
+            ));
+
+            return command;
+        }
+
+        private static Command AndroidEmulatorRouterCommand()
+        {
+            Command command = new(
                 name: "android-emu",
                 description: "Start a .NET application Diagnostics Server routing local IPC server <--> Android Emulator. " +
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
-                        // Handler
-                        HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerAndroidEmulatorRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerAndroidEmulatorRouter).GetCommandHandler(),
-                        // Options
-                        RuntimeTimeoutOption(), VerboseOption(), InfoOption()
+                RuntimeTimeoutOption, VerboseOption, InfoOption
             };
 
-        private static Command AndroidRouterCommand() =>
-            new(
+            command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerAndroidEmulatorRouter(
+                ct,
+                runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
+                verbose: parseResult.GetValue(VerboseOption),
+                info: parseResult.GetValue(InfoOption)));
+
+            return command;
+        }
+
+        private static Command AndroidRouterCommand()
+        {
+            Command command = new(
                 name: "android",
                 description: "Start a .NET application Diagnostics Server routing local IPC server <--> Android Device. " +
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
-                        // Handler
-                        HandlerDescriptor.FromDelegate((DiagnosticsServerIpcServerAndroidRouterDelegate)new DiagnosticsServerRouterCommands().RunIpcServerAndroidRouter).GetCommandHandler(),
-                        // Options
-                        RuntimeTimeoutOption(), VerboseOption(), InfoOption()
+                RuntimeTimeoutOption, VerboseOption, InfoOption
             };
 
-        private static Option IpcClientAddressOption() =>
-            new(
-                aliases: new[] { "--ipc-client", "-ipcc" },
-                description: "The diagnostic tool diagnostics server ipc address (--diagnostic-port argument). " +
+            command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerAndroidRouter(
+                ct,
+                runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
+                verbose: parseResult.GetValue(VerboseOption),
+                info: parseResult.GetValue(InfoOption)));
+
+            return command;
+        }
+
+        private static readonly Option<string> IpcClientAddressOption =
+            new("--ipc-client", "-ipcc")
+            {
+                Description = "The diagnostic tool diagnostics server ipc address (--diagnostic-port argument). " +
                                 "Router connects diagnostic tool ipc server when establishing a " +
-                                "new route between runtime and diagnostic tool.")
-            {
-                Argument = new Argument<string>(name: "ipcClient", getDefaultValue: () => "")
+                                "new route between runtime and diagnostic tool."
             };
 
-        private static Option IpcServerAddressOption() =>
-            new(
-                aliases: new[] { "--ipc-server", "-ipcs" },
-                description: "The diagnostics server ipc address to route. Router accepts ipc connections from diagnostic tools " +
+        private static readonly Option<string> IpcServerAddressOption =
+            new("--ipc-server", "-ipcs")
+            {
+                Description = "The diagnostics server ipc address to route. Router accepts ipc connections from diagnostic tools " +
                                 "establishing a new route between runtime and diagnostic tool. If not specified " +
-                                "router will use default ipc diagnostics server path.")
-            {
-                Argument = new Argument<string>(name: "ipcServer", getDefaultValue: () => "")
+                                "router will use default ipc diagnostics server path."
             };
 
-        private static Option TcpClientAddressOption() =>
-            new(
-                aliases: new[] { "--tcp-client", "-tcpc" },
-                description: "The runtime TCP/IP address using format [host]:[port]. " +
+        private static readonly Option<string> TcpClientAddressOption =
+            new("--tcp-client", "-tcpc")
+            {
+                Description = "The runtime TCP/IP address using format [host]:[port]. " +
                                 "Router can can connect 127.0.0.1, [::1], ipv4 address, ipv6 address, hostname addresses." +
-                                "Launch runtime using DOTNET_DiagnosticPorts environment variable to setup listener")
-            {
-                Argument = new Argument<string>(name: "tcpClient", getDefaultValue: () => "")
+                                "Launch runtime using DOTNET_DiagnosticPorts environment variable to setup listener."
             };
 
-        private static Option TcpServerAddressOption() =>
-            new(
-                aliases: new[] { "--tcp-server", "-tcps" },
-                description: "The router TCP/IP address using format [host]:[port]. " +
+        private static Option<string> TcpServerAddressOption =
+            new("--tcp-server", "-tcps")
+            {
+                Description = "The router TCP/IP address using format [host]:[port]. " +
                                 "Router can bind one (127.0.0.1, [::1], 0.0.0.0, [::], ipv4 address, ipv6 address, hostname) " +
                                 "or all (*) interfaces. Launch runtime using DOTNET_DiagnosticPorts environment variable " +
-                                "connecting router TCP server during startup.")
-            {
-                Argument = new Argument<string>(name: "tcpServer", getDefaultValue: () => "")
+                                "connecting router TCP server during startup."
             };
 
-        private static Option WebSocketURLAddressOption() =>
-            new(
-                aliases: new[] { "--web-socket", "-ws" },
-                description: "The router WebSocket address using format ws://[host]:[port]/[path] or wss://[host]:[port]/[path]. " +
-                                "Launch app with WasmExtraConfig property specifying diagnostic_options with a server connect_url")
+        private static readonly Option<string> WebSocketURLAddressOption =
+            new("--web-socket", "-ws")
             {
-                Argument = new Argument<string>(name: "webSocketURI", getDefaultValue: () => "")
+                Description = "The router WebSocket address using format ws://[host]:[port]/[path] or wss://[host]:[port]/[path]. " +
+                                "Launch app with WasmExtraConfig property specifying diagnostic_options with a server connect_url"
             };
 
-        private static Option RuntimeTimeoutOption() =>
-            new(
-                aliases: new[] { "--runtime-timeout", "-rt" },
-                description: "Automatically shutdown router if no runtime connects to it before specified timeout (seconds)." +
-                                "If not specified, router won't trigger an automatic shutdown.")
+        private static readonly Option<int> RuntimeTimeoutOption =
+            new("--runtime-timeout", "-rt")
             {
-                Argument = new Argument<int>(name: "runtimeTimeout", getDefaultValue: () => Timeout.Infinite)
+                Description = "Automatically shutdown router if no runtime connects to it before specified timeout (seconds)." +
+                                "If not specified, router won't trigger an automatic shutdown.",
+                DefaultValueFactory = _ => Timeout.Infinite,
             };
 
-        private static Option VerboseOption() =>
-            new(
-                aliases: new[] { "--verbose", "-v" },
-                description: "Enable verbose logging (none|critical|error|warning|info|debug|trace)")
+        private static readonly Option<string> VerboseOption =
+            new("--verbose", "-v")
             {
-                Argument = new Argument<string>(name: "verbose", getDefaultValue: () => "info")
+                Description = "Enable verbose logging (none|critical|error|warning|info|debug|trace)",
+                DefaultValueFactory = _ => "info",
             };
 
-        private static Option ForwardPortOption() =>
-            new(
-                aliases: new[] { "--forward-port", "-fp" },
-                description: "Enable port forwarding, values Android|iOS for TcpClient and only Android for TcpServer. Make sure to set ANDROID_SDK_ROOT before using this option on Android.")
+        private static readonly Option<string> ForwardPortOption =
+            new("--forward-port", "-fp")
             {
-                Argument = new Argument<string>(name: "forwardPort", getDefaultValue: () => "")
+                Description = "Enable port forwarding, values Android|iOS for TcpClient and only Android for TcpServer. Make sure to set ANDROID_SDK_ROOT before using this option on Android."
             };
 
-        private static Option InfoOption() =>
-            new(
-                aliases: new[] { "--info", "-i" },
-                description: "Print info on how to use current dotnet-dsrouter instance with application and diagnostic tooling.")
+        private static readonly Option<bool> InfoOption =
+            new("--info", "-i")
             {
-                Argument = new Argument<bool>(name: "info", getDefaultValue: () => false)
+                Description = "Print info on how to use current dotnet-dsrouter instance with application and diagnostic tooling."
             };
 
-        private static int Main(string[] args)
+        private static Task<int> Main(string[] args)
         {
-            Parser parser = new CommandLineBuilder()
-                .AddCommand(IpcClientTcpServerRouterCommand())
-                .AddCommand(IpcServerTcpServerRouterCommand())
-                .AddCommand(IpcServerTcpClientRouterCommand())
-                .AddCommand(IpcClientTcpClientRouterCommand())
-                .AddCommand(IpcServerWebSocketServerRouterCommand())
-                .AddCommand(IpcClientWebSocketServerRouterCommand())
-                .AddCommand(IOSSimulatorRouterCommand())
-                .AddCommand(IOSRouterCommand())
-                .AddCommand(AndroidEmulatorRouterCommand())
-                .AddCommand(AndroidRouterCommand())
-                .UseToolsDefaults()
-                .Build();
+            RootCommand rootCommand = new()
+            {
+                IpcClientTcpServerRouterCommand(),
+                IpcServerTcpServerRouterCommand(),
+                IpcServerTcpClientRouterCommand(),
+                IpcClientTcpClientRouterCommand(),
+                IpcServerWebSocketServerRouterCommand(),
+                IpcClientWebSocketServerRouterCommand(),
+                IOSSimulatorRouterCommand(),
+                IOSRouterCommand(),
+                AndroidEmulatorRouterCommand(),
+                AndroidRouterCommand()
+            };
 
-            ParseResult parseResult = parser.Parse(args);
+            ParseResult parseResult = rootCommand.Parse(args);
 
-            if (parseResult.UnparsedTokens.Count > 0)
+            if (parseResult.UnmatchedTokens.Count > 0)
             {
                 ProcessLauncher.Launcher.PrepareChildProcess(args);
             }
 
-            string verbose = parseResult.ValueForOption<string>("-v");
+            string verbose = parseResult.GetValue(VerboseOption);
             if (!string.Equals(verbose, "none", StringComparison.OrdinalIgnoreCase))
             {
                 ConsoleColor currentColor = Console.ForegroundColor;
@@ -279,7 +329,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 Console.ForegroundColor = currentColor;
             }
 
-            return parser.InvokeAsync(args).Result;
+            return parseResult.InvokeAsync();
         }
     }
 }
