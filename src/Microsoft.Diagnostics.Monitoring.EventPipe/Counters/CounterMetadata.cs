@@ -5,17 +5,31 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     public class CounterMetadata
     {
-        public CounterMetadata(string providerName, string counterName, string meterTags, string instrumentTags, string scopeHash)
+        public CounterMetadata(string providerName, string counterName, string counterUnit)
             : this(
                   providerName,
                   providerVersion: null,
                   counterName,
-                  counterUnit: null,
+                  counterUnit,
+                  counterDescription: null,
+                  instrumentId: null,
+                  meterTags: null,
+                  instrumentTags: null,
+                  scopeHash: null)
+        {
+        }
+
+        public CounterMetadata(string providerName, string counterName, string counterUnit, string meterTags, string instrumentTags)
+            : this(
+                  providerName,
+                  providerVersion: null,
+                  counterName,
+                  counterUnit,
                   counterDescription: null,
                   instrumentId: null,
                   meterTags,
                   instrumentTags,
-                  scopeHash)
+                  scopeHash: null)
         {
         }
 

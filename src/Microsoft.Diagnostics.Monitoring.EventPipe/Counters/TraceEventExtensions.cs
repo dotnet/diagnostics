@@ -246,7 +246,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string meterName = (string)obj.PayloadValue(1);
             //string meterVersion = (string)obj.PayloadValue(2);
             string instrumentName = (string)obj.PayloadValue(3);
-            string unit = (string)obj.PayloadValue(4);
+            //string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string lastValueText = (string)obj.PayloadValue(6);
             int? id = null;
@@ -265,7 +265,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
             {
-                payload = new GaugePayload(metadata, null, unit, tags, lastValue, obj.TimeStamp);
+                payload = new GaugePayload(metadata, null, tags, lastValue, obj.TimeStamp);
             }
             else
             {
@@ -345,7 +345,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string meterName = (string)traceEvent.PayloadValue(1);
             //string meterVersion = (string)obj.PayloadValue(2);
             string instrumentName = (string)traceEvent.PayloadValue(3);
-            string unit = (string)traceEvent.PayloadValue(4);
+            //string unit = (string)traceEvent.PayloadValue(4);
             string tags = (string)traceEvent.PayloadValue(5);
             string rateText = (string)traceEvent.PayloadValue(6);
             //Starting in .NET 8 we also publish the absolute value of these counters
@@ -371,11 +371,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     counterConfiguration.UseCounterRateAndValuePayload &&
                     double.TryParse(absoluteValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
                 {
-                    payload = new CounterRateAndValuePayload(metadata, null, unit, tags, rate, value, traceEvent.TimeStamp);
+                    payload = new CounterRateAndValuePayload(metadata, null, tags, rate, value, traceEvent.TimeStamp);
                 }
                 else
                 {
-                    payload = new RatePayload(metadata, null, unit, tags, rate, counterConfiguration.CounterFilter.DefaultIntervalSeconds, traceEvent.TimeStamp);
+                    payload = new RatePayload(metadata, null, tags, rate, counterConfiguration.CounterFilter.DefaultIntervalSeconds, traceEvent.TimeStamp);
                 }
             }
             else
@@ -401,7 +401,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string meterName = (string)traceEvent.PayloadValue(1);
             //string meterVersion = (string)obj.PayloadValue(2);
             string instrumentName = (string)traceEvent.PayloadValue(3);
-            string unit = (string)traceEvent.PayloadValue(4);
+            //string unit = (string)traceEvent.PayloadValue(4);
             string tags = (string)traceEvent.PayloadValue(5);
             string rateText = (string)traceEvent.PayloadValue(6);
             string valueText = (string)traceEvent.PayloadValue(7);
@@ -426,7 +426,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate)
                 && double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
             {
-                payload = new UpDownCounterPayload(metadata, null, unit, tags, rate, value, traceEvent.TimeStamp);
+                payload = new UpDownCounterPayload(metadata, null, tags, rate, value, traceEvent.TimeStamp);
             }
             else
             {
@@ -451,7 +451,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string meterName = (string)obj.PayloadValue(1);
             //string meterVersion = (string)obj.PayloadValue(2);
             string instrumentName = (string)obj.PayloadValue(3);
-            string unit = (string)obj.PayloadValue(4);
+            //string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string quantilesText = (string)obj.PayloadValue(6);
             int count = (int)obj.PayloadValue(7);
@@ -470,7 +470,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //Note quantiles can be empty.
             IList<Quantile> quantiles = ParseQuantiles(quantilesText);
             CounterMetadata metadata = GetCounterMetadata(meterName, instrumentName, id);
-            payload = new AggregatePercentilePayload(metadata, null, unit, tags, count, sum, quantiles, obj.TimeStamp);
+            payload = new AggregatePercentilePayload(metadata, null, tags, count, sum, quantiles, obj.TimeStamp);
         }
 
         private static void HandleHistogramLimitReached(TraceEvent obj, CounterConfiguration configuration, out ICounterPayload payload)
