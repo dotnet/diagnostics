@@ -33,6 +33,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public string DisplayName { get; protected set; }
 
+        public string Unit => CounterMetadata.CounterUnit;
 
         public double Value { get; }
 
