@@ -586,7 +586,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 output: parseResult.GetValue(OutputPathOption),
                 buffersize: parseResult.GetValue(CircularBufferOption),
                 providers: parseResult.GetValue(ProvidersOption) ?? string.Empty,
-                profile: parseResult.GetValue(ProfileOption),
+                profile: parseResult.GetValue(ProfileOption) ?? string.Empty,
                 format: parseResult.GetValue(CommonOptions.FormatOption),
                 duration: parseResult.GetValue(DurationOption),
                 clrevents: parseResult.GetValue(CLREventsOption) ?? string.Empty,

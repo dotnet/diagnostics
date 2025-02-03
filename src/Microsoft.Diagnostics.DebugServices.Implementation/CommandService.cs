@@ -321,7 +321,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         if (command.Action is CommandHandler handler)
                         {
-                            handler.Invoke(parseResult);
+                            handler.Invoke(parseResult, services);
                             return true;
                         }
                     }
@@ -568,8 +568,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <param name="services">service provider</param>
             internal void Invoke(ParseResult context, IServiceProvider services) => Invoke(_methodInfo, context, (RootCommand)context.RootCommandResult.Command, services);
 
-            public override int Invoke(ParseResult parseResult)
-                => (int)Invoke(_methodInfo, parseResult, (RootCommand)parseResult.RootCommandResult.Command, null);
+            public override int Invoke(ParseResult parseResult) => throw new NotImplementedException();
 
             /// <summary>
             /// Return the various ways the command can be invoked. For building the help text.
