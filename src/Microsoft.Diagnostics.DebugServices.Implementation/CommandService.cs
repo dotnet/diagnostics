@@ -274,7 +274,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private sealed class CommandGroup
         {
-            private RootCommand _rootCommand;
+            private Command _rootCommand;
             private readonly Dictionary<string, CommandHandler> _commandHandlers = new();
 
             /// <summary>
@@ -283,7 +283,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <param name="commandPrompt">command prompted used in help message</param>
             public CommandGroup(string commandPrompt = null)
             {
-                _rootCommand = new RootCommand(commandPrompt);
+                _rootCommand = new Command(commandPrompt);
             }
 
             /// <summary>
@@ -334,7 +334,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// </summary>
             internal IEnumerable<CommandHandler> CommandHandlers => _commandHandlers.Values;
 
-            internal RootCommand Parser => _rootCommand;
+            internal Command Parser => _rootCommand;
 
             /// <summary>
             /// Returns true if command or command alias is found
@@ -559,14 +559,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <summary>
             /// Returns true is the command is supported by the command filter. Calls the FilterInvokeAttribute marked method.
             /// </summary>
-            internal bool IsCommandSupported(RootCommand parser, IServiceProvider services) => _methodInfoFilter == null || (bool)Invoke(_methodInfoFilter, context: null, parser, services);
+            internal bool IsCommandSupported(Command parser, IServiceProvider services) => _methodInfoFilter == null || (bool)Invoke(_methodInfoFilter, context: null, parser, services);
 
             /// <summary>
             /// Execute the command synchronously.
             /// </summary>
             /// <param name="context">invocation context</param>
             /// <param name="services">service provider</param>
-            internal void Invoke(ParseResult context, IServiceProvider services) => Invoke(_methodInfo, context, (RootCommand)context.RootCommandResult.Command, services);
+            internal void Invoke(ParseResult context, IServiceProvider services) => Invoke(_methodInfo, context, (Command)context.RootCommandResult.Command, services);
 
             public override int Invoke(ParseResult parseResult) => throw new NotImplementedException();
 
@@ -597,7 +597,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <param name="parser">parser instance</param>
             /// <param name="services">service provider</param>
             /// <returns>true help called, false no help function</returns>
-            internal string GetDetailedHelp(RootCommand parser, IServiceProvider services)
+            internal string GetDetailedHelp(Command parser, IServiceProvider services)
             {
                 if (_methodInfoHelp == null)
                 {
@@ -611,7 +611,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return (string)Invoke(_methodInfoHelp, context: null, parser, services);
             }
 
-            private object Invoke(MethodInfo methodInfo, ParseResult context, RootCommand parser, IServiceProvider services)
+            private object Invoke(MethodInfo methodInfo, ParseResult context, Command parser, IServiceProvider services)
             {
                 object instance = null;
                 if (!methodInfo.IsStatic)
@@ -622,7 +622,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return Utilities.Invoke(methodInfo, instance, services);
             }
 
-            private void SetProperties(ParseResult contextParseResult, RootCommand parser, object instance)
+            private void SetProperties(ParseResult contextParseResult, Command parser, object instance)
             {
                 ParseResult defaultParseResult = null;
 
