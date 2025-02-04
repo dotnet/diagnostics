@@ -339,7 +339,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <summary>
             /// Returns true if command or command alias is found
             /// </summary>
-            internal bool Contains(string commandName) => _rootCommand.Subcommands.Any(cmd => cmd.Name == commandName);
+            internal bool Contains(string commandName) => TryGetCommand(commandName, out _);
 
             /// <summary>
             /// Returns the command handler for the command or command alias
@@ -365,7 +365,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <returns>true if found</returns>
             internal bool TryGetCommand(string commandName, out Command command)
             {
-                command = _rootCommand.Subcommands.FirstOrDefault(cmd => cmd.Name == commandName);
+                command = _rootCommand.Subcommands.FirstOrDefault(cmd => cmd.Name == commandName || cmd.Aliases.Contains(commandName));
                 return command != null;
             }
 
