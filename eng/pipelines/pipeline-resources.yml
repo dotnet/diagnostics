@@ -75,8 +75,8 @@ extends:
         options: --cap-add=SYS_PTRACE
 
       test_debian_12_amd64:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-12-helix-amd64
-        options: '--env PYTHONPATH=/usr/bin/python3.9'
+        image: dotnetdockerdev.azurecr.io/dotnet-buildtools/prereqs:debian-12-helix-amd64
+        options: '--env PYTHONPATH=/usr/bin/python3.11'
 
       test_fedora:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-41
