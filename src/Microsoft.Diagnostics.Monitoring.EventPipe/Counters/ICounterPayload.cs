@@ -24,6 +24,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         string DisplayName { get; }
 
+        string Unit => CounterMetadata.CounterUnit;
+
         DateTime Timestamp { get; }
 
         /// <summary>

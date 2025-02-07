@@ -457,12 +457,12 @@ namespace DotnetCounters.UnitTests
 
         private static CounterPayload CreateMeterCounterPreNet8(string meterName, string instrumentName, string unit, string tags, double value)
         {
-            return new RatePayload(new CounterMetadata(meterName, instrumentName, unit), instrumentName, tags, value, 1, DateTime.MinValue);
+            return new RatePayload(new CounterMetadata(meterName, instrumentName, unit), displayName: null, displayUnits: null, tags, value, 1, DateTime.MinValue);
         }
 
         private static CounterPayload CreateMeterCounterPostNet8(string meterName, string instrumentName, string unit, string tags, double value)
         {
-            return new CounterRateAndValuePayload(new CounterMetadata(meterName, instrumentName, unit), instrumentName, tags, rate:double.NaN, value, DateTime.MinValue);
+            return new CounterRateAndValuePayload(new CounterMetadata(meterName, instrumentName, unit), displayName: null, displayUnits: null, tags, rate: double.NaN, value, DateTime.MinValue);
         }
     }
 }

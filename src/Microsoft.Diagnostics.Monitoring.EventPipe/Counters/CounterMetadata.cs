@@ -19,17 +19,31 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
         }
 
-        public CounterMetadata(string providerName, string counterName, string counterUnit, string meterTags, string instrumentTags)
+        internal CounterMetadata(string providerName, string counterName, string meterTags, string instrumentTags)
             : this(
                   providerName,
                   providerVersion: null,
                   counterName,
-                  counterUnit,
+                  counterUnit: null,
                   counterDescription: null,
                   instrumentId: null,
                   meterTags,
                   instrumentTags,
                   scopeHash: null)
+        {
+        }
+
+        public CounterMetadata(string providerName, string counterName, string meterTags, string instrumentTags, string scopeHash)
+            : this(
+                  providerName,
+                  providerVersion: null,
+                  counterName,
+                  counterUnit: null,
+                  counterDescription: null,
+                  instrumentId: null,
+                  meterTags,
+                  instrumentTags,
+                  scopeHash)
         {
         }
 

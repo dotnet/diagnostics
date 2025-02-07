@@ -116,7 +116,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 foreach (Quantile quantile in aggregatePayload.Quantiles)
                 {
                     (double key, double val) = quantile;
-                    PercentilePayload percentilePayload = new(payload.CounterMetadata, payload.DisplayName, AppendQuantile(payload.ValueTags, $"Percentile={key * 100}"), val, payload.Timestamp);
+                    PercentilePayload percentilePayload = new(payload.CounterMetadata, payload.DisplayName, payload.DisplayUnits, AppendQuantile(payload.ValueTags, $"Percentile={key * 100}"), val, payload.Timestamp);
                     _renderer.CounterPayloadReceived(percentilePayload, _pauseCmdSet);
                 }
 
