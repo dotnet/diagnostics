@@ -630,7 +630,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 string defaultOptions = _commandAttribute.DefaultOptions;
                 if (defaultOptions != null)
                 {
-                    defaultParseResult = parser.Parse(Name + " " + defaultOptions);
+                    List<string> commandLine = new() { Name };
+                    commandLine.AddRange(CommandLineParser.SplitCommandLine(defaultOptions));
+                    defaultParseResult = parser.Parse(commandLine);
                 }
 
                 // Now initialize the option and service properties from the default and command line options
