@@ -454,8 +454,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //string unit = (string)obj.PayloadValue(4);
             string tags = (string)obj.PayloadValue(5);
             string quantilesText = (string)obj.PayloadValue(6);
-            int count = (int)obj.PayloadValue(7);
-            double sum = (double)obj.PayloadValue(8);
+
+            int count;
+            double sum;
+            if (obj.Version >= 1)
+            {
+                count = (int)obj.PayloadValue(7);
+                sum = (double)obj.PayloadValue(8);
+            }
+            else
+            {
+                count = 0;
+                sum = 0;
+            }
+
             int? id = null;
             if (obj.Version >= 2)
             {
