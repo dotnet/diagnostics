@@ -3,8 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.CommandLine;
-using System.CommandLine.IO;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -198,7 +196,7 @@ namespace DotnetCounters.UnitTests
         {
             try
             {
-                CounterMonitor monitor = new CounterMonitor();
+                CounterMonitor monitor = new CounterMonitor(TextWriter.Null, TextWriter.Null);
 
                 using CancellationTokenSource source = new CancellationTokenSource(DefaultTimeout);
 
@@ -210,7 +208,6 @@ namespace DotnetCounters.UnitTests
                             ct: ct,
                             counter_list: counterList,
                             counters: null,
-                            console: new TestConsole(),
                             processId: testRunner.Pid,
                             refreshInterval: 1,
                             format: exportFormat,
@@ -302,35 +299,6 @@ namespace DotnetCounters.UnitTests
             public double Value { get; set; }
             public string Tags { get; set; }
             public CounterTypes CounterType { get; set; }
-        }
-
-        private sealed class TestConsole : IConsole
-        {
-            private readonly TestStandardStreamWriter _outWriter;
-            private readonly TestStandardStreamWriter _errorWriter;
-
-            private sealed class TestStandardStreamWriter : IStandardStreamWriter
-            {
-                private StringWriter _writer = new();
-                public void Write(string value) => _writer.Write(value);
-                public void WriteLine(string value) => _writer.WriteLine(value);
-            }
-
-            public TestConsole()
-            {
-                _outWriter = new TestStandardStreamWriter();
-                _errorWriter = new TestStandardStreamWriter();
-            }
-
-            public IStandardStreamWriter Out => _outWriter;
-
-            public bool IsOutputRedirected => true;
-
-            public IStandardStreamWriter Error => _errorWriter;
-
-            public bool IsErrorRedirected => true;
-
-            public bool IsInputRedirected => false;
         }
     }
 }
