@@ -76,7 +76,7 @@ namespace Microsoft.Internal.Common.Utils
         }
 
         /// <summary>
-        /// A helper method for validating --process-id, --name, --diagnostic-port, --dsrouter options for collect commands.
+        /// A helper method for validating --process-id, --name, --diagnostic-port, --dsrouter options for collect commands and resolving the process ID.
         /// Only one of these options can be specified, so it checks for duplicate options specified and if there is
         /// such duplication, it prints the appropriate error message.
         /// </summary>
@@ -86,7 +86,7 @@ namespace Microsoft.Internal.Common.Utils
         /// <param name="dsrouter">dsrouter</param>
         /// <param name="resolvedProcessId">resolvedProcessId</param>
         /// <returns></returns>
-        public static bool ValidateArgumentsForAttach(int processId, string name, string port, string dsrouter, out int resolvedProcessId)
+        public static bool ResolveProcessForAttach(int processId, string name, string port, string dsrouter, out int resolvedProcessId)
         {
             resolvedProcessId = -1;
             if (processId == 0 && string.IsNullOrEmpty(name) && string.IsNullOrEmpty(port) && string.IsNullOrEmpty(dsrouter))

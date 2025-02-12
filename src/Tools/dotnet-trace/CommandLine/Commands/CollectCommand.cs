@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
                         return (int)ReturnCode.ArgumentError;
                     }
-                    if (CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
+                    if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
                     {
                         processId = resolvedProcessId;
                     }

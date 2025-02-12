@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <returns></returns>
         private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter)
         {
-            if (!CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
+            if (!CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
             {
                 return -1;
             }

@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
         private static Task<int> ReportFromProcess(int processId, string diagnosticPort, string dsrouter, CancellationToken ct)
         {
-            if (!CommandUtils.ValidateArgumentsForAttach(processId, string.Empty, diagnosticPort, dsrouter, out int resolvedProcessId))
+            if (!CommandUtils.ResolveProcessForAttach(processId, string.Empty, diagnosticPort, dsrouter, out int resolvedProcessId))
             {
                 return Task.FromResult(-1);
             }
