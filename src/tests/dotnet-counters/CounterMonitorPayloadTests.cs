@@ -217,7 +217,8 @@ namespace DotnetCounters.UnitTests
                             resumeRuntime: false,
                             maxHistograms: 10,
                             maxTimeSeries: 1000,
-                            duration: TimeSpan.FromSeconds(10)));
+                            duration: TimeSpan.FromSeconds(10),
+                            dsrouter: null));
                 }, testRunner, source.Token);
 
                 return CreateMetricComponents();
