@@ -42,9 +42,9 @@ namespace Microsoft.Internal.Common.Utils
         // <summary>
         // Returns processId that matches the given dsrouter.
         // </summary>
-        // <param name="dsrouter">dsrouter</param>
+        // <param name="dsrouter">dsroutercommand</param>
         // <returns>processId</returns>
-        public static int LaunchDSRouterProcess(string command)
+        public static int LaunchDSRouterProcess(string dsroutercommand)
         {
             ConsoleColor currentColor = Console.ForegroundColor;
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -52,7 +52,7 @@ namespace Microsoft.Internal.Common.Utils
             Console.ForegroundColor = currentColor;
             Console.WriteLine("For finer control over the dotnet-dsrouter options, run it separately and connect to it using -p" + Environment.NewLine);
 
-            return DsRouterProcessLauncher.Launcher.Start(command, default);
+            return DsRouterProcessLauncher.Launcher.Start(dsroutercommand, default);
         }
 
 

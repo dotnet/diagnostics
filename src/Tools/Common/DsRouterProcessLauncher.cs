@@ -36,7 +36,7 @@ namespace Microsoft.Internal.Common.Utils
 
         private Process ChildProc => _childProc;
 
-        public int Start(string routername, CancellationToken ct)
+        public int Start(string dsroutercommand, CancellationToken ct)
         {
             string toolsRoot = System.IO.Path.GetDirectoryName(System.Environment.ProcessPath);
             string dotnetDsrouterTool = "dotnet-dsrouter";
@@ -49,7 +49,7 @@ namespace Microsoft.Internal.Common.Utils
             _childProc = new Process();
 
             _childProc.StartInfo.FileName = dotnetDsrouterTool;
-            _childProc.StartInfo.Arguments = routername;
+            _childProc.StartInfo.Arguments = dsroutercommand;
             _childProc.StartInfo.UseShellExecute = false;
             _childProc.StartInfo.RedirectStandardOutput = true;
             _childProc.StartInfo.RedirectStandardError = true;
