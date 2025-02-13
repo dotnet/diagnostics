@@ -10,6 +10,7 @@
     <NeedsPublishing>true</NeedsPublishing>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <SOSPackagePathPrefix>tools/$(TargetFramework)/any</SOSPackagePathPrefix>
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
