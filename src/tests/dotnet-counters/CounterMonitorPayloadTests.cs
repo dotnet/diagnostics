@@ -239,7 +239,15 @@ namespace DotnetCounters.UnitTests
             HashSet<string> expectedProviders = new() { Constants.TestMeterName };
             Assert.Equal(expectedProviders, metricComponents.Select(c => c.ProviderName).ToHashSet());
 
-            HashSet<string> expectedCounterNames = new() { Constants.TestHistogramName, Constants.TestCounterName };
+            HashSet<string> expectedCounterNames = new()
+            {
+                Constants.TestHistogramName,
+                Constants.TestCounterName,
+                Constants.TestUpDownCounterName,
+                Constants.TestObservableCounterName,
+                Constants.TestObservableUpDownCounterName,
+                Constants.TestObservableGaugeName
+            };
             Assert.Equal(expectedCounterNames, metricComponents.Select(c => c.CounterName).ToHashSet());
 
             Assert.Equal(ExpectedCounterTypes, metricComponents.Select(c => c.CounterType).ToHashSet());

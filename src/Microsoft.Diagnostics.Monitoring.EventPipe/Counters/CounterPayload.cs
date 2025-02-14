@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -10,10 +12,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
     internal abstract class CounterPayload : ICounterPayload
     {
-        protected CounterPayload(DateTime timestamp,
+        private readonly string _DisplayUnits;
+
+        protected CounterPayload(
+            DateTime timestamp,
             CounterMetadata counterMetadata,
             string displayName,
-            string unit,
+            string displayUnits,
             double value,
             CounterType counterType,
             float interval,
@@ -21,9 +26,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string valueTags,
             EventType eventType)
         {
+            Debug.Assert(counterMetadata != null);
+
             Timestamp = timestamp;
             DisplayName = displayName;
-            Unit = unit;
+            _DisplayUnits = displayUnits;
             Value = value;
             CounterType = counterType;
             CounterMetadata = counterMetadata;
@@ -35,7 +42,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         public string DisplayName { get; protected set; }
 
-        public string Unit { get; }
+        [Obsolete]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public string Unit => CounterMetadata.CounterUnit;
+
+        public string DisplayUnits => _DisplayUnits ?? CounterMetadata.CounterUnit;
 
         public double Value { get; }
 
@@ -62,12 +73,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string providerName,
             string name,
             string displayName,
-            string unit,
+            string displayUnits,
             double value,
             CounterType counterType,
             float interval,
             int series,
-            string valueTags) : base(timestamp, new(providerName, name, null, null, null), displayName, unit, value, counterType, interval, series, valueTags, EventType.Gauge)
+            string valueTags) : base(timestamp, new(providerName, name, displayUnits), displayName, displayUnits, value, counterType, interval, series, valueTags, EventType.Gauge)
         {
         }
     }
@@ -77,16 +88,23 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         protected MeterPayload(DateTime timestamp,
                     CounterMetadata counterMetadata,
                     string displayName,
-                    string unit,
+                    string displayUnits,
                     double value,
                     CounterType counterType,
                     string valueTags,
                     EventType eventType)
-            : base(timestamp, counterMetadata, displayName, unit, value, counterType, 0.0f, 0, valueTags, eventType)
+            : base(timestamp, counterMetadata, displayName, displayUnits, value, counterType, 0.0f, 0, valueTags, eventType)
         {
         }
 
-        public override bool IsMeter => true;
+        public sealed override bool IsMeter => true;
+
+        public virtual bool SupportsDelta { get; }
+    }
+
+    internal interface IRatePayload
+    {
+        double Rate { get; }
     }
 
     internal sealed class GaugePayload : MeterPayload
@@ -96,19 +114,37 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? counterMetadata.CounterName : displayName;
-            DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
+            string unitsName = !string.IsNullOrEmpty(displayUnits)
+                ? displayUnits
+                : !string.IsNullOrEmpty(counterMetadata.CounterUnit)
+                    ? counterMetadata.CounterUnit
+                    : null;
+            DisplayName = !string.IsNullOrEmpty(unitsName) ? $"{counterName} ({unitsName})" : counterName;
         }
     }
 
-    internal class UpDownCounterPayload : MeterPayload
+    internal sealed class UpDownCounterPayload : MeterPayload, IRatePayload
     {
-        public UpDownCounterPayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, double value, DateTime timestamp) :
+        public UpDownCounterPayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, double value, DateTime timestamp)
+            : this(counterMetadata, displayName, displayUnits, valueTags, rate: 0d, value, timestamp)
+        {
+        }
+
+        public UpDownCounterPayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, double rate, double value, DateTime timestamp) :
             base(timestamp, counterMetadata, displayName, displayUnits, value, CounterType.Metric, valueTags, EventType.UpDownCounter)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? counterMetadata.CounterName : displayName;
-            DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
+            string unitsName = !string.IsNullOrEmpty(displayUnits)
+                ? displayUnits
+                : !string.IsNullOrEmpty(counterMetadata.CounterUnit)
+                    ? counterMetadata.CounterUnit
+                    : null;
+            DisplayName = !string.IsNullOrEmpty(unitsName) ? $"{counterName} ({unitsName})" : counterName;
+            Rate = rate;
         }
+
+        public double Rate { get; }
     }
 
     internal sealed class BeginInstrumentReportingPayload : MeterPayload
@@ -131,37 +167,50 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     /// This gets generated for Counter instruments from Meters. This is used for pre-.NET 8 versions of MetricsEventSource that only reported rate and not absolute value,
     /// or for any tools that haven't opted into using RateAndValuePayload in the CounterConfiguration settings.
     /// </summary>
-    internal sealed class RatePayload : MeterPayload
+    internal sealed class RatePayload : MeterPayload, IRatePayload
     {
-
         public RatePayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, double rate, double intervalSecs, DateTime timestamp) :
             base(timestamp, counterMetadata, displayName, displayUnits, rate, CounterType.Rate, valueTags, EventType.Rate)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? counterMetadata.CounterName : displayName;
-            string unitsName = string.IsNullOrEmpty(displayUnits) ? "Count" : displayUnits;
+            string unitsName = !string.IsNullOrEmpty(displayUnits)
+                ? displayUnits
+                : !string.IsNullOrEmpty(counterMetadata.CounterUnit)
+                    ? counterMetadata.CounterUnit
+                    : "Count";
             string intervalName = intervalSecs.ToString() + " sec";
             DisplayName = $"{counterName} ({unitsName} / {intervalName})";
         }
+
+        public double Rate => Value;
+
+        public override bool SupportsDelta => true;
     }
 
     /// <summary>
     /// Starting in .NET 8, MetricsEventSource reports counters with both absolute value and rate. If enabled in the CounterConfiguration and the new value field is present
     /// then this payload will be created rather than the older RatePayload. Unlike RatePayload, this one treats the absolute value as the primary statistic.
     /// </summary>
-    internal sealed class CounterRateAndValuePayload : MeterPayload
+    internal sealed class CounterRateAndValuePayload : MeterPayload, IRatePayload
     {
         public CounterRateAndValuePayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, double rate, double value, DateTime timestamp) :
             base(timestamp, counterMetadata, displayName, displayUnits, value, CounterType.Metric, valueTags, EventType.Rate)
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? counterMetadata.CounterName : displayName;
-            string unitsName = string.IsNullOrEmpty(displayUnits) ? "Count" : displayUnits;
+            string unitsName = !string.IsNullOrEmpty(displayUnits)
+                ? displayUnits
+                : !string.IsNullOrEmpty(counterMetadata.CounterUnit)
+                    ? counterMetadata.CounterUnit
+                    : "Count";
             DisplayName = $"{counterName} ({unitsName})";
             Rate = rate;
         }
 
-        public double Rate { get; private set; }
+        public double Rate { get; }
+
+        public override bool SupportsDelta => true;
     }
 
     internal record struct Quantile(double Percentage, double Value);
@@ -173,7 +222,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             // In case these properties are not provided, set them to appropriate values.
             string counterName = string.IsNullOrEmpty(displayName) ? counterMetadata.CounterName : displayName;
-            DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
+            string unitsName = !string.IsNullOrEmpty(displayUnits)
+                ? displayUnits
+                : !string.IsNullOrEmpty(counterMetadata.CounterUnit)
+                    ? counterMetadata.CounterUnit
+                    : null;
+            DisplayName = !string.IsNullOrEmpty(unitsName) ? $"{counterName} ({unitsName})" : counterName;
         }
     }
 
@@ -184,13 +238,24 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     // like dotnet-counters, while still keeping the quantiles together as a unit.
     internal sealed class AggregatePercentilePayload : MeterPayload
     {
-        public AggregatePercentilePayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, IEnumerable<Quantile> quantiles, DateTime timestamp) :
+        public AggregatePercentilePayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, IEnumerable<Quantile> quantiles, DateTime timestamp)
+            : this(counterMetadata, displayName, displayUnits, valueTags, count: 0, sum: 0, quantiles, timestamp)
+        {
+        }
+
+        public AggregatePercentilePayload(CounterMetadata counterMetadata, string displayName, string displayUnits, string valueTags, int count, double sum, IEnumerable<Quantile> quantiles, DateTime timestamp) :
             base(timestamp, counterMetadata, displayName, displayUnits, 0.0, CounterType.Metric, valueTags, EventType.Histogram)
         {
+            Count = count;
+            Sum = sum;
             //string counterName = string.IsNullOrEmpty(displayName) ? name : displayName;
             //DisplayName = !string.IsNullOrEmpty(displayUnits) ? $"{counterName} ({displayUnits})" : counterName;
             Quantiles = quantiles.ToArray();
         }
+
+        public int Count { get; }
+
+        public double Sum { get; }
 
         public Quantile[] Quantiles { get; }
     }

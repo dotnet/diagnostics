@@ -28,7 +28,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload(new CounterMetadata("myProvider", "incrementingCounterOne", null, null, null), "Incrementing Counter One", string.Empty, string.Empty, 1, 1, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload(new CounterMetadata("myProvider", "incrementingCounterOne", counterUnit: string.Empty), "Incrementing Counter One", string.Empty, string.Empty, 1, 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -59,7 +59,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterOne", null, null, null), "Counter One", string.Empty, string.Empty, 1, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterOne", counterUnit: string.Empty), "Counter One", string.Empty, string.Empty, 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -86,7 +86,6 @@ namespace DotnetCounters.UnitTests
         {
             string meterTags = "MeterTagKey=MeterTagValue,MeterTagKey2=MeterTagValue2";
             string instrumentTags = "InstrumentTagKey=InstrumentTagValue,InstrumentTagKey2=InstrumentTagValue2";
-            string scopeHash = "123";
 
             string fileName = "CounterTest.json";
             JSONExporter exporter = new(fileName, "myProcess.exe");
@@ -94,7 +93,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterOne", meterTags, instrumentTags, scopeHash), "Counter One", string.Empty, "f=abc,two=9", 1, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterOne", meterTags, instrumentTags), "Counter One", string.Empty, "f=abc,two=9", 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -125,15 +124,14 @@ namespace DotnetCounters.UnitTests
             string meterTags = "MeterTagKey=MeterTagValue,MeterTagKey2=MeterTagValue2";
             string instrumentTags = "InstrumentTagKey=InstrumentTagValue,InstrumentTagKey2=InstrumentTagValue2";
             string otherInstrumentTags = "OtherInstrumentTagKey=OtherInstrumentTagValue,OtherInstrumentTagKey2=OtherInstrumentTagValue2";
-            string scopeHash = "123";
 
             string fileName = "CounterTest.json";
             JSONExporter exporter = new(fileName, "myProcess.exe");
             exporter.Initialize();
             DateTime start = DateTime.Now;
 
-            exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterOne", meterTags, instrumentTags, scopeHash), "Counter One", string.Empty, "f=abc,two=9", 1, start + TimeSpan.FromSeconds(1)), false);
-            exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterTwo", meterTags, otherInstrumentTags, scopeHash), "Counter Two", string.Empty, "g=bcd,three=10", 1, start + TimeSpan.FromSeconds(2)), false);
+            exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterOne", meterTags, instrumentTags), "Counter One", string.Empty, "f=abc,two=9", 1, start + TimeSpan.FromSeconds(1)), false);
+            exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterTwo", meterTags, otherInstrumentTags), "Counter Two", string.Empty, "g=bcd,three=10", 1, start + TimeSpan.FromSeconds(2)), false);
 
             exporter.Stop();
 
@@ -175,7 +173,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 20; i++)
             {
-                exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "heapSize", null, null, null), "Heap Size", "MB", string.Empty, i, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "heapSize", "MB"), "Heap Size", string.Empty, string.Empty, i, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -209,7 +207,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 20; i++)
             {
-                exporter.CounterPayloadReceived(new RatePayload(new CounterMetadata("myProvider", "heapSize", null, null, null), "Heap Size", "MB", string.Empty, 0, 60, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new RatePayload(new CounterMetadata("myProvider", "heapSize", "MB"), "Heap Size", string.Empty, string.Empty, 0, 60, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -233,7 +231,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterOne", null, null, null), "Counter One", "", "f=abc,two=9", 1, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterOne", counterUnit: ""), "Counter One", string.Empty, "f=abc,two=9", 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -265,7 +263,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider\\", "counterOne\f", null, null, null), "CounterOne\f", "", "f\b\"\n=abc\r\\,\ttwo=9", 1, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider\\", "counterOne\f", counterUnit: ""), "CounterOne\f", string.Empty, "f\b\"\n=abc\r\\,\ttwo=9", 1, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 
@@ -297,7 +295,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 10; i++)
             {
-                exporter.CounterPayloadReceived(new PercentilePayload(new CounterMetadata("myProvider", "counterOne", null, null, null), "Counter One", "", "f=abc,Percentile=50", 1, start + TimeSpan.FromSeconds(1)), false);
+                exporter.CounterPayloadReceived(new PercentilePayload(new CounterMetadata("myProvider", "counterOne", counterUnit: ""), "Counter One", string.Empty, "f=abc,Percentile=50", 1, start + TimeSpan.FromSeconds(1)), false);
             }
             exporter.Stop();
 
@@ -333,7 +331,7 @@ namespace DotnetCounters.UnitTests
             DateTime start = DateTime.Now;
             for (int i = 0; i < 20; i++)
             {
-                exporter.CounterPayloadReceived(new CounterRateAndValuePayload(new CounterMetadata("myProvider", "heapSize", null, null, null), "Heap Size", "MB", string.Empty, rate: 0, i, start + TimeSpan.FromSeconds(i)), false);
+                exporter.CounterPayloadReceived(new CounterRateAndValuePayload(new CounterMetadata("myProvider", "heapSize", "MB"), "Heap Size", string.Empty, string.Empty, rate: 0, i, start + TimeSpan.FromSeconds(i)), false);
             }
             exporter.Stop();
 

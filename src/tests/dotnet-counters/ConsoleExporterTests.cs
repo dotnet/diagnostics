@@ -335,7 +335,7 @@ namespace DotnetCounters.UnitTests
             exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "color=blue", 87), false);
             exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter2", "{widget}", "size=1", 14), false);
             exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter2", "{widget}", "temp=hot", 160), false);
-            
+
             console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
                                      "    Status: Running",
                                      "",
@@ -457,12 +457,12 @@ namespace DotnetCounters.UnitTests
 
         private static CounterPayload CreateMeterCounterPreNet8(string meterName, string instrumentName, string unit, string tags, double value)
         {
-            return new RatePayload(new CounterMetadata(meterName, instrumentName, null, null, null), instrumentName, unit, tags, value, 1, DateTime.MinValue);
+            return new RatePayload(new CounterMetadata(meterName, instrumentName, unit), displayName: null, displayUnits: null, tags, value, 1, DateTime.MinValue);
         }
 
         private static CounterPayload CreateMeterCounterPostNet8(string meterName, string instrumentName, string unit, string tags, double value)
         {
-            return new CounterRateAndValuePayload(new CounterMetadata(meterName, instrumentName, null, null, null), instrumentName, unit, tags, rate:double.NaN, value, DateTime.MinValue);
+            return new CounterRateAndValuePayload(new CounterMetadata(meterName, instrumentName, unit), displayName: null, displayUnits: null, tags, rate: double.NaN, value, DateTime.MinValue);
         }
     }
 }
