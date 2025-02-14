@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -13,7 +14,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
     {
         private readonly string _DisplayUnits;
 
-        protected CounterPayload(DateTime timestamp,
+        protected CounterPayload(
+            DateTime timestamp,
             CounterMetadata counterMetadata,
             string displayName,
             string displayUnits,
@@ -24,6 +26,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string valueTags,
             EventType eventType)
         {
+            Debug.Assert(counterMetadata != null);
+
             Timestamp = timestamp;
             DisplayName = displayName;
             _DisplayUnits = displayUnits;
