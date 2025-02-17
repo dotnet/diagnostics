@@ -16,13 +16,13 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx64100Version>10.0.0-alpha.1.25066.14</VSRedistCommonNetCoreSharedFrameworkx64100Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>10.0.0-alpha.1.25066.14</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx64100Version>10.0.0-preview.2.25113.8</VSRedistCommonNetCoreSharedFrameworkx64100Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>10.0.0-preview.2.25113.8</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>10.0.0-alpha.2.25060.16</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>10.0.0-alpha.2.25060.16</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>10.0.0-preview.2.25114.1</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>10.0.0-preview.2.25114.1</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftNETSdkVersion>10.0.100-alpha.1.25062.16</MicrosoftNETSdkVersion>
+    <MicrosoftNETSdkVersion>10.0.100-preview.2.25108.4</MicrosoftNETSdkVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -37,7 +37,7 @@
     <SystemCollectionsImmutableVersion>8.0.0</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>6.0.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>4.0.0-beta.25063.1</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeVersion>4.0.0-beta.25103.1</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.16</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
@@ -45,22 +45,22 @@
     <MicrosoftExtensionsLoggingConsoleVersion>6.0.0</MicrosoftExtensionsLoggingConsoleVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
-    <SystemCommandLineVersion>2.0.0-beta1.20468.1</SystemCommandLineVersion>
-    <SystemCommandLineRenderingVersion>2.0.0-beta1.20074.1</SystemCommandLineRenderingVersion>
+    <SystemCommandLineVersion>2.0.0-beta4.25072.1</SystemCommandLineVersion>
     <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
     <SystemBuffersVersion>4.5.1</SystemBuffersVersion>
+    <SystemDiagnosticsDiagnosticSourceVersion>8.0.1</SystemDiagnosticsDiagnosticSourceVersion>
     <SystemMemoryVersion>4.5.5</SystemMemoryVersion>
     <SystemRuntimeLoaderVersion>4.3.0</SystemRuntimeLoaderVersion>
     <SystemThreadingTasksExtensionsVersion>4.5.4</SystemThreadingTasksExtensionsVersion>
     <SystemTextEncodingsWebVersion>8.0.0</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetCodeAnalysisVersion>10.0.0-beta.25061.1</MicrosoftDotNetCodeAnalysisVersion>
-    <StyleCopAnalyzersVersion>1.2.0-beta.406</StyleCopAnalyzersVersion>
+    <MicrosoftDotNetCodeAnalysisVersion>10.0.0-beta.25106.4</MicrosoftDotNetCodeAnalysisVersion>
+    <StyleCopAnalyzersVersion>1.2.0-beta.556</StyleCopAnalyzersVersion>
     <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.26100.1</cdbsosversion>
     <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
-    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>10.0.606501</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
+    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>10.0.611203</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
     <!-- Roslyn and analyzers -->
     <!-- dotnet/roslyn dependencies -->
     <!--

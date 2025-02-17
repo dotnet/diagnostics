@@ -44,11 +44,6 @@ namespace Microsoft.Diagnostics.DebugServices
         uint? ProcessId { get; }
 
         /// <summary>
-        /// Returns the unique temporary directory for this instance of SOS
-        /// </summary>
-        string GetTempDirectory();
-
-        /// <summary>
         /// The per target services.
         /// </summary>
         IServiceProvider Services { get; }

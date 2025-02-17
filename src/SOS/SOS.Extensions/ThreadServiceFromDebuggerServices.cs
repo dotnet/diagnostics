@@ -24,11 +24,6 @@ namespace SOS.Extensions
             _debuggerServices = debuggerServices;
         }
 
-        protected override bool GetThreadContext(uint threadId, uint contextFlags, uint contextSize, byte[] context)
-        {
-            return _debuggerServices.GetThreadContext(threadId, contextFlags, contextSize, context) == HResult.S_OK;
-        }
-
         protected override IEnumerable<IThread> GetThreadsInner()
         {
             HResult hr = _debuggerServices.GetNumberThreads(out uint number);
@@ -53,6 +48,11 @@ namespace SOS.Extensions
             {
                 Trace.TraceError("GetNumberThreads() FAILED {0:X8}", hr);
             }
+        }
+
+        protected override bool GetThreadContext(uint threadId, uint contextFlags, byte[] context)
+        {
+            return _debuggerServices.GetThreadContext(threadId, contextFlags, (uint)context.Length, context).IsOK;
         }
 
         protected override ulong GetThreadTeb(uint threadId)

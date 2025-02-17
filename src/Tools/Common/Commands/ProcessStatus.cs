@@ -4,30 +4,28 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Binding;
-using System.CommandLine.IO;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Internal.Common.Utils;
 using Microsoft.Internal.Common;
+using Microsoft.Internal.Common.Utils;
 using Process = System.Diagnostics.Process;
 
 namespace Microsoft.Internal.Common.Commands
 {
     public class ProcessStatusCommandHandler
     {
-        public static Command ProcessStatusCommand(string description) =>
-            new(name: "ps", description)
-            {
-                HandlerDescriptor.FromDelegate((ProcessStatusDelegate)ProcessStatus).GetCommandHandler()
-            };
-
-        private delegate void ProcessStatusDelegate(IConsole console);
+        public static Command ProcessStatusCommand(string description)
+        {
+            Command statusCommand = new(name: "ps", description);
+            statusCommand.SetAction((parseResult, ct) => Task.FromResult(ProcessStatus(parseResult.Configuration.Output, parseResult.Configuration.Error)));
+            return statusCommand;
+        }
 
         private static void MakeFixedWidth(string text, int width, StringBuilder sb, bool leftPad = false, bool truncateFront = false)
         {
@@ -76,7 +74,7 @@ namespace Microsoft.Internal.Common.Commands
         /// <summary>
         /// Print the current list of available .NET core processes for diagnosis, their statuses and the command line arguments that are passed to them.
         /// </summary>
-        public static void ProcessStatus(IConsole console)
+        public static int ProcessStatus(TextWriter stdOut, TextWriter stdError)
         {
             int GetColumnWidth(IEnumerable<int> fieldWidths)
             {
@@ -170,11 +168,13 @@ namespace Microsoft.Internal.Common.Commands
                     }
                 }
                 FormatTableRows(printInfo, sb);
-                console.Out.WriteLine(sb.ToString());
+                stdOut.WriteLine(sb.ToString());
+                return 0;
             }
             catch (Exception ex)
             {
-                console.Out.WriteLine(ex.ToString());
+                stdError.WriteLine(ex.ToString());
+                return 1;
             }
         }
 

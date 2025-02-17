@@ -48,17 +48,6 @@ namespace Microsoft.Diagnostics.DebugServices
         bool TryGetRegisterInfo(int registerIndex, out RegisterInfo info);
 
         /// <summary>
-        /// Returns the register value for the thread context and register index. This function
-        /// can only return register values that are 64 bits or less and currently the clrmd data
-        /// targets don't return any floating point or larger registers.
-        /// </summary>
-        /// <param name="context">thread context</param>
-        /// <param name="registerIndex">register index</param>
-        /// <param name="value">value returned</param>
-        /// <returns>true if value found</returns>
-        bool TryGetRegisterValue(ReadOnlySpan<byte> context, int registerIndex, out ulong value);
-
-        /// <summary>
         /// Enumerate all the native threads
         /// </summary>
         /// <returns>Get info for all the threads</returns>

@@ -27,6 +27,7 @@ namespace SOS.Hosting
             builder.AddMethod(new GetHostTypeDelegate(GetHostType));
             builder.AddMethod(new GetServiceDelegate(ServiceWrapper.GetService));
             builder.AddMethod(new GetCurrentTargetDelegate(GetCurrentTarget));
+            builder.AddMethod(new GetTempDirectoryDelegate(GetTempDirectory));
             IHost = builder.Complete();
 
             AddRef();
@@ -65,6 +66,12 @@ namespace SOS.Hosting
             return HResult.S_OK;
         }
 
+        private string GetTempDirectory(
+            IntPtr self)
+        {
+            return _host.GetTempDirectory();
+        }
+
         #endregion
 
         #region IHost delegates
@@ -83,6 +90,11 @@ namespace SOS.Hosting
         private delegate int GetCurrentTargetDelegate(
             [In] IntPtr self,
             [Out] out IntPtr target);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        [return: MarshalAs(UnmanagedType.LPStr)]
+        private delegate string GetTempDirectoryDelegate(
+            [In] IntPtr self);
 
         #endregion
     }

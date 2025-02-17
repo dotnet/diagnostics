@@ -504,6 +504,8 @@ namespace SOS.Hosting
 
         public int AddTarget(ITarget target) => throw new NotImplementedException();
 
+        public string GetTempDirectory() => throw new NotImplementedException();
+
         #endregion
 
         #region ICLRDebuggingLibraryProvider* delegates

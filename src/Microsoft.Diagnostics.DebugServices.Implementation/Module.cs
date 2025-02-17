@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.FileFormats;
@@ -73,7 +74,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public virtual uint? IndexTimeStamp { get; protected set; }
 
-        public bool IsPEImage
+        public virtual bool IsPEImage
         {
             get
             {
@@ -183,6 +184,31 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public abstract string GetVersionString();
 
         public abstract string LoadSymbols();
+
+        /// <summary>
+        /// Downloads and returns the metadata for the assembly.
+        /// </summary>
+        /// <returns>metadata bytes</returns>
+        public ImmutableArray<byte> GetMetadata()
+        {
+            try
+            {
+                PEReader reader = Services.GetService<PEReader>();
+                if (reader is not null && reader.HasMetadata)
+                {
+                    PEMemoryBlock metadataInfo = reader.GetMetadata();
+                    return metadataInfo.GetContent();
+                }
+            }
+            catch (Exception ex) when
+                (ex is InvalidOperationException ||
+                 ex is BadImageFormatException ||
+                 ex is IOException)
+            {
+                Trace.TraceError($"GetMetaData: {ex.Message}");
+            }
+            return ImmutableArray<byte>.Empty;
+        }
 
         #endregion
 
