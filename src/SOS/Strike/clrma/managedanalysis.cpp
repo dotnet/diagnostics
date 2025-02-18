@@ -260,30 +260,31 @@ ClrmaManagedAnalysis::AssociateClient(
                     TraceError("AssociateClient GetRuntime FAILED %08x\n", hr);
                     return hr;
                 }
-                ReleaseHolder<IXCLRDataProcess> clrData;
-                if (FAILED(hr = runtime->GetClrDataProcess((IXCLRDataProcess**)&clrData)))
+                if (FAILED(hr = runtime->GetClrDataProcess(&m_clrData)))
                 {
-                    clrData = GetClrDataFromDbgEng();
-                    if (clrData == nullptr)
+                    m_clrData = GetClrDataFromDbgEng();
+                    if (m_clrData == nullptr)
                     {
                         TraceError("AssociateClient GetClrDataProcess FAILED %08x\n", hr);
                         return hr;
                     }
                 }
-                ReleaseHolder<ISOSDacInterface> sosDac;
-                if (FAILED(hr = clrData->QueryInterface(__uuidof(ISOSDacInterface), (void**)&sosDac)))
+                else
+                {
+                    m_clrData->AddRef();
+                    m_clrData->Flush();
+                }
+                if (FAILED(hr = m_clrData->QueryInterface(__uuidof(ISOSDacInterface), (void**)&m_sosDac)))
                 {
                     TraceError("AssociateClient QueryInterface ISOSDacInterface FAILED %08x\n", hr);
                     return hr;
                 }
-                if (FAILED(hr = sosDac->GetUsefulGlobals(&m_usefulGlobals)))
-                {
-                    TraceError("AssociateClient GetUsefulGlobals FAILED %08x\n", hr);
-                    return hr;
-                }
-                clrData->AddRef();
-                m_clrData = clrData.Detach();
-                m_sosDac = sosDac.Detach();
+                // Ignore error getting the global objects method tables like ResetGlobals does. This can only
+                // happen because the runtime globals containing them are not in the dump and we don't want to
+                // fail this CLRMA API causing !analyze to fallback to the unstructured provider. We only
+                // use m_usefulGlobals.ExceptionMethodTable and it will only slightly degrade the exception
+                // stack unwinding experience.
+                m_sosDac->GetUsefulGlobals(&m_usefulGlobals);
                 return S_OK;
             }
         }
