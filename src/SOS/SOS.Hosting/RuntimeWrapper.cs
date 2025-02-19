@@ -471,14 +471,34 @@ namespace SOS.Hosting
                     Trace.TraceError($"Could not find matching DAC {dacFilePath ?? ""} for this runtime: {_runtime.RuntimeModule.FileName}");
                     return IntPtr.Zero;
                 }
+                ISettingsService settingsService = _services.GetService<ISettingsService>();
+                IDisposable fileLock = null;
                 try
                 {
-                    _dacHandle = DataTarget.PlatformFunctions.LoadLibrary(dacFilePath);
+                    if (settingsService is null || settingsService.DacSignatureVerificationEnabled)
+                    {
+                        Trace.TraceInformation($"Verifying DAC signing and cert {dacFilePath}");
+
+                        // Check if the DAC cert is valid before loading
+                        if (!AuthenticodeUtil.VerifyDacDll(dacFilePath, out fileLock))
+                        {
+                            return IntPtr.Zero;
+                        }
+                    }
+                    try
+                    {
+                        _dacHandle = DataTarget.PlatformFunctions.LoadLibrary(dacFilePath);
+                    }
+                    catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
+                    {
+                        Trace.TraceError($"LoadLibrary({dacFilePath}) FAILED {ex}");
+                        return IntPtr.Zero;
+                    }
                 }
-                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
+                finally
                 {
-                    Trace.TraceError($"LoadLibrary({dacFilePath}) FAILED {ex}");
-                    return IntPtr.Zero;
+                    // Keep DAC file locked until it loaded
+                    fileLock?.Dispose();
                 }
                 Debug.Assert(_dacHandle != IntPtr.Zero);
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

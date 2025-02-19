@@ -22,7 +22,7 @@ namespace SOS.Extensions
     /// <summary>
     /// The extension services Wrapper the native hosts are given
     /// </summary>
-    public sealed unsafe class HostServices : COMCallableIUnknown, SOSLibrary.ISOSModule
+    public sealed unsafe class HostServices : COMCallableIUnknown, ISettingsService, SOSLibrary.ISOSModule
     {
         private static readonly Guid IID_IHostServices = new("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
 
@@ -227,6 +227,7 @@ namespace SOS.Extensions
                 ServiceContainer serviceContainer = _host.CreateServiceContainer();
 
                 // Add all the global services to the global service container
+                serviceContainer.AddService<ISettingsService>(this);
                 serviceContainer.AddService<SOSLibrary.ISOSModule>(this);
                 serviceContainer.AddService<SOSHost.INativeDebugger>(DebuggerServices);
                 serviceContainer.AddService<ICommandService>(_commandService);
@@ -408,6 +409,28 @@ namespace SOS.Extensions
             catch (Exception ex)
             {
                 Trace.TraceError(ex.ToString());
+            }
+        }
+
+        #endregion
+
+        #region ISettingsService
+
+        public bool DacSignatureVerificationEnabled
+        {
+            get
+            {
+                HResult hr = DebuggerServices.GetDacSignatureVerificationSettings(out bool value);
+                if (hr.IsOK)
+                {
+                    return value;
+                }
+                // Return true (verify DAC signature) if any errors. Secure by default.
+                return true;
+            }
+            set
+            {
+                throw new NotSupportedException("Changing the DacSignatureVerificationEnabled setting is not supported.");
             }
         }
 
