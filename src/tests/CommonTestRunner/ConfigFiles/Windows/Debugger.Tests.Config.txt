@@ -21,27 +21,26 @@
       -->
     <Option Condition="'$(RuntimeVersionLatest)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
     </Option>
     <Option Condition="'$(RuntimeVersionServicing1)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
     </Option>
     <Option Condition="'$(RuntimeVersionServicing2)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
     </Option>
     <Option Condition="'$(RuntimeVersionServicing3)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
     </Option>
   </Options>
-
-  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '10')">net10.0</BuildProjectFramework>
-  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '9')">net9.0</BuildProjectFramework>
-  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '8')">net8.0</BuildProjectFramework>
-  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '6')">net6.0</BuildProjectFramework>
 
   <!-- Single-file debuggees don't need the host -->
   <HostExe Condition="'$(PublishSingleFile)' != 'true'">$(DotNetRoot)\dotnet.exe</HostExe>
   <HostArgs Condition="'$(PublishSingleFile)' != 'true'">--fx-version $(RuntimeFrameworkVersion)</HostArgs>
 
   <DotNetTraceHost>$(DotNetRoot)\dotnet.exe</DotNetTraceHost>
-  <DotNetTracePath>$(RootBinDir)\bin\dotnet-trace\$(TargetConfiguration)\net6.0\dotnet-trace.dll</DotNetTracePath>
+  <DotNetTracePath>$(RootBinDir)\bin\dotnet-trace\$(TargetConfiguration)\$(NetCoreAppMinTargetFramework)\dotnet-trace.dll</DotNetTracePath>
 </Configuration>

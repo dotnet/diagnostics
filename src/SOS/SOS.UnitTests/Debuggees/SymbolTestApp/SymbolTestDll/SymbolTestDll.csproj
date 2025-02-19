@@ -3,6 +3,6 @@
     <OutputType>Library</OutputType>
     <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
     <TargetFrameworks Condition="'$(BuildProjectFramework)' == '' and '$(OS)' != 'Windows_NT'">$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
-    <TargetFrameworks Condition="'$(BuildProjectFramework)' == '' and '$(OS)' == 'Windows_NT'">net462;$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks Condition="'$(BuildProjectFramework)' == '' and '$(OS)' == 'Windows_NT'">$(DesktopTargetFramework);$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 </Project>

@@ -7,39 +7,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static class CommonOptions
     {
-        public static Option ProcessIdOption() =>
-            new(
-                aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect the trace.")
+        public static readonly Option<int> ProcessIdOption =
+            new("--process-id", "-p")
             {
-                Argument = new Argument<int>(name: "pid")
+                Description = "The process id to collect the trace."
             };
 
-        public static Option NameOption() =>
-            new(
-                aliases: new[] { "-n", "--name" },
-                description: "The name of the process to collect the trace.")
+        public static readonly Option<string> NameOption =
+            new("--name", "-n")
             {
-                Argument = new Argument<string>(name: "name")
+                Description = "The name of the process to collect the trace.",
             };
 
         public static TraceFileFormat DefaultTraceFileFormat() => TraceFileFormat.NetTrace;
 
-        public static Option FormatOption() =>
-            new(
-                alias: "--format",
-                description: $"If not using the default NetTrace format, an additional file will be emitted with the specified format under the same output name and with the corresponding format extension. The default format is {DefaultTraceFileFormat()}.")
+        public static readonly Option<TraceFileFormat> FormatOption =
+            new("--format")
             {
-                Argument = new Argument<TraceFileFormat>(name: "trace-file-format", getDefaultValue: DefaultTraceFileFormat)
+                Description =  $"If not using the default NetTrace format, an additional file will be emitted with the specified format under the same output name and with the corresponding format extension. The default format is {DefaultTraceFileFormat()}.",
+                DefaultValueFactory = _ => DefaultTraceFileFormat()
             };
 
-        public static Option ConvertFormatOption() =>
-            new(
-                alias: "--format",
-                description: $"Sets the output format for the trace file conversion.")
+        public static readonly Option<TraceFileFormat> ConvertFormatOption =
+            new("--format")
             {
-                Argument = new Argument<TraceFileFormat>(name: "trace-file-format"),
-                IsRequired = true
+                Description = $"Sets the output format for the trace file conversion.",
+                Required = true
             };
     }
 }

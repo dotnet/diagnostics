@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net462;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>$(DesktopTargetFramework);netstandard2.0</TargetFrameworks>
     <NoWarn>;1591;1701</NoWarn>
     <IsPackable>true</IsPackable>
     <Description>File format readers</Description>

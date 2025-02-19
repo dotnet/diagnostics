@@ -17,7 +17,7 @@ VERIFY: invalid is not a supported generation
 
 !IFDEF:LLDB
 EXTCOMMAND_FAIL: dumpgen gen0 -mt
-VERIFY: Required argument missing for option: -mt
+VERIFY: Required argument missing for option: '-mt'.
 
 EXTCOMMAND_FAIL: dumpgen gen1 -mt zzzzz
 VERIFY: Hexadecimal address expected for -mt option

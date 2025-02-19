@@ -69,6 +69,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #endregion
 
+        internal void AddService<T>(T service) => _serviceContainer.AddService(service);
+
         protected override ModuleService ModuleService { get; }
     }
 }

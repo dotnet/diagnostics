@@ -16,12 +16,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation {
     /// </summary>
     public abstract class ThreadService : IThreadService, IDisposable
     {
-        private readonly int _contextSize;
-        private readonly uint _contextFlags;
         private readonly Dictionary<string, RegisterInfo> _lookupByName;
         private readonly Dictionary<int, RegisterInfo> _lookupByIndex;
         private Dictionary<uint, IThread> _threads;
 
+        protected internal readonly int ContextSize;
+        protected internal readonly uint ContextFlags;
+        protected internal readonly int ContextFlagsOffset;
         protected internal readonly IServiceProvider Services;
         protected internal readonly ITarget Target;
 
@@ -36,38 +37,38 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation {
             {
                 case Architecture.X64:
                     // Dumps generated with newer dbgeng have bigger context buffers and clrmd requires the context size to at least be that size.
-                    _contextSize = Target.OperatingSystem == OSPlatform.Windows ? 0x700 : AMD64Context.Size;
-                    _contextFlags = AMD64Context.ContextControl | AMD64Context.ContextInteger | AMD64Context.ContextSegments | AMD64Context.ContextFloatingPoint;
+                    ContextSize = Target.Host.HostType != HostType.Vs && Target.OperatingSystem == OSPlatform.Windows ? 0x700 : AMD64Context.Size;
+                    ContextFlags = AMD64Context.ContextControl | AMD64Context.ContextInteger | AMD64Context.ContextSegments | AMD64Context.ContextFloatingPoint;
                     contextType = typeof(AMD64Context);
                     break;
 
                 case Architecture.X86:
-                    _contextSize = X86Context.Size;
-                    _contextFlags = X86Context.ContextControl | X86Context.ContextInteger | X86Context.ContextSegments | X86Context.ContextFloatingPoint;
+                    ContextSize = X86Context.Size;
+                    ContextFlags = X86Context.ContextControl | X86Context.ContextInteger | X86Context.ContextSegments | X86Context.ContextFloatingPoint;
                     contextType = typeof(X86Context);
                     break;
 
                 case Architecture.Arm64:
-                    _contextSize = Arm64Context.Size;
-                    _contextFlags = Arm64Context.ContextControl | Arm64Context.ContextInteger | Arm64Context.ContextFloatingPoint;
+                    ContextSize = Arm64Context.Size;
+                    ContextFlags = Arm64Context.ContextControl | Arm64Context.ContextInteger | Arm64Context.ContextFloatingPoint;
                     contextType = typeof(Arm64Context);
                     break;
 
                 case Architecture.Arm:
-                    _contextSize = ArmContext.Size;
-                    _contextFlags = ArmContext.ContextControl | ArmContext.ContextInteger | ArmContext.ContextFloatingPoint;
+                    ContextSize = ArmContext.Size;
+                    ContextFlags = ArmContext.ContextControl | ArmContext.ContextInteger | ArmContext.ContextFloatingPoint;
                     contextType = typeof(ArmContext);
                     break;
 
                 case (Architecture)6 /* Architecture.LoongArch64 */:
-                    _contextSize = LoongArch64Context.Size;
-                    _contextFlags = LoongArch64Context.ContextControl | LoongArch64Context.ContextInteger | LoongArch64Context.ContextFloatingPoint;
+                    ContextSize = LoongArch64Context.Size;
+                    ContextFlags = LoongArch64Context.ContextControl | LoongArch64Context.ContextInteger | LoongArch64Context.ContextFloatingPoint;
                     contextType = typeof(LoongArch64Context);
                     break;
 
                 case (Architecture)9 /* Architecture.RiscV64 */:
-                    _contextSize = RiscV64Context.Size;
-                    _contextFlags = RiscV64Context.ContextControl | RiscV64Context.ContextInteger | RiscV64Context.ContextFloatingPoint;
+                    ContextSize = RiscV64Context.Size;
+                    ContextFlags = RiscV64Context.ContextControl | RiscV64Context.ContextInteger | RiscV64Context.ContextFloatingPoint;
                     contextType = typeof(RiscV64Context);
                     break;
 
@@ -81,6 +82,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation {
             FieldInfo[] fields = contextType.GetFields(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
             foreach (FieldInfo field in fields)
             {
+                FieldOffsetAttribute offsetAttribute = field.GetCustomAttributes<FieldOffsetAttribute>(inherit: false).Single();
+                if (field.Name.Equals("contextflags", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    ContextFlagsOffset = offsetAttribute.Value;
+                }
                 RegisterAttribute registerAttribute = field.GetCustomAttributes<RegisterAttribute>(inherit: false).SingleOrDefault();
                 if (registerAttribute is null)
                 {
@@ -108,7 +114,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation {
                 {
                     FramePointerIndex = index;
                 }
-                FieldOffsetAttribute offsetAttribute = field.GetCustomAttributes<FieldOffsetAttribute>(inherit: false).Single();
                 RegisterInfo registerInfo = new(index, offsetAttribute.Value, Marshal.SizeOf(field.FieldType), registerAttribute.Name ?? field.Name.ToLowerInvariant());
                 registers.Add(registerInfo);
                 index++;
@@ -188,43 +193,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation {
         }
 
         /// <summary>
-        /// Returns the register value for the thread context and register index. This function
-        /// can only return register values that are 64 bits or less and currently the clrmd data
-        /// targets don't return any floating point or larger registers.
-        /// </summary>
-        /// <param name="context">thread context</param>
-        /// <param name="registerIndex">register index</param>
-        /// <param name="value">value returned</param>
-        /// <returns>true if value found</returns>
-        public bool TryGetRegisterValue(ReadOnlySpan<byte> context, int registerIndex, out ulong value)
-        {
-            if (TryGetRegisterInfo(registerIndex, out RegisterInfo info))
-            {
-                ReadOnlySpan<byte> threadSpan = context.Slice(info.RegisterOffset, info.RegisterSize);
-                switch (info.RegisterSize)
-                {
-                    case 1:
-                        value = MemoryMarshal.Read<byte>(threadSpan);
-                        return true;
-                    case 2:
-                        value = MemoryMarshal.Read<ushort>(threadSpan);
-                        return true;
-                    case 4:
-                        value = MemoryMarshal.Read<uint>(threadSpan);
-                        return true;
-                    case 8:
-                        value = MemoryMarshal.Read<ulong>(threadSpan);
-                        return true;
-                    default:
-                        Trace.TraceError($"GetRegisterValue: {info.RegisterName} invalid size {info.RegisterSize}");
-                        break;
-                }
-            }
-            value = 0;
-            return false;
-        }
-
-        /// <summary>
         /// Enumerate all the native threads
         /// </summary>
         /// <returns>ThreadInfos for all the threads</returns>
@@ -269,32 +237,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation {
         #endregion
 
         /// <summary>
-        /// Get the thread context
-        /// </summary>
-        /// <param name="thread">thread instance</param>
-        /// <returns>context array</returns>
-        /// <exception cref="DiagnosticsException">invalid thread id</exception>
-        internal byte[] GetThreadContext(Thread thread)
-        {
-            byte[] threadContext = new byte[_contextSize];
-            if (!GetThreadContext(thread.ThreadId, _contextFlags, (uint)_contextSize, threadContext))
-            {
-                throw new DiagnosticsException();
-            }
-            return threadContext;
-        }
-
-        /// <summary>
-        /// Get the thread TEB
-        /// </summary>
-        /// <param name="thread">thread instance</param>
-        /// <returns>TEB</returns>
-        internal ulong GetThreadTeb(Thread thread)
-        {
-            return GetThreadTeb(thread.ThreadId);
-        }
-
-        /// <summary>
         /// Get/create the thread dictionary.
         /// </summary>
         private Dictionary<uint, IThread> GetThreads()
@@ -313,17 +255,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation {
         /// </summary>
         /// <param name="threadId">OS thread id</param>
         /// <param name="contextFlags">Windows context flags</param>
-        /// <param name="contextSize">Context size</param>
         /// <param name="context">Context buffer</param>
         /// <returns>true succeeded, false failed</returns>
         /// <exception cref="DiagnosticsException">invalid thread id</exception>
-        protected abstract bool GetThreadContext(uint threadId, uint contextFlags, uint contextSize, byte[] context);
+        protected internal virtual bool GetThreadContext(uint threadId, uint contextFlags, byte[] context) => throw new NotImplementedException();
 
         /// <summary>
         /// Returns the Windows TEB pointer for the thread
         /// </summary>
         /// <param name="threadId">OS thread id</param>
-        /// <returns>TEB pointer or 0</returns>
-        protected abstract ulong GetThreadTeb(uint threadId);
+        /// <returns>TEB pointer or 0 if not implemented or thread id not found</returns>
+        protected internal virtual ulong GetThreadTeb(uint threadId) => throw new NotImplementedException();
     }
 }

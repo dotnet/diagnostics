@@ -83,8 +83,10 @@ internal sealed class EmbeddedWebSocketServer
     private static void ConfigureApplication(/*WebHostBuilderContext context,*/ IApplicationBuilder app, Func<HttpContext, WebSocket, CancellationToken, Task> connectionHandler)
     {
         app.Use((context, next) => {
+#pragma warning disable ASP0019 // Suggest using IHeaderDictionary.Append or the indexer
             context.Response.Headers.Add("Cross-Origin-Embedder-Policy", "require-corp");
             context.Response.Headers.Add("Cross-Origin-Opener-Policy", "same-origin");
+#pragma warning restore ASP0019 // Suggest using IHeaderDictionary.Append or the indexer
             return next();
         });
 
