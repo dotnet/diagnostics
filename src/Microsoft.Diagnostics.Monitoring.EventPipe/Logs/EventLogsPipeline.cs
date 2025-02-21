@@ -108,18 +108,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             if (_logger != null)
             {
+                LogRecordFactory logRecordFactory = new();
+
                 eventSource.Dynamic.AddCallbackForProviderEvent(LoggingSourceConfiguration.MicrosoftExtensionsLoggingProviderName, "MessageJson", (traceEvent) => {
                     if (!activityIdToScope.TryGetValue(traceEvent.ActivityID, out LogScopeItem scopeItem))
                     {
                         activityIdToScope.TryGetValue(traceEvent.RelatedActivityID, out scopeItem);
                     }
 
-                    traceEvent.GetLogRecordPayloadFromMessageJsonEvent(scopeItem, out LogRecordPayload payload);
+                    traceEvent.GetLogMessageJsonEventData(out LogMessageJsonEventData eventData);
 
-                    _logger.Log(
-                        in payload.LogRecord,
-                        payload.Attributes,
-                        new(payload.Scopes));
+                    logRecordFactory.EmitLog(
+                        _logger,
+                        scopeItem,
+                        in eventData);
                 });
             }
             else
