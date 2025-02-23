@@ -555,6 +555,10 @@ public class SOSRunner : IDisposable
 
                     // Turn on source/line numbers
                     initialCommands.Add(".lines");
+
+                    string setHostRuntime = config.SetHostRuntime();
+                    bool secureLoadDotNetExtensions = !(config.PrivateBuildTesting() || (setHostRuntime != null && setHostRuntime == "-none"));
+                    initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(secureLoadDotNetExtensions ? "true" : "false")}");
                     break;
 
                 case NativeDebugger.Lldb:
@@ -699,7 +703,7 @@ public class SOSRunner : IDisposable
 
             // Setup the extension environment variable
             string extensions = config.DotNetDiagnosticExtensions();
-            if (!string.IsNullOrEmpty(extensions)) 
+            if (!string.IsNullOrEmpty(extensions))
             {
                 processRunner.WithEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS", extensions);
             }
