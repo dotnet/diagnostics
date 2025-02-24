@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
             return installCommand;
         }
 
-        private static readonly Option<Architecture> ArchitectureOption =
+        private static readonly Option<Architecture?> ArchitectureOption =
             new("--architecture", "-a", "--arch")
             {
                 Description = "The processor architecture to install."
