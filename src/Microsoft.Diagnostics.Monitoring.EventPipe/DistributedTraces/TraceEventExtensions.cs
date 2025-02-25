@@ -208,7 +208,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return tagCount;
         }
 
-        private static void AddToArrayGrowingAsNeeded<T>(ref T[] destination, T item, ref int index)
+        internal static void AddToArrayGrowingAsNeeded<T>(ref T[] destination, T item, ref int index)
         {
             if (index >= destination.Length)
             {
