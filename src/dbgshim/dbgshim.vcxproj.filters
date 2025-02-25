@@ -36,9 +36,6 @@
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.props">
       <Filter>pkg</Filter>
     </None>
-    <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-arm.proj">
-      <Filter>pkg</Filter>
-    </None>
     <None Include="pkg\Microsoft.Diagnostics.DbgShim.win-arm64.proj">
       <Filter>pkg</Filter>
     </None>

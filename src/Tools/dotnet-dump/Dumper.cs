@@ -3,7 +3,6 @@
 
 using System;
 using System.CommandLine;
-using System.CommandLine.IO;
 using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -32,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public int Collect(IConsole console, int processId, string output, bool diag, bool crashreport, DumpTypeOption type, string name)
+        public int Collect(TextWriter stdOutput, TextWriter stdError, int processId, string output, bool diag, bool crashreport, DumpTypeOption type, string name)
         {
             Console.WriteLine(name);
             if (name != null)
@@ -90,7 +89,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                         dumpTypeMessage = "triage dump";
                         break;
                 }
-                console.Out.WriteLine($"Writing {dumpTypeMessage} to {output}");
+                stdOutput.WriteLine($"Writing {dumpTypeMessage} to {output}");
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
@@ -148,11 +147,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  NotSupportedException or
                  DiagnosticsClientException)
             {
-                console.Error.WriteLine($"{ex.Message}");
+                stdError.WriteLine($"{ex.Message}");
                 return -1;
             }
 
-            console.Out.WriteLine($"Complete");
+            stdOutput.WriteLine($"Complete");
             return 0;
         }
     }

@@ -31,6 +31,7 @@
 <Configuration>
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
   <RepoRootDir>$(RepoRoot)</RepoRootDir>
+  <NetCoreAppMinTargetFramework>$(NetCoreAppMinTargetFramework)</NetCoreAppMinTargetFramework>
 </Configuration>
 ]]>
        </ConfigFileEntry>

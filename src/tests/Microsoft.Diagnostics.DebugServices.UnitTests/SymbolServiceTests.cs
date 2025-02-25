@@ -105,6 +105,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public int AddTarget(ITarget target) => throw new NotImplementedException();
 
+        public string GetTempDirectory() => throw new NotImplementedException();
+
         #endregion
     }
 

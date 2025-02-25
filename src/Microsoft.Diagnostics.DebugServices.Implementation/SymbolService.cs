@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// The default symbol cache path:
         /// * dbgeng on Windows uses the dbgeng symbol cache path: %PROGRAMDATA%\dbg\sym
-        /// * dotnet-dump on Windows uses the VS symbol cache path: %TEMPDIR%\SymbolCache
+        /// * VS or dotnet-dump on Windows use the VS symbol cache path: %TEMPDIR%\SymbolCache
         /// * dotnet-dump/lldb on Linux/MacOS uses: $HOME/.dotnet/symbolcache
         /// </summary>
         public string DefaultSymbolCache
@@ -86,8 +86,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         _defaultSymbolCache = _host.HostType switch
                         {
                             HostType.DbgEng => Path.Combine(Environment.GetEnvironmentVariable("PROGRAMDATA"), "dbg", "sym"),
-                            HostType.DotnetDump => Path.Combine(Path.GetTempPath(), "SymbolCache"),
-                            _ => throw new NotSupportedException($"Host type not supported {_host.HostType}"),
+                            _ => Path.Combine(Path.GetTempPath(), "SymbolCache"),
                         };
                     }
                     else
@@ -257,7 +256,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             int? retryCount = null)
         {
             TokenCredential tokenCredential = new DefaultAzureCredential(includeInteractiveCredentials);
-            AccessToken accessToken;
+            AccessToken accessToken = default;
             async ValueTask<AuthenticationHeaderValue> authenticationFunc(CancellationToken token)
             {
                 try

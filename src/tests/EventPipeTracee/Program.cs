@@ -91,6 +91,7 @@ namespace EventPipeTracee
                         recordMetricsCancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                         metrics?.IncrementCounter();
+                        metrics?.IncrementUpDownCounter();
                         metrics?.RecordHistogram(10.0f);
 #if NET8_0_OR_GREATER
                         dupMetrics?.IncrementCounter();

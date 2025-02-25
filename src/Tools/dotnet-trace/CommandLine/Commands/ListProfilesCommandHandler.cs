@@ -14,7 +14,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal sealed class ListProfilesCommandHandler
     {
-        public static async Task<int> GetProfiles(IConsole console)
+        public static int GetProfiles()
         {
             try
             {
@@ -23,7 +23,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Console.Out.WriteLine($"\t{profile.Name,-16} - {profile.Description}");
                 }
 
-                await Task.FromResult(0).ConfigureAwait(false);
                 return 0;
             }
             catch (Exception ex)
@@ -33,13 +32,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        public static Command ListProfilesCommand() =>
-            new(
+        public static Command ListProfilesCommand()
+        {
+            Command listProfilesCommand = new(
                 name: "list-profiles",
-                description: "Lists pre-built tracing profiles with a description of what providers and filters are in each profile")
-            {
-                Handler = CommandHandler.Create<IConsole>(GetProfiles),
-            };
+                description: "Lists pre-built tracing profiles with a description of what providers and filters are in each profile");
+
+            listProfilesCommand.SetAction((parseResult, ct) => Task.FromResult(GetProfiles()));
+            return listProfilesCommand;
+        }
 
         internal static IEnumerable<Profile> DotNETRuntimeProfiles { get; } = new[] {
             new Profile(

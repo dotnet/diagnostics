@@ -242,6 +242,7 @@ namespace SOS.Hosting
                         modulePath = DownloadModule(DacName, timeStamp, sizeOfImage);
                     }
                 }
+                Trace.TraceInformation($"LibraryProviderWrapper.ProvideWindowsLibrary {modulePath}");
                 TestGetPEInfo(modulePath, timeStamp, sizeOfImage);
                 modulePathOut = Marshal.StringToCoTaskMemUni(modulePath);
                 Trace.TraceInformation($"LibraryProviderWrapper.ProvideWindowsLibrary SUCCEEDED {modulePath}");
@@ -502,6 +503,8 @@ namespace SOS.Hosting
         public IEnumerable<ITarget> EnumerateTargets() => throw new NotImplementedException();
 
         public int AddTarget(ITarget target) => throw new NotImplementedException();
+
+        public string GetTempDirectory() => throw new NotImplementedException();
 
         #endregion
 
