@@ -51,7 +51,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     eventSource.Dynamic.All += traceEvent => {
                         try
                         {
-                            if ("Version".Equals(traceEvent.EventName))
+                            if (traceEvent.ProviderName.Equals(MonitoringSourceConfiguration.DiagnosticSourceEventSource)
+                                && "Version".Equals(traceEvent.EventName))
                             {
                                 majorVersion = (int)traceEvent.PayloadValue(0);
                             }
