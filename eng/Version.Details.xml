@@ -49,9 +49,9 @@
       <Sha>2a51ee3fd10c2a5af5d44e710ef804813f73bf75</Sha>
     </Dependency>
     <!-- Intermediate is necessary for source build. -->
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="10.0.611901">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="10.0.612402">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>d794781cc75921b4ebbefe2eabdb0d6cd1713005</Sha>
+      <Sha>425a5b77e3e7e67665dcc2ed293d36e2b9519f06</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis" Version="4.11.0-2.24271.11">
