@@ -96,25 +96,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     Duration = Timeout.InfiniteTimeSpan,
                 }, new[] { logger });
 
-                if (config.RuntimeFrameworkVersionMajor < 9)
-                {
-                    // Note: Pipeline should throw PipelineException when
-                    // setting SamplingRatio on runtimes < .NET 9.
-                    await Assert.ThrowsAsync<PipelineException>(
-                        async () => {
-                            await PipelineTestUtilities.ExecutePipelineWithTracee(
-                                pipeline,
-                                testRunner);
-                        });
+                await PipelineTestUtilities.ExecutePipelineWithTracee(
+                    pipeline,
+                    testRunner);
+            }
 
-                    return;
-                }
-                else
-                {
-                    await PipelineTestUtilities.ExecutePipelineWithTracee(
-                        pipeline,
-                        testRunner);
-                }
+            if (config.RuntimeFrameworkVersionMajor < 9)
+            {
+                // Note: Sampling ratio is only supported when DS 9 or greater is used
+                Assert.Empty(logger.LoggedActivities);
+                return;
             }
 
             Assert.Single(logger.LoggedActivities);
