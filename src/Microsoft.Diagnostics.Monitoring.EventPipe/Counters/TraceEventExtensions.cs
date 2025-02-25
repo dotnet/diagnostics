@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal record struct ProviderAndCounter(string ProviderName, string CounterName);
 
-    internal static class TraceEventExtensions
+    internal static partial class TraceEventExtensions
     {
         private static Dictionary<ProviderAndCounter, CounterMetadata> counterMetadataByName = new();
         private static Dictionary<int, CounterMetadata> counterMetadataById = new();
