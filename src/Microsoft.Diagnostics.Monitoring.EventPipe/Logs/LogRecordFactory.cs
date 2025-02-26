@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                 do
                 {
-                    AddToArrayGrowingAsNeeded(ref scopes, scopesLeafNode.ScopedObject, ref scopeCount);
+                    TraceEventExtensions.AddToArrayGrowingAsNeeded(ref scopes, scopesLeafNode.ScopedObject, ref scopeCount);
 
                     scopesLeafNode = scopesLeafNode.Parent;
                 }
@@ -70,18 +70,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 in LogRecord,
                 Attributes,
                 new(Scopes));
-        }
-
-        private static void AddToArrayGrowingAsNeeded<T>(ref T[] destination, T item, ref int index)
-        {
-            if (index >= destination.Length)
-            {
-                T[] newArray = new T[destination.Length * 2];
-                Array.Copy(destination, newArray, destination.Length);
-                destination = newArray;
-            }
-
-            destination[index++] = item;
         }
 
         private int ParseAttributesFromJson(string argumentsJson, out string? messageTemplate)
@@ -122,7 +110,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
                         string value = reader.GetString()!;
 
-                        AddToArrayGrowingAsNeeded(ref attributes, new(key, value), ref attributeCount);
+                        TraceEventExtensions.AddToArrayGrowingAsNeeded(ref attributes, new(key, value), ref attributeCount);
                     }
                 }
             }

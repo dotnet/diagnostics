@@ -72,7 +72,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TaskCompletionSource<object> waitTaskSource = null)
             where TPipeline : Pipeline
         {
-            Task runTask = await startPipelineAsync(pipeline, token);
+            Task runTask;
+            try
+            {
+                runTask = await startPipelineAsync(pipeline, token);
+            }
+            catch
+            {
+                await TestRunnerUtilities.ExecuteCollection(Task.CompletedTask, testRunner, token);
+                throw;
+            }
 
             Func<CancellationToken, Task> waitForPipeline = async (cancellationToken) => {
                 // Optionally wait on caller before allowing the pipeline to stop.
