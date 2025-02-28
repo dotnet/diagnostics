@@ -22,6 +22,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\Commands\Utils.cs" Link="Utils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
+    <Compile Include="..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
   </ItemGroup>
 
   <ItemGroup>
