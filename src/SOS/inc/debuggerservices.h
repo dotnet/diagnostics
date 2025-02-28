@@ -195,6 +195,9 @@ public:
     virtual HRESULT STDMETHODCALLTYPE ExecuteHostCommand(
         PCSTR commandLine,
         PEXECUTE_COMMAND_OUTPUT_CALLBACK callback) = 0;
+
+    virtual HRESULT STDMETHODCALLTYPE GetDacSignatureVerificationSettings(
+        BOOL* dacSignatureVerificationEnabled) = 0;
 };
 
 #ifdef __cplusplus

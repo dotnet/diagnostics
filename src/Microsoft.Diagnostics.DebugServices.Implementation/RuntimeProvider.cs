@@ -29,12 +29,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="flags">Enumeration control flags</param>
         public IEnumerable<IRuntime> EnumerateRuntimes(int startingRuntimeId, RuntimeEnumerationFlags flags)
         {
+            ISettingsService settingsService = _services.GetService<ISettingsService>();
             // The ClrInfo and DataTarget instances are disposed when Runtime instance is disposed. Runtime instances are
             // not flushed when the Target/RuntimeService is flushed; they are all disposed and the list cleared. They are
             // all re-created the next time the IRuntime or ClrRuntime instance is queried.
             DataTarget dataTarget = new(new CustomDataTarget(_services.GetService<IDataReader>())
             {
                 ForceCompleteRuntimeEnumeration = (flags & RuntimeEnumerationFlags.All) != 0,
+                DacSignatureVerificationEnabled = settingsService is null || settingsService.DacSignatureVerificationEnabled,
                 FileLocator = null
             });
             for (int i = 0; i < dataTarget.ClrVersions.Length; i++)

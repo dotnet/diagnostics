@@ -18,6 +18,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IContextService ContextService { get; set; }
 
+        [ServiceImport(Optional = true)]
+        public ISettingsService SettingsService { get; set; }
+
         [ServiceImport]
         public ITarget Target { get; set; }
 
@@ -33,14 +36,27 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Forces all runtimes to be enumerated.")]
         public bool All { get; set; }
 
+        [Option(Name = "--DacSignatureVerification", Aliases = new string[] { "-v" }, Help = "Enforce the proper DAC certificate signing when loaded (true/false).")]
+        public bool? DacSignatureVerification { get; set; }
+
         public override void Invoke()
         {
             if (NetFx && NetCore)
             {
                 throw new DiagnosticsException("Cannot specify both -netfx and -netcore options");
             }
-            RuntimeEnumerationFlags flags = RuntimeEnumerationFlags.Default;
 
+            if (DacSignatureVerification.HasValue)
+            {
+                if (SettingsService is null)
+                {
+                    throw new DiagnosticsException("Changing the DAC signature verification setting not supported");
+                }
+                SettingsService.DacSignatureVerificationEnabled = DacSignatureVerification.Value;
+                Target.Flush();
+            }
+
+            RuntimeEnumerationFlags flags = RuntimeEnumerationFlags.Default;
             if (All)
             {
                 // Force all runtimes to be enumerated. This requires a target flush.
@@ -91,6 +107,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     this.DisplayResources(runtime.RuntimeModule, all: false, indent: "    ");
                     this.DisplayRuntimeExports(runtime.RuntimeModule, error: true, indent: "    ");
+                    WriteLine($"DAC signature verification check enabled: {SettingsService.DacSignatureVerificationEnabled}");
                 }
             }
         }

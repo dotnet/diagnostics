@@ -100,9 +100,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             return Task.Factory.StartNew(async () => {
                 try
                 {
-                    while (!reader.EndOfStream)
+                    string line;
+                    while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) is not null)
                     {
-                        string line = await reader.ReadLineAsync().ConfigureAwait(false);
                         output.WriteLine(line);
                     }
                 }

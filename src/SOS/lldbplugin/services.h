@@ -421,6 +421,9 @@ public:
         PCSTR commandLine,
         PEXECUTE_COMMAND_OUTPUT_CALLBACK callback);
 
+    HRESULT STDMETHODCALLTYPE GetDacSignatureVerificationSettings(
+        BOOL* dacSignatureVerificationEnabled);
+
     //----------------------------------------------------------------------------
     // LLDBServices (internal)
     //----------------------------------------------------------------------------

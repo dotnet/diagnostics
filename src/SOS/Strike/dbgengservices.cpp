@@ -17,6 +17,7 @@ DbgEngServices::DbgEngServices(IDebugClient* client) :
     m_symbols(nullptr),
     m_system(nullptr),
     m_advanced(nullptr),
+    m_settings(nullptr),
     m_targetMachine(nullptr)
 {
     client->AddRef();
@@ -24,6 +25,11 @@ DbgEngServices::DbgEngServices(IDebugClient* client) :
 
 DbgEngServices::~DbgEngServices()
 {
+    if (m_settings != nullptr)
+    {
+        m_settings->Release();
+        m_settings = nullptr;
+    }
     if (m_control != nullptr)
     {
         m_control->Release();
@@ -81,8 +87,33 @@ DbgEngServices::Initialize()
     {
         return hr;
     }
-    ReleaseHolder<IDebugEventCallbacks> pCallbacks = nullptr;
-    hr = QueryInterface(__uuidof(IDebugEventCallbacks), (void**)&pCallbacks);
+    ReleaseHolder <IHostDataModelAccess> dataModelAccess;
+    if (FAILED(hr = m_client->QueryInterface(__uuidof(IHostDataModelAccess), &dataModelAccess)))
+    {
+        return hr;
+    }
+    ReleaseHolder <IDebugHost> debugHost;
+    ReleaseHolder <IDataModelManager> dataModelManager;
+    if (FAILED(hr = dataModelAccess->GetDataModel(dataModelManager.GetAddr(), debugHost.GetAddr())))
+    {
+        return hr;
+    }
+    ReleaseHolder <IModelObject> rootNameSpace;
+    if (FAILED(hr = dataModelManager->GetRootNamespace(rootNameSpace.GetAddr())))
+    {
+        return hr;
+    }
+    ReleaseHolder <IModelObject> debugger;
+    if (FAILED(hr = rootNameSpace->GetKeyValue(L"Debugger", debugger.GetAddr(), nullptr)))
+    {
+        return hr;
+    }
+    if (FAILED(hr = debugger->GetKeyValue(L"Settings", &m_settings, nullptr)))
+    {
+        return hr;
+    }
+    ReleaseHolder<IDebugEventCallbacks> pCallbacks;
+    hr = QueryInterface(__uuidof(IDebugEventCallbacks), &pCallbacks);
     _ASSERTE(SUCCEEDED(hr));
 
     if (FAILED(hr = m_client->SetEventCallbacks(pCallbacks)))
@@ -589,6 +620,36 @@ DbgEngServices::ExecuteHostCommand(
 {
     OutputCaptureHolder holder(m_client, callback);
     return m_control->Execute(DEBUG_OUTCTL_THIS_CLIENT, commandLine, DEBUG_EXECUTE_NO_REPEAT);
+}
+
+HRESULT
+DbgEngServices::GetDacSignatureVerificationSettings(
+    BOOL* dacSignatureVerificationEnabled)
+{
+    if (dacSignatureVerificationEnabled == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    *dacSignatureVerificationEnabled = FALSE;
+
+    HRESULT hr;
+    ReleaseHolder <IModelObject> engineInit;
+    if (FAILED(hr = m_settings->GetKeyValue(L"EngineInitialization", engineInit.GetAddr(), nullptr)))
+    {
+        return hr;
+    }
+    ReleaseHolder <IModelObject> secureLoadDotNetExtensions;
+    if (FAILED(hr = engineInit->GetKeyValue(L"SecureLoadDotNetExtensions", secureLoadDotNetExtensions.GetAddr(), nullptr)))
+    {
+        return hr;
+    }
+    VARIANT value;
+    if (FAILED(hr = secureLoadDotNetExtensions->GetIntrinsicValue(&value)))
+    {
+        return hr;
+    }
+    *dacSignatureVerificationEnabled = value.boolVal != 0;
+    return S_OK;
 }
 
 //----------------------------------------------------------------------------
