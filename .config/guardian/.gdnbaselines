@@ -1,0 +1,375 @@
+{
+  "properties": {
+    "helpUri": "https://eng.ms/docs/microsoft-security/security/azure-security/cloudai-security-fundamentals-engineering/security-integration/guardian-wiki/microsoft-guardian/general/baselines"
+  },
+  "version": "1.0.0",
+  "baselines": {
+    "default": {
+      "name": "default",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "lastUpdatedDate": "2025-01-09 23:37:21Z"
+    }
+  },
+  "results": {
+    "9e936e6d712c55faece8cbd4e0e9eb985f8e40ec10592cf08c098e0b329881cd": {
+      "signature": "9e936e6d712c55faece8cbd4e0e9eb985f8e40ec10592cf08c098e0b329881cd",
+      "alternativeSignatures": [
+        "6957011fe154b7afe0dee3fbea5f962a53c927e634a51621d0a5eadbe0c35bf0"
+      ],
+      "target": "artifacts/bin/Microsoft.FileFormats.UnitTests/Release/net8.0/TestBinaries/System.Diagnostics.StackTrace.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2021",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "3b2081f08b3a307de29e623498890cae19b5b9cb32fef595ccefbf899157ab3d": {
+      "signature": "3b2081f08b3a307de29e623498890cae19b5b9cb32fef595ccefbf899157ab3d",
+      "alternativeSignatures": [
+        "9325f1658bab688bb9d04c0855ae030f0ecaf938bad8d027727a956161ed09b3"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mockclr_amd64.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2009",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "803a5ae644f0fab5ddf58d18b38b5636bae4b57f7a16afdc409474872ab3a7b4": {
+      "signature": "803a5ae644f0fab5ddf58d18b38b5636bae4b57f7a16afdc409474872ab3a7b4",
+      "alternativeSignatures": [
+        "2c47a509934d96fccc30ddd39e226a75d502650ca4c3997e4e1e26fd70ad7a88"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mockclr_amd64.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2021",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "a9ed5c7cbc57d7d46df23da9bdfc76860a418c3621930d3320d937734dddb3a0": {
+      "signature": "a9ed5c7cbc57d7d46df23da9bdfc76860a418c3621930d3320d937734dddb3a0",
+      "alternativeSignatures": [
+        "c714d6783968bae4c0c9c7cc07b9f838b95daf497d643b45ccb9aa5a185a779c"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mockclr_arm64.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2009",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "8bceec1b23b433c2253f972c9b628e6c3d023de0fa257e6b7984c2ba8271178e": {
+      "signature": "8bceec1b23b433c2253f972c9b628e6c3d023de0fa257e6b7984c2ba8271178e",
+      "alternativeSignatures": [
+        "7ca1676f9bb73d7403947a4c5e32014001274e07fee0fa2ff7bbfc8d07ab9387"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mockclr_arm64.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2021",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "3adf8cbe90b6f1ffd33b774c478419fe2fa8c73f51f57dd78bdcfe6faa7d07ee": {
+      "signature": "3adf8cbe90b6f1ffd33b774c478419fe2fa8c73f51f57dd78bdcfe6faa7d07ee",
+      "alternativeSignatures": [
+        "7b8a6f669c184a6adffaf2c3582356a3f5608245b8ff2dafd06a177076ea20de"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mockclr_i386.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2009",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "5fbb229c32d5b8a31507bfeeeae8e027577db33146be2cdad2b9e0593edd2af7": {
+      "signature": "5fbb229c32d5b8a31507bfeeeae8e027577db33146be2cdad2b9e0593edd2af7",
+      "alternativeSignatures": [
+        "d55904ae1626be05ede64bf0555aa40862c73c590939f5b0fc14b985e44cab24"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mockclr_i386.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2021",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "b80e75a3b72e859760d900e6871f2a75b4be8ff5bd8ba113185c7bc3580c3331": {
+      "signature": "b80e75a3b72e859760d900e6871f2a75b4be8ff5bd8ba113185c7bc3580c3331",
+      "alternativeSignatures": [
+        "efc4b38981ba6c62f369b6ed5abaf8ee79d58f5bba984c9766e2fd240151226f"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mockdac.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2009",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "b8747d9efb90ecd3841ac5e30d2fd67cdbbe513e8a5275e5d5a7738993cd5b29": {
+      "signature": "b8747d9efb90ecd3841ac5e30d2fd67cdbbe513e8a5275e5d5a7738993cd5b29",
+      "alternativeSignatures": [
+        "f65ae053fd82ec2df268472889969fdbec3c15fc51fdab8496c55351d21e5661"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mockdac.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2021",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "478f77deff69adc282e7eeaa418d90aaf7c7e7b373452c9ac65482c3618dba15": {
+      "signature": "478f77deff69adc282e7eeaa418d90aaf7c7e7b373452c9ac65482c3618dba15",
+      "alternativeSignatures": [
+        "f0117e04ed68f16582c48e70eb7fb7dc5fc776a4de59ec815e772a853a5e0aa9"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mockdbi.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2009",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "4edc0ea5c8bba00cec899de1465f2ad06103b4273b4f776a4e8a01c7fe32d95f": {
+      "signature": "4edc0ea5c8bba00cec899de1465f2ad06103b4273b4f776a4e8a01c7fe32d95f",
+      "alternativeSignatures": [
+        "ee847e02e2274f3f2fe7e9896beab2337b8c4e69d628ddc20742b47c63dc1878"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mockdbi.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2021",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "7546f5989ce9558dd9bc2662688d5ba8f0580c12ae54355af1139b998e380354": {
+      "signature": "7546f5989ce9558dd9bc2662688d5ba8f0580c12ae54355af1139b998e380354",
+      "alternativeSignatures": [
+        "ee4b29ad0b1e0686ce3db764c7fa8cb3ece5abcb09937a70645fa4e07fed1dc3"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mocksos.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2009",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "479916a8e3f6e15b5abc5c805b7a1e2acc141eab6c4fdc676dfab642af1ea7ea": {
+      "signature": "479916a8e3f6e15b5abc5c805b7a1e2acc141eab6c4fdc676dfab642af1ea7ea",
+      "alternativeSignatures": [
+        "1738de815cd0c47906df5cec49f38c7c2f6e82437e8d3e1835078c0c8b810bbd"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/mocksos.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2021",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "79cfd2a0b36852069aecfc7e1ffe37936042299d49d9eb2d2ff9d9486565707f": {
+      "signature": "79cfd2a0b36852069aecfc7e1ffe37936042299d49d9eb2d2ff9d9486565707f",
+      "alternativeSignatures": [
+        "722427e76da6eb11af4d6a7f669b27a809d6da158a2695082d09b73c4d195cef"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/System.Diagnostics.StackTrace.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2021",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "119d6a8d111d61e3efed7f81963977345df2c4a02e30c4bdc028b5e212b763fb": {
+      "signature": "119d6a8d111d61e3efed7f81963977345df2c4a02e30c4bdc028b5e212b763fb",
+      "alternativeSignatures": [
+        "be21939dd5cf6f5a810b62d69eaddbd69174e43ef7004e99b16710b7ce4d7520"
+      ],
+      "target": "artifacts/bin/Microsoft.FileFormats.UnitTests/Release/net8.0/TestBinaries/PerfMapEnabled/System.ComponentModel.EventBasedAsync.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2021",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "253b223abe413d9360c9e9926a4a68e1298f2fb2cd1f65c017d51ae062821202": {
+      "signature": "253b223abe413d9360c9e9926a4a68e1298f2fb2cd1f65c017d51ae062821202",
+      "alternativeSignatures": [
+        "7b7016d758d20519064872cf988463e06702ed9ab91118065b8e9451fdd3308e"
+      ],
+      "target": "artifacts/bin/Microsoft.SymbolStore.UnitTests/Release/net8.0/TestBinaries/PerfMapEnabled/System.ComponentModel.EventBasedAsync.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2021",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "b45f4eac16bcc61f2170308fc4c220ce755299b530a3a8d95ef18e30bd15473d": {
+      "signature": "b45f4eac16bcc61f2170308fc4c220ce755299b530a3a8d95ef18e30bd15473d",
+      "alternativeSignatures": [
+        "3cb83aef0508a0fdfffacba92a7a7175d397c6a5cf80b9109d85edad9edd2f50"
+      ],
+      "target": "artifacts/bin/SOS.UnitTests/Release/net8.0/publish/CodeCoverage/CodeCoverage.exe",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "762eb7e10b90350a21bdbb60cc250dcfab82487eb4743914c0788db402b6263d": {
+      "signature": "762eb7e10b90350a21bdbb60cc250dcfab82487eb4743914c0788db402b6263d",
+      "alternativeSignatures": [
+        "f014f0bacd05baa51364f4540a7d2218c377df271d922ccd0e99eec5ce18d4f1"
+      ],
+      "target": "artifacts/bin/SOS.UnitTests/Release/net8.0/publish/CodeCoverage/covrun32.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "9fadf4154cb07092438572b3f981616ffc948e75e2c899da7a3e984c998848af": {
+      "signature": "9fadf4154cb07092438572b3f981616ffc948e75e2c899da7a3e984c998848af",
+      "alternativeSignatures": [
+        "4f87d51098f27d36a5add18642da0ae14a1fbb721740bba2827965ff72bf37b9"
+      ],
+      "target": "artifacts/bin/SOS.UnitTests/Release/net8.0/publish/CodeCoverage/msdia140.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "269474fbe3fd027867eca13746c0106fba941fa1d33ac46eee37322d18086291": {
+      "signature": "269474fbe3fd027867eca13746c0106fba941fa1d33ac46eee37322d18086291",
+      "alternativeSignatures": [
+        "63556016cf0e5c60ef4144acaf64cfb5d200b65e209a1b5b1d1a149e918fe5ee"
+      ],
+      "target": "artifacts/bin/SOS.UnitTests/Release/net8.0/publish/CodeCoverage/amd64/CodeCoverage.exe",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "46ec80aeee21d7e97b2eaae0426507b7fe15fcaec4d1bce62a8446c355aa203f": {
+      "signature": "46ec80aeee21d7e97b2eaae0426507b7fe15fcaec4d1bce62a8446c355aa203f",
+      "alternativeSignatures": [
+        "a8b9b52491bc23f071c9a0976f3dc4ceb4d290d1360e65d8ba84ac5964ace038"
+      ],
+      "target": "artifacts/bin/SOS.UnitTests/Release/net8.0/publish/CodeCoverage/amd64/covrun64.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "426285d202667616702bf9fe501e451bf9b48d4e727b21c72b4f3e986a33e22d": {
+      "signature": "426285d202667616702bf9fe501e451bf9b48d4e727b21c72b4f3e986a33e22d",
+      "alternativeSignatures": [
+        "b70bd643d991ad0d62786323d8a56f05a62805f65bb96fbe37a79d8d508f18cd"
+      ],
+      "target": "artifacts/bin/SOS.UnitTests/Release/net8.0/publish/CodeCoverage/amd64/msdia140.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "683988e45574a32111b1d1a040842297049d9eb8aa927edfed0e40094e7b67c8": {
+      "signature": "683988e45574a32111b1d1a040842297049d9eb8aa927edfed0e40094e7b67c8",
+      "alternativeSignatures": [
+        "b7a60811244f26123e5f9b33e88c7fa746c3858a893ca5341e811494e832856a"
+      ],
+      "target": "artifacts/bin/SOS.UnitTests/Release/net8.0/publish/CodeCoverage/arm64/covrunarm64.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    },
+    "4e504b16f612a402187003d6c8614dab3463e2b46df8f4d68d539cbbac259091": {
+      "signature": "4e504b16f612a402187003d6c8614dab3463e2b46df8f4d68d539cbbac259091",
+      "alternativeSignatures": [
+        "7031a097c052a46b82ee077654baa174b17a1daaac3b3054782db0cad9509341"
+      ],
+      "target": "artifacts/bin/SOS.UnitTests/Release/net8.0/publish/CodeCoverage/arm64/msdia140.dll",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "binskim",
+      "ruleId": "BA2008",
+      "createdDate": "2025-01-09 23:37:21Z",
+      "expirationDate": "2025-06-29 01:33:27Z",
+      "justification": "This error is baselined with an expiration date of 180 days from 2025-01-10 01:33:27Z"
+    }
+  }
+}
