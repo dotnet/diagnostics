@@ -259,7 +259,7 @@ extends:
             jobTemplate: ${{ variables.jobTemplate }}
             name: Debian_Bullseye
             osGroup: Linux
-            container: test_debian_11_amd64
+            container: test_debian_12_amd64
             dependsOn: Linux
             testOnly: true
             buildConfigs:
