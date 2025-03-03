@@ -27,9 +27,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="name">The process name to collect the gcdump from.</param>
         /// <param name="diagnosticPort">The diagnostic IPC channel to collect the gcdump from.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort)
+        private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter)
         {
-            if (!CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out int resolvedProcessId))
+            if (!CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
             {
                 return -1;
             }
@@ -148,7 +148,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     timeout: parseResult.GetValue(TimeoutOption),
                     verbose: parseResult.GetValue(VerboseOption),
                     name: parseResult.GetValue(NameOption),
-                    diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty));
+                    diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
+                    dsrouter: string.Empty));
 
             return collectCommand;
         }

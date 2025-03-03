@@ -77,7 +77,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             return (source, type) switch
             {
-                (ReportSource.Process, ReportType.HeapStat) => ReportFromProcess(processId ?? 0, diagnosticPort, ct),
+                (ReportSource.Process, ReportType.HeapStat) => ReportFromProcess(processId ?? 0, diagnosticPort, dsrouter: string.Empty, ct: ct),
                 (ReportSource.DumpFile, ReportType.HeapStat) => ReportFromFile(gcdump_filename),
                 _ => HandleUnknownParam()
             };
@@ -89,9 +89,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             return Task.FromResult(-1);
         }
 
-        private static Task<int> ReportFromProcess(int processId, string diagnosticPort, CancellationToken ct)
+        private static Task<int> ReportFromProcess(int processId, string diagnosticPort, string dsrouter, CancellationToken ct)
         {
-            if (!CommandUtils.ValidateArgumentsForAttach(processId, string.Empty, diagnosticPort, out int resolvedProcessId))
+            if (!CommandUtils.ResolveProcessForAttach(processId, string.Empty, diagnosticPort, dsrouter, out int resolvedProcessId))
             {
                 return Task.FromResult(-1);
             }
