@@ -13,7 +13,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" />
     <PackageReference Include="xunit.abstractions" Version="$(XUnitAbstractionsVersion)" />
-    <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonVersion)" />
   </ItemGroup>
 
 </Project>
