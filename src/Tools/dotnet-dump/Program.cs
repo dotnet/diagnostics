@@ -40,8 +40,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 crashreport: parseResult.GetValue(CrashReportOption),
                 type: parseResult.GetValue(TypeOption),
                 name: parseResult.GetValue(ProcessNameOption),
-                diagnosticPort: parseResult.GetValue(DiagnosticPortOption),
-                dsrouter: string.Empty)));
+                diagnosticPort: parseResult.GetValue(DiagnosticPortOption))));
 
             return command;
         }

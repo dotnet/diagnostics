@@ -31,9 +31,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public int Collect(TextWriter stdOutput, TextWriter stdError, int processId, string output, bool diag, bool crashreport, DumpTypeOption type, string name, string diagnosticPort, string dsrouter)
+        public int Collect(TextWriter stdOutput, TextWriter stdError, int processId, string output, bool diag, bool crashreport, DumpTypeOption type, string name, string diagnosticPort)
         {
-            if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
+            if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, string.Empty, out int resolvedProcessId))
             {
                 processId = resolvedProcessId;
             }
