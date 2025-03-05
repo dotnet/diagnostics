@@ -64,6 +64,7 @@
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
+              <BuildType>Nightly</BuildType>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing1)' != ''">
               <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
@@ -98,6 +99,7 @@
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
           <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+          <BuildType>Nightly</BuildType>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing1)' != ''">
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
@@ -120,6 +122,7 @@
           <TestName>SOS.TestExtensions</TestName>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
+          <BuildType>Nightly</BuildType>
           <DotNetDiagnosticExtensions>$(RootBinDir)\bin\TestExtension\$(TargetConfiguration)\netstandard2.0\TestExtension.dll</DotNetDiagnosticExtensions>
           <Options>
             <Option>
@@ -146,6 +149,7 @@
                   <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
                   <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
                   <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
+                  <BuildType>Nightly</BuildType>
                 </Option>
                 <Option Condition="'$(RuntimeVersionServicing1)' != ''">
                   <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
@@ -173,6 +177,7 @@
             <Option Condition="'$(RuntimeVersionLatest)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
+              <BuildType>Nightly</BuildType>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing1)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
@@ -214,12 +219,14 @@
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+              <BuildType>Nightly</BuildType>
             </Option>
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
               <!-- This turns off the -fx-version to the dotnet host allowing it use the correct runtime version -->
               <SetFxVersion>false</SetFxVersion>
+              <BuildType>Nightly</BuildType>
             </Option>
             <Option Condition="'$(AspNetCoreVersionServicing1)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>

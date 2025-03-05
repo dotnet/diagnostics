@@ -556,9 +556,10 @@ public class SOSRunner : IDisposable
                     // Turn on source/line numbers
                     initialCommands.Add(".lines");
 
-                    string setHostRuntime = config.SetHostRuntime();
-                    bool secureLoadDotNetExtensions = !(config.PrivateBuildTesting() || (setHostRuntime != null && setHostRuntime == "-none"));
-                    initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(secureLoadDotNetExtensions ? "true" : "false")}");
+                    bool shouldVerifyDacSignature = !config.PrivateBuildTesting()
+                                                    && !"nightly".Equals(config.GetValue("BuildType"), StringComparison.OrdinalIgnoreCase)
+                                                    && !"-none".Equals(config.SetHostRuntime(), StringComparison.OrdinalIgnoreCase);
+                    initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(shouldVerifyDacSignature ? "true" : "false")}");
                     break;
 
                 case NativeDebugger.Lldb:
@@ -672,7 +673,10 @@ public class SOSRunner : IDisposable
                         }
                     }
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
-                    initialCommands.Add($"runtimes --DacSignatureVerification:{(config.PrivateBuildTesting() || OS.Kind != OSKind.Windows ? "false" : "true")}");
+                    shouldVerifyDacSignature = OS.Kind == OSKind.Windows
+                        && !config.PrivateBuildTesting()
+                        && !"nightly".Equals(config.GetValue("BuildType"), StringComparison.OrdinalIgnoreCase);
+                    initialCommands.Add($"runtimes --DacSignatureVerification:{(shouldVerifyDacSignature ? "true" : "false")}");
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
                     debuggerPath = config.DotNetDumpHost();
