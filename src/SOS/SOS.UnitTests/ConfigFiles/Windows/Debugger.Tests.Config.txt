@@ -146,6 +146,7 @@
                   <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
                   <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
                   <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
+                  <BuildType>Nightly</BuildType>
                 </Option>
                 <Option Condition="'$(RuntimeVersionServicing1)' != ''">
                   <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
@@ -173,6 +174,7 @@
             <Option Condition="'$(RuntimeVersionLatest)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
+              <BuildType>Nightly</BuildType>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing1)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
@@ -214,12 +216,14 @@
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
+              <BuildType>Nightly</BuildType>
             </Option>
             <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
               <!-- This turns off the -fx-version to the dotnet host allowing it use the correct runtime version -->
               <SetFxVersion>false</SetFxVersion>
+              <BuildType>Nightly</BuildType>
             </Option>
             <Option Condition="'$(AspNetCoreVersionServicing1)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
@@ -274,6 +278,10 @@
       <SetHostRuntime>-netfx</SetHostRuntime>
     </Option>
   </Options>
+
+  <BuildType>servicing</BuildType>
+  <BuildType Condition="'$(RuntimeVersionLatest)' == '$(RuntimeFrameworkVersion)'">nightly</BuildType>
+  <BuildType Condition="'$(PrivateBuildTesting)' == 'true'">private</BuildType>
 
   <SOSPath>$(InstallDir)\sos.dll</SOSPath>
   <DotNetDumpHost>$(DotNetRoot)\dotnet.exe</DotNetDumpHost>

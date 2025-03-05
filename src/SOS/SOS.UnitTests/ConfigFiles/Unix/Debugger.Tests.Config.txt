@@ -200,6 +200,10 @@
   <RuntimeSymbolsPath>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
   <LLDBHelperScript>$(ScriptRootDir)/lldbhelper.py</LLDBHelperScript>
 
+  <BuildType>servicing</BuildType>
+  <BuildType Condition="'$(RuntimeVersionLatest)' == '$(RuntimeFrameworkVersion)'">nightly</BuildType>
+  <BuildType Condition="'$(PrivateBuildTesting)' == 'true'">private</BuildType>
+
   <!-- Single-file debuggees don't need the host -->
   <SetHostExe Condition="'$(PublishSingleFile)' == 'true'">false</SetHostExe>
   <SetFxVersion Condition="'$(PublishSingleFile)' == 'true'">false</SetFxVersion>

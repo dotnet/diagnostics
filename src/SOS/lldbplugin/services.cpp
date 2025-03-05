@@ -2611,6 +2611,18 @@ LLDBServices::ExecuteHostCommand(
     return Execute(DEBUG_OUTCTL_THIS_CLIENT, commandLine, DEBUG_EXECUTE_NO_REPEAT);
 }
 
+HRESULT
+LLDBServices::GetDacSignatureVerificationSettings(
+    BOOL* dacSignatureVerificationEnabled)
+{
+    if (dacSignatureVerificationEnabled == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    *dacSignatureVerificationEnabled = FALSE;
+    return S_OK;
+}
+
 //----------------------------------------------------------------------------
 // Helper functions
 //----------------------------------------------------------------------------

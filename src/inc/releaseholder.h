@@ -51,6 +51,11 @@ public:
         return (void**)&m_ptr;
     }
 
+    T** GetAddr()
+    {
+        return &m_ptr;
+    }
+
     T* GetPtr() const
     {
         return m_ptr;
