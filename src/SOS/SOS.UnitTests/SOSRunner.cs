@@ -556,8 +556,8 @@ public class SOSRunner : IDisposable
                     // Turn on source/line numbers
                     initialCommands.Add(".lines");
 
-                    bool shouldVerifyDacSignature = !config.PrivateBuildTesting()
-                                                    && !"nightly".Equals(config.GetValue("BuildType"), StringComparison.OrdinalIgnoreCase)
+                    bool shouldVerifyDacSignature = !config.IsPrivateBuildTesting()
+                                                    && !config.IsNightlyBuild()
                                                     && !"-none".Equals(config.SetHostRuntime(), StringComparison.OrdinalIgnoreCase);
                     initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(shouldVerifyDacSignature ? "true" : "false")}");
                     break;
@@ -674,8 +674,8 @@ public class SOSRunner : IDisposable
                     }
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
                     shouldVerifyDacSignature = OS.Kind == OSKind.Windows
-                        && !config.PrivateBuildTesting()
-                        && !"nightly".Equals(config.GetValue("BuildType"), StringComparison.OrdinalIgnoreCase);
+                        && !config.IsPrivateBuildTesting()
+                        && !config.IsNightlyBuild();
                     initialCommands.Add($"runtimes --DacSignatureVerification:{(shouldVerifyDacSignature ? "true" : "false")}");
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
@@ -1788,8 +1788,7 @@ public static class TestConfigurationExtensions
         return TestConfiguration.MakeCanonicalPath(config.GetValue("DebuggeeDumpOutputRootDir"));
     }
 
-    public static bool PrivateBuildTesting(this TestConfiguration config)
-    {
-        return config.GetValue("PrivateBuildTesting")?.ToLowerInvariant() == "true";
-    }
+    public static bool IsPrivateBuildTesting(this TestConfiguration config) => "true".Equals(config.GetValue("PrivateBuildTesting"), StringComparison.OrdinalIgnoreCase);
+
+    public static bool IsNightlyBuild(this TestConfiguration config) => "nightly".Equals(config.GetValue("BuildType"), StringComparison.OrdinalIgnoreCase);
 }

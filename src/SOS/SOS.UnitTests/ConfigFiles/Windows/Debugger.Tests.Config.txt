@@ -282,6 +282,10 @@
     </Option>
   </Options>
 
+  <BuildType>servicing</BuildType>
+  <BuildType Condition="'$(RuntimeVersionLatest)' == '$(RuntimeFrameworkVersion)'">nightly</BuildType>
+  <BuildType Condition="'$(PrivateBuildTesting)' == 'true'">private</BuildType>
+
   <SOSPath>$(InstallDir)\sos.dll</SOSPath>
   <DotNetDumpHost>$(DotNetRoot)\dotnet.exe</DotNetDumpHost>
   <DotNetDumpPath>$(RootBinDir)\bin\dotnet-dump\$(TargetConfiguration)\$(NetCoreAppMinTargetFramework)\publish\dotnet-dump.dll</DotNetDumpPath>
