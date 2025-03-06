@@ -206,8 +206,7 @@ namespace DotnetCounters.UnitTests
                     return Task.Run(async () =>
                         await monitor.Collect(
                             ct: ct,
-                            counter_list: counterList,
-                            counters: null,
+                            counters: string.Join(',', counterList),
                             processId: testRunner.Pid,
                             refreshInterval: 1,
                             format: exportFormat,
