@@ -24,7 +24,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 name: "monitor",
                 description: "Start monitoring a .NET application")
             {
-                CounterList,
                 CounterOption,
                 ProcessIdOption,
                 RefreshIntervalOption,
@@ -39,9 +38,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             monitorCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Main
 
-            monitorCommand.SetAction((parseResult, ct) => new CounterMonitor(parseResult.Configuration.Output, parseResult.Configuration.Error).Monitor(
+            monitorCommand.SetAction(static (parseResult, ct) => new CounterMonitor(parseResult.Configuration.Output, parseResult.Configuration.Error).Monitor(
                 ct,
-                counter_list: parseResult.GetValue(CounterList),
                 counters: parseResult.GetValue(CounterOption),
                 processId: parseResult.GetValue(ProcessIdOption),
                 refreshInterval: parseResult.GetValue(RefreshIntervalOption),
@@ -64,7 +62,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 name: "collect",
                 description: "Monitor counters in a .NET application and export the result into a file")
             {
-                CounterList,
                 CounterOption,
                 ProcessIdOption,
                 RefreshIntervalOption,
@@ -82,7 +79,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             collectCommand.SetAction((parseResult, ct) => new CounterMonitor(parseResult.Configuration.Output, parseResult.Configuration.Error).Collect(
                 ct,
-                counter_list: parseResult.GetValue(CounterList),
                 counters: parseResult.GetValue(CounterOption),
                 processId: parseResult.GetValue(ProcessIdOption),
                 refreshInterval: parseResult.GetValue(RefreshIntervalOption),
@@ -141,14 +137,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 " names can either refer to the name of a Meter for the System.Diagnostics.Metrics API or the name of an EventSource for the EventCounters API. If the monitored application has both" +
                 " a Meter and an EventSource with the same name, the Meter is automatically preferred. Use the prefix \'EventCounters\\\' in front of a provider name to only show the EventCounters." +
                 " To discover well-known provider and counter names, please visit https://learn.microsoft.com/dotnet/core/diagnostics/built-in-metrics."
-            };
-
-        private static readonly Argument<List<string>> CounterList =
-            new(name: "counter_list")
-            {
-                Description = @"A space separated list of counter providers. Counters can be specified <provider_name> or <provider_name>[comma_separated_counter_names]. If the provider_name is used without a qualifying counter_names then all counters will be shown. To discover provider and counter names, use the list command.",
-                Hidden = true,
-                DefaultValueFactory = _ => new List<string>()
             };
 
         private static Command ListCommand()
