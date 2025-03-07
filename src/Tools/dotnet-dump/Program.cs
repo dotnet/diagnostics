@@ -86,7 +86,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
         private static readonly Option<string> DiagnosticPortOption =
             new("--diagnostic-port", "--dport")
             {
-                Description = "The path to a diagnostic port to be used."
+                Description = "The path to a diagnostic port to be used. Must be a runtime connect port."
             };
 
         private static Command AnalyzeCommand()
