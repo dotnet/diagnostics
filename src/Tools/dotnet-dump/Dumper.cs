@@ -31,32 +31,14 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
         }
 
-        public int Collect(TextWriter stdOutput, TextWriter stdError, int processId, string output, bool diag, bool crashreport, DumpTypeOption type, string name)
+        public int Collect(TextWriter stdOutput, TextWriter stdError, int processId, string output, bool diag, bool crashreport, DumpTypeOption type, string name, string diagnosticPort)
         {
-            Console.WriteLine(name);
-            if (name != null)
+            if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, string.Empty, out int resolvedProcessId))
             {
-                if (processId != 0)
-                {
-                    Console.WriteLine("Can only specify either --name or --process-id option.");
-                    return -1;
-                }
-                processId = CommandUtils.FindProcessIdWithName(name);
-                if (processId < 0)
-                {
-                    return -1;
-                }
+                processId = resolvedProcessId;
             }
-
-            if (processId == 0)
+            else
             {
-                Console.Error.WriteLine("ProcessId is required.");
-                return -1;
-            }
-
-            if (processId < 0)
-            {
-                Console.Error.WriteLine($"The PID cannot be negative: {processId}");
                 return -1;
             }
 
@@ -103,7 +85,21 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 }
                 else
                 {
-                    DiagnosticsClient client = new(processId);
+                    DiagnosticsClient client;
+                    if (!string.IsNullOrEmpty(diagnosticPort))
+                    {
+                        IpcEndpointConfig diagnosticPortConfig = IpcEndpointConfig.Parse(diagnosticPort);
+                        if (!diagnosticPortConfig.IsConnectConfig)
+                        {
+                            Console.WriteLine("dotnet-dump only supports connect mode to a runtime.");
+                            return -1;
+                        }
+                        client = new DiagnosticsClient(diagnosticPortConfig);
+                    }
+                    else
+                    {
+                        client = new DiagnosticsClient(processId);
+                    }
 
                     DumpType dumpType = DumpType.Normal;
                     switch (type)
