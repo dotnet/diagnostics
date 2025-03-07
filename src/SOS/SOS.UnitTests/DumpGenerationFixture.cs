@@ -48,7 +48,7 @@ public class DumpGenerationFixture : IDisposable
                         {
                             foreach (string directory in Directory.GetDirectories(path))
                             {
-                                if (Path.GetFileName(directory).StartsWith("9"))
+                                if (Path.GetFileName(directory).StartsWith("10"))
                                 {
                                     paths.Add(directory);
                                 }

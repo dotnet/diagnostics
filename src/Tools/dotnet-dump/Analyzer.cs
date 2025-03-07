@@ -86,6 +86,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
             serviceContainer.AddService<ICommandService>(_commandService);
             serviceContainer.AddService<CommandService>(_commandService);
+            serviceContainer.AddService<ISettingsService>(this);
 
             DumpTargetFactory dumpTargetFactory = new(this);
             serviceContainer.AddService<IDumpTargetFactory>(dumpTargetFactory);

@@ -27,6 +27,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             _contextService = new(_host);
             serviceContainer.AddService<IContextService>(_contextService);
+            serviceContainer.AddService<ISettingsService>(this);
 
             _commandService = new();
             serviceContainer.AddService<ICommandService>(_commandService);

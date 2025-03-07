@@ -4,10 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.IO;
 using System.CommandLine.Rendering;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +16,6 @@ using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Internal.Common.Utils;
-using IConsole = System.CommandLine.IConsole;
 
 namespace Microsoft.Diagnostics.Tools.Counters
 {
@@ -25,8 +24,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private const int BufferDelaySecs = 1;
         private const string EventCountersProviderPrefix = "EventCounters\\";
         private int _processId;
+        private TextWriter _stdOutput;
+        private TextWriter _stdError;
         private List<EventPipeCounterGroup> _counterList;
-        private IConsole _console;
         private ICounterRenderer _renderer;
         private string _output;
         private bool _pauseCmdSet;
@@ -42,10 +42,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private readonly Dictionary<string, ProviderEventState> _providerEventStates = new();
         private readonly Queue<CounterPayload> _bufferedEvents = new();
 
-        public CounterMonitor()
+        public CounterMonitor(TextWriter stdOutput, TextWriter stdError)
         {
             _pauseCmdSet = false;
             _shouldExit = new TaskCompletionSource<ReturnCode>();
+            _stdOutput = stdOutput;
+            _stdError = stdError;
         }
 
         private void MeterInstrumentEventObserved(string meterName, DateTime timestamp)
@@ -116,7 +118,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 foreach (Quantile quantile in aggregatePayload.Quantiles)
                 {
                     (double key, double val) = quantile;
-                    PercentilePayload percentilePayload = new(payload.CounterMetadata, payload.DisplayName, payload.Unit, AppendQuantile(payload.ValueTags, $"Percentile={key * 100}"), val, payload.Timestamp);
+                    PercentilePayload percentilePayload = new(payload.CounterMetadata, payload.DisplayName, payload.DisplayUnits, AppendQuantile(payload.ValueTags, $"Percentile={key * 100}"), val, payload.Timestamp);
                     _renderer.CounterPayloadReceived(percentilePayload, _pauseCmdSet);
                 }
 
@@ -164,9 +166,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
         public async Task<ReturnCode> Monitor(
             CancellationToken ct,
-            List<string> counter_list,
             string counters,
-            IConsole console,
             int processId,
             int refreshInterval,
             string name,
@@ -175,7 +175,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             int maxHistograms,
             int maxTimeSeries,
             TimeSpan duration,
-            bool showDeltas)
+            bool showDeltas,
+            string dsrouter)
         {
             try
             {
@@ -185,7 +186,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // to it.
                 ValidateNonNegative(maxHistograms, nameof(maxHistograms));
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
-                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
+                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId))
                 {
                     return ReturnCode.ArgumentError;
                 }
@@ -202,10 +203,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                     try
                     {
-                        _console = console;
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
-                        _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
+                        _counterList = ConfigureCounters(counters);
                         _renderer = new ConsoleWriter(new DefaultConsole(useAnsi), showDeltaColumn:showDeltas);
                         _diagnosticsClient = holder.Client;
                         _settings = new MetricsPipelineSettings();
@@ -237,22 +237,20 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         //Cancellation token should automatically stop the session
 
-                        console.Out.WriteLine($"Complete");
+                        _stdOutput.WriteLine($"Complete");
                         return ReturnCode.Ok;
                     }
                 }
             }
             catch (CommandLineErrorException e)
             {
-                console.Error.WriteLine(e.Message);
+                _stdError.WriteLine(e.Message);
                 return ReturnCode.ArgumentError;
             }
         }
         public async Task<ReturnCode> Collect(
             CancellationToken ct,
-            List<string> counter_list,
             string counters,
-            IConsole console,
             int processId,
             int refreshInterval,
             CountersExportFormat format,
@@ -262,7 +260,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
             bool resumeRuntime,
             int maxHistograms,
             int maxTimeSeries,
-            TimeSpan duration)
+            TimeSpan duration,
+            string dsrouter)
         {
             try
             {
@@ -272,7 +271,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // to it.
                 ValidateNonNegative(maxHistograms, nameof(maxHistograms));
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
-                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out _processId))
+                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId))
                 {
                     return ReturnCode.ArgumentError;
                 }
@@ -288,10 +287,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
                     try
                     {
-                        _console = console;
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
-                        _counterList = ConfigureCounters(counters, _processId != 0 ? counter_list : null);
+                        _counterList = ConfigureCounters(counters);
                         _settings = new MetricsPipelineSettings();
                         _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;
                         _settings.MaxHistograms = maxHistograms;
@@ -303,7 +301,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _diagnosticsClient = holder.Client;
                         if (_output.Length == 0)
                         {
-                            _console.Error.WriteLine("Output cannot be an empty string");
+                            _stdError.WriteLine("Output cannot be an empty string");
                             return ReturnCode.ArgumentError;
                         }
                         if (format == CountersExportFormat.csv)
@@ -327,7 +325,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         }
                         else
                         {
-                            _console.Error.WriteLine($"The output format {format} is not a valid output format.");
+                            _stdError.WriteLine($"The output format {format} is not a valid output format.");
                             return ReturnCode.ArgumentError;
                         }
 
@@ -349,7 +347,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             catch (CommandLineErrorException e)
             {
-                console.Error.WriteLine(e.Message);
+                _stdError.WriteLine(e.Message);
                 return ReturnCode.ArgumentError;
             }
         }
@@ -362,7 +360,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
         }
 
-        internal List<EventPipeCounterGroup> ConfigureCounters(string commaSeparatedProviderListText, List<string> providerList)
+        internal List<EventPipeCounterGroup> ConfigureCounters(string commaSeparatedProviderListText)
         {
             List<EventPipeCounterGroup> counters = new();
             try
@@ -379,26 +377,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 throw new CommandLineErrorException("Error parsing --counters argument: " + e.Message);
             }
 
-            if (providerList != null)
-            {
-                try
-                {
-                    foreach (string providerText in providerList)
-                    {
-                        ParseCounterProvider(providerText, counters);
-                    }
-                }
-                catch (FormatException e)
-                {
-                    // the FormatException message strings thrown by ParseCounterProvider are controlled
-                    // by us and anticipate being integrated into the command-line error text.
-                    throw new CommandLineErrorException("Error parsing counter_list: " + e.Message);
-                }
-            }
-
             if (counters.Count == 0)
             {
-                _console.Out.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
+                _stdOutput.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
                 ParseCounterProvider("System.Runtime", counters);
             }
             return counters;

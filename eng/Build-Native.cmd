@@ -222,7 +222,7 @@ if %__BuildNative% EQU 1 (
 
 REM Copy the native SOS binaries to where these tools expect for CI & VS testing
 
-set "__targetRid=net6.0"
+set "__targetRid=net8.0"
 set "__dotnet_sos=%__RootBinDir%\bin\dotnet-sos\%__BuildType%\%__targetRid%"
 set "__dotnet_dump=%__RootBinDir%\bin\dotnet-dump\%__BuildType%\%__targetRid%"
 mkdir %__dotnet_sos%\win-%__TargetArch%

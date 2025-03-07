@@ -146,6 +146,7 @@ enum EEFLAVOR {UNKNOWNEE, MSCOREE, MSCORWKS, MSCOREND};
 extern IXCLRDataProcess *g_clrData;
 extern ISOSDacInterface *g_sos;
 extern ISOSDacInterface15 *g_sos15;
+extern ISOSDacInterface16 *g_sos16;
 
 #include "dacprivate.h"
 

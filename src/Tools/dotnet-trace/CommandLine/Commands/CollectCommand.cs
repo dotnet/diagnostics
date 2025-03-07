@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Binding;
 using System.CommandLine.Rendering;
 using System.Diagnostics;
 using System.IO;
@@ -31,8 +30,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string port, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown);
-
         /// <summary>
         /// Collects a diagnostic trace from a currently running process or launch a child process and trace it.
         /// Append -- to the collect command to instruct the tool to run a command and trace it immediately. By default the IO from this process is hidden, but the --show-child-io option may be used to show the child process IO.
@@ -57,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="stoppingEventPayloadFilter">A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.</param>
         /// <param name="rundown">Collect rundown events.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown)
+        private static async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -97,7 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
                         return (int)ReturnCode.ArgumentError;
                     }
-                    if (CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out int resolvedProcessId))
+                    if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
                     {
                         processId = resolvedProcessId;
                     }
@@ -228,7 +225,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     // if builder returned null, it means we received ctrl+C while waiting for clients to connect. Exit gracefully.
                     if (holder == null)
                     {
-                        return (int)await Task.FromResult(ReturnCode.Ok).ConfigureAwait(false);
+                        return (int)ReturnCode.Ok;
                     }
                     diagnosticsClient = holder.Client;
                     if (ProcessLauncher.Launcher.HasChildProc)
@@ -470,7 +467,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         if (format != TraceFileFormat.NetTrace)
                         {
                             string outputFilename = TraceFileFormatConverter.GetConvertedFilename(output.FullName, outputfile: null, format);
-                            TraceFileFormatConverter.ConvertToFormat(console, format, fileToConvert: output.FullName, outputFilename);
+                            TraceFileFormatConverter.ConvertToFormat(cliConfig.Output, cliConfig.Error, format, fileToConvert: output.FullName, outputFilename);
                         }
                     }
 
@@ -504,7 +501,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 if (printStatusOverTime)
                 {
-                    if (console.GetTerminal() != null)
+                    if (!Console.IsOutputRedirected)
                     {
                         Console.CursorVisible = true;
                     }
@@ -518,8 +515,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
                 ProcessLauncher.Launcher.Cleanup();
+                DsRouterProcessLauncher.Launcher.Cleanup();
             }
-            return await Task.FromResult(ret).ConfigureAwait(false);
+            return ret;
         }
 
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
@@ -556,151 +554,161 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        public static Command CollectCommand() =>
-            new(
-                name: "collect",
-                description: "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.")
+        public static Command CollectCommand()
+        {
+            Command collectCommand = new("collect")
             {
-                // Handler
-                HandlerDescriptor.FromDelegate((CollectDelegate)Collect).GetCommandHandler(),
                 // Options
-                CommonOptions.ProcessIdOption(),
-                CircularBufferOption(),
-                OutputPathOption(),
-                ProvidersOption(),
-                ProfileOption(),
-                CommonOptions.FormatOption(),
-                DurationOption(),
-                CLREventsOption(),
-                CLREventLevelOption(),
-                CommonOptions.NameOption(),
-                DiagnosticPortOption(),
-                ShowChildIOOption(),
-                ResumeRuntimeOption(),
-                StoppingEventProviderNameOption(),
-                StoppingEventEventNameOption(),
-                StoppingEventPayloadFilterOption(),
-                RundownOption()
+                CommonOptions.ProcessIdOption,
+                CircularBufferOption,
+                OutputPathOption,
+                ProvidersOption,
+                ProfileOption,
+                CommonOptions.FormatOption,
+                DurationOption,
+                CLREventsOption,
+                CLREventLevelOption,
+                CommonOptions.NameOption,
+                DiagnosticPortOption,
+                ShowChildIOOption,
+                ResumeRuntimeOption,
+                StoppingEventProviderNameOption,
+                StoppingEventEventNameOption,
+                StoppingEventPayloadFilterOption,
+                RundownOption,
+                DSRouterOption
             };
+            collectCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Program.Main that handles UnmatchedTokens
+            collectCommand.Description = "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.";
 
-        private static uint DefaultCircularBufferSizeInMB() => 256;
+            collectCommand.SetAction((parseResult, ct) => Collect(
+                ct,
+                cliConfig: parseResult.Configuration,
+                processId: parseResult.GetValue(CommonOptions.ProcessIdOption),
+                output: parseResult.GetValue(OutputPathOption),
+                buffersize: parseResult.GetValue(CircularBufferOption),
+                providers: parseResult.GetValue(ProvidersOption) ?? string.Empty,
+                profile: parseResult.GetValue(ProfileOption) ?? string.Empty,
+                format: parseResult.GetValue(CommonOptions.FormatOption),
+                duration: parseResult.GetValue(DurationOption),
+                clrevents: parseResult.GetValue(CLREventsOption) ?? string.Empty,
+                clreventlevel: parseResult.GetValue(CLREventLevelOption) ?? string.Empty,
+                name: parseResult.GetValue(CommonOptions.NameOption),
+                diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
+                showchildio: parseResult.GetValue(ShowChildIOOption),
+                resumeRuntime: parseResult.GetValue(ResumeRuntimeOption),
+                stoppingEventProviderName: parseResult.GetValue(StoppingEventProviderNameOption),
+                stoppingEventEventName: parseResult.GetValue(StoppingEventEventNameOption),
+                stoppingEventPayloadFilter: parseResult.GetValue(StoppingEventPayloadFilterOption),
+                rundown: parseResult.GetValue(RundownOption),
+                dsrouter: parseResult.GetValue(DSRouterOption)));
 
-        private static Option CircularBufferOption() =>
-            new(
-                alias: "--buffersize",
-                description: $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB()} MB.")
+            return collectCommand;
+        }
+
+        private const uint DefaultCircularBufferSizeInMB = 256;
+
+        private static readonly Option<uint> CircularBufferOption =
+            new("--buffersize")
             {
-                Argument = new Argument<uint>(name: "size", getDefaultValue: DefaultCircularBufferSizeInMB)
+                Description = $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.",
+                DefaultValueFactory = _ => DefaultCircularBufferSizeInMB,
             };
 
         public static string DefaultTraceName => "default";
 
-        private static Option OutputPathOption() =>
-            new(
-                aliases: new[] { "-o", "--output" },
-                description: $"The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.")
+        private static readonly Option<FileInfo> OutputPathOption =
+            new("--output", "-o")
             {
-                Argument = new Argument<FileInfo>(name: "trace-file-path", getDefaultValue: () => new FileInfo(DefaultTraceName))
+                Description =  $"The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.",
+                DefaultValueFactory = _ => new FileInfo(DefaultTraceName)
             };
 
-        private static Option ProvidersOption() =>
-            new(
-                alias: "--providers",
-                description: @"A comma delimitted list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]'," +
+        private static readonly Option<string> ProvidersOption =
+            new("--providers")
+            {
+                Description = @"A comma delimitted list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]'," +
                              @"where Provider is in the form: 'KnownProviderName[:[Flags][:[Level][:[KeyValueArgs]]]]', and KeyValueArgs is in the form: " +
                              @"'[key1=value1][;key2=value2]'.  Values in KeyValueArgs that contain ';' or '=' characters need to be surrounded by '""', " +
                              @"e.g., FilterAndPayloadSpecs=""MyProvider/MyEvent:-Prop1=Prop1;Prop2=Prop2.A.B;"".  Depending on your shell, you may need to " +
                              @"escape the '""' characters and/or surround the entire provider specification in quotes, e.g., " +
                              @"--providers 'KnownProviderName:0x1:1:FilterSpec=\""KnownProviderName/EventName:-Prop1=Prop1;Prop2=Prop2.A.B;\""'. These providers are in " +
                              @"addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the " +
-                             @"configuration here takes precedence over the implicit configuration from the profile.  See documentation for examples.")
-            {
-                Argument = new Argument<string>(name: "list-of-comma-separated-providers", getDefaultValue: () => string.Empty) // TODO: Can we specify an actual type?
+                             @"configuration here takes precedence over the implicit configuration from the profile.  See documentation for examples."
+                // TODO: Can we specify an actual type?
             };
 
-        private static Option ProfileOption() =>
-            new(
-                alias: "--profile",
-                description: @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly.")
+        private static readonly Option<string> ProfileOption =
+            new("--profile")
             {
-                Argument = new Argument<string>(name: "profile-name", getDefaultValue: () => string.Empty)
+                Description = @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly."
             };
 
-        private static Option DurationOption() =>
-            new(
-                alias: "--duration",
-                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.")
+        private static readonly Option<TimeSpan> DurationOption =
+            new("--duration")
             {
-                Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => default)
+                Description = @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss."
             };
 
-        private static Option CLREventsOption() =>
-            new(
-                alias: "--clrevents",
-                description: @"List of CLR runtime events to emit.")
+        private static readonly Option<string> CLREventsOption =
+            new("--clrevents")
             {
-                Argument = new Argument<string>(name: "clrevents", getDefaultValue: () => string.Empty)
+                Description = @"List of CLR runtime events to emit."
             };
 
-        private static Option CLREventLevelOption() =>
-            new(
-                alias: "--clreventlevel",
-                description: @"Verbosity of CLR events to be emitted.")
+        private static readonly Option<string> CLREventLevelOption =
+            new("--clreventlevel")
             {
-                Argument = new Argument<string>(name: "clreventlevel", getDefaultValue: () => string.Empty)
-            };
-        private static Option DiagnosticPortOption() =>
-            new(
-                aliases: new[] { "--dport", "--diagnostic-port" },
-                description: @"The path to a diagnostic port to be used.")
-            {
-                Argument = new Argument<string>(name: "diagnosticPort", getDefaultValue: () => string.Empty)
-            };
-        private static Option ShowChildIOOption() =>
-            new(
-                alias: "--show-child-io",
-                description: @"Shows the input and output streams of a launched child process in the current console.")
-            {
-                Argument = new Argument<bool>(name: "show-child-io", getDefaultValue: () => false)
+                Description = @"Verbosity of CLR events to be emitted."
             };
 
-        private static Option ResumeRuntimeOption() =>
-            new(
-                alias: "--resume-runtime",
-                description: @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false")
+        private static readonly Option<string> DiagnosticPortOption =
+            new("--diagnostic-port", "--dport")
             {
-                Argument = new Argument<bool>(name: "resumeRuntime", getDefaultValue: () => true)
+                Description = @"The path to a diagnostic port to be used."
             };
 
-        private static Option StoppingEventProviderNameOption() =>
-            new(
-                alias: "--stopping-event-provider-name",
-                description: @"A string, parsed as-is, that will stop the trace upon hitting an event with the matching provider name. For a more specific stopping event, additionally provide `--stopping-event-event-name` and/or `--stopping-event-payload-filter`.")
+        private static readonly Option<bool> ShowChildIOOption =
+            new("--show-child-io")
             {
-                Argument = new Argument<string>(name: "stoppingEventProviderName", getDefaultValue: () => null)
+                Description = @"Shows the input and output streams of a launched child process in the current console."
             };
 
-        private static Option StoppingEventEventNameOption() =>
-            new(
-                alias: "--stopping-event-event-name",
-                description: @"A string, parsed as-is, that will stop the trace upon hitting an event with the matching event name. Requires `--stopping-event-provider-name` to be set. For a more specific stopping event, additionally provide `--stopping-event-payload-filter`.")
+        private static readonly Option<bool> ResumeRuntimeOption =
+            new("--resume-runtime")
             {
-                Argument = new Argument<string>(name: "stoppingEventEventName", getDefaultValue: () => null)
+                Description = @"Resume runtime once session has been initialized, defaults to true. Disable resume of runtime using --resume-runtime:false",
+                DefaultValueFactory = _ => true,
             };
 
-        private static Option StoppingEventPayloadFilterOption() =>
-            new(
-                alias: "--stopping-event-payload-filter",
-                description: @"A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.")
+        private static readonly Option<string> StoppingEventProviderNameOption =
+            new("--stopping-event-provider-name")
             {
-                Argument = new Argument<string>(name: "stoppingEventPayloadFilter", getDefaultValue: () => null)
+                Description = @"A string, parsed as-is, that will stop the trace upon hitting an event with the matching provider name. For a more specific stopping event, additionally provide `--stopping-event-event-name` and/or `--stopping-event-payload-filter`."
             };
-        private static Option RundownOption() =>
-            new(
-                alias: "--rundown",
-                description: @"Collect rundown events unless specified false.")
+
+        private static readonly Option<string> StoppingEventEventNameOption =
+            new("--stopping-event-event-name")
             {
-                Argument = new Argument<bool?>(name: "rundown")
+                Description = @"A string, parsed as-is, that will stop the trace upon hitting an event with the matching event name. Requires `--stopping-event-provider-name` to be set. For a more specific stopping event, additionally provide `--stopping-event-payload-filter`."
+            };
+
+        private static readonly Option<string> StoppingEventPayloadFilterOption =
+            new("--stopping-event-payload-filter")
+            {
+                Description = @"A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set."
+            };
+
+        private static readonly Option<bool> RundownOption =
+            new("--rundown")
+            {
+                 Description = @"Collect rundown events unless specified false."
+            };
+
+        private static readonly Option<string> DSRouterOption =
+            new("--dsrouter")
+            {
+                Description = @"The dsrouter command to start. Value should be one of ios, ios-sim, android, android-emu. Run `dotnet-dsrouter -h` for more information."
             };
     }
 }

@@ -292,38 +292,6 @@ LPCSTR Runtime::GetDacFilePath()
             if (access(dacModulePath.c_str(), F_OK) == 0)
 #endif
             {
-#if defined(__linux__)
-                // We are creating a symlink to the DAC in a temp directory
-                // where libcoreclrtraceptprovider.so doesn't exist so it 
-                // doesn't get loaded by the DAC causing a LTTng-UST exception.
-                //
-                // Issue #https://github.com/dotnet/coreclr/issues/20205
-                LPCSTR tmpPath = m_target->GetTempDirectory();
-                if (tmpPath != nullptr) 
-                {
-                    std::string dacSymLink(tmpPath);
-                    dacSymLink.append(NETCORE_DAC_DLL_NAME_A);
-
-                    // Check if the DAC file already exists in the temp directory because
-                    // of a "loadsymbols" command which downloads everything.
-                    if (access(dacSymLink.c_str(), F_OK) == 0)
-                    {
-                        dacModulePath.assign(dacSymLink);
-                    }
-                    else
-                    {
-                        int error = symlink(dacModulePath.c_str(), dacSymLink.c_str());
-                        if (error == 0)
-                        {
-                            dacModulePath.assign(dacSymLink);
-                        }
-                        else
-                        {
-                            ExtErr("symlink(%s, %s) FAILED %s\n", dacModulePath.c_str(), dacSymLink.c_str(), strerror(errno));
-                        }
-                    }
-                }
-#endif
                 m_dacFilePath = _strdup(dacModulePath.c_str());
             }
         }

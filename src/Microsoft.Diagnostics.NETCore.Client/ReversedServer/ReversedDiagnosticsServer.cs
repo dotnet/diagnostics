@@ -198,10 +198,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         private void VerifyNotDisposed()
         {
+#pragma warning disable CA1513 // Use ObjectDisposedException throw helper
             if (_disposed)
             {
                 throw new ObjectDisposedException(nameof(ReversedDiagnosticsServer));
             }
+#pragma warning restore CA1513 // Use ObjectDisposedException throw helper
         }
 
         private void VerifyIsStarted()

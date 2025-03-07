@@ -71,10 +71,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         protected void VerifyNotDisposed()
         {
+#pragma warning disable CA1513 // Use ObjectDisposedException throw helper
             if (_disposed)
             {
                 throw new ObjectDisposedException(GetType().Name);
             }
+#pragma warning restore CA1513 // Use ObjectDisposedException throw helper
         }
 
         internal void SetCallback(IIpcServerTransportCallbackInternal callback)

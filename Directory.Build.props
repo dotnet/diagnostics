@@ -21,16 +21,19 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- This represents the minimum supported .NET Version, so the min
-    version that the tools must be able to run against for a simple customer
-    experience.
-    When bumping this, bump __targetRid in build.sh/build-native.cmd
-    and modify the Debugger.Tests.Configs to reflect the new TFMs -->
-    <NetCoreAppMinVersion>6.0</NetCoreAppMinVersion>
+    <DesktopTargetFramework>net462</DesktopTargetFramework>
+    <!-- 
+        This represents the minimum supported .NET Version, so the min version that the tools must 
+        be able to run against for a simple customer experience.
+
+        When bumping this, bump __targetRid in build.sh/build-native.cmd and modify the 
+        Debugger.Tests.Configs to reflect the new TFMs
+     -->
+    <NetCoreAppMinVersion>8.0</NetCoreAppMinVersion>
     <NetCoreAppMinTargetFramework>net$(NetCoreAppMinVersion)</NetCoreAppMinTargetFramework>
-    <!-- this is the list of TFMs we build our debuggees and tracees as. -->
-    <SupportedSubProcessTargetFrameworks>net6.0;net8.0;net9.0</SupportedSubProcessTargetFrameworks>
-    <!-- this is the list of TFMs we build our unit tests as. -->
-    <SupportedXUnitTestTargetFrameworks>net6.0;net8.0</SupportedXUnitTestTargetFrameworks>
+    <!-- This is the list of TFMs we build our debuggees and tracees as. -->
+    <SupportedSubProcessTargetFrameworks>net8.0;net9.0;net10.0</SupportedSubProcessTargetFrameworks>
+    <!-- This is the list of TFMs we build our unit tests as. -->
+    <SupportedXUnitTestTargetFrameworks>net8.0</SupportedXUnitTestTargetFrameworks>
   </PropertyGroup>
 </Project>

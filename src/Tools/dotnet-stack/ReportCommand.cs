@@ -4,8 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Binding;
-using System.CommandLine.IO;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading;
@@ -22,18 +20,15 @@ namespace Microsoft.Diagnostics.Tools.Stack
 {
     internal static class ReportCommandHandler
     {
-        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration);
-
         /// <summary>
         /// Reports a stack trace
         /// </summary>
         /// <param name="ct">The cancellation token</param>
-        /// <param name="console"></param>
         /// <param name="processId">The process to report the stack from.</param>
         /// <param name="name">The name of process to report the stack from.</param>
         /// <param name="duration">The duration of to trace the target for. </param>
         /// <returns></returns>
-        private static async Task<int> Report(CancellationToken ct, IConsole console, int processId, string name, TimeSpan duration)
+        private static async Task<int> Report(CancellationToken ct, TextWriter stdOutput, TextWriter stdError, int processId, string name, TimeSpan duration)
         {
             string tempNetTraceFilename = Path.Join(Path.GetTempPath(), Path.GetRandomFileName() + ".nettrace");
             string tempEtlxFilename = "";
@@ -57,12 +52,12 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
                 if (processId < 0)
                 {
-                    console.Error.WriteLine("Process ID should not be negative.");
+                    stdError.WriteLine("Process ID should not be negative.");
                     return -1;
                 }
                 else if (processId == 0)
                 {
-                    console.Error.WriteLine("--process-id is required");
+                    stdError.WriteLine("--process-id is required");
                     return -1;
                 }
 
@@ -91,7 +86,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     Task completedTask = await Task.WhenAny(copyTask, timeoutTask).ConfigureAwait(false);
                     if (completedTask == timeoutTask)
                     {
-                        console.Out.WriteLine($"# Sufficiently large applications can cause this command to take non-trivial amounts of time");
+                        stdOutput.WriteLine($"# Sufficiently large applications can cause this reportCommand to take non-trivial amounts of time");
                     }
                     await copyTask.ConfigureAwait(false);
                 }
@@ -142,9 +137,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     foreach ((int threadId, List<StackSourceSample> samples) in samplesForThread)
                     {
 #if DEBUG
-                        console.Out.WriteLine($"Found {samples.Count} stacks for thread 0x{threadId:X}");
+                        stdOutput.WriteLine($"Found {samples.Count} stacks for thread 0x{threadId:X}");
 #endif
-                        PrintStack(console, threadId, samples[0], stackSource);
+                        PrintStack(stdOutput, threadId, samples[0], stackSource);
                     }
                 }
             }
@@ -154,7 +149,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex}");
+                stdError.WriteLine($"[ERROR] {ex}");
                 return -1;
             }
             finally
@@ -173,55 +168,58 @@ namespace Microsoft.Diagnostics.Tools.Stack
             return 0;
         }
 
-        private static void PrintStack(IConsole console, int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
+        private static void PrintStack(TextWriter stdOutput, int threadId, StackSourceSample stackSourceSample, StackSource stackSource)
         {
-            console.Out.WriteLine($"Thread (0x{threadId:X}):");
+            stdOutput.WriteLine($"Thread (0x{threadId:X}):");
             StackSourceCallStackIndex stackIndex = stackSourceSample.StackIndex;
             while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false).StartsWith("Thread ("))
             {
-                console.Out.WriteLine($"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"
+                stdOutput.WriteLine($"  {stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), verboseName: false)}"
                     .Replace("UNMANAGED_CODE_TIME", "[Native Frames]"));
                 stackIndex = stackSource.GetCallerIndex(stackIndex);
             }
-            console.Out.WriteLine();
+            stdOutput.WriteLine();
         }
 
-        public static Command ReportCommand() =>
-            new(
+        public static Command ReportCommand()
+        {
+            Command reportCommand = new(
                 name: "report",
                 description: "reports the managed stacks from a running .NET process")
             {
-                // Handler
-                HandlerDescriptor.FromDelegate((ReportDelegate)Report).GetCommandHandler(),
-                // Options
-                ProcessIdOption(),
-                NameOption(),
-                DurationOption()
+                ProcessIdOption,
+                NameOption,
+                DurationOption
             };
 
-        private static Option DurationOption() =>
-            new(
-                alias: "--duration",
-                description: @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.")
+            reportCommand.SetAction((parseResult, ct) => Report(ct,
+                stdOutput: parseResult.Configuration.Output,
+                stdError: parseResult.Configuration.Error,
+                processId: parseResult.GetValue(ProcessIdOption),
+                name: parseResult.GetValue(NameOption),
+                duration: parseResult.GetValue(DurationOption)));
+
+            return reportCommand;
+        }
+
+        private static readonly Option<TimeSpan> DurationOption =
+            new("--duration")
             {
-                Argument = new Argument<TimeSpan>(name: "duration-timespan", getDefaultValue: () => TimeSpan.FromMilliseconds(10)),
-                IsHidden = true
+                Description = @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss.",
+                DefaultValueFactory = _ => TimeSpan.FromMilliseconds(10),
+                Hidden = true
             };
 
-        public static Option ProcessIdOption() =>
-            new(
-                aliases: new[] { "-p", "--process-id" },
-                description: "The process id to report the stack.")
+        public static readonly Option<int> ProcessIdOption =
+            new("--process-id", "-p")
             {
-                Argument = new Argument<int>(name: "pid")
+                Description = "The process id to report the stack."
             };
 
-        public static Option NameOption() =>
-            new(
-                aliases: new[] { "-n", "--name" },
-                description: "The name of the process to report the stack.")
+        public static readonly Option<string> NameOption =
+            new("--name", "-n")
             {
-                Argument = new Argument<string>(name: "name")
+                Description = "The name of the process to report the stack."
             };
     }
 }

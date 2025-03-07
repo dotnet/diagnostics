@@ -4,51 +4,49 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Binding;
-using System.CommandLine.IO;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.Internal.Common;
 
 namespace Microsoft.Diagnostics.Tools.Stack
 {
-    internal static class SymbolicateHandler
+    internal static partial class SymbolicateHandler
     {
-        private static readonly Regex s_regex = new(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+):token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled);
+        private static readonly Regex s_regex = GetSymbolRegex();
         private static readonly Dictionary<string, string> s_assemblyFilePathDictionary = new();
         private static readonly Dictionary<string, MetadataReader> s_metadataReaderDictionary = new();
-
-        private delegate void SymbolicateDelegate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout);
 
         /// <summary>
         /// Get the line number from the Method Token and IL Offset in a stacktrace
         /// </summary>
-        /// <param name="console"></param>
         /// <param name="inputPath">Path to the stacktrace text file</param>
         /// <param name="searchDir">Path of multiple directories with assembly and pdb where the exception occurred</param>
         /// <param name="output">Output directly to a file</param>
         /// <param name="stdout">Output directly to a console</param>
-        private static void Symbolicate(IConsole console, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout)
+        private static int Symbolicate(TextWriter stdOutput, TextWriter stdError, FileInfo inputPath, DirectoryInfo[] searchDir, FileInfo output, bool stdout)
         {
             try
             {
                 output ??= new FileInfo(inputPath.FullName + ".symbolicated");
 
-                SetAssemblyFilePathDictionary(console, searchDir);
+                SetAssemblyFilePathDictionary(stdError, searchDir);
 
-                CreateSymbolicateFile(console, inputPath.FullName, output.FullName, stdout);
+                CreateSymbolicateFile(stdOutput, stdError, inputPath.FullName, output.FullName, stdout);
+                return 0;
             }
             catch (Exception e)
             {
-                console.Error.WriteLine(e.Message);
+                stdError.WriteLine(e.Message);
+                return 1;
             }
         }
 
-        private static void SetAssemblyFilePathDictionary(IConsole console, DirectoryInfo[] searchDir)
+        private static void SetAssemblyFilePathDictionary(TextWriter stdError, DirectoryInfo[] searchDir)
         {
             try
             {
@@ -102,7 +100,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
             catch (Exception e)
             {
-                console.Error.WriteLine(e.Message);
+                stdError.WriteLine(e.Message);
             }
         }
 
@@ -126,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
         }
 
-        private static void CreateSymbolicateFile(IConsole console, string inputPath, string outputPath, bool isStdout)
+        private static void CreateSymbolicateFile(TextWriter stdOutput, TextWriter stdError, string inputPath, string outputPath, bool isStdout)
         {
             try
             {
@@ -138,14 +136,14 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     fileStreamWriter?.WriteLine(ret);
                     if (isStdout)
                     {
-                        console.Out.WriteLine(ret);
+                        stdOutput.WriteLine(ret);
                     }
                 }
-                console.Out.WriteLine($"\nOutput: {outputPath}\n");
+                stdOutput.WriteLine($"\nOutput: {outputPath}\n");
             }
             catch (Exception e)
             {
-                console.Error.WriteLine(e.Message);
+                stdError.WriteLine(e.Message);
             }
         }
 
@@ -295,45 +293,58 @@ namespace Microsoft.Diagnostics.Tools.Stack
             }
         }
 
-        public static Command SymbolicateCommand() =>
-            new(
-                name: "symbolicate", description: "Get the line number from the Method Token and IL Offset in a stacktrace")
+        public static Command SymbolicateCommand()
+        {
+            Command symbolicateCommand = new(
+                name: "symbolicate",
+                description: "Get the line number from the Method Token and IL Offset in a stacktrace")
             {
-                // Handler
-                HandlerDescriptor.FromDelegate((SymbolicateDelegate)Symbolicate).GetCommandHandler(),
-                // Arguments and Options
-                InputFileArgument(),
-                SearchDirectoryOption(),
-                OutputFileOption(),
-                StandardOutOption()
+                InputFileArgument,
+                SearchDirectoryOption,
+                OutputFileOption,
+                StandardOutOption
             };
 
-        public static Argument<FileInfo> InputFileArgument() =>
-            new Argument<FileInfo>(name: "input-path")
+            symbolicateCommand.SetAction((parseResult, ct) => Task.FromResult(Symbolicate(
+                stdOutput: parseResult.Configuration.Output,
+                stdError: parseResult.Configuration.Error,
+                inputPath: parseResult.GetValue(InputFileArgument),
+                searchDir: parseResult.GetValue(SearchDirectoryOption),
+                output: parseResult.GetValue(OutputFileOption),
+                stdout: parseResult.GetValue(StandardOutOption))));
+
+            return symbolicateCommand;
+        }
+
+        public static readonly Argument<FileInfo> InputFileArgument =
+            new Argument<FileInfo>("input-path")
             {
                 Description = "Path to the stacktrace text file",
                 Arity = ArgumentArity.ExactlyOne
-            }.ExistingOnly();
+            }.AcceptExistingOnly();
 
-        public static Option<DirectoryInfo[]> SearchDirectoryOption() =>
-            new(new[] { "-d", "--search-dir" }, "Path of multiple directories with assembly and pdb")
+        public static readonly Option<DirectoryInfo[]> SearchDirectoryOption =
+            new Option<DirectoryInfo[]>("--search-dir", "-d")
             {
-                Argument = new Argument<DirectoryInfo[]>(name: "directory1 directory2 ...", getDefaultValue: () => new DirectoryInfo(Directory.GetCurrentDirectory()).GetDirectories())
-                {
-                    Arity = ArgumentArity.ZeroOrMore
-                }.ExistingOnly()
+                Description = "Path of multiple directories with assembly and pdb",
+                DefaultValueFactory = _ => new DirectoryInfo(Directory.GetCurrentDirectory()).GetDirectories(),
+                Arity = ArgumentArity.ZeroOrMore
+            }.AcceptExistingOnly();
+
+        public static readonly Option<FileInfo> OutputFileOption =
+            new("--output", "-o")
+            {
+                Description = "Output directly to a file (Default: <input-path>.symbolicated)",
+                Arity = ArgumentArity.ZeroOrOne
             };
 
-        public static Option<FileInfo> OutputFileOption() =>
-            new(new[] { "-o", "--output" }, "Output directly to a file (Default: <input-path>.symbolicated)")
+        public static readonly Option<bool> StandardOutOption =
+            new("--stdout", "-c")
             {
-                Argument = new Argument<FileInfo>(name: "output-path")
-                {
-                    Arity = ArgumentArity.ZeroOrOne
-                }
+                Description = "Output directly to a console"
             };
 
-        public static Option<bool> StandardOutOption() =>
-            new(new[] { "-c", "--stdout" }, getDefaultValue: () => false, "Output directly to a console");
+        [GeneratedRegex(@" at (?<type>[\w+\.?]+)\.(?<method>\w+)\((?<params>.*)\) in (?<filename>[\w+\.?]+):token (?<token>0x\d+)\+(?<offset>0x\d+)", RegexOptions.Compiled)]
+        private static partial Regex GetSymbolRegex();
     }
 }
