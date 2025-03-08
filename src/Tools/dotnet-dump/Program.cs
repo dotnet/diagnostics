@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             Command command = new(name: "collect", description: "Capture dumps from a process")
             {
-                ProcessIdOption, OutputOption, DiagnosticLoggingOption, CrashReportOption, TypeOption, ProcessNameOption
+                ProcessIdOption, OutputOption, DiagnosticLoggingOption, CrashReportOption, TypeOption, ProcessNameOption, DiagnosticPortOption
             };
 
             command.SetAction((parseResult, ct) => Task.FromResult(new Dumper().Collect(
@@ -39,7 +39,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 diag: parseResult.GetValue(DiagnosticLoggingOption),
                 crashreport: parseResult.GetValue(CrashReportOption),
                 type: parseResult.GetValue(TypeOption),
-                name: parseResult.GetValue(ProcessNameOption))));
+                name: parseResult.GetValue(ProcessNameOption),
+                diagnosticPort: parseResult.GetValue(DiagnosticPortOption))));
 
             return command;
         }
@@ -80,6 +81,12 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
             {
                 Description = @"The dump type determines the kinds of information that are collected from the process. There are several types: Full - The largest dump containing all memory including the module images. Heap - A large and relatively comprehensive dump containing module lists, thread lists, all stacks, exception information, handle information, and all memory except for mapped images. Mini - A small dump containing module lists, thread lists, exception information and all stacks. Triage - A small dump containing module lists, thread lists, exception information, all stacks and PII removed.",
                 DefaultValueFactory = _ => Dumper.DumpTypeOption.Full
+            };
+
+        private static readonly Option<string> DiagnosticPortOption =
+            new("--diagnostic-port", "--dport")
+            {
+                Description = "The path to a diagnostic port to be used. Must be a runtime connect port."
             };
 
         private static Command AnalyzeCommand()
