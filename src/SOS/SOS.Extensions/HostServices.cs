@@ -227,7 +227,6 @@ namespace SOS.Extensions
                 ServiceContainer serviceContainer = _host.CreateServiceContainer();
 
                 // Add all the global services to the global service container
-                serviceContainer.AddService<ISettingsService>(this);
                 serviceContainer.AddService<SOSLibrary.ISOSModule>(this);
                 serviceContainer.AddService<ISettingsService>(this);
                 serviceContainer.AddService<SOSHost.INativeDebugger>(DebuggerServices);
