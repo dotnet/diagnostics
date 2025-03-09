@@ -7,6 +7,7 @@
     <PackageTags>Symbols</PackageTags>
     <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
     <NoWarn>;1591;1701</NoWarn>
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +19,6 @@
   <ItemGroup>
     <PackageReference Include="Azure.Core" Version="$(AzureCoreVersion)" />
     <PackageReference Include="Azure.Identity" Version="$(AzureIdentityVersion)" />
-    <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonVersion)" />
   </ItemGroup>
 
   <ItemGroup>

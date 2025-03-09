@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <EnableAnalyzers>false</EnableAnalyzers>
-    <DebugType Condition="'$(TargetFramework)' == 'net462'">full</DebugType>
+    <DebugType Condition="'$(TargetFramework)' == '$(DesktopTargetFramework)'">full</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>false</Optimize>
   </PropertyGroup>

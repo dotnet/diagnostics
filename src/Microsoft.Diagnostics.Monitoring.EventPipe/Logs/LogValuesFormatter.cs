@@ -13,9 +13,6 @@ using System.Text;
 //with monitor modifications.
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
-    /// <summary>
-    /// Formatter to convert the named format items like {NamedformatItem} to <see cref="M:string.Format"/> format.
-    /// </summary>
     internal class LogValuesFormatter
     {
         private const string NullValue = "(null)";

@@ -23,10 +23,10 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             // Loading extensions or adding service factories not allowed after this point.
             ServiceContainer serviceContainer = _host.CreateServiceContainer();
-            serviceContainer.AddService<ISettingsService>(this);
 
             _contextService = new(_host);
             serviceContainer.AddService<IContextService>(_contextService);
+            serviceContainer.AddService<ISettingsService>(this);
 
             _commandService = new();
             serviceContainer.AddService<ICommandService>(_commandService);

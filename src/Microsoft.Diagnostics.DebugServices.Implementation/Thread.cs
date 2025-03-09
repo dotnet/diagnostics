@@ -3,6 +3,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -23,7 +24,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _serviceContainer.AddService<IThread>(this);
         }
 
-        void IDisposable.Dispose()
+        public void Dispose()
         {
             _serviceContainer.RemoveService(typeof(IThread));
             _serviceContainer.DisposeServices();
@@ -58,21 +59,46 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_threadContext.IsEmpty)
             {
-                _threadContext = _threadService.GetThreadContext(this);
+                byte[] threadContext = new byte[_threadService.ContextSize];
+                if (!GetThreadContextInner(_threadService.ContextFlags, threadContext))
+                {
+                    throw new DiagnosticsException($"Unable to get the context for thread {ThreadId:X8} with flags {_threadService.ContextFlags:X8}");
+                }
+                _threadContext = threadContext;
             }
             return _threadContext.Span;
         }
+
+        /// <summary>
+        /// Get the thread context
+        /// </summary>
+        /// <param name="contextFlags">Windows context flags</param>
+        /// <param name="context">Context buffer</param>
+        /// <returns>true succeeded, false failed</returns>
+        protected virtual bool GetThreadContextInner(uint contextFlags, byte[] context) => _threadService.GetThreadContext(ThreadId, contextFlags, context);
 
         public ulong GetThreadTeb()
         {
             if (!_teb.HasValue)
             {
-                _teb = _threadService.GetThreadTeb(this);
+                _teb = GetThreadTebInner();
             }
             return _teb.Value;
         }
 
+        /// <summary>
+        /// Returns the Windows TEB pointer for the thread
+        /// </summary>
+        /// <returns>TEB pointer or 0 if not implemented or thread id not found</returns>
+        protected virtual ulong GetThreadTebInner() => _threadService.GetThreadTeb(ThreadId);
+
         #endregion
+
+        protected void SetContextFlags(uint contextFlags, Span<byte> context)
+        {
+            Span<byte> threadSpan = context.Slice(_threadService.ContextFlagsOffset, sizeof(uint));
+            MemoryMarshal.Write<uint>(threadSpan, ref contextFlags);
+        }
 
         public override bool Equals(object obj)
         {

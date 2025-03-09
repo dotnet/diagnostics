@@ -80,12 +80,12 @@ namespace Microsoft.Diagnostics.Tools.Dump
             ServiceContainer serviceContainer = CreateServiceContainer();
 
             // Add all the global services to the global service container.
-            serviceContainer.AddService<ISettingsService>(this);
             serviceContainer.AddService<IConsoleService>(_fileLoggingConsoleService);
             serviceContainer.AddService<IConsoleFileLoggingService>(_fileLoggingConsoleService);
             serviceContainer.AddService<IDiagnosticLoggingService>(DiagnosticLoggingService.Instance);
             serviceContainer.AddService<ICommandService>(_commandService);
             serviceContainer.AddService<CommandService>(_commandService);
+            serviceContainer.AddService<ISettingsService>(this);
 
             DumpTargetFactory dumpTargetFactory = new(this);
             serviceContainer.AddService<IDumpTargetFactory>(dumpTargetFactory);

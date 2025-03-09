@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <PackageReference Include="xunit.abstractions" Version="$(XUnitAbstractionsVersion)" />
-    <PackageReference Include="System.Text.Json" Version="$(SystemTextJsonVersion)" />
   </ItemGroup>
 
 </Project>

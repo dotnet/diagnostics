@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
-    internal static class USBMuxInterop
+    internal static partial class USBMuxInterop
     {
         public const string CoreFoundationLibrary = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
         public const string MobileDeviceLibrary = "/System/Library/PrivateFrameworks/MobileDevice.framework/MobileDevice";
@@ -43,46 +43,46 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         public delegate void DeviceNotificationDelegate(ref AMDeviceNotificationCallbackInfo info);
 
         #region MobileDeviceLibrary
-        [DllImport(MobileDeviceLibrary)]
-        public static extern uint AMDeviceNotificationSubscribe(DeviceNotificationDelegate callback, uint unused0, uint unused1, uint unused2, out IntPtr context);
+        [LibraryImport(MobileDeviceLibrary)]
+        public static partial uint AMDeviceNotificationSubscribe(DeviceNotificationDelegate callback, uint unused0, uint unused1, uint unused2, out IntPtr context);
 
-        [DllImport(MobileDeviceLibrary)]
-        public static extern uint AMDeviceNotificationUnsubscribe(IntPtr context);
+        [LibraryImport(MobileDeviceLibrary)]
+        public static partial uint AMDeviceNotificationUnsubscribe(IntPtr context);
 
-        [DllImport(MobileDeviceLibrary)]
-        public static extern uint AMDeviceConnect(IntPtr device);
+        [LibraryImport(MobileDeviceLibrary)]
+        public static partial uint AMDeviceConnect(IntPtr device);
 
-        [DllImport(MobileDeviceLibrary)]
-        public static extern uint AMDeviceDisconnect(IntPtr device);
+        [LibraryImport(MobileDeviceLibrary)]
+        public static partial uint AMDeviceDisconnect(IntPtr device);
 
-        [DllImport(MobileDeviceLibrary)]
-        public static extern uint AMDeviceGetConnectionID(IntPtr device);
+        [LibraryImport(MobileDeviceLibrary)]
+        public static partial uint AMDeviceGetConnectionID(IntPtr device);
 
-        [DllImport(MobileDeviceLibrary)]
-        public static extern int AMDeviceGetInterfaceType(IntPtr device);
+        [LibraryImport(MobileDeviceLibrary)]
+        public static partial int AMDeviceGetInterfaceType(IntPtr device);
 
-        [DllImport(MobileDeviceLibrary)]
-        public static extern uint USBMuxConnectByPort(uint connection, ushort port, out int socketHandle);
+        [LibraryImport(MobileDeviceLibrary)]
+        public static partial uint USBMuxConnectByPort(uint connection, ushort port, out int socketHandle);
         #endregion
         #region CoreFoundationLibrary
-        [DllImport(CoreFoundationLibrary)]
-        public static extern void CFRunLoopRun();
+        [LibraryImport(CoreFoundationLibrary)]
+        public static partial void CFRunLoopRun();
 
-        [DllImport(CoreFoundationLibrary)]
-        public static extern void CFRunLoopStop(IntPtr runLoop);
+        [LibraryImport(CoreFoundationLibrary)]
+        public static partial void CFRunLoopStop(IntPtr runLoop);
 
-        [DllImport(CoreFoundationLibrary)]
-        public static extern IntPtr CFRunLoopGetCurrent();
+        [LibraryImport(CoreFoundationLibrary)]
+        public static partial IntPtr CFRunLoopGetCurrent();
         #endregion
         #region LibC
-        [DllImport(LibC, SetLastError = true)]
-        public static extern unsafe int send(int handle, byte* buffer, IntPtr length, int flags);
+        [LibraryImport(LibC, SetLastError = true)]
+        public static unsafe partial int send(int handle, byte* buffer, IntPtr length, int flags);
 
-        [DllImport(LibC, SetLastError = true)]
-        public static extern unsafe int recv(int handle, byte* buffer, IntPtr length, int flags);
+        [LibraryImport(LibC, SetLastError = true)]
+        public static unsafe partial int recv(int handle, byte* buffer, IntPtr length, int flags);
 
-        [DllImport(LibC, SetLastError = true)]
-        public static extern int close(int handle);
+        [LibraryImport(LibC, SetLastError = true)]
+        public static partial int close(int handle);
         #endregion
     }
 

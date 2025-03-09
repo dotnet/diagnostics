@@ -332,15 +332,36 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return await helper.ReadEnvironmentAsync(response.Continuation, token).ConfigureAwait(false);
         }
 
-        internal void ApplyStartupHook(string startupHookPath)
+        /// <summary>
+        /// Loads the specified assembly with a StartupHook in the target process.
+        /// </summary>
+        /// <param name="startupHookPath">The path to the assembly containing the StartupHook.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="startupHookPath"/> is null or empty.</exception>
+        public void ApplyStartupHook(string startupHookPath)
         {
+            if (string.IsNullOrEmpty(startupHookPath))
+            {
+                throw new ArgumentNullException(nameof(startupHookPath));
+            }
+
             IpcMessage message = CreateApplyStartupHookMessage(startupHookPath);
             IpcMessage response = IpcClient.SendMessage(_endpoint, message);
             ValidateResponseMessage(response, nameof(ApplyStartupHook));
         }
 
-        internal async Task ApplyStartupHookAsync(string startupHookPath, CancellationToken token)
+        /// <summary>
+        /// Loads the specified assembly with a StartupHook in the target process.
+        /// </summary>
+        /// <param name="startupHookPath">The path to the assembly containing the StartupHook.</param>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="startupHookPath"/> is null or empty.</exception>
+        public async Task ApplyStartupHookAsync(string startupHookPath, CancellationToken token)
         {
+            if (string.IsNullOrEmpty(startupHookPath))
+            {
+                throw new ArgumentNullException(nameof(startupHookPath));
+            }
+
             IpcMessage message = CreateApplyStartupHookMessage(startupHookPath);
             IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, message, token).ConfigureAwait(false);
             ValidateResponseMessage(response, nameof(ApplyStartupHookAsync));
@@ -379,47 +400,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             IpcMessage request = CreateDisablePerfMapMessage();
             IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, request, token).ConfigureAwait(false);
             ValidateResponseMessage(response, nameof(DisablePerfMapAsync));
-        }
-
-        /// <summary>
-        /// Create a new DiagnosticsClient instance using the specified diagnostic port.
-        /// </summary>
-        /// <param name="diagnosticPort">The diagnostic port.</param>
-        /// <param name="ct">The token to monitor for cancellation requests.</param>
-        public static async Task<DiagnosticsClient> FromDiagnosticPort(string diagnosticPort, CancellationToken ct)
-        {
-            if (diagnosticPort is null)
-            {
-                throw new ArgumentNullException(nameof(diagnosticPort));
-            }
-
-            IpcEndpointConfig portConfig = IpcEndpointConfig.Parse(diagnosticPort);
-
-            if (portConfig.IsListenConfig)
-            {
-                string fullPort = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? portConfig.Address : Path.GetFullPath(portConfig.Address);
-                ReversedDiagnosticsServer server = new(fullPort);
-                server.Start();
-
-                try
-                {
-                    IpcEndpointInfo endpointInfo = await server.AcceptAsync(ct).ConfigureAwait(false);
-                    return new DiagnosticsClient(endpointInfo.Endpoint);
-                }
-                catch (TaskCanceledException)
-                {
-                    //clean up the server
-                    await server.DisposeAsync().ConfigureAwait(false);
-                    if (!ct.IsCancellationRequested)
-                    {
-                        throw;
-                    }
-                    return null;
-                }
-            }
-
-            Debug.Assert(portConfig.IsConnectConfig);
-            return new DiagnosticsClient(portConfig);
         }
 
         /// <summary>

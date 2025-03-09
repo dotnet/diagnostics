@@ -5,6 +5,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Runtime.InteropServices;
+using System.Buffers;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe
 {
@@ -13,12 +15,21 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         public static readonly Func<object, Exception, string> Callback = (state, exception) => ((LogObject)state).ToString();
 
         private readonly string _formattedMessage;
-        private List<KeyValuePair<string, object>> _items = new();
+        private KeyValuePair<string, object>[] _items = new KeyValuePair<string, object>[8];
 
         public LogObject(JsonElement element, string formattedMessage = null)
         {
+            int index = 0;
+
             foreach (JsonProperty item in element.EnumerateObject())
             {
+                if (index >= _items.Length)
+                {
+                    KeyValuePair<string, object>[] newArray = new KeyValuePair<string, object>[_items.Length * 2];
+                    _items.CopyTo(newArray, 0);
+                    _items = newArray;
+                }
+
                 switch (item.Value.ValueKind)
                 {
                     case JsonValueKind.Undefined:
@@ -28,17 +39,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     case JsonValueKind.Array:
                         break;
                     case JsonValueKind.String:
-                        _items.Add(new KeyValuePair<string, object>(item.Name, item.Value.GetString()));
+                        _items[index++] = new KeyValuePair<string, object>(item.Name, item.Value.GetString());
                         break;
                     case JsonValueKind.Number:
-                        _items.Add(new KeyValuePair<string, object>(item.Name, item.Value.GetInt32()));
+                        _items[index++] = new KeyValuePair<string, object>(item.Name, item.Value.GetInt32());
                         break;
                     case JsonValueKind.False:
                     case JsonValueKind.True:
-                        _items.Add(new KeyValuePair<string, object>(item.Name, item.Value.GetBoolean()));
+                        _items[index++] = new KeyValuePair<string, object>(item.Name, item.Value.GetBoolean());
                         break;
                     case JsonValueKind.Null:
-                        _items.Add(new KeyValuePair<string, object>(item.Name, null));
+                        _items[index++] = new KeyValuePair<string, object>(item.Name, null);
                         break;
                     default:
                         break;
@@ -46,17 +57,24 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
 
             _formattedMessage = formattedMessage;
+            Count = index;
         }
 
         public KeyValuePair<string, object> this[int index] => _items[index];
 
-        public int Count => _items.Count;
+        public int Count { get; private set; }
 
         public DateTime Timestamp { get; internal set; }
 
+        internal ReadOnlySpan<KeyValuePair<string, object>> ToSpan()
+            => new(_items, 0, Count);
+
         public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
         {
-            return _items.GetEnumerator();
+            for (int i = 0; i < Count; i++)
+            {
+                yield return this[i];
+            }
         }
 
         IEnumerator IEnumerable.GetEnumerator()

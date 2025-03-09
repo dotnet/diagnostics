@@ -22,8 +22,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
         }
 
-        // .NET 6 implements this method directly on Socket, but for earlier runtimes we need a polyfill
-#if !NET6_0
+        // .NET 8 implements this method directly on Socket, but for earlier runtimes we need a polyfill
+#if !NET8_0
         public async Task<Socket> AcceptAsync(CancellationToken token)
         {
             using (token.Register(() => Close(0)))
@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         // .NET 6 implements this method directly on Socket, but for earlier runtimes we need a polyfill
-#if !NET6_0
+#if !NET8_0
         public async Task ConnectAsync(EndPoint remoteEP, CancellationToken token)
         {
             using (token.Register(() => Close(0)))

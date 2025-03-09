@@ -47,6 +47,7 @@
           <PublishSingleFile>true</PublishSingleFile>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing1)' != ''">
           <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
@@ -54,6 +55,7 @@
           <PublishSingleFile>true</PublishSingleFile>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing2)' != ''">
           <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
@@ -61,6 +63,7 @@
           <PublishSingleFile>true</PublishSingleFile>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing3)' != ''">
           <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
@@ -68,6 +71,7 @@
           <PublishSingleFile>true</PublishSingleFile>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
         </Option>
       </Options>
     </Option>
@@ -76,18 +80,22 @@
       -->
     <Option Condition="'$(RuntimeVersionLatest)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
       <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
     <Option Condition="'$(RuntimeVersionServicing1)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
       <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
     <Option Condition="'$(RuntimeVersionServicing2)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
       <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
     <Option Condition="'$(RuntimeVersionServicing3)' != ''">
       <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
     </Option>
     <!--
         SOS.TestExtensions
@@ -95,6 +103,7 @@
     <Option Condition="'$(RuntimeVersionLatest)' != ''">
       <TestName>SOS.TestExtensions</TestName>
       <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
       <DotNetDiagnosticExtensions>$(RootBinDir)/bin/TestExtension/$(TargetConfiguration)/netstandard2.0/TestExtension.dll</DotNetDiagnosticExtensions>
       <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
     </Option>
@@ -113,38 +122,46 @@
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing1)' != ''">
               <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
+              <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing2)' != ''">
               <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
+              <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing3)' != ''">
               <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+              <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
             </Option>
           </Options>
         </Option>
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing1)' != ''">
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing2)' != ''">
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing3)' != ''">
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
         </Option>
       </Options>
     </Option>
@@ -156,20 +173,24 @@
       <Options>
         <Option Condition="'$(AspNetCoreVersionLatest)' != ''">
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
           <!-- This turns off the -fx-version to the dotnet host allowing it use the correct runtime version -->
           <SetFxVersion>false</SetFxVersion>
         </Option>
         <Option Condition="'$(AspNetCoreVersionServicing1)' != ''">
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
           <FrameworkVersion>$(AspNetCoreVersionServicing1)</FrameworkVersion>
         </Option>
         <Option Condition="'$(AspNetCoreVersionServicing2)' != ''">
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersionServicing2)</FrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(AspNetCoreVersionServicing3)' != ''">
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
           <FrameworkVersion>$(AspNetCoreVersionServicing3)</FrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
         </Option>
       </Options>
     </Option>
@@ -179,10 +200,9 @@
   <RuntimeSymbolsPath>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</RuntimeSymbolsPath>
   <LLDBHelperScript>$(ScriptRootDir)/lldbhelper.py</LLDBHelperScript>
 
-  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '10')">net10.0</BuildProjectFramework>
-  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '9')">net9.0</BuildProjectFramework>
-  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '8')">net8.0</BuildProjectFramework>
-  <BuildProjectFramework Condition="StartsWith('$(RuntimeFrameworkVersion)', '6')">net6.0</BuildProjectFramework>
+  <BuildType>servicing</BuildType>
+  <BuildType Condition="'$(RuntimeVersionLatest)' == '$(RuntimeFrameworkVersion)'">nightly</BuildType>
+  <BuildType Condition="'$(PrivateBuildTesting)' == 'true'">private</BuildType>
 
   <!-- Single-file debuggees don't need the host -->
   <SetHostExe Condition="'$(PublishSingleFile)' == 'true'">false</SetHostExe>
@@ -201,7 +221,7 @@
   </Options>
 
   <DotNetDumpHost>$(DotNetRoot)/dotnet</DotNetDumpHost>
-  <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/net6.0/publish/dotnet-dump.dll</DotNetDumpPath>
+  <DotNetDumpPath>$(RootBinDir)/bin/dotnet-dump/$(TargetConfiguration)/$(NetCoreAppMinTargetFramework)/publish/dotnet-dump.dll</DotNetDumpPath>
   <DebuggeeDumpOutputRootDir>$(DumpDir)/$(TestProduct)/$(RuntimeFrameworkVersion)/$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
   <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
 

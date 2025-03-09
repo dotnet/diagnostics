@@ -16,23 +16,29 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class ReportCommandHandler
     {
-        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType reportType = ReportType.HeapStat, string diagnosticPort = null);
-
-        public static Command ReportCommand() =>
-            new(
+        public static Command ReportCommand()
+        {
+            Command reportCommand = new(
                 name: "report",
                 description: "Generate report into stdout from a previously generated gcdump or from a running process.")
             {
-                // Handler
-                HandlerDescriptor.FromDelegate((ReportDelegate) Report).GetCommandHandler(),
-                // Options
-                FileNameArgument(),
-                ProcessIdOption(),
-                ReportTypeOption(),
-                DiagnosticPortOption(),
+                FileNameArgument,
+                ProcessIdOption,
+                ReportTypeOption,
+                DiagnosticPortOption
             };
 
-        private static Task<int> Report(CancellationToken ct, IConsole console, FileInfo gcdump_filename, int? processId = null, ReportType type = ReportType.HeapStat, string diagnosticPort = null)
+            reportCommand.SetAction((parseResult, ct) => Report(
+                ct,
+                gcdump_filename: parseResult.GetValue(FileNameArgument),
+                processId: parseResult.GetValue(ProcessIdOption),
+                type: parseResult.GetValue(ReportTypeOption),
+                diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty
+            ));
+
+            return reportCommand;
+        }
+        private static Task<int> Report(CancellationToken ct, FileInfo gcdump_filename, int? processId = null, ReportType type = ReportType.HeapStat, string diagnosticPort = null)
         {
             //
             // Validation
@@ -71,7 +77,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             return (source, type) switch
             {
-                (ReportSource.Process, ReportType.HeapStat) => ReportFromProcess(processId ?? 0, diagnosticPort, ct),
+                (ReportSource.Process, ReportType.HeapStat) => ReportFromProcess(processId ?? 0, diagnosticPort, dsrouter: string.Empty, ct: ct),
                 (ReportSource.DumpFile, ReportType.HeapStat) => ReportFromFile(gcdump_filename),
                 _ => HandleUnknownParam()
             };
@@ -83,9 +89,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             return Task.FromResult(-1);
         }
 
-        private static Task<int> ReportFromProcess(int processId, string diagnosticPort, CancellationToken ct)
+        private static Task<int> ReportFromProcess(int processId, string diagnosticPort, string dsrouter, CancellationToken ct)
         {
-            if (!CommandUtils.ValidateArgumentsForAttach(processId, string.Empty, diagnosticPort, out int resolvedProcessId))
+            if (!CommandUtils.ResolveProcessForAttach(processId, string.Empty, diagnosticPort, dsrouter, out int resolvedProcessId))
             {
                 return Task.FromResult(-1);
             }
@@ -145,35 +151,30 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
-        private static Argument<FileInfo> FileNameArgument() =>
+        private static readonly Argument<FileInfo> FileNameArgument =
             new Argument<FileInfo>("gcdump_filename")
             {
                 Description = "The file to read gcdump from.",
                 Arity = new ArgumentArity(0, 1)
-            }.ExistingOnly();
+            }.AcceptExistingOnly();
 
-        private static Option<int> ProcessIdOption() =>
-            new(
-                aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect the gcdump from.")
+        private static Option<int> ProcessIdOption =
+            new("--process-id", "-p")
             {
-                Argument = new Argument<int>(name: "pid"),
+                Description = "The process id to collect the gcdump from.",
             };
 
-        private static Option<ReportType> ReportTypeOption() =>
-            new(
-                aliases: new[] { "-t", "--report-type" },
-                description: "The type of report to generate. Available options: heapstat (default)")
+        private static readonly Option<ReportType> ReportTypeOption =
+            new("--report-type", "-t")
             {
-                Argument = new Argument<ReportType>(name: "report-type", () => ReportType.HeapStat)
+                Description = "The type of report to generate. Available options: heapstat (default)",
+                DefaultValueFactory = _ => ReportType.HeapStat
             };
 
-        private static Option<string> DiagnosticPortOption() =>
-            new(
-                aliases: new[] { "--dport", "--diagnostic-port" },
-                description: "The path to a diagnostic port to collect the dump from.")
+        private static readonly Option<string> DiagnosticPortOption =
+            new("--diagnostic-port", "--dport")
             {
-                Argument = new Argument<string>(name: "diagnostic-port", getDefaultValue: () => string.Empty)
+                Description = "The path to a diagnostic port to collect the dump from."
             };
 
         private enum ReportSource

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks Condition="'$(DotNetBuildSourceOnly)' != 'true'">netstandard2.0;$(NetCoreAppMinTargetFramework)</TargetFrameworks>
@@ -14,6 +14,7 @@
     <IsShipping>true</IsShipping>
     <BuildingOutsideDiagnostics>false</BuildingOutsideDiagnostics>
     <BuildingOutsideDiagnostics Condition="'$(GitHubRepositoryName)' != 'diagnostics'">true</BuildingOutsideDiagnostics>
+    <PreReleaseVersionLabel />
   </PropertyGroup>
 
   <PropertyGroup Condition="$(BuildingOutsideDiagnostics)">
@@ -36,6 +37,7 @@
     <InternalsVisibleTo Include="dotnet-dsrouter" />
     <InternalsVisibleTo Include="dotnet-monitor" />
     <InternalsVisibleTo Include="dotnet-trace" />
+    <InternalsVisibleTo Include="dotnet-dump" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.WebSocketServer" />

@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Binding;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,16 +30,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return ret;
         }
 
-        private delegate Task<int> ReportDelegate(CancellationToken ct, IConsole console, string traceFile);
-        private static Task<int> Report(CancellationToken ct, IConsole console, string traceFile)
+        private static Task<int> Report()
         {
             Console.Error.WriteLine("Error: subcommand was not provided. Available subcommands:");
             Console.Error.WriteLine("    topN: Finds the top N methods on the callstack the longest.");
             return Task.FromResult(-1);
         }
 
-        private delegate Task<int> TopNReportDelegate(CancellationToken ct, IConsole console, string traceFile, int n, bool inclusive, bool verbose);
-        private static async Task<int> TopNReport(CancellationToken ct, IConsole console, string traceFile, int number, bool inclusive, bool verbose)
+        private static int TopNReport(string traceFile, int number, bool inclusive, bool verbose)
         {
             try
             {
@@ -92,69 +90,69 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, verbose);
                 }
-                return await Task.FromResult(0).ConfigureAwait(false);
+                return 0;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex}");
+                return 1;
             }
-
-            return await Task.FromResult(0).ConfigureAwait(false);
         }
 
-        public static Command ReportCommand() =>
-            new(
+        public static Command ReportCommand()
+        {
+            Command topNCommand = new(
+                name: "topN",
+                description: "Finds the top N methods that have been on the callstack the longest.")
+            {
+                TopNOption,
+                InclusiveOption,
+                VerboseOption,
+            };
+
+            topNCommand.SetAction((parseResult, ct) => Task.FromResult(TopNReport(
+                traceFile: parseResult.GetValue(FileNameArgument),
+                number: parseResult.GetValue(TopNOption),
+                inclusive: parseResult.GetValue(InclusiveOption),
+                verbose: parseResult.GetValue(VerboseOption)
+            )));
+
+            Command reportCommand = new(
                 name: "report",
                 description: "Generates a report into stdout from a previously generated trace.")
                 {
-                    //Handler
-                    HandlerDescriptor.FromDelegate((ReportDelegate)Report).GetCommandHandler(),
-                    //Options
-                    FileNameArgument(),
-                    new Command(
-                        name: "topN",
-                        description: "Finds the top N methods that have been on the callstack the longest.")
-                        {
-                            //Handler
-                            HandlerDescriptor.FromDelegate((TopNReportDelegate)TopNReport).GetCommandHandler(),
-                            TopNOption(),
-                            InclusiveOption(),
-                            VerboseOption(),
-                        }
+                    FileNameArgument,
+                    topNCommand
                 };
+            reportCommand.SetAction((parseResult, ct) => Report());
 
-        private static Argument<string> FileNameArgument() =>
+            return reportCommand;
+        }
+
+        private static readonly Argument<string> FileNameArgument =
             new("trace_filename")
             {
-                Name = "tracefile",
                 Description = "The file path for the trace being analyzed.",
                 Arity = new ArgumentArity(1, 1)
             };
 
-        private static Option TopNOption()
-        {
-            return new Option(
-                aliases: new[] { "-n", "--number" },
-                description: $"Gives the top N methods on the callstack.")
+        private static readonly Option<int> TopNOption =
+            new("--number", "-n")
             {
-                Argument = new Argument<int>(name: "n", getDefaultValue: () => 5)
-            };
-        }
-
-        private static Option InclusiveOption() =>
-            new(
-                aliases: new[] { "--inclusive" },
-                description: $"Output the top N methods based on inclusive time. If not specified, exclusive time is used by default.")
-            {
-                Argument = new Argument<bool>(name: "inclusive", getDefaultValue: () => false)
+                Description = "Gives the top N methods on the callstack.",
+                DefaultValueFactory = _ => 5
             };
 
-        private static Option VerboseOption() =>
-            new(
-                aliases: new[] { "-v", "--verbose" },
-                description: $"Output the parameters of each method in full. If not specified, parameters will be truncated.")
+        private static readonly Option<bool> InclusiveOption =
+            new("--inclusive")
             {
-                Argument = new Argument<bool>(name: "verbose", getDefaultValue: () => false)
+                Description = "Output the top N methods based on inclusive time. If not specified, exclusive time is used by default."
+            };
+
+        private static readonly Option<bool> VerboseOption =
+            new("--verbose", "-v")
+            {
+                Description = "Output the parameters of each method in full. If not specified, parameters will be truncated."
             };
     }
 }

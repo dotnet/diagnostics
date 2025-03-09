@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public override void Invoke()
         {
             // Runtime.ThreadPool shouldn't be null unless there was a problem with the dump.
-            ClrThreadPool threadPool = Runtime.ThreadPool;
+            ClrThreadPool threadPool = Runtime?.ThreadPool;
             if (threadPool is null)
             {
                 Console.WriteLineError("Failed to obtain ThreadPool data.");

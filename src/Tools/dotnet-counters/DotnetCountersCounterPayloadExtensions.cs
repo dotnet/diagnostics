@@ -11,12 +11,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (!counterPayload.IsMeter)
             {
-                string unit = counterPayload.Unit == "count" ? "Count" : counterPayload.Unit;
+                string unit = counterPayload.CounterMetadata.CounterUnit == "count" ? "Count" : counterPayload.CounterMetadata.CounterUnit;
                 if (counterPayload.CounterType == CounterType.Rate)
                 {
                     return $"{counterPayload.DisplayName} ({unit} / {counterPayload.Series} sec)";
                 }
-                if (!string.IsNullOrEmpty(counterPayload.Unit))
+                if (!string.IsNullOrEmpty(counterPayload.CounterMetadata.CounterUnit))
                 {
                     return $"{counterPayload.DisplayName} ({unit})";
                 }

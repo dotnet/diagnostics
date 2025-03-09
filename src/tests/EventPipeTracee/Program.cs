@@ -33,8 +33,9 @@ namespace EventPipeTracee
 
             bool diagMetrics = args.Any("DiagMetrics".Equals);
             bool duplicateNameMetrics = args.Any("DuplicateNameMetrics".Equals);
+            bool useActivitySource = args.Any("UseActivitySource".Equals);
 
-            Console.WriteLine($"{pid} EventPipeTracee: DiagMetrics {diagMetrics}");
+            Console.WriteLine($"{pid} EventPipeTracee: DiagMetrics {diagMetrics} UseActivitySource {useActivitySource}");
             Console.WriteLine($"{pid} EventPipeTracee: DuplicateNameMetrics {duplicateNameMetrics}");
 
             Console.WriteLine($"{pid} EventPipeTracee: start process");
@@ -58,6 +59,10 @@ namespace EventPipeTracee
             using ILoggerFactory loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
             ILogger customCategoryLogger = loggerFactory.CreateLogger(loggerCategory);
             ILogger appCategoryLogger = loggerFactory.CreateLogger(AppLoggerCategoryName);
+
+            using ActivitySource activitySource = useActivitySource
+                ? new ActivitySource("EventPipeTracee.ActivitySource", version: "1.0.0")
+                : null;
 
             Console.WriteLine($"{pid} EventPipeTracee: {DateTime.UtcNow} Awaiting start");
             Console.Out.Flush();
@@ -86,6 +91,7 @@ namespace EventPipeTracee
                         recordMetricsCancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                         metrics?.IncrementCounter();
+                        metrics?.IncrementUpDownCounter();
                         metrics?.RecordHistogram(10.0f);
 #if NET8_0_OR_GREATER
                         dupMetrics?.IncrementCounter();
@@ -96,7 +102,7 @@ namespace EventPipeTracee
                 }).ConfigureAwait(true);
             }
 
-            await TestBodyCore(customCategoryLogger, appCategoryLogger).ConfigureAwait(false);
+            await TestBodyCore(customCategoryLogger, appCategoryLogger, activitySource).ConfigureAwait(false);
 
             Console.WriteLine($"{pid} EventPipeTracee: signal end of test data");
             Console.Out.Flush();
@@ -130,8 +136,32 @@ namespace EventPipeTracee
         }
 
         // TODO At some point we may want parameters to choose different test bodies.
-        private static async Task TestBodyCore(ILogger customCategoryLogger, ILogger appCategoryLogger)
+        private static async Task TestBodyCore(ILogger customCategoryLogger, ILogger appCategoryLogger, ActivitySource activitySource)
         {
+            using Activity activity = activitySource?.StartActivity(
+                name: "TestBodyCore",
+                kind: ActivityKind.Client,
+                links: new ActivityLink[] {
+                    new(
+                        ActivityContext.Parse(
+                            traceParent: "00-99d43cb30a4cdb4fbeee3a19c29201b0-e82825765f051b47-01",
+                            traceState: "k1=v1;k2=v2"))
+                });
+
+            if (activity != null)
+            {
+                activity.DisplayName = "Display name";
+                if (activity.IsAllDataRequested)
+                {
+                    activity.SetTag("custom.tag.string", "value1");
+                    activity.SetTag("custom.tag.int", 18);
+                }
+                activity.SetStatus(ActivityStatusCode.Error, "Error occurred");
+                activity.AddEvent(new ActivityEvent(
+                    name: "MyEvent",
+                    tags: new ActivityTagsCollection { ["tag1"] = "value1", ["tag2"] = 18 }));
+            }
+
             TaskCompletionSource secondSetScopes = new(TaskCreationOptions.RunContinuationsAsynchronously);
             TaskCompletionSource firstFinishedLogging = new(TaskCreationOptions.RunContinuationsAsynchronously);
             TaskCompletionSource secondFinishedLogging = new(TaskCreationOptions.RunContinuationsAsynchronously);

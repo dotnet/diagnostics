@@ -1,8 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.CommandLine.Builder;
-using System.CommandLine.Parsing;
+using System.CommandLine;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Commands;
@@ -13,14 +12,14 @@ namespace Microsoft.Diagnostics.Tools.Stack
     {
         public static Task<int> Main(string[] args)
         {
-            Parser parser = new CommandLineBuilder()
-                .AddCommand(ReportCommandHandler.ReportCommand())
-                .AddCommand(ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that stack traces can be collected from."))
-                .AddCommand(SymbolicateHandler.SymbolicateCommand())
-                .UseToolsDefaults()
-                .Build();
+            RootCommand rootCommand = new()
+            {
+                ReportCommandHandler.ReportCommand(),
+                ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that stack traces can be collected from."),
+                SymbolicateHandler.SymbolicateCommand()
+            };
 
-            return parser.InvokeAsync(args);
+            return rootCommand.Parse(args).InvokeAsync();
         }
     }
 }

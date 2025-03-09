@@ -3,7 +3,6 @@
 
 using System;
 using System.CommandLine;
-using System.CommandLine.Binding;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,8 +15,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     internal static class CollectCommandHandler
     {
-        private delegate Task<int> CollectDelegate(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort);
-
         /// <summary>
         /// Collects a gcdump from a currently running process.
         /// </summary>
@@ -30,9 +27,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="name">The process name to collect the gcdump from.</param>
         /// <param name="diagnosticPort">The diagnostic IPC channel to collect the gcdump from.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, IConsole console, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort)
+        private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter)
         {
-            if (!CommandUtils.ValidateArgumentsForAttach(processId, name, diagnosticPort, out int resolvedProcessId))
+            if (!CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
             {
                 return -1;
             }
@@ -131,69 +128,68 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             return true;
         }
 
-        public static Command CollectCommand() =>
-            new(
+        public static Command CollectCommand()
+        {
+            Command collectCommand = new(
                 name: "collect",
                 description: "Collects a diagnostic trace from a currently running process")
             {
-                // Handler
-                HandlerDescriptor.FromDelegate((CollectDelegate) Collect).GetCommandHandler(),
-                // Options
-                ProcessIdOption(),
-                OutputPathOption(),
-                VerboseOption(),
-                TimeoutOption(),
-                NameOption(),
-                DiagnosticPortOption()
+                ProcessIdOption,
+                OutputPathOption,
+                VerboseOption,
+                TimeoutOption,
+                NameOption,
+                DiagnosticPortOption
             };
 
-        private static Option<int> ProcessIdOption() =>
-            new(
-                aliases: new[] { "-p", "--process-id" },
-                description: "The process id to collect the gcdump from.")
+            collectCommand.SetAction(static (parseResult, ct) => Collect(ct,
+                    processId: parseResult.GetValue(ProcessIdOption),
+                    output: parseResult.GetValue(OutputPathOption) ?? string.Empty,
+                    timeout: parseResult.GetValue(TimeoutOption),
+                    verbose: parseResult.GetValue(VerboseOption),
+                    name: parseResult.GetValue(NameOption),
+                    diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
+                    dsrouter: string.Empty));
+
+            return collectCommand;
+        }
+
+        private static readonly Option<int> ProcessIdOption =
+            new("--process-id", "-p")
             {
-                Argument = new Argument<int>(name: "pid"),
+                Description = "The process id to collect the gcdump from."
             };
 
-        private static Option<string> NameOption() =>
-            new(
-                aliases: new[] { "-n", "--name" },
-                description: "The name of the process to collect the gcdump from.")
+        private static readonly Option<string> NameOption =
+            new("--name", "-n")
             {
-                Argument = new Argument<string>(name: "name")
+                Description = "The name of the process to collect the gcdump from."
             };
 
-        private static Option<string> OutputPathOption() =>
-            new(
-                aliases: new[] { "-o", "--output" },
-                description: $@"The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump.")
+        private static readonly Option<string> OutputPathOption =
+            new("--output", "-o")
             {
-                Argument = new Argument<string>(name: "gcdump-file-path", getDefaultValue: () => string.Empty)
+                Description = @"The path where collected gcdumps should be written. Defaults to '.\YYYYMMDD_HHMMSS_<pid>.gcdump' where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump."
             };
 
-        private static Option<bool> VerboseOption() =>
-            new(
-                aliases: new[] { "-v", "--verbose" },
-                description: "Output the log while collecting the gcdump.")
+        private static readonly Option<bool> VerboseOption =
+            new("--verbose", "-v")
             {
-                Argument = new Argument<bool>(name: "verbose")
+                Description = "Output the log while collecting the gcdump."
             };
 
         public static int DefaultTimeout = 30;
-        private static Option<int> TimeoutOption() =>
-            new(
-                aliases: new[] { "-t", "--timeout" },
-                description: $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.")
+        private static readonly Option<int> TimeoutOption =
+            new("--timeout", "-t")
             {
-                Argument = new Argument<int>(name: "timeout", getDefaultValue: () => DefaultTimeout)
+                Description = $"Give up on collecting the gcdump if it takes longer than this many seconds. The default value is {DefaultTimeout}s.",
+                DefaultValueFactory = _ => DefaultTimeout,
             };
 
-        private static Option<string> DiagnosticPortOption() =>
-        new(
-            aliases: new[] { "--dport", "--diagnostic-port" },
-            description: "The path to a diagnostic port to collect the dump from.")
-        {
-            Argument = new Argument<string>(name: "diagnostic-port", getDefaultValue: () => string.Empty)
-        };
+        private static readonly Option<string> DiagnosticPortOption =
+            new("--diagnostic-port", "--dport")
+            {
+                Description = "The path to a diagnostic port to collect the dump from."
+            };
     }
 }

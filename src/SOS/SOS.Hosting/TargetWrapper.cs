@@ -45,7 +45,6 @@ namespace SOS.Hosting
 
             builder.AddMethod(new GetOperatingSystemDelegate(GetOperatingSystem));
             builder.AddMethod(new HostWrapper.GetServiceDelegate(ServiceWrapper.GetService));
-            builder.AddMethod(new GetTempDirectoryDelegate(GetTempDirectory));
             builder.AddMethod(new GetRuntimeDelegate(GetRuntime));
             builder.AddMethod(new FlushDelegate(Flush));
 
@@ -82,12 +81,6 @@ namespace SOS.Hosting
                 return OperatingSystem.OSX;
             }
             return OperatingSystem.Unknown;
-        }
-
-        private string GetTempDirectory(
-            IntPtr self)
-        {
-            return _target.GetTempDirectory();
         }
 
         private int GetRuntime(
@@ -131,11 +124,6 @@ namespace SOS.Hosting
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate OperatingSystem GetOperatingSystemDelegate(
-            [In] IntPtr self);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        [return: MarshalAs(UnmanagedType.LPStr)]
-        private delegate string GetTempDirectoryDelegate(
             [In] IntPtr self);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
