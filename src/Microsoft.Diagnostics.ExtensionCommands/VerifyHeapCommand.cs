@@ -61,6 +61,44 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken), verifySyncTable: filteredHeap.HasFilters);
         }
 
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"VerifyHeap is a diagnostic tool that checks the garbage collected heap for 
+signs of corruption. It walks objects one by one in a pattern like this:
+
+    o = firstobject;
+    while(o != endobject)
+    {
+        o.ValidateAllFields();
+        o = (Object *) o + o.Size();
+    }
+
+If an error is found, VerifyHeap will report it. I'll take a perfectly good 
+object and corrupt it:
+
+    {prompt}dumpobj a79d40
+    Name: Customer
+    MethodTable: 009038ec
+    EEClass: 03ee1b84
+    Size: 20(0x14) bytes
+     (C:\pub\unittest.exe)
+    Fields:
+          MT    Field   Offset                 Type       Attr    Value Name
+    009038ec  4000008        4                CLASS   instance 00a79ce4 name
+    009038ec  4000009        8                CLASS   instance 00a79d2c bank
+    009038ec  400000a        c       System.Boolean   instance        1 valid
+
+    {prompt}ed a79d40+4 01  (change the name field to the bogus pointer value 1)
+    {prompt}verifyheap
+    object 01ee60dc: bad member 00000003 at 01EE6168
+    Last good object: 01EE60C4.
+
+If this gc heap corruption exists, there is a serious bug in your own code or 
+in the CLR. In user code, an error in constructing PInvoke calls can cause 
+this problem, and running with Managed Debugging Assistants is advised. If that
+possibility is eliminated, consider contacting Microsoft Product Support for
+help.
+";
         private IEnumerable<ClrObject> EnumerateWithCount(IEnumerable<ClrObject> objs)
         {
             _totalObjects = 0;

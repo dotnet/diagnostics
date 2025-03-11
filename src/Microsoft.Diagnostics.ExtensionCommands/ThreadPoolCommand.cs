@@ -133,6 +133,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"This command lists basic information about the ThreadPool, including the number
+of work requests in the queue, number of completion port threads, and number of
+timers.
+";
         private void DumpWorkItems()
         {
             Table output = null;

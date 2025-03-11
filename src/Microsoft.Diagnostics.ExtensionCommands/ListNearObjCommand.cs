@@ -263,6 +263,38 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"ListNearObj is a diagnostic tool that displays the object preceeding and 
+succeeding the address passed in:
+
+The command looks for the address in the GC heap that looks like a valid 
+beginning of a managed object (based on a valid method table) and the object 
+following the argument address.
+
+    {prompt}listnearobj 028000ec
+    Before: 0x28000a4           72 (0x48      ) System.StackOverflowException
+    After:  0x2800134           72 (0x48      ) System.Threading.ThreadAbortException
+    Heap local consistency confirmed.
+
+    {prompt}listnearobj 028000f0
+    Before: 0x28000ec           72 (0x48      ) System.ExecutionEngineException
+    After:  0x2800134           72 (0x48      ) System.Threading.ThreadAbortException
+    Heap local consistency confirmed.
+
+The command considers the heap as ""locally consistent"" if:
+    prev_obj_addr + prev_obj_size = arg_addr && arg_obj + arg_size = next_obj_addr
+OR
+    prev_obj_addr + prev_obj_size = next_obj_addr
+
+When the condition is not satisfied:
+
+    {prompt}listnearobj 028000ec
+    Before: 0x28000a4           72 (0x48      ) System.StackOverflowException
+    After:  0x2800134           72 (0x48      ) System.Threading.ThreadAbortException
+    Heap local consistency not confirmed.
+";
+
         private void CheckEndOfSegment(ClrSegment segment, ulong expectedNextObject, ulong prevObjectAddress, ref bool localConsistency, ref bool foundLastObject)
         {
             if (!segment.ObjectRange.Contains(expectedNextObject) && !foundLastObject)

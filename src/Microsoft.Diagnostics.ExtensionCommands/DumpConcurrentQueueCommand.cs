@@ -67,14 +67,14 @@ DumpConcurrentQueue
 Lists all items in the given concurrent queue.
 
 For simple types such as numbers, boolean and string, values are shown.
-> dcq 00000202a79320e8
+{prompt}dcq 00000202a79320e8
 System.Collections.Concurrent.ConcurrentQueue<System.Int32>
    1 - 0
    2 - 1
    3 - 2
 
 In case of reference types, the command to dump each object is shown.
-> dcq 00000202a79337f8
+{prompt}dcq 00000202a79337f8
 System.Collections.Concurrent.ConcurrentQueue<ForDump.ReferenceType>
    1 - dumpobj 0x202a7934e38
    2 - dumpobj 0x202a7934fd0
@@ -82,7 +82,7 @@ System.Collections.Concurrent.ConcurrentQueue<ForDump.ReferenceType>
 
 For value types, the command to dump each array segment is shown.
 The next step is to manually dump each element with dumpvc <the Element Methodtable> <[item] address>.
-> dcq 00000202a7933370
+{prompt}dcq 00000202a7933370
 System.Collections.Concurrent.ConcurrentQueue<ForDump.ValueType>
    1 - dumparray 202a79334e0
    2 - dumparray 202a7938a88
