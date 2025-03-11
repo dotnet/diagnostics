@@ -105,13 +105,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [HelpInvoke]
         public static string GetDetailedHelp() =>
 @"-------------------------------------------------------------------------------
-ThreadPoolQueue
-
 ThreadPoolQueue lists the enqueued work items in the Clr Thread Pool followed by a summary of the different tasks/work items.
 The global queue is first iterated before local per-thread queues.
 The name of the method to be called (on which instance if any) is also provided when available.
 
-> tpq
+{prompt}tpq
 
 global work item queue________________________________
 0x000002AC3C1DDBB0 Work | (ASP.global_asax)System.Web.HttpApplication.ResumeStepsWaitCallback

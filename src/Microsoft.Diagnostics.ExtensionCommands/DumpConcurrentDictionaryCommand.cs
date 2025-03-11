@@ -69,7 +69,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 DumpConcurrentDictionary
 Lists all items (key/value pairs) in the given concurrent dictionary.
 
-> dcd 00000184aa23e2e0
+{prompt}dcd 00000184aa23e2e0
 System.Collections.Concurrent.ConcurrentDictionary<System.Int32, ForDump.DumpStruct>
     -----
       Key: 31

@@ -107,12 +107,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [HelpInvoke]
         public static string GetDetailedHelp() =>
 @"-------------------------------------------------------------------------------
-TimerInfo
-
 TimerInfo lists all the running timers followed by a summary of the different items.
 The name of the method to be called (on which instance if any) is also provided when available.
 
-> ti
+{prompt}ti
 0x000001E29BD45848 @     964 ms every     1000 ms |  0x000001E29BD0C828 (Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.Heartbeat) ->
 0x000001E19BD0F868 @       1 ms every   ------ ms |  0x000001E19BD0F800 (System.Threading.Tasks.Task+DelayPromise) -> System.Threading.Tasks.Task+<>c.<Delay>b__260_1
 0x000001E09BD09B40 @       1 ms every   ------ ms |  0x000001E09BD09AD8 (System.Threading.Tasks.Task+DelayPromise) -> System.Threading.Tasks.Task+<>c.<Delay>b__260_1

@@ -608,7 +608,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // requesting help (either the help command or some other command using
                 // --help) won't work for the command instance that implements it's own
                 // help (SOS command).
-                return (string)Invoke(_methodInfoHelp, context: null, parser, services);
+                string help = (string)Invoke(_methodInfoHelp, context: null, parser, services);
+
+                // Replace "{prompt}" with the host debugger's prompt
+                string prompt = services.GetService<IHost>().HostType switch
+                {
+                    HostType.Lldb => "(lldb) ",
+                    HostType.DbgEng => "0:000> !",
+                    _ => "> "
+                };
+                return help.Replace("{prompt}", prompt);
             }
 
             private object Invoke(MethodInfo methodInfo, ParseResult context, Command parser, IServiceProvider services)

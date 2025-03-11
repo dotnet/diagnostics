@@ -132,7 +132,7 @@ Generation number can take the following values (case insensitive):
 - poh
 - foh
 
-> dumpgen gen0
+{prompt}dumpgen gen0
 Statistics:
               MT    Count    TotalSize Class Name
 00007ff9ea6601c8        1           24 System.Collections.Generic.GenericEqualityComparer<System.String>
@@ -143,7 +143,7 @@ Statistics:
 Total 651 objects
 
 As the original dumpheap command, we can pass an additional '-type' parameter to filter out on type name
-> dumpgen gen2 -type Object
+{prompt}dumpgen gen2 -type Object
 Statistics:
               MT    Count    TotalSize Class Name
 00007ff9ea590af0       26          624 System.Object
@@ -151,7 +151,7 @@ Statistics:
 00007ff9ea596618       17         2080 System.Object[]
 Total 46 objects
 
-> dumpgen gen0 -mt 00007ff9ea6e75b8
+{prompt}dumpgen gen0 -mt 00007ff9ea6e75b8
          Address               MT     Size
 00000184aa23e8a0 00007ff9ea6e75b8       40
 00000184aa23e8f0 00007ff9ea6e75b8       40
