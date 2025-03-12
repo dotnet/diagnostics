@@ -368,4 +368,4 @@ extends:
           publishInstallersAndChecksums: true
 
       # This sets up the bits to do a Release.
-      - template: /eng/pipelines/prepare-release.yml
+    - template: /eng/pipelines/prepare-release.yml
