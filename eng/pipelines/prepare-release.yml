@@ -4,6 +4,10 @@ stages:
   jobs:
   - job: PrepareReleaseJob
     displayName: Prepare Release
+    pool:
+      name: $(BuildPool)
+      demands: ImageOverride -equals $(WindowsImage)
+      os: windows
     ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/internal/release/'))) }}:
       templateContext:
         outputs:
@@ -17,7 +21,7 @@ stages:
       - group: DotNet-Diagnostics-Storage
       - group: Release-Pipeline
     steps:
-    - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+    - ${{ if or(in(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranch'], 'refs/heads/main')) }}:
       - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release /bl'
         workingDirectory: '$(System.ArtifactsDirectory)'
         displayName: 'Build Manifest generation and asset publishing tool'
