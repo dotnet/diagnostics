@@ -367,5 +367,5 @@ extends:
           symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
           publishInstallersAndChecksums: true
 
-      # This sets up the bits to do a Release.
-      - template: /eng/pipelines/prepare-release.yml
+    # This sets up the bits to do a Release.
+    - template: /eng/pipelines/prepare-release.yml
