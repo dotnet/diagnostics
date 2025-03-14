@@ -94,10 +94,10 @@ namespace DiagnosticsReleaseTool.CommandLine
 
         private static Option<DirectoryInfo> StagingPathOption()
         {
-            Option<DirectoryInfo> option = new("--staging-path", "-p")
+            Option<DirectoryInfo> option = new("--staging-directory", "-p")
             {
                 Description = "Full path to the staging path.",
-                DefaultValueFactory = _=> new DirectoryInfo(Path.Join(Path.GetTempPath(), Path.GetRandomFileName()))
+                DefaultValueFactory = _ => new DirectoryInfo(Path.Join(Path.GetTempPath(), Path.GetRandomFileName()))
             };
             option.AcceptLegalFilePathsOnly();
             return option;
