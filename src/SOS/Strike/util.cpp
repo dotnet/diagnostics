@@ -825,7 +825,10 @@ void DisplayThreadStatic (DacpModuleData* pModule, CLRDATA_ADDRESS cdaMT, DacpMe
     DacpThreadStoreData ThreadStore;
     ThreadStore.Request(g_sos);
 
-    ExtOut("    >> Thread:Value");
+#define INDENT "    "
+#define INDENT_DATA INDENT INDENT
+
+    ExtOut(INDENT "Thread static values (Thread:Value)\n");
     CLRDATA_ADDRESS CurThread = ThreadStore.firstThread;
     while (CurThread)
     {
@@ -850,8 +853,9 @@ void DisplayThreadStatic (DacpModuleData* pModule, CLRDATA_ADDRESS cdaMT, DacpMe
                 pSOS14->Release();
                 if (SUCCEEDED(hr) && (Flags&4))
                 {
-                    ExtOut(" %x:", vThread.osThreadId);
+                    ExtOut(INDENT_DATA "%x:", vThread.osThreadId);
                     DisplayDataMember(pFD, dwTmp, FALSE);
+                    ExtOut("\n");
                 }
             }
             else
@@ -917,15 +921,19 @@ void DisplayThreadStatic (DacpModuleData* pModule, CLRDATA_ADDRESS cdaMT, DacpMe
                     continue;
                 }
 
-                ExtOut(" %x:", vThread.osThreadId);
+                ExtOut(INDENT_DATA "%x:", vThread.osThreadId);
                 DisplayDataMember(pFD, dwTmp, FALSE);
+                ExtOut("\n");
             }
         }
 
         // Go to next thread
         CurThread = vThread.nextThread;
     }
-    ExtOut(" <<\n");
+    ExtOut("\n");
+
+#undef INDENT
+#undef INDENT_DATA
 }
 
 const char * ElementTypeName(unsigned type)
@@ -3961,7 +3969,7 @@ class SOSDacInterface15Simulator : public ISOSDacInterface15
             return S_OK;
         }
 
-        virtual HRESULT STDMETHODCALLTYPE Next( 
+        virtual HRESULT STDMETHODCALLTYPE Next(
             /* [in] */ unsigned int count,
             /* [length_is][size_is][out] */ SOSMethodData methods[  ],
             /* [out] */ unsigned int *pFetched)
@@ -4051,7 +4059,7 @@ public:
         return E_NOINTERFACE;
     }
 
-    virtual HRESULT STDMETHODCALLTYPE GetMethodTableSlotEnumerator( 
+    virtual HRESULT STDMETHODCALLTYPE GetMethodTableSlotEnumerator(
             CLRDATA_ADDRESS mt,
             ISOSMethodEnum **enumerator)
     {
