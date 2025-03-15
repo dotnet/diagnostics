@@ -32,13 +32,13 @@
       <Uri>https://github.com/dotnet/sdk</Uri>
       <Sha>bf19cbbae5fdf176cd4f13bca559133021779846</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="10.0.0-preview.3.25162.8">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="10.0.0-preview.3.25163.10">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>e6d943297f981ae68003b215f0cee66891cdf8ae</Sha>
+      <Sha>f3555640d3b0d049856947c4f2bd0b869adf5c5e</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="10.0.0-preview.3.25162.8">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="10.0.0-preview.3.25163.10">
       <Uri>https://github.com/dotnet/aspnetcore</Uri>
-      <Sha>e6d943297f981ae68003b215f0cee66891cdf8ae</Sha>
+      <Sha>f3555640d3b0d049856947c4f2bd0b869adf5c5e</Sha>
     </Dependency>
     <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="10.0.0-preview.3.25153.8">
       <Uri>https://github.com/dotnet/runtime</Uri>
@@ -49,9 +49,9 @@
       <Sha>3cf22b78d833dbac3d7e32f32406419bcb7511c0</Sha>
     </Dependency>
     <!-- Intermediate is necessary for source build. -->
-    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="10.0.616001">
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="10.0.616304">
       <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
-      <Sha>8f9f6fa14523b2f2475ea0a86be1cf60b5de5336</Sha>
+      <Sha>cac4d021768f34079c30570518ece6af317cbab8</Sha>
       <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
     </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis" Version="4.11.0-2.24271.11">
