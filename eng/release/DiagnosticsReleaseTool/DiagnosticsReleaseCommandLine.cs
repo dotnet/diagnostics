@@ -33,7 +33,7 @@ namespace DiagnosticsReleaseTool.CommandLine
                 // Toggles
                 ToolManifestVerificationOption, DiagnosticLoggingOption,
                 // Outputs
-                StagingPathOption(),
+                StagingPathOption,
                 AzureStorageAccountNameOption, AzureStorageAccountKeyOption, AzureStorageContainerNameOption
             };
 
@@ -43,7 +43,7 @@ namespace DiagnosticsReleaseTool.CommandLine
                     toolManifest: parseResult.GetValue(ToolManifestPathOption),
                     verifyToolManifest: parseResult.GetValue(ToolManifestVerificationOption),
                     inputDropPath: parseResult.GetValue(InputDropPathOption),
-                    stagingDirectory: parseResult.GetValue(StagingPathOption()),
+                    stagingDirectory: parseResult.GetValue(StagingPathOption),
                     releaseName: parseResult.GetValue(ReleaseNameOption),
                     accountName: parseResult.GetValue(AzureStorageAccountNameOption),
                     clientId: parseResult.GetValue(AzureStorageAccountKeyOption),
@@ -92,7 +92,10 @@ namespace DiagnosticsReleaseTool.CommandLine
                 Required = true
             };
 
-        private static Option<DirectoryInfo> StagingPathOption()
+
+        private static readonly Option<DirectoryInfo> StagingPathOption = InitStagingPath();
+
+        private static Option<DirectoryInfo> InitStagingPath()
         {
             Option<DirectoryInfo> option = new("--staging-directory", "-p")
             {
