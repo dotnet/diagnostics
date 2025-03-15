@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DiagnosticsReleaseTool", "DiagnosticsReleaseTool.csproj", "{67E77FB6-7C08-5D47-087C-10848A96123B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{67E77FB6-7C08-5D47-087C-10848A96123B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67E77FB6-7C08-5D47-087C-10848A96123B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67E77FB6-7C08-5D47-087C-10848A96123B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67E77FB6-7C08-5D47-087C-10848A96123B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A8543907-B0C4-4BBA-9F92-CE3D3FDA2F8D}
+	EndGlobalSection
+EndGlobal
