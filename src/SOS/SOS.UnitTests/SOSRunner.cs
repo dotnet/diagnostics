@@ -682,6 +682,11 @@ public class SOSRunner : IDisposable
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
+            if (config.TestCDAC)
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
+            }
+
             // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting debuggees.
             if (OS.Kind == OSKind.Windows)
             {
@@ -699,7 +704,7 @@ public class SOSRunner : IDisposable
 
             // Setup the extension environment variable
             string extensions = config.DotNetDiagnosticExtensions();
-            if (!string.IsNullOrEmpty(extensions)) 
+            if (!string.IsNullOrEmpty(extensions))
             {
                 processRunner.WithEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS", extensions);
             }
