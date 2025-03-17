@@ -192,7 +192,7 @@ public class SOS
 
     public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestCDAC", "true", MemberType = typeof(SOSTestHelpers)), Trait("Category", "CDACCompatible")]
+    [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
     public async Task StackTraceSoftwareExceptionFrame(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(
@@ -204,7 +204,7 @@ public class SOS
             testTriage: true);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestCDAC", "true", MemberType = typeof(SOSTestHelpers)), Trait("Category", "CDACCompatible")]
+    [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
     public async Task StackTraceFaultingExceptionFrame(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(
