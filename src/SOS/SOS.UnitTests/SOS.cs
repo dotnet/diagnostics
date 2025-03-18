@@ -195,6 +195,10 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
     public async Task StackTraceSoftwareExceptionFrame(TestConfiguration config)
     {
+        if (config.RuntimeFrameworkVersionMajor < 10)
+        {
+            throw new SkipTestException("This test validates SoftwareExceptionFrame handling, before .NET10, these aren't used in this debuggee scenario.");
+        }
         await SOSTestHelpers.RunTest(
             config,
             debuggeeName: "SimpleThrow",
