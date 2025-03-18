@@ -14,6 +14,7 @@ Param(
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimedownloadversion= 'default',
     [string] $runtimesourcefeed = '',
     [string] $runtimesourcefeedkey = '',
+    [string] $liveRuntimeDir = '',
     [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
 )
 
@@ -98,6 +99,7 @@ if ($test) {
           /p:DotnetRuntimeDownloadVersion="$dotnetruntimedownloadversion" `
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
           /p:RuntimeSourceFeedKey="$runtimesourcefeedkey"
+          /p:LiveRuntimeDir="$liveRuntimeDir" `
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
