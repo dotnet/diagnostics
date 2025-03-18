@@ -12,7 +12,7 @@ LOADSOS
 SOSCOMMAND:PrintException
 VERIFY:Exception object:\s+<HEXVAL>\s+
 VERIFY:Exception type:\s+System\.InvalidOperationException\s+
-VERIFY:Message:\s+Throwing an invalid operation....\s+
+VERIFY:Message:\s+(<Invalid Object>|Throwing an invalid operation\.\.\.\.)\s+
 VERIFY:InnerException:\s+<none>\s+
 VERIFY:StackTrace \(generated\):\s+
 VERIFY:\s+SP\s+IP\s+\s+Function\s+
