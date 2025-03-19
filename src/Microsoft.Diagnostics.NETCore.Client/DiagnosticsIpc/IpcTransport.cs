@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading;
@@ -20,6 +21,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         /// <param name="timeout">The amount of time to block attempting to connect</param>
         /// <returns>A stream used for writing and reading data to and from the target .NET process</returns>
+        /// <throws>ServerNotAvailableException</throws>
         public abstract Stream Connect(TimeSpan timeout);
 
         /// <summary>
@@ -29,6 +31,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>
         /// A task that completes with a stream used for writing and reading data to and from the target .NET process.
         /// </returns>
+        /// <throws>ServerNotAvailableException</throws>
         public abstract Task<Stream> ConnectAsync(CancellationToken token);
 
         /// <summary>
@@ -51,66 +54,81 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public static Stream Connect(IpcEndpointConfig config, TimeSpan timeout)
         {
-            if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
+            try
             {
-                NamedPipeClientStream namedPipe = new(
-                    ".",
-                    config.Address,
-                    PipeDirection.InOut,
-                    PipeOptions.None,
-                    TokenImpersonationLevel.Impersonation);
-                namedPipe.Connect((int)timeout.TotalMilliseconds);
-                return namedPipe;
-            }
-            else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
-            {
-                IpcUnixDomainSocket socket = new();
-                socket.Connect(new IpcUnixDomainSocketEndPoint(config.Address), timeout);
-                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
-            }
+                if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
+                {
+                    NamedPipeClientStream namedPipe = new(
+                        ".",
+                        config.Address,
+                        PipeDirection.InOut,
+                        PipeOptions.None,
+                        TokenImpersonationLevel.Impersonation);
+                    namedPipe.Connect((int)timeout.TotalMilliseconds);
+                    return namedPipe;
+                }
+                else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
+                {
+                    IpcUnixDomainSocket socket = new();
+                    socket.Connect(new IpcUnixDomainSocketEndPoint(config.Address), timeout);
+                    return new ExposedSocketNetworkStream(socket, ownsSocket: true);
+                }
 #if DIAGNOSTICS_RUNTIME
-            else if (config.Transport == IpcEndpointConfig.TransportType.TcpSocket)
-            {
-                var tcpClient = new TcpClient ();
-                var endPoint = new IpcTcpSocketEndPoint(config.Address);
-                tcpClient.Connect(endPoint.EndPoint);
-                return tcpClient.GetStream();
-            }
+                else if (config.Transport == IpcEndpointConfig.TransportType.TcpSocket)
+                {
+                    var tcpClient = new TcpClient ();
+                    var endPoint = new IpcTcpSocketEndPoint(config.Address);
+                    tcpClient.Connect(endPoint.EndPoint);
+                    return tcpClient.GetStream();
+                }
 #endif
-            else
+                else
+                {
+                    throw new ArgumentException($"Unsupported IpcEndpointConfig transport type {config.Transport}");
+                }
+
+            }
+            catch (SocketException ex)
             {
-                throw new ArgumentException($"Unsupported IpcEndpointConfig transport type {config.Transport}");
+                throw new ServerNotAvailableException($"Unable to connect to the server. {ex.Message}", ex);
             }
         }
 
         public static async Task<Stream> ConnectAsync(IpcEndpointConfig config, CancellationToken token)
         {
-            if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
+            try
             {
-                NamedPipeClientStream namedPipe = new(
-                    ".",
-                    config.Address,
-                    PipeDirection.InOut,
-                    PipeOptions.Asynchronous,
-                    TokenImpersonationLevel.Impersonation);
+                if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
+                {
+                    NamedPipeClientStream namedPipe = new(
+                        ".",
+                        config.Address,
+                        PipeDirection.InOut,
+                        PipeOptions.Asynchronous,
+                        TokenImpersonationLevel.Impersonation);
 
-                // Pass non-infinite timeout in order to cause internal connection algorithm
-                // to check the CancellationToken periodically. Otherwise, if the named pipe
-                // is waited using WaitNamedPipe with an infinite timeout, then the
-                // CancellationToken cannot be observed.
-                await namedPipe.ConnectAsync(int.MaxValue, token).ConfigureAwait(false);
+                    // Pass non-infinite timeout in order to cause internal connection algorithm
+                    // to check the CancellationToken periodically. Otherwise, if the named pipe
+                    // is waited using WaitNamedPipe with an infinite timeout, then the
+                    // CancellationToken cannot be observed.
+                    await namedPipe.ConnectAsync(int.MaxValue, token).ConfigureAwait(false);
 
-                return namedPipe;
+                    return namedPipe;
+                }
+                else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
+                {
+                    IpcUnixDomainSocket socket = new();
+                    await socket.ConnectAsync(new IpcUnixDomainSocketEndPoint(config.Address), token).ConfigureAwait(false);
+                    return new ExposedSocketNetworkStream(socket, ownsSocket: true);
+                }
+                else
+                {
+                    throw new ArgumentException($"Unsupported IpcEndpointConfig transport type {config.Transport}");
+                }
             }
-            else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
+            catch (SocketException ex)
             {
-                IpcUnixDomainSocket socket = new();
-                await socket.ConnectAsync(new IpcUnixDomainSocketEndPoint(config.Address), token).ConfigureAwait(false);
-                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
-            }
-            else
-            {
-                throw new ArgumentException($"Unsupported IpcEndpointConfig transport type {config.Transport}");
+                throw new ServerNotAvailableException($"Unable to connect to the server. {ex.Message}", ex);
             }
         }
     }
