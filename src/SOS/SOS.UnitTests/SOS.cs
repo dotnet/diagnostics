@@ -222,6 +222,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
     public async Task StackTraceFaultingExceptionFrame(TestConfiguration config)
     {
+        SOSTestHelpers.SkipIfWinX86(config);
+
         await SOSTestHelpers.RunTest(
             config,
             debuggeeName: "DivZero",
@@ -234,8 +236,6 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task DivZero(TestConfiguration config)
     {
-        SOSTestHelpers.SkipIfWinX86(config);
-
         await SOSTestHelpers.RunTest(
             config,
             debuggeeName: "DivZero",
