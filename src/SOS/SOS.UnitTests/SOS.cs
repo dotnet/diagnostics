@@ -32,6 +32,14 @@ public static class SOSTestHelpers
         }
     }
 
+    internal static void SkipIfWinX86(TestConfiguration config)
+    {
+        if (config.TargetArchitecture == "x86" && OS.Kind == OSKind.Windows)
+        {
+            throw new SkipTestException("Test does not support x86 on Windows");
+        }
+    }
+
     internal static async Task RunTest(
         string scriptName,
         SOSRunner.TestInformation information,
@@ -199,6 +207,9 @@ public class SOS
         {
             throw new SkipTestException("This test validates SoftwareExceptionFrame handling, before .NET10, these aren't used in this debuggee scenario.");
         }
+
+        SOSTestHelpers.SkipIfWinX86(config);
+
         await SOSTestHelpers.RunTest(
             config,
             debuggeeName: "SimpleThrow",
@@ -223,6 +234,8 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task DivZero(TestConfiguration config)
     {
+        SOSTestHelpers.SkipIfWinX86(config);
+
         await SOSTestHelpers.RunTest(
             config,
             debuggeeName: "DivZero",
