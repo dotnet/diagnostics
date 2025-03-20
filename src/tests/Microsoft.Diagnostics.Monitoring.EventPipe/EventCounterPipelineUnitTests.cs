@@ -153,7 +153,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             if (config.RuntimeFrameworkVersionMajor == 10)
             {
-                throw new SkipTestException("MetricsEventSource currently has a bug. Reenable after https://github.com/dotnet/runtime/pull/113524 brings in the payload.");
+                throw new SkipTestException("MetricsEventSource currently has a bug wrt metertelemetryschemaurl. Reenable after https://github.com/dotnet/runtime/pull/113524 is in the runtime payload.");
             }
 
             if (config.RuntimeFrameworkVersionMajor < 9)
