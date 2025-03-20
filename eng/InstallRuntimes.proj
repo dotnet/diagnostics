@@ -58,7 +58,7 @@
 -->
 
   <Target Name="InstallTestRuntimes"
-          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest;OverrideLatestRuntime" />
+          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;OverrideLatestRuntime;WriteTestVersionManifest" />
 
 <!--
     Installs the test runtimes on Windows
@@ -98,21 +98,18 @@
           Condition="'%(RuntimeTestVersions.AspNetDownload)' != ''" />
   </Target>
 
+  <!-- Overrides the latest runtime shared framework with local shared framework artifacts -->
   <Target Name="OverrideLatestRuntime"
-          Condition="'$(LiveRuntimeDir) != ''">
-    <Copy SourceFiles="$(LiveRuntimeDir)\**\*.*"
+          Condition="'$(LiveRuntimeDir)' != ''"
+          Inputs="$(VersionsPropsPath)"
+          Outputs="$(TestConfigFileName)">
+    
+    <ItemGroup>
+      <_LiveRuntimeFiles Include="$(LiveRuntimeDir)\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_LiveRuntimeFiles)"
           DestinationFolder="$(DotNetInstallDir)"
           OverwriteReadOnlyFiles="true" />
-    <!--
-    <Copy SourceFiles="$(LiveRuntimeDir)\sharedFramework\*.*;
-                       $(LiveRuntimeDir)\System.Private.CoreLib.dll;
-                       $(LiveRuntimeDir)\cdacreader.dll;"
-          DestinationFolder="$(DotNetInstallDir)"
-          OverwriteReadOnlyFiles="true" />
-    <Copy SourceFiles="$(LiveRuntimeDir)\cdaclibs\**\*.*"
-          DestinationFolder="$(DotNetInstallDir)\cdaclibs"
-          OverwriteReadOnlyFiles="true" />
-    -->
   </Target>
 
 <!--
