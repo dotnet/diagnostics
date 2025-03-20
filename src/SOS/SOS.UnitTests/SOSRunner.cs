@@ -691,6 +691,11 @@ public class SOSRunner : IDisposable
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
+            if (config.TestCDAC)
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
+            }
+
             // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting debuggees.
             if (OS.Kind == OSKind.Windows)
             {

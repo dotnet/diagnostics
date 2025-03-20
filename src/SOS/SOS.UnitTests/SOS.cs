@@ -32,6 +32,14 @@ public static class SOSTestHelpers
         }
     }
 
+    internal static void SkipIfWinX86(TestConfiguration config)
+    {
+        if (config.TargetArchitecture == "x86" && OS.Kind == OSKind.Windows)
+        {
+            throw new SkipTestException("Test does not support x86 on Windows");
+        }
+    }
+
     internal static async Task RunTest(
         string scriptName,
         SOSRunner.TestInformation information,
@@ -191,6 +199,39 @@ public class SOS
     private ITestOutputHelper Output { get; set; }
 
     public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
+
+    [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
+    public async Task StackTraceSoftwareExceptionFrame(TestConfiguration config)
+    {
+        if (config.RuntimeFrameworkVersionMajor < 10)
+        {
+            throw new SkipTestException("This test validates SoftwareExceptionFrame handling, before .NET10, these aren't used in this debuggee scenario.");
+        }
+
+        SOSTestHelpers.SkipIfWinX86(config);
+
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "SimpleThrow",
+            scriptName: "StackTraceSoftwareExceptionFrame.script",
+            Output,
+            testName: "SOS.StackTraceSoftwareExceptionFrame",
+            testTriage: true);
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
+    public async Task StackTraceFaultingExceptionFrame(TestConfiguration config)
+    {
+        SOSTestHelpers.SkipIfWinX86(config);
+
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "DivZero",
+            scriptName: "StackTraceFaultingExceptionFrame.script",
+            Output,
+            testName: "SOS.StackTraceFaultingExceptionFrame",
+            testTriage: true);
+    }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task DivZero(TestConfiguration config)

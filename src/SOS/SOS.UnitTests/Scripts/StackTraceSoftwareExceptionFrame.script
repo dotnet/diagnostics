@@ -1,0 +1,42 @@
+# Simple Throw debugging scenario
+# 1) Load the executable
+# 2) Run the executable and wait for it to crash
+# 3) Take a dump of the executable.
+# 4) Open the dump and compare the output
+
+CONTINUE
+
+LOADSOS
+
+# Verifying that PrintException gives us the right exception in the format above.
+SOSCOMMAND:PrintException
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.InvalidOperationException\s+
+VERIFY:Message:\s+(<Invalid Object>|Throwing an invalid operation\.\.\.\.)\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace \(generated\):\s+
+VERIFY:\s+SP\s+IP\s+\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+.*!UserObject\.UseObject(\(.*\))?\+0x<HEXVAL>\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+.*!Simple\.Main(\(.*\))?\+0x<HEXVAL>\s+
+VERIFY:(StackTraceString: <none>\s+)?\s+
+VERIFY:HResult:\s+80131509\s+
+
+# Verify that Threads (clrthreads) works
+SOSCOMMAND:clrthreads
+VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
+VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
+VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+
+VERIFY:\s+PendingThread:\s+<DECVAL>\s+
+VERIFY:\s+DeadThread:\s+<DECVAL>\s+
+VERIFY:\s+Hosted Runtime:\s+no\s+
+VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
+VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
+
+# Verify that ClrStack with no options works
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[InlinedCallFrame: <HEXVAL>]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[SoftwareExceptionFrame: <HEXVAL>]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+UserObject\.UseObject(\(.*\))?\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+Simple\.Main(\(.*\))?\s+

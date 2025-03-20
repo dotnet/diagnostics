@@ -10,10 +10,12 @@ Param(
     [switch] $skipmanaged,
     [switch] $skipnative,
     [switch] $bundletools,
+    [switch] $useCdac,
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimedownloadversion= 'default',
     [string] $runtimesourcefeed = '',
     [string] $runtimesourcefeedkey = '',
+    [string] $liveRuntimeDir = '',
     [Parameter(ValueFromRemainingArguments=$true)][String[]] $remainingargs
 )
 
@@ -80,12 +82,17 @@ if ($installruntimes -or $privatebuild) {
       /bl:$logdir\InstallRuntimes.binlog `
       /p:PrivateBuildTesting=$privatebuildtesting `
       /p:BuildArch=$architecture `
-      /p:TestArchitectures=$architecture
+      /p:TestArchitectures=$architecture `
+      /p:LiveRuntimeDir="$liveRuntimeDir"
 }
 
 # Run the xunit tests
 if ($test) {
     if (-not $crossbuild) {
+        if ($useCdac) {
+            $env:SOS_TEST_CDAC="true"
+        }
+
         & "$engroot\common\build.ps1" `
           -test `
           -configuration $configuration `
@@ -97,7 +104,8 @@ if ($test) {
           /p:DotnetRuntimeVersion="$dotnetruntimeversion" `
           /p:DotnetRuntimeDownloadVersion="$dotnetruntimedownloadversion" `
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
-          /p:RuntimeSourceFeedKey="$runtimesourcefeedkey"
+          /p:RuntimeSourceFeedKey="$runtimesourcefeedkey" `
+          /p:LiveRuntimeDir="$liveRuntimeDir" 
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode

@@ -20,6 +20,7 @@
   <PropertyGroup>
     <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
     <BuildArch Condition="'$(BuildArch)' == 'AnyCpu'">$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</BuildArch>
+    <LiveRuntimeDir Condition="'$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizePath('$(LiveRuntimeDir)'))</LiveRuntimeDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(BuildArch)' != 'x86'">
@@ -57,7 +58,7 @@
 -->
 
   <Target Name="InstallTestRuntimes"
-          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;WriteTestVersionManifest;" />
+          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;OverrideLatestRuntime;WriteTestVersionManifest" />
 
 <!--
     Installs the test runtimes on Windows
@@ -95,7 +96,21 @@
     <Exec Command="bash $(DotnetInstallScriptCmd) $(CommonInstallArgs) %(RuntimeTestVersions.ExtraInstallArgs) -Version %(RuntimeTestVersions.AspNetDownload) -Runtime aspnetcore"
           IgnoreStandardErrorWarningFormat="true"
           Condition="'%(RuntimeTestVersions.AspNetDownload)' != ''" />
-   </Target>
+  </Target>
+
+  <!-- Overrides the latest runtime shared framework with local shared framework artifacts -->
+  <Target Name="OverrideLatestRuntime"
+          Condition="'$(LiveRuntimeDir)' != ''"
+          Inputs="$(VersionsPropsPath)"
+          Outputs="$(TestConfigFileName)">
+    
+    <ItemGroup>
+      <_LiveRuntimeFiles Include="$(LiveRuntimeDir)\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_LiveRuntimeFiles)"
+          DestinationFolder="$(DotNetInstallDir)"
+          OverwriteReadOnlyFiles="true" />
+  </Target>
 
 <!--
     Writes the Debugger.Tests.Versions.txt file used by the SOS test harness
