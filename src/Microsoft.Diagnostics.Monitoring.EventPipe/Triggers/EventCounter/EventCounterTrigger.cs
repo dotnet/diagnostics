@@ -32,7 +32,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         private readonly CounterFilter _filter;
         private readonly EventCounterTriggerImpl _impl;
         private readonly string _providerName;
-        private CounterConfiguration _counterConfiguration;
+        private readonly CounterConfiguration _counterConfiguration;
+
+        // CONSIDER It is likely that we could expand the scope of this cache across multiple triggers, but
+        // currently each trigger creates its own session.
+        private CounterMetadataCache _counterMetadataCache;
 
         public EventCounterTrigger(EventCounterTriggerSettings settings)
         {
@@ -47,6 +51,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
             _filter.AddFilter(settings.ProviderName, new string[] { settings.CounterName });
 
             _counterConfiguration = new CounterConfiguration(_filter);
+            _counterMetadataCache = new();
 
             _impl = new EventCounterTriggerImpl(settings);
 
@@ -61,7 +66,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.EventCounter
         public bool HasSatisfiedCondition(TraceEvent traceEvent)
         {
             // Filter to the counter of interest before forwarding to the implementation
-            if (traceEvent.TryGetCounterPayload(_counterConfiguration, out ICounterPayload payload))
+            if (traceEvent.TryGetCounterPayload(_counterMetadataCache, _counterConfiguration, out ICounterPayload payload))
             {
                 return _impl.HasSatisfiedCondition(payload);
             }

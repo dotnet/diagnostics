@@ -68,10 +68,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
         {
             await ExecuteCounterLoggerActionAsync((metricLogger) => metricLogger.PipelineStarted(token)).ConfigureAwait(false);
 
+            CounterMetadataCache cache = new();
+
             eventSource.Dynamic.All += traceEvent => {
                 try
                 {
-                    if (traceEvent.TryGetCounterPayload(_counterConfiguration, out ICounterPayload counterPayload))
+                    if (traceEvent.TryGetCounterPayload(cache, _counterConfiguration, out ICounterPayload counterPayload))
                     {
                         ExecuteCounterLoggerAction((metricLogger) => metricLogger.Log(counterPayload));
                     }
