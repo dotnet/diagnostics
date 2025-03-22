@@ -151,7 +151,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestDuplicateNameMetrics(TestConfiguration config)
         {
-            if(config.RuntimeFrameworkVersionMajor < 9)
+            if (config.RuntimeFrameworkVersionMajor == 10)
+            {
+                throw new SkipTestException("MetricsEventSource currently has a bug wrt metertelemetryschemaurl. Reenable after https://github.com/dotnet/runtime/pull/113524 is in the runtime payload.");
+            }
+
+            if (config.RuntimeFrameworkVersionMajor < 9)
             {
                 throw new SkipTestException("MetricsEventSource only supports instrument IDs starting in .NET 9.0.");
             }
@@ -167,7 +172,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TaskCompletionSource<object> foundExpectedCountersSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
             TestMetricsLogger logger = new(expectedCounters, foundExpectedCountersSource);
 
-            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "DuplicateNameMetrics", _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "DuplicateNameMetrics", _output, testProcessTimeout: 3_000))
             {
                 DiagnosticsClient client = new(testRunner.Pid);
 
