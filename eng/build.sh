@@ -38,7 +38,6 @@ usage_list+=("-skipnative: do not build native components.")
 usage_list+=("-test: run xunit tests")
 
 handle_arguments() {
-    
     lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
     case "$lowerI" in
         architecture|-architecture|-a)
