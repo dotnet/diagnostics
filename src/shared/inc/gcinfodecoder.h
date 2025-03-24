@@ -7,11 +7,11 @@
  *
  *****************************************************************/
 
- // ******************************************************************************
- // WARNING!!!: These values are used by SOS in the diagnostics repo. Values should
- // added or removed in a backwards and forwards compatible way.
- // See: https://github.com/dotnet/diagnostics/blob/main/src/shared/inc/gcinfodecoder.h
- // ******************************************************************************
+// ******************************************************************************
+// WARNING!!!: These values are used by SOS in the diagnostics repo. Values should
+// added or removed in a backwards and forwards compatible way.
+// See: https://github.com/dotnet/diagnostics/blob/main/src/shared/inc/gcinfodecoder.h
+// ******************************************************************************
 
 #ifndef _GC_INFO_DECODER_
 #define _GC_INFO_DECODER_
@@ -62,7 +62,7 @@ typedef DPTR(INT32) PTR_INT32;
 
 #define CHECK_APP_DOMAIN    0
 
-typedef void* OBJECTREF;
+typedef void * OBJECTREF;
 
 #define GET_CALLER_SP(pREGDISPLAY) ((TADDR)0)
 
@@ -97,7 +97,7 @@ inline TADDR GetSP(T_CONTEXT* context)
 inline PCODE GetIP(T_CONTEXT* context)
 {
 #ifdef TARGET_AMD64
-    return (PCODE)context->Rip;
+    return (PCODE) context->Rip;
 #elif defined(TARGET_ARM)
     return (PCODE)context->Pc;
 #elif defined(TARGET_ARM64)
@@ -118,7 +118,7 @@ inline PCODE GetIP(T_CONTEXT* context)
 #ifndef DEFINE_OBJECTREF
 #define DEFINE_OBJECTREF
 class Object;
-typedef Object* OBJECTREF;
+typedef Object *OBJECTREF;
 #endif
 typedef SIZE_T TADDR;
 
@@ -135,15 +135,15 @@ typedef SIZE_T TADDR;
 
 #ifndef _stdmacros_h_
 
-inline BOOL IS_ALIGNED(size_t val, size_t alignment)
+inline BOOL IS_ALIGNED( size_t val, size_t alignment )
 {
     // alignment must be a power of 2 for this implementation to work (need modulo otherwise)
-    _ASSERTE(0 == (alignment & (alignment - 1)));
+    _ASSERTE( 0 == (alignment & (alignment - 1)) );
     return 0 == (val & (alignment - 1));
 }
-inline BOOL IS_ALIGNED(void* val, size_t alignment)
+inline BOOL IS_ALIGNED( void* val, size_t alignment )
 {
-    return IS_ALIGNED((size_t)val, alignment);
+    return IS_ALIGNED( (size_t) val, alignment );
 }
 
 #define FMT_REG     "r%d "
@@ -160,10 +160,10 @@ inline BOOL IS_ALIGNED(void* val, size_t alignment)
 #ifndef _EETWAIN_H
 
 typedef void (*GCEnumCallback)(
-    void* hCallback,      // callback data
-    OBJECTREF* pObject,        // address of object-reference we are reporting
+    void *          hCallback,      // callback data
+    OBJECTREF*      pObject,        // address of object-reference we are reporting
     uint32_t        flags           // is this a pinned and/or interior pointer
-    );
+);
 
 #endif // !_EETWAIN_H
 
@@ -175,19 +175,19 @@ typedef void (*GCEnumCallback)(
 
 enum ICodeManagerFlags
 {
-    ActiveStackFrame = 0x0001, // this is the currently active function
-    ExecutionAborted = 0x0002, // execution of this function has been aborted
-    // (i.e. it will not continue execution at the
-    // current location)
+    ActiveStackFrame  =  0x0001, // this is the currently active function
+    ExecutionAborted  =  0x0002, // execution of this function has been aborted
+                                 // (i.e. it will not continue execution at the
+                                 // current location)
     ParentOfFuncletStackFrame
-    = 0x0040, // A funclet for this frame was previously reported
+                      =  0x0040, // A funclet for this frame was previously reported
 
     NoReportUntracked
-    = 0x0080, // EnumGCRefs/EnumerateLiveSlots should *not* include
-    // any untracked slots
+                    =   0x0080, // EnumGCRefs/EnumerateLiveSlots should *not* include
+                                // any untracked slots
     ReportFPBasedSlotsOnly
-    = 0x0200, // EnumGCRefs/EnumerateLiveSlots should only include
-    // slots that are based on the frame pointer
+                    =   0x0200, // EnumGCRefs/EnumerateLiveSlots should only include
+                                // slots that are based on the frame pointer
 };
 
 #endif // !_strike_h
@@ -198,57 +198,57 @@ enum ICodeManagerFlags
 #include "gcinfotypes.h"
 
 #ifdef _DEBUG
-#define MAX_PREDECODED_SLOTS  4
+    #define MAX_PREDECODED_SLOTS  4
 #else
-#define MAX_PREDECODED_SLOTS 64
+    #define MAX_PREDECODED_SLOTS 64
 #endif
 
 
 
 enum GcInfoDecoderFlags
 {
-    DECODE_EVERYTHING = 0x0,
-    DECODE_SECURITY_OBJECT = 0x01,    // stack location of security object
-    DECODE_CODE_LENGTH = 0x02,
-    DECODE_VARARG = 0x04,
-    DECODE_INTERRUPTIBILITY = 0x08,
-    DECODE_GC_LIFETIMES = 0x10,
-    DECODE_NO_VALIDATION = 0x20,
-    DECODE_PSP_SYM = 0x40,
+    DECODE_EVERYTHING            = 0x0,
+    DECODE_SECURITY_OBJECT       = 0x01,    // stack location of security object
+    DECODE_CODE_LENGTH           = 0x02,
+    DECODE_VARARG                = 0x04,
+    DECODE_INTERRUPTIBILITY      = 0x08,
+    DECODE_GC_LIFETIMES          = 0x10,
+    DECODE_NO_VALIDATION         = 0x20,
+    DECODE_PSP_SYM               = 0x40,
     DECODE_GENERICS_INST_CONTEXT = 0x80,    // stack location of instantiation context for generics
-    // (this may be either the 'this' ptr or the instantiation secret param)
-    DECODE_GS_COOKIE = 0x100,   // stack location of the GS cookie
-    DECODE_FOR_RANGES_CALLBACK = 0x200,
-    DECODE_PROLOG_LENGTH = 0x400,   // length of the prolog (used to avoid reporting generics context)
-    DECODE_EDIT_AND_CONTINUE = 0x800,
-    DECODE_REVERSE_PINVOKE_VAR = 0x1000,
+                                            // (this may be either the 'this' ptr or the instantiation secret param)
+    DECODE_GS_COOKIE             = 0x100,   // stack location of the GS cookie
+    DECODE_FOR_RANGES_CALLBACK   = 0x200,
+    DECODE_PROLOG_LENGTH         = 0x400,   // length of the prolog (used to avoid reporting generics context)
+    DECODE_EDIT_AND_CONTINUE     = 0x800,
+    DECODE_REVERSE_PINVOKE_VAR   = 0x1000,
 #if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
-    DECODE_HAS_TAILCALLS = 0x4000,
+    DECODE_HAS_TAILCALLS         = 0x4000,
 #endif // TARGET_ARM || TARGET_ARM64 || TARGET_LOONGARCH64
 };
 
 enum GcInfoHeaderFlags
 {
-    GC_INFO_IS_VARARG = 0x1,
+    GC_INFO_IS_VARARG                   = 0x1,
     // unused                           = 0x2, // was GC_INFO_HAS_SECURITY_OBJECT
-    GC_INFO_HAS_GS_COOKIE = 0x4,
-    GC_INFO_HAS_PSP_SYM = 0x8,
-    GC_INFO_HAS_GENERICS_INST_CONTEXT_MASK = 0x30,
-    GC_INFO_HAS_GENERICS_INST_CONTEXT_NONE = 0x00,
-    GC_INFO_HAS_GENERICS_INST_CONTEXT_MT = 0x10,
-    GC_INFO_HAS_GENERICS_INST_CONTEXT_MD = 0x20,
-    GC_INFO_HAS_GENERICS_INST_CONTEXT_THIS = 0x30,
-    GC_INFO_HAS_STACK_BASE_REGISTER = 0x40,
+    GC_INFO_HAS_GS_COOKIE               = 0x4,
+    GC_INFO_HAS_PSP_SYM                 = 0x8,
+    GC_INFO_HAS_GENERICS_INST_CONTEXT_MASK   = 0x30,
+    GC_INFO_HAS_GENERICS_INST_CONTEXT_NONE   = 0x00,
+    GC_INFO_HAS_GENERICS_INST_CONTEXT_MT     = 0x10,
+    GC_INFO_HAS_GENERICS_INST_CONTEXT_MD     = 0x20,
+    GC_INFO_HAS_GENERICS_INST_CONTEXT_THIS   = 0x30,
+    GC_INFO_HAS_STACK_BASE_REGISTER     = 0x40,
 #ifdef TARGET_AMD64
-    GC_INFO_WANTS_REPORT_ONLY_LEAF = 0x80,
+    GC_INFO_WANTS_REPORT_ONLY_LEAF      = 0x80,
 #elif defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
-    GC_INFO_HAS_TAILCALLS = 0x80,
+    GC_INFO_HAS_TAILCALLS               = 0x80,
 #endif // TARGET_AMD64
     GC_INFO_HAS_EDIT_AND_CONTINUE_INFO = 0x100,
     GC_INFO_REVERSE_PINVOKE_FRAME = 0x200,
 
-    GC_INFO_FLAGS_BIT_SIZE_VERSION_1 = 9,
-    GC_INFO_FLAGS_BIT_SIZE = 10,
+    GC_INFO_FLAGS_BIT_SIZE_VERSION_1    = 9,
+    GC_INFO_FLAGS_BIT_SIZE              = 10,
 };
 
 class BitStreamReader
@@ -259,13 +259,13 @@ public:
         SUPPORTS_DAC;
     }
 
-    BitStreamReader(PTR_CBYTE pBuffer)
+    BitStreamReader( PTR_CBYTE pBuffer )
     {
         SUPPORTS_DAC;
 
-        _ASSERTE(pBuffer != NULL);
+        _ASSERTE( pBuffer != NULL );
 
-        m_pCurrent = m_pBuffer = dac_cast<PTR_size_t>((size_t)dac_cast<TADDR>(pBuffer) & ~((size_t)sizeof(size_t) - 1));
+        m_pCurrent = m_pBuffer = dac_cast<PTR_size_t>((size_t)dac_cast<TADDR>(pBuffer) & ~((size_t)sizeof(size_t)-1));
         m_RelPos = m_InitialRelPos = (int)((size_t)dac_cast<TADDR>(pBuffer) % sizeof(size_t)) * 8/*BITS_PER_BYTE*/;
         // There are always some bits in the GC info, at least the header.
         // It is ok to prefetch.
@@ -296,7 +296,7 @@ public:
     }
 
     // NOTE: This routine is perf-critical
-    __forceinline size_t Read(int numBits)
+    __forceinline size_t Read( int numBits )
     {
         SUPPORTS_DAC;
 
@@ -305,7 +305,7 @@ public:
         size_t result = m_current;
         m_current >>= numBits;
         int newRelPos = m_RelPos + numBits;
-        if (newRelPos > BITS_PER_SIZE_T)
+        if(newRelPos > BITS_PER_SIZE_T)
         {
             m_pCurrent++;
             m_current = *m_pCurrent;
@@ -327,7 +327,7 @@ public:
 
         // "m_RelPos == BITS_PER_SIZE_T" means that m_current
         // is not yet fetched. Do that now.
-        if (m_RelPos == BITS_PER_SIZE_T)
+        if(m_RelPos == BITS_PER_SIZE_T)
         {
             m_pCurrent++;
             m_current = *m_pCurrent;
@@ -345,10 +345,10 @@ public:
     __forceinline size_t GetCurrentPos()
     {
         SUPPORTS_DAC;
-        return (size_t)((m_pCurrent - m_pBuffer) * BITS_PER_SIZE_T + m_RelPos - m_InitialRelPos);
+        return (size_t) ((m_pCurrent - m_pBuffer) * BITS_PER_SIZE_T + m_RelPos - m_InitialRelPos);
     }
 
-    __forceinline void SetCurrentPos(size_t pos)
+    __forceinline void SetCurrentPos( size_t pos )
     {
         size_t adjPos = pos + m_InitialRelPos;
         m_pCurrent = m_pBuffer + adjPos / BITS_PER_SIZE_T;
@@ -360,7 +360,7 @@ public:
         _ASSERTE(GetCurrentPos() == pos);
     }
 
-    __forceinline void Skip(SSIZE_T numBitsToSkip)
+    __forceinline void Skip( SSIZE_T numBitsToSkip )
     {
         SUPPORTS_DAC;
 
@@ -393,18 +393,18 @@ public:
     // See the corresponding methods on BitStreamWriter for more information on the format
     //--------------------------------------------------------------------------
 
-    size_t DecodeVarLengthUnsignedMore(int base)
+    size_t DecodeVarLengthUnsignedMore ( int base )
     {
         _ASSERTE((base > 0) && (base < (int)BITS_PER_SIZE_T));
         size_t numEncodings = size_t{ 1 } << base;
         size_t result = numEncodings;
-        for (int shift = base; ; shift += base)
+        for(int shift=base; ; shift+=base)
         {
-            _ASSERTE(shift + base <= (int)BITS_PER_SIZE_T);
+            _ASSERTE(shift+base <= (int)BITS_PER_SIZE_T);
 
-            size_t currentChunk = Read(base + 1);
-            result ^= (currentChunk & (numEncodings - 1)) << shift;
-            if (!(currentChunk & numEncodings))
+            size_t currentChunk = Read(base+1);
+            result ^= (currentChunk & (numEncodings-1)) << shift;
+            if(!(currentChunk & numEncodings))
             {
                 // Extension bit is not set, we're done.
                 return result;
@@ -425,21 +425,21 @@ public:
         return result;
     }
 
-    inline SSIZE_T DecodeVarLengthSigned(int base)
+    inline SSIZE_T DecodeVarLengthSigned( int base )
     {
         _ASSERTE((base > 0) && (base < (int)BITS_PER_SIZE_T));
         size_t numEncodings = size_t{ 1 } << base;
         SSIZE_T result = 0;
-        for (int shift = 0; ; shift += base)
+        for(int shift=0; ; shift+=base)
         {
-            _ASSERTE(shift + base <= (int)BITS_PER_SIZE_T);
+            _ASSERTE(shift+base <= (int)BITS_PER_SIZE_T);
 
-            size_t currentChunk = Read(base + 1);
-            result |= (currentChunk & (numEncodings - 1)) << shift;
-            if (!(currentChunk & numEncodings))
+            size_t currentChunk = Read(base+1);
+            result |= (currentChunk & (numEncodings-1)) << shift;
+            if(!(currentChunk & numEncodings))
             {
                 // Extension bit is not set, sign-extend and we're done.
-                int sbits = BITS_PER_SIZE_T - (shift + base);
+                int sbits = BITS_PER_SIZE_T - (shift+base);
                 result <<= sbits;
                 result >>= sbits;   // This provides the sign extension
                 return result;
@@ -469,8 +469,7 @@ class GcSlotDecoder
 {
 public:
     GcSlotDecoder()
-    {
-    }
+    {}
 
     void DecodeSlotTable(BitStreamReader& reader);
 
@@ -514,10 +513,10 @@ public:
 
     // If you are not interested in interruptibility or gc lifetime information, pass 0 as instructionOffset
     GcInfoDecoder(
-        GCInfoToken gcInfoToken,
-        GcInfoDecoderFlags flags = DECODE_EVERYTHING,
-        UINT32 instructionOffset = 0
-    );
+            GCInfoToken gcInfoToken,
+            GcInfoDecoderFlags flags = DECODE_EVERYTHING,
+            UINT32 instructionOffset = 0
+            );
 
     //------------------------------------------------------------------------
     // Interruptibility
@@ -533,36 +532,36 @@ public:
     // This is used for gcinfodumper
     bool IsSafePoint(UINT32 codeOffset);
 
-    typedef void EnumerateSafePointsCallback(GcInfoDecoder* decoder, UINT32 offset, void* hCallback);
-    void EnumerateSafePoints(EnumerateSafePointsCallback* pCallback, void* hCallback);
+    typedef void EnumerateSafePointsCallback (GcInfoDecoder* decoder, UINT32 offset, void * hCallback);
+    void EnumerateSafePoints(EnumerateSafePointsCallback * pCallback, void * hCallback);
 
 #endif
     // Returns true to stop enumerating.
-    typedef bool EnumerateInterruptibleRangesCallback(UINT32 startOffset, UINT32 stopOffset, void* hCallback);
+    typedef bool EnumerateInterruptibleRangesCallback (UINT32 startOffset, UINT32 stopOffset, void * hCallback);
 
-    void EnumerateInterruptibleRanges(
-        EnumerateInterruptibleRangesCallback* pCallback,
-        void* hCallback);
+    void EnumerateInterruptibleRanges (
+                EnumerateInterruptibleRangesCallback *pCallback,
+                void *                                hCallback);
 
     //------------------------------------------------------------------------
     // GC lifetime information
     //------------------------------------------------------------------------
 
     bool EnumerateLiveSlots(
-        PREGDISPLAY         pRD,
-        bool                reportScratchSlots,
-        unsigned            flags,
-        GCEnumCallback      pCallBack,
-        void* hCallBack
-    );
+                PREGDISPLAY         pRD,
+                bool                reportScratchSlots,
+                unsigned            flags,
+                GCEnumCallback      pCallBack,
+                void *              hCallBack
+                );
 
     // Public for the gc info dumper
     void EnumerateUntrackedSlots(
-        PREGDISPLAY         pRD,
-        unsigned            flags,
-        GCEnumCallback      pCallBack,
-        void* hCallBack
-    );
+                PREGDISPLAY         pRD,
+                unsigned            flags,
+                GCEnumCallback      pCallBack,
+                void *              hCallBack
+                );
 
     //------------------------------------------------------------------------
     // Miscellaneous method information
@@ -634,88 +633,88 @@ private:
 
     bool PredecodeFatHeader(int remainingFlags);
 
-    static bool SetIsInterruptibleCB(UINT32 startOffset, UINT32 stopOffset, void* hCallback);
+    static bool SetIsInterruptibleCB (UINT32 startOffset, UINT32 stopOffset, void * hCallback);
 
     OBJECTREF* GetRegisterSlot(
-        int             regNum,
-        PREGDISPLAY     pRD
-    );
+                        int             regNum,
+                        PREGDISPLAY     pRD
+                        );
 
 #ifdef TARGET_UNIX
     OBJECTREF* GetCapturedRegister(
-        int             regNum,
-        PREGDISPLAY     pRD
-    );
+                        int             regNum,
+                        PREGDISPLAY     pRD
+                        );
 #endif // TARGET_UNIX
 
     OBJECTREF* GetStackSlot(
-        INT32           spOffset,
-        GcStackSlotBase spBase,
-        PREGDISPLAY     pRD
-    );
+                        INT32           spOffset,
+                        GcStackSlotBase spBase,
+                        PREGDISPLAY     pRD
+                        );
 
 #ifdef DACCESS_COMPILE
     int GetStackReg(int spBase);
 #endif // DACCESS_COMPILE
 
-    bool IsScratchRegister(int regNum, PREGDISPLAY pRD);
+    bool IsScratchRegister(int regNum,  PREGDISPLAY pRD);
     bool IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY pRD);
 
     void ReportUntrackedSlots(
-        GcSlotDecoder& slotDecoder,
-        PREGDISPLAY         pRD,
-        unsigned            flags,
-        GCEnumCallback      pCallBack,
-        void* hCallBack
-    );
+                GcSlotDecoder&      slotDecoder,
+                PREGDISPLAY         pRD,
+                unsigned            flags,
+                GCEnumCallback      pCallBack,
+                void *              hCallBack
+                );
 
     void ReportRegisterToGC(
-        int             regNum,
-        unsigned        gcFlags,
-        PREGDISPLAY     pRD,
-        unsigned        flags,
-        GCEnumCallback  pCallBack,
-        void* hCallBack
-    );
+                                int             regNum,
+                                unsigned        gcFlags,
+                                PREGDISPLAY     pRD,
+                                unsigned        flags,
+                                GCEnumCallback  pCallBack,
+                                void *          hCallBack
+                                );
 
     void ReportStackSlotToGC(
-        INT32           spOffset,
-        GcStackSlotBase spBase,
-        unsigned        gcFlags,
-        PREGDISPLAY     pRD,
-        unsigned        flags,
-        GCEnumCallback  pCallBack,
-        void* hCallBack
-    );
+                                INT32           spOffset,
+                                GcStackSlotBase spBase,
+                                unsigned        gcFlags,
+                                PREGDISPLAY     pRD,
+                                unsigned        flags,
+                                GCEnumCallback  pCallBack,
+                                void *          hCallBack
+                                );
 
 
     inline void ReportSlotToGC(
-        GcSlotDecoder& slotDecoder,
-        UINT32              slotIndex,
-        PREGDISPLAY         pRD,
-        bool                reportScratchSlots,
-        unsigned            inputFlags,
-        GCEnumCallback      pCallBack,
-        void* hCallBack
-    )
+                    GcSlotDecoder&      slotDecoder,
+                    UINT32              slotIndex,
+                    PREGDISPLAY         pRD,
+                    bool                reportScratchSlots,
+                    unsigned            inputFlags,
+                    GCEnumCallback      pCallBack,
+                    void *              hCallBack
+                    )
     {
         _ASSERTE(slotIndex < slotDecoder.GetNumSlots());
         const GcSlotDesc* pSlot = slotDecoder.GetSlotDesc(slotIndex);
         bool reportFpBasedSlotsOnly = (inputFlags & ReportFPBasedSlotsOnly);
 
-        if (slotIndex < slotDecoder.GetNumRegisters())
+        if(slotIndex < slotDecoder.GetNumRegisters())
         {
             UINT32 regNum = pSlot->Slot.RegisterNumber;
-            if ((reportScratchSlots || !IsScratchRegister(regNum, pRD)) && !reportFpBasedSlotsOnly)
+            if( ( reportScratchSlots || !IsScratchRegister( regNum, pRD ) ) && !reportFpBasedSlotsOnly )
             {
                 ReportRegisterToGC(
-                    regNum,
-                    pSlot->Flags,
-                    pRD,
-                    inputFlags,
-                    pCallBack,
-                    hCallBack
-                );
+                            regNum,
+                            pSlot->Flags,
+                            pRD,
+                            inputFlags,
+                            pCallBack,
+                            hCallBack
+                            );
             }
             else
             {
@@ -727,18 +726,18 @@ private:
             INT32 spOffset = pSlot->Slot.Stack.SpOffset;
             GcStackSlotBase spBase = pSlot->Slot.Stack.Base;
 
-            if ((reportScratchSlots || !IsScratchStackSlot(spOffset, spBase, pRD)) &&
-                (!reportFpBasedSlotsOnly || (GC_FRAMEREG_REL == spBase)))
+            if( ( reportScratchSlots || !IsScratchStackSlot(spOffset, spBase, pRD) ) &&
+                ( !reportFpBasedSlotsOnly || (GC_FRAMEREG_REL == spBase ) ) )
             {
                 ReportStackSlotToGC(
-                    spOffset,
-                    spBase,
-                    pSlot->Flags,
-                    pRD,
-                    inputFlags,
-                    pCallBack,
-                    hCallBack
-                );
+                            spOffset,
+                            spBase,
+                            pSlot->Flags,
+                            pRD,
+                            inputFlags,
+                            pCallBack,
+                            hCallBack
+                            );
             }
             else
             {
