@@ -30,13 +30,14 @@ __InstallRuntimes=0
 __PrivateBuild=0
 __Test=0
 __UnprocessedBuildArgs=
+__UseCdac=0
+__LiveRuntimeDir=
 
 usage_list+=("-skipmanaged: do not build managed components.")
 usage_list+=("-skipnative: do not build native components.")
 usage_list+=("-test: run xunit tests")
 
 handle_arguments() {
-
     lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
     case "$lowerI" in
         architecture|-architecture|-a)
@@ -79,6 +80,11 @@ handle_arguments() {
             __ShiftArgs=1
              ;;
 
+        liveruntimedir|-liveruntimedir)
+            __LiveRuntimeDir="$2"
+            __ShiftArgs=1
+            ;;
+
         skipmanaged|-skipmanaged)
             __ManagedBuild=0
             ;;
@@ -97,6 +103,10 @@ handle_arguments() {
 
         test|-test)
             __Test=1
+            ;;
+
+        usecdac|-usecdac)
+            __UseCdac=1
             ;;
 
         -warnaserror|-nodereuse)
@@ -248,7 +258,8 @@ if [[ "$__InstallRuntimes" == 1 || "$__PrivateBuild" == 1 ]]; then
         /bl:"$__LogsDir/InstallRuntimes.binlog" \
         /p:PrivateBuildTesting="$__privateBuildTesting" \
         /p:BuildArch="$__TargetArch" \
-        /p:TestArchitectures="$__TargetArch"
+        /p:TestArchitectures="$__TargetArch" \
+        /p:LiveRuntimeDir="$__LiveRuntimeDir" 
 fi
 
 #
@@ -295,6 +306,10 @@ if [[ "$__Test" == 1 ]]; then
 
       echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
 
+      if [[ "$__UseCdac" == 1 ]]; then
+          export SOS_TEST_CDAC="true"
+      fi
+
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
         --configuration "$__BuildType" \
@@ -304,6 +319,7 @@ if [[ "$__Test" == 1 ]]; then
         /p:DotnetRuntimeDownloadVersion="$__DotnetRuntimeDownloadVersion" \
         /p:RuntimeSourceFeed="$__RuntimeSourceFeed" \
         /p:RuntimeSourceFeedKey="$__RuntimeSourceFeedKey" \
+        /p:LiveRuntimeDir="$__LiveRuntimeDir" \
         $__CommonMSBuildArgs
 
       if [ $? != 0 ]; then
