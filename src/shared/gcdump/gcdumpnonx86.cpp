@@ -14,7 +14,7 @@
 #include "gcinfodumper.h"
 
 
-PCSTR GetRegName (UINT32 regnum)
+PCSTR GetRegName(UINT32 regnum)
 {
 #ifdef TARGET_AMD64
 
@@ -48,15 +48,15 @@ PCSTR GetRegName (UINT32 regnum)
         _snprintf_s(szRegName, ARRAY_SIZE(szRegName), sizeof(szRegName), "X%u", regnum);
         return szRegName;
     }
-    else if(regnum == 29)
+    else if (regnum == 29)
     {
         return "Fp";
     }
-    else if(regnum == 30)
+    else if (regnum == 30)
     {
         return "Lr";
     }
-    else if(regnum == 31)
+    else if (regnum == 31)
     {
         return "Sp";
     }
@@ -155,9 +155,9 @@ PCSTR GetRegName (UINT32 regnum)
 
 
 GCDump::GCDump(UINT32 gcInfoVer, bool encBytes, unsigned maxEncBytes, bool dumpCodeOffs)
-  : gcInfoVersion(gcInfoVer),
-    fDumpEncBytes   (encBytes    ),
-    cMaxEncBytes    (maxEncBytes ),
+    : gcInfoVersion(gcInfoVer),
+    fDumpEncBytes(encBytes),
+    cMaxEncBytes(maxEncBytes),
     fDumpCodeOffsets(dumpCodeOffs)
 {
 }
@@ -176,12 +176,12 @@ struct GcInfoDumpState
 };
 
 
-BOOL InterruptibleStateChangeCallback (
-            UINT32 CodeOffset,
-            BOOL fInterruptible,
-            PVOID pvData)
+BOOL InterruptibleStateChangeCallback(
+    UINT32 CodeOffset,
+    BOOL fInterruptible,
+    PVOID pvData)
 {
-    GcInfoDumpState *pState = (GcInfoDumpState*)pvData;
+    GcInfoDumpState* pState = (GcInfoDumpState*)pvData;
 
     if (pState->fAnythingPrinted)
     {
@@ -197,11 +197,11 @@ BOOL InterruptibleStateChangeCallback (
     return FALSE;
 }
 
-BOOL SafePointCallback (
-            UINT32 CodeOffset,
-            PVOID pvData)
+BOOL SafePointCallback(
+    UINT32 CodeOffset,
+    PVOID pvData)
 {
-    GcInfoDumpState *pState = (GcInfoDumpState*)pvData;
+    GcInfoDumpState* pState = (GcInfoDumpState*)pvData;
 
     if (pState->fAnythingPrinted)
     {
@@ -218,7 +218,7 @@ BOOL SafePointCallback (
 }
 
 
-VOID PrintFlags (GCDump::printfFtn pfnPrintf, GcSlotFlags Flags)
+VOID PrintFlags(GCDump::printfFtn pfnPrintf, GcSlotFlags Flags)
 {
     if (Flags & GC_SLOT_PINNED)
         pfnPrintf("(pinned)");
@@ -231,14 +231,14 @@ VOID PrintFlags (GCDump::printfFtn pfnPrintf, GcSlotFlags Flags)
 }
 
 
-BOOL RegisterStateChangeCallback (
-            UINT32 CodeOffset,
-            UINT32 RegisterNumber,
-            GcSlotFlags Flags,
-            GcSlotState NewState,
-            PVOID pvData)
+BOOL RegisterStateChangeCallback(
+    UINT32 CodeOffset,
+    UINT32 RegisterNumber,
+    GcSlotFlags Flags,
+    GcSlotState NewState,
+    PVOID pvData)
 {
-    GcInfoDumpState *pState = (GcInfoDumpState*)pvData;
+    GcInfoDumpState* pState = (GcInfoDumpState*)pvData;
 
     if (pState->fSafePoint && (GC_SLOT_LIVE != NewState))
     {
@@ -268,15 +268,15 @@ BOOL RegisterStateChangeCallback (
 }
 
 
-BOOL StackSlotStateChangeCallback (
-            UINT32 CodeOffset,
-            GcSlotFlags flags,
-            GcStackSlotBase BaseRegister,
-            SSIZE_T StackOffset,
-            GcSlotState NewState,
-            PVOID pvData)
+BOOL StackSlotStateChangeCallback(
+    UINT32 CodeOffset,
+    GcSlotFlags flags,
+    GcStackSlotBase BaseRegister,
+    SSIZE_T StackOffset,
+    GcSlotState NewState,
+    PVOID pvData)
 {
-    GcInfoDumpState *pState = (GcInfoDumpState*)pvData;
+    GcInfoDumpState* pState = (GcInfoDumpState*)pvData;
 
     if (pState->fSafePoint && (GC_SLOT_LIVE != NewState))
     {
@@ -348,25 +348,24 @@ BOOL StackSlotStateChangeCallback (
 
 
 size_t      GCDump::DumpGCTable(PTR_CBYTE      gcInfoBlock,
-                                unsigned       methodSize,
-                                bool           verifyGCTables)
+    unsigned       methodSize,
+    bool           verifyGCTables)
 {
     GCInfoToken gcInfoToken = { dac_cast<PTR_VOID>(gcInfoBlock), gcInfoVersion };
     GcInfoDecoder hdrdecoder(gcInfoToken,
-                             (GcInfoDecoderFlags)(  DECODE_SECURITY_OBJECT
-                                                  | DECODE_GS_COOKIE
-                                                  | DECODE_CODE_LENGTH
-                                                  | DECODE_PSP_SYM
-                                                  | DECODE_VARARG
-                                                  | DECODE_GENERICS_INST_CONTEXT
-                                                  | DECODE_GC_LIFETIMES
-                                                  | DECODE_PROLOG_LENGTH
-                                                  | DECODE_RETURN_KIND
+        (GcInfoDecoderFlags)(DECODE_SECURITY_OBJECT
+            | DECODE_GS_COOKIE
+            | DECODE_CODE_LENGTH
+            | DECODE_PSP_SYM
+            | DECODE_VARARG
+            | DECODE_GENERICS_INST_CONTEXT
+            | DECODE_GC_LIFETIMES
+            | DECODE_PROLOG_LENGTH
 #if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_RISCV64) || defined(TARGET_LOONGARCH64)
-                                                  | DECODE_HAS_TAILCALLS
+            | DECODE_HAS_TAILCALLS
 #endif
-                                                 ),
-                             0);
+            ),
+        0);
 
     if (NO_GENERICS_INST_CONTEXT != hdrdecoder.GetGenericsInstContextStackSlot() ||
         NO_GS_COOKIE == hdrdecoder.GetGSCookieStackSlot())
@@ -481,17 +480,17 @@ size_t      GCDump::DumpGCTable(PTR_CBYTE      gcInfoBlock,
         gcPrintf("caller.sp%c%x ", sign, ofs);
 
         if (hdrdecoder.HasMethodDescGenericsInstContext())
-             gcPrintf("(GENERIC_PARAM_CONTEXT_METHODDESC)\n");
+            gcPrintf("(GENERIC_PARAM_CONTEXT_METHODDESC)\n");
         else if (hdrdecoder.HasMethodTableGenericsInstContext())
-             gcPrintf("(GENERIC_PARAM_CONTEXT_METHODHANDLE)\n");
+            gcPrintf("(GENERIC_PARAM_CONTEXT_METHODHANDLE)\n");
         else
-             gcPrintf("(GENERIC_PARAM_CONTEXT_THIS)\n");
+            gcPrintf("(GENERIC_PARAM_CONTEXT_THIS)\n");
     }
 
     gcPrintf("Varargs: %u\n", hdrdecoder.GetIsVarArg());
     gcPrintf("Frame pointer: %s\n", NO_STACK_BASE_REGISTER == hdrdecoder.GetStackBaseRegister()
-                                    ? "<none>"
-                                    : GetRegName(hdrdecoder.GetStackBaseRegister()));
+        ? "<none>"
+        : GetRegName(hdrdecoder.GetStackBaseRegister()));
 
 #ifdef TARGET_AMD64
     gcPrintf("Wants Report Only Leaf: %u\n", hdrdecoder.WantsReportOnlyLeaf());
@@ -501,9 +500,6 @@ size_t      GCDump::DumpGCTable(PTR_CBYTE      gcInfoBlock,
 #ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
     gcPrintf("Size of parameter area: %x\n", hdrdecoder.GetSizeOfStackParameterArea());
 #endif
-
-    ReturnKind returnKind = hdrdecoder.GetReturnKind();
-    gcPrintf("Return Kind: %s\n", ReturnKindToString(returnKind));
 
     UINT32 cbEncodedMethodSize = hdrdecoder.GetCodeLength();
     gcPrintf("Code size: %x\n", cbEncodedMethodSize);
@@ -518,11 +514,11 @@ size_t      GCDump::DumpGCTable(PTR_CBYTE      gcInfoBlock,
     state.pfnPrintf = gcPrintf;
 
     GcInfoDumper::EnumerateStateChangesResults result = dumper.EnumerateStateChanges(
-            &InterruptibleStateChangeCallback,
-            &RegisterStateChangeCallback,
-            &StackSlotStateChangeCallback,
-            &SafePointCallback,
-            &state);
+        &InterruptibleStateChangeCallback,
+        &RegisterStateChangeCallback,
+        &StackSlotStateChangeCallback,
+        &SafePointCallback,
+        &state);
 
     if (state.fAnythingPrinted)
         gcPrintf("\n");
@@ -569,9 +565,9 @@ size_t      GCDump::DumpGCTable(PTR_CBYTE      gcInfoBlock,
 /*****************************************************************************/
 
 void    GCDump::DumpPtrsInFrame(PTR_CBYTE   gcInfoBlock,
-                                PTR_CBYTE   codeBlock,
-                                unsigned    offs,
-                                bool        verifyGCTables)
+    PTR_CBYTE   codeBlock,
+    unsigned    offs,
+    bool        verifyGCTables)
 {
     _ASSERTE(!"NYI");
 }
