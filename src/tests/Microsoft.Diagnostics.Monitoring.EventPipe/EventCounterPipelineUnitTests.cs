@@ -151,14 +151,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestDuplicateNameMetrics(TestConfiguration config)
         {
-            if (config.RuntimeFrameworkVersionMajor == 10)
-            {
-                throw new SkipTestException("MetricsEventSource currently has a bug wrt metertelemetryschemaurl. Reenable after https://github.com/dotnet/runtime/pull/113524 is in the runtime payload.");
-            }
-
             if (config.RuntimeFrameworkVersionMajor < 9)
             {
                 throw new SkipTestException("MetricsEventSource only supports instrument IDs starting in .NET 9.0.");
+            }
+            if (OS.Kind == OSKind.OSX)
+            {
+                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/5375");
             }
             string providerName = "AmbiguousNameMeter";
             string counterName = "AmbiguousNameCounter";

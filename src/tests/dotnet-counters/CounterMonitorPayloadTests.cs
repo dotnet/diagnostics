@@ -45,11 +45,6 @@ namespace DotnetCounters.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorCustomMetricsJSON(TestConfiguration configuration)
         {
-            if (configuration.RuntimeFrameworkVersionMajor == 10)
-            {
-                throw new SkipTestException("MetricsEventSource currently has a bug wrt metertelemetryschemaurl. Reenable after https://github.com/dotnet/runtime/pull/113524 is in the runtime payload.");
-            }
-
             CheckRuntimeOS();
             CheckFramework(configuration);
 
@@ -61,11 +56,6 @@ namespace DotnetCounters.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorCustomMetricsCSV(TestConfiguration configuration)
         {
-            if (configuration.RuntimeFrameworkVersionMajor == 10)
-            {
-                throw new SkipTestException("MetricsEventSource currently has a bug wrt metertelemetryschemaurl. Reenable after https://github.com/dotnet/runtime/pull/113524 is in the runtime payload.");
-            }
-
             CheckRuntimeOS();
             CheckFramework(configuration);
 
