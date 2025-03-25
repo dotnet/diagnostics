@@ -383,7 +383,18 @@ GcInfoDecoder::GcInfoDecoder(
     {
         if(m_NumSafePoints)
         {
+#ifdef DECODE_OLD_FORMATS
+            if (Version() < 4)
+            {
+                // Safepoints are encoded with a -1 adjustment
+                // DECODE_GC_LIFETIMES adjusts the offset accordingly, but DECODE_INTERRUPTIBILITY does not
+                // adjust here
+                UINT32 offset = flags & DECODE_INTERRUPTIBILITY ? m_InstructionOffset - 1 : m_InstructionOffset;
+                m_SafePointIndex = FindSafePoint(offset);
+            }
+#else
             m_SafePointIndex = FindSafePoint(m_InstructionOffset);
+#endif
         }
     }
     else if(flags & DECODE_FOR_RANGES_CALLBACK)
@@ -458,6 +469,14 @@ bool GcInfoDecoder::IsSafePoint(UINT32 codeOffset)
     _ASSERTE(m_Flags == DECODE_EVERYTHING && m_InstructionOffset == 0);
     if(m_NumSafePoints == 0)
         return false;
+
+#ifdef DECODE_OLD_FORMATS
+    if (Version() < 4)
+    {
+        // Safepoints are encoded with a -1 adjustment, adjust before searching.
+        codeOffset--;
+    }
+#endif
 
     size_t savedPos = m_Reader.GetCurrentPos();
     UINT32 safePointIndex = FindSafePoint(codeOffset);
@@ -546,6 +565,15 @@ void GcInfoDecoder::EnumerateSafePoints(EnumerateSafePointsCallback *pCallback, 
     {
         UINT32 normOffset = (UINT32)m_Reader.Read(numBitsPerOffset);
         UINT32 offset = DenormalizeCodeOffset(normOffset);
+
+#ifdef DECODE_OLD_FORMATS
+        if (Version() < 4)
+        {
+            // Safepoints are encoded with a -1 adjustment, adjust before reporting
+            offset++;
+        }
+#endif
+
         pCallback(this, offset, hCallback);
     }
 }
