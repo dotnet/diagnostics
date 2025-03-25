@@ -155,6 +155,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             {
                 throw new SkipTestException("MetricsEventSource only supports instrument IDs starting in .NET 9.0.");
             }
+            if (OS.Kind == OSKind.OSX)
+            {
+                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/5375");
+            }
             string providerName = "AmbiguousNameMeter";
             string counterName = "AmbiguousNameCounter";
             ExpectedCounter[] expectedCounters =
