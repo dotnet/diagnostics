@@ -113,21 +113,21 @@ bool GcInfoDecoder::PredecodeFatHeader(int remainingFlags)
     {
         // Note that normalization as a code offset can be different than
         //  normalization as code length
-        UINT32 normCodeLength = NORMALIZE_CODE_OFFSET(m_CodeLength);
+        UINT32 normCodeLength = NormalizeCodeOffset(m_CodeLength);
 
         // Decode prolog/epilog information
         UINT32 normPrologSize = (UINT32)m_Reader.DecodeVarLengthUnsigned(NORM_PROLOG_SIZE_ENCBASE) + 1;
         UINT32 normEpilogSize = (UINT32)m_Reader.DecodeVarLengthUnsigned(NORM_EPILOG_SIZE_ENCBASE);
 
-        m_ValidRangeStart = (UINT32)DENORMALIZE_CODE_OFFSET(normPrologSize);
-        m_ValidRangeEnd = (UINT32)DENORMALIZE_CODE_OFFSET(normCodeLength - normEpilogSize);
+        m_ValidRangeStart = (UINT32)DenormalizeCodeOffset(normPrologSize);
+        m_ValidRangeEnd = (UINT32)DenormalizeCodeOffset(normCodeLength - normEpilogSize);
         _ASSERTE(m_ValidRangeStart < m_ValidRangeEnd);
     }
     else if ((m_headerFlags & GC_INFO_HAS_GENERICS_INST_CONTEXT_MASK) != GC_INFO_HAS_GENERICS_INST_CONTEXT_NONE)
     {
         // Decode prolog information
         UINT32 normPrologSize = (UINT32)m_Reader.DecodeVarLengthUnsigned(NORM_PROLOG_SIZE_ENCBASE) + 1;
-        m_ValidRangeStart = (UINT32)DENORMALIZE_CODE_OFFSET(normPrologSize);
+        m_ValidRangeStart = (UINT32)DenormalizeCodeOffset(normPrologSize);
         // satisfy asserts that assume m_GSCookieValidRangeStart != 0 ==> m_GSCookieValidRangeStart < m_GSCookieValidRangeEnd
         m_ValidRangeEnd = m_ValidRangeStart + 1;
     }
@@ -371,7 +371,7 @@ GcInfoDecoder::GcInfoDecoder(
     {
         // Note that normalization as a code offset can be different than
         //  normalization as code length
-        UINT32 normCodeLength = NORMALIZE_CODE_OFFSET(m_CodeLength);
+        UINT32 normCodeLength = NormalizeCodeOffset(m_CodeLength);
 
         UINT32 numBitsPerOffset = CeilOfLog2(normCodeLength);
         m_Reader.Skip(m_NumSafePoints * numBitsPerOffset);
@@ -460,7 +460,7 @@ UINT32 GcInfoDecoder::NarrowSafePointSearch(size_t savedPos, UINT32 breakOffset,
     INT32 low = 0;
     INT32 high = (INT32)m_NumSafePoints;
 
-    const UINT32 numBitsPerOffset = CeilOfLog2(NORMALIZE_CODE_OFFSET(m_CodeLength));
+    const UINT32 numBitsPerOffset = CeilOfLog2(NormalizeCodeOffset(m_CodeLength));
     while (high - low > MAX_LINEAR_SEARCH)
     {
         const INT32 mid = (low + high) / 2;
@@ -484,9 +484,9 @@ UINT32 GcInfoDecoder::FindSafePoint(UINT32 breakOffset)
     _ASSERTE(m_NumSafePoints > 0);
     UINT32 result = m_NumSafePoints;
     const size_t savedPos = m_Reader.GetCurrentPos();
-    const UINT32 numBitsPerOffset = CeilOfLog2(NORMALIZE_CODE_OFFSET(m_CodeLength));
+    const UINT32 numBitsPerOffset = CeilOfLog2(NormalizeCodeOffset(m_CodeLength));
 
-    const UINT32 normBreakOffset = NORMALIZE_CODE_OFFSET(breakOffset);
+    const UINT32 normBreakOffset = NormalizeCodeOffset(breakOffset);
     UINT32 linearSearchStart = 0;
     UINT32 linearSearchEnd = m_NumSafePoints;
     if (linearSearchEnd - linearSearchStart > MAX_LINEAR_SEARCH)
@@ -521,12 +521,12 @@ void GcInfoDecoder::EnumerateSafePoints(EnumerateSafePointsCallback *pCallback, 
     if(m_NumSafePoints == 0)
         return;
 
-    const UINT32 numBitsPerOffset = CeilOfLog2(NORMALIZE_CODE_OFFSET(m_CodeLength));
+    const UINT32 numBitsPerOffset = CeilOfLog2(NormalizeCodeOffset(m_CodeLength));
 
     for(UINT32 i = 0; i < m_NumSafePoints; i++)
     {
         UINT32 normOffset = (UINT32)m_Reader.Read(numBitsPerOffset);
-        UINT32 offset = DENORMALIZE_CODE_OFFSET(normOffset);
+        UINT32 offset = DenormalizeCodeOffset(normOffset);
         pCallback(this, offset, hCallback);
     }
 }
@@ -549,8 +549,8 @@ void GcInfoDecoder::EnumerateInterruptibleRanges (
         UINT32 rangeStartOffsetNormalized = lastInterruptibleRangeStopOffsetNormalized + normStartDelta;
         UINT32 rangeStopOffsetNormalized = rangeStartOffsetNormalized + normStopDelta;
 
-        UINT32 rangeStartOffset = DENORMALIZE_CODE_OFFSET(rangeStartOffsetNormalized);
-        UINT32 rangeStopOffset = DENORMALIZE_CODE_OFFSET(rangeStopOffsetNormalized);
+        UINT32 rangeStartOffset = DenormalizeCodeOffset(rangeStartOffsetNormalized);
+        UINT32 rangeStopOffset = DenormalizeCodeOffset(rangeStopOffsetNormalized);
 
         bool fStop = pCallback(rangeStartOffset, rangeStopOffset, hCallback);
         if (fStop)
@@ -696,7 +696,7 @@ bool GcInfoDecoder::EnumerateLiveSlots(
 
     GcSlotDecoder slotDecoder;
 
-    UINT32 normBreakOffset = NORMALIZE_CODE_OFFSET(m_InstructionOffset);
+    UINT32 normBreakOffset = NormalizeCodeOffset(m_InstructionOffset);
 
     // Normalized break offset
     // Relative to interruptible ranges #if PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED
@@ -705,7 +705,7 @@ bool GcInfoDecoder::EnumerateLiveSlots(
     UINT32 numInterruptibleLength = 0;
 #else
     UINT32 pseudoBreakOffset = normBreakOffset;
-    UINT32 numInterruptibleLength = NORMALIZE_CODE_OFFSET(m_CodeLength);
+    UINT32 numInterruptibleLength = NormalizeCodeOffset(m_CodeLength);
 #endif
 
 

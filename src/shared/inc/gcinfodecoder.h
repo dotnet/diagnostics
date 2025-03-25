@@ -631,6 +631,26 @@ private:
 #endif
     UINT32 m_Version;
 
+    inline UINT32 NormalizeCodeOffset(UINT32 offset)
+    {
+#ifdef SOS_INCLUDE
+        // code normalization is hardcoded, unless we are in SOS and support nondefault formats
+        if (m_Version < 4)
+            return offset;
+#endif
+        return NORMALIZE_CODE_OFFSET(offset);
+    }
+
+    inline UINT32 DenormalizeCodeOffset(UINT32 offset)
+    {
+#ifdef SOS_INCLUDE
+        // code normalization is hardcoded, unless we are in SOS and support nondefault formats
+        if (m_Version < 4)
+            return offset;
+#endif
+        return DENORMALIZE_CODE_OFFSET(offset);
+    }
+
     bool PredecodeFatHeader(int remainingFlags);
 
     static bool SetIsInterruptibleCB (UINT32 startOffset, UINT32 stopOffset, void * hCallback);

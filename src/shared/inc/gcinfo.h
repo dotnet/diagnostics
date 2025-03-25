@@ -36,7 +36,22 @@ const unsigned   this_OFFSET_FLAG  = 0x2;  // the offset is "this"
 // The current GCInfo Version
 //-----------------------------------------------------------------------------
 
-#define GCINFO_VERSION 3
+#define GCINFO_VERSION 4
+
+#ifdef SOS_INCLUDE
+extern bool IsRuntimeVersionAtLeast(DWORD major);
+// SOS needs to support both v4 and v3 versions.
+//     we can figure which one is used from the major version of the runtime.
+inline int GCInfoVersion()
+{
+    // Since in SOS we only care about ability to parse the GC Info,
+    // we can assume that everything before net10.0 uses GCInfo v3
+    // v2 and v3 had the same format, so for parsing/dumping purposes they are the same.
+    // Also, since runtime cannot parse GC info in nondefault format,
+    // we can infer GC Info format from major runtime version.
+    return IsRuntimeVersionAtLeast(10) ? 4 : 3;
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // GCInfoToken: A wrapper that contains the GcInfo data and version number.
@@ -67,15 +82,11 @@ struct GCInfoToken
 
     static uint32_t ReadyToRunVersionToGcInfoVersion(uint32_t readyToRunMajorVersion, uint32_t readyToRunMinorVersion)
     {
-        // Once MINIMUM_READYTORUN_MAJOR_VERSION is bumped to 10+
-        // delete the following and just return GCINFO_VERSION
-        //
-        // R2R 9.0 and 9.1 use GCInfo v2
-        // R2R 9.2 uses GCInfo v3
-        if (readyToRunMajorVersion == 9 && readyToRunMinorVersion < 2)
-            return 2;
-
+#ifdef SOS_INCLUDE
+        return GCInfoVersion();
+#else
         return GCINFO_VERSION;
+#endif
     }
 };
 
