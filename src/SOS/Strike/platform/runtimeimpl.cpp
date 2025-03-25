@@ -14,6 +14,7 @@
 #include <psapi.h>
 #include <clrinternal.h>
 #include <metahost.h>
+#include <clrconfignocache.h>
 #include "runtimeimpl.h"
 #include "datatarget.h"
 #include "cordebugdatatarget.h"
@@ -300,6 +301,43 @@ LPCSTR Runtime::GetDacFilePath()
 }
 
 /**********************************************************************\
+ * Returns the cDAC module path to the rest of SOS.
+\**********************************************************************/
+LPCSTR Runtime::GetCdacFilePath()
+{
+    if (m_cdacFilePath == nullptr)
+    {
+        // No debugger service instance means that SOS is hosted by dotnet-dump,
+        // which does runtime enumeration in CLRMD. We should never get here.
+        IDebuggerServices* debuggerServices = GetDebuggerServices();
+        if (debuggerServices == nullptr)
+        {
+            ExtDbgOut("GetCdacFilePath: GetDebuggerServices returned nullptr\n");
+            return nullptr;
+        }
+
+        // TODO: Signature verification
+
+        LPCSTR directory = GetRuntimeDirectory();
+        if (directory != nullptr)
+        {
+            std::string dacModulePath(directory);
+            dacModulePath.append(DIRECTORY_SEPARATOR_STR_A);
+            dacModulePath.append(GetCdacDllName());
+    #ifdef FEATURE_PAL
+            // If DAC file exists in the runtime directory
+            if (access(dacModulePath.c_str(), F_OK) == 0)
+    #endif
+            {
+                m_cdacFilePath = _strdup(dacModulePath.c_str());
+            }
+        }
+    }
+    return m_cdacFilePath;
+}
+
+
+/**********************************************************************\
  * Returns the DBI module path to the rest of SOS
 \**********************************************************************/
 LPCSTR Runtime::GetDbiFilePath()
@@ -427,7 +465,14 @@ HRESULT Runtime::GetClrDataProcess(IXCLRDataProcess** ppClrDataProcess)
     {
         *ppClrDataProcess = nullptr;
 
-        LPCSTR dacFilePath = GetDacFilePath();
+        CLRConfigNoCache enable = CLRConfigNoCache::Get("SOS_LOAD_CDAC");
+        DWORD val = 0;
+        if (enable.IsSet())
+        {
+            enable.TryAsInteger(10, val);
+        }
+
+        LPCSTR dacFilePath = val != 0 ? GetCdacFilePath() : GetDacFilePath();
         if (dacFilePath == nullptr)
         {
             return CORDBG_E_NO_IMAGE_AVAILABLE;

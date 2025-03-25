@@ -105,6 +105,12 @@ inline const char* GetDacDllName()
     return (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_DLL_NAME_A : NETCORE_DAC_DLL_NAME_A;
 }
 
+// Returns the cDAC module name
+inline const char* GetCdacDllName()
+{
+    return MAKEDLLNAME_A("cdacreader");
+}
+
 /**********************************************************************\
  * Local Runtime interface implementation
 \**********************************************************************/
@@ -121,6 +127,7 @@ private:
     RuntimeInfo* m_runtimeInfo;
     LPCSTR m_runtimeDirectory;
     LPCSTR m_dacFilePath;
+    LPCSTR m_cdacFilePath;
     LPCSTR m_dbiFilePath;
     IXCLRDataProcess* m_clrDataProcess;
     ICorDebugProcess* m_pCorDebugProcess;
@@ -149,6 +156,8 @@ public:
     void Flush();
 
     LPCSTR GetDacFilePath();
+
+    LPCSTR GetCdacFilePath();
 
     LPCSTR GetDbiFilePath();
 

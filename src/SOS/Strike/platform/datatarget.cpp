@@ -55,6 +55,12 @@ DataTarget::QueryInterface(
         AddRef();
         return S_OK;
     }
+    else if (InterfaceId == IID_ICLRContractLocator)
+    {
+        *Interface = (ICLRContractLocator*)this;
+        AddRef();
+        return S_OK;
+    }
     else
     {
         *Interface = NULL;
@@ -384,4 +390,14 @@ DataTarget::GetRuntimeBase(
 {
     *baseAddress = m_baseAddress;
     return S_OK;
+}
+
+// ICLRContractLocator
+
+HRESULT STDMETHODCALLTYPE
+DataTarget::GetContractDescriptor(
+    /* out */ CLRDATA_ADDRESS* contractAddress)
+{
+    // TODO: IMPLEMENT
+    return E_FAIL;
 }
