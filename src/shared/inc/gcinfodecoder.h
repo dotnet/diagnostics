@@ -470,6 +470,8 @@ struct GcSlotDesc
     GcSlotFlags Flags;
 };
 
+
+template <typename GcInfoEncoding>
 class GcSlotDecoder
 {
 public:
@@ -512,12 +514,13 @@ private:
 };
 
 #ifdef USE_GC_INFO_DECODER
-class GcInfoDecoder
+template <typename GcInfoEncoding>
+class TGcInfoDecoder
 {
 public:
 
     // If you are not interested in interruptibility or gc lifetime information, pass 0 as instructionOffset
-    GcInfoDecoder(
+    TGcInfoDecoder(
             GCInfoToken gcInfoToken,
             GcInfoDecoderFlags flags = DECODE_EVERYTHING,
             UINT32 instructionOffset = 0
@@ -537,7 +540,7 @@ public:
     // This is used for gcinfodumper
     bool IsSafePoint(UINT32 codeOffset);
 
-    typedef void EnumerateSafePointsCallback (GcInfoDecoder* decoder, UINT32 offset, void * hCallback);
+    typedef void EnumerateSafePointsCallback (TGcInfoDecoder<GcInfoEncoding> * decoder, UINT32 offset, void * hCallback);
     void EnumerateSafePoints(EnumerateSafePointsCallback * pCallback, void * hCallback);
 
 #endif
@@ -649,7 +652,7 @@ private:
         if (Version() < 4)
             return offset;
 #endif
-        return NORMALIZE_CODE_OFFSET(offset);
+        return GcInfoEncoding::NORMALIZE_CODE_OFFSET(offset);
     }
 
     inline UINT32 DenormalizeCodeOffset(UINT32 offset)
@@ -658,7 +661,7 @@ private:
         if (Version() < 4)
             return offset;
 #endif
-        return DENORMALIZE_CODE_OFFSET(offset);
+        return GcInfoEncoding::DENORMALIZE_CODE_OFFSET(offset);
     }
 
     bool PredecodeFatHeader(int remainingFlags);
@@ -691,7 +694,7 @@ private:
     bool IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY pRD);
 
     void ReportUntrackedSlots(
-                GcSlotDecoder&      slotDecoder,
+                GcSlotDecoder<GcInfoEncoding>&      slotDecoder,
                 PREGDISPLAY         pRD,
                 unsigned            flags,
                 GCEnumCallback      pCallBack,
@@ -719,7 +722,7 @@ private:
 
 
     inline void ReportSlotToGC(
-                    GcSlotDecoder&      slotDecoder,
+                    GcSlotDecoder<GcInfoEncoding>&      slotDecoder,
                     UINT32              slotIndex,
                     PREGDISPLAY         pRD,
                     bool                reportScratchSlots,
@@ -776,6 +779,9 @@ private:
         }
     }
 };
+
+typedef TGcInfoDecoder<TargetGcInfoEncoding> GcInfoDecoder;
+
 #endif // USE_GC_INFO_DECODER
 
 
