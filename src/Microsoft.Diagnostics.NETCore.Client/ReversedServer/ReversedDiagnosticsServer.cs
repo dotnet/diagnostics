@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         // The amount of time to allow parsing of the advertise data before cancelling. This allows the server to
         // remain responsive in case the advertise data is incomplete and the stream is not closed.
-        private static readonly TimeSpan ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(250);
+        private static readonly TimeSpan ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(750);
 
         private readonly CancellationTokenSource _disposalSource = new();
         private readonly HandleableCollection<IpcEndpointInfo> _endpointInfos = new();
