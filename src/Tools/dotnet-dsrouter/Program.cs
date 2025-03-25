@@ -267,7 +267,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             new("--web-socket", "-ws")
             {
                 Description = "The router WebSocket address using format ws://[host]:[port]/[path] or wss://[host]:[port]/[path]. " +
-                                "Launch app with WasmExtraConfig property specifying diagnostic_options with a server connect_url"
+                                "Launch app with WasmExtraConfig property specifying diagnostic_options with a server connect_url",
+                DefaultValueFactory = _ => "ws://127.0.0.1:8088/diagnostics"
             };
 
         private static readonly Option<int> RuntimeTimeoutOption =
