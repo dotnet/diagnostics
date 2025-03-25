@@ -16,6 +16,10 @@
 #ifndef _GC_INFO_DECODER_
 #define _GC_INFO_DECODER_
 
+#ifdef SOS_INCLUDE
+#define DECODE_OLD_FORMATS
+#endif
+
 #define _max(a, b) (((a) > (b)) ? (a) : (b))
 #define _min(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -222,6 +226,7 @@ enum GcInfoDecoderFlags
     DECODE_PROLOG_LENGTH         = 0x400,   // length of the prolog (used to avoid reporting generics context)
     DECODE_EDIT_AND_CONTINUE     = 0x800,
     DECODE_REVERSE_PINVOKE_VAR   = 0x1000,
+    DECODE_RETURN_KIND           = 0x2000,  // not currently used, but SOS needs this for older versions
 #if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
     DECODE_HAS_TAILCALLS         = 0x4000,
 #endif // TARGET_ARM || TARGET_ARM64 || TARGET_LOONGARCH64
@@ -581,6 +586,7 @@ public:
 #if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
     bool    HasTailCalls();
 #endif // TARGET_ARM || TARGET_ARM64 || TARGET_LOONGARCH64 || defined(TARGET_RISCV64)
+    ReturnKind GetReturnKind();
     UINT32  GetCodeLength();
     UINT32  GetStackBaseRegister();
     UINT32  GetSizeOfEditAndContinuePreservedArea();
@@ -593,6 +599,10 @@ public:
     UINT32  GetSizeOfStackParameterArea();
 #endif // FIXED_STACK_PARAMETER_SCRATCH_AREA
 
+    inline UINT32 Version()
+    {
+        return m_Version;
+    }
 
 private:
     BitStreamReader m_Reader;
@@ -613,6 +623,8 @@ private:
 #ifdef TARGET_ARM64
     UINT32  m_SizeOfEditAndContinueFixedStackFrame;
 #endif
+    // only used with older runtimes in SOS scenarios.
+    ReturnKind m_ReturnKind;
 #ifdef PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED
     UINT32  m_NumSafePoints;
     UINT32  m_SafePointIndex;
@@ -633,9 +645,9 @@ private:
 
     inline UINT32 NormalizeCodeOffset(UINT32 offset)
     {
-#ifdef SOS_INCLUDE
-        // code normalization is hardcoded, unless we are in SOS and support nondefault formats
-        if (m_Version < 4)
+#ifdef DECODE_OLD_FORMATS
+        // code normalization is hardcoded, unless we are in SOS and support older formats
+        if (Version() < 4)
             return offset;
 #endif
         return NORMALIZE_CODE_OFFSET(offset);
@@ -643,9 +655,9 @@ private:
 
     inline UINT32 DenormalizeCodeOffset(UINT32 offset)
     {
-#ifdef SOS_INCLUDE
-        // code normalization is hardcoded, unless we are in SOS and support nondefault formats
-        if (m_Version < 4)
+#ifdef DECODE_OLD_FORMATS
+        // code normalization is hardcoded, unless we are in SOS and support older formats
+        if (Version() < 4)
             return offset;
 #endif
         return DENORMALIZE_CODE_OFFSET(offset);

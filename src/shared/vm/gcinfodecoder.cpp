@@ -9,6 +9,12 @@
 
 #ifdef USE_GC_INFO_DECODER
 
+#undef NORMALIZE_CODE_OFFSET
+#define NORMALIZE_CODE_OFFSET Use "NormalizeCodeOffset"
+
+#undef DENORMALIZE_CODE_OFFSET
+#define DENORMALIZE_CODE_OFFSET Use "DenormalizeCodeOffset"
+
 #ifndef CHECK_APP_DOMAIN
 #define CHECK_APP_DOMAIN    0
 #endif
@@ -91,7 +97,13 @@ bool GcInfoDecoder::PredecodeFatHeader(int remainingFlags)
     int numFlagBits = (m_Version == 1) ? GC_INFO_FLAGS_BIT_SIZE_VERSION_1 : GC_INFO_FLAGS_BIT_SIZE;
     m_headerFlags = (GcInfoHeaderFlags)m_Reader.Read(numFlagBits);
 
-    remainingFlags &= ~DECODE_VARARG;
+#ifdef DECODE_OLD_FORMATS
+    if (Version() < 4)
+    {
+        m_ReturnKind = (ReturnKind)((UINT32)m_Reader.Read(SIZE_OF_RETURN_KIND_IN_FAT_HEADER));
+    }
+#endif
+    remainingFlags &= ~(DECODE_RETURN_KIND | DECODE_VARARG);
 #if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
     remainingFlags &= ~DECODE_HAS_TAILCALLS;
 #endif
@@ -257,6 +269,7 @@ GcInfoDecoder::GcInfoDecoder(
             : m_Reader(dac_cast<PTR_CBYTE>(gcInfoToken.Info))
             , m_InstructionOffset(breakOffset)
             , m_IsInterruptible(false)
+            , m_ReturnKind(RT_Illegal)
 #ifdef _DEBUG
             , m_Flags( flags )
             , m_GcInfoAddress(dac_cast<PTR_CBYTE>(gcInfoToken.Info))
@@ -296,7 +309,13 @@ GcInfoDecoder::GcInfoDecoder(
             m_StackBaseRegister = NO_STACK_BASE_REGISTER;
         }
 
-        remainingFlags &= ~DECODE_VARARG;
+#ifdef DECODE_OLD_FORMATS
+        if (Version() < 4)
+        {
+            m_ReturnKind = (ReturnKind)((UINT32)m_Reader.Read(SIZE_OF_RETURN_KIND_IN_SLIM_HEADER));
+        }
+#endif
+        remainingFlags &= ~(DECODE_RETURN_KIND | DECODE_VARARG);
 #if defined(TARGET_ARM) || defined(TARGET_ARM64) || defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
         remainingFlags &= ~DECODE_HAS_TAILCALLS;
 #endif
@@ -631,6 +650,13 @@ UINT32 GcInfoDecoder::GetCodeLength()
 //    SUPPORTS_DAC;
     _ASSERTE( m_Flags & DECODE_CODE_LENGTH );
     return m_CodeLength;
+}
+
+ReturnKind GcInfoDecoder::GetReturnKind()
+{
+    //    SUPPORTS_DAC;
+    _ASSERTE(m_Flags & DECODE_RETURN_KIND);
+    return m_ReturnKind;
 }
 
 UINT32  GcInfoDecoder::GetStackBaseRegister()
