@@ -646,7 +646,6 @@ private:
     inline UINT32 NormalizeCodeOffset(UINT32 offset)
     {
 #ifdef DECODE_OLD_FORMATS
-        // code normalization is hardcoded, unless we are in SOS and support older formats
         if (Version() < 4)
             return offset;
 #endif
@@ -656,7 +655,6 @@ private:
     inline UINT32 DenormalizeCodeOffset(UINT32 offset)
     {
 #ifdef DECODE_OLD_FORMATS
-        // code normalization is hardcoded, unless we are in SOS and support older formats
         if (Version() < 4)
             return offset;
 #endif
