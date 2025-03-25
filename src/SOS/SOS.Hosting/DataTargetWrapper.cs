@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -17,9 +17,13 @@ namespace SOS.Hosting {
         private static readonly Guid IID_ICLRDataTarget4 = new("E799DC06-E099-4713-BDD9-906D3CC02CF2");
         private static readonly Guid IID_ICLRMetadataLocator = new("aa8fa804-bc05-4642-b2c5-c353ed22fc63");
         private static readonly Guid IID_ICLRRuntimeLocator = new("b760bf44-9377-4597-8be7-58083bdc5146");
+        private static readonly Guid IID_ICLRContractLocator = new("17d5b8c6-34a9-407f-af4f-a930201d4e02");
 
         // For ClrMD's magic hand shake
         private const ulong MagicCallbackConstant = 0x43;
+
+        // cDAC Contract Descriptor export symbol name
+        private const string ContractDescriptorExport = "DotNetRuntimeContractDescriptor";
 
         private readonly IRuntime _runtime;
         private readonly IContextService _contextService;
@@ -65,6 +69,10 @@ namespace SOS.Hosting {
 
             builder = AddInterface(IID_ICLRRuntimeLocator, false);
             builder.AddMethod(new GetRuntimeBaseDelegate(GetRuntimeBase));
+            builder.Complete();
+
+            builder = AddInterface(IID_ICLRContractLocator, false);
+            builder.AddMethod(new GetContractDescriptorDelegate(GetContractDescriptor));
             builder.Complete();
 
             AddRef();
@@ -350,6 +358,26 @@ namespace SOS.Hosting {
 
         #endregion
 
+        #region ICLRContractLocator
+
+        private int GetContractDescriptor(
+            IntPtr self,
+            out ulong address)
+        {
+            address = 0;
+            IExportSymbols exportSymbols = _runtime.RuntimeModule.Services.GetService<IExportSymbols>();
+            if (exportSymbols is not null)
+            {
+                if (exportSymbols.TryGetSymbolAddress(ContractDescriptorExport, out address))
+                {
+                    return HResult.S_OK;
+                }
+            }
+            return HResult.E_FAIL;
+        }
+
+        #endregion
+
         #region ICLRDataTarget delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
@@ -484,6 +512,14 @@ namespace SOS.Hosting {
             [In] IntPtr self,
             [Out] out ulong address);
 
+        #endregion
+
+        #region ICLRContractLocator delegate
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int GetContractDescriptorDelegate(
+            [In] IntPtr self,
+            [Out] out ulong address);
         #endregion
     }
 }
