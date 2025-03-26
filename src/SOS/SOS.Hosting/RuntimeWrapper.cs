@@ -9,6 +9,7 @@ using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.FileFormats.ELF;
 using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Hosting
@@ -26,6 +27,22 @@ namespace SOS.Hosting
             UnixCore = 2,
             OSXCore = 3,
             Unknown = 4
+        }
+
+        /// <summary>
+        /// Flags to GetClrDataProcess when creating the DAC instance
+        /// </summary>
+        private enum ClrDataProcessFlags
+        {
+            /// <summary>
+            /// No flags
+            /// </summary>
+            None,
+
+            /// <summary>
+            /// Use the cdac if available and enabled by global setting
+            /// </summary>
+            UseCDac
         }
 
         public static Guid IID_IXCLRDataProcess = new("5c552ab6-fc09-4cb3-8e36-22fa03c798b7");
@@ -84,8 +101,10 @@ namespace SOS.Hosting
         private readonly IServiceProvider _services;
         private readonly IRuntime _runtime;
         private IntPtr _clrDataProcess = IntPtr.Zero;
+        private IntPtr _cdacDataProcess = IntPtr.Zero;
         private IntPtr _corDebugProcess = IntPtr.Zero;
         private IntPtr _dacHandle = IntPtr.Zero;
+        private IntPtr _cdacHandle = IntPtr.Zero;
         private IntPtr _dbiHandle = IntPtr.Zero;
 
         public IntPtr IRuntime { get; }
@@ -132,10 +151,20 @@ namespace SOS.Hosting
                 ComWrapper.ReleaseWithCheck(_clrDataProcess);
                 _clrDataProcess = IntPtr.Zero;
             }
+            if (_cdacDataProcess != IntPtr.Zero)
+            {
+                ComWrapper.ReleaseWithCheck(_cdacDataProcess);
+                _cdacDataProcess = IntPtr.Zero;
+            }
             if (_dacHandle != IntPtr.Zero)
             {
                 DataTarget.PlatformFunctions.FreeLibrary(_dacHandle);
                 _dacHandle = IntPtr.Zero;
+            }
+            if (_cdacHandle != IntPtr.Zero)
+            {
+                DataTarget.PlatformFunctions.FreeLibrary(_cdacHandle);
+                _cdacHandle = IntPtr.Zero;
             }
             if (_dbiHandle != IntPtr.Zero)
             {
@@ -200,24 +229,45 @@ namespace SOS.Hosting
 
         private int GetClrDataProcess(
             IntPtr self,
+            ClrDataProcessFlags flags,
             IntPtr* ppClrDataProcess)
         {
             if (ppClrDataProcess == null)
             {
                 return HResult.E_INVALIDARG;
             }
-            if (_clrDataProcess == IntPtr.Zero)
+            *ppClrDataProcess = IntPtr.Zero;
+            if ((flags & ClrDataProcessFlags.UseCDac) != 0)
             {
-                try
+                if (_cdacDataProcess == IntPtr.Zero)
                 {
-                    _clrDataProcess = CreateClrDataProcess();
+                    try
+                    {
+                        _cdacDataProcess = CreateClrDataProcess(GetCDacHandle());
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.TraceError(ex.ToString());
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Trace.TraceError(ex.ToString());
-                }
+                *ppClrDataProcess = _cdacDataProcess;
             }
-            *ppClrDataProcess = _clrDataProcess;
+            // Fallback to regular DAC instance if CDac isn't enabled or there where errors creating the instance
+            if (*ppClrDataProcess == IntPtr.Zero)
+            {
+                if (_clrDataProcess == IntPtr.Zero)
+                {
+                    try
+                    {
+                        _clrDataProcess = CreateClrDataProcess(GetDacHandle());
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.TraceError(ex.ToString());
+                    }
+                }
+                *ppClrDataProcess = _clrDataProcess;
+            }
             if (*ppClrDataProcess == IntPtr.Zero)
             {
                 return HResult.E_NOINTERFACE;
@@ -301,9 +351,8 @@ namespace SOS.Hosting
 
         #endregion
 
-        private IntPtr CreateClrDataProcess()
+        private IntPtr CreateClrDataProcess(IntPtr dacHandle)
         {
-            IntPtr dacHandle = GetDacHandle();
             if (dacHandle == IntPtr.Zero)
             {
                 return IntPtr.Zero;
@@ -334,7 +383,7 @@ namespace SOS.Hosting
         private IntPtr CreateCorDebugProcess()
         {
             string dbiFilePath = _runtime.GetDbiFilePath();
-            string dacFilePath = _runtime.GetDacFilePath();
+            string dacFilePath = _runtime.GetDacFilePath(out bool verifySignature);
             if (dbiFilePath == null || dacFilePath == null)
             {
                 Trace.TraceError($"Could not find matching DBI {dbiFilePath ?? ""} or DAC {dacFilePath ?? ""} for this runtime: {_runtime.RuntimeModule.FileName}");
@@ -465,49 +514,65 @@ namespace SOS.Hosting
         {
             if (_dacHandle == IntPtr.Zero)
             {
-                string dacFilePath = _runtime.GetDacFilePath();
-                if (dacFilePath == null)
-                {
-                    Trace.TraceError($"Could not find matching DAC {dacFilePath ?? ""} for this runtime: {_runtime.RuntimeModule.FileName}");
-                    return IntPtr.Zero;
-                }
-                ISettingsService settingsService = _services.GetService<ISettingsService>();
-                IDisposable fileLock = null;
-                try
-                {
-                    if (settingsService is null || settingsService.DacSignatureVerificationEnabled)
-                    {
-                        Trace.TraceInformation($"Verifying DAC signing and cert {dacFilePath}");
+                _dacHandle = GetDacHandle(useCDac: false);
+            }
+            return _dacHandle;
+        }
 
-                        // Check if the DAC cert is valid before loading
-                        if (!AuthenticodeUtil.VerifyDacDll(dacFilePath, out fileLock))
-                        {
-                            return IntPtr.Zero;
-                        }
-                    }
-                    try
+        private IntPtr GetCDacHandle()
+        {
+            if (_cdacHandle == IntPtr.Zero)
+            {
+                _cdacHandle = GetDacHandle(useCDac: true);
+            }
+            return _cdacHandle;
+        }
+
+        private IntPtr GetDacHandle(bool useCDac)
+        {
+            bool verifySignature = false;
+            string dacFilePath = useCDac ? _runtime.GetCDacFilePath() : _runtime.GetDacFilePath(out verifySignature);
+            if (dacFilePath == null)
+            {
+                Trace.TraceError($"Could not find matching DAC {dacFilePath ?? ""} {useCDac} for this runtime: {_runtime.RuntimeModule.FileName}");
+                return IntPtr.Zero;
+            }
+            IntPtr dacHandle = IntPtr.Zero;
+            IDisposable fileLock = null;
+            try
+            {
+                if (verifySignature)
+                {
+                    Trace.TraceInformation($"Verifying DAC signing and cert {dacFilePath} {useCDac}");
+
+                    // Check if the DAC cert is valid before loading
+                    if (!AuthenticodeUtil.VerifyDacDll(dacFilePath, out fileLock))
                     {
-                        _dacHandle = DataTarget.PlatformFunctions.LoadLibrary(dacFilePath);
-                    }
-                    catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
-                    {
-                        Trace.TraceError($"LoadLibrary({dacFilePath}) FAILED {ex}");
                         return IntPtr.Zero;
                     }
                 }
-                finally
+                try
                 {
-                    // Keep DAC file locked until it loaded
-                    fileLock?.Dispose();
+                    dacHandle = DataTarget.PlatformFunctions.LoadLibrary(dacFilePath);
                 }
-                Debug.Assert(_dacHandle != IntPtr.Zero);
-                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
                 {
-                    DllMainDelegate dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(_dacHandle, "DllMain");
-                    dllmain?.Invoke(_dacHandle, 1, IntPtr.Zero);
+                    Trace.TraceError($"LoadLibrary({dacFilePath}) {useCDac} FAILED {ex}");
+                    return IntPtr.Zero;
                 }
             }
-            return _dacHandle;
+            finally
+            {
+                // Keep DAC file locked until it loaded
+                fileLock?.Dispose();
+            }
+            Debug.Assert(dacHandle != IntPtr.Zero);
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                DllMainDelegate dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(dacHandle, "DllMain");
+                dllmain?.Invoke(dacHandle, 1, IntPtr.Zero);
+            }
+            return dacHandle;
         }
 
         #region IRuntime delegates
@@ -537,6 +602,7 @@ namespace SOS.Hosting
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetClrDataProcessDelegate(
             [In] IntPtr self,
+            [In] ClrDataProcessFlags flags,
             [Out] IntPtr* ppClrDataProcess);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]

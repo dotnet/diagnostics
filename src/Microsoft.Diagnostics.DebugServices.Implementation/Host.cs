@@ -10,7 +10,7 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
-    public class Host : IHost
+    public class Host : IHost, ISettingsService
     {
         private readonly ServiceManager _serviceManager;
         private ServiceContainer _serviceContainer;
@@ -49,6 +49,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
             _serviceContainer.AddService<IServiceManager>(_serviceManager);
             _serviceContainer.AddService<IHost>(this);
+            _serviceContainer.AddService<ISettingsService>(this);
 
             return _serviceContainer;
         }
@@ -100,6 +101,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             return _tempDirectory;
         }
+
+        #endregion
+
+        #region ISettingsService
+
+        public virtual bool DacSignatureVerificationEnabled { get; set; }
+
+        public bool UseContractReader { get; set; }
+
+        public bool ForceUseContractReader { get; set; }
 
         #endregion
 

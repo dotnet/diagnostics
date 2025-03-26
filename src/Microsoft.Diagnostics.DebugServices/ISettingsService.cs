@@ -15,5 +15,15 @@ namespace Microsoft.Diagnostics.DebugServices
         /// If true, enforces the proper DAC certificate signing when loaded
         /// </summary>
         bool DacSignatureVerificationEnabled { get; set; }
+
+        /// <summary>
+        /// If true, uses the CDAC contract reader if available.
+        /// </summary>
+        bool UseContractReader { get; set; }
+
+        /// <summary>
+        /// If true, always use the CDAC contract reader even when not requested
+        /// </summary>
+        bool ForceUseContractReader { get; set; }
     }
 }
