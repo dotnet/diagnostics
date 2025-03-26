@@ -38,7 +38,7 @@ VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[FaultingExceptionFrame: <HEXVAL>]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+\[FaultingExceptionFrame: <HEXVAL>\]\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+(\*\*\* WARNING: Unable to verify checksum for DivZero.exe\s*)?
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.F3(\(.*\))?\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.F2(\(.*\))?\s+

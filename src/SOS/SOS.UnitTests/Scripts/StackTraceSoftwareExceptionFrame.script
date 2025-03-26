@@ -36,7 +36,7 @@ VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[InlinedCallFrame: <HEXVAL>]\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[SoftwareExceptionFrame: <HEXVAL>]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+\[InlinedCallFrame: <HEXVAL>\]\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+\[SoftwareExceptionFrame: <HEXVAL>\]\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+UserObject\.UseObject(\(.*\))?\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+Simple\.Main(\(.*\))?\s+
