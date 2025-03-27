@@ -40,9 +40,18 @@ public class WebSocketServerImpl : IWebSocketServer
 
         ParseWebSocketURL(endpoint, out Uri uri);
 
+        string scheme = uri.Scheme switch
+        {
+            "ws" => "http",
+            "http" => "http",
+            "wss" => "https",
+            "https" => "https",
+            _ => throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme))
+        };
+
         EmbeddedWebSocketServer.Options options = new()
         {
-            Scheme = uri.Scheme,
+            Scheme = scheme,
             Host = uri.Host,
             Port = uri.Port.ToString(),
             Path = uri.PathAndQuery,
@@ -172,24 +181,24 @@ public class WebSocketServerImpl : IWebSocketServer
             uriToParse = endPoint;
         }
 
+        string[] supportedSchemes = new string[] { "ws", "wss", "http", "https" };
 
         if (!string.IsNullOrEmpty(uriToParse) && Uri.TryCreate(uriToParse, UriKind.Absolute, out uri))
         {
-            if (uri.Scheme == "ws")
+            bool supported = false;
+            foreach (string scheme in supportedSchemes)
             {
-                uri = new UriBuilder(uri) { Scheme = "http" }.Uri;
-                return;
+                if (string.Equals(uri.Scheme, scheme, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    supported = true;
+                    break;
+                }
             }
-            if (uri.Scheme == "wss")
+            if (!supported)
             {
-                uri = new UriBuilder(uri) { Scheme = "https" }.Uri;
-                return;
+                throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme));
             }
-            if (uri.Scheme == "http" || uri.Scheme == "https")
-            {
-                return;
-            }
-            throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme));
+            return;
         }
         else
         {
