@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerWebSocketServerRouter(
                 ct,
                 ipcServer: parseResult.GetValue(IpcServerAddressOption) ?? "",
-                webSocket: parseResult.GetValue(WebSocketURLAddressOption) ?? "",
+                webSocket: parseResult.GetValue(WebSocketURLAddressOption),
                 runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
                 verbose: parseResult.GetValue(VerboseOption)
             ));
@@ -117,7 +117,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcClientWebSocketServerRouter(
                 ct,
                 ipcClient: parseResult.GetValue(IpcClientAddressOption) ?? "",
-                webSocket: parseResult.GetValue(WebSocketURLAddressOption) ?? "",
+                webSocket: parseResult.GetValue(WebSocketURLAddressOption),
                 runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
                 verbose: parseResult.GetValue(VerboseOption)
             ));
