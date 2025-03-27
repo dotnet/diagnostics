@@ -356,9 +356,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public WebSocketServerRouterFactory(string webSocketURL, int runtimeTimeoutMs, ILogger logger) : base(runtimeTimeoutMs, logger)
         {
-            _webSocketURL = string.IsNullOrEmpty(webSocketURL) ? "ws://127.0.0.1:8088/diagnostics" : webSocketURL;
+            Debug.Assert(!string.IsNullOrEmpty(webSocketURL));
 
-            _webSocketServer = new ReversedDiagnosticsServer(_webSocketURL, ReversedDiagnosticsServer.Kind.WebSocket);
+            _webSocketURL = webSocketURL;
+
+            _webSocketServer = new ReversedDiagnosticsServer(_webSocketURL, ReversedDiagnosticsServer.Kind.WebSocket, TimeSpan.FromMilliseconds(750));
             _webSocketServer.TransportCallback = this;
         }
 

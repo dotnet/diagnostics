@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         // The amount of time to allow parsing of the advertise data before cancelling. This allows the server to
         // remain responsive in case the advertise data is incomplete and the stream is not closed.
-        private static readonly TimeSpan ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(250);
+        private readonly TimeSpan ParseAdvertiseTimeout;
 
         private readonly CancellationTokenSource _disposalSource = new();
         private readonly HandleableCollection<IpcEndpointInfo> _endpointInfos = new();
@@ -52,6 +52,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public ReversedDiagnosticsServer(string address)
         {
             _address = address;
+            ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(250);
         }
 
         /// <summary>
@@ -69,12 +70,38 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// Otherwise if kind is TcpIp as a supported protocol for ReversedDiagnosticServer. When Kind is Tcp, address will
         /// be analyzed and if on format host:port, ReversedDiagnosticServer will try to bind
         /// a TcpIp listener to host and port, otherwise it will use a Unix domain socket or a Windows named pipe.
-        ///
         /// </param>
         public ReversedDiagnosticsServer(string address, Kind kind)
         {
             _address = address;
             _kind = kind;
+            ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(250);
+        }
+
+        /// <summary>
+        /// Constructs the <see cref="ReversedDiagnosticsServer"/> instance with an endpoint bound
+        /// to the location specified by <paramref name="address"/>.
+        /// </summary>
+        /// <param name="address">
+        /// The server endpoint.
+        /// On Windows, this can be a full pipe path or the name without the "\\.\pipe\" prefix.
+        /// On all other systems, this must be the full file path of the socket.
+        /// </param>
+        /// <param name="kind">
+        /// If kind is WebSocket, start a Kestrel web server.
+        /// Otherwise if kind is TcpIp as a supported protocol for ReversedDiagnosticServer. When Kind is Tcp, address will
+        /// be analyzed and if on format host:port, ReversedDiagnosticServer will try to bind
+        /// a TcpIp listener to host and port, otherwise it will use a Unix domain socket or a Windows named pipe.
+        /// </param>
+        /// <param name="timeout">
+        /// The amount of time to allow parsing of the advertise data before cancelling. This allows the server to
+        /// remain responsive in case the advertise data is incomplete and the stream is not closed.
+        /// </param>
+        public ReversedDiagnosticsServer(string address, Kind kind, TimeSpan timeout)
+        {
+            _address = address;
+            _kind = kind;
+            ParseAdvertiseTimeout = timeout;
         }
 
         public async ValueTask DisposeAsync()

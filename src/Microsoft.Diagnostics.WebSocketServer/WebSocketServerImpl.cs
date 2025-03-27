@@ -40,9 +40,18 @@ public class WebSocketServerImpl : IWebSocketServer
 
         ParseWebSocketURL(endpoint, out Uri uri);
 
+        string scheme = uri.Scheme switch
+        {
+            "ws" => "http",
+            "http" => "http",
+            "wss" => "https",
+            "https" => "https",
+            _ => throw new ArgumentException(string.Format("Unsupported Uri schema, \"{0}\"", uri.Scheme))
+        };
+
         EmbeddedWebSocketServer.Options options = new()
         {
-            Scheme = uri.Scheme,
+            Scheme = scheme,
             Host = uri.Host,
             Port = uri.Port.ToString(),
             Path = uri.PathAndQuery,
