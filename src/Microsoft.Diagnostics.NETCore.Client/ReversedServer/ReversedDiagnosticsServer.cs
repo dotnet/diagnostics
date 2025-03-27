@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public ReversedDiagnosticsServer(string address)
         {
             _address = address;
-            ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(750);
+            ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(250);
         }
 
         /// <summary>
@@ -75,7 +75,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             _address = address;
             _kind = kind;
-            ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(750);
+            ParseAdvertiseTimeout = TimeSpan.FromMilliseconds(250);
         }
 
         /// <summary>
