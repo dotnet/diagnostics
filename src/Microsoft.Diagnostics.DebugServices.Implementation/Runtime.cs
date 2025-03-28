@@ -98,7 +98,40 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public string GetDacFilePath()
         {
-            _dacFilePath ??= GetLibraryPath(DebugLibraryKind.Dac);
+            if (_dacFilePath is not null)
+            {
+                return _dacFilePath;
+            }
+
+            // Optionally load the DAC through the cDAC
+            string str = Environment.GetEnvironmentVariable("DOTNET_SOS_LOAD_CDAC");
+            int.TryParse(str ?? string.Empty, out int val);
+
+            if (val == 0)
+            {
+                _dacFilePath ??= GetLibraryPath(DebugLibraryKind.Dac);
+            }
+            else
+            {
+                OSPlatform platform = Target.OperatingSystem;
+                if (platform == OSPlatform.Windows)
+                {
+                    _dacFilePath ??= GetLocalPath("cdacreader.dll");
+                }
+                else if (platform == OSPlatform.Linux)
+                {
+                    _dacFilePath ??= GetLocalPath("libcdacreader.so");
+                }
+                else if (platform == OSPlatform.OSX)
+                {
+                    _dacFilePath ??= GetLocalPath("libcdacreader.dylib");
+                }
+                else
+                {
+                    Trace.TraceError($"GetCdacFilePath: platform not supported - {platform}");
+                }
+            }
+
             return _dacFilePath;
         }
 
