@@ -6806,7 +6806,7 @@ DECLARE_API(GCInfo)
 
     // Mutable table pointer since we need to pass the appropriate
     // offset into the table to DumpGCTable.
-    GCInfoToken gcInfoToken = { table, GCINFO_VERSION };
+    GCInfoToken gcInfoToken = { table, GCInfoVersion() };
     unsigned int methodSize = (unsigned int)codeHeaderData.MethodSize;
 
     g_targetMachine->DumpGCInfo(gcInfoToken, methodSize, ExtOut, true /*encBytes*/, true /*bPrintHeader*/);
@@ -7453,7 +7453,7 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
             return E_OUTOFMEMORY;
         }
 
-        GCInfoToken gcInfoToken = { table, GCINFO_VERSION };
+        GCInfoToken gcInfoToken = { table, GCInfoVersion() };
         g_targetMachine->DumpGCInfo(gcInfoToken, methodSize, DecodeGCTableEntry, false /*encBytes*/, false /*bPrintHeader*/);
     }
     return S_OK;
