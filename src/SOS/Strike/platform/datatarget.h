@@ -120,4 +120,9 @@ public:
 
     virtual HRESULT STDMETHODCALLTYPE GetRuntimeBase(
         /* [out] */ CLRDATA_ADDRESS* baseAddress);
+
+    // ICLRContractLocator
+
+    virtual HRESULT STDMETHODCALLTYPE  GetContractDescriptor(
+        /* [out] */ CLRDATA_ADDRESS* contractAddress);
 };
