@@ -77,10 +77,17 @@ public:
         switch (flavor)
         {
             case HostRuntimeFlavor::None:
-                result.Printf("Using no runtime to host the managed SOS code\n");
+                result.Printf("Using no runtime to host the managed SOS code. Some commands are not availible.\n");
                 break;
             case HostRuntimeFlavor::NetCore:
-                result.Printf("Using .NET Core runtime (version %d.%d) to host the managed SOS code\n", major, minor);
+                if (major == 0)
+                {
+                    result.Printf("Using .NET Core runtime to host the managed SOS code\n");
+                }
+                else
+                {
+                    result.Printf("Using .NET Core runtime (version %d.%d) to host the managed SOS code\n", major, minor);
+                }
                 break;
             default:
                 break;
