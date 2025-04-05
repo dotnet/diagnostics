@@ -84,7 +84,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 XElement runtimeElement = new("Runtime");
                 runtimesElement.Add(runtimeElement);
-                AddMembers(runtimeElement, typeof(IRuntime), runtime, nameof(IRuntime.GetDacFilePath), nameof(IRuntime.GetDbiFilePath));
+                AddMembers(runtimeElement, typeof(IRuntime), runtime, nameof(IRuntime.GetDacFilePath), nameof(IRuntime.GetCDacFilePath), nameof(IRuntime.GetDbiFilePath));
 
                 XElement runtimeModuleElement = new("RuntimeModule");
                 runtimeElement.Add(runtimeModuleElement);

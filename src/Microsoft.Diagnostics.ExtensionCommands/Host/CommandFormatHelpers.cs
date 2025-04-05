@@ -12,8 +12,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 {
     public static class CommandFormatHelpers
     {
-        public const string DacTableSymbol = "g_dacTable";
-        public const string DebugHeaderSymbol = "DotNetRuntimeDebugHeader";
+        public const string DacTableExport = "g_dacTable";
+        public const string DebugHeaderExport = "DotNetRuntimeDebugHeader";
+        public const string ContractDescriptorExport = "DotNetRuntimeContractDescriptor";
 
         /// <summary>
         /// Displays the special diagnostics info header memory block (.NET Core 8 or later on Linux/MacOS)
@@ -127,28 +128,28 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             IExportSymbols symbols = module.Services.GetService<IExportSymbols>();
             if (symbols != null && symbols.TryGetSymbolAddress(RuntimeInfo.RUNTIME_INFO_SYMBOL, out ulong infoAddress))
             {
-                Console().Write($"{indent}{RuntimeInfo.RUNTIME_INFO_SYMBOL,-24}: {infoAddress:X16}");
+                Console().Write($"{indent}{RuntimeInfo.RUNTIME_INFO_SYMBOL}: {infoAddress:X16}");
                 if (RuntimeInfo.TryRead(command.Services, infoAddress, out RuntimeInfo info))
                 {
                     Console().WriteLine(info.IsValid ? "" : " <INVALID>");
-                    Console().WriteLine($"{indent}    Signature:                  {info.Signature}");
-                    Console().WriteLine($"{indent}    Version:                    {info.Version}");
-                    Console().WriteLine($"{indent}    RuntimeModuleIndex:         {info.RawRuntimeModuleIndex.ToHex()}");
-                    Console().WriteLine($"{indent}    DacModuleIndex:             {info.RawDacModuleIndex.ToHex()}");
-                    Console().WriteLine($"{indent}    DbiModuleIndex:             {info.RawDbiModuleIndex.ToHex()}");
+                    Console().WriteLine($"{indent}    Signature:            {info.Signature}");
+                    Console().WriteLine($"{indent}    Version:              {info.Version}");
+                    Console().WriteLine($"{indent}    RuntimeModuleIndex:   {info.RawRuntimeModuleIndex.ToHex()}");
+                    Console().WriteLine($"{indent}    DacModuleIndex:       {info.RawDacModuleIndex.ToHex()}");
+                    Console().WriteLine($"{indent}    DbiModuleIndex:       {info.RawDbiModuleIndex.ToHex()}");
                     if (module.IsPEImage)
                     {
-                        Console().WriteLine($"{indent}    RuntimePEIndex:             {info.RuntimePEIIndex.timeStamp:X8}/{info.RuntimePEIIndex.fileSize:X}");
-                        Console().WriteLine($"{indent}    DacPEIndex:                 {info.DacPEIndex.timeStamp:X8}/{info.DacPEIndex.fileSize:X}");
-                        Console().WriteLine($"{indent}    DbiPEIndex:                 {info.DbiPEIndex.timeStamp:X8}/{info.DbiPEIndex.fileSize:X}");
+                        Console().WriteLine($"{indent}    RuntimePEIndex:       {info.RuntimePEIIndex.timeStamp:X8}/{info.RuntimePEIIndex.fileSize:X}");
+                        Console().WriteLine($"{indent}    DacPEIndex:           {info.DacPEIndex.timeStamp:X8}/{info.DacPEIndex.fileSize:X}");
+                        Console().WriteLine($"{indent}    DbiPEIndex:           {info.DbiPEIndex.timeStamp:X8}/{info.DbiPEIndex.fileSize:X}");
                     }
                     else
                     {
-                        Console().WriteLine($"{indent}    RuntimeBuildId:             {info.RuntimeBuildId.ToHex()}");
-                        Console().WriteLine($"{indent}    DacBuildId:                 {info.DacBuildId.ToHex()}");
-                        Console().WriteLine($"{indent}    DbiBuildId:                 {info.DbiBuildId.ToHex()}");
+                        Console().WriteLine($"{indent}    RuntimeBuildId:       {info.RuntimeBuildId.ToHex()}");
+                        Console().WriteLine($"{indent}    DacBuildId:           {info.DacBuildId.ToHex()}");
+                        Console().WriteLine($"{indent}    DbiBuildId:           {info.DbiBuildId.ToHex()}");
                     }
-                    Console().WriteLine($"{indent}    RuntimeVersion:             {info.RuntimeVersion?.ToString() ?? "<none>"}");
+                    Console().WriteLine($"{indent}    RuntimeVersion:       {info.RuntimeVersion?.ToString() ?? "<none>"}");
                 }
                 else
                 {
@@ -157,7 +158,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else if (error)
             {
-                Console().WriteLine($"{indent}{RuntimeInfo.RUNTIME_INFO_SYMBOL,-24}: <NO SYMBOL>");
+                Console().WriteLine($"{indent}{RuntimeInfo.RUNTIME_INFO_SYMBOL}: <NO SYMBOL>");
             }
 
             // Print the Windows runtime engine metrics (.NET Core and .NET Framework)
@@ -166,13 +167,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (symbols != null && symbols.TryGetSymbolAddress(ClrEngineMetrics.Symbol, out ulong metricsAddress))
                 {
-                    Console().Write($"{indent}{ClrEngineMetrics.Symbol,-24}: ({metricsAddress:X16})");
+                    Console().Write($"{indent}{ClrEngineMetrics.Symbol}: {metricsAddress:X16}");
                     if (ClrEngineMetrics.TryRead(command.Services, metricsAddress, out ClrEngineMetrics metrics))
                     {
                         Console().WriteLine();
-                        Console().WriteLine($"{indent}    Size:                   {metrics.Size} (0x{metrics.Size:X2})");
-                        Console().WriteLine($"{indent}    DbiVersion:             {metrics.DbiVersion}");
-                        Console().WriteLine($"{indent}    ContinueStartupEvent:   {((ulong)metrics.ContinueStartupEvent):X16}");
+                        Console().WriteLine($"{indent}    Size:                 {metrics.Size} (0x{metrics.Size:X2})");
+                        Console().WriteLine($"{indent}    DbiVersion:           {metrics.DbiVersion}");
+                        Console().WriteLine($"{indent}    ContinueStartupEvent: {((ulong)metrics.ContinueStartupEvent):X16}");
                     }
                     else
                     {
@@ -181,28 +182,38 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 else if (error)
                 {
-                    Console().WriteLine($"{indent}{ClrEngineMetrics.Symbol,-24}: <NO SYMBOL>");
+                    Console().WriteLine($"{indent}{ClrEngineMetrics.Symbol}: <NO SYMBOL>");
                 }
             }
 
             // Print the DAC table address (g_dacTable)
-            if (symbols != null && symbols.TryGetSymbolAddress(DacTableSymbol, out ulong dacTableAddress))
+            if (symbols != null && symbols.TryGetSymbolAddress(DacTableExport, out ulong dacTableAddress))
             {
-                Console().WriteLine($"{indent}{DacTableSymbol,-24}: {dacTableAddress:X16}");
+                Console().WriteLine($"{indent}{DacTableExport}: {dacTableAddress:X16}");
             }
             else if (error)
             {
-                Console().WriteLine($"{indent}{DacTableSymbol,-24}: <NO SYMBOL>");
+                Console().WriteLine($"{indent}{DacTableExport}: <NO SYMBOL>");
             }
 
             // Print the Native AOT contract data address (DotNetRuntimeDebugHeader)
-            if (symbols != null && symbols.TryGetSymbolAddress(DebugHeaderSymbol, out ulong debugHeaderAddress))
+            if (symbols != null && symbols.TryGetSymbolAddress(DebugHeaderExport, out ulong debugHeaderAddress))
             {
-                Console().WriteLine($"{indent}{DebugHeaderSymbol,-24}: {debugHeaderAddress:X16}");
+                Console().WriteLine($"{indent}{DebugHeaderExport}: {debugHeaderAddress:X16}");
             }
             else if (error)
             {
-                Console().WriteLine($"{indent}{DebugHeaderSymbol,-24}: <NO SYMBOL>");
+                Console().WriteLine($"{indent}{DebugHeaderExport}: <NO SYMBOL>");
+            }
+
+            // Print the CDAC contract data address (DotNetRuntimeContractDescriptor)
+            if (symbols != null && symbols.TryGetSymbolAddress(ContractDescriptorExport, out ulong contractDescriptorAddress))
+            {
+                Console().WriteLine($"{indent}{ContractDescriptorExport}: {contractDescriptorAddress:X16}");
+            }
+            else if (error)
+            {
+                Console().WriteLine($"{indent}{ContractDescriptorExport}: <NO SYMBOL>");
             }
         }
     }

@@ -421,7 +421,7 @@ LPCSTR Runtime::GetRuntimeDirectory()
 /**********************************************************************\
  * Creates an instance of the DAC clr data process
 \**********************************************************************/
-HRESULT Runtime::GetClrDataProcess(IXCLRDataProcess** ppClrDataProcess)
+HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess** ppClrDataProcess)
 {
     if (m_clrDataProcess == nullptr)
     {

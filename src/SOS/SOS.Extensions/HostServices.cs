@@ -22,7 +22,7 @@ namespace SOS.Extensions
     /// <summary>
     /// The extension services Wrapper the native hosts are given
     /// </summary>
-    public sealed unsafe class HostServices : COMCallableIUnknown, SOSLibrary.ISOSModule, ISettingsService
+    public sealed unsafe class HostServices : COMCallableIUnknown, SOSLibrary.ISOSModule
     {
         private static readonly Guid IID_IHostServices = new("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
 
@@ -130,7 +130,7 @@ namespace SOS.Extensions
             SOSPath = Path.GetDirectoryName(extensionPath);
             SOSHandle = extensionsLibrary;
 
-            _host = new Host(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? HostType.DbgEng : HostType.Lldb);
+            _host = new HostForHostServices(this);
             _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!sos" : null);
             _host.ServiceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
 
@@ -228,7 +228,6 @@ namespace SOS.Extensions
 
                 // Add all the global services to the global service container
                 serviceContainer.AddService<SOSLibrary.ISOSModule>(this);
-                serviceContainer.AddService<ISettingsService>(this);
                 serviceContainer.AddService<SOSHost.INativeDebugger>(DebuggerServices);
                 serviceContainer.AddService<ICommandService>(_commandService);
                 serviceContainer.AddService<ISymbolService>(_symbolService);
@@ -414,23 +413,38 @@ namespace SOS.Extensions
 
         #endregion
 
-        #region ISettingsService
+        #region HostForHostServices
 
-        public bool DacSignatureVerificationEnabled
+        internal sealed class HostForHostServices : Host
         {
-            get
+            private readonly HostServices _hostServices;
+
+            public HostForHostServices(HostServices hostServices)
+                : base(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? HostType.DbgEng : HostType.Lldb)
             {
-                HResult hr = DebuggerServices.GetDacSignatureVerificationSettings(out bool value);
-                if (hr.IsOK)
-                {
-                    return value;
-                }
-                // Return true (verify DAC signature) if any errors. Secure by default.
-                return true;
+                _hostServices = hostServices;
             }
-            set
+
+            public override bool DacSignatureVerificationEnabled
             {
-                throw new NotSupportedException("Changing the DacSignatureVerificationEnabled setting is not supported.");
+                get
+                {
+                    if (_hostServices.DebuggerServices is null)
+                    {
+                        throw new InvalidOperationException("DacSignatureVerificationEnabled called too soon in initialization");
+                    }
+                    HResult hr = _hostServices.DebuggerServices.GetDacSignatureVerificationSettings(out bool value);
+                    if (hr.IsOK)
+                    {
+                        return value;
+                    }
+                    // Return true (verify DAC signature) if any errors. Secure by default.
+                    return true;
+                }
+                set
+                {
+                    throw new NotSupportedException("Changing the DacSignatureVerificationEnabled setting is not supported.");
+                }
             }
         }
 

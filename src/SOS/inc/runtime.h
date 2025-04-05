@@ -39,6 +39,22 @@ public:
     };
 
     /// <summary>
+    /// Flags to GetClrDataProcess when creating the DAC instance
+    /// </summary>
+    enum ClrDataProcessFlags
+    {
+        /// <summary>
+        /// No flags
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// Use the CDac if available and enabled by global setting
+        /// </summary>
+        UseCDac
+    };
+
+    /// <summary>
     /// Returns the runtime configuration 
     /// </summary>
     virtual RuntimeConfiguration STDMETHODCALLTYPE GetRuntimeConfiguration() const = 0;
@@ -66,7 +82,7 @@ public:
     /// <summary>
     /// Returns the DAC data process instance
     /// </summary>
-    virtual HRESULT STDMETHODCALLTYPE GetClrDataProcess(IXCLRDataProcess** ppClrDataProcess) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess** ppClrDataProcess) = 0;
 
     /// <summary>
     /// Initializes and returns the DBI debugging interface instance 

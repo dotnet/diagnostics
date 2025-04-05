@@ -180,7 +180,7 @@ public:
 
     LPCSTR STDMETHODCALLTYPE GetRuntimeDirectory();
 
-    HRESULT STDMETHODCALLTYPE GetClrDataProcess(IXCLRDataProcess** ppClrDataProcess);
+    HRESULT STDMETHODCALLTYPE GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess** ppClrDataProcess);
 
     HRESULT STDMETHODCALLTYPE GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess);
 

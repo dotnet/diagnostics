@@ -3,7 +3,10 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>SOS.Hosting</AssemblyName>
     <NoWarn>$(NoWarn);1591;1701;IDE0060</NoWarn>
-    <Description>SOS Hosting support</Description>
+    <IsPackable>true</IsPackable>
+    <Description>Diagnostic SOS hosting support</Description>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <PackageTags>SOS</PackageTags>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>

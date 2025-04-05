@@ -4088,7 +4088,7 @@ public:
 HRESULT LoadClrDebugDll(void)
 {
     _ASSERTE(g_pRuntime != nullptr);
-    HRESULT hr = g_pRuntime->GetClrDataProcess(&g_clrData);
+    HRESULT hr = g_pRuntime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::None, &g_clrData);
     if (FAILED(hr))
     {
         g_clrData = GetClrDataFromDbgEng();
