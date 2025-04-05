@@ -8140,6 +8140,7 @@ DECLARE_API(SOSStatus)
         return S_OK;
     }
     Target::DisplayStatus();
+    ExtOut("Using no runtime to host the managed SOS code. Some commands are not availible.\n");
     return S_OK;
 }
 
@@ -13803,10 +13804,17 @@ exit:
     switch (flavor)
     {
         case HostRuntimeFlavor::None:
-            ExtOut("Using no runtime to host the managed SOS code\n");
+            ExtOut("Using no runtime to host the managed SOS code. Some commands are not availible.\n");
             break;
         case HostRuntimeFlavor::NetCore:
-            ExtOut("Using .NET Core runtime (version %d.%d) to host the managed SOS code\n", major, minor);
+            if (major == 0)
+            {
+                ExtOut("Using .NET Core runtime to host the managed SOS code\n");
+            }
+            else
+            {
+                ExtOut("Using .NET Core runtime (version %d.%d) to host the managed SOS code\n", major, minor);
+            }
             break;
         case HostRuntimeFlavor::NetFx:
             ExtOut("Using desktop .NET Framework runtime to host the managed SOS code\n");
