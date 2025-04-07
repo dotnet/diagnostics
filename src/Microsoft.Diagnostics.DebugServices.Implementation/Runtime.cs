@@ -20,10 +20,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class Runtime : IRuntime, IDisposable
     {
         private readonly ClrInfo _clrInfo;
+        private readonly ISettingsService _settingsService;
         private readonly ISymbolService _symbolService;
         private Version _runtimeVersion;
         private ClrRuntime _clrRuntime;
         private string _dacFilePath;
+        private string _cdacFilePath;
         private string _dbiFilePath;
 
         protected readonly ServiceContainer _serviceContainer;
@@ -33,7 +35,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Target = services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
             Id = id;
             _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
-            _symbolService = services.GetService<ISymbolService>();
+            _settingsService = services.GetService<ISettingsService>() ?? throw new ArgumentException("ISettingsService required");
+            _symbolService = services.GetService<ISymbolService>() ?? throw new ArgumentException("ISymbolService required");
 
             RuntimeType = RuntimeType.Unknown;
             if (clrInfo.Flavor == ClrFlavor.Core)
@@ -96,9 +99,33 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public string GetDacFilePath()
+        public string GetCDacFilePath()
         {
-            _dacFilePath ??= GetLibraryPath(DebugLibraryKind.Dac);
+            if (_cdacFilePath is null)
+            {
+                if (_settingsService.UseContractReader || _settingsService.ForceUseContractReader)
+                {
+                    _cdacFilePath = GetLibraryPath(DebugLibraryKind.CDac);
+                }
+            }
+            return _cdacFilePath;
+        }
+
+        public string GetDacFilePath(out bool verifySignature)
+        {
+            verifySignature = false;
+            if (_settingsService.ForceUseContractReader)
+            {
+                return GetCDacFilePath();
+            }
+            if (_dacFilePath is null)
+            {
+                _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac);
+                if (_dacFilePath is not null)
+                {
+                    verifySignature = _settingsService.DacSignatureVerificationEnabled;
+                }
+            }
             return _dacFilePath;
         }
 
@@ -115,7 +142,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private ClrRuntime CreateRuntime()
         {
-            string dacFilePath = GetDacFilePath();
+            string dacFilePath = GetDacFilePath(out bool verifySignature);
             if (dacFilePath is not null)
             {
                 Trace.TraceInformation($"Creating ClrRuntime #{Id} {dacFilePath}");
@@ -123,7 +150,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     // Ignore the DAC version mismatch that can happen because the clrmd ELF dump reader
                     // returns 0.0.0.0 for the runtime module that the DAC is matched against.
-                    return _clrRuntime = _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
+                    return _clrRuntime = _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true, verifySignature);
                 }
                 catch (Exception ex) when
                    (ex is DllNotFoundException or
@@ -151,15 +178,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 if (libraryInfo.Kind == kind && RuntimeInformation.IsOSPlatform(libraryInfo.Platform) && libraryInfo.TargetArchitecture == currentArch)
                 {
-                    libraryPath = GetLocalPath(libraryInfo.FileName);
+                    libraryPath = GetLocalPath(libraryInfo);
                     if (libraryPath is not null)
                     {
                         break;
                     }
-                    libraryPath = DownloadFile(libraryInfo);
-                    if (libraryPath is not null)
+                    if (libraryInfo.ArchivedUnder != SymbolProperties.None)
                     {
-                        break;
+                        libraryPath = DownloadFile(libraryInfo);
+                        if (libraryPath is not null)
+                        {
+                            break;
+                        }
                     }
                 }
             }
@@ -167,16 +197,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return libraryPath;
         }
 
-        private string GetLocalPath(string fileName)
+        private string GetLocalPath(DebugLibraryInfo libraryInfo)
         {
             string localFilePath;
-            if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
+            if (libraryInfo.Kind == DebugLibraryKind.CDac)
             {
-                localFilePath = Path.Combine(RuntimeModuleDirectory, Path.GetFileName(fileName));
+                localFilePath = libraryInfo.FileName;
             }
             else
             {
-                localFilePath = Path.Combine(Path.GetDirectoryName(RuntimeModule.FileName), Path.GetFileName(fileName));
+                if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
+                {
+                    localFilePath = Path.Combine(RuntimeModuleDirectory, Path.GetFileName(libraryInfo.FileName));
+                }
+                else
+                {
+                    localFilePath = Path.Combine(Path.GetDirectoryName(RuntimeModule.FileName), Path.GetFileName(libraryInfo.FileName));
+                }
             }
             if (!File.Exists(localFilePath))
             {
@@ -303,6 +340,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 sb.AppendLine();
                 sb.Append($"    DAC: {_dacFilePath}");
+            }
+            if (_cdacFilePath is not null)
+            {
+                sb.AppendLine();
+                sb.Append($"    CDAC: {_cdacFilePath}");
             }
             if (_dbiFilePath is not null)
             {

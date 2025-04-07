@@ -260,7 +260,7 @@ ClrmaManagedAnalysis::AssociateClient(
                     TraceError("AssociateClient GetRuntime FAILED %08x\n", hr);
                     return hr;
                 }
-                if (FAILED(hr = runtime->GetClrDataProcess(&m_clrData)))
+                if (FAILED(hr = runtime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::UseCDac, &m_clrData)))
                 {
                     m_clrData = GetClrDataFromDbgEng();
                     if (m_clrData == nullptr)
