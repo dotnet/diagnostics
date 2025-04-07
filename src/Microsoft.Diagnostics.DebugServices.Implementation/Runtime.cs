@@ -120,13 +120,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             if (_dacFilePath is null)
             {
-                if (_dacFilePath is null)
+                _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac);
+                if (_dacFilePath is not null)
                 {
-                    _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac);
-                    if (_dacFilePath is not null)
-                    {
-                        verifySignature = _settingsService.DacSignatureVerificationEnabled;
-                    }
+                    verifySignature = _settingsService.DacSignatureVerificationEnabled;
                 }
             }
             return _dacFilePath;
