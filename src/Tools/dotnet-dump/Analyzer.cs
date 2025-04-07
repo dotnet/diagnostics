@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
             ServiceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
         }
 
-        public Task<int> Analyze(FileInfo dump_path, string[] command)
+        public int Analyze(FileInfo dump_path, string[] command)
         {
             _fileLoggingConsoleService.WriteLine($"Loading core dump: {dump_path} ...");
 
@@ -145,7 +145,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                  or NotSupportedException)
             {
                 _fileLoggingConsoleService.WriteLineError($"{ex.Message}");
-                return Task.FromResult(1);
+                return 1;
             }
             finally
             {
@@ -173,7 +173,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 // Dispose of the global services
                 serviceContainer.DisposeServices();
             }
-            return Task.FromResult(0);
+            return 0;
         }
     }
 }
