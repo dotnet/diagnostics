@@ -993,7 +993,7 @@ public class SOSRunner : IDisposable
                     if (_config.PublishSingleFile)
                     {
                         string appRootDir = ReplaceVariables(_variables, "%DEBUG_ROOT%");
-                        commands.Add($"!SetSymbolServer -ms -directory {appRootDir}");
+                        commands.Add($"!SetSymbolServer -ms -timeout 10 -directory {appRootDir}");
                     }
                     if (!string.IsNullOrEmpty(setSymbolServer))
                     {
@@ -1027,7 +1027,7 @@ public class SOSRunner : IDisposable
                     if (_config.PublishSingleFile)
                     {
                         string appRootDir = ReplaceVariables(_variables, "%DEBUG_ROOT%");
-                        commands.Add($"setsymbolserver -ms -directory {appRootDir}");
+                        commands.Add($"setsymbolserver -ms -timeout 10 -directory {appRootDir}");
                     }
                     if (!string.IsNullOrEmpty(setSymbolServer))
                     {
