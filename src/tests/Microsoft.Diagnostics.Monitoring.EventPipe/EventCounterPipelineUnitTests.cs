@@ -155,7 +155,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             {
                 throw new SkipTestException("MetricsEventSource only supports instrument IDs starting in .NET 9.0.");
             }
-            if (OS.Kind == OSKind.OSX)
+            if (OS.Kind == OSKind.OSX || OS.Kind == OSKind.Windows)
             {
                 throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/5375");
             }
