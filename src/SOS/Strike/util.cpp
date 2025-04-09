@@ -4115,14 +4115,12 @@ HRESULT LoadClrDebugDll(void)
         g_sos = NULL;
         return hr;
     }
-
     // Always have an instance of the MethodTable enumerator
     hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface15), (void**)&g_sos15);
     if (FAILED(hr))
     {
         g_sos15 = &SOSDacInterface15Simulator_Instance;
     }
-
     // Always have an instance of the MethodTable enumerator
     hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface16), (void**)&g_sos16);
     return S_OK;
