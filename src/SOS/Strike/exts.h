@@ -241,6 +241,8 @@ public:
     /* We may reconsider caching g_clrData in the future */     \
     ToRelease<IXCLRDataProcess> spIDP(g_clrData);               \
     ToRelease<ISOSDacInterface> spISD(g_sos);                   \
+    ToRelease<ISOSDacInterface15> spISD15(g_sos15);             \
+    ToRelease<ISOSDacInterface16> spISD16(g_sos16);             \
     ResetGlobals();
 
 #define INIT_API_PROBE_MANAGED(name)                            \
@@ -275,8 +277,10 @@ public:
     }                                                           \
     /* If LoadClrDebugDll() succeeded make sure we release g_clrData. */  \
     /* We may reconsider caching g_clrData in the future */     \
+    ToRelease<IXCLRDataProcess> spIDP(g_clrData);               \
     ToRelease<ISOSDacInterface> spISD(g_sos);                   \
-    ToRelease<IXCLRDataProcess> spIDP(g_clrData);
+    ToRelease<ISOSDacInterface15> spISD15(g_sos15);             \
+    ToRelease<ISOSDacInterface16> spISD16(g_sos16);
     
 #ifdef FEATURE_PAL
 
