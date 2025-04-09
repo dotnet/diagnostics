@@ -2262,7 +2262,14 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
                 if (FAILED(hr = assemblyData.Request(g_sos, pAssemblyArray[nAssem])))
                 {
                     ExtOut("Failed to request assembly: %08x\n", hr);
-                    goto Failure;
+                    // This is to work around a bug in the .NET 8.0 or less DAC's GetAssemblyData call to
+                    // Assembly::GetLoader() in which the return isn't properly DAC'ized. This is causing
+                    // test failures on Alpine x64 8.0 legs.
+                    if (IsRuntimeVersionAtLeast(9))
+                    {
+                        goto Failure;
+                    }
+                    continue;
                 }
 
                 pModules = new CLRDATA_ADDRESS[assemblyData.ModuleCount];
