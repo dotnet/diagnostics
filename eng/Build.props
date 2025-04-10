@@ -1,5 +1,11 @@
 <Project>
+
+  <ItemGroup Condition="'$(DotNetBuild)' == 'true'">
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
+  </ItemGroup>
+
   <ItemGroup Condition=" '$(BundleTools)' == 'true' ">
     <ProjectToBuild Include="$(RepoRoot)src/singlefile-tools.proj" />
   </ItemGroup>
+
 </Project>
