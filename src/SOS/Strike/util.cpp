@@ -2262,7 +2262,14 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
                 if (FAILED(hr = assemblyData.Request(g_sos, pAssemblyArray[nAssem])))
                 {
                     ExtOut("Failed to request assembly: %08x\n", hr);
-                    goto Failure;
+                    // This is to work around a bug in the .NET 8.0 or less DAC's GetAssemblyData call to
+                    // Assembly::GetLoader() in which the return isn't properly DAC'ized. This is causing
+                    // test failures on Alpine x64 8.0 legs.
+                    if (IsRuntimeVersionAtLeast(9))
+                    {
+                        goto Failure;
+                    }
+                    continue;
                 }
 
                 pModules = new CLRDATA_ADDRESS[assemblyData.ModuleCount];
@@ -4108,14 +4115,12 @@ HRESULT LoadClrDebugDll(void)
         g_sos = NULL;
         return hr;
     }
-
     // Always have an instance of the MethodTable enumerator
     hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface15), (void**)&g_sos15);
     if (FAILED(hr))
     {
         g_sos15 = &SOSDacInterface15Simulator_Instance;
     }
-
     // Always have an instance of the MethodTable enumerator
     hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface16), (void**)&g_sos16);
     return S_OK;

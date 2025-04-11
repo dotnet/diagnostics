@@ -202,7 +202,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [HelpInvoke]
         public static string GetDetailedHelp() =>
 $@"-------------------------------------------------------------------------------
-!maddress is a managed version of !address, which attempts to annotate all memory
+The maddress command is a managed version of !address, which attempts to annotate all memory
 with information about CLR's heaps.
 
 usage: !maddress [{SummaryFlag}] [{ImagesFlag}] [{ForceHandleTableFlag}] [{ReserveFlag} [{ReserveHeuristicFlag}]]

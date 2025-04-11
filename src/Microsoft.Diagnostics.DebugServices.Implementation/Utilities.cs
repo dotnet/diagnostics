@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.FileFormats.MachO;
@@ -49,6 +50,19 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 default:
                     throw new NotSupportedException("Architecture not supported");
             }
+        }
+
+        /// <summary>
+        /// Create an IModule from a managed ClrModule
+        /// </summary>
+        /// <param name="moduleService">module service</param>
+        /// <param name="moduleIndex">module index or -1 if none</param>
+        /// <param name="module">ClrModule instance</param>
+        /// <returns></returns>
+        public static IModule CreateModule(this IModuleService moduleService, int moduleIndex, ClrModule module)
+        {
+            ulong size = module.Size > 0 ? module.Size : 4096;
+            return moduleService.CreateModule(moduleIndex, module.ImageBase, size, module.Name);
         }
 
         /// <summary>

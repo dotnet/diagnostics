@@ -158,7 +158,7 @@ namespace SOS.Hosting.DbgEng
             [Out][MarshalAs(UnmanagedType.LPStr)] StringBuilder Buffer,
             [In] int BufferSize,
             [Out] uint* FileSize,
-            [Out][MarshalAs(UnmanagedType.Bool)] bool* Append);
+            [Out] bool* Append);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int OpenLogFileDelegate(
@@ -554,13 +554,13 @@ namespace SOS.Hosting.DbgEng
         private delegate int GetBreakpointByIndexDelegate(
             IntPtr self,
             [In] uint Index,
-            [Out][MarshalAs(UnmanagedType.Interface)] IntPtr bp);     // out IDebugBreakpoint
+            [Out] IntPtr bp);     // out IDebugBreakpoint
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetBreakpointByIdDelegate(
             IntPtr self,
             [In] uint Id,
-            [Out][MarshalAs(UnmanagedType.Interface)] IntPtr bp);     // out IDebugBreakpoint
+            [Out] IntPtr bp);     // out IDebugBreakpoint
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetBreakpointParametersDelegate(
@@ -575,7 +575,7 @@ namespace SOS.Hosting.DbgEng
             IntPtr self,
             [In] DEBUG_BREAKPOINT_TYPE Type,
             [In] uint DesiredId,
-            [Out][MarshalAs(UnmanagedType.Interface)] IntPtr bp);     // out IDebugBreakpoint
+            [Out] IntPtr bp);     // out IDebugBreakpoint
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int RemoveBreakpointDelegate(

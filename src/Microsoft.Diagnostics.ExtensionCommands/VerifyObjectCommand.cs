@@ -49,5 +49,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine();
             Console.WriteLine($"{corruption.Length:n0} error{(corruption.Length == 1 ? "" : "s")}  detected.");
         }
+
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"VerifyObj is a diagnostic tool that checks the object that is passed as an 
+argument for signs of corruption.
+
+    {prompt}verifyobj 028000ec
+    object 0x28000ec does not have valid method table
+
+    {prompt}verifyobj 0680017c 
+    object 0x680017c: bad member 00000001 at 06800184
+";
     }
 }

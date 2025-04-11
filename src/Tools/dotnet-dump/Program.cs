@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
 {
     internal static class Program
     {
-        public static Task<int> Main(string[] args)
+        public static int Main(string[] args)
         {
             RootCommand rootCommand = new()
             {
@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that dumps can be collected from.")
             };
 
-            return rootCommand.Parse(args).InvokeAsync();
+            return rootCommand.Parse(args).Invoke();
         }
 
         private static Command CollectCommand()
@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 ProcessIdOption, OutputOption, DiagnosticLoggingOption, CrashReportOption, TypeOption, ProcessNameOption, DiagnosticPortOption
             };
 
-            command.SetAction((parseResult, ct) => Task.FromResult(new Dumper().Collect(
+            command.SetAction((parseResult) => new Dumper().Collect(
                 stdOutput: parseResult.Configuration.Output,
                 stdError: parseResult.Configuration.Error,
                 processId: parseResult.GetValue(ProcessIdOption),
@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 crashreport: parseResult.GetValue(CrashReportOption),
                 type: parseResult.GetValue(TypeOption),
                 name: parseResult.GetValue(ProcessNameOption),
-                diagnosticPort: parseResult.GetValue(DiagnosticPortOption))));
+                diagnosticPort: parseResult.GetValue(DiagnosticPortOption)));
 
             return command;
         }
@@ -99,7 +99,7 @@ on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Othe
                 RunCommand
             };
 
-            command.SetAction((parseResult, ct) => new Analyzer().Analyze(
+            command.SetAction((parseResult) => new Analyzer().Analyze(
                 parseResult.GetValue(DumpPath),
                 parseResult.GetValue(RunCommand) ?? Array.Empty<string>()));
 

@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.FileFormats;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -37,7 +39,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             container.AddService(memoryService);
 
             _memoryService = memoryService;
-            _moduleService = managed ? new ManagedImageMappingModuleService(container) : container.GetService<IModuleService>();
+            _moduleService = managed ? new ManagedModuleService(container) : container.GetService<IModuleService>();
             _memoryCache = new MemoryCache(ReadMemoryFromModule);
             _recursionProtection = new HashSet<ulong>();
 
@@ -323,6 +325,59 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         blob.Offset += sizeOfBlock - 8;
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Module service implementation for managed image mapping. Enumerates all managed modules in all runtimes.
+        /// </summary>
+        private sealed class ManagedModuleService : ModuleService
+        {
+            private readonly IRuntimeService _runtimeService;
+
+            public ManagedModuleService(IServiceProvider services)
+                : base(services)
+            {
+                _runtimeService = services.GetService<IRuntimeService>();
+            }
+
+            /// <summary>
+            /// Get/create the modules dictionary.
+            /// </summary>
+            protected override Dictionary<ulong, IModule> GetModulesInner()
+            {
+                Dictionary<ulong, IModule> modules = new();
+                int moduleIndex = 0;
+
+                IEnumerable<IRuntime> runtimes = _runtimeService.EnumerateRuntimes();
+                if (runtimes.Any())
+                {
+                    foreach (IRuntime runtime in runtimes)
+                    {
+                        ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
+                        if (clrRuntime is not null)
+                        {
+                            foreach (ClrModule clrModule in clrRuntime.EnumerateModules())
+                            {
+                                if (clrModule.ImageBase != 0)
+                                {
+                                    IModule module = this.CreateModule(moduleIndex, clrModule);
+                                    try
+                                    {
+                                        modules.Add(module.ImageBase, module);
+                                        moduleIndex++;
+                                    }
+                                    catch (ArgumentException)
+                                    {
+                                        Trace.TraceError($"GetModulesInner(): duplicate module base '{module}' dup '{modules[module.ImageBase]}'");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return modules;
             }
         }
     }

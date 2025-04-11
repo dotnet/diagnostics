@@ -461,48 +461,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public string DownloadFile(string index, string file) => DownloadFile(new SymbolStoreKey(index, file));
 
         /// <summary>
-        /// Returns the metadata for the assembly
-        /// </summary>
-        /// <param name="imagePath">file name and path to module</param>
-        /// <param name="imageTimestamp">module timestamp</param>
-        /// <param name="imageSize">size of PE image</param>
-        /// <returns>metadata</returns>
-        public ImmutableArray<byte> GetMetadata(string imagePath, uint imageTimestamp, uint imageSize)
-        {
-            try
-            {
-                Stream peStream = null;
-                if (imagePath != null && File.Exists(imagePath))
-                {
-                    peStream = Utilities.TryOpenFile(imagePath);
-                }
-                else if (IsSymbolStoreEnabled)
-                {
-                    SymbolStoreKey key = PEFileKeyGenerator.GetKey(imagePath, imageTimestamp, imageSize);
-                    peStream = GetSymbolStoreFile(key)?.Stream;
-                }
-                if (peStream != null)
-                {
-                    using PEReader peReader = new(peStream, PEStreamOptions.Default);
-                    if (peReader.HasMetadata)
-                    {
-                        PEMemoryBlock metadataInfo = peReader.GetMetadata();
-                        return metadataInfo.GetContent();
-                    }
-                }
-            }
-            catch (Exception ex) when
-                (ex is UnauthorizedAccessException or
-                 BadImageFormatException or
-                 InvalidVirtualAddressException or
-                 IOException)
-            {
-                Trace.TraceError($"GetMetaData: {ex.Message}");
-            }
-            return ImmutableArray<byte>.Empty;
-        }
-
-        /// <summary>
         /// Returns the portable PDB reader for the assembly path
         /// </summary>
         /// <param name="assemblyPath">file path of the assembly or null if the module is in-memory or dynamic</param>
@@ -887,7 +845,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
                         if (!File.Exists(downloadFilePath))
                         {
-                            downloadFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + "-" + Path.GetFileName(key.FullPathName));
+                            downloadFilePath = Path.Combine(_host.GetTempDirectory(), Path.GetRandomFileName() + "-" + Path.GetFileName(key.FullPathName));
                             using (Stream destinationStream = File.OpenWrite(downloadFilePath))
                             {
                                 file.Stream.CopyTo(destinationStream);

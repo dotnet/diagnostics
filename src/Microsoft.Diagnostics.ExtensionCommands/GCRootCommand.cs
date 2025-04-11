@@ -111,6 +111,28 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Console.WriteLine($"Found {count:n0} unique roots.");
         }
 
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"GCRoot looks for references (or roots) to an object. These can exist in four
+places:
+
+   1. On the stack
+   2. Within a GC Handle
+   3. In an object ready for finalization
+   4. As a member of an object found in 1, 2 or 3 above.
+
+First, all stacks will be searched for roots, then handle tables, and finally
+the reachable queue of the finalizer. Some caution about the stack roots: 
+GCRoot doesn't attempt to determine if a stack root it encountered is valid 
+or is old (discarded) data. You would have to use !ClrStack and !U to 
+disassemble the frame that the local or argument value belongs to in order to 
+determine if it is still in use.
+
+Because people often want to restrict the search to gc handles and reachable
+objects, there is a -nostacks option.
+
+The -all option forces all roots to be displayed instead of just the unique roots.
+";
         private int PrintOlderGenerationRoots(GCRoot gcroot, int gen, int limit)
         {
             int count = 0;

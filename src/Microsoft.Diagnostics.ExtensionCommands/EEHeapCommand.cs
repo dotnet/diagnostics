@@ -71,6 +71,91 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             PrintOneRuntime(Runtime);
         }
 
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"The eeheap command enumerates process memory consumed by internal CLR data
+structures. You can limit the output by passing ""-gc"" or ""-loader"". All
+information will be displayed otherwise.
+
+The information for the Garbage Collector lists the ranges of each Segment in 
+the managed heap. This can be useful if you believe you have an object pointer.
+If the pointer falls within a segment range given by 'eeheap -gc', then you do
+have an object pointer, and can attempt to run 'dumpobj' on it.
+
+Here is output for a simple program:
+
+    {prompt}eeheap -gc
+    Number of GC Heaps: 1
+    generation 0 starts at 0x00a71018
+    generation 1 starts at 0x00a7100c
+    generation 2 starts at 0x00a71000
+     segment    begin allocated     size
+    00a70000 00a71000  00a7e01c 0000d01c(53276)
+    Large object heap starts at 0x01a71000
+     segment    begin allocated     size
+    01a70000 01a71000  01a76000 0x00005000(20480)
+    Total Size   0x1201c(73756)
+    ------------------------------
+    GC Heap Size   0x1201c(73756)
+
+So the total size of the GC Heap is only 72K. On a large web server, with 
+multiple processors, you can expect to see a GC Heap of 400MB or more. The 
+Garbage Collector attempts to collect and reclaim memory only when required to
+by memory pressure for better performance. You can also see the notion of 
+""generations,"" wherein the youngest objects live in generation 0, and 
+long-lived objects eventually get ""promoted"" to generation 2.
+
+The loader output lists various private heaps associated with AppDomains. It 
+also lists heaps associated with the JIT compiler, and heaps associated with 
+Modules. For example:
+
+    {prompt}eeheap -loader
+    Loader Heap:
+    --------------------------------------
+    System Domain: 5e0662a0
+    LowFrequencyHeap:008f0000(00002000:00001000) Size: 0x00001000 bytes.
+    HighFrequencyHeap:008f2000(00008000:00001000) Size: 0x00001000 bytes.
+    StubHeap:008fa000(00002000:00001000) Size: 0x00001000 bytes.
+    Total size: 0x3000(12288)bytes
+    --------------------------------------
+    Shared Domain: 5e066970
+    LowFrequencyHeap:00920000(00002000:00001000) 03e30000(00010000:00003000) Size: 0x00004000 bytes.
+    Wasted: 0x00001000 bytes.
+    HighFrequencyHeap:00922000(00008000:00001000) Size: 0x00001000 bytes.
+    StubHeap:0092a000(00002000:00001000) Size: 0x00001000 bytes.
+    Total size: 0x6000(24576)bytes
+    --------------------------------------
+    Domain 1: 14f000
+    LowFrequencyHeap:00900000(00002000:00001000) 03ee0000(00010000:00003000) Size: 0x00004000 bytes.
+    Wasted: 0x00001000 bytes.
+    HighFrequencyHeap:00902000(00008000:00003000) Size: 0x00003000 bytes.
+    StubHeap:0090a000(00002000:00001000) Size: 0x00001000 bytes.
+    Total size: 0x8000(32768)bytes
+    --------------------------------------
+    Jit code heap:
+    Normal JIT:03ef0000(00010000:00002000) Size: 0x00002000 bytes.
+    Total size: 0x2000(8192)bytes
+    --------------------------------------
+    Module Thunk heaps:
+    Module 5ba22410: Size: 0x00000000 bytes.
+    Module 001c1320: Size: 0x00000000 bytes.
+    Module 001c03f0: Size: 0x00000000 bytes.
+    Module 001caa38: Size: 0x00000000 bytes.
+    Total size: 0x0(0)bytes
+    --------------------------------------
+    Module Lookup Table heaps:
+    Module 5ba22410:Size: 0x00000000 bytes.
+    Module 001c1320:Size: 0x00000000 bytes.
+    Module 001c03f0:Size: 0x00000000 bytes.
+    Module 001caa38:03ec0000(00010000:00002000) Size: 0x00002000 bytes.
+    Total size: 0x2000(8192)bytes
+    --------------------------------------
+    Total LoaderHeap size: 0x15000(86016)bytes
+    =======================================
+
+By using 'eeheap' to keep track of the growth of these private heaps, we are 
+able to rule out or include them as a source of a memory leak.
+";
         private ulong PrintOneRuntime(ClrRuntime clrRuntime)
         {
             StringBuilder stringBuilder = null;

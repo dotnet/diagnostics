@@ -56,5 +56,61 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Console.WriteLine("There was no managed OOM due to allocations on the GC heap");
             }
         }
+
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"AnalyzeOOM displays the info of the last OOM occurred on an allocation request to
+the GC heap (in Server GC it displays OOM, if any, on each GC heap). 
+
+To see the managed exception(s) use the 'clrthreads' command which will show you 
+managed exception(s), if any, on each managed thread. If you do see an 
+OutOfMemoryException exception you can use the 'printexception' command on it.
+To get the full call stack use the ""kb"" command in the debugger for that thread.
+For example, to display thread 3's stack use ~3kb.
+
+OOM exceptions could be because of the following reasons:
+
+1) allocation request to GC heap 
+   in which case you will see JIT_New* on the call stack because managed code called new.
+2) other runtime allocation failure
+   for example, failure to expand the finalize queue when GC.ReRegisterForFinalize is
+   called.
+3) some other code you use throws a managed OOM exception 
+   for example, some .NET framework code converts a native OOM exception to managed 
+   and throws it.
+
+The 'analyzeoom' command aims to help you with investigating 1) which is the most
+difficult because it requires some internal info from GC. The only exception is
+we don't support allocating objects larger than 2GB on CLR v2.0 or prior. And this
+command will not display any managed OOM because we will throw OOM right away 
+instead of even trying to allocate it on the GC heap.
+
+There are 2 legitimate scenarios where GC would return OOM to allocation requests - 
+one is if the process is running out of VM space to reserve a segment; the other
+is if the system is running out physical memory (+ page file if you have one) so
+GC can not commit memory it needs. You can look at these scenarios by using performance
+counters or debugger commands. For example for the former scenario the ""!address 
+-summary"" debugger command will show you the largest free region in the VM. For
+the latter scenario you can look at the ""Memory% Committed Bytes In Use"" see
+if you are running low on commit space. One important thing to keep in mind is
+when you do this kind of memory analysis it could an aftereffect and doesn't 
+completely agree with what this command tells you, in which case the command should
+be respected because it truly reflects what happened during GC.
+
+The other cases should be fairly obvious from the call stack.
+
+Sample output:
+
+    {prompt}analyzeoom
+    ---------Heap 2 ---------
+    Managed OOM occurred after GC #28 (Requested to allocate 1234 bytes)
+    Reason: Didn't have enough memory to commit
+    Detail: SOH: Didn't have enough memory to grow the internal GC data structures (800000 bytes) - 
+            on GC entry available commit space was 500 MB
+    ---------Heap 4 ---------
+    Managed OOM occurred after GC #12 (Requested to allocate 100000 bytes)
+    Reason: Didn't have enough memory to allocate an LOH segment
+    Detail: LOH: Failed to reserve memory (16777216 bytes)
+";
     }
 }

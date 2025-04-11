@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     return false;
                 }
-                // Native Windows dlls default to file layout
+                // Native Windows dlls default to loaded layout
                 if ((_flags & Flags.IsManaged) == 0 && Target.OperatingSystem == OSPlatform.Windows)
                 {
                     return false;
@@ -193,7 +193,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             try
             {
-                PEReader reader = Services.GetService<PEReader>();
+                PEReader reader = Services.GetService<PEModule>()?.GetPEReader();
                 if (reader is not null && reader.HasMetadata)
                 {
                     PEMemoryBlock metadataInfo = reader.GetMetadata();
@@ -201,13 +201,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
             catch (Exception ex) when
-                (ex is InvalidOperationException ||
-                 ex is BadImageFormatException ||
-                 ex is IOException)
+                (ex is InvalidOperationException or
+                 BadImageFormatException or
+                 IOException)
             {
                 Trace.TraceError($"GetMetaData: {ex.Message}");
             }
-            return ImmutableArray<byte>.Empty;
+            return [];
         }
 
         #endregion

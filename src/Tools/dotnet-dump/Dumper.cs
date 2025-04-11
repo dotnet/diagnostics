@@ -33,23 +33,24 @@ namespace Microsoft.Diagnostics.Tools.Dump
 
         public int Collect(TextWriter stdOutput, TextWriter stdError, int processId, string output, bool diag, bool crashreport, DumpTypeOption type, string name, string diagnosticPort)
         {
-            if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, string.Empty, out int resolvedProcessId))
-            {
-                processId = resolvedProcessId;
-            }
-            else
-            {
-                return -1;
-            }
-
             try
             {
+                if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, string.Empty, out int resolvedProcessId))
+                {
+                    processId = resolvedProcessId;
+                }
+                else
+                {
+                    return -1;
+                }
+
                 if (output == null)
                 {
                     // Build timestamp based file path
                     string timestamp = $"{DateTime.Now:yyyyMMdd_HHmmss}";
                     output = Path.Combine(Directory.GetCurrentDirectory(), RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? $"dump_{timestamp}.dmp" : $"core_{timestamp}");
                 }
+
                 // Make sure the dump path is NOT relative. This path could be sent to the runtime
                 // process on Linux which may have a different current directory.
                 output = Path.GetFullPath(output);
@@ -131,19 +132,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     client.WriteDump(dumpType, output, flags);
                 }
             }
-            catch (Exception ex) when
-                (ex is FileNotFoundException or
-                 ArgumentException or
-                 DirectoryNotFoundException or
-                 UnauthorizedAccessException or
-                 PlatformNotSupportedException or
-                 UnsupportedCommandException or
-                 InvalidDataException or
-                 InvalidOperationException or
-                 NotSupportedException or
-                 DiagnosticsClientException)
+            catch (Exception ex)
             {
-                stdError.WriteLine($"{ex.Message}");
+                if (diag)
+                {
+                    stdError.WriteLine($"{ex}");
+                }
+                else
+                {
+                    stdError.WriteLine($"{ex.Message}");
+                }
                 return -1;
             }
 

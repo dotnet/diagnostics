@@ -52,7 +52,7 @@ namespace SOS.Extensions
 
         protected override bool GetThreadContext(uint threadId, uint contextFlags, byte[] context)
         {
-            return _debuggerServices.GetThreadContext(threadId, contextFlags, (uint)context.Length, context).IsOK;
+            return _debuggerServices.GetThreadContext(threadId, contextFlags, context).IsOK;
         }
 
         protected override ulong GetThreadTeb(uint threadId)

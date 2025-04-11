@@ -175,13 +175,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Create a module instance
         /// </summary>
-        /// <param name="moduleIndex">artificial index</param>
+        /// <param name="moduleIndex">artificial index or -1 for none</param>
         /// <param name="imageBase">module base address</param>
         /// <param name="imageSize">module size</param>
         /// <param name="imageName">module name</param>
         /// <returns>IModule</returns>
-        IModule IModuleService.CreateModule(int moduleIndex, ulong imageBase, ulong imageSize, string imageName)
+        /// <exception cref="ArgumentNullException">thrown if imageBase or imageSize is 0</exception>
+        public IModule CreateModule(int moduleIndex, ulong imageBase, ulong imageSize, string imageName)
         {
+            if (imageBase == 0)
+            {
+                throw new ArgumentNullException(nameof(imageBase));
+            }
+            if (imageSize == 0)
+            {
+                throw new ArgumentNullException(nameof(imageSize));
+            }
             return new ModuleFromAddress(this, moduleIndex, imageBase, imageSize, imageName);
         }
 

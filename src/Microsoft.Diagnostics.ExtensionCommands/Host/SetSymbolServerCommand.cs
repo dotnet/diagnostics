@@ -123,28 +123,23 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [HelpInvoke]
         public static string GetDetailedHelp(IHost host)
         {
-            switch (host.HostType)
+            return host.HostType switch
             {
-                case HostType.DbgEng:
-                    return s_detailedHelpTextDbgEng;
-                case HostType.Lldb:
-                    return s_detailedHelpTextLLDB;
-                case HostType.DotnetDump:
-                    return s_detailedHelpTextDotNetDump;
-            }
-            return null;
+                HostType.DbgEng => s_detailedHelpTextDbgEng,
+                HostType.Lldb => s_detailedHelpTextLLDB,
+                HostType.DotnetDump => s_detailedHelpTextDotNetDump,
+                _ => null,
+            };
         }
 
         private const string s_detailedHelpTextDbgEng =
-        @"
-This commands enables symbol server support for portable PDBs for managed assemblies and 
+@"This commands enables symbol server support for portable PDBs for managed assemblies and 
 .NET Core native modules files (like the DAC) in SOS. If the .sympath is set, the symbol 
 server supported is automatically set and this command isn't necessary.
 ";
 
         private const string s_detailedHelpTextLLDB =
-        @"
-This commands enables symbol server support in SOS. The portable PDBs for managed assemblies
+@"This commands enables symbol server support in SOS. The portable PDBs for managed assemblies
 and .NET Core native symbol and module (like the DAC) files are downloaded.
 
 To enable downloading symbols from the Microsoft symbol server:
@@ -183,8 +178,7 @@ stack frames).
 ";
 
         private const string s_detailedHelpTextDotNetDump =
-        @"
-This commands enables symbol server support in SOS. The portable PDBs for managed assemblies
+@"This commands enables symbol server support in SOS. The portable PDBs for managed assemblies
 and .NET Core native module (like the DAC) files are downloaded.
 
 To enable downloading symbols from the Microsoft symbol server:
