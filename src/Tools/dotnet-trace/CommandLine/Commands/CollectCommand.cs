@@ -377,12 +377,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     stoppingEventProviderName,
                                     stoppingEventEventName,
                                     payloadFilter,
-                                    onEvent: (traceEvent) =>
-                                    {
+                                    onEvent: (traceEvent) => {
                                         shouldExit.Set();
                                     },
-                                    onPayloadFilterMismatch: (traceEvent) =>
-                                    {
+                                    onPayloadFilterMismatch: (traceEvent) => {
                                         ConsoleWriteLine($"One or more field names specified in the payload filter for event '{traceEvent.ProviderName}/{traceEvent.EventName}' do not match any of the known field names: '{string.Join(' ', traceEvent.PayloadNames)}'. As a result the requested stopping event is unreachable; will continue to collect the trace for the remaining specified duration.");
                                     },
                                     eventStream: new PassthroughStream(session.EventStream, fs, (int)buffersize, leaveDestinationStreamOpen: true),
@@ -620,7 +618,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static readonly Option<FileInfo> OutputPathOption =
             new("--output", "-o")
             {
-                Description =  $"The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.",
+                Description = $"The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.",
                 DefaultValueFactory = _ => new FileInfo(DefaultTraceName)
             };
 
@@ -699,10 +697,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Description = @"A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set."
             };
 
-        private static readonly Option<bool> RundownOption =
+        private static readonly Option<bool?> RundownOption =
             new("--rundown")
             {
-                 Description = @"Collect rundown events unless specified false."
+                Description = @"Collect rundown events unless specified false."
             };
 
         private static readonly Option<string> DSRouterOption =
