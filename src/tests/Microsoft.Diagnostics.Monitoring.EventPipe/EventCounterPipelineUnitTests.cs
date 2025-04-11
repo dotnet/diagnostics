@@ -59,8 +59,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             private readonly List<ExpectedCounter> _expectedCounters = new();
             private Dictionary<ExpectedCounter, ICounterPayload> _metrics = new();
             private readonly TaskCompletionSource<object> _foundExpectedCountersSource;
+            private readonly ITestOutputHelper _output;
 
-            public TestMetricsLogger(IEnumerable<ExpectedCounter> expectedCounters, TaskCompletionSource<object> foundExpectedCountersSource)
+            public TestMetricsLogger(IEnumerable<ExpectedCounter> expectedCounters, TaskCompletionSource<object> foundExpectedCountersSource, ITestOutputHelper output)
             {
                 _foundExpectedCountersSource = foundExpectedCountersSource;
                 _expectedCounters = new(expectedCounters);
@@ -68,6 +69,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 {
                     foundExpectedCountersSource.SetResult(null);
                 }
+                _output = output;
             }
 
             public IEnumerable<ICounterPayload> Metrics => _metrics.Values;
@@ -90,17 +92,29 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 ExpectedCounter expectedCounter = _expectedCounters.Find(c => c.MatchesCounterMetadata(payload.CounterMetadata));
                 if(expectedCounter != null)
                 {
+                    
                     _expectedCounters.Remove(expectedCounter);
                     _metrics.Add(expectedCounter, payload);
+
+                    _output.WriteLine($"Found expected counter: {expectedCounter.ProviderName}/{expectedCounter.CounterName}. Counters remaining={_expectedCounters.Count}");
                     // Complete the task source if the last expected key was removed.
                     if (_expectedCounters.Count == 0)
                     {
+                        _output.WriteLine($"All expected counters have been received. Signaling pipeline can exit.");
                         _foundExpectedCountersSource.TrySetResult(null);
                     }
                 }
+                else
+                {
+                    _output.WriteLine($"Received additional counter event: {payload.CounterMetadata.ProviderName}/{payload.CounterMetadata.CounterName}");
+                }
             }
 
-            public Task PipelineStarted(CancellationToken token) => Task.CompletedTask;
+            public Task PipelineStarted(CancellationToken token)
+            {
+                _output.WriteLine("Counters pipeline is running. Waiting to receive expected counters from tracee.");
+                return Task.CompletedTask;
+            }
 
             public Task PipelineStopped(CancellationToken token) => Task.CompletedTask;
         }
@@ -113,7 +127,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             TaskCompletionSource<object> foundExpectedCountersSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            TestMetricsLogger logger = new(expectedCounters.Select(name => new ExpectedCounter(expectedProvider, name)), foundExpectedCountersSource);
+            TestMetricsLogger logger = new(expectedCounters.Select(name => new ExpectedCounter(expectedProvider, name)), foundExpectedCountersSource, _output);
 
             await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "CounterRemoteTest", _output))
             {
@@ -169,7 +183,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     new ExpectedCounter(providerName, counterName, "MeterTag=two","InstrumentTag=B"),
                 ];
             TaskCompletionSource<object> foundExpectedCountersSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            TestMetricsLogger logger = new(expectedCounters, foundExpectedCountersSource);
+            TestMetricsLogger logger = new(expectedCounters, foundExpectedCountersSource, _output);
 
             await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "DuplicateNameMetrics", _output, testProcessTimeout: 3_000))
             {
