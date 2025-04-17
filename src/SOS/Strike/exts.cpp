@@ -107,6 +107,8 @@ ExtInit(PDEBUG_CLIENT client)
         g_bDacBroken = TRUE;
         g_clrData = NULL;
         g_sos = NULL;
+        g_sos15 = NULL;
+        g_sos16 = NULL;
 
         // Flush here only on Windows under dbgeng. The lldb sos plugin handles it for Linux/MacOS.
 #ifndef FEATURE_PAL

@@ -86,6 +86,42 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             DumpHeap.PrintHeap(GetTransitiveClosure(objects), displayKind, Stat, printFragmentation: false);
         }
 
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"With no parameters, 'objsize' lists the size of all objects found on managed 
+threads. It also enumerates all GCHandles in the process, and totals the size 
+of any objects pointed to by those handles. In calculating object size, 
+!ObjSize includes the size of all child objects in addition to the parent.
+
+For example, 'dumpobj' lists a size of 20 bytes for this Customer object:
+
+    {prompt}dumpobj a79d40
+    Name: Customer
+    MethodTable: 009038ec
+    EEClass: 03ee1b84
+    Size: 20(0x14) bytes
+     (C:\pub\unittest.exe)
+    Fields:
+          MT    Field   Offset                 Type       Attr    Value Name
+    009038ec  4000008        4                CLASS   instance 00a79ce4 name
+    009038ec  4000009        8                CLASS   instance 00a79d2c bank
+    009038ec  400000a        c       System.Boolean   instance        1 valid
+
+but 'objsize' lists 152 bytes:
+
+    {prompt}objsize a79d40
+    sizeof(00a79d40) =      152 (    0x98) bytes (Customer)
+
+This is because a Customer points to a Bank, has a name, and the Bank points to
+an Address string. You can use !ObjSize to identify any particularly large 
+objects, such as a managed cache in a web server.
+
+While running ObjSize with no arguments may point to specific roots that hold 
+onto large amounts of memory it does not provide information regarding the 
+amount of managed memory that is still alive.  This is due to the fact that a 
+number of roots can share a common subgraph, and that part will be reported in 
+the size of all the roots that reference the subgraph.
+";
         private static IEnumerable<ClrObject> GetTransitiveClosure(IEnumerable<ClrObject> objects)
         {
             HashSet<ulong> seen = new();

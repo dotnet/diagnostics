@@ -2,7 +2,12 @@
 setlocal enabledelayedexpansion
 
 set "SDK_LOC=%~dp0.dotnet"
-set "SLN_OR_PROJ=%~dp0diagnostics.sln"
+
+if "%1" == "" (
+  set "SLN_OR_PROJ=%~dp0diagnostics.sln"
+) else (
+  set "SLN_OR_PROJ=%1"
+)
 
 set "DOTNET_ROOT=%SDK_LOC%"
 set "DOTNET_ROOT(x86)=%SDK_LOC%\x86"

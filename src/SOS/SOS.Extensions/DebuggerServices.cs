@@ -259,11 +259,11 @@ namespace SOS.Extensions
             }
         }
 
-        public HResult GetThreadContext(uint threadId, uint contextFlags, uint contextSize, byte[] context)
+        public HResult GetThreadContext(uint threadId, uint contextFlags, byte[] context)
         {
             fixed (byte* contextPtr = context)
             {
-                return VTable.GetThreadContextBySystemId(Self, threadId, contextFlags, contextSize, contextPtr);
+                return VTable.GetThreadContextBySystemId(Self, threadId, contextFlags, (uint)context.Length, contextPtr);
             }
         }
 

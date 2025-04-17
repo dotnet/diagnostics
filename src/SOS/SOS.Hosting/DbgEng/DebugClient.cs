@@ -274,12 +274,12 @@ namespace SOS.Hosting.DbgEng
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int CreateClientDelegate(
             IntPtr self,
-            [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Client);             // out IDebugClient
+            [Out] IntPtr Client);       // out IDebugClient
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetInputCallbacksDelegate(
             IntPtr self,
-            [Out][MarshalAs(UnmanagedType.Interface)] IntPtr Callbacks);          // out IDebugInputCallbacks
+            [Out] IntPtr Callbacks);    // out IDebugInputCallbacks
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SetInputCallbacksDelegate(

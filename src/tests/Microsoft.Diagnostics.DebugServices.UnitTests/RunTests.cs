@@ -137,15 +137,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     {
         private readonly ITarget _target;
         private readonly IServiceProvider _services;
-        private readonly CommandService _commandService;
 
         internal TestDebugger(TestConfiguration config, ITarget target, IServiceProvider services)
             : base(config)
         {
             _target = target;
             _services = services;
-            // dotnet-dump adds the CommandService implementation class as a service
-            _commandService = services.GetService<CommandService>();
         }
 
         public override IReadOnlyList<string> ExecuteHostCommand(string commandLine)

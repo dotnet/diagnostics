@@ -69,6 +69,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             PrintStackObjects(range);
         }
 
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"This command will display any managed objects it finds within the bounds of 
+the current stack. Combined with the stack tracing commands like K and 
+!ClrStack, it is a good aid to determining the values of locals and 
+parameters.
+
+If you use the -verify option, each non-static CLASS field of an object
+candidate is validated. This helps to eliminate false positives. It is not
+on by default because very often in a debugging scenario, you are 
+interested in objects with invalid fields.
+
+The abbreviation 'dso' can be used for brevity.
+";
+
         private void PrintStackObjects(MemoryRange stack)
         {
             Console.WriteLine($"OS Thread Id: 0x{CurrentThread.ThreadId:x} ({CurrentThread.ThreadIndex})");
