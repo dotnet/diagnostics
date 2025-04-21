@@ -285,6 +285,7 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing2 = 0x03, // create/start a given session with/without rundown
     CollectTracing3 = 0x04, // create/start a given session with/without collecting stacks
     CollectTracing4 = 0x05, // create/start a given session with specific rundown keyword
+    CollectTracing5 = 0x06, // create/start a given session with/without user_events
 }
 ```
 See: [EventPipe Commands](#EventPipe-Commands)
@@ -335,6 +336,59 @@ For example, the Command to start a stream session with EventPipe would be `0x02
 
 ## EventPipe Commands
 
+The EventPipe CommandSet enables Clients to create/start or stop [EventPipe](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/eventpipe) Sessions. Two session types are currently supported through this protocol.
+
+### Streaming Session
+
+The latest CommandID [`CollectTracing5`](#collecttracing5) supports configuring the following streaming EventPipe session options:
+* `uint circularBufferMB`: The size of the circular buffer used for buffering event data
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
+* `ulong rundownKeyword`: Indicates the keyword for the rundown provider
+* `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
+* `array<provider_config> providers`: The providers to turn on for the session
+
+### User_events Session
+
+The latest CommandID [`CollectTracing5`](#collecttracing5) supports configuring the following user_events EventPipe session options:
+
+Payload:
+* `ulong rundownKeyword`: Indicates the keyword for the rundown provider
+* `array<provider_config> providers`: The providers to turn on for the session
+
+### Session Providers
+
+The `provider_config` is composed of the following data:
+* `ulong keywords`: The keywords to turn on with this provider
+* `uint logLevel`: The level of information to turn on
+* `string provider_name`: The name of the provider
+* `string filter_data`: (Callback filter information) or (length = `0`)
+* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`). See [details](#event-filter).
+
+For user_events EventPipe Session Providers, another `provider_config` field is configurable:
+* `tracepoint_config config`: Maps Event IDs to tracepoints. If an Event ID is excluded by `event_filter`, it will not be written to any tracepoint. See [details](#tracepoint-config)
+
+#### Event Filter
+An `event_filter` is comprised of the following data:
+* `bool allow`: 0 for deny list, 1 for allow list
+* `array<uint> event_ids`: List of Event IDs to deny or allow.
+
+See [event_filter serialization examples](#event_filter)
+
+#### Tracepoint Config
+A `tracepoint_config` is comprised of the following data:
+* `string default_tracepoint_name`: (The default tracepoint filtered Event IDs will be written to unless otherwise specified by `tracepoints`) or (length = `0` to only write to tracepoints specified in `tracepoints`)
+* `array<tracepoint_set> tracepoints`: Specifies alternate tracepoints for a set of Event IDs to be written to instead of the default tracepoint or (length = `0`).
+
+A `tracepoint_set` is comprised of the following data:
+* `string tracepoint_name`: The tracepoint that the following subset of Event IDs should be written to.
+* `array<uint> event_ids`: The Event IDs to be written to `tracepoint_name`.
+
+With a user_events session, atleast one of `default_tracepoint_name` and `tracepoints` must be specified. An error will be returned through the stream if both are length = `0`.
+Event IDs specified in `tracepoint_set`s must be exclusive. If an Event ID is detected in different `tracepoint_set`s of the provider, an error will be returned through the stream.
+
+See [tracepoint_config serialization examples](#tracepoint_config)
+
+### EventPipe Command IDs
 ```c++
 enum class EventPipeCommandId : uint8_t
 {
@@ -344,6 +398,7 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing2 = 0x03, // create/start a given session with/without rundown
     CollectTracing3 = 0x04, // create/start a given session with/without collecting stacks
     CollectTracing4 = 0x05, // create/start a given session with specific rundown keyword
+    CollectTracing5 = 0x06, // create/start a given session with/without user_events
 }
 ```
 EventPipe Payloads are encoded with the following rules:
@@ -360,21 +415,21 @@ EventPipe Payloads are encoded with the following rules:
 
 Command Code: `0x0201`
 
-The `StopTracing` command is used to stop a specific streaming session.  Clients are expected to use this command to stop streaming sessions started with [`CollectStreaming`](#CollectStreaming).
+The `StopTracing` command is used to stop a specific EventPipe session.  Clients are expected to use this command to stop EventPipe sessions started with [`CollectStreaming`](#CollectStreaming).
 
 #### Inputs:
 
 Header: `{ Magic; 28; 0x0201; 0x0000 }`
 
 Payload:
-* `ulong sessionId`: The ID for the streaming session to stop
+* `ulong sessionId`: The ID for the EventPipe session to stop
 
 #### Returns:
 
 Header: `{ Magic; 28; 0xFF00; 0x0000 }`
 
 Payload:
-* `ulong sessionId`: the ID for the streaming session that was stopped
+* `ulong sessionId`: the ID for the EventPipe session that was stopped
 
 
 ##### Details:
@@ -648,6 +703,342 @@ Payload
 }
 ```
 Followed by an Optional Continuation of a `nettrace` format stream of events.
+
+### `CollectTracing5`
+
+Command Code: `0x0206`
+
+The `CollectTracing5` command is an extension of the `CollectTracing4` command. It has all the capabilities of `CollectTracing4` and introduces new fields to enable a Linux-only user_events-based eventpipe session and to prescribe an allow/deny list for Event IDs. When the user_events-based eventpipe session is enabled, the file descriptor and SCM_RIGHTS of the `user_events_data` file must be sent through the optional continuation stream as [described](#passing_file_descriptor). The runtime will register tracepoints based on the provider configurations passed in, and runtime events will be written directly to the `user_events_data` file descriptor. The allow/deny list of Event IDs will apply after the keyword/level filter to determine whether or not that provider's event will be written. When using this command, even without leveraging the new user_events-based eventpipe session option, the new fields must be serialized.
+
+> Note available for .NET 10.0 and later.
+
+#### Inputs:
+
+Header: `{ Magic; 20 + Payload Size; 0x0206; 0x0000 }`
+
+#### [Streaming Session](#streaming-session) Payload:
+* `uint output_format`: 0
+* `uint circularBufferMB`: The size of the circular buffer used for buffering event data
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
+* `ulong rundownKeyword`: Indicates the keyword for the rundown provider
+* `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
+* `array<provider_config> providers`: The providers to turn on for the session
+
+The Streaming Session `provider_config` is composed of the following data:
+* `ulong keywords`: The keywords to turn on with this provider
+* `uint logLevel`: The level of information to turn on
+* `string provider_name`: The name of the provider
+* `string filter_data`: (Callback filter information) or (length = `0`)
+* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`). See [details](#event-filter).
+
+#### [User_events Session](#user_events-session) Payload:
+* `uint output_format`: 1
+* `ulong rundownKeyword`: Indicates the keyword for the rundown provider
+* `array<provider_config> providers`: The providers to turn on for the session
+
+The User_events Session `provider_config` is composed of the following data:
+* `ulong keywords`: The keywords to turn on with this provider
+* `uint logLevel`: The level of information to turn on
+* `string provider_name`: The name of the provider
+* `string filter_data`: (Callback filter information) or (length = `0`)
+* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`). See [details](#event-filter).
+* `tracepoint_config config`: Maps Event IDs to tracepoints. If an Event ID is excluded by `event_filter`, it will not be written to any tracepoint. See [details](#tracepoint-config)
+
+> See ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`CollectTracing5` returns:
+* `ulong sessionId`: the ID for the EventPipe Session started
+
+A Streaming Session started with `CollectTracing5` is followed by an Optional Continuation of a `nettrace` format stream of events.
+
+A User_events Session started with `CollectTracing5` expects the Optional Continuation to contain another message passing along the SCM_RIGHTS `user_events_data` file descriptor. See [details](#passing_file_descriptor)
+
+## EventPipe Payload Serialization Examples
+
+### Event_filter
+Example `event_filter` serialization. Serializing
+```
+allow=0, event_ids=[]: Allow all events.
+```
+<table>
+  <tr>
+    <th>1</th>
+    <th>2-5</th>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">bool</td>
+    <td colspan="4">array&ltuint&gt</td>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">allow</td>
+    <td colspan="1">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">0</td>
+    <td colspan="1">0</td>
+  </tr>
+</table>
+
+```
+allow=0, event_ids=[4, 5]: Deny only Event IDs 4 and 5.
+```
+
+<table>
+  <tr>
+    <th>1</th>
+    <th>2</th>
+    <th>6</th>
+    <th>10-13</th>
+  </tr>
+  <tr>
+    <td colspan="1">bool</td>
+    <td colspan="4">array&ltuint&gt</td>
+  </tr>
+  <tr>
+    <td colspan="1">allow</td>
+    <td colspan="4">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">0</td>
+    <td colspan="1">2</td>
+    <td colspan="1">4</td>
+    <td colspan="1">5</td>
+  </tr>
+</table>
+
+```
+allow=1, event_ids=[]: Deny all events.
+```
+
+<table>
+  <tr>
+    <th>1</th>
+    <th>2-5</th>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">bool</td>
+    <td colspan="4">array&ltuint&gt</td>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">allow</td>
+    <td colspan="1">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">1</td>
+    <td colspan="1">0</td>
+  </tr>
+</table>
+
+```
+allow=1, event_ids=[1, 2, 3]: Allow only Event IDs 1, 2, and 3.
+```
+
+<table>
+  <tr>
+    <th>1</th>
+    <th>2</th>
+    <th>6</th>
+    <th>10</th>
+    <th>14-17</th>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">bool</td>
+    <td colspan="4">array&ltuint&gt</td>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">allow</td>
+    <td colspan="4">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">1</td>
+    <td colspan="1">3</td>
+    <td colspan="1">1</td>
+    <td colspan="1">2</td>
+    <td colspan="1">3</td>
+  </tr>
+</table>
+
+### Tracepoint_config
+Example `tracepoint_config` serialization
+```
+Output_format=0, DO NOT encode bytes for tracepoint_config
+Output_format=1, encode bytes for tracepoint_config
+```
+
+```
+All allowed Event IDs will be written to a default "MyTracepoint" tracepoint
+```
+<table>
+  <tr>
+    <th>1</th>
+    <th>5</th>
+    <th>33-36</th>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="2">string (array&ltwchar&gt)</td>
+    <td colspan="1">array&ltuint&gt</td>
+  </tr>
+  <tr>
+    <td colspan="2">default_tracepoint_name</td>
+    <td colspan="1">tracepoints</td>
+  </tr>
+  <tr>
+    <td colspan="1">14</td>
+    <td colspan="1">"MyTracepoint"</td>
+    <td colspan="1">0</td>
+  </tr>
+</table>
+
+```
+Allowed Event IDs 1 - 9 will be written to tracepoint "LowEvents".
+All other allowed Event IDs will be written to "MyTracepoint"
+```
+<table>
+  <tr>
+    <th>1</th>
+    <th>5</th>
+    <th>33</th>
+    <th>37</th>
+    <th>41</th>
+    <th>61</th>
+    <th>65</th>
+    <th>69</th>
+    <th>73</th>
+    <th>77</th>
+    <th>81</th>
+    <th>85</th>
+    <th>89</th>
+    <th>93</th>
+    <th>97-100</th>
+  </tr>
+  <tr>
+    <tr>
+      <td colspan="2">string (array&ltwchar&gt)</td>
+      <td colspan="1">uint</td>
+      <td colspan="2">string (array&ltwchar&gt)</td>
+      <td colspan="10">array&lt;uint&gt;</td>
+    </tr>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="2">default_tracepoint_name</td>
+    <td colspan="1">tracepoints</td>
+    <td colspan="2">tracepoint_name</td>
+    <td colspan="10">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">14</td>
+    <td colspan="1">"MyTracepoint"</td>
+    <td colspan="1">1</td>
+    <td colspan="1">10</td>
+    <td colspan="1">"LowEvents"</td>
+    <td colspan="1">9</td>
+    <td colspan="1">1</td>
+    <td colspan="1">2</td>
+    <td colspan="1">3</td>
+    <td colspan="1">4</td>
+    <td colspan="1">5</td>
+    <td colspan="1">6</td>
+    <td colspan="1">7</td>
+    <td colspan="1">8</td>
+    <td colspan="1">9</td>
+  </tr>
+</table>
+
+```
+Allowed Event IDs 1 - 9 will be written to tracepoint "LowEvents".
+No default tracepoint needed, don't write any other allowed Event IDs
+```
+<table>
+  <tr>
+    <th>1</th>
+    <th>5</th>
+    <th>9</th>
+    <th>13</th>
+    <th>33</th>
+    <th>37</th>
+    <th>41</th>
+    <th>45</th>
+    <th>49</th>
+    <th>53</th>
+    <th>57</th>
+    <th>61</th>
+    <th>65</th>
+    <th>69-72</th>
+  </tr>
+  <tr>
+    <tr>
+      <td colspan="1">string (array&ltwchar&gt)</td>
+      <td colspan="1">uint</td>
+      <td colspan="2">string (array&ltwchar&gt)</td>
+      <td colspan="10">array&lt;uint&gt;</td>
+    </tr>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">default_tracepoint_name</td>
+    <td colspan="1">tracepoints</td>
+    <td colspan="2">tracepoint_name</td>
+    <td colspan="10">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">0</td>
+    <td colspan="1">1</td>
+    <td colspan="1">10</td>
+    <td colspan="1">"LowEvents"</td>
+    <td colspan="1">9</td>
+    <td colspan="1">1</td>
+    <td colspan="1">2</td>
+    <td colspan="1">3</td>
+    <td colspan="1">4</td>
+    <td colspan="1">5</td>
+    <td colspan="1">6</td>
+    <td colspan="1">7</td>
+    <td colspan="1">8</td>
+    <td colspan="1">9</td>
+  </tr>
+</table>
+
+### passing_file_descriptor
+
+> Note: This only applies to enabling an user_event-based EventPipe session, which is specifically a Linux feature
+
+To register [user_event](https://docs.kernel.org/trace/user_events.html) tracepoints and write events, access to the root protected `user_events_data` file is required. Once the .NET Runtime's Diagnostic Server processes a [CollectTracing5](#collecttracing5) command specifying the `user_events` format (`output_format=1`), it expects that the client will send a file descriptor to the [continuation stream](#general-flow) via SCM_RIGHTS.
+
+```C
+#include <sys/socket.h>
+#include <sys/un.h>
+
+struct msghdr {
+    void * msg_name;             /* ignored by runtime */
+    unsigned int msg_namelen;    /* ignored by runtime */
+    struct iovec * msg_iov;      /* runtime will "parse" 1 byte */
+    unsigned int msg_iovlen;     /* runtime will "parse" one msg_iov */
+    void * msg_control;          /* ancillary data */
+    unsigned int msg_controllen; /* ancillary data buffer len */
+    int msg_flags;               /* ignored by runtime */
+};
+
+struct cmsghdr {
+    unsigned int cmsg_len;     /* length of control message */
+    int cmsg_level;            /* SOL_SOCKET */
+    int cmsg_type;             /* SCM_RIGHTS */
+    int cmsg_data[0];          /* file descriptor */
+};
+```
+
+For parsing the file descriptor passed with SCM_RIGHTS, the runtime will `recvmsg` the message and only care about the control message containing ancillary data. It will read one byte from the `msg_iov` buffer just to receive the ancillary data, but it will disregard the contents of the `msg_iov` buffers.
 
 ## Dump Commands
 
