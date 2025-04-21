@@ -195,92 +195,26 @@ Payloads are either encoded as fixed size structures that can be `memcpy`'ed , _
 * `array<T>` = uint length, length # of `T`s
 * `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
 
-As an example, the CollectTracing command to EventPipe (explained below) encodes its Payload as:
+As an example, the [CollectTracing](#collecttracing) command to EventPipe encodes its Payload as:
 
 <table>
   <tr>
-    <th>1</th>
-    <th>2</th>
-    <th>3</th>
-    <th>4</th>
-    <th>5</th>
-    <th>6</th>
-    <th>7</th>
-    <th>8</th>
-    <th>9</th>
-    <th>10</th>
-    <th>11</th>
-    <th>12</th>
-    <th>13</th>
-    <th>14</th>
-    <th>15</th>
-    <th>16</th>
-    <th>17</th>
-    <th>18</th>
-    <th>19</th>
-    <th>20</th>
-    <th>21</th>
-    <th>22</th>
-    <th>23</th>
-    <th>24</th>
-    <th>25</th>
-    <th>26</th>
-    <th>27</th>
-    <th>28</th>
-    <th>29</th>
-    <th>30</th>
-    <th>31</th>
-    <th>32</th>
-    <th>33</th>
-    <th>34</th>
-    <th>35</th>
-    <th>36</th>
-    <th>37</th>
-    <th>38</th>
-    <th>39</th>
-    <th>40</th>
-    <th>41</th>
-    <th>42</th>
-    <th>43</th>
-    <th>44</th>
-    <th>45</th>
-    <th>46</th>
-    <th>47</th>
-    <th>48</th>
-    <th>49</th>
-    <th>50</th>
-    <th>51</th>
-    <th>52</th>
-    <th>53</th>
-    <th>54</th>
-    <th>55</th>
-    <th>56</th>
-    <th>57</th>
-    <th>58</th>
-    <th>59</th>
-    <th>60</th>
-    <th>61</th>
-    <th>62</th>
-    <th>63</th>
-    <th>64</th>
-    <th>65</th>
-    <th>66</th>
-    <th>67</th>
-    <th>68</th>
-    <th>69</th>
-    <th>70</th>
-    <th>71</th>
-    <th>72</th>
-    <th>73</th>
-    <th>74</th>
-    <th>75</th>
-    <th>76</th>
-    <th>77</th>
-    <th>78</th>
+    <td colspan="14">1 - 14</td>
+    <td colspan="2">15 - 16</td>
+    <td colspan="2">17 - 18</td>
+    <td colspan="2">19 - 20</td>
+    <td colspan="4">21 - 24</td>
+    <td colspan="4">25 - 28</td>
+    <td colspan="4">29 - 32</td>
+    <td colspan="8">33 - 40</td>
+    <td colspan="4">41 - 44</td>
+    <td colspan="4">45 - 48</td>
+    <td colspan="28">49 - 76</td>
+    <td colspan="4">77 - 80</td>
   </tr>
   <tr>
     <td colspan="20">Header</td>
-    <td colspan="58">Payload</td>
+    <td colspan="60">Payload</td>
   </tr>
   <tr>
     <td colspan="14">magic</td>
@@ -288,27 +222,27 @@ As an example, the CollectTracing command to EventPipe (explained below) encodes
     <td colspan="2">command</td>
     <td colspan="2">reserved</td>
     <td colspan="4">circularBufferMB</td>
-    <td colspan="4">outputPath Length</td>
-    <td colspan="16">outputPath String</td>
+    <td colspan="4">format</td>
     <td colspan="4">n Providers</td>
     <td colspan="8">Keywords</td>
     <td colspan="4">logLevel</td>
     <td colspan="4">provider_name length</td>
-    <td colspan="14">provider_name string</td>
+    <td colspan="28">provider_name string</td>
+    <td colspan="4">filter_data length</td>
   </tr>
   <tr>
     <td colspan="14">"DOTNET_IPC_V1"</td>
-    <td colspan="2">78</td>
+    <td colspan="2">80</td>
     <td colspan="2">0x0202</td>
     <td colspan="2">0x0000</td>
     <td colspan="4">250</td>
-    <td colspan="4">16</td>
-    <td colspan="16">"/tmp/foo.nettrace"</td>
+    <td colspan="4">1</td>
     <td colspan="4">1</td>
     <td colspan="8">100</td>
     <td colspan="4">2</td>
     <td colspan="4">14</td>
-    <td colspan="14">"MyEventSource"</td>
+    <td colspan="28">"MyEventSource"</td>
+    <td colspan="4">0</td>
   </tr>
 </table>
 
@@ -359,7 +293,9 @@ See: [EventPipe Commands](#EventPipe-Commands)
 enum class DumpCommandId : uint8_t
 {
     // reserved     = 0x00,
-    CreateCoreDump  = 0x01,
+    GenerateCoreDump  = 0x01,
+    GenerateCoreDump2  = 0x02,
+    GenerateCoreDump3  = 0x03,
     // future
 }
 ```
@@ -370,6 +306,7 @@ enum class ProfilerCommandId : uint8_t
 {
     // reserved     = 0x00,
     AttachProfiler  = 0x01,
+    StartupProfiler = 0x02,
     // future
 }
 ```
@@ -378,14 +315,15 @@ See: [Profiler Commands](#Profiler-Commands)
 ```c++
 enum class ProcessCommandId : uint8_t
 {
-    ProcessInfo        = 0x00,
-    ResumeRuntime      = 0x01,
-    ProcessEnvironment = 0x02,
-    ProcessInfo2       = 0x04,
-    EnablePerfMap      = 0x05,
-    DisablePerfMap     = 0x06,
-    ApplyStartupHook   = 0x07
-    ProcessInfo3       = 0x08,
+    ProcessInfo            = 0x00,
+    ResumeRuntime          = 0x01,
+    ProcessEnvironment     = 0x02,
+    SetEnvironmentVariable = 0x03,
+    ProcessInfo2           = 0x04,
+    EnablePerfMap          = 0x05,
+    DisablePerfMap         = 0x06,
+    ApplyStartupHook       = 0x07
+    ProcessInfo3           = 0x08,
     // future
 }
 ```
@@ -418,6 +356,45 @@ EventPipe Payloads are encoded with the following rules:
 * `array<T>` = uint length, length # of `T`s
 * `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
 
+### `StopTracing`
+
+Command Code: `0x0201`
+
+The `StopTracing` command is used to stop a specific streaming session.  Clients are expected to use this command to stop streaming sessions started with [`CollectStreaming`](#CollectStreaming).
+
+#### Inputs:
+
+Header: `{ Magic; 28; 0x0201; 0x0000 }`
+
+Payload:
+* `ulong sessionId`: The ID for the streaming session to stop
+
+#### Returns:
+
+Header: `{ Magic; 28; 0xFF00; 0x0000 }`
+
+Payload:
+* `ulong sessionId`: the ID for the streaming session that was stopped
+
+
+##### Details:
+
+Inputs:
+```c
+Payload
+{
+   ulong sessionId
+}
+```
+
+Returns:
+```c
+Payload
+{
+   ulong sessionId
+}
+```
+
 ### `CollectTracing`
 
 Command Code: `0x0202`
@@ -432,17 +409,18 @@ If the stream is stopped prematurely due to a client or server error, the `nettr
 
 #### Inputs:
 
-Header: `{ Magic; Size; 0x0202; 0x0000 }`
+Header: `{ Magic; 20 + Payload Size; 0x0202; 0x0000 }`
 
+Payload:
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
-* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
 A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data` (optional): Filter information
+* `string filter_data`: (Callback filter information) or (length = `0`)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 
@@ -469,7 +447,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data (optional)
+    string filter_data
 }
 ```
 
@@ -490,10 +468,10 @@ The `CollectTracing2` command is an extension of the `CollectTracing` command - 
 
 #### Inputs:
 
-Header: `{ Magic; Size; 0x0203; 0x0000 }`
+Header: `{ Magic; 20 + Payload Size; 0x0203; 0x0000 }`
 
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
-* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
 * `bool requestRundown`: Indicates whether rundown should be fired by the runtime.
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
@@ -501,7 +479,7 @@ A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data` (optional): Filter information
+* `string filter_data`: (Callback filter information) or (length = `0`)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 >
@@ -529,7 +507,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data (optional)
+    string filter_data
 }
 ```
 
@@ -550,10 +528,10 @@ The `CollectTracing3` command is an extension of the `CollectTracing2` command -
 
 #### Inputs:
 
-Header: `{ Magic; Size; 0x0203; 0x0000 }`
+Header: `{ Magic; 20 + Payload Size; 0x0203; 0x0000 }`
 
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
-* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
 * `bool requestRundown`: Indicates whether rundown should be fired by the runtime.
 * `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
 * `array<provider_config> providers`: The providers to turn on for the streaming session
@@ -562,7 +540,7 @@ A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data` (optional): Filter information
+* `string filter_data`: (Callback filter information) or (length = `0`)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 >
@@ -591,7 +569,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data (optional)
+    string filter_data
 }
 ```
 
@@ -608,7 +586,7 @@ Followed by an Optional Continuation of a `nettrace` format stream of events.
 
 Command Code: `0x0205`
 
-The `CollectTracing4` command is an extension of the `CollectTracing3` command - its behavior is the same as `CollectTracing3` command, except the requestRundown field is replaced by the rundownKeyword field to allow customizing the set of rundown events to be fired. 
+The `CollectTracing4` command is an extension of the `CollectTracing3` command - its behavior is the same as `CollectTracing3` command, except the requestRundown field is replaced by the rundownKeyword field to allow customizing the set of rundown events to be fired.
 
 A rundown keyword of `0x80020139` has the equivalent behavior as `CollectTracing3` with `requestRundown=true` and rundown keyword of `0` has the equivalent behavior as `requestRundown=false`.
 
@@ -617,18 +595,20 @@ A rundown keyword of `0x80020139` has the equivalent behavior as `CollectTracing
 
 #### Inputs:
 
-Header: `{ Magic; Size; 0x0205; 0x0000 }`
+Header: `{ Magic; 20 + Payload Size; 0x0205; 0x0000 }`
 
+Payload:
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
-* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
 * `ulong rundownKeyword`: Indicates the keyword for the rundown provider
+* `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
 A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data` (optional): Filter information
+* `string filter_data`: (Callback filter information) or (length = `0`)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 >
@@ -656,7 +636,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data (optional)
+    string filter_data
 }
 ```
 
@@ -668,43 +648,6 @@ Payload
 }
 ```
 Followed by an Optional Continuation of a `nettrace` format stream of events.
-
-### `StopTracing`
-
-Command Code: `0x0201`
-
-The `StopTracing` command is used to stop a specific streaming session.  Clients are expected to use this command to stop streaming sessions started with [`CollectStreaming`](#CollectStreaming).
-
-#### Inputs:
-
-Header: `{ Magic; 28; 0x0201; 0x0000 }`
-
-* `ulong sessionId`: The ID for the streaming session to stop
-
-#### Returns:
-
-Header: `{ Magic; 28; 0xFF00; 0x0000 }`
-
-* `ulong sessionId`: the ID for the streaming session that was stopped
-
-
-##### Details:
-
-Inputs:
-```c
-Payload
-{
-   ulong sessionId
-}
-```
-
-Returns:
-```c
-Payload
-{
-   ulong sessionId
-}
-```
 
 ## Dump Commands
 
