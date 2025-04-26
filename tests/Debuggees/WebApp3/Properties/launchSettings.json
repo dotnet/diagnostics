@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "WebApp3": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:54990;http://localhost:54991"
+    }
+  }
+}
