@@ -195,3 +195,4 @@ endif(CLR_CMAKE_HOST_UNIX)
 # Native Projects
 #-----------------------------------------
 add_subdirectory(src)
+add_subdirectory(tests)
