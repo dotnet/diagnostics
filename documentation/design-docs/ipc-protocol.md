@@ -336,58 +336,6 @@ For example, the Command to start a stream session with EventPipe would be `0x02
 
 ## EventPipe Commands
 
-The EventPipe CommandSet enables Clients to create/start or stop [EventPipe](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/eventpipe) Sessions. Two session types are currently supported through this protocol.
-
-### Streaming Session
-
-The latest CommandID [`CollectTracing5`](#collecttracing5) supports configuring the following streaming EventPipe session options:
-* `uint circularBufferMB`: The size of the circular buffer used for buffering event data
-* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
-* `ulong rundownKeyword`: Indicates the keyword for the rundown provider
-* `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
-* `array<provider_config> providers`: The providers to turn on for the session
-
-### User_events Session
-
-The latest CommandID [`CollectTracing5`](#collecttracing5) supports configuring the following user_events EventPipe session options:
-
-Payload:
-* `ulong rundownKeyword`: Indicates the keyword for the rundown provider
-* `array<provider_config> providers`: The providers to turn on for the session
-
-### Session Providers
-
-The `provider_config` is composed of the following data:
-* `ulong keywords`: The keywords to turn on with this provider
-* `uint logLevel`: The level of information to turn on
-* `string provider_name`: The name of the provider
-* `string filter_data`: (Callback filter information) or (length = `0`)
-* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`). See [details](#event-filter).
-
-For user_events EventPipe Session Providers, another `provider_config` field is configurable:
-* `tracepoint_config config`: Maps Event IDs to tracepoints. If an Event ID is excluded by `event_filter`, it will not be written to any tracepoint. See [details](#tracepoint-config)
-
-#### Event Filter
-An `event_filter` is comprised of the following data:
-* `bool allow`: 0 for deny list, 1 for allow list
-* `array<uint> event_ids`: List of Event IDs to deny or allow.
-
-See [event_filter serialization examples](#event_filter)
-
-#### Tracepoint Config
-A `tracepoint_config` is comprised of the following data:
-* `string default_tracepoint_name`: (The default tracepoint filtered Event IDs will be written to unless otherwise specified by `tracepoints`) or (length = `0` to only write to tracepoints specified in `tracepoints`)
-* `array<tracepoint_set> tracepoints`: Specifies alternate tracepoints for a set of Event IDs to be written to instead of the default tracepoint or (length = `0`).
-
-A `tracepoint_set` is comprised of the following data:
-* `string tracepoint_name`: The tracepoint that the following subset of Event IDs should be written to.
-* `array<uint> event_ids`: The Event IDs to be written to `tracepoint_name`.
-
-With a user_events session, atleast one of `default_tracepoint_name` and `tracepoints` must be specified. An error will be returned through the stream if both are length = `0`.
-Event IDs specified in `tracepoint_set`s must be exclusive. If an Event ID is detected in different `tracepoint_set`s of the provider, an error will be returned through the stream.
-
-See [tracepoint_config serialization examples](#tracepoint_config)
-
 ### EventPipe Command IDs
 ```c++
 enum class EventPipeCommandId : uint8_t
@@ -708,7 +656,7 @@ Followed by an Optional Continuation of a `nettrace` format stream of events.
 
 Command Code: `0x0206`
 
-The `CollectTracing5` command is an extension of the `CollectTracing4` command. It has all the capabilities of `CollectTracing4` and introduces new fields to enable a Linux-only user_events-based eventpipe session and to prescribe an allow/deny list for Event IDs. When the user_events-based eventpipe session is enabled, the file descriptor and SCM_RIGHTS of the `user_events_data` file must be sent through the optional continuation stream as [described](#passing_file_descriptor). The runtime will register tracepoints based on the provider configurations passed in, and runtime events will be written directly to the `user_events_data` file descriptor. The allow/deny list of Event IDs will apply after the keyword/level filter to determine whether or not that provider's event will be written. When using this command, even without leveraging the new user_events-based eventpipe session option, the new fields must be serialized.
+The `CollectTracing5` command is an extension of the `CollectTracing4` command. It has all the capabilities of `CollectTracing4` and introduces new fields to enable a Linux-only user_events-based eventpipe session and to prescribe an allow/deny list for Event IDs. When the user_events-based eventpipe session is enabled, the file descriptor and SCM_RIGHTS of the `user_events_data` file must be sent through the optional continuation stream as [described](#passing_file_descriptor). The runtime will register tracepoints based on the provider configurations passed in, and runtime events will be written directly to the `user_events_data` file descriptor. The allow/deny list of Event IDs will apply after the keyword/level filter to determine whether or not that provider's event will be written.
 
 > Note available for .NET 10.0 and later.
 
@@ -716,33 +664,58 @@ The `CollectTracing5` command is an extension of the `CollectTracing4` command. 
 
 Header: `{ Magic; 20 + Payload Size; 0x0206; 0x0000 }`
 
-#### [Streaming Session](#streaming-session) Payload:
+#### Streaming Session Payload:
 * `uint output_format`: 0
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data
 * `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
 * `ulong rundownKeyword`: Indicates the keyword for the rundown provider
 * `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
-* `array<provider_config> providers`: The providers to turn on for the session
+* `array<streaming_provider_config> providers`: The providers to turn on for the session
 
-The Streaming Session `provider_config` is composed of the following data:
+The `streaming_provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this provider
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
 * `string filter_data`: (Callback filter information) or (length = `0`)
-* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`). See [details](#event-filter).
+* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`).
 
-#### [User_events Session](#user_events-session) Payload:
+An `event_filter` is comprised of the following data:
+* `bool allow`: 0 for deny list, 1 for allow list
+* `array<uint> event_ids`: List of Event IDs to deny or allow.
+
+See [event_filter serialization examples](#event_filter)
+
+#### User_events Session Payload:
 * `uint output_format`: 1
 * `ulong rundownKeyword`: Indicates the keyword for the rundown provider
-* `array<provider_config> providers`: The providers to turn on for the session
+* `array<user_events_provider_config> providers`: The providers to turn on for the session
 
-The User_events Session `provider_config` is composed of the following data:
+The `user_events_provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this provider
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
 * `string filter_data`: (Callback filter information) or (length = `0`)
-* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`). See [details](#event-filter).
-* `tracepoint_config config`: Maps Event IDs to tracepoints. If an Event ID is excluded by `event_filter`, it will not be written to any tracepoint. See [details](#tracepoint-config)
+* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`).
+* `tracepoint_config config`: Maps Event IDs to tracepoints. If an Event ID is excluded by `event_filter`, it will not be written to any tracepoint.
+
+An `event_filter` is comprised of the following data:
+* `bool allow`: 0 for deny list, 1 for allow list
+* `array<uint> event_ids`: List of Event IDs to deny or allow.
+
+See [event_filter serialization examples](#event_filter)
+
+A `tracepoint_config` is comprised of the following data:
+* `string default_tracepoint_name`: (The default tracepoint filtered Event IDs will be written to unless otherwise specified by `tracepoints`) or (length = `0` to only write to tracepoints specified in `tracepoints`)
+* `array<tracepoint_set> tracepoints`: Specifies alternate tracepoints for a set of Event IDs to be written to instead of the default tracepoint or (length = `0`).
+
+A `tracepoint_set` is comprised of the following data:
+* `string tracepoint_name`: The tracepoint that the following subset of Event IDs should be written to.
+* `array<uint> event_ids`: The Event IDs to be written to `tracepoint_name`.
+
+With a user_events session, atleast one of `default_tracepoint_name` and `tracepoints` must be specified. An error will be returned through the stream if both are length = `0`.
+Event IDs specified in `tracepoint_set`s must be exclusive. If an Event ID is detected in different `tracepoint_set`s of the provider, an error will be returned through the stream.
+
+See [tracepoint_config serialization examples](#tracepoint_config)
 
 > See ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 
@@ -871,7 +844,7 @@ allow=1, event_ids=[1, 2, 3]: Allow only Event IDs 1, 2, and 3.
 ### Tracepoint_config
 Example `tracepoint_config` serialization
 ```
-Output_format=0, DO NOT encode bytes for tracepoint_config
+Output_format=0, Streaming Sessions DO NOT encode bytes for tracepoint_config
 Output_format=1, encode bytes for tracepoint_config
 ```
 
