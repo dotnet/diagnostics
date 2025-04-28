@@ -8,10 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Debuggees\SimpleDebuggee\SimpleDebuggee.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\src\SOS\SOS.Hosting\SOS.Hosting.csproj" />
   </ItemGroup>
@@ -73,9 +69,6 @@
 ]]>
        </ConfigFileEntry>
     </ConfigFileEntries>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Debuggees\SimpleDebuggee\SimpleDebuggee.cs" />
   </ItemGroup>
 
   <Target Name="DbgShimWriteTestConfigFile" Outputs="$(DbgShimConfigFileName)" BeforeTargets="BeforeBuild;Publish">
