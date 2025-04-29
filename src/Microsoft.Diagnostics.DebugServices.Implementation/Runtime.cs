@@ -25,6 +25,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private Version _runtimeVersion;
         private ClrRuntime _clrRuntime;
         private string _dacFilePath;
+        private bool _verifySignature;
         private string _cdacFilePath;
         private string _dbiFilePath;
 
@@ -111,11 +112,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return _cdacFilePath;
         }
 
+
         public string GetDacFilePath(out bool verifySignature)
         {
-            verifySignature = false;
             if (_settingsService.ForceUseContractReader)
             {
+                verifySignature = false;        // Don't verify signature when using the CDAC
                 return GetCDacFilePath();
             }
             if (_dacFilePath is null)
@@ -123,9 +125,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac);
                 if (_dacFilePath is not null)
                 {
-                    verifySignature = _settingsService.DacSignatureVerificationEnabled;
+                    _verifySignature = _settingsService.DacSignatureVerificationEnabled;
                 }
             }
+            verifySignature = _verifySignature;
             return _dacFilePath;
         }
 
@@ -339,7 +342,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (_dacFilePath is not null)
             {
                 sb.AppendLine();
-                sb.Append($"    DAC: {_dacFilePath}");
+                string verify = _verifySignature ? "(verify)" : "(don't verify)";
+                sb.Append($"    DAC: {_dacFilePath} {verify}");
             }
             if (_cdacFilePath is not null)
             {
