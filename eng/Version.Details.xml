@@ -1,13 +1,13 @@
 <Dependencies>
   <Source Uri="https://github.com/dotnet/dotnet" Mapping="diagnostics" Sha="5fd0935290d20e7172918595a509a367df7d5bb6" BarId="266023" />
   <ProductDependencies>
-    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.25221.1">
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.25228.1">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>d44dc66cad6f64ee340a55868451bef2ef1b8f8e</Sha>
+      <Sha>5d7512617558d777b0c27459930b35dca9c3afe3</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.0.0-beta.25221.1">
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.0.0-beta.25228.1">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>d44dc66cad6f64ee340a55868451bef2ef1b8f8e</Sha>
+      <Sha>5d7512617558d777b0c27459930b35dca9c3afe3</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
