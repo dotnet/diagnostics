@@ -8,4 +8,3 @@
 /src/                       @dotnet/dotnet-diag
 /documentation/             @dotnet/dotnet-diag
 /eng/DotNetBuild.props      @dotnet/product-construction
-/eng/SourceBuildPrebuiltBaseline.xml  @dotnet/source-build
