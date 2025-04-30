@@ -5,4 +5,14 @@
     <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
+  <!--
+    Copy the dekstop CLR host binaries to the output directory for dual runtime testing.
+   -->
+  <Target Name="InstallDesktopClrHost" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
+    <ItemGroup>
+      <NativeBinaries Include="$(ArtifactsBinNativeDir)DesktopClrHost.dll" Condition="Exists('$(ArtifactsBinNativeDir)DesktopClrHost.dll')" />
+      <NativeBinaries Include="$(ArtifactsBinNativeDir)PDB\DesktopClrHost.pdb" Condition="Exists('$(ArtifactsBinNativeDir)PDB\DesktopClrHost.pdb')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(NativeBinaries)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="false" />
+  </Target>
 </Project>

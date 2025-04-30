@@ -38,6 +38,7 @@ switch ($configuration.ToLower()) {
 $reporoot = Join-Path $PSScriptRoot ".."
 $engroot = Join-Path $reporoot "eng"
 $artifactsdir = Join-Path $reporoot "artifacts"
+$os = "Windows_NT"
 $logdir = Join-Path $artifactsdir "log"
 $logdir = Join-Path $logdir Windows_NT.$architecture.$configuration
 
@@ -53,17 +54,18 @@ if ($bundletools) {
     $test = $False
 }
 
-# Install sdk for building, restore and build managed components.
-if (-not $skipmanaged) {
-    Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity /p:BuildArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
+# Build native components
+if (-not $skipnative) {
+    Invoke-Expression "& `"$engroot\Build-Native.cmd`" -architecture $architecture -configuration $configuration -verbosity $verbosity $remainingargs"
     if ($lastExitCode -ne 0) {
         exit $lastExitCode
     }
 }
 
-# Build native components
-if (-not $skipnative) {
-    Invoke-Expression "& `"$engroot\Build-Native.cmd`" -architecture $architecture -configuration $configuration -verbosity $verbosity $remainingargs"
+# Install sdk for building, restore and build managed components.
+if (-not $skipmanaged) {
+    Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
+
     if ($lastExitCode -ne 0) {
         exit $lastExitCode
     }
@@ -81,7 +83,8 @@ if ($installruntimes -or $privatebuild) {
       /t:InstallTestRuntimes `
       /bl:$logdir\InstallRuntimes.binlog `
       /p:PrivateBuildTesting=$privatebuildtesting `
-      /p:BuildArch=$architecture `
+      /p:TargetOS=$os `
+      /p:TargetArch=$architecture `
       /p:TestArchitectures=$architecture `
       /p:LiveRuntimeDir="$liveRuntimeDir"
 }
@@ -92,14 +95,14 @@ if ($test) {
         if ($useCdac) {
             $env:SOS_TEST_CDAC="true"
         }
-
         & "$engroot\common\build.ps1" `
           -test `
           -configuration $configuration `
           -verbosity $verbosity `
           -ci:$ci `
           /bl:$logdir\Test.binlog `
-          /p:BuildArch=$architecture `
+          /p:TargetOS=$os `
+          /p:TargetArch=$architecture `
           /p:TestArchitectures=$architecture `
           /p:DotnetRuntimeVersion="$dotnetruntimeversion" `
           /p:DotnetRuntimeDownloadVersion="$dotnetruntimedownloadversion" `

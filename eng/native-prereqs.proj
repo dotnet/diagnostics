@@ -14,6 +14,10 @@
     <AssemblyName>.NET Diagnostics</AssemblyName>
   </PropertyGroup>
 
+  <Target Name="BuildPrereqs" 
+          BeforeTargets="Build" 
+          DependsOnTargets="GenerateRuntimeVersionFile;InstallNativePackages" />
+
   <Target Name="GenerateRuntimeVersionFile"
           DependsOnTargets="GenerateNativeVersionFile">
     <PropertyGroup>
@@ -67,6 +71,10 @@
     <Error Condition="!Exists('$(NativeSourceLinkFile)')" Text="Native SourceLink file could not be made available to the native build. Ensure that $(MSBuildProjectName) ran the sourcelink targets."/>
   </Target>
 
-  <Target Name="BuildPrereqs" BeforeTargets="Build" DependsOnTargets="GenerateRuntimeVersionFile" />
+  <!--
+     This installs the native packages like diasymreader and cdac into the native artifact directory
+   -->
+  <Import Project="$(RepositoryEngineeringDir)InstallNativePackages.targets" />
+
   <Import Project="Sdk.targets" Sdk="Microsoft.Build.NoTargets" />
 </Project>
