@@ -3,11 +3,9 @@
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <PropertyGroup>
-    <IsShipping>false</IsShipping>
-    <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
     <NoPackageAnalysis>true</NoPackageAnalysis>
-    <DebugSymbols>true</DebugSymbols>
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <DebugSymbols>true</DebugSymbols>
     <BundledToolsPath>$(ArtifactsDir)bundledtools/</BundledToolsPath>
   </PropertyGroup>
 

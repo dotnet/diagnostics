@@ -8,7 +8,5 @@
     <BuildArch Condition="'$(BuildArch)' == 'AnyCpu'">$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</BuildArch>
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
     <DebugSymbols>true</DebugSymbols>
-    <IsShipping>false</IsShipping>
-    <IsPackable>false</IsPackable>
   </PropertyGroup>
 </Project>
