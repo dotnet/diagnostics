@@ -16,13 +16,13 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx64100Version>10.0.0-preview.5.25228.104</VSRedistCommonNetCoreSharedFrameworkx64100Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>10.0.0-preview.5.25228.104</MicrosoftNETCoreAppRuntimewinx64Version>
+    <VSRedistCommonNetCoreSharedFrameworkx64100Version>10.0.0-preview.5.25229.109</VSRedistCommonNetCoreSharedFrameworkx64100Version>
+    <MicrosoftNETCoreAppRuntimewinx64Version>10.0.0-preview.5.25229.109</MicrosoftNETCoreAppRuntimewinx64Version>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>10.0.0-preview.5.25228.104</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>10.0.0-preview.5.25228.104</MicrosoftAspNetCoreAppRefVersion>
+    <MicrosoftAspNetCoreAppRefInternalVersion>10.0.0-preview.5.25229.109</MicrosoftAspNetCoreAppRefInternalVersion>
+    <MicrosoftAspNetCoreAppRefVersion>10.0.0-preview.5.25229.109</MicrosoftAspNetCoreAppRefVersion>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftNETSdkVersion>10.0.100-preview.5.25228.104</MicrosoftNETSdkVersion>
+    <MicrosoftNETSdkVersion>10.0.100-preview.5.25229.109</MicrosoftNETSdkVersion>
   </PropertyGroup>
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
@@ -55,7 +55,7 @@
     <SystemTextEncodingsWebVersion>8.0.0</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetCodeAnalysisVersion>10.0.0-beta.25228.104</MicrosoftDotNetCodeAnalysisVersion>
+    <MicrosoftDotNetCodeAnalysisVersion>10.0.0-beta.25229.109</MicrosoftDotNetCodeAnalysisVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.556</StyleCopAnalyzersVersion>
     <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.26100.1</cdbsosversion>
