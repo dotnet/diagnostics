@@ -383,11 +383,9 @@ namespace SOS.Hosting
         private IntPtr CreateCorDebugProcess()
         {
             string dbiFilePath = _runtime.GetDbiFilePath();
-            // The DAC will be verified in the GetDacHandle call below. Ignore the verifySignature parameter here.
-            string dacFilePath = _runtime.GetDacFilePath(out bool _);
-            if (dbiFilePath == null || dacFilePath == null)
+            if (dbiFilePath == null)
             {
-                Trace.TraceError($"Could not find matching DBI {dbiFilePath ?? ""} or DAC {dacFilePath ?? ""} for this runtime: {_runtime.RuntimeModule.FileName}");
+                Trace.TraceError($"Could not find matching DBI {dbiFilePath ?? ""} for this runtime: {_runtime.RuntimeModule.FileName}");
                 return IntPtr.Zero;
             }
             if (_dbiHandle == IntPtr.Zero)
@@ -416,6 +414,9 @@ namespace SOS.Hosting
             int hresult = 0;
             try
             {
+                // The DAC will be verified in the GetDacHandle call below. Ignore the verifySignature parameter here.
+                string dacFilePath = _runtime.GetDacFilePath(out bool _);
+
                 // This will verify the DAC signature if needed before DBI is passed the DAC path or handle
                 IntPtr dacHandle = GetDacHandle();
                 if (dacHandle == IntPtr.Zero)

@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private Version _runtimeVersion;
         private ClrRuntime _clrRuntime;
         private string _dacFilePath;
-        private bool _verifySignature;
+        private bool _verifySignature;      // This only applies to the regular DAC, not the CDAC
         private string _cdacFilePath;
         private string _dbiFilePath;
 
@@ -112,12 +112,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return _cdacFilePath;
         }
 
-
         public string GetDacFilePath(out bool verifySignature)
         {
             if (_settingsService.ForceUseContractReader)
             {
-                verifySignature = false;        // Don't verify signature when using the CDAC
+                // Don't verify signature when using the CDAC and don't change the cached value
+                // because it only applies to the regular DAC in _dacFilePath.
+                verifySignature = false;
                 return GetCDacFilePath();
             }
             if (_dacFilePath is null)
