@@ -1013,6 +1013,39 @@ struct cmsghdr {
 
 For parsing the file descriptor passed with SCM_RIGHTS, the runtime will `recvmsg` the message and only care about the control message containing ancillary data. It will read one byte from the `msg_iov` buffer just to receive the ancillary data, but it will disregard the contents of the `msg_iov` buffers.
 
+### User_events format
+
+When writing events to their mapped user_events tracepoints prescribed by the `tracepoint_config` in the [User_events session payload](#user_events-session-payload), the runtime will adapt the [user_events writing protocol](https://docs.kernel.org/trace/user_events.html#writing-data) to write the event as:
+
+```
+struct iovec io[5];
+
+io[0].iov_base = &myTracepointIndex;        // __u32 from event_reg
+io[0].iov_len = sizeof(myTracepointIndex);
+io[1].iov_base = &event_id                  // EventID defined by EventSource/native manifest
+io[1].iov_len = sizeof(event_id)
+io[2].iov_base = &this_event_payload;       // __rel_loc char[]
+io[2].iov_len = sizeof(this_event_payload);
+io[3].iov_base = &this_event_meta;          // __rel_loc char[]
+io[3].iov_len = sizeof(this_event_meta);
+io[4].iov_base = &actual_data;              // char[]
+io[4].iov_len = actual_data_len;
+
+writev(ep_session->data_fd, (const struct iovec *)io, 5);
+```
+
+The `__rel_loc` is the relative dynamic array attribute described [here](https://lwn.net/Articles/876682/).
+
+The payload points at a blob of data with the same format as an EventPipe payload – the concatenated encoded values for all the parameters 
+
+The metadata either points at nothing if the event doesn’t have metadata, or it points at a metadata blob matching the NetTrace version 5 formatting convention. Specifically it is the data that would be stored inside the PayloadBytes area of an event blob within a MetadataBlock described [here](https://github.com/microsoft/perfview/blob/main/src/TraceEvent/EventPipe/NetTraceFormat_v5.md#metadata-event-encoding).
+
+> NOTE: V5 and V6 metadata formats have the same info, but they aren’t formatted identically. Parsing and reserialization is required to convert between the two.
+
+### Which events have metadata?
+
+The runtime will keep track per-session whether it has sent a particular event before. The first time each event is sent during a session, metadata will be included, and otherwise, it will be left empty. As a special case, runtime events currently implemented in native code will never send metadata.
+
 ## Dump Commands
 
 ### `CreateCoreDump`
