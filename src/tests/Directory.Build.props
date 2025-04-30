@@ -1,9 +1,3 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
-
-  <PropertyGroup>
-    <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
-    <BuildArch Condition="'$(BuildArch)' == 'AnyCpu'">$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</BuildArch>
-  </PropertyGroup>
-
 </Project>
