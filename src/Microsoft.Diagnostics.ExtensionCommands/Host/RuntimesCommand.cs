@@ -129,7 +129,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     this.DisplayResources(runtime.RuntimeModule, all: false, indent: "    ");
                     this.DisplayRuntimeExports(runtime.RuntimeModule, error: true, indent: "    ");
                 }
-                this.DisplaySetttingService();
+                this.DisplaySettingService();
             }
         }
     }

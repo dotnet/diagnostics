@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public const string DebugHeaderExport = "DotNetRuntimeDebugHeader";
         public const string ContractDescriptorExport = "DotNetRuntimeContractDescriptor";
 
-        public static void DisplaySetttingService(this CommandBase command)
+        public static void DisplaySettingService(this CommandBase command)
         {
             ISettingsService settingsService = command.Services.GetService<ISettingsService>() ?? throw new DiagnosticsException("Settings service required");
             command.Console.WriteLine("Settings:");
