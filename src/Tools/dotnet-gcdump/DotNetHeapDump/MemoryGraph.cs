@@ -38,29 +38,6 @@ namespace Graphs
         public static MemoryGraph ReadFromBinaryFile(string inputFileName)
         {
             Deserializer deserializer = new(inputFileName, SerializationSettings.Default);
-
-            Func<Type, IFastSerializable> defaultFactory = (Type type) => {
-                try
-                {
-                    return (IFastSerializable)Activator.CreateInstance(type);
-                }
-                catch (MissingMethodException)
-                {
-                    throw new SerializationException(
-                        $"Unable to create an object of type {type.FullName}. It must either have a parameterless constructor or have been registered with the deserializer via RegisterFactory.");
-                }
-            };
-
-            deserializer.OnUnregisteredType = (string name) =>
-            {
-                Type type = Type.GetType(name, false);
-                if (type == null)
-                {
-                    return null;
-                }
-
-                return () => defaultFactory(type);
-            };
             deserializer.RegisterFactory(typeof(MemoryGraph), delegate { return new MemoryGraph(1); });
             deserializer.RegisterFactory(typeof(Module), delegate { return new Module(0); });
             return (MemoryGraph)deserializer.GetEntryObject();
