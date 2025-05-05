@@ -1015,13 +1015,23 @@ For parsing the file descriptor passed with SCM_RIGHTS, the runtime will `recvms
 
 ### User_events format
 
+#### User_events Registration
+
+Once the runtime has received the configured tracepoint names as detailed under [tracepoint_config](#user_events-session-payload), it uses the [file descriptor passed in the continuation stream](#passing_file_descriptor) to register the prescribed tracepoint names following the [user_events registering protocol](https://docs.kernel.org/trace/user_events.html#registering). The runtime will construct a `user_reg` struct for every tracepoint name, defaulting to using none of the `user_reg` flags, so the resulting command format will be as follows:
+
+`<tracepoint_name> u16 event_id; __rel_loc char[] payload; __rel_loc char[] meta`
+
+See [user_events writing](#user_events-writing) below for field details`.
+
+#### User_events Writing
+
 When writing events to their mapped user_events tracepoints prescribed by the `tracepoint_config` in the [User_events session payload](#user_events-session-payload), the runtime will adapt the [user_events writing protocol](https://docs.kernel.org/trace/user_events.html#writing-data) to write the event as:
 
 ```
 struct iovec io[5];
 
-io[0].iov_base = &myTracepointIndex;        // __u32 from event_reg
-io[0].iov_len = sizeof(myTracepointIndex);
+io[0].iov_base = &my_tracepoint_index;      // __u32 from event_reg
+io[0].iov_len = sizeof(my_tracepoint_index);
 io[1].iov_base = &event_id                  // EventID defined by EventSource/native manifest
 io[1].iov_len = sizeof(event_id)
 io[2].iov_base = &this_event_payload;       // __rel_loc char[]
