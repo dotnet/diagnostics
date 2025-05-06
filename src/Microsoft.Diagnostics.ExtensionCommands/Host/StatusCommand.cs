@@ -63,6 +63,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                 }
                 this.DisplaySpecialInfo();
+                this.DisplaySettingService();
                 Write(SymbolService.ToString());
 
                 List<Assembly> extensions = new(ServiceManager.ExtensionsLoaded);

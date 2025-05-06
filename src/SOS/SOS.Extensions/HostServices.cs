@@ -356,6 +356,10 @@ namespace SOS.Extensions
             {
                 return HResult.E_INVALIDARG;
             }
+            if (_commandService is null)
+            {
+                return HResult.E_FAIL;
+            }
             try
             {
                 _commandService.Execute(commandName, commandArguments, string.Equals(commandName, "help", StringComparison.OrdinalIgnoreCase) ?  _contextServiceFromDebuggerServices.Services : _servicesWithManagedOnlyFilter);

@@ -128,10 +128,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     this.DisplayResources(runtime.RuntimeModule, all: false, indent: "    ");
                     this.DisplayRuntimeExports(runtime.RuntimeModule, error: true, indent: "    ");
-                    WriteLine($"Use CDAC contract reader: {SettingsService.UseContractReader}");
-                    WriteLine($"Force use CDAC contract reader: {SettingsService.ForceUseContractReader}");
-                    WriteLine($"DAC signature verification check enabled: {SettingsService.DacSignatureVerificationEnabled}");
                 }
+                this.DisplaySettingService();
             }
         }
     }
