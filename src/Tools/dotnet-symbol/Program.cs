@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -68,7 +70,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                         program.SymbolServers.Add(new ServerInfo { Uri = uri, PersonalAccessToken = null });
                         break;
 
-                     case "--internal-server":
+                    case "--internal-server":
                         Uri.TryCreate("https://symweb.azurefd.net/", UriKind.Absolute, out uri);
                         program.SymbolServers.Add(new ServerInfo { Uri = uri, PersonalAccessToken = null, InternalSymwebServer = true });
                         break;
@@ -263,7 +265,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
         private Microsoft.SymbolStore.SymbolStores.SymbolStore BuildSymbolStore()
         {
             Microsoft.SymbolStore.SymbolStores.SymbolStore store = null;
-
+            HttpClient.DefaultProxy.Credentials = CredentialCache.DefaultCredentials;
             foreach (ServerInfo server in ((IEnumerable<ServerInfo>)SymbolServers).Reverse())
             {
                 if (server.InternalSymwebServer)
@@ -597,8 +599,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
 
         private IEnumerable<string> GetInputFiles()
         {
-            IEnumerable<string> inputFiles = InputFilePaths.SelectMany((string file) =>
-            {
+            IEnumerable<string> inputFiles = InputFilePaths.SelectMany((string file) => {
                 string directory = Path.GetDirectoryName(file);
                 string pattern = Path.GetFileName(file);
                 return Directory.EnumerateFiles(string.IsNullOrWhiteSpace(directory) ? "." : directory, pattern,

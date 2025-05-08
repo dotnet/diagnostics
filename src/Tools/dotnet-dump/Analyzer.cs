@@ -3,6 +3,8 @@
 
 using System;
 using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -102,6 +104,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 contextService.SetCurrentTarget(target);
 
                 // Automatically enable symbol server support, default cache and search for symbols in the dump directory
+                HttpClient.DefaultProxy.Credentials = CredentialCache.DefaultCredentials;
                 symbolService.AddSymbolServer(retryCount: 3);
                 symbolService.AddCachePath(symbolService.DefaultSymbolCache);
                 symbolService.AddDirectoryPath(Path.GetDirectoryName(dump_path.FullName));
