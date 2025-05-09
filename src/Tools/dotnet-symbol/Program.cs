@@ -5,8 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -265,7 +263,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
         private Microsoft.SymbolStore.SymbolStores.SymbolStore BuildSymbolStore()
         {
             Microsoft.SymbolStore.SymbolStores.SymbolStore store = null;
-            HttpClient.DefaultProxy.Credentials = CredentialCache.DefaultCredentials;
+
             foreach (ServerInfo server in ((IEnumerable<ServerInfo>)SymbolServers).Reverse())
             {
                 if (server.InternalSymwebServer)
