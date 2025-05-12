@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 // ==++==
-// 
- 
-// 
+//
+
+//
 // ==--==
 #include "strike.h"
 #include "util.h"
@@ -12,7 +12,7 @@
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to find the name of a TypeDef using       *  
+*    This function is called to find the name of a TypeDef using       *
 *    metadata API.                                                     *
 *                                                                      *
 \**********************************************************************/
@@ -20,9 +20,14 @@
 static HRESULT NameForTypeDef_s(mdTypeDef tkTypeDef, IMetaDataImport *pImport,
                               __out_ecount (capacity_mdName) WCHAR *mdName, size_t capacity_mdName)
 {
+    if (pImport == NULL)
+    {
+        int res = swprintf_s(mdName, capacity_mdName, W("0x%08x"), tkTypeDef);
+        return res != -1 ? S_OK : E_FAIL;
+    }
+
     DWORD flags;
     ULONG nameLen;
-    
     HRESULT hr = pImport->GetTypeDefProps(tkTypeDef, mdName,
                                           (ULONG)capacity_mdName, &nameLen,
                                           &flags, NULL);
@@ -68,13 +73,13 @@ IMetaDataImport* MDImportForModule(DacpModuleData* pModule)
     IMetaDataImport *pRet = NULL;
     ToRelease<IXCLRDataModule> module;
     HRESULT hr = g_sos->GetModule(pModule->Address, &module);
-    
+
     if (SUCCEEDED(hr))
         hr = module->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pRet);
 
     if (SUCCEEDED(hr))
         return pRet;
-    
+
     return NULL;
 }
 
@@ -104,9 +109,9 @@ HRESULT NameForToken_s(mdTypeDef mb, IMetaDataImport *pImport, __out_ecount (cap
         //ExtOut("unsupported\n");
         return E_FAIL;
     }
-    
+
     HRESULT hr = E_FAIL;
-    
+
     PAL_CPP_TRY
     {
         static WCHAR name[MAX_CLASSNAME_LENGTH];
@@ -168,7 +173,7 @@ HRESULT NameForToken_s(mdTypeDef mb, IMetaDataImport *pImport, __out_ecount (cap
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    This function is called to find the name of a metadata token      *  
+*    This function is called to find the name of a metadata token      *
 *    using metadata API.                                               *
 *                                                                      *
 \**********************************************************************/
@@ -206,7 +211,7 @@ void NameForToken_s(DacpModuleData *pModule, mdTypeDef mb, __out_ecount (capacit
     {
         hr = NameForToken_s (mb, pImport, mdName, capacity_mdName, bClassName);
     }
-    
+
     if (!pImport || !SUCCEEDED (hr))
     {
         const SIZE_T capacity_moduleName = mdNameLen+19;
@@ -218,7 +223,7 @@ void NameForToken_s(DacpModuleData *pModule, mdTypeDef mb, __out_ecount (capacit
             if (assembly.isDynamic) {
                 wcscpy_s(moduleName, capacity_moduleName, W("Dynamic "));
             }
-            wcscat_s (moduleName, capacity_moduleName, W("Module in "));            
+            wcscat_s (moduleName, capacity_moduleName, W("Module in "));
             if(g_sos->GetAssemblyName(pModule->Assembly, mdNameLen, g_mdName, NULL)==S_OK)
             {
                 wcscat_s(moduleName, capacity_moduleName, g_mdName);
@@ -238,9 +243,16 @@ class MDInfo
 public:
     MDInfo (DWORD_PTR ModuleAddr)
     {
-        m_pImport = MDImportForModule(ModuleAddr);
-        if (!m_pImport)
-            ExtOut("Unable to get IMetaDataImport for module %p\n", ModuleAddr);
+        if (ModuleAddr == 0)
+        {
+            m_pImport = NULL;
+        }
+        else
+        {
+            m_pImport = MDImportForModule(ModuleAddr);
+            if (!m_pImport)
+                ExtOut("Unable to get IMetaDataImport for module %p\n", ModuleAddr);
+        }
         m_pSigBuf = NULL;
     }
 
@@ -251,7 +263,7 @@ public:
         m_pSigBuf = NULL;
     }
 
-    void GetMethodName(mdTypeDef token, CQuickBytes *fullName);
+    void GetMethodName(mdMethodDef token, CQuickBytes *fullName);
     GetSignatureStringResults GetMethodSignature(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, CQuickBytes *fullName);
     GetSignatureStringResults GetSignature(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, CQuickBytes *fullName);
 
@@ -308,12 +320,12 @@ void GetMethodName(mdMethodDef methodDef, IMetaDataImport * pImport, CQuickBytes
 
 
 // Tables for mapping element type to text
-const WCHAR *g_wszMapElementType[] = 
+const WCHAR *g_wszMapElementType[] =
 {
     W("End"),          // 0x0
     W("Void"),         // 0x1
     W("Boolean"),
-    W("Char"), 
+    W("Char"),
     W("I1"),
     W("UI1"),
     W("I2"),           // 0x6
@@ -345,9 +357,9 @@ const WCHAR *g_wszMapElementType[] =
     W("CMOD_OPT"),
     W("INTERNAL"),
 };
- 
-const WCHAR *g_wszCalling[] = 
-{   
+
+const WCHAR *g_wszCalling[] =
+{
     W("[DEFAULT]"),
     W("[C]"),
     W("[STDCALL]"),
@@ -360,13 +372,9 @@ const WCHAR *g_wszCalling[] =
     W("[UNMANAGED]"),
 };
 
-void MDInfo::GetMethodName(mdTypeDef token, CQuickBytes *fullName)
+void MDInfo::GetMethodName(mdMethodDef token, CQuickBytes *fullName)
 {
-    if (m_pImport == NULL) {
-        return;
-    }
-
-    HRESULT hr;
+    HRESULT hr = E_FAIL;
     mdTypeDef memTypeDef;
     ULONG nameLen;
     DWORD flags;
@@ -380,14 +388,20 @@ void MDInfo::GetMethodName(mdTypeDef token, CQuickBytes *fullName)
 
     WCHAR szFunctionName[1024];
 
-    hr = m_pImport->GetMethodProps(token, &memTypeDef, 
-                                   szFunctionName, ARRAY_SIZE(szFunctionName), &nameLen, 
-                                   &flags, &pbSigBlob, &ulSigBlob, &ulCodeRVA, &ulImplFlags);
-    if (FAILED (hr))
+    if (m_pImport != NULL)
     {
+        hr = m_pImport->GetMethodProps(token, &memTypeDef,
+                                    szFunctionName, ARRAY_SIZE(szFunctionName), &nameLen,
+                                    &flags, &pbSigBlob, &ulSigBlob, &ulCodeRVA, &ulImplFlags);
+    }
+
+    if (FAILED(hr))
+    {
+        swprintf_s(szFunctionName, ARRAY_SIZE(szFunctionName), W("0x%08x"), token);
+        AddToSigBuffer(szFunctionName);
         return;
     }
-    
+
     szFunctionName[nameLen] = L'\0';
     m_szName[0] = L'\0';
     if (memTypeDef != mdTypeDefNil)
@@ -420,9 +434,6 @@ void MDInfo::GetMethodName(mdTypeDef token, CQuickBytes *fullName)
 
 GetSignatureStringResults MDInfo::GetMethodSignature(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, CQuickBytes *fullName)
 {
-    if (!m_pImport)
-        return GSS_ERROR;
-
     m_pSigBuf = fullName;
     InitSigBuffer();
 
@@ -431,7 +442,7 @@ GetSignatureStringResults MDInfo::GetMethodSignature(PCCOR_SIGNATURE pbSigBlob, 
     LONG lSigBlobRemaining;
     if (FAILED(GetFullNameForMD(pbSigBlob, ulSigBlob, &lSigBlobRemaining)))
         return GSS_ERROR;
-    
+
     if (lSigBlobRemaining < 0)
         return GSS_INSUFFICIENT_DATA;
 
@@ -441,9 +452,6 @@ GetSignatureStringResults MDInfo::GetMethodSignature(PCCOR_SIGNATURE pbSigBlob, 
 
 GetSignatureStringResults MDInfo::GetSignature(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, CQuickBytes *fullName)
 {
-    if (!m_pImport)
-        return GSS_ERROR;
-
     m_pSigBuf = fullName;
     InitSigBuffer();
 
@@ -461,10 +469,9 @@ GetSignatureStringResults MDInfo::GetSignature(PCCOR_SIGNATURE pbSigBlob, ULONG 
     return GSS_SUCCESS;
 }
 
-
 inline bool isCallConv(unsigned sigByte, CorCallingConvention conv)
 {
-    return ((sigByte & IMAGE_CEE_CS_CALLCONV_MASK) == (unsigned) conv); 
+    return ((sigByte & IMAGE_CEE_CS_CALLCONV_MASK) == (unsigned) conv);
 }
 
 #undef IfFailGoto
@@ -492,7 +499,7 @@ HRESULT MDInfo::GetFullNameForMD(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, LON
     //    goto ErrExit;
 
     AddToSigBuffer (g_wszCalling[ulData & IMAGE_CEE_CS_CALLCONV_MASK]);
-    if (cb>ulSigBlob) 
+    if (cb>ulSigBlob)
         goto ErrExit;
     cbCur += cb;
     ulSigBlob -= cb;
@@ -510,15 +517,15 @@ HRESULT MDInfo::GetFullNameForMD(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, LON
             goto ErrExit;
         AddToSigBuffer ( W(" "));
         AddToSigBuffer ( m_szName);
-        if (cb>ulSigBlob) 
+        if (cb>ulSigBlob)
             goto ErrExit;
         cbCur += cb;
         ulSigBlob -= cb;
     }
-    else 
+    else
     {
         cb = CorSigUncompressData(&pbSigBlob[cbCur], &ulArgs);
-        if (cb>ulSigBlob) 
+        if (cb>ulSigBlob)
             goto ErrExit;
         cbCur += cb;
         ulSigBlob -= cb;
@@ -531,7 +538,7 @@ HRESULT MDInfo::GetFullNameForMD(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, LON
             AddToSigBuffer (W(" "));
             AddToSigBuffer (m_szName);
             AddToSigBuffer ( W("("));
-            if (cb>ulSigBlob) 
+            if (cb>ulSigBlob)
                 goto ErrExit;
             cbCur += cb;
             ulSigBlob -= cb;
@@ -551,7 +558,7 @@ HRESULT MDInfo::GetFullNameForMD(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, LON
             if (i != ulArgs) {
                 AddToSigBuffer ( W(","));
             }
-            if (cb>ulSigBlob) 
+            if (cb>ulSigBlob)
                 goto ErrExit;
 
             cbCur += cb;
@@ -573,39 +580,42 @@ ErrExit:
 
 LPCWSTR MDInfo::TypeDefName(mdTypeDef inTypeDef)
 {
-    if (m_pImport == NULL) {
-        return W("");
+    HRESULT hr = E_FAIL;
+    if (m_pImport != NULL)
+    {
+        hr = m_pImport->GetTypeDefProps(
+                                // [IN] The import scope.
+            inTypeDef,              // [IN] TypeDef token for inquiry.
+            m_szTempBuf,            // [OUT] Put name here.
+            MAX_CLASSNAME_LENGTH ,      // [IN] size of name buffer in wide chars.
+            NULL,                   // [OUT] put size of name (wide chars) here.
+            NULL,                   // [OUT] Put flags here.
+            NULL);                  // [OUT] Put base class TypeDef/TypeRef here.
+    }
+    if (FAILED(hr))
+    {
+        swprintf_s(m_szTempBuf, MAX_CLASSNAME_LENGTH, W("0x%08x"), inTypeDef);
     }
 
-    HRESULT hr;
-
-    hr = m_pImport->GetTypeDefProps(
-                            // [IN] The import scope.
-        inTypeDef,              // [IN] TypeDef token for inquiry.
-        m_szTempBuf,            // [OUT] Put name here.
-        MAX_CLASSNAME_LENGTH ,      // [IN] size of name buffer in wide chars.
-        NULL,                   // [OUT] put size of name (wide chars) here.
-        NULL,                   // [OUT] Put flags here.
-        NULL);                  // [OUT] Put base class TypeDef/TypeRef here.
-
-    if (FAILED(hr)) return (W("NoName"));
     return (m_szTempBuf);
 } // LPCWSTR MDInfo::TypeDefName()
+
 LPCWSTR MDInfo::TypeRefName(mdTypeRef tr)
 {
-    if (m_pImport == NULL) {
-        return W("");
+    HRESULT hr = E_FAIL;
+    if (m_pImport != NULL)
+    {
+        hr = m_pImport->GetTypeRefProps(
+            tr,                 // The class ref token.
+            NULL,               // Resolution scope.
+            m_szTempBuf,             // Put the name here.
+            MAX_CLASSNAME_LENGTH,             // Size of the name buffer, wide chars.
+            NULL);              // Put actual size of name here.
     }
-
-    HRESULT hr;
-    
-    hr = m_pImport->GetTypeRefProps(           
-        tr,                 // The class ref token.
-        NULL,               // Resolution scope.
-        m_szTempBuf,             // Put the name here.
-        MAX_CLASSNAME_LENGTH,             // Size of the name buffer, wide chars.
-        NULL);              // Put actual size of name here.
-    if (FAILED(hr)) return (W("NoName"));
+    if (FAILED(hr))
+    {
+        swprintf_s(m_szTempBuf, MAX_CLASSNAME_LENGTH, W("0x%08x"), tr);
+    }
 
     return (m_szTempBuf);
 } // LPCWSTR MDInfo::TypeRefName()
@@ -673,7 +683,7 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
     }
 
     // Handle the underlying element types.
-    if (ulData >= ELEMENT_TYPE_MAX) 
+    if (ulData >= ELEMENT_TYPE_MAX)
     {
         hr = E_FAIL;
         goto ErrExit;
@@ -694,7 +704,7 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
         // The next byte represents which generic parameter is referred to.  We
         // do not currently use this information, so just bypass this byte.
         cbCur++;
-        
+
         goto ErrExit;
     }
 
@@ -714,19 +724,19 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
         IfFailGo(AddToSigBuffer(W("<")));
         for (ULONG i = 0; i < numParams; i++)
         {
-            if (i > 0) 
+            if (i > 0)
                 IfFailGo(AddToSigBuffer(W(",")));
-            
+
             IfFailGo(GetOneElementType(&pbSigBlob[cbCur], ulSigBlob-cbCur, &cb));
             cbCur += cb;
         }
         IfFailGo(AddToSigBuffer(W(">")));
         goto ErrExit;
     }
-    
+
     // Past this point we must have something which directly maps to a value in g_wszMapElementType.
     IfFailGo(AddToSigBuffer(g_wszMapElementType[ulData]));
-    if (CorIsPrimitiveType((CorElementType)ulData) || 
+    if (CorIsPrimitiveType((CorElementType)ulData) ||
         ulData == ELEMENT_TYPE_TYPEDBYREF ||
         ulData == ELEMENT_TYPE_OBJECT ||
         ulData == ELEMENT_TYPE_I ||
@@ -737,8 +747,8 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
     }
 
     AddToSigBuffer(W(" "));
-    if (ulData == ELEMENT_TYPE_VALUETYPE || 
-        ulData == ELEMENT_TYPE_CLASS || 
+    if (ulData == ELEMENT_TYPE_VALUETYPE ||
+        ulData == ELEMENT_TYPE_CLASS ||
         ulData == ELEMENT_TYPE_CMOD_REQD ||
         ulData == ELEMENT_TYPE_CMOD_OPT)
     {
@@ -776,7 +786,7 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
         cbCur += cb;
         goto ErrExit;
     }
-    if (ulData == ELEMENT_TYPE_FNPTR) 
+    if (ulData == ELEMENT_TYPE_FNPTR)
     {
         cb = CorSigUncompressData(&pbSigBlob[cbCur], &ulData);
         cbCur += cb;
@@ -798,7 +808,7 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
         cbCur += cb;
 
         IfFailGo(AddToSigBuffer(W("(")));
-        while (numArgs > 0) 
+        while (numArgs > 0)
         {
             if (cbCur > ulSigBlob)
                 goto ErrExit;
@@ -806,7 +816,7 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
                 goto ErrExit;
             cbCur += cb;
             --numArgs;
-            if (numArgs > 0) 
+            if (numArgs > 0)
                 IfFailGo(AddToSigBuffer(W(",")));
         }
         IfFailGo(AddToSigBuffer(W(")")));
@@ -834,7 +844,6 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
         goto ErrExit;
     }
 
-        
     if(ulData != ELEMENT_TYPE_ARRAY) return E_FAIL;
 
     // display the base type of SDARRAY
@@ -887,7 +896,7 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
         cbCur += cb;
         ulData--;
     }
-    
+
 ErrExit:
     if (cbCur > ulSigBlob)
         hr = E_FAIL;
@@ -900,17 +909,17 @@ ErrExit:
 //*****************************************************************************
 typedef struct tagCOR_ILMETHOD_TINY : IMAGE_COR_ILMETHOD_TINY
 {
-    bool     IsTiny() const         { return((Flags_CodeSize & (CorILMethod_FormatMask >> 1)) == CorILMethod_TinyFormat); } 
-    DWORD    GetLocalVarSigTok() const  { return(0); }  
+    bool     IsTiny() const         { return((Flags_CodeSize & (CorILMethod_FormatMask >> 1)) == CorILMethod_TinyFormat); }
+    DWORD    GetLocalVarSigTok() const  { return(0); }
 } COR_ILMETHOD_TINY;
 
 
 //*****************************************************************************
-// This strucuture is the 'fat' layout, where no compression is attempted. 
+// This strucuture is the 'fat' layout, where no compression is attempted.
 // Note that this structure can be added on at the end, thus making it extensible
 //*****************************************************************************
 typedef struct tagCOR_ILMETHOD_FAT : IMAGE_COR_ILMETHOD_FAT
 {
-    bool     IsFat() const              { return((Flags & CorILMethod_FormatMask) == CorILMethod_FatFormat); }  
-    mdToken  GetLocalVarSigTok() const      { return(LocalVarSigTok); } 
+    bool     IsFat() const              { return((Flags & CorILMethod_FormatMask) == CorILMethod_FatFormat); }
+    mdToken  GetLocalVarSigTok() const      { return(LocalVarSigTok); }
 } COR_ILMETHOD_FAT;
