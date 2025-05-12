@@ -956,7 +956,7 @@ DECLARE_API(DumpSig)
     if (dwSigAddr == 0)
     {
         ExtOut("Invalid parameter %s\n", sigExpr.data);
-        return Status;
+        return E_INVALIDARG;
     }
 
     DWORD_PTR dwModuleAddr = 0;
@@ -1006,7 +1006,7 @@ DECLARE_API(DumpSigElem)
     if (dwSigAddr == 0)
     {
         ExtOut("Invalid parameter %s\n", sigExpr.data);
-        return Status;
+        return E_INVALIDARG;
     }
 
     DWORD_PTR dwModuleAddr = 0;
