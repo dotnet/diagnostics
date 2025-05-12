@@ -356,6 +356,7 @@ EventPipe Payloads are encoded with the following rules:
 * `ulong` = 8 little endian bytes
 * `wchar` = 2 little endian bytes, UTF16 encoding
 * `byte` = 1 unsigned little endian byte
+* `bool` = 1 unsigned little endian byte
 * `array<T>` = uint length, length # of `T`s
 * `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
 
@@ -735,7 +736,8 @@ A User_events Session started with `CollectTracing5` expects the Optional Contin
 ### Event_filter
 Example `event_filter` serialization. Serializing
 ```
-allow=0, event_ids=[]: Allow all events.
+allow=0, event_ids=[]
+Deny Nothing === Allow all events.
 ```
 <table>
   <tr>
@@ -759,7 +761,8 @@ allow=0, event_ids=[]: Allow all events.
 </table>
 
 ```
-allow=0, event_ids=[4, 5]: Deny only Event IDs 4 and 5.
+allow=0, event_ids=[4, 5]
+Deny only Event IDs 4 and 5 === Allow all Event IDs except 4 and 5
 ```
 
 <table>
@@ -786,7 +789,8 @@ allow=0, event_ids=[4, 5]: Deny only Event IDs 4 and 5.
 </table>
 
 ```
-allow=1, event_ids=[]: Deny all events.
+allow=1, event_ids=[]
+Allow Nothing === Deny all events.
 ```
 
 <table>
@@ -811,7 +815,8 @@ allow=1, event_ids=[]: Deny all events.
 </table>
 
 ```
-allow=1, event_ids=[1, 2, 3]: Allow only Event IDs 1, 2, and 3.
+allow=1, event_ids=[1, 2, 3]
+Allow only EventIDs 1, 2, and 3 === Deny all EventIDs except 1, 2, and 3.
 ```
 
 <table>
