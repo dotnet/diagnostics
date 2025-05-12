@@ -375,13 +375,13 @@ const WCHAR *g_wszCalling[] =
 void MDInfo::GetMethodName(mdMethodDef token, CQuickBytes *fullName)
 {
     HRESULT hr = E_FAIL;
-    mdTypeDef memTypeDef;
-    ULONG nameLen;
-    DWORD flags;
-    PCCOR_SIGNATURE pbSigBlob;
-    ULONG ulSigBlob;
-    ULONG ulCodeRVA;
-    ULONG ulImplFlags;
+    mdTypeDef memTypeDef = mdTypeDefNil;
+    ULONG nameLen = 0;
+    DWORD flags = 0;
+    PCCOR_SIGNATURE pbSigBlob = NULL;
+    ULONG ulSigBlob = 0;
+    ULONG ulCodeRVA = 0;
+    ULONG ulImplFlags = 0;
 
     m_pSigBuf = fullName;
     InitSigBuffer();
