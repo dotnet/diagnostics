@@ -1019,7 +1019,9 @@ For parsing the file descriptor passed with SCM_RIGHTS, the runtime will `recvms
 
 Once the runtime has received the configured tracepoint names as detailed under [tracepoint_config](#user_events-session-payload), it uses the [file descriptor passed in the continuation stream](#passing_file_descriptor) to register the prescribed tracepoint names following the [user_events registering protocol](https://docs.kernel.org/trace/user_events.html#registering). The runtime will construct a `user_reg` struct for every tracepoint name, defaulting to using none of the `user_reg` flags, so the resulting command format will be as follows:
 
-`<tracepoint_name> u16 event_id; __rel_loc u8[] payload; __rel_loc u8[] meta`
+##### Tracepoint Format V1
+
+`<tracepoint_name> u8 version; u16 event_id; __rel_loc u8[] extension; __rel_loc u8[] payload; __rel_loc u8[] meta`
 
 See [user_events writing](#user_events-writing) below for field details`.
 
@@ -1028,27 +1030,39 @@ See [user_events writing](#user_events-writing) below for field details`.
 When writing events to their mapped user_events tracepoints prescribed by the `tracepoint_config` in the [User_events session payload](#user_events-session-payload), the runtime will adapt the [user_events writing protocol](https://docs.kernel.org/trace/user_events.html#writing-data) to write the event as:
 
 ```
-struct iovec io[5];
+struct iovec io[7];
 
-io[0].iov_base = &my_tracepoint_index;      // __u32 from event_reg
-io[0].iov_len = sizeof(my_tracepoint_index);
-io[1].iov_base = &event_id                  // EventID defined by EventSource/native manifest
-io[1].iov_len = sizeof(event_id)
-io[2].iov_base = &this_event_payload;       // __rel_loc u8[]
-io[2].iov_len = sizeof(this_event_payload);
-io[3].iov_base = &this_event_meta;          // __rel_loc u8[]
-io[3].iov_len = sizeof(this_event_meta);
-io[4].iov_base = &actual_data;              // u8[]
-io[4].iov_len = actual_data_len;
+io[0].iov_base = &write_index;       // __u32 tracepoint write index from registration
+io[0].iov_len = sizeof(write_index);
+io[1].iov_base = &version;           // __u8 tracepoint format version
+io[1].iov_len = sizeof(version);
+io[2].iov_base = &event_id;          // __u16 EventID defined by EventSource/native manifest
+io[2].iov_len = sizeof(event_id);
+io[3].iov_base = &extension;         // __rel_loc u8[] NetTrace V6 label list
+io[3].iov_base = sizeof(extension);
+io[4].iov_base = &payload;           // __rel_loc u8[] event payload
+io[4].iov_len = sizeof(payload);
+io[5].iov_base = &meta;              // __rel_loc u8[] event metadata
+io[5].iov_len = sizeof(meta);
+io[6].iov_base = &data;              // __u8[] data
+io[6].iov_len = data_len;
 
-writev(ep_session->data_fd, (const struct iovec *)io, 5);
+writev(ep_session->data_fd, (const struct iovec *)io, 7);
 ```
 
 The `__rel_loc` is the relative dynamic array attribute described [here](https://lwn.net/Articles/876682/).
 
-The payload points at a blob of data with the same format as an EventPipe payload – the concatenated encoded values for all the parameters 
+The `write_index` is the tracepoint's write index determined during tracepoint registration.
 
-The metadata either points at nothing if the event doesn’t have metadata, or it points at a metadata blob matching the NetTrace version 5 formatting convention. Specifically it is the data that would be stored inside the PayloadBytes area of an event blob within a MetadataBlock described [here](https://github.com/microsoft/perfview/blob/main/src/TraceEvent/EventPipe/NetTraceFormat_v5.md#metadata-event-encoding).
+The `version` is the version of the tracepoint format, which in this case is [version 1](#tracepoint-format-v1).
+
+The `event_id` is the ID of the event, defined by the EventSource/native manifest.
+
+The `extension` points at a [NetTrace V6 LabelList block](https://github.com/microsoft/perfview/blob/main/src/TraceEvent/EventPipe/NetTraceFormat.md#labellistblock) describing other fields associated with the event. e.g. ActivityId, RelatedActivityId, event_thread, and stack.
+
+The `payload` points at a blob of data with the same format as an EventPipe payload – the concatenated encoded values for all the parameters.
+
+The `metadata` either points at nothing if the event doesn’t have metadata, or it points at a metadata blob matching the NetTrace version 5 formatting convention. Specifically it is the data that would be stored inside the PayloadBytes area of an event blob within a MetadataBlock described [here](https://github.com/microsoft/perfview/blob/main/src/TraceEvent/EventPipe/NetTraceFormat_v5.md#metadata-event-encoding).
 
 > NOTE: V5 and V6 metadata formats have the same info, but they aren’t formatted identically. Parsing and reserialization is required to convert between the two.
 
