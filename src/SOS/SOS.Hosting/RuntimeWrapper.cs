@@ -414,15 +414,15 @@ namespace SOS.Hosting
             int hresult = 0;
             try
             {
-                // The DAC will be verified in the GetDacHandle call below. Ignore the verifySignature parameter here.
-                string dacFilePath = _runtime.GetDacFilePath(out bool _);
-
                 // This will verify the DAC signature if needed before DBI is passed the DAC path or handle
                 IntPtr dacHandle = GetDacHandle();
                 if (dacHandle == IntPtr.Zero)
                 {
                     return IntPtr.Zero;
                 }
+
+                // The DAC was verified in the GetDacHandle call above. Ignore the verifySignature parameter here.
+                string dacFilePath = _runtime.GetDacFilePath(out bool _);
 
                 OpenVirtualProcessImpl2Delegate openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
                 if (openVirtualProcessImpl2 != null)
