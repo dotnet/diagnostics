@@ -327,35 +327,36 @@ const WCHAR *g_wszMapElementType[] =
     W("Boolean"),
     W("Char"),
     W("I1"),
-    W("UI1"),
+    W("U1"),
     W("I2"),           // 0x6
-    W("UI2"),
+    W("U2"),
     W("I4"),
-    W("UI4"),
+    W("U4"),
     W("I8"),
-    W("UI8"),
+    W("U8"),
     W("R4"),
     W("R8"),
     W("String"),
     W("Ptr"),          // 0xf
     W("ByRef"),        // 0x10
-    W("ValueClass"),
+    W("ValueType"),
     W("Class"),
-    W("CopyCtor"),
+    W("Var"),
     W("MDArray"),      // 0x14
-    W("GENArray"),
+    W("GenericInst"),
     W("TypedByRef"),
-    W("VALUEARRAY"),
-    W("I"),
-    W("U"),
-    W("R"),            // 0x1a
-    W("FNPTR"),
+    W("UNUSED"),
+    W("IntPtr"),
+    W("UIntPtr"),
+    W("UNUSED"),            // 0x1a
+    W("FnPtr"),
     W("Object"),
     W("SZArray"),
-    W("GENERICArray"),
+    W("MVar"),
     W("CMOD_REQD"),
     W("CMOD_OPT"),
     W("INTERNAL"),
+    W("CMOD_INTERNAL"),
 };
 
 const WCHAR *g_wszCalling[] =
@@ -370,6 +371,12 @@ const WCHAR *g_wszCalling[] =
     W("[LOCALSIG]"),
     W("[PROPERTY]"),
     W("[UNMANAGED]"),
+    W("[GENERICINST]"),
+    W("[NATIVEVARARG]"),
+    W("[UNKNOWN]"),
+    W("[UNKNOWN]"),
+    W("[UNKNOWN]"),
+    W("[UNKNOWN]"),
 };
 
 void MDInfo::GetMethodName(mdMethodDef token, CQuickBytes *fullName)
@@ -504,11 +511,6 @@ HRESULT MDInfo::GetFullNameForMD(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, LON
     cbCur += cb;
     ulSigBlob -= cb;
 
-    if (ulData & IMAGE_CEE_CS_CALLCONV_HASTHIS)
-        AddToSigBuffer ( W(" [hasThis]"));
-    if (ulData & IMAGE_CEE_CS_CALLCONV_EXPLICITTHIS)
-        AddToSigBuffer ( W(" [explicit]"));
-
     AddToSigBuffer (W(" "));
     if ( isCallConv(ulData,IMAGE_CEE_CS_CALLCONV_FIELD) )
     {
@@ -524,6 +526,27 @@ HRESULT MDInfo::GetFullNameForMD(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, LON
     }
     else
     {
+        if (ulData & IMAGE_CEE_CS_CALLCONV_HASTHIS)
+            AddToSigBuffer ( W("[hasThis] "));
+        if (ulData & IMAGE_CEE_CS_CALLCONV_EXPLICITTHIS)
+            AddToSigBuffer ( W("[explicit] "));
+
+        if (ulData & IMAGE_CEE_CS_CALLCONV_GENERIC)
+        {
+            ULONG ulGenericCount;
+            cb = CorSigUncompressData(&pbSigBlob[cbCur], &ulGenericCount);
+            if (cb>ulSigBlob)
+                goto ErrExit;
+            AddToSigBuffer (W("[generic:"));
+
+            WCHAR buffer[16];
+            _itow_s(ulGenericCount, buffer, ARRAY_SIZE(buffer), 10);
+            AddToSigBuffer (buffer);
+            AddToSigBuffer (W("] "));
+            cbCur += cb;
+            ulSigBlob -= cb;
+        }
+
         cb = CorSigUncompressData(&pbSigBlob[cbCur], &ulArgs);
         if (cb>ulSigBlob)
             goto ErrExit;
@@ -653,7 +676,6 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
     ULONG       ulTemp;
     int         iTemp = 0;
     mdToken     tk;
-    const size_t capacity_buffer = 9;
 
     cb = CorSigUncompressData(pbSigBlob, &ulData);
 
@@ -688,6 +710,7 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
         hr = E_FAIL;
         goto ErrExit;
     }
+
     while (ulData == ELEMENT_TYPE_PTR || ulData == ELEMENT_TYPE_BYREF)
     {
         IfFailGo(AddToSigBuffer(g_wszMapElementType[ulData]));
@@ -697,14 +720,24 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
     }
 
     // Generics
-    if (ulData == ELEMENT_TYPE_VAR)
+    if (ulData == ELEMENT_TYPE_VAR || ulData == ELEMENT_TYPE_MVAR)
     {
-        IfFailGo(AddToSigBuffer(W("__Canon")));
+        if (ulData == ELEMENT_TYPE_VAR)
+        {
+            IfFailGo(AddToSigBuffer(W("!")));
+        }
+        else
+        {
+            IfFailGo(AddToSigBuffer(W("!!")));
+        }
 
-        // The next byte represents which generic parameter is referred to.  We
-        // do not currently use this information, so just bypass this byte.
-        cbCur++;
+        ULONG varIndex = 0;
+        IfFailGo(CorSigUncompressData(&pbSigBlob[cbCur], ulSigBlob-cbCur, &varIndex, &cb));
+        cbCur += cb;
 
+        WCHAR buffer[16];
+        _itow_s(varIndex, buffer, ARRAY_SIZE(buffer), 10);
+        AddToSigBuffer(buffer);
         goto ErrExit;
     }
 
@@ -717,7 +750,7 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
 
         // Get the number of generic arguments.
         ULONG numParams = 0;
-        IfFailGo(CorSigUncompressData(&pbSigBlob[cbCur], 1, &numParams, &cb));
+        IfFailGo(CorSigUncompressData(&pbSigBlob[cbCur], ulSigBlob-cbCur, &numParams, &cb));
         cbCur += cb;
 
         // Print out the list of arguments
@@ -735,6 +768,12 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
     }
 
     // Past this point we must have something which directly maps to a value in g_wszMapElementType.
+    if (ulData >= ARRAY_SIZE(g_wszMapElementType))
+    {
+        IfFailGo(AddToSigBuffer(W("INVALID_ELEMENT_TYPE")));
+        return E_FAIL;
+    }
+
     IfFailGo(AddToSigBuffer(g_wszMapElementType[ulData]));
     if (CorIsPrimitiveType((CorElementType)ulData) ||
         ulData == ELEMENT_TYPE_TYPEDBYREF ||
@@ -763,8 +802,8 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
         else
         {
             _ASSERTE(TypeFromToken(tk) == mdtTypeSpec);
-            WCHAR buffer[capacity_buffer];
-            _itow_s (tk, buffer, capacity_buffer, 16);
+            WCHAR buffer[16];
+            _itow_s (tk, buffer, ARRAY_SIZE(buffer), 16);
             IfFailGo(AddToSigBuffer(buffer));
         }
         if (ulData == ELEMENT_TYPE_CMOD_REQD ||
@@ -780,7 +819,7 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
     }
     if (ulData == ELEMENT_TYPE_SZARRAY)
     {
-        // display the base type of SZARRAY or GENERICARRAY
+        // display the base type of SZARRAY
         if (FAILED(GetOneElementType(&pbSigBlob[cbCur], ulSigBlob-cbCur, &cb)))
             goto ErrExit;
         cbCur += cb;
@@ -831,9 +870,8 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
         cb = CorSigUncompressPointer(&pbSigBlob[cbCur], (void**)&pvMethodTable);
         cbCur += cb;
 
-        const size_t capacity_szMethodTableValue = 10;
-        WCHAR szMethodTableValue[10];
-        itow_s_ptr((INT_PTR)pvMethodTable, szMethodTableValue, capacity_szMethodTableValue, 16);
+        WCHAR szMethodTableValue[32];
+        itow_s_ptr((INT_PTR)pvMethodTable, szMethodTableValue, ARRAY_SIZE(szMethodTableValue), 16);
 
         IfFailGo(AddToSigBuffer(szMethodTableValue));
         IfFailGo(AddToSigBuffer(W(" ")));
@@ -844,58 +882,67 @@ HRESULT MDInfo::GetOneElementType(PCCOR_SIGNATURE pbSigBlob, ULONG ulSigBlob, UL
         goto ErrExit;
     }
 
-    if(ulData != ELEMENT_TYPE_ARRAY) return E_FAIL;
+    if(ulData != ELEMENT_TYPE_ARRAY)
+        return E_FAIL;
 
-    // display the base type of SDARRAY
+    // Since MDARRAY has extra data, we will use a visual indication
+    // to group the base type and the ArrayShape.
+    IfFailGo(AddToSigBuffer(W("{")));
+
+    // Display the base type of MDARRAY
     if (FAILED(GetOneElementType(&pbSigBlob[cbCur], ulSigBlob-cbCur, &cb)))
         goto ErrExit;
     cbCur += cb;
 
-    IfFailGo(AddToSigBuffer(W(" ")));
-    // display the rank of MDARRAY
+    // Print the ArrayShape - ECMA-335 II.23.2.13
+    AddToSigBuffer(W(", "));
+
+    // Display the rank
     cb = CorSigUncompressData(&pbSigBlob[cbCur], &ulData);
     cbCur += cb;
-    WCHAR buffer[capacity_buffer];
-    _itow_s (ulData, buffer, capacity_buffer, 10);
+    WCHAR buffer[16];
+    _itow_s (ulData, buffer, ARRAY_SIZE(buffer), 10);
     IfFailGo(AddToSigBuffer(buffer));
+
+    // we are done if no rank specified
     if (ulData == 0)
-        // we are done if no rank specified
         goto ErrExit;
 
     IfFailGo(AddToSigBuffer(W(" ")));
+
     // how many dimensions have size specified?
     cb = CorSigUncompressData(&pbSigBlob[cbCur], &ulData);
     cbCur += cb;
-    _itow_s (ulData, buffer, capacity_buffer, 10);
+    _itow_s (ulData, buffer, ARRAY_SIZE(buffer), 10);
     IfFailGo(AddToSigBuffer(buffer));
-    if (ulData == 0) {
+    if (ulData == 0)
         IfFailGo(AddToSigBuffer(W(" ")));
-    }
-    while (ulData)
-    {
 
+    for (;ulData != 0; ulData--)
+    {
         cb = CorSigUncompressData(&pbSigBlob[cbCur], &ulTemp);
-        _itow_s (ulTemp, buffer, capacity_buffer, 10);
+        _itow_s (ulTemp, buffer, ARRAY_SIZE(buffer), 10);
         IfFailGo(AddToSigBuffer(buffer));
         IfFailGo(AddToSigBuffer(W(" ")));
         cbCur += cb;
-        ulData--;
     }
+
     // how many dimensions have lower bounds specified?
     cb = CorSigUncompressData(&pbSigBlob[cbCur], &ulData);
     cbCur += cb;
-    _itow_s (ulData, buffer, capacity_buffer, 10);
+    _itow_s (ulData, buffer, ARRAY_SIZE(buffer), 10);
     IfFailGo(AddToSigBuffer(buffer));
-    while (ulData)
-    {
+    IfFailGo(AddToSigBuffer(W(" ")));
 
+    for (;ulData != 0; ulData--)
+    {
         cb = CorSigUncompressSignedInt(&pbSigBlob[cbCur], &iTemp);
-        _itow_s (iTemp, buffer, capacity_buffer, 10);
+        _itow_s (iTemp, buffer, ARRAY_SIZE(buffer), 10);
         IfFailGo(AddToSigBuffer(buffer));
         IfFailGo(AddToSigBuffer(W(" ")));
         cbCur += cb;
-        ulData--;
     }
+    IfFailGo(AddToSigBuffer(W("}")));
 
 ErrExit:
     if (cbCur > ulSigBlob)
