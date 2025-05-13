@@ -39,9 +39,39 @@
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>78c5fa9a48d469a19ab5a61c16c955c1f370b5be</Sha>
     </Dependency>
+    <!-- Intermediate is necessary for source build. -->
+    <Dependency Name="Microsoft.SourceBuild.Intermediate.source-build-reference-packages" Version="10.0.622304">
+      <Uri>https://github.com/dotnet/source-build-reference-packages</Uri>
+      <Sha>65dce0e04c42107e92af4287fe8b5022407b7440</Sha>
+      <SourceBuild RepoName="source-build-reference-packages" ManagedOnly="true" />
+    </Dependency>
     <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.10.0" Version="10.0.0-preview.5.25229.109">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>78c5fa9a48d469a19ab5a61c16c955c1f370b5be</Sha>
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>c4bc9b0821921ec58eeaf0ab923d291259165dd9</Sha>
+    </Dependency>
+    <Dependency Name="runtime.win-x64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.5.25261.1">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>c4bc9b0821921ec58eeaf0ab923d291259165dd9</Sha>
+    </Dependency>
+    <Dependency Name="runtime.win-arm64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.5.25261.1">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>c4bc9b0821921ec58eeaf0ab923d291259165dd9</Sha>
+    </Dependency>
+    <Dependency Name="runtime.linux-x64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.5.25261.1">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>c4bc9b0821921ec58eeaf0ab923d291259165dd9</Sha>
+    </Dependency>
+    <Dependency Name="runtime.linux-arm64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.5.25261.1">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>c4bc9b0821921ec58eeaf0ab923d291259165dd9</Sha>
+    </Dependency>
+    <Dependency Name="runtime.osx-x64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.5.25260.104">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>c4bc9b0821921ec58eeaf0ab923d291259165dd9</Sha>
+    </Dependency>
+    <Dependency Name="runtime.osx-arm64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.5.25260.104">
+      <Uri>https://github.com/dotnet/runtime</Uri>
+      <Sha>c4bc9b0821921ec58eeaf0ab923d291259165dd9</Sha>
     </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis" Version="4.11.0-2.24271.11">
       <Uri>https://github.com/dotnet/roslyn</Uri>
