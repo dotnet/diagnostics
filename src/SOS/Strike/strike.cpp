@@ -844,8 +844,7 @@ DECLARE_API(DumpIL)
     return Status;
 }
 
-
-void DumpSigWorker (
+static void DumpSigWorker (
         DWORD_PTR dwSigAddr,
         DWORD_PTR dwModuleAddr,
         BOOL fMethod)
@@ -946,20 +945,23 @@ DECLARE_API(DumpSig)
     {
         return E_INVALIDARG;
     }
-    if (nArg != 2)
+
+    if (nArg < 1 || nArg > 2)
     {
-        ExtOut("%sdumpsig <sigaddr> <moduleaddr>\n", SOSPrefix);
+        ExtOut("%sdumpsig <sigaddr> [<moduleaddr>]?\n", SOSPrefix);
         return E_INVALIDARG;
     }
 
     DWORD_PTR dwSigAddr = GetExpression(sigExpr.data);
-    DWORD_PTR dwModuleAddr = GetExpression(moduleExpr.data);
-
-    if (dwSigAddr == 0 || dwModuleAddr == 0)
+    if (dwSigAddr == 0)
     {
-        ExtOut("Invalid parameters %s %s\n", sigExpr.data, moduleExpr.data);
-        return Status;
+        ExtOut("Invalid parameter %s\n", sigExpr.data);
+        return E_INVALIDARG;
     }
+
+    DWORD_PTR dwModuleAddr = 0;
+    if (nArg == 2)
+        dwModuleAddr = GetExpression(moduleExpr.data);
 
     DumpSigWorker(dwSigAddr, dwModuleAddr, TRUE);
     return Status;
@@ -994,20 +996,22 @@ DECLARE_API(DumpSigElem)
         return E_INVALIDARG;
     }
 
-    if (nArg != 2)
+    if (nArg < 1 || nArg > 2)
     {
-        ExtOut("%sdumpsigelem <sigaddr> <moduleaddr>\n", SOSPrefix);
+        ExtOut("%sdumpsigelem <sigaddr> [<moduleaddr>]?\n", SOSPrefix);
         return E_INVALIDARG;
     }
 
     DWORD_PTR dwSigAddr = GetExpression(sigExpr.data);
-    DWORD_PTR dwModuleAddr = GetExpression(moduleExpr.data);
-
-    if (dwSigAddr == 0 || dwModuleAddr == 0)
+    if (dwSigAddr == 0)
     {
-        ExtOut("Invalid parameters %s %s\n", sigExpr.data, moduleExpr.data);
+        ExtOut("Invalid parameter %s\n", sigExpr.data);
         return E_INVALIDARG;
     }
+
+    DWORD_PTR dwModuleAddr = 0;
+    if (nArg == 2)
+        dwModuleAddr = GetExpression(moduleExpr.data);
 
     DumpSigWorker(dwSigAddr, dwModuleAddr, FALSE);
     return Status;
@@ -8073,9 +8077,9 @@ DECLARE_API(EEVersion)
             }
         }
         else
+        {
             ExtOut("Workstation mode\n");
-
-        
+        }
 
         if (!GetGcStructuresValid())
         {
