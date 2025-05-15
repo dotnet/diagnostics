@@ -1,6 +1,7 @@
 <Project>
   <PropertyGroup>
     <ContinuousIntegrationBuild Condition="'$(OfficialBuildId)' != ''">true</ContinuousIntegrationBuild>
+    <PublishWindowsPdb>false</PublishWindowsPdb>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -22,11 +23,11 @@
 
   <PropertyGroup>
     <DesktopTargetFramework>net462</DesktopTargetFramework>
-    <!-- 
-        This represents the minimum supported .NET Version, so the min version that the tools must 
+    <!--
+        This represents the minimum supported .NET Version, so the min version that the tools must
         be able to run against for a simple customer experience.
 
-        When bumping this, bump __targetRid in build.sh/build-native.cmd and modify the 
+        When bumping this, bump __targetRid in build.sh/build-native.cmd and modify the
         Debugger.Tests.Configs to reflect the new TFMs
      -->
     <NetCoreAppMinVersion>8.0</NetCoreAppMinVersion>
