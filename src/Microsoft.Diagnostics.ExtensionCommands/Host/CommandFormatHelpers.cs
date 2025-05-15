@@ -16,6 +16,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public const string DebugHeaderExport = "DotNetRuntimeDebugHeader";
         public const string ContractDescriptorExport = "DotNetRuntimeContractDescriptor";
 
+        public static void DisplaySettingService(this CommandBase command)
+        {
+            ISettingsService settingsService = command.Services.GetService<ISettingsService>() ?? throw new DiagnosticsException("Settings service required");
+            command.Console.WriteLine("Settings:");
+            command.Console.WriteLine($"-> Use CDAC contract reader: {settingsService.UseContractReader}");
+            command.Console.WriteLine($"-> Force use CDAC contract reader: {settingsService.ForceUseContractReader}");
+            command.Console.WriteLine($"-> DAC signature verification check enabled: {settingsService.DacSignatureVerificationEnabled}");
+        }
+
         /// <summary>
         /// Displays the special diagnostics info header memory block (.NET Core 8 or later on Linux/MacOS)
         /// </summary>
