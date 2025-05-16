@@ -113,7 +113,7 @@
   </Target>
 
 <!--
-    Writes the Debugger.Tests.Versions.txt file used by the SOS test harness
+    Writes the Debugger.Tests.Versions.txt file used by tests in this repo to determine which runtimes to test against
 -->
 
   <Target Name="WriteTestVersionManifest"
