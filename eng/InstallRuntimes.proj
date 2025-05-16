@@ -35,7 +35,7 @@
 
   <PropertyGroup>
     <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(BuildArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
-    <DotNetInstallDir>$([MSBuild]::NormalizeDirectory('$(DotNetInstallRoot)', 'shared', 'Microsoft.NETCore.App', '$(MicrosoftNETCoreAppRuntimewinx64Version)'))</DotNetInstallDir>
+    <DotNetInstallDir>$([MSBuild]::NormalizeDirectory('$(DotNetInstallRoot)', 'shared', 'Microsoft.NETCore.App', '$(MicrosoftNETCoreAppRefVersion)'))</DotNetInstallDir>
     <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
   </PropertyGroup>
 
@@ -103,7 +103,7 @@
           Condition="'$(LiveRuntimeDir)' != ''"
           Inputs="$(VersionsPropsPath)"
           Outputs="$(TestConfigFileName)">
-    
+
     <ItemGroup>
       <_LiveRuntimeFiles Include="$(LiveRuntimeDir)\**\*.*" />
     </ItemGroup>

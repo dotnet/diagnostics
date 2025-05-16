@@ -16,8 +16,8 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest shared runtime version updated by darc -->
-    <VSRedistCommonNetCoreSharedFrameworkx64100Version>10.0.0-preview.5.25229.109</VSRedistCommonNetCoreSharedFrameworkx64100Version>
-    <MicrosoftNETCoreAppRuntimewinx64Version>10.0.0-preview.5.25229.109</MicrosoftNETCoreAppRuntimewinx64Version>
+    <MicrosoftNETCorePlatformsVersion>10.0.0-preview.5.25229.109</MicrosoftNETCorePlatformsVersion>
+    <MicrosoftNETCoreAppRefVersion>10.0.0-preview.5.25229.109</MicrosoftNETCoreAppRefVersion>
     <!-- Latest shared aspnetcore version updated by darc -->
     <MicrosoftAspNetCoreAppRefInternalVersion>10.0.0-preview.5.25229.109</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>10.0.0-preview.5.25229.109</MicrosoftAspNetCoreAppRefVersion>
@@ -114,8 +114,8 @@
   </PropertyGroup>
   <ItemGroup Condition="!$(PrivateBuildTesting) AND !$(InternalReleaseTesting)">
     <RuntimeTestVersions Include="Latest">
-      <RuntimeDownload>$(VSRedistCommonNetCoreSharedFrameworkx64100Version)</RuntimeDownload>
-      <Runtime>$(MicrosoftNETCoreAppRuntimewinx64Version)</Runtime>
+      <RuntimeDownload>$(MicrosoftNETCorePlatformsVersion)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreAppRefVersion)</Runtime>
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
       <TargetFramework>net10.0</TargetFramework>
@@ -138,8 +138,8 @@
   <!-- Private build testing -->
   <ItemGroup Condition="$(PrivateBuildTesting)">
     <RuntimeTestVersions Include="Latest">
-      <RuntimeDownload>$(VSRedistCommonNetCoreSharedFrameworkx64100Version)</RuntimeDownload>
-      <Runtime>$(MicrosoftNETCoreAppRuntimewinx64Version)</Runtime>
+      <RuntimeDownload>$(MicrosoftNETCorePlatformsVersion)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreAppRefVersion)</Runtime>
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
       <TargetFramework>net10.0</TargetFramework>

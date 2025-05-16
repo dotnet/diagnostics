@@ -35,11 +35,7 @@
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>78c5fa9a48d469a19ab5a61c16c955c1f370b5be</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.App.Runtime.win-x64" Version="10.0.0-preview.5.25229.109">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>78c5fa9a48d469a19ab5a61c16c955c1f370b5be</Sha>
-    </Dependency>
-    <Dependency Name="VS.Redist.Common.NetCore.SharedFramework.x64.10.0" Version="10.0.0-preview.5.25229.109">
+    <Dependency Name="Microsoft.NETCore.Platforms" Version="10.0.0-preview.5.25229.109">
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>78c5fa9a48d469a19ab5a61c16c955c1f370b5be</Sha>
     </Dependency>
