@@ -61,14 +61,4 @@
       <FileWrites Include="$(SOSConfigFileName)" />
     </ItemGroup>
   </Target>
-
-  <Target Name="_ApplyTestCategoryFilter" 
-          Condition="'$(SOS_TEST_CDAC)' == 'true'"
-          BeforeTargets="RunTests">
-    <ItemGroup>
-      <TestToRun Include="@(TestToRun)">
-        <TestRunnerAdditionalArguments>-trait Category=CDACCompatible</TestRunnerAdditionalArguments>
-      </TestToRun>
-    </ItemGroup>
-  </Target>
 </Project>
