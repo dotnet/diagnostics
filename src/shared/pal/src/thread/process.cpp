@@ -2371,7 +2371,27 @@ CreateProcessModules(
             }
         }
 
-        if (!dup)
+        // Does the offset in the module correspond to a valid MachO header?
+        bool isMachO = false;
+        int fd = open(moduleName, O_RDONLY);
+        if (fd != -1)
+        {
+            if (lseek(fd, rwpi.prp_prinfo.pri_offset, SEEK_SET) != (off_t)-1)
+            {
+                uint32_t magic = 0;
+                ssize_t bytesRead = read(fd, &magic, sizeof(magic));
+                if (bytesRead == sizeof(magic))
+                {
+                    if (magic == 0xFEEDFACF)
+                    {
+                        isMachO = true;
+                    }
+                }
+            }
+            close(fd);
+        }
+
+        if (!dup && isMachO)
         {
             int cbModuleName = strlen(moduleName) + 1;
             ProcessModules *entry = (ProcessModules *)malloc(sizeof(ProcessModules) + cbModuleName);
