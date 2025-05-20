@@ -109,14 +109,9 @@ VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
 # Issue: https://github.com/dotnet/diagnostics/issues/4654
 # Verify DumpMT
 SOSCOMMAND:DumpMT <POUT>\s*Method Table:\s+(<HEXVAL>)\s+<POUT>
+
+# Only verify the output fields on non-Alpine platforms
 !IFDEF:ALPINE
-# On Alpine, the output verification is skipped but the command still runs
-ENDIF:ALPINE
-IFDEF:ALPINE
-# On Alpine, just verify that the command ran without verifying its output
-ENDIF:ALPINE
-!IFDEF:ALPINE
-# On non-Alpine platforms, verify specific output fields
 VERIFY:\s*Name:\s+SymbolTestApp.Program\s+
 VERIFY:\s*File:\s+.*SymbolTestApp\.(dll|exe)\s+
 ENDIF:ALPINE
