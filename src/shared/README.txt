@@ -3,6 +3,7 @@ The "shared" directory contains the common code between the runtime and diagnost
 It is also shared by the dbgshim and SOS components.
 
 Updated last on 8/14/2024 from the runtime repo commit hash: 96bcf7150deba280a070c6a4d85ca0640e405278
+X86 GC info decoding changes were cherry-picked on 5/16/2025 from the runtime repo commit hash: b85dd69a8e1acb95f70b4a9d82e97213406a3eba
 
 runtime/src/coreclr/inc                                 -> diagnostics/src/shared/inc
 runtime/src/coreclr/debug/dbgutil                       -> diagnostics/src/shared/debug/dbgutil
