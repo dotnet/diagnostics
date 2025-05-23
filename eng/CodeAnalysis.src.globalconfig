@@ -524,6 +524,11 @@ dotnet_diagnostic.CA2020.severity = warning
 
 # CA2021: Do not call Enumerable.Cast<T> or Enumerable.OfType<T> with incompatible types
 dotnet_diagnostic.CA2021.severity = warning
+
+# CA2025: Ensure tasks using 'IDisposable' instances complete before the instances are disposed
+# This is having a fair bit of false positives - downgrade to suggestion.
+dotnet_diagnostic.CA2025.severity = suggestion
+
 # CA2100: Review SQL queries for security vulnerabilities
 dotnet_diagnostic.CA2100.severity = none
 
