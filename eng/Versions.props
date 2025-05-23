@@ -16,8 +16,11 @@
   </PropertyGroup>
   <PropertyGroup>
     <!-- Latest shared runtime version updated by darc -->
+     <!-- We use platforms for the unstable package version and
+      the ref pack as the stable version. We need them as download links
+      use the unstable version, but the installed assets are all stable.  -->
     <MicrosoftNETCorePlatformsVersion>10.0.0-preview.6.25272.109</MicrosoftNETCorePlatformsVersion>
-    <MicrosoftNETCoreAppRefVersion>10.0.0-preview.5.25266.103</MicrosoftNETCoreAppRefVersion>
+    <MicrosoftNETCoreAppRefVersion>10.0.0-preview.6.25272.109</MicrosoftNETCoreAppRefVersion>
     <!-- Latest shared aspnetcore version updated by darc -->
     <MicrosoftAspNetCoreAppRefInternalVersion>10.0.0-preview.6.25272.109</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftAspNetCoreAppRefVersion>10.0.0-preview.6.25272.109</MicrosoftAspNetCoreAppRefVersion>
