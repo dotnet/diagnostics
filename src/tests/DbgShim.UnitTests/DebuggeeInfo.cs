@@ -71,9 +71,21 @@ namespace Microsoft.Diagnostics
             }
             try
             {
-                CancellationTokenSource source = new(TimeSpan.FromMinutes(5));
+                using CancellationTokenSource source = new(TimeSpan.FromMinutes(5));
                 Trace.TraceInformation($"DebuggeeInfo.WaitForDebuggee: waiting {ProcessId}");
-                await _pipeServer.WaitForConnectionAsync(source.Token);
+
+                Task processDeath = _process.WaitForExitAsync(source.Token);
+                Task debuggeeReady = _pipeServer.WaitForConnectionAsync(source.Token);
+                Task doneTask = await Task.WhenAny(processDeath, debuggeeReady).WaitAsync(source.Token);
+
+                source.Cancel();
+
+                if (doneTask == processDeath)
+                {
+                    Trace.TraceWarning($"DebuggeeInfo.WaitForDebuggee: process {ProcessId} exited");
+                    return false;
+                }
+
                 Trace.TraceInformation($"DebuggeeInfo.WaitForDebuggee: after wait {ProcessId}");
             }
             catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)

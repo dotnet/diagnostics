@@ -245,8 +245,16 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                 WriteLine("WaitForTracee");
                 try
                 {
-                    CancellationTokenSource source = new(TimeSpan.FromMinutes(2));
-                    await _pipeServer.WaitForConnectionAsync(source.Token).ConfigureAwait(false);
+                    using CancellationTokenSource source = new(TimeSpan.FromMinutes(2));
+                    Task processDeath = _runner.WaitForExit();
+                    Task traceeReady = _pipeServer.WaitForConnectionAsync(source.Token);
+                    Task doneTask = await Task.WhenAny(processDeath, traceeReady).WaitAsync(source.Token).ConfigureAwait(false);
+
+                    source.Cancel();
+                    if (doneTask == processDeath)
+                    {
+                        Trace.TraceWarning($"WaitForTracee: process {Pid} exited without sending the event");
+                    }
                     WriteLine("WaitForTracee: DONE");
                 }
                 catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
