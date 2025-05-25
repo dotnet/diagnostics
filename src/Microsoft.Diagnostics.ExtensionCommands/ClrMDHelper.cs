@@ -150,7 +150,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         continue;
                     }
 
-                    if (string.CompareOrdinal(objType.Name, "System.Threading.TimerQueue") != 0)
+                    if (objType.Name != "System.Threading.TimerQueue")
                     {
                         continue;
                     }
@@ -386,7 +386,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     continue;
                 }
 
-                if (string.CompareOrdinal(objType.Name, "System.Threading.ThreadPoolWorkQueue") == 0)
+                if (objType.Name == "System.Threading.ThreadPoolWorkQueue")
                 {
                     // work items are stored in a ConcurrentQueue stored in the "workItems" field
                     ClrInstanceField workItemsField = objType.GetFieldByName("workItems");
@@ -413,11 +413,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return GetTask(item);
             }
 
-            if (
-                (string.CompareOrdinal(itemType.Name, "System.Threading.QueueUserWorkItemCallback") == 0) ||
-                // new to .NET Core
-                (string.CompareOrdinal(itemType.Name, "System.Threading.QueueUserWorkItemCallbackDefaultContext") == 0)
-               )
+            if (itemType.Name is
+                "System.Threading.QueueUserWorkItemCallback" or
+                "System.Threading.QueueUserWorkItemCallbackDefaultContext") //new to .net core
             {
                 return GetQueueUserWorkItemCallback(item);
             }
@@ -463,7 +461,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if (taskScheduler.IsValid)
             {
                 string schedulerType = taskScheduler.Type.ToString();
-                if (string.CompareOrdinal("System.Threading.Tasks.ThreadPoolTaskScheduler", schedulerType) != 0)
+                if ("System.Threading.Tasks.ThreadPoolTaskScheduler" != schedulerType)
                 {
                     tpi.MethodName = $"{tpi.MethodName} [{schedulerType}]";
                 }
@@ -542,10 +540,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // method is implemented by an class inherited from targetType
                     // ... or a simple delegate indirection to a static/instance method
                     {
-                        if (
-                            (string.CompareOrdinal(targetType.Name, "System.Threading.WaitCallback") == 0) ||
-                             targetType.Name.StartsWith("System.Action<", StringComparison.Ordinal)
-                            )
+                        if (targetType.Name == "System.Threading.WaitCallback"
+                            || targetType.Name.StartsWith("System.Action<", StringComparison.Ordinal))
                         {
                             return $"{method.Type.Name}.{method.Name}";
                         }
@@ -611,7 +607,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     continue;
                 }
 
-                if (string.CompareOrdinal(type.Name, "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue") == 0)
+                if (type.Name == "System.Threading.ThreadPoolWorkQueue+WorkStealingQueue")
                 {
                     ClrObject stealingQueue = obj;
                     ClrArray workItems = stealingQueue.ReadObjectField("m_array").AsArray();
@@ -667,7 +663,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     continue;
                 }
 
-                if (string.CompareOrdinal(workQueueType.Name, "System.Threading.ThreadPoolWorkQueue") != 0)
+                if (workQueueType.Name != "System.Threading.ThreadPoolWorkQueue")
                 {
                     continue;
                 }

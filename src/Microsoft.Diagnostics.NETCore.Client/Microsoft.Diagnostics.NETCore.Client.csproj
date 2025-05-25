@@ -13,7 +13,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <IsShipping>true</IsShipping>
     <BuildingOutsideDiagnostics>false</BuildingOutsideDiagnostics>
-    <BuildingOutsideDiagnostics Condition="'$(GitHubRepositoryName)' != 'diagnostics'">true</BuildingOutsideDiagnostics>
+    <BuildingOutsideDiagnostics Condition="'$(RepositoryName)' != 'diagnostics'">true</BuildingOutsideDiagnostics>
     <PreReleaseVersionLabel />
   </PropertyGroup>
 
