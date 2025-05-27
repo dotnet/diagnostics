@@ -657,7 +657,7 @@ Followed by an Optional Continuation of a `nettrace` format stream of events.
 
 Command Code: `0x0206`
 
-The `CollectTracing5` command is an extension of the `CollectTracing4` command. It has all the capabilities of `CollectTracing4` and introduces new fields to enable a Linux-only user_events-based eventpipe session and to prescribe an allow/deny list for Event IDs. When the user_events-based eventpipe session is enabled, the file descriptor and SCM_RIGHTS of the `user_events_data` file must be sent through the optional continuation stream as [described](#passing_file_descriptor). The runtime will register tracepoints based on the provider configurations passed in, and runtime events will be written directly to the `user_events_data` file descriptor. The allow/deny list of Event IDs will apply after the keyword/level filter to determine whether or not that provider's event will be written.
+The `CollectTracing5` command is an extension of the `CollectTracing4` command. It has all the capabilities of `CollectTracing4` and introduces new fields to enable a Linux-only user_events-based eventpipe session and to prescribe an enable/disable list for Event IDs. When the user_events-based eventpipe session is enabled, the file descriptor and SCM_RIGHTS of the `user_events_data` file must be sent through the optional continuation stream as [described](#passing_file_descriptor). The runtime will register tracepoints based on the provider configurations passed in, and runtime events will be written directly to the `user_events_data` file descriptor. The enable/disable list of Event IDs will apply after the keyword/level filter to determine whether or not that provider's event will be written.
 
 > Note available for .NET 10.0 and later.
 
@@ -678,11 +678,11 @@ The `streaming_provider_config` is composed of the following data:
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
 * `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
-* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`).
+* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an enable/disable list or (length = `0`).
 
 An `event_filter` is comprised of the following data:
-* `bool allow`: 0 for deny list, 1 for allow list
-* `array<uint> event_ids`: List of Event IDs to deny or allow.
+* `bool enable`: 0 to disable events, 1 to enable events
+* `array<uint> event_ids`: List of Event IDs to disable or enable.
 
 See [event_filter serialization examples](#event_filter)
 
@@ -696,12 +696,12 @@ The `user_events_provider_config` is composed of the following data:
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
 * `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
-* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`).
+* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an enable/disable list or (length = `0`).
 * `tracepoint_config config`: Maps Event IDs to tracepoints. If an Event ID is excluded by `event_filter`, it will not be written to any tracepoint.
 
 An `event_filter` is comprised of the following data:
-* `bool allow`: 0 for deny list, 1 for allow list
-* `array<uint> event_ids`: List of Event IDs to deny or allow.
+* `bool enable`: 0 to disable events, 1 to enable events
+* `array<uint> event_ids`: List of Event IDs to disable or enable.
 
 See [event_filter serialization examples](#event_filter)
 
@@ -736,8 +736,8 @@ A User_events Session started with `CollectTracing5` expects the Optional Contin
 ### Event_filter
 Example `event_filter` serialization. Serializing
 ```
-allow=0, event_ids=[]
-Deny Nothing === Allow all events.
+enable=0, event_ids=[]
+Disable Nothing === Enable all events.
 ```
 <table>
   <tr>
@@ -751,7 +751,7 @@ Deny Nothing === Allow all events.
   </tr>
   <tr>
     <tr>
-    <td colspan="1">allow</td>
+    <td colspan="1">enable</td>
     <td colspan="1">event_ids</td>
   </tr>
   <tr>
@@ -761,8 +761,8 @@ Deny Nothing === Allow all events.
 </table>
 
 ```
-allow=0, event_ids=[4, 5]
-Deny only Event IDs 4 and 5 === Allow all Event IDs except 4 and 5
+enable=0, event_ids=[4, 5]
+Disable only Event IDs 4 and 5 === Enable all Event IDs except 4 and 5
 ```
 
 <table>
@@ -777,7 +777,7 @@ Deny only Event IDs 4 and 5 === Allow all Event IDs except 4 and 5
     <td colspan="4">array&ltuint&gt</td>
   </tr>
   <tr>
-    <td colspan="1">allow</td>
+    <td colspan="1">enable</td>
     <td colspan="4">event_ids</td>
   </tr>
   <tr>
@@ -789,8 +789,8 @@ Deny only Event IDs 4 and 5 === Allow all Event IDs except 4 and 5
 </table>
 
 ```
-allow=1, event_ids=[]
-Allow Nothing === Deny all events.
+enable=1, event_ids=[]
+Enable Nothing === Disable all events.
 ```
 
 <table>
@@ -805,7 +805,7 @@ Allow Nothing === Deny all events.
   </tr>
   <tr>
     <tr>
-    <td colspan="1">allow</td>
+    <td colspan="1">enable</td>
     <td colspan="1">event_ids</td>
   </tr>
   <tr>
@@ -815,8 +815,8 @@ Allow Nothing === Deny all events.
 </table>
 
 ```
-allow=1, event_ids=[1, 2, 3]
-Allow only EventIDs 1, 2, and 3 === Deny all EventIDs except 1, 2, and 3.
+enable=1, event_ids=[1, 2, 3]
+Enable only EventIDs 1, 2, and 3 === Disable all EventIDs except 1, 2, and 3.
 ```
 
 <table>
@@ -834,7 +834,7 @@ Allow only EventIDs 1, 2, and 3 === Deny all EventIDs except 1, 2, and 3.
   </tr>
   <tr>
     <tr>
-    <td colspan="1">allow</td>
+    <td colspan="1">enable</td>
     <td colspan="4">event_ids</td>
   </tr>
   <tr>
@@ -854,7 +854,7 @@ Output_format=1, encode bytes for tracepoint_config
 ```
 
 ```
-All allowed Event IDs will be written to a default "MyTracepoint" tracepoint
+All enabled Event IDs will be written to a default "MyTracepoint" tracepoint
 ```
 <table>
   <tr>
@@ -879,8 +879,8 @@ All allowed Event IDs will be written to a default "MyTracepoint" tracepoint
 </table>
 
 ```
-Allowed Event IDs 1 - 9 will be written to tracepoint "LowEvents".
-All other allowed Event IDs will be written to "MyTracepoint"
+Enabled Event IDs 1 - 9 will be written to tracepoint "LowEvents".
+All other enabled Event IDs will be written to "MyTracepoint"
 ```
 <table>
   <tr>
@@ -935,8 +935,8 @@ All other allowed Event IDs will be written to "MyTracepoint"
 </table>
 
 ```
-Allowed Event IDs 1 - 9 will be written to tracepoint "LowEvents".
-No default tracepoint needed, don't write any other allowed Event IDs
+Enabled Event IDs 1 - 9 will be written to tracepoint "LowEvents".
+No default tracepoint needed, don't write any other enabled Event IDs
 ```
 <table>
   <tr>
