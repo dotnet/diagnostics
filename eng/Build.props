@@ -1,5 +1,6 @@
 <Project>
 
+  <!-- Only build the NETCore.Client library in .NET product build mode. -->
   <ItemGroup Condition="'$(DotNetBuild)' == 'true'">
     <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
   </ItemGroup>

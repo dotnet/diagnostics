@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             ParseTcpIpEndPoint(endPoint, out string host, out int port);
             EndPoint = CreateEndPoint(host, port);
-            DualMode = string.CompareOrdinal(host, "*") == 0;
+            DualMode = host == "*";
         }
 
         public static implicit operator EndPoint(IpcTcpSocketEndPoint endPoint) => endPoint.EndPoint;
@@ -98,7 +98,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     port = int.Parse(segments[1]);
                 }
 
-                if (string.CompareOrdinal(host, "*") != 0)
+                if (host == "*")
                 {
                     if (!IPAddress.TryParse(host, out _))
                     {
@@ -122,7 +122,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             IPAddress ipAddress = null;
             try
             {
-                if (string.CompareOrdinal(host, "*") == 0)
+                if (host == "*")
                 {
                     if (Socket.OSSupportsIPv6)
                     {
