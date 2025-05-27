@@ -378,9 +378,10 @@ public class SOSRunner : IDisposable
                         if (pipeServer != null)
                         {
                             dotnetDumpOutputHelper.WriteLine("Waiting for connection on pipe {0}", pipeName);
-                            CancellationTokenSource source = new(TimeSpan.FromMinutes(5));
+                            using CancellationTokenSource source = new(TimeSpan.FromMinutes(5));
 
                             // Wait for debuggee to connect/write to pipe or if the process exits on some other failure/abnormally
+                            // TODO: This is a resiliency issue - we'll try to collect the dump even if the debuggee fails to connect.
                             await Task.WhenAny(pipeServer.WaitForConnectionAsync(source.Token), processRunner.WaitForExit());
                         }
 
