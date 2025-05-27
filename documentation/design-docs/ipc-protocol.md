@@ -228,7 +228,7 @@ As an example, the [CollectTracing](#collecttracing) command to EventPipe encode
     <td colspan="4">logLevel</td>
     <td colspan="4">provider_name length</td>
     <td colspan="28">provider_name string</td>
-    <td colspan="4">filter_data length</td>
+    <td colspan="4">arguments length</td>
   </tr>
   <tr>
     <td colspan="14">"DOTNET_IPC_V1"</td>
@@ -424,7 +424,7 @@ A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data`: (Callback filter information) or (length = `0`)
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 
@@ -451,7 +451,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data
+    string arguments
 }
 ```
 
@@ -483,7 +483,7 @@ A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data`: (Callback filter information) or (length = `0`)
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 >
@@ -511,7 +511,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data
+    string arguments
 }
 ```
 
@@ -544,7 +544,7 @@ A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data`: (Callback filter information) or (length = `0`)
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 >
@@ -573,7 +573,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data
+    string arguments
 }
 ```
 
@@ -612,7 +612,7 @@ A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data`: (Callback filter information) or (length = `0`)
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 >
@@ -640,7 +640,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data
+    string arguments
 }
 ```
 
@@ -677,7 +677,7 @@ The `streaming_provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this provider
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data`: (Callback filter information) or (length = `0`)
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
 * `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`).
 
 An `event_filter` is comprised of the following data:
@@ -695,7 +695,7 @@ The `user_events_provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this provider
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data`: (Callback filter information) or (length = `0`)
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
 * `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an allow/deny list or (length = `0`).
 * `tracepoint_config config`: Maps Event IDs to tracepoints. If an Event ID is excluded by `event_filter`, it will not be written to any tracepoint.
 
