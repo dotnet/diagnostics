@@ -488,6 +488,11 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task ConcurrentDictionaries(TestConfiguration config)
     {
+        if (OS.Kind != OSKind.Windows && config.RuntimeFrameworkVersionMajor == 10)
+        {
+            throw new SkipTestException("Dumping concurrent dict objects in dumps hits unavailable memory on linux dumps. Tracking: dotnet/diagnostics#5491");
+        }
+
         await SOSTestHelpers.RunTest(
             scriptName: "ConcurrentDictionaries.script",
             new SOSRunner.TestInformation
