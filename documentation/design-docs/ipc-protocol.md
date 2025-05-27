@@ -667,8 +667,8 @@ Header: `{ Magic; 20 + Payload Size; 0x0206; 0x0000 }`
 
 #### Streaming Session Payload:
 * `uint output_format`: 0
-* `uint circularBufferMB`: The size of the circular buffer used for buffering event data
-* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
+* `uint streaming_circularBufferMB`: Specifies the size of the Streaming session's circular buffer used for buffering event data.
+* `uint streaming_format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format. Specifies the format in which event data will be serialized into the IPC Stream
 * `ulong rundownKeyword`: Indicates the keyword for the rundown provider
 * `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
 * `array<streaming_provider_config> providers`: The providers to turn on for the session
