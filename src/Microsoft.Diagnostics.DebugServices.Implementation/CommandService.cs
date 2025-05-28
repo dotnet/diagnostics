@@ -436,9 +436,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Output = console
                 };
 
-                // Get the command help by parsing the --help option
-                // and invoking the help action that writes to configuration.Output.
+                // Get the command help by parsing the --help option.
+                // The option is hidden so it doesn't show up in the help text.
+                command.Options.Add(new HelpOption() { Hidden = true });
+                // Invoking the help action writes to configuration.Output.
                 command.Parse(["--help"], configuration).Invoke();
+                command.Options.RemoveAt(command.Options.Count - 1); // Remove the help option
 
                 // Get the detailed help if any
                 if (TryGetCommandHandler(command.Name, out CommandHandler handler))
