@@ -26,6 +26,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="verbose">Enable verbose logging.</param>
         /// <param name="name">The process name to collect the gcdump from.</param>
         /// <param name="diagnosticPort">The diagnostic IPC channel to collect the gcdump from.</param>
+        /// <param name="dsrouter">The dsrouter command to use for collecting the gcdump.</param>
         /// <returns></returns>
         private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter)
         {
@@ -80,6 +81,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     if (TryCollectMemoryGraph(ct, processId, diagnosticPort, timeout, verbose, out MemoryGraph memoryGraph))
                     {
                         GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
+                        DsRouterProcessLauncher.Launcher.Cleanup();
                         return true;
                     }
 
@@ -87,6 +89,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 });
 
                 bool fDumpSuccess = await dumpTask.ConfigureAwait(false);
+                DsRouterProcessLauncher.Launcher.Cleanup();
 
                 if (fDumpSuccess)
                 {
@@ -139,7 +142,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 VerboseOption,
                 TimeoutOption,
                 NameOption,
-                DiagnosticPortOption
+                DiagnosticPortOption,
+                DsRouterOption
             };
 
             collectCommand.SetAction(static (parseResult, ct) => Collect(ct,
@@ -149,7 +153,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     verbose: parseResult.GetValue(VerboseOption),
                     name: parseResult.GetValue(NameOption),
                     diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
-                    dsrouter: string.Empty));
+                    dsrouter: parseResult.GetValue(DsRouterOption) ?? string.Empty));
 
             return collectCommand;
         }
@@ -190,6 +194,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             new("--diagnostic-port", "--dport")
             {
                 Description = "The path to a diagnostic port to collect the dump from."
+            };
+
+        private static readonly Option<string> DsRouterOption =
+            new("--dsrouter")
+            {
+                Description = "The dsrouter command to use for collecting the gcdump. If specified, the --process-id, --name, or --diagnostic-port options cannot be used."
             };
     }
 }
