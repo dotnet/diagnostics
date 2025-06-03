@@ -81,7 +81,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     if (TryCollectMemoryGraph(ct, processId, diagnosticPort, timeout, verbose, out MemoryGraph memoryGraph))
                     {
                         GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
-                        DsRouterProcessLauncher.Launcher.Cleanup();
                         return true;
                     }
 
@@ -89,7 +88,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 });
 
                 bool fDumpSuccess = await dumpTask.ConfigureAwait(false);
-                DsRouterProcessLauncher.Launcher.Cleanup();
 
                 if (fDumpSuccess)
                 {
@@ -112,6 +110,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             {
                 Console.Error.WriteLine($"[ERROR] {ex}");
                 return -1;
+            }
+            finally
+            {
+                DsRouterProcessLauncher.Launcher.Cleanup();
             }
         }
 
