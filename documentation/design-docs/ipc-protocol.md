@@ -667,7 +667,7 @@ The `CollectTracing5` command is an extension of the `CollectTracing4` command. 
 Header: `{ Magic; 20 + Payload Size; 0x0206; 0x0000 }`
 
 #### Streaming Session Payload:
-* `uint output_format`: 0
+* `uint session_type`: 0
 * `uint streaming_circularBufferMB`: Specifies the size of the Streaming session's circular buffer used for buffering event data.
 * `uint streaming_format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format. Specifies the format in which event data will be serialized into the IPC Stream
 * `ulong rundownKeyword`: Indicates the keyword for the rundown provider
@@ -688,7 +688,7 @@ An `event_filter` is comprised of the following data:
 See [event_filter serialization examples](#event_filter)
 
 #### User_events Session Payload:
-* `uint output_format`: 1
+* `uint session_type`: 1
 * `ulong rundownKeyword`: Indicates the keyword for the rundown provider
 * `array<user_events_provider_config> providers`: The providers to turn on for the session
 
@@ -850,8 +850,8 @@ Enable only EventIDs 1, 2, and 3 === Disable all EventIDs except 1, 2, and 3.
 ### Tracepoint_config
 Example `tracepoint_config` serialization
 ```
-Output_format=0, Streaming Sessions DO NOT encode bytes for tracepoint_config
-Output_format=1, encode bytes for tracepoint_config
+session_type=0, Streaming Sessions DO NOT encode bytes for tracepoint_config
+session_type=1, encode bytes for tracepoint_config
 ```
 
 ```
@@ -993,7 +993,7 @@ No default tracepoint needed, don't write any other enabled Event IDs
 
 > Note: This only applies to enabling an user_event-based EventPipe session, which is specifically a Linux feature
 
-To register [user_event](https://docs.kernel.org/trace/user_events.html) tracepoints and write events, access to the root protected `user_events_data` file is required. Once the .NET Runtime's Diagnostic Server processes a [CollectTracing5](#collecttracing5) command specifying the `user_events` format (`output_format=1`), it expects that the client will send a file descriptor to the [continuation stream](#general-flow) via SCM_RIGHTS.
+To register [user_event](https://docs.kernel.org/trace/user_events.html) tracepoints and write events, access to the root protected `user_events_data` file is required. Once the .NET Runtime's Diagnostic Server processes a [CollectTracing5](#collecttracing5) command specifying the `user_events` format (`session_type=1`), it expects that the client will send a file descriptor to the [continuation stream](#general-flow) via SCM_RIGHTS.
 
 ```C
 #include <sys/socket.h>
