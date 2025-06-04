@@ -192,6 +192,7 @@ Payloads are either encoded as fixed size structures that can be `memcpy`'ed , _
 * `uint` = 4 little endian bytes
 * `ulong` = 8 little endian bytes
 * `wchar` = 2 little endian bytes, UTF16 encoding
+* `bool` = 1 unsigned byte
 * `array<T>` = uint length, length # of `T`s
 * `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
 
@@ -355,8 +356,8 @@ EventPipe Payloads are encoded with the following rules:
 * `uint` = 4 little endian bytes
 * `ulong` = 8 little endian bytes
 * `wchar` = 2 little endian bytes, UTF16 encoding
-* `byte` = 1 unsigned little endian byte
-* `bool` = 1 unsigned little endian byte
+* `byte` = 1 unsigned byte
+* `bool` = 1 unsigned byte
 * `array<T>` = uint length, length # of `T`s
 * `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
 
