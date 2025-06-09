@@ -33,7 +33,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(BuildArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
+    <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(TargetArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
     <DotNetInstallDir>$([MSBuild]::NormalizeDirectory('$(DotNetInstallRoot)', 'shared', 'Microsoft.NETCore.App', '$(MicrosoftNETCoreAppRefVersion)'))</DotNetInstallDir>
     <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
   </PropertyGroup>
