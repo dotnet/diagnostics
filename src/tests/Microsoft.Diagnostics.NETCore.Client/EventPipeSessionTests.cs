@@ -212,7 +212,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                 });
                 runner.WriteLine("Waiting for stream Task");
-                streamTask.Wait(10000);
+                try
+                {
+                    await streamTask.WaitAsync(TimeSpan.FromMilliseconds(10000));
+                }
+                catch (TimeoutException)
+                {
+                    // Continue even if the stream task doesn't complete within the timeout
+                    runner.WriteLine("Stream task did not complete within timeout, proceeding to stop session");
+                }
                 runner.WriteLine("Done waiting for stream Task");
                 session.Stop();
                 runner.WakeupTracee();
