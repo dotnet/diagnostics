@@ -173,7 +173,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             runner.Stop();
         }
 
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4717"), MemberData(nameof(Configurations))]
+        [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task StartEventPipeSessionWithoutStackwalkTestAsync(TestConfiguration testConfig)
         {
             if (testConfig.RuntimeFrameworkVersionMajor < 9)
@@ -210,15 +210,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         // This exception can happen if the target process exits while EventPipeEventSource is in the middle of reading from the pipe.
                         runner.WriteLine($"Error encountered while processing events {ex}");
                     }
-                    finally
-                    {
-                        runner.WakeupTracee();
-                    }
                 });
                 runner.WriteLine("Waiting for stream Task");
                 streamTask.Wait(10000);
                 runner.WriteLine("Done waiting for stream Task");
                 session.Stop();
+                runner.WakeupTracee();
                 await streamTask;
 
                 tmpFileStream.Close();
