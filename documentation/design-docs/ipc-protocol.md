@@ -1027,7 +1027,7 @@ Once the runtime has received the configured tracepoint names as detailed under 
 
 ##### Tracepoint Format V1
 
-`<tracepoint_name> u8 version; u16 event_id; __rel_loc u8[] extension; __rel_loc u8[] payload; __rel_loc u8[] meta`
+`<tracepoint_name> u8 version; u16 event_id; __rel_loc u8[] extension; __rel_loc u8[] payload`
 
 See [user_events writing](#user_events-writing) below for field details`.
 
@@ -1044,12 +1044,10 @@ io[1].iov_base = &version;           // __u8 tracepoint format version
 io[1].iov_len = sizeof(version);
 io[2].iov_base = &event_id;          // __u16 EventID defined by EventSource/native manifest
 io[2].iov_len = sizeof(event_id);
-io[3].iov_base = &extension;         // __rel_loc u8[] NetTrace V6 label list
+io[3].iov_base = &extension;         // __rel_loc u8[] optional event information
 io[3].iov_base = sizeof(extension);
 io[4].iov_base = &payload;           // __rel_loc u8[] event payload
 io[4].iov_len = sizeof(payload);
-io[5].iov_base = &meta;              // __rel_loc u8[] event metadata
-io[5].iov_len = sizeof(meta);
 io[6].iov_base = &data;              // __u8[] data
 io[6].iov_len = data_len;
 
@@ -1064,7 +1062,40 @@ The `version` is the version of the tracepoint format, which in this case is [ve
 
 The `event_id` is the ID of the event, defined by the EventSource/native manifest.
 
-The `extension` points at a [NetTrace V6 LabelList block](https://github.com/microsoft/perfview/blob/main/src/TraceEvent/EventPipe/NetTraceFormat.md#labellistblock) describing other fields associated with the event. e.g. ActivityId, RelatedActivityId, event_thread, and stack.
+#### Extension Blob Format
+
+The `extension` field is an optional data blob that can provide additional information about an event. Its structure is as follows:
+
+1. **Label** (`byte`): Indicates the type of data that follows.
+2. **Data**: The content, whose format depends on the label.
+
+**Label Values and Corresponding Data:**
+
+| Label  | Meaning                | Data Format                | Description                                                                 |
+|--------|------------------------|----------------------------|-----------------------------------------------------------------------------|
+| 0x01   | Event Metadata         | `array<byte> metadata`     | Contains event metadata, formatted per NetTrace v5.                         |
+| 0x02   | ActivityId             | `uint16 guid`              | Contains the GUID for the ActivityId.                                       |
+| 0x03   | RelatedActivityId      | `uint16 guid`              | Contains the GUID for the RelatedActivityId.                                |
+
+**Details:**
+- The extension blob may be empty if no extra information is present.
+- Multiple extension blobs can be concatenated if more than one piece of information is needed. Each blob starts with its own label byte.
+- For Event Metadata (`0x01`), the `metadata` array matches the NetTrace v5 PayloadBytes format.
+- For ActivityId and RelatedActivityId (`0x02`, `0x03`), the `guid` is a 16-byte value representing the GUID.
+- The size of the entire extension blob can be inferred from the extension `__rel_loc` field. See the [__rel_loc documentation](https://lwn.net/Articles/876682/) for more details.
+
+**Example Layout:**
+
+```
+[Label][Data][Label][Data]...
+```
+
+For example, an extension blob containing both Event Metadata and ActivityId would look like:
+- `[0x01][metadata][0x02][guid]`
+
+**Notes:**
+- The runtime includes Event Metadata only the first time an event is sent in a session.
+- Native runtime events do not include metadata.
 
 The `payload` points at a blob of data with the same format as an EventPipe payload – the concatenated encoded values for all the parameters.
 
