@@ -49,6 +49,7 @@ else()
     file(GLOB LLDB_H_PATHS
         "$ENV{ROOTFS_DIR}/usr/lib/llvm-*/include/lldb/API/LLDB.h"
         "$ENV{ROOTFS_DIR}/usr/local/llvm*/include/lldb/API/LLDB.h"
+        "$ENV{ROOTFS_DIR}/usr/include/lldb/API/LLDB.h"
     )
 
     # Add explicitly specified path if provided
