@@ -59,7 +59,7 @@ else()
     endif()
 
     # Sort the list to get the highest version last
-    list(SORT LLDB_H_PATHS)
+    list(SORT LLDB_H_PATHS COMPARE NATURAL)
 
     list(LENGTH LLDB_H_PATHS LLDB_H_PATHS_LEN)
     if(LLDB_H_PATHS_LEN GREATER 0)
