@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
+using Xamarin.Android.Tools;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
@@ -65,7 +66,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public static bool RunAdbCommandInternal(string command, string expectedOutput, int expectedExitCode, bool rethrow, ILogger logger)
         {
-            string sdkRoot = Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT");
+            //ANDROID_SDK_ROOT is deprecated
+            string sdkRoot = Environment.GetEnvironmentVariable("ANDROID_HOME") ?? Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT") ?? new AndroidSdkInfo().AndroidSdkPath;
             string adbTool = "adb";
 
             if (!string.IsNullOrEmpty(sdkRoot))
