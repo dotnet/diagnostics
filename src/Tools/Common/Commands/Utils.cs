@@ -66,7 +66,7 @@ namespace Microsoft.Internal.Common.Utils
         /// <returns></returns>
         public static bool ValidateArgumentsForChildProcess(int processId, string name, string port)
         {
-            if (processId != 0 && name != null && !string.IsNullOrEmpty(port))
+            if (processId != 0 || name != null || !string.IsNullOrEmpty(port))
             {
                 Console.WriteLine("None of the --name, --process-id, or --diagnostic-port options may be specified when launching a child process.");
                 return false;
@@ -99,9 +99,11 @@ namespace Microsoft.Internal.Common.Utils
                 Console.WriteLine($"{processId} is not a valid process ID");
                 return false;
             }
-            else if ( processId != 0 && (!string.IsNullOrEmpty(name) || !string.IsNullOrEmpty(port) || !string.IsNullOrEmpty(dsrouter))
-                    || !string.IsNullOrEmpty(name) && (!string.IsNullOrEmpty(port) || !string.IsNullOrEmpty(dsrouter))
-                    || !string.IsNullOrEmpty(port) && !string.IsNullOrEmpty(dsrouter))
+            else if ((processId != 0 ? 1 : 0) +
+                     (!string.IsNullOrEmpty(name) ? 1 : 0) +
+                     (!string.IsNullOrEmpty(port) ? 1 : 0) +
+                     (!string.IsNullOrEmpty(dsrouter) ? 1 : 0)
+                     != 1)
             {
                 Console.WriteLine("Only one of the --name, --process-id, --diagnostic-port, or --dsrouter options may be specified.");
                 return false;
