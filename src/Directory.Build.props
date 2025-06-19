@@ -1,6 +1,5 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
-  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <PropertyGroup>
     <IsShipping>false</IsShipping>
@@ -12,6 +11,5 @@
   </PropertyGroup>
 
   <Import Project="$(RepositoryEngineeringDir)native\naming.props" />
-  <Import Condition="'$(DotNetBuildSourceOnly)' != 'true'"
-          Project="$(RepositoryEngineeringDir)Analyzers.props" />
+  <Import Condition="'$(DotNetBuildSourceOnly)' != 'true'" Project="$(RepositoryEngineeringDir)Analyzers.props" />
 </Project>
