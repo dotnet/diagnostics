@@ -192,95 +192,30 @@ Payloads are either encoded as fixed size structures that can be `memcpy`'ed , _
 * `uint` = 4 little endian bytes
 * `ulong` = 8 little endian bytes
 * `wchar` = 2 little endian bytes, UTF16 encoding
+* `bool` = 1 unsigned byte
 * `array<T>` = uint length, length # of `T`s
 * `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
 
-As an example, the CollectTracing command to EventPipe (explained below) encodes its Payload as:
+As an example, the [CollectTracing](#collecttracing) command to EventPipe encodes its Payload as:
 
 <table>
   <tr>
-    <th>1</th>
-    <th>2</th>
-    <th>3</th>
-    <th>4</th>
-    <th>5</th>
-    <th>6</th>
-    <th>7</th>
-    <th>8</th>
-    <th>9</th>
-    <th>10</th>
-    <th>11</th>
-    <th>12</th>
-    <th>13</th>
-    <th>14</th>
-    <th>15</th>
-    <th>16</th>
-    <th>17</th>
-    <th>18</th>
-    <th>19</th>
-    <th>20</th>
-    <th>21</th>
-    <th>22</th>
-    <th>23</th>
-    <th>24</th>
-    <th>25</th>
-    <th>26</th>
-    <th>27</th>
-    <th>28</th>
-    <th>29</th>
-    <th>30</th>
-    <th>31</th>
-    <th>32</th>
-    <th>33</th>
-    <th>34</th>
-    <th>35</th>
-    <th>36</th>
-    <th>37</th>
-    <th>38</th>
-    <th>39</th>
-    <th>40</th>
-    <th>41</th>
-    <th>42</th>
-    <th>43</th>
-    <th>44</th>
-    <th>45</th>
-    <th>46</th>
-    <th>47</th>
-    <th>48</th>
-    <th>49</th>
-    <th>50</th>
-    <th>51</th>
-    <th>52</th>
-    <th>53</th>
-    <th>54</th>
-    <th>55</th>
-    <th>56</th>
-    <th>57</th>
-    <th>58</th>
-    <th>59</th>
-    <th>60</th>
-    <th>61</th>
-    <th>62</th>
-    <th>63</th>
-    <th>64</th>
-    <th>65</th>
-    <th>66</th>
-    <th>67</th>
-    <th>68</th>
-    <th>69</th>
-    <th>70</th>
-    <th>71</th>
-    <th>72</th>
-    <th>73</th>
-    <th>74</th>
-    <th>75</th>
-    <th>76</th>
-    <th>77</th>
-    <th>78</th>
+    <td colspan="14">1 - 14</td>
+    <td colspan="2">15 - 16</td>
+    <td colspan="2">17 - 18</td>
+    <td colspan="2">19 - 20</td>
+    <td colspan="4">21 - 24</td>
+    <td colspan="4">25 - 28</td>
+    <td colspan="4">29 - 32</td>
+    <td colspan="8">33 - 40</td>
+    <td colspan="4">41 - 44</td>
+    <td colspan="4">45 - 48</td>
+    <td colspan="28">49 - 76</td>
+    <td colspan="4">77 - 80</td>
   </tr>
   <tr>
     <td colspan="20">Header</td>
-    <td colspan="58">Payload</td>
+    <td colspan="60">Payload</td>
   </tr>
   <tr>
     <td colspan="14">magic</td>
@@ -288,27 +223,27 @@ As an example, the CollectTracing command to EventPipe (explained below) encodes
     <td colspan="2">command</td>
     <td colspan="2">reserved</td>
     <td colspan="4">circularBufferMB</td>
-    <td colspan="4">outputPath Length</td>
-    <td colspan="16">outputPath String</td>
+    <td colspan="4">format</td>
     <td colspan="4">n Providers</td>
     <td colspan="8">Keywords</td>
     <td colspan="4">logLevel</td>
     <td colspan="4">provider_name length</td>
-    <td colspan="14">provider_name string</td>
+    <td colspan="28">provider_name string</td>
+    <td colspan="4">arguments length</td>
   </tr>
   <tr>
     <td colspan="14">"DOTNET_IPC_V1"</td>
-    <td colspan="2">78</td>
+    <td colspan="2">80</td>
     <td colspan="2">0x0202</td>
     <td colspan="2">0x0000</td>
     <td colspan="4">250</td>
-    <td colspan="4">16</td>
-    <td colspan="16">"/tmp/foo.nettrace"</td>
+    <td colspan="4">1</td>
     <td colspan="4">1</td>
     <td colspan="8">100</td>
     <td colspan="4">2</td>
     <td colspan="4">14</td>
-    <td colspan="14">"MyEventSource"</td>
+    <td colspan="28">"MyEventSource"</td>
+    <td colspan="4">0</td>
   </tr>
 </table>
 
@@ -351,6 +286,7 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing2 = 0x03, // create/start a given session with/without rundown
     CollectTracing3 = 0x04, // create/start a given session with/without collecting stacks
     CollectTracing4 = 0x05, // create/start a given session with specific rundown keyword
+    CollectTracing5 = 0x06, // create/start a given session with/without user_events
 }
 ```
 See: [EventPipe Commands](#EventPipe-Commands)
@@ -359,7 +295,9 @@ See: [EventPipe Commands](#EventPipe-Commands)
 enum class DumpCommandId : uint8_t
 {
     // reserved     = 0x00,
-    CreateCoreDump  = 0x01,
+    GenerateCoreDump  = 0x01,
+    GenerateCoreDump2  = 0x02,
+    GenerateCoreDump3  = 0x03,
     // future
 }
 ```
@@ -370,6 +308,7 @@ enum class ProfilerCommandId : uint8_t
 {
     // reserved     = 0x00,
     AttachProfiler  = 0x01,
+    StartupProfiler = 0x02,
     // future
 }
 ```
@@ -378,14 +317,15 @@ See: [Profiler Commands](#Profiler-Commands)
 ```c++
 enum class ProcessCommandId : uint8_t
 {
-    ProcessInfo        = 0x00,
-    ResumeRuntime      = 0x01,
-    ProcessEnvironment = 0x02,
-    ProcessInfo2       = 0x04,
-    EnablePerfMap      = 0x05,
-    DisablePerfMap     = 0x06,
-    ApplyStartupHook   = 0x07
-    ProcessInfo3       = 0x08,
+    ProcessInfo            = 0x00,
+    ResumeRuntime          = 0x01,
+    ProcessEnvironment     = 0x02,
+    SetEnvironmentVariable = 0x03,
+    ProcessInfo2           = 0x04,
+    EnablePerfMap          = 0x05,
+    DisablePerfMap         = 0x06,
+    ApplyStartupHook       = 0x07
+    ProcessInfo3           = 0x08,
     // future
 }
 ```
@@ -397,6 +337,7 @@ For example, the Command to start a stream session with EventPipe would be `0x02
 
 ## EventPipe Commands
 
+### EventPipe Command IDs
 ```c++
 enum class EventPipeCommandId : uint8_t
 {
@@ -406,6 +347,7 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing2 = 0x03, // create/start a given session with/without rundown
     CollectTracing3 = 0x04, // create/start a given session with/without collecting stacks
     CollectTracing4 = 0x05, // create/start a given session with specific rundown keyword
+    CollectTracing5 = 0x06, // create/start a given session with/without user_events
 }
 ```
 EventPipe Payloads are encoded with the following rules:
@@ -414,9 +356,49 @@ EventPipe Payloads are encoded with the following rules:
 * `uint` = 4 little endian bytes
 * `ulong` = 8 little endian bytes
 * `wchar` = 2 little endian bytes, UTF16 encoding
-* `byte` = 1 unsigned little endian byte
+* `byte` = 1 unsigned byte
+* `bool` = 1 unsigned byte
 * `array<T>` = uint length, length # of `T`s
 * `string` = (`array<wchar>` where the last `wchar` must = `0`) or (length = `0`)
+
+### `StopTracing`
+
+Command Code: `0x0201`
+
+The `StopTracing` command is used to stop a specific EventPipe session.  Clients are expected to use this command to stop EventPipe sessions started with [`CollectStreaming`](#CollectStreaming).
+
+#### Inputs:
+
+Header: `{ Magic; 28; 0x0201; 0x0000 }`
+
+Payload:
+* `ulong sessionId`: The ID for the EventPipe session to stop
+
+#### Returns:
+
+Header: `{ Magic; 28; 0xFF00; 0x0000 }`
+
+Payload:
+* `ulong sessionId`: the ID for the EventPipe session that was stopped
+
+
+##### Details:
+
+Inputs:
+```c
+Payload
+{
+   ulong sessionId
+}
+```
+
+Returns:
+```c
+Payload
+{
+   ulong sessionId
+}
+```
 
 ### `CollectTracing`
 
@@ -432,17 +414,18 @@ If the stream is stopped prematurely due to a client or server error, the `nettr
 
 #### Inputs:
 
-Header: `{ Magic; Size; 0x0202; 0x0000 }`
+Header: `{ Magic; 20 + Payload Size; 0x0202; 0x0000 }`
 
+Payload:
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
-* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
 A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data` (optional): Filter information
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 
@@ -469,7 +452,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data (optional)
+    string arguments
 }
 ```
 
@@ -490,10 +473,10 @@ The `CollectTracing2` command is an extension of the `CollectTracing` command - 
 
 #### Inputs:
 
-Header: `{ Magic; Size; 0x0203; 0x0000 }`
+Header: `{ Magic; 20 + Payload Size; 0x0203; 0x0000 }`
 
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
-* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
 * `bool requestRundown`: Indicates whether rundown should be fired by the runtime.
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
@@ -501,7 +484,7 @@ A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data` (optional): Filter information
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 >
@@ -529,7 +512,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data (optional)
+    string arguments
 }
 ```
 
@@ -550,10 +533,10 @@ The `CollectTracing3` command is an extension of the `CollectTracing2` command -
 
 #### Inputs:
 
-Header: `{ Magic; Size; 0x0203; 0x0000 }`
+Header: `{ Magic; 20 + Payload Size; 0x0203; 0x0000 }`
 
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
-* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
 * `bool requestRundown`: Indicates whether rundown should be fired by the runtime.
 * `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
 * `array<provider_config> providers`: The providers to turn on for the streaming session
@@ -562,7 +545,7 @@ A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data` (optional): Filter information
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 >
@@ -591,7 +574,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data (optional)
+    string arguments
 }
 ```
 
@@ -608,7 +591,7 @@ Followed by an Optional Continuation of a `nettrace` format stream of events.
 
 Command Code: `0x0205`
 
-The `CollectTracing4` command is an extension of the `CollectTracing3` command - its behavior is the same as `CollectTracing3` command, except the requestRundown field is replaced by the rundownKeyword field to allow customizing the set of rundown events to be fired. 
+The `CollectTracing4` command is an extension of the `CollectTracing3` command - its behavior is the same as `CollectTracing3` command, except the requestRundown field is replaced by the rundownKeyword field to allow customizing the set of rundown events to be fired.
 
 A rundown keyword of `0x80020139` has the equivalent behavior as `CollectTracing3` with `requestRundown=true` and rundown keyword of `0` has the equivalent behavior as `requestRundown=false`.
 
@@ -617,18 +600,20 @@ A rundown keyword of `0x80020139` has the equivalent behavior as `CollectTracing
 
 #### Inputs:
 
-Header: `{ Magic; Size; 0x0205; 0x0000 }`
+Header: `{ Magic; 20 + Payload Size; 0x0205; 0x0000 }`
 
+Payload:
 * `uint circularBufferMB`: The size of the circular buffer used for buffering event data while streaming
-* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace format
+* `uint format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format
 * `ulong rundownKeyword`: Indicates the keyword for the rundown provider
+* `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
 * `array<provider_config> providers`: The providers to turn on for the streaming session
 
 A `provider_config` is composed of the following data:
 * `ulong keywords`: The keywords to turn on with this providers
 * `uint logLevel`: The level of information to turn on
 * `string provider_name`: The name of the provider
-* `string filter_data` (optional): Filter information
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
 
 > see ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
 >
@@ -656,7 +641,7 @@ provider_config
     ulong keywords,
     uint logLevel,
     string provider_name,
-    string filter_data (optional)
+    string arguments
 }
 ```
 
@@ -669,42 +654,458 @@ Payload
 ```
 Followed by an Optional Continuation of a `nettrace` format stream of events.
 
-### `StopTracing`
+### `CollectTracing5`
 
-Command Code: `0x0201`
+Command Code: `0x0206`
 
-The `StopTracing` command is used to stop a specific streaming session.  Clients are expected to use this command to stop streaming sessions started with [`CollectStreaming`](#CollectStreaming).
+The `CollectTracing5` command is an extension of the `CollectTracing4` command. It has all the capabilities of `CollectTracing4` and introduces new fields to enable a Linux-only user_events-based eventpipe session and to prescribe an enable/disable list for Event IDs. When the user_events-based eventpipe session is enabled, the file descriptor and SCM_RIGHTS of the `user_events_data` file must be sent through the optional continuation stream as [described](#passing_file_descriptor). The runtime will register tracepoints based on the provider configurations passed in, and runtime events will be written directly to the `user_events_data` file descriptor. The enable/disable list of Event IDs will apply after the keyword/level filter to determine whether or not that provider's event will be written.
+
+> Note available for .NET 10.0 and later.
 
 #### Inputs:
 
-Header: `{ Magic; 28; 0x0201; 0x0000 }`
+Header: `{ Magic; 20 + Payload Size; 0x0206; 0x0000 }`
 
-* `ulong sessionId`: The ID for the streaming session to stop
+#### Streaming Session Payload:
+* `uint session_type`: 0
+* `uint streaming_circularBufferMB`: Specifies the size of the Streaming session's circular buffer used for buffering event data.
+* `uint streaming_format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format. Specifies the format in which event data will be serialized into the IPC Stream
+* `ulong rundownKeyword`: Indicates the keyword for the rundown provider
+* `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
+* `array<streaming_provider_config> providers`: The providers to turn on for the session
 
-#### Returns:
+The `streaming_provider_config` is composed of the following data:
+* `ulong keywords`: The keywords to turn on with this provider
+* `uint logLevel`: The level of information to turn on
+* `string provider_name`: The name of the provider
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
+* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an enable/disable list or (length = `0`).
 
-Header: `{ Magic; 28; 0xFF00; 0x0000 }`
+An `event_filter` is comprised of the following data:
+* `bool enable`: 0 to disable events, 1 to enable events
+* `array<uint> event_ids`: List of Event IDs to disable or enable.
 
-* `ulong sessionId`: the ID for the streaming session that was stopped
+See [event_filter serialization examples](#event_filter)
 
+#### User_events Session Payload:
+* `uint session_type`: 1
+* `ulong rundownKeyword`: Indicates the keyword for the rundown provider
+* `array<user_events_provider_config> providers`: The providers to turn on for the session
 
-##### Details:
+The `user_events_provider_config` is composed of the following data:
+* `ulong keywords`: The keywords to turn on with this provider
+* `uint logLevel`: The level of information to turn on
+* `string provider_name`: The name of the provider
+* `string arguments`: (Key-value pairs string to pass to the provider) or (length = 0)
+* `event_filter filter`: Rules for filtering this provider's Event IDs, applied after `keyword`/`logLevel`, using an enable/disable list or (length = `0`).
+* `tracepoint_config config`: Maps Event IDs to tracepoints. If an Event ID is excluded by `event_filter`, it will not be written to any tracepoint.
 
-Inputs:
-```c
-Payload
-{
-   ulong sessionId
-}
+An `event_filter` is comprised of the following data:
+* `bool enable`: 0 to disable events, 1 to enable events
+* `array<uint> event_ids`: List of Event IDs to disable or enable.
+
+See [event_filter serialization examples](#event_filter)
+
+A `tracepoint_config` is comprised of the following data:
+* `string default_tracepoint_name`: (The default tracepoint filtered Event IDs will be written to unless otherwise specified by `tracepoints`) or (length = `0` to only write to tracepoints specified in `tracepoints`)
+* `array<tracepoint_set> tracepoints`: Specifies alternate tracepoints for a set of Event IDs to be written to instead of the default tracepoint or (length = `0`).
+
+A `tracepoint_set` is comprised of the following data:
+* `string tracepoint_name`: The tracepoint that the following subset of Event IDs should be written to.
+* `array<uint> event_ids`: The Event IDs to be written to `tracepoint_name`.
+
+With a user_events session, atleast one of `default_tracepoint_name` and `tracepoints` must be specified. An error will be returned through the stream if both are length = `0`.
+Event IDs specified in `tracepoint_set`s must be exclusive. If an Event ID is detected in different `tracepoint_set`s of the provider, an error will be returned through the stream.
+
+See [tracepoint_config serialization examples](#tracepoint_config)
+
+> See ETW documentation for a more detailed explanation of Keywords, Filters, and Log Level.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`CollectTracing5` returns:
+* `ulong sessionId`: the ID for the EventPipe Session started
+
+A Streaming Session started with `CollectTracing5` is followed by an Optional Continuation of a `nettrace` format stream of events.
+
+A User_events Session started with `CollectTracing5` expects the Optional Continuation to contain another message passing along the SCM_RIGHTS `user_events_data` file descriptor. See [details](#passing_file_descriptor)
+
+## EventPipe Payload Serialization Examples
+
+### Event_filter
+Example `event_filter` serialization. Serializing
+```
+enable=0, event_ids=[]
+Disable Nothing === Enable all events.
+```
+<table>
+  <tr>
+    <th>1</th>
+    <th>2-5</th>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">bool</td>
+    <td colspan="4">array&ltuint&gt</td>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">enable</td>
+    <td colspan="1">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">0</td>
+    <td colspan="1">0</td>
+  </tr>
+</table>
+
+```
+enable=0, event_ids=[4, 5]
+Disable only Event IDs 4 and 5 === Enable all Event IDs except 4 and 5
 ```
 
-Returns:
-```c
-Payload
-{
-   ulong sessionId
-}
+<table>
+  <tr>
+    <th>1</th>
+    <th>2</th>
+    <th>6</th>
+    <th>10-13</th>
+  </tr>
+  <tr>
+    <td colspan="1">bool</td>
+    <td colspan="4">array&ltuint&gt</td>
+  </tr>
+  <tr>
+    <td colspan="1">enable</td>
+    <td colspan="4">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">0</td>
+    <td colspan="1">2</td>
+    <td colspan="1">4</td>
+    <td colspan="1">5</td>
+  </tr>
+</table>
+
 ```
+enable=1, event_ids=[]
+Enable Nothing === Disable all events.
+```
+
+<table>
+  <tr>
+    <th>1</th>
+    <th>2-5</th>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">bool</td>
+    <td colspan="4">array&ltuint&gt</td>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">enable</td>
+    <td colspan="1">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">1</td>
+    <td colspan="1">0</td>
+  </tr>
+</table>
+
+```
+enable=1, event_ids=[1, 2, 3]
+Enable only EventIDs 1, 2, and 3 === Disable all EventIDs except 1, 2, and 3.
+```
+
+<table>
+  <tr>
+    <th>1</th>
+    <th>2</th>
+    <th>6</th>
+    <th>10</th>
+    <th>14-17</th>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">bool</td>
+    <td colspan="4">array&ltuint&gt</td>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">enable</td>
+    <td colspan="4">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">1</td>
+    <td colspan="1">3</td>
+    <td colspan="1">1</td>
+    <td colspan="1">2</td>
+    <td colspan="1">3</td>
+  </tr>
+</table>
+
+### Tracepoint_config
+Example `tracepoint_config` serialization
+```
+session_type=0, Streaming Sessions DO NOT encode bytes for tracepoint_config
+session_type=1, encode bytes for tracepoint_config
+```
+
+```
+All enabled Event IDs will be written to a default "MyTracepoint" tracepoint
+```
+<table>
+  <tr>
+    <th>1</th>
+    <th>5</th>
+    <th>33-36</th>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="2">string (array&ltwchar&gt)</td>
+    <td colspan="1">array&ltuint&gt</td>
+  </tr>
+  <tr>
+    <td colspan="2">default_tracepoint_name</td>
+    <td colspan="1">tracepoints</td>
+  </tr>
+  <tr>
+    <td colspan="1">14</td>
+    <td colspan="1">"MyTracepoint"</td>
+    <td colspan="1">0</td>
+  </tr>
+</table>
+
+```
+Enabled Event IDs 1 - 9 will be written to tracepoint "LowEvents".
+All other enabled Event IDs will be written to "MyTracepoint"
+```
+<table>
+  <tr>
+    <th>1</th>
+    <th>5</th>
+    <th>33</th>
+    <th>37</th>
+    <th>41</th>
+    <th>61</th>
+    <th>65</th>
+    <th>69</th>
+    <th>73</th>
+    <th>77</th>
+    <th>81</th>
+    <th>85</th>
+    <th>89</th>
+    <th>93</th>
+    <th>97-100</th>
+  </tr>
+  <tr>
+    <tr>
+      <td colspan="2">string (array&ltwchar&gt)</td>
+      <td colspan="1">uint</td>
+      <td colspan="2">string (array&ltwchar&gt)</td>
+      <td colspan="10">array&lt;uint&gt;</td>
+    </tr>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="2">default_tracepoint_name</td>
+    <td colspan="1">tracepoints</td>
+    <td colspan="2">tracepoint_name</td>
+    <td colspan="10">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">14</td>
+    <td colspan="1">"MyTracepoint"</td>
+    <td colspan="1">1</td>
+    <td colspan="1">10</td>
+    <td colspan="1">"LowEvents"</td>
+    <td colspan="1">9</td>
+    <td colspan="1">1</td>
+    <td colspan="1">2</td>
+    <td colspan="1">3</td>
+    <td colspan="1">4</td>
+    <td colspan="1">5</td>
+    <td colspan="1">6</td>
+    <td colspan="1">7</td>
+    <td colspan="1">8</td>
+    <td colspan="1">9</td>
+  </tr>
+</table>
+
+```
+Enabled Event IDs 1 - 9 will be written to tracepoint "LowEvents".
+No default tracepoint needed, don't write any other enabled Event IDs
+```
+<table>
+  <tr>
+    <th>1</th>
+    <th>5</th>
+    <th>9</th>
+    <th>13</th>
+    <th>33</th>
+    <th>37</th>
+    <th>41</th>
+    <th>45</th>
+    <th>49</th>
+    <th>53</th>
+    <th>57</th>
+    <th>61</th>
+    <th>65</th>
+    <th>69-72</th>
+  </tr>
+  <tr>
+    <tr>
+      <td colspan="1">string (array&ltwchar&gt)</td>
+      <td colspan="1">uint</td>
+      <td colspan="2">string (array&ltwchar&gt)</td>
+      <td colspan="10">array&lt;uint&gt;</td>
+    </tr>
+  </tr>
+  <tr>
+    <tr>
+    <td colspan="1">default_tracepoint_name</td>
+    <td colspan="1">tracepoints</td>
+    <td colspan="2">tracepoint_name</td>
+    <td colspan="10">event_ids</td>
+  </tr>
+  <tr>
+    <td colspan="1">0</td>
+    <td colspan="1">1</td>
+    <td colspan="1">10</td>
+    <td colspan="1">"LowEvents"</td>
+    <td colspan="1">9</td>
+    <td colspan="1">1</td>
+    <td colspan="1">2</td>
+    <td colspan="1">3</td>
+    <td colspan="1">4</td>
+    <td colspan="1">5</td>
+    <td colspan="1">6</td>
+    <td colspan="1">7</td>
+    <td colspan="1">8</td>
+    <td colspan="1">9</td>
+  </tr>
+</table>
+
+### passing_file_descriptor
+
+> Note: This only applies to enabling an user_event-based EventPipe session, which is specifically a Linux feature
+
+To register [user_event](https://docs.kernel.org/trace/user_events.html) tracepoints and write events, access to the root protected `user_events_data` file is required. Once the .NET Runtime's Diagnostic Server processes a [CollectTracing5](#collecttracing5) command specifying the `user_events` format (`session_type=1`), it expects that the client will send a file descriptor to the [continuation stream](#general-flow) via SCM_RIGHTS.
+
+```C
+#include <sys/socket.h>
+#include <sys/un.h>
+
+struct msghdr {
+    void * msg_name;             /* ignored by runtime */
+    unsigned int msg_namelen;    /* ignored by runtime */
+    struct iovec * msg_iov;      /* runtime will "parse" 1 byte */
+    unsigned int msg_iovlen;     /* runtime will "parse" one msg_iov */
+    void * msg_control;          /* ancillary data */
+    unsigned int msg_controllen; /* ancillary data buffer len */
+    int msg_flags;               /* ignored by runtime */
+};
+
+struct cmsghdr {
+    unsigned int cmsg_len;     /* length of control message */
+    int cmsg_level;            /* SOL_SOCKET */
+    int cmsg_type;             /* SCM_RIGHTS */
+    int cmsg_data[0];          /* file descriptor */
+};
+```
+
+For parsing the file descriptor passed with SCM_RIGHTS, the runtime will `recvmsg` the message and only care about the control message containing ancillary data. It will read one byte from the `msg_iov` buffer just to receive the ancillary data, but it will disregard the contents of the `msg_iov` buffers.
+
+### User_events format
+
+#### User_events Registration
+
+Once the runtime has received the configured tracepoint names as detailed under [tracepoint_config](#user_events-session-payload), it uses the [file descriptor passed in the continuation stream](#passing_file_descriptor) to register the prescribed tracepoint names following the [user_events registering protocol](https://docs.kernel.org/trace/user_events.html#registering). The runtime will construct a `user_reg` struct for every tracepoint name, defaulting to using none of the `user_reg` flags, so the resulting command format will be as follows:
+
+##### Tracepoint Format V1
+
+`<tracepoint_name> u8 version; u16 event_id; __rel_loc u8[] extension; __rel_loc u8[] payload`
+
+See [user_events writing](#user_events-writing) below for field details`.
+
+#### User_events Writing
+
+When writing events to their mapped user_events tracepoints prescribed by the `tracepoint_config` in the [User_events session payload](#user_events-session-payload), the runtime will adapt the [user_events writing protocol](https://docs.kernel.org/trace/user_events.html#writing-data) to write the event as:
+
+```
+struct iovec io[7];
+
+io[0].iov_base = &write_index;       // __u32 tracepoint write index from registration
+io[0].iov_len = sizeof(write_index);
+io[1].iov_base = &version;           // __u8 tracepoint format version
+io[1].iov_len = sizeof(version);
+io[2].iov_base = &event_id;          // __u16 EventID defined by EventSource/native manifest
+io[2].iov_len = sizeof(event_id);
+io[3].iov_base = &extension;         // __rel_loc u8[] optional event information
+io[3].iov_base = sizeof(extension);
+io[4].iov_base = &payload;           // __rel_loc u8[] event payload
+io[4].iov_len = sizeof(payload);
+io[6].iov_base = &data;              // __u8[] data
+io[6].iov_len = data_len;
+
+writev(ep_session->data_fd, (const struct iovec *)io, 7);
+```
+
+The `__rel_loc` is the relative dynamic array attribute described [here](https://lwn.net/Articles/876682/).
+
+The `write_index` is the tracepoint's write index determined during tracepoint registration.
+
+The `version` is the version of the tracepoint format, which in this case is [version 1](#tracepoint-format-v1).
+
+The `event_id` is the ID of the event, defined by the EventSource/native manifest.
+
+#### Extension Blob Format
+
+The `extension` field is an optional data blob that can provide additional information about an event. Its structure is as follows:
+
+1. **Label** (`byte`): Indicates the type of data that follows.
+2. **Data**: The content, whose format depends on the label.
+
+**Label Values and Corresponding Data:**
+
+| Label  | Meaning                | Data Format                | Description                                                                 |
+|--------|------------------------|----------------------------|-----------------------------------------------------------------------------|
+| 0x01   | Event Metadata         | `array<byte> metadata`     | Contains event metadata, formatted per NetTrace v5.                         |
+| 0x02   | ActivityId             | `uint16 guid`              | Contains the GUID for the ActivityId.                                       |
+| 0x03   | RelatedActivityId      | `uint16 guid`              | Contains the GUID for the RelatedActivityId.                                |
+
+**Details:**
+- The extension blob may be empty if no extra information is present.
+- Multiple extension blobs can be concatenated if more than one piece of information is needed. Each blob starts with its own label byte.
+- For Event Metadata (`0x01`), the `metadata` array matches the NetTrace v5 PayloadBytes format.
+- For ActivityId and RelatedActivityId (`0x02`, `0x03`), the `guid` is a 16-byte value representing the GUID.
+- The size of the entire extension blob can be inferred from the extension `__rel_loc` field. See the [__rel_loc documentation](https://lwn.net/Articles/876682/) for more details.
+
+**Example Layout:**
+
+```
+[Label][Data][Label][Data]...
+```
+
+For example, an extension blob containing both Event Metadata and ActivityId would look like:
+- `[0x01][metadata][0x02][guid]`
+
+**Notes:**
+- The runtime includes Event Metadata only the first time an event is sent in a session.
+- Native runtime events do not include metadata.
+
+The `payload` points at a blob of data with the same format as an EventPipe payload – the concatenated encoded values for all the parameters.
+
+The `metadata` either points at nothing if the event doesn’t have metadata, or it points at a metadata blob matching the NetTrace version 5 formatting convention. Specifically it is the data that would be stored inside the PayloadBytes area of an event blob within a MetadataBlock described [here](https://github.com/microsoft/perfview/blob/main/src/TraceEvent/EventPipe/NetTraceFormat_v5.md#metadata-event-encoding).
+
+> NOTE: V5 and V6 metadata formats have the same info, but they aren’t formatted identically. Parsing and reserialization is required to convert between the two.
+
+### Which events have metadata?
+
+The runtime will keep track per-session whether it has sent a particular event before. The first time each event is sent during a session, metadata will be included, and otherwise, it will be left empty. As a special case, runtime events currently implemented in native code will never send metadata.
 
 ## Dump Commands
 
