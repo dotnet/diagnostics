@@ -1,11 +1,11 @@
 {
   "sdk": {
-    "version": "10.0.100-preview.6.25272.112",
+    "version": "10.0.100-preview.6.25315.102",
     "allowPrerelease": true,
     "rollForward": "major"
   },
   "tools": {
-    "dotnet": "10.0.100-preview.6.25272.112",
+    "dotnet": "10.0.100-preview.6.25315.102",
     "runtimes": {
       "dotnet": [
         "$(MicrosoftNETCoreApp80Version)"
@@ -17,6 +17,6 @@
   },
   "msbuild-sdks": {
     "Microsoft.Build.NoTargets": "3.5.0",
-    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25276.103"
+    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25325.106"
   }
 }
