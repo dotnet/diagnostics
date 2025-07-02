@@ -217,7 +217,7 @@ fi
 if [[ "$__NativeBuild" == 1 ]]; then
     build_native "$__TargetOS" "$__TargetArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
 
-    if [ "$?" != 0 ]; then
+    if [ "${PIPESTATUS[0]}" != 0 ]; then
         echo "Native build FAILED"
         exit 1
     fi
