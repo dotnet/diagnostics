@@ -118,12 +118,29 @@ public class DotNetHeapDumpGraphReader
             }
 
             ulong moduleID = unchecked((ulong)data.ModuleID);
-            if (!m_moduleID2Name.ContainsKey(moduleID))
+            if ((data.ModuleFlags & ModuleFlags.Native) != 0)
             {
-                m_moduleID2Name[moduleID] = data.ModuleILPath;
-            }
+                if (!m_modules.ContainsKey(moduleID))
+                {
+                    Module module = new(moduleID);
+                    module.Path = data.ModuleNativePath;
+                    module.PdbGuid = data.NativePdbSignature;
+                    module.PdbAge = data.NativePdbAge;
+                    module.PdbName = data.NativePdbBuildPath;
+                    m_modules[module.ImageBase] = module;
+                }
 
-            m_log.WriteLine("Found Module {0} ID 0x{1:x}", data.ModuleILFileName, moduleID);
+                m_log.WriteLine("Found Native Module {0} ID 0x{1:x}", data.ModuleNativePath, moduleID);
+            }
+            else
+            {
+                if (!m_moduleID2Name.ContainsKey(moduleID))
+                {
+                    m_moduleID2Name[moduleID] = data.ModuleILPath;
+                }
+
+                m_log.WriteLine("Found Module {0} ID 0x{1:x}", data.ModuleILFileName, moduleID);
+            }
         };
         source.Clr.AddCallbackForEvents(moduleCallback); // Get module events for clr provider
         // TODO should not be needed if we use CAPTURE_STATE when collecting.
@@ -542,12 +559,11 @@ public class DotNetHeapDumpGraphReader
             {
                 GCBulkTypeValues typeData = data.Values(i);
                 string typeName = typeData.TypeName;
-                if (IsProjectN)
+                if ((typeData.Flags & TypeFlags.ModuleBaseAddress) != 0)
                 {
-                    // For project N we only log the type ID and module base address.
+                    // For native modules we only log the type ID and module base address.
                     Debug.Assert(typeName.Length == 0);
-                    Debug.Assert((typeData.Flags & TypeFlags.ModuleBaseAddress) != 0);
-                    ulong moduleBaseAddress = typeData.TypeID - (ulong)typeData.TypeNameID;   // Tricky way of getting the image base.
+                    ulong moduleBaseAddress = typeData.ModuleID;
                     Debug.Assert((moduleBaseAddress & 0xFFFF) == 0);       // Image loads should be on 64K boundaries.
 
                     Module module = GetModuleForImageBase(moduleBaseAddress);
@@ -855,7 +871,7 @@ public class DotNetHeapDumpGraphReader
             // TODO FIX NOW worry about module collision
             if (!m_arrayNametoIndex.TryGetValue(typeName, out ret))
             {
-                if (IsProjectN)
+                if (m_graph.HasDeferedTypeNames)
                 {
                     ret = m_graph.CreateType(type.RawTypeID, type.Module, objSize, suffix);
                 }
