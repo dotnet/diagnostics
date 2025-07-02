@@ -14,10 +14,6 @@
     <AssemblyName>.NET Diagnostics</AssemblyName>
   </PropertyGroup>
 
-  <Target Name="BuildPrereqs" 
-          BeforeTargets="Build" 
-          DependsOnTargets="GenerateRuntimeVersionFile;InstallNativePackages" />
-
   <Target Name="GenerateRuntimeVersionFile"
           DependsOnTargets="GenerateNativeVersionFile">
     <PropertyGroup>
@@ -77,4 +73,7 @@
   <Import Project="$(RepositoryEngineeringDir)InstallNativePackages.targets" />
 
   <Import Project="Sdk.targets" Sdk="Microsoft.Build.NoTargets" />
+
+  <Target Name="Build"
+          DependsOnTargets="GenerateRuntimeVersionFile;InstallNativePackages" />
 </Project>

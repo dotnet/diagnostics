@@ -5,9 +5,10 @@
 cmake_minimum_required(VERSION 3.15)
 
 cmake_policy(SET CMP0042 NEW) # MACOSX_RPATH is enabled by default.
-if(CLR_CMAKE_HOST_WIN32)
+if(POLICY CMP0177)
   cmake_policy(SET CMP0177 NEW) # install() paths are normalized
-endif(CLR_CMAKE_HOST_WIN32)
+endif(POLICY CMP0177)
+
 
 # Set the project name
 project(diagnostics)
