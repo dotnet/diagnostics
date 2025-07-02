@@ -189,7 +189,7 @@ if [[ "$__NativeBuild" == 1 ]]; then
     "$__RepoRootDir/eng/common/msbuild.sh" \
         $__RepoRootDir/eng/native-prereqs.proj \
         /bl:$__GenerateVersionLog \
-        /t:BuildPrereqs \
+        /t:Build \
         /restore \
         /p:Configuration="$__BuildType" \
         /p:TargetOS="$__TargetOS" \
