@@ -37,16 +37,5 @@
 
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
 
-  <!--
-    Copies all the native binaries to a rid-specific directory under the output and publish paths.
-  -->
-  <Target Name="InstallNativeFiles" AfterTargets="Build">
-    <ItemGroup>
-      <NativeBinaries Include="@(SosRequiredBinaries->WithMetadataValue('TargetRid', '$(TargetRid)'))">
-        <SourcePath>$([MSBuild]::ValueOrDefault('%(FullPath)', '').Replace('linux-musl', 'linux'))</SourcePath>
-      </NativeBinaries>
-    </ItemGroup>
-    <Copy SourceFiles="@(NativeBinaries -> '%(SourcePath)')" DestinationFolder="$(OutputPath)$(TargetRid)" SkipUnchangedFiles="false" />
-    <Copy SourceFiles="@(NativeBinaries -> '%(SourcePath)')" DestinationFolder="$(OutputPath)publish\$(TargetRid)" SkipUnchangedFiles="false" />
-  </Target>
+  <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.targets" />
 </Project>
