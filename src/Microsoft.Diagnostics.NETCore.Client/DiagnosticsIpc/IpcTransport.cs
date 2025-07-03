@@ -332,8 +332,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 string msg = $"Unable to connect to Process {pid}.";
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
+                    int total_length = 26 + IpcRootPath.Length + pid.ToString().Length;
+                    if (total_length > 108) // This isn't perfect as we don't know the disambiguation key length. However it should catch most cases.
+                    {
+                        msg += "The total length of the diagnostic socket path may exceed 108 characters. " +
+                            $"Please ensure that the target process has a shorter {IpcRootPath} path, " +
+                            "or set the TMPDIR environment variable to a shorter path.\n";
+                    }
                     msg += $" Please verify that {IpcRootPath} is writable by the current user. "
                         + "If the target process has environment variable TMPDIR set, please set TMPDIR to the same directory. "
+                        + "Please also ensure that the target process has {temp}/dotnet-diagnostic-{pid}-{disambiguation_key}-socket shorter than 108 characters. "
                         + "Please see https://aka.ms/dotnet-diagnostics-port for more information";
                 }
                 throw new ServerNotAvailableException(msg);
