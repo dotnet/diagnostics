@@ -194,7 +194,7 @@ if [[ "$__NativeBuild" == 1 ]]; then
         /p:Configuration="$__BuildType" \
         /p:TargetOS="$__TargetOS" \
         /p:TargetArch="$__TargetArch" \
-        /p:TargetRid="$__OutputRid" \
+        /p:TargetRid="$__TargetRid" \
         /p:Platform="$__TargetArch" \
         $__UnprocessedBuildArgs
 
@@ -222,7 +222,7 @@ if [[ "$__ManagedBuild" == 1 ]]; then
     "$__RepoRootDir/eng/common/build.sh" \
         --configuration "$__BuildType" \
         /p:TargetArch="$__TargetArch" \
-        /p:TargetRid="$__OutputRid" \
+        /p:TargetRid="$__TargetRid" \
         $__CommonMSBuildArgs \
         $__ManagedBuildArgs \
         $__UnprocessedBuildArgs
@@ -249,7 +249,7 @@ if [[ "$__InstallRuntimes" == 1 || "$__PrivateBuild" == 1 ]]; then
         /p:PrivateBuildTesting="$__privateBuildTesting" \
         /p:TargetOS="$__TargetOS" \
         /p:TargetArch="$__TargetArch" \
-        /p:TargetRid="$__OutputRid" \
+        /p:TargetRid="$__TargetRid" \
         /p:TestArchitectures="$__TargetArch" \
         /p:LiveRuntimeDir="$__LiveRuntimeDir" 
 fi
@@ -308,7 +308,7 @@ if [[ "$__Test" == 1 ]]; then
         --configuration "$__BuildType" \
         /bl:"$__LogsDir"/Test.binlog \
         /p:TargetArch="$__TargetArch" \
-        /p:TargetRid="$__OutputRid" \
+        /p:TargetRid="$__TargetRid" \
         /p:DotnetRuntimeVersion="$__DotnetRuntimeVersion" \
         /p:DotnetRuntimeDownloadVersion="$__DotnetRuntimeDownloadVersion" \
         /p:RuntimeSourceFeed="$__RuntimeSourceFeed" \
