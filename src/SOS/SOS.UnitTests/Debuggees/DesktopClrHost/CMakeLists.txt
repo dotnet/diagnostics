@@ -29,8 +29,11 @@ set(DESKTOPCLRHOST_LIBRARY
 
 add_library_clr(DesktopClrHost SHARED ${DESKTOPCLRHOST_SOURCES})
 
+# When building with ninja we need to explicitly link against the 4.8.1 version of the .NET Framework SDK because it is the only one that supports ARM64.
+if(CLR_CMAKE_TARGET_ARCH_ARM64)
+    target_link_directories(DesktopClrHost PRIVATE "$ENV{WindowsSdkDir}/../NETFXSDK/4.8.1/Lib/um/arm64")
+endif(CLR_CMAKE_TARGET_ARCH_ARM64)
+
 target_link_libraries(DesktopClrHost ${DESKTOPCLRHOST_LIBRARY})
 
-install(TARGETS DesktopClrHost DESTINATION ${CLR_MANAGED_BINARY_DIR}/WebApp3/${CLR_BUILD_TYPE}/net8.0)
-install(TARGETS DesktopClrHost DESTINATION ${CLR_MANAGED_BINARY_DIR}/WebApp3/${CLR_BUILD_TYPE}/net9.0)
-install(TARGETS DesktopClrHost DESTINATION ${CLR_MANAGED_BINARY_DIR}/WebApp3/${CLR_BUILD_TYPE}/net10.0)
+install_clr(TARGETS DesktopClrHost DESTINATIONS .)
