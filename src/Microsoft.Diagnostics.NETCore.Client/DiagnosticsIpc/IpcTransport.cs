@@ -341,7 +341,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     msg += $" Please verify that {IpcRootPath} is writable by the current user. "
                         + "If the target process has environment variable TMPDIR set, please set TMPDIR to the same directory. "
-                        + "Please also ensure that the target process has {temp}/dotnet-diagnostic-{pid}-{disambiguation_key}-socket shorter than 108 characters. "
+                        + "Please also ensure that the target process has {TMPDIR}/dotnet-diagnostic-{pid}-{disambiguation_key}-socket shorter than 108 characters. "
                         + "Please see https://aka.ms/dotnet-diagnostics-port for more information";
                 }
                 throw new ServerNotAvailableException(msg);
