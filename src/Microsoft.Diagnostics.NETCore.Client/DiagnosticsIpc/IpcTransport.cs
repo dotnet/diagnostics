@@ -336,8 +336,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     if (total_length > 108) // This isn't perfect as we don't know the disambiguation key length. However it should catch most cases.
                     {
                         msg += "The total length of the diagnostic socket path may exceed 108 characters. " +
-                            $"Please ensure that the target process has a shorter {IpcRootPath} path, " +
-                            "or set the TMPDIR environment variable to a shorter path.\n";
+                            "Try setting the TMPDIR environment variable to a shorter path";
                     }
                     msg += $" Please verify that {IpcRootPath} is writable by the current user. "
                         + "If the target process has environment variable TMPDIR set, please set TMPDIR to the same directory. "
