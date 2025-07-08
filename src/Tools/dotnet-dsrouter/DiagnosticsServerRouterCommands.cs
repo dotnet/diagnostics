@@ -72,6 +72,44 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 LogLevel = logLevel;
             }
 
+            protected static async Task WaitForQuitAsync(CancellationToken token)
+            {
+                if (!Console.IsInputRedirected)
+                {
+                    while (!token.IsCancellationRequested)
+                    {
+                        if (Console.KeyAvailable)
+                        {
+                            ConsoleKey cmd = Console.ReadKey(true).Key;
+                            if (cmd == ConsoleKey.Q)
+                            {
+                                break;
+                            }
+                        }
+                        await Task.Delay(250, token).ConfigureAwait(false);
+                    }
+                }
+                else
+                {
+                    await Task.Run(async() => {
+                        Memory<char> buffer = new char[1];
+                        while (!token.IsCancellationRequested)
+                        {
+                            int result = await Console.In.ReadAsync(buffer, token).ConfigureAwait(false);
+                            if (result != 0)
+                            {
+                                char key = buffer.Span[0];
+                                if (key == 'Q' || key == 'q')
+                                {
+                                    break;
+                                }
+                            }
+                            await Task.Delay(250, token).ConfigureAwait(false);
+                        }
+                    }, token).ConfigureAwait(false);
+                }
+            }
+
             public abstract void ConfigureLauncher(CancellationToken cancellationToken);
 
             // The basic run loop: configure logging and the launcher, then create the router and run it until it exits or the user interrupts
@@ -91,26 +129,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 logger.LogInformation($"Starting dotnet-dsrouter using pid={pid}");
 
                 Task<int> routerTask = createRouterTask(logger, Launcher, linkedCancelToken);
+                Task waitForQuitTask = WaitForQuitAsync(linkedCancelToken.Token);
 
-                while (!linkedCancelToken.IsCancellationRequested)
+                if (!linkedCancelToken.IsCancellationRequested)
                 {
-                    await Task.WhenAny(routerTask, Task.Delay(
-                        250,
-                        linkedCancelToken.Token)).ConfigureAwait(false);
-                    if (routerTask.IsCompleted)
-                    {
-                        break;
-                    }
-
-                    if (!Console.IsInputRedirected && Console.KeyAvailable)
-                    {
-                        ConsoleKey cmd = Console.ReadKey(true).Key;
-                        if (cmd == ConsoleKey.Q)
-                        {
-                            cancelRouterTask.Cancel();
-                            break;
-                        }
-                    }
+                    await Task.WhenAny(routerTask, waitForQuitTask).ConfigureAwait(false);
                 }
 
                 if (!routerTask.IsCompleted)

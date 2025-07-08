@@ -280,7 +280,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         try
                         {
                             EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: rundownKeyword, requestStackwalk: true);
-                            session = diagnosticsClient.StartEventPipeSession(config);
+                            session = await diagnosticsClient.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false);
                         }
                         catch (UnsupportedCommandException e)
                         {
@@ -298,7 +298,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                                 //
                                 EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: EventPipeSession.DefaultRundownKeyword, requestStackwalk: true);
-                                session = diagnosticsClient.StartEventPipeSession(config);
+                                session = await diagnosticsClient.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false);
                             }
                             else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
                             {
@@ -314,7 +314,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                                 //
                                 EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: 0, requestStackwalk: true);
-                                session = diagnosticsClient.StartEventPipeSession(config);
+                                session = await diagnosticsClient.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false);
                             }
                             else
                             {
@@ -331,7 +331,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         {
                             try
                             {
-                                diagnosticsClient.ResumeRuntime();
+                                await diagnosticsClient.ResumeRuntimeAsync(ct).ConfigureAwait(false);
                             }
                             catch (UnsupportedCommandException)
                             {
@@ -490,6 +490,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Error.WriteLine($"[ERROR] {e.Message}");
                 collectionStopped = true;
                 ret = (int)ReturnCode.TracingError;
+            }
+            catch (OperationCanceledException)
+            {
+                if (printStatusOverTime)
+                {
+                    ConsoleWriteLine("\nTrace collection canceled.");
+                }
             }
             catch (Exception ex)
             {
