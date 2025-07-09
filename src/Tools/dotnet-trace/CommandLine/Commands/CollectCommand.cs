@@ -493,10 +493,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (OperationCanceledException)
             {
-                if (printStatusOverTime)
-                {
-                    ConsoleWriteLine("\nTrace collection canceled.");
-                }
+                ConsoleWriteLine("\nTrace collection canceled.");
+                collectionStopped = true;
+                ret = (int)ReturnCode.TracingError;
             }
             catch (Exception ex)
             {
