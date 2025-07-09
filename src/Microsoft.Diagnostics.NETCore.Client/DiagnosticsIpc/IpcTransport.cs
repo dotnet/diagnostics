@@ -221,9 +221,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
-
+        
+        // Format strings as private readonly members
+        private static readonly string _defaultAddressFormatWindows = "dotnet-diagnostic-{0}";
+        private static readonly string _dsrouterAddressFormatWindows = "dotnet-diagnostic-dsrouter-{0}";
+        private static readonly string _defaultAddressFormatNonWindows = "dotnet-diagnostic-{0}-*-socket";
+        private static readonly string _dsrouterAddressFormatNonWindows = "dotnet-diagnostic-dsrouter-{0}-*-socket";
+        private static readonly string _defaultAddressLengthString = "{0}dotnet-diagnostic-{1}-##########-socket";
+        
         private int _pid;
-        private IpcEndpointConfig _config;
+        private IpcEndpointConfig _config;        
 
         /// <summary>
         /// Creates a reference to a .NET process's IPC Transport
@@ -271,11 +278,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                defaultAddress = $"dotnet-diagnostic-{pid}";
+                defaultAddress = string.Format(_defaultAddressFormatWindows, pid);
 
                 try
                 {
-                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-dsrouter-{pid}").FirstOrDefault();
+                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, string.Format(_dsrouterAddressFormatWindows, pid)).FirstOrDefault();
                     if (!string.IsNullOrEmpty(dsrouterAddress))
                     {
                         defaultAddress = dsrouterAddress;
@@ -287,11 +294,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    defaultAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
+                    defaultAddress = Directory.GetFiles(IpcRootPath, string.Format(_defaultAddressFormatNonWindows, pid)) // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
-                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-dsrouter-{pid}-*-socket") // Try best match.
+                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, string.Format(_dsrouterAddressFormatNonWindows, pid)) // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
@@ -332,7 +339,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 string msg = $"Unable to connect to Process {pid}.";
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    int total_length = 26 + IpcRootPath.Length + pid.ToString().Length;
+                    int total_length = string.Format(_defaultAddressLengthString, IpcRootPath, pid).Length;
                     if (total_length > 108) // This isn't perfect as we don't know the disambiguation key length. However it should catch most cases.
                     {
                         msg += "The total length of the diagnostic socket path may exceed 108 characters. " +
@@ -356,7 +363,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 address = address.Substring(IpcRootPath.Length);
             }
 
-            string dsrouterAddress = $"dotnet-diagnostic-dsrouter-{pid}";
+            string dsrouterAddress = string.Format(_dsrouterAddressFormatWindows, pid);
             return address.StartsWith(dsrouterAddress, StringComparison.OrdinalIgnoreCase);
         }
 
