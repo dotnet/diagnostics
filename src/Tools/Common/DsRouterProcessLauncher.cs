@@ -85,6 +85,12 @@ namespace Microsoft.Internal.Common.Utils
                     _childProc.StandardInput.Flush();
 
                     _childProc.WaitForExit(1000);
+                }
+                // if process exited while we were trying to write to stdin, it can throw IOException
+                catch (IOException) { }
+
+                try
+                {
                     if (!_childProc.HasExited)
                     {
                         _childProc.Kill();
@@ -92,8 +98,20 @@ namespace Microsoft.Internal.Common.Utils
                 }
                 // if process exited while we were trying to kill it, it can throw IOE
                 catch (InvalidOperationException) { }
-                _stdOutTask.Wait();
-                _stdErrTask.Wait();
+
+                try
+                {
+                    _stdOutTask.Wait();
+                }
+                // Ignore any fault/cancel state of task.
+                catch (AggregateException) { }
+
+                try
+                {
+                    _stdErrTask.Wait();
+                }
+                // Ignore any fault/cancel state of task.
+                catch (AggregateException) { }
             }
         }
     }

@@ -128,8 +128,20 @@ namespace Microsoft.Internal.Common.Utils
                 }
                 // if process exited while we were trying to kill it, it can throw IOE
                 catch (InvalidOperationException) { }
-                _stdOutTask.Wait();
-                _stdErrTask.Wait();
+
+                try
+                {
+                    _stdOutTask.Wait();
+                }
+                // Ignore any fault/cancel state of task.
+                catch (AggregateException) { }
+
+                try
+                {
+                    _stdErrTask.Wait();
+                }
+                // Ignore any fault/cancel state of task.
+                catch (AggregateException) { }
             }
         }
     }
