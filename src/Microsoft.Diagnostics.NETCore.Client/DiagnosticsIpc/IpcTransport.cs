@@ -221,17 +221,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
-        
         // Format strings as private const members
         private const string _defaultAddressFormatWindows = "dotnet-diagnostic-{0}";
         private const string _dsrouterAddressFormatWindows = "dotnet-diagnostic-dsrouter-{0}";
         private const string _defaultAddressFormatNonWindows = "dotnet-diagnostic-{0}-*-socket";
         private const string _dsrouterAddressFormatNonWindows = "dotnet-diagnostic-dsrouter-{0}-*-socket";
         private const string _defaultAddressLengthString = "{0}dotnet-diagnostic-{1}-##########-socket";
-        
         private int _pid;
-        private IpcEndpointConfig _config;        
-
+        private IpcEndpointConfig _config;
         /// <summary>
         /// Creates a reference to a .NET process's IPC Transport
         /// using the default rules for a given pid
