@@ -223,11 +223,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
         
         // Format strings as private const members
-        private static const string _defaultAddressFormatWindows = "dotnet-diagnostic-{0}";
-        private static const string _dsrouterAddressFormatWindows = "dotnet-diagnostic-dsrouter-{0}";
-        private static const string _defaultAddressFormatNonWindows = "dotnet-diagnostic-{0}-*-socket";
-        private static const string _dsrouterAddressFormatNonWindows = "dotnet-diagnostic-dsrouter-{0}-*-socket";
-        private static const string _defaultAddressLengthString = "{0}dotnet-diagnostic-{1}-##########-socket";
+        private const string _defaultAddressFormatWindows = "dotnet-diagnostic-{0}";
+        private const string _dsrouterAddressFormatWindows = "dotnet-diagnostic-dsrouter-{0}";
+        private const string _defaultAddressFormatNonWindows = "dotnet-diagnostic-{0}-*-socket";
+        private const string _dsrouterAddressFormatNonWindows = "dotnet-diagnostic-dsrouter-{0}-*-socket";
+        private const string _defaultAddressLengthString = "{0}dotnet-diagnostic-{1}-##########-socket";
         
         private int _pid;
         private IpcEndpointConfig _config;        
