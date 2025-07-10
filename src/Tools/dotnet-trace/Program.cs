@@ -24,13 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 ReportCommandHandler.ReportCommand()
             };
 
-            CommandLineConfiguration configuration = new(rootCommand)
-            {
-                // System.CommandLine should not interfere with Ctrl+C
-                ProcessTerminationTimeout = null
-            };
-
-            ParseResult parseResult = rootCommand.Parse(args, configuration);
+            ParseResult parseResult = rootCommand.Parse(args);
             string parsedCommandName = parseResult.CommandResult.Command.Name;
             if (parsedCommandName == "collect")
             {
@@ -41,7 +35,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ProcessLauncher.Launcher.PrepareChildProcess(args);
                 }
             }
-            return parseResult.InvokeAsync();
+
+            return ProcessTerminationHandler.InvokeAsync(parseResult);
         }
     }
 }
