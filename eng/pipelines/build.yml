@@ -133,9 +133,6 @@ jobs:
       - _TestArgs: '-test'
       - _Cross: ''
 
-      - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
-        - _buildLog: '-binaryLog'
-
       - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
         - _buildScript: $(Build.SourcesDirectory)\build.cmd
       - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
@@ -185,6 +182,7 @@ jobs:
 
       - script: $(_buildScript)
           -ci
+          -binaryLog
           -configuration ${{ config.configuration }}
           -architecture ${{ config.architecture }}
           $(_buildLog)
