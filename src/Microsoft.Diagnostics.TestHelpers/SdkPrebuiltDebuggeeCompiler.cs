@@ -15,6 +15,15 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public SdkPrebuiltDebuggeeCompiler(TestConfiguration config, string debuggeeName)
         {
+            if (string.IsNullOrEmpty(config.TargetConfiguration))
+            {
+                throw new System.ArgumentException("TargetConfiguration must be set in the TestConfiguration");
+            }
+            if (string.IsNullOrEmpty(config.BuildProjectFramework))
+            {
+                throw new System.ArgumentException("BuildProjectFramework must be set in the TestConfiguration");
+            }
+
             // The layout is how the current .NET Core SDK layouts the binaries out:
             // Source Path:     <DebuggeeSourceRoot>/<DebuggeeName>/[<DebuggeeName>]
             // Binary Path:     <DebuggeeBuildRoot>/bin/<DebuggeeName>/<TargetConfiguration>/<BuildProjectFramework>
