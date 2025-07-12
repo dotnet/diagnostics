@@ -25,5 +25,4 @@ add_compile_definitions(SOS_INCLUDE)
 add_compile_definitions(DISABLE_CONTRACTS)
 
 add_subdirectory(extensions)
-add_subdirectory(SOS.Extensions)
 add_subdirectory(Strike)

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <ToolCommandName>dotnet-sos</ToolCommandName>
@@ -21,12 +21,14 @@
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
 
   <ItemGroup>
-      <None Include="$(SOSExtensionsBinaries)">
-        <Visible>false</Visible>
-        <Pack>true</Pack>
-        <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
-        <Link Condition="'$(PublishSingleFile)' == 'true'">lib/%(Filename)%(Extension)</Link>
-        <CopyToOutputDirectory Condition="'$(PublishSingleFile)' == 'true'">PreserveNewest</CopyToOutputDirectory>
-      </None>
+    <None Include="$(SOSExtensionsBinaries)">
+      <Visible>false</Visible>
+      <Pack>true</Pack>
+      <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
+      <Link Condition="'$(PublishSingleFile)' == 'true'">lib/%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory Condition="'$(PublishSingleFile)' == 'true'">PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.targets" />
 </Project>
