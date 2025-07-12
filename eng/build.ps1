@@ -7,6 +7,7 @@ Param(
     [switch] $installruntimes,
     [switch] $privatebuild,
     [switch] $ci,
+    [switch][Alias('bl')]$binaryLog,
     [switch] $skipmanaged,
     [switch] $skipnative,
     [switch] $bundletools,
@@ -42,6 +43,8 @@ $os = "Windows_NT"
 $logdir = Join-Path $artifactsdir "log"
 $logdir = Join-Path $logdir Windows_NT.$architecture.$configuration
 
+$bl = if ($binaryLog) { '-binaryLog' } else { '' }
+
 if ($ci) {
     $remainingargs = "-ci " + $remainingargs
 }
@@ -64,7 +67,7 @@ if (-not $skipnative) {
 
 # Install sdk for building, restore and build managed components.
 if (-not $skipmanaged) {
-    Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
+    Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity $bl /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
 
     if ($lastExitCode -ne 0) {
         exit $lastExitCode
