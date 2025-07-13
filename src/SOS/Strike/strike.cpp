@@ -11278,7 +11278,6 @@ private:
     static void PrintArgsAndLocals(IXCLRDataStackWalk *pStackWalk, BOOL bArgs, BOOL bLocals)
     {
         ToRelease<IXCLRDataFrame> pFrame;
-        ToRelease<IXCLRDataValue> pVal;
         ULONG32 argCount = 0;
         ULONG32 localCount = 0;
         HRESULT hr = S_OK;
@@ -11290,14 +11289,14 @@ private:
             hr = pFrame->GetNumArguments(&argCount);
 
         if (SUCCEEDED(hr) && bArgs)
-            hr = ShowArgs(argCount, pFrame, pVal);
+            hr = ShowArgs(argCount, pFrame);
 
         // Print locals
         if (SUCCEEDED(hr) && bLocals)
             hr = pFrame->GetNumLocalVariables(&localCount);
 
         if (SUCCEEDED(hr) && bLocals)
-            ShowLocals(localCount, pFrame, pVal);
+            ShowLocals(localCount, pFrame);
 
         ExtOut("\n");
     }
@@ -11308,9 +11307,8 @@ private:
      * Params:
      *      argy - the number of arguments the function has
      *      pFramey - the frame we are inspecting
-     *      pVal - a pointer to the CLRDataValue we use to query for info about the args
      */
-    static HRESULT ShowArgs(ULONG32 argy, IXCLRDataFrame *pFramey, IXCLRDataValue *pVal)
+    static HRESULT ShowArgs(ULONG32 argy, IXCLRDataFrame *pFramey)
     {
         CLRDATA_ADDRESS addr = 0;
         BOOL fPrintedLocation = FALSE;
@@ -11332,6 +11330,7 @@ private:
                 ExtOut("    PARAMETERS:\n");
             }
 
+            ToRelease<IXCLRDataValue> pVal;
             hr = pFramey->GetArgumentByIndex(i,
                                    &pVal,
                                    mdNameLen,
@@ -11413,8 +11412,6 @@ private:
             {
                 ExtOut("<no data>\n");
             }
-
-            pVal->Release();
         }
 
         return S_OK;
@@ -11425,9 +11422,8 @@ private:
      * Params:
      *      localy - the number of locals in the frame
      *      pFramey - the frame we are inspecting
-     *      pVal - a pointer to the CLRDataValue we use to query for info about the args
      */
-    static HRESULT ShowLocals(ULONG32 localy, IXCLRDataFrame *pFramey, IXCLRDataValue *pVal)
+    static HRESULT ShowLocals(ULONG32 localy, IXCLRDataFrame *pFramey)
     {
         for (ULONG32 i=0; i < localy; i++)
         {
@@ -11438,6 +11434,7 @@ private:
             ExtOut("        ");
 
             // local names don't work in Whidbey.
+            ToRelease<IXCLRDataValue> pVal;
             hr = pFramey->GetLocalVariableByIndex(i, &pVal, mdNameLen, NULL, g_mdName);
             if (FAILED(hr))
             {
@@ -11506,8 +11503,6 @@ private:
             {
                 ExtOut("<no data>\n");
             }
-
-            pVal->Release();
         }
 
         return S_OK;
