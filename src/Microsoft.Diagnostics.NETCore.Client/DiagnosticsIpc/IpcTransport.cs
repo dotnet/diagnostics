@@ -222,12 +222,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
         
-        // Format strings as private readonly members
+        // Format strings as private const members
         private const string _defaultAddressFormatWindows = "dotnet-diagnostic-{0}";
         private const string _dsrouterAddressFormatWindows = "dotnet-diagnostic-dsrouter-{0}";
-        private const string _defaultAddressFormatNonWindows = "dotnet-diagnostic-{0}-*-socket";
+        private const string _defaultAddressFormatNonWindows = "dotnet-diagnostic-{0}-{1}-socket";
         private const string _dsrouterAddressFormatNonWindows = "dotnet-diagnostic-dsrouter-{0}-*-socket";
-        private const string _defaultAddressLengthString = "{0}dotnet-diagnostic-{1}-##########-socket";
         private int _pid;
         private IpcEndpointConfig _config;
         /// <summary>
@@ -292,7 +291,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    defaultAddress = Directory.GetFiles(IpcRootPath, string.Format(_defaultAddressFormatNonWindows, pid)) // Try best match.
+                    defaultAddress = Directory.GetFiles(IpcRootPath, string.Format(_defaultAddressFormatNonWindows, pid, "*")) // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
@@ -337,7 +336,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 string msg = $"Unable to connect to Process {pid}.";
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    int total_length = string.Format(_defaultAddressLengthString, IpcRootPath, pid).Length;
+                    int total_length = IpcRootPath.Length + string.Format(_defaultAddressFormatNonWindows, pid, "##########").Length;
                     if (total_length > 108) // This isn't perfect as we don't know the disambiguation key length. However it should catch most cases.
                     {
                         msg += "The total length of the diagnostic socket path may exceed 108 characters. " +
