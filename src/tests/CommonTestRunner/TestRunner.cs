@@ -49,6 +49,10 @@ namespace Microsoft.Diagnostics.CommonTestRunner
 
             // Get the full debuggee launch command line (includes the host if required)
             string exePath = debuggeeConfig.BinaryExePath;
+            if (!File.Exists(exePath))
+            {
+                throw new FileNotFoundException($"Expected to find target executable at {exePath} but it didn't exist. Perhaps the path was improperly configured or a build/deployment error caused the file to be missing?");
+            }
             string pipeName = null;
 
             StringBuilder arguments = new();

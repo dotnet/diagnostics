@@ -74,7 +74,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 ProcessInfo processInfoBeforeResume = null;
                 if (suspend)
                 {
-                    processInfoBeforeResume = await clientShim.GetProcessInfo();
+                    // when the process is just starting up, the IPC channel may not be ready yet. We need to be prepared for the connection attempt to fail.
+                    // If 100 retries over 10 seconds fail then we'll go ahead and fail the test.
+                    const int retryCount = 100;
+                    for (int i = 0; i < retryCount; i++)
+                    {
+                        try
+                        {
+                            processInfoBeforeResume = await clientShim.GetProcessInfo();
+                            break;
+                        }
+                        catch (ServerNotAvailableException) when (i < retryCount-1)
+                        {
+                            _output.WriteLine($"Failed to connect to the IPC channel as the process is starting up. Attempt {i+1} of {retryCount}. Waiting 0.1 seconds, then retrying.");
+                            await Task.Delay(100);
+                        }
+                    }
                     ValidateProcessInfo(runner.Pid, processInfoBeforeResume);
                     Assert.True((config.RuntimeFrameworkVersionMajor < 8) == string.IsNullOrEmpty(processInfoBeforeResume.ManagedEntrypointAssemblyName));
 
