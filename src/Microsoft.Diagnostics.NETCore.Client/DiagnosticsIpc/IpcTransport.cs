@@ -221,7 +221,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
-        
         // Format strings as private const members
         private const string _defaultAddressFormatWindows = "dotnet-diagnostic-{0}";
         private const string _dsrouterAddressFormatWindows = "dotnet-diagnostic-dsrouter-{0}";
