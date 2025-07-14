@@ -86,7 +86,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         }
                         catch (ServerNotAvailableException) when (i < retryCount-1)
                         {
-                            _output.WriteLine($"Failed to connect to the IPC channel as the process is starting up. Attempt {i} of {retryCount}. Waiting 0.1 seconds, then retrying.");
+                            _output.WriteLine($"Failed to connect to the IPC channel as the process is starting up. Attempt {i+1} of {retryCount}. Waiting 0.1 seconds, then retrying.");
                             await Task.Delay(100);
                         }
                     }
