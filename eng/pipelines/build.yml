@@ -77,6 +77,11 @@ parameters:
   type: boolean
   default: false
 
+- name: _PackageWithCDac
+  value: $[ eq(variables['PackageWithCDac'], 'true') ]
+  default: ''
+
+
 jobs:
 - ${{ each config in parameters.buildConfigs }}:
   - template: ${{ parameters.jobTemplate }}
@@ -133,7 +138,9 @@ jobs:
       - _TestArgs: '-test'
       - _Cross: ''
 
-      - _ExtraBuildProps: $[eq(variables['PackageWithCDac'], 'true'), '/p:PackageWithCDac=true', '']
+      - _ExtraBuildProps: ''
+      - ${{ if eq(variables['_PackageWithCDac'], 'true') }}:
+        - _ExtraBuildProps: '/p:PackageWithCDac=true'
 
       - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
         - _buildScript: $(Build.SourcesDirectory)\build.cmd
