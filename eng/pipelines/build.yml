@@ -77,11 +77,6 @@ parameters:
   type: boolean
   default: false
 
-- name: _PackageWithCDac
-  value: $[ eq(variables['PackageWithCDac'], 'true') ]
-  default: ''
-
-
 jobs:
 - ${{ each config in parameters.buildConfigs }}:
   - template: ${{ parameters.jobTemplate }}
