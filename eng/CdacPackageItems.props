@@ -2,21 +2,20 @@
   <!--
     *MicrosoftDotNetCdacTransportVersion is from Versions.props. This is how we integrate the cDAC transport packs into our builds
   -->
+  <PropertyGroup>
+    <_cdacPackageVersion Condition="'$(TargetRid)' == 'win-x64'">$(runtimewinx64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
+    <_cdacPackageVersion Condition="'$(TargetRid)' == 'win-arm64'">$(runtimewinarm64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
+    <_cdacPackageVersion Condition="'$(TargetRid)' == 'linux-x64'">$(runtimelinuxx64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
+    <_cdacPackageVersion Condition="'$(TargetRid)' == 'linux-arm64'">$(runtimelinuxarm64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
+    <_cdacPackageVersion Condition="'$(TargetRid)' == 'osx-x64'">$(runtimeosxx64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
+    <_cdacPackageVersion Condition="'$(TargetRid)' == 'osx-arm64'">$(runtimeosxarm64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
+  </PropertyGroup>
+
   <ItemGroup>
-    <PackageDownload Include="runtime.win-x64.Microsoft.DotNet.Cdac.Transport" Version="[$(runtimewinx64MicrosoftDotNetCdacTransportVersion)]" Condition="'$(TargetRid)' == 'win-x64'"/>
-    <PackageDownload Include="runtime.win-arm64.Microsoft.DotNet.Cdac.Transport" Version="[$(runtimewinarm64MicrosoftDotNetCdacTransportVersion)]" Condition="'$(TargetRid)' == 'win-arm64'"/>
-    <PackageDownload Include="runtime.linux-x64.Microsoft.DotNet.Cdac.Transport" Version="[$(runtimelinuxx64MicrosoftDotNetCdacTransportVersion)]" Condition="'$(TargetRid)' == 'linux-x64'"/>
-    <PackageDownload Include="runtime.linux-arm64.Microsoft.DotNet.Cdac.Transport" Version="[$(runtimelinuxarm64MicrosoftDotNetCdacTransportVersion)]" Condition="'$(TargetRid)' == 'linux-arm64'"/>
-    <PackageDownload Include="runtime.osx-x64.Microsoft.DotNet.Cdac.Transport" Version="[$(runtimeosxx64MicrosoftDotNetCdacTransportVersion)]" Condition="'$(TargetRid)' == 'osx-x64'"/>
-    <PackageDownload Include="runtime.osx-arm64.Microsoft.DotNet.Cdac.Transport" Version="[$(runtimeosxarm64MicrosoftDotNetCdacTransportVersion)]" Condition="'$(TargetRid)' == 'osx-arm64'"/>
+    <PackageDownload Include="runtime.$(TargetRid).Microsoft.DotNet.Cdac.Transport" Version="[$(_cdacPackageVersion)]" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.win-x64.microsoft.dotnet.cdac.transport\$(runtimewinx64MicrosoftDotNetCdacTransportVersion)\runtimes\win-x64\native\*" Condition="'$(TargetRid)' == 'win-x64'" />
-    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.win-arm64.microsoft.dotnet.cdac.transport\$(runtimewinarm64MicrosoftDotNetCdacTransportVersion)\runtimes\win-arm64\native\*" Condition="'$(TargetRid)' == 'win-arm64'" />
-    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.linux-x64.microsoft.dotnet.cdac.transport\$(runtimelinuxx64MicrosoftDotNetCdacTransportVersion)\runtimes\linux-x64\native\*" Condition="'$(TargetRid)' == 'linux-x64'" />
-    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.linux-arm64.microsoft.dotnet.cdac.transport\$(runtimelinuxarm64MicrosoftDotNetCdacTransportVersion)\runtimes\linux-arm64\native\*" Condition="'$(TargetRid)' == 'linux-arm64'" />
-    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.osx-x64.microsoft.dotnet.cdac.transport\$(runtimeosxx64MicrosoftDotNetCdacTransportVersion)\runtimes\osx-x64\native\*" Condition="'$(TargetRid)' == 'osx-x64'" />
-    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.osx-arm64.microsoft.dotnet.cdac.transport\$(runtimeosxarm64MicrosoftDotNetCdacTransportVersion)\runtimes\osx-arm64\native\*" Condition="'$(TargetRid)' == 'osx-arm64'" />
+    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.$(TargetRid).microsoft.dotnet.cdac.transport\$(_cdacPackageVersion)\runtimes\$(TargetRid)\native\*" />
   </ItemGroup>
 </Project>

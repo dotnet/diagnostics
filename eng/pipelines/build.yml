@@ -185,7 +185,6 @@ jobs:
           -binaryLog
           -configuration ${{ config.configuration }}
           -architecture ${{ config.architecture }}
-          $(_buildLog)
           $(_TestArgs)
           $(_Cross)
           $(_InternalInstallArgs)
