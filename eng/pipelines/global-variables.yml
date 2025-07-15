@@ -69,7 +69,6 @@ variables:
 - ${{ if eq(parameters.runtimeFeedToken, 'dotnetclimsrc-sas-token-base64') }}:
   - name: RuntimeFeedBase64SasToken
     value: $(dotnetclimsrc-read-sas-token-base64)
-- ${{ if eq(variables['PackageWithCDac'], 'true') }}:
-  - name: _PackageWithCDac
-    value: 'true'
+- name: _PackageWithCDac
+  value: $[ eq(variables['PackageWithCDac'], 'true') ]
 
