@@ -133,8 +133,7 @@ jobs:
       - _TestArgs: '-test'
       - _Cross: ''
 
-      - ${{ if eq(variables.PackageWithCDac, 'true') }}:
-        - _ExtraBuildProps: '/p:PackageWithCDac=true'
+      - _ExtraBuildProps: $[eq(variables['PackageWithCDac'], 'true'), '/p:PackageWithCDac=true', '']
 
       - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
         - _buildScript: $(Build.SourcesDirectory)\build.cmd
