@@ -225,7 +225,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private const string _defaultAddressFormatWindows = "dotnet-diagnostic-{0}";
         private const string _dsrouterAddressFormatWindows = "dotnet-diagnostic-dsrouter-{0}";
         private const string _defaultAddressFormatNonWindows = "dotnet-diagnostic-{0}-{1}-socket";
-        private const string _dsrouterAddressFormatNonWindows = "dotnet-diagnostic-dsrouter-{0}-*-socket";
+        private const string _dsrouterAddressFormatNonWindows = "dotnet-diagnostic-dsrouter-{0}-{1}-socket";
         private int _pid;
         private IpcEndpointConfig _config;
         /// <summary>
@@ -294,7 +294,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
-                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, string.Format(_dsrouterAddressFormatNonWindows, pid)) // Try best match.
+                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, string.Format(_dsrouterAddressFormatNonWindows, pid, "*")) // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
