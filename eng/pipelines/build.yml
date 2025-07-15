@@ -133,6 +133,9 @@ jobs:
       - _TestArgs: '-test'
       - _Cross: ''
 
+      - ${{ if eq($(PackageWithCDac), 'true') }}:
+        - _ExtraBuildProps: '/p:PackageWithCDac=true'
+
       - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
         - _buildScript: $(Build.SourcesDirectory)\build.cmd
       - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
@@ -189,6 +192,7 @@ jobs:
           $(_Cross)
           $(_InternalInstallArgs)
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          $(_ExtraBuildProps)
         ${{ if eq(parameters.testOnly, 'true') }}:
           displayName: Test
         ${{ elseif eq(parameters.buildOnly, 'true') }}:
