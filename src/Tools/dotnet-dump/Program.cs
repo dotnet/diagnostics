@@ -32,8 +32,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
             };
 
             command.SetAction((parseResult) => new Dumper().Collect(
-                stdOutput: parseResult.Configuration.Output,
-                stdError: parseResult.Configuration.Error,
+                stdOutput: parseResult.InvocationConfiguration.Output,
+                stdError: parseResult.InvocationConfiguration.Error,
                 processId: parseResult.GetValue(ProcessIdOption),
                 output: parseResult.GetValue(OutputOption),
                 diag: parseResult.GetValue(DiagnosticLoggingOption),
@@ -60,7 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         private static readonly Option<string> OutputOption =
             new("--output", "-o")
             {
-                Description = @"The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and './core_YYYYMMDD_HHMMSS' 
+                Description = @"The path where collected dumps should be written. Defaults to '.\dump_YYYYMMDD_HHMMSS.dmp' on Windows and './core_YYYYMMDD_HHMMSS'
 on Linux where YYYYMMDD is Year/Month/Day and HHMMSS is Hour/Minute/Second. Otherwise, it is the full path and file name of the dump."
             };
 

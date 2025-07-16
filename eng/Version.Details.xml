@@ -9,6 +9,10 @@
       <Uri>https://github.com/microsoft/clrmd</Uri>
       <Sha>d724947392626b66e39b525998a8817447d50380</Sha>
     </Dependency>
+    <Dependency Name="System.Commandline" Version="2.0.0-beta7.25365.101">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>78061f4bcc414fa2054be6237b1fd3813d8edf6b</Sha>
+    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.25365.101">
