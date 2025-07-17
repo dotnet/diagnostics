@@ -1,7 +1,8 @@
 <!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
 <Project Sdk="Microsoft.Build.NoTargets">
   <!--
-    $(BuildArch) - architecture to test (x64, x86, arm, arm64). Defaults to x64.
+    $(TargetArch) - architecture to test (x64, x86, arm, arm64). Defaults to x64.
+    $(LiveRuntimeDir) - path to the locally built runtime to use for testing.
 
     From Versions.props:
 
@@ -18,23 +19,21 @@
   -->
 
   <PropertyGroup>
-    <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
-    <BuildArch Condition="'$(BuildArch)' == 'AnyCpu'">$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</BuildArch>
     <LiveRuntimeDir Condition="'$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizePath('$(LiveRuntimeDir)'))</LiveRuntimeDir>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(BuildArch)' != 'x86'">
+  <PropertyGroup Condition="'$(TargetArch)' != 'x86'">
     <DotNetInstallRoot>$(RepoRoot).dotnet-test\</DotNetInstallRoot>
     <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE</RegistryRoot>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(BuildArch)' == 'x86'">
+  <PropertyGroup Condition="'$(TargetArch)' == 'x86'">
     <DotNetInstallRoot>$(RepoRoot).dotnet-test\x86\</DotNetInstallRoot>
     <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node</RegistryRoot>
   </PropertyGroup>
 
   <PropertyGroup>
-    <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(BuildArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
+    <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(TargetArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
     <DotNetInstallDir>$([MSBuild]::NormalizeDirectory('$(DotNetInstallRoot)', 'shared', 'Microsoft.NETCore.App', '$(MicrosoftNETCoreAppRefVersion)'))</DotNetInstallDir>
     <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
   </PropertyGroup>

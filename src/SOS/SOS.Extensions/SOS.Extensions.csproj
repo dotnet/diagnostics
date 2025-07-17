@@ -12,7 +12,6 @@
   
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
-    <PackageReference Include="Microsoft.DiaSymReader.Native" Version="$(MicrosoftDiaSymReaderNativeVersion)" Condition="'$(OS)' == 'Windows_NT'" />
     <PackageReference Include="System.Memory" Version="$(SystemMemoryVersion)" />
   </ItemGroup>
     
@@ -23,4 +22,15 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\SOS.Hosting\SOS.Hosting.csproj" />
   </ItemGroup>
+
+  <!--
+    This copies all the managed binaries needed to load/run SOS from the native artifact directory
+   -->
+  <Target Name="InstallProjectBinaries" AfterTargets="Build">
+    <ItemGroup>
+      <ProjectBinaries Include="$(OutputPath)\publish\*.dll" />
+      <ProjectBinaries Include="$(OutputPath)\publish\*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ProjectBinaries)" DestinationFolder="$(ArtifactsBinNativeDir)" SkipUnchangedFiles="false" />
+  </Target>
 </Project>
