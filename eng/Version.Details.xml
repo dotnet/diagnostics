@@ -9,34 +9,6 @@
       <Uri>https://github.com/microsoft/clrmd</Uri>
       <Sha>d724947392626b66e39b525998a8817447d50380</Sha>
     </Dependency>
-    <Dependency Name="runtime.win-x64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
-    </Dependency>
-    <Dependency Name="runtime.win-arm64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
-    </Dependency>
-    <Dependency Name="runtime.linux-x64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
-    </Dependency>
-    <Dependency Name="runtime.linux-arm64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
-    </Dependency>
-    <Dependency Name="runtime.osx-x64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
-    </Dependency>
-    <Dependency Name="runtime.osx-arm64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
-    </Dependency>
-    <Dependency Name="System.Commandline" Version="2.0.0-beta7.25365.101">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>78061f4bcc414fa2054be6237b1fd3813d8edf6b</Sha>
-    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.25367.104">
@@ -68,6 +40,30 @@
       <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
     </Dependency>
     <Dependency Name="Microsoft.NETCore.Platforms" Version="10.0.0-preview.7.25367.104">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
+    </Dependency>
+    <Dependency Name="runtime.win-x64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
+    </Dependency>
+    <Dependency Name="runtime.win-arm64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
+    </Dependency>
+    <Dependency Name="runtime.linux-x64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
+    </Dependency>
+    <Dependency Name="runtime.linux-arm64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
+    </Dependency>
+    <Dependency Name="runtime.osx-x64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
+    </Dependency>
+    <Dependency Name="runtime.osx-arm64.Microsoft.DotNet.Cdac.Transport" Version="10.0.0-preview.7.25367.104">
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>8eb9ff11d643a9f03d9a5c0185e0eeb35767707f</Sha>
     </Dependency>

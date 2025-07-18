@@ -306,8 +306,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
             symbolicateCommand.SetAction((parseResult, ct) => Task.FromResult(Symbolicate(
-                stdOutput: parseResult.InvocationConfiguration.Output,
-                stdError: parseResult.InvocationConfiguration.Error,
+                stdOutput: parseResult.Configuration.Output,
+                stdError: parseResult.Configuration.Error,
                 inputPath: parseResult.GetValue(InputFileArgument),
                 searchDir: parseResult.GetValue(SearchDirectoryOption),
                 output: parseResult.GetValue(OutputFileOption),

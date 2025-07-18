@@ -32,8 +32,8 @@ namespace Microsoft.Diagnostics.Tools.SOS
             };
 
             installCommand.SetAction(parseResult => Invoke(
-                parseResult.InvocationConfiguration.Output,
-                parseResult.InvocationConfiguration.Error,
+                parseResult.Configuration.Output,
+                parseResult.Configuration.Error,
                 architecture: parseResult.GetValue(ArchitectureOption),
                 install: true));
 
@@ -53,8 +53,8 @@ namespace Microsoft.Diagnostics.Tools.SOS
                 description: "Uninstalls SOS and reverts any configuration changes to LLDB.");
 
             uninstallCommand.SetAction(parseResult => Invoke(
-                parseResult.InvocationConfiguration.Output,
-                parseResult.InvocationConfiguration.Error,
+                parseResult.Configuration.Output,
+                parseResult.Configuration.Error,
                 architecture: null,
                 install: false));
 

@@ -193,8 +193,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
             };
 
             reportCommand.SetAction((parseResult, ct) => Report(ct,
-                stdOutput: parseResult.InvocationConfiguration.Output,
-                stdError: parseResult.InvocationConfiguration.Error,
+                stdOutput: parseResult.Configuration.Output,
+                stdError: parseResult.Configuration.Error,
                 processId: parseResult.GetValue(ProcessIdOption),
                 name: parseResult.GetValue(NameOption),
                 duration: parseResult.GetValue(DurationOption)));

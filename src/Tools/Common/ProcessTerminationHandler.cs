@@ -24,14 +24,15 @@ namespace Microsoft.Internal.Common.Utils
 
         internal static async Task<int> InvokeAsync(ParseResult parseResult, string blockedSignals = "")
         {
-            using ProcessTerminationHandler terminationHandler = new(blockedSignals);
-            return await parseResult.InvokeAsync(
-                configuration: new InvocationConfiguration
-                {
-                    // System.CommandLine should not interfere with Ctrl+C
-                    ProcessTerminationTimeout = null,
-                },
-                cancellationToken: terminationHandler.GetToken).ConfigureAwait(false);
+            using ProcessTerminationHandler terminationHandler = ConfigureTerminationHandler(parseResult, blockedSignals);
+            return await parseResult.InvokeAsync(terminationHandler.GetToken).ConfigureAwait(false);
+        }
+
+        private static ProcessTerminationHandler ConfigureTerminationHandler(ParseResult parseResult, string blockedSignals)
+        {
+            // Use custom process terminate handler for the command line tool parse result.
+            parseResult.Configuration.ProcessTerminationTimeout = null;
+            return new ProcessTerminationHandler(blockedSignals);
         }
 
         private ProcessTerminationHandler(string blockedSignals)
