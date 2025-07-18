@@ -1,0 +1,38 @@
+<!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
+<Project>
+  <!--
+    $(ArtifactsBinNativeDir) - Native artifacts directory (e.g. artifacts\bin\Windows_NT.x64.Debug).
+    $(TargetRid) - Target runtime identifier (e.g. win-x64, linux-x64, osx-x64).
+
+    From Versions.props:
+
+    $(MicrosoftDiaSymReaderNativeVersion)
+
+    From Arcade:
+
+    $(NuGetPackageRoot) - nuget packages root directory
+  -->
+
+  <ItemGroup>
+    <PackageDownload Include="Microsoft.DiaSymReader.Native" Version="[$(MicrosoftDiaSymReaderNativeVersion)]" Condition="'$(OS)' == 'Windows_NT'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageSourceFiles Include="$(NuGetPackageRoot)microsoft.diasymreader.native\$(MicrosoftDiaSymReaderNativeVersion)\runtimes\$(TargetRid)\native\*" Condition="'$(OS)' == 'Windows_NT'" />
+  </ItemGroup>
+
+  <Import Condition="'$(PackageWithCDac)' == 'true'" Project="$(RepositoryEngineeringDir)CdacPackageItems.props" />
+
+<!--
+    Installs the above packages into the $(ArtifactsBinNativeDir) directory. 
+-->
+  <Target Name="InstallNativePackages">
+    <Message Importance="High" Text="Installing packages to $(ArtifactsBinNativeDir)..." />
+
+    <Copy SourceFiles="@(PackageSourceFiles)" DestinationFolder="$(ArtifactsBinNativeDir)" SkipUnchangedFiles="false">
+      <Output TaskParameter="CopiedFiles" ItemName="CopiedPackageFiles" />
+    </Copy>
+
+    <Message Importance="High" Text="Installed packages: @(CopiedPackageFiles)" />
+  </Target>
+</Project>

@@ -21,7 +21,7 @@ set __TargetOS=Windows_NT
 set __BuildNative=1
 set __CI=0
 set __Verbosity=minimal
-set __Ninja=0
+set __Ninja=1
 
 :: Set the various build properties here so that CMake and MSBuild can pick them up
 set "__RepoRootDir=%~dp0"
@@ -46,6 +46,8 @@ if /i "%1" == "--help" goto Usage
 if /i "%1" == "-configuration"       (set __BuildType=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-architecture"        (set __TargetArch=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
 if /i "%1" == "-verbosity"           (set __Verbosity=%2&set processedArgs=!processedArgs! %1 %2&shift&shift&goto Arg_Loop)
+if /i "%1" == "-msbuild"             (set __Ninja=0&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
+if /i "%1" == "-ninja"               (set __Ninja=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 if /i "%1" == "-ci"                  (set __CI=1&set processedArgs=!processedArgs! %1&shift&goto Arg_Loop)
 
 :: These options are ignored for a native build
@@ -105,7 +107,7 @@ set "__CMakeBinDir=%__BinDir%"
 set "__CMakeBinDir=%__CMakeBinDir:\=/%"
 
 :: Common msbuild arguments
-set "__CommonBuildArgs=/v:!__Verbosity! /p:Configuration=%__BuildType% /p:BuildArch=%__TargetArch% %__UnprocessedBuildArgs%"
+set "__CommonBuildArgs=/v:!__Verbosity! /p:Configuration=%__BuildType% /p:TargetOS=%__TargetOS% /p:TargetArch=%__TargetArch% %__UnprocessedBuildArgs%"
 
 if not exist "%__BinDir%"           md "%__BinDir%"
 if not exist "%__IntermediatesDir%" md "%__IntermediatesDir%"
@@ -162,13 +164,9 @@ if %__BuildNative% EQU 1 (
         goto ExitWithError
     )
 
-    if %__Ninja% EQU 1 (
-        set __ExtraCmakeArgs="-DCMAKE_BUILD_TYPE=!__BuildType!"
-    )
-
     echo Generating Version Header
     set __GenerateVersionLog="%__LogDir%\GenerateVersion.binlog"
-    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__RepoRootDir%\eng\common\msbuild.ps1" "%__RepoRootDir%\eng\native-prereqs.proj" /bl:!__GenerateVersionLog! /t:BuildPrereqs /restore %__CommonBuildArgs%
+    powershell -NoProfile -ExecutionPolicy ByPass -NoLogo -File "%__RepoRootDir%\eng\common\msbuild.ps1" "%__RepoRootDir%\eng\native-prereqs.proj" /bl:!__GenerateVersionLog! /t:Build /restore %__CommonBuildArgs%
     if not !errorlevel! == 0 (
         echo Generate Version Header FAILED
         goto ExitWithError
@@ -177,9 +175,11 @@ if %__BuildNative% EQU 1 (
 
     echo %__MsgPrefix%Regenerating the Visual Studio solution
 
-    set "__ManagedBinaryDir=%__RootBinDir%\bin"
-    set "__ManagedBinaryDir=!__ManagedBinaryDir:\=/!"
-    set __ExtraCmakeArgs=!__ExtraCmakeArgs! "-DCMAKE_SYSTEM_VERSION=10.0" "-DCLR_MANAGED_BINARY_DIR=!__ManagedBinaryDir!" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__TargetArch%" "-DNUGET_PACKAGES=%NUGET_PACKAGES:\=/%"
+    if %__Ninja% EQU 1 (
+        set __ExtraCmakeArgs="-DCMAKE_BUILD_TYPE=!__BuildType!"
+    )
+
+    set __ExtraCmakeArgs=!__ExtraCmakeArgs! "-DCMAKE_SYSTEM_VERSION=10.0" "-DCLR_BUILD_TYPE=%__BuildType%" "-DCLR_CMAKE_TARGET_ARCH=%__TargetArch%"
 
     pushd "%__IntermediatesDir%"
     call "%__RepoRootDir%\eng\native\gen-buildsys.cmd" "%__RepoRootDir%" "%__IntermediatesDir%" %VisualStudioVersion% %__HostArch% %__TargetOS% !__ExtraCmakeArgs!
@@ -194,9 +194,16 @@ if %__BuildNative% EQU 1 (
         goto ExitWithError
     )
     set __BuildLog="%__LogDir%\Native.Build.binlog"
+    set __CmakeBuildToolArgs=
+    if %__Ninja% EQU 1 (
+        set __CmakeBuildToolArgs=
+    ) else (
+        REM We pass the /m flag directly to MSBuild so that we can get both MSBuild and CL parallelism, which is fastest for our builds.
+        set __CmakeBuildToolArgs=/bl:!__BuildLog! !__CommonBuildArgs!
+    )
 
-    echo running "%CMakePath%" --build %__IntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
-    "%CMakePath%" --build %__IntermediatesDir% --target install --config %__BuildType% -- /bl:!__BuildLog! !__CommonBuildArgs!
+    echo running "%CMakePath%" --build %__IntermediatesDir% --target install --config %__BuildType% -- !__CmakeBuildToolArgs!
+    "%CMakePath%" --build %__IntermediatesDir% --target install --config %__BuildType% -- !__CmakeBuildToolArgs!
 
     if not !ERRORLEVEL! == 0 (
         echo %__MsgPrefix%Error: native component build failed. Refer to the build log files for details:
@@ -208,20 +215,6 @@ if %__BuildNative% EQU 1 (
     rem } Scope environment changes end
     endlocal
 )
-
-REM Copy the native SOS binaries to where these tools expect for CI & VS testing
-
-set "__targetFramework=net8.0"
-set "__dotnet_sos=%__RootBinDir%\bin\dotnet-sos\%__BuildType%\%__targetFramework%"
-set "__dotnet_dump=%__RootBinDir%\bin\dotnet-dump\%__BuildType%\%__targetFramework%"
-mkdir %__dotnet_sos%\win-%__TargetArch%
-mkdir %__dotnet_sos%\publish\win-%__TargetArch%
-mkdir %__dotnet_dump%\win-%__TargetArch%
-mkdir %__dotnet_dump%\publish\win-%__TargetArch%
-xcopy /y /q /i %__BinDir% %__dotnet_sos%\win-%__TargetArch%
-xcopy /y /q /i %__BinDir% %__dotnet_sos%\publish\win-%__TargetArch%
-xcopy /y /q /i %__BinDir% %__dotnet_dump%\win-%__TargetArch%
-xcopy /y /q /i %__BinDir% %__dotnet_dump%\publish\win-%__TargetArch%
 
 REM =========================================================================================
 REM ===

@@ -137,47 +137,15 @@ mkdir -p "$__IntermediatesDir"
 mkdir -p "$__LogsDir"
 mkdir -p "$__CMakeBinDir"
 
-__ExtraCmakeArgs="$__CMakeArgs $__ExtraCmakeArgs -DCLR_MANAGED_BINARY_DIR=$__RootBinDir/bin -DCLR_BUILD_TYPE=$__BuildType"
+__ExtraCmakeArgs="$__CMakeArgs $__ExtraCmakeArgs -DCLR_BUILD_TYPE=$__BuildType"
 
 # Specify path to be set for CMAKE_INSTALL_PREFIX.
 # This is where all built native libraries will copied to.
 export __CMakeBinDir="$__BinDir"
 
-
 if [[ "$__TargetArch" == "armel" ]]; then
     # Armel cross build is Tizen specific and does not support Portable RID build
     __PortableBuild=0
-fi
-
-#
-# Managed build
-#
-
-if [[ "$__ManagedBuild" == 1 ]]; then
-
-    echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
-    "$__RepoRootDir/eng/common/build.sh" --configuration "$__BuildType" $__CommonMSBuildArgs $__ManagedBuildArgs $__UnprocessedBuildArgs
-
-    if [ "$?" != 0 ]; then
-        exit 1
-    fi
-
-    echo "Generating Version Source File"
-    __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
-
-    "$__RepoRootDir/eng/common/msbuild.sh" \
-        $__RepoRootDir/eng/native-prereqs.proj \
-        /bl:$__GenerateVersionLog \
-        /t:BuildPrereqs \
-        /restore \
-        /p:Configuration="$__BuildType" \
-        /p:Platform="$__TargetArch" \
-        $__UnprocessedBuildArgs
-
-    if [ $? != 0 ]; then
-        echo "Generating Version Source File FAILED"
-        exit 1
-    fi
 fi
 
 #
@@ -215,6 +183,26 @@ fi
 # Build native components
 #
 if [[ "$__NativeBuild" == 1 ]]; then
+    echo "Generating Version Source File"
+    __GenerateVersionLog="$__LogsDir/GenerateVersion.binlog"
+
+    "$__RepoRootDir/eng/common/msbuild.sh" \
+        $__RepoRootDir/eng/native-prereqs.proj \
+        /bl:$__GenerateVersionLog \
+        /t:Build \
+        /restore \
+        /p:Configuration="$__BuildType" \
+        /p:TargetOS="$__TargetOS" \
+        /p:TargetArch="$__TargetArch" \
+        /p:TargetRid="$__TargetRid" \
+        /p:Platform="$__TargetArch" \
+        $__UnprocessedBuildArgs
+
+    if [ $? != 0 ]; then
+        echo "Generating Version Source File FAILED"
+        exit 1
+    fi
+
     build_native "$__TargetOS" "$__TargetArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
 
     if [ "${PIPESTATUS[0]}" != 0 ]; then
@@ -224,22 +212,24 @@ if [[ "$__NativeBuild" == 1 ]]; then
 fi
 
 #
-# Copy the native SOS binaries to where these tools expect for testing
+# Managed build
 #
 
-if [[ "$__NativeBuild" == 1 || "$__Test" == 1 ]]; then
-    __targetFramework=net8.0
-    __dotnet_sos=$__RootBinDir/bin/dotnet-sos/$__BuildType/$__targetFramework/publish/$__TargetRid
-    __dotnet_dump=$__RootBinDir/bin/dotnet-dump/$__BuildType/$__targetFramework/publish/$__TargetRid
+if [[ "$__ManagedBuild" == 1 ]]; then
 
-    mkdir -p "$__dotnet_sos"
-    mkdir -p "$__dotnet_dump"
+    # __CommonMSBuildArgs contains TargetOS property
+    echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
+    "$__RepoRootDir/eng/common/build.sh" \
+        --configuration "$__BuildType" \
+        /p:TargetArch="$__TargetArch" \
+        /p:TargetRid="$__TargetRid" \
+        $__CommonMSBuildArgs \
+        $__ManagedBuildArgs \
+        $__UnprocessedBuildArgs
 
-    cp "$__BinDir"/* "$__dotnet_sos"
-    echo "Copied SOS to $__dotnet_sos"
-
-    cp "$__BinDir"/* "$__dotnet_dump"
-    echo "Copied SOS to $__dotnet_dump"
+    if [ "$?" != 0 ]; then
+        exit 1
+    fi
 fi
 
 #
@@ -257,7 +247,9 @@ if [[ "$__InstallRuntimes" == 1 || "$__PrivateBuild" == 1 ]]; then
         /t:InstallTestRuntimes \
         /bl:"$__LogsDir/InstallRuntimes.binlog" \
         /p:PrivateBuildTesting="$__privateBuildTesting" \
-        /p:BuildArch="$__TargetArch" \
+        /p:TargetOS="$__TargetOS" \
+        /p:TargetArch="$__TargetArch" \
+        /p:TargetRid="$__TargetRid" \
         /p:TestArchitectures="$__TargetArch" \
         /p:LiveRuntimeDir="$__LiveRuntimeDir" 
 fi
@@ -310,11 +302,13 @@ if [[ "$__Test" == 1 ]]; then
           export SOS_TEST_CDAC="true"
       fi
 
+      # __CommonMSBuildArgs contains TargetOS property
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
         --configuration "$__BuildType" \
         /bl:"$__LogsDir"/Test.binlog \
-        /p:BuildArch="$__TargetArch" \
+        /p:TargetArch="$__TargetArch" \
+        /p:TargetRid="$__TargetRid" \
         /p:DotnetRuntimeVersion="$__DotnetRuntimeVersion" \
         /p:DotnetRuntimeDownloadVersion="$__DotnetRuntimeDownloadVersion" \
         /p:RuntimeSourceFeed="$__RuntimeSourceFeed" \
