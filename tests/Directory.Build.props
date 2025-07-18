@@ -4,8 +4,6 @@
   <Import Project="$(RepositoryEngineeringDir)AuxMsbuildFiles\SdkPackOverrides.targets"/>
 
   <PropertyGroup>
-    <BuildArch Condition="'$(BuildArch)' == ''">$(Platform)</BuildArch>
-    <BuildArch Condition="'$(BuildArch)' == 'AnyCpu'">$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</BuildArch>
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>

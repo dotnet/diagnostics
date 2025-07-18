@@ -36,7 +36,7 @@ namespace Microsoft.Internal.Common.Utils
 
         private Process ChildProc => _childProc;
 
-        public int Start(string dsroutercommand, CancellationToken ct)
+        public int Start(string dsrouterCommand, CancellationToken ct)
         {
             string toolsRoot = System.IO.Path.GetDirectoryName(System.Environment.ProcessPath);
             string dotnetDsrouterTool = "dotnet-dsrouter";
@@ -46,10 +46,13 @@ namespace Microsoft.Internal.Common.Utils
                 dotnetDsrouterTool = Path.Combine(toolsRoot, dotnetDsrouterTool);
             }
 
+            // Block SIGINT and SIGQUIT in child process.
+            dsrouterCommand += " --block-signals SIGINT;SIGQUIT";
+
             _childProc = new Process();
 
             _childProc.StartInfo.FileName = dotnetDsrouterTool;
-            _childProc.StartInfo.Arguments = dsroutercommand;
+            _childProc.StartInfo.Arguments = dsrouterCommand;
             _childProc.StartInfo.UseShellExecute = false;
             _childProc.StartInfo.RedirectStandardOutput = true;
             _childProc.StartInfo.RedirectStandardError = true;
@@ -78,12 +81,37 @@ namespace Microsoft.Internal.Common.Utils
             {
                 try
                 {
-                    _childProc.Kill();
+                    _childProc.StandardInput.WriteLine("Q");
+                    _childProc.StandardInput.Flush();
+
+                    _childProc.WaitForExit(1000);
+                }
+                // if process exited while we were trying to write to stdin, it can throw IOException
+                catch (IOException) { }
+
+                try
+                {
+                    if (!_childProc.HasExited)
+                    {
+                        _childProc.Kill();
+                    }
                 }
                 // if process exited while we were trying to kill it, it can throw IOE
                 catch (InvalidOperationException) { }
-                _stdOutTask.Wait();
-                _stdErrTask.Wait();
+
+                try
+                {
+                    _stdOutTask.Wait();
+                }
+                // Ignore any fault/cancel state of task.
+                catch (AggregateException) { }
+
+                try
+                {
+                    _stdErrTask.Wait();
+                }
+                // Ignore any fault/cancel state of task.
+                catch (AggregateException) { }
             }
         }
     }

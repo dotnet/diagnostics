@@ -194,8 +194,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
             try
             {
-                _portReverseTaskCancelToken.Cancel();
-                await _portReverseTask.ConfigureAwait(false);
+                if (_portReverseTaskCancelToken is not null && _portReverseTask is not null)
+                {
+                    _portReverseTaskCancelToken.Cancel();
+                    await _portReverseTask.ConfigureAwait(false);
+                }
             }
             catch { }
 
@@ -265,8 +268,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             try
             {
-                _portForwardTaskCancelToken.Cancel();
-                _portForwardTask.Wait();
+                if (_portForwardTaskCancelToken is not null && _portForwardTask is not null)
+                {
+                    _portForwardTaskCancelToken.Cancel();
+                    _portForwardTask.Wait();
+                }
             }
             catch { }
 

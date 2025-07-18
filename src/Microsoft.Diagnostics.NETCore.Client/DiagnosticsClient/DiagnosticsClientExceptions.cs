@@ -21,6 +21,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     public class ServerNotAvailableException : DiagnosticsClientException
     {
         public ServerNotAvailableException(string msg) : base(msg) { }
+        public ServerNotAvailableException(string msg, Exception exception) : base(msg, exception) { }
     }
 
     // When the runtime responded with an error

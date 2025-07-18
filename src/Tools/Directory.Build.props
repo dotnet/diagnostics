@@ -28,4 +28,11 @@
       </PropertyGroup>
     </Otherwise>
   </Choose>
+
+  <ItemGroup>
+    <None Include="$(RepoRoot)/THIRD-PARTY-NOTICES.TXT"
+          Pack="true"
+          Visible="false"
+          PackagePath="THIRD-PARTY-NOTICES.txt" />
+  </ItemGroup>
 </Project>
