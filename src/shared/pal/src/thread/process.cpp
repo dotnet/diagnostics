@@ -1354,7 +1354,14 @@ class PAL_RuntimeStartupHelper
 
         if (fd == -1)
         {
-            TRACE("open failed: errno is %d (%s)\n", errno, strerror(errno));
+            if (!*canceled)
+            {
+                TRACE("open failed: errno is %d (%s)\n", errno, strerror(errno));
+            }
+            else
+            {
+                TRACE("open canceled\n");
+            }
             return -1;
         }
 
@@ -1941,16 +1948,30 @@ public:
         continuePipeFd = OpenNonBlockingPipe(kq, m_continuePipeName, O_WRONLY, &m_canceled);
         if (continuePipeFd == -1)
         {
-            TRACE("StartupHelperRuntimeEventsThread: failed opening continue pipe, exiting\n");
+            if (m_canceled)
+            {
+                TRACE("StartupHelperRuntimeEventsThread: canceled opening continue pipe\n");
+            }
+            else
+            {
+                TRACE("StartupHelperRuntimeEventsThread: failed opening continue pipe\n");
+            }
             goto exit;
         }
 
-        TRACE("StartupHelperRuntimeEventsThread: opening startup pipe\n");
+        TRACE("StartupHelperRuntimeEventsThread: opening continue '%s' startup '%s' pipes\n", m_continuePipeName, m_startupPipeName);
 
         startupPipeFd = OpenNonBlockingPipe(kq, m_startupPipeName, O_RDONLY, &m_canceled);
         if (startupPipeFd == -1)
         {
-            TRACE("StartupHelperRuntimeEventsThread: failed opening startup pipe, exiting\n");
+            if (m_canceled)
+            {
+                TRACE("StartupHelperRuntimeEventsThread: canceled opening startup pipe\n");
+            }
+            else
+            {
+                TRACE("StartupHelperRuntimeEventsThread: failed opening startup pipe\n");
+            }
             goto exit;
         }
 
@@ -1990,6 +2011,10 @@ public:
             if (offset == bytesToRead && event == (unsigned char)RuntimeEvent_Started)
             {
                 TRACE("StartupHelperRuntimeEventsThread: received started event\n");
+            }
+            else if (m_canceled)
+            {
+                TRACE("StartupHelperRuntimeEventsThread: canceled waiting for started event\n");
             }
             else
             {
@@ -2105,7 +2130,7 @@ static
 DWORD
 StartupHelperRuntimeEventsThread(LPVOID p)
 {
-    TRACE("PAL's StartupHelperRuntimeEventsThread starting\n");
+    TRACE("StartupHelperRuntimeEventsThread: starting\n");
 
     PAL_RuntimeStartupHelper *helper = (PAL_RuntimeStartupHelper *)p;
     helper->StartupHelperRuntimeEventsThread();
