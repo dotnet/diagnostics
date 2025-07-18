@@ -199,7 +199,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         {
                             if (handler.IsCommandSupported(group.Parser, services))
                             {
-                                return group.GetDetailedHelp(command, services, consoleWidth);
+                                return group.GetDetailedHelp(command, services);
                             }
                             if (handler.FilterInvokeMessage != null)
                             {
@@ -276,7 +276,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             private Command _rootCommand;
             private readonly Dictionary<string, CommandHandler> _commandHandlers = new();
-            private readonly ParseResult _emptyParseResult;
 
             /// <summary>
             /// Create an instance of the command processor;
@@ -285,10 +284,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             public CommandGroup(string commandPrompt = null)
             {
                 _rootCommand = new Command(commandPrompt);
-
-                // The actual ParseResult.Empty() has a bug in it where it tries to get the executable name
-                // and nothing is returned under lldb on Linux causing an index out of range exception.
-                _emptyParseResult = _rootCommand.Parse(Array.Empty<string>());
             }
 
             /// <summary>
@@ -317,7 +312,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         sb.AppendLine(error.Message);
                     }
-                    string helpText = GetDetailedHelp(parseResult.CommandResult.Command, services, int.MaxValue);
+                    string helpText = GetDetailedHelp(parseResult.CommandResult.Command, services);
                     throw new CommandParsingException(sb.ToString(), helpText);
                 }
                 else
@@ -433,14 +428,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Build or re-build parser instance after this command is added
             }
 
-            internal string GetDetailedHelp(Command command, IServiceProvider services, int windowWidth)
+            internal string GetDetailedHelp(Command command, IServiceProvider services)
             {
                 StringWriter console = new();
+                CommandLineConfiguration configuration = new(command)
+                {
+                    Output = console
+                };
 
-                // Get the command help
-                HelpBuilder helpBuilder = new(maxWidth: windowWidth);
-                HelpContext helpContext = new(helpBuilder, command, console, _emptyParseResult);
-                helpBuilder.Write(helpContext);
+                // Get the command help by parsing the --help option.
+                // The option is hidden so it doesn't show up in the help text.
+                command.Options.Add(new HelpOption() { Hidden = true });
+                // Invoking the help action writes to configuration.Output.
+                command.Parse(["--help"], configuration).Invoke();
+                command.Options.RemoveAt(command.Options.Count - 1); // Remove the help option
 
                 // Get the detailed help if any
                 if (TryGetCommandHandler(command.Name, out CommandHandler handler))
