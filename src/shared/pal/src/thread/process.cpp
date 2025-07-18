@@ -97,7 +97,7 @@ extern "C"
 
 // On macOS 26, sem_open fails if debugger and debugee are signed with different team ids.
 // Use fifos instead of semaphores to avoid this issue, https://github.com/dotnet/runtime/issues/116545
-#define ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#define ENABLE_RUNTIME_EVENTS_OVER_PIPES
 #endif // __APPLE__
 
 #ifdef __NetBSD__
@@ -267,10 +267,10 @@ DWORD
 StartupHelperThread(
     LPVOID p);
 
-#ifdef ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
 static
 DWORD
-StartupHelperRuntimeEventThread(
+StartupHelperRuntimeEventsThread(
     LPVOID p);
 #endif
 
@@ -1237,10 +1237,10 @@ static uint64_t HashSemaphoreName(uint64_t a, uint64_t b)
 static const char *const TwoWayNamedPipePrefix = "clr-debug-pipe";
 static const char* IpcNameFormat = "%s-%d-%llu-%s";
 
-#ifdef ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
 static const char* RuntimeStartupPipeName = "st";
 static const char* RuntimeContinuePipeName = "co";
-#endif // ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
 
 class PAL_RuntimeStartupHelper
 {
@@ -1268,18 +1268,18 @@ class PAL_RuntimeStartupHelper
 
     char m_applicationGroupId[MAX_APPLICATION_GROUP_ID_LENGTH+1];
 
-#ifdef ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
     char m_startupPipeName[MAX_DEBUGGER_TRANSPORT_PIPE_NAME_LENGTH];
     char m_continuePipeName[MAX_DEBUGGER_TRANSPORT_PIPE_NAME_LENGTH];
-    DWORD m_runtimeEventThreadId;
-    HANDLE m_runtimeEventThreadHandle;
+    DWORD m_runtimeEventsThreadId;
+    HANDLE m_runtimeEventsThreadHandle;
 
     typedef enum
     {
-        PipeHandshakeCommand_Unknown = 0,
-        PipeHandshakeCommand_Startup = 1,
-        PipeHandshakeCommand_Continue = 2,
-    } PipeHandshakeCommand;
+        RuntimeEvent_Unknown = 0,
+        RuntimeEvent_Started = 1,
+        RuntimeEvent_Continue = 2,
+    } RuntimeEvent;
 
     static void CloseFd(int fd)
     {
@@ -1331,7 +1331,7 @@ class PAL_RuntimeStartupHelper
         flags |= O_CLOEXEC;
 #endif
 
-        while(!(*canceled) && fd == -1)
+        while(!*canceled && fd == -1)
         {
             fd = open(name, flags);
             if (fd == -1)
@@ -1568,7 +1568,7 @@ class PAL_RuntimeStartupHelper
         return DoNonBlockingPipeIO(fd, (void *)buf, count, timeout, WriteIOFunc, POLLOUT);
     }
 #endif // HAVE_KQUEUE && !HAVE_BROKEN_FIFO_KEVENT
-#endif // ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
 
 #ifdef __APPLE__
     LPCSTR GetApplicationGroupId() const
@@ -1594,10 +1594,10 @@ public:
         m_processId(dwProcessId),
         m_startupSem(SEM_FAILED),
         m_continueSem(SEM_FAILED)
-#ifdef ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
-        , m_runtimeEventThreadId(0)
-        , m_runtimeEventThreadHandle(NULL)
-#endif // ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+        , m_runtimeEventsThreadId(0)
+        , m_runtimeEventsThreadHandle(NULL)
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
     {
     }
 
@@ -1620,15 +1620,15 @@ public:
             CloseHandle(m_threadHandle);
         }
 
-#ifdef ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
         unlink(m_startupPipeName);
         unlink(m_continuePipeName);
 
-        if (m_runtimeEventThreadHandle != NULL)
+        if (m_runtimeEventsThreadHandle != NULL)
         {
-            CloseHandle(m_runtimeEventThreadHandle);
+            CloseHandle(m_runtimeEventsThreadHandle);
         }
-#endif // ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
     }
 
     LONG AddRef()
@@ -1709,7 +1709,7 @@ public:
         }
 #endif // __APPLE__
 
-#ifdef ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
         PAL_GetTransportPipeName(m_startupPipeName, m_processId, GetApplicationGroupId(), RuntimeStartupPipeName);
         PAL_GetTransportPipeName(m_continuePipeName, m_processId, GetApplicationGroupId(), RuntimeContinuePipeName);
 
@@ -1717,7 +1717,7 @@ public:
 
         CreatePipe(m_continuePipeName);
         CreatePipe(m_startupPipeName);
-#endif // ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
 
         // See semaphore name format for details about this value. We store it so that
         // it can be used by the cleanup code that removes the semaphore with sem_unlink.
@@ -1753,19 +1753,19 @@ public:
             goto exit;
         }
 
-#ifdef ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
         // Add a reference for the thread handler
         AddRef();
         pe = InternalCreateThread(
             pThread,
             NULL,
             0,
-            ::StartupHelperRuntimeEventThread,
+            ::StartupHelperRuntimeEventsThread,
             this,
             0,
             UserCreatedThread,
             &osThreadId,
-            &m_runtimeEventThreadHandle);
+            &m_runtimeEventsThreadHandle);
 
         if (NO_ERROR != pe)
         {
@@ -1774,8 +1774,8 @@ public:
             goto exit;
         }
 
-        m_runtimeEventThreadId = (DWORD)osThreadId;
-#endif // ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+        m_runtimeEventsThreadId = (DWORD)osThreadId;
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
 
         // Add a reference for the thread handler
         AddRef();
@@ -1824,13 +1824,13 @@ public:
             WaitForSingleObject(m_threadHandle, 60 * 1000);
         }
 
-#ifdef ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
-        if (m_runtimeEventThreadId != (DWORD)THREADSilentGetCurrentThreadId())
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+        if (m_runtimeEventsThreadId != (DWORD)THREADSilentGetCurrentThreadId())
         {
-            // Wait for pipe thread to exit for 60 seconds
-            WaitForSingleObject(m_runtimeEventThreadHandle, 60 * 1000);
+            // Wait for runtime events thread to exit for 60 seconds
+            WaitForSingleObject(m_runtimeEventsThreadHandle, 60 * 1000);
         }
-#endif // ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
     }
 
     //
@@ -1918,8 +1918,8 @@ public:
         return pe;
     }
 
-#ifdef ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
-    void StartupHelperRuntimeEventThread()
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+    void StartupHelperRuntimeEventsThread()
     {
         PAL_ERROR pe = NO_ERROR;
         int offset = 0;
@@ -1931,30 +1931,35 @@ public:
         kq = kqueue();
         if (kq == -1)
         {
-            TRACE("kqueue() failed: %d (%s)\n", errno, strerror(errno));
+            TRACE("StartupHelperRuntimeEventsThread: kqueue() failed: %d (%s)\n", errno, strerror(errno));
             goto exit;
         }
 #endif // HAVE_KQUEUE && !HAVE_BROKEN_FIFO_KEVENT
 
+        TRACE("StartupHelperRuntimeEventsThread: opening continue pipe\n");
+
         continuePipeFd = OpenNonBlockingPipe(kq, m_continuePipeName, O_WRONLY, &m_canceled);
         if (continuePipeFd == -1)
         {
-            TRACE("RuntimeEventThread: failed opening continue pipe, exiting\n");
+            TRACE("StartupHelperRuntimeEventsThread: failed opening continue pipe, exiting\n");
             goto exit;
         }
+
+        TRACE("StartupHelperRuntimeEventsThread: opening startup pipe\n");
 
         startupPipeFd = OpenNonBlockingPipe(kq, m_startupPipeName, O_RDONLY, &m_canceled);
         if (startupPipeFd == -1)
         {
-            TRACE("RuntimeEventThread: failed opening startup pipe, exiting\n");
+            TRACE("StartupHelperRuntimeEventsThread: failed opening startup pipe, exiting\n");
             goto exit;
         }
 
-        // Wait for the runtime to startup.
+        TRACE("StartupHelperRuntimeEventsThread: waiting on started event\n");
+
         {
-            unsigned char command = (unsigned char)PipeHandshakeCommand_Unknown;
-            unsigned char *buffer = &command;
-            int bytesToRead = sizeof(command);
+            unsigned char event = (unsigned char)RuntimeEvent_Unknown;
+            unsigned char *buffer = &event;
+            int bytesToRead = sizeof(event);
             int bytesRead = 0;
 
             do
@@ -1982,35 +1987,37 @@ public:
             }
             while (!m_canceled && offset < bytesToRead);
 
-            if (offset == bytesToRead && command == (unsigned char)PipeHandshakeCommand_Startup)
+            if (offset == bytesToRead && event == (unsigned char)RuntimeEvent_Started)
             {
-                TRACE("RuntimeEventThread: received startup command\n");
+                TRACE("StartupHelperRuntimeEventsThread: received started event\n");
             }
             else
             {
-                TRACE("RuntimeEventThread: received invalid command\n");
+                TRACE("StartupHelperRuntimeEventsThread: received invalid event\n");
                 m_error = ERROR_INVALID_PARAMETER;
             }
             
             sem_post(m_startupSem);
         }
 
-        // Wait for the debugger to signal that it is ready to continue.
+        TRACE("StartupHelperRuntimeEventsThread: waiting on debugger\n");
+
         while (sem_wait(m_continueSem) != 0)
         {
             if (EINTR == errno)
             {
-                TRACE("sem_wait() failed with EINTR; re-waiting");
+                TRACE("StartupHelperRuntimeEventsThread: sem_wait() failed with EINTR; re-waiting\n");
                 continue;
             }
-            TRACE("sem_wait(contniue) failed: errno is %d (%s)\n", errno, strerror(errno));
+            TRACE("StartupHelperRuntimeEventsThread: sem_wait(contniue) failed: errno is %d (%s)\n", errno, strerror(errno));
         }
 
+        TRACE("StartupHelperRuntimeEventsThread: sending continue event\n");
+
         {
-            // Signal runtime continue event.
-            unsigned char command = (unsigned char)PipeHandshakeCommand_Continue;
-            unsigned char *buffer = &command;
-            int bytesToWrite = sizeof(command);
+            unsigned char event = (unsigned char)RuntimeEvent_Continue;
+            unsigned char *buffer = &event;
+            int bytesToWrite = sizeof(event);
             int bytesWritten = 0;
 
             offset = 0;
@@ -2023,6 +2030,11 @@ public:
                 }
             }
             while (bytesWritten > 0 && offset < bytesToWrite);
+
+            if (offset != bytesToWrite)
+            {
+                TRACE("StartupHelperRuntimeEventsThread: failed sending continue event\n");
+            }
         }
 
     exit:
@@ -2042,7 +2054,8 @@ public:
             CloseFd(kq);
         }
     }
-#endif // ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
 
     void StartupHelperThread()
     {
@@ -2087,19 +2100,22 @@ public:
     }
 };
 
-#ifdef ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
 static
 DWORD
-StartupHelperRuntimeEventThread(LPVOID p)
+StartupHelperRuntimeEventsThread(LPVOID p)
 {
-    TRACE("PAL's StartupHelperRuntimeEventThread starting\n");
+    TRACE("PAL's StartupHelperRuntimeEventsThread starting\n");
 
     PAL_RuntimeStartupHelper *helper = (PAL_RuntimeStartupHelper *)p;
-    helper->StartupHelperRuntimeEventThread();
+    helper->StartupHelperRuntimeEventsThread();
     helper->Release();
+
+    TRACE("StartupHelperRuntimeEventsThread: finished\n");
+
     return 0;
 }
-#endif // ENABLE_RUNTIME_STARTUP_HANDSHAKE_USING_PIPES
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
 
 static
 DWORD
