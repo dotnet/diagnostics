@@ -24,6 +24,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public const uint FAST_FAIL_EXCEPTION_DOTNET_AOT = 0x48;
 
+        public const uint MAX_CRASHINFOBUFFER_SIZE = 8192;
+
         private sealed class CrashInfoJson
         {
             [JsonPropertyName("version")]

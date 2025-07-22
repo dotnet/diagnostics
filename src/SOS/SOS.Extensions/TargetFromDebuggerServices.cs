@@ -142,6 +142,42 @@ namespace SOS.Extensions
                         Trace.TraceError($"CrashInfoService: ReadMemory({triageBufferAddress}) failed");
                     }
                 }
+                else
+                {
+                    IModuleService foo = services.GetService<IModuleService>();//.TryGetSymbolAddress("g_CrashInfoBuffer", out ulong triageBufferAddress);
+                    IModule m = foo.GetModuleFromIndex(0); // the zero'th module is the EXE module
+                    //foreach (IModule m in foo.EnumerateModules())
+                    // If the module is managed, this won't have the g_CrashInfoBuffer symbol
+                    if (!m.IsManaged && m.FileName != null && m.FileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if ((m as IModuleSymbols)?.TryGetSymbolAddress("g_CrashInfoBuffer", out ulong triageBufferAddress) == true)
+                        {
+                            // If the crash info buffer is available, read it
+                            Span<byte> buffer = new byte[CrashInfoService.MAX_CRASHINFOBUFFER_SIZE];
+                            if (services.GetService<IMemoryService>().ReadMemory(triageBufferAddress, buffer, out int bytesRead) && bytesRead > 0 && bytesRead <= CrashInfoService.MAX_CRASHINFOBUFFER_SIZE)
+                            {
+                                // truncate the buffer to the null terminated string in the buffer
+                                for (int i = 0; i < bytesRead - 1; i += 2)
+                                {
+                                    if (buffer[i] == 0 && buffer[i + 1] == 0)
+                                    {
+                                        buffer = buffer.Slice(0, (int)i);
+                                        break;
+                                    }
+                                }
+                                return CrashInfoService.Create(0, buffer, services.GetService<IModuleService>());
+                            }
+                            else
+                            {
+                                Trace.TraceError($"CrashInfoService: ReadMemory({triageBufferAddress}) failed");
+                            }
+                        }
+                        else
+                        {
+                            Trace.TraceInformation($"CrashInfoService: g_CrashInfoBuffer symbol not found in module {m.FileName}");
+                        }
+                    }
+                }
             }
             return null;
         }
