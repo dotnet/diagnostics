@@ -1943,7 +1943,7 @@ public:
         }
 #endif // HAVE_KQUEUE && !HAVE_BROKEN_FIFO_KEVENT
 
-        TRACE("StartupHelperRuntimeEventsThread: opening continue pipe\n");
+        TRACE("StartupHelperRuntimeEventsThread: opening continue '%s' startup '%s' pipes\n", m_continuePipeName, m_startupPipeName);
 
         continuePipeFd = OpenNonBlockingPipe(kq, m_continuePipeName, O_WRONLY, &m_canceled);
         if (continuePipeFd == -1)
@@ -1958,8 +1958,6 @@ public:
             }
             goto exit;
         }
-
-        TRACE("StartupHelperRuntimeEventsThread: opening continue '%s' startup '%s' pipes\n", m_continuePipeName, m_startupPipeName);
 
         startupPipeFd = OpenNonBlockingPipe(kq, m_startupPipeName, O_RDONLY, &m_canceled);
         if (startupPipeFd == -1)
