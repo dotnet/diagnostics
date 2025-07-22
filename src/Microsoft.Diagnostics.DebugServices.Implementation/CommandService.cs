@@ -199,7 +199,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         {
                             if (handler.IsCommandSupported(group.Parser, services))
                             {
-                                return group.GetDetailedHelp(command, services);
+                                return group.GetDetailedHelp(command, services, consoleWidth);
                             }
                             if (handler.FilterInvokeMessage != null)
                             {
@@ -295,15 +295,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <exception cref="DiagnosticsException">parsing error</exception>
             internal bool Execute(IReadOnlyList<string> commandLine, IServiceProvider services)
             {
-                IConsoleService consoleService = services.GetService<IConsoleService>();
-                CommandLineConfiguration configuration = new(_rootCommand)
-                {
-                    Output = new ConsoleServiceWrapper(consoleService.Write),
-                    Error = new ConsoleServiceWrapper(consoleService.WriteError)
-                };
-
-                // Parse the command line and invoke the command
-                ParseResult parseResult = configuration.Parse(commandLine);
+                ParseResult parseResult = _rootCommand.Parse(commandLine);
 
                 if (parseResult.Errors.Count > 0)
                 {
@@ -312,7 +304,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         sb.AppendLine(error.Message);
                     }
-                    string helpText = GetDetailedHelp(parseResult.CommandResult.Command, services);
+                    string helpText = GetDetailedHelp(parseResult.CommandResult.Command, services, int.MaxValue);
                     throw new CommandParsingException(sb.ToString(), helpText);
                 }
                 else
@@ -428,20 +420,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Build or re-build parser instance after this command is added
             }
 
-            internal string GetDetailedHelp(Command command, IServiceProvider services)
+#pragma warning disable IDE0060 // Remove unused parameter
+// We are waiting on a way to provide the width in the action or the InvocationConfiguration.
+            internal string GetDetailedHelp(Command command, IServiceProvider services, int windowWidth)
+#pragma warning restore IDE0060 // Remove unused parameter
             {
                 StringWriter console = new();
-                CommandLineConfiguration configuration = new(command)
-                {
-                    Output = console
-                };
 
-                // Get the command help by parsing the --help option.
-                // The option is hidden so it doesn't show up in the help text.
+                // Add a stub help option, invoke it, and remove it. The invocation will
+                // write the help text to the console writer.
                 command.Options.Add(new HelpOption() { Hidden = true });
-                // Invoking the help action writes to configuration.Output.
-                command.Parse(["--help"], configuration).Invoke();
-                command.Options.RemoveAt(command.Options.Count - 1); // Remove the help option
+                command.Parse(["--help"]).Invoke(new() { Output = console });
+                command.Options.RemoveAt(command.Options.Count - 1);
 
                 // Get the detailed help if any
                 if (TryGetCommandHandler(command.Name, out CommandHandler handler))
