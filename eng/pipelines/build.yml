@@ -182,6 +182,7 @@ jobs:
 
       - script: $(_buildScript)
           -ci
+          -binaryLog
           -configuration ${{ config.configuration }}
           -architecture ${{ config.architecture }}
           $(_TestArgs)

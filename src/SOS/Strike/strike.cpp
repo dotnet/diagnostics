@@ -844,8 +844,7 @@ DECLARE_API(DumpIL)
     return Status;
 }
 
-
-void DumpSigWorker (
+static void DumpSigWorker (
         DWORD_PTR dwSigAddr,
         DWORD_PTR dwModuleAddr,
         BOOL fMethod)
@@ -946,20 +945,23 @@ DECLARE_API(DumpSig)
     {
         return E_INVALIDARG;
     }
-    if (nArg != 2)
+
+    if (nArg < 1 || nArg > 2)
     {
-        ExtOut("%sdumpsig <sigaddr> <moduleaddr>\n", SOSPrefix);
+        ExtOut("%sdumpsig <sigaddr> [<moduleaddr>]?\n", SOSPrefix);
         return E_INVALIDARG;
     }
 
     DWORD_PTR dwSigAddr = GetExpression(sigExpr.data);
-    DWORD_PTR dwModuleAddr = GetExpression(moduleExpr.data);
-
-    if (dwSigAddr == 0 || dwModuleAddr == 0)
+    if (dwSigAddr == 0)
     {
-        ExtOut("Invalid parameters %s %s\n", sigExpr.data, moduleExpr.data);
-        return Status;
+        ExtOut("Invalid parameter %s\n", sigExpr.data);
+        return E_INVALIDARG;
     }
+
+    DWORD_PTR dwModuleAddr = 0;
+    if (nArg == 2)
+        dwModuleAddr = GetExpression(moduleExpr.data);
 
     DumpSigWorker(dwSigAddr, dwModuleAddr, TRUE);
     return Status;
@@ -994,20 +996,22 @@ DECLARE_API(DumpSigElem)
         return E_INVALIDARG;
     }
 
-    if (nArg != 2)
+    if (nArg < 1 || nArg > 2)
     {
-        ExtOut("%sdumpsigelem <sigaddr> <moduleaddr>\n", SOSPrefix);
+        ExtOut("%sdumpsigelem <sigaddr> [<moduleaddr>]?\n", SOSPrefix);
         return E_INVALIDARG;
     }
 
     DWORD_PTR dwSigAddr = GetExpression(sigExpr.data);
-    DWORD_PTR dwModuleAddr = GetExpression(moduleExpr.data);
-
-    if (dwSigAddr == 0 || dwModuleAddr == 0)
+    if (dwSigAddr == 0)
     {
-        ExtOut("Invalid parameters %s %s\n", sigExpr.data, moduleExpr.data);
+        ExtOut("Invalid parameter %s\n", sigExpr.data);
         return E_INVALIDARG;
     }
+
+    DWORD_PTR dwModuleAddr = 0;
+    if (nArg == 2)
+        dwModuleAddr = GetExpression(moduleExpr.data);
 
     DumpSigWorker(dwSigAddr, dwModuleAddr, FALSE);
     return Status;
@@ -6806,7 +6810,7 @@ DECLARE_API(GCInfo)
 
     // Mutable table pointer since we need to pass the appropriate
     // offset into the table to DumpGCTable.
-    GCInfoToken gcInfoToken = { table, GCINFO_VERSION };
+    GCInfoToken gcInfoToken = { table, GCInfoVersion() };
     unsigned int methodSize = (unsigned int)codeHeaderData.MethodSize;
 
     g_targetMachine->DumpGCInfo(gcInfoToken, methodSize, ExtOut, true /*encBytes*/, true /*bPrintHeader*/);
@@ -7453,7 +7457,7 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
             return E_OUTOFMEMORY;
         }
 
-        GCInfoToken gcInfoToken = { table, GCINFO_VERSION };
+        GCInfoToken gcInfoToken = { table, GCInfoVersion() };
         g_targetMachine->DumpGCInfo(gcInfoToken, methodSize, DecodeGCTableEntry, false /*encBytes*/, false /*bPrintHeader*/);
     }
     return S_OK;
@@ -8073,9 +8077,9 @@ DECLARE_API(EEVersion)
             }
         }
         else
+        {
             ExtOut("Workstation mode\n");
-
-        
+        }
 
         if (!GetGcStructuresValid())
         {
@@ -8140,6 +8144,7 @@ DECLARE_API(SOSStatus)
         return S_OK;
     }
     Target::DisplayStatus();
+    ExtOut("Using no runtime to host the managed SOS code. Some commands are not availible.\n");
     return S_OK;
 }
 
@@ -11273,7 +11278,6 @@ private:
     static void PrintArgsAndLocals(IXCLRDataStackWalk *pStackWalk, BOOL bArgs, BOOL bLocals)
     {
         ToRelease<IXCLRDataFrame> pFrame;
-        ToRelease<IXCLRDataValue> pVal;
         ULONG32 argCount = 0;
         ULONG32 localCount = 0;
         HRESULT hr = S_OK;
@@ -11285,14 +11289,14 @@ private:
             hr = pFrame->GetNumArguments(&argCount);
 
         if (SUCCEEDED(hr) && bArgs)
-            hr = ShowArgs(argCount, pFrame, pVal);
+            hr = ShowArgs(argCount, pFrame);
 
         // Print locals
         if (SUCCEEDED(hr) && bLocals)
             hr = pFrame->GetNumLocalVariables(&localCount);
 
         if (SUCCEEDED(hr) && bLocals)
-            ShowLocals(localCount, pFrame, pVal);
+            ShowLocals(localCount, pFrame);
 
         ExtOut("\n");
     }
@@ -11303,9 +11307,8 @@ private:
      * Params:
      *      argy - the number of arguments the function has
      *      pFramey - the frame we are inspecting
-     *      pVal - a pointer to the CLRDataValue we use to query for info about the args
      */
-    static HRESULT ShowArgs(ULONG32 argy, IXCLRDataFrame *pFramey, IXCLRDataValue *pVal)
+    static HRESULT ShowArgs(ULONG32 argy, IXCLRDataFrame *pFramey)
     {
         CLRDATA_ADDRESS addr = 0;
         BOOL fPrintedLocation = FALSE;
@@ -11327,6 +11330,7 @@ private:
                 ExtOut("    PARAMETERS:\n");
             }
 
+            ToRelease<IXCLRDataValue> pVal;
             hr = pFramey->GetArgumentByIndex(i,
                                    &pVal,
                                    mdNameLen,
@@ -11408,8 +11412,6 @@ private:
             {
                 ExtOut("<no data>\n");
             }
-
-            pVal->Release();
         }
 
         return S_OK;
@@ -11420,9 +11422,8 @@ private:
      * Params:
      *      localy - the number of locals in the frame
      *      pFramey - the frame we are inspecting
-     *      pVal - a pointer to the CLRDataValue we use to query for info about the args
      */
-    static HRESULT ShowLocals(ULONG32 localy, IXCLRDataFrame *pFramey, IXCLRDataValue *pVal)
+    static HRESULT ShowLocals(ULONG32 localy, IXCLRDataFrame *pFramey)
     {
         for (ULONG32 i=0; i < localy; i++)
         {
@@ -11433,6 +11434,7 @@ private:
             ExtOut("        ");
 
             // local names don't work in Whidbey.
+            ToRelease<IXCLRDataValue> pVal;
             hr = pFramey->GetLocalVariableByIndex(i, &pVal, mdNameLen, NULL, g_mdName);
             if (FAILED(hr))
             {
@@ -11501,8 +11503,6 @@ private:
             {
                 ExtOut("<no data>\n");
             }
-
-            pVal->Release();
         }
 
         return S_OK;
@@ -13803,10 +13803,17 @@ exit:
     switch (flavor)
     {
         case HostRuntimeFlavor::None:
-            ExtOut("Using no runtime to host the managed SOS code\n");
+            ExtOut("Using no runtime to host the managed SOS code. Some commands are not availible.\n");
             break;
         case HostRuntimeFlavor::NetCore:
-            ExtOut("Using .NET Core runtime (version %d.%d) to host the managed SOS code\n", major, minor);
+            if (major == 0)
+            {
+                ExtOut("Using .NET Core runtime to host the managed SOS code\n");
+            }
+            else
+            {
+                ExtOut("Using .NET Core runtime (version %d.%d) to host the managed SOS code\n", major, minor);
+            }
             break;
         case HostRuntimeFlavor::NetFx:
             ExtOut("Using desktop .NET Framework runtime to host the managed SOS code\n");

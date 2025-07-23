@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using SOS.Hosting.DbgEng.Interop;
 
@@ -17,6 +18,7 @@ namespace SOS.Hosting {
         private static readonly Guid IID_ICLRDataTarget4 = new("E799DC06-E099-4713-BDD9-906D3CC02CF2");
         private static readonly Guid IID_ICLRMetadataLocator = new("aa8fa804-bc05-4642-b2c5-c353ed22fc63");
         private static readonly Guid IID_ICLRRuntimeLocator = new("b760bf44-9377-4597-8be7-58083bdc5146");
+        private static readonly Guid IID_ICLRContractLocator = new("17d5b8c6-34a9-407f-af4f-a930201d4e02");
 
         // For ClrMD's magic hand shake
         private const ulong MagicCallbackConstant = 0x43;
@@ -65,6 +67,10 @@ namespace SOS.Hosting {
 
             builder = AddInterface(IID_ICLRRuntimeLocator, false);
             builder.AddMethod(new GetRuntimeBaseDelegate(GetRuntimeBase));
+            builder.Complete();
+
+            builder = AddInterface(IID_ICLRContractLocator, false);
+            builder.AddMethod(new GetContractDescriptorDelegate(GetContractDescriptor));
             builder.Complete();
 
             AddRef();
@@ -350,6 +356,28 @@ namespace SOS.Hosting {
 
         #endregion
 
+        #region ICLRContractLocator
+
+        private int GetContractDescriptor(
+            IntPtr self,
+            out ulong address)
+        {
+            address = 0;
+            ClrInfo clrInfo = _runtime.Services.GetService<ClrInfo>();
+            if (clrInfo is null)
+            {
+                return HResult.E_FAIL;
+            }
+            address = clrInfo.ContractDescriptorAddress;
+            if (address == 0)
+            {
+                return HResult.E_FAIL;
+            }
+            return HResult.S_OK;
+        }
+
+        #endregion
+
         #region ICLRDataTarget delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
@@ -481,6 +509,15 @@ namespace SOS.Hosting {
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetRuntimeBaseDelegate(
+            [In] IntPtr self,
+            [Out] out ulong address);
+
+        #endregion
+
+        #region ICLRContractLocator delegate
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int GetContractDescriptorDelegate(
             [In] IntPtr self,
             [Out] out ulong address);
 

@@ -79,6 +79,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"GCWhere displays the location in the GC heap of the argument passed in.
+
+    {prompt}gcwhere 02800038  
+    Address  Gen Heap segment  begin    allocated size
+    02800038 2    0   02800000 02800038 0282b740  12
+
+When the argument lies in the managed heap, but is not a valid *object* address 
+the ""size"" is displayed as 0:
+
+    {prompt}gcwhere 0280003c
+    Address  Gen Heap segment  begin    allocated size
+    0280003c 2    0   02800000 02800038 0282b740  0
+
+";
         private IEnumerable<ClrSegment> FindSegments(ulong address)
         {
             // ClrHeap.GetSegmentByAddress doesn't search for reserve memory

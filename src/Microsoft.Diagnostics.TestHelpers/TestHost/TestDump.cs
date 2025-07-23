@@ -8,7 +8,7 @@ using Microsoft.Diagnostics.DebugServices.Implementation;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
-    public class TestDump : TestHost, ISettingsService
+    public class TestDump : TestHost
     {
         private readonly Host _host;
         private readonly ContextService _contextService;
@@ -26,7 +26,6 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             _contextService = new(_host);
             serviceContainer.AddService<IContextService>(_contextService);
-            serviceContainer.AddService<ISettingsService>(this);
 
             _commandService = new();
             serviceContainer.AddService<ICommandService>(_commandService);
@@ -53,11 +52,5 @@ namespace Microsoft.Diagnostics.TestHelpers
             _symbolService.AddDirectoryPath(Path.GetDirectoryName(DumpFile));
             return _dumpTargetFactory.OpenDump(DumpFile);
         }
-
-        #region ISettingsService
-
-        public bool DacSignatureVerificationEnabled { get; set; }
-
-        #endregion
     }
 }

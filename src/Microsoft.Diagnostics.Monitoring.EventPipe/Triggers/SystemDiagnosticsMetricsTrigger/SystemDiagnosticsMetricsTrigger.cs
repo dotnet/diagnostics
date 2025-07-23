@@ -31,6 +31,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         private readonly string _sessionId;
         private CounterConfiguration _counterConfiguration;
 
+        // CONSIDER It is likely that we could expand the scope of this cache across multiple triggers, but
+        // currently each trigger creates its own session.
+        private readonly CounterMetadataCache _counterMetadataCache;
+
         public SystemDiagnosticsMetricsTrigger(SystemDiagnosticsMetricsTriggerSettings settings)
         {
             if (null == settings)
@@ -54,6 +58,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
             _clientId = settings.ClientId;
 
             _counterConfiguration = new CounterConfiguration(_filter) { SessionId = _sessionId, ClientId = _clientId };
+            _counterMetadataCache = new();
         }
 
         public IReadOnlyDictionary<string, IReadOnlyCollection<string>> GetProviderEventMap()
@@ -64,7 +69,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.SystemDiagnosticsM
         public bool HasSatisfiedCondition(TraceEvent traceEvent)
         {
             // Filter to the counter of interest before forwarding to the implementation
-            if (traceEvent.TryGetCounterPayload(_counterConfiguration, out ICounterPayload payload))
+            if (traceEvent.TryGetCounterPayload(_counterMetadataCache, _counterConfiguration, out ICounterPayload payload))
             {
                 return _impl.HasSatisfiedCondition(payload);
             }

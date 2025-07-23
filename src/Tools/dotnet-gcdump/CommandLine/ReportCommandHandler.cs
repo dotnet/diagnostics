@@ -51,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             if (gcdump_filename != null && (processId.HasValue || !string.IsNullOrEmpty(diagnosticPort)))
             {
-                Console.Error.WriteLine("Specify only one of -f|--file or -p|--process-id or --dport|--diagnostic-port.");
+                Console.Error.WriteLine("Specify only one of gcdump_filename or -p|--process-id or --dport|--diagnostic-port.");
                 return Task.FromResult(-1);
             }
 
@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Arity = new ArgumentArity(0, 1)
             }.AcceptExistingOnly();
 
-        private static Option<int> ProcessIdOption =
+        private static Option<int?> ProcessIdOption =
             new("--process-id", "-p")
             {
                 Description = "The process id to collect the gcdump from.",

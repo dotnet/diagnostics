@@ -34,13 +34,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
     internal record struct ProviderAndCounter(string ProviderName, string CounterName);
 
+    internal sealed class CounterMetadataCache
+    {
+        public Dictionary<ProviderAndCounter, CounterMetadata> CounterMetadataByName { get; } = new();
+        public Dictionary<int, CounterMetadata> CounterMetadataById { get; } = new();
+    }
+
     internal static partial class TraceEventExtensions
     {
-        private static Dictionary<ProviderAndCounter, CounterMetadata> counterMetadataByName = new();
-        private static Dictionary<int, CounterMetadata> counterMetadataById = new();
+        // This cache is used to track shared sessions that have already been marked as inactive.
+        // It can be shared between processes.
         private static HashSet<string> inactiveSharedSessions = new(StringComparer.OrdinalIgnoreCase);
 
         private static CounterMetadata AddCounterMetadata(
+            CounterMetadataCache counterMetadataCache,
             string providerName,
             string counterName,
             int? id,
@@ -52,7 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string counterDescription = null)
         {
             CounterMetadata metadata;
-            if (id.HasValue && counterMetadataById.TryGetValue(id.Value, out metadata))
+            if (id.HasValue && counterMetadataCache.CounterMetadataById.TryGetValue(id.Value, out metadata))
             {
                 return metadata;
             }
@@ -61,7 +68,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // listening to it then.
             // Its also possible that we previously indexed a counter with the same name as this one but with different tags or scope hash.
             ProviderAndCounter providerAndCounter = new(providerName, counterName);
-            if (counterMetadataByName.TryGetValue(providerAndCounter, out metadata))
+            if (counterMetadataCache.CounterMetadataByName.TryGetValue(providerAndCounter, out metadata))
             {
                 // we found a counter that matches the name, but it might not match everything
                 if (metadata.MeterTags == meterTags && metadata.InstrumentTags == instrumentTags && metadata.ScopeHash == scopeHash)
@@ -69,7 +76,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                     // add the ID index if it didn't exist before
                     if (id.HasValue)
                     {
-                        counterMetadataById.TryAdd(id.Value, metadata);
+                        counterMetadataCache.CounterMetadataById.TryAdd(id.Value, metadata);
                     }
                     return metadata;
                 }
@@ -79,45 +86,45 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             metadata = new CounterMetadata(providerName, providerVersion, counterName, counterUnit, counterDescription, id, meterTags, instrumentTags, scopeHash);
             if (id.HasValue)
             {
-                counterMetadataById.TryAdd(id.Value, metadata);
+                counterMetadataCache.CounterMetadataById.TryAdd(id.Value, metadata);
             }
-            counterMetadataByName.TryAdd(providerAndCounter, metadata);
+            counterMetadataCache.CounterMetadataByName.TryAdd(providerAndCounter, metadata);
             return metadata;
         }
 
-        private static CounterMetadata GetCounterMetadata(string providerName, string counterName, int? id)
+        private static CounterMetadata GetCounterMetadata(CounterMetadataCache counterMetadataCache, string providerName, string counterName, int? id)
         {
             // Lookup by ID is preferred because it eliminates ambiguity in the case of duplicate provider/counter names.
             // IDs are present starting in MetricsEventSource 9.0.
             // Duplicate named providers/counters might still have different tags or scope hashes
             CounterMetadata metadata;
-            if (id.HasValue && counterMetadataById.TryGetValue(id.Value, out metadata))
+            if (id.HasValue && counterMetadataCache.CounterMetadataById.TryGetValue(id.Value, out metadata))
             {
                 return metadata;
             }
             ProviderAndCounter providerAndCounter = new(providerName, counterName);
-            if (counterMetadataByName.TryGetValue(providerAndCounter, out metadata))
+            if (counterMetadataCache.CounterMetadataByName.TryGetValue(providerAndCounter, out metadata))
             {
                 return metadata;
             }
 
             // For EventCounter based events we expect to fall through here the first time a new counter is observed
             // For MetricsEventSource events we should never reach here unless the BeginInstrumentRecording event was dropped.
-            return AddCounterMetadata(providerName, counterName, id, null, null, null);
+            return AddCounterMetadata(counterMetadataCache, providerName, counterName, id, null, null, null);
         }
 
-        public static bool TryGetCounterMetadata(string providerName, string counterName, int? instrumentId, out CounterMetadata counterMetadata)
+        public static bool TryGetCounterMetadata(CounterMetadataCache counterMetadataCache, string providerName, string counterName, int? instrumentId, out CounterMetadata counterMetadata)
         {
-            if (instrumentId.HasValue && counterMetadataById.TryGetValue(instrumentId.Value, out counterMetadata))
+            if (instrumentId.HasValue && counterMetadataCache.CounterMetadataById.TryGetValue(instrumentId.Value, out counterMetadata))
             {
                 return true;
             }
 
             ProviderAndCounter providerAndCounter = new(providerName, counterName);
-            return counterMetadataByName.TryGetValue(providerAndCounter, out counterMetadata);
+            return counterMetadataCache.CounterMetadataByName.TryGetValue(providerAndCounter, out counterMetadata);
         }
 
-        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterConfiguration counterConfiguration, out ICounterPayload payload)
+        public static bool TryGetCounterPayload(this TraceEvent traceEvent, CounterMetadataCache counterMetadataCache, CounterConfiguration counterConfiguration, out ICounterPayload payload)
         {
             payload = null;
 
@@ -183,23 +190,23 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 if (traceEvent.EventName == "BeginInstrumentReporting")
                 {
-                    HandleBeginInstrumentReporting(traceEvent, counterConfiguration, out payload);
+                    HandleBeginInstrumentReporting(traceEvent, counterMetadataCache, counterConfiguration, out payload);
                 }
                 if (traceEvent.EventName == "HistogramValuePublished")
                 {
-                    HandleHistogram(traceEvent, counterConfiguration, out payload);
+                    HandleHistogram(traceEvent, counterMetadataCache, counterConfiguration, out payload);
                 }
                 else if (traceEvent.EventName == "GaugeValuePublished")
                 {
-                    HandleGauge(traceEvent, counterConfiguration, out payload);
+                    HandleGauge(traceEvent, counterMetadataCache, counterConfiguration, out payload);
                 }
                 else if (traceEvent.EventName == "CounterRateValuePublished")
                 {
-                    HandleCounterRate(traceEvent, counterConfiguration, out payload);
+                    HandleCounterRate(traceEvent, counterMetadataCache, counterConfiguration, out payload);
                 }
                 else if (traceEvent.EventName == "UpDownCounterRateValuePublished")
                 {
-                    HandleUpDownCounterValue(traceEvent, counterConfiguration, out payload);
+                    HandleUpDownCounterValue(traceEvent, counterMetadataCache, counterConfiguration, out payload);
                 }
                 else if (traceEvent.EventName == "TimeSeriesLimitReached")
                 {
@@ -232,7 +239,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             return false;
         }
 
-        private static void HandleGauge(TraceEvent obj, CounterConfiguration counterConfiguration, out ICounterPayload payload)
+        private static void HandleGauge(TraceEvent obj, CounterMetadataCache counterMetadataCache, CounterConfiguration counterConfiguration, out ICounterPayload payload)
         {
             payload = null;
 
@@ -261,7 +268,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 return;
             }
 
-            CounterMetadata metadata = GetCounterMetadata(meterName, instrumentName, id);
+            CounterMetadata metadata = GetCounterMetadata(counterMetadataCache, meterName, instrumentName, id);
             // the value might be an empty string indicating no measurement was provided this collection interval
             if (double.TryParse(lastValueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double lastValue))
             {
@@ -275,7 +282,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleBeginInstrumentReporting(TraceEvent traceEvent, CounterConfiguration counterConfiguration, out ICounterPayload payload)
+        private static void HandleBeginInstrumentReporting(TraceEvent traceEvent, CounterMetadataCache counterMetadataCache, CounterConfiguration counterConfiguration, out ICounterPayload payload)
         {
             payload = null;
 
@@ -319,6 +326,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
             payload = new BeginInstrumentReportingPayload(
                 AddCounterMetadata(
+                    counterMetadataCache,
                     meterName,
                     instrumentName,
                     instrumentID,
@@ -331,7 +339,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 traceEvent.TimeStamp);
         }
 
-        private static void HandleCounterRate(TraceEvent traceEvent, CounterConfiguration counterConfiguration, out ICounterPayload payload)
+        private static void HandleCounterRate(TraceEvent traceEvent, CounterMetadataCache counterMetadataCache, CounterConfiguration counterConfiguration, out ICounterPayload payload)
         {
             payload = null;
 
@@ -364,7 +372,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             {
                 return;
             }
-            CounterMetadata metadata = GetCounterMetadata(meterName, instrumentName, id);
+            CounterMetadata metadata = GetCounterMetadata(counterMetadataCache, meterName, instrumentName, id);
             if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate))
             {
                 if (absoluteValueText != null &&
@@ -387,7 +395,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleUpDownCounterValue(TraceEvent traceEvent, CounterConfiguration configuration, out ICounterPayload payload)
+        private static void HandleUpDownCounterValue(TraceEvent traceEvent, CounterMetadataCache counterMetadataCache, CounterConfiguration configuration, out ICounterPayload payload)
         {
             payload = null;
 
@@ -422,7 +430,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 rateText = valueText;
             }
 
-            CounterMetadata metadata = GetCounterMetadata(meterName, instrumentName, id);
+            CounterMetadata metadata = GetCounterMetadata(counterMetadataCache, meterName, instrumentName, id);
             if (double.TryParse(rateText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double rate)
                 && double.TryParse(valueText, NumberStyles.Number | NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
             {
@@ -437,7 +445,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             }
         }
 
-        private static void HandleHistogram(TraceEvent obj, CounterConfiguration configuration, out ICounterPayload payload)
+        private static void HandleHistogram(TraceEvent obj, CounterMetadataCache counterMetadataCache, CounterConfiguration configuration, out ICounterPayload payload)
         {
             payload = null;
 
@@ -481,7 +489,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
             //Note quantiles can be empty.
             IList<Quantile> quantiles = ParseQuantiles(quantilesText);
-            CounterMetadata metadata = GetCounterMetadata(meterName, instrumentName, id);
+            CounterMetadata metadata = GetCounterMetadata(counterMetadataCache, meterName, instrumentName, id);
             payload = new AggregatePercentilePayload(metadata, displayName: null, displayUnits: null, tags, count, sum, quantiles, obj.TimeStamp);
         }
 

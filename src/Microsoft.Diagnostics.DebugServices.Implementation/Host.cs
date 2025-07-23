@@ -6,11 +6,13 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
-    public class Host : IHost
+    public class Host : IHost, ISettingsService
     {
         private readonly ServiceManager _serviceManager;
         private ServiceContainer _serviceContainer;
@@ -49,6 +51,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);
             _serviceContainer.AddService<IServiceManager>(_serviceManager);
             _serviceContainer.AddService<IHost>(this);
+            _serviceContainer.AddService<ISettingsService>(this);
 
             return _serviceContainer;
         }
@@ -91,15 +94,33 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_tempDirectory == null)
             {
-                // Use the SOS process's id if can't get the target's
+                string tempPath;
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    tempPath = Path.GetTempPath();
+                }
+                else
+                {
+                    tempPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".dotnet");
+                }
+                // Make the temp directory per SOS session
                 uint processId = (uint)Process.GetCurrentProcess().Id;
-
                 // SOS depends on that the temp directory ends with "/".
-                _tempDirectory = Path.Combine(Path.GetTempPath(), "sos" + processId.ToString()) + Path.DirectorySeparatorChar;
+                _tempDirectory = Path.Combine(tempPath, "sos" + processId.ToString()) + Path.DirectorySeparatorChar;
                 Directory.CreateDirectory(_tempDirectory);
             }
             return _tempDirectory;
         }
+
+        #endregion
+
+        #region ISettingsService
+
+        public virtual bool DacSignatureVerificationEnabled { get; set; }
+
+        public bool UseContractReader { get; set; }
+
+        public bool ForceUseContractReader { get; set; }
 
         #endregion
 

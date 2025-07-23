@@ -42,65 +42,72 @@ if(NOT ENABLE_LLDBPLUGIN)
     return()
 endif()
 
+if(NOT "$ENV{LLDB_H}" STREQUAL "")
+    set(LLDB_H "$ENV{LLDB_H}")
+else()
+    # Glob matching LLDB headers in standard locations
+    file(GLOB LLDB_H_PATHS
+        "$ENV{ROOTFS_DIR}/usr/lib/llvm-*/include/lldb/API/LLDB.h"
+        "$ENV{ROOTFS_DIR}/usr/local/llvm*/include/lldb/API/LLDB.h"
+        "$ENV{ROOTFS_DIR}/usr/include/lldb/API/LLDB.h"
+    )
+
+    # Add explicitly specified path if provided
+    if(WITH_LLDB_INCLUDES)
+        file(GLOB EXTRA_LLDB_H_PATHS "${WITH_LLDB_INCLUDES}/lldb/API/LLDB.h")
+        list(APPEND LLDB_H_PATHS ${EXTRA_LLDB_H_PATHS})
+    endif()
+
+    # Sort the list to get the highest version last
+    list(SORT LLDB_H_PATHS COMPARE NATURAL)
+
+    list(LENGTH LLDB_H_PATHS LLDB_H_PATHS_LEN)
+    if(LLDB_H_PATHS_LEN GREATER 0)
+        list(GET LLDB_H_PATHS -1 LATEST_LLDB_H_PATH)
+        # Go up 3 levels from lldb/API/LLDB.h -> include
+        get_filename_component(LLDB_H "${LATEST_LLDB_H_PATH}" DIRECTORY)  # .../API
+        get_filename_component(LLDB_H "${LLDB_H}" DIRECTORY)              # .../lldb
+        get_filename_component(LLDB_H "${LLDB_H}" DIRECTORY)              # .../include
+
+        # Extract LLVM version from LLDB_H path: match llvm-XX or llvmXX
+        string(REGEX MATCH "llvm[-]?([0-9]+)" LLVM_VERSION_MATCH "${LLDB_H}")
+        if(LLVM_VERSION_MATCH)
+            string(REGEX REPLACE "llvm[-]?([0-9]+)" "\\1" LLDB_LLVM_VERSION "${LLVM_VERSION_MATCH}")
+            message(STATUS "Detected LLVM version: ${LLDB_LLVM_VERSION}")
+        endif()
+    else()
+        if(REQUIRE_LLDBPLUGIN)
+            set(MESSAGE_MODE FATAL_ERROR)
+        else()
+            set(MESSAGE_MODE WARNING)
+        endif()
+        message(${MESSAGE_MODE} "Cannot find LLDB.h. Try installing lldb-dev. You may need to set LLVM_HOME or LLDB_INCLUDE_DIR.")
+        return()
+    endif()
+endif()
+
+message(STATUS "LLDB_H: ${LLDB_H}")
+
 if(NOT $ENV{LLDB_LIB} STREQUAL "")
     set(LLDB_LIB "$ENV{LLDB_LIB}")
 else()
     # Check for LLDB library
     if(CLR_CMAKE_HOST_OSX)
-        find_library(LLDB_LIB NAMES LLDB lldb lldb-6.0 lldb-5.0 lldb-4.0 lldb-3.9 lldb-3.8 lldb-3.7 lldb-3.6 lldb-3.5 PATHS "${WITH_LLDB_LIBS}" PATH_SUFFIXES llvm NO_DEFAULT_PATH)
-        find_library(LLDB_LIB NAMES LLDB lldb lldb-6.0 lldb-5.0 lldb-4.0 lldb-3.9 lldb-3.8 lldb-3.7 lldb-3.6 lldb-3.5 PATH_SUFFIXES llvm)
+        find_library(LLDB_LIB NAMES LLDB lldb lldb-${LLDB_LLVM_VERSION} lldb-6.0 lldb-5.0 lldb-4.0 lldb-3.9 lldb-3.8 lldb-3.7 lldb-3.6 lldb-3.5 PATHS "${WITH_LLDB_LIBS}" PATH_SUFFIXES llvm NO_DEFAULT_PATH)
+        find_library(LLDB_LIB NAMES LLDB lldb lldb-${LLDB_LLVM_VERSION} lldb-6.0 lldb-5.0 lldb-4.0 lldb-3.9 lldb-3.8 lldb-3.7 lldb-3.6 lldb-3.5 PATH_SUFFIXES llvm)
         if(LLDB_LIB STREQUAL LLDB_LIB-NOTFOUND)
-	    if(REQUIRE_LLDBPLUGIN)
-		set(MESSAGE_MODE FATAL_ERROR)
-	    else()
-		set(MESSAGE_MODE WARNING)
-	    endif()
-	    message(${MESSAGE_MODE} "Cannot find lldb library. Try installing Xcode. You may need to set LLVM_HOME, LLDB_LIB_DIR or LLDB_LIB if the build still can't find it.")
-	    return()
+            if(REQUIRE_LLDBPLUGIN)
+                set(MESSAGE_MODE FATAL_ERROR)
+            else()
+                set(MESSAGE_MODE WARNING)
+            endif()
+            message(${MESSAGE_MODE} "Cannot find lldb library. Try installing Xcode. You may need to set LLVM_HOME, LLDB_LIB_DIR or LLDB_LIB if the build still can't find it.")
+            return()
         endif()
     endif()
 endif()
 
 message(STATUS "LLDB_LIB: ${LLDB_LIB}")
-
-if(NOT $ENV{LLDB_H} STREQUAL "")
-    set(LLDB_H "$ENV{LLDB_H}")
-else()
-    # Check for LLDB headers
-    # Multiple versions of LLDB can install side-by-side, so we need to check for lldb in various locations.
-    # If the file in a directory is found the result is stored in the variable and the search will not be repeated unless the variable is cleared.
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "${WITH_LLDB_INCLUDES}" NO_DEFAULT_PATH)
-    find_path(LLDB_H "lldb/API/LLDB.h")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/lib/llvm-14/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/lib/llvm-13/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/lib/llvm-12/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/lib/llvm-11/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/lib/llvm-10/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/lib/llvm-9/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/lib/llvm-6.0/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/lib/llvm-5.0/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/lib/llvm-4.0/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/lib/llvm-3.9/include")
-    #FreeBSD
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm39/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm38/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm12/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm11/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm10/include")
-    find_path(LLDB_H "lldb/API/LLDB.h" PATHS "/usr/local/llvm90/include")
-
-    if(LLDB_H STREQUAL LLDB_H-NOTFOUND)
-	if(REQUIRE_LLDBPLUGIN)
-	    set(MESSAGE_MODE FATAL_ERROR)
-	else()
-	    set(MESSAGE_MODE WARNING)
-	endif()
-	message(${MESSAGE_MODE} "Cannot find LLDB.h Try installing lldb-3.9-dev (or the appropriate package for your platform). You may need to set LLVM_HOME or LLDB_INCLUDE_DIR if the build still can't find it.")
-	return()
-    endif()
-endif()
-
-message(STATUS "LLDB_H: ${LLDB_H}")
 
 add_compile_options(-Wno-delete-non-virtual-dtor)
 

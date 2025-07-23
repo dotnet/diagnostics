@@ -60,15 +60,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [HelpInvoke]
         public static string GetDetailedHelp() =>
 @"-------------------------------------------------------------------------------
-TaskState [hexa address] [-v <decimal state value>]
-
 TaskState translates a Task m_stateFlags field value into human readable format.
 It supports hexadecimal address corresponding to a task instance or -v <decimal state value>.
 
-> tks 000001db16cf98f0
+{prompt}tks 000001db16cf98f0
 Running
 
-> tks -v 73728
+{prompt}tks -v 73728
 WaitingToRun
 ";
     }

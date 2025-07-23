@@ -378,9 +378,10 @@ public class SOSRunner : IDisposable
                         if (pipeServer != null)
                         {
                             dotnetDumpOutputHelper.WriteLine("Waiting for connection on pipe {0}", pipeName);
-                            CancellationTokenSource source = new(TimeSpan.FromMinutes(5));
+                            using CancellationTokenSource source = new(TimeSpan.FromMinutes(5));
 
                             // Wait for debuggee to connect/write to pipe or if the process exits on some other failure/abnormally
+                            // TODO: This is a resiliency issue - we'll try to collect the dump even if the debuggee fails to connect.
                             await Task.WhenAny(pipeServer.WaitForConnectionAsync(source.Token), processRunner.WaitForExit());
                         }
 
@@ -691,6 +692,11 @@ public class SOSRunner : IDisposable
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
+            if (config.TestCDAC)
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
+            }
+
             // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting debuggees.
             if (OS.Kind == OSKind.Windows)
             {
@@ -988,7 +994,7 @@ public class SOSRunner : IDisposable
                     if (_config.PublishSingleFile)
                     {
                         string appRootDir = ReplaceVariables(_variables, "%DEBUG_ROOT%");
-                        commands.Add($"!SetSymbolServer -ms -directory {appRootDir}");
+                        commands.Add($"!SetSymbolServer -ms -timeout 10 -directory {appRootDir}");
                     }
                     if (!string.IsNullOrEmpty(setSymbolServer))
                     {
@@ -1022,7 +1028,7 @@ public class SOSRunner : IDisposable
                     if (_config.PublishSingleFile)
                     {
                         string appRootDir = ReplaceVariables(_variables, "%DEBUG_ROOT%");
-                        commands.Add($"setsymbolserver -ms -directory {appRootDir}");
+                        commands.Add($"setsymbolserver -ms -timeout 10 -directory {appRootDir}");
                     }
                     if (!string.IsNullOrEmpty(setSymbolServer))
                     {

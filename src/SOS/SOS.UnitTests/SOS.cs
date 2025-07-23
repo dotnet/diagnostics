@@ -32,6 +32,14 @@ public static class SOSTestHelpers
         }
     }
 
+    internal static void SkipIfWinX86(TestConfiguration config)
+    {
+        if (config.TargetArchitecture == "x86" && OS.Kind == OSKind.Windows)
+        {
+            throw new SkipTestException("Test does not support x86 on Windows");
+        }
+    }
+
     internal static async Task RunTest(
         string scriptName,
         SOSRunner.TestInformation information,
@@ -192,6 +200,39 @@ public class SOS
 
     public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
 
+    [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
+    public async Task StackTraceSoftwareExceptionFrame(TestConfiguration config)
+    {
+        if (config.RuntimeFrameworkVersionMajor < 10)
+        {
+            throw new SkipTestException("This test validates SoftwareExceptionFrame handling, before .NET10, these aren't used in this debuggee scenario.");
+        }
+
+        SOSTestHelpers.SkipIfWinX86(config);
+
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "SimpleThrow",
+            scriptName: "StackTraceSoftwareExceptionFrame.script",
+            Output,
+            testName: "SOS.StackTraceSoftwareExceptionFrame",
+            testTriage: true);
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
+    public async Task StackTraceFaultingExceptionFrame(TestConfiguration config)
+    {
+        SOSTestHelpers.SkipIfWinX86(config);
+
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "DivZero",
+            scriptName: "StackTraceFaultingExceptionFrame.script",
+            Output,
+            testName: "SOS.StackTraceFaultingExceptionFrame",
+            testTriage: true);
+    }
+
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task DivZero(TestConfiguration config)
     {
@@ -312,6 +353,12 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackTests(TestConfiguration config)
     {
+        if (config.RuntimeFrameworkVersionMajor == 10)
+        {
+            // The clrstack -i command regressed on .NET 10 win-x86, so skip this test for now.
+            SOSTestHelpers.SkipIfWinX86(config);
+        }
+
         await SOSTestHelpers.RunTest(
             config,
             debuggeeName: "NestedExceptionTest",
@@ -447,6 +494,11 @@ public class SOS
     [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task ConcurrentDictionaries(TestConfiguration config)
     {
+        if (OS.Kind != OSKind.Windows && config.RuntimeFrameworkVersionMajor == 10)
+        {
+            throw new SkipTestException("Dumping concurrent dict objects in dumps hits unavailable memory on linux dumps. Tracking: dotnet/diagnostics#5491");
+        }
+
         await SOSTestHelpers.RunTest(
             scriptName: "ConcurrentDictionaries.script",
             new SOSRunner.TestInformation

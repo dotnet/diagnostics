@@ -49,6 +49,10 @@ namespace Microsoft.Diagnostics.CommonTestRunner
 
             // Get the full debuggee launch command line (includes the host if required)
             string exePath = debuggeeConfig.BinaryExePath;
+            if (!File.Exists(exePath))
+            {
+                throw new FileNotFoundException($"Expected to find target executable at {exePath} but it didn't exist. Perhaps the path was improperly configured or a build/deployment error caused the file to be missing?");
+            }
             string pipeName = null;
 
             StringBuilder arguments = new();
@@ -245,8 +249,16 @@ namespace Microsoft.Diagnostics.CommonTestRunner
                 WriteLine("WaitForTracee");
                 try
                 {
-                    CancellationTokenSource source = new(TimeSpan.FromMinutes(2));
-                    await _pipeServer.WaitForConnectionAsync(source.Token).ConfigureAwait(false);
+                    using CancellationTokenSource source = new(TimeSpan.FromMinutes(2));
+                    Task processDeath = _runner.WaitForExit();
+                    Task traceeReady = _pipeServer.WaitForConnectionAsync(source.Token);
+                    Task doneTask = await Task.WhenAny(processDeath, traceeReady).WaitAsync(source.Token).ConfigureAwait(false);
+
+                    source.Cancel();
+                    if (doneTask == processDeath)
+                    {
+                        Trace.TraceWarning($"WaitForTracee: process {Pid} exited without sending the event");
+                    }
                     WriteLine("WaitForTracee: DONE");
                 }
                 catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)

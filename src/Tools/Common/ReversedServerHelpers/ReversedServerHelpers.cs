@@ -95,7 +95,7 @@ namespace Microsoft.Internal.Common.Utils
             _childProc.StartInfo.RedirectStandardOutput = !showChildIO;
             _childProc.StartInfo.RedirectStandardError = !showChildIO;
             _childProc.StartInfo.RedirectStandardInput = !showChildIO;
-            _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName}");
+            _childProc.StartInfo.Environment.Add("DOTNET_DiagnosticPorts", $"{diagnosticTransportName},suspend,connect");
             try
             {
                 if (printLaunchCommand && !showChildIO)
@@ -128,8 +128,20 @@ namespace Microsoft.Internal.Common.Utils
                 }
                 // if process exited while we were trying to kill it, it can throw IOE
                 catch (InvalidOperationException) { }
-                _stdOutTask.Wait();
-                _stdErrTask.Wait();
+
+                try
+                {
+                    _stdOutTask.Wait();
+                }
+                // Ignore any fault/cancel state of task.
+                catch (AggregateException) { }
+
+                try
+                {
+                    _stdErrTask.Wait();
+                }
+                // Ignore any fault/cancel state of task.
+                catch (AggregateException) { }
             }
         }
     }

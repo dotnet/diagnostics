@@ -79,7 +79,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["IsAlpine"] = OS.IsAlpine.ToString().ToLowerInvariant(),
                 ["TargetRid"] = GetRid(),
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
-                ["NuGetPackageCacheDir"] = nugetPackages
+                ["NuGetPackageCacheDir"] = nugetPackages,
+                ["TestCDAC"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC")
             };
             if (OS.Kind == OSKind.Windows)
             {
@@ -461,6 +462,10 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 sb.Append(".singlefile");
             }
+            if (TestCDAC)
+            {
+                sb.Append(".cdac");
+            }
             if (!string.IsNullOrEmpty(version))
             {
                 sb.Append('.');
@@ -553,6 +558,14 @@ namespace Microsoft.Diagnostics.TestHelpers
         public bool IsDesktop
         {
             get { return TestProduct.Equals("desktop"); }
+        }
+
+        /// <summary>
+        /// Returns true if test should use the cDAC.
+        /// </summary>
+        public bool TestCDAC
+        {
+            get { return string.Equals(GetValue("TestCDAC"), "true", StringComparison.InvariantCultureIgnoreCase); }
         }
 
         /// <summary>

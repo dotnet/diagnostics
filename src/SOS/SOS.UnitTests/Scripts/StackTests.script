@@ -26,7 +26,7 @@ VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(
 ENDIF:64BIT
 
 !IFDEF:WINDOWS
-SOSCOMMAND:SetSymbolServer -ms -loadsymbols
+SOSCOMMAND:SetSymbolServer -ms -timeout 10 -loadsymbols
 ENDIF:WINDOWS
 
 !IFDEF:DOTNETDUMP

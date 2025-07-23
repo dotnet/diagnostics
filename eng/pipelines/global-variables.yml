@@ -69,3 +69,4 @@ variables:
 - ${{ if eq(parameters.runtimeFeedToken, 'dotnetclimsrc-sas-token-base64') }}:
   - name: RuntimeFeedBase64SasToken
     value: $(dotnetclimsrc-read-sas-token-base64)
+

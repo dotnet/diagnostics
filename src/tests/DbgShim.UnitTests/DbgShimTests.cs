@@ -261,7 +261,7 @@ namespace Microsoft.Diagnostics
                 IRuntime runtime = runtimeService.EnumerateRuntimes().Single();
 
                 CorDebugDataTargetWrapper dataTarget = new(target.Services, runtime);
-                LibraryProviderWrapper libraryProvider = new(target.OperatingSystem, runtime.RuntimeModule.BuildId, runtime.GetDbiFilePath(), runtime.GetDacFilePath());
+                LibraryProviderWrapper libraryProvider = new(target.OperatingSystem, runtime.RuntimeModule.BuildId, runtime.GetDbiFilePath(), runtime.GetDacFilePath(out bool verifySignature));
                 ClrDebuggingVersion maxDebuggerSupportedVersion = new()
                 {
                     StructVersion = 0,

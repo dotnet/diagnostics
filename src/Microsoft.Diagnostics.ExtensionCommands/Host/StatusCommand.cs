@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -62,6 +63,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                 }
                 this.DisplaySpecialInfo();
+                this.DisplaySettingService();
                 Write(SymbolService.ToString());
 
                 List<Assembly> extensions = new(ServiceManager.ExtensionsLoaded);
@@ -74,7 +76,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     FileVersionInfo versionInfo = FileVersionInfo.GetVersionInfo(path);
                     WriteLine($"-> {versionInfo.ProductVersion} {path}");
                 }
-
+                WriteLine($"Host runtime {RuntimeInformation.FrameworkDescription} on {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}");
                 long memoryUsage = GC.GetTotalMemory(forceFullCollection: true);
                 WriteLine($"GC memory usage for managed SOS components: {memoryUsage:##,#} bytes");
             }

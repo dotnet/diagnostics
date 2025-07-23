@@ -2,18 +2,22 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.PE;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.KeyGenerators;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// Memory service wrapper that maps always module's metadata into the address
+    /// Memory service wrapper that always maps clrmodule's metadata into the address
     /// space even is some or all of the memory exists in the coredump. lldb returns
     /// zero's (instead of failing the memory read) for missing pages in core dumps
     /// that older (less than 5.0) createdumps generate  so it needs this special
@@ -22,6 +26,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class MetadataMappingMemoryService : IMemoryService, IDisposable
     {
         private readonly ServiceContainer _serviceContainer;
+        private readonly IModuleService _moduleService;
         private readonly IMemoryService _memoryService;
         private readonly IRuntimeService _runtimeService;
         private readonly ISymbolService _symbolService;
@@ -40,6 +45,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             container.AddService(memoryService);
 
             _memoryService = memoryService;
+            _moduleService = container.GetService<IModuleService>();
             _runtimeService = container.GetService<IRuntimeService>();
             _symbolService = container.GetService<ISymbolService>();
 
@@ -124,7 +130,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Need to set this before enumerating the runtimes to prevent reentrancy
                 _regionInitialized = true;
 
-                System.Collections.Generic.IEnumerable<IRuntime> runtimes = _runtimeService.EnumerateRuntimes();
+                IEnumerable<IRuntime> runtimes = _runtimeService.EnumerateRuntimes();
                 if (runtimes.Any())
                 {
                     foreach (IRuntime runtime in runtimes)
@@ -176,32 +182,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return null;
         }
 
-        private ImmutableArray<byte> GetMetaDataFromAssembly(ClrModule module)
-        {
-            Debug.Assert(module.ImageBase != 0);
-
-            ImmutableArray<byte> metadata = ImmutableArray<byte>.Empty;
-            bool isVirtual = module.Layout != ModuleLayout.Flat;
-            try
-            {
-                Stream stream = _memoryService.CreateMemoryStream(module.ImageBase, module.Size > 0 ? module.Size : 4096);
-                PEFile peFile = new(new StreamAddressSpace(stream), isVirtual);
-                if (peFile.IsValid())
-                {
-                    metadata = _symbolService.GetMetadata(module.Name, peFile.Timestamp, peFile.SizeOfImage);
-                }
-                else
-                {
-                    Trace.TraceError($"GetMetaData: {module.ImageBase:X16} not valid PE");
-                }
-            }
-            catch (Exception ex) when (ex is InvalidVirtualAddressException or BadInputFormatException)
-            {
-                Trace.TraceError($"GetMetaData: loaded {module.ImageBase:X16} exception {ex.Message}");
-            }
-            return metadata;
-        }
-
         private sealed class MetadataRegion : IComparable<MetadataRegion>
         {
             private readonly MetadataMappingMemoryService _memoryService;
@@ -242,7 +222,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 if (_metadata.IsDefault)
                 {
-                    _metadata = _memoryService.GetMetaDataFromAssembly(_module);
+                    _metadata = _memoryService._moduleService.CreateModule(-1, _module).GetMetadata();
                 }
                 return _metadata;
             }

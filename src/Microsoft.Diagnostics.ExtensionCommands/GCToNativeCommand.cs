@@ -574,7 +574,7 @@ specified memory will be displayed instead of just a summary table.
 
 Sample Output:
 
-    0:000> gctonative PAGE_READWRITE
+    {prompt}gctonative PAGE_READWRITE
     Walking GC heap to find pointers...
     Resolving object names...
     ================================================ PAGE_READWRITE Regions ================================================

@@ -61,5 +61,4 @@
       <FileWrites Include="$(SOSConfigFileName)" />
     </ItemGroup>
   </Target>
-
 </Project>
