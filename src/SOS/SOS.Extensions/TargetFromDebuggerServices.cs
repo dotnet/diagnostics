@@ -130,11 +130,13 @@ namespace SOS.Extensions
             if (!memoryService.Read<uint>(ref headerAddr, out uint headerValue) ||
                 headerValue != CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_COOKIE ||
                 !memoryService.Read<ushort>(ref headerAddr, out ushort majorVersion) || majorVersion < 3 || // .NET 8 and later
-                !memoryService.Read<ushort>(ref headerAddr, out ushort _))
+                !memoryService.Read<ushort>(ref headerAddr, out ushort minorVersion))
             {
                 Trace.TraceInformation($"CrashInfoService: .NET 8+ {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} not found in module {module.FileName}");
                 return false;
             }
+
+            Trace.TraceInformation($"CrashInfoService: Found {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} in module {module.FileName} with version {majorVersion}.{minorVersion}");
 
             if (!memoryService.Read<uint>(ref headerAddr, out uint flags) ||
                 memoryService.PointerSize != (flags == 0x1 ? 8 : 4) ||
@@ -143,6 +145,8 @@ namespace SOS.Extensions
                 Trace.TraceError($"CrashInfoService: Failed to read DotNetRuntimeDebugHeader flags or padding in module {module.FileName}");
                 return false;
             }
+
+            Trace.TraceInformation($"CrashInfoService: Target is {memoryService.PointerSize * 8}-bit");
 
             headerAddr += (uint)memoryService.PointerSize; // skip DebugEntries array
 
@@ -176,6 +180,7 @@ namespace SOS.Extensions
                     if (nullTerminatorIndex >= 0)
                     {
                         buffer = buffer.Slice(0, nullTerminatorIndex);
+                        Trace.TraceInformation($"CrashInfoService: Found g_CrashInfoBuffer in module {module.FileName} with size {buffer.Length} bytes");
                         if (buffer.Length > 0)
                         {
                             crashInfoService = CrashInfoService.Create(0, buffer, module.Services.GetService<IModuleService>());
