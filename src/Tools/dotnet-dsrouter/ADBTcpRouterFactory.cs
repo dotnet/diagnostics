@@ -85,8 +85,8 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 }
             };
 
-            //ANDROID_SDK_ROOT is deprecated
-            string sdkRoot = Environment.GetEnvironmentVariable("ANDROID_HOME") ?? Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT") ?? new AndroidSdkInfo(logger: sdklogger).AndroidSdkPath;
+            // AndroidSdkInfo checks $ANDROID_SDK_ROOT, $ANDROID_HOME, and default locations.
+            string sdkRoot = new AndroidSdkInfo(logger: sdklogger).AndroidSdkPath;
             string adbTool = "adb";
 
             if (!string.IsNullOrEmpty(sdkRoot))
@@ -187,7 +187,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 _ownsPortReverse = false;
                 Logger.LogError("Failed setting up adb port reverse." +
                     " This might lead to problems communicating with Android application." +
-                    " Make sure env variable ANDROID_SDK_ROOT is set and points to an Android SDK." +
+                    " Make sure env variable $ANDROID_HOME is set and points to an Android SDK." +
                     $" Executing with unknown adb status for port {_localPort}.");
                 base.Start();
                 return;
@@ -266,7 +266,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 _ownsPortForward = false;
                 Logger.LogError("Failed setting up adb port forward." +
                     " This might lead to problems communicating with Android application." +
-                    " Make sure env variable ANDROID_SDK_ROOT is set and points to an Android SDK." +
+                    " Make sure env variable $ANDROID_HOME is set and points to an Android SDK." +
                     $" Executing with unknown adb status for port {_localPort}.");
                 return;
             }
