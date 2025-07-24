@@ -14,7 +14,10 @@
     <IsShipping>true</IsShipping>
     <BuildingOutsideDiagnostics>false</BuildingOutsideDiagnostics>
     <BuildingOutsideDiagnostics Condition="'$(RepositoryName)' != 'diagnostics'">true</BuildingOutsideDiagnostics>
-    <PreReleaseVersionLabel />
+    <!-- Set the pre-release version label to to empty, to produce a release only package version, only
+         in the repo build. In the VMR build, do not do this so that we don't end up with overlapping package IDs.
+         If both the VMR and repo produce this package, day N of the VMR will overlap with Day N+1 of the repo. -->
+    <PreReleaseVersionLabel Condition="'$(DotNetBuild)' != 'true'" />
   </PropertyGroup>
 
   <PropertyGroup Condition="$(BuildingOutsideDiagnostics)">

@@ -1,0 +1,14 @@
+<Project>
+  <!--
+    Copies all the native binaries to a rid-specific directory under the output and publish paths.
+  -->
+  <Target Name="InstallNativeFiles" AfterTargets="AfterBuild">
+    <ItemGroup>
+      <NativeBinaries Include="@(SosRequiredBinaries->WithMetadataValue('TargetRid', '$(TargetRid)'))">
+        <SourcePath>$([MSBuild]::ValueOrDefault('%(FullPath)', '').Replace('linux-musl', 'linux'))</SourcePath>
+      </NativeBinaries>
+    </ItemGroup>
+    <Copy SourceFiles="@(NativeBinaries -> '%(SourcePath)')" DestinationFolder="$(OutputPath)$(TargetRid)" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="@(NativeBinaries -> '%(SourcePath)')" DestinationFolder="$(OutputPath)publish\$(TargetRid)" SkipUnchangedFiles="false" />
+  </Target>
+</Project>

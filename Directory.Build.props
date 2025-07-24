@@ -21,13 +21,42 @@
     <RepositoryName>diagnostics</RepositoryName>
   </PropertyGroup>
 
+  <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+
+  <!--
+    $(TargetOS) - target operating system (win, linux, osx). Defaults to host OS.
+    $(TargetArch) - architecture to test (x64, x86, arm, arm64). Defaults to host architecture.
+    $(TargetRid) - the runtime identifier (rid) to against (win-x64, linux-arm64, linux-musl-x64, etc).
+    $(Configuration) - configuration to test (Debug, Release). Defaults to Debug.
+    $(ArtifactsBinDir) - artifacts\bin directory
+  -->
+
+  <PropertyGroup Condition="'$(TargetOS)' == ''">
+    <TargetOS>linux</TargetOS>
+    <TargetOS Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' == 'true'">Windows_NT</TargetOS>
+    <TargetOS Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))' == 'true'">linux</TargetOS>
+    <TargetOS Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' == 'true'">osx</TargetOS>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetArch Condition="'$(TargetArch)' == ''">$(Platform)</TargetArch>
+    <TargetArch Condition="'$(TargetArch)' == 'AnyCpu'">$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</TargetArch>
+    <ArtifactsBinNativeDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', '$(TargetOS).$(TargetArch).$(Configuration)'))</ArtifactsBinNativeDir>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetRid)' == ''">
+    <TargetRidOS>$(TargetOS)</TargetRidOS>
+    <TargetRidOS Condition="'$(TargetOS)' == 'Windows_NT'">win</TargetRidOS>
+    <TargetRid>$(TargetRidOS)-$(TargetArch)</TargetRid>
+  </PropertyGroup>
+
   <PropertyGroup>
     <DesktopTargetFramework>net462</DesktopTargetFramework>
     <!--
         This represents the minimum supported .NET Version, so the min version that the tools must
         be able to run against for a simple customer experience.
 
-        When bumping this, bump __targetRid in build.sh/build-native.cmd and modify the
+        When bumping this, bump __targetFramework in build.sh/build-native.cmd and modify the
         Debugger.Tests.Configs to reflect the new TFMs
      -->
     <NetCoreAppMinVersion>8.0</NetCoreAppMinVersion>
@@ -37,4 +66,5 @@
     <!-- This is the list of TFMs we build our unit tests as. -->
     <SupportedXUnitTestTargetFrameworks>net8.0</SupportedXUnitTestTargetFrameworks>
   </PropertyGroup>
+
 </Project>

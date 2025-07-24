@@ -77,7 +77,7 @@ struct SOSEHInfo
     UINT        EHCount;
     CLRDATA_ADDRESS methodStart;
 
-    SOSEHInfo()   { ZeroMemory(this, sizeof(SOSEHInfo)); }
+    SOSEHInfo()   { ZeroMemory(static_cast<void*>(this), sizeof(SOSEHInfo)); }
     ~SOSEHInfo()  { if (m_pInfos) { delete [] m_pInfos; } }    
 
     void FormatForDisassembly(CLRDATA_ADDRESS offSet);

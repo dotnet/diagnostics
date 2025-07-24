@@ -65,7 +65,7 @@ protected:
   BlockMap m_L1_cache; // A first level memory cache whose chunk sizes vary that
                        // will be used only if the memory read fits entirely in
                        // a chunk
-  BlockMap m_L2_cache; // A memory cache of fixed size chinks
+  BlockMap m_L2_cache; // A memory cache of fixed size chunks
                        // (m_L2_cache_line_byte_size bytes in size each)
   InvalidRanges m_invalid_ranges;
   Process &m_process;

@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading;
@@ -20,6 +21,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         /// <param name="timeout">The amount of time to block attempting to connect</param>
         /// <returns>A stream used for writing and reading data to and from the target .NET process</returns>
+        /// <throws>ServerNotAvailableException</throws>
         public abstract Stream Connect(TimeSpan timeout);
 
         /// <summary>
@@ -29,6 +31,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>
         /// A task that completes with a stream used for writing and reading data to and from the target .NET process.
         /// </returns>
+        /// <throws>ServerNotAvailableException</throws>
         public abstract Task<Stream> ConnectAsync(CancellationToken token);
 
         /// <summary>
@@ -51,66 +54,81 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public static Stream Connect(IpcEndpointConfig config, TimeSpan timeout)
         {
-            if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
+            try
             {
-                NamedPipeClientStream namedPipe = new(
-                    ".",
-                    config.Address,
-                    PipeDirection.InOut,
-                    PipeOptions.None,
-                    TokenImpersonationLevel.Impersonation);
-                namedPipe.Connect((int)timeout.TotalMilliseconds);
-                return namedPipe;
-            }
-            else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
-            {
-                IpcUnixDomainSocket socket = new();
-                socket.Connect(new IpcUnixDomainSocketEndPoint(config.Address), timeout);
-                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
-            }
+                if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
+                {
+                    NamedPipeClientStream namedPipe = new(
+                        ".",
+                        config.Address,
+                        PipeDirection.InOut,
+                        PipeOptions.None,
+                        TokenImpersonationLevel.Impersonation);
+                    namedPipe.Connect((int)timeout.TotalMilliseconds);
+                    return namedPipe;
+                }
+                else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
+                {
+                    IpcUnixDomainSocket socket = new();
+                    socket.Connect(new IpcUnixDomainSocketEndPoint(config.Address), timeout);
+                    return new ExposedSocketNetworkStream(socket, ownsSocket: true);
+                }
 #if DIAGNOSTICS_RUNTIME
-            else if (config.Transport == IpcEndpointConfig.TransportType.TcpSocket)
-            {
-                var tcpClient = new TcpClient ();
-                var endPoint = new IpcTcpSocketEndPoint(config.Address);
-                tcpClient.Connect(endPoint.EndPoint);
-                return tcpClient.GetStream();
-            }
+                else if (config.Transport == IpcEndpointConfig.TransportType.TcpSocket)
+                {
+                    var tcpClient = new TcpClient ();
+                    var endPoint = new IpcTcpSocketEndPoint(config.Address);
+                    tcpClient.Connect(endPoint.EndPoint);
+                    return tcpClient.GetStream();
+                }
 #endif
-            else
+                else
+                {
+                    throw new ArgumentException($"Unsupported IpcEndpointConfig transport type {config.Transport}");
+                }
+
+            }
+            catch (SocketException ex)
             {
-                throw new ArgumentException($"Unsupported IpcEndpointConfig transport type {config.Transport}");
+                throw new ServerNotAvailableException($"Unable to connect to the server. {ex.Message}", ex);
             }
         }
 
         public static async Task<Stream> ConnectAsync(IpcEndpointConfig config, CancellationToken token)
         {
-            if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
+            try
             {
-                NamedPipeClientStream namedPipe = new(
-                    ".",
-                    config.Address,
-                    PipeDirection.InOut,
-                    PipeOptions.Asynchronous,
-                    TokenImpersonationLevel.Impersonation);
+                if (config.Transport == IpcEndpointConfig.TransportType.NamedPipe)
+                {
+                    NamedPipeClientStream namedPipe = new(
+                        ".",
+                        config.Address,
+                        PipeDirection.InOut,
+                        PipeOptions.Asynchronous,
+                        TokenImpersonationLevel.Impersonation);
 
-                // Pass non-infinite timeout in order to cause internal connection algorithm
-                // to check the CancellationToken periodically. Otherwise, if the named pipe
-                // is waited using WaitNamedPipe with an infinite timeout, then the
-                // CancellationToken cannot be observed.
-                await namedPipe.ConnectAsync(int.MaxValue, token).ConfigureAwait(false);
+                    // Pass non-infinite timeout in order to cause internal connection algorithm
+                    // to check the CancellationToken periodically. Otherwise, if the named pipe
+                    // is waited using WaitNamedPipe with an infinite timeout, then the
+                    // CancellationToken cannot be observed.
+                    await namedPipe.ConnectAsync(int.MaxValue, token).ConfigureAwait(false);
 
-                return namedPipe;
+                    return namedPipe;
+                }
+                else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
+                {
+                    IpcUnixDomainSocket socket = new();
+                    await socket.ConnectAsync(new IpcUnixDomainSocketEndPoint(config.Address), token).ConfigureAwait(false);
+                    return new ExposedSocketNetworkStream(socket, ownsSocket: true);
+                }
+                else
+                {
+                    throw new ArgumentException($"Unsupported IpcEndpointConfig transport type {config.Transport}");
+                }
             }
-            else if (config.Transport == IpcEndpointConfig.TransportType.UnixDomainSocket)
+            catch (SocketException ex)
             {
-                IpcUnixDomainSocket socket = new();
-                await socket.ConnectAsync(new IpcUnixDomainSocketEndPoint(config.Address), token).ConfigureAwait(false);
-                return new ExposedSocketNetworkStream(socket, ownsSocket: true);
-            }
-            else
-            {
-                throw new ArgumentException($"Unsupported IpcEndpointConfig transport type {config.Transport}");
+                throw new ServerNotAvailableException($"Unable to connect to the server. {ex.Message}", ex);
             }
         }
     }
@@ -221,10 +239,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public static string IpcRootPath { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"\\.\pipe\" : Path.GetTempPath();
         public static string DiagnosticsPortPattern { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @"^dotnet-diagnostic-(\d+)$" : @"^dotnet-diagnostic-(\d+)-(\d+)-socket$";
-
+        // Format strings as private const members
+        private const string _defaultAddressFormatWindows = "dotnet-diagnostic-{0}";
+        private const string _dsrouterAddressFormatWindows = "dotnet-diagnostic-dsrouter-{0}";
+        private const string _defaultAddressFormatNonWindows = "dotnet-diagnostic-{0}-{1}-socket";
+        private const string _dsrouterAddressFormatNonWindows = "dotnet-diagnostic-dsrouter-{0}-{1}-socket";
         private int _pid;
         private IpcEndpointConfig _config;
-
         /// <summary>
         /// Creates a reference to a .NET process's IPC Transport
         /// using the default rules for a given pid
@@ -271,11 +292,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                defaultAddress = $"dotnet-diagnostic-{pid}";
+                defaultAddress = string.Format(_defaultAddressFormatWindows, pid);
 
                 try
                 {
-                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-dsrouter-{pid}").FirstOrDefault();
+                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, string.Format(_dsrouterAddressFormatWindows, pid)).FirstOrDefault();
                     if (!string.IsNullOrEmpty(dsrouterAddress))
                     {
                         defaultAddress = dsrouterAddress;
@@ -287,11 +308,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    defaultAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-{pid}-*-socket") // Try best match.
+                    defaultAddress = Directory.GetFiles(IpcRootPath, string.Format(_defaultAddressFormatNonWindows, pid, "*")) // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
-                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, $"dotnet-diagnostic-dsrouter-{pid}-*-socket") // Try best match.
+                    string dsrouterAddress = Directory.GetFiles(IpcRootPath, string.Format(_dsrouterAddressFormatNonWindows, pid, "*")) // Try best match.
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
@@ -332,8 +353,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 string msg = $"Unable to connect to Process {pid}.";
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
+                    int total_length = IpcRootPath.Length + string.Format(_defaultAddressFormatNonWindows, pid, "##########").Length;
+                    if (total_length > 108) // This isn't perfect as we don't know the disambiguation key length. However it should catch most cases.
+                    {
+                        msg += "The total length of the diagnostic socket path may exceed 108 characters. " +
+                            "Try setting the TMPDIR environment variable to a shorter path";
+                    }
                     msg += $" Please verify that {IpcRootPath} is writable by the current user. "
                         + "If the target process has environment variable TMPDIR set, please set TMPDIR to the same directory. "
+                        + "Please also ensure that the target process has {TMPDIR}/dotnet-diagnostic-{pid}-{disambiguation_key}-socket shorter than 108 characters. "
                         + "Please see https://aka.ms/dotnet-diagnostics-port for more information";
                 }
                 throw new ServerNotAvailableException(msg);
@@ -349,7 +377,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 address = address.Substring(IpcRootPath.Length);
             }
 
-            string dsrouterAddress = $"dotnet-diagnostic-dsrouter-{pid}";
+            string dsrouterAddress = string.Format(_dsrouterAddressFormatWindows, pid);
             return address.StartsWith(dsrouterAddress, StringComparison.OrdinalIgnoreCase);
         }
 
