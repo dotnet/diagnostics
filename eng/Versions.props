@@ -72,6 +72,7 @@
     <cdbsosversion>10.0.26100.1</cdbsosversion>
     <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
     <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>10.0.622304</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
+    <XamarinAndroidToolsAndroidSdkVersion>1.0.105-preview.225</XamarinAndroidToolsAndroidSdkVersion>
     <!-- Roslyn and analyzers -->
     <!-- dotnet/roslyn dependencies -->
     <!--

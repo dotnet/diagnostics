@@ -9,6 +9,10 @@
       <Uri>https://github.com/microsoft/clrmd</Uri>
       <Sha>d724947392626b66e39b525998a8817447d50380</Sha>
     </Dependency>
+    <Dependency Name="Xamarin.Android.Tools.AndroidSdk" Version="1.0.105-preview.225">
+      <Uri>https://github.com/dotnet/android</Uri>
+      <Sha>bf304cf475308547a2a1a342bb9f2e6825cc33cd</Sha>
+    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.25351.106">
