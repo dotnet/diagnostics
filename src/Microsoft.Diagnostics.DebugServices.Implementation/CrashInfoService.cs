@@ -25,7 +25,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public const uint FAST_FAIL_EXCEPTION_DOTNET_AOT = 0x48;
 
         public const uint MAX_CRASHINFOBUFFER_SIZE = 8192;
-        public const uint MAX_GLOBAL_ENTRIES_ARRAY_SIZE = 8;
+        public const uint MAX_GLOBAL_ENTRIES_ARRAY_SIZE_NET8 = 6;
+        public const uint MAX_GLOBAL_ENTRIES_ARRAY_SIZE_NET9_PLUS = 8;
         public const uint MAX_GLOBAL_ENTRY_NAME_CHARS = 32;
         public const uint DOTNET_RUNTIME_DEBUG_HEADER_COOKIE = 0x48444e44; // 'DNDH'
         public const string DOTNET_RUNTIME_DEBUG_HEADER_NAME = "DotNetRuntimeDebugHeader";

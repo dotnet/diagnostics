@@ -197,7 +197,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Gets the entrypoint module for the target.  This is the first module in the sorted list of modules.
         /// </summary>
-        public IModule EntryPointModule
+        public virtual IModule EntryPointModule
         {
             get
             {

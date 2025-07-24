@@ -114,10 +114,10 @@ namespace SOS.Extensions
             targetWrapper?.ServiceWrapper.AddServiceWrapper(ClrmaServiceWrapper.IID_ICLRMAService, () => new ClrmaServiceWrapper(this, Services, targetWrapper.ServiceWrapper));
         }
 
-        private static bool CreateCrashInfoServiceForModule(IServiceProvider services, IModule module, out ICrashInfoService crashInfoService)
+        private static bool CreateCrashInfoServiceForModule(IModule module, out ICrashInfoService crashInfoService)
         {
             crashInfoService = null;
-            if (module?.IsManaged == true)
+            if (module == null || module.IsManaged)
             {
                 return false;
             }
@@ -126,13 +126,13 @@ namespace SOS.Extensions
                 Trace.TraceInformation($"CrashInfoService: {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} export not found in module {module.FileName}");
                 return false;
             }
-            IMemoryService memoryService = services.GetService<IMemoryService>();
+            IMemoryService memoryService = module.Services.GetService<IMemoryService>();
             if (!memoryService.Read<uint>(ref headerAddr, out uint headerValue) ||
                 headerValue != CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_COOKIE ||
-                !memoryService.Read<ushort>(ref headerAddr, out ushort majorVersion) || majorVersion < 5 || // .NET 10 and later
+                !memoryService.Read<ushort>(ref headerAddr, out ushort majorVersion) || majorVersion < 3 || // .NET 8 and later
                 !memoryService.Read<ushort>(ref headerAddr, out ushort _))
             {
-                Trace.TraceInformation($"CrashInfoService: .NET 10+ {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} not found in module {module.FileName}");
+                Trace.TraceInformation($"CrashInfoService: .NET 8+ {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} not found in module {module.FileName}");
                 return false;
             }
 
@@ -152,7 +152,8 @@ namespace SOS.Extensions
                 Trace.TraceError($"CrashInfoService: Unable to read GlobalEntry array");
                 return false;
             }
-            for (int i = 0; i < CrashInfoService.MAX_GLOBAL_ENTRIES_ARRAY_SIZE; i++)
+            uint maxGlobalEntries = (majorVersion >= 4 /*.NET 9 or later*/) ? CrashInfoService.MAX_GLOBAL_ENTRIES_ARRAY_SIZE_NET9_PLUS : CrashInfoService.MAX_GLOBAL_ENTRIES_ARRAY_SIZE_NET8;
+            for (int i = 0; i < maxGlobalEntries; i++)
             {
                 if (!memoryService.ReadPointer(ref globalEntryArrayAddress, out ulong globalNameAddress) || globalNameAddress == 0 ||
                     !memoryService.ReadPointer(ref globalEntryArrayAddress, out ulong globalValueAddress) || globalValueAddress == 0 ||
@@ -175,9 +176,24 @@ namespace SOS.Extensions
                     if (nullTerminatorIndex >= 0)
                     {
                         buffer = buffer.Slice(0, nullTerminatorIndex);
-                        crashInfoService = CrashInfoService.Create(0, buffer, services.GetService<IModuleService>());
-                        return true;
+                        if (buffer.Length > 0)
+                        {
+                            crashInfoService = CrashInfoService.Create(0, buffer, module.Services.GetService<IModuleService>());
+                            return true;
+                        }
+                        else
+                        {
+                            Trace.TraceError($"CrashInfoService: g_CrashInfoBuffer is empty in module {module.FileName}");
+                        }
                     }
+                    else
+                    {
+                        Trace.TraceError($"CrashInfoService: g_CrashInfoBuffer is not null terminated in module {module.FileName}");
+                    }
+                }
+                else
+                {
+                    Trace.TraceError($"CrashInfoService: ReadMemory({triageBufferAddress}) failed in module {module.FileName}");
                 }
             }
             return false;
@@ -215,9 +231,32 @@ namespace SOS.Extensions
 
             // if the above did not located the crash info service, then look for the DotNetRuntimeDebugHeader
             IModule entryPointModule = services.GetService<IModuleService>().EntryPointModule;
-            if (CreateCrashInfoServiceForModule(services, entryPointModule, out ICrashInfoService crashInfoService))
+            if (entryPointModule == null)
+            {
+                Trace.TraceError("CrashInfoService: No entry point module found");
+                return null;
+            }
+            if (CreateCrashInfoServiceForModule(entryPointModule, out ICrashInfoService crashInfoService))
             {
                 return crashInfoService;
+            }
+            // if the entry point module did not have the crash info service, then look for a library with the same name as the entry point
+            string fileName = entryPointModule.FileName;
+            if (fileName == null)
+            {
+                Trace.TraceError("CrashInfoService: Entry point module has no file name");
+                return null;
+            }
+            if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                fileName = fileName.Substring(0, fileName.Length - 4) + ".dll"; // look for a dll with the same name
+                foreach (IModule speculativeAppModule in services.GetService<IModuleService>().GetModuleFromModuleName(fileName))
+                {
+                    if (CreateCrashInfoServiceForModule(speculativeAppModule, out crashInfoService))
+                    {
+                        return crashInfoService;
+                    }
+                }
             }
 
             return null;
