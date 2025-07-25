@@ -13,6 +13,7 @@ namespace SOS.Extensions.Clrma
 {
     public sealed class ClrmaServiceWrapper : COMCallableIUnknown
     {
+        public const ModuleEnumerationScheme DefaultModuleEnumerationScheme = ModuleEnumerationScheme.EntryPointAndEntryPointDllModule;
         public static readonly Guid IID_ICLRMAService = new("1FCF4C14-60C1-44E6-84ED-20506EF3DC60");
 
         public const int E_BOUNDS = unchecked((int)0x8000000B);
@@ -104,7 +105,15 @@ namespace SOS.Extensions.Clrma
             return HResult.E_NOTIMPL;
         }
 
-        private ICrashInfoService CrashInfoService => _crashInfoService ??= _serviceProvider.GetService<ICrashInfoService>();
+        private ICrashInfoService CrashInfoService
+        {
+            get
+            {
+                _crashInfoService ??= _serviceProvider.GetService<ICrashInfoService>(); // Use the default exception-based mechanism for obtaining crash info service
+                _crashInfoService ??= _serviceProvider.GetService<ICrashInfoModuleService>()?.Create(DefaultModuleEnumerationScheme); // if the above fails, try to create a crash info service from the modules
+                return _crashInfoService;
+            }
+        }
 
         private IThreadService ThreadService => _serviceProvider.GetService<IThreadService>();
 

@@ -84,7 +84,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public static ICrashInfoService CreateCrashInfoService(IServiceProvider services)
+        public static ICrashInfoService CreateCrashInfoServiceFromException(IServiceProvider services)
         {
             EXCEPTION_RECORD64 exceptionRecord;
 

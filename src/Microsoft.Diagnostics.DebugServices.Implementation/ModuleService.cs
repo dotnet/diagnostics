@@ -194,6 +194,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return new ModuleFromAddress(this, moduleIndex, imageBase, imageSize, imageName);
         }
 
+        /// <summary>
+        /// Gets the entrypoint module for the target.  This is the first module in the sorted list of modules.
+        /// </summary>
+        public virtual IModule EntryPointModule
+        {
+            get
+            {
+                // The entry point module is the first module in the sorted list of modules.
+                // This is not necessarily the same as the entry point module in the target.
+                IModule[] modules = GetSortedModules();
+                return modules.Length > 0 ? modules[0] : null;
+            }
+        }
+
         #endregion
 
         /// <summary>

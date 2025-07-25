@@ -100,8 +100,12 @@ namespace SOS.Extensions
             });
 
             // Add optional crash info service (currently only for Native AOT).
-            _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => CreateCrashInfoService(services, debuggerServices));
+            _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => CreateCrashInfoServiceFromException(services, debuggerServices));
             OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
+
+            // Add the crash info service factory which lookup the DotNetRuntimeDebugHeader from modules
+            _serviceContainerFactory.AddServiceFactory<ICrashInfoModuleService>((services) => new CrashInfoModuleService(services));
+            OnFlushEvent.Register(() => FlushService<ICrashInfoModuleService>());
 
             if (Host.HostType == HostType.DbgEng)
             {
@@ -114,12 +118,12 @@ namespace SOS.Extensions
             targetWrapper?.ServiceWrapper.AddServiceWrapper(ClrmaServiceWrapper.IID_ICLRMAService, () => new ClrmaServiceWrapper(this, Services, targetWrapper.ServiceWrapper));
         }
 
-        private unsafe ICrashInfoService CreateCrashInfoService(IServiceProvider services, DebuggerServices debuggerServices)
+        private unsafe ICrashInfoService CreateCrashInfoServiceFromException(IServiceProvider services, DebuggerServices debuggerServices)
         {
             // For Linux/OSX dumps loaded under dbgeng the GetLastException API doesn't return the necessary information
             if (Host.HostType == HostType.DbgEng && (OperatingSystem == OSPlatform.Linux || OperatingSystem == OSPlatform.OSX))
             {
-                return SpecialDiagInfo.CreateCrashInfoService(services);
+                return SpecialDiagInfo.CreateCrashInfoServiceFromException(services);
             }
             HResult hr = debuggerServices.GetLastException(out uint processId, out int threadIndex, out EXCEPTION_RECORD64 exceptionRecord);
             if (hr.IsOK)
@@ -143,7 +147,10 @@ namespace SOS.Extensions
                     }
                 }
             }
+
             return null;
         }
+
+
     }
 }
