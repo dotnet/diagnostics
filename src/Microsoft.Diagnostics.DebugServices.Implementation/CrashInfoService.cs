@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -140,20 +141,41 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     // if the entry point module did not have the crash info service, then look for a library with the same name as the entry point
                     string fileName = entryPointModule.FileName;
+                    OSPlatform osPlatform = entryPointModule.Target.OperatingSystem;
                     if (fileName == null)
                     {
                         Trace.TraceError("CrashInfoService: Entry point module has no file name");
                         return null;
                     }
-                    if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    if (osPlatform == OSPlatform.Windows)
                     {
-                        fileName = fileName.Substring(0, fileName.Length - 4) + ".dll"; // look for a dll with the same name
-                        foreach (IModule speculativeAppModule in services.GetService<IModuleService>().GetModuleFromModuleName(fileName))
+                        if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (CreateCrashInfoServiceForModule(speculativeAppModule, out crashInfoService))
-                            {
-                                return crashInfoService;
-                            }
+                            fileName = fileName.Substring(0, fileName.Length - 4) + ".dll"; // look for a dll with the same name
+                        }
+                        else
+                        {
+                            Trace.TraceError($"CrashInfoService: Unexpected entry point module file name {fileName}");
+                        }
+                    }
+                    else if (osPlatform == OSPlatform.Linux)
+                    {
+                        fileName += ".so"; // look for a .so with the same name
+                    }
+                    else if (osPlatform == OSPlatform.OSX)
+                    {
+                        fileName += ".dylib"; // look for a .dylib with the same name
+                    }
+                    else
+                    {
+                        Trace.TraceError($"CrashInfoService: Unsupported operating system {osPlatform}");
+                        return null;
+                    }
+                    foreach (IModule speculativeAppModule in services.GetService<IModuleService>().GetModuleFromModuleName(fileName))
+                    {
+                        if (CreateCrashInfoServiceForModule(speculativeAppModule, out crashInfoService))
+                        {
+                            return crashInfoService;
                         }
                     }
                 }
