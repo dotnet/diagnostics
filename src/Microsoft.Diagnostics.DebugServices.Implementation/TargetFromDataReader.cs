@@ -77,6 +77,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => SpecialDiagInfo.CreateCrashInfoService(services));
             OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
 
+            // Add the crash info service factory which lookup the DotNetRuntimeDebugHeader from modules
+            _serviceContainerFactory.AddServiceFactory<ICrashInfoModuleService>((services) => new CrashInfoModuleService(services));
+            OnFlushEvent.Register(() => FlushService<ICrashInfoModuleService>());
+
             Finished();
         }
 
