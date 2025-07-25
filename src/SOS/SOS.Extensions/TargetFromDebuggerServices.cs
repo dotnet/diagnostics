@@ -123,7 +123,7 @@ namespace SOS.Extensions
             // For Linux/OSX dumps loaded under dbgeng the GetLastException API doesn't return the necessary information
             if (Host.HostType == HostType.DbgEng && (OperatingSystem == OSPlatform.Linux || OperatingSystem == OSPlatform.OSX))
             {
-                return SpecialDiagInfo.CreateCrashInfoService(services);
+                return SpecialDiagInfo.CreateCrashInfoServiceFromException(services);
             }
             HResult hr = debuggerServices.GetLastException(out uint processId, out int threadIndex, out EXCEPTION_RECORD64 exceptionRecord);
             if (hr.IsOK)

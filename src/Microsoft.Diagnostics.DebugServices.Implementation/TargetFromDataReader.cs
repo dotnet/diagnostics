@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             });
 
             // Add optional crash info service (currently only for Native AOT on Linux/MacOS).
-            _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => SpecialDiagInfo.CreateCrashInfoService(services));
+            _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => SpecialDiagInfo.CreateCrashInfoServiceFromException(services));
             OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
 
             // Add the crash info service factory which lookup the DotNetRuntimeDebugHeader from modules
