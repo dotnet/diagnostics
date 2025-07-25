@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Extensions.Logging;
+using Xamarin.Android.Tools;
 
 namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 {
@@ -65,7 +66,27 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public static bool RunAdbCommandInternal(string command, string expectedOutput, int expectedExitCode, bool rethrow, ILogger logger)
         {
-            string sdkRoot = Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT");
+            void sdklogger(TraceLevel level, string message)
+            {
+                switch (level)
+                {
+                    case TraceLevel.Error:
+                        logger?.LogError(message);
+                        break;
+                    case TraceLevel.Warning:
+                        logger?.LogWarning(message);
+                        break;
+                    case TraceLevel.Info:
+                        logger?.LogInformation(message);
+                        break;
+                    case TraceLevel.Verbose:
+                        logger?.LogDebug(message);
+                        break;
+                }
+            };
+
+            // AndroidSdkInfo checks $ANDROID_SDK_ROOT, $ANDROID_HOME, and default locations.
+            string sdkRoot = new AndroidSdkInfo(logger: sdklogger).AndroidSdkPath;
             string adbTool = "adb";
 
             if (!string.IsNullOrEmpty(sdkRoot))
@@ -166,7 +187,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 _ownsPortReverse = false;
                 Logger.LogError("Failed setting up adb port reverse." +
                     " This might lead to problems communicating with Android application." +
-                    " Make sure env variable ANDROID_SDK_ROOT is set and points to an Android SDK." +
+                    " Make sure env variable $ANDROID_HOME is set and points to an Android SDK." +
                     $" Executing with unknown adb status for port {_localPort}.");
                 base.Start();
                 return;
@@ -245,7 +266,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 _ownsPortForward = false;
                 Logger.LogError("Failed setting up adb port forward." +
                     " This might lead to problems communicating with Android application." +
-                    " Make sure env variable ANDROID_SDK_ROOT is set and points to an Android SDK." +
+                    " Make sure env variable $ANDROID_HOME is set and points to an Android SDK." +
                     $" Executing with unknown adb status for port {_localPort}.");
                 return;
             }

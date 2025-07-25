@@ -289,7 +289,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         private static readonly Option<string> ForwardPortOption =
             new("--forward-port", "-fp")
             {
-                Description = "Enable port forwarding, values Android|iOS for TcpClient and only Android for TcpServer. Make sure to set ANDROID_SDK_ROOT before using this option on Android."
+                Description = "Enable port forwarding, values Android|iOS for TcpClient and only Android for TcpServer. For Android, optionally set $ANDROID_HOME to a valid Android SDK path."
             };
 
         private static readonly Option<string> BlockedSignalsOption =
