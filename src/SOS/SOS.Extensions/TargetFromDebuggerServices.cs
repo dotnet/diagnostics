@@ -14,208 +14,6 @@ using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace SOS.Extensions
 {
-    internal sealed class CrashInfoServiceFactory : ICrashInfoServiceFactory
-    {
-        private readonly IServiceProvider Services;
-        private readonly DebuggerServices DebuggerServices;
-        private readonly IHost Host;
-        private readonly OSPlatform OperatingSystem;
-
-        public CrashInfoServiceFactory(IServiceProvider services, DebuggerServices debuggerServices, IHost host, OSPlatform operatingSystem)
-        {
-            Services = services ?? throw new ArgumentNullException(nameof(services));
-            DebuggerServices = debuggerServices ?? throw new ArgumentNullException(nameof(debuggerServices));
-            Host = host ?? throw new ArgumentNullException(nameof(host));
-            OperatingSystem = operatingSystem;
-        }
-        public ICrashInfoService Create(ModuleEnumerationScheme moduleEnumerationScheme)
-        {
-            return CreateCrashInfoService(Services, DebuggerServices, moduleEnumerationScheme);
-        }
-
-        private static bool CreateCrashInfoServiceForModule(IModule module, out ICrashInfoService crashInfoService)
-        {
-            crashInfoService = null;
-            if (module == null || module.IsManaged)
-            {
-                return false;
-            }
-            if ((module as IExportSymbols)?.TryGetSymbolAddress(CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME, out ulong headerAddr) != true)
-            {
-                Trace.TraceInformation($"CrashInfoService: {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} export not found in module {module.FileName}");
-                return false;
-            }
-            IMemoryService memoryService = module.Services.GetService<IMemoryService>();
-            if (!memoryService.Read<uint>(ref headerAddr, out uint headerValue) ||
-                headerValue != CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_COOKIE ||
-                !memoryService.Read<ushort>(ref headerAddr, out ushort majorVersion) || majorVersion < 3 || // .NET 8 and later
-                !memoryService.Read<ushort>(ref headerAddr, out ushort minorVersion))
-            {
-                Trace.TraceInformation($"CrashInfoService: .NET 8+ {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} not found in module {module.FileName}");
-                return false;
-            }
-
-            Trace.TraceInformation($"CrashInfoService: Found {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} in module {module.FileName} with version {majorVersion}.{minorVersion}");
-
-            if (!memoryService.Read<uint>(ref headerAddr, out uint flags) ||
-                memoryService.PointerSize != (flags == 0x1 ? 8 : 4) ||
-                !memoryService.Read<uint>(ref headerAddr, out uint _)) // padding
-            {
-                Trace.TraceError($"CrashInfoService: Failed to read DotNetRuntimeDebugHeader flags or padding in module {module.FileName}");
-                return false;
-            }
-
-            Trace.TraceInformation($"CrashInfoService: Target is {memoryService.PointerSize * 8}-bit");
-
-            headerAddr += (uint)memoryService.PointerSize; // skip DebugEntries array
-
-            // read GlobalEntries array
-            if (!memoryService.ReadPointer(ref headerAddr, out ulong globalEntryArrayAddress) || globalEntryArrayAddress == 0)
-            {
-                Trace.TraceError($"CrashInfoService: Unable to read GlobalEntry array");
-                return false;
-            }
-            uint maxGlobalEntries = (majorVersion >= 4 /*.NET 9 or later*/) ? CrashInfoService.MAX_GLOBAL_ENTRIES_ARRAY_SIZE_NET9_PLUS : CrashInfoService.MAX_GLOBAL_ENTRIES_ARRAY_SIZE_NET8;
-            for (int i = 0; i < maxGlobalEntries; i++)
-            {
-                if (!memoryService.ReadPointer(ref globalEntryArrayAddress, out ulong globalNameAddress) || globalNameAddress == 0 ||
-                    !memoryService.ReadPointer(ref globalEntryArrayAddress, out ulong globalValueAddress) || globalValueAddress == 0 ||
-                    !memoryService.ReadAnsiString(CrashInfoService.MAX_GLOBAL_ENTRY_NAME_CHARS, globalNameAddress, out string globalName))
-                {
-                    break; // no more global entries
-                }
-
-                if (!string.Equals(globalName, "g_CrashInfoBuffer", StringComparison.Ordinal))
-                {
-                    continue; // not the crash info buffer
-                }
-
-                ulong triageBufferAddress = globalValueAddress;
-                Span<byte> buffer = new byte[CrashInfoService.MAX_CRASHINFOBUFFER_SIZE];
-                if (memoryService.ReadMemory(triageBufferAddress, buffer, out int bytesRead) && bytesRead > 0 && bytesRead <= CrashInfoService.MAX_CRASHINFOBUFFER_SIZE)
-                {
-                    // truncate the buffer to the null terminated string in the buffer
-                    int nullTerminatorIndex = buffer.IndexOf((byte)0);
-                    if (nullTerminatorIndex >= 0)
-                    {
-                        buffer = buffer.Slice(0, nullTerminatorIndex);
-                        Trace.TraceInformation($"CrashInfoService: Found g_CrashInfoBuffer in module {module.FileName} with size {buffer.Length} bytes");
-                        if (buffer.Length > 0)
-                        {
-                            crashInfoService = CrashInfoService.Create(0, buffer, module.Services.GetService<IModuleService>());
-                            return true;
-                        }
-                        else
-                        {
-                            Trace.TraceError($"CrashInfoService: g_CrashInfoBuffer is empty in module {module.FileName}");
-                        }
-                    }
-                    else
-                    {
-                        Trace.TraceError($"CrashInfoService: g_CrashInfoBuffer is not null terminated in module {module.FileName}");
-                    }
-                }
-                else
-                {
-                    Trace.TraceError($"CrashInfoService: ReadMemory({triageBufferAddress}) failed in module {module.FileName}");
-                }
-            }
-            return false;
-        }
-
-        private unsafe ICrashInfoService CreateCrashInfoService(IServiceProvider services, DebuggerServices debuggerServices, ModuleEnumerationScheme moduleEnumerationScheme)
-        {
-            // For Linux/OSX dumps loaded under dbgeng the GetLastException API doesn't return the necessary information
-            if (Host.HostType == HostType.DbgEng && (OperatingSystem == OSPlatform.Linux || OperatingSystem == OSPlatform.OSX))
-            {
-                return SpecialDiagInfo.CreateCrashInfoService(services);
-            }
-            HResult hr = debuggerServices.GetLastException(out uint processId, out int threadIndex, out EXCEPTION_RECORD64 exceptionRecord);
-            if (hr.IsOK)
-            {
-                if (exceptionRecord.ExceptionCode == CrashInfoService.STATUS_STACK_BUFFER_OVERRUN &&
-                    exceptionRecord.NumberParameters >= 4 &&
-                    exceptionRecord.ExceptionInformation[0] == CrashInfoService.FAST_FAIL_EXCEPTION_DOTNET_AOT)
-                {
-                    uint hresult = (uint)exceptionRecord.ExceptionInformation[1];
-                    ulong triageBufferAddress = exceptionRecord.ExceptionInformation[2];
-                    int triageBufferSize = (int)exceptionRecord.ExceptionInformation[3];
-
-                    Span<byte> buffer = new byte[triageBufferSize];
-                    if (services.GetService<IMemoryService>().ReadMemory(triageBufferAddress, buffer, out int bytesRead) && bytesRead == triageBufferSize)
-                    {
-                        return CrashInfoService.Create(hresult, buffer, services.GetService<IModuleService>());
-                    }
-                    else
-                    {
-                        Trace.TraceError($"CrashInfoService: ReadMemory({triageBufferAddress}) failed");
-                    }
-                }
-            }
-
-            if (moduleEnumerationScheme == ModuleEnumerationScheme.None)
-            {
-                return null;
-            }
-
-            if (moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointModule ||
-                moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointAndEntryPointDllModule)
-            {
-                // if the above did not located the crash info service, then look for the DotNetRuntimeDebugHeader
-                IModule entryPointModule = services.GetService<IModuleService>().EntryPointModule;
-                if (entryPointModule == null)
-                {
-                    Trace.TraceError("CrashInfoService: No entry point module found");
-                    return null;
-                }
-                if (CreateCrashInfoServiceForModule(entryPointModule, out ICrashInfoService crashInfoService))
-                {
-                    return crashInfoService;
-                }
-                if (moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointAndEntryPointDllModule)
-                {
-                    // if the entry point module did not have the crash info service, then look for a library with the same name as the entry point
-                    string fileName = entryPointModule.FileName;
-                    if (fileName == null)
-                    {
-                        Trace.TraceError("CrashInfoService: Entry point module has no file name");
-                        return null;
-                    }
-                    if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                    {
-                        fileName = fileName.Substring(0, fileName.Length - 4) + ".dll"; // look for a dll with the same name
-                        foreach (IModule speculativeAppModule in services.GetService<IModuleService>().GetModuleFromModuleName(fileName))
-                        {
-                            if (CreateCrashInfoServiceForModule(speculativeAppModule, out crashInfoService))
-                            {
-                                return crashInfoService;
-                            }
-                        }
-                    }
-                }
-            }
-            else if (moduleEnumerationScheme == ModuleEnumerationScheme.All)
-            {
-                // enumerate all modules and look for the crash info service
-                foreach (IModule module in services.GetService<IModuleService>().EnumerateModules())
-                {
-                    if (CreateCrashInfoServiceForModule(module, out ICrashInfoService crashInfoService))
-                    {
-                        return crashInfoService;
-                    }
-                }
-            }
-            else
-            {
-                Trace.TraceError($"CrashInfoService: Unknown module enumeration scheme {moduleEnumerationScheme}");
-            }
-
-            return null;
-        }
-
-
-    }
-
     /// <summary>
     /// ITarget implementation for the ClrMD IDataReader
     /// </summary>
@@ -303,10 +101,11 @@ namespace SOS.Extensions
             });
 
             // Add optional crash info service (currently only for Native AOT).
-            // _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => CreateCrashInfoService(services, debuggerServices, ModuleEnumerationScheme.None));
-            // OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
+            _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => CreateCrashInfoServiceFromException(services, debuggerServices));
+            OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
 
-            _serviceContainerFactory.AddServiceFactory<ICrashInfoServiceFactory>((services) => new CrashInfoServiceFactory(services, debuggerServices, host, OperatingSystem));
+            // Add the crash info service factory which lookup the DotNetRuntimeDebugHeader from modules
+            _serviceContainerFactory.AddServiceFactory<ICrashInfoServiceFactory>((services) => new CrashInfoServiceFactory(services));
             OnFlushEvent.Register(() => FlushService<ICrashInfoServiceFactory>());
 
             if (Host.HostType == HostType.DbgEng)
@@ -319,6 +118,40 @@ namespace SOS.Extensions
             TargetWrapper targetWrapper = Services.GetService<TargetWrapper>();
             targetWrapper?.ServiceWrapper.AddServiceWrapper(ClrmaServiceWrapper.IID_ICLRMAService, () => new ClrmaServiceWrapper(this, Services, targetWrapper.ServiceWrapper));
         }
+
+        private unsafe ICrashInfoService CreateCrashInfoServiceFromException(IServiceProvider services, DebuggerServices debuggerServices)
+        {
+            // For Linux/OSX dumps loaded under dbgeng the GetLastException API doesn't return the necessary information
+            if (Host.HostType == HostType.DbgEng && (OperatingSystem == OSPlatform.Linux || OperatingSystem == OSPlatform.OSX))
+            {
+                return SpecialDiagInfo.CreateCrashInfoService(services);
+            }
+            HResult hr = debuggerServices.GetLastException(out uint processId, out int threadIndex, out EXCEPTION_RECORD64 exceptionRecord);
+            if (hr.IsOK)
+            {
+                if (exceptionRecord.ExceptionCode == CrashInfoService.STATUS_STACK_BUFFER_OVERRUN &&
+                    exceptionRecord.NumberParameters >= 4 &&
+                    exceptionRecord.ExceptionInformation[0] == CrashInfoService.FAST_FAIL_EXCEPTION_DOTNET_AOT)
+                {
+                    uint hresult = (uint)exceptionRecord.ExceptionInformation[1];
+                    ulong triageBufferAddress = exceptionRecord.ExceptionInformation[2];
+                    int triageBufferSize = (int)exceptionRecord.ExceptionInformation[3];
+
+                    Span<byte> buffer = new byte[triageBufferSize];
+                    if (services.GetService<IMemoryService>().ReadMemory(triageBufferAddress, buffer, out int bytesRead) && bytesRead == triageBufferSize)
+                    {
+                        return CrashInfoService.Create(hresult, buffer, services.GetService<IModuleService>());
+                    }
+                    else
+                    {
+                        Trace.TraceError($"CrashInfoService: ReadMemory({triageBufferAddress}) failed");
+                    }
+                }
+            }
+
+            return null; // no crash info service found
+        }
+
 
     }
 }

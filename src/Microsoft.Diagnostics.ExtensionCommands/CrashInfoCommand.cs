@@ -13,34 +13,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "crashinfo", Help = "Displays the crash details that created the dump.")]
     public class CrashInfoCommand : CommandBase
     {
-        // [ServiceImport(Optional = true)]
-        // public ICrashInfoService CrashInfo { get; set; }
+        [ServiceImport(Optional = true)]
+        public ICrashInfoService CrashInfo { get; set; }
 
         [ServiceImport(Optional = true)]
         public ICrashInfoServiceFactory CrashInfoFactory { get; set; }
 
-        [Option(Name = "--enumerateAllModules", Aliases = new string[] { "-a" }, Help = "Enables enumerating all modules to find a Native AOT module.")]
-        public bool EnumerateAllModules { get; set; }
-
-        [Option(Name = "--entryPoint", Aliases = new string[] { "-e" }, Help = "Enables enumerating the entry point module to find a Native AOT module.")]
-        public bool EntryPointOnly { get; set; }
-
-        // [Option(Name = "--moduleName", Aliases = new string[] { "-m" }, Help = "Specifies the module name to find a Native AOT module.")]
-        // public string ModuleName { get; set; }
-
-        // [Option(Name = "--moduleIndex", Aliases = new string[] { "-i" }, Help = "Specifies the module index to find a Native AOT module.")]
-        // public int ModuleIndex { get; set; }
-
-        // [Option(Name = "--moduleBase", Aliases = new string[] { "-b" }, Help = "Specifies the module base address to find a Native AOT module.")]
-        // public ulong ModuleBase { get; set; }
-
-        [Option(Name = "--entryPointDll", Aliases = new string[] { "-d" }, Help = "Enables enumerating the entry point module and corresponding entry point library to find a Native AOT module.")]
-        public bool EntryPointDll { get; set; }
+        [Option(Name = "--moduleEnumerationScheme", Aliases = new string[] { "-e" }, Help = "Enables searching modules for the NativeAOT crashinfo data.")]
+        public ModuleEnumerationScheme ModuleEnumerationScheme { get; set; }
 
         public override void Invoke()
         {
-            ICrashInfoService crashInfo = CrashInfoFactory.Create(ModuleEnumerationScheme.All);
-
+            ICrashInfoService crashInfo = CrashInfo ?? CrashInfoFactory.Create(ModuleEnumerationScheme);
             if (crashInfo == null)
             {
                 throw new DiagnosticsException("No crash info to display");
