@@ -14,104 +14,23 @@ using Architecture = System.Runtime.InteropServices.Architecture;
 
 namespace SOS.Extensions
 {
-    /// <summary>
-    /// ITarget implementation for the ClrMD IDataReader
-    /// </summary>
-    internal sealed class TargetFromDebuggerServices : Target
+    internal sealed class CrashInfoServiceFactory : ICrashInfoServiceFactory
     {
-        /// <summary>
-        /// Build a target instance from IDataReader
-        /// </summary>
-        internal TargetFromDebuggerServices(DebuggerServices debuggerServices, IHost host)
-            : base(host, dumpPath: null)
+        private readonly IServiceProvider Services;
+        private readonly DebuggerServices DebuggerServices;
+        private readonly IHost Host;
+        private readonly OSPlatform OperatingSystem;
+
+        public CrashInfoServiceFactory(IServiceProvider services, DebuggerServices debuggerServices, IHost host, OSPlatform operatingSystem)
         {
-            Debug.Assert(debuggerServices != null);
-
-            HResult hr = debuggerServices.GetOperatingSystem(out DebuggerServices.OperatingSystem operatingSystem);
-            Debug.Assert(hr == HResult.S_OK);
-            OperatingSystem = operatingSystem switch
-            {
-                DebuggerServices.OperatingSystem.Windows => OSPlatform.Windows,
-                DebuggerServices.OperatingSystem.Linux => OSPlatform.Linux,
-                DebuggerServices.OperatingSystem.OSX => OSPlatform.OSX,
-                _ => throw new PlatformNotSupportedException($"Operating system not supported: {operatingSystem}"),
-            };
-
-            hr = debuggerServices.GetDebuggeeType(out DEBUG_CLASS debugClass, out DEBUG_CLASS_QUALIFIER qualifier);
-            Debug.Assert(hr == HResult.S_OK);
-            if (qualifier >= DEBUG_CLASS_QUALIFIER.USER_WINDOWS_SMALL_DUMP)
-            {
-                IsDump = true;
-            }
-
-            hr = debuggerServices.GetProcessorType(out IMAGE_FILE_MACHINE type);
-            if (hr == HResult.S_OK)
-            {
-                Debug.Assert(type is not IMAGE_FILE_MACHINE.ARM64X and not IMAGE_FILE_MACHINE.ARM64EC);
-                Architecture = type switch
-                {
-                    IMAGE_FILE_MACHINE.I386 => Architecture.X86,
-                    IMAGE_FILE_MACHINE.ARM => Architecture.Arm,
-                    IMAGE_FILE_MACHINE.THUMB => Architecture.Arm,
-                    IMAGE_FILE_MACHINE.ARMNT => Architecture.Arm,
-                    IMAGE_FILE_MACHINE.AMD64 => Architecture.X64,
-                    IMAGE_FILE_MACHINE.ARM64 => Architecture.Arm64,
-                    IMAGE_FILE_MACHINE.LOONGARCH64 => (Architecture)6 /* Architecture.LoongArch64 */,
-                    IMAGE_FILE_MACHINE.RISCV64 => (Architecture)9 /* Architecture.RiscV64 */,
-                    _ => throw new PlatformNotSupportedException($"Machine type not supported: {type}"),
-                };
-            }
-            else
-            {
-                throw new PlatformNotSupportedException($"GetProcessorType() FAILED {hr:X8}");
-            }
-
-            hr = debuggerServices.GetCurrentProcessId(out uint processId);
-            if (hr == HResult.S_OK)
-            {
-                ProcessId = processId;
-            }
-            else
-            {
-                Trace.TraceError("GetCurrentThreadId() FAILED {0:X8}", hr);
-            }
-
-            // Add the thread, memory, and module services
-            _serviceContainerFactory.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDebuggerServices(services, debuggerServices));
-            _serviceContainerFactory.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDebuggerServices(services, debuggerServices));
-            _serviceContainerFactory.AddServiceFactory<IMemoryService>((_) => {
-                Debug.Assert(Host.HostType != HostType.DotnetDump);
-                IMemoryService memoryService = new MemoryServiceFromDebuggerServices(this, debuggerServices);
-                if (IsDump && Host.HostType == HostType.Lldb)
-                {
-                    ServiceContainerFactory clone = _serviceContainerFactory.Clone();
-                    clone.RemoveServiceFactory<IMemoryService>();
-
-                    // lldb doesn't map managed modules into the address space
-                    memoryService = new ImageMappingMemoryService(clone.Build(), memoryService, managed: true);
-
-                    // This is a special memory service that maps the managed assemblies' metadata into the address
-                    // space. The lldb debugger returns zero's (instead of failing the memory read) for missing pages
-                    // in core dumps that older (< 5.0) createdumps generate so it needs this special metadata mapping
-                    // memory service. dotnet-dump needs this logic for clrstack -i (uses ICorDebug data targets).
-                    memoryService = new MetadataMappingMemoryService(clone.Build(), memoryService);
-                }
-                return memoryService;
-            });
-
-            // Add optional crash info service (currently only for Native AOT).
-            _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => CreateCrashInfoService(services, debuggerServices));
-            OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
-
-            if (Host.HostType == HostType.DbgEng)
-            {
-                _serviceContainerFactory.AddServiceFactory<IMemoryRegionService>((services) => new MemoryRegionServiceFromDebuggerServices(debuggerServices));
-            }
-
-            Finished();
-
-            TargetWrapper targetWrapper = Services.GetService<TargetWrapper>();
-            targetWrapper?.ServiceWrapper.AddServiceWrapper(ClrmaServiceWrapper.IID_ICLRMAService, () => new ClrmaServiceWrapper(this, Services, targetWrapper.ServiceWrapper));
+            Services = services ?? throw new ArgumentNullException(nameof(services));
+            DebuggerServices = debuggerServices ?? throw new ArgumentNullException(nameof(debuggerServices));
+            Host = host ?? throw new ArgumentNullException(nameof(host));
+            OperatingSystem = operatingSystem;
+        }
+        public ICrashInfoService Create(ModuleEnumerationScheme moduleEnumerationScheme)
+        {
+            return CreateCrashInfoService(Services, DebuggerServices, moduleEnumerationScheme);
         }
 
         private static bool CreateCrashInfoServiceForModule(IModule module, out ICrashInfoService crashInfoService)
@@ -204,7 +123,7 @@ namespace SOS.Extensions
             return false;
         }
 
-        private unsafe ICrashInfoService CreateCrashInfoService(IServiceProvider services, DebuggerServices debuggerServices)
+        private unsafe ICrashInfoService CreateCrashInfoService(IServiceProvider services, DebuggerServices debuggerServices, ModuleEnumerationScheme moduleEnumerationScheme)
         {
             // For Linux/OSX dumps loaded under dbgeng the GetLastException API doesn't return the necessary information
             if (Host.HostType == HostType.DbgEng && (OperatingSystem == OSPlatform.Linux || OperatingSystem == OSPlatform.OSX))
@@ -234,37 +153,172 @@ namespace SOS.Extensions
                 }
             }
 
-            // if the above did not located the crash info service, then look for the DotNetRuntimeDebugHeader
-            IModule entryPointModule = services.GetService<IModuleService>().EntryPointModule;
-            if (entryPointModule == null)
+            if (moduleEnumerationScheme == ModuleEnumerationScheme.None)
             {
-                Trace.TraceError("CrashInfoService: No entry point module found");
                 return null;
             }
-            if (CreateCrashInfoServiceForModule(entryPointModule, out ICrashInfoService crashInfoService))
+
+            if (moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointModule ||
+                moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointAndEntryPointDllModule)
             {
-                return crashInfoService;
-            }
-            // if the entry point module did not have the crash info service, then look for a library with the same name as the entry point
-            string fileName = entryPointModule.FileName;
-            if (fileName == null)
-            {
-                Trace.TraceError("CrashInfoService: Entry point module has no file name");
-                return null;
-            }
-            if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-            {
-                fileName = fileName.Substring(0, fileName.Length - 4) + ".dll"; // look for a dll with the same name
-                foreach (IModule speculativeAppModule in services.GetService<IModuleService>().GetModuleFromModuleName(fileName))
+                // if the above did not located the crash info service, then look for the DotNetRuntimeDebugHeader
+                IModule entryPointModule = services.GetService<IModuleService>().EntryPointModule;
+                if (entryPointModule == null)
                 {
-                    if (CreateCrashInfoServiceForModule(speculativeAppModule, out crashInfoService))
+                    Trace.TraceError("CrashInfoService: No entry point module found");
+                    return null;
+                }
+                if (CreateCrashInfoServiceForModule(entryPointModule, out ICrashInfoService crashInfoService))
+                {
+                    return crashInfoService;
+                }
+                if (moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointAndEntryPointDllModule)
+                {
+                    // if the entry point module did not have the crash info service, then look for a library with the same name as the entry point
+                    string fileName = entryPointModule.FileName;
+                    if (fileName == null)
+                    {
+                        Trace.TraceError("CrashInfoService: Entry point module has no file name");
+                        return null;
+                    }
+                    if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        fileName = fileName.Substring(0, fileName.Length - 4) + ".dll"; // look for a dll with the same name
+                        foreach (IModule speculativeAppModule in services.GetService<IModuleService>().GetModuleFromModuleName(fileName))
+                        {
+                            if (CreateCrashInfoServiceForModule(speculativeAppModule, out crashInfoService))
+                            {
+                                return crashInfoService;
+                            }
+                        }
+                    }
+                }
+            }
+            else if (moduleEnumerationScheme == ModuleEnumerationScheme.All)
+            {
+                // enumerate all modules and look for the crash info service
+                foreach (IModule module in services.GetService<IModuleService>().EnumerateModules())
+                {
+                    if (CreateCrashInfoServiceForModule(module, out ICrashInfoService crashInfoService))
                     {
                         return crashInfoService;
                     }
                 }
             }
+            else
+            {
+                Trace.TraceError($"CrashInfoService: Unknown module enumeration scheme {moduleEnumerationScheme}");
+            }
 
             return null;
         }
+
+
+    }
+
+    /// <summary>
+    /// ITarget implementation for the ClrMD IDataReader
+    /// </summary>
+    internal sealed class TargetFromDebuggerServices : Target
+    {
+        /// <summary>
+        /// Build a target instance from IDataReader
+        /// </summary>
+        internal TargetFromDebuggerServices(DebuggerServices debuggerServices, IHost host)
+            : base(host, dumpPath: null)
+        {
+            Debug.Assert(debuggerServices != null);
+
+            HResult hr = debuggerServices.GetOperatingSystem(out DebuggerServices.OperatingSystem operatingSystem);
+            Debug.Assert(hr == HResult.S_OK);
+            OperatingSystem = operatingSystem switch
+            {
+                DebuggerServices.OperatingSystem.Windows => OSPlatform.Windows,
+                DebuggerServices.OperatingSystem.Linux => OSPlatform.Linux,
+                DebuggerServices.OperatingSystem.OSX => OSPlatform.OSX,
+                _ => throw new PlatformNotSupportedException($"Operating system not supported: {operatingSystem}"),
+            };
+
+            hr = debuggerServices.GetDebuggeeType(out DEBUG_CLASS debugClass, out DEBUG_CLASS_QUALIFIER qualifier);
+            Debug.Assert(hr == HResult.S_OK);
+            if (qualifier >= DEBUG_CLASS_QUALIFIER.USER_WINDOWS_SMALL_DUMP)
+            {
+                IsDump = true;
+            }
+
+            hr = debuggerServices.GetProcessorType(out IMAGE_FILE_MACHINE type);
+            if (hr == HResult.S_OK)
+            {
+                Debug.Assert(type is not IMAGE_FILE_MACHINE.ARM64X and not IMAGE_FILE_MACHINE.ARM64EC);
+                Architecture = type switch
+                {
+                    IMAGE_FILE_MACHINE.I386 => Architecture.X86,
+                    IMAGE_FILE_MACHINE.ARM => Architecture.Arm,
+                    IMAGE_FILE_MACHINE.THUMB => Architecture.Arm,
+                    IMAGE_FILE_MACHINE.ARMNT => Architecture.Arm,
+                    IMAGE_FILE_MACHINE.AMD64 => Architecture.X64,
+                    IMAGE_FILE_MACHINE.ARM64 => Architecture.Arm64,
+                    IMAGE_FILE_MACHINE.LOONGARCH64 => (Architecture)6 /* Architecture.LoongArch64 */,
+                    IMAGE_FILE_MACHINE.RISCV64 => (Architecture)9 /* Architecture.RiscV64 */,
+                    _ => throw new PlatformNotSupportedException($"Machine type not supported: {type}"),
+                };
+            }
+            else
+            {
+                throw new PlatformNotSupportedException($"GetProcessorType() FAILED {hr:X8}");
+            }
+
+            hr = debuggerServices.GetCurrentProcessId(out uint processId);
+            if (hr == HResult.S_OK)
+            {
+                ProcessId = processId;
+            }
+            else
+            {
+                Trace.TraceError("GetCurrentThreadId() FAILED {0:X8}", hr);
+            }
+
+            // Add the thread, memory, and module services
+            _serviceContainerFactory.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDebuggerServices(services, debuggerServices));
+            _serviceContainerFactory.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDebuggerServices(services, debuggerServices));
+            _serviceContainerFactory.AddServiceFactory<IMemoryService>((_) =>
+            {
+                Debug.Assert(Host.HostType != HostType.DotnetDump);
+                IMemoryService memoryService = new MemoryServiceFromDebuggerServices(this, debuggerServices);
+                if (IsDump && Host.HostType == HostType.Lldb)
+                {
+                    ServiceContainerFactory clone = _serviceContainerFactory.Clone();
+                    clone.RemoveServiceFactory<IMemoryService>();
+
+                    // lldb doesn't map managed modules into the address space
+                    memoryService = new ImageMappingMemoryService(clone.Build(), memoryService, managed: true);
+
+                    // This is a special memory service that maps the managed assemblies' metadata into the address
+                    // space. The lldb debugger returns zero's (instead of failing the memory read) for missing pages
+                    // in core dumps that older (< 5.0) createdumps generate so it needs this special metadata mapping
+                    // memory service. dotnet-dump needs this logic for clrstack -i (uses ICorDebug data targets).
+                    memoryService = new MetadataMappingMemoryService(clone.Build(), memoryService);
+                }
+                return memoryService;
+            });
+
+            // Add optional crash info service (currently only for Native AOT).
+            // _serviceContainerFactory.AddServiceFactory<ICrashInfoService>((services) => CreateCrashInfoService(services, debuggerServices, ModuleEnumerationScheme.None));
+            // OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
+
+            _serviceContainerFactory.AddServiceFactory<ICrashInfoServiceFactory>((services) => new CrashInfoServiceFactory(services, debuggerServices, host, OperatingSystem));
+            OnFlushEvent.Register(() => FlushService<ICrashInfoServiceFactory>());
+
+            if (Host.HostType == HostType.DbgEng)
+            {
+                _serviceContainerFactory.AddServiceFactory<IMemoryRegionService>((services) => new MemoryRegionServiceFromDebuggerServices(debuggerServices));
+            }
+
+            Finished();
+
+            TargetWrapper targetWrapper = Services.GetService<TargetWrapper>();
+            targetWrapper?.ServiceWrapper.AddServiceWrapper(ClrmaServiceWrapper.IID_ICLRMAService, () => new ClrmaServiceWrapper(this, Services, targetWrapper.ServiceWrapper));
+        }
+
     }
 }

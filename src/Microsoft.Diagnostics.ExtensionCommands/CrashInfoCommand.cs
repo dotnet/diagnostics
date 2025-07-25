@@ -13,27 +13,50 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "crashinfo", Help = "Displays the crash details that created the dump.")]
     public class CrashInfoCommand : CommandBase
     {
+        // [ServiceImport(Optional = true)]
+        // public ICrashInfoService CrashInfo { get; set; }
+
         [ServiceImport(Optional = true)]
-        public ICrashInfoService CrashInfo { get; set; }
+        public ICrashInfoServiceFactory CrashInfoFactory { get; set; }
+
+        [Option(Name = "--enumerateAllModules", Aliases = new string[] { "-a" }, Help = "Enables enumerating all modules to find a Native AOT module.")]
+        public bool EnumerateAllModules { get; set; }
+
+        [Option(Name = "--entryPoint", Aliases = new string[] { "-e" }, Help = "Enables enumerating the entry point module to find a Native AOT module.")]
+        public bool EntryPointOnly { get; set; }
+
+        // [Option(Name = "--moduleName", Aliases = new string[] { "-m" }, Help = "Specifies the module name to find a Native AOT module.")]
+        // public string ModuleName { get; set; }
+
+        // [Option(Name = "--moduleIndex", Aliases = new string[] { "-i" }, Help = "Specifies the module index to find a Native AOT module.")]
+        // public int ModuleIndex { get; set; }
+
+        // [Option(Name = "--moduleBase", Aliases = new string[] { "-b" }, Help = "Specifies the module base address to find a Native AOT module.")]
+        // public ulong ModuleBase { get; set; }
+
+        [Option(Name = "--entryPointDll", Aliases = new string[] { "-d" }, Help = "Enables enumerating the entry point module and corresponding entry point library to find a Native AOT module.")]
+        public bool EntryPointDll { get; set; }
 
         public override void Invoke()
         {
-            if (CrashInfo == null)
+            ICrashInfoService crashInfo = CrashInfoFactory.Create(ModuleEnumerationScheme.All);
+
+            if (crashInfo == null)
             {
                 throw new DiagnosticsException("No crash info to display");
             }
-            WriteLine($"CrashReason:        {CrashInfo.CrashReason}");
-            WriteLine($"ThreadId:           {CrashInfo.ThreadId:X4}");
-            WriteLine($"HResult:            {CrashInfo.HResult:X4}");
-            WriteLine($"RuntimeType:        {CrashInfo.RuntimeType}");
-            WriteLine($"RuntimeBaseAddress: {CrashInfo.RuntimeBaseAddress:X16}");
-            WriteLine($"RuntimeVersion:     {CrashInfo.RuntimeVersion}");
-            WriteLine($"Message:            {CrashInfo.Message}");
+            WriteLine($"CrashReason:        {crashInfo.CrashReason}");
+            WriteLine($"ThreadId:           {crashInfo.ThreadId:X4}");
+            WriteLine($"HResult:            {crashInfo.HResult:X4}");
+            WriteLine($"RuntimeType:        {crashInfo.RuntimeType}");
+            WriteLine($"RuntimeBaseAddress: {crashInfo.RuntimeBaseAddress:X16}");
+            WriteLine($"RuntimeVersion:     {crashInfo.RuntimeVersion}");
+            WriteLine($"Message:            {crashInfo.Message}");
 
             WriteLine();
             WriteLine("** Current Exception **");
             WriteLine();
-            IException exception = CrashInfo.GetException(0);
+            IException exception = crashInfo.GetException(0);
             if (exception != null)
             {
                 WriteLine("-----------------------------------------------");
@@ -41,9 +64,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             WriteLine();
-            WriteLine($"** Thread {CrashInfo.ThreadId} Exception **");
+            WriteLine($"** Thread {crashInfo.ThreadId} Exception **");
             WriteLine();
-            exception = CrashInfo.GetThreadException(CrashInfo.ThreadId);
+            exception = crashInfo.GetThreadException(crashInfo.ThreadId);
             if (exception != null)
             {
                 WriteLine("-----------------------------------------------");
@@ -53,7 +76,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             WriteLine();
             WriteLine("** Nested Exceptions **");
             WriteLine();
-            IEnumerable<IException> exceptions = CrashInfo.GetNestedExceptions(CrashInfo.ThreadId);
+            IEnumerable<IException> exceptions = crashInfo.GetNestedExceptions(crashInfo.ThreadId);
             foreach (IException ex in exceptions)
             {
                 WriteLine("-----------------------------------------------");
