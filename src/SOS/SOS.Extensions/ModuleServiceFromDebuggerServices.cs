@@ -279,7 +279,7 @@ namespace SOS.Extensions
                     }
                     else
                     {
-                        // On non-Windows, the entry point module is the first module.
+                        // On non-Windows, assume the entry point module is the first module.
                         return module;
                     }
                 }
