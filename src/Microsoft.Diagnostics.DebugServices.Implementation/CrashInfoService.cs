@@ -13,17 +13,17 @@ using System.Text.Json.Serialization;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
-    public sealed class CrashInfoServiceFactory : ICrashInfoServiceFactory
+    public sealed class CrashInfoModuleService : ICrashInfoModuleService
     {
         private readonly IServiceProvider Services;
 
-        public CrashInfoServiceFactory(IServiceProvider services)
+        public CrashInfoModuleService(IServiceProvider services)
         {
             Services = services ?? throw new ArgumentNullException(nameof(services));
         }
         public ICrashInfoService Create(ModuleEnumerationScheme moduleEnumerationScheme)
         {
-            return CreateCrashInfoService(Services, moduleEnumerationScheme);
+            return CreateCrashInfoServiceFromModule(Services, moduleEnumerationScheme);
         }
 
         private static bool CreateCrashInfoServiceForModule(IModule module, out ICrashInfoService crashInfoService)
@@ -117,7 +117,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return false;
         }
 
-        private static unsafe ICrashInfoService CreateCrashInfoService(IServiceProvider services, ModuleEnumerationScheme moduleEnumerationScheme)
+        private static unsafe ICrashInfoService CreateCrashInfoServiceFromModule(IServiceProvider services, ModuleEnumerationScheme moduleEnumerationScheme)
         {
             if (moduleEnumerationScheme == ModuleEnumerationScheme.None)
             {

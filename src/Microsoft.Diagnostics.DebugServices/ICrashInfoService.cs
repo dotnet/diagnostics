@@ -40,7 +40,7 @@ namespace Microsoft.Diagnostics.DebugServices
         All
     }
 
-    public interface ICrashInfoServiceFactory
+    public interface ICrashInfoModuleService
     {
         /// <summary>
         /// Create a crash info service

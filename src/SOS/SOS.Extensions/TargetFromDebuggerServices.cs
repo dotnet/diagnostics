@@ -79,8 +79,7 @@ namespace SOS.Extensions
             // Add the thread, memory, and module services
             _serviceContainerFactory.AddServiceFactory<IModuleService>((services) => new ModuleServiceFromDebuggerServices(services, debuggerServices));
             _serviceContainerFactory.AddServiceFactory<IThreadService>((services) => new ThreadServiceFromDebuggerServices(services, debuggerServices));
-            _serviceContainerFactory.AddServiceFactory<IMemoryService>((_) =>
-            {
+            _serviceContainerFactory.AddServiceFactory<IMemoryService>((_) => {
                 Debug.Assert(Host.HostType != HostType.DotnetDump);
                 IMemoryService memoryService = new MemoryServiceFromDebuggerServices(this, debuggerServices);
                 if (IsDump && Host.HostType == HostType.Lldb)
@@ -105,8 +104,8 @@ namespace SOS.Extensions
             OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
 
             // Add the crash info service factory which lookup the DotNetRuntimeDebugHeader from modules
-            _serviceContainerFactory.AddServiceFactory<ICrashInfoServiceFactory>((services) => new CrashInfoServiceFactory(services));
-            OnFlushEvent.Register(() => FlushService<ICrashInfoServiceFactory>());
+            _serviceContainerFactory.AddServiceFactory<ICrashInfoModuleService>((services) => new CrashInfoModuleService(services));
+            OnFlushEvent.Register(() => FlushService<ICrashInfoModuleService>());
 
             if (Host.HostType == HostType.DbgEng)
             {
@@ -149,7 +148,7 @@ namespace SOS.Extensions
                 }
             }
 
-            return null; // no crash info service found
+            return null;
         }
 
 

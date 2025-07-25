@@ -17,7 +17,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public ICrashInfoService CrashInfo { get; set; }
 
         [ServiceImport(Optional = true)]
-        public ICrashInfoServiceFactory CrashInfoFactory { get; set; }
+        public ICrashInfoModuleService CrashInfoFactory { get; set; }
 
         [Option(Name = "--moduleEnumerationScheme", Aliases = new string[] { "-e" }, Help = "Enables searching modules for the NativeAOT crashinfo data.  Default is None")]
         public ModuleEnumerationScheme ModuleEnumerationScheme { get; set; } = ModuleEnumerationScheme.None;
