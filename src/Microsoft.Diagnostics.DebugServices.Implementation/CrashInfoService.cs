@@ -112,6 +112,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     Trace.TraceError($"CrashInfoService: ReadMemory({triageBufferAddress}) failed in module {module.FileName}");
                 }
+                break;
             }
             return false;
         }
