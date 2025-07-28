@@ -1267,7 +1267,9 @@ class PAL_RuntimeStartupHelper
     // registered (m_callback) returns.
     sem_t *m_continueSem;
 
+#ifdef __APPLE__    
     char m_applicationGroupId[MAX_APPLICATION_GROUP_ID_LENGTH+1];
+#endif // __APPLE__
 
 #ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
     char m_startupPipeName[MAX_DEBUGGER_TRANSPORT_PIPE_NAME_LENGTH];
