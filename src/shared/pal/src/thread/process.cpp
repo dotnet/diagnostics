@@ -79,7 +79,7 @@ SET_DEFAULT_DEBUG_CHANNEL(PROCESS); // some headers have code with asserts, so d
 # endif
 #endif
 
-#ifdef HAVE_KQUEUE
+#if HAVE_KQUEUE
 #include <sys/event.h>
 #endif
 
@@ -1240,6 +1240,7 @@ static const char* IpcNameFormat = "%s-%d-%llu-%s";
 #ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
 static const char* RuntimeStartupPipeName = "st";
 static const char* RuntimeContinuePipeName = "co";
+#define PIPE_OPEN_RETRY_DELAY_NS 500000000 // 500 ms
 #endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
 
 class PAL_RuntimeStartupHelper
@@ -1285,7 +1286,7 @@ class PAL_RuntimeStartupHelper
     {
         if (fd != -1)
         {
-            while(close(fd) < 0 && errno == EINTR);
+            while (close(fd) < 0 && errno == EINTR);
         }
     }
     
@@ -1331,14 +1332,14 @@ class PAL_RuntimeStartupHelper
         flags |= O_CLOEXEC;
 #endif
 
-        while(!*canceled && fd == -1)
+        while (!*canceled && fd == -1)
         {
             fd = open(name, flags);
             if (fd == -1)
             {
                 if (mode == O_WRONLY && errno == ENXIO)
                 {
-                    PAL_nanosleep(500 * 1000 * 1000);
+                    PAL_nanosleep(PIPE_OPEN_RETRY_DELAY_NS);
                     continue;
                 }
                 else if (errno == EINTR)
