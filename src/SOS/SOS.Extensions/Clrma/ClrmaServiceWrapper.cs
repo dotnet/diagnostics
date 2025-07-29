@@ -35,9 +35,20 @@ namespace SOS.Extensions.Clrma
             builder.AddMethod(new GetThreadDelegate(GetThread));
             builder.AddMethod(new GetExceptionDelegate(GetException));
             builder.AddMethod(new GetObjectInspectionDelegate(GetObjectInspection));
+            builder.AddMethod(new SetModuleEnumerationPolicyDelegate((self, moduleEnumerationPolicy) =>
+            {
+                if (moduleEnumerationPolicy < 0 || moduleEnumerationPolicy > (int)ModuleEnumerationScheme.All)
+                {
+                    return HResult.E_INVALIDARG;
+                }
+                ModuleEnumerationScheme = (ModuleEnumerationScheme)moduleEnumerationPolicy;
+                return HResult.S_OK;
+            }));
             builder.Complete();
             // Since this wrapper is only created through a ServiceWrapper factory, no AddRef() is needed.
         }
+
+        public ModuleEnumerationScheme ModuleEnumerationScheme { get; private set; } = ModuleEnumerationScheme.None;
 
         protected override void Destroy()
         {
@@ -110,7 +121,7 @@ namespace SOS.Extensions.Clrma
             get
             {
                 _crashInfoService ??= _serviceProvider.GetService<ICrashInfoService>(); // Use the default exception-based mechanism for obtaining crash info service
-                _crashInfoService ??= _serviceProvider.GetService<ICrashInfoModuleService>()?.Create(DefaultModuleEnumerationScheme); // if the above fails, try to create a crash info service from the modules
+                _crashInfoService ??= _serviceProvider.GetService<ICrashInfoModuleService>()?.Create(ModuleEnumerationScheme); // if the above fails, try to create a crash info service from the modules
                 return _crashInfoService;
             }
         }
@@ -140,6 +151,11 @@ namespace SOS.Extensions.Clrma
         private delegate int GetObjectInspectionDelegate(
             [In] IntPtr self,
             [Out] out IntPtr objectInspection);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int SetModuleEnumerationPolicyDelegate(
+            [In] IntPtr self,
+            [In] uint moduleEnumerationPolicy);
 
         #endregion
     }
