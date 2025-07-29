@@ -127,7 +127,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointModule ||
                 moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointAndEntryPointDllModule)
             {
-                // if the above did not located the crash info service, then look for the DotNetRuntimeDebugHeader
+                // if the above did not locate the crash info service, then look for the DotNetRuntimeDebugHeader
                 IModule entryPointModule = services.GetService<IModuleService>().EntryPointModule;
                 if (entryPointModule == null)
                 {
