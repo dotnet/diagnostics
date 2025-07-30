@@ -27,6 +27,9 @@ enum ClrmaGlobalFlags
     LoggingEnabled = 0x01,                  // CLRMA logging enabled
     DacClrmaEnabled = 0x02,                 // Direct DAC CLRMA code enabled
     ManagedClrmaEnabled = 0x04,             // Native AOT managed support enabled
+    ModuleEnumeration_EntryPointModule = 0x08, // Use entry point module enumeration scheme
+    ModuleEnumeration_EntryPointAndDllModule = 0x10, // Use entry point and DLL module enumeration scheme
+    ModuleEnumeration_AllModules = 0x20,    // Use all modules enumeration scheme
 };
 
 #define MAX_STACK_FRAMES    1000            // Max number of stack frames returned from thread stackwalk

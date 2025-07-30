@@ -9,7 +9,7 @@ HRESULT CLRMAReleaseInstance();
 
 ICLRManagedAnalysis* g_managedAnalysis = nullptr;
 
-int g_clrmaGlobalFlags = ClrmaGlobalFlags::LoggingEnabled | ClrmaGlobalFlags::DacClrmaEnabled | ClrmaGlobalFlags::ManagedClrmaEnabled;
+int g_clrmaGlobalFlags = ClrmaGlobalFlags::LoggingEnabled | ClrmaGlobalFlags::DacClrmaEnabled | ClrmaGlobalFlags::ManagedClrmaEnabled | ClrmaGlobalFlags::ModuleEnumeration_EntryPointAndDllModule;
 
 //
 // Exports
@@ -63,6 +63,7 @@ DECLARE_API(clrmaconfig)
     BOOL bDacClrma = FALSE;
     BOOL bManagedClrma = FALSE;
     BOOL bLogging = FALSE;
+    SIZE_T moduleEnumerationScheme = -1; // None=0, EntryPointModule=1, EntryPointAndEntryPointDllModule=2, AllModules=3
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
@@ -71,6 +72,7 @@ DECLARE_API(clrmaconfig)
         {"-dac", &bDacClrma, COBOOL, FALSE},
         {"-managed", &bManagedClrma, COBOOL, FALSE},
         {"-logging", &bLogging, COBOOL, FALSE},
+        {"-enumScheme", &moduleEnumerationScheme, COSIZE_T, TRUE},
     };
 
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
@@ -107,11 +109,32 @@ DECLARE_API(clrmaconfig)
         {
             g_clrmaGlobalFlags &= ~ClrmaGlobalFlags::LoggingEnabled;
         }
+        if (moduleEnumerationScheme != 0)
+        {
+            g_clrmaGlobalFlags &= ~(ClrmaGlobalFlags::ModuleEnumeration_EntryPointModule |
+                                 ClrmaGlobalFlags::ModuleEnumeration_EntryPointAndDllModule |
+                                 ClrmaGlobalFlags::ModuleEnumeration_AllModules);
+        }
+    }
+
+    if (moduleEnumerationScheme != -1)
+    {
+        g_clrmaGlobalFlags &= ~(ClrmaGlobalFlags::ModuleEnumeration_EntryPointModule |
+                                ClrmaGlobalFlags::ModuleEnumeration_EntryPointAndDllModule |
+                                ClrmaGlobalFlags::ModuleEnumeration_AllModules);
+        g_clrmaGlobalFlags |= moduleEnumerationScheme == 1 ? ClrmaGlobalFlags::ModuleEnumeration_EntryPointModule :
+                                moduleEnumerationScheme == 2 ? ClrmaGlobalFlags::ModuleEnumeration_EntryPointAndDllModule :
+                                moduleEnumerationScheme == 3 ? ClrmaGlobalFlags::ModuleEnumeration_AllModules :
+                                0;
     }
 
     ExtOut("CLRMA logging:              %s\n", (g_clrmaGlobalFlags & ClrmaGlobalFlags::LoggingEnabled) ? "enabled (disable with '-disable -logging')" : "disabled (enable with '-enable -logging')");
     ExtOut("CLRMA direct DAC support:   %s\n", (g_clrmaGlobalFlags & ClrmaGlobalFlags::DacClrmaEnabled) ? "enabled (disable with '-disable -dac')" : "disabled (enable with '-enable -dac')");
     ExtOut("CLRMA managed support:      %s\n", (g_clrmaGlobalFlags & ClrmaGlobalFlags::ManagedClrmaEnabled) ? "enabled (disable with '-disable -managed')" : "disabled (enable with '-enable -managed')");
+    ExtOut("CLRMA module enumeration:   %s\n", (g_clrmaGlobalFlags & ClrmaGlobalFlags::ModuleEnumeration_EntryPointModule) ? "Search for crashinfo on EntryPoint module (-enumScheme 1)" :
+                                                    (g_clrmaGlobalFlags & ClrmaGlobalFlags::ModuleEnumeration_EntryPointAndDllModule) ? "Search for crash info on both EntryPoint and DLL with same name (-enumScheme 2)" :
+                                                    (g_clrmaGlobalFlags & ClrmaGlobalFlags::ModuleEnumeration_AllModules) ? "Search for crash info on all modules (-enumScheme 3)" :
+                                                    "Only read crashinfo from Exception if present (use -enumScheme 0)");
 
     return Status;
 }
