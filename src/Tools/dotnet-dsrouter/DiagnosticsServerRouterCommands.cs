@@ -514,8 +514,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},nosuspend,{listenMode}");
             message.AppendLine("[Startup Tracing]");
             message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},suspend,{listenMode}");
-            message.AppendLine($"Run diagnotic tool connecting application on {deviceName} through dotnet-dsrouter pid={pid}:");
-            message.AppendLine($"dotnet-trace collect -p {pid}");
+            if (!DsRouterProcessLauncher.IsLaunchedByDotnetTrace())
+            {
+                message.AppendLine($"Run diagnotic tool connecting application on {deviceName} through dotnet-dsrouter pid={pid}:");
+                message.AppendLine($"dotnet-trace collect -p {pid}");
+            }
             message.AppendLine($"See https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dsrouter for additional details and examples.");
 
             ConsoleColor currentColor = Console.ForegroundColor;
