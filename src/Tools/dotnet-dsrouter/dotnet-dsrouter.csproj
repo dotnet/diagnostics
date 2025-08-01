@@ -15,7 +15,6 @@
     <Compile Include="..\Common\ReversedServerHelpers\ReversedServerHelpers.cs" Link="ReversedServerHelpers.cs" />
     <Compile Include="..\Common\CommandLineErrorException.cs" Link="CommandLineErrorException.cs" />
     <Compile Include="..\Common\ProcessTerminationHandler.cs" Link="ProcessTerminationHandler.cs" />
-    <Compile Include="..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
   </ItemGroup>
 
   <ItemGroup>

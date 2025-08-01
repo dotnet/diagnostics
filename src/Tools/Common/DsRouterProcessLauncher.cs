@@ -18,7 +18,6 @@ namespace Microsoft.Internal.Common.Utils
 {
     internal sealed partial class DsRouterProcessLauncher
     {
-        private const string DiagnosticSubprocessEnvVar = "DOTNET_DIAGNOSTIC_SUBPROCESS";
         private Process _childProc;
         private Task _stdOutTask = Task.CompletedTask;
         private Task _stdErrTask = Task.CompletedTask;
@@ -118,9 +117,6 @@ namespace Microsoft.Internal.Common.Utils
 
         private Process ChildProc => _childProc;
 
-        public static bool IsLaunchedByDotnetTrace() =>
-            Environment.GetEnvironmentVariable(DiagnosticSubprocessEnvVar) == "1";
-
         public int Start(string dsrouterCommand, CancellationToken ct)
         {
             string toolsRoot = System.IO.Path.GetDirectoryName(System.Environment.ProcessPath);
@@ -132,7 +128,7 @@ namespace Microsoft.Internal.Common.Utils
             }
 
             // Block SIGINT and SIGQUIT in child process.
-            dsrouterCommand += " --block-signals SIGINT;SIGQUIT";
+            dsrouterCommand += " --block-signals SIGINT;SIGQUIT --subprocess";
 
             _childProc = new Process();
 
@@ -142,7 +138,6 @@ namespace Microsoft.Internal.Common.Utils
             _childProc.StartInfo.RedirectStandardOutput = true;
             _childProc.StartInfo.RedirectStandardError = true;
             _childProc.StartInfo.RedirectStandardInput = true;
-            _childProc.StartInfo.EnvironmentVariables.Add(DiagnosticSubprocessEnvVar, "1");
             try
             {
                 _childProc.Start();
