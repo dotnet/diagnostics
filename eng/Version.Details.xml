@@ -1,13 +1,13 @@
 <Dependencies>
   <Source Uri="https://github.com/dotnet/dotnet" Mapping="diagnostics" Sha="eaa19c281d34580a8168cff9ce1e7337da8bfe4f" BarId="273855" />
   <ProductDependencies>
-    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.25380.1">
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.25381.2">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>02791bfe45e47611bebc437caaf659319b5bd893</Sha>
+      <Sha>f11663fc2e71ddd0869deb528047f0f476a0e346</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.0.0-beta.25380.1">
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.0.0-beta.25381.2">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>02791bfe45e47611bebc437caaf659319b5bd893</Sha>
+      <Sha>f11663fc2e71ddd0869deb528047f0f476a0e346</Sha>
     </Dependency>
     <Dependency Name="Xamarin.Android.Tools.AndroidSdk" Version="1.0.105-preview.225">
       <Uri>https://github.com/dotnet/android</Uri>
