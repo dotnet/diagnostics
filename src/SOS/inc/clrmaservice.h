@@ -31,6 +31,9 @@ public:
     
     virtual HRESULT STDMETHODCALLTYPE GetObjectInspection( 
         ICLRMAObjectInspection **ppObjectInspection) = 0;
+
+    virtual HRESULT STDMETHODCALLTYPE SetModuleEnumerationPolicy(
+        ULONG moduleEnumerationPolicy) = 0;
 };
 
 #ifdef __cplusplus

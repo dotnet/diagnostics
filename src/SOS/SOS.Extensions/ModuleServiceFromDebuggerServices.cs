@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime.Utilities;
@@ -260,6 +261,30 @@ namespace SOS.Extensions
         {
             Debug.Assert(debuggerServices != null);
             _debuggerServices = debuggerServices;
+        }
+
+        public override IModule EntryPointModule
+        {
+            get
+            {
+                foreach (IModule module in ((IModuleService)this).EnumerateModules())
+                {
+                    if (Target.OperatingSystem == OSPlatform.Windows)
+                    {
+                        // The entry point module is not necessarily the first module in the sorted list of modules.
+                        if (module.FileName?.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            return module;
+                        }
+                    }
+                    else
+                    {
+                        // On non-Windows, assume the entry point module is the first module.
+                        return module;
+                    }
+                }
+                return null;
+            }
         }
 
         /// <summary>

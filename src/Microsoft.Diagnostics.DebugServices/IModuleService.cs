@@ -57,5 +57,13 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <returns>IModule</returns>
         /// <exception cref="ArgumentNullException">thrown if imageBase or imageSize is 0</exception>
         IModule CreateModule(int moduleIndex, ulong imageBase, ulong imageSize, string imageName);
+
+        /// <summary>
+        /// Gets the entrypoint module for the target.
+        /// </summary>
+        IModule EntryPointModule
+        {
+            get;
+        }
     }
 }

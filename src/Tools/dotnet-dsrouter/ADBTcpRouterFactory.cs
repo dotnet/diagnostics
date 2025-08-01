@@ -66,27 +66,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         public static bool RunAdbCommandInternal(string command, string expectedOutput, int expectedExitCode, bool rethrow, ILogger logger)
         {
-            void sdklogger(TraceLevel level, string message)
-            {
-                switch (level)
-                {
-                    case TraceLevel.Error:
-                        logger?.LogError(message);
-                        break;
-                    case TraceLevel.Warning:
-                        logger?.LogWarning(message);
-                        break;
-                    case TraceLevel.Info:
-                        logger?.LogInformation(message);
-                        break;
-                    case TraceLevel.Verbose:
-                        logger?.LogDebug(message);
-                        break;
-                }
-            };
-
-            // AndroidSdkInfo checks $ANDROID_SDK_ROOT, $ANDROID_HOME, and default locations.
-            string sdkRoot = new AndroidSdkInfo(logger: sdklogger).AndroidSdkPath;
+            string sdkRoot = GetAndroidSdkPath(logger);
             string adbTool = "adb";
 
             if (!string.IsNullOrEmpty(sdkRoot))
@@ -147,6 +127,38 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
 
             return processStartedResult && expectedOutputResult && expectedExitCodeResult;
+        }
+
+        private static string AndroidSdkPath;
+
+        private static string GetAndroidSdkPath(ILogger logger)
+        {
+            if (AndroidSdkPath is not null)
+            {
+                return AndroidSdkPath;
+            }
+
+            void sdklogger(TraceLevel level, string message)
+            {
+                switch (level)
+                {
+                    case TraceLevel.Error:
+                        logger?.LogError(message);
+                        break;
+                    case TraceLevel.Warning:
+                        logger?.LogWarning(message);
+                        break;
+                    case TraceLevel.Info:
+                        logger?.LogInformation(message);
+                        break;
+                    case TraceLevel.Verbose:
+                        logger?.LogDebug(message);
+                        break;
+                }
+            }
+
+            // AndroidSdkInfo checks $ANDROID_SDK_ROOT, $ANDROID_HOME, and default locations.
+            return AndroidSdkPath = new AndroidSdkInfo(logger: sdklogger).AndroidSdkPath;
         }
     }
 

@@ -241,6 +241,10 @@ ClrmaManagedAnalysis::AssociateClient(
                 ReleaseHolder<ICLRMAService> clrmaService;
                 if (SUCCEEDED(hr = target->GetService(__uuidof(ICLRMAService), (void**)&clrmaService)))
                 {
+                    TraceInformation("AssociateClient got managed CLRMA service\n");
+                    clrmaService->SetModuleEnumerationPolicy(g_clrmaGlobalFlags & ClrmaGlobalFlags::ModuleEnumeration_EntryPointModule ? 1 :
+                                                                                 g_clrmaGlobalFlags & ClrmaGlobalFlags::ModuleEnumeration_EntryPointAndDllModule ? 2 :
+                                                                                 g_clrmaGlobalFlags & ClrmaGlobalFlags::ModuleEnumeration_AllModules ? 3 : 0);
                     if (SUCCEEDED(hr = clrmaService->AssociateClient(m_debugClient)))
                     {
                         m_clrmaService = clrmaService.Detach();

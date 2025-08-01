@@ -96,3 +96,17 @@ Frequently Asked Questions
     ```
 
     You may need a different bitness of the Windows (windbg/cdb) debugger or dotnet-dump. If you are running an x64 (64 bit), try an x86 (32 bit) version. The easiest way to get an x86 version of dotnet-dump is installing the "single-file" version [here](https://aka.ms/dotnet-dump/win-x86). For more information on single-file tools see [here](https://github.com/dotnet/diagnostics/blob/main/documentation/single-file-tools.md#single-file-diagnostic-tools).
+
+* If you are using `dotnet-dump analyze` and see an error like:
+
+    ```
+    ERROR: No CLR runtime found
+    ```
+
+    This can happen if you are analyzing a dump on a different machine or OS than where the dump was created, specially when the dump comes from a .NET runtime provided by a non-Microsoft entity (such as a Linux distribution).
+
+    A workaround is to run `dotnet-dump analyze` in the same environment (machine, container, or OS) where the dump was originally generated. That lets `dotnet-dump` use the DAC module included in the runtime and get going.
+
+    For more details, see the vendor-specific documentation:
+
+    - Red Hat: https://access.redhat.com/solutions/6989907
