@@ -276,7 +276,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             private Command _rootCommand;
             private readonly Dictionary<string, CommandHandler> _commandHandlers = new();
-            private readonly ParseResult _emptyParseResult;
 
             /// <summary>
             /// Create an instance of the command processor;
@@ -285,10 +284,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             public CommandGroup(string commandPrompt = null)
             {
                 _rootCommand = new Command(commandPrompt);
-
-                // The actual ParseResult.Empty() has a bug in it where it tries to get the executable name
-                // and nothing is returned under lldb on Linux causing an index out of range exception.
-                _emptyParseResult = _rootCommand.Parse(Array.Empty<string>());
             }
 
             /// <summary>
@@ -300,15 +295,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// <exception cref="DiagnosticsException">parsing error</exception>
             internal bool Execute(IReadOnlyList<string> commandLine, IServiceProvider services)
             {
-                IConsoleService consoleService = services.GetService<IConsoleService>();
-                CommandLineConfiguration configuration = new(_rootCommand)
-                {
-                    Output = new ConsoleServiceWrapper(consoleService.Write),
-                    Error = new ConsoleServiceWrapper(consoleService.WriteError)
-                };
-
-                // Parse the command line and invoke the command
-                ParseResult parseResult = configuration.Parse(commandLine);
+                ParseResult parseResult = _rootCommand.Parse(commandLine);
 
                 if (parseResult.Errors.Count > 0)
                 {
@@ -433,14 +420,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Build or re-build parser instance after this command is added
             }
 
+#pragma warning disable IDE0060 // Remove unused parameter
+// We are waiting on a way to provide the width in the action or the InvocationConfiguration.
             internal string GetDetailedHelp(Command command, IServiceProvider services, int windowWidth)
+#pragma warning restore IDE0060 // Remove unused parameter
             {
                 StringWriter console = new();
 
-                // Get the command help
-                HelpBuilder helpBuilder = new(maxWidth: windowWidth);
-                HelpContext helpContext = new(helpBuilder, command, console, _emptyParseResult);
-                helpBuilder.Write(helpContext);
+                // Add a stub help option, invoke it, and remove it. The invocation will
+                // write the help text to the console writer.
+                command.Options.Add(new HelpOption() { Hidden = true });
+                command.Parse(["--help"]).Invoke(new() { Output = console });
+                command.Options.RemoveAt(command.Options.Count - 1);
 
                 // Get the detailed help if any
                 if (TryGetCommandHandler(command.Name, out CommandHandler handler))

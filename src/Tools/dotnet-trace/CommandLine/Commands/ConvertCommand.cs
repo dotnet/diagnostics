@@ -103,8 +103,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
 
             convertCommand.SetAction((parseResult, ct) => Task.FromResult(ConvertFile(
-                stdOut: parseResult.Configuration.Output,
-                stdError: parseResult.Configuration.Error,
+                stdOut: parseResult.InvocationConfiguration.Output,
+                stdError: parseResult.InvocationConfiguration.Error,
                 inputFilename: parseResult.GetValue(InputFileArgument),
                 format: parseResult.GetValue(CommonOptions.ConvertFormatOption),
                 output: parseResult.GetValue(OutputOption
