@@ -128,7 +128,7 @@ namespace Microsoft.Internal.Common.Utils
             }
 
             // Block SIGINT and SIGQUIT in child process.
-            dsrouterCommand += " --block-signals SIGINT;SIGQUIT";
+            dsrouterCommand += " --block-signals SIGINT;SIGQUIT --subprocess";
 
             _childProc = new Process();
 
