@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
-                RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, SubprocessOption
+                RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, ParentProcessOption
             };
 
             command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerIOSSimulatorRouter(
@@ -164,7 +164,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
                 verbose: parseResult.GetValue(VerboseOption),
                 info: parseResult.GetValue(InfoOption),
-                subprocess: parseResult.GetValue(SubprocessOption)
+                parentProcess: parseResult.GetValue(ParentProcessOption)
             ));
 
             return command;
@@ -178,7 +178,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP client (connecting runtime TCP server over usbmux).")
             {
-                RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, SubprocessOption
+                RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, ParentProcessOption
             };
 
             command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerIOSRouter(
@@ -186,7 +186,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
                 verbose: parseResult.GetValue(VerboseOption),
                 info: parseResult.GetValue(InfoOption),
-                subprocess: parseResult.GetValue(SubprocessOption)
+                parentProcess: parseResult.GetValue(ParentProcessOption)
             ));
 
             return command;
@@ -200,7 +200,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
-                RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, SubprocessOption
+                RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, ParentProcessOption
             };
 
             command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerAndroidEmulatorRouter(
@@ -208,7 +208,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
                 verbose: parseResult.GetValue(VerboseOption),
                 info: parseResult.GetValue(InfoOption),
-                subprocess: parseResult.GetValue(SubprocessOption)
+                parentProcess: parseResult.GetValue(ParentProcessOption)
             ));
 
             return command;
@@ -222,7 +222,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                                 "Router is configured using an IPC server (connecting to by diagnostic tools) " +
                                 "and a TCP/IP server (accepting runtime TCP client).")
             {
-                RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, SubprocessOption
+                RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, ParentProcessOption
             };
 
             command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerAndroidRouter(
@@ -230,7 +230,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
                 verbose: parseResult.GetValue(VerboseOption),
                 info: parseResult.GetValue(InfoOption),
-                subprocess: parseResult.GetValue(SubprocessOption)
+                parentProcess: parseResult.GetValue(ParentProcessOption)
             ));
 
             return command;
@@ -310,11 +310,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 Description = "Print info on how to use current dotnet-dsrouter instance with application and diagnostic tooling."
             };
 
-        private static readonly Option<bool> SubprocessOption =
-            new("--subprocess")
+        private static readonly Option<string> ParentProcessOption =
+            new("--parentprocess")
             {
-                Description = "Indicates if dsrouter was launched from dotnet-trace or another .NET diagnostic tool",
-                DefaultValueFactory = _ => false,
+                Description = "If dsrouter was launched from dotnet-trace or another .NET diagnostic tool, contains the parent process ID and name: --parentprocess pid:name",
+                DefaultValueFactory = _ => "",
                 Hidden = true
             };
 

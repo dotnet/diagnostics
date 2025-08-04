@@ -357,41 +357,41 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        public async Task<int> RunIpcServerIOSSimulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, bool subprocess)
+        public async Task<int> RunIpcServerIOSSimulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess)
         {
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("ios simulator", "127.0.0.1:9000", true, subprocess);
+                logRouterUsageInfo("ios simulator", "127.0.0.1:9000", true, parentProcess);
             }
 
             return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
         }
 
-        public async Task<int> RunIpcServerIOSRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, bool subprocess)
+        public async Task<int> RunIpcServerIOSRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess)
         {
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("ios device", "127.0.0.1:9000", true, subprocess);
+                logRouterUsageInfo("ios device", "127.0.0.1:9000", true, parentProcess);
             }
 
             return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "iOS").ConfigureAwait(false);
         }
 
-        public async Task<int> RunIpcServerAndroidEmulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, bool subprocess)
+        public async Task<int> RunIpcServerAndroidEmulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess)
         {
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("android emulator", "10.0.2.2:9000", false, subprocess);
+                logRouterUsageInfo("android emulator", "10.0.2.2:9000", false, parentProcess);
             }
 
             return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
         }
 
-        public async Task<int> RunIpcServerAndroidRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, bool subprocess)
+        public async Task<int> RunIpcServerAndroidRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess)
         {
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("android device", "127.0.0.1:9000", false, subprocess);
+                logRouterUsageInfo("android device", "127.0.0.1:9000", false, parentProcess);
             }
 
             return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9001", runtimeTimeout, verbose, "Android").ConfigureAwait(false);
@@ -501,7 +501,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return logLevel;
         }
 
-        private static void logRouterUsageInfo(string deviceName, string deviceTcpIpAddress, bool deviceListenMode, bool subprocess)
+        private static void logRouterUsageInfo(string deviceName, string deviceTcpIpAddress, bool deviceListenMode, string parentProcess)
         {
             StringBuilder message = new();
 
@@ -514,7 +514,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},nosuspend,{listenMode}");
             message.AppendLine("[Startup Tracing]");
             message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},suspend,{listenMode}");
-            if (!subprocess)
+            if (string.IsNullOrEmpty(parentProcess))
             {
                 message.AppendLine($"Run diagnotic tool connecting application on {deviceName} through dotnet-dsrouter pid={pid}:");
                 message.AppendLine($"dotnet-trace collect -p {pid}");
