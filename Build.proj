@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.Build.Traversal">
+  <ItemGroup Condition="'$(IsTestRun)' != 'true'" Label="Diagnostic Source Projects">
+    <ProjectToBuild Condition="'$(DotNetBuild)' == 'true'" Include="$(RepoRoot)src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectToBuild Condition="'$(BundleTools)' == 'true'" Include="$(RepoRoot)src/singlefile-tools.proj" />
+
+    <ProjectToBuild Include="$(RepoRoot)src/Tools/dotnet-trace/dotnet-trace.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Tools/dotnet-dump/dotnet-dump.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/SOS/SOS.InstallHelper/SOS.InstallHelper.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Tools/dotnet-sos/dotnet-sos.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/SOS/SOS.Hosting/SOS.Hosting.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.Repl/Microsoft.Diagnostics.Repl.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Tools/dotnet-counters/dotnet-counters.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/SOS/SOS.Package/SOS.Package.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.DebugServices/Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/SOS/SOS.Package/SOS.Symbol.Package.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Tools/dotnet-gcdump/dotnet-gcdump.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.Monitoring/Microsoft.Diagnostics.Monitoring.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.Monitoring.EventPipe/Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Tools/dotnet-stack/dotnet-stack.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.DebugServices.Implementation/Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/SOS/SOS.Extensions/SOS.Extensions.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.ExtensionCommands/Microsoft.Diagnostics.ExtensionCommands.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Tools/dotnet-dsrouter/dotnet-dsrouter.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.WebSocketServer/Microsoft.Diagnostics.WebSocketServer.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.FileFormats/Microsoft.FileFormats.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Tools/dotnet-symbol/dotnet-symbol.csproj" />
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.SymbolManifestGenerator/Microsoft.SymbolManifestGenerator.csproj" />
+  </ItemGroup>
+
+  <Import Condition="'$(BuildTests)' == 'true' or '$(IsTestRun)' == 'true'" Project="$(RepoRoot)Test.proj" />
+
+  <ItemGroup>
+    <ProjectReference Include="@(ProjectToBuild)" />
+  </ItemGroup>
+</Project>
