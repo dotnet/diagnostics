@@ -130,7 +130,7 @@ jobs:
       - _PhaseName: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
       - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/${{ config.configuration }}/streams
 
-      - _BuildTestArgs: '-buildtests'
+      - _BuildTestArgs: '-withtests'
       - _RunTestArgs: '-runtests'
       - _Cross: ''
 
@@ -143,7 +143,7 @@ jobs:
         'error, testOnly and buildOnly cannot be true at the same time': error
 
       - ${{ if eq(parameters.testOnly, 'true') }}:
-        - _BuildTestArgs: '-buildtests -skipnative'
+        - _BuildTestArgs: '-withtests -skipnative'
 
       - ${{ if or(eq(parameters.buildOnly, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
         - _BuildTestArgs: ''

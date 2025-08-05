@@ -102,7 +102,7 @@ handle_arguments() {
             __PrivateBuild=1
             ;;
 
-        buildtests|-buildtests)
+        withtests|-withtests)
             __BuildTests=1
             ;;
         

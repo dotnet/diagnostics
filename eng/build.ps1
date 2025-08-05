@@ -3,7 +3,7 @@ Param(
     [ValidateSet("x86","x64","arm","arm64")][string][Alias('a', "platform")]$architecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant(),
     [ValidateSet("Debug","Release")][string][Alias('c')] $configuration = "Debug",
     [string][Alias('v')] $verbosity = "minimal",
-    [switch][Alias('bt')] $buildtests,
+    [switch][Alias('wt')] $withtests,
     [switch][Alias('rt')] $runtests,
     [switch] $installruntimes,
     [switch] $privatebuild,
@@ -73,7 +73,7 @@ if (-not $skipnative) {
 
 # Install sdk for building, restore and build managed components.
 if (-not $skipmanaged) {
-    if ($buildtests) {
+    if ($withtests) {
         $remainingargs = "/p:BuildTests=true " + $remainingargs
     }
 
