@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -12,6 +13,194 @@ using System.Text.Json.Serialization;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
+    public sealed class CrashInfoModuleService : ICrashInfoModuleService
+    {
+        private readonly IServiceProvider Services;
+
+        public CrashInfoModuleService(IServiceProvider services)
+        {
+            Services = services ?? throw new ArgumentNullException(nameof(services));
+        }
+        public ICrashInfoService Create(ModuleEnumerationScheme moduleEnumerationScheme)
+        {
+            return CreateCrashInfoServiceFromModule(Services, moduleEnumerationScheme);
+        }
+
+        private static bool CreateCrashInfoServiceForModule(IModule module, out ICrashInfoService crashInfoService)
+        {
+            crashInfoService = null;
+            if (module == null || module.IsManaged)
+            {
+                return false;
+            }
+            if ((module as IExportSymbols)?.TryGetSymbolAddress(CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME, out ulong headerAddr) != true)
+            {
+                Trace.TraceInformation($"CrashInfoService: {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} export not found in module {module.FileName}");
+                return false;
+            }
+            IMemoryService memoryService = module.Services.GetService<IMemoryService>();
+            if (!memoryService.Read<uint>(ref headerAddr, out uint headerValue) ||
+                headerValue != CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_COOKIE ||
+                !memoryService.Read<ushort>(ref headerAddr, out ushort majorVersion) || majorVersion < 3 || // .NET 8 and later
+                !memoryService.Read<ushort>(ref headerAddr, out ushort minorVersion))
+            {
+                Trace.TraceInformation($"CrashInfoService: .NET 8+ {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} not found in module {module.FileName}");
+                return false;
+            }
+
+            Trace.TraceInformation($"CrashInfoService: Found {CrashInfoService.DOTNET_RUNTIME_DEBUG_HEADER_NAME} in module {module.FileName} with version {majorVersion}.{minorVersion}");
+
+            if (!memoryService.Read<uint>(ref headerAddr, out uint flags) ||
+                memoryService.PointerSize != (flags == 0x1 ? 8 : 4) ||
+                !memoryService.Read<uint>(ref headerAddr, out uint _)) // padding
+            {
+                Trace.TraceError($"CrashInfoService: Failed to read DotNetRuntimeDebugHeader flags or padding in module {module.FileName}");
+                return false;
+            }
+
+            Trace.TraceInformation($"CrashInfoService: Target is {memoryService.PointerSize * 8}-bit");
+
+            headerAddr += (uint)memoryService.PointerSize; // skip DebugEntries array
+
+            // read GlobalEntries array
+            if (!memoryService.ReadPointer(ref headerAddr, out ulong globalEntryArrayAddress) || globalEntryArrayAddress == 0)
+            {
+                Trace.TraceError($"CrashInfoService: Unable to read GlobalEntry array");
+                return false;
+            }
+            uint maxGlobalEntries = (majorVersion >= 4 /*.NET 9 or later*/) ? CrashInfoService.MAX_GLOBAL_ENTRIES_ARRAY_SIZE_NET9_PLUS : CrashInfoService.MAX_GLOBAL_ENTRIES_ARRAY_SIZE_NET8;
+            for (int i = 0; i < maxGlobalEntries; i++)
+            {
+                if (!memoryService.ReadPointer(ref globalEntryArrayAddress, out ulong globalNameAddress) || globalNameAddress == 0 ||
+                    !memoryService.ReadPointer(ref globalEntryArrayAddress, out ulong globalValueAddress) || globalValueAddress == 0 ||
+                    !memoryService.ReadAnsiString(CrashInfoService.MAX_GLOBAL_ENTRY_NAME_CHARS, globalNameAddress, out string globalName))
+                {
+                    break; // no more global entries
+                }
+
+                if (!string.Equals(globalName, "g_CrashInfoBuffer", StringComparison.Ordinal))
+                {
+                    continue; // not the crash info buffer
+                }
+
+                ulong triageBufferAddress = globalValueAddress;
+                Span<byte> buffer = new byte[CrashInfoService.MAX_CRASHINFOBUFFER_SIZE];
+                if (memoryService.ReadMemory(triageBufferAddress, buffer, out int bytesRead) && bytesRead > 0 && bytesRead <= CrashInfoService.MAX_CRASHINFOBUFFER_SIZE)
+                {
+                    // truncate the buffer to the null terminated string in the buffer
+                    int nullTerminatorIndex = buffer.IndexOf((byte)0);
+                    if (nullTerminatorIndex >= 0)
+                    {
+                        buffer = buffer.Slice(0, nullTerminatorIndex);
+                        Trace.TraceInformation($"CrashInfoService: Found g_CrashInfoBuffer in module {module.FileName} with size {buffer.Length} bytes");
+                        if (buffer.Length > 0)
+                        {
+                            crashInfoService = CrashInfoService.Create(0, buffer, module.Services.GetService<IModuleService>());
+                            return true;
+                        }
+                        else
+                        {
+                            Trace.TraceError($"CrashInfoService: g_CrashInfoBuffer is empty in module {module.FileName}");
+                        }
+                    }
+                    else
+                    {
+                        Trace.TraceError($"CrashInfoService: g_CrashInfoBuffer is not null terminated in module {module.FileName}");
+                    }
+                }
+                else
+                {
+                    Trace.TraceError($"CrashInfoService: ReadMemory({triageBufferAddress}) failed in module {module.FileName}");
+                }
+                break;
+            }
+            return false;
+        }
+
+        private static unsafe ICrashInfoService CreateCrashInfoServiceFromModule(IServiceProvider services, ModuleEnumerationScheme moduleEnumerationScheme)
+        {
+            if (moduleEnumerationScheme == ModuleEnumerationScheme.None)
+            {
+                return null;
+            }
+
+            if (moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointModule ||
+                moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointAndEntryPointDllModule)
+            {
+                // if the above did not locate the crash info service, then look for the DotNetRuntimeDebugHeader
+                IModule entryPointModule = services.GetService<IModuleService>().EntryPointModule;
+                if (entryPointModule == null)
+                {
+                    Trace.TraceError("CrashInfoService: No entry point module found");
+                    return null;
+                }
+                if (CreateCrashInfoServiceForModule(entryPointModule, out ICrashInfoService crashInfoService))
+                {
+                    return crashInfoService;
+                }
+                if (moduleEnumerationScheme == ModuleEnumerationScheme.EntryPointAndEntryPointDllModule)
+                {
+                    // if the entry point module did not have the crash info service, then look for a library with the same name as the entry point
+                    string fileName = entryPointModule.FileName;
+                    OSPlatform osPlatform = entryPointModule.Target.OperatingSystem;
+                    if (fileName == null)
+                    {
+                        Trace.TraceError("CrashInfoService: Entry point module has no file name");
+                        return null;
+                    }
+                    if (osPlatform == OSPlatform.Windows)
+                    {
+                        if (fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                        {
+                            fileName = fileName.Substring(0, fileName.Length - 4) + ".dll"; // look for a dll with the same name
+                        }
+                        else
+                        {
+                            Trace.TraceError($"CrashInfoService: Unexpected entry point module file name {fileName}");
+                        }
+                    }
+                    else if (osPlatform == OSPlatform.Linux)
+                    {
+                        fileName += ".so"; // look for a .so with the same name
+                    }
+                    else if (osPlatform == OSPlatform.OSX)
+                    {
+                        fileName += ".dylib"; // look for a .dylib with the same name
+                    }
+                    else
+                    {
+                        Trace.TraceError($"CrashInfoService: Unsupported operating system {osPlatform}");
+                        return null;
+                    }
+                    foreach (IModule speculativeAppModule in services.GetService<IModuleService>().GetModuleFromModuleName(fileName))
+                    {
+                        if (CreateCrashInfoServiceForModule(speculativeAppModule, out crashInfoService))
+                        {
+                            return crashInfoService;
+                        }
+                    }
+                }
+            }
+            else if (moduleEnumerationScheme == ModuleEnumerationScheme.All)
+            {
+                // enumerate all modules and look for the crash info service
+                foreach (IModule module in services.GetService<IModuleService>().EnumerateModules())
+                {
+                    if (CreateCrashInfoServiceForModule(module, out ICrashInfoService crashInfoService))
+                    {
+                        return crashInfoService;
+                    }
+                }
+            }
+            else
+            {
+                Trace.TraceError($"CrashInfoService: Unknown module enumeration scheme {moduleEnumerationScheme}");
+            }
+
+            return null;
+        }
+    }
+
     public class CrashInfoService : ICrashInfoService
     {
         /// <summary>
@@ -23,6 +212,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// This is the Native AOT fail fast subcode used by Watson
         /// </summary>
         public const uint FAST_FAIL_EXCEPTION_DOTNET_AOT = 0x48;
+
+        public const uint MAX_CRASHINFOBUFFER_SIZE = 8192;
+        public const uint MAX_GLOBAL_ENTRIES_ARRAY_SIZE_NET8 = 6;
+        public const uint MAX_GLOBAL_ENTRIES_ARRAY_SIZE_NET9_PLUS = 8;
+        public const uint MAX_GLOBAL_ENTRY_NAME_CHARS = 32;
+        public const uint DOTNET_RUNTIME_DEBUG_HEADER_COOKIE = 0x48444e44; // 'DNDH'
+        public const string DOTNET_RUNTIME_DEBUG_HEADER_NAME = "DotNetRuntimeDebugHeader";
 
         private sealed class CrashInfoJson
         {

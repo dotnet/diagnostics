@@ -29,6 +29,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             // When RemoteExecutor is fixed the "using" can be added and the GC.SuppressFinalize be removed.
             RemoteInvokeHandle remoteInvokeHandle = RemoteExecutor.Invoke(method, config.Serialize(), options);
             GC.SuppressFinalize(remoteInvokeHandle);
+
+            output.WriteLine($"RemoteExecutorHelper.RemoteInvoke: starting process {remoteInvokeHandle.Process.Id}");
+
             try
             {
                 Task stdOutputTask = WriteStreamToOutput(remoteInvokeHandle.Process.StandardOutput, output);
