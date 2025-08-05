@@ -130,7 +130,8 @@ jobs:
       - _PhaseName: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
       - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/${{ config.configuration }}/streams
 
-      - _TestArgs: '-test'
+      - _BuildTestArgs: '-buildtests'
+      - _RunTestArgs: '-runtests'
       - _Cross: ''
 
       - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
@@ -142,10 +143,10 @@ jobs:
         'error, testOnly and buildOnly cannot be true at the same time': error
 
       - ${{ if eq(parameters.testOnly, 'true') }}:
-        - _TestArgs: '-test -skipnative'
+        - _BuildTestArgs: '-buildtests -skipnative'
 
       - ${{ if or(eq(parameters.buildOnly, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
-        - _TestArgs: ''
+        - _BuildTestArgs: ''
 
       # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
       - _InternalInstallArgs: ''
@@ -185,17 +186,27 @@ jobs:
           -binaryLog
           -configuration ${{ config.configuration }}
           -architecture ${{ config.architecture }}
-          $(_TestArgs)
+          $(_BuildTestArgs)
           $(_Cross)
           $(_InternalInstallArgs)
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         ${{ if eq(parameters.testOnly, 'true') }}:
-          displayName: Test
-        ${{ elseif eq(parameters.buildOnly, 'true') }}:
-          displayName: Build
+          displayName: Build Tests
         ${{ else }}:
-          displayName: Build / Test
+          displayName: Build
         condition: succeeded()
+
+      - ${{ if and(ne(parameters.isCodeQLRun, 'true'), ne(parameters.buildOnly, 'true')) }}:
+        - script: $(_buildScript)
+            -ci
+            -binaryLog
+            -configuration ${{ config.configuration }}
+            -architecture ${{ config.architecture }}
+            $(_RunTestArgs)
+            $(_InternalInstallArgs)
+            /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          displayName: Run Tests
+          condition: succeeded()
 
       - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
         - task: CodeQL3000Finalize@0
