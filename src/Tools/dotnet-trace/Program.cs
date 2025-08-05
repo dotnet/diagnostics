@@ -29,8 +29,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             if (parsedCommandName == "collect")
             {
                 IReadOnlyCollection<string> unparsedTokens = parseResult.UnmatchedTokens;
+                string dsrouter = CollectCommandHandler.GetDSRouterOption(parseResult);
                 // If we notice there are unparsed tokens, user might want to attach on startup.
-                if (unparsedTokens.Count > 0)
+                if (string.IsNullOrEmpty(dsrouter) && unparsedTokens.Count > 0)
                 {
                     ProcessLauncher.Launcher.PrepareChildProcess(args);
                 }

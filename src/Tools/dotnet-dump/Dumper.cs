@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             try
             {
-                if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, string.Empty, out int resolvedProcessId))
+                if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, string.Empty, [], out int resolvedProcessId))
                 {
                     processId = resolvedProcessId;
                 }

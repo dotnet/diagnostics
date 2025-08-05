@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Threading;
@@ -27,10 +28,11 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="name">The process name to collect the gcdump from.</param>
         /// <param name="diagnosticPort">The diagnostic IPC channel to collect the gcdump from.</param>
         /// <param name="dsrouter">The dsrouter command to use for collecting the gcdump.</param>
+        /// <param name="unmatchedTokens">Unmatched tokens from the command line.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter)
+        private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter, IReadOnlyList<string> unmatchedTokens)
         {
-            if (!CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
+            if (!CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, unmatchedTokens, out int resolvedProcessId))
             {
                 return -1;
             }
@@ -155,7 +157,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     verbose: parseResult.GetValue(VerboseOption),
                     name: parseResult.GetValue(NameOption),
                     diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
-                    dsrouter: parseResult.GetValue(DsRouterOption) ?? string.Empty));
+                    dsrouter: parseResult.GetValue(DsRouterOption) ?? string.Empty,
+                    unmatchedTokens: parseResult.UnmatchedTokens
+            ));
 
             return collectCommand;
         }

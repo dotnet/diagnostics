@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Binding;
 using System.Diagnostics;
@@ -117,7 +118,7 @@ namespace Microsoft.Internal.Common.Utils
 
         private Process ChildProc => _childProc;
 
-        public int Start(string dsrouterCommand, CancellationToken ct)
+        public int Start(string dsrouterCommand, IReadOnlyList<string> unmatchedTokens, CancellationToken ct)
         {
             string toolsRoot = System.IO.Path.GetDirectoryName(System.Environment.ProcessPath);
             string dotnetDsrouterTool = "dotnet-dsrouter";
@@ -131,6 +132,11 @@ namespace Microsoft.Internal.Common.Utils
 
             // Block SIGINT and SIGQUIT in child process.
             dsrouterCommand += $" --block-signals SIGINT;SIGQUIT --parentprocess \"{currentProcess.Id}:{currentProcess.ProcessName}\"";
+
+            if (unmatchedTokens.Count > 0)
+            {
+                dsrouterCommand += $" -- {string.Join(" ", unmatchedTokens)}";
+            }
 
             _childProc = new Process();
 

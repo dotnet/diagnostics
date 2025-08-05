@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.Binding;
 using System.IO;
@@ -91,7 +92,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
         private static Task<int> ReportFromProcess(int processId, string diagnosticPort, string dsrouter, CancellationToken ct)
         {
-            if (!CommandUtils.ResolveProcessForAttach(processId, string.Empty, diagnosticPort, dsrouter, out int resolvedProcessId))
+            if (!CommandUtils.ResolveProcessForAttach(processId, string.Empty, diagnosticPort, dsrouter, [], out int resolvedProcessId))
             {
                 return Task.FromResult(-1);
             }

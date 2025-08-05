@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -357,44 +358,67 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
         }
 
-        public async Task<int> RunIpcServerIOSSimulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess)
+        public async Task<int> RunIpcServerIOSSimulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess, IReadOnlyList<string> unmatchedTokens)
         {
+            string deviceTcpIpAddress = "127.0.0.1";
+            string deviceTcpIpPort = "9000";
+            string listenMode = "listen";
+
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("ios simulator", "127.0.0.1", "9000", true, parentProcess);
+                logRouterUsageInfo("ios simulator", deviceTcpIpAddress, deviceTcpIpPort, listenMode, parentProcess);
             }
+            prepareChildProcess(unmatchedTokens, deviceTcpIpAddress, deviceTcpIpPort, listenMode);
 
-            return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
+            return await RunIpcServerTcpClientRouter(token, "", $"{deviceTcpIpAddress}:{deviceTcpIpPort}", runtimeTimeout, verbose, "").ConfigureAwait(false);
         }
 
-        public async Task<int> RunIpcServerIOSRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess)
+        public async Task<int> RunIpcServerIOSRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess, IReadOnlyList<string> unmatchedTokens)
         {
+            string deviceTcpIpAddress = "127.0.0.1";
+            string deviceTcpIpPort = "9000";
+            string listenMode = "listen";
+
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("ios device", "127.0.0.1", "9000", true, parentProcess);
+                logRouterUsageInfo("ios device", deviceTcpIpAddress, deviceTcpIpPort, listenMode, parentProcess);
             }
 
-            return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "iOS").ConfigureAwait(false);
+            prepareChildProcess(unmatchedTokens, deviceTcpIpAddress, deviceTcpIpPort, listenMode);
+
+            return await RunIpcServerTcpClientRouter(token, "", $"{deviceTcpIpAddress}:{deviceTcpIpPort}", runtimeTimeout, verbose, "iOS").ConfigureAwait(false);
         }
 
-        public async Task<int> RunIpcServerAndroidEmulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess)
+        public async Task<int> RunIpcServerAndroidEmulatorRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess, IReadOnlyList<string> unmatchedTokens)
         {
+            string deviceTcpIpAddress = "10.0.2.2";
+            string deviceTcpIpPort = "9000";
+            string listenMode = "connect";
+
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("android emulator", "10.0.2.2", "9000", false, parentProcess);
+                logRouterUsageInfo("android emulator", deviceTcpIpAddress, deviceTcpIpPort, listenMode, parentProcess);
             }
 
-            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
+            prepareChildProcess(unmatchedTokens, deviceTcpIpAddress, deviceTcpIpPort, listenMode);
+
+            return await RunIpcServerTcpServerRouter(token, "", $"127.0.0.1:{deviceTcpIpPort}", runtimeTimeout, verbose, "").ConfigureAwait(false);
         }
 
-        public async Task<int> RunIpcServerAndroidRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess)
+        public async Task<int> RunIpcServerAndroidRouter(CancellationToken token, int runtimeTimeout, string verbose, bool info, string parentProcess, IReadOnlyList<string> unmatchedTokens)
         {
+            string deviceTcpIpAddress = "127.0.0.1";
+            string deviceTcpIpPort = "9000";
+            string listenMode = "connect";
+
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("android device", "127.0.0.1", "9000", false, parentProcess);
+                logRouterUsageInfo("android device", deviceTcpIpAddress, deviceTcpIpPort, listenMode, parentProcess);
             }
 
-            return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9001", runtimeTimeout, verbose, "Android").ConfigureAwait(false);
+            prepareChildProcess(unmatchedTokens, deviceTcpIpAddress, deviceTcpIpPort, listenMode);
+
+            return await RunIpcServerTcpServerRouter(token, "", $"{deviceTcpIpAddress}:{deviceTcpIpPort}", runtimeTimeout, verbose, "Android").ConfigureAwait(false);
         }
 
         private static string GetDefaultIpcServerPath(ILogger logger)
@@ -501,11 +525,9 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return logLevel;
         }
 
-        private static void logRouterUsageInfo(string deviceName, string deviceTcpIpAddress, string deviceTcpIpPort, bool deviceListenMode, string parentProcess)
+        private static void logRouterUsageInfo(string deviceName, string deviceTcpIpAddress, string deviceTcpIpPort, string listenMode, string parentProcess)
         {
             StringBuilder message = new();
-
-            string listenMode = deviceListenMode ? "listen" : "connect";
             int pid = Process.GetCurrentProcess().Id;
 
             message.AppendLine($"How to connect current dotnet-dsrouter pid={pid} with {deviceName} and diagnostics tooling.");
@@ -521,10 +543,44 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             }
             message.AppendLine($"See https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dsrouter for additional details and examples.");
 
+            logMessageWithColor(message.ToString(), ConsoleColor.Green);
+        }
+
+        private static void logMessageWithColor(string message, ConsoleColor color)
+        {
             ConsoleColor currentColor = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(message.ToString());
-            Console.ForegroundColor = currentColor;
+            try
+            {
+                Console.ForegroundColor = color;
+                Console.WriteLine(message);
+            }
+            finally
+            {
+                Console.ForegroundColor = currentColor;
+            }
+        }
+
+        private static void prepareChildProcess(IReadOnlyList<string> unmatchedTokens, string deviceTcpIpAddress, string deviceTcpIpPort, string listenMode)
+        {
+            if (unmatchedTokens.Count == 0)
+            {
+                return;
+            }
+            List<string> args = [.. unmatchedTokens];
+            if (unmatchedTokens.Count > 1)
+            {
+                // Automatically add MSBuild properties for 'dotnet run' or 'dotnet build' commands
+                if (args[1] == "run" || args[1] == "build")
+                {
+                    args.Add($"-p:DiagnosticAddress={deviceTcpIpAddress}");
+                    args.Add($"-p:DiagnosticPort={deviceTcpIpPort}");
+                    args.Add($"-p:DiagnosticListenMode={listenMode}");
+                    // NOTE: -p:DiagnosticSuspend has to be provided by the user
+                }
+            }
+
+            logMessageWithColor($"Running: {string.Join(' ', args)}", ConsoleColor.Green);
+            ProcessLauncher.Launcher.PrepareChildProcess(args);
         }
 
         private static void checkLoopbackOnly(string tcpServer, LogLevel logLevel)
@@ -540,10 +596,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 message.Append("testing environments.");
                 message.AppendLine();
 
-                ConsoleColor currentColor = Console.ForegroundColor;
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine(message.ToString());
-                Console.ForegroundColor = currentColor;
+                logMessageWithColor(message.ToString(), ConsoleColor.Yellow);
             }
         }
     }
