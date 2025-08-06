@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -32,6 +33,16 @@ namespace Microsoft.Internal.Common.Utils
                 return;
             }
 
+            PrepareChildProcess(args, unparsedTokenIdx);
+        }
+
+        public void PrepareChildProcess(IEnumerable<string> unmatchedTokens)
+        {
+            PrepareChildProcess([.. unmatchedTokens], 0);
+        }
+
+        private void PrepareChildProcess(string[] args, int unparsedTokenIdx)
+        {
             _childProc = new Process();
             _childProc.StartInfo.FileName = args[unparsedTokenIdx];
             string arguments = "";

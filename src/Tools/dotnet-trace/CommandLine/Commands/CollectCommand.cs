@@ -53,8 +53,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="stoppingEventEventName">A string, parsed as-is, that will stop the trace upon hitting an event with the matching event name. Requires `--stopping-event-provider-name` to be set. For a more specific stopping event, additionally provide `--stopping-event-payload-filter`.</param>
         /// <param name="stoppingEventPayloadFilter">A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.</param>
         /// <param name="rundown">Collect rundown events.</param>
+        /// <param name="dsrouter">Path to the data collector router to be used.</param>
+        /// <param name="unmatchedTokens">Any unmatched tokens from the command line.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
+        private static async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter, IReadOnlyList<string> unmatchedTokens)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -94,7 +96,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
                         return (int)ReturnCode.ArgumentError;
                     }
-                    if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
+                    if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, unmatchedTokens, out int resolvedProcessId))
                     {
                         processId = resolvedProcessId;
                     }
@@ -605,10 +607,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 stoppingEventEventName: parseResult.GetValue(StoppingEventEventNameOption),
                 stoppingEventPayloadFilter: parseResult.GetValue(StoppingEventPayloadFilterOption),
                 rundown: parseResult.GetValue(RundownOption),
-                dsrouter: parseResult.GetValue(DSRouterOption)));
+                dsrouter: GetDSRouterOption(parseResult),
+                unmatchedTokens: parseResult.UnmatchedTokens));
 
             return collectCommand;
         }
+
+        public static string GetDSRouterOption(ParseResult parseResult) =>
+            parseResult.GetValue(DSRouterOption) ?? string.Empty;
 
         private const uint DefaultCircularBufferSizeInMB = 256;
 

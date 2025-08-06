@@ -158,13 +158,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, ParentProcessOption
             };
+            command.TreatUnmatchedTokensAsErrors = false;
 
             command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerIOSSimulatorRouter(
                 ct,
                 runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
                 verbose: parseResult.GetValue(VerboseOption),
                 info: parseResult.GetValue(InfoOption),
-                parentProcess: parseResult.GetValue(ParentProcessOption)
+                parentProcess: parseResult.GetValue(ParentProcessOption),
+                unmatchedTokens: parseResult.UnmatchedTokens
             ));
 
             return command;
@@ -180,13 +182,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, ParentProcessOption
             };
+            command.TreatUnmatchedTokensAsErrors = false;
 
             command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerIOSRouter(
                 ct,
                 runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
                 verbose: parseResult.GetValue(VerboseOption),
                 info: parseResult.GetValue(InfoOption),
-                parentProcess: parseResult.GetValue(ParentProcessOption)
+                parentProcess: parseResult.GetValue(ParentProcessOption),
+                unmatchedTokens: parseResult.UnmatchedTokens
             ));
 
             return command;
@@ -202,13 +206,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, ParentProcessOption
             };
+            command.TreatUnmatchedTokensAsErrors = false;
 
             command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerAndroidEmulatorRouter(
                 ct,
                 runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
                 verbose: parseResult.GetValue(VerboseOption),
                 info: parseResult.GetValue(InfoOption),
-                parentProcess: parseResult.GetValue(ParentProcessOption)
+                parentProcess: parseResult.GetValue(ParentProcessOption),
+                unmatchedTokens: parseResult.UnmatchedTokens
             ));
 
             return command;
@@ -224,13 +230,15 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             {
                 RuntimeTimeoutOption, VerboseOption, InfoOption, BlockedSignalsOption, ParentProcessOption
             };
+            command.TreatUnmatchedTokensAsErrors = false;
 
             command.SetAction((parseResult, ct) => new DiagnosticsServerRouterCommands().RunIpcServerAndroidRouter(
                 ct,
                 runtimeTimeout: parseResult.GetValue(RuntimeTimeoutOption),
                 verbose: parseResult.GetValue(VerboseOption),
                 info: parseResult.GetValue(InfoOption),
-                parentProcess: parseResult.GetValue(ParentProcessOption)
+                parentProcess: parseResult.GetValue(ParentProcessOption),
+                unmatchedTokens: parseResult.UnmatchedTokens
             ));
 
             return command;
@@ -320,6 +328,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
 
         private static Task<int> Main(string[] args)
         {
+            Command iosCommand = IOSRouterCommand();
+            Command iosSimulatorCommand = IOSSimulatorRouterCommand();
+            Command androidCommand = AndroidRouterCommand();
+            Command androidEmulatorCommand = AndroidEmulatorRouterCommand();
+
             RootCommand rootCommand = new()
             {
                 IpcClientTcpServerRouterCommand(),
@@ -328,15 +341,20 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 IpcClientTcpClientRouterCommand(),
                 IpcServerWebSocketServerRouterCommand(),
                 IpcClientWebSocketServerRouterCommand(),
-                IOSSimulatorRouterCommand(),
-                IOSRouterCommand(),
-                AndroidEmulatorRouterCommand(),
-                AndroidRouterCommand()
+                iosSimulatorCommand,
+                iosCommand,
+                androidEmulatorCommand,
+                androidCommand
             };
 
             ParseResult parseResult = rootCommand.Parse(args);
 
-            if (parseResult.UnmatchedTokens.Count > 0)
+            string parsedCommandName = parseResult.CommandResult.Command.Name;
+            if (parseResult.UnmatchedTokens.Count > 0 &&
+                parsedCommandName != iosCommand.Name &&
+                parsedCommandName != iosSimulatorCommand.Name &&
+                parsedCommandName != androidCommand.Name &&
+                parsedCommandName != androidEmulatorCommand.Name)
             {
                 ProcessLauncher.Launcher.PrepareChildProcess(args);
             }

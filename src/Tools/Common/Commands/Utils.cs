@@ -44,11 +44,11 @@ namespace Microsoft.Internal.Common.Utils
         // </summary>
         // <param name="dsrouter">dsrouterCommand</param>
         // <returns>processId</returns>
-        public static int LaunchDSRouterProcess(string dsrouterCommand)
+        public static int LaunchDSRouterProcess(string dsrouterCommand, IReadOnlyList<string> unmatchedTokens)
         {
             Console.WriteLine("For finer control over the dotnet-dsrouter options, run it separately and connect to it using -p" + Environment.NewLine);
 
-            return DsRouterProcessLauncher.Launcher.Start(dsrouterCommand, default);
+            return DsRouterProcessLauncher.Launcher.Start(dsrouterCommand, unmatchedTokens, default);
         }
 
 
@@ -80,9 +80,10 @@ namespace Microsoft.Internal.Common.Utils
         /// <param name="name">name</param>
         /// <param name="port">port</param>
         /// <param name="dsrouter">dsrouter</param>
+        /// <param name="unmatchedTokens">unmatchedTokens</param>
         /// <param name="resolvedProcessId">resolvedProcessId</param>
         /// <returns></returns>
-        public static bool ResolveProcessForAttach(int processId, string name, string port, string dsrouter, out int resolvedProcessId)
+        public static bool ResolveProcessForAttach(int processId, string name, string port, string dsrouter, IReadOnlyList<string> unmatchedTokens, out int resolvedProcessId)
         {
             resolvedProcessId = -1;
             if (processId == 0 && string.IsNullOrEmpty(name) && string.IsNullOrEmpty(port) && string.IsNullOrEmpty(dsrouter))
@@ -124,7 +125,7 @@ namespace Microsoft.Internal.Common.Utils
                     Console.WriteLine("Invalid value for --dsrouter. Valid values are 'ios', 'ios-sim', 'android' and 'android-emu'.");
                     return false;
                 }
-                if ((processId = LaunchDSRouterProcess(dsrouter)) < 0)
+                if ((processId = LaunchDSRouterProcess(dsrouter, unmatchedTokens)) < 0)
                 {
                     if (processId == -2)
                     {

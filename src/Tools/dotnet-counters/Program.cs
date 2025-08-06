@@ -50,7 +50,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 maxTimeSeries: parseResult.GetValue(MaxTimeSeriesOption),
                 duration: parseResult.GetValue(DurationOption),
                 showDeltas: parseResult.GetValue(ShowDeltasOption),
-                dsrouter: string.Empty
+                dsrouter: string.Empty,
+                unmatchedTokens: parseResult.UnmatchedTokens
             ));
 
             return monitorCommand;
@@ -90,7 +91,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 maxHistograms: parseResult.GetValue(MaxHistogramOption),
                 maxTimeSeries: parseResult.GetValue(MaxTimeSeriesOption),
                 duration: parseResult.GetValue(DurationOption),
-                dsrouter: string.Empty));
+                dsrouter: string.Empty,
+                unmatchedTokens: parseResult.UnmatchedTokens
+            ));
 
             return collectCommand;
         }
