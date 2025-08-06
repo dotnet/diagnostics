@@ -247,6 +247,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _stdError.WriteLine(e.Message);
                 return ReturnCode.ArgumentError;
             }
+            finally
+            {
+                DsRouterProcessLauncher.Launcher.Cleanup();
+            }
         }
         public async Task<ReturnCode> Collect(
             CancellationToken ct,
@@ -349,6 +353,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 _stdError.WriteLine(e.Message);
                 return ReturnCode.ArgumentError;
+            }
+            finally
+            {
+                DsRouterProcessLauncher.Launcher.Cleanup();
             }
         }
 
