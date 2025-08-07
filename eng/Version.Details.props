@@ -7,8 +7,8 @@ This file should be imported by eng/Versions.props
 <Project>
   <PropertyGroup>
     <!-- microsoft/clrmd dependencies -->
-    <MicrosoftDiagnosticsRuntimePackageVersion>4.0.0-beta.25404.1</MicrosoftDiagnosticsRuntimePackageVersion>
-    <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.0.0-beta.25404.1</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
+    <MicrosoftDiagnosticsRuntimePackageVersion>4.0.0-beta.25406.1</MicrosoftDiagnosticsRuntimePackageVersion>
+    <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.0.0-beta.25406.1</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
     <!-- dotnet/android dependencies -->
     <XamarinAndroidToolsAndroidSdkPackageVersion>1.0.105-preview.225</XamarinAndroidToolsAndroidSdkPackageVersion>
     <!-- dotnet/dotnet dependencies -->
