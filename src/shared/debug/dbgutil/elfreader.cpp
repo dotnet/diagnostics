@@ -97,7 +97,7 @@ public:
         }
     }
 
-    virtual bool ReadMemory(void* address, void* buffer, size_t size)
+    virtual bool ReadMemory(const void* address, void* buffer, size_t size)
     {
         if (m_file == NULL)
         {
@@ -163,7 +163,7 @@ TryGetBuildIdFromFile(const WCHAR* modulePath, BYTE* buffer, ULONG bufferSize, P
 
 #endif // HOST_UNIX
 
-typedef bool (*ReadMemoryCallback)(void* address, void* buffer, size_t size);
+typedef bool (*ReadMemoryCallback)(const void* address, void* buffer, size_t size);
 
 class ElfReaderWithCallback : public ElfReader
 {
@@ -181,7 +181,7 @@ public:
     }
 
 private:
-    virtual bool ReadMemory(void* address, void* buffer, size_t size)
+    virtual bool ReadMemory(const void* address, void* buffer, size_t size)
     {
         return m_readMemory(address, buffer, size);
     }
@@ -225,7 +225,7 @@ public:
     }
 
 private:
-    virtual bool ReadMemory(void* address, void* buffer, size_t size)
+    virtual bool ReadMemory(const void* address, void* buffer, size_t size)
     {
         uint32_t read = 0;
         return SUCCEEDED(m_dataTarget->ReadVirtual(reinterpret_cast<CLRDATA_ADDRESS>(address), reinterpret_cast<PBYTE>(buffer), (uint32_t)size, &read));
