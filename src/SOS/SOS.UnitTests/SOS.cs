@@ -302,6 +302,13 @@ public class SOS
         {
             throw new SkipTestException("Single file and desktop framework not supported");
         }
+
+        if (config.RuntimeFrameworkVersionMajor == 10)
+        {
+            // The clrstack -i -a command regressed on .NET 10 win-x86, so skip this test for now.
+            SOSTestHelpers.SkipIfWinX86(config);
+        }
+
         await SOSTestHelpers.RunTest(config, debuggeeName: "DynamicMethod", scriptName: "DynamicMethod.script", Output);
     }
 
