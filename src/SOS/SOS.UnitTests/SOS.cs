@@ -302,6 +302,13 @@ public class SOS
         {
             throw new SkipTestException("Single file and desktop framework not supported");
         }
+
+        if (config.RuntimeFrameworkVersionMajor == 10)
+        {
+            // The clrstack -i -a command regressed on .NET 10 win-x86, so skip this test for now.
+            SOSTestHelpers.SkipIfWinX86(config);
+        }
+
         await SOSTestHelpers.RunTest(config, debuggeeName: "DynamicMethod", scriptName: "DynamicMethod.script", Output);
     }
 
@@ -398,6 +405,12 @@ public class SOS
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.StackAndOtherTests", MemberType = typeof(SOSTestHelpers))]
     public async Task StackAndOtherTests(TestConfiguration config)
     {
+        if (config.RuntimeFrameworkVersionMajor == 10)
+        {
+            // The clrstack -i -a command regressed on .NET 10 win-x86, so skip this test for now.
+            SOSTestHelpers.SkipIfWinX86(config);
+        }
+
         foreach (TestConfiguration currentConfig in TestRunner.EnumeratePdbTypeConfigs(config))
         {
             // Assumes that SymbolTestDll.dll that is dynamically loaded is the parent directory of the single file app
