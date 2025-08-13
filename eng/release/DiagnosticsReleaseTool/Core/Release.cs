@@ -188,7 +188,7 @@ namespace ReleaseTool.Core
 
             using IDisposable scope = _logger.BeginScope("Laying out files");
 
-            _logger.LogInformation("Laying out files from {_productBuildPath}", _productBuildPath.Name);
+            _logger.LogInformation("Laying out files from {_productBuildPath}", _productBuildPath.FullName);
 
             // TODO: Make this parallel using Task.Run + semaphore to batch process files. Need to make collections concurrent or have single
             //       queue to aggregate results.

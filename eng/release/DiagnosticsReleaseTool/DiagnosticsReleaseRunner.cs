@@ -47,8 +47,8 @@ namespace DiagnosticsReleaseTool.Impl
             }
 
             // TODO: Probably should use BAR ID instead as an identifier for the metadata to gather.
-            ReleaseMetadata releaseMetadata = darcLayoutHelper.GetDropMetadataForSingleRepoVariants(DiagnosticsRepoHelpers.RepositoryUrls);
-            DirectoryInfo basePublishDirectory = darcLayoutHelper.GetShippingDirectoryForSingleProjectVariants(DiagnosticsRepoHelpers.ProductNames);
+            ReleaseMetadata releaseMetadata = darcLayoutHelper.GetDropMetadataForSingleRepoVariants(releaseConfig.ReleaseRepoAllowList);
+            DirectoryInfo basePublishDirectory = darcLayoutHelper.GetShippingDirectoryForSingleProjectVariants(releaseConfig.ReleaseProductAllowList);
             string publishManifestPath = Path.Combine(releaseConfig.StagingDirectory.FullName, ManifestName);
 
             IPublisher releasePublisher = new AzureBlobBublisher(releaseConfig.AccountName, releaseConfig.ClientId, releaseConfig.ContainerName, releaseConfig.ReleaseName, logger);
