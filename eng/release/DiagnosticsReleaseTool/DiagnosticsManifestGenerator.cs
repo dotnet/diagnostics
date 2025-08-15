@@ -24,8 +24,12 @@ namespace DiagnosticsReleaseTool.Impl
         public DiagnosticsManifestGenerator(ReleaseMetadata productReleaseMetadata, FileInfo toolManifest, ILogger logger)
         {
             _productReleaseMetadata = productReleaseMetadata;
-            string manifestContent = File.ReadAllText(toolManifest.FullName);
-            _assetManifestManifestDom = JsonDocument.Parse(manifestContent);
+            using Stream manifestStream = File.OpenRead(toolManifest.FullName);
+            _assetManifestManifestDom = JsonDocument.Parse(manifestStream, new JsonDocumentOptions
+            {
+                AllowTrailingCommas = true,
+                CommentHandling = JsonCommentHandling.Skip
+            });
             _logger = logger;
         }
 

@@ -1,7 +1,6 @@
 parameters:
   runtimeFeed: default
   runtimeFeedToken: default
-  isCodeQLRun: false
 
 variables:
 - name: _TeamName
@@ -17,26 +16,15 @@ variables:
   - name: BuildPool
     value: $(DncEngInternalBuildPool)
   - name: WindowsImage
-    value: 1es-windows-2022
+    value: windows.vs2022.amd64
   - name: LinuxImage
-    value: 1es-ubuntu-2204
+    value: Build.Ubuntu.2204.Amd64
   - name: macOSImage
     value: macOS-latest
   - name: sourceBuildTemplate
     value: /eng/common/templates-official/job/source-build.yml@self
   - name: jobTemplate
     value: /eng/common/templates-official/job/job.yml@self
-  - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
-    - name: Codeql.Enabled
-      value: True
-    - name: Codeql.Cadence
-      value: 0
-    - name: Codeql.TSAEnabled
-      value: True
-    - name: Codeql.BuildIdentifier
-      value: $(System.JobDisplayName)
-    - name: Codeql.Language
-      value: csharp,cpp
   - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
     - name: _SignType
       value: real
@@ -69,4 +57,3 @@ variables:
 - ${{ if eq(parameters.runtimeFeedToken, 'dotnetclimsrc-sas-token-base64') }}:
   - name: RuntimeFeedBase64SasToken
     value: $(dotnetclimsrc-read-sas-token-base64)
-

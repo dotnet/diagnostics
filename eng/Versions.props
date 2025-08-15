@@ -18,21 +18,24 @@
   <PropertyGroup>
     <!-- Opt-in/out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
-    <AzureIdentityVersion>1.12.0</AzureIdentityVersion>
-    <AzureCoreVersion>1.43.0</AzureCoreVersion>
-    <AzureStorageBlobsVersion>12.22.0</AzureStorageBlobsVersion>
+    <AzureIdentityVersion>1.13.1</AzureIdentityVersion>
+    <AzureCoreVersion>1.45.0</AzureCoreVersion>
+    <AzureStorageBlobsVersion>12.23.0</AzureStorageBlobsVersion>
     <!-- Uncomment this line to use the custom version of roslyn as needed. -->
     <!-- <UsingToolMicrosoftNetCompilers Condition="'$(DotNetBuildSourceOnly)' != 'true'">true</UsingToolMicrosoftNetCompilers> -->
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>8.0.0</SystemReflectionMetadataVersion>
     <SystemCollectionsImmutableVersion>8.0.0</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
-    <MicrosoftBclAsyncInterfacesVersion>6.0.0</MicrosoftBclAsyncInterfacesVersion>
+    <MicrosoftBclAsyncInterfacesVersion>9.0.8</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.23</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
-    <MicrosoftExtensionsLoggingAbstractionsVersion>6.0.4</MicrosoftExtensionsLoggingAbstractionsVersion>
-    <MicrosoftExtensionsLoggingConsoleVersion>6.0.0</MicrosoftExtensionsLoggingConsoleVersion>
+    <MicrosoftExtensionsLoggingVersion>9.0.8</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingAbstractionsVersion>9.0.8</MicrosoftExtensionsLoggingAbstractionsVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>9.0.8</MicrosoftExtensionsLoggingConsoleVersion>
+    <MicrosoftExtensionsConfigurationVersion>9.0.8</MicrosoftExtensionsConfigurationVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>9.0.8</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsLoggingConfigurationVersion>9.0.8</MicrosoftExtensionsLoggingConfigurationVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemCommandLineVersion>2.0.0-beta5.25210.1</SystemCommandLineVersion>
