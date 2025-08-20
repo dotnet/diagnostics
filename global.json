@@ -17,6 +17,6 @@
   },
   "msbuild-sdks": {
     "Microsoft.Build.NoTargets": "3.5.0",
-    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25416.109"
+    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25418.119"
   }
 }
