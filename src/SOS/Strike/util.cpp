@@ -5594,7 +5594,7 @@ HRESULT InternalFrameManager::PrintPrecedingInternalFrames(ICorDebugFrame * pFra
 
     for (; m_iInternalFrameCur < m_cInternalFramesActual; m_iInternalFrameCur++)
     {
-        if (nPrintedFrames >= nNumberOfFrames && nNumberOfFrames != 0)
+        if (nPrintedFrames > nNumberOfFrames && nNumberOfFrames != 0)
         {
             // We have printed enough frames, so we're done
             return S_OK;

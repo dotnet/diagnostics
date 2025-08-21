@@ -10631,7 +10631,7 @@ public:
 
         for (Status = S_OK; ; Status = pStackWalk->Next())
         {
-            if (nPrintedFrames == nFrames && nFrames != 0)
+            if (nPrintedFrames >= nFrames && nFrames != 0)
                 break;
             currentFrame++;
             nPrintedFrames++;
@@ -10690,7 +10690,8 @@ public:
             // stack frame?  I think I like that better.
             _ASSERTE(pFrame != NULL);
             IfFailRet(internalFrameManager.PrintPrecedingInternalFrames(pFrame, nPrintedFrames, nFrames));
-
+            if (nPrintedFrames >= nFrames && nFrames != 0)
+                break;
             // Print the stack and instruction pointers.
             DMLOut("%p %s ", SOS_PTR(sp), DMLIP(ip));
 
