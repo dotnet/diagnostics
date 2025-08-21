@@ -10621,7 +10621,7 @@ public:
         IfFailRet(internalFrameManager.Init(pThread3));
 
     #if defined(_AMD64_) || defined(_ARM64_) || defined(_RISCV64_) || defined(_LOONGARCH64_)
-        ExtOut("%-16s %-16s %s %d\n", "Child SP", "IP", "Call Site");
+        ExtOut("%-16s %-16s %s\n", "Child SP", "IP", "Call Site");
     #elif defined(_X86_) || defined(_ARM_)
         ExtOut("%-8s %-8s %s\n", "Child SP", "IP", "Call Site");
     #endif
