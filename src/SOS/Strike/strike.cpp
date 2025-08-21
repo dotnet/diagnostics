@@ -10902,7 +10902,7 @@ public:
 
         int frameNumber = 0;
         int internalFrames = 0;
-        int printedFrames = 0;
+        size_t printedFrames = 0;
         do
         {
             if (IsInterrupt())
