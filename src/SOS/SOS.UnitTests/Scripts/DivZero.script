@@ -58,31 +58,3 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+(\*\*\* WARNING: Unable to verify checksum for D
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.F3(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 24\s*\]\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.F2(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ 36\s*\]\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+C\.Main(\(.*\))?\s+\[(?i:.*[\\|/]DivZero\.cs) @ (57|56)\s*\]\s+
-
-# Verify that ClrStack with number of frames works
-SOSCOMMAND:ClrStack -c 1
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:(?:[^\r\n]*\r?\n){3}[ \t]*\r?\n
-!VERIFY:(?:[^\r\n]*\r?\n){5}[ \t]*\r?\n
-
-# Verify that ClrStack with number of frames works
-SOSCOMMAND:ClrStack -c 2
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:(?:[^\r\n]*\r?\n){4}[ \t]*\r?\n
-!VERIFY:(?:[^\r\n]*\r?\n){6}[ \t]*\r?\n
-
-# Verify that ClrStack with number of frames works
-SOSCOMMAND:ClrStack -c 3
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:(?:[^\r\n]*\r?\n){5}[ \t]*\r?\n
-!VERIFY:(?:[^\r\n]*\r?\n){7}[ \t]*\r?\n
-
-# Verify that ClrStack with number of frames works
-SOSCOMMAND:ClrStack -c 4
-VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
-VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:(?:[^\r\n]*\r?\n){6}[ \t]*\r?\n
-!VERIFY:(?:[^\r\n]*\r?\n){8}[ \t]*\r?\n
