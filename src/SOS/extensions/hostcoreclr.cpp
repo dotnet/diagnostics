@@ -475,11 +475,6 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     // If the hosting runtime isn't already set, use the runtime we are debugging
     if (g_hostRuntimeDirectory == nullptr)
     {
-#if defined(HOST_FREEBSD)
-        TraceHostingError("FreeBSD not supported\n");
-        return E_FAIL;
-#else
-
         HRESULT Status = E_FAIL;
         std::vector<ProbingStrategy> strategyList = {
              { ProbeEnvVarInstallationHint, RuntimeHostingConstants::DotnetRootArchSpecificEnvVar }
@@ -545,7 +540,6 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
     coreClrPath.append(DIRECTORY_SEPARATOR_STR_A);
     coreClrPath.append(MAKEDLLNAME_A("coreclr"));
     return S_OK;
-#endif
 }
 
 /**********************************************************************\
