@@ -2290,10 +2290,10 @@ private:
 public:
     InternalFrameManager();
     HRESULT Init(ICorDebugThread3 * pThread3);
-    HRESULT PrintPrecedingInternalFrames(ICorDebugFrame * pFrame);
+    HRESULT PrintPrecedingInternalFrames(ICorDebugFrame * pFrame, size_t &nPrintedFrames, size_t nNumberOfFrames);
 
 private:
-    HRESULT PrintCurrentInternalFrame();
+    HRESULT PrintCurrentInternalFrame(size_t &nPrintedFrames);
 };
 
 #undef LIMITED_METHOD_DAC_CONTRACT 

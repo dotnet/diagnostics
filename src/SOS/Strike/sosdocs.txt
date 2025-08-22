@@ -547,7 +547,7 @@ exceptions by switching to the thread in question, and running
 \\
 
 COMMAND: clrstack.
-!ClrStack [-a] [-l] [-p] [-n] [-f] [-r] [-all]
+!ClrStack [-a] [-l] [-p] [-n] [-f] [-r] [-all] [-c <number of frames>]
 !ClrStack [-a] [-l] [-p] [-i] [variable name] [frame]
 
 ClrStack attempts to provide a true stack trace for managed code only. It is
@@ -565,6 +565,8 @@ frames.
 The -r option dumps the registers for each stack frame.
 
 The -all option dumps all the managed threads' stacks.
+
+The -c option limits the number of the frames that will be printed.
 
 If the debugger has the option SYMOPT_LOAD_LINES specified (either by the
 .lines or .symopt commands), SOS will look up the symbols for every managed 
