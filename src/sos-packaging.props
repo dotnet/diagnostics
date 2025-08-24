@@ -1,4 +1,4 @@
-<!-- 
+<!--
     Input:
         SOSPackagePathPrefix - the nupkg package path prefix. The SOS native binaries are added to package relative to this.
 -->
@@ -12,11 +12,11 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\Microsoft.DiaSymReader.Native.amd64.dll" TargetRid="win-x64" />
     <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x64" />
   </ItemGroup>
-      
+
   <ItemGroup Condition="'$(BuildX64Package)' != 'true'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\Microsoft.DiaSymReader.Native.x86.dll" TargetRid="win-x86" />
-      
+
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\sos.dll" TargetRid="win-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll" TargetRid="win-arm64" />
     <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-arm64" />
@@ -38,7 +38,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libsos.so" TargetRid="linux-arm64" />
     <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-arm64" />
-    
+
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsos.so" TargetRid="linux-musl-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm64" />
@@ -59,13 +59,16 @@
   </ItemGroup>
 
   <!-- What and where to pack SOS assets in the final packages. -->
+  <!-- This is an issue for verticals - as not everything is available. -->
   <ItemGroup>
     <None Include="@(SosRequiredBinaries)">
       <Visible>false</Visible>
       <Pack>true</Pack>
       <PackagePath>$(SOSPackagePathPrefix)/%(TargetRid)</PackagePath>
+      <TargetPath>%(TargetRid)/%(Filename)%(Extension)</TargetPath>
       <Link Condition="'$(PublishSingleFile)' == 'true'">%(TargetRid)/%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory Condition="'$(PublishSingleFile)' == 'true' and '%(TargetRid)' == '$(RuntimeIdentifier)'">PreserveNewest</CopyToOutputDirectory>
+      <!-- <CopyToPublishDirectory Condition="'%(TargetRid)' == '$(RuntimeIdentifier)'">PreserveNewest</CopyToPublishDirectory> -->
     </None>
   </ItemGroup>
 </Project>

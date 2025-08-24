@@ -21,14 +21,13 @@
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
 
   <ItemGroup>
-    <None Include="$(SOSExtensionsBinaries)">
+    <!-- This is probably broken -->
+    <!-- <None Include="$(SOSExtensionsBinaries)">
       <Visible>false</Visible>
       <Pack>true</Pack>
       <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
       <Link Condition="'$(PublishSingleFile)' == 'true'">lib/%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory Condition="'$(PublishSingleFile)' == 'true'">PreserveNewest</CopyToOutputDirectory>
-    </None>
+    </None> -->
   </ItemGroup>
-
-  <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.targets" />
 </Project>

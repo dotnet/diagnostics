@@ -10,20 +10,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <_ProjectToBundle Include="$(RepoRoot)src/Tools/**/*.csproj" Exclude="$(RepoRoot)src/Tools/dotnet-dsrouter/**/*.csproj" />
+    <_ProjectToBundle Include="$(RepoRoot)src/Tools/**/*.csproj" Exclude="$(RepoRoot)src/Tools/dotnet-dsrouter/**/*.csproj"
+                      AdditionalProperties="Configuration=$(Configuration);BundleTools=true"/>
     <SupportedRids Include="$(SupportedRids)"/>
   </ItemGroup>
 
   <Target Name="FanoutBundle" AfterTargets="Build">
     <ItemGroup>
       <!-- Take all the tool projects and batch them, adding one per (tool, rid) combination from the property $(SupportedRids). -->
+
       <ProjectToBundle Include="@(_ProjectToBundle)">
-        <AdditionalProperties>Configuration=$(Configuration);BundleTools=true;RuntimeIdentifiers=$(SupportedRids);RuntimeIdentifier=%(SupportedRids.Identity)</AdditionalProperties>
+        <AdditionalProperties>RuntimeIdentifier=%(SupportedRids.Identity);_IsPublishing=true</AdditionalProperties>
       </ProjectToBundle>
     </ItemGroup>
 
-    <!-- First pass: restore the different tools -->
-    <MSBuild Projects="@(ProjectToBundle)"
+    <!-- First pass: restore the different tools as rid-less. -->
+    <MSBuild Projects="@(_ProjectToBundle)"
         BuildInParallel="true"
         SkipNonexistentProjects="false"
         SkipNonexistentTargets="false"
