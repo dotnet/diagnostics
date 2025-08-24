@@ -17,6 +17,10 @@
       <Uri>https://github.com/dotnet/android</Uri>
       <Sha>bf304cf475308547a2a1a342bb9f2e6825cc33cd</Sha>
     </Dependency>
+    <Dependency Name="System.Commandline" Version="2.0.0-beta7.25365.101">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>78061f4bcc414fa2054be6237b1fd3813d8edf6b</Sha>
+    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.25411.106">

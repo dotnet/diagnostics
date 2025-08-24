@@ -23,7 +23,7 @@ namespace Microsoft.Internal.Common.Commands
         public static Command ProcessStatusCommand(string description)
         {
             Command statusCommand = new(name: "ps", description);
-            statusCommand.SetAction((parseResult, ct) => Task.FromResult(ProcessStatus(parseResult.Configuration.Output, parseResult.Configuration.Error)));
+            statusCommand.SetAction((parseResult, ct) => Task.FromResult(ProcessStatus(parseResult.InvocationConfiguration.Output, parseResult.InvocationConfiguration.Error)));
             return statusCommand;
         }
 
