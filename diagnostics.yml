@@ -32,6 +32,12 @@ pr:
     - LICENSE.TXT
 
 variables:
+- ${{ if and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}:
+  - name: isOfficialBuild
+    value: true
+- ${{ else }}:
+  - name: isOfficialBuild
+    value: false
 - template : /eng/pipelines/global-variables.yml
   parameters:
     runtimeFeed: ${{ parameters.runtimeFeed }}
@@ -354,3 +360,11 @@ extends:
 
     # This sets up the bits to do a Release.
     - template: /eng/pipelines/prepare-release.yml
+      parameters:
+        isOfficialBuild: ${{ variables['isOfficialBuild'] }}
+        repoAllowList: https://github.com/dotnet/diagnostics https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics
+        productAllowList: diagnostics dotnet-diagnostics
+        ${{ if eq(variables['isOfficialBuild'], 'true') }}:
+          dependsOn: [ publish_using_darc ]
+        ${{ else }}:
+          dependsOn: [ build ]

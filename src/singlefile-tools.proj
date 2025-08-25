@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
-    <SupportedRids>win-x64;win-x86;win-arm64;linux-x64;linux-musl-arm64;linux-arm64;linux-musl-x64;linux-arm</SupportedRids>
+    <SupportedRids>win-x64;win-x86;win-arm64;linux-x64;linux-musl-x64;linux-musl-arm64;linux-arm64;linux-arm;linux-musl-arm</SupportedRids>
     <ArcadeSdkMSBuildProjectDir>$([System.IO.Path]::GetDirectoryName('$(ArcadeSdkBuildTasksAssembly)'))\..\</ArcadeSdkMSBuildProjectDir>
     <ArcadeSdkSignProject>$(ArcadeSdkMSBuildProjectDir)Sign.proj</ArcadeSdkSignProject>
     <BundledToolsZipDirectory>$(BundledToolsPath)$(Configuration)/zips/</BundledToolsZipDirectory>
@@ -22,14 +22,15 @@
       </ProjectToBundle>
     </ItemGroup>
 
-    <!-- First pass: restore and build all the different  -->
+    <!-- First pass: restore the different tools -->
     <MSBuild Projects="@(ProjectToBundle)"
         BuildInParallel="true"
         SkipNonexistentProjects="false"
         SkipNonexistentTargets="false"
         StopOnFirstFailure="true"
-        Targets="Restore;Build"
-        ContinueOnError="false" />
+        Targets="Restore"
+        ContinueOnError="false"
+        Properties="MSBuildRestoreSessionId=$([System.Guid]::NewGuid())"/>
 
     <!-- Second: Get the files that we'll bundle for every rid and project combination. -->
     <!--        and need signing. -->
@@ -39,7 +40,7 @@
         SkipNonexistentProjects="false"
         SkipNonexistentTargets="false"
         StopOnFirstFailure="true"
-        Targets="CollectBundleFilesToSign"
+        Targets="Build;CollectBundleFilesToSign"
         ContinueOnError="false">
         <Output TaskParameter="TargetOutputs" ItemName="ItemsNeedingSigning" />
     </MSBuild>

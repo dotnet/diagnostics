@@ -1,4 +1,5 @@
 <Project>
+  <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
   <PropertyGroup>
     <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
     <PreReleaseVersionLabel>preview</PreReleaseVersionLabel>
@@ -15,45 +16,26 @@
     <SkipPackagePublishingVersionChecks>true</SkipPackagePublishingVersionChecks>
   </PropertyGroup>
   <PropertyGroup>
-    <!-- Latest shared runtime version updated by darc -->
-    <!-- We use platforms for the unstable package version and
-      the ref pack as the stable version. We need them as download links
-      use the unstable version, but the installed assets are all stable.  -->
-    <MicrosoftNETCorePlatformsVersion>10.0.0-preview.7.25351.106</MicrosoftNETCorePlatformsVersion>
-    <MicrosoftNETCoreAppRefVersion>10.0.0-preview.7.25351.106</MicrosoftNETCoreAppRefVersion>
-    <!-- Latest shared aspnetcore version updated by darc -->
-    <MicrosoftAspNetCoreAppRefInternalVersion>10.0.0-preview.7.25351.106</MicrosoftAspNetCoreAppRefInternalVersion>
-    <MicrosoftAspNetCoreAppRefVersion>10.0.0-preview.7.25351.106</MicrosoftAspNetCoreAppRefVersion>
-    <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <MicrosoftNETSdkVersion>10.0.100-preview.7.25351.106</MicrosoftNETSdkVersion>
-  </PropertyGroup>
-  <PropertyGroup>
-    <runtimewinx64MicrosoftDotNetCdacTransportVersion>10.0.0-preview.7.25351.106</runtimewinx64MicrosoftDotNetCdacTransportVersion>
-    <runtimewinarm64MicrosoftDotNetCdacTransportVersion>10.0.0-preview.7.25351.106</runtimewinarm64MicrosoftDotNetCdacTransportVersion>
-    <runtimelinuxx64MicrosoftDotNetCdacTransportVersion>10.0.0-preview.7.25351.106</runtimelinuxx64MicrosoftDotNetCdacTransportVersion>
-    <runtimelinuxarm64MicrosoftDotNetCdacTransportVersion>10.0.0-preview.7.25351.106</runtimelinuxarm64MicrosoftDotNetCdacTransportVersion>
-    <runtimeosxx64MicrosoftDotNetCdacTransportVersion>10.0.0-preview.7.25351.106</runtimeosxx64MicrosoftDotNetCdacTransportVersion>
-    <runtimeosxarm64MicrosoftDotNetCdacTransportVersion>10.0.0-preview.7.25351.106</runtimeosxarm64MicrosoftDotNetCdacTransportVersion>
-  </PropertyGroup>
-  <PropertyGroup>
     <!-- Opt-in/out repo features -->
     <UsingToolXliff>false</UsingToolXliff>
-    <AzureIdentityVersion>1.12.0</AzureIdentityVersion>
-    <AzureCoreVersion>1.43.0</AzureCoreVersion>
-    <AzureStorageBlobsVersion>12.22.0</AzureStorageBlobsVersion>
+    <AzureIdentityVersion>1.13.1</AzureIdentityVersion>
+    <AzureCoreVersion>1.45.0</AzureCoreVersion>
+    <AzureStorageBlobsVersion>12.23.0</AzureStorageBlobsVersion>
     <!-- Uncomment this line to use the custom version of roslyn as needed. -->
     <!-- <UsingToolMicrosoftNetCompilers Condition="'$(DotNetBuildSourceOnly)' != 'true'">true</UsingToolMicrosoftNetCompilers> -->
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>8.0.0</SystemReflectionMetadataVersion>
     <SystemCollectionsImmutableVersion>8.0.0</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
-    <MicrosoftBclAsyncInterfacesVersion>6.0.0</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiagnosticsRuntimeVersion>4.0.0-beta.25381.2</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftBclAsyncInterfacesVersion>9.0.8</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.23</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <MicrosoftExtensionsLoggingVersion>6.0.0</MicrosoftExtensionsLoggingVersion>
-    <MicrosoftExtensionsLoggingAbstractionsVersion>6.0.4</MicrosoftExtensionsLoggingAbstractionsVersion>
-    <MicrosoftExtensionsLoggingConsoleVersion>6.0.0</MicrosoftExtensionsLoggingConsoleVersion>
+    <MicrosoftExtensionsLoggingVersion>9.0.8</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingAbstractionsVersion>9.0.8</MicrosoftExtensionsLoggingAbstractionsVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>9.0.8</MicrosoftExtensionsLoggingConsoleVersion>
+    <MicrosoftExtensionsConfigurationVersion>9.0.8</MicrosoftExtensionsConfigurationVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>9.0.8</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsLoggingConfigurationVersion>9.0.8</MicrosoftExtensionsLoggingConfigurationVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemCommandLineVersion>2.0.0-beta5.25210.1</SystemCommandLineVersion>
@@ -66,23 +48,16 @@
     <SystemTextEncodingsWebVersion>8.0.0</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
-    <MicrosoftDotNetCodeAnalysisVersion>10.0.0-beta.25351.106</MicrosoftDotNetCodeAnalysisVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.556</StyleCopAnalyzersVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorVersion>
     <cdbsosversion>10.0.26100.1</cdbsosversion>
     <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
-    <MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>10.0.622304</MicrosoftSourceBuildIntermediatesourcebuildreferencepackagesPackageVersion>
-    <XamarinAndroidToolsAndroidSdkVersion>1.0.105-preview.225</XamarinAndroidToolsAndroidSdkVersion>
     <!-- Roslyn and analyzers -->
     <!-- dotnet/roslyn dependencies -->
     <!--
-      These versions should not be used by any project that contributes to the design-time experience in VS, such as an analyzer, code-fix, or generator assembly.
-      Any tools that contribute to the design-time experience should use the MicrosoftCodeAnalysisVersion_LatestVS property above to ensure
+      MicrosoftCodeAnalysisVersion should not be used by any project that contributes to the design-time experience in VS, such as an analyzer, code-fix, or generator assembly.
+      Any tools that contribute to the design-time experience should use the MicrosoftCodeAnalysisVersion_LatestVS property below to ensure
       they do not break the local dev experience.
     -->
-    <MicrosoftCodeAnalysisCSharpVersion>5.0.0-1.25351.106</MicrosoftCodeAnalysisCSharpVersion>
-    <MicrosoftCodeAnalysisVersion>5.0.0-1.25351.106</MicrosoftCodeAnalysisVersion>
-    <MicrosoftNetCompilersToolsetVersion>4.11.0-2.24271.11</MicrosoftNetCompilersToolsetVersion>
     <!-- Compatibility with VS 16.11/.NET SDK 5.0.4xx -->
     <MicrosoftCodeAnalysisVersion_3_11>3.11.0</MicrosoftCodeAnalysisVersion_3_11>
     <!-- Compatibility with VS 17.0/.NET SDK 6.0.1xx  -->
@@ -95,8 +70,6 @@
     <MicrosoftCodeAnalysisVersion_4_4>4.4.0</MicrosoftCodeAnalysisVersion_4_4>
     <MicrosoftCodeAnalysisVersion_LatestVS>4.8.0</MicrosoftCodeAnalysisVersion_LatestVS>
     <MicrosoftCodeAnalysisVersion_LatestVS Condition="'$(DotNetBuildSourceOnly)' == 'true'">$(MicrosoftCodeAnalysisVersion)</MicrosoftCodeAnalysisVersion_LatestVS>
-    <MicrosoftCodeAnalysisAnalyzersVersion>5.0.0-1.25351.106</MicrosoftCodeAnalysisAnalyzersVersion>
-    <MicrosoftCodeAnalysisNetAnalyzersVersion>10.0.0-preview.25351.106</MicrosoftCodeAnalysisNetAnalyzersVersion>
     <!--
       These packages affect the design-time experience in VS, so we update them at the same cadance as the MicrosoftCodeAnalysisVersion_LatestVS version.
     -->

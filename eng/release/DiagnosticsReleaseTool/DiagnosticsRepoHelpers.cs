@@ -10,9 +10,8 @@ namespace DiagnosticsReleaseTool.Util
 {
     public static partial class DiagnosticsRepoHelpers
     {
-        public static readonly string[] ProductNames = ["diagnostics", "dotnet-diagnostics"];
-        public static readonly string[] RepositoryUrls = ["https://github.com/dotnet/diagnostics", "https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics"];
-        public static string BundleToolsPathInDrop => System.IO.Path.Combine("diagnostics", "bundledtools");
+        public static readonly string PublicBundleToolsPathInDrop = System.IO.Path.Combine("diagnostics", "bundledtools");
+        public static readonly string InternalBundleToolsPathInDrop = System.IO.Path.Combine("diagnostics-internal", "bundledtools");
         public const string BundledToolsPrefix = "diagnostic-tools-";
         public const string BundledToolsCategory = "ToolBundleAssets";
         public const string PdbCategory = "PdbAssets";
@@ -68,7 +67,7 @@ namespace DiagnosticsReleaseTool.Util
         public static bool IsBundledToolArchive(FileInfo file)
         {
             return file.Exists && file.Extension == ".zip"
-                && file.DirectoryName.Contains(BundleToolsPathInDrop)
+                && (file.DirectoryName.Contains(InternalBundleToolsPathInDrop) || file.DirectoryName.Contains(PublicBundleToolsPathInDrop))
                 && file.Name.StartsWith(BundledToolsPrefix);
         }
 

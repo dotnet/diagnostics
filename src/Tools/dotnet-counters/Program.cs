@@ -33,7 +33,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 MaxHistogramOption,
                 MaxTimeSeriesOption,
                 DurationOption,
-                ShowDeltasOption
+                ShowDeltasOption,
+                DSRouterOption
             };
 
             monitorCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Main
@@ -50,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 maxTimeSeries: parseResult.GetValue(MaxTimeSeriesOption),
                 duration: parseResult.GetValue(DurationOption),
                 showDeltas: parseResult.GetValue(ShowDeltasOption),
-                dsrouter: string.Empty
+                dsrouter: parseResult.GetValue(DSRouterOption)
             ));
 
             return monitorCommand;
@@ -72,7 +73,8 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 ResumeRuntimeOption,
                 MaxHistogramOption,
                 MaxTimeSeriesOption,
-                DurationOption
+                DurationOption,
+                DSRouterOption
             };
 
             collectCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Main
@@ -90,7 +92,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 maxHistograms: parseResult.GetValue(MaxHistogramOption),
                 maxTimeSeries: parseResult.GetValue(MaxTimeSeriesOption),
                 duration: parseResult.GetValue(DurationOption),
-                dsrouter: string.Empty));
+                dsrouter: parseResult.GetValue(DSRouterOption)));
 
             return collectCommand;
         }
@@ -137,6 +139,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 " names can either refer to the name of a Meter for the System.Diagnostics.Metrics API or the name of an EventSource for the EventCounters API. If the monitored application has both" +
                 " a Meter and an EventSource with the same name, the Meter is automatically preferred. Use the prefix \'EventCounters\\\' in front of a provider name to only show the EventCounters." +
                 " To discover well-known provider and counter names, please visit https://learn.microsoft.com/dotnet/core/diagnostics/built-in-metrics."
+            };
+
+        private static readonly Option<string> DSRouterOption =
+            new("--dsrouter")
+            {
+                Description = @"The dsrouter command to start. Value should be one of ios, ios-sim, android, android-emu. Run `dotnet-dsrouter -h` for more information."
             };
 
         private static Command ListCommand()
