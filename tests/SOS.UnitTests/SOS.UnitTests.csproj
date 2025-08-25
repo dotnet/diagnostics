@@ -4,7 +4,9 @@
     <IsPackable>false</IsPackable>
     <NoWarn>;1591;1701</NoWarn>
     <DefineConstants>$(DefineConstants);CORE_CLR</DefineConstants>
+    <NeedsDebuggees>true</NeedsDebuggees>
     <NeedsPublishing>true</NeedsPublishing>
+    <NeedsCdb>true</NeedsCdb>
     <SOSConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</SOSConfigFileName>
   </PropertyGroup>
 
@@ -26,16 +28,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="cdb-sos" Version="10.0.26100.1" />
     <PackageReference Include="NewtonSoft.Json" Version="$(NewtonSoftJsonVersion)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\TestExtension\TestExtension.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageDownload Include="cdb-sos" Version="[$(cdbsosversion)]" />
   </ItemGroup>
 
   <Target Name="SOSWriteTestConfigFile" Outputs="$(SOSConfigFileName)" BeforeTargets="BeforeBuild;Publish">

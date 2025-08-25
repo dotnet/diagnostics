@@ -112,6 +112,10 @@ handle_arguments() {
             __ManagedBuild=0
             ;;
 
+        helix|-helix)
+            __UseHelix=1
+            ;;
+
         usecdac|-usecdac)
             __UseCdac=1
             ;;
@@ -229,6 +233,10 @@ if [[ "$__ManagedBuild" == 1 ]]; then
 
     if [[ "$__BuildTests" == 1 ]]; then
         __ManagedBuildArgs="$__ManagedBuildArgs /p:BuildTests=true"
+
+        if [[ "$__UseHelix" == 1 ]]; then
+            __ManagedBuildArgs="$__ManagedBuildArgs /p:ArchiveTests=true"
+        fi
     fi
 
     "$__RepoRootDir/eng/common/build.sh" \
@@ -314,6 +322,10 @@ if [[ "$__RunTests" == 1 ]]; then
           export SOS_TEST_CDAC="true"
       fi
 
+      if [[ "$__UseHelix" == 1 ]]; then
+          __ManagedBuildArgs="$__ManagedBuildArgs /p:UseHelix=true"
+      fi
+
       # __CommonMSBuildArgs contains TargetOS property
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
@@ -327,6 +339,7 @@ if [[ "$__RunTests" == 1 ]]; then
         /p:RuntimeSourceFeedKey="$__RuntimeSourceFeedKey" \
         /p:LiveRuntimeDir="$__LiveRuntimeDir" \
         /p:IsTestRun=true \
+        $__ManagedBuildArgs \
         $__CommonMSBuildArgs
 
       if [ $? != 0 ]; then

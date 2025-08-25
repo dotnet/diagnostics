@@ -70,4 +70,13 @@
     <SupportedXUnitTestTargetFrameworks>net8.0</SupportedXUnitTestTargetFrameworks>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(TargetArch)' != 'x86'">
+    <DotNetInstallRoot>$(RepoRoot).dotnet-test\</DotNetInstallRoot>
+    <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE</RegistryRoot>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetArch)' == 'x86'">
+    <DotNetInstallRoot>$(RepoRoot).dotnet-test\x86\</DotNetInstallRoot>
+    <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node</RegistryRoot>
+  </PropertyGroup>
 </Project>

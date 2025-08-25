@@ -6,6 +6,7 @@
     <DebugType Condition="'$(TargetFramework)' == '$(DesktopTargetFramework)'">full</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>false</Optimize>
+    <OutputPath>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'debuggees', '$(MSBuildProjectName)', '$(Configuration)'))</OutputPath>
   </PropertyGroup>
 
   <ItemGroup>

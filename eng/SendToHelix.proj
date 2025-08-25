@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.Build.NoTargets" InitialTargets="_SetTestArchiveRuntimeFile">
+  <PropertyGroup>
+    <HelixArchitecture>$(TargetArch)</HelixArchitecture> 
+    <HelixBuild>$(OfficialBuildId)</HelixBuild>
+    <HelixBuild Condition="'$(HelixBuild)' == ''">99999999.99</HelixBuild>
+    <HelixConfiguration>Release</HelixConfiguration>
+    <HelixType>tests/diagnostics/</HelixType>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IncludeDotNetCli>true</IncludeDotNetCli>
+    <DotNetCliPackageType>sdk</DotNetCliPackageType>
+    <DotNetCliVersion>$(MicrosoftNetSdkVersion)</DotNetCliVersion>
+    <DotNetCliChannel>Current</DotNetCliChannel>
+  </PropertyGroup>
+
+  <!-- Maybe different jobs for each version we want to test against? -->
+  <ItemGroup>
+    <AdditionalDotNetPackage Include="%(RuntimeTestVersions.RuntimeDownload)">
+      <PackageType>runtime</PackageType>
+    </AdditionalDotNetPackage>
+    <AdditionalDotNetPackage Include="%(RuntimeTestVersions.AspNetDownload)">
+      <PackageType>aspnetcore-runtime</PackageType>
+    </AdditionalDotNetPackage>
+  </ItemGroup>
+</Project>

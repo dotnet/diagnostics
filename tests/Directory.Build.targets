@@ -11,6 +11,25 @@
       <EmbeddedFiles Include="$(GeneratedAssemblyInfoFile)"/>
   </ItemGroup>
 
+  <ItemGroup Condition="'$(NeedsCdb)' == 'true' and '$(BuildTests)' == 'true'">
+    <PackageDownload Include="cdb-sos" 
+                     Version="[$(cdbsosversion)]" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(NeedsTestAssets)' == 'true' and '$(BuildTests)' == 'true' and '$(OS)' == 'Windows_NT'">
+    <PackageDownload Include="TestAssets.Windows.x64.6.0" 
+                     Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Windows.x86.6.0" 
+                     Version="[$(TestAssetsVersion)]" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(NeedsTestAssets)' == 'true' and '$(BuildTests)' == 'true' and ('$(OS)' == 'Unix' OR '$(OS)' == 'Windows_NT')">
+    <PackageDownload Include="TestAssets.Linux.x64.6.0" 
+                     Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Linux.arm64.6.0" 
+                     Version="[$(TestAssetsVersion)]" />
+  </ItemGroup>
+
   <!-- We need this for the binplacing for testing assets.
   This should be removed at some point as it's brittle (harcodes versions and creates native-managed coupling). -->
   <Target Name="_PublishPackageReferences"
@@ -24,4 +43,158 @@
       <MSBuild Projects="$(RepositoryEngineeringDir)InstallRuntimes.proj" Targets="InstallTestRuntimes" />
   </Target>
 
+  <Target Name="_PrepareTestingAssets"
+          Condition="'$(BuildTests)' == 'true'"
+          AfterTargets="Build"
+          DependsOnTargets="_CopyDebugTestAssets;_CompressTest" />
+
+  <Target Name="_CopyDebugTestAssets">    
+    <ItemGroup>
+      <_cdbFiles Include="$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\**\*" 
+                 Condition="'$(NeedsCdb)' == 'true'" />
+                      
+      <_testAssetsWinx64 Include="$(NuGetPackageRoot)testassets.windows.x64.6.0\$(TestAssetsVersion)\**\*" 
+                         Condition="'$(NeedsTestAssets)' == 'true' and '$(OS)' == 'Windows_NT'" />
+                      
+      <_testAssetsWinx86 Include="$(NuGetPackageRoot)testassets.windows.x86.6.0\$(TestAssetsVersion)\**\*" 
+                         Condition="'$(NeedsTestAssets)' == 'true' and '$(OS)' == 'Windows_NT'" />
+                      
+      <_testAssetsLinux64 Include="$(NuGetPackageRoot)testassets.linux.x64.6.0\$(TestAssetsVersion)\**\*" 
+                          Condition="'$(NeedsTestAssets)' == 'true'" />
+                      
+      <_testAssetsLinuxArm64 Include="$(NuGetPackageRoot)testassets.linux.arm64.6.0\$(TestAssetsVersion)\**\*" 
+                             Condition="'$(NeedsTestAssets)' == 'true'" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_cdbFiles)"
+          DestinationFiles="@(_cdbFiles->'$(PackageArtifactsRootDir)cdb-sos\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+
+    <Copy SourceFiles="@(_testAssetsWinx64)"
+          DestinationFiles="@(_testAssetsWinx64->'$(PackageArtifactsRootDir)testassets.windows.x64.6.0\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy SourceFiles="@(_testAssetsWinx86)"
+          DestinationFiles="@(_testAssetsWinx86->'$(PackageArtifactsRootDir)testassets.windows.x86.6.0\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy SourceFiles="@(_testAssetsLinux64)"
+          DestinationFiles="@(_testAssetsLinux64->'$(PackageArtifactsRootDir)testassets.linux.x64.6.0\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy SourceFiles="@(_testAssetsLinuxArm64)"
+          DestinationFiles="@(_testAssetsLinuxArm64->'$(PackageArtifactsRootDir)testassets.linux.arm64.6.0\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <Target Name="_CompressTest"
+          Condition="'$(ArchiveTests)' == 'true' and '$(IsTestProject)' == 'true'"
+          DependsOnTargets="_ZipTestArchive" />
+
+  <Target Name="_ZipTestArchive"
+          Condition="'$(OutDir)' != ''">
+    <PropertyGroup>
+      <_ZipSourceDirectory>$(OutDir)</_ZipSourceDirectory>
+      <_ZipSourceDirectory Condition="'$(NeedsPublishing)' == 'true'">$(PublishDir)</_ZipSourceDirectory>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(TestArchiveTestsDir)" />
+    
+    <!-- We're going to just build the debuggees as needed on helix -->
+    <ItemGroup Condition="'$(NeedsDebuggees)' == 'true'">
+      <_TempZipFiles Include="$(_ZipSourceDirectory)*" />
+      <_TempZipFiles Include="$(DebuggerVersionConfigFileName)" />
+      <_TempZipFiles Include="$(XunitConsoleNetCoreAppPath)" />
+      <_DebuggeeFiles Include="$(DebuggeeSourceRootDir)**\*" />
+      <_DebuggeeArtifactFiles Include="$(DebuggeeArtifactsRootDir)**\*" />
+      <_AuxMsBuildFiles Include="$(AuxMSBuildRootDir)**\*" />
+      <_TestPackageFiles Include="$(PackageArtifactsRootDir)**\*" />
+      <_DebuggerNativeFiles Include="$(ArtifactsBinNativeDir)**\*" />
+    </ItemGroup>
+    
+    <PropertyGroup Condition="'$(NeedsDebuggees)' == 'true'">
+      <_TempZipDir>$([MSBuild]::NormalizeDirectory('$(IntermediateOutputPath)', 'TempZip'))</_TempZipDir>
+    </PropertyGroup>
+
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)eng\AuxMsbuildFiles\" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)tests\Debuggees\" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)artifacts\bin\debuggees\" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)packages\" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)native\" />
+
+    <Copy Condition="'$(NeedsDebuggees)' == 'true'"
+          SourceFiles="@(_TempZipFiles)"
+          DestinationFiles="@(_TempZipFiles->'$(_TempZipDir)%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy Condition="'$(NeedsDebuggees)' == 'true'"
+          SourceFiles="@(_DebuggerNativeFiles)"
+          DestinationFiles="@(_DebuggerNativeFiles->'$(_TempZipDir)native\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy Condition="'$(NeedsDebuggees)' == 'true'"
+          SourceFiles="@(_AuxMsBuildFiles)"
+          DestinationFiles="@(_AuxMsBuildFiles->'$(_TempZipDir)eng\AuxMsbuildFiles\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy Condition="'$(NeedsDebuggees)' == 'true'"
+          SourceFiles="@(_DebuggeeFiles)"
+          DestinationFiles="@(_DebuggeeFiles->'$(_TempZipDir)tests\Debuggees\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy Condition="'$(NeedsDebuggees)' == 'true'"
+          SourceFiles="@(_DebuggeeArtifactFiles)"
+          DestinationFiles="@(_DebuggeeArtifactFiles->'$(_TempZipDir)artifacts\bin\debuggees\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy Condition="'$(NeedsDebuggees)' == 'true'"
+          SourceFiles="@(_TestPackageFiles)"
+          DestinationFiles="@(_TestPackageFiles->'$(_TempZipDir)packages\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <ZipDirectory Condition="'$(NeedsDebuggees)' == 'true'"
+                  SourceDirectory="$(_TempZipDir)"
+                  DestinationFile="$([MSBuild]::NormalizePath('$(TestArchiveTestsDir)', '$(MSBuildProjectName).zip'))"
+                  Overwrite="true" />
+                    
+    <ZipDirectory Condition="'$(NeedsDebuggees)' != 'true'"
+                  SourceDirectory="$(_ZipSourceDirectory)"
+                  DestinationFile="$([MSBuild]::NormalizePath('$(TestArchiveTestsDir)', '$(MSBuildProjectName).zip'))"
+                  Overwrite="true" />
+
+    <RemoveDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)" />
+  </Target>
+
+  <Target Name="WriteTestVersionManifest"
+          BeforeTargets="Build"
+          Inputs="$(VersionsPropsPath)"
+          Outputs="$(DebuggerVersionConfigFileName)">
+
+    <ItemGroup>
+      <TestConfigFileLines Include="Header">
+        <ConfigFileEntry>
+<![CDATA[
+<Configuration>
+  <InternalReleaseTesting>$(InternalReleaseTesting)</InternalReleaseTesting>
+  <PrivateBuildTesting>$(PrivateBuildTesting)</PrivateBuildTesting>
+]]>
+        </ConfigFileEntry>
+      </TestConfigFileLines>
+      <TestConfigFileLines Include="@(RuntimeTestVersions)">
+        <ConfigFileEntry>
+<![CDATA[
+  <RuntimeVersion%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.Runtime)</RuntimeVersion%(RuntimeTestVersions.Identity)>
+  <AspNetCoreVersion%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.AspNet)</AspNetCoreVersion%(RuntimeTestVersions.Identity)>
+  <TargetFramework%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.TargetFramework)</TargetFramework%(RuntimeTestVersions.Identity)>
+]]>
+        </ConfigFileEntry>
+      </TestConfigFileLines>
+      <TestConfigFileLines Include="End">
+        <ConfigFileEntry>
+<![CDATA[
+</Configuration>
+]]>
+        </ConfigFileEntry>
+      </TestConfigFileLines>
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(DebuggerVersionConfigFileName)" Lines="@(TestConfigFileLines->Metadata('ConfigFileEntry'))" Overwrite="true" WriteOnlyWhenDifferent="true" />
+
+    <Message Importance="High" Text="Created config file $(DebuggerVersionConfigFileName)" />
+
+    <ItemGroup>
+      <FileWrites Include="$(DebuggerVersionConfigFileName)" />
+    </ItemGroup>
+  </Target>
 </Project>

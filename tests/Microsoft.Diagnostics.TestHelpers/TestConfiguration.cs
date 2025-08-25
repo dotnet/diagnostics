@@ -80,7 +80,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TargetRid"] = GetRid(),
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages,
-                ["TestCDAC"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC")
+                ["TestCDAC"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC"),
+                ["DotNetRoot"] = Environment.GetEnvironmentVariable("DOTNET_ROOT")
             };
             if (OS.Kind == OSKind.Windows)
             {
@@ -824,7 +825,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             get
             {
                 string dotnetRoot = GetValue("DotNetRoot");
-                return MakeCanonicalPath(dotnetRoot);
+                return (!string.IsNullOrEmpty(dotnetRoot)) ? MakeCanonicalPath(dotnetRoot) : MakeCanonicalPath(Environment.GetEnvironmentVariable("DOTNET_ROOT"));
             }
         }
 
