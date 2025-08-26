@@ -29,7 +29,7 @@ namespace DiagnosticsReleaseTool.CommandLine
                 description: "Given a darc drop, generates validated manifests and layouts to initiate a tool release.")
             {
                 // Inputs
-                InputDropPathOption, ToolManifestPathOption, ReleaseNameOption,
+                InputDropPathOption, ToolManifestPathOption, ReleaseNameOption, ReleaseProductAllowListOption, ReleaseRepoAllowListOption,
                 // Toggles
                 ToolManifestVerificationOption, DiagnosticLoggingOption,
                 // Outputs
@@ -45,6 +45,8 @@ namespace DiagnosticsReleaseTool.CommandLine
                     inputDropPath: parseResult.GetValue(InputDropPathOption),
                     stagingDirectory: parseResult.GetValue(StagingPathOption),
                     releaseName: parseResult.GetValue(ReleaseNameOption),
+                    releaseProductAllowList: parseResult.GetValue(ReleaseProductAllowListOption),
+                    releaseRepoAllowList: parseResult.GetValue(ReleaseRepoAllowListOption),
                     accountName: parseResult.GetValue(AzureStorageAccountNameOption),
                     clientId: parseResult.GetValue(AzureStorageAccountKeyOption),
                     containerName: parseResult.GetValue(AzureStorageContainerNameOption)
@@ -92,6 +94,21 @@ namespace DiagnosticsReleaseTool.CommandLine
                 Required = true
             };
 
+        private static Option<string[]> ReleaseProductAllowListOption =
+            new("--product-allow-list")
+            {
+                AllowMultipleArgumentsPerToken = true,
+                Description = "List of allowed product names for this release.",
+                Required = true
+            };
+
+        private static Option<string[]> ReleaseRepoAllowListOption =
+            new("--repo-allow-list")
+            {
+                AllowMultipleArgumentsPerToken = true,
+                Description = "List of allowed repository urls for this release.",
+                Required = true
+            };
 
         private static readonly Option<DirectoryInfo> StagingPathOption = InitStagingPath();
 

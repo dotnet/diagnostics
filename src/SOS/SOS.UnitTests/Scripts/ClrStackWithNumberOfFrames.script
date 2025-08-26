@@ -1,0 +1,57 @@
+# Divide By Zero debugging scenario
+# 1) Load the executable
+# 2) Run the executable and wait for it to crash
+# 3) Take a dump of the executable.
+# 4) Open the dump and compare the output
+
+CONTINUE
+
+LOADSOS
+
+# Verify that ClrStack with number of frames works
+SOSCOMMAND:ClrStack -c 1
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:(?:[^\r\n]*\r?\n){3}[ \t]*\r?\n
+!VERIFY:(?:[^\r\n]*\r?\n){5}[ \t]*\r?\n
+
+# Verify that ClrStack with number of frames works
+SOSCOMMAND:ClrStack -c 2
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:(?:[^\r\n]*\r?\n){4}[ \t]*\r?\n
+!VERIFY:(?:[^\r\n]*\r?\n){6}[ \t]*\r?\n
+
+# Verify that ClrStack with number of frames works
+SOSCOMMAND:ClrStack -c 3
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:(?:[^\r\n]*\r?\n){5}[ \t]*\r?\n
+!VERIFY:(?:[^\r\n]*\r?\n){7}[ \t]*\r?\n
+
+# Verify that ClrStack with number of frames works
+SOSCOMMAND:ClrStack -c 4
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:(?:[^\r\n]*\r?\n){6}[ \t]*\r?\n
+!VERIFY:(?:[^\r\n]*\r?\n){8}[ \t]*\r?\n
+
+# Verify that ClrStack with number of frames works using ICorDebug
+SOSCOMMAND:ClrStack -i -c 1
+VERIFY:(?:[^\r\n]*\r?\n){8}[ \t]*\r?\n
+!VERIFY:(?:[^\r\n]*\r?\n){10}[ \t]*\r?\n
+
+# Verify that ClrStack with number of frames works using ICorDebug
+SOSCOMMAND:ClrStack -i -c 2
+VERIFY:(?:[^\r\n]*\r?\n){9}[ \t]*\r?\n
+!VERIFY:(?:[^\r\n]*\r?\n){11}[ \t]*\r?\n
+
+# Verify that ClrStack with number of frames works using ICorDebug
+SOSCOMMAND:ClrStack -i -c 3
+VERIFY:(?:[^\r\n]*\r?\n){10}[ \t]*\r?\n
+!VERIFY:(?:[^\r\n]*\r?\n){12}[ \t]*\r?\n
+
+# Verify that ClrStack with number of frames works using ICorDebug
+SOSCOMMAND:ClrStack -i -c 4
+VERIFY:(?:[^\r\n]*\r?\n){11}[ \t]*\r?\n
+!VERIFY:(?:[^\r\n]*\r?\n){13}[ \t]*\r?\n

@@ -10593,7 +10593,7 @@ public:
     //     * Consider interleaving this code back into the main body of !clrstack if it turns
     //         out that there's a lot of duplication of code between these two functions.
     //         (Still unclear how things will look once locals is implemented.)
-    static HRESULT ClrStackFromPublicInterface(BOOL bParams, BOOL bLocals, BOOL bSuppressLines, __in_z WCHAR* varToExpand = NULL, int onlyShowFrame = -1)
+    static HRESULT ClrStackFromPublicInterface(BOOL bParams, BOOL bLocals, BOOL bSuppressLines, __in_z WCHAR* varToExpand = NULL, int onlyShowFrame = -1, size_t nFrames = 0)
     {
         HRESULT Status;
 
@@ -10627,11 +10627,14 @@ public:
     #endif
 
         int currentFrame = -1;
+        size_t nPrintedFrames = 0;
 
         for (Status = S_OK; ; Status = pStackWalk->Next())
         {
+            if (nPrintedFrames >= nFrames && nFrames != 0)
+                break;
             currentFrame++;
-
+            nPrintedFrames++;
             if (Status == CORDBG_S_AT_END_OF_STACK)
             {
                 ExtOut("Stack walk complete.\n");
@@ -10686,8 +10689,9 @@ public:
             // appears leafier than the base-part of the range of the currently iterated
             // stack frame?  I think I like that better.
             _ASSERTE(pFrame != NULL);
-            IfFailRet(internalFrameManager.PrintPrecedingInternalFrames(pFrame));
-
+            IfFailRet(internalFrameManager.PrintPrecedingInternalFrames(pFrame, nPrintedFrames, nFrames));
+            if (nPrintedFrames > nFrames && nFrames != 0)
+                break;
             // Print the stack and instruction pointers.
             DMLOut("%p %s ", SOS_PTR(sp), DMLIP(ip));
 
@@ -10852,7 +10856,7 @@ void PrintRef(const SOSStackRefData &ref, TableOutput &out)
 class ClrStackImpl
 {
 public:
-    static void PrintThread(ULONG osID, BOOL bParams, BOOL bLocals, BOOL bSuppressLines, BOOL bGC, BOOL bFull, BOOL bDisplayRegVals)
+    static void PrintThread(ULONG osID, BOOL bParams, BOOL bLocals, BOOL bSuppressLines, BOOL bGC, BOOL bFull, BOOL bDisplayRegVals, size_t nFrames)
     {
         _ASSERTE(g_targetMachine != nullptr);
 
@@ -10899,6 +10903,7 @@ public:
 
         int frameNumber = 0;
         int internalFrames = 0;
+        size_t printedFrames = 0;
         do
         {
             if (IsInterrupt())
@@ -10987,11 +10992,13 @@ public:
                     if (bParams || bLocals)
                         PrintArgsAndLocals(pStackWalk, bParams, bLocals);
                 }
+                printedFrames++;
             }
 
             if (bDisplayRegVals)
                 PrintManagedFrameContext(pStackWalk);
-
+            if (printedFrames == nFrames && nFrames != 0)
+                break;
             hr = pStackWalk->Next();
         } while (hr == S_OK);
 
@@ -11008,9 +11015,10 @@ public:
 #endif // FEATURE_PAL
         }
 
-        while (numNativeFrames > 0)
+        while (numNativeFrames > 0 && ((printedFrames < nFrames && nFrames != 0) || nFrames == 0))
         {
             PrintNativeStackFrame(out, currentNativeFrame, bSuppressLines);
+            printedFrames++;
             currentNativeFrame++;
             numNativeFrames--;
         }
@@ -11203,7 +11211,7 @@ public:
         }
     }
 
-    static void PrintCurrentThread(BOOL bParams, BOOL bLocals, BOOL bSuppressLines, BOOL bGC, BOOL bNative, BOOL bDisplayRegVals)
+    static void PrintCurrentThread(BOOL bParams, BOOL bLocals, BOOL bSuppressLines, BOOL bGC, BOOL bNative, BOOL bDisplayRegVals, size_t nFrames)
     {
         ULONG id = 0;
         ULONG osid = 0;
@@ -11213,10 +11221,10 @@ public:
         g_ExtSystem->GetCurrentThreadId(&id);
         ExtOut("(%d)\n", id);
 
-        PrintThread(osid, bParams, bLocals, bSuppressLines, bGC, bNative, bDisplayRegVals);
+        PrintThread(osid, bParams, bLocals, bSuppressLines, bGC, bNative, bDisplayRegVals, nFrames);
     }
 
-    static void PrintAllThreads(BOOL bParams, BOOL bLocals, BOOL bSuppressLines, BOOL bGC, BOOL bNative, BOOL bDisplayRegVals)
+    static void PrintAllThreads(BOOL bParams, BOOL bLocals, BOOL bSuppressLines, BOOL bGC, BOOL bNative, BOOL bDisplayRegVals, size_t nFrames)
     {
         HRESULT Status;
 
@@ -11242,7 +11250,7 @@ public:
             if (Thread.osThreadId != 0)
             {
                 ExtOut("OS Thread Id: 0x%x\n", Thread.osThreadId);
-                PrintThread(Thread.osThreadId, bParams, bLocals, bSuppressLines, bGC, bNative, bDisplayRegVals);
+                PrintThread(Thread.osThreadId, bParams, bLocals, bSuppressLines, bGC, bNative, bDisplayRegVals, nFrames);
             }
             CurThread = Thread.nextThread;
         }
@@ -11653,6 +11661,7 @@ DECLARE_API(ClrStack)
     BOOL bDisplayRegVals = FALSE;
     BOOL bAllThreads = FALSE;
     DWORD frameToDumpVariablesFor = -1;
+    size_t nFrames = 0;
     StringHolder cvariableName;
     ArrayHolder<WCHAR> wvariableName = new NOTHROW WCHAR[mdNameLen];
     if (wvariableName == NULL)
@@ -11676,6 +11685,7 @@ DECLARE_API(ClrStack)
         {"-f", &bFull, COBOOL, FALSE},
         {"-r", &bDisplayRegVals, COBOOL, FALSE },
         {"/d", &dml, COBOOL, FALSE},
+        {"-c", &nFrames, COSIZE_T, TRUE}
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -11720,14 +11730,14 @@ DECLARE_API(ClrStack)
             bParams = bLocals = TRUE;
 
         EnableDMLHolder dmlHolder(TRUE);
-        return ClrStackImplWithICorDebug::ClrStackFromPublicInterface(bParams, bLocals, FALSE, wvariableName, frameToDumpVariablesFor);
+        return ClrStackImplWithICorDebug::ClrStackFromPublicInterface(bParams, bLocals, FALSE, wvariableName, frameToDumpVariablesFor, nFrames);
     }
 
     if (bAllThreads) {
-        ClrStackImpl::PrintAllThreads(bParams, bLocals, bSuppressLines, bGC, bFull, bDisplayRegVals);
+        ClrStackImpl::PrintAllThreads(bParams, bLocals, bSuppressLines, bGC, bFull, bDisplayRegVals, nFrames);
     }
     else {
-        ClrStackImpl::PrintCurrentThread(bParams, bLocals, bSuppressLines, bGC, bFull, bDisplayRegVals);
+        ClrStackImpl::PrintCurrentThread(bParams, bLocals, bSuppressLines, bGC, bFull, bDisplayRegVals, nFrames);
     }
 
     return S_OK;
