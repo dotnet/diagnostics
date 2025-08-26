@@ -241,12 +241,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
-                                     "        blue                                87",
-                                     "        red                                  0.1",
+                                     "            blue                            87",
+                                     "            red                              0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
-                                     "        1                                   14",
-                                     "             hot                           160");
+                                     "            1                               14",
+                                     "                 hot                       160");
         }
 
         [Fact]
@@ -267,12 +267,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color LongNameTag   herOne",
-                                     "        blue  ThisDoesNotFi Hi              87",
-                                     "        red                                  0.1",
+                                     "            blue  ThisDoesNotFi Hi          87",
+                                     "            red                              0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
-                                     "        1                                   14",
-                                     "             hot                           160");
+                                     "            1                               14",
+                                     "                 hot                       160");
         }
 
         [Fact]
@@ -315,12 +315,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
-                                     "        blue                                87",
-                                     "        red                                  0.1",
+                                     "            blue                            87",
+                                     "            red                              0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
-                                     "        1                                   14",
-                                     "             hot                           160");
+                                     "            1                               14",
+                                     "                 hot                       160");
         }
 
         [Fact]
@@ -343,12 +343,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
-                                     "        blue                              87",
-                                     "        red                                0.1",
+                                     "            blue                          87",
+                                     "            red                            0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
-                                     "        1                                 14",
-                                     "             hot                         160",
+                                     "            1                             14",
+                                     "                 hot                     160",
                                      "[System.Runtime]",
                                      "    Allocation Rate (B / 1 sec)        1,731");
         }
@@ -372,12 +372,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
-                                     "        blue                              87",
-                                     "        red                                0.1",
+                                     "            blue                          87",
+                                     "            red                            0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
-                                     "        1                                 14",
-                                     "             hot                         160",
+                                     "            1                             14",
+                                     "                 hot                     160",
                                      "[System.Runtime]",
                                      "    Allocation Rate (B / 1 sec)        1,731");
 
@@ -392,12 +392,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
-                                     "        blue                              87               0",
-                                     "        red                                0.2             0.1",
+                                     "            blue                          87               0",
+                                     "            red                            0.2             0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
-                                     "        1                                 10              -4",
-                                     "             hot                         160",
+                                     "            1                             10              -4",
+                                     "                 hot                     160",
                                      "[System.Runtime]",
                                      "    Allocation Rate (B / 1 sec)        1,732               1");
         }
@@ -424,8 +424,8 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget})",                                            // There is no longer (unit / 1 sec) here
                                      "        color",
-                                     "        blue                              87",
-                                     "        red                                0.1",
+                                     "            blue                          87",
+                                     "            red                            0.1",
                                      "    Counter2 ({widget})                   14");
 
             exporter.CounterPayloadReceived(CreateMeterCounterPostNet8("Provider1", "Counter1", "{widget}", "color=red", 0.2), false);
@@ -439,8 +439,8 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget})",                                            // There is no longer (unit / 1 sec) here
                                      "        color",
-                                     "        blue                              87               0",
-                                     "        red                                0.2             0.1",
+                                     "            blue                          87               0",
+                                     "            red                            0.2             0.1",
                                      "    Counter2 ({widget})                   10              -4");
         }
 
