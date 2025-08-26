@@ -233,7 +233,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     tagWithSpaces += " ";
                     tagRow += tagWithSpaces;
                 }
-                if (!RenderCounterValueRow(ref row, indentLevel: 2, tagRow, tagSet.LastValue, 0))
+                if (!RenderCounterValueRow(ref row, indentLevel: 3, tagRow, tagSet.LastValue, 0))
                 {
                     return false;
                 }
