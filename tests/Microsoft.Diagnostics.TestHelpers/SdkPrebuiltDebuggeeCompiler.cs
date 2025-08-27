@@ -26,14 +26,14 @@ namespace Microsoft.Diagnostics.TestHelpers
 
             // The layout is how the current .NET Core SDK layouts the binaries out:
             // Source Path:     <DebuggeeSourceRoot>/<DebuggeeName>/[<DebuggeeName>]
-            // Binary Path:     <DebuggeeBuildRoot>/bin/<DebuggeeName>/<TargetConfiguration>/<BuildProjectFramework>
-            // Binary Exe Path: <DebuggeeBuildRoot>/bin/<DebuggeeName>/<TargetConfiguration>/<BuildProjectFramework>/<DebuggeeName>.dll
+            // Binary Path:     <DebuggeeBuildRoot>/bin/debuggees/<DebuggeeName>/<TargetConfiguration>/<BuildProjectFramework>
+            // Binary Exe Path: <DebuggeeBuildRoot>/bin/debuggees/<DebuggeeName>/<TargetConfiguration>/<BuildProjectFramework>/<DebuggeeName>.dll
             _sourcePath = Path.Combine(config.DebuggeeSourceRoot, debuggeeName);
             if (Directory.Exists(Path.Combine(_sourcePath, debuggeeName)))
             {
                 _sourcePath = Path.Combine(_sourcePath, debuggeeName);
             }
-            _binaryPath = Path.Combine(config.DebuggeeBuildRoot, "bin", debuggeeName, config.TargetConfiguration, config.BuildProjectFramework);
+            _binaryPath = Path.Combine(config.DebuggeeBuildRoot, "bin", "debuggees", debuggeeName, config.TargetConfiguration, config.BuildProjectFramework);
             _binaryExePath = Path.Combine(_binaryPath, debuggeeName) + (config.IsDesktop ? ".exe" : ".dll");
         }
 

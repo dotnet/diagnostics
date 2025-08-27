@@ -202,7 +202,7 @@
               <TestName>SOS.DualRuntimes</TestName>
               <SetSymbolServer>-ms -timeout 10</SetSymbolServer>
               <!-- The assembly path, class and function name of the desktop test code to load/run -->
-              <DesktopTestParameters>$(RootBinDir)\bin\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
+              <DesktopTestParameters>$(RootBinDir)\bin\debuggees\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
             </Option>
           </Options>
           <Options>
