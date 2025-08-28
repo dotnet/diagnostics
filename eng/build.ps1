@@ -8,6 +8,7 @@ Param(
     [switch] $installruntimes,
     [switch] $privatebuild,
     [switch] $ci,
+    [switch] $helix,
     [switch][Alias('bl')]$binaryLog,
     [switch] $skipmanaged,
     [switch] $skipnative,
@@ -75,6 +76,10 @@ if (-not $skipnative) {
 if (-not $skipmanaged) {
     if ($withtests) {
         $remainingargs = "/p:BuildTests=true " + $remainingargs
+
+        if ($helix) {
+            $remainingargs = "/p:ArchiveTests=true " + $remainingargs
+        }
     }
 
     Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity $bl /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture $remainingargs"

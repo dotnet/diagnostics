@@ -30,6 +30,7 @@ __InstallRuntimes=0
 __PrivateBuild=0
 __BuildTests=0
 __RunTests=0
+__UseHelix=0
 __UnprocessedBuildArgs=
 __UseCdac=0
 __LiveRuntimeDir=
@@ -105,7 +106,7 @@ handle_arguments() {
         withtests|-withtests)
             __BuildTests=1
             ;;
-        
+
         runtests|-runtests)
             __RunTests=1
             __NativeBuild=0
@@ -271,7 +272,7 @@ if [[ "$__InstallRuntimes" == 1 || "$__PrivateBuild" == 1 ]]; then
         /p:TargetArch="$__TargetArch" \
         /p:TargetRid="$__TargetRid" \
         /p:TestArchitectures="$__TargetArch" \
-        /p:LiveRuntimeDir="$__LiveRuntimeDir" 
+        /p:LiveRuntimeDir="$__LiveRuntimeDir"
 fi
 
 #
