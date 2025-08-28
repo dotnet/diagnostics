@@ -17,19 +17,6 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <TestArchiveRoot>$(ArtifactsDir)helix/</TestArchiveRoot>
-    <TestArchiveTestsDir>$(TestArchiveRoot)tests/</TestArchiveTestsDir>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(ArchiveTests)' == 'true'">
-    <TestRepoRoot>.</TestRepoRoot>
-    <TestPackageArtifactsRootDir>packages</TestPackageArtifactsRootDir>
-    <TestAuxMSBuildRootDir>eng/AuxMsbuildFiles</TestAuxMSBuildRootDir>
-    <TestVersionConfigDir>.</TestVersionConfigDir>
-    <TestNativeDir>native</TestNativeDir>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(ArchiveTests)' != 'true'">
     <TestRepoRoot>$(RepoRoot)</TestRepoRoot>
     <TestDotNetRootDir>$(DotNetInstallRoot)</TestDotNetRootDir>
     <TestPackageArtifactsRootDir>$(NuGetPackageRoot)</TestPackageArtifactsRootDir>
