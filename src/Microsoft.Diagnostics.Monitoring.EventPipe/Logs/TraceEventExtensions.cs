@@ -31,17 +31,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string? activityTraceFlags = null;
 
             int idxTraceId = traceEvent.PayloadIndex("ActivityTraceId");
-            int idxSpanId = traceEvent.PayloadIndex("ActivitySpanId");
-            if (idxTraceId >= 0 && idxSpanId >= 0)
+            if (idxTraceId >= 0)
             {
-                activityTraceId = (string)traceEvent.PayloadValue(idxTraceId);
-                activitySpanId = (string)traceEvent.PayloadValue(idxSpanId);
-            }
+                int idxSpanId = traceEvent.PayloadIndex("ActivitySpanId");
+                int idxFlags = traceEvent.PayloadIndex("ActivityTraceFlags");
 
-            int idxFlags = traceEvent.PayloadIndex("ActivityTraceFlags");
-            if (idxFlags >= 0)
-            {
-                activityTraceFlags = (string)traceEvent.PayloadValue(idxFlags);
+                if (idxSpanId >= 0 && idxFlags >= 0)
+                {
+                    activityTraceId = (string)traceEvent.PayloadValue(idxTraceId);
+                    activitySpanId = (string)traceEvent.PayloadValue(idxSpanId);
+                    activityTraceFlags = (string)traceEvent.PayloadValue(idxFlags);
+                }
             }
 
             eventData = new(
