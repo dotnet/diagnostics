@@ -14,23 +14,23 @@ This file should be imported by eng/Versions.props
     <!-- dotnet/android dependencies -->
     <XamarinAndroidToolsAndroidSdkPackageVersion>1.0.105-preview.225</XamarinAndroidToolsAndroidSdkPackageVersion>
     <!-- dotnet/dotnet dependencies -->
-    <MicrosoftAspNetCoreAppRefPackageVersion>10.0.0-rc.2.25420.109</MicrosoftAspNetCoreAppRefPackageVersion>
-    <MicrosoftAspNetCoreAppRefInternalPackageVersion>10.0.0-rc.2.25420.109</MicrosoftAspNetCoreAppRefInternalPackageVersion>
-    <MicrosoftCodeAnalysisPackageVersion>5.0.0-2.25420.109</MicrosoftCodeAnalysisPackageVersion>
-    <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.0.0-2.25420.109</MicrosoftCodeAnalysisAnalyzersPackageVersion>
-    <MicrosoftCodeAnalysisCSharpPackageVersion>5.0.0-2.25420.109</MicrosoftCodeAnalysisCSharpPackageVersion>
-    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>10.0.0-preview.25420.109</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.25420.109</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.25420.109</MicrosoftDotNetCodeAnalysisPackageVersion>
-    <MicrosoftNETSdkPackageVersion>10.0.100-rc.2.25420.109</MicrosoftNETSdkPackageVersion>
-    <MicrosoftNETCoreAppRefPackageVersion>10.0.0-rc.2.25420.109</MicrosoftNETCoreAppRefPackageVersion>
-    <MicrosoftNETCorePlatformsPackageVersion>10.0.0-rc.2.25420.109</MicrosoftNETCorePlatformsPackageVersion>
-    <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25420.109</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25420.109</runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25420.109</runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25420.109</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25420.109</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25420.109</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
+    <MicrosoftAspNetCoreAppRefPackageVersion>10.0.0-rc.2.25426.115</MicrosoftAspNetCoreAppRefPackageVersion>
+    <MicrosoftAspNetCoreAppRefInternalPackageVersion>10.0.0-rc.2.25426.115</MicrosoftAspNetCoreAppRefInternalPackageVersion>
+    <MicrosoftCodeAnalysisPackageVersion>5.0.0-2.25426.115</MicrosoftCodeAnalysisPackageVersion>
+    <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.0.0-2.25426.115</MicrosoftCodeAnalysisAnalyzersPackageVersion>
+    <MicrosoftCodeAnalysisCSharpPackageVersion>5.0.0-2.25426.115</MicrosoftCodeAnalysisCSharpPackageVersion>
+    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>10.0.100-rc.1.25426.115</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.25426.115</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.25426.115</MicrosoftDotNetCodeAnalysisPackageVersion>
+    <MicrosoftNETSdkPackageVersion>10.0.100-rc.1.25426.115</MicrosoftNETSdkPackageVersion>
+    <MicrosoftNETCoreAppRefPackageVersion>10.0.0-rc.2.25426.115</MicrosoftNETCoreAppRefPackageVersion>
+    <MicrosoftNETCorePlatformsPackageVersion>10.0.0-rc.2.25426.115</MicrosoftNETCorePlatformsPackageVersion>
+    <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25426.115</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25426.115</runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25426.115</runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25426.115</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25426.115</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rc.2.25426.115</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
     <!-- dotnet/arcade dependencies -->
     <MicrosoftDotNetRemoteExecutorPackageVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorPackageVersion>
   </PropertyGroup>
