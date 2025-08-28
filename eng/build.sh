@@ -314,10 +314,6 @@ if [[ "$__RunTests" == 1 ]]; then
           export SOS_TEST_CDAC="true"
       fi
 
-      if [[ "$__UseHelix" == 1 ]]; then
-          __ManagedBuildArgs="$__ManagedBuildArgs /p:UseHelix=true"
-      fi
-
       # __CommonMSBuildArgs contains TargetOS property
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
