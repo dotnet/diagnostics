@@ -7,12 +7,6 @@
     <SOSExtensionsBinaries>$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\netstandard2.0\publish\*.dll</SOSExtensionsBinaries>
   </PropertyGroup>
 
-  <ItemGroup>
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll" TargetRid="win-x64" />
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\Microsoft.DiaSymReader.Native.amd64.dll" TargetRid="win-x64" />
-    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x64" />
-  </ItemGroup>
-      
   <ItemGroup Condition="'$(BuildX64Package)' != 'true'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\Microsoft.DiaSymReader.Native.x86.dll" TargetRid="win-x86" />
@@ -56,11 +50,25 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libsos.dylib" TargetRid="osx-arm64" />
     <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-arm64" />
+
+    <_SosBinariesToPack Include="@(SosRequiredBinaries)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_winSosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll" TargetRid="win-x64" />
+    <_winSosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\Microsoft.DiaSymReader.Native.amd64.dll" TargetRid="win-x64" />
+    <_winSosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x64" />
+
+    <!-- When we are running the official build and packaging, don't copy too much. We already publish sos.dll in another leg, so favor that. -->
+    <_SosBinariesToPack Condition="'$(BuildX64Package)' == 'true'" 
+                        Include="@(_winSosRequiredBinaries)" />
+
+    <SosRequiredBinaries Include="@(_winSosRequiredBinaries)" />
   </ItemGroup>
 
   <!-- What and where to pack SOS assets in the final packages. -->
   <ItemGroup>
-    <None Include="@(SosRequiredBinaries)">
+    <None Include="@(_SosBinariesToPack)">
       <Visible>false</Visible>
       <Pack>true</Pack>
       <PackagePath>$(SOSPackagePathPrefix)/%(TargetRid)</PackagePath>
