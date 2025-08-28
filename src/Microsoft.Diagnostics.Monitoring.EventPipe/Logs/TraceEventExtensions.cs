@@ -26,10 +26,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string argsJson = (string)traceEvent.PayloadValue(6);
             string formattedMessage = (string)traceEvent.PayloadValue(7);
 
-            string? activityTraceId = null;
-            string? activitySpanId = null;
-            string? activityTraceFlags = null;
-
             // NOTE: The Microsoft-Extensions-Logging EventSource is created with
             // EventSourceSettings.EtwSelfDescribingEventFormat (TraceLogging). In TraceLogging,
             // the ETW event header Version is always 0 even if the [Event] attribute declares
@@ -37,19 +33,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             // ActivityTraceFlags) were added in .NET 9, and with TraceLogging their presence
             // is discoverable only via payload schema (field names), not header Version.
             // Therefore we detect by payload name instead of checking traceEvent.Version.
-            int idxTraceId = traceEvent.PayloadIndex("ActivityTraceId");
-            if (idxTraceId >= 0)
-            {
-                int idxSpanId = traceEvent.PayloadIndex("ActivitySpanId");
-                int idxFlags = traceEvent.PayloadIndex("ActivityTraceFlags");
-
-                if (idxSpanId >= 0 && idxFlags >= 0)
-                {
-                    activityTraceId = (string)traceEvent.PayloadValue(idxTraceId);
-                    activitySpanId = (string)traceEvent.PayloadValue(idxSpanId);
-                    activityTraceFlags = (string)traceEvent.PayloadValue(idxFlags);
-                }
-            }
+            string? activityTraceId = (string)traceEvent.PayloadByName("ActivityTraceId");
+            string? activitySpanId = (string)traceEvent.PayloadByName("ActivitySpanId");
+            string? activityTraceFlags = (string)traceEvent.PayloadByName("ActivityTraceFlags");
 
             eventData = new(
                 traceEvent.TimeStamp,
