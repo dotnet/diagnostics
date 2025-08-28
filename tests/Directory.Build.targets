@@ -12,21 +12,21 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(NeedsCdb)' == 'true' and '$(BuildTests)' == 'true'">
-    <PackageDownload Include="cdb-sos" 
+    <PackageDownload Include="cdb-sos"
                      Version="[$(cdbsosversion)]" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(NeedsTestAssets)' == 'true' and '$(BuildTests)' == 'true' and '$(OS)' == 'Windows_NT'">
-    <PackageDownload Include="TestAssets.Windows.x64.6.0" 
+    <PackageDownload Include="TestAssets.Windows.x64.6.0"
                      Version="[$(TestAssetsVersion)]" />
-    <PackageDownload Include="TestAssets.Windows.x86.6.0" 
+    <PackageDownload Include="TestAssets.Windows.x86.6.0"
                      Version="[$(TestAssetsVersion)]" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(NeedsTestAssets)' == 'true' and '$(BuildTests)' == 'true' and ('$(OS)' == 'Unix' OR '$(OS)' == 'Windows_NT')">
-    <PackageDownload Include="TestAssets.Linux.x64.6.0" 
+    <PackageDownload Include="TestAssets.Linux.x64.6.0"
                      Version="[$(TestAssetsVersion)]" />
-    <PackageDownload Include="TestAssets.Linux.arm64.6.0" 
+    <PackageDownload Include="TestAssets.Linux.arm64.6.0"
                      Version="[$(TestAssetsVersion)]" />
   </ItemGroup>
 
@@ -48,21 +48,21 @@
           AfterTargets="Build"
           DependsOnTargets="_CopyDebugTestAssets;_CompressTest" />
 
-  <Target Name="_CopyDebugTestAssets">    
+  <Target Name="_CopyDebugTestAssets">
     <ItemGroup>
-      <_cdbFiles Include="$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\**\*" 
+      <_cdbFiles Include="$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\**\*"
                  Condition="'$(NeedsCdb)' == 'true'" />
-                      
-      <_testAssetsWinx64 Include="$(NuGetPackageRoot)testassets.windows.x64.6.0\$(TestAssetsVersion)\**\*" 
+
+      <_testAssetsWinx64 Include="$(NuGetPackageRoot)testassets.windows.x64.6.0\$(TestAssetsVersion)\**\*"
                          Condition="'$(NeedsTestAssets)' == 'true' and '$(OS)' == 'Windows_NT'" />
-                      
-      <_testAssetsWinx86 Include="$(NuGetPackageRoot)testassets.windows.x86.6.0\$(TestAssetsVersion)\**\*" 
+
+      <_testAssetsWinx86 Include="$(NuGetPackageRoot)testassets.windows.x86.6.0\$(TestAssetsVersion)\**\*"
                          Condition="'$(NeedsTestAssets)' == 'true' and '$(OS)' == 'Windows_NT'" />
-                      
-      <_testAssetsLinux64 Include="$(NuGetPackageRoot)testassets.linux.x64.6.0\$(TestAssetsVersion)\**\*" 
+
+      <_testAssetsLinux64 Include="$(NuGetPackageRoot)testassets.linux.x64.6.0\$(TestAssetsVersion)\**\*"
                           Condition="'$(NeedsTestAssets)' == 'true'" />
-                      
-      <_testAssetsLinuxArm64 Include="$(NuGetPackageRoot)testassets.linux.arm64.6.0\$(TestAssetsVersion)\**\*" 
+
+      <_testAssetsLinuxArm64 Include="$(NuGetPackageRoot)testassets.linux.arm64.6.0\$(TestAssetsVersion)\**\*"
                              Condition="'$(NeedsTestAssets)' == 'true'" />
     </ItemGroup>
 
@@ -95,19 +95,22 @@
     </PropertyGroup>
 
     <MakeDir Directories="$(TestArchiveTestsDir)" />
-    
+
     <!-- We're going to just build the debuggees as needed on helix -->
     <ItemGroup Condition="'$(NeedsDebuggees)' == 'true'">
       <_TempZipFiles Include="$(_ZipSourceDirectory)*" />
       <_TempZipFiles Include="$(DebuggerVersionConfigFileName)" />
       <_TempZipFiles Include="$(XunitConsoleNetCoreAppPath)" />
+      <_TempZipFiles Include="$(RepoRoot)global.json"/>
+      <_TempZipFiles Include="$(RepoRoot)Nuget.config"/>
+      <_TempZipFiles Include="$(RepoRoot)eng\Versions.props"/>
       <_DebuggeeFiles Include="$(DebuggeeSourceRootDir)**\*" />
       <_DebuggeeArtifactFiles Include="$(DebuggeeArtifactsRootDir)**\*" />
       <_AuxMsBuildFiles Include="$(AuxMSBuildRootDir)**\*" />
       <_TestPackageFiles Include="$(PackageArtifactsRootDir)**\*" />
       <_DebuggerNativeFiles Include="$(ArtifactsBinNativeDir)**\*" />
     </ItemGroup>
-    
+
     <PropertyGroup Condition="'$(NeedsDebuggees)' == 'true'">
       <_TempZipDir>$([MSBuild]::NormalizeDirectory('$(IntermediateOutputPath)', 'TempZip'))</_TempZipDir>
     </PropertyGroup>
@@ -147,7 +150,7 @@
                   SourceDirectory="$(_TempZipDir)"
                   DestinationFile="$([MSBuild]::NormalizePath('$(TestArchiveTestsDir)', '$(MSBuildProjectName).zip'))"
                   Overwrite="true" />
-                    
+
     <ZipDirectory Condition="'$(NeedsDebuggees)' != 'true'"
                   SourceDirectory="$(_ZipSourceDirectory)"
                   DestinationFile="$([MSBuild]::NormalizePath('$(TestArchiveTestsDir)', '$(MSBuildProjectName).zip'))"

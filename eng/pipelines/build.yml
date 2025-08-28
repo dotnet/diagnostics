@@ -196,6 +196,31 @@ jobs:
           displayName: Build
         condition: succeeded()
 
+        # If intended to send extra steps after regular build add them here.
+      - ${{ if ne(parameters.postBuildSteps,'') }}:
+        - ${{ each postBuildStep in parameters.postBuildSteps }}:
+          - ${{ if ne(postBuildStep.template, '') }}:
+            - template: ${{ postBuildStep.template }}
+              parameters:
+                osGroup: ${{ parameters.osGroup }}
+                osSubgroup: ${{ parameters.osSubgroup }}
+                archType: ${{ parameters.archType }}
+                buildConfig: ${{ parameters.buildConfig }}
+                runtimeFlavor: ${{ parameters.runtimeFlavor }}
+                runtimeVariant: ${{ parameters.runtimeVariant }}
+                helixQueues: ${{ parameters.helixQueues }}
+                targetRid: ${{ parameters.targetRid }}
+                nameSuffix: ${{ parameters.nameSuffix }}
+                platform: ${{ parameters.platform }}
+                shouldContinueOnError: ${{ parameters.shouldContinueOnError }}
+                ${{ if ne(postBuildStep.forwardedParameters, '') }}:
+                  ${{ each parameter in postBuildStep.forwardedParameters }}:
+                    ${{ parameter }}: ${{ parameters[parameter] }}
+                ${{ if ne(postBuildStep.parameters, '') }}:
+                  ${{ insert }}: ${{ postBuildStep.parameters }}
+          - ${{ else }}:
+            - ${{ postBuildStep }}
+
       - ${{ if and(ne(parameters.isCodeQLRun, 'true'), ne(parameters.buildOnly, 'true')) }}:
         - script: $(_buildScript)
             -ci

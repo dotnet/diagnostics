@@ -75,6 +75,10 @@ extends:
           jobTemplate: ${{ variables.jobTemplate }}
           name: Windows
           osGroup: Windows_NT
+          postBuildSteps:
+            - template: /eng/pipelines/helix.yml
+              parameters:
+                creator: dotnet-bot
           buildConfigs:
           - configuration: Debug
             architecture: x64

@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.Build.NoTargets" InitialTargets="_SetTestArchiveRuntimeFile">
+<Project Sdk="Microsoft.DotNet.Helix.Sdk" DefaultTargets="Test">
   <PropertyGroup>
-    <HelixArchitecture>$(TargetArch)</HelixArchitecture> 
+    <HelixArchitecture>$(TargetArch)</HelixArchitecture>
     <HelixBuild>$(OfficialBuildId)</HelixBuild>
     <HelixBuild Condition="'$(HelixBuild)' == ''">99999999.99</HelixBuild>
-    <HelixConfiguration>Release</HelixConfiguration>
+    <HelixConfiguration>$(Configuration)</HelixConfiguration>
     <HelixType>tests/diagnostics/</HelixType>
+    <TestRunNamePrefix>host-$(TargetOS)-$(TargetArch)-$(Configuration) @ </TestRunNamePrefix>
   </PropertyGroup>
 
   <PropertyGroup>

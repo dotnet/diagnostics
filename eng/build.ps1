@@ -118,6 +118,7 @@ if ($runtests) {
           -configuration $configuration `
           -verbosity $verbosity `
           -ci:$ci `
+          -projects tests\SOS.UnitTests\SOS.UnitTests.csproj `
           /bl:$logdir\Test.binlog `
           /p:TargetOS=$os `
           /p:TargetArch=$architecture `
