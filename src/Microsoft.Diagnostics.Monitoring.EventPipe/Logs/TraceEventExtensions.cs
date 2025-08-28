@@ -26,21 +26,22 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string argsJson = (string)traceEvent.PayloadValue(6);
             string formattedMessage = (string)traceEvent.PayloadValue(7);
 
-            string? activityTraceId;
-            string? activitySpanId;
-            string? activityTraceFlags;
-            if (traceEvent.Version >= 2)
+            string? activityTraceId = null;
+            string? activitySpanId = null;
+            string? activityTraceFlags = null;
+
+            int idxTraceId = traceEvent.PayloadIndex("ActivityTraceId");
+            int idxSpanId = traceEvent.PayloadIndex("ActivitySpanId");
+            if (idxTraceId >= 0 && idxSpanId >= 0)
             {
-                // Note: Trace correlation fields added in .NET 9
-                activityTraceId = (string)traceEvent.PayloadValue(8);
-                activitySpanId = (string)traceEvent.PayloadValue(9);
-                activityTraceFlags = (string)traceEvent.PayloadValue(10);
+                activityTraceId = (string)traceEvent.PayloadValue(idxTraceId);
+                activitySpanId = (string)traceEvent.PayloadValue(idxSpanId);
             }
-            else
+
+            int idxFlags = traceEvent.PayloadIndex("ActivityTraceFlags");
+            if (idxFlags >= 0)
             {
-                activityTraceId = null;
-                activitySpanId = null;
-                activityTraceFlags = null;
+                activityTraceFlags = (string)traceEvent.PayloadValue(idxFlags);
             }
 
             eventData = new(
