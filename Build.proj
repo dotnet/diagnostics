@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup Condition="'$(IsTestRun)' != 'true'" Label="Diagnostic Source Projects">
-    <ProjectReference Condition="'$(DotNetBuild)' == 'true'" Include="$(RepoRoot)src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
     <ProjectReference Condition="'$(BundleTools)' == 'true'" Include="$(RepoRoot)src/singlefile-tools.proj" />
 
+    <ProjectReference Include="$(RepoRoot)src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
     <ProjectReference Include="$(RepoRoot)src/Tools/dotnet-trace/dotnet-trace.csproj" />
     <ProjectReference Include="$(RepoRoot)src/Tools/dotnet-dump/dotnet-dump.csproj" />
     <ProjectReference Include="$(RepoRoot)src/SOS/SOS.InstallHelper/SOS.InstallHelper.csproj" />
@@ -29,6 +29,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Condition="'$(BuildTests)' == 'true' or '$(IsTestRun)' == 'true'" Include="$(RepoRoot)Test.proj" />
+    <ProjectReference Condition="'$(BuildTests)' == 'true' or '$(IsTestRun)' == 'true'" Include="$(RepoRoot)tests/Test.proj" />
   </ItemGroup>
 </Project>
