@@ -29,6 +29,7 @@ __SkipGenerateVersion=0
 __InstallRuntimes=0
 __PrivateBuild=0
 __Test=0
+__TestBuild=1
 __UnprocessedBuildArgs=
 __UseCdac=0
 __LiveRuntimeDir=
@@ -103,6 +104,10 @@ handle_arguments() {
 
         test|-test)
             __Test=1
+            ;;
+
+        skiptest|-skiptest)
+            __TestBuild=0
             ;;
 
         usecdac|-usecdac)
@@ -219,6 +224,11 @@ if [[ "$__ManagedBuild" == 1 ]]; then
 
     # __CommonMSBuildArgs contains TargetOS property
     echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
+
+    if [[ "$__TestBuild" == 1 ]]; then
+        __ManagedBuildArgs="$__ManagedBuildArgs /p:BuildTests=true"
+    fi
+
     "$__RepoRootDir/eng/common/build.sh" \
         --configuration "$__BuildType" \
         /p:TargetArch="$__TargetArch" \
@@ -251,7 +261,7 @@ if [[ "$__InstallRuntimes" == 1 || "$__PrivateBuild" == 1 ]]; then
         /p:TargetArch="$__TargetArch" \
         /p:TargetRid="$__TargetRid" \
         /p:TestArchitectures="$__TargetArch" \
-        /p:LiveRuntimeDir="$__LiveRuntimeDir" 
+        /p:LiveRuntimeDir="$__LiveRuntimeDir"
 fi
 
 #
@@ -314,6 +324,8 @@ if [[ "$__Test" == 1 ]]; then
         /p:RuntimeSourceFeed="$__RuntimeSourceFeed" \
         /p:RuntimeSourceFeedKey="$__RuntimeSourceFeedKey" \
         /p:LiveRuntimeDir="$__LiveRuntimeDir" \
+        /p:IsTestRun=true \
+        $__ManagedBuildArgs \
         $__CommonMSBuildArgs
 
       if [ $? != 0 ]; then
