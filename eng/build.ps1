@@ -8,7 +8,7 @@ Param(
     [switch] $privatebuild,
     [switch] $ci,
     [switch][Alias('bl')]$binaryLog,
-    [switch] $skiptest,
+    [switch] $skiptest = $false,
     [switch] $skipmanaged,
     [switch] $skipnative,
     [switch] $bundletools,
