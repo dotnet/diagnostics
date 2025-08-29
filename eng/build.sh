@@ -28,7 +28,9 @@ __SkipConfigure=0
 __SkipGenerateVersion=0
 __InstallRuntimes=0
 __PrivateBuild=0
-__Test=0
+__BuildTests=0
+__RunTests=0
+__UseHelix=0
 __UnprocessedBuildArgs=
 __UseCdac=0
 __LiveRuntimeDir=
@@ -101,8 +103,18 @@ handle_arguments() {
             __PrivateBuild=1
             ;;
 
-        test|-test)
-            __Test=1
+        withtests|-withtests)
+            __BuildTests=1
+            ;;
+
+        runtests|-runtests)
+            __RunTests=1
+            __NativeBuild=0
+            __ManagedBuild=0
+            ;;
+
+        helix|-helix)
+            __UseHelix=1
             ;;
 
         usecdac|-usecdac)
@@ -219,6 +231,15 @@ if [[ "$__ManagedBuild" == 1 ]]; then
 
     # __CommonMSBuildArgs contains TargetOS property
     echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
+
+    if [[ "$__BuildTests" == 1 ]]; then
+        __ManagedBuildArgs="$__ManagedBuildArgs /p:BuildTests=true"
+
+        if [[ "$__UseHelix" == 1 ]]; then
+            __ManagedBuildArgs="$__ManagedBuildArgs /p:ArchiveTests=true"
+        fi
+    fi
+
     "$__RepoRootDir/eng/common/build.sh" \
         --configuration "$__BuildType" \
         /p:TargetArch="$__TargetArch" \
@@ -251,14 +272,14 @@ if [[ "$__InstallRuntimes" == 1 || "$__PrivateBuild" == 1 ]]; then
         /p:TargetArch="$__TargetArch" \
         /p:TargetRid="$__TargetRid" \
         /p:TestArchitectures="$__TargetArch" \
-        /p:LiveRuntimeDir="$__LiveRuntimeDir" 
+        /p:LiveRuntimeDir="$__LiveRuntimeDir"
 fi
 
 #
 # Run xunit tests
 #
 
-if [[ "$__Test" == 1 ]]; then
+if [[ "$__RunTests" == 1 ]]; then
    if [[ "$__CrossBuild" == 0 ]]; then
       if [[ -z "$LLDB_PATH" ]]; then
         check_version_exists() {
@@ -302,6 +323,10 @@ if [[ "$__Test" == 1 ]]; then
           export SOS_TEST_CDAC="true"
       fi
 
+      if [[ "$__UseHelix" == 1 ]]; then
+          __ManagedBuildArgs="$__ManagedBuildArgs /p:UseHelix=true"
+      fi
+
       # __CommonMSBuildArgs contains TargetOS property
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
@@ -314,6 +339,8 @@ if [[ "$__Test" == 1 ]]; then
         /p:RuntimeSourceFeed="$__RuntimeSourceFeed" \
         /p:RuntimeSourceFeedKey="$__RuntimeSourceFeedKey" \
         /p:LiveRuntimeDir="$__LiveRuntimeDir" \
+        /p:IsTestRun=true \
+        $__ManagedBuildArgs \
         $__CommonMSBuildArgs
 
       if [ $? != 0 ]; then

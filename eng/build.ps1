@@ -3,10 +3,12 @@ Param(
     [ValidateSet("x86","x64","arm","arm64")][string][Alias('a', "platform")]$architecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant(),
     [ValidateSet("Debug","Release")][string][Alias('c')] $configuration = "Debug",
     [string][Alias('v')] $verbosity = "minimal",
-    [switch][Alias('t')] $test,
+    [switch][Alias('wt')] $withtests,
+    [switch][Alias('rt')] $runtests,
     [switch] $installruntimes,
     [switch] $privatebuild,
     [switch] $ci,
+    [switch] $helix,
     [switch][Alias('bl')]$binaryLog,
     [switch] $skipmanaged,
     [switch] $skipnative,
@@ -22,6 +24,11 @@ Param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ($runtests) {
+    $skipmanaged = $true
+    $skipnative = $true
+}
 
 $crossbuild = $false
 if (($architecture -eq "arm") -or ($architecture -eq "arm64")) {
@@ -67,6 +74,14 @@ if (-not $skipnative) {
 
 # Install sdk for building, restore and build managed components.
 if (-not $skipmanaged) {
+    if ($withtests) {
+        $remainingargs = "/p:BuildTests=true " + $remainingargs
+
+        if ($helix) {
+            $remainingargs = "/p:ArchiveTests=true " + $remainingargs
+        }
+    }
+
     Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity $bl /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
 
     if ($lastExitCode -ne 0) {
@@ -93,7 +108,7 @@ if ($installruntimes -or $privatebuild) {
 }
 
 # Run the xunit tests
-if ($test) {
+if ($runtests) {
     if (-not $crossbuild) {
         if ($useCdac) {
             $env:SOS_TEST_CDAC="true"
@@ -103,6 +118,7 @@ if ($test) {
           -configuration $configuration `
           -verbosity $verbosity `
           -ci:$ci `
+          -projects tests\SOS.UnitTests\SOS.UnitTests.csproj `
           /bl:$logdir\Test.binlog `
           /p:TargetOS=$os `
           /p:TargetArch=$architecture `
@@ -111,7 +127,8 @@ if ($test) {
           /p:DotnetRuntimeDownloadVersion="$dotnetruntimedownloadversion" `
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
           /p:RuntimeSourceFeedKey="$runtimesourcefeedkey" `
-          /p:LiveRuntimeDir="$liveRuntimeDir" 
+          /p:LiveRuntimeDir="$liveRuntimeDir" `
+          /p:IsTestRun=true
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
