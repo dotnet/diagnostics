@@ -130,7 +130,8 @@ jobs:
       - _PhaseName: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
       - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/${{ config.configuration }}/streams
 
-      - _TestArgs: '-test'
+      - _RunTestArgs: '-test'
+      - _BuildTestArgs: ''
       - _Cross: ''
 
       - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
