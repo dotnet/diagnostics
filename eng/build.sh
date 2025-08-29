@@ -28,8 +28,8 @@ __SkipConfigure=0
 __SkipGenerateVersion=0
 __InstallRuntimes=0
 __PrivateBuild=0
-__BuildTests=0
-__RunTests=0
+__Test=0
+__TestBuild=1
 __UnprocessedBuildArgs=
 __UseCdac=0
 __LiveRuntimeDir=
@@ -102,14 +102,12 @@ handle_arguments() {
             __PrivateBuild=1
             ;;
 
-        withtests|-withtests)
-            __BuildTests=1
+        test|-test)
+            __Test=1
             ;;
 
-        runtests|-runtests)
-            __RunTests=1
-            __NativeBuild=0
-            __ManagedBuild=0
+        skiptest|-skiptest)
+            __TestBuild=0
             ;;
 
         usecdac|-usecdac)
@@ -227,7 +225,7 @@ if [[ "$__ManagedBuild" == 1 ]]; then
     # __CommonMSBuildArgs contains TargetOS property
     echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
 
-    if [[ "$__BuildTests" == 1 ]]; then
+    if [[ "$__TestBuild" == 1 ]]; then
         __ManagedBuildArgs="$__ManagedBuildArgs /p:BuildTests=true"
     fi
 
@@ -270,7 +268,7 @@ fi
 # Run xunit tests
 #
 
-if [[ "$__RunTests" == 1 ]]; then
+if [[ "$__Test" == 1 ]]; then
    if [[ "$__CrossBuild" == 0 ]]; then
       if [[ -z "$LLDB_PATH" ]]; then
         check_version_exists() {

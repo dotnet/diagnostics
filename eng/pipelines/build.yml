@@ -130,8 +130,7 @@ jobs:
       - _PhaseName: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
       - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/${{ config.configuration }}/streams
 
-      - _BuildTestArgs: '-withtests'
-      - _RunTestArgs: '-runtests'
+      - _TestArgs: '-test'
       - _Cross: ''
 
       - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
@@ -143,10 +142,10 @@ jobs:
         'error, testOnly and buildOnly cannot be true at the same time': error
 
       - ${{ if eq(parameters.testOnly, 'true') }}:
-        - _BuildTestArgs: '-withtests -skipnative'
+        - _BuildTestArgs: '-skipnative'
 
       - ${{ if or(eq(parameters.buildOnly, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
-        - _BuildTestArgs: ''
+        - _BuildTestArgs: '-skiptest'
 
       # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
       - _InternalInstallArgs: ''

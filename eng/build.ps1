@@ -3,12 +3,12 @@ Param(
     [ValidateSet("x86","x64","arm","arm64")][string][Alias('a', "platform")]$architecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant(),
     [ValidateSet("Debug","Release")][string][Alias('c')] $configuration = "Debug",
     [string][Alias('v')] $verbosity = "minimal",
-    [switch][Alias('wt')] $withtests,
-    [switch][Alias('rt')] $runtests,
+    [switch][Alias('t')] $test,
     [switch] $installruntimes,
     [switch] $privatebuild,
     [switch] $ci,
     [switch][Alias('bl')]$binaryLog,
+    [switch] $skiptest,
     [switch] $skipmanaged,
     [switch] $skipnative,
     [switch] $bundletools,
@@ -23,11 +23,6 @@ Param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-
-if ($runtests) {
-    $skipmanaged = $true
-    $skipnative = $true
-}
 
 $crossbuild = $false
 if (($architecture -eq "arm") -or ($architecture -eq "arm64")) {
@@ -73,7 +68,7 @@ if (-not $skipnative) {
 
 # Install sdk for building, restore and build managed components.
 if (-not $skipmanaged) {
-    if ($withtests) {
+    if (-not $skiptest) {
         $remainingargs = "/p:BuildTests=true " + $remainingargs
     }
 
@@ -103,7 +98,7 @@ if ($installruntimes -or $privatebuild) {
 }
 
 # Run the xunit tests
-if ($runtests) {
+if ($test) {
     if (-not $crossbuild) {
         if ($useCdac) {
             $env:SOS_TEST_CDAC="true"
