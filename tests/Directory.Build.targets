@@ -71,16 +71,16 @@
           SkipUnchangedFiles="true" />
 
     <Copy SourceFiles="@(_testAssetsWinx64)"
-          DestinationFiles="@(_testAssetsWinx64->'$(PackageArtifactsRootDir)testassets.windows.x64.6.0\%(RecursiveDir)%(Filename)%(Extension)')" />
+          DestinationFiles="@(_testAssetsWinx64->'$(PackageArtifactsRootDir)testassets.windows.x64.6.0\$(TestAssetsVersion)\%(RecursiveDir)%(Filename)%(Extension)')" />
 
     <Copy SourceFiles="@(_testAssetsWinx86)"
-          DestinationFiles="@(_testAssetsWinx86->'$(PackageArtifactsRootDir)testassets.windows.x86.6.0\%(RecursiveDir)%(Filename)%(Extension)')" />
+          DestinationFiles="@(_testAssetsWinx86->'$(PackageArtifactsRootDir)testassets.windows.x86.6.0\$(TestAssetsVersion)\%(RecursiveDir)%(Filename)%(Extension)')" />
 
     <Copy SourceFiles="@(_testAssetsLinux64)"
-          DestinationFiles="@(_testAssetsLinux64->'$(PackageArtifactsRootDir)testassets.linux.x64.6.0\%(RecursiveDir)%(Filename)%(Extension)')" />
+          DestinationFiles="@(_testAssetsLinux64->'$(PackageArtifactsRootDir)testassets.linux.x64.6.0\$(TestAssetsVersion)\%(RecursiveDir)%(Filename)%(Extension)')" />
 
     <Copy SourceFiles="@(_testAssetsLinuxArm64)"
-          DestinationFiles="@(_testAssetsLinuxArm64->'$(PackageArtifactsRootDir)testassets.linux.arm64.6.0\%(RecursiveDir)%(Filename)%(Extension)')" />
+          DestinationFiles="@(_testAssetsLinuxArm64->'$(PackageArtifactsRootDir)testassets.linux.arm64.6.0\$(TestAssetsVersion)\%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 
   <Target Name="_CompressTest"
@@ -100,10 +100,13 @@
     <ItemGroup Condition="'$(NeedsDebuggees)' == 'true'">
       <_TempZipFiles Include="$(_ZipSourceDirectory)*" />
       <_TempZipFiles Include="$(DebuggerVersionConfigFileName)" />
-      <_TempZipFiles Include="$(XunitConsoleNetCoreAppPath)" />
+      <_TempZipFiles Include="$([System.IO.Path]::GetDirectoryName('$(XunitConsoleNetCoreAppPath)'))\*" />
       <_TempZipFiles Include="$(RepoRoot)global.json"/>
       <_TempZipFiles Include="$(RepoRoot)Nuget.config"/>
-      <_TempZipFiles Include="$(RepoRoot)eng\Versions.props"/>
+      <_TempZipFiles Include="$(RepoRoot)Directory.Build.props"/>
+      <_TempZipFiles Include="$(RepoRoot)Directory.Build.targets"/>
+      <_EngFiles Include="$(RepoRoot)eng\Versions.props"/>
+      <_EngFiles Include="$(RepoRoot)eng\Version.Details.props"/>
       <_DebuggeeFiles Include="$(DebuggeeSourceRootDir)**\*" />
       <_DebuggeeArtifactFiles Include="$(DebuggeeArtifactsRootDir)**\*" />
       <_AuxMsBuildFiles Include="$(AuxMSBuildRootDir)**\*" />
@@ -118,6 +121,7 @@
     <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)" />
     <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)eng\AuxMsbuildFiles\" />
     <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)tests\Debuggees\" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)artifacts\Debuggees" />
     <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)artifacts\bin\debuggees\" />
     <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)packages\" />
     <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)native\" />
@@ -129,6 +133,10 @@
     <Copy Condition="'$(NeedsDebuggees)' == 'true'"
           SourceFiles="@(_DebuggerNativeFiles)"
           DestinationFiles="@(_DebuggerNativeFiles->'$(_TempZipDir)native\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy Condition="'$(NeedsDebuggees)' == 'true'"
+          SourceFiles="@(_EngFiles)"
+          DestinationFiles="@(_EngFiles->'$(_TempZipDir)eng\%(RecursiveDir)%(Filename)%(Extension)')" />
 
     <Copy Condition="'$(NeedsDebuggees)' == 'true'"
           SourceFiles="@(_AuxMsBuildFiles)"
