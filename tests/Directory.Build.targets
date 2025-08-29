@@ -91,7 +91,6 @@
           Condition="'$(OutDir)' != ''">
     <PropertyGroup>
       <_ZipSourceDirectory>$(OutDir)</_ZipSourceDirectory>
-      <_ZipSourceDirectory Condition="'$(NeedsPublishing)' == 'true'">$(PublishDir)</_ZipSourceDirectory>
     </PropertyGroup>
 
     <MakeDir Directories="$(TestArchiveTestsDir)" />
