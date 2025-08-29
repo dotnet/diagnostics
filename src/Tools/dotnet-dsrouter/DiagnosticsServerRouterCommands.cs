@@ -361,7 +361,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("ios simulator", "127.0.0.1:9000", true, parentProcess);
+                logRouterUsageInfo("ios simulator", "127.0.0.1", "9000", true, parentProcess);
             }
 
             return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
@@ -371,7 +371,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("ios device", "127.0.0.1:9000", true, parentProcess);
+                logRouterUsageInfo("ios device", "127.0.0.1", "9000", true, parentProcess);
             }
 
             return await RunIpcServerTcpClientRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "iOS").ConfigureAwait(false);
@@ -381,7 +381,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("android emulator", "10.0.2.2:9000", false, parentProcess);
+                logRouterUsageInfo("android emulator", "10.0.2.2", "9000", false, parentProcess);
             }
 
             return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9000", runtimeTimeout, verbose, "").ConfigureAwait(false);
@@ -391,7 +391,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
         {
             if (info || ParseLogLevel(verbose) <= LogLevel.Information)
             {
-                logRouterUsageInfo("android device", "127.0.0.1:9000", false, parentProcess);
+                logRouterUsageInfo("android device", "127.0.0.1", "9000", false, parentProcess);
             }
 
             return await RunIpcServerTcpServerRouter(token, "", "127.0.0.1:9001", runtimeTimeout, verbose, "Android").ConfigureAwait(false);
@@ -501,7 +501,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             return logLevel;
         }
 
-        private static void logRouterUsageInfo(string deviceName, string deviceTcpIpAddress, bool deviceListenMode, string parentProcess)
+        private static void logRouterUsageInfo(string deviceName, string deviceTcpIpAddress, string deviceTcpIpPort, bool deviceListenMode, string parentProcess)
         {
             StringBuilder message = new();
 
@@ -509,11 +509,11 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             int pid = Process.GetCurrentProcess().Id;
 
             message.AppendLine($"How to connect current dotnet-dsrouter pid={pid} with {deviceName} and diagnostics tooling.");
-            message.AppendLine($"Start an application on {deviceName} with ONE of the following environment variables set:");
+            message.AppendLine($"Build and run your application on {deviceName} such as:");
             message.AppendLine("[Default Tracing]");
-            message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},nosuspend,{listenMode}");
+            message.AppendLine($"dotnet build -t:Run -c Release -p:DiagnosticAddress={deviceTcpIpAddress} -p:DiagnosticPort={deviceTcpIpPort} -p:DiagnosticSuspend=false -p:DiagnosticListenMode={listenMode}");
             message.AppendLine("[Startup Tracing]");
-            message.AppendLine($"DOTNET_DiagnosticPorts={deviceTcpIpAddress},suspend,{listenMode}");
+            message.AppendLine($"dotnet build -t:Run -c Release -p:DiagnosticAddress={deviceTcpIpAddress} -p:DiagnosticPort={deviceTcpIpPort} -p:DiagnosticSuspend=true -p:DiagnosticListenMode={listenMode}");
             if (string.IsNullOrEmpty(parentProcess))
             {
                 message.AppendLine($"Run diagnotic tool connecting application on {deviceName} through dotnet-dsrouter pid={pid}:");
