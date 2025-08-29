@@ -208,14 +208,20 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             AdjustColumnsLength(columnHeaderLen, maxValueColumnLen);
             //print the header
             string headerRow = "";
+            string headerDelimiter = "";
             for (int i = 0; i < observedTags.Count; i++)
             {
                 (string header, string[] values) observedTag = observedTags[i];
                 string headerWithSpaces = MakeFixedWidth(observedTag.header, Math.Max(maxValueColumnLen[i], columnHeaderLen[i]), truncateLeft: true);
                 headerWithSpaces += " ";
                 headerRow += headerWithSpaces;
+                headerDelimiter += new string('-', Math.Max(maxValueColumnLen[i], columnHeaderLen[i])) + " ";
             }
             if (!RenderCounterNameRow(ref row, headerRow, indentLevel: 2))
+            {
+                return false;
+            }
+            if (!RenderCounterNameRow(ref row, headerDelimiter, indentLevel: 2))
             {
                 return false;
             }
