@@ -1,7 +1,7 @@
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
   <DotNetRoot Condition="'$(TestDotNetRoot)' != ''">$(TestDotNetRoot)</DotNetRoot>
-  <Import ConfigFile="$(TestVersionConfigDir)\Debugger.Tests.Versions.txt" />
+  <Import ConfigFile="$(VersionConfigFile)\Debugger.Tests.Versions.txt" />
 
   <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
   <InstallDir>$(TestNativeDir)</InstallDir>
@@ -17,7 +17,7 @@
 
   <RunTestsWindows_x64>true</RunTestsWindows_x64>
   <RunTestsWindows_x64 Condition="'$(TargetArchitecture)' != 'x64'">false</RunTestsWindows_x64>
-  
+
   <RunTestsWindows_x86>true</RunTestsWindows_x86>
   <RunTestsWindows_x86 Condition="'$(TargetArchitecture)' != 'x86'">false</RunTestsWindows_x86>
 

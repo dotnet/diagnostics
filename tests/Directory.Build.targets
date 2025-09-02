@@ -67,7 +67,7 @@
     </ItemGroup>
 
     <Copy SourceFiles="@(_cdbFiles)"
-          DestinationFiles="@(_cdbFiles->'$(PackageArtifactsRootDir)cdb-sos\%(RecursiveDir)%(Filename)%(Extension)')"
+          DestinationFiles="@(_cdbFiles->'$(PackageArtifactsRootDir)cdb-sos\$(cdbsosversion)\%(RecursiveDir)%(Filename)%(Extension)')"
           SkipUnchangedFiles="true" />
 
     <Copy SourceFiles="@(_testAssetsWinx64)"
@@ -87,13 +87,31 @@
           Condition="'$(ArchiveTests)' == 'true' and '$(IsTestProject)' == 'true'"
           DependsOnTargets="_ZipTestArchive" />
 
+  <Target Name="_CreateTempDir">
+
+    <PropertyGroup Condition="'$(NeedsDebuggees)' == 'true'">
+      <_TempZipDir>$([MSBuild]::NormalizeDirectory('$(IntermediateOutputPath)', 'TempZip'))</_TempZipDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(TestArchiveTestsDir)" />
+
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)eng\AuxMsbuildFiles\" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)tests\Debuggees\" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)artifacts\Debuggees" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)artifacts\bin\debuggees\" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)packages\" />
+    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)native\" />
+
+  </Target>
+
   <Target Name="_ZipTestArchive"
-          Condition="'$(OutDir)' != ''">
+          Condition="'$(OutDir)' != ''"
+          DependsOnTargets="_CreateTempDir;$(ProjectSpecificTestAssetTargets)">
     <PropertyGroup>
       <_ZipSourceDirectory>$(OutDir)</_ZipSourceDirectory>
     </PropertyGroup>
 
-    <MakeDir Directories="$(TestArchiveTestsDir)" />
 
     <!-- We're going to just build the debuggees as needed on helix -->
     <ItemGroup Condition="'$(NeedsDebuggees)' == 'true'">
@@ -112,18 +130,6 @@
       <_TestPackageFiles Include="$(PackageArtifactsRootDir)**\*" />
       <_DebuggerNativeFiles Include="$(ArtifactsBinNativeDir)**\*" />
     </ItemGroup>
-
-    <PropertyGroup Condition="'$(NeedsDebuggees)' == 'true'">
-      <_TempZipDir>$([MSBuild]::NormalizeDirectory('$(IntermediateOutputPath)', 'TempZip'))</_TempZipDir>
-    </PropertyGroup>
-
-    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)" />
-    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)eng\AuxMsbuildFiles\" />
-    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)tests\Debuggees\" />
-    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)artifacts\Debuggees" />
-    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)artifacts\bin\debuggees\" />
-    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)packages\" />
-    <MakeDir Condition="'$(NeedsDebuggees)' == 'true'" Directories="$(_TempZipDir)native\" />
 
     <Copy Condition="'$(NeedsDebuggees)' == 'true'"
           SourceFiles="@(_TempZipFiles)"

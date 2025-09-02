@@ -9,16 +9,12 @@
 
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <DotNetRoot Condition="'$(TargetArchitecture)' != 'x86'">$(RepoRootDir)\.dotnet-test</DotNetRoot>
-  <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet-test\x86</DotNetRoot>
-  <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
+  <Import ConfigFile="$(VersionConfigFile)\Debugger.Tests.Versions.txt" />
 
-  <ScriptRootDir>$(RepoRootDir)\tests\SOS.UnitTests\Scripts</ScriptRootDir>
   <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
-  <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
-  <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
+  <CDBHelperExtension>$(NativeDir)\runcommand.dll</CDBHelperExtension>
   <MicrosoftNETCoreAppPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\</MicrosoftNETCoreAppPath>
 
   <SetHostExe>true</SetHostExe>
@@ -283,7 +279,7 @@
   <BuildType Condition="'$(RuntimeVersionLatest)' == '$(RuntimeFrameworkVersion)'">nightly</BuildType>
   <BuildType Condition="'$(PrivateBuildTesting)' == 'true'">private</BuildType>
 
-  <SOSPath>$(InstallDir)\sos.dll</SOSPath>
+  <SOSPath>$(NativeDir)\sos.dll</SOSPath>
   <DotNetDumpHost>$(DotNetRoot)\dotnet.exe</DotNetDumpHost>
   <DotNetDumpPath>$(RootBinDir)\bin\dotnet-dump\$(TargetConfiguration)\$(NetCoreAppMinTargetFramework)\publish\dotnet-dump.dll</DotNetDumpPath>
   <DebuggeeDumpOutputRootDir>$(DumpDir)\$(TestProduct)\$(RuntimeFrameworkVersion)\$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>

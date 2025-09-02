@@ -8,6 +8,7 @@
     <NeedsPublishing>true</NeedsPublishing>
     <NeedsCdb>true</NeedsCdb>
     <SOSConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</SOSConfigFileName>
+    <ProjectSpecificTestAssetTargets>CopyProjectSpecificTestAssets</ProjectSpecificTestAssetTargets>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,29 +36,49 @@
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\TestExtension\TestExtension.csproj" />
+    <ProjectReference Include="$(RepoRoot)src\Tools\dotnet-dump\dotnet-dump.csproj" />
   </ItemGroup>
 
   <Target Name="SOSWriteTestConfigFile" Outputs="$(SOSConfigFileName)" BeforeTargets="BeforeBuild;Publish">
-    <PropertyGroup>
-      <TestConfigFileLines>
-<![CDATA[
-<Configuration>
-  <TargetConfiguration>$(Configuration)</TargetConfiguration>
-  <DesktopFramework>$(DesktopTargetFramework)</DesktopFramework>
-  <NetCoreAppMinTargetFramework>$(NetCoreAppMinTargetFramework)</NetCoreAppMinTargetFramework>
-  <RepoRootDir>$(TestRepoRoot)</RepoRootDir>
-  <CDBPath>$(TestPackageArtifactsRootDir)cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\cdb.exe</CDBPath>
-</Configuration>
-]]>
-      </TestConfigFileLines>
-    </PropertyGroup>
 
-    <WriteLinesToFile File="$(SOSConfigFileName)" Lines="$(TestConfigFileLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <ConfigLines Include="&lt;Configuration&gt;" />
+      <ConfigLines Include="  &lt;TargetConfiguration&gt;$(Configuration)&lt;/TargetConfiguration&gt;" />
+      <ConfigLines Include="  &lt;DesktopFramework&gt;$(DesktopTargetFramework)&lt;/DesktopFramework&gt;" />
+      <ConfigLines Include="  &lt;NetCoreAppMinTargetFramework&gt;$(NetCoreAppMinTargetFramework)&lt;/NetCoreAppMinTargetFramework&gt;" />
+      <ConfigLines Include="  &lt;RepoRootDir&gt;$(TestRepoRoot)&lt;/RepoRootDir&gt;" />
+      <ConfigLines Include="  &lt;CDBPath&gt;$(TestPackageArtifactsRootDir)\cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\cdb.exe&lt;/CDBPath&gt;" />
+      <ConfigLines Include="  &lt;DotNetRoot&gt;$(TestDotNetRootDir)&lt;/DotNetRoot&gt;" Condition="'$(TestDotNetRootDir)' != ''" />
+      <ConfigLines Include="  &lt;VersionConfigFile&gt;$(TestVersionConfigDir)&lt;/VersionConfigFile&gt;" />
+      <ConfigLines Include="  &lt;NativeDir&gt;$(TestNativeDir)&lt;/NativeDir&gt;" />
+      <ConfigLines Include="  &lt;ScriptRootDir&gt;$(RepoRootDir)\tests\SOS.UnitTests\Scripts&lt;/ScriptRootDir&gt;" Condition="'$(ArchiveTests)' != 'true'"/>
+      <ConfigLines Include="  &lt;ScriptRootDir&gt;$(RepoRootDir)scripts&lt;/ScriptRootDir&gt;" Condition="'$(ArchiveTests)' == 'true'"/>
+      <ConfigLines Include="&lt;/Configuration&gt;" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(SOSConfigFileName)" Lines="@(ConfigLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
 
     <Message Importance="High" Text="Created config file $(SOSConfigFileName)" />
 
     <ItemGroup>
       <FileWrites Include="$(SOSConfigFileName)" />
     </ItemGroup>
+  </Target>
+
+  <Target Name="CopyProjectSpecificTestAssets">
+    <ItemGroup>
+      <ScriptFiles Include="$(MSBuildThisFileDirectory)Scripts\**\*" />
+      <DotNetDumpFiles Include="$(ArtifactsBinDir)dotnet-dump\$(Configuration)\$(NetCoreAppMinTargetFramework)\publish\**\*" />
+    </ItemGroup>
+
+    <MakeDir Directories="$(_TempZipDir)scripts\" />
+    <MakeDir Directories="$(_TempZipDir)artifacts\bin\dotnet-dump\$(Configuration)\$(NetCoreAppMinTargetFramework)\publish\" />
+
+    <Copy SourceFiles="@(ScriptFiles)"
+          DestinationFiles="@(ScriptFiles->'$(_TempZipDir)scripts\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy SourceFiles="@(DotNetDumpFiles)"
+          DestinationFiles="@(DotNetDumpFiles->'$(_TempZipDir)artifacts\bin\dotnet-dump\$(Configuration)\$(NetCoreAppMinTargetFramework)\publish\%(RecursiveDir)%(Filename)%(Extension)')" />
+
   </Target>
 </Project>
