@@ -589,7 +589,7 @@ public class SOS
             string repoRootDir = TestConfiguration.MakeCanonicalPath(config.AllSettings["RepoRootDir"]);
 
             // Get test python script path
-            string scriptDir = Path.Combine(repoRootDir, "tests", "lldbplugin.tests");
+            string scriptDir = Path.Combine(repoRootDir, "src", "tests", "lldbplugin.tests");
             arguments.Append(Path.Combine(scriptDir, "test_libsosplugin.py"));
             arguments.Append(' ');
 
