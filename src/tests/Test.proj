@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.Build.Traversal">
+  <ItemGroup Label="Diagnostic Test Projects">
+    <ProjectReference Include="Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="SOS.UnitTests/SOS.UnitTests.csproj" />
+    <ProjectReference Include="DotnetTrace.UnitTests/DotnetTrace.UnitTests.csproj" />
+    <ProjectReference Include="DotnetCounters.UnitTests/DotnetCounters.UnitTests.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.NETCore.Client.UnitTests/Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj" />
+    <ProjectReference Include="EventPipe.UnitTests/EventPipe.UnitTests.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.Monitoring.UnitTests/Microsoft.Diagnostics.Monitoring.UnitTests.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests/Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.DebugServices.UnitTests/Microsoft.Diagnostics.DebugServices.UnitTests.csproj" />
+    <ProjectReference Include="DbgShim.UnitTests/DbgShim.UnitTests.csproj" />
+    <ProjectReference Include="CommonTestRunner/CommonTestRunner.csproj" />
+    <!-- Tests are broken as it hasn't been run on main in a while. Relies on older System.CommandLine API's that are no longer public -->
+    <!--<ProjectReference Include="DotnetStack.UnitTests/DotnetStack.UnitTests.csproj" />-->
+    <ProjectReference Include="TestExtension/TestExtension.csproj" />
+    <ProjectReference Include="TestHelpers/TestHelpers.csproj" />
+    <ProjectReference Include="Microsoft.FileFormats.UnitTests/Microsoft.FileFormats.UnitTests.csproj" />
+    <ProjectReference Include="Microsoft.SymbolStore.UnitTests/Microsoft.SymbolStore.UnitTests.csproj" />
+  </ItemGroup>
+  <ItemGroup Label="Debuggee Test Projects">
+    <ProjectReference Include="Debuggees/TestDebuggee/TestDebuggee.csproj" />
+    <ProjectReference Include="Debuggees/WebApp3/WebApp3.csproj" />
+    <ProjectReference Include="Debuggees/SimpleThrow/SimpleThrow.csproj" />
+    <ProjectReference Include="Debuggees/DivZero/DivZero.csproj" />
+    <ProjectReference Include="Debuggees/GCWhere/GCWhere.csproj" />
+    <ProjectReference Include="Debuggees/NestedExceptionTest/NestedExceptionTest.csproj" />
+    <ProjectReference Include="Debuggees/Overflow/Overflow.csproj" />
+    <ProjectReference Include="Debuggees/ReflectionTest/ReflectionTest.csproj" />
+    <ProjectReference Include="Debuggees/TaskNestedException/TaskNestedException/TaskNestedException.csproj" />
+    <ProjectReference Include="Debuggees/TaskNestedException/RandomUserLibrary/RandomUserLibrary.csproj" />
+    <ProjectReference Include="Debuggees/SymbolTestApp/SymbolTestApp/SymbolTestApp.csproj" />
+    <ProjectReference Include="Debuggees/SymbolTestApp/SymbolTestDll/SymbolTestDll.csproj" />
+    <ProjectReference Include="Debuggees/LineNums/LineNums.csproj" />
+    <ProjectReference Include="Debuggees/GCPOH/GCPOH.csproj" />
+    <ProjectReference Include="Debuggees/DotnetDumpCommands/DotnetDumpCommands.csproj" />
+    <ProjectReference Include="Debuggees/DynamicMethod/DynamicMethod.csproj" />
+    <ProjectReference Include="Debuggees/EventPipeTracee/EventPipeTracee.csproj" />
+    <ProjectReference Include="Debuggees/ExitCodeTracee/ExitCodeTracee.csproj" />
+    <ProjectReference Include="Debuggees/StackTracee/StackTracee.csproj" />
+    <ProjectReference Include="Debuggees/SimpleDebuggee/SimpleDebuggee.csproj" />
+    <ProjectReference Include="Debuggees/Tracee/Tracee.csproj" />
+  </ItemGroup>
+</Project>

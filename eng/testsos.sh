@@ -14,4 +14,4 @@ done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 export LLDB_PATH=/usr/bin/lldb
-$scriptroot/../.dotnet/dotnet test --no-build --logger "console;verbosity=detailed" $scriptroot/../src/SOS/SOS.UnitTests/SOS.UnitTests.csproj
+$scriptroot/../.dotnet/dotnet test --no-build --logger "console;verbosity=detailed" $scriptroot/../src/tests/SOS.UnitTests/SOS.UnitTests.csproj

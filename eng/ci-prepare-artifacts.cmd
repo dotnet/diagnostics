@@ -5,7 +5,7 @@ set "_commonArgs=-restore -ci -prepareMachine -verbosity minimal -configuration 
 set "_logDir=%~dp0..\artifacts\log\Release\"
 
 echo Creating packages
-powershell -ExecutionPolicy ByPass -NoProfile -command "& """%~dp0common\Build.ps1""" %_commonArgs% -pack -noBl /bl:'%_logDir%Pack.binlog' %*"
+powershell -ExecutionPolicy ByPass -NoProfile -command "& """%~dp0common\Build.ps1""" %_commonArgs% -pack -noBl /bl:'%_logDir%Pack.binlog' -projects %~dp0..\diagnostics.sln %*"
 if NOT '%ERRORLEVEL%' == '0' goto ExitWithCode
 
 echo Creating bundles
