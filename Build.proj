@@ -29,6 +29,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Condition="'$(BuildTests)' == 'true' or '$(IsTestRun)' == 'true'" Include="$(RepoRoot)tests/Test.proj" />
+    <ProjectReference Condition="'$(BuildTests)' == 'true' or '$(IsTestRun)' == 'true'" Include="$(RepoRoot)src/tests/Test.proj" />
   </ItemGroup>
 </Project>

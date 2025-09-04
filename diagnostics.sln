@@ -3,14 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32519.111
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.TestHelpers", "tests\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj", "{730C1201-1848-4F1E-8C1F-6316FB886C35}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.TestHelpers", "src\tests\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj", "{730C1201-1848-4F1E-8C1F-6316FB886C35}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SOS", "SOS", "{41638A4C-0DAF-47ED-A774-ECBBAC0315D7}"
 	ProjectSection(SolutionItems) = preProject
 		src\SOS\CMakeLists.txt = src\SOS\CMakeLists.txt
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SOS.UnitTests", "tests\SOS.UnitTests\SOS.UnitTests.csproj", "{1532DB3C-7DCD-45C6-B697-62B8378A16A2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SOS.UnitTests", "src\tests\SOS.UnitTests\SOS.UnitTests.csproj", "{1532DB3C-7DCD-45C6-B697-62B8378A16A2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lldbplugin", "src\SOS\lldbplugin\lldbplugin.vcxproj", "{D52C65C4-2C7D-45E6-9F5C-6F3A96796018}"
 EndProject
@@ -42,17 +42,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SOS.Symbol.Package", "src\S
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{03479E19-3F18-49A6-910A-F5041E27E7C0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetTrace.UnitTests", "tests\DotnetTrace.UnitTests\DotnetTrace.UnitTests.csproj", "{AEDCCF5B-5AD0-4D64-BF73-5CF468E07D22}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetTrace.UnitTests", "src\tests\DotnetTrace.UnitTests\DotnetTrace.UnitTests.csproj", "{AEDCCF5B-5AD0-4D64-BF73-5CF468E07D22}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-gcdump", "src\Tools\dotnet-gcdump\dotnet-gcdump.csproj", "{936678B3-3392-4F4F-943C-B6A4BFCBAADC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetCounters.UnitTests", "tests\DotnetCounters.UnitTests\DotnetCounters.UnitTests.csproj", "{E5A7DC6C-BF8D-418A-BCBD-094EB748FA82}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetCounters.UnitTests", "src\tests\DotnetCounters.UnitTests\DotnetCounters.UnitTests.csproj", "{E5A7DC6C-BF8D-418A-BCBD-094EB748FA82}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.NETCore.Client", "src\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj", "{D8BE9C81-194E-43E5-82CF-2080892FBDE7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.NETCore.Client.UnitTests", "tests\Microsoft.Diagnostics.NETCore.Client.UnitTests\Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj", "{6F4DD2F8-1C7B-4A87-B7E5-1BEE9F5AC128}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.NETCore.Client.UnitTests", "src\tests\Microsoft.Diagnostics.NETCore.Client.UnitTests\Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj", "{6F4DD2F8-1C7B-4A87-B7E5-1BEE9F5AC128}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventPipe.UnitTests", "tests\EventPipe.UnitTests\EventPipe.UnitTests.csproj", "{CED9ABBA-861E-4C0A-9359-22351208EF27}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventPipe.UnitTests", "src\tests\EventPipe.UnitTests\EventPipe.UnitTests.csproj", "{CED9ABBA-861E-4C0A-9359-22351208EF27}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{298AE119-6625-4604-BDE5-0765DC34C856}"
 	ProjectSection(SolutionItems) = preProject

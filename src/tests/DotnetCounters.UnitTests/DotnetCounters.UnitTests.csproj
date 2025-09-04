@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(RepoRoot)src/Tools/dotnet-counters/dotnet-counters.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../CommonTestRunner/CommonTestRunner.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NewtonSoft.Json" Version="$(NewtonSoftJsonVersion)" />
+  </ItemGroup>
+
+</Project>

@@ -1559,7 +1559,7 @@ SOFTWARE.
 
 -------------------------------------------------
 
-Source in tests/Microsoft.Diagnostics.TestHelpers/Xunit.Extensions/* is largely derived from source
+Source in src/tests/Microsoft.Diagnostics.TestHelpers/Xunit.Extensions/* is largely derived from source
 source found at https://github.com/xunit/samples.xunit.
 
 This set of code is covered by the following license:
