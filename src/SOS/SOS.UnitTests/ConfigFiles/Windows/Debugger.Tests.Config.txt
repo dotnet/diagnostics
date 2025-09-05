@@ -277,7 +277,6 @@
             <Option Condition="'$(RuntimeVersionServicing3)' != ''">
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
-              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
             </Option>
           </Options>
         </Option>
