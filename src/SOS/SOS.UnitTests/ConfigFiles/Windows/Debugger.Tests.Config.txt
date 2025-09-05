@@ -242,6 +242,46 @@
             </Option>
           </Options>
         </Option>
+
+        <!--
+          GC Related Tests
+         -->
+        <Option>
+          <TestName>GC</TestName>
+
+          <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+          <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
+          <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+
+          <Options>
+            <Option><GCServer>1</GCServer></Option>
+            <Option><GCServer>0</GCServer></Option>
+          </Options>
+
+          <Options>
+            <Option Condition="'$(RuntimeVersionLatest)' != ''">
+              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+              <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
+              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+            </Option>
+            <Option Condition="'$(RuntimeVersionServicing1)' != ''">
+              <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
+              <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
+              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+            </Option>
+            <Option Condition="'$(RuntimeVersionServicing2)' != ''">
+              <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
+              <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
+              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+            </Option>
+            <Option Condition="'$(RuntimeVersionServicing3)' != ''">
+              <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+              <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
+              <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
+            </Option>
+          </Options>
+        </Option>
+
       </Options>
 
       <FrameworkVersion Condition="'$(FrameworkVersion)' == ''">$(RuntimeFrameworkVersion)</FrameworkVersion>
@@ -254,6 +294,7 @@
       <HostExe Condition="'$(SetHostExe)' == 'true'">$(DotNetRoot)\dotnet.exe</HostExe>
       <HostArgs Condition="'$(SetFxVersion)' == 'true'">--fx-version $(FrameworkVersion)</HostArgs>
     </Option>
+
     <!--
         Desktop Runtime (debuggees cli built)
      -->

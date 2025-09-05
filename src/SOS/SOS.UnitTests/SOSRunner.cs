@@ -719,6 +719,12 @@ public class SOSRunner : IDisposable
                 processRunner.WithEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS", extensions);
             }
 
+            string gcServerMode = config.GetValue("GCServer");
+            if (!string.IsNullOrEmpty(gcServerMode))
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_gcServer", gcServerMode);
+            }
+
             DumpType? dumpType = null;
             if (action is DebuggerAction.LoadDump or DebuggerAction.LoadDumpWithDotNetDump)
             {

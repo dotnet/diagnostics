@@ -200,7 +200,19 @@ public class SOS
 
     public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
 
-    [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "GC", MemberType = typeof(SOSTestHelpers))]
+    public async Task DumpGCData(TestConfiguration config)
+    {
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "DumpGCData",
+            scriptName: "DumpGCData.script",
+            Output,
+            testName: "SOS.DumpGCData",
+            testDump: false);
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackTraceSoftwareExceptionFrame(TestConfiguration config)
     {
         if (config.RuntimeFrameworkVersionMajor < 10)
@@ -219,7 +231,7 @@ public class SOS
             testTriage: true);
     }
 
-    [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackTraceFaultingExceptionFrame(TestConfiguration config)
     {
         SOSTestHelpers.SkipIfWinX86(config);
