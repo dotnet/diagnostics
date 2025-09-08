@@ -30,7 +30,7 @@ COMMAND:~
 COMMAND:~0s
 
 SOSCOMMAND:DumpStackObjects
-SOSCOMMAND:FindRoots <POUT>\w+\s+(<HEXVAL>)\s+(HeapAnalyzeDacMarshalIssue.Thing)(?!\[\])<POUT>
+SOSCOMMAND:FindRoots <POUT>\w+\s+(<HEXVAL>)\s+(FindRootsOlderGeneration.Thing)(?!\[\])<POUT>
 VERIFY:Found 1 unique roots.
 
 COMMAND:sxn CLRN
