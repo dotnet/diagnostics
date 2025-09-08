@@ -201,6 +201,23 @@ public class SOS
     public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "GC", MemberType = typeof(SOSTestHelpers))]
+    public async Task FindRootsOlderGeneration(TestConfiguration config)
+    {
+        if (OS.Kind != OSKind.Windows)
+        {
+            throw new SkipTestException("Test only supports CDB and therefore only runs on Windows");
+        }
+
+        await SOSTestHelpers.RunTest(
+                config,
+                debuggeeName: "FindRootsOlderGeneration",
+                scriptName: "FindRootsOlderGeneration.script",
+                Output,
+                testName: "SOS.FindRootsOlderGeneration",
+                testDump: false);
+    }
+
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "GC", MemberType = typeof(SOSTestHelpers))]
     public async Task DumpGCData(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(
