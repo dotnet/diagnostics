@@ -231,18 +231,28 @@ public class SOS
             throw new SkipTestException("Test only supports CDB and therefore only runs on Windows");
         }
 
+        if (config.RuntimeFrameworkVersionMajor < 10)
+        {
+            throw new SkipTestException("This test validates a bug which was fixed in .NET 10");
+        }
+
         await SOSTestHelpers.RunTest(
-                config,
-                debuggeeName: "FindRootsOlderGeneration",
-                scriptName: "FindRootsOlderGeneration.script",
-                Output,
-                testName: "SOS.FindRootsOlderGeneration",
-                testDump: false);
+            config,
+            debuggeeName: "FindRootsOlderGeneration",
+            scriptName: "FindRootsOlderGeneration.script",
+            Output,
+            testName: "SOS.FindRootsOlderGeneration",
+            testDump: false);
     }
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task DumpGCData(TestConfiguration config)
     {
+        if (config.RuntimeFrameworkVersionMajor < 10)
+        {
+            throw new SkipTestException("This test validates a bug which was fixed in .NET 10");
+        }
+
         await SOSTestHelpers.RunTest(
             config,
             debuggeeName: "DumpGCData",
