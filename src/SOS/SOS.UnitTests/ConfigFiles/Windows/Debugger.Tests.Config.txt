@@ -254,7 +254,6 @@
       <HostExe Condition="'$(SetHostExe)' == 'true'">$(DotNetRoot)\dotnet.exe</HostExe>
       <HostArgs Condition="'$(SetFxVersion)' == 'true'">--fx-version $(FrameworkVersion)</HostArgs>
     </Option>
-
     <!--
         Desktop Runtime (debuggees cli built)
      -->
