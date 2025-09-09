@@ -24,6 +24,29 @@ public static class SOSTestHelpers
         return TestRunConfiguration.Instance.Configurations.Where((c) => key == null || c.AllSettings.GetValueOrDefault(key) == value).DefaultIfEmpty(TestConfiguration.Empty).Select(c => new[] { c });
     }
 
+    public static IEnumerable<object[]> GetGCConfigurations()
+    {
+        IEnumerable<TestConfiguration> inputConfigurations = TestRunConfiguration.Instance.Configurations
+            // Filter out configurations for specific tests
+            .Where(c => c.AllSettings.GetValueOrDefault("TestName") == null)
+            // Filter for only .NET core configurations
+            .Where(c => c.IsNETCore)
+            // Filter out single file scenarios
+            .Where(c => !c.PublishSingleFile);
+
+        TestConfiguration AddSetting(TestConfiguration inputConfiguration, string key, string value)
+        {
+            Dictionary<string, string> settings = new(inputConfiguration.AllSettings);
+            settings.Add(key, value);
+            return new TestConfiguration(settings);
+        }
+
+        IEnumerable<TestConfiguration> outputConfigurations = inputConfigurations.Select(c => AddSetting(c, "GCServer", "0"))
+            .Concat(inputConfigurations.Select(c => AddSetting(c, "GCServer", "1")));
+
+        return outputConfigurations.Select(c => new[] { c });
+    }
+
     internal static void SkipIfArm(TestConfiguration config)
     {
         if (config.TargetArchitecture is "arm" or "arm64")
@@ -200,7 +223,7 @@ public class SOS
 
     public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "GC", MemberType = typeof(SOSTestHelpers))]
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task FindRootsOlderGeneration(TestConfiguration config)
     {
         if (OS.Kind != OSKind.Windows)
@@ -217,7 +240,7 @@ public class SOS
                 testDump: false);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "GC", MemberType = typeof(SOSTestHelpers))]
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task DumpGCData(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(
