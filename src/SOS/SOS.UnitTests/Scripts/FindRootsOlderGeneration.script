@@ -26,10 +26,11 @@ CONTINUE
 SOSCOMMAND:clrstack -all
 
 # Switch to main runtime thread
-COMMAND:~
-COMMAND:~0s
+SWITCH_THREAD:0
 
 SOSCOMMAND:DumpStackObjects
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+FindRootsOlderGeneration.Thing\s+
+
 SOSCOMMAND:FindRoots <POUT>\w+\s+(<HEXVAL>)\s+(FindRootsOlderGeneration.Thing)(?!\[\])<POUT>
 VERIFY:Found 1 unique roots.
 
