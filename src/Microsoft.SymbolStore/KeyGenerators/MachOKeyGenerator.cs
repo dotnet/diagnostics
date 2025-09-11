@@ -61,7 +61,13 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 {
                     bool symbolFile = _machoFile.Header.FileType == MachHeaderFileType.Dsym;
                     // TODO - mikem 1/23/18 - is there a way to get the name of the "linked" dwarf symbol file
-                    foreach (SymbolStoreKey key in GetKeys(flags, _path, uuid, symbolFile, symbolFileName: null))
+                    SymbolStoreKey[] keys = GetKeys(flags, _path, uuid, symbolFile, symbolFileName: null).ToArray();
+                    if (keys.Length == 0 && (flags & (KeyTypeFlags.ClrKeys | KeyTypeFlags.DacDbiKeys)) != 0)
+                    {
+                        string keyType = (flags & KeyTypeFlags.ClrKeys) != 0 ? "CLR" : "DAC/DBI";
+                        Tracer.Verbose("Mach-O File `{0}`: file is not the coreclr module `{1}`. No {2} keys will be produced.", _path, CoreClrFileName, keyType);
+                    }
+                    foreach (SymbolStoreKey key in keys)
                     {
                         yield return key;
                     }
@@ -74,6 +80,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
                             // apphost downloaded as the host program name
                             yield return BuildKey(_path, IdentityPrefix, uuid, "apphost");
+                        }
+                        else
+                        {
+                            Tracer.Verbose("Mach-O file `{0}`: file type `{1}` is not an executable. No host keys will be generated.", _path, _machoFile.Header.FileType);
                         }
                     }
                 }
