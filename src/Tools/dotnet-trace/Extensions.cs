@@ -23,6 +23,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { "gc", 0x1 },
             { "gchandle", 0x2 },
             { "fusion", 0x4 },
+            { "assemblyloader", 0x4 },
             { "loader", 0x8 },
             { "jit", 0x10 },
             { "ngen", 0x20 },
@@ -42,6 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { "gcsampledobjectallocationhigh", 0x200000 },
             { "gcheapsurvivalandmovement", 0x400000 },
             { "gcheapcollect", 0x800000 },
+            { "managedheadcollect", 0x800000 },
             { "gcheapandtypenames", 0x1000000 },
             { "gcsampledobjectallocationlow", 0x2000000 },
             { "perftrack", 0x20000000 },
@@ -55,7 +57,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { "compilationdiagnostic", 0x2000000000 },
             { "methoddiagnostic", 0x4000000000 },
             { "typediagnostic", 0x8000000000 },
+            { "jitinstrumentationdata", 0x10000000000 },
+            { "profiler", 0x20000000000 },
             { "waithandle", 0x40000000000 },
+            { "allocationsampling", 0x80000000000 },
         };
 
         public static List<EventPipeProvider> ToProviders(string providersRawInput)
