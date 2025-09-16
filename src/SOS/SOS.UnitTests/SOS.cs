@@ -712,4 +712,18 @@ public class SOS
             outputHelper?.Dispose();
         }
     }
+    [SkippableTheory, MemberData(nameof(Configurations))]
+    public async Task ClrStackWithNumberOfFrames(TestConfiguration config)
+    {
+        if (config.IsDesktop)
+        {
+            throw new SkipTestException("The behavior of ClrStack -i is not the same on Desktop");
+        }
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "DivZero",
+            scriptName: "ClrStackWithNumberOfFrames.script",
+            Output,
+            testTriage: true);
+    }
 }

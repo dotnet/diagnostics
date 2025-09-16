@@ -26,22 +26,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             string argsJson = (string)traceEvent.PayloadValue(6);
             string formattedMessage = (string)traceEvent.PayloadValue(7);
 
-            string? activityTraceId;
-            string? activitySpanId;
-            string? activityTraceFlags;
-            if (traceEvent.Version >= 2)
-            {
-                // Note: Trace correlation fields added in .NET 9
-                activityTraceId = (string)traceEvent.PayloadValue(8);
-                activitySpanId = (string)traceEvent.PayloadValue(9);
-                activityTraceFlags = (string)traceEvent.PayloadValue(10);
-            }
-            else
-            {
-                activityTraceId = null;
-                activitySpanId = null;
-                activityTraceFlags = null;
-            }
+            // NOTE: The Microsoft-Extensions-Logging EventSource is created with
+            // EventSourceSettings.EtwSelfDescribingEventFormat (TraceLogging). In TraceLogging,
+            // the ETW event header Version is always 0 even if the [Event] attribute declares
+            // Version=2. The three correlation fields (ActivityTraceId, ActivitySpanId,
+            // ActivityTraceFlags) were added in .NET 9, and with TraceLogging their presence
+            // is discoverable only via payload schema (field names), not header Version.
+            // Therefore we detect by payload name instead of checking traceEvent.Version.
+            string? activityTraceId = (string)traceEvent.PayloadByName("ActivityTraceId");
+            string? activitySpanId = (string)traceEvent.PayloadByName("ActivitySpanId");
+            string? activityTraceFlags = (string)traceEvent.PayloadByName("ActivityTraceFlags");
 
             eventData = new(
                 traceEvent.TimeStamp,
