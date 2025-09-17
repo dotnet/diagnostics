@@ -20,7 +20,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             Dictionary<string, string> enabledBy = new();
 
-            List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providerToParse);
+            List<EventPipeProvider> parsedProviders = ProviderUtils.ToProviders(providerToParse);
 
             foreach (EventPipeProvider provider in parsedProviders)
             {
@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 .FirstOrDefault(p => p.Name.Equals(profileName, StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(selectedProfile);
 
-            Extensions.MergeProfileAndProviders(selectedProfile, parsedProviders, enabledBy);
+            ProviderUtils.MergeProfileAndProviders(selectedProfile, parsedProviders, enabledBy);
 
             EventPipeProvider enabledProvider = parsedProviders.SingleOrDefault(p => p.Name == "Microsoft-Windows-DotNETRuntime");
 

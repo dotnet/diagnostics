@@ -10,7 +10,7 @@ using Microsoft.Diagnostics.NETCore.Client;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static class Extensions
+    internal static class ProviderUtils
     {
         public static string CLREventProviderName = "Microsoft-Windows-DotNETRuntime";
 

@@ -116,7 +116,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 Dictionary<string, string> enabledBy = new();
 
-                List<EventPipeProvider> providerCollection = Extensions.ToProviders(providers);
+                List<EventPipeProvider> providerCollection = ProviderUtils.ToProviders(providers);
                 foreach (EventPipeProvider providerCollectionProvider in providerCollection)
                 {
                     enabledBy[providerCollectionProvider.Name] = "--providers ";
@@ -138,7 +138,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     rundownKeyword = selectedProfile.RundownKeyword;
                     retryStrategy = selectedProfile.RetryStrategy;
 
-                    Extensions.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
+                    ProviderUtils.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
                 }
 
                 if (rundown.HasValue)
@@ -159,15 +159,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (clrevents.Length != 0)
                 {
                     // Ignore --clrevents if CLR event provider was already specified via --profile or --providers command.
-                    if (enabledBy.ContainsKey(Extensions.CLREventProviderName))
+                    if (enabledBy.ContainsKey(ProviderUtils.CLREventProviderName))
                     {
                         ConsoleWriteLine($"The argument --clrevents {clrevents} will be ignored because the CLR provider was configured via either --profile or --providers command.");
                     }
                     else
                     {
-                        EventPipeProvider clrProvider = Extensions.ToCLREventPipeProvider(clrevents, clreventlevel);
+                        EventPipeProvider clrProvider = ProviderUtils.ToCLREventPipeProvider(clrevents, clreventlevel);
                         providerCollection.Add(clrProvider);
-                        enabledBy[Extensions.CLREventProviderName] = "--clrevents";
+                        enabledBy[ProviderUtils.CLREventProviderName] = "--clrevents";
                     }
                 }
 
