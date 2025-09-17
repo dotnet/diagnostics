@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 .FirstOrDefault(p => p.Name.Equals(profileName, StringComparison.OrdinalIgnoreCase));
             Assert.NotNull(selectedProfile);
 
-            Profile.MergeProfileAndProviders(selectedProfile, parsedProviders, enabledBy);
+            Extensions.MergeProfileAndProviders(selectedProfile, parsedProviders, enabledBy);
 
             EventPipeProvider enabledProvider = parsedProviders.SingleOrDefault(p => p.Name == "Microsoft-Windows-DotNETRuntime");
 

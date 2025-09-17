@@ -138,7 +138,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     rundownKeyword = selectedProfile.RundownKeyword;
                     retryStrategy = selectedProfile.RetryStrategy;
 
-                    Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
+                    Extensions.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
                 }
 
                 if (rundown.HasValue)
