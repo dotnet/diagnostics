@@ -116,8 +116,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static readonly Argument<FileInfo> InputFileArgument =
             new Argument<FileInfo>(name: "input-filename")
             {
-                Description = $"Input trace file to be converted. Defaults to '{CollectCommandHandler.DefaultTraceName}'.",
-                DefaultValueFactory = _ => new FileInfo(CollectCommandHandler.DefaultTraceName),
+                Description = $"Input trace file to be converted. Defaults to '{CommonOptions.DefaultTraceName}'.",
+                DefaultValueFactory = _ => new FileInfo(CommonOptions.DefaultTraceName),
             }.AcceptExistingOnly();
 
         private static readonly Option<FileInfo> OutputOption =

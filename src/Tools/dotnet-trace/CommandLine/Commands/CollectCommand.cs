@@ -263,7 +263,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     }
 
-                    if (string.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
                     {
                         DateTime now = DateTime.Now;
                         FileInfo processMainModuleFileInfo = new(processMainModuleFileName);
@@ -565,13 +565,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 // Options
                 CommonOptions.ProcessIdOption,
                 CircularBufferOption,
-                OutputPathOption,
-                ProvidersOption,
-                ProfileOption,
+                CommonOptions.OutputPathOption,
+                CommonOptions.ProvidersOption,
+                CommonOptions.ProfileOption,
                 CommonOptions.FormatOption,
-                DurationOption,
-                CLREventsOption,
-                CLREventLevelOption,
+                CommonOptions.DurationOption,
+                CommonOptions.CLREventsOption,
+                CommonOptions.CLREventLevelOption,
                 CommonOptions.NameOption,
                 DiagnosticPortOption,
                 ShowChildIOOption,
@@ -589,14 +589,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 ct,
                 cliConfig: parseResult.Configuration,
                 processId: parseResult.GetValue(CommonOptions.ProcessIdOption),
-                output: parseResult.GetValue(OutputPathOption),
+                output: parseResult.GetValue(CommonOptions.OutputPathOption),
                 buffersize: parseResult.GetValue(CircularBufferOption),
-                providers: parseResult.GetValue(ProvidersOption) ?? string.Empty,
-                profile: parseResult.GetValue(ProfileOption) ?? string.Empty,
+                providers: parseResult.GetValue(CommonOptions.ProvidersOption) ?? string.Empty,
+                profile: parseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty,
                 format: parseResult.GetValue(CommonOptions.FormatOption),
-                duration: parseResult.GetValue(DurationOption),
-                clrevents: parseResult.GetValue(CLREventsOption) ?? string.Empty,
-                clreventlevel: parseResult.GetValue(CLREventLevelOption) ?? string.Empty,
+                duration: parseResult.GetValue(CommonOptions.DurationOption),
+                clrevents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
+                clreventlevel: parseResult.GetValue(CommonOptions.CLREventLevelOption) ?? string.Empty,
                 name: parseResult.GetValue(CommonOptions.NameOption),
                 diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
                 showchildio: parseResult.GetValue(ShowChildIOOption),
@@ -617,53 +617,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Description = $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.",
                 DefaultValueFactory = _ => DefaultCircularBufferSizeInMB,
-            };
-
-        public static string DefaultTraceName => "default";
-
-        private static readonly Option<FileInfo> OutputPathOption =
-            new("--output", "-o")
-            {
-                Description = $"The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.",
-                DefaultValueFactory = _ => new FileInfo(DefaultTraceName)
-            };
-
-        private static readonly Option<string> ProvidersOption =
-            new("--providers")
-            {
-                Description = @"A comma delimitted list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]'," +
-                             @"where Provider is in the form: 'KnownProviderName[:[Flags][:[Level][:[KeyValueArgs]]]]', and KeyValueArgs is in the form: " +
-                             @"'[key1=value1][;key2=value2]'.  Values in KeyValueArgs that contain ';' or '=' characters need to be surrounded by '""', " +
-                             @"e.g., FilterAndPayloadSpecs=""MyProvider/MyEvent:-Prop1=Prop1;Prop2=Prop2.A.B;"".  Depending on your shell, you may need to " +
-                             @"escape the '""' characters and/or surround the entire provider specification in quotes, e.g., " +
-                             @"--providers 'KnownProviderName:0x1:1:FilterSpec=\""KnownProviderName/EventName:-Prop1=Prop1;Prop2=Prop2.A.B;\""'. These providers are in " +
-                             @"addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the " +
-                             @"configuration here takes precedence over the implicit configuration from the profile.  See documentation for examples."
-                // TODO: Can we specify an actual type?
-            };
-
-        private static readonly Option<string> ProfileOption =
-            new("--profile")
-            {
-                Description = @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly."
-            };
-
-        private static readonly Option<TimeSpan> DurationOption =
-            new("--duration")
-            {
-                Description = @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss."
-            };
-
-        private static readonly Option<string> CLREventsOption =
-            new("--clrevents")
-            {
-                Description = @"List of CLR runtime events to emit."
-            };
-
-        private static readonly Option<string> CLREventLevelOption =
-            new("--clreventlevel")
-            {
-                Description = @"Verbosity of CLR events to be emitted."
             };
 
         private static readonly Option<string> DiagnosticPortOption =
