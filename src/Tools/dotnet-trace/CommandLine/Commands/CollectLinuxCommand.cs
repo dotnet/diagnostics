@@ -6,7 +6,9 @@ using System.CommandLine;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Trace
@@ -35,6 +37,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             if (!OperatingSystem.IsLinux())
             {
                 Console.Error.WriteLine("The collect-linux command is only supported on Linux.");
+                return (int)ReturnCode.ArgumentError;
+            }
+
+            if (args.ProcessId != 0 && !string.IsNullOrEmpty(args.Name))
+            {
+                Console.Error.WriteLine("Only one of --process-id or --name can be specified.");
                 return (int)ReturnCode.ArgumentError;
             }
 
@@ -118,12 +126,118 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static List<string> BuildRecordTraceArgs(CollectLinuxArgs args, out string scriptPath)
         {
-            Console.WriteLine($"{args.ProcessId}");
+            scriptPath = null;
             List<string> recordTraceArgs = new();
 
-            recordTraceArgs.Add("--on-cpu");
+            foreach (string profile in args.Profiles)
+            {
+                if (profile.Equals("kernel-cpu", StringComparison.OrdinalIgnoreCase))
+                {
+                    recordTraceArgs.Add("--on-cpu");
+                }
+                if (profile.Equals("kernel-cswitch", StringComparison.OrdinalIgnoreCase))
+                {
+                    recordTraceArgs.Add("--off-cpu");
+                }
+            }
+
+            int pid = args.ProcessId;
+            if (!string.IsNullOrEmpty(args.Name))
+            {
+                pid = CommandUtils.FindProcessIdWithName(args.Name);
+            }
+            if (pid > 0)
+            {
+                recordTraceArgs.Add($"--pid");
+                recordTraceArgs.Add($"{pid}");
+            }
+
+            string resolvedOutput = ResolveOutputPath(args.Output, pid);
+            recordTraceArgs.Add($"--out");
+            recordTraceArgs.Add(resolvedOutput);
+
+            if (args.Duration != default(TimeSpan))
+            {
+                recordTraceArgs.Add($"--duration");
+                recordTraceArgs.Add(args.Duration.ToString());
+            }
+
+            StringBuilder scriptBuilder = new();
+
+            string[] profiles = args.Profiles;
+            if (args.Profiles.Length == 0 && args.Providers.Length == 0 && string.IsNullOrEmpty(args.ClrEvents))
+            {
+                Console.WriteLine("No profile or providers specified, defaulting to trace profile 'dotnet-common'");
+                profiles = new[] { "dotnet-common" };
+            }
+
+            List<EventPipeProvider> providerCollection = ProviderUtils.ToProviders(args.Providers, args.ClrEvents, args.ClrEventLevel, profiles, true);
+            foreach (EventPipeProvider provider in providerCollection)
+            {
+                string providerName = provider.Name;
+                string providerNameSanitized = providerName.Replace('-', '_').Replace('.', '_');
+                long keywords = provider.Keywords;
+                uint eventLevel = (uint)provider.EventLevel;
+                IDictionary<string, string> arguments = provider.Arguments;
+                if (arguments != null && arguments.Count > 0)
+                {
+                    scriptBuilder.Append($"set_dotnet_filter_args(\n\t\"{providerName}\"");
+                    foreach ((string key, string value) in arguments)
+                    {
+                        scriptBuilder.Append($",\n\t\"{key}={value}\"");
+                    }
+                    scriptBuilder.Append($");\n");
+                }
+
+                scriptBuilder.Append($"let {providerNameSanitized}_flags = new_dotnet_provider_flags();\n");
+                scriptBuilder.Append($"record_dotnet_provider(\"{providerName}\", 0x{keywords:X}, {eventLevel}, {providerNameSanitized}_flags);\n\n");
+            }
+
+            foreach (string perfEvent in args.PerfEvents)
+            {
+                if (string.IsNullOrWhiteSpace(perfEvent) || !perfEvent.Contains(':', StringComparison.Ordinal))
+                {
+                    throw new ArgumentException($"Invalid perf event specification '{perfEvent}'. Expected format 'provider:event'.");
+                }
+
+                string[] split = perfEvent.Split(':', 2, StringSplitOptions.TrimEntries);
+                if (split.Length != 2 || string.IsNullOrEmpty(split[0]) || string.IsNullOrEmpty(split[1]))
+                {
+                    throw new ArgumentException($"Invalid perf event specification '{perfEvent}'. Expected format 'provider:event'.");
+                }
+
+                string perfProvider = split[0];
+                string perfEventName = split[1];
+                scriptBuilder.Append($"let {perfEventName} = event_from_tracefs(\"{perfProvider}\", \"{perfEventName}\");\nrecord_event({perfEventName});\n\n");
+            }
+
+            string scriptText = scriptBuilder.ToString();
+            string scriptFileName = $"{Path.GetFileNameWithoutExtension(resolvedOutput)}.script";
+            scriptPath = Path.Combine(Environment.CurrentDirectory, scriptFileName);
+            File.WriteAllText(scriptPath, scriptText);
+
+            recordTraceArgs.Add("--script-file");
+            recordTraceArgs.Add(scriptPath);
 
             return recordTraceArgs;
+        }
+
+        private static string ResolveOutputPath(FileInfo output, int processId)
+        {
+            if (!string.Equals(output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
+            {
+                return output.Name;
+            }
+
+            DateTime now = DateTime.Now;
+            if (processId > 0)
+            {
+                Process process = Process.GetProcessById(processId);
+                FileInfo processMainModuleFileInfo = new(process.MainModule.FileName);
+                return $"{processMainModuleFileInfo.Name}_{now:yyyyMMdd}_{now:HHmmss}.nettrace";
+            }
+
+            return $"collect_linux_{now:yyyyMMdd}_{now:HHmmss}.nettrace";
         }
 
         private static int OutputHandler(uint type, IntPtr data, UIntPtr dataLen)
