@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -141,6 +142,76 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                  });
 
             return providers.ToList();
+        }
+
+        public static List<EventPipeProvider> ToProviders(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles)
+        {
+            Dictionary<string, EventPipeProvider> merged = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string providerArg in providersArg)
+            {
+                EventPipeProvider provider = ToProvider(providerArg);
+                if (!merged.TryGetValue(provider.Name, out EventPipeProvider existing))
+                {
+                    merged[provider.Name] = provider;
+                }
+                else
+                {
+                    merged[provider.Name] = MergeProviderConfigs(existing, provider);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(clreventsArg))
+            {
+                EventPipeProvider provider = ToCLREventPipeProvider(clreventsArg, clreventlevel);
+                if (provider is not null)
+                {
+                    if (!merged.TryGetValue(provider.Name, out EventPipeProvider existing))
+                    {
+                        merged[provider.Name] = provider;
+                    }
+                    else
+                    {
+                        merged[provider.Name] = MergeProviderConfigs(existing, provider);
+                    }
+                }
+            }
+
+            foreach (string profile in profiles)
+            {
+                Profile dotnetProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
+                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
+                if (dotnetProfile == null)
+                {
+                    // for collect-linux, could be linux perf event profile
+                    continue;
+                }
+
+                IEnumerable<EventPipeProvider> profileProviders = dotnetProfile.Providers;
+                foreach (EventPipeProvider provider in profileProviders)
+                {
+                    merged.TryAdd(provider.Name, provider);
+                    // Prefer providers set through --providers and --clrevents over implicit profile configuration
+                }
+            }
+
+            return merged.Values.ToList();
+        }
+
+        private static EventPipeProvider MergeProviderConfigs(EventPipeProvider providerConfigA, EventPipeProvider providerConfigB)
+        {
+            Debug.Assert(string.Equals(providerConfigA.Name, providerConfigB.Name, StringComparison.OrdinalIgnoreCase));
+
+            EventLevel level = (providerConfigA.EventLevel == EventLevel.LogAlways || providerConfigB.EventLevel == EventLevel.LogAlways) ?
+                                EventLevel.LogAlways :
+                                (providerConfigA.EventLevel > providerConfigB.EventLevel ? providerConfigA.EventLevel : providerConfigB.EventLevel);
+
+            if (providerConfigA.Arguments != null && providerConfigB.Arguments != null)
+            {
+                throw new ArgumentException($"Provider \"{providerConfigA.Name}\" is declared multiple times with filter arguments.");
+            }
+
+            return new EventPipeProvider(providerConfigA.Name, level, providerConfigA.Keywords | providerConfigB.Keywords, providerConfigA.Arguments ?? providerConfigB.Arguments);
         }
 
         public static EventPipeProvider ToCLREventPipeProvider(string clreventslist, string clreventlevel)
