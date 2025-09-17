@@ -77,7 +77,13 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     }
 
                     string symbolFileName = GetSymbolFileName();
-                    foreach (SymbolStoreKey key in GetKeys(flags, _path, buildId, symbolFile, symbolFileName))
+                    SymbolStoreKey[] keys = GetKeys(flags, _path, buildId, symbolFile, symbolFileName).ToArray();
+                    if (keys.Length == 0 && (flags & (KeyTypeFlags.ClrKeys | KeyTypeFlags.DacDbiKeys)) != 0)
+                    {
+                        string keyType = (flags & KeyTypeFlags.ClrKeys) != 0 ? "CLR" : "DAC/DBI";
+                        Tracer.Verbose("ELF File `{0}`: file is not the coreclr module `{1}`. No {2} keys will be produced.", _path, CoreClrFileName, keyType);
+                    }
+                    foreach (SymbolStoreKey key in keys)
                     {
                         yield return key;
                     }
@@ -90,6 +96,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
                             // apphost downloaded as the host program name
                             yield return BuildKey(_path, IdentityPrefix, buildId, "apphost");
+                        }
+                        else
+                        {
+                            Tracer.Verbose("ELFfile `{0}`: header type is not an Executable. No host keys will be generated.", _path);
                         }
                     }
                 }

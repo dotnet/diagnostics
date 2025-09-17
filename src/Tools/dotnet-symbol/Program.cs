@@ -343,6 +343,8 @@ namespace Microsoft.Diagnostics.Tools.Symbol
 
             foreach (string inputFile in inputFiles)
             {
+                Tracer.Verbose($"Generating SymbolStore lookup keys for `{inputFile}`...");
+                int count = 0;
                 foreach (KeyGenerator generator in GetKeyGenerators(inputFile))
                 {
                     KeyTypeFlags flags = KeyTypeFlags.None;
@@ -381,8 +383,17 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                     }
                     foreach (SymbolStoreKeyWrapper wrapper in generator.GetKeys(flags).Select((key) => new SymbolStoreKeyWrapper(key, inputFile)))
                     {
+                        count++;
                         yield return wrapper;
                     }
+                }
+                if (count > 0)
+                {
+                    Tracer.Verbose($"Generated {count} SymbolStoreKeys for `{inputFile}`.");
+                }
+                else
+                {
+                    Tracer.Verbose($"Could not generate SymbolStoreKeys for `{inputFile}`.");
                 }
             }
         }

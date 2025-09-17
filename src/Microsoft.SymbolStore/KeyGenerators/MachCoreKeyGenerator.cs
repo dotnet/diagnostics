@@ -12,12 +12,14 @@ namespace Microsoft.SymbolStore.KeyGenerators
     public class MachCoreKeyGenerator : KeyGenerator
     {
         private readonly MachCore _core;
+        private readonly string _path;
 
         public MachCoreKeyGenerator(ITracer tracer, SymbolStoreFile file)
             : base(tracer)
         {
             StreamAddressSpace dataSource = new(file.Stream);
             _core = new MachCore(dataSource);
+            _path = file.FileName;
         }
 
         public override bool IsValid()
@@ -34,10 +36,18 @@ namespace Microsoft.SymbolStore.KeyGenerators
         {
             if (IsValid())
             {
-                return _core.LoadedImages
+                KeyGenerator[] generators = _core.LoadedImages
                     .Select((MachLoadedImage loadedImage) => CreateGenerator(loadedImage))
                     .Where((KeyGenerator generator) => generator != null)
-                    .SelectMany((KeyGenerator generator) => generator.GetKeys(flags));
+                    .ToArray();
+
+                if (generators.Length == 0)
+                {
+                    Tracer.Verbose("MachCore file `{0}`: missing valid loaded images. No keys will be generated.", _path);
+                    return SymbolStoreKey.EmptyArray;
+                }
+
+                return generators.SelectMany((KeyGenerator generator) => generator.GetKeys(flags));
             }
             return SymbolStoreKey.EmptyArray;
         }
