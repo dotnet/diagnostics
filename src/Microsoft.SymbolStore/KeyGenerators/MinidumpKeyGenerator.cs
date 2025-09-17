@@ -11,11 +11,13 @@ namespace Microsoft.SymbolStore.KeyGenerators
     public class MinidumpKeyGenerator : KeyGenerator
     {
         private readonly IAddressSpace _dataSource;
+        private readonly string _path;
 
         public MinidumpKeyGenerator(ITracer tracer, SymbolStoreFile file)
             : base(tracer)
         {
             _dataSource = new StreamAddressSpace(file.Stream);
+            _path = file.FileName;
         }
 
         public override bool IsValid()
@@ -35,9 +37,18 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 try
                 {
                     Minidump dump = new(_dataSource);
-                    return dump.LoadedImages
+                    KeyGenerator[] generators = dump.LoadedImages
                         .Select((MinidumpLoadedImage loadedImage) => new PEFileKeyGenerator(Tracer, loadedImage.Image, loadedImage.ModuleName))
-                        .SelectMany((KeyGenerator generator) => generator.GetKeys(flags));
+                        .Where((KeyGenerator g) => g != null && g.IsValid())
+                        .ToArray();
+
+                    if (generators.Length == 0)
+                    {
+                        Tracer.Verbose("Minidump file `{0}`: missing valid module images. No keys will be generated.", _path);
+                        return SymbolStoreKey.EmptyArray;
+                    }
+
+                    return generators.SelectMany((KeyGenerator generator) => generator.GetKeys(flags));
                 }
                 catch (InvalidVirtualAddressException ex)
                 {

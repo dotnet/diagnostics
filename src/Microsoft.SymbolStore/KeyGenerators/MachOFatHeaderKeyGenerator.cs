@@ -29,7 +29,17 @@ namespace Microsoft.SymbolStore.KeyGenerators
         {
             if (IsValid())
             {
-                return _machoFatFile.ArchSpecificFiles.Select((file) => new MachOFileKeyGenerator(Tracer, file, _path)).SelectMany((generator) => generator.GetKeys(flags));
+                MachOFileKeyGenerator[] generators = _machoFatFile.ArchSpecificFiles
+                    .Select((MachOFile file) => new MachOFileKeyGenerator(Tracer, file, _path))
+                    .ToArray();
+
+                if (generators.Length == 0)
+                {
+                    Tracer.Verbose("Mach-O fat file `{0}`: missing arch-specific slices. No keys will be generated.", _path);
+                    return SymbolStoreKey.EmptyArray;
+                }
+
+                return generators.SelectMany((KeyGenerator generator) => generator.GetKeys(flags));
             }
             return SymbolStoreKey.EmptyArray;
         }

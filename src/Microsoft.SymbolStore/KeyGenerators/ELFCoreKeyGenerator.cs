@@ -13,12 +13,14 @@ namespace Microsoft.SymbolStore.KeyGenerators
     public class ELFCoreKeyGenerator : KeyGenerator
     {
         private readonly ELFCoreFile _core;
+        private readonly string _path;
 
         public ELFCoreKeyGenerator(ITracer tracer, SymbolStoreFile file)
             : base(tracer)
         {
             StreamAddressSpace dataSource = new(file.Stream);
             _core = new ELFCoreFile(dataSource);
+            _path = file.FileName;
         }
 
         public override bool IsValid()
@@ -35,10 +37,18 @@ namespace Microsoft.SymbolStore.KeyGenerators
         {
             if (IsValid())
             {
-                return _core.LoadedImages
+                KeyGenerator[] generators = _core.LoadedImages
                     .Select((ELFLoadedImage loadedImage) => CreateGenerator(loadedImage))
                     .Where((KeyGenerator generator) => generator != null)
-                    .SelectMany((KeyGenerator generator) => generator.GetKeys(flags));
+                    .ToArray();
+
+                if (generators.Length == 0)
+                {
+                    Tracer.Verbose("ELFCore file `{0}`: missing valid loaded images. No keys will be generated.", _path);
+                    return SymbolStoreKey.EmptyArray;
+                }
+
+                return generators.SelectMany((KeyGenerator generator) => generator.GetKeys(flags));
             }
             return SymbolStoreKey.EmptyArray;
         }

@@ -1649,6 +1649,9 @@ Paremeters:
            Variable
            AsyncPinned
            SizedRef
+           Dependent
+           WeakWinRT
+           WeakInteriorPointer
 
 Sometimes the  source of a memory leak is a GCHandle leak. For example, code
 might keep a 50 Megabyte array alive because a strong GCHandle points to it,
