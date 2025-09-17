@@ -64,6 +64,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { "allocationsampling", 0x80000000000 },
         };
 
+        private enum ProviderSource
+        {
+            ProvidersArg = 1,
+            CLREventsArg = 2,
+            ProfileArg = 4,
+        }
+
         public static void MergeProfileAndProviders(Profile selectedProfile, List<EventPipeProvider> providerCollection, Dictionary<string, string> enabledBy)
         {
             List<EventPipeProvider> profileProviders = new();
@@ -144,9 +151,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return providers.ToList();
         }
 
-        public static List<EventPipeProvider> ToProviders(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles)
+        public static List<EventPipeProvider> ToProviders(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles, bool shouldPrintProviders)
         {
             Dictionary<string, EventPipeProvider> merged = new(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, int> providerSources = new(StringComparer.OrdinalIgnoreCase);
 
             foreach (string providerArg in providersArg)
             {
@@ -154,6 +162,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (!merged.TryGetValue(provider.Name, out EventPipeProvider existing))
                 {
                     merged[provider.Name] = provider;
+                    providerSources[provider.Name] = (int)ProviderSource.ProvidersArg;
                 }
                 else
                 {
@@ -169,10 +178,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (!merged.TryGetValue(provider.Name, out EventPipeProvider existing))
                     {
                         merged[provider.Name] = provider;
+                        providerSources[provider.Name] = (int)ProviderSource.CLREventsArg;
                     }
                     else
                     {
                         merged[provider.Name] = MergeProviderConfigs(existing, provider);
+                        providerSources[provider.Name] |= (int)ProviderSource.CLREventsArg;
                     }
                 }
             }
@@ -190,12 +201,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 IEnumerable<EventPipeProvider> profileProviders = dotnetProfile.Providers;
                 foreach (EventPipeProvider provider in profileProviders)
                 {
-                    merged.TryAdd(provider.Name, provider);
+                    if (merged.TryAdd(provider.Name, provider))
+                    {
+                        providerSources[provider.Name] = (int)ProviderSource.ProfileArg;
+                    }
                     // Prefer providers set through --providers and --clrevents over implicit profile configuration
                 }
             }
 
-            return merged.Values.ToList();
+            List<EventPipeProvider> unifiedProviders = merged.Values.ToList();
+            if (shouldPrintProviders)
+            {
+                PrintProviders(unifiedProviders, providerSources);
+            }
+
+            return unifiedProviders;
         }
 
         private static EventPipeProvider MergeProviderConfigs(EventPipeProvider providerConfigA, EventPipeProvider providerConfigB)
@@ -213,6 +233,36 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             return new EventPipeProvider(providerConfigA.Name, level, providerConfigA.Keywords | providerConfigB.Keywords, providerConfigA.Arguments ?? providerConfigB.Arguments);
         }
+
+        private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, int> enabledBy)
+        {
+            Console.WriteLine("");
+            Console.WriteLine(string.Format("{0, -40}", "Provider Name") + string.Format("{0, -20}", "Keywords") +
+                string.Format("{0, -20}", "Level") + "Enabled By");  // +4 is for the tab
+            foreach (EventPipeProvider provider in providers)
+            {
+                List<string> providerSources = new();
+                if (enabledBy.TryGetValue(provider.Name, out int source))
+                {
+                    if ((source & (int)ProviderSource.ProvidersArg) == (int)ProviderSource.ProvidersArg)
+                    {
+                        providerSources.Add("--providers");
+                    }
+                    if ((source & (int)ProviderSource.CLREventsArg) == (int)ProviderSource.CLREventsArg)
+                    {
+                        providerSources.Add("--clrevents");
+                    }
+                    if ((source & (int)ProviderSource.ProfileArg) == (int)ProviderSource.ProfileArg)
+                    {
+                        providerSources.Add("--profile");
+                    }
+                }
+                Console.WriteLine(string.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + string.Join(", ", providerSources));
+            }
+            Console.WriteLine("");
+        }
+        private static string GetProviderDisplayString(EventPipeProvider provider) =>
+            string.Format("{0, -40}", provider.Name) + string.Format("0x{0, -18}", $"{provider.Keywords:X16}") + string.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
 
         public static EventPipeProvider ToCLREventPipeProvider(string clreventslist, string clreventlevel)
         {

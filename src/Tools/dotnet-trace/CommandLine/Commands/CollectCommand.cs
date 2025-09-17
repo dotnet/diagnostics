@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="stoppingEventPayloadFilter">A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.</param>
         /// <param name="rundown">Collect rundown events.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
+        private static async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string[] providers, string[] profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -111,34 +111,35 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
                     ConsoleWriteLine("No profile or providers specified, defaulting to trace profile 'dotnet-common'");
-                    profile = "dotnet-common";
+                    profile = new[] { "dotnet-common" };
                 }
 
-                Dictionary<string, string> enabledBy = new();
-
-                List<EventPipeProvider> providerCollection = ProviderUtils.ToProviders(providers);
-                foreach (EventPipeProvider providerCollectionProvider in providerCollection)
-                {
-                    enabledBy[providerCollectionProvider.Name] = "--providers ";
-                }
-
-                long rundownKeyword = EventPipeSession.DefaultRundownKeyword;
+                long rundownKeyword = 0;
                 RetryStrategy retryStrategy = RetryStrategy.NothingToRetry;
 
                 if (profile.Length != 0)
                 {
-                    Profile selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
-                        .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
-                    if (selectedProfile == null)
+                    foreach (string prof in profile)
                     {
-                        Console.Error.WriteLine($"Invalid profile name: {profile}");
-                        return (int)ReturnCode.ArgumentError;
+                        Profile selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
+                            .FirstOrDefault(p => p.Name.Equals(prof, StringComparison.OrdinalIgnoreCase));
+                        if (selectedProfile == null)
+                        {
+                            Console.Error.WriteLine($"Invalid profile name: {prof}");
+                            return (int)ReturnCode.ArgumentError;
+                        }
+
+                        rundownKeyword |= selectedProfile.RundownKeyword;
+                        if (selectedProfile.RetryStrategy > retryStrategy)
+                        {
+                            retryStrategy = selectedProfile.RetryStrategy;
+                        }
                     }
+                }
 
-                    rundownKeyword = selectedProfile.RundownKeyword;
-                    retryStrategy = selectedProfile.RetryStrategy;
-
-                    ProviderUtils.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
+                if (rundownKeyword == 0)
+                {
+                    rundownKeyword = EventPipeSession.DefaultRundownKeyword;
                 }
 
                 if (rundown.HasValue)
@@ -155,30 +156,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
 
-                // Parse --clrevents parameter
-                if (clrevents.Length != 0)
-                {
-                    // Ignore --clrevents if CLR event provider was already specified via --profile or --providers command.
-                    if (enabledBy.ContainsKey(ProviderUtils.CLREventProviderName))
-                    {
-                        ConsoleWriteLine($"The argument --clrevents {clrevents} will be ignored because the CLR provider was configured via either --profile or --providers command.");
-                    }
-                    else
-                    {
-                        EventPipeProvider clrProvider = ProviderUtils.ToCLREventPipeProvider(clrevents, clreventlevel);
-                        providerCollection.Add(clrProvider);
-                        enabledBy[ProviderUtils.CLREventProviderName] = "--clrevents";
-                    }
-                }
-
-
+                List<EventPipeProvider> providerCollection = ProviderUtils.ToProviders(providers, clrevents, clreventlevel, profile, !IsQuiet);
                 if (providerCollection.Count <= 0)
                 {
                     Console.Error.WriteLine("No providers were specified to start a trace.");
                     return (int)ReturnCode.ArgumentError;
                 }
-
-                PrintProviders(providerCollection, enabledBy);
 
                 // Validate and parse stoppingEvent parameters: stoppingEventProviderName, stoppingEventEventName, stoppingEventPayloadFilter
 
@@ -524,20 +507,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return ret;
         }
 
-        private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
-        {
-            ConsoleWriteLine("");
-            ConsoleWriteLine(string.Format("{0, -40}", "Provider Name") + string.Format("{0, -20}", "Keywords") +
-                string.Format("{0, -20}", "Level") + "Enabled By");  // +4 is for the tab
-            foreach (EventPipeProvider provider in providers)
-            {
-                ConsoleWriteLine(string.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
-            }
-            ConsoleWriteLine("");
-        }
-        private static string GetProviderDisplayString(EventPipeProvider provider) =>
-            string.Format("{0, -40}", provider.Name) + string.Format("0x{0, -18}", $"{provider.Keywords:X16}") + string.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
-
         private static string GetSize(long length)
         {
             if (length > 1e9)
@@ -585,14 +554,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
             collectCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Program.Main that handles UnmatchedTokens
             collectCommand.Description = "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.";
 
-            collectCommand.SetAction((parseResult, ct) => Collect(
+            collectCommand.SetAction((parseResult, ct) => {
+                string providersValue = parseResult.GetValue(CommonOptions.ProvidersOption) ?? string.Empty;
+                string profileValue = parseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty;
+
+                return Collect(
                 ct,
                 cliConfig: parseResult.Configuration,
                 processId: parseResult.GetValue(CommonOptions.ProcessIdOption),
                 output: parseResult.GetValue(CommonOptions.OutputPathOption),
                 buffersize: parseResult.GetValue(CircularBufferOption),
-                providers: parseResult.GetValue(CommonOptions.ProvidersOption) ?? string.Empty,
-                profile: parseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty,
+                providers: providersValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                profile: profileValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                 format: parseResult.GetValue(CommonOptions.FormatOption),
                 duration: parseResult.GetValue(CommonOptions.DurationOption),
                 clrevents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
@@ -605,7 +578,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 stoppingEventEventName: parseResult.GetValue(StoppingEventEventNameOption),
                 stoppingEventPayloadFilter: parseResult.GetValue(StoppingEventPayloadFilterOption),
                 rundown: parseResult.GetValue(RundownOption),
-                dsrouter: parseResult.GetValue(DSRouterOption)));
+                dsrouter: parseResult.GetValue(DSRouterOption));
+            });
 
             return collectCommand;
         }
