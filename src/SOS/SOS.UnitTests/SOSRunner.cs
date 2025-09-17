@@ -719,6 +719,18 @@ public class SOSRunner : IDisposable
                 processRunner.WithEnvironmentVariable("DOTNET_DIAGNOSTIC_EXTENSIONS", extensions);
             }
 
+            string gcServerMode = config.GetValue("GCServer");
+            if (!string.IsNullOrEmpty(gcServerMode))
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_gcServer", gcServerMode);
+            }
+
+            string gcName = config.GetValue("GCName");
+            if (!string.IsNullOrEmpty(gcName))
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_gcName", gcName);
+            }
+
             DumpType? dumpType = null;
             if (action is DebuggerAction.LoadDump or DebuggerAction.LoadDumpWithDotNetDump)
             {
@@ -866,6 +878,14 @@ public class SOSRunner : IDisposable
                         {
                             throw new Exception($"Debugger command FAILED: {input}");
                         }
+
+                    }
+                    // Switching threads is debugger specific and can cause issues
+                    // with the runcommand helper.
+                    else if (line.StartsWith("SWITCH_THREAD:"))
+                    {
+                        string input = line.Substring("SWITCH_THREAD:".Length).TrimStart();
+                        await SwitchThread(input);
                     }
                     else if (line.StartsWith("COMMAND_FAIL:"))
                     {
@@ -1103,6 +1123,31 @@ public class SOSRunner : IDisposable
                 {
                     throw new Exception($"'{command}' FAILED");
                 }
+            }
+        }
+    }
+
+    public async Task SwitchThread(string threadId)
+    {
+        string command = null;
+        bool addPrefix = true;
+
+        switch (Debugger)
+        {
+            case NativeDebugger.Cdb:
+                command = $"~{threadId}s";
+                // Don't add the !runcommand prefix because it gets printed when cdb stops at
+                // the new thread because the helper extension used .pcmd to set a stop command.
+                addPrefix = false;
+                break;
+            default:
+                throw new NotImplementedException("Switching threads is not implemented on other debuggers");
+        }
+        if (command != null)
+        {
+            if (!await RunCommand(command, addPrefix))
+            {
+                throw new Exception($"'{command}' FAILED");
             }
         }
     }

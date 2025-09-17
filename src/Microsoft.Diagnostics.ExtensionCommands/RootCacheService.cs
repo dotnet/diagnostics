@@ -40,6 +40,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public bool IsDependentHandleLink(ulong source, ulong target)
         {
+            InitializeHandleRoots();
+
             int i = _dependentHandles.BinarySearch((source, target));
             return i >= 0;
         }
