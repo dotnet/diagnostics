@@ -110,8 +110,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
-                    ConsoleWriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
-                    profile = "cpu-sampling";
+                    ConsoleWriteLine("No profile or providers specified, defaulting to trace profile 'dotnet-common'");
+                    profile = "dotnet-common";
                 }
 
                 Dictionary<string, string> enabledBy = new();

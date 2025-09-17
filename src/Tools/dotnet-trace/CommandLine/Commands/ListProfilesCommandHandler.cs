@@ -14,13 +14,52 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal sealed class ListProfilesCommandHandler
     {
+        private static long defaultKeyword =    0x1 |           // GC
+                                                0x4 |           // Loader
+                                                0x8 |           // AssemblyLoader
+                                                0x10 |          // JIT
+                                                0x8000 |        // Exceptions
+                                                0x10000 |       // Threading
+                                                0x20000 |       // JittedMethodILToNativeMap
+                                                0x1000000000;   // Contention
+
+        private static string dotnetCommonDescription = """
+                                                        Lightweight .NET runtime diagnostics designed to stay low overhead.
+                                                        Includes:
+                                                            GC
+                                                            AssemblyLoader
+                                                            Jit
+                                                            Exception
+                                                            Threading
+                                                            JittedMethodILToNativeMap
+                                                            Compilation
+                                                            Contention
+                                                        Equivalent to --providers "Microsoft-Windows-DotNETRuntime:0x100003801D:4".
+                                                        """;
+
         public static int GetProfiles()
         {
             try
             {
+                Console.Out.WriteLine("dotnet-trace collect profiles:");
+                int profileNameWidth = ProfileNamesMaxWidth(DotNETRuntimeProfiles);
                 foreach (Profile profile in DotNETRuntimeProfiles)
                 {
-                    Console.Out.WriteLine($"\t{profile.Name,-16} - {profile.Description}");
+                    PrintProfile(profile, profileNameWidth);
+                }
+
+                if (OperatingSystem.IsLinux())
+                {
+                    Console.Out.WriteLine("\ndotnet-trace collect-linux profiles:");
+                    profileNameWidth = Math.Max(profileNameWidth, ProfileNamesMaxWidth(LinuxPerfEventProfiles));
+                    foreach (Profile profile in DotNETRuntimeProfiles)
+                    {
+                        PrintProfile(profile, profileNameWidth);
+                    }
+                    foreach (Profile profile in LinuxPerfEventProfiles)
+                    {
+                        PrintProfile(profile, profileNameWidth);
+                    }
                 }
 
                 return 0;
@@ -44,12 +83,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         internal static IEnumerable<Profile> DotNETRuntimeProfiles { get; } = new[] {
             new Profile(
-                "cpu-sampling",
+                "dotnet-common",
+                new EventPipeProvider[] {
+                    new("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, defaultKeyword)
+                },
+                dotnetCommonDescription),
+            new Profile(
+                "dotnet-sampled-thread-time",
                 new EventPipeProvider[] {
                     new("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
-                    new("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, (long)ClrTraceEventParser.Keywords.Default)
                 },
-                "Useful for tracking CPU usage and general .NET runtime information. This is the default option if no profile or providers are specified."),
+                "Samples .NET thread stacks (~100 Hz) to identify hotspots over time. Uses the runtime sample profiler with managed stacks."),
             new Profile(
                 "gc-verbose",
                 new EventPipeProvider[] {
@@ -103,6 +147,44 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 },
                 "Captures ADO.NET and Entity Framework database commands")
         };
+
+        internal static IEnumerable<Profile> LinuxPerfEventProfiles { get; } = new[] {
+            new Profile(
+                "kernel-cpu",
+                providers: Array.Empty<EventPipeProvider>(),
+                description: "Kernel CPU sampling (perf-based), emitted as Universal.Events/cpu, for precise on-CPU attribution."),
+            new Profile(
+                "kernel-cswitch",
+                providers: Array.Empty<EventPipeProvider>(),
+                description: "Kernel thread context switches, emitted as Universal.Events/cswitch, for on/off-CPU and scheduler analysis.")
+        };
+
+        private static int ProfileNamesMaxWidth(IEnumerable<Profile> profiles)
+        {
+            int maxWidth = 0;
+            foreach (Profile profile in profiles)
+            {
+                if (profile.Name.Length > maxWidth)
+                {
+                    maxWidth = profile.Name.Length;
+                }
+            }
+
+            return maxWidth;
+        }
+
+        private static void PrintProfile(Profile profile, int nameColumnWidth)
+        {
+            string[] descriptionLines = profile.Description.Replace("\r\n", "\n").Split('\n');
+
+            Console.Out.WriteLine($"\t{profile.Name.PadRight(nameColumnWidth)} - {descriptionLines[0]}");
+
+            string continuationPrefix = $"\t{new string(' ', nameColumnWidth)}   ";
+            for (int i = 1; i < descriptionLines.Length; i++)
+            {
+                Console.Out.WriteLine(continuationPrefix + descriptionLines[i]);
+            }
+        }
 
         /// <summary>
         /// Keywords for DiagnosticSourceEventSource provider
