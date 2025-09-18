@@ -1,0 +1,18 @@
+#
+# Verifies that the !clrstack command properly prints out the correct
+# method name in vararg PInvoke scenarios. On some platforms this utilizes a special
+# 'reportInteropMD' to find the correct MethodDesc.
+#
+
+# Continue to the DebugBreak
+CONTINUE
+VERIFY:Break instruction exception - code 80000003
+
+LOADSOS
+
+COMMAND:bm msvcrt!printf
+
+CONTINUE
+
+# Print the stack trace
+SOSCOMMAND:clrstack
