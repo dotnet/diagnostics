@@ -28,6 +28,9 @@ public static class SOSTestHelpers
     public static IEnumerable<object[]> GetNetCoreConfigurations()
     {
         return TestRunConfiguration.Instance.Configurations
+            // Filter out configurations for specific tests
+            .Where(c => c.AllSettings.GetValueOrDefault("TestName") == null)
+            // Filter for only .NET core configurations
             .Where(c => c.IsNETCore)
             .Select(c => new[] { c });
     }
