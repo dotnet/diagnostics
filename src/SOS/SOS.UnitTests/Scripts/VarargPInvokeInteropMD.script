@@ -16,3 +16,9 @@ CONTINUE
 
 # Print the stack trace
 SOSCOMMAND:clrstack
+
+# Verify InlinedCallFrame method is correct
+VERIFY:\s*<HEXVAL>\s*<HEXVAL>\s*\[InlinedCallFrame.*\]\s*VarargPInvokeInteropMD.Interop.printf\(System.String, ...\)
+
+# Verify IL_STUB displays
+VERIFY:\s*<HEXVAL>\s*<HEXVAL>\s*ILStubClass.IL_STUB_PInvoke\(System.String, Int32, Double, ...\)
