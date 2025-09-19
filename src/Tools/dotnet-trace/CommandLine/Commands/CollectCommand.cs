@@ -114,39 +114,31 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     profile = new[] { "dotnet-common", "dotnet-sampled-thread-time" };
                 }
 
-                long rundownKeyword = 0;
-                RetryStrategy retryStrategy = RetryStrategy.NothingToRetry;
-
-                if (profile.Length != 0)
+                List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(providers, clrevents, clreventlevel, profile, !IsQuiet, "collect");
+                if (providerCollection.Count <= 0)
                 {
-                    foreach (string prof in profile)
-                    {
-                        Profile selectedProfile = ListProfilesCommandHandler.TraceProfiles
-                            .FirstOrDefault(p => p.Name.Equals(prof, StringComparison.OrdinalIgnoreCase));
-                        if (selectedProfile == null)
-                        {
-                            Console.Error.WriteLine($"Invalid profile name: {prof}");
-                            return (int)ReturnCode.ArgumentError;
-                        }
-                        if (!string.IsNullOrEmpty(selectedProfile.VerbExclusivity) && !string.Equals(selectedProfile.VerbExclusivity, "collect", StringComparison.OrdinalIgnoreCase))
-                        {
-                            Console.Error.WriteLine($"The specified profile '{selectedProfile.Name}' does not apply to `dotnet-trace collect`.");
-                            return (int)ReturnCode.ArgumentError;
-                        }
-
-                        rundownKeyword |= selectedProfile.RundownKeyword;
-                        if (selectedProfile.RetryStrategy > retryStrategy)
-                        {
-                            retryStrategy = selectedProfile.RetryStrategy;
-                        }
-                    }
+                    Console.Error.WriteLine("No providers were specified to start a trace.");
+                    return (int)ReturnCode.ArgumentError;
                 }
 
+                long rundownKeyword = 0;
+                RetryStrategy retryStrategy = RetryStrategy.NothingToRetry;
+                foreach (string prof in profile)
+                {
+                    // Profiles are already validated in ComputeProviderConfig
+                    Profile selectedProfile = ListProfilesCommandHandler.TraceProfiles
+                        .FirstOrDefault(p => p.Name.Equals(prof, StringComparison.OrdinalIgnoreCase));
+
+                    rundownKeyword |= selectedProfile.RundownKeyword;
+                    if (selectedProfile.RetryStrategy > retryStrategy)
+                    {
+                        retryStrategy = selectedProfile.RetryStrategy;
+                    }
+                }
                 if (rundownKeyword == 0)
                 {
                     rundownKeyword = EventPipeSession.DefaultRundownKeyword;
                 }
-
                 if (rundown.HasValue)
                 {
                     if (rundown.Value)
@@ -159,13 +151,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         rundownKeyword = 0;
                         retryStrategy = RetryStrategy.NothingToRetry;
                     }
-                }
-
-                List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(providers, clrevents, clreventlevel, profile, !IsQuiet, "collect");
-                if (providerCollection.Count <= 0)
-                {
-                    Console.Error.WriteLine("No providers were specified to start a trace.");
-                    return (int)ReturnCode.ArgumentError;
                 }
 
                 // Validate and parse stoppingEvent parameters: stoppingEventProviderName, stoppingEventEventName, stoppingEventPayloadFilter
