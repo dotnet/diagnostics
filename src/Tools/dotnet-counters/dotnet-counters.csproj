@@ -12,7 +12,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)..\dotnet-trace\Extensions.cs" Link="Extensions.cs" />
     <Compile Include="..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
     <Compile Include="..\Common\Rendering\Interop.Windows.cs" Link="VirtualTerminalMode.Interop.Windows.cs" />
     <Compile Include="..\Common\Rendering\VirtualTerminalMode.cs" Link="VirtualTerminalMode.cs" />
