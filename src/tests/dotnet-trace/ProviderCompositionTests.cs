@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void ProvidersArg_ParsesCorrectly(string providersArg, EventPipeProvider expected)
         {
             string[] providers = providersArg.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            List<EventPipeProvider> parsedProviders = ProviderUtils.ToProviders(providers, string.Empty, string.Empty, Array.Empty<string>(), false);
+            List<EventPipeProvider> parsedProviders = ProviderUtils.ComputeProviderConfig(providers, string.Empty, string.Empty, Array.Empty<string>());
             EventPipeProvider actual = Assert.Single(parsedProviders);
             Assert.Equal(expected, actual);
         }
@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void InvalidProvidersArg_Throws(string providersArg, Type expectedException)
         {
             string[] providers = providersArg.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            Assert.Throws(expectedException, () => ProviderUtils.ToProviders(providers, string.Empty, string.Empty, Array.Empty<string>(), false));
+            Assert.Throws(expectedException, () => ProviderUtils.ComputeProviderConfig(providers, string.Empty, string.Empty, Array.Empty<string>()));
         }
 
         public static IEnumerable<object[]> MultipleValidProviders()
@@ -110,7 +110,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void MultipleProviders_Parse_AsExpected(string providersArg, EventPipeProvider[] expected)
         {
             string[] providers = providersArg.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            List<EventPipeProvider> parsed = ProviderUtils.ToProviders(providers, string.Empty, string.Empty, Array.Empty<string>(), false);
+            List<EventPipeProvider> parsed = ProviderUtils.ComputeProviderConfig(providers, string.Empty, string.Empty, Array.Empty<string>());
             Assert.Equal(expected.Length, parsed.Count);
             for (int i = 0; i < expected.Length; i++)
             {
@@ -132,7 +132,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void MultipleProviders_FailureCases_Throw(string providersArg, Type expectedException)
         {
             string[] providers = providersArg.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            Assert.Throws(expectedException, () => ProviderUtils.ToProviders(providers, string.Empty, string.Empty, Array.Empty<string>(), false));
+            Assert.Throws(expectedException, () => ProviderUtils.ComputeProviderConfig(providers, string.Empty, string.Empty, Array.Empty<string>()));
         }
 
         public static IEnumerable<object[]> DedupeSuccessCases()
@@ -153,7 +153,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(DedupeSuccessCases))]
         public void DedupeProviders_Success(string[] providersArg, EventPipeProvider expected)
         {
-            List<EventPipeProvider> list = ProviderUtils.ToProviders(providersArg, string.Empty, string.Empty, Array.Empty<string>(), false);
+            List<EventPipeProvider> list = ProviderUtils.ComputeProviderConfig(providersArg, string.Empty, string.Empty, Array.Empty<string>());
             EventPipeProvider actual = Assert.Single(list);
             Assert.Equal(expected, actual);
         }
@@ -162,7 +162,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(DedupeFailureCases))]
         public void DedupeProviders_Failure(string[] providersArg, Type expectedException)
         {
-            Assert.Throws(expectedException, () => ProviderUtils.ToProviders(providersArg, string.Empty, string.Empty, Array.Empty<string>(), false));
+            Assert.Throws(expectedException, () => ProviderUtils.ComputeProviderConfig(providersArg, string.Empty, string.Empty, Array.Empty<string>()));
         }
 
         public static IEnumerable<object[]> PrecedenceCases()
@@ -181,7 +181,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 "Verbose",
                 new[]{ "dotnet-common", "dotnet-sampled-thread-time" },
                 new[]{
-                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, 0x1),
+                    new EventPipeProvider("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, 0x100003801D),
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational, 0xF00000000000)
                 }
             };
@@ -223,7 +223,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(PrecedenceCases))]
         public void ProviderSourcePrecedence(string[] providersArg, string clreventsArg, string clreventLevel, string[] profiles, EventPipeProvider[] expected)
         {
-            List<EventPipeProvider> actual = ProviderUtils.ToProviders(providersArg, clreventsArg, clreventLevel, profiles, false);
+            List<EventPipeProvider> actual = ProviderUtils.ComputeProviderConfig(providersArg, clreventsArg, clreventLevel, profiles);
             Assert.Equal(expected.Length, actual.Count);
             for (int i = 0; i < expected.Length; i++)
             {
@@ -240,7 +240,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(InvalidClrEvents))]
         public void UnknownClrEvents_Throws(string[] providersArg, string clreventsArg, string clreventLevel, string[] profiles, Type expectedException)
         {
-            Assert.Throws(expectedException, () => ProviderUtils.ToProviders(providersArg, clreventsArg, clreventLevel, profiles, false));
+            Assert.Throws(expectedException, () => ProviderUtils.ComputeProviderConfig(providersArg, clreventsArg, clreventLevel, profiles));
         }
 
         public record ProviderSourceExpectation(string Name, bool FromProviders, bool FromClrEvents, bool FromProfile);
@@ -251,7 +251,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 new[]{ "MyProvider:0x1:Error" },
                 "gc",
                 "Informational",
-                new[]{ "dotnet-common", "dotnet-sampled-thread-time" },
+                new[]{ "dotnet-sampled-thread-time" },
                 new[]{
                     new ProviderSourceExpectation("MyProvider", true, false, false),
                     new ProviderSourceExpectation("Microsoft-Windows-DotNETRuntime", false, true, false),
@@ -269,7 +269,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             try
             {
                 Console.SetOut(capture);
-                _ = ProviderUtils.ToProviders(providersArg, clreventsArg, clreventLevel, profiles, true);
+                _ = ProviderUtils.ComputeProviderConfig(providersArg, clreventsArg, clreventLevel, profiles, true);
                 string output = capture.ToString();
                 foreach (ProviderSourceExpectation e in expectations)
                 {
@@ -295,7 +295,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(MergingCases))]
         public void MergeDuplicateProviders(string[] providersArg, string clreventsArg, string clreventLevel, string[] profiles, EventPipeProvider expected)
         {
-            List<EventPipeProvider> actual = ProviderUtils.ToProviders(providersArg, clreventsArg, clreventLevel, profiles, false);
+            List<EventPipeProvider> actual = ProviderUtils.ComputeProviderConfig(providersArg, clreventsArg, clreventLevel, profiles);
             EventPipeProvider single = Assert.Single(actual);
             Assert.Equal(expected, single);
         }
@@ -305,7 +305,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void ProviderEventLevel_Clamps(string providersArg, EventLevel expected)
         {
             string[] providers = providersArg.Split(',', StringSplitOptions.RemoveEmptyEntries);
-            EventPipeProvider actual = Assert.Single(ProviderUtils.ToProviders(providers, string.Empty, string.Empty, Array.Empty<string>(), false));
+            EventPipeProvider actual = Assert.Single(ProviderUtils.ComputeProviderConfig(providers, string.Empty, string.Empty, Array.Empty<string>()));
             Assert.Equal(expected, actual.EventLevel);
         }
 
@@ -318,7 +318,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(ClrEventLevelCases))]
         public void CLREvents_NumericLevel_Parses(string[] providersArg, string clreventsArg, string clreventLevel, string[] profiles, EventPipeProvider expected)
         {
-            List<EventPipeProvider> actual = ProviderUtils.ToProviders(providersArg, clreventsArg, clreventLevel, profiles, false);
+            List<EventPipeProvider> actual = ProviderUtils.ComputeProviderConfig(providersArg, clreventsArg, clreventLevel, profiles);
             EventPipeProvider single = Assert.Single(actual, p => p.Name == "Microsoft-Windows-DotNETRuntime");
             Assert.Equal(expected, single);
         }

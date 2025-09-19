@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -128,19 +129,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             scriptPath = null;
             List<string> recordTraceArgs = new();
-
-            foreach (string profile in args.Profiles)
-            {
-                if (profile.Equals("kernel-cpu", StringComparison.OrdinalIgnoreCase))
-                {
-                    recordTraceArgs.Add("--on-cpu");
-                }
-                if (profile.Equals("kernel-cswitch", StringComparison.OrdinalIgnoreCase))
-                {
-                    recordTraceArgs.Add("--off-cpu");
-                }
-            }
-
             int pid = args.ProcessId;
             if (!string.IsNullOrEmpty(args.Name))
             {
@@ -156,22 +144,34 @@ namespace Microsoft.Diagnostics.Tools.Trace
             recordTraceArgs.Add($"--out");
             recordTraceArgs.Add(resolvedOutput);
 
-            if (args.Duration != default(TimeSpan))
+            if (args.Duration != default)
             {
                 recordTraceArgs.Add($"--duration");
                 recordTraceArgs.Add(args.Duration.ToString());
             }
 
-            StringBuilder scriptBuilder = new();
-
             string[] profiles = args.Profiles;
             if (args.Profiles.Length == 0 && args.Providers.Length == 0 && string.IsNullOrEmpty(args.ClrEvents))
             {
-                Console.WriteLine("No profile or providers specified, defaulting to trace profile 'dotnet-common'");
-                profiles = new[] { "dotnet-common" };
+                Console.WriteLine("No profile or providers specified, defaulting to trace profiles 'dotnet-common' + 'cpu-sampling'.");
+                profiles = new[] { "dotnet-common", "cpu-sampling" };
             }
 
-            List<EventPipeProvider> providerCollection = ProviderUtils.ToProviders(args.Providers, args.ClrEvents, args.ClrEventLevel, profiles, true);
+            foreach (string profile in profiles)
+            {
+                Profile traceProfile = ListProfilesCommandHandler.TraceProfiles
+                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
+
+                if (!string.IsNullOrEmpty(traceProfile.VerbExclusivity) &&
+                    traceProfile.VerbExclusivity.Equals("collect-linux", StringComparison.OrdinalIgnoreCase))
+                {
+                    recordTraceArgs.Add(traceProfile.CollectLinuxArgs);
+                }
+            }
+
+            StringBuilder scriptBuilder = new();
+
+            List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(args.Providers, args.ClrEvents, args.ClrEventLevel, profiles, true, "collect-linux");
             foreach (EventPipeProvider provider in providerCollection)
             {
                 string providerName = provider.Name;
@@ -237,7 +237,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return $"{processMainModuleFileInfo.Name}_{now:yyyyMMdd}_{now:HHmmss}.nettrace";
             }
 
-            return $"collect_linux_{now:yyyyMMdd}_{now:HHmmss}.nettrace";
+            return $"trace_{now:yyyyMMdd}_{now:HHmmss}.nettrace";
         }
 
         private static int OutputHandler(uint type, IntPtr data, UIntPtr dataLen)
@@ -273,7 +273,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static readonly Option<string> PerfEventsOption =
             new("--perf-events")
             {
-                Description = @"Comma-separated list of kernel perf events (e.g. syscalls:sys_enter_execve,sched:sched_switch)."
+                Description = @"Comma-separated list of perf events (e.g. syscalls:sys_enter_execve,sched:sched_switch)."
             };
 
         private enum OutputType : uint

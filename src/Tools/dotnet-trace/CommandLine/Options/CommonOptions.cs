@@ -20,7 +20,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                              @"--providers 'KnownProviderName:0x1:1:FilterSpec=\""KnownProviderName/EventName:-Prop1=Prop1;Prop2=Prop2.A.B;\""'. These providers are in " +
                              @"addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the " +
                              @"configuration here takes precedence over the implicit configuration from the profile.  See documentation for examples."
-                // TODO: Can we specify an actual type?
             };
 
         public static readonly Option<string> CLREventLevelOption =

@@ -25,5 +25,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public long RundownKeyword { get; set; } = EventPipeSession.DefaultRundownKeyword;
 
         public RetryStrategy RetryStrategy { get; set; } = RetryStrategy.NothingToRetry;
+
+        public string VerbExclusivity { get; set; } = string.Empty;
+
+        public string CollectLinuxArgs { get; set; } = string.Empty;
     }
 }

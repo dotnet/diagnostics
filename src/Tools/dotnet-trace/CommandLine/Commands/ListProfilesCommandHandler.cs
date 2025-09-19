@@ -15,25 +15,25 @@ namespace Microsoft.Diagnostics.Tools.Trace
     internal sealed class ListProfilesCommandHandler
     {
         private static long defaultKeyword =    0x1 |           // GC
-                                                0x4 |           // Loader
-                                                0x8 |           // AssemblyLoader
+                                                0x4 |           // AssemblyLoader
+                                                0x8 |           // Loader
                                                 0x10 |          // JIT
                                                 0x8000 |        // Exceptions
                                                 0x10000 |       // Threading
                                                 0x20000 |       // JittedMethodILToNativeMap
-                                                0x1000000000;   // Contention
+                                                0x1000000000;   // Compilation
 
         private static string dotnetCommonDescription = """
                                                         Lightweight .NET runtime diagnostics designed to stay low overhead.
                                                         Includes:
                                                             GC
                                                             AssemblyLoader
-                                                            Jit
-                                                            Exception
+                                                            Loader
+                                                            JIT
+                                                            Exceptions
                                                             Threading
                                                             JittedMethodILToNativeMap
                                                             Compilation
-                                                            Contention
                                                         Equivalent to --providers "Microsoft-Windows-DotNETRuntime:0x100003801D:4".
                                                         """;
 
@@ -41,25 +41,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             try
             {
-                Console.Out.WriteLine("dotnet-trace collect profiles:");
-                int profileNameWidth = ProfileNamesMaxWidth(DotNETRuntimeProfiles);
-                foreach (Profile profile in DotNETRuntimeProfiles)
+                Console.Out.WriteLine("dotnet-trace profiles:");
+                int profileNameWidth = ProfileNamesMaxWidth(TraceProfiles);
+                foreach (Profile profile in TraceProfiles)
                 {
                     PrintProfile(profile, profileNameWidth);
-                }
-
-                if (OperatingSystem.IsLinux())
-                {
-                    Console.Out.WriteLine("\ndotnet-trace collect-linux profiles:");
-                    profileNameWidth = Math.Max(profileNameWidth, ProfileNamesMaxWidth(LinuxPerfEventProfiles));
-                    foreach (Profile profile in DotNETRuntimeProfiles)
-                    {
-                        PrintProfile(profile, profileNameWidth);
-                    }
-                    foreach (Profile profile in LinuxPerfEventProfiles)
-                    {
-                        PrintProfile(profile, profileNameWidth);
-                    }
                 }
 
                 return 0;
@@ -81,7 +67,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return listProfilesCommand;
         }
 
-        internal static IEnumerable<Profile> DotNETRuntimeProfiles { get; } = new[] {
+        internal static IEnumerable<Profile> TraceProfiles { get; } = new[] {
             new Profile(
                 "dotnet-common",
                 new EventPipeProvider[] {
@@ -93,7 +79,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 new EventPipeProvider[] {
                     new("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
                 },
-                "Samples .NET thread stacks (~100 Hz) to identify hotspots over time. Uses the runtime sample profiler with managed stacks."),
+                "Samples .NET thread stacks (~100 Hz) toestimate how much wall clock time code is using.") { VerbExclusivity = "collect" },
             new Profile(
                 "gc-verbose",
                 new EventPipeProvider[] {
@@ -145,18 +131,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                     )
                 },
-                "Captures ADO.NET and Entity Framework database commands")
-        };
-
-        internal static IEnumerable<Profile> LinuxPerfEventProfiles { get; } = new[] {
+                "Captures ADO.NET and Entity Framework database commands"),
             new Profile(
-                "kernel-cpu",
+                "cpu-sampling",
                 providers: Array.Empty<EventPipeProvider>(),
-                description: "Kernel CPU sampling (perf-based), emitted as Universal.Events/cpu, for precise on-CPU attribution."),
+                description: "Kernel CPU sampling events for measuring CPU usage.") { VerbExclusivity = "collect-linux", CollectLinuxArgs = "--on-cpu" },
             new Profile(
-                "kernel-cswitch",
+                "thread-time",
                 providers: Array.Empty<EventPipeProvider>(),
-                description: "Kernel thread context switches, emitted as Universal.Events/cswitch, for on/off-CPU and scheduler analysis.")
+                description: "Kernel thread context switch events for measuring CPU usage and wall clock time") { VerbExclusivity = "collect-linux", CollectLinuxArgs = "--off-cpu" },
         };
 
         private static int ProfileNamesMaxWidth(IEnumerable<Profile> profiles)
@@ -164,9 +147,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int maxWidth = 0;
             foreach (Profile profile in profiles)
             {
-                if (profile.Name.Length > maxWidth)
+                int profileNameWidth = profile.Name.Length;
+                if (!string.IsNullOrEmpty(profile.VerbExclusivity))
                 {
-                    maxWidth = profile.Name.Length;
+                    profileNameWidth = $"{profile.Name} ({profile.VerbExclusivity})".Length;
+                }
+                if (profileNameWidth > maxWidth)
+                {
+                    maxWidth = profileNameWidth;
                 }
             }
 
@@ -177,7 +165,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             string[] descriptionLines = profile.Description.Replace("\r\n", "\n").Split('\n');
 
-            Console.Out.WriteLine($"\t{profile.Name.PadRight(nameColumnWidth)} - {descriptionLines[0]}");
+            string profileColumn = $"{profile.Name}";
+            if (!string.IsNullOrEmpty(profile.VerbExclusivity))
+            {
+                profileColumn = $"{profile.Name} ({profile.VerbExclusivity})";
+            }
+
+            Console.Out.WriteLine($"\t{profileColumn.PadRight(nameColumnWidth)} - {descriptionLines[0]}");
 
             string continuationPrefix = $"\t{new string(' ', nameColumnWidth)}   ";
             for (int i = 1; i < descriptionLines.Length; i++)

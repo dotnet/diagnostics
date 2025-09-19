@@ -110,8 +110,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
-                    ConsoleWriteLine("No profile or providers specified, defaulting to trace profile 'dotnet-common'");
-                    profile = new[] { "dotnet-common" };
+                    ConsoleWriteLine("No profile or providers specified, defaulting to trace profiles 'dotnet-common' + 'dotnet-sampled-thread-time'.");
+                    profile = new[] { "dotnet-common", "dotnet-sampled-thread-time" };
                 }
 
                 long rundownKeyword = 0;
@@ -121,11 +121,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     foreach (string prof in profile)
                     {
-                        Profile selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
+                        Profile selectedProfile = ListProfilesCommandHandler.TraceProfiles
                             .FirstOrDefault(p => p.Name.Equals(prof, StringComparison.OrdinalIgnoreCase));
                         if (selectedProfile == null)
                         {
                             Console.Error.WriteLine($"Invalid profile name: {prof}");
+                            return (int)ReturnCode.ArgumentError;
+                        }
+                        if (!string.IsNullOrEmpty(selectedProfile.VerbExclusivity) && !string.Equals(selectedProfile.VerbExclusivity, "collect", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Console.Error.WriteLine($"The specified profile '{selectedProfile.Name}' does not apply to `dotnet-trace collect`.");
                             return (int)ReturnCode.ArgumentError;
                         }
 
@@ -156,7 +161,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
 
-                List<EventPipeProvider> providerCollection = ProviderUtils.ToProviders(providers, clrevents, clreventlevel, profile, !IsQuiet);
+                List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(providers, clrevents, clreventlevel, profile, !IsQuiet, "collect");
                 if (providerCollection.Count <= 0)
                 {
                     Console.Error.WriteLine("No providers were specified to start a trace.");

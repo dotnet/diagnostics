@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             ProfileArg = 4,
         }
 
-        public static List<EventPipeProvider> ToProviders(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles, bool shouldPrintProviders)
+        public static List<EventPipeProvider> ComputeProviderConfig(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles, bool shouldPrintProviders = false, string verbExclusivity = null)
         {
             Dictionary<string, EventPipeProvider> merged = new(StringComparer.OrdinalIgnoreCase);
             Dictionary<string, int> providerSources = new(StringComparer.OrdinalIgnoreCase);
@@ -90,6 +90,34 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
             }
 
+            foreach (string profile in profiles)
+            {
+                Profile traceProfile = ListProfilesCommandHandler.TraceProfiles
+                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
+
+                if (traceProfile == null)
+                {
+                    throw new ArgumentException($"Invalid profile name: {profile}");
+                }
+
+                if (!string.IsNullOrEmpty(verbExclusivity) &&
+                    !string.IsNullOrEmpty(traceProfile.VerbExclusivity) &&
+                    !string.Equals(traceProfile.VerbExclusivity, verbExclusivity, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new ArgumentException($"The specified profile '{traceProfile.Name}' does not apply to `dotnet-trace {verbExclusivity}`.");
+                }
+
+                IEnumerable<EventPipeProvider> profileProviders = traceProfile.Providers;
+                foreach (EventPipeProvider provider in profileProviders)
+                {
+                    if (merged.TryAdd(provider.Name, provider))
+                    {
+                        providerSources[provider.Name] = (int)ProviderSource.ProfileArg;
+                    }
+                    // Prefer providers set through --providers over implicit profile configuration
+                }
+            }
+
             if (!string.IsNullOrEmpty(clreventsArg))
             {
                 EventPipeProvider provider = ToCLREventPipeProvider(clreventsArg, clreventlevel);
@@ -100,28 +128,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         merged[provider.Name] = provider;
                         providerSources[provider.Name] = (int)ProviderSource.CLREventsArg;
                     }
-                    // Prefer providers set through --providers  over --clrevents
-                }
-            }
-
-            foreach (string profile in profiles)
-            {
-                Profile dotnetProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
-                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
-                if (dotnetProfile == null)
-                {
-                    // for collect-linux, could be linux perf event profile
-                    continue;
-                }
-
-                IEnumerable<EventPipeProvider> profileProviders = dotnetProfile.Providers;
-                foreach (EventPipeProvider provider in profileProviders)
-                {
-                    if (merged.TryAdd(provider.Name, provider))
-                    {
-                        providerSources[provider.Name] = (int)ProviderSource.ProfileArg;
-                    }
-                    // Prefer providers set through --providers and --clrevents over implicit profile configuration
+                    // Prefer providers set through --providers or --profile over --clrevents
                 }
             }
 
