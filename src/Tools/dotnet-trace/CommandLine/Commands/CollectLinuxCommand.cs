@@ -151,9 +151,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             string[] profiles = args.Profiles;
-            if (args.Profiles.Length == 0 && args.Providers.Length == 0 && string.IsNullOrEmpty(args.ClrEvents))
+            if (args.Profiles.Length == 0 && args.Providers.Length == 0 && string.IsNullOrEmpty(args.ClrEvents) && args.PerfEvents.Length == 0)
             {
-                Console.WriteLine("No profile or providers specified, defaulting to trace profiles 'dotnet-common' + 'cpu-sampling'.");
+                Console.WriteLine("No providers, profiles, ClrEvents, or PerfEvents were specified, defaulting to trace profiles 'dotnet-common' + 'cpu-sampling'.");
                 profiles = new[] { "dotnet-common", "cpu-sampling" };
             }
 
@@ -195,11 +195,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             foreach (string perfEvent in args.PerfEvents)
             {
-                if (string.IsNullOrWhiteSpace(perfEvent) || !perfEvent.Contains(':', StringComparison.Ordinal))
-                {
-                    throw new ArgumentException($"Invalid perf event specification '{perfEvent}'. Expected format 'provider:event'.");
-                }
-
                 string[] split = perfEvent.Split(':', 2, StringSplitOptions.TrimEntries);
                 if (split.Length != 2 || string.IsNullOrEmpty(split[0]) || string.IsNullOrEmpty(split[1]))
                 {
@@ -208,6 +203,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 string perfProvider = split[0];
                 string perfEventName = split[1];
+                Console.WriteLine($"Enabling perf event '{perfEvent}'");
                 scriptBuilder.Append($"let {perfEventName} = event_from_tracefs(\"{perfProvider}\", \"{perfEventName}\");\nrecord_event({perfEventName});\n\n");
             }
 

@@ -173,6 +173,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, int> enabledBy)
         {
+            if (providers.Count == 0)
+            {
+                Console.WriteLine("No providers were configured.");
+                return;
+            }
+
             Console.WriteLine("");
             Console.WriteLine(string.Format("{0, -40}", "Provider Name") + string.Format("{0, -20}", "Keywords") +
                 string.Format("{0, -20}", "Level") + "Enabled By");  // +4 is for the tab
