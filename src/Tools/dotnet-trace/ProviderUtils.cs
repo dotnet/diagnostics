@@ -71,86 +71,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             ProfileArg = 4,
         }
 
-        public static void MergeProfileAndProviders(Profile selectedProfile, List<EventPipeProvider> providerCollection, Dictionary<string, string> enabledBy)
-        {
-            List<EventPipeProvider> profileProviders = new();
-            // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
-            // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
-            // via --providers options.
-            if (selectedProfile.Providers != null)
-            {
-                foreach (EventPipeProvider selectedProfileProvider in selectedProfile.Providers)
-                {
-                    bool shouldAdd = true;
-
-                    foreach (EventPipeProvider providerCollectionProvider in providerCollection)
-                    {
-                        if (providerCollectionProvider.Name.Equals(selectedProfileProvider.Name))
-                        {
-                            shouldAdd = false;
-                            break;
-                        }
-                    }
-
-                    if (shouldAdd)
-                    {
-                        enabledBy[selectedProfileProvider.Name] = "--profile ";
-                        profileProviders.Add(selectedProfileProvider);
-                    }
-                }
-            }
-            providerCollection.AddRange(profileProviders);
-        }
-
-        public static List<EventPipeProvider> ToProviders(string providersRawInput)
-        {
-            if (providersRawInput == null)
-            {
-                throw new ArgumentNullException(nameof(providersRawInput));
-            }
-
-            if (string.IsNullOrWhiteSpace(providersRawInput))
-            {
-                return new List<EventPipeProvider>();
-            }
-
-            IEnumerable<EventPipeProvider> providers = providersRawInput.Split(',').Select(ToProvider).ToList();
-
-            // Dedupe the entries
-            providers = providers.GroupBy(p => p.Name)
-                                 .Select(p => {
-                                     string providerName = p.Key;
-                                     EventLevel providerLevel = EventLevel.Critical;
-                                     long providerKeywords = 0;
-                                     IDictionary<string, string> providerFilterArgs = null;
-
-                                     foreach (EventPipeProvider currentProvider in p)
-                                     {
-                                         providerKeywords |= currentProvider.Keywords;
-
-                                         if ((currentProvider.EventLevel == EventLevel.LogAlways)
-                                             || (providerLevel != EventLevel.LogAlways && currentProvider.EventLevel > providerLevel))
-                                         {
-                                             providerLevel = currentProvider.EventLevel;
-                                         }
-
-                                         if (currentProvider.Arguments != null)
-                                         {
-                                             if (providerFilterArgs != null)
-                                             {
-                                                 throw new ArgumentException($"Provider \"{providerName}\" is declared multiple times with filter arguments.");
-                                             }
-
-                                             providerFilterArgs = currentProvider.Arguments;
-                                         }
-                                     }
-
-                                     return new EventPipeProvider(providerName, providerLevel, providerKeywords, providerFilterArgs);
-                                 });
-
-            return providers.ToList();
-        }
-
         public static List<EventPipeProvider> ToProviders(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles, bool shouldPrintProviders)
         {
             Dictionary<string, EventPipeProvider> merged = new(StringComparer.OrdinalIgnoreCase);
@@ -180,11 +100,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         merged[provider.Name] = provider;
                         providerSources[provider.Name] = (int)ProviderSource.CLREventsArg;
                     }
-                    else
-                    {
-                        merged[provider.Name] = MergeProviderConfigs(existing, provider);
-                        providerSources[provider.Name] |= (int)ProviderSource.CLREventsArg;
-                    }
+                    // Prefer providers set through --providers  over --clrevents
                 }
             }
 
