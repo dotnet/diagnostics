@@ -26,35 +26,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public RetryStrategy RetryStrategy { get; set; } = RetryStrategy.NothingToRetry;
 
-        public static void MergeProfileAndProviders(Profile selectedProfile, List<EventPipeProvider> providerCollection, Dictionary<string, string> enabledBy)
-        {
-            List<EventPipeProvider> profileProviders = new();
-            // If user defined a different key/level on the same provider via --providers option that was specified via --profile option,
-            // --providers option takes precedence. Go through the list of providers specified and only add it if it wasn't specified
-            // via --providers options.
-            if (selectedProfile.Providers != null)
-            {
-                foreach (EventPipeProvider selectedProfileProvider in selectedProfile.Providers)
-                {
-                    bool shouldAdd = true;
+        public string VerbExclusivity { get; set; } = string.Empty;
 
-                    foreach (EventPipeProvider providerCollectionProvider in providerCollection)
-                    {
-                        if (providerCollectionProvider.Name.Equals(selectedProfileProvider.Name))
-                        {
-                            shouldAdd = false;
-                            break;
-                        }
-                    }
-
-                    if (shouldAdd)
-                    {
-                        enabledBy[selectedProfileProvider.Name] = "--profile ";
-                        profileProviders.Add(selectedProfileProvider);
-                    }
-                }
-            }
-            providerCollection.AddRange(profileProviders);
-        }
+        public string CollectLinuxArgs { get; set; } = string.Empty;
     }
 }
