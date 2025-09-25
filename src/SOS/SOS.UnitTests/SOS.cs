@@ -24,6 +24,17 @@ public static class SOSTestHelpers
         return TestRunConfiguration.Instance.Configurations.Where((c) => key == null || c.AllSettings.GetValueOrDefault(key) == value).DefaultIfEmpty(TestConfiguration.Empty).Select(c => new[] { c });
     }
 
+    // Configurations skipping desktop framework
+    public static IEnumerable<object[]> GetNetCoreConfigurations()
+    {
+        return TestRunConfiguration.Instance.Configurations
+            // Filter out configurations for specific tests
+            .Where(c => c.AllSettings.GetValueOrDefault("TestName") == null)
+            // Filter for only .NET core configurations
+            .Where(c => c.IsNETCore)
+            .Select(c => new[] { c });
+    }
+
     public static IEnumerable<object[]> GetGCConfigurations()
     {
         IEnumerable<TestConfiguration> inputConfigurations = TestRunConfiguration.Instance.Configurations
@@ -222,6 +233,24 @@ public class SOS
     private ITestOutputHelper Output { get; set; }
 
     public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
+
+
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
+    public async Task VarargPInvokeInteropMD(TestConfiguration config)
+    {
+        if (OS.Kind != OSKind.Windows)
+        {
+            throw new SkipTestException("Test only supports CDB and therefore only runs on Windows");
+        }
+
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "VarargPInvokeInteropMD",
+            scriptName: "VarargPInvokeInteropMD.script",
+            Output,
+            testName: "SOS.VarargPInvokeInteropMD",
+            testDump: false);
+    }
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task FindRootsOlderGeneration(TestConfiguration config)
