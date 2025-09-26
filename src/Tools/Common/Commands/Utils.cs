@@ -211,6 +211,7 @@ namespace Microsoft.Internal.Common.Utils
         SessionCreationError,
         TracingError,
         ArgumentError,
+        PlatformNotSupportedError,
         UnknownError
     }
 }
