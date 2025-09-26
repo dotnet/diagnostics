@@ -139,7 +139,8 @@ public static class SOSTestHelpers
         string testName = null,
         bool testLive = true,
         bool testDump = true,
-        bool testTriage = false)
+        bool testTriage = false,
+        SOSRunner.DumpGenerator dumpGenerator = SOSRunner.DumpGenerator.CreateDump)
     {
         await RunTest(scriptName,
             new SOSRunner.TestInformation
@@ -149,7 +150,8 @@ public static class SOSTestHelpers
                 TestLive = testLive,
                 TestDump = testDump,
                 DebuggeeName = debuggeeName,
-                DumpType = SOSRunner.DumpType.Heap
+                DumpType = SOSRunner.DumpType.Heap,
+                DumpGenerator = dumpGenerator,
             },
             output);
 
@@ -165,7 +167,8 @@ public static class SOSTestHelpers
                     TestLive = false,
                     TestDump = testDump,
                     DebuggeeName = debuggeeName,
-                    DumpType = SOSRunner.DumpType.Triage
+                    DumpType = SOSRunner.DumpType.Triage,
+                    DumpGenerator = dumpGenerator,
                 },
                 output);
         }
@@ -234,6 +237,21 @@ public class SOS
 
     public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
 
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
+    public async Task TriageDumpLocalVarLookup(TestConfiguration config)
+    {
+        // The default dumpGenerator, CreateDump, only supports taking dumps at exceptions.
+        // DotnetDump could support taking a dump at a breakpoint, but this SOS test framework doesn't currently support this operation.
+        // Therefore we use the NativeDebugger to take a dump at the DebugBreak() call in the debuggee.
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "TriageDumpLocalVarLookup",
+            scriptName: "TriageDumpLocalVarLookup.script",
+            Output,
+            testName: "SOS.TriageDumpLocalVarLookup",
+            testTriage: true,
+            dumpGenerator: SOSRunner.DumpGenerator.NativeDebugger);
+    }
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task VarargPInvokeInteropMD(TestConfiguration config)

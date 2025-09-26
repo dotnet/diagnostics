@@ -1,0 +1,15 @@
+#
+# Verifies that local stack value variables are able to be parsed by the debugger in mini/triage dumps
+# Utilizes the ICorDebug stackwalk with -i
+#
+
+CONTINUE
+
+LOADSOS
+
+# stackwalk with locals
+SOSCOMMAND:clrstack -l
+
+# stackwalk through ICorDebug with locals
+SOSCOMMAND:clrstack -i -l
+VERIFY:int\s+length\s+=\s+13
