@@ -1,0 +1,21 @@
+#
+# Verifies DumpGCData command
+#
+
+# Continue to the DebugBreak
+CONTINUE
+IFDEF:CDB
+VERIFY:Break instruction exception - code 80000003
+ENDIF:CDB
+
+LOADSOS
+
+# At start of main, there should be no pinned objects
+SOSCOMMAND:DumpGCData
+VERIFY: pre and post pin: 0
+
+CONTINUE
+
+# At second break, there should be a single pinned object
+SOSCOMMAND:DumpGCData
+VERIFY: pre and post pin: 1
