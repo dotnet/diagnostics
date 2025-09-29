@@ -51,7 +51,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FindRootsOlderGeneration", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DumpGCData", "src\SOS\SOS.UnitTests\Debuggees\DumpGCData\DumpGCData.csproj", "{CBE13BD1-EA24-4A95-818C-EE6FFA4F09A5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TriageDumpLocalVarLookup", "src\SOS\SOS.UnitTests\Debuggees\TriageDumpLocalVarLookup\TriageDumpLocalVarLookup.csproj", "{B042D2AB-D74C-46D8-94DD-68E9AA293FF5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniDumpLocalVarLookup", "src\SOS\SOS.UnitTests\Debuggees\MiniDumpLocalVarLookup\MiniDumpLocalVarLookup.csproj", "{B042D2AB-D74C-46D8-94DD-68E9AA293FF5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
