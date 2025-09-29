@@ -825,7 +825,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             get
             {
                 string dotnetRoot = GetValue("DotNetRoot");
-                return (!string.IsNullOrEmpty(dotnetRoot)) ? MakeCanonicalPath(dotnetRoot) : MakeCanonicalPath(Environment.GetEnvironmentVariable("DOTNET_ROOT"));
+                return MakeCanonicalPath(dotnetRoot);
             }
         }
 

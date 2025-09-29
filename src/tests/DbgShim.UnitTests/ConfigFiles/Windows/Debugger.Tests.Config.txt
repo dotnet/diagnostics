@@ -1,15 +1,13 @@
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <DotNetRoot Condition="'$(TestDotNetRoot)' != ''">$(TestDotNetRoot)</DotNetRoot>
-  <Import ConfigFile="$(TestVersionConfigDir)\Debugger.Tests.Versions.txt" />
-
+  <DotNetRoot Condition="'$(TargetArchitecture)' != 'x86'">$(RepoRootDir)\.dotnet-test</DotNetRoot>
+  <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet-test\x86</DotNetRoot>
+  <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
   <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
-  <InstallDir>$(TestNativeDir)</InstallDir>
-  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\dbgshim.unittests_$(Timestamp)</LogDir>
+  <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
 
   <TestProduct>ProjectK</TestProduct>
   <DebuggeeSourceRoot>$(RepoRootDir)\src\tests\Debuggees</DebuggeeSourceRoot>
-  <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
   <DebuggeeName>SimpleDebuggee</DebuggeeName>
 

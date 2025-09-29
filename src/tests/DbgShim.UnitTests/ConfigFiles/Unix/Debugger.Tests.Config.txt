@@ -1,10 +1,10 @@
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <DotNetRoot Condition="'$(TestDotNetRoot)' != ''">$(TestDotNetRoot)</DotNetRoot>
-  <Import ConfigFile="$(TestVersionConfigDir)/Debugger.Tests.Versions.txt" />
+  <DotNetRoot>$(RepoRootDir)/.dotnet-test</DotNetRoot>
+  <Import ConfigFile="$(DotNetRoot)/Debugger.Tests.Versions.txt" />
 
   <RootBinDir>$(RepoRootDir)/artifacts</RootBinDir>
-  <InstallDir>$(TestNativeDir)</InstallDir>
+  <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/dbgshim.unittests_$(Timestamp)</LogDir>
  
   <TestProduct>ProjectK</TestProduct>
