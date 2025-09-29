@@ -140,6 +140,7 @@ public static class SOSTestHelpers
         bool testLive = true,
         bool testDump = true,
         bool testTriage = false,
+        bool testMini = false,
         SOSRunner.DumpGenerator dumpGenerator = SOSRunner.DumpGenerator.CreateDump)
     {
         await RunTest(scriptName,
@@ -168,6 +169,21 @@ public static class SOSTestHelpers
                     TestDump = testDump,
                     DebuggeeName = debuggeeName,
                     DumpType = SOSRunner.DumpType.Triage,
+                    DumpGenerator = dumpGenerator,
+                },
+                output);
+        }
+        if (testMini && !config.PublishSingleFile)
+        {
+            await RunTest(scriptName,
+                new SOSRunner.TestInformation
+                {
+                    TestConfiguration = config,
+                    TestName = testName,
+                    TestLive = false,
+                    TestDump = testDump,
+                    DebuggeeName = debuggeeName,
+                    DumpType = SOSRunner.DumpType.Mini,
                     DumpGenerator = dumpGenerator,
                 },
                 output);
@@ -238,18 +254,28 @@ public class SOS
     public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task TriageDumpLocalVarLookup(TestConfiguration config)
+    public async Task MiniDumpLocalVarLookup(TestConfiguration config)
     {
+        if (OS.Kind != OSKind.Windows)
+        {
+            throw new SkipTestException("Test only supports CDB and therefore only runs on Windows");
+        }
+
+        if (config.PublishSingleFile)
+        {
+            throw new SkipTestException("Single file does not support mini dumps");
+        }
+
         // The default dumpGenerator, CreateDump, only supports taking dumps at exceptions.
         // DotnetDump could support taking a dump at a breakpoint, but this SOS test framework doesn't currently support this operation.
         // Therefore we use the NativeDebugger to take a dump at the DebugBreak() call in the debuggee.
         await SOSTestHelpers.RunTest(
             config,
-            debuggeeName: "TriageDumpLocalVarLookup",
-            scriptName: "TriageDumpLocalVarLookup.script",
+            debuggeeName: "MiniDumpLocalVarLookup",
+            scriptName: "MiniDumpLocalVarLookup.script",
             Output,
-            testName: "SOS.TriageDumpLocalVarLookup",
-            testTriage: true,
+            testName: "SOS.MiniDumpLocalVarLookup",
+            testMini: true,
             dumpGenerator: SOSRunner.DumpGenerator.NativeDebugger);
     }
 

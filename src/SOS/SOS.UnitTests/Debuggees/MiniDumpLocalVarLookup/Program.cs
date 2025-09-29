@@ -4,7 +4,7 @@
 using System;
 using System.Diagnostics;
 
-namespace TriageDumpLocalVarLookup;
+namespace MiniDumpLocalVarLookup;
 
 internal class Program
 {
