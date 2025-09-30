@@ -46,7 +46,7 @@
     <InternalsVisibleTo Include="Microsoft.Diagnostics.WebSocketServer" />
     <!-- Temporary until Diagnostic Apis are finalized-->
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.WebApi" />
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.Tests" />
   </ItemGroup>
 
   <ItemGroup>

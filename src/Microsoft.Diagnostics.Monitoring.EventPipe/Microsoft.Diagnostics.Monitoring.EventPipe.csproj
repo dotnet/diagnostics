@@ -41,10 +41,10 @@
     <InternalsVisibleTo Include="dotnet-monitor" />
     <InternalsVisibleTo Include="dotnet-counters" />
     <InternalsVisibleTo Include="dotnet-trace" />
-    <InternalsVisibleTo Include="DotnetCounters.UnitTests" />
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests" />
+    <InternalsVisibleTo Include="DotnetCounters.Tests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe.Tests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.WebApi" />
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.Tool.UnitTests" />
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.Tool.Tests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.Tests" />
   </ItemGroup>
 </Project>

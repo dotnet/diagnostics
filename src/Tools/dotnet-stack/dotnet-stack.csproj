@@ -29,7 +29,7 @@
  </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="DotnetStack.UnitTests" />
+    <InternalsVisibleTo Include="DotnetStack.Tests" />
   </ItemGroup>
 
 </Project>

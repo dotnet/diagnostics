@@ -26,7 +26,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.UnitTests')) or $(MSBuildProjectName.EndsWith('.Tests'))">true</IsTestProject>
+    <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.Tests'))">true</IsTestProject>
     <IsTestSupportProject Condition="'$(IsTestProject)' != 'true' and '$(IsTrimmingTestProject)' != 'true'">true</IsTestSupportProject>
   </PropertyGroup>
 </Project>

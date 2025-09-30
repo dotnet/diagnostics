@@ -10,7 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SOS", "SOS", "{41638A4C-0DA
 		src\SOS\CMakeLists.txt = src\SOS\CMakeLists.txt
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SOS.UnitTests", "src\tests\SOS.UnitTests\SOS.UnitTests.csproj", "{1532DB3C-7DCD-45C6-B697-62B8378A16A2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SOS.Tests", "src\tests\SOS.Tests\SOS.Tests.csproj", "{1532DB3C-7DCD-45C6-B697-62B8378A16A2}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "lldbplugin", "src\SOS\lldbplugin\lldbplugin.vcxproj", "{D52C65C4-2C7D-45E6-9F5C-6F3A96796018}"
 EndProject
@@ -42,17 +42,17 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SOS.Symbol.Package", "src\S
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{03479E19-3F18-49A6-910A-F5041E27E7C0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetTrace.UnitTests", "src\tests\DotnetTrace.UnitTests\DotnetTrace.UnitTests.csproj", "{AEDCCF5B-5AD0-4D64-BF73-5CF468E07D22}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetTrace.Tests", "src\tests\DotnetTrace.Tests\DotnetTrace.Tests.csproj", "{AEDCCF5B-5AD0-4D64-BF73-5CF468E07D22}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-gcdump", "src\Tools\dotnet-gcdump\dotnet-gcdump.csproj", "{936678B3-3392-4F4F-943C-B6A4BFCBAADC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetCounters.UnitTests", "src\tests\DotnetCounters.UnitTests\DotnetCounters.UnitTests.csproj", "{E5A7DC6C-BF8D-418A-BCBD-094EB748FA82}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetCounters.Tests", "src\tests\DotnetCounters.Tests\DotnetCounters.Tests.csproj", "{E5A7DC6C-BF8D-418A-BCBD-094EB748FA82}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.NETCore.Client", "src\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj", "{D8BE9C81-194E-43E5-82CF-2080892FBDE7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.NETCore.Client.UnitTests", "src\tests\Microsoft.Diagnostics.NETCore.Client.UnitTests\Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj", "{6F4DD2F8-1C7B-4A87-B7E5-1BEE9F5AC128}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.NETCore.Client.Tests", "src\tests\Microsoft.Diagnostics.NETCore.Client.Tests\Microsoft.Diagnostics.NETCore.Client.Tests.csproj", "{6F4DD2F8-1C7B-4A87-B7E5-1BEE9F5AC128}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventPipe.UnitTests", "src\tests\EventPipe.UnitTests\EventPipe.UnitTests.csproj", "{CED9ABBA-861E-4C0A-9359-22351208EF27}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventPipe.Tests", "src\tests\EventPipe.Tests\EventPipe.Tests.csproj", "{CED9ABBA-861E-4C0A-9359-22351208EF27}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{298AE119-6625-4604-BDE5-0765DC34C856}"
 	ProjectSection(SolutionItems) = preProject
@@ -190,11 +190,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "llvm", "llvm", "{06730767-4
 		src\shared\inc\llvm\ELF.h = src\shared\inc\llvm\ELF.h
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Monitoring.UnitTests", "tests\Microsoft.Diagnostics.Monitoring.UnitTests\Microsoft.Diagnostics.Monitoring.UnitTests.csproj", "{6419BA04-6F1A-4D2F-8DE4-5C359E0364A3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Monitoring.Tests", "tests\Microsoft.Diagnostics.Monitoring.Tests\Microsoft.Diagnostics.Monitoring.Tests.csproj", "{6419BA04-6F1A-4D2F-8DE4-5C359E0364A3}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Monitoring.EventPipe", "src\Microsoft.Diagnostics.Monitoring.EventPipe\Microsoft.Diagnostics.Monitoring.EventPipe.csproj", "{E1E2C698-E247-4D48-AE01-542B43744ACB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests", "tests\Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests\Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests.csproj", "{A58B7F72-E9DF-4962-9E15-300EF4C53ABB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.Monitoring.EventPipe.Tests", "tests\Microsoft.Diagnostics.Monitoring.EventPipe.Tests\Microsoft.Diagnostics.Monitoring.EventPipe.Tests.csproj", "{A58B7F72-E9DF-4962-9E15-300EF4C53ABB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-stack", "src\Tools\dotnet-stack\dotnet-stack.csproj", "{642E6E67-8A84-473D-9507-C302BF10989D}"
 EndProject
@@ -224,7 +224,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "extensions", "src\SOS\exten
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.ExtensionCommands", "src\Microsoft.Diagnostics.ExtensionCommands\Microsoft.Diagnostics.ExtensionCommands.csproj", "{5FC66A16-41E9-4D22-A44C-FEBB7DCCAAF8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.DebugServices.UnitTests", "tests\Microsoft.Diagnostics.DebugServices.UnitTests\Microsoft.Diagnostics.DebugServices.UnitTests.csproj", "{064BC7DD-D44C-400E-9215-7546E092AB98}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.DebugServices.Tests", "tests\Microsoft.Diagnostics.DebugServices.Tests\Microsoft.Diagnostics.DebugServices.Tests.csproj", "{064BC7DD-D44C-400E-9215-7546E092AB98}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-dsrouter", "src\Tools\dotnet-dsrouter\dotnet-dsrouter.csproj", "{2BD55143-B102-4FEC-84AD-DC3B330FA9AC}"
 EndProject
@@ -245,11 +245,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "minipal", "minipal", "{795B
 		src\shared\minipal\dn-u16.h = src\shared\minipal\dn-u16.h
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DbgShim.UnitTests", "tests\DbgShim.UnitTests\DbgShim.UnitTests.csproj", "{DD60B7C4-BECC-4C7D-A53B-FCDD4C92B728}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DbgShim.Tests", "tests\DbgShim.Tests\DbgShim.Tests.csproj", "{DD60B7C4-BECC-4C7D-A53B-FCDD4C92B728}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CommonTestRunner", "tests\CommonTestRunner\CommonTestRunner.csproj", "{DFF48CB6-4504-41C6-A8F1-F4A3D316D49F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetStack.UnitTests", "tests\DotnetStack.UnitTests\DotnetStack.UnitTests.csproj", "{E8F133F8-4D20-475D-9D16-2BA236DAB65F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetStack.Tests", "tests\DotnetStack.Tests\DotnetStack.Tests.csproj", "{E8F133F8-4D20-475D-9D16-2BA236DAB65F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Diagnostics.WebSocketServer", "src\Microsoft.Diagnostics.WebSocketServer\Microsoft.Diagnostics.WebSocketServer.csproj", "{1043FA82-37CC-4809-80DC-C1EB06A55133}"
 EndProject
@@ -263,9 +263,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "dotnet-symbol", "src\Tools\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestHelpers", "tests\TestHelpers\TestHelpers.csproj", "{C32F2858-6B5F-4967-ABC4-852B6399C4AE}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.FileFormats.UnitTests", "tests\Microsoft.FileFormats.UnitTests\Microsoft.FileFormats.UnitTests.csproj", "{44F93947-8FD4-4946-8AE5-EF6D25970CC7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.FileFormats.Tests", "tests\Microsoft.FileFormats.Tests\Microsoft.FileFormats.Tests.csproj", "{44F93947-8FD4-4946-8AE5-EF6D25970CC7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.SymbolStore.UnitTests", "tests\Microsoft.SymbolStore.UnitTests\Microsoft.SymbolStore.UnitTests.csproj", "{C2422836-BA25-4751-9060-7C7890085869}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.SymbolStore.Tests", "tests\Microsoft.SymbolStore.Tests\Microsoft.SymbolStore.Tests.csproj", "{C2422836-BA25-4751-9060-7C7890085869}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.SymbolManifestGenerator", "src\Microsoft.SymbolManifestGenerator\Microsoft.SymbolManifestGenerator.csproj", "{28B55114-88C0-44B6-BBD8-50C14ED59EE2}"
 EndProject
