@@ -14,7 +14,8 @@
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" GeneratePathProperty="true" />
-    <PackageReference Include="Microsoft.OneCollect.RecordTrace" Version="0.1.31522" PrivateAssets="All" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.OneCollect.RecordTrace" Version="0.1.31901" PrivateAssets="All" GeneratePathProperty="true"
+                      Condition="'$(RuntimeIdentifier)' != '' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,18 +31,8 @@
     <InternalsVisibleTo Include="DotnetTrace.UnitTests" />
   </ItemGroup>
 
-  <Target Name="ResolveRecordTraceNative" BeforeTargets="CopyFilesToOutputDirectory">
-    <PropertyGroup>
-      <_RecordTraceFromPackage>$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(RuntimeIdentifier)/native/librecordtrace.so</_RecordTraceFromPackage>
-    </PropertyGroup>
-
-    <ItemGroup>
-      <_RecordTraceResolved Include="$(_RecordTraceLocal)" Condition="'$(RuntimeIdentifier)' != '' AND Exists('$(_RecordTraceLocal)')" />
-      <_RecordTraceResolved Include="$(_RecordTraceFromPackage)" Condition="'@(_RecordTraceResolved)' == '' AND '$(RuntimeIdentifier)' != '' AND Exists('$(_RecordTraceFromPackage)')" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Include="@(_RecordTraceResolved)" CopyToOutputDirectory="PreserveNewest" Condition="'@(_RecordTraceResolved)' != ''" />
-    </ItemGroup>
-  </Target>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' != '' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))">
+    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(RuntimeIdentifier)/native/librecordtrace.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+          Condition="Exists('$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(RuntimeIdentifier)/native/librecordtrace.so')" />
+  </ItemGroup>
 </Project>
