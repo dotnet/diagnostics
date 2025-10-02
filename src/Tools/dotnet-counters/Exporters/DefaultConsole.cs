@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Microsoft.Diagnostics.Tools.Common.Exporters;
 
 namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 {
