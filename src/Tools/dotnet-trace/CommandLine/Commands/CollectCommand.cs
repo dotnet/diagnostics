@@ -13,16 +13,26 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools.Common;
 using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static class CollectCommandHandler
+    internal class CollectCommandHandler
     {
-        internal static bool IsQuiet { get; set; }
+        internal bool IsQuiet { get; set; }
 
-        private static void ConsoleWriteLine(string str)
+        public CollectCommandHandler()
+        {
+            Console = new DefaultConsole(false);
+            StartTraceSessionAsync = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
+            ResumeRuntimeAsync = (client, ct) => client.ResumeRuntimeAsync(ct);
+            CollectSessionEventStream = name => new FileStream(name, FileMode.Create, FileAccess.Write);
+            IsOutputRedirected = Console.IsOutputRedirected;
+        }
+
+        private void ConsoleWriteLine(string str)
         {
             if (!IsQuiet)
             {
@@ -54,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="stoppingEventPayloadFilter">A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.</param>
         /// <param name="rundown">Collect rundown events.</param>
         /// <returns></returns>
-        internal static async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
+        internal async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -79,7 +89,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     cancelOnCtrlC = true;
                     cancelOnEnter = !Console.IsInputRedirected;
-                    printStatusOverTime = !IsOutputRedirected();
+                    printStatusOverTime = !IsOutputRedirected;
                 }
 
                 if (!cancelOnCtrlC)
@@ -357,10 +367,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         LineRewriter rewriter = null;
 
-                        using (FileStream fs = new(output.FullName, FileMode.Create, FileAccess.Write))
+                        using (Stream eventStream = CollectSessionEventStream(output.FullName))
                         {
                             ConsoleWriteLine($"Process        : {processMainModuleFileName}");
-                            ConsoleWriteLine($"Output File    : {fs.Name}");
+                            ConsoleWriteLine($"Output File    : {output.FullName}");
                             if (shouldStopAfterDuration)
                             {
                                 ConsoleWriteLine($"Trace Duration : {duration:dd\\:hh\\:mm\\:ss}");
@@ -383,14 +393,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     onPayloadFilterMismatch: (traceEvent) => {
                                         ConsoleWriteLine($"One or more field names specified in the payload filter for event '{traceEvent.ProviderName}/{traceEvent.EventName}' do not match any of the known field names: '{string.Join(' ', traceEvent.PayloadNames)}'. As a result the requested stopping event is unreachable; will continue to collect the trace for the remaining specified duration.");
                                     },
-                                    eventStream: new PassthroughStream(session.EventStream, fs, (int)buffersize, leaveDestinationStreamOpen: true),
+                                    eventStream: new PassthroughStream(session.EventStream, eventStream, (int)buffersize, leaveDestinationStreamOpen: true),
                                     callOnEventOnlyOnce: true);
 
                                 copyTask = eventMonitor.ProcessAsync(CancellationToken.None);
                             }
                             else
                             {
-                                copyTask = session.EventStream.CopyToAsync(fs);
+                                copyTask = session.EventStream.CopyToAsync(eventStream);
                             }
                             Task shouldExitTask = copyTask.ContinueWith(
                                 (task) => shouldExit.Set(),
@@ -400,7 +410,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             if (printStatusOverTime)
                             {
-                                if (AreCursorOperationsSupported())
+                                if (CursorOperationsSupported)
                                 {
                                     rewriter = new LineRewriter { LineToClear = Console.CursorTop - 1 };
                                     Console.CursorVisible = false;
@@ -506,7 +516,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             finally
             {
-                if (printStatusOverTime && AreCursorOperationsSupported())
+                if (printStatusOverTime && CursorOperationsSupported)
                 {
                     if (!Console.IsOutputRedirected)
                     {
@@ -527,7 +537,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return ret;
         }
 
-        private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
+        private void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
         {
             ConsoleWriteLine("");
             ConsoleWriteLine(string.Format("{0, -40}", "Provider Name") + string.Format("{0, -20}", "Keywords") +
@@ -588,27 +598,30 @@ namespace Microsoft.Diagnostics.Tools.Trace
             collectCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Program.Main that handles UnmatchedTokens
             collectCommand.Description = "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.";
 
-            collectCommand.SetAction((parseResult, ct) => Collect(
-                ct,
-                cliConfig: parseResult.Configuration,
-                processId: parseResult.GetValue(CommonOptions.ProcessIdOption),
-                output: parseResult.GetValue(OutputPathOption),
-                buffersize: parseResult.GetValue(CircularBufferOption),
-                providers: parseResult.GetValue(ProvidersOption) ?? string.Empty,
-                profile: parseResult.GetValue(ProfileOption) ?? string.Empty,
-                format: parseResult.GetValue(CommonOptions.FormatOption),
-                duration: parseResult.GetValue(DurationOption),
-                clrevents: parseResult.GetValue(CLREventsOption) ?? string.Empty,
-                clreventlevel: parseResult.GetValue(CLREventLevelOption) ?? string.Empty,
-                name: parseResult.GetValue(CommonOptions.NameOption),
-                diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
-                showchildio: parseResult.GetValue(ShowChildIOOption),
-                resumeRuntime: parseResult.GetValue(ResumeRuntimeOption),
-                stoppingEventProviderName: parseResult.GetValue(StoppingEventProviderNameOption),
-                stoppingEventEventName: parseResult.GetValue(StoppingEventEventNameOption),
-                stoppingEventPayloadFilter: parseResult.GetValue(StoppingEventPayloadFilterOption),
-                rundown: parseResult.GetValue(RundownOption),
-                dsrouter: parseResult.GetValue(DSRouterOption)));
+            collectCommand.SetAction((parseResult, ct) =>
+            {
+                CollectCommandHandler handler = new();
+                return handler.Collect(ct,
+                                       cliConfig: parseResult.Configuration,
+                                       processId: parseResult.GetValue(CommonOptions.ProcessIdOption),
+                                       output: parseResult.GetValue(OutputPathOption),
+                                       buffersize: parseResult.GetValue(CircularBufferOption),
+                                       providers: parseResult.GetValue(ProvidersOption) ?? string.Empty,
+                                       profile: parseResult.GetValue(ProfileOption) ?? string.Empty,
+                                       format: parseResult.GetValue(CommonOptions.FormatOption),
+                                       duration: parseResult.GetValue(DurationOption),
+                                       clrevents: parseResult.GetValue(CLREventsOption) ?? string.Empty,
+                                       clreventlevel: parseResult.GetValue(CLREventLevelOption) ?? string.Empty,
+                                       name: parseResult.GetValue(CommonOptions.NameOption),
+                                       diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
+                                       showchildio: parseResult.GetValue(ShowChildIOOption),
+                                       resumeRuntime: parseResult.GetValue(ResumeRuntimeOption),
+                                       stoppingEventProviderName: parseResult.GetValue(StoppingEventProviderNameOption),
+                                       stoppingEventEventName: parseResult.GetValue(StoppingEventEventNameOption),
+                                       stoppingEventPayloadFilter: parseResult.GetValue(StoppingEventPayloadFilterOption),
+                                       rundown: parseResult.GetValue(RundownOption),
+                                       dsrouter: parseResult.GetValue(DSRouterOption));
+            });
 
             return collectCommand;
         }
@@ -735,14 +748,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             public void Dispose() => _session.Dispose();
         }
 
-        internal static Func<DiagnosticsClient, EventPipeSessionConfiguration, CancellationToken, Task<ICollectSession>> StartTraceSessionAsync { get; set; }
-            = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
-
-        internal static Func<DiagnosticsClient, CancellationToken, Task> ResumeRuntimeAsync { get; set; }
-            = (client, ct) => client.ResumeRuntimeAsync(ct);
-
-        internal static Func<bool> IsOutputRedirected { get; set; } = () => Console.IsOutputRedirected;
-        internal static Func<bool> AreCursorOperationsSupported { get; set; } = () => true;
+        internal Func<DiagnosticsClient, EventPipeSessionConfiguration, CancellationToken, Task<ICollectSession>> StartTraceSessionAsync { get; set; }
+        internal Func<DiagnosticsClient, CancellationToken, Task> ResumeRuntimeAsync { get; set; }
+        internal bool CursorOperationsSupported { get; set; } = true;
+        internal Func<string, Stream> CollectSessionEventStream { get; set; }
+        internal IConsole Console { get; set; }
+        internal bool IsOutputRedirected { get; set; }
 #endregion
     }
 }

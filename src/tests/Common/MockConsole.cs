@@ -35,6 +35,18 @@ namespace Microsoft.Diagnostics.Tests.Common
 
         public int BufferWidth { get; private set; }
 
+        public int BufferHeight { get; private set; }
+
+        public bool IsOutputRedirected { get; private set; }
+
+        public bool IsInputRedirected { get; private set; }
+
+        public bool KeyAvailable { get; private set; }
+
+        public TextWriter Out => this;
+
+        public TextWriter Error => this;
+
         public void Clear()
         {
             _chars = new char[WindowHeight][];
@@ -102,6 +114,10 @@ namespace Microsoft.Diagnostics.Tests.Common
 
         public string GetLineText(int row) => new string(_chars[row]).TrimEnd();
 
+        public ConsoleKeyInfo ReadKey() => Console.ReadKey();
+
+        public ConsoleKeyInfo ReadKey(bool intercept) => Console.ReadKey(intercept);
+
         public string[] Lines
         {
             get
@@ -143,29 +159,29 @@ namespace Microsoft.Diagnostics.Tests.Common
         // Asserts that the sanitized version of the console lines exactly equals the expected lines.
         // The sanitizer receives the raw Lines array and should return a transformed array (e.g., with
         // blank lines removed, whitespace collapsed, dynamic values normalized). Equality is ordinal.
-        public void AssertSanitizedLinesEqual(Func<string[], string[]> sanitizer, params string[] expectedSanitizedLines)
+        public void AssertSanitizedLinesEqual(Func<string[], string[]> sanitizer, params string[] expectedLines)
         {
-            if (sanitizer is null)
+            string[] actualLines = Lines;
+            if (sanitizer is not null)
             {
-                throw new ArgumentNullException(nameof(sanitizer));
+                actualLines = sanitizer(actualLines);
             }
-            string[] actualSanitized = sanitizer(Lines);
-            if (actualSanitized.Length != expectedSanitizedLines.Length)
+            Assert.True(actualLines.Length >= expectedLines.Length, "Sanitized console output had fewer lines than expected." + Environment.NewLine +
+                $"Expected line count: {expectedLines.Length}" + Environment.NewLine +
+                $"Actual line count: {actualLines.Length}");
+
+            for (int i = 0; i < expectedLines.Length; i++)
             {
-                Assert.Fail("Sanitized console output length mismatch." + Environment.NewLine +
-                    $"Expected: {expectedSanitizedLines.Length}" + Environment.NewLine +
-                    $"Actual  : {actualSanitized.Length}");
-            }
-            for (int i = 0; i < expectedSanitizedLines.Length; i++)
-            {
-                string expected = expectedSanitizedLines[i];
-                string actual = actualSanitized[i];
-                if (!string.Equals(expected, actual, StringComparison.Ordinal))
+                if (!string.Equals(expectedLines[i], actualLines[i], StringComparison.Ordinal))
                 {
                     Assert.Fail("Sanitized console output mismatch." + Environment.NewLine +
-                        $"Line {i,2} Expected: {expected}" + Environment.NewLine +
-                        $"Line {i,2} Actual  : {actual}");
+                        $"Line {i,2} Expected: {expectedLines[i]}" + Environment.NewLine +
+                        $"Line {i,2} Actual  : {actualLines[i]}");
                 }
+            }
+            for (int i = expectedLines.Length; i < actualLines.Length; i++)
+            {
+                Assert.True(string.IsNullOrWhiteSpace(actualLines[i]), "Actual line beyond expected lines is not empty: " + actualLines[i]);
             }
         }
     }

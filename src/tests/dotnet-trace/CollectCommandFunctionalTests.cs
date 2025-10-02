@@ -43,33 +43,33 @@ namespace Microsoft.Diagnostics.Tools.Trace
             internal TraceFileFormat Format => (TraceFileFormat)formatValue;
             public string OutputFilePath => output.FullName;
             public int ProcessId => processId == -1 ? Environment.ProcessId : processId;
+            private MemoryStream _eventStream = new();
+            public MemoryStream EventStream => _eventStream;
         }
 
         [Theory]
         [MemberData(nameof(BasicCases))]
         public async Task CollectCommandProviderConfigurationConsolidation(CollectArgs args, string[] expectedSubset)
         {
-            MockConsole console = new(600, 400);
+            MockConsole console = new(200, 30);
             string[] rawLines = await RunAsync(args, console).ConfigureAwait(true);
             console.AssertSanitizedLinesEqual(CollectSanitizer, expectedSubset);
 
-            Assert.True(File.Exists(args.OutputFilePath), $"Trace output file not found: {args.OutputFilePath}");
-            byte[] actual = File.ReadAllBytes(args.OutputFilePath);
             byte[] expected = Encoding.UTF8.GetBytes(ExpectedPayload);
-            Assert.Equal(expected.Length, actual.Length);
-            Assert.Equal(expected, actual);
+            Assert.Equal(expected, args.EventStream.ToArray());
         }
 
         private static async Task<string[]> RunAsync(CollectArgs config, MockConsole console)
         {
-            // Override CollectCommand seams for testing
-            CollectCommandHandler.StartTraceSessionAsync = (client, cfg, ct) => Task.FromResult<CollectCommandHandler.ICollectSession>(new TestCollectSession());
-            CollectCommandHandler.ResumeRuntimeAsync = (client, ct) => Task.CompletedTask;
-            CollectCommandHandler.IsOutputRedirected = () => false;
-            CollectCommandHandler.AreCursorOperationsSupported = () => false;
+            var handler = new CollectCommandHandler();
+            handler.StartTraceSessionAsync = (client, cfg, ct) => Task.FromResult<CollectCommandHandler.ICollectSession>(new TestCollectSession());
+            handler.ResumeRuntimeAsync = (client, ct) => Task.CompletedTask;
+            handler.CursorOperationsSupported = false;
+            handler.CollectSessionEventStream = (name) => config.EventStream;
+            handler.Console = console;
+            handler.IsOutputRedirected = false;
 
-            Console.SetOut(console);
-            int exit = await CollectCommandHandler.Collect(
+            int exit = await handler.Collect(
                 config.ct,
                 config.cliConfig,
                 config.ProcessId,
@@ -95,40 +95,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 throw new InvalidOperationException($"Collect exited with return code {exit}.");
             }
-            Console.SetOut(Console.Out);
             return console.Lines;
         }
 
         private static string[] CollectSanitizer(string[] lines)
         {
             List<string> result = new();
-            bool traceStatusSeen = false;
             foreach (string line in lines)
             {
-                if (string.IsNullOrWhiteSpace(line))
-                {
-                    continue;
-                }
                 if (line.StartsWith("Process        :", StringComparison.Ordinal))
                 {
-                    result.Add("Process : <PROCESS>");
-                }
-                else if (line.StartsWith("Output File    :", StringComparison.Ordinal))
-                {
-                    result.Add("Output File : <FILE>");
-                }
-                else if (line.Contains("Recording trace", StringComparison.Ordinal) || line.Contains("Press <Enter>", StringComparison.Ordinal))
-                {
-                    if (!traceStatusSeen)
-                    {
-                        traceStatusSeen = true;
-                        result.Add(line);
-                    }
+                    result.Add("Process        : <PROCESS>");
                 }
                 else
                 {
-                    string sanitizedLine = string.Join(" ", line.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries));
-                    result.Add(sanitizedLine);
+                    result.Add(line);
                 }
             }
             return result.ToArray();
@@ -139,7 +120,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             private static readonly byte[] _testBytes = Encoding.UTF8.GetBytes(ExpectedPayload);
             private readonly MemoryStream _stream = new(_testBytes);
             public Stream EventStream => _stream;
-            public void Stop() { _ = _stream; }
+            public void Stop() {}
             public void Dispose() => _stream.Dispose();
         }
 
@@ -147,131 +128,128 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             yield return new object[]
             {
-                new CollectArgs(output: CreateTraceFile("noProviders")),
+                new CollectArgs(output: new FileInfo("noProviders")),
                 ExpectProvidersWithMessages(
+                    "noProviders",
                     new[]
                     {
                         "No profile or providers specified, defaulting to trace profile 'cpu-sampling'"
                     },
-                    "Microsoft-DotNETCore-SampleProfiler 0x0000F00000000000 Informational(4) --profile",
-                    "Microsoft-Windows-DotNETRuntime 0x00000014C14FCCBD Informational(4) --profile")
+                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"),
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "00000014C14FCCBD", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: CreateTraceFile("singleProvider"), providers: "Foo:0x1:4"),
+                new CollectArgs(output: new FileInfo("singleProvider"), providers: "Foo:0x1:4"),
                 ExpectProviders(
-                    "Foo 0x0000000000000001 Informational(4) --providers")
+                    "singleProvider",
+                    FormatProvider("Foo", "0000000000000001", "Informational", 4, "--providers"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: CreateTraceFile("multipleProviders"), providers: "Foo:0x1:4,Bar:0x2:4"),
+                new CollectArgs(output: new FileInfo("multipleProviders"), providers: "Foo:0x1:4,Bar:0x2:4"),
                 ExpectProviders(
-                    "Foo 0x0000000000000001 Informational(4) --providers",
-                    "Bar 0x0000000000000002 Informational(4) --providers")
+                    "multipleProviders",
+                    FormatProvider("Foo", "0000000000000001", "Informational", 4, "--providers"),
+                    FormatProvider("Bar", "0000000000000002", "Informational", 4, "--providers"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: CreateTraceFile("profileOnly"), profile: "cpu-sampling"),
+                new CollectArgs(output: new FileInfo("profileOnly"), profile: "cpu-sampling"),
                 ExpectProviders(
-                    "Microsoft-DotNETCore-SampleProfiler 0x0000F00000000000 Informational(4) --profile",
-                    "Microsoft-Windows-DotNETRuntime 0x00000014C14FCCBD Informational(4) --profile")
+                    "profileOnly",
+                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"),
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "00000014C14FCCBD", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: CreateTraceFile("profileAndProviders"), profile: "cpu-sampling", providers: "Foo:0x1:4"),
+                new CollectArgs(output: new FileInfo("profileAndProviders"), profile: "cpu-sampling", providers: "Foo:0x1:4"),
                 ExpectProviders(
-                    "Foo 0x0000000000000001 Informational(4) --providers",
-                    "Microsoft-DotNETCore-SampleProfiler 0x0000F00000000000 Informational(4) --profile",
-                    "Microsoft-Windows-DotNETRuntime 0x00000014C14FCCBD Informational(4) --profile")
+                    "profileAndProviders",
+                    FormatProvider("Foo", "0000000000000001", "Informational", 4, "--providers"),
+                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"),
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "00000014C14FCCBD", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: CreateTraceFile("profileAndClrEventsIgnored"), profile: "cpu-sampling", clrevents: "gc"),
+                new CollectArgs(output: new FileInfo("profileAndClrEventsIgnored"), profile: "cpu-sampling", clrevents: "gc"),
                 ExpectProvidersWithMessages(
+                    "profileAndClrEventsIgnored",
                     new[]
                     {
                         "The argument --clrevents gc will be ignored because the CLR provider was configured via either --profile or --providers command."
                     },
-                    "Microsoft-DotNETCore-SampleProfiler 0x0000F00000000000 Informational(4) --profile",
-                    "Microsoft-Windows-DotNETRuntime 0x00000014C14FCCBD Informational(4) --profile")
+                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"),
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "00000014C14FCCBD", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: CreateTraceFile("profileOverriddenRuntime"), profile: "cpu-sampling", providers: "Microsoft-Windows-DotNETRuntime:0x1:4"),
+                new CollectArgs(output: new FileInfo("profileOverriddenRuntime"), profile: "cpu-sampling", providers: "Microsoft-Windows-DotNETRuntime:0x1:4"),
                 ExpectProviders(
-                    "Microsoft-Windows-DotNETRuntime 0x0000000000000001 Informational(4) --providers",
-                    "Microsoft-DotNETCore-SampleProfiler 0x0000F00000000000 Informational(4) --profile")
+                    "profileOverriddenRuntime",
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "0000000000000001", "Informational", 4, "--providers"),
+                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: CreateTraceFile("providersClrEventsIgnored"), providers: "Microsoft-Windows-DotNETRuntime:0x1:4", clrevents: "gc"),
+                new CollectArgs(output: new FileInfo("providersClrEventsIgnored"), providers: "Microsoft-Windows-DotNETRuntime:0x1:4", clrevents: "gc"),
                 ExpectProvidersWithMessages(
+                    "providersClrEventsIgnored",
                     new[]
                     {
                         "The argument --clrevents gc will be ignored because the CLR provider was configured via either --profile or --providers command."
                     },
-                    "Microsoft-Windows-DotNETRuntime 0x0000000000000001 Informational(4) --providers")
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "0000000000000001", "Informational", 4, "--providers"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: CreateTraceFile("clrEventsOnly"), clrevents: "gc+jit"),
+                new CollectArgs(output: new FileInfo("clrEventsOnly"), clrevents: "gc+jit"),
                 ExpectProviders(
-                    "Microsoft-Windows-DotNETRuntime 0x0000000000000011 Informational(4) --clrevents")
+                    "clrEventsOnly",
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "0000000000000011", "Informational", 4, "--clrevents"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: CreateTraceFile("clrEventsVerbose"), clrevents: "gc+jit", clreventlevel: "5"),
+                new CollectArgs(output: new FileInfo("clrEventsVerbose"), clrevents: "gc+jit", clreventlevel: "5"),
                 ExpectProviders(
-                    "Microsoft-Windows-DotNETRuntime 0x0000000000000011 Verbose(5) --clrevents")
+                    "clrEventsVerbose",
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "0000000000000011", "Verbose", 5, "--clrevents"))
             };
         }
 
-        private static FileInfo CreateTraceFile(string prefix)
-        {
-            string fullPath = Path.Combine(TestTraceDir, $"{prefix}_{Guid.NewGuid():N}.nettrace");
-            if (File.Exists(fullPath))
-            {
-                File.Delete(fullPath);
-            }
-            return new FileInfo(fullPath);
-        }
-
-        private static readonly string TestTraceDir = CreateTestTraceDir();
-
-        private static string CreateTestTraceDir()
-        {
-            string baseDir = AppContext.BaseDirectory;
-            string traceDir = Path.Combine(baseDir, "traces");
-            Directory.CreateDirectory(traceDir);
-            return traceDir;
-        }
-
+        private const string ProcessPlaceHolder = "Process        : <PROCESS>";
+        private static string outputPrefix = $"Output File    : {Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar}";
+        private const string ProviderHeader = "Provider Name                           Keywords            Level               Enabled By";
         private static readonly string[] CommonTail = [
-            "Process : <PROCESS>",
-            "Output File : <FILE>",
+            "",
             "Recording trace in progress. Press <Enter> or <Ctrl+C> to exit...",
             "\nTrace completed."
         ];
 
-        private static string[] Expect(params string[] lines)
-            => lines.Length == 0 ? CommonTail : [.. lines, .. CommonTail];
+        private static string[] Expect(string outputFile, params string[] lines)
+            => [.. lines, ProcessPlaceHolder, outputPrefix + outputFile, .. CommonTail];
 
-        private const string ProviderHeader = "Provider Name Keywords Level Enabled By";
+        private static string[] ExpectProviders(string outputFile, params string[] providerLines)
+            => Expect(outputFile, ["", ProviderHeader, .. providerLines, ""]);
 
-        private static string[] ExpectProviders(params string[] providerLines)
-            => Expect([ProviderHeader, .. providerLines]);
+        private static string[] ExpectProvidersWithMessages(string outputFile, string[] messages, params string[] providerLines)
+            => Expect(outputFile, [.. messages, "", ProviderHeader, .. providerLines, ""]);
 
-        // Supports any number of pre-provider messages before the header.
-        private static string[] ExpectProvidersWithMessages(string[] messages, params string[] providerLines)
-            => Expect([.. messages, ProviderHeader, .. providerLines]);
+        private static string FormatProvider(string name, string keywordsHex, string levelName, int levelValue, string enabledBy)
+        {
+            string display = string.Format("{0, -40}", name) +
+                             string.Format("0x{0, -18}", keywordsHex) +
+                             string.Format("{0, -8}", $"{levelName}({levelValue})");
+            return string.Format("{0, -80}", display) + enabledBy;
+        }
     }
 }
