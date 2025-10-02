@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace Microsoft.Diagnostics.Tools.Common.Exporters
+namespace Microsoft.Diagnostics.Tools.Common
 {
     /// <summary>
     /// Abstraction over console operations so tools can render to custom consoles in tests.

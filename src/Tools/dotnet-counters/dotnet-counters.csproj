@@ -22,7 +22,7 @@
     <Compile Include="..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
     <Compile Include="..\Common\CommandLineErrorException.cs" Link="CommandLineErrorException.cs" />
     <Compile Include="..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
-    <Compile Include="..\Common\Exporters\IConsole.cs" Link="Exporters\Shared\IConsole.cs" />
+    <Compile Include="..\Common\IConsole.cs" Link="IConsole.cs" />
   </ItemGroup>
 
   <ItemGroup>

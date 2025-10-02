@@ -12,7 +12,7 @@ using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Trace;
 using Xunit;
 
-namespace DotnetTrace.UnitTests
+namespace Microsoft.Diagnostics.Tools.Trace
 {
     public class CollectCommandFunctionalTests
     {

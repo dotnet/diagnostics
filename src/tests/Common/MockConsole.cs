@@ -5,7 +5,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using Microsoft.Diagnostics.Tools.Common.Exporters;
+using Microsoft.Diagnostics.Tools.Common;
 using Xunit;
 
 namespace Microsoft.Diagnostics.Tests.Common
