@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="stoppingEventPayloadFilter">A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.</param>
         /// <param name="rundown">Collect rundown events.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
+        internal static async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     cancelOnCtrlC = true;
                     cancelOnEnter = !Console.IsInputRedirected;
-                    printStatusOverTime = !Console.IsOutputRedirected;
+                    printStatusOverTime = !IsOutputRedirected();
                 }
 
                 if (!cancelOnCtrlC)
@@ -276,11 +276,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     using (VirtualTerminalMode vTermMode = printStatusOverTime ? VirtualTerminalMode.TryEnable() : null)
                     {
-                        EventPipeSession session = null;
+                        ICollectSession session = null;
                         try
                         {
                             EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: rundownKeyword, requestStackwalk: true);
-                            session = await diagnosticsClient.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false);
+                            session = await StartTraceSessionAsync(diagnosticsClient, config, ct).ConfigureAwait(false);
                         }
                         catch (UnsupportedCommandException e)
                         {
@@ -298,7 +298,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                                 //
                                 EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: EventPipeSession.DefaultRundownKeyword, requestStackwalk: true);
-                                session = await diagnosticsClient.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false);
+                                session = await StartTraceSessionAsync(diagnosticsClient, config, ct).ConfigureAwait(false);
                             }
                             else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
                             {
@@ -314,7 +314,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                                 //
                                 EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: 0, requestStackwalk: true);
-                                session = await diagnosticsClient.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false);
+                                session = await StartTraceSessionAsync(diagnosticsClient, config, ct).ConfigureAwait(false);
                             }
                             else
                             {
@@ -331,7 +331,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         {
                             try
                             {
-                                await diagnosticsClient.ResumeRuntimeAsync(ct).ConfigureAwait(false);
+                                await ResumeRuntimeAsync(diagnosticsClient, ct).ConfigureAwait(false);
                             }
                             catch (UnsupportedCommandException)
                             {
@@ -400,18 +400,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             if (printStatusOverTime)
                             {
-                                rewriter = new LineRewriter { LineToClear = Console.CursorTop - 1 };
-                                Console.CursorVisible = false;
-                                if (!rewriter.IsRewriteConsoleLineSupported)
+                                if (AreCursorOperationsSupported())
+                                {
+                                    rewriter = new LineRewriter { LineToClear = Console.CursorTop - 1 };
+                                    Console.CursorVisible = false;
+                                }
+                                if (rewriter == null || !rewriter.IsRewriteConsoleLineSupported)
                                 {
                                     ConsoleWriteLine("Recording trace in progress. Press <Enter> or <Ctrl+C> to exit...");
                                 }
                             }
 
                             Action printStatus = () => {
-                                if (printStatusOverTime && rewriter.IsRewriteConsoleLineSupported)
+                                if (printStatusOverTime && rewriter != null && rewriter.IsRewriteConsoleLineSupported)
                                 {
-                                    rewriter?.RewriteConsoleLine();
+                                    rewriter.RewriteConsoleLine();
                                     fileInfo.Refresh();
                                     ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(fileInfo.Length)}");
                                     ConsoleWriteLine("Press <Enter> or <Ctrl+C> to exit...");
@@ -503,7 +506,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             finally
             {
-                if (printStatusOverTime)
+                if (printStatusOverTime && AreCursorOperationsSupported())
                 {
                     if (!Console.IsOutputRedirected)
                     {
@@ -714,5 +717,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Description = @"The dsrouter command to start. Value should be one of ios, ios-sim, android, android-emu. Run `dotnet-dsrouter -h` for more information."
             };
+
+#region testing seams
+        // Abstraction for Collect's usage of EventPipeSession to facilitate testing.
+        internal interface ICollectSession : IDisposable
+        {
+            Stream EventStream { get; }
+            void Stop();
+        }
+
+        private sealed class CollectSession : ICollectSession
+        {
+            private readonly EventPipeSession _session;
+            public CollectSession(EventPipeSession session) => _session = session;
+            public Stream EventStream => _session.EventStream;
+            public void Stop() => _session.Stop();
+            public void Dispose() => _session.Dispose();
+        }
+
+        internal static Func<DiagnosticsClient, EventPipeSessionConfiguration, CancellationToken, Task<ICollectSession>> StartTraceSessionAsync { get; set; }
+            = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
+
+        internal static Func<DiagnosticsClient, CancellationToken, Task> ResumeRuntimeAsync { get; set; }
+            = (client, ct) => client.ResumeRuntimeAsync(ct);
+
+        internal static Func<bool> IsOutputRedirected { get; set; } = () => Console.IsOutputRedirected;
+        internal static Func<bool> AreCursorOperationsSupported { get; set; } = () => true;
+#endregion
     }
 }

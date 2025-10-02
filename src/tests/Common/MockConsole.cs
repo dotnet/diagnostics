@@ -4,12 +4,13 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using Microsoft.Diagnostics.Tools.Common.Exporters;
 using Xunit;
 
 namespace Microsoft.Diagnostics.Tests.Common
 {
-    internal class MockConsole : IConsole
+    internal class MockConsole : TextWriter, IConsole
     {
         char[][] _chars;
 
@@ -21,6 +22,8 @@ namespace Microsoft.Diagnostics.Tests.Common
             WindowHeight = height;
             Clear();
         }
+
+        public override Encoding Encoding => Encoding.UTF8;
 
         public int WindowHeight { get; init; }
 
@@ -51,7 +54,7 @@ namespace Microsoft.Diagnostics.Tests.Common
             CursorTop = row;
             _cursorLeft = col;
         }
-        public void Write(string text)
+        public override void Write(string text)
         {
             for(int textPos = 0; textPos < text.Length; )
             {
@@ -90,12 +93,12 @@ namespace Microsoft.Diagnostics.Tests.Common
                 }
             }
         }
-        public void WriteLine(string text)
+        public override void WriteLine(string text)
         {
             Write(text);
             Write(Environment.NewLine);
         }
-        public void WriteLine() => Write(Environment.NewLine);
+        public override void WriteLine() => Write(Environment.NewLine);
 
         public string GetLineText(int row) => new string(_chars[row]).TrimEnd();
 
@@ -134,6 +137,35 @@ namespace Microsoft.Diagnostics.Tests.Common
                         $"Actual line     : {actualLine}");
                 }
 
+            }
+        }
+
+        // Asserts that the sanitized version of the console lines exactly equals the expected lines.
+        // The sanitizer receives the raw Lines array and should return a transformed array (e.g., with
+        // blank lines removed, whitespace collapsed, dynamic values normalized). Equality is ordinal.
+        public void AssertSanitizedLinesEqual(Func<string[], string[]> sanitizer, params string[] expectedSanitizedLines)
+        {
+            if (sanitizer is null)
+            {
+                throw new ArgumentNullException(nameof(sanitizer));
+            }
+            string[] actualSanitized = sanitizer(Lines);
+            if (actualSanitized.Length != expectedSanitizedLines.Length)
+            {
+                Assert.Fail("Sanitized console output length mismatch." + Environment.NewLine +
+                    $"Expected: {expectedSanitizedLines.Length}" + Environment.NewLine +
+                    $"Actual  : {actualSanitized.Length}");
+            }
+            for (int i = 0; i < expectedSanitizedLines.Length; i++)
+            {
+                string expected = expectedSanitizedLines[i];
+                string actual = actualSanitized[i];
+                if (!string.Equals(expected, actual, StringComparison.Ordinal))
+                {
+                    Assert.Fail("Sanitized console output mismatch." + Environment.NewLine +
+                        $"Line {i,2} Expected: {expected}" + Environment.NewLine +
+                        $"Line {i,2} Actual  : {actual}");
+                }
             }
         }
     }
