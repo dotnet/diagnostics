@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console = new DefaultConsole(false);
             StartTraceSessionAsync = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
             ResumeRuntimeAsync = (client, ct) => client.ResumeRuntimeAsync(ct);
-            CollectSessionEventStream = name => new FileStream(name, FileMode.Create, FileAccess.Write);
+            CollectSessionEventStream = (name) => new FileStream(name, FileMode.Create, FileAccess.Write);
         }
 
         private void ConsoleWriteLine(string str)
@@ -409,34 +409,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             if (printStatusOverTime)
                             {
                                 rewriter = new LineRewriter(Console) { LineToClear = Console.CursorTop - 1 };
-                                try {
-                                    Console.CursorVisible = false;
-                                }
-                                catch {}
+                                Console.CursorVisible = false;
                                 if (!rewriter.IsRewriteConsoleLineSupported)
                                 {
                                     ConsoleWriteLine("Recording trace in progress. Press <Enter> or <Ctrl+C> to exit...");
                                 }
                             }
 
-                            FileInfo fileInfo = null;
-                            if (FileSizeForStatus == 0)
-                            {
-                                fileInfo = new(output.FullName);
-                            }
+                            FileInfo fileInfo = new(output.FullName);
                             Action printStatus = () => {
                                 if (printStatusOverTime && rewriter.IsRewriteConsoleLineSupported)
                                 {
                                     rewriter?.RewriteConsoleLine();
-                                    if (fileInfo != null)
-                                    {
-                                        fileInfo.Refresh();
-                                        ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(fileInfo.Length)}");
-                                    }
-                                    else
-                                    {
-                                        ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(FileSizeForStatus)}");
-                                    }
+                                    fileInfo.Refresh();
+                                    ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(fileInfo.Length)}");
                                     ConsoleWriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                 }
 
@@ -530,11 +516,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     if (!Console.IsOutputRedirected)
                     {
-                        try
-                        {
-                            Console.CursorVisible = true;
-                        }
-                        catch { }
+                        Console.CursorVisible = true;
                     }
                 }
 
@@ -766,7 +748,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
         internal Func<DiagnosticsClient, CancellationToken, Task> ResumeRuntimeAsync { get; set; }
         internal Func<string, Stream> CollectSessionEventStream { get; set; }
         internal IConsole Console { get; set; }
-        internal long FileSizeForStatus { get; set; }
 #endregion
     }
 }

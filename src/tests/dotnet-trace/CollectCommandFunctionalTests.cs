@@ -50,7 +50,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(BasicCases))]
         public async Task CollectCommandProviderConfigurationConsolidation(CollectArgs args, string[] expectedSubset)
         {
-            MockConsole console = new(200, 30) { IsOutputRedirected = false };
+            MockConsole console = new(200, 30);
             string[] rawLines = await RunAsync(args, console).ConfigureAwait(true);
             console.AssertSanitizedLinesEqual(CollectSanitizer, expectedSubset);
 
@@ -63,9 +63,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             var handler = new CollectCommandHandler();
             handler.StartTraceSessionAsync = (client, cfg, ct) => Task.FromResult<CollectCommandHandler.ICollectSession>(new TestCollectSession());
             handler.ResumeRuntimeAsync = (client, ct) => Task.CompletedTask;
-            handler.CollectSessionEventStream = (name) => new SlowSinkStream(config.EventStream);
+            handler.CollectSessionEventStream = (name) => config.EventStream;
             handler.Console = console;
-            handler.FileSizeForStatus = Encoding.UTF8.GetByteCount(ExpectedPayload);
 
             int exit = await handler.Collect(
                 config.ct,
@@ -96,32 +95,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return console.Lines;
         }
 
-        // As the test payload is small, we need to delay writes to the output stream to ensure
-        // that the status update logic in CollectCommandHandler has a chance to run.
-        private sealed class SlowSinkStream : Stream
-        {
-            private readonly Stream _inner;
-
-            public SlowSinkStream(Stream inner) { _inner = inner; }
-
-            public override bool CanRead => false;
-            public override bool CanSeek => false;
-            public override bool CanWrite => true;
-            public override long Length => throw new NotSupportedException();
-            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-
-            public override void Flush() { }
-            public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-            public override void SetLength(long value) => throw new NotSupportedException();
-            public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
-            public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-            {
-                await Task.Delay(200, cancellationToken).ConfigureAwait(false);
-                await _inner.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
-            }
-        }
-
         private static string[] CollectSanitizer(string[] lines)
         {
             List<string> result = new();
@@ -130,10 +103,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (line.StartsWith("Process        :", StringComparison.Ordinal))
                 {
                     result.Add("Process        : <PROCESS>");
-                }
-                else if (line.StartsWith('[') && line.Contains("Recording trace"))
-                {
-                    result.Add("[dd:hh:mm:ss]\t" + line.Substring(14));
                 }
                 else
                 {
@@ -250,8 +219,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static readonly string[] CommonTail = [
             "Process        : <PROCESS>",
             outputFile,
-            "[dd:hh:mm:ss]\tRecording trace 38.00    (B)",
-            "Press <Enter> or <Ctrl+C> to exit...",
+            "",
             "\nTrace completed."
         ];
 

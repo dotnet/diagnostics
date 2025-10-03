@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Tests.Common
 
         public int WindowWidth { get; init; }
 
-        public bool CursorVisible { get => throw new NotSupportedException(); set => throw new NotImplementedException(); }
+        public bool CursorVisible { get; set; }
 
         public int CursorLeft { get; private set; }
 
