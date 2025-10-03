@@ -4,7 +4,6 @@
 using System;
 using System.Diagnostics;
 using System.Runtime;
-using System.Runtime.InteropServices;
 
 namespace FindRootsOlderGeneration;
 
@@ -12,35 +11,63 @@ internal class Program
 {
     private static void Main()
     {
-        Debugger.Break();
-
         // Allocate a large object to ensure it goes on the LOH
-        Thing[] data = new Thing[1024 * 1024 * 3];
-        int dataGen = GC.GetGeneration(data);
-        data[0] = new Thing() { Name = "First" };
-        int thingGen = GC.GetGeneration(data[0]);
+        Thing[] things = new Thing[1024 * 100];
 
-        Console.WriteLine("Enable CLRN notifications: SXE CLRN");
         Debugger.Break();
-
-        Console.WriteLine("Forcing GC...");
 
         // On CI runs, in server GC mode, these collects have sometimes triggered
         // a gen 2 collection that is not expected and causes the test to fail.
         // Adding "SustainedLowLatency" mode to try to prevent that.
         GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
-        GC.Collect(0, GCCollectionMode.Forced, true);
-        GC.Collect(0, GCCollectionMode.Forced, true);
-        Console.WriteLine("GC complete.");
-        Console.WriteLine("Disable CLRN notifications: SXN CLRN");
+
+        PopulateArray(things);
+        Thing lastThing = things[things.Length - 1];
+
+        Console.WriteLine("Enable CLRN notifications: SXE CLRN");
         Debugger.Break();
 
-        Console.WriteLine(data[0].Name);
-        Console.WriteLine($"Array Gen: {dataGen}, Thing Gen: {thingGen}");
+        int dataGen = GC.GetGeneration(things);
+        int thingGen = GC.GetGeneration(lastThing);
+        Console.WriteLine($"Before GC - Array Gen: {dataGen}, Thing Gen: {thingGen}");
+
+        Console.WriteLine("Forcing GC...");
+
+        GC.Collect(0, GCCollectionMode.Forced, blocking: true);
+
+        Console.WriteLine("GC complete.");
+        Console.WriteLine("Disable CLRN notifications: SXN CLRN");
+
+        dataGen = GC.GetGeneration(things);
+        thingGen = GC.GetGeneration(lastThing);
+        Console.WriteLine($"After GC - Array Gen: {dataGen}, Thing Gen: {thingGen}");
+
+        Debugger.Break();
+
+        // Keep data alive
+        PrintSumArray(things);
+    }
+
+    private static void PopulateArray(Thing[] things)
+    {
+        for (uint i = 0; i < things.Length; i++)
+        {
+            things[i] = new Thing() { Id = i };
+        }
+    }
+
+    private static void PrintSumArray(Thing[] things)
+    {
+        ulong acc = 0;
+        for (int i = 0; i < things.Length; i++)
+        {
+            acc += things[i].Id;
+        }
+        Console.WriteLine($"Thing Array sum: {acc}");
     }
 }
 
 internal class Thing
 {
-    public string Name { get; set; }
+    public uint Id { get; set; }
 }

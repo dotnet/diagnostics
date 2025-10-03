@@ -22,7 +22,6 @@ COMMAND:sxe CLRN
 CONTINUE
 
 # Print list of threads with their stacks
-
 SOSCOMMAND:clrstack -all
 
 # Switch to main runtime thread
