@@ -1,0 +1,93 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Checked" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <BuildType Name="RelWithDebInfo" />
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM" />
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/" />
+  <Folder Name="/src/SOS/" />
+  <Folder Name="/src/SOS/Debuggees/">
+    <Project Path="src/SOS/lldbplugin.tests/TestDebuggee/TestDebuggee.csproj">
+      <BuildType Solution="Checked|*" Project="Release" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DivZero/DivZero.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DotnetDumpCommands/DotnetDumpCommands.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DynamicMethod/DynamicMethod.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/GCPOH/GCPOH.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/GCWhere/GCWhere.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/LineNums/LineNums.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/NestedExceptionTest/NestedExceptionTest.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/Overflow/Overflow.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/ReflectionTest/ReflectionTest.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/SimpleThrow/SimpleThrow.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/SymbolTestApp/SymbolTestApp/SymbolTestApp.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/SymbolTestApp/SymbolTestDll/SymbolTestDll.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/TaskNestedException/RandomUserLibrary/RandomUserLibrary.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/TaskNestedException/TaskNestedException/TaskNestedException.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/WebApp3/WebApp3.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DumpGCData/DumpGCData.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/FindRootsOlderGeneration/FindRootsOlderGeneration.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/VarargPInvokeInteropMD/VarargPInvokeInteropMD.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    </Project>
+  </Folder>
+</Solution>
