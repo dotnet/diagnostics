@@ -11,7 +11,7 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/src/">
-    <Project Path="src/dbgshim/dbgshim.vcxproj">
+    <Project Path="src/dbgshim/dbgshim.vcxproj" Id="bd779298-8631-3f5d-aa59-82897e5454a7">
       <Platform Project="x64" />
       <Build Solution="*|Any CPU" Project="false" />
       <Build Solution="*|ARM" Project="false" />
@@ -86,7 +86,7 @@
   </Folder>
   <Folder Name="/src/shared/">
     <File Path="src/shared/README.txt" />
-    <Project Path="src/shared/gcdump/gcdump.vcxproj">
+    <Project Path="src/shared/gcdump/gcdump.vcxproj" Id="20ebc3c4-917c-402d-b778-9a6e3742bf5a">
       <Platform Project="x64" />
       <Build Solution="*|Any CPU" Project="false" />
       <Build Solution="*|ARM" Project="false" />
@@ -94,7 +94,7 @@
       <Build Solution="*|x86" Project="false" />
       <Build Solution="Release|x64" Project="false" />
     </Project>
-    <Project Path="src/shared/utilcode/utilcode.vcxproj">
+    <Project Path="src/shared/utilcode/utilcode.vcxproj" Id="8c35fef8-1101-38f6-acd0-462a1ea53a7d">
       <Platform Project="x64" />
       <Build Solution="*|Any CPU" Project="false" />
       <Build Solution="*|ARM" Project="false" />
@@ -105,7 +105,7 @@
   </Folder>
   <Folder Name="/src/shared/debug/">
     <File Path="src/shared/debug/CMakeLists.txt" />
-    <Project Path="src/shared/debug/dbgutil/dbgutil.vcxproj">
+    <Project Path="src/shared/debug/dbgutil/dbgutil.vcxproj" Id="a9a7c879-c320-3327-bb84-16e1322e17ae">
       <Platform Project="x64" />
       <Build Solution="Debug|Any CPU" Project="false" />
       <Build Solution="Release|*" Project="false" />
@@ -274,7 +274,7 @@
   </Folder>
   <Folder Name="/src/SOS/">
     <File Path="src/SOS/CMakeLists.txt" />
-    <Project Path="src/SOS/extensions/extensions.vcxproj">
+    <Project Path="src/SOS/extensions/extensions.vcxproj" Id="eec90a42-cdcd-4ee3-b47d-c109d604e7e2">
       <Platform Project="x64" />
       <Build Solution="*|Any CPU" Project="false" />
       <Build Solution="*|ARM" Project="false" />
@@ -282,7 +282,7 @@
       <Build Solution="*|x86" Project="false" />
       <Build Solution="Release|x64" Project="false" />
     </Project>
-    <Project Path="src/SOS/lldbplugin/lldbplugin.vcxproj">
+    <Project Path="src/SOS/lldbplugin/lldbplugin.vcxproj" Id="d52c65c4-2c7d-45e6-9f5c-6f3a96796018">
       <BuildType Solution="Checked|*" Project="Release" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
       <Platform Solution="*|x86" Project="x86" />
@@ -324,7 +324,7 @@
       <BuildType Solution="Checked|*" Project="Release" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/SOS/Strike/Strike.vcxproj">
+    <Project Path="src/SOS/Strike/Strike.vcxproj" Id="41f59d85-fc36-3015-861b-f177863252bc">
       <Platform Project="x64" />
       <Build Solution="*|Any CPU" Project="false" />
       <Build Solution="*|ARM" Project="false" />
