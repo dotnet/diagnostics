@@ -31,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             CollectSessionEventStream = (name) => new FileStream(name, FileMode.Create, FileAccess.Write);
         }
 
-        private void ConsoleWriteLine(string str)
+        private void ConsoleWriteLine(string str = "")
         {
             if (!IsQuiet)
             {
@@ -375,7 +375,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 ConsoleWriteLine($"Trace Duration : {duration:dd\\:hh\\:mm\\:ss}");
                             }
 
-                            ConsoleWriteLine("\n\n");
+                            ConsoleWriteLine();
+                            ConsoleWriteLine();
 
                             EventMonitor eventMonitor = null;
                             Task copyTask = null;
@@ -469,7 +470,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             shouldExitTask.Wait();
                         }
 
-                        ConsoleWriteLine($"\nTrace completed.");
+                        ConsoleWriteLine();
+                        ConsoleWriteLine("Trace completed.");
 
                         if (format != TraceFileFormat.NetTrace)
                         {
@@ -500,7 +502,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (OperationCanceledException)
             {
-                ConsoleWriteLine("\nTrace collection canceled.");
+                ConsoleWriteLine();
+                ConsoleWriteLine("Trace collection canceled.");
                 collectionStopped = true;
                 ret = (int)ReturnCode.TracingError;
             }

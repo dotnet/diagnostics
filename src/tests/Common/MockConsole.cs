@@ -180,7 +180,7 @@ namespace Microsoft.Diagnostics.Tests.Common
             }
             for (int i = expectedLines.Length; i < actualLines.Length; i++)
             {
-                Assert.True(string.IsNullOrEmpty(actualLines[i]), "Actual line beyond expected lines is not empty: " + actualLines[i]);
+                Assert.True(string.IsNullOrEmpty(actualLines[i]), $"Actual line #{i} beyond expected lines is not empty: {actualLines[i]}");
             }
         }
     }

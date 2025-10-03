@@ -220,7 +220,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             "Process        : <PROCESS>",
             outputFile,
             "",
-            "\nTrace completed."
+            "",
+            "",
+            "Trace completed."
         ];
 
         private static string[] ExpectProviders(params string[] providerLines)
