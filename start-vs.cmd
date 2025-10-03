@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 set "SDK_LOC=%~dp0.dotnet"
 
 if "%1" == "" (
-  set "SLN_OR_PROJ=%~dp0diagnostics.sln"
+  set "SLN_OR_PROJ=%~dp0diagnostics.slnx"
 ) else (
   set "SLN_OR_PROJ=%1"
 )
