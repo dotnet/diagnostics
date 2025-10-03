@@ -31,13 +31,15 @@ namespace Microsoft.Diagnostics.Tests.Common
 
         public bool CursorVisible { get => throw new NotSupportedException(); set => throw new NotImplementedException(); }
 
+        public int CursorLeft { get; private set; }
+
         public int CursorTop { get; private set; }
 
         public int BufferWidth { get; private set; }
 
         public int BufferHeight { get; private set; }
 
-        public bool IsOutputRedirected { get; private set; }
+        public bool IsOutputRedirected { get; set; }
 
         public bool IsInputRedirected { get; private set; }
 

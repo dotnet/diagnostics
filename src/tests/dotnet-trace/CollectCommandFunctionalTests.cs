@@ -19,7 +19,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private const string ExpectedPayload = "CollectCommandFunctionalTestsTraceData";
 
         public sealed record CollectArgs(
-            FileInfo output,
             CancellationToken ct = default,
             CommandLineConfiguration cliConfig = null,
             int processId = -1,
@@ -41,8 +40,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string dsrouter = "")
         {
             internal TraceFileFormat Format => (TraceFileFormat)formatValue;
-            public string OutputFilePath => output.FullName;
             public int ProcessId => processId == -1 ? Environment.ProcessId : processId;
+            public FileInfo Output => new FileInfo("trace.nettrace");
             private MemoryStream _eventStream = new();
             public MemoryStream EventStream => _eventStream;
         }
@@ -51,7 +50,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(BasicCases))]
         public async Task CollectCommandProviderConfigurationConsolidation(CollectArgs args, string[] expectedSubset)
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30) { IsOutputRedirected = false };
             string[] rawLines = await RunAsync(args, console).ConfigureAwait(true);
             console.AssertSanitizedLinesEqual(CollectSanitizer, expectedSubset);
 
@@ -64,16 +63,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
             var handler = new CollectCommandHandler();
             handler.StartTraceSessionAsync = (client, cfg, ct) => Task.FromResult<CollectCommandHandler.ICollectSession>(new TestCollectSession());
             handler.ResumeRuntimeAsync = (client, ct) => Task.CompletedTask;
-            handler.CursorOperationsSupported = false;
-            handler.CollectSessionEventStream = (name) => config.EventStream;
+            handler.CollectSessionEventStream = (name) => new SlowSinkStream(config.EventStream);
             handler.Console = console;
-            handler.IsOutputRedirected = false;
+            handler.FileSizeForStatus = Encoding.UTF8.GetByteCount(ExpectedPayload);
 
             int exit = await handler.Collect(
                 config.ct,
                 config.cliConfig,
                 config.ProcessId,
-                config.output,
+                config.Output,
                 config.buffersize,
                 config.providers,
                 config.profile,
@@ -98,6 +96,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return console.Lines;
         }
 
+        // As the test payload is small, we need to delay writes to the output stream to ensure
+        // that the status update logic in CollectCommandHandler has a chance to run.
+        private sealed class SlowSinkStream : Stream
+        {
+            private readonly Stream _inner;
+
+            public SlowSinkStream(Stream inner) { _inner = inner; }
+
+            public override bool CanRead => false;
+            public override bool CanSeek => false;
+            public override bool CanWrite => true;
+            public override long Length => throw new NotSupportedException();
+            public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+            public override void Flush() { }
+            public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+            public override void SetLength(long value) => throw new NotSupportedException();
+            public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
+            public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            {
+                await Task.Delay(200, cancellationToken).ConfigureAwait(false);
+                await _inner.WriteAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         private static string[] CollectSanitizer(string[] lines)
         {
             List<string> result = new();
@@ -106,6 +130,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (line.StartsWith("Process        :", StringComparison.Ordinal))
                 {
                     result.Add("Process        : <PROCESS>");
+                }
+                else if (line.StartsWith('[') && line.Contains("Recording trace"))
+                {
+                    result.Add("[dd:hh:mm:ss]\t" + line.Substring(14));
                 }
                 else
                 {
@@ -126,11 +154,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static IEnumerable<object[]> BasicCases()
         {
+            FileInfo fi = new("trace.nettrace");
             yield return new object[]
             {
-                new CollectArgs(output: new FileInfo("noProviders")),
+                new CollectArgs(),
                 ExpectProvidersWithMessages(
-                    "noProviders",
                     new[]
                     {
                         "No profile or providers specified, defaulting to trace profile 'cpu-sampling'"
@@ -141,35 +169,31 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             yield return new object[]
             {
-                new CollectArgs(output: new FileInfo("singleProvider"), providers: "Foo:0x1:4"),
+                new CollectArgs(providers: "Foo:0x1:4"),
                 ExpectProviders(
-                    "singleProvider",
                     FormatProvider("Foo", "0000000000000001", "Informational", 4, "--providers"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: new FileInfo("multipleProviders"), providers: "Foo:0x1:4,Bar:0x2:4"),
+                new CollectArgs(providers: "Foo:0x1:4,Bar:0x2:4"),
                 ExpectProviders(
-                    "multipleProviders",
                     FormatProvider("Foo", "0000000000000001", "Informational", 4, "--providers"),
                     FormatProvider("Bar", "0000000000000002", "Informational", 4, "--providers"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: new FileInfo("profileOnly"), profile: "cpu-sampling"),
+                new CollectArgs(profile: "cpu-sampling"),
                 ExpectProviders(
-                    "profileOnly",
                     FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"),
                     FormatProvider("Microsoft-Windows-DotNETRuntime", "00000014C14FCCBD", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: new FileInfo("profileAndProviders"), profile: "cpu-sampling", providers: "Foo:0x1:4"),
+                new CollectArgs(profile: "cpu-sampling", providers: "Foo:0x1:4"),
                 ExpectProviders(
-                    "profileAndProviders",
                     FormatProvider("Foo", "0000000000000001", "Informational", 4, "--providers"),
                     FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"),
                     FormatProvider("Microsoft-Windows-DotNETRuntime", "00000014C14FCCBD", "Informational", 4, "--profile"))
@@ -177,9 +201,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             yield return new object[]
             {
-                new CollectArgs(output: new FileInfo("profileAndClrEventsIgnored"), profile: "cpu-sampling", clrevents: "gc"),
+                new CollectArgs(profile: "cpu-sampling", clrevents: "gc"),
                 ExpectProvidersWithMessages(
-                    "profileAndClrEventsIgnored",
                     new[]
                     {
                         "The argument --clrevents gc will be ignored because the CLR provider was configured via either --profile or --providers command."
@@ -190,18 +213,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             yield return new object[]
             {
-                new CollectArgs(output: new FileInfo("profileOverriddenRuntime"), profile: "cpu-sampling", providers: "Microsoft-Windows-DotNETRuntime:0x1:4"),
+                new CollectArgs(profile: "cpu-sampling", providers: "Microsoft-Windows-DotNETRuntime:0x1:4"),
                 ExpectProviders(
-                    "profileOverriddenRuntime",
                     FormatProvider("Microsoft-Windows-DotNETRuntime", "0000000000000001", "Informational", 4, "--providers"),
                     FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: new FileInfo("providersClrEventsIgnored"), providers: "Microsoft-Windows-DotNETRuntime:0x1:4", clrevents: "gc"),
+                new CollectArgs(providers: "Microsoft-Windows-DotNETRuntime:0x1:4", clrevents: "gc"),
                 ExpectProvidersWithMessages(
-                    "providersClrEventsIgnored",
                     new[]
                     {
                         "The argument --clrevents gc will be ignored because the CLR provider was configured via either --profile or --providers command."
@@ -211,38 +232,34 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             yield return new object[]
             {
-                new CollectArgs(output: new FileInfo("clrEventsOnly"), clrevents: "gc+jit"),
+                new CollectArgs(clrevents: "gc+jit"),
                 ExpectProviders(
-                    "clrEventsOnly",
                     FormatProvider("Microsoft-Windows-DotNETRuntime", "0000000000000011", "Informational", 4, "--clrevents"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(output: new FileInfo("clrEventsVerbose"), clrevents: "gc+jit", clreventlevel: "5"),
+                new CollectArgs(clrevents: "gc+jit", clreventlevel: "5"),
                 ExpectProviders(
-                    "clrEventsVerbose",
                     FormatProvider("Microsoft-Windows-DotNETRuntime", "0000000000000011", "Verbose", 5, "--clrevents"))
             };
         }
 
-        private const string ProcessPlaceHolder = "Process        : <PROCESS>";
-        private static string outputPrefix = $"Output File    : {Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar}";
+        private static string outputFile = $"Output File    : {Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar}trace.nettrace";
         private const string ProviderHeader = "Provider Name                           Keywords            Level               Enabled By";
         private static readonly string[] CommonTail = [
-            "",
-            "Recording trace in progress. Press <Enter> or <Ctrl+C> to exit...",
+            "Process        : <PROCESS>",
+            outputFile,
+            "[dd:hh:mm:ss]\tRecording trace 38.00    (B)",
+            "Press <Enter> or <Ctrl+C> to exit...",
             "\nTrace completed."
         ];
 
-        private static string[] Expect(string outputFile, params string[] lines)
-            => [.. lines, ProcessPlaceHolder, outputPrefix + outputFile, .. CommonTail];
+        private static string[] ExpectProviders(params string[] providerLines)
+            => ExpectProvidersWithMessages(new string[0], providerLines);
 
-        private static string[] ExpectProviders(string outputFile, params string[] providerLines)
-            => Expect(outputFile, ["", ProviderHeader, .. providerLines, ""]);
-
-        private static string[] ExpectProvidersWithMessages(string outputFile, string[] messages, params string[] providerLines)
-            => Expect(outputFile, [.. messages, "", ProviderHeader, .. providerLines, ""]);
+        private static string[] ExpectProvidersWithMessages(string[] messages, params string[] providerLines)
+            => [.. messages, "", ProviderHeader, .. providerLines, "", .. CommonTail];
 
         private static string FormatProvider(string name, string keywordsHex, string levelName, int levelValue, string enabledBy)
         {

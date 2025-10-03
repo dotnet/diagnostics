@@ -15,6 +15,7 @@ namespace Microsoft.Diagnostics.Tools.Common
         int WindowHeight { get; }
         int WindowWidth { get; }
         bool CursorVisible { get; set; }
+        int CursorLeft { get; }
         int CursorTop { get; }
         int BufferWidth { get; }
         int BufferHeight { get; }

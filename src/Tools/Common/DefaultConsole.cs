@@ -29,6 +29,8 @@ namespace Microsoft.Diagnostics.Tools.Common
         public bool CursorVisible { get => Console.CursorVisible; set { Console.CursorVisible = value; } }
 #pragma warning restore CA1416
 
+        public int CursorLeft => Console.CursorLeft;
+
         public int CursorTop => Console.CursorTop;
 
         public int BufferWidth => Console.BufferWidth;

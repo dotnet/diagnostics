@@ -29,7 +29,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             StartTraceSessionAsync = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
             ResumeRuntimeAsync = (client, ct) => client.ResumeRuntimeAsync(ct);
             CollectSessionEventStream = name => new FileStream(name, FileMode.Create, FileAccess.Write);
-            IsOutputRedirected = Console.IsOutputRedirected;
         }
 
         private void ConsoleWriteLine(string str)
@@ -89,7 +88,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 {
                     cancelOnCtrlC = true;
                     cancelOnEnter = !Console.IsInputRedirected;
-                    printStatusOverTime = !IsOutputRedirected;
+                    printStatusOverTime = !Console.IsOutputRedirected;
                 }
 
                 if (!cancelOnCtrlC)
@@ -378,7 +377,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             ConsoleWriteLine("\n\n");
 
-                            FileInfo fileInfo = new(output.FullName);
                             EventMonitor eventMonitor = null;
                             Task copyTask = null;
                             if (hasStoppingEventProviderName)
@@ -410,23 +408,35 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             if (printStatusOverTime)
                             {
-                                if (CursorOperationsSupported)
-                                {
-                                    rewriter = new LineRewriter { LineToClear = Console.CursorTop - 1 };
+                                rewriter = new LineRewriter(Console) { LineToClear = Console.CursorTop - 1 };
+                                try {
                                     Console.CursorVisible = false;
                                 }
-                                if (rewriter == null || !rewriter.IsRewriteConsoleLineSupported)
+                                catch {}
+                                if (!rewriter.IsRewriteConsoleLineSupported)
                                 {
                                     ConsoleWriteLine("Recording trace in progress. Press <Enter> or <Ctrl+C> to exit...");
                                 }
                             }
 
+                            FileInfo fileInfo = null;
+                            if (FileSizeForStatus == 0)
+                            {
+                                fileInfo = new(output.FullName);
+                            }
                             Action printStatus = () => {
-                                if (printStatusOverTime && rewriter != null && rewriter.IsRewriteConsoleLineSupported)
+                                if (printStatusOverTime && rewriter.IsRewriteConsoleLineSupported)
                                 {
-                                    rewriter.RewriteConsoleLine();
-                                    fileInfo.Refresh();
-                                    ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(fileInfo.Length)}");
+                                    rewriter?.RewriteConsoleLine();
+                                    if (fileInfo != null)
+                                    {
+                                        fileInfo.Refresh();
+                                        ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(fileInfo.Length)}");
+                                    }
+                                    else
+                                    {
+                                        ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(FileSizeForStatus)}");
+                                    }
                                     ConsoleWriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                 }
 
@@ -516,11 +526,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             finally
             {
-                if (printStatusOverTime && CursorOperationsSupported)
+                if (printStatusOverTime)
                 {
                     if (!Console.IsOutputRedirected)
                     {
-                        Console.CursorVisible = true;
+                        try
+                        {
+                            Console.CursorVisible = true;
+                        }
+                        catch { }
                     }
                 }
 
@@ -750,10 +764,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         internal Func<DiagnosticsClient, EventPipeSessionConfiguration, CancellationToken, Task<ICollectSession>> StartTraceSessionAsync { get; set; }
         internal Func<DiagnosticsClient, CancellationToken, Task> ResumeRuntimeAsync { get; set; }
-        internal bool CursorOperationsSupported { get; set; } = true;
         internal Func<string, Stream> CollectSessionEventStream { get; set; }
         internal IConsole Console { get; set; }
-        internal bool IsOutputRedirected { get; set; }
+        internal long FileSizeForStatus { get; set; }
 #endregion
     }
 }
