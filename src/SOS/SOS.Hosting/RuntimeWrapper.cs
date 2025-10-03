@@ -156,21 +156,6 @@ namespace SOS.Hosting
                 ComWrapper.ReleaseWithCheck(_cdacDataProcess);
                 _cdacDataProcess = IntPtr.Zero;
             }
-            if (_dacHandle != IntPtr.Zero)
-            {
-                DataTarget.PlatformFunctions.FreeLibrary(_dacHandle);
-                _dacHandle = IntPtr.Zero;
-            }
-            if (_cdacHandle != IntPtr.Zero)
-            {
-                DataTarget.PlatformFunctions.FreeLibrary(_cdacHandle);
-                _cdacHandle = IntPtr.Zero;
-            }
-            if (_dbiHandle != IntPtr.Zero)
-            {
-                DataTarget.PlatformFunctions.FreeLibrary(_dbiHandle);
-                _dbiHandle = IntPtr.Zero;
-            }
         }
 
         #region IRuntime (native)
