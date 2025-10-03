@@ -15,7 +15,7 @@
     <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" GeneratePathProperty="true" />
     <PackageReference Include="Microsoft.OneCollect.RecordTrace" Version="0.1.31901" PrivateAssets="All" GeneratePathProperty="true"
-                      Condition="'$(RuntimeIdentifier)' != '' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))" />
+                      Condition="'$(TargetRid)' != '' and $([System.String]::Copy('$(TargetRid)').StartsWith('linux'))" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,8 +31,8 @@
     <InternalsVisibleTo Include="DotnetTrace.UnitTests" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(RuntimeIdentifier)' != '' and $([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux'))">
-    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(RuntimeIdentifier)/native/librecordtrace.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
-          Condition="Exists('$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(RuntimeIdentifier)/native/librecordtrace.so')" />
+  <ItemGroup Condition="'$(TargetRid)' != '' and $([System.String]::Copy('$(TargetRid)').StartsWith('linux'))">
+    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(TargetRid)/native/librecordtrace.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+          Condition="Exists('$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(TargetRid)/native/librecordtrace.so')" />
   </ItemGroup>
 </Project>
