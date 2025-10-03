@@ -158,9 +158,6 @@ namespace Microsoft.Diagnostics.Tests.Common
             }
         }
 
-        // Asserts that the sanitized version of the console lines exactly equals the expected lines.
-        // The sanitizer receives the raw Lines array and should return a transformed array (e.g., with
-        // blank lines removed, whitespace collapsed, dynamic values normalized). Equality is ordinal.
         public void AssertSanitizedLinesEqual(Func<string[], string[]> sanitizer, params string[] expectedLines)
         {
             string[] actualLines = Lines;
@@ -183,7 +180,7 @@ namespace Microsoft.Diagnostics.Tests.Common
             }
             for (int i = expectedLines.Length; i < actualLines.Length; i++)
             {
-                Assert.True(string.IsNullOrWhiteSpace(actualLines[i]), "Actual line beyond expected lines is not empty: " + actualLines[i]);
+                Assert.True(string.IsNullOrEmpty(actualLines[i]), "Actual line beyond expected lines is not empty: " + actualLines[i]);
             }
         }
     }
