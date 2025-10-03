@@ -24,6 +24,11 @@ internal class Program
         Debugger.Break();
 
         Console.WriteLine("Forcing GC...");
+
+        // On CI runs, in server GC mode, these collects have sometimes triggered
+        // a gen 2 collection that is not expected and causes the test to fail.
+        // Adding "SustainedLowLatency" mode to try to prevent that.
+        GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         GC.Collect(0, GCCollectionMode.Forced, true);
         GC.Collect(0, GCCollectionMode.Forced, true);
         Console.WriteLine("GC complete.");
