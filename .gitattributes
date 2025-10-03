@@ -33,6 +33,7 @@
 *.ruleset			text
 *.shproj			text
 *.sln       		text
+*.slnx      		text
 *.targets   		text
 *.vb				text
 *.vbproj			text

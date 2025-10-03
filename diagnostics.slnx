@@ -1,0 +1,468 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Checked" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <BuildType Name="RelWithDebInfo" />
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM" />
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/dbgshim/dbgshim.vcxproj" Id="bd779298-8631-3f5d-aa59-82897e5454a7">
+      <Platform Project="x64" />
+      <Build Solution="*|Any CPU" Project="false" />
+      <Build Solution="*|ARM" Project="false" />
+      <Build Solution="*|ARM64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+      <Build Solution="Release|x64" Project="false" />
+    </Project>
+    <Project Path="src/Microsoft.Diagnostics.DebugServices.Implementation/Microsoft.Diagnostics.DebugServices.Implementation.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Microsoft.Diagnostics.DebugServices/Microsoft.Diagnostics.DebugServices.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Microsoft.Diagnostics.ExtensionCommands/Microsoft.Diagnostics.ExtensionCommands.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Microsoft.Diagnostics.Monitoring.EventPipe/Microsoft.Diagnostics.Monitoring.EventPipe.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Microsoft.Diagnostics.Monitoring/Microsoft.Diagnostics.Monitoring.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Microsoft.Diagnostics.Repl/Microsoft.Diagnostics.Repl.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj">
+      <BuildType Solution="Checked|*" Project="Release" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Microsoft.Diagnostics.WebSocketServer/Microsoft.Diagnostics.WebSocketServer.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    </Project>
+    <Project Path="src/Microsoft.FileFormats/Microsoft.FileFormats.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Microsoft.SymbolManifestGenerator/Microsoft.SymbolManifestGenerator.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Microsoft.SymbolStore/Microsoft.SymbolStore.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+  </Folder>
+  <Folder Name="/src/inc/">
+    <File Path="src/inc/corcompile.h" />
+    <File Path="src/inc/ntimageex.h" />
+    <File Path="src/inc/releaseholder.h" />
+    <File Path="src/inc/stacktrace.h" />
+  </Folder>
+  <Folder Name="/src/inc/rt/">
+    <File Path="src/inc/rt/intsafe.h" />
+    <File Path="src/inc/rt/oaidl.h" />
+    <File Path="src/inc/rt/psapi.h" />
+    <File Path="src/inc/rt/tchar.h" />
+    <File Path="src/inc/rt/tlhelp32.h" />
+    <File Path="src/inc/rt/winapifamily.h" />
+    <File Path="src/inc/rt/winternl.h" />
+    <File Path="src/inc/rt/winver.h" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <File Path="src/shared/README.txt" />
+    <Project Path="src/shared/gcdump/gcdump.vcxproj" Id="20ebc3c4-917c-402d-b778-9a6e3742bf5a">
+      <Platform Project="x64" />
+      <Build Solution="*|Any CPU" Project="false" />
+      <Build Solution="*|ARM" Project="false" />
+      <Build Solution="*|ARM64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+      <Build Solution="Release|x64" Project="false" />
+    </Project>
+    <Project Path="src/shared/utilcode/utilcode.vcxproj" Id="8c35fef8-1101-38f6-acd0-462a1ea53a7d">
+      <Platform Project="x64" />
+      <Build Solution="*|Any CPU" Project="false" />
+      <Build Solution="*|ARM" Project="false" />
+      <Build Solution="*|ARM64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+      <Build Solution="Release|x64" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/src/shared/debug/">
+    <File Path="src/shared/debug/CMakeLists.txt" />
+    <Project Path="src/shared/debug/dbgutil/dbgutil.vcxproj" Id="a9a7c879-c320-3327-bb84-16e1322e17ae">
+      <Platform Project="x64" />
+      <Build Solution="Debug|Any CPU" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/src/shared/debug/inc/">
+    <File Path="src/shared/debug/inc/dbgtargetcontext.h" />
+    <File Path="src/shared/debug/inc/dbgutil.h" />
+    <File Path="src/shared/debug/inc/runtimeinfo.h" />
+  </Folder>
+  <Folder Name="/src/shared/debug/inc/dump/">
+    <File Path="src/shared/debug/inc/dump/dumpcommon.h" />
+  </Folder>
+  <Folder Name="/src/shared/inc/">
+    <File Path="src/shared/inc/arrayholder.h" />
+    <File Path="src/shared/inc/bitvector.h" />
+    <File Path="src/shared/inc/check.h" />
+    <File Path="src/shared/inc/check.inl" />
+    <File Path="src/shared/inc/clrdata.idl" />
+    <File Path="src/shared/inc/clrhost.h" />
+    <File Path="src/shared/inc/clrinternal.idl" />
+    <File Path="src/shared/inc/clrnt.h" />
+    <File Path="src/shared/inc/clrprivappxhosting.idl" />
+    <File Path="src/shared/inc/clrprivbinding.idl" />
+    <File Path="src/shared/inc/clrprivhosting.idl" />
+    <File Path="src/shared/inc/clrprivruntimebinders.idl" />
+    <File Path="src/shared/inc/clrtypes.h" />
+    <File Path="src/shared/inc/CMakeLists.txt" />
+    <File Path="src/shared/inc/contract.h" />
+    <File Path="src/shared/inc/contract.inl" />
+    <File Path="src/shared/inc/cor.h" />
+    <File Path="src/shared/inc/cordebug.idl" />
+    <File Path="src/shared/inc/coreclrhost.h" />
+    <File Path="src/shared/inc/corexcep.h" />
+    <File Path="src/shared/inc/corhdr.h" />
+    <File Path="src/shared/inc/corhlpr.cpp" />
+    <File Path="src/shared/inc/corhlpr.h" />
+    <File Path="src/shared/inc/corhlprpriv.h" />
+    <File Path="src/shared/inc/corjitflags.h" />
+    <File Path="src/shared/inc/corprof.idl" />
+    <File Path="src/shared/inc/corpub.idl" />
+    <File Path="src/shared/inc/corsym.idl" />
+    <File Path="src/shared/inc/cortypeinfo.h" />
+    <File Path="src/shared/inc/crosscomp.h" />
+    <File Path="src/shared/inc/crsttypes.h" />
+    <File Path="src/shared/inc/crtwrap.h" />
+    <File Path="src/shared/inc/daccess.h" />
+    <File Path="src/shared/inc/dacprivate.h" />
+    <File Path="src/shared/inc/dbgenginemetrics.h" />
+    <File Path="src/shared/inc/dbgportable.h" />
+    <File Path="src/shared/inc/dbgutil.h" />
+    <File Path="src/shared/inc/debugmacros.h" />
+    <File Path="src/shared/inc/debugmacrosext.h" />
+    <File Path="src/shared/inc/debugreturn.h" />
+    <File Path="src/shared/inc/entrypoints.h" />
+    <File Path="src/shared/inc/ex.h" />
+    <File Path="src/shared/inc/fstring.h" />
+    <File Path="src/shared/inc/fusion.idl" />
+    <File Path="src/shared/inc/gcdecoder.cpp" />
+    <File Path="src/shared/inc/gcdesc.h" />
+    <File Path="src/shared/inc/gcdump.h" />
+    <File Path="src/shared/inc/gcinfo.h" />
+    <File Path="src/shared/inc/gcinfodecoder.h" />
+    <File Path="src/shared/inc/gcinfodumper.h" />
+    <File Path="src/shared/inc/gcinfotypes.h" />
+    <File Path="src/shared/inc/gcmsg.inl" />
+    <File Path="src/shared/inc/genericstackprobe.h" />
+    <File Path="src/shared/inc/getproductversionnumber.h" />
+    <File Path="src/shared/inc/hillclimbing.h" />
+    <File Path="src/shared/inc/holder.h" />
+    <File Path="src/shared/inc/iallocator.h" />
+    <File Path="src/shared/inc/iterator.h" />
+    <File Path="src/shared/inc/livedatatarget.h" />
+    <File Path="src/shared/inc/log.h" />
+    <File Path="src/shared/inc/loglf.h" />
+    <File Path="src/shared/inc/longfilepathwrappers.h" />
+    <File Path="src/shared/inc/mdcommon.h" />
+    <File Path="src/shared/inc/memoryrange.h" />
+    <File Path="src/shared/inc/metadata.h" />
+    <File Path="src/shared/inc/metahost.idl" />
+    <File Path="src/shared/inc/MSCOREE.IDL" />
+    <File Path="src/shared/inc/mscorsvc.idl" />
+    <File Path="src/shared/inc/msodw.h" />
+    <File Path="src/shared/inc/new.hpp" />
+    <File Path="src/shared/inc/nibblemapmacros.h" />
+    <File Path="src/shared/inc/nsutilpriv.h" />
+    <File Path="src/shared/inc/opcode.def" />
+    <File Path="src/shared/inc/openum.h" />
+    <File Path="src/shared/inc/ostype.h" />
+    <File Path="src/shared/inc/palclr.h" />
+    <File Path="src/shared/inc/palclr_win.h" />
+    <File Path="src/shared/inc/pedecoder.h" />
+    <File Path="src/shared/inc/pedecoder.inl" />
+    <File Path="src/shared/inc/predeftlsslot.h" />
+    <File Path="src/shared/inc/random.h" />
+    <File Path="src/shared/inc/readytorun.h" />
+    <File Path="src/shared/inc/readytoruninstructionset.h" />
+    <File Path="src/shared/inc/regdisp.h" />
+    <File Path="src/shared/inc/registrywrapper.h" />
+    <File Path="src/shared/inc/resource.h" />
+    <File Path="src/shared/inc/runtimeinfo.h" />
+    <File Path="src/shared/inc/safemath.h" />
+    <File Path="src/shared/inc/safewrap.h" />
+    <File Path="src/shared/inc/sbuffer.h" />
+    <File Path="src/shared/inc/sbuffer.inl" />
+    <File Path="src/shared/inc/securityutil.h" />
+    <File Path="src/shared/inc/securitywrapper.h" />
+    <File Path="src/shared/inc/sigparser.h" />
+    <File Path="src/shared/inc/sospriv.idl" />
+    <File Path="src/shared/inc/sstring.h" />
+    <File Path="src/shared/inc/sstring.inl" />
+    <File Path="src/shared/inc/stacktrace.h" />
+    <File Path="src/shared/inc/staticcontract.h" />
+    <File Path="src/shared/inc/static_assert.h" />
+    <File Path="src/shared/inc/stdmacros.h" />
+    <File Path="src/shared/inc/stresslog.h" />
+    <File Path="src/shared/inc/switches.h" />
+    <File Path="src/shared/inc/tls.h" />
+    <File Path="src/shared/inc/unreachable.h" />
+    <File Path="src/shared/inc/utilcode.h" />
+    <File Path="src/shared/inc/volatile.h" />
+    <File Path="src/shared/inc/warningcontrol.h" />
+    <File Path="src/shared/inc/win64unwind.h" />
+    <File Path="src/shared/inc/winwrap.h" />
+    <File Path="src/shared/inc/xclrdata.idl" />
+    <File Path="src/shared/inc/xcordebug.idl" />
+    <File Path="src/shared/inc/yieldprocessornormalized.h" />
+  </Folder>
+  <Folder Name="/src/shared/inc/llvm/">
+    <File Path="src/shared/inc/llvm/Dwarf.def" />
+    <File Path="src/shared/inc/llvm/Dwarf.h" />
+    <File Path="src/shared/inc/llvm/ELF.h" />
+  </Folder>
+  <Folder Name="/src/shared/minipal/">
+    <File Path="src/shared/minipal/CMakeLists.txt" />
+    <File Path="src/shared/minipal/dn-u16.h" />
+  </Folder>
+  <Folder Name="/src/shared/minipal/Unix/">
+    <File Path="src/shared/minipal/Unix/CMakeLists.txt" />
+    <File Path="src/shared/minipal/Unix/dn-u16.cpp" />
+  </Folder>
+  <Folder Name="/src/shared/minipal/Windows/">
+    <File Path="src/shared/minipal/Windows/CMakeLists.txt" />
+    <File Path="src/shared/minipal/Windows/dn-u16.cpp" />
+  </Folder>
+  <Folder Name="/src/shared/native/" />
+  <Folder Name="/src/shared/native/minipal/">
+    <File Path="src/shared/native/minipal/asansupport.cpp" />
+    <File Path="src/shared/native/minipal/configure.cmake" />
+    <File Path="src/shared/native/minipal/cpufeatures.c" />
+    <File Path="src/shared/native/minipal/cpufeatures.h" />
+    <File Path="src/shared/native/minipal/cpuid.h" />
+    <File Path="src/shared/native/minipal/entrypoints.h" />
+    <File Path="src/shared/native/minipal/getexepath.h" />
+    <File Path="src/shared/native/minipal/minipalconfig.h.in" />
+    <File Path="src/shared/native/minipal/random.c" />
+    <File Path="src/shared/native/minipal/random.h" />
+    <File Path="src/shared/native/minipal/strings.h" />
+    <File Path="src/shared/native/minipal/time.c" />
+    <File Path="src/shared/native/minipal/time.h" />
+    <File Path="src/shared/native/minipal/types.h" />
+    <File Path="src/shared/native/minipal/unicodedata.c" />
+    <File Path="src/shared/native/minipal/utf8.c" />
+    <File Path="src/shared/native/minipal/utf8.h" />
+    <File Path="src/shared/native/minipal/utils.h" />
+  </Folder>
+  <Folder Name="/src/SOS/">
+    <File Path="src/SOS/CMakeLists.txt" />
+    <Project Path="src/SOS/extensions/extensions.vcxproj" Id="eec90a42-cdcd-4ee3-b47d-c109d604e7e2">
+      <Platform Project="x64" />
+      <Build Solution="*|Any CPU" Project="false" />
+      <Build Solution="*|ARM" Project="false" />
+      <Build Solution="*|ARM64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+      <Build Solution="Release|x64" Project="false" />
+    </Project>
+    <Project Path="src/SOS/lldbplugin/lldbplugin.vcxproj" Id="d52c65c4-2c7d-45e6-9f5c-6f3a96796018">
+      <BuildType Solution="Checked|*" Project="Release" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+      <Platform Solution="*|x86" Project="x86" />
+      <Platform Solution="Checked|ARM" Project="x64" />
+      <Platform Solution="Checked|ARM64" Project="x64" />
+      <Platform Solution="Debug|ARM" Project="x86" />
+      <Platform Solution="Debug|ARM64" Project="x86" />
+      <Platform Solution="Release|Any CPU" Project="x86" />
+      <Platform Solution="Release|ARM" Project="x86" />
+      <Platform Solution="Release|ARM64" Project="x86" />
+      <Platform Solution="RelWithDebInfo|ARM" Project="x64" />
+      <Platform Solution="RelWithDebInfo|ARM64" Project="x64" />
+      <Build Solution="Debug|Any CPU" Project="false" />
+      <Build Solution="Debug|ARM" Project="false" />
+      <Build Solution="Debug|ARM64" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.Extensions/SOS.Extensions.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.Hosting/SOS.Hosting.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.InstallHelper/SOS.InstallHelper.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.Package/SOS.Package.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.Package/SOS.Symbol.Package.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/SOS.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Release" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/SOS/Strike/Strike.vcxproj" Id="41f59d85-fc36-3015-861b-f177863252bc">
+      <Platform Project="x64" />
+      <Build Solution="*|Any CPU" Project="false" />
+      <Build Solution="*|ARM" Project="false" />
+      <Build Solution="*|ARM64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+      <Build Solution="Release|x64" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/src/SOS/inc/">
+    <File Path="src/SOS/inc/clrma.h" />
+    <File Path="src/SOS/inc/clrma.idl" />
+    <File Path="src/SOS/inc/clrmaservice.h" />
+    <File Path="src/SOS/inc/debuggerservices.h" />
+    <File Path="src/SOS/inc/host.h" />
+    <File Path="src/SOS/inc/hostservices.h" />
+    <File Path="src/SOS/inc/lldbservices.h" />
+    <File Path="src/SOS/inc/outputservice.h" />
+    <File Path="src/SOS/inc/remotememoryservice.h" />
+    <File Path="src/SOS/inc/runtime.h" />
+    <File Path="src/SOS/inc/specialdiaginfo.h" />
+    <File Path="src/SOS/inc/specialthreadinfo.h" />
+    <File Path="src/SOS/inc/symbolservice.h" />
+    <File Path="src/SOS/inc/target.h" />
+  </Folder>
+  <Folder Name="/src/tests/">
+    <Project Path="src/tests/CommonTestRunner/CommonTestRunner.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/DbgShim.UnitTests/DbgShim.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/dotnet-counters/DotnetCounters.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/dotnet-stack/DotnetStack.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+      <Build Solution="Debug|Any CPU" Project="false" />
+      <Build Solution="Release|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/dotnet-trace/DotnetTrace.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    </Project>
+    <Project Path="src/tests/eventpipe/EventPipe.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/EventPipeTracee/EventPipeTracee.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/ExitCodeTracee/ExitCodeTracee.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/Microsoft.Diagnostics.DebugServices.UnitTests/Microsoft.Diagnostics.DebugServices.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/Microsoft.Diagnostics.Monitoring.EventPipe/Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/Microsoft.Diagnostics.Monitoring/Microsoft.Diagnostics.Monitoring.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/Microsoft.FileFormats.UnitTests/Microsoft.FileFormats.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/Microsoft.SymbolStore.UnitTests/Microsoft.SymbolStore.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/StackTracee/StackTracee.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    </Project>
+    <Project Path="src/tests/TestExtension/TestExtension.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/TestHelpers/TestHelpers.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/Tracee/Tracee.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    </Project>
+  </Folder>
+  <Folder Name="/src/Tools/">
+    <Project Path="src/Tools/dotnet-counters/dotnet-counters.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Tools/dotnet-dsrouter/dotnet-dsrouter.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Tools/dotnet-dump/dotnet-dump.csproj">
+      <BuildType Solution="Checked|*" Project="Release" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Tools/dotnet-gcdump/dotnet-gcdump.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Tools/dotnet-sos/dotnet-sos.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Tools/dotnet-stack/dotnet-stack.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    </Project>
+    <Project Path="src/Tools/dotnet-symbol/dotnet-symbol.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/Tools/dotnet-trace/dotnet-trace.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+  </Folder>
+  <Folder Name="/src/Tools/Common/">
+    <File Path="src/Tools/Common/CommandExtensions.cs" />
+  </Folder>
+  <Folder Name="/src/Tools/Common/Commands/">
+    <File Path="src/Tools/Common/Commands/ProcessStatus.cs" />
+  </Folder>
+</Solution>
