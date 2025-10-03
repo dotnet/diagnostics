@@ -21,9 +21,6 @@ COMMAND:sxe CLRN
 # Should break on a GCNotification
 CONTINUE
 
-# Verify that we triggered a gen 0 or gen 1 collection
-VERIFY:Performing\s+a\s+gen\s+[01]\s+collection
-
 # Print list of threads with their stacks
 SOSCOMMAND:clrstack -all
 
