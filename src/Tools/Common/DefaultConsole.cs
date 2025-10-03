@@ -72,7 +72,7 @@ namespace Microsoft.Diagnostics.Tools.Common
         }
         public void Write(string text) => Console.Write(text);
         public void WriteLine(string text) => Console.WriteLine(text);
-        public static void WriteLine() => Console.WriteLine();
+        public void WriteLine() => Console.WriteLine();
         public ConsoleKeyInfo ReadKey() => Console.ReadKey();
         public ConsoleKeyInfo ReadKey(bool intercept) => Console.ReadKey(intercept);
     }

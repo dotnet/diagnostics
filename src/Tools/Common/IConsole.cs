@@ -28,6 +28,7 @@ namespace Microsoft.Diagnostics.Tools.Common
         void Clear();
         void SetCursorPosition(int col, int row);
         void Write(string text);
+        void WriteLine();
         void WriteLine(string text);
         ConsoleKeyInfo ReadKey();
         ConsoleKeyInfo ReadKey(bool intercept);
