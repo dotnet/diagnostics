@@ -25,15 +25,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static string dotnetCommonDescription = """
                                                         Lightweight .NET runtime diagnostics designed to stay low overhead.
-                                                        Includes:
-                                                            GC
-                                                            AssemblyLoader
-                                                            Loader
-                                                            JIT
-                                                            Exceptions
-                                                            Threading
-                                                            JittedMethodILToNativeMap
-                                                            Compilation
+                                                        Includes GC, AssemblyLoader, Loader, JIT, Exceptions, Threading, JittedMethodILToNativeMap, and Compilation events
                                                         Equivalent to --providers "Microsoft-Windows-DotNETRuntime:0x100003801D:4".
                                                         """;
 

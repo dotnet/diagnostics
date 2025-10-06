@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Internal.Common.Utils;
@@ -16,9 +17,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal static partial class CollectLinuxCommandHandler
     {
-        private static int s_recordStatus;
+        private static bool s_stopTracing;
+        private static Stopwatch s_stopwatch = new();
+        private static LineRewriter s_rewriter = new() { LineToClear = Console.CursorTop - 1 };
+        private static bool s_printingStatus;
 
         internal sealed record CollectLinuxArgs(
+            CancellationToken Ct,
             string[] Providers,
             string ClrEventLevel,
             string ClrEvents,
@@ -47,7 +52,42 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return (int)ReturnCode.ArgumentError;
             }
 
-            return RunRecordTrace(args);
+            args.Ct.Register(() => s_stopTracing = true);
+            int ret = (int)ReturnCode.TracingError;
+            string scriptPath = null;
+            try
+            {
+                Console.CursorVisible = false;
+                byte[] command = BuildRecordTraceArgs(args, out scriptPath);
+
+                if (args.Duration != default)
+                {
+                    System.Timers.Timer durationTimer = new(args.Duration.TotalMilliseconds);
+                    durationTimer.Elapsed += (sender, e) =>
+                    {
+                        durationTimer.Stop();
+                        s_stopTracing = true;
+                    };
+                    durationTimer.Start();
+                }
+                s_stopwatch.Start();
+                ret = RunRecordTrace(command, (UIntPtr)command.Length, OutputHandler);
+            }
+            finally
+            {
+                if (!string.IsNullOrEmpty(scriptPath))
+                {
+                    try
+                    {
+                        if (File.Exists(scriptPath))
+                        {
+                            File.Delete(scriptPath);
+                        }
+                    } catch { }
+                }
+            }
+
+            return ret;
         }
 
         public static Command CollectLinuxCommand()
@@ -73,6 +113,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 string profilesValue = parseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty;
 
                 int rc = CollectLinux(new CollectLinuxArgs(
+                    Ct: ct,
                     Providers: providersValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     ClrEventLevel: parseResult.GetValue(CommonOptions.CLREventLevelOption) ?? string.Empty,
                     ClrEvents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
@@ -88,44 +129,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return collectLinuxCommand;
         }
 
-        private static int RunRecordTrace(CollectLinuxArgs args)
-        {
-            s_recordStatus = 0;
-
-            ConsoleCancelEventHandler handler = (sender, e) =>
-            {
-                e.Cancel = true;
-                s_recordStatus = 1;
-            };
-            Console.CancelKeyPress += handler;
-
-            IEnumerable<string> recordTraceArgList = BuildRecordTraceArgs(args, out string scriptPath);
-
-            string options = string.Join(' ', recordTraceArgList);
-            byte[] command = Encoding.UTF8.GetBytes(options);
-            int rc;
-            try
-            {
-                rc = RecordTrace(command, (UIntPtr)command.Length, OutputHandler);
-            }
-            finally
-            {
-                Console.CancelKeyPress -= handler;
-                if (!string.IsNullOrEmpty(scriptPath))
-                {
-                    try {
-                        if (File.Exists(scriptPath))
-                        {
-                            File.Delete(scriptPath);
-                        }
-                    } catch { }
-                }
-            }
-
-            return rc;
-        }
-
-        private static List<string> BuildRecordTraceArgs(CollectLinuxArgs args, out string scriptPath)
+        private static byte[] BuildRecordTraceArgs(CollectLinuxArgs args, out string scriptPath)
         {
             scriptPath = null;
             List<string> recordTraceArgs = new();
@@ -143,12 +147,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string resolvedOutput = ResolveOutputPath(args.Output, pid);
             recordTraceArgs.Add($"--out");
             recordTraceArgs.Add(resolvedOutput);
-
-            if (args.Duration != default)
-            {
-                recordTraceArgs.Add($"--duration");
-                recordTraceArgs.Add(args.Duration.ToString());
-            }
 
             string[] profiles = args.Profiles;
             if (args.Profiles.Length == 0 && args.Providers.Length == 0 && string.IsNullOrEmpty(args.ClrEvents) && args.PerfEvents.Length == 0)
@@ -217,7 +215,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             recordTraceArgs.Add("--script-file");
             recordTraceArgs.Add(scriptPath);
 
-            return recordTraceArgs;
+            string options = string.Join(' ', recordTraceArgs);
+            return Encoding.UTF8.GetBytes(options);
         }
 
         private static string ResolveOutputPath(FileInfo output, int processId)
@@ -241,31 +240,44 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static int OutputHandler(uint type, IntPtr data, UIntPtr dataLen)
         {
             OutputType ot = (OutputType)type;
-            if (ot != OutputType.Progress)
+            if (dataLen != UIntPtr.Zero && (ulong)dataLen <= int.MaxValue)
             {
-                int len = checked((int)dataLen);
-                if (len > 0)
+                string text = Marshal.PtrToStringUTF8(data, (int)dataLen);
+                if (!string.IsNullOrEmpty(text) &&
+                    !text.StartsWith("Recording started", StringComparison.OrdinalIgnoreCase))
                 {
-                    byte[] buffer = new byte[len];
-                    Marshal.Copy(data, buffer, 0, len);
-                    string text = Encoding.UTF8.GetString(buffer);
-                    switch (ot)
+                    if (ot == OutputType.Error)
                     {
-                    case OutputType.Normal:
-                    case OutputType.Live:
-                        Console.Out.WriteLine(text);
-                        break;
-                    case OutputType.Error:
                         Console.Error.WriteLine(text);
-                        break;
-                    default:
-                        Console.Error.WriteLine($"[{ot}] {text}");
-                        break;
+                        s_stopTracing = true;
+                    }
+                    else
+                    {
+                        Console.Out.WriteLine(text);
                     }
                 }
             }
 
-            return s_recordStatus;
+            if (ot == OutputType.Progress)
+            {
+                if (s_printingStatus)
+                {
+                    s_rewriter.RewriteConsoleLine();
+                }
+                else
+                {
+                    s_printingStatus = true;
+                }
+                Console.Out.WriteLine($"[{s_stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace.");
+                Console.Out.WriteLine("Press <Enter> or <Ctrl-C> to exit...");
+
+                if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
+                {
+                    s_stopTracing = true;
+                }
+            }
+
+            return s_stopTracing ? 1 : 0;
         }
 
         private static readonly Option<string> PerfEventsOption =
@@ -288,8 +300,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             [In] IntPtr data,
             [In] UIntPtr dataLen);
 
-        [LibraryImport("recordtrace")]
-        private static partial int RecordTrace(
+        [LibraryImport("recordtrace", EntryPoint = "RecordTrace")]
+        private static partial int RunRecordTrace(
             byte[] command,
             UIntPtr commandLen,
             recordTraceCallback callback);
