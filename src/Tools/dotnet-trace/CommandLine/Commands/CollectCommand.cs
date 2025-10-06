@@ -13,16 +13,25 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools.Common;
 using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static class CollectCommandHandler
+    internal class CollectCommandHandler
     {
-        internal static bool IsQuiet { get; set; }
+        internal bool IsQuiet { get; set; }
 
-        private static void ConsoleWriteLine(string str)
+        public CollectCommandHandler()
+        {
+            Console = new DefaultConsole(false);
+            StartTraceSessionAsync = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
+            ResumeRuntimeAsync = (client, ct) => client.ResumeRuntimeAsync(ct);
+            CollectSessionEventStream = (name) => new FileStream(name, FileMode.Create, FileAccess.Write);
+        }
+
+        private void ConsoleWriteLine(string str = "")
         {
             if (!IsQuiet)
             {
@@ -54,7 +63,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="stoppingEventPayloadFilter">A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.</param>
         /// <param name="rundown">Collect rundown events.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string[] providers, string[] profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
+        internal async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string[] providers, string[] profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -249,11 +258,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     using (VirtualTerminalMode vTermMode = printStatusOverTime ? VirtualTerminalMode.TryEnable() : null)
                     {
-                        EventPipeSession session = null;
+                        ICollectSession session = null;
                         try
                         {
                             EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: rundownKeyword, requestStackwalk: true);
-                            session = await diagnosticsClient.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false);
+                            session = await StartTraceSessionAsync(diagnosticsClient, config, ct).ConfigureAwait(false);
                         }
                         catch (UnsupportedCommandException e)
                         {
@@ -271,7 +280,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                                 //
                                 EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: EventPipeSession.DefaultRundownKeyword, requestStackwalk: true);
-                                session = await diagnosticsClient.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false);
+                                session = await StartTraceSessionAsync(diagnosticsClient, config, ct).ConfigureAwait(false);
                             }
                             else if (retryStrategy == RetryStrategy.DropKeywordDropRundown)
                             {
@@ -287,7 +296,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 // Debug.Assert(rundownKeyword != EventPipeSession.DefaultRundownKeyword);
                                 //
                                 EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: 0, requestStackwalk: true);
-                                session = await diagnosticsClient.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false);
+                                session = await StartTraceSessionAsync(diagnosticsClient, config, ct).ConfigureAwait(false);
                             }
                             else
                             {
@@ -304,7 +313,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         {
                             try
                             {
-                                await diagnosticsClient.ResumeRuntimeAsync(ct).ConfigureAwait(false);
+                                await ResumeRuntimeAsync(diagnosticsClient, ct).ConfigureAwait(false);
                             }
                             catch (UnsupportedCommandException)
                             {
@@ -330,18 +339,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                         LineRewriter rewriter = null;
 
-                        using (FileStream fs = new(output.FullName, FileMode.Create, FileAccess.Write))
+                        using (Stream eventStream = CollectSessionEventStream(output.FullName))
                         {
                             ConsoleWriteLine($"Process        : {processMainModuleFileName}");
-                            ConsoleWriteLine($"Output File    : {fs.Name}");
+                            ConsoleWriteLine($"Output File    : {output.FullName}");
                             if (shouldStopAfterDuration)
                             {
                                 ConsoleWriteLine($"Trace Duration : {duration:dd\\:hh\\:mm\\:ss}");
                             }
 
-                            ConsoleWriteLine("\n\n");
+                            ConsoleWriteLine();
+                            ConsoleWriteLine();
 
-                            FileInfo fileInfo = new(output.FullName);
                             EventMonitor eventMonitor = null;
                             Task copyTask = null;
                             if (hasStoppingEventProviderName)
@@ -356,14 +365,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                     onPayloadFilterMismatch: (traceEvent) => {
                                         ConsoleWriteLine($"One or more field names specified in the payload filter for event '{traceEvent.ProviderName}/{traceEvent.EventName}' do not match any of the known field names: '{string.Join(' ', traceEvent.PayloadNames)}'. As a result the requested stopping event is unreachable; will continue to collect the trace for the remaining specified duration.");
                                     },
-                                    eventStream: new PassthroughStream(session.EventStream, fs, (int)buffersize, leaveDestinationStreamOpen: true),
+                                    eventStream: new PassthroughStream(session.EventStream, eventStream, (int)buffersize, leaveDestinationStreamOpen: true),
                                     callOnEventOnlyOnce: true);
 
                                 copyTask = eventMonitor.ProcessAsync(CancellationToken.None);
                             }
                             else
                             {
-                                copyTask = session.EventStream.CopyToAsync(fs);
+                                copyTask = session.EventStream.CopyToAsync(eventStream);
                             }
                             Task shouldExitTask = copyTask.ContinueWith(
                                 (task) => shouldExit.Set(),
@@ -373,7 +382,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                             if (printStatusOverTime)
                             {
-                                rewriter = new LineRewriter { LineToClear = Console.CursorTop - 1 };
+                                rewriter = new LineRewriter(Console) { LineToClear = Console.CursorTop - 1 };
                                 Console.CursorVisible = false;
                                 if (!rewriter.IsRewriteConsoleLineSupported)
                                 {
@@ -381,6 +390,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 }
                             }
 
+                            FileInfo fileInfo = new(output.FullName);
                             Action printStatus = () => {
                                 if (printStatusOverTime && rewriter.IsRewriteConsoleLineSupported)
                                 {
@@ -433,7 +443,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             shouldExitTask.Wait();
                         }
 
-                        ConsoleWriteLine($"\nTrace completed.");
+                        ConsoleWriteLine();
+                        ConsoleWriteLine("Trace completed.");
 
                         if (format != TraceFileFormat.NetTrace)
                         {
@@ -464,7 +475,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (OperationCanceledException)
             {
-                ConsoleWriteLine("\nTrace collection canceled.");
+                ConsoleWriteLine();
+                ConsoleWriteLine("Trace collection canceled.");
                 collectionStopped = true;
                 ret = (int)ReturnCode.TracingError;
             }
@@ -544,31 +556,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
             collectCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Program.Main that handles UnmatchedTokens
             collectCommand.Description = "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.";
 
-            collectCommand.SetAction((parseResult, ct) => {
+            collectCommand.SetAction((parseResult, ct) =>
+            {
+                CollectCommandHandler handler = new();
                 string providersValue = parseResult.GetValue(CommonOptions.ProvidersOption) ?? string.Empty;
                 string profileValue = parseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty;
 
-                return Collect(
-                ct,
-                cliConfig: parseResult.Configuration,
-                processId: parseResult.GetValue(CommonOptions.ProcessIdOption),
-                output: parseResult.GetValue(CommonOptions.OutputPathOption),
-                buffersize: parseResult.GetValue(CircularBufferOption),
-                providers: providersValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-                profile: profileValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-                format: parseResult.GetValue(CommonOptions.FormatOption),
-                duration: parseResult.GetValue(CommonOptions.DurationOption),
-                clrevents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
-                clreventlevel: parseResult.GetValue(CommonOptions.CLREventLevelOption) ?? string.Empty,
-                name: parseResult.GetValue(CommonOptions.NameOption),
-                diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
-                showchildio: parseResult.GetValue(ShowChildIOOption),
-                resumeRuntime: parseResult.GetValue(ResumeRuntimeOption),
-                stoppingEventProviderName: parseResult.GetValue(StoppingEventProviderNameOption),
-                stoppingEventEventName: parseResult.GetValue(StoppingEventEventNameOption),
-                stoppingEventPayloadFilter: parseResult.GetValue(StoppingEventPayloadFilterOption),
-                rundown: parseResult.GetValue(RundownOption),
-                dsrouter: parseResult.GetValue(DSRouterOption));
+                return handler.Collect(ct,
+                                       cliConfig: parseResult.Configuration,
+                                       processId: parseResult.GetValue(CommonOptions.ProcessIdOption),
+                                       output: parseResult.GetValue(CommonOptions.OutputPathOption),
+                                       buffersize: parseResult.GetValue(CircularBufferOption),
+                                       providers: providersValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                                       profile: profileValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                                       format: parseResult.GetValue(CommonOptions.FormatOption),
+                                       duration: parseResult.GetValue(CommonOptions.DurationOption),
+                                       clrevents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
+                                       clreventlevel: parseResult.GetValue(CommonOptions.CLREventLevelOption) ?? string.Empty,
+                                       name: parseResult.GetValue(CommonOptions.NameOption),
+                                       diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
+                                       showchildio: parseResult.GetValue(ShowChildIOOption),
+                                       resumeRuntime: parseResult.GetValue(ResumeRuntimeOption),
+                                       stoppingEventProviderName: parseResult.GetValue(StoppingEventProviderNameOption),
+                                       stoppingEventEventName: parseResult.GetValue(StoppingEventEventNameOption),
+                                       stoppingEventPayloadFilter: parseResult.GetValue(StoppingEventPayloadFilterOption),
+                                       rundown: parseResult.GetValue(RundownOption),
+                                       dsrouter: parseResult.GetValue(DSRouterOption));
             });
 
             return collectCommand;
@@ -631,5 +644,28 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Description = @"The dsrouter command to start. Value should be one of ios, ios-sim, android, android-emu. Run `dotnet-dsrouter -h` for more information."
             };
+
+#region testing seams
+        // Abstraction for Collect's usage of EventPipeSession to facilitate testing.
+        internal interface ICollectSession : IDisposable
+        {
+            Stream EventStream { get; }
+            void Stop();
+        }
+
+        private sealed class CollectSession : ICollectSession
+        {
+            private readonly EventPipeSession _session;
+            public CollectSession(EventPipeSession session) => _session = session;
+            public Stream EventStream => _session.EventStream;
+            public void Stop() => _session.Stop();
+            public void Dispose() => _session.Dispose();
+        }
+
+        internal Func<DiagnosticsClient, EventPipeSessionConfiguration, CancellationToken, Task<ICollectSession>> StartTraceSessionAsync { get; set; }
+        internal Func<DiagnosticsClient, CancellationToken, Task> ResumeRuntimeAsync { get; set; }
+        internal Func<string, Stream> CollectSessionEventStream { get; set; }
+        internal IConsole Console { get; set; }
+#endregion
     }
 }
