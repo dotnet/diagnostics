@@ -157,20 +157,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 profiles = new[] { "dotnet-common", "cpu-sampling" };
             }
 
-            foreach (string profile in profiles)
-            {
-                Profile traceProfile = ListProfilesCommandHandler.TraceProfiles
-                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
-
-                if (!string.IsNullOrEmpty(traceProfile.VerbExclusivity) &&
-                    traceProfile.VerbExclusivity.Equals("collect-linux", StringComparison.OrdinalIgnoreCase))
-                {
-                    recordTraceArgs.Add(traceProfile.CollectLinuxArgs);
-                }
-            }
-
             StringBuilder scriptBuilder = new();
-
             List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(args.Providers, args.ClrEvents, args.ClrEventLevel, profiles, true, "collect-linux");
             foreach (EventPipeProvider provider in providerCollection)
             {
@@ -193,6 +180,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 scriptBuilder.Append($"record_dotnet_provider(\"{providerName}\", 0x{keywords:X}, {eventLevel}, {providerNameSanitized}_flags);\n\n");
             }
 
+            Console.WriteLine($"{("Linux Events"),-80}Enabled By");
+            foreach (string profile in profiles)
+            {
+                Profile traceProfile = ListProfilesCommandHandler.TraceProfiles
+                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
+
+                if (!string.IsNullOrEmpty(traceProfile.VerbExclusivity) &&
+                    traceProfile.VerbExclusivity.Equals("collect-linux", StringComparison.OrdinalIgnoreCase))
+                {
+                    recordTraceArgs.Add(traceProfile.CollectLinuxArgs);
+                    Console.WriteLine($"{traceProfile.Name,-80}--profile");
+                }
+            }
+
             foreach (string perfEvent in args.PerfEvents)
             {
                 string[] split = perfEvent.Split(':', 2, StringSplitOptions.TrimEntries);
@@ -203,9 +204,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 string perfProvider = split[0];
                 string perfEventName = split[1];
-                Console.WriteLine($"Enabling perf event '{perfEvent}'");
+                Console.WriteLine($"{perfEvent,-80}--perf-events");
                 scriptBuilder.Append($"let {perfEventName} = event_from_tracefs(\"{perfProvider}\", \"{perfEventName}\");\nrecord_event({perfEventName});\n\n");
             }
+            Console.WriteLine();
 
             string scriptText = scriptBuilder.ToString();
             string scriptFileName = $"{Path.GetFileNameWithoutExtension(resolvedOutput)}.script";

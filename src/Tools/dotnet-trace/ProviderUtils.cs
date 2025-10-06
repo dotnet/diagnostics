@@ -107,17 +107,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     throw new ArgumentException($"The specified profile '{traceProfile.Name}' does not apply to `dotnet-trace {verbExclusivity}`.");
                 }
 
-                if (shouldPrintProviders)
-                {
-                    string profileEffect = string.Join(", ", traceProfile.Providers.Select(p => p.ToString()));
-                    if (!string.IsNullOrEmpty(traceProfile.VerbExclusivity) &&
-                        traceProfile.VerbExclusivity.Equals("collect-linux", StringComparison.OrdinalIgnoreCase))
-                    {
-                        profileEffect = traceProfile.CollectLinuxArgs;
-                    }
-                    Console.WriteLine($"Applying profile '{traceProfile.Name}': {profileEffect}");
-                }
-
                 IEnumerable<EventPipeProvider> profileProviders = traceProfile.Providers;
                 foreach (EventPipeProvider provider in profileProviders)
                 {
@@ -175,7 +164,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             if (providers.Count == 0)
             {
-                Console.WriteLine("No providers were configured.");
+                Console.WriteLine("No .NET providers were configured.");
+                Console.WriteLine("");
                 return;
             }
 
