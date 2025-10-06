@@ -11,15 +11,16 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools.Common;
 using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static partial class CollectLinuxCommandHandler
+    internal partial class CollectLinuxCommandHandler
     {
         private static bool s_stopTracing;
         private static Stopwatch s_stopwatch = new();
-        private static LineRewriter s_rewriter = new() { LineToClear = Console.CursorTop - 1 };
+        private static LineRewriter s_rewriter;
         private static bool s_printingStatus;
 
         internal sealed record CollectLinuxArgs(
@@ -34,11 +35,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string Name,
             int ProcessId);
 
+        public CollectLinuxCommandHandler()
+        {
+            Console = new DefaultConsole(false);
+            s_rewriter = new LineRewriter(Console) { LineToClear = Console.CursorTop - 1 };
+        }
+
         /// <summary>
         /// Collects diagnostic traces using perf_events, a Linux OS technology. collect-linux requires admin privileges to capture kernel- and user-mode events, and by default, captures events from all processes.
         /// This Linux-only command includes the same .NET events as dotnet-trace collect, and it uses the kernel’s user_events mechanism to emit .NET events as perf events, enabling unification of user-space .NET events with kernel-space system events.
         /// </summary>
-        private static int CollectLinux(CollectLinuxArgs args)
+        internal int CollectLinux(CollectLinuxArgs args)
         {
             if (!OperatingSystem.IsLinux())
             {
@@ -71,7 +78,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     durationTimer.Start();
                 }
                 s_stopwatch.Start();
-                ret = RunRecordTrace(command, (UIntPtr)command.Length, OutputHandler);
+                ret = RecordTraceInvoker(command, (UIntPtr)command.Length, OutputHandler);
             }
             finally
             {
@@ -111,8 +118,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 string providersValue = parseResult.GetValue(CommonOptions.ProvidersOption) ?? string.Empty;
                 string perfEventsValue = parseResult.GetValue(PerfEventsOption) ?? string.Empty;
                 string profilesValue = parseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty;
+                CollectLinuxCommandHandler handler = new();
 
-                int rc = CollectLinux(new CollectLinuxArgs(
+                int rc = handler.CollectLinux(new CollectLinuxArgs(
                     Ct: ct,
                     Providers: providersValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     ClrEventLevel: parseResult.GetValue(CommonOptions.CLREventLevelOption) ?? string.Empty,
@@ -129,7 +137,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return collectLinuxCommand;
         }
 
-        private static byte[] BuildRecordTraceArgs(CollectLinuxArgs args, out string scriptPath)
+        private byte[] BuildRecordTraceArgs(CollectLinuxArgs args, out string scriptPath)
         {
             scriptPath = null;
             List<string> recordTraceArgs = new();
@@ -156,7 +164,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             StringBuilder scriptBuilder = new();
-            List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(args.Providers, args.ClrEvents, args.ClrEventLevel, profiles, true, "collect-linux");
+            List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(args.Providers, args.ClrEvents, args.ClrEventLevel, profiles, true, "collect-linux", Console);
             foreach (EventPipeProvider provider in providerCollection)
             {
                 string providerName = provider.Name;
@@ -237,7 +245,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return $"trace_{now:yyyyMMdd}_{now:HHmmss}.nettrace";
         }
 
-        private static int OutputHandler(uint type, IntPtr data, UIntPtr dataLen)
+        private int OutputHandler(uint type, IntPtr data, UIntPtr dataLen)
         {
             OutputType ot = (OutputType)type;
             if (dataLen != UIntPtr.Zero && (ulong)dataLen <= int.MaxValue)
@@ -295,7 +303,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate int recordTraceCallback(
+        internal delegate int recordTraceCallback(
             [In] uint type,
             [In] IntPtr data,
             [In] UIntPtr dataLen);
@@ -305,5 +313,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             byte[] command,
             UIntPtr commandLen,
             recordTraceCallback callback);
+
+#region testing seams
+        internal Func<byte[], UIntPtr, recordTraceCallback, int> RecordTraceInvoker { get; set; } = RunRecordTrace;
+        internal IConsole Console { get; set; }
+#endregion
     }
 }
