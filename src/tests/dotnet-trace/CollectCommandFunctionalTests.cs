@@ -23,8 +23,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             CommandLineConfiguration cliConfig = null,
             int processId = -1,
             uint buffersize = 1,
-            string providers = "",
-            string profile = "",
+            string[] providers = null,
+            string[] profile = null,
             int formatValue = (int)TraceFileFormat.NetTrace,
             TimeSpan duration = default,
             string clrevents = "",
@@ -72,8 +72,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 config.ProcessId,
                 config.Output,
                 config.buffersize,
-                config.providers,
-                config.profile,
+                config.providers ?? Array.Empty<string>(),
+                config.profile ?? Array.Empty<string>(),
                 config.Format,
                 config.duration,
                 config.clrevents,
@@ -130,22 +130,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 ExpectProvidersWithMessages(
                     new[]
                     {
-                        "No profile or providers specified, defaulting to trace profile 'cpu-sampling'"
+                        "No profile or providers specified, defaulting to trace profiles 'dotnet-common' + 'dotnet-sampled-thread-time'."
                     },
-                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"),
-                    FormatProvider("Microsoft-Windows-DotNETRuntime", "00000014C14FCCBD", "Informational", 4, "--profile"))
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "000000100003801D", "Informational", 4, "--profile"),
+                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(providers: "Foo:0x1:4"),
+                new CollectArgs(providers: new[] { "Foo:0x1:4" }),
                 ExpectProviders(
                     FormatProvider("Foo", "0000000000000001", "Informational", 4, "--providers"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(providers: "Foo:0x1:4,Bar:0x2:4"),
+                new CollectArgs(providers: new[] { "Foo:0x1:4", "Bar:0x2:4" }),
                 ExpectProviders(
                     FormatProvider("Foo", "0000000000000001", "Informational", 4, "--providers"),
                     FormatProvider("Bar", "0000000000000002", "Informational", 4, "--providers"))
@@ -153,36 +153,36 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             yield return new object[]
             {
-                new CollectArgs(profile: "cpu-sampling"),
+                new CollectArgs(profile: new[] { "dotnet-common", "dotnet-sampled-thread-time" }),
                 ExpectProviders(
-                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"),
-                    FormatProvider("Microsoft-Windows-DotNETRuntime", "00000014C14FCCBD", "Informational", 4, "--profile"))
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "000000100003801D", "Informational", 4, "--profile"),
+                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(profile: "cpu-sampling", providers: "Foo:0x1:4"),
+                new CollectArgs(profile: new[] { "dotnet-common", "dotnet-sampled-thread-time" }, providers: new[] { "Foo:0x1:4" }),
                 ExpectProviders(
                     FormatProvider("Foo", "0000000000000001", "Informational", 4, "--providers"),
-                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"),
-                    FormatProvider("Microsoft-Windows-DotNETRuntime", "00000014C14FCCBD", "Informational", 4, "--profile"))
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "000000100003801D", "Informational", 4, "--profile"),
+                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(profile: "cpu-sampling", clrevents: "gc"),
+                new CollectArgs(profile: new[] { "dotnet-common", "dotnet-sampled-thread-time" }, clrevents: "gc"),
                 ExpectProvidersWithMessages(
                     new[]
                     {
-                        "The argument --clrevents gc will be ignored because the CLR provider was configured via either --profile or --providers command."
+                        "Warning: The CLR provider was already specified through --providers or --profile. Ignoring --clrevents."
                     },
-                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"),
-                    FormatProvider("Microsoft-Windows-DotNETRuntime", "00000014C14FCCBD", "Informational", 4, "--profile"))
+                    FormatProvider("Microsoft-Windows-DotNETRuntime", "000000100003801D", "Informational", 4, "--profile"),
+                    FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"))
             };
 
             yield return new object[]
             {
-                new CollectArgs(profile: "cpu-sampling", providers: "Microsoft-Windows-DotNETRuntime:0x1:4"),
+                new CollectArgs(profile: new[] { "dotnet-common", "dotnet-sampled-thread-time" }, providers: new[] { "Microsoft-Windows-DotNETRuntime:0x1:4" }),
                 ExpectProviders(
                     FormatProvider("Microsoft-Windows-DotNETRuntime", "0000000000000001", "Informational", 4, "--providers"),
                     FormatProvider("Microsoft-DotNETCore-SampleProfiler", "0000F00000000000", "Informational", 4, "--profile"))
@@ -190,11 +190,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             yield return new object[]
             {
-                new CollectArgs(providers: "Microsoft-Windows-DotNETRuntime:0x1:4", clrevents: "gc"),
+                new CollectArgs(providers: new[] { "Microsoft-Windows-DotNETRuntime:0x1:4" }, clrevents: "gc"),
                 ExpectProvidersWithMessages(
                     new[]
                     {
-                        "The argument --clrevents gc will be ignored because the CLR provider was configured via either --profile or --providers command."
+                        "Warning: The CLR provider was already specified through --providers or --profile. Ignoring --clrevents."
                     },
                     FormatProvider("Microsoft-Windows-DotNETRuntime", "0000000000000001", "Informational", 4, "--providers"))
             };

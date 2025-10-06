@@ -123,7 +123,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     profile = new[] { "dotnet-common", "dotnet-sampled-thread-time" };
                 }
 
-                List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(providers, clrevents, clreventlevel, profile, !IsQuiet, "collect");
+                List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(providers, clrevents, clreventlevel, profile, !IsQuiet, "collect", Console);
                 if (providerCollection.Count <= 0)
                 {
                     Console.Error.WriteLine("No providers were specified to start a trace.");

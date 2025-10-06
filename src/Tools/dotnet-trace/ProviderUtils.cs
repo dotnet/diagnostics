@@ -5,9 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -71,14 +73,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
             ProfileArg = 4,
         }
 
-        public static List<EventPipeProvider> ComputeProviderConfig(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles, bool shouldPrintProviders = false, string verbExclusivity = null)
+        public static List<EventPipeProvider> ComputeProviderConfig(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles, bool shouldPrintProviders = false, string verbExclusivity = null, IConsole console = null)
         {
+            console ??= new DefaultConsole(false);
             Dictionary<string, EventPipeProvider> merged = new(StringComparer.OrdinalIgnoreCase);
             Dictionary<string, int> providerSources = new(StringComparer.OrdinalIgnoreCase);
 
             foreach (string providerArg in providersArg)
             {
-                EventPipeProvider provider = ToProvider(providerArg);
+                EventPipeProvider provider = ToProvider(providerArg, console);
                 if (!merged.TryGetValue(provider.Name, out EventPipeProvider existing))
                 {
                     merged[provider.Name] = provider;
@@ -130,7 +133,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                     else if (shouldPrintProviders)
                     {
-                        Console.WriteLine($"Warning: The CLR provider was already specified through --providers or --profile. Ignoring --clrevents.");
+                        console.WriteLine($"Warning: The CLR provider was already specified through --providers or --profile. Ignoring --clrevents.");
                     }
                 }
             }
@@ -138,7 +141,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             List<EventPipeProvider> unifiedProviders = merged.Values.ToList();
             if (shouldPrintProviders)
             {
-                PrintProviders(unifiedProviders, providerSources);
+                PrintProviders(unifiedProviders, providerSources, console);
             }
 
             return unifiedProviders;
@@ -160,17 +163,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return new EventPipeProvider(providerConfigA.Name, level, providerConfigA.Keywords | providerConfigB.Keywords, providerConfigA.Arguments ?? providerConfigB.Arguments);
         }
 
-        private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, int> enabledBy)
+        private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, int> enabledBy, IConsole console)
         {
             if (providers.Count == 0)
             {
-                Console.WriteLine("No .NET providers were configured.");
-                Console.WriteLine("");
+                console.WriteLine("No .NET providers were configured.");
+                console.WriteLine("");
                 return;
             }
 
-            Console.WriteLine("");
-            Console.WriteLine(string.Format("{0, -40}", "Provider Name") + string.Format("{0, -20}", "Keywords") +
+            console.WriteLine("");
+            console.WriteLine(string.Format("{0, -40}", "Provider Name") + string.Format("{0, -20}", "Keywords") +
                 string.Format("{0, -20}", "Level") + "Enabled By");  // +4 is for the tab
             foreach (EventPipeProvider provider in providers)
             {
@@ -190,9 +193,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         providerSources.Add("--profile");
                     }
                 }
-                Console.WriteLine(string.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + string.Join(", ", providerSources));
+                console.WriteLine(string.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + string.Join(", ", providerSources));
             }
-            Console.WriteLine("");
+            console.WriteLine("");
         }
         private static string GetProviderDisplayString(EventPipeProvider provider) =>
             string.Format("{0, -40}", provider.Name) + string.Format("0x{0, -18}", $"{provider.Keywords:X16}") + string.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
@@ -257,7 +260,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        private static EventPipeProvider ToProvider(string provider)
+        private static EventPipeProvider ToProvider(string provider, IConsole console)
         {
             if (string.IsNullOrWhiteSpace(provider))
             {
@@ -272,7 +275,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             // Check if the supplied provider is a GUID and not a name.
             if (Guid.TryParse(providerName, out _))
             {
-                Console.WriteLine($"Warning: --provider argument {providerName} appears to be a GUID which is not supported by dotnet-trace. Providers need to be referenced by their textual name.");
+                console.WriteLine($"Warning: --provider argument {providerName} appears to be a GUID which is not supported by dotnet-trace. Providers need to be referenced by their textual name.");
             }
 
             if (string.IsNullOrWhiteSpace(providerName))
