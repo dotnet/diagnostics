@@ -26,7 +26,7 @@ assignees: ''
 * Do you know whether it is specific to that configuration?
 * Are you running in any particular type of environment? (e.g. Containers, a cloud scenario, app you are trying to target is a different user)
 * Is it a self-contained published application?
-* What's the output of `dotnet info`
+* What's the output of `dotnet --info`
   -->
 
 ### Regression?
