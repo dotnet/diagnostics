@@ -46,21 +46,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void CollectLinuxCommandProviderConfigurationConsolidation(object testArgs, string[] expectedLines)
         {
             MockConsole console = new(200, 30);
-            RunAsync((CollectLinuxCommandHandler.CollectLinuxArgs)testArgs, console);
-            console.AssertSanitizedLinesEqual(null, expectedLines);
-        }
-
-        private static string[] RunAsync(CollectLinuxCommandHandler.CollectLinuxArgs args, MockConsole console)
-        {
-            var handler = new CollectLinuxCommandHandler();
-            handler.Console = console;
+            var handler = new CollectLinuxCommandHandler(console);
             handler.RecordTraceInvoker = (cmd, len, cb) => 0;
-            int exit = handler.CollectLinux(args);
-            if (exit != 0)
+            int exit = handler.CollectLinux((CollectLinuxCommandHandler.CollectLinuxArgs)testArgs);
+            if (OperatingSystem.IsLinux())
             {
-                throw new InvalidOperationException($"Collect exited with return code {exit}.");
+                Assert.Equal(0, exit);
+                console.AssertSanitizedLinesEqual(null, expectedLines);
             }
-            return console.Lines;
+            else
+            {
+                Assert.Equal(3, exit);
+                console.AssertSanitizedLinesEqual(null, new string[] {
+                    "The collect-linux command is only supported on Linux.",
+                });
+            }
         }
 
         public static IEnumerable<object[]> BasicCases()

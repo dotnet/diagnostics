@@ -35,9 +35,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string Name,
             int ProcessId);
 
-        public CollectLinuxCommandHandler()
+        public CollectLinuxCommandHandler(IConsole console = null)
         {
-            Console = new DefaultConsole(false);
+            Console = console ?? new DefaultConsole(false);
             s_rewriter = new LineRewriter(Console) { LineToClear = Console.CursorTop - 1 };
         }
 
