@@ -14,7 +14,7 @@
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
-    
+
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
@@ -37,7 +37,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ExtensionPackage>
     <Name>SOS</Name>
-    <Version>$(FileVersion)</Version> 
+    <Version>$(FileVersion)</Version>
     <Description>Debugging aid for .NET Core programs and runtimes</Description>
     <Components>
         <BinaryComponent Name="sos" Type="Engine">
@@ -54,7 +54,9 @@
                     <ModuleTrigger Name="libcoreclr.so" />
                 </TriggerSet>
                 <TriggerSet>
-                  <ExceptionTrigger ExceptionCode="0xC0000409" >
+                  <ExceptionTrigger ExceptionCode="0xC0000409" />
+                  <ExceptionTrigger ExceptionCode="0xC000027B" />
+                  <ExceptionTrigger ExceptionCode="0xC000027C" >
                     <Parameters>
                       <Parameter Index="0" Value="0x48"/>
                     </Parameters>
