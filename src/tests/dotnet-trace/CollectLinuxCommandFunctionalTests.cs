@@ -25,9 +25,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string[] perfEvents = null,
             string[] profiles = null,
             FileInfo output = null,
-            TimeSpan duration = default,
-            string name = "",
-            int processId = -1)
+            TimeSpan duration = default)
         {
             return new CollectLinuxCommandHandler.CollectLinuxArgs(ct,
                                                                    providers ?? Array.Empty<string>(),
@@ -36,9 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    perfEvents ?? Array.Empty<string>(),
                                                                    profiles ?? Array.Empty<string>(),
                                                                    output ?? new FileInfo(CommonOptions.DefaultTraceName),
-                                                                   duration,
-                                                                   name,
-                                                                   processId);
+                                                                   duration);
         }
 
         [Theory]
@@ -81,7 +77,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             yield return new object[] {
                 TestArgs(providers: new[]{"Foo:0x1:4"}),
                 new string[] {
-                    "", ProviderHeader,
+                    "",
+                    ProviderHeader,
                     FormatProvider("Foo","0000000000000001","Informational",4,"--providers"),
                     "",
                     LinuxHeader,
@@ -91,7 +88,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             yield return new object[] {
                 TestArgs(providers: new[]{"Foo:0x1:4","Bar:0x2:4"}),
                 new string[] {
-                    "", ProviderHeader,
+                    "",
+                    ProviderHeader,
                     FormatProvider("Foo","0000000000000001","Informational",4,"--providers"),
                     FormatProvider("Bar","0000000000000002","Informational",4,"--providers"),
                     "",
@@ -112,7 +110,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             yield return new object[] {
                 TestArgs(providers: new[]{"Foo:0x1:4"}, profiles: new[]{"cpu-sampling"}),
                 new string[] {
-                    "", ProviderHeader,
+                    "",
+                    ProviderHeader,
                     FormatProvider("Foo","0000000000000001","Informational",4,"--providers"),
                     "",
                     LinuxHeader,
@@ -123,7 +122,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             yield return new object[] {
                 TestArgs(clrEvents: "gc", profiles: new[]{"cpu-sampling"}),
                 new string[] {
-                    "", ProviderHeader,
+                    "",
+                    ProviderHeader,
                     FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000001","Informational",4,"--clrevents"),
                     "",
                     LinuxHeader,
@@ -134,7 +134,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             yield return new object[] {
                 TestArgs(providers: new[]{"Microsoft-Windows-DotNETRuntime:0x1:4"}, profiles: new[]{"cpu-sampling"}),
                 new string[] {
-                    "", ProviderHeader,
+                    "",
+                    ProviderHeader,
                     FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000001","Informational",4,"--providers"),
                     "",
                     LinuxHeader,
@@ -146,7 +147,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 TestArgs(providers: new[]{"Microsoft-Windows-DotNETRuntime:0x1:4"}, clrEvents: "gc"),
                 new string[] {
                     "Warning: The CLR provider was already specified through --providers or --profile. Ignoring --clrevents.",
-                    "", ProviderHeader,
+                    "",
+                    ProviderHeader,
                     FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000001","Informational",4,"--providers"),
                     "",
                     LinuxHeader,
@@ -156,7 +158,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             yield return new object[] {
                 TestArgs(clrEvents: "gc+jit"),
                 new string[] {
-                    "", ProviderHeader,
+                    "",
+                    ProviderHeader,
                     FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000011","Informational",4,"--clrevents"),
                     "",
                     LinuxHeader,
@@ -166,7 +169,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             yield return new object[] {
                 TestArgs(clrEvents: "gc+jit", clrEventLevel: "5"),
                 new string[] {
-                    "", ProviderHeader,
+                    "",
+                    ProviderHeader,
                     FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000011","Verbose",5,"--clrevents"),
                     "",
                     LinuxHeader,

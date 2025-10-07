@@ -31,9 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string[] PerfEvents,
             string[] Profiles,
             FileInfo Output,
-            TimeSpan Duration,
-            string Name,
-            int ProcessId);
+            TimeSpan Duration);
 
         public CollectLinuxCommandHandler(IConsole console = null)
         {
@@ -50,12 +48,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             if (!OperatingSystem.IsLinux())
             {
                 Console.Error.WriteLine("The collect-linux command is only supported on Linux.");
-                return (int)ReturnCode.ArgumentError;
-            }
-
-            if (args.ProcessId != 0 && !string.IsNullOrEmpty(args.Name))
-            {
-                Console.Error.WriteLine("Only one of --process-id or --name can be specified.");
                 return (int)ReturnCode.ArgumentError;
             }
 
@@ -108,8 +100,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.ProfileOption,
                 CommonOptions.OutputPathOption,
                 CommonOptions.DurationOption,
-                CommonOptions.NameOption,
-                CommonOptions.ProcessIdOption
             };
             collectLinuxCommand.TreatUnmatchedTokensAsErrors = true; // collect-linux currently does not support child process tracing.
             collectLinuxCommand.Description = "Collects diagnostic traces using perf_events, a Linux OS technology. collect-linux requires admin privileges to capture kernel- and user-mode events, and by default, captures events from all processes. This Linux-only command includes the same .NET events as dotnet-trace collect, and it uses the kernel’s user_events mechanism to emit .NET events as perf events, enabling unification of user-space .NET events with kernel-space system events.";
@@ -128,9 +118,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     PerfEvents: perfEventsValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Profiles: profilesValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Output: parseResult.GetValue(CommonOptions.OutputPathOption) ?? new FileInfo(CommonOptions.DefaultTraceName),
-                    Duration: parseResult.GetValue(CommonOptions.DurationOption),
-                    Name: parseResult.GetValue(CommonOptions.NameOption) ?? string.Empty,
-                    ProcessId: parseResult.GetValue(CommonOptions.ProcessIdOption)));
+                    Duration: parseResult.GetValue(CommonOptions.DurationOption)));
                 return Task.FromResult(rc);
             });
 
@@ -141,18 +129,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             scriptPath = null;
             List<string> recordTraceArgs = new();
-            int pid = args.ProcessId;
-            if (!string.IsNullOrEmpty(args.Name))
-            {
-                pid = CommandUtils.FindProcessIdWithName(args.Name);
-            }
-            if (pid > 0)
-            {
-                recordTraceArgs.Add($"--pid");
-                recordTraceArgs.Add($"{pid}");
-            }
 
-            string resolvedOutput = ResolveOutputPath(args.Output, pid);
+            string resolvedOutput = ResolveOutputPath(args.Output);
             recordTraceArgs.Add($"--out");
             recordTraceArgs.Add(resolvedOutput);
 
@@ -227,7 +205,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return Encoding.UTF8.GetBytes(options);
         }
 
-        private static string ResolveOutputPath(FileInfo output, int processId)
+        private static string ResolveOutputPath(FileInfo output)
         {
             if (!string.Equals(output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
             {
@@ -235,13 +213,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             DateTime now = DateTime.Now;
-            if (processId > 0)
-            {
-                Process process = Process.GetProcessById(processId);
-                FileInfo processMainModuleFileInfo = new(process.MainModule.FileName);
-                return $"{processMainModuleFileInfo.Name}_{now:yyyyMMdd}_{now:HHmmss}.nettrace";
-            }
-
             return $"trace_{now:yyyyMMdd}_{now:HHmmss}.nettrace";
         }
 
