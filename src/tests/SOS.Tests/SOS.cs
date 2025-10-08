@@ -24,6 +24,40 @@ public static class SOSTestHelpers
         return TestRunConfiguration.Instance.Configurations.Where((c) => key == null || c.AllSettings.GetValueOrDefault(key) == value).DefaultIfEmpty(TestConfiguration.Empty).Select(c => new[] { c });
     }
 
+    // Configurations skipping desktop framework
+    public static IEnumerable<object[]> GetNetCoreConfigurations()
+    {
+        return TestRunConfiguration.Instance.Configurations
+            // Filter out configurations for specific tests
+            .Where(c => c.AllSettings.GetValueOrDefault("TestName") == null)
+            // Filter for only .NET core configurations
+            .Where(c => c.IsNETCore)
+            .Select(c => new[] { c });
+    }
+
+    public static IEnumerable<object[]> GetGCConfigurations()
+    {
+        IEnumerable<TestConfiguration> inputConfigurations = TestRunConfiguration.Instance.Configurations
+            // Filter out configurations for specific tests
+            .Where(c => c.AllSettings.GetValueOrDefault("TestName") == null)
+            // Filter for only .NET core configurations
+            .Where(c => c.IsNETCore)
+            // Filter out single file scenarios
+            .Where(c => !c.PublishSingleFile);
+
+        TestConfiguration AddSetting(TestConfiguration inputConfiguration, string key, string value)
+        {
+            Dictionary<string, string> settings = new(inputConfiguration.AllSettings);
+            settings.Add(key, value);
+            return new TestConfiguration(settings);
+        }
+
+        IEnumerable<TestConfiguration> outputConfigurations = inputConfigurations.Select(c => AddSetting(c, "GCServer", "0"))
+            .Concat(inputConfigurations.Select(c => AddSetting(c, "GCServer", "1")));
+
+        return outputConfigurations.Select(c => new[] { c });
+    }
+
     internal static void SkipIfArm(TestConfiguration config)
     {
         if (config.TargetArchitecture is "arm" or "arm64")
@@ -200,7 +234,64 @@ public class SOS
 
     public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
 
-    [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
+
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
+    public async Task VarargPInvokeInteropMD(TestConfiguration config)
+    {
+        if (OS.Kind != OSKind.Windows)
+        {
+            throw new SkipTestException("Test only supports CDB and therefore only runs on Windows");
+        }
+
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "VarargPInvokeInteropMD",
+            scriptName: "VarargPInvokeInteropMD.script",
+            Output,
+            testName: "SOS.VarargPInvokeInteropMD",
+            testDump: false);
+    }
+
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
+    public async Task FindRootsOlderGeneration(TestConfiguration config)
+    {
+        if (OS.Kind != OSKind.Windows)
+        {
+            throw new SkipTestException("Test only supports CDB and therefore only runs on Windows");
+        }
+
+        if (config.RuntimeFrameworkVersionMajor < 10)
+        {
+            throw new SkipTestException("This test validates a bug which was fixed in .NET 10");
+        }
+
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "FindRootsOlderGeneration",
+            scriptName: "FindRootsOlderGeneration.script",
+            Output,
+            testName: "SOS.FindRootsOlderGeneration",
+            testDump: false);
+    }
+
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
+    public async Task DumpGCData(TestConfiguration config)
+    {
+        if (config.RuntimeFrameworkVersionMajor < 10)
+        {
+            throw new SkipTestException("This test validates a bug which was fixed in .NET 10");
+        }
+
+        await SOSTestHelpers.RunTest(
+            config,
+            debuggeeName: "DumpGCData",
+            scriptName: "DumpGCData.script",
+            Output,
+            testName: "SOS.DumpGCData",
+            testDump: false);
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackTraceSoftwareExceptionFrame(TestConfiguration config)
     {
         if (config.RuntimeFrameworkVersionMajor < 10)
@@ -219,7 +310,7 @@ public class SOS
             testTriage: true);
     }
 
-    [SkippableTheory, MemberData(nameof(Configurations)), Trait("Category", "CDACCompatible")]
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task StackTraceFaultingExceptionFrame(TestConfiguration config)
     {
         SOSTestHelpers.SkipIfWinX86(config);

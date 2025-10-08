@@ -67,6 +67,11 @@ namespace Microsoft.SymbolStore.KeyGenerators
                         Tracer.Error("Reading PDB records for {0}: {1}", _path, ex.Message);
                     }
 
+                    if (pdbs.Length == 0)
+                    {
+                        Tracer.Verbose("PEFile `{0}`: no PDB records found. No symbol keys will be produced.", _path);
+                    }
+
                     foreach (PEPdbRecord pdb in pdbs)
                     {
                         if (((flags & KeyTypeFlags.ForceWindowsPdbs) == 0) && pdb.IsPortablePDB)
@@ -82,6 +87,11 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
                 if ((flags & KeyTypeFlags.PerfMapKeys) != 0)
                 {
+                    if (!_peFile.PerfMapsV1.Any())
+                    {
+                        Tracer.Verbose("PEFile `{0}`: no perfmap records found. No perfmap keys will be produced.", _path);
+                    }
+
                     foreach (PEPerfMapRecord perfmapRecord in _peFile.PerfMapsV1)
                     {
                         if (perfmapRecord.Version > FileFormats.PerfMap.PerfMapFile.MaxKnownPerfMapVersion)
@@ -94,10 +104,15 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 }
 
                 // Return keys for SOS modules for a given runtime module
-                if ((flags & (KeyTypeFlags.ClrKeys)) != 0)
+                if ((flags & KeyTypeFlags.ClrKeys) != 0)
                 {
                     string coreclrId = BuildId(_peFile.Timestamp, _peFile.SizeOfImage);
-                    foreach (string specialFileName in GetSOSFiles(GetFileName(_path)))
+                    string[] sosFiles = GetSOSFiles(GetFileName(_path)).ToArray();
+                    if (sosFiles.Length == 0)
+                    {
+                        Tracer.Verbose("PEFile `{0}`: no SOS special files generated for runtime file {1}. No SOS keys will be produced.", _path, GetFileName(_path));
+                    }
+                    foreach (string specialFileName in sosFiles)
                     {
                         yield return BuildKey(specialFileName, coreclrId);
                     }
@@ -107,7 +122,12 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 if ((flags & (KeyTypeFlags.ClrKeys | KeyTypeFlags.DacDbiKeys)) != 0)
                 {
                     string coreclrId = BuildId(_peFile.Timestamp, _peFile.SizeOfImage);
-                    foreach (string specialFileName in GetDACFiles(GetFileName(_path)))
+                    string[] dacFiles = GetDACFiles(GetFileName(_path)).ToArray();
+                    if (dacFiles.Length == 0)
+                    {
+                        Tracer.Verbose("PEFile `{0}`: no DAC/DBI special files generated for runtime file {1}. No DAC/DBI keys will be produced.", _path, GetFileName(_path));
+                    }
+                    foreach (string specialFileName in dacFiles)
                     {
                         yield return BuildKey(specialFileName, coreclrId);
                     }
@@ -124,6 +144,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
                         // apphost.exe downloaded as the host program name
                         yield return BuildKey(_path, prefix: null, id, "apphost.exe");
+                    }
+                    else
+                    {
+                        Tracer.Verbose("PEfile `{0}`: non-executable (DLL or IL image). No host keys will be generated.", _path);
                     }
                 }
             }

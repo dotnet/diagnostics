@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 foreach (Change change in _changes)
                 {
-                    output.WriteRow(change.Object, change.AddressModified, change.OriginalValue.Reverse(), change.NewValue.Reverse(), change.ExpectedFailure);
+                    output.WriteRow(change.Object, change.AddressModified, change.OriginalValue.AsEnumerable().Reverse(), change.NewValue.AsEnumerable().Reverse(), change.ExpectedFailure);
                 }
             }
 
