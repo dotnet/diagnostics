@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    clrEvents,
                                                                    perfEvents ?? Array.Empty<string>(),
                                                                    profile ?? Array.Empty<string>(),
-                                                                   output ?? new FileInfo(CommonOptions.DefaultTraceName),
+                                                                   output ?? new FileInfo("trace.nettrace"),
                                                                    duration);
         }
 
@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             if (OperatingSystem.IsLinux())
             {
                 Assert.Equal((int)ReturnCode.Ok, exitCode);
-                console.AssertSanitizedLinesEqual(null, expectedLines: expectedLines);
+                console.AssertSanitizedLinesEqual(CollectLinuxSanitizer, expectedLines: expectedLines);
             }
             else
             {
@@ -81,138 +81,114 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static int Run(object args, MockConsole console)
         {
             var handler = new CollectLinuxCommandHandler(console);
-            handler.RecordTraceInvoker = (cmd, len, cb) => 0;
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                return 0;
+            };
             return handler.CollectLinux((CollectLinuxCommandHandler.CollectLinuxArgs)args);
         }
 
+        private static string[] CollectLinuxSanitizer(string[] lines)
+        {
+            List<string> result = new();
+            foreach (string line in lines)
+            {
+                if (line.Contains("Recording trace.", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Add("[dd:hh:mm:ss]\tRecording trace.");
+                }
+                else
+                {
+                    result.Add(line);
+                }
+            }
+            return result.ToArray();
+        }
 
         public static IEnumerable<object[]> BasicCases()
         {
             yield return new object[] {
                 TestArgs(),
-                new string[] {
-                    "No providers, profiles, ClrEvents, or PerfEvents were specified, defaulting to trace profiles 'dotnet-common' + 'cpu-sampling'.",
-                    "",
-                    ProviderHeader,
-                    FormatProvider("Microsoft-Windows-DotNETRuntime","000000100003801D","Informational",4,"--profile"),
-                    "",
-                    LinuxHeader,
-                    LinuxProfile("cpu-sampling"),
-                    ""
-                }
+                ExpectProvidersAndLinuxWithMessages(
+                    new[]{"No providers, profiles, ClrEvents, or PerfEvents were specified, defaulting to trace profiles 'dotnet-common' + 'cpu-sampling'."},
+                    new[]{FormatProvider("Microsoft-Windows-DotNETRuntime","000000100003801D","Informational",4,"--profile")},
+                    new[]{LinuxProfile("cpu-sampling")})
             };
+
             yield return new object[] {
                 TestArgs(providers: new[]{"Foo:0x1:4"}),
-                new string[] {
-                    "",
-                    ProviderHeader,
-                    FormatProvider("Foo","0000000000000001","Informational",4,"--providers"),
-                    "",
-                    LinuxHeader,
-                    ""
-                }
+                ExpectProvidersAndLinux(
+                    new[]{FormatProvider("Foo","0000000000000001","Informational",4,"--providers")},
+                    Array.Empty<string>())
             };
+
             yield return new object[] {
                 TestArgs(providers: new[]{"Foo:0x1:4","Bar:0x2:4"}),
-                new string[] {
-                    "",
-                    ProviderHeader,
-                    FormatProvider("Foo","0000000000000001","Informational",4,"--providers"),
-                    FormatProvider("Bar","0000000000000002","Informational",4,"--providers"),
-                    "",
-                    LinuxHeader,
-                    ""
-                }
+                ExpectProvidersAndLinux(
+                    new[]{
+                        FormatProvider("Foo","0000000000000001","Informational",4,"--providers"),
+                        FormatProvider("Bar","0000000000000002","Informational",4,"--providers")
+                    },
+                    Array.Empty<string>())
             };
+
             yield return new object[] {
                 TestArgs(profile: new[]{"cpu-sampling"}),
-                new string[] {
-                    "No .NET providers were configured.",
-                    "",
-                    LinuxHeader,
-                    LinuxProfile("cpu-sampling"),
-                    ""
-                }
+                ExpectProvidersAndLinuxWithMessages(
+                    new[]{"No .NET providers were configured."},
+                    Array.Empty<string>(),
+                    new[]{LinuxProfile("cpu-sampling")})
             };
+
             yield return new object[] {
                 TestArgs(providers: new[]{"Foo:0x1:4"}, profile: new[]{"cpu-sampling"}),
-                new string[] {
-                    "",
-                    ProviderHeader,
-                    FormatProvider("Foo","0000000000000001","Informational",4,"--providers"),
-                    "",
-                    LinuxHeader,
-                    LinuxProfile("cpu-sampling"),
-                    ""
-                }
+                ExpectProvidersAndLinux(
+                    new[]{FormatProvider("Foo","0000000000000001","Informational",4,"--providers")},
+                    new[]{LinuxProfile("cpu-sampling")})
             };
+
             yield return new object[] {
                 TestArgs(clrEvents: "gc", profile: new[]{"cpu-sampling"}),
-                new string[] {
-                    "",
-                    ProviderHeader,
-                    FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000001","Informational",4,"--clrevents"),
-                    "",
-                    LinuxHeader,
-                    LinuxProfile("cpu-sampling"),
-                    ""
-                }
+                ExpectProvidersAndLinux(
+                    new[]{FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000001","Informational",4,"--clrevents")},
+                    new[]{LinuxProfile("cpu-sampling")})
             };
+
             yield return new object[] {
                 TestArgs(providers: new[]{"Microsoft-Windows-DotNETRuntime:0x1:4"}, profile: new[]{"cpu-sampling"}),
-                new string[] {
-                    "",
-                    ProviderHeader,
-                    FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000001","Informational",4,"--providers"),
-                    "",
-                    LinuxHeader,
-                    LinuxProfile("cpu-sampling"),
-                    ""
-                }
+                ExpectProvidersAndLinux(
+                    new[]{FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000001","Informational",4,"--providers")},
+                    new[]{LinuxProfile("cpu-sampling")})
             };
+
             yield return new object[] {
                 TestArgs(providers: new[]{"Microsoft-Windows-DotNETRuntime:0x1:4"}, clrEvents: "gc"),
-                new string[] {
-                    "Warning: The CLR provider was already specified through --providers or --profile. Ignoring --clrevents.",
-                    "",
-                    ProviderHeader,
-                    FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000001","Informational",4,"--providers"),
-                    "",
-                    LinuxHeader,
-                    ""
-                }
+                ExpectProvidersAndLinuxWithMessages(
+                    new[]{"Warning: The CLR provider was already specified through --providers or --profile. Ignoring --clrevents."},
+                    new[]{FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000001","Informational",4,"--providers")},
+                    Array.Empty<string>())
             };
+
             yield return new object[] {
                 TestArgs(clrEvents: "gc+jit"),
-                new string[] {
-                    "",
-                    ProviderHeader,
-                    FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000011","Informational",4,"--clrevents"),
-                    "",
-                    LinuxHeader,
-                    ""
-                }
+                ExpectProvidersAndLinux(
+                    new[]{FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000011","Informational",4,"--clrevents")},
+                    Array.Empty<string>())
             };
+
             yield return new object[] {
                 TestArgs(clrEvents: "gc+jit", clrEventLevel: "5"),
-                new string[] {
-                    "",
-                    ProviderHeader,
-                    FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000011","Verbose",5,"--clrevents"),
-                    "",
-                    LinuxHeader,
-                    ""
-                }
+                ExpectProvidersAndLinux(
+                    new[]{FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000011","Verbose",5,"--clrevents")},
+                    Array.Empty<string>())
             };
+
             yield return new object[] {
                 TestArgs(perfEvents: new[]{"sched:sched_switch"}),
-                new string[] {
-                    "No .NET providers were configured.",
-                    "",
-                    LinuxHeader,
-                    LinuxPerfEvent("sched:sched_switch"),
-                    ""
-                }
+                ExpectProvidersAndLinuxWithMessages(
+                    new[]{"No .NET providers were configured."},
+                    Array.Empty<string>(),
+                    new[]{LinuxPerfEvent("sched:sched_switch")})
             };
         }
 
@@ -250,7 +226,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         private const string ProviderHeader = "Provider Name                           Keywords            Level               Enabled By";
-        private static string LinuxHeader => $"{"Linux Events",-80}Enabled By";
+        private static string LinuxHeader => $"{"Linux Perf Events",-80}Enabled By";
         private static string LinuxProfile(string name) => $"{name,-80}--profile";
         private static string LinuxPerfEvent(string spec) => $"{spec,-80}--perf-events";
         private static string FormatProvider(string name, string keywordsHex, string levelName, int levelValue, string enabledBy)
@@ -261,5 +237,48 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return string.Format("{0, -80}", display) + enabledBy;
         }
         private static string FormatException(string message, string exceptionType) => $"[ERROR] {exceptionType}: {message}";
+        private static string DefaultOutputFile => $"Output File    : {Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar}trace.nettrace";
+        private static readonly string[] CommonTail = [
+            DefaultOutputFile,
+            "",
+            "[dd:hh:mm:ss]\tRecording trace.",
+            "Press <Enter> or <Ctrl-C> to exit...",
+        ];
+
+        private static string[] ExpectProvidersAndLinux(string[] dotnetProviders, string[] linuxPerfEvents)
+            => ExpectProvidersAndLinuxWithMessages(Array.Empty<string>(), dotnetProviders, linuxPerfEvents);
+
+        private static string[] ExpectProvidersAndLinuxWithMessages(string[] messages, string[] dotnetProviders, string[] linuxPerfEvents)
+        {
+            List<string> result = new();
+
+            if (messages.Length > 0)
+            {
+                result.AddRange(messages);
+            }
+            result.Add("");
+
+            if (dotnetProviders.Length > 0)
+            {
+                result.Add(ProviderHeader);
+                result.AddRange(dotnetProviders);
+                result.Add("");
+            }
+
+            if (linuxPerfEvents.Length > 0)
+            {
+                result.Add(LinuxHeader);
+                result.AddRange(linuxPerfEvents);
+            }
+            else
+            {
+                result.Add("No Linux Perf Events enabled.");
+            }
+            result.Add("");
+
+            result.AddRange(CommonTail);
+
+            return result.ToArray();
+        }
     }
 }

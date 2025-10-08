@@ -135,10 +135,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             scriptPath = null;
             List<string> recordTraceArgs = new();
 
-            string resolvedOutput = ResolveOutputPath(args.Output);
-            recordTraceArgs.Add($"--out");
-            recordTraceArgs.Add(resolvedOutput);
-
             string[] profiles = args.Profiles;
             if (args.Profiles.Length == 0 && args.Providers.Length == 0 && string.IsNullOrEmpty(args.ClrEvents) && args.PerfEvents.Length == 0)
             {
@@ -169,17 +165,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 scriptBuilder.Append($"record_dotnet_provider(\"{providerName}\", 0x{keywords:X}, {eventLevel}, {providerNameSanitized}_flags);\n\n");
             }
 
-            Console.WriteLine($"{("Linux Events"),-80}Enabled By");
+            List<string> linuxEventLines = new();
             foreach (string profile in profiles)
             {
                 Profile traceProfile = ListProfilesCommandHandler.TraceProfiles
                     .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
 
-                if (!string.IsNullOrEmpty(traceProfile.VerbExclusivity) &&
+                if (traceProfile != null &&
+                    !string.IsNullOrEmpty(traceProfile.VerbExclusivity) &&
                     traceProfile.VerbExclusivity.Equals("collect-linux", StringComparison.OrdinalIgnoreCase))
                 {
                     recordTraceArgs.Add(traceProfile.CollectLinuxArgs);
-                    Console.WriteLine($"{traceProfile.Name,-80}--profile");
+                    linuxEventLines.Add($"{traceProfile.Name,-80}--profile");
                 }
             }
 
@@ -193,14 +190,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 string perfProvider = split[0];
                 string perfEventName = split[1];
-                Console.WriteLine($"{perfEvent,-80}--perf-events");
+                linuxEventLines.Add($"{perfEvent,-80}--perf-events");
                 scriptBuilder.Append($"let {perfEventName} = event_from_tracefs(\"{perfProvider}\", \"{perfEventName}\");\nrecord_event({perfEventName});\n\n");
+            }
+
+            if (linuxEventLines.Count > 0)
+            {
+                Console.WriteLine($"{("Linux Perf Events"),-80}Enabled By");
+                foreach (string line in linuxEventLines)
+                {
+                    Console.WriteLine(line);
+                }
+            }
+            else
+            {
+                Console.WriteLine("No Linux Perf Events enabled.");
             }
             Console.WriteLine();
 
+            FileInfo resolvedOutput = ResolveOutputPath(args.Output);
+            recordTraceArgs.Add($"--out");
+            recordTraceArgs.Add(resolvedOutput.FullName);
+            Console.WriteLine($"Output File    : {resolvedOutput.FullName}");
+            Console.WriteLine();
+
             string scriptText = scriptBuilder.ToString();
-            string scriptFileName = $"{Path.GetFileNameWithoutExtension(resolvedOutput)}.script";
-            scriptPath = Path.Combine(Environment.CurrentDirectory, scriptFileName);
+            scriptPath = Path.ChangeExtension(resolvedOutput.FullName, ".script");
             File.WriteAllText(scriptPath, scriptText);
 
             recordTraceArgs.Add("--script-file");
@@ -210,15 +225,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return Encoding.UTF8.GetBytes(options);
         }
 
-        private static string ResolveOutputPath(FileInfo output)
+        private static FileInfo ResolveOutputPath(FileInfo output)
         {
             if (!string.Equals(output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
             {
-                return output.Name;
+                return output;
             }
 
             DateTime now = DateTime.Now;
-            return $"trace_{now:yyyyMMdd}_{now:HHmmss}.nettrace";
+            return new FileInfo($"trace_{now:yyyyMMdd}_{now:HHmmss}.nettrace");
         }
 
         private int OutputHandler(uint type, IntPtr data, UIntPtr dataLen)
