@@ -10,84 +10,27 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Folder Name="/src/" />
-  <Folder Name="/src/SOS/" />
-  <Folder Name="/src/SOS/Debuggees/">
-    <Project Path="src/SOS/lldbplugin.tests/TestDebuggee/TestDebuggee.csproj">
-      <BuildType Solution="Checked|*" Project="Release" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DivZero/DivZero.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DotnetDumpCommands/DotnetDumpCommands.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DynamicMethod/DynamicMethod.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/GCPOH/GCPOH.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/GCWhere/GCWhere.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/LineNums/LineNums.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/NestedExceptionTest/NestedExceptionTest.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/Overflow/Overflow.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/ReflectionTest/ReflectionTest.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/SimpleThrow/SimpleThrow.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/SymbolTestApp/SymbolTestApp/SymbolTestApp.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/SymbolTestApp/SymbolTestDll/SymbolTestDll.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/TaskNestedException/RandomUserLibrary/RandomUserLibrary.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/TaskNestedException/TaskNestedException/TaskNestedException.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/WebApp3/WebApp3.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DumpGCData/DumpGCData.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/FindRootsOlderGeneration/FindRootsOlderGeneration.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
-    </Project>
-    <Project Path="src/SOS/SOS.UnitTests/Debuggees/VarargPInvokeInteropMD/VarargPInvokeInteropMD.csproj">
-      <BuildType Solution="Checked|*" Project="Debug" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
-    </Project>
+  <Folder Name="/tests/Debuggees/">
+    <Project Path="src/tests/Debuggees/DivZero/DivZero.csproj"/>
+    <Project Path="src/tests/Debuggees/DotnetDumpCommands/DotnetDumpCommands.csproj"/>
+    <Project Path="src/tests/Debuggees/DynamicMethod/DynamicMethod.csproj"/>
+    <Project Path="src/tests/Debuggees/EventPipeTracee/EventPipeTracee.csproj"/>
+    <Project Path="src/tests/Debuggees/ExitCodeTracee/ExitCodeTracee.csproj"/>
+    <Project Path="src/tests/Debuggees/GCPOH/GCPOH.csproj"/>
+    <Project Path="src/tests/Debuggees/GCWhere/GCWhere.csproj"/>
+    <Project Path="src/tests/Debuggees/LineNums/LineNums.csproj"/>
+    <Project Path="src/tests/Debuggees/NestedExceptionTest/NestedExceptionTest.csproj"/>
+    <Project Path="src/tests/Debuggees/Overflow/Overflow.csproj"/>
+    <Project Path="src/tests/Debuggees/ReflectionTest/ReflectionTest.csproj"/>
+    <Project Path="src/tests/Debuggees/SimpleDebuggee/SimpleDebuggee.csproj"/>
+    <Project Path="src/tests/Debuggees/SimpleThrow/SimpleThrow.csproj"/>
+    <Project Path="src/tests/Debuggees/StackTracee/StackTracee.csproj"/>
+    <Project Path="src/tests/Debuggees/SymbolTestApp/SymbolTestApp/SymbolTestApp.csproj"/>
+    <Project Path="src/tests/Debuggees/SymbolTestApp/SymbolTestDll/SymbolTestDll.csproj"/>
+    <Project Path="src/tests/Debuggees/TaskNestedException/RandomUserLibrary/RandomUserLibrary.csproj"/>
+    <Project Path="src/tests/Debuggees/TaskNestedException/TaskNestedException/TaskNestedException.csproj"/>
+    <Project Path="src/tests/Debuggees/TestDebuggee/TestDebuggee.csproj"/>
+    <Project Path="src/tests/Debuggees/Tracee/Tracee.csproj"/>
+    <Project Path="src/tests/Debuggees/WebApp3/WebApp3.csproj"/>
   </Folder>
 </Solution>

@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Tools\dotnet-trace\dotnet-trace.csproj" />
+    <ProjectReference Include="..\CommonTestRunner\CommonTestRunner.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Common\MockConsole.cs" Link="MockConsole.cs" />
+  </ItemGroup>
+
+</Project>
