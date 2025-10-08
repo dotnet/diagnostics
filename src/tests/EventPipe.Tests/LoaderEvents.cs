@@ -9,13 +9,13 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
-using EventPipe.Tests.Common;
+using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace EventPipe.Tests.LoaderEventsValidation
+namespace EventPipe.UnitTests.LoaderEventsValidation
 {
     public class AssemblyLoad : AssemblyLoadContext
     {

@@ -5,12 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Threading.Tasks;
-using EventPipe.Tests.Common;
+using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace EventPipe.Tests.CustomEventsValidation
+namespace EventPipe.UnitTests.CustomEventsValidation
 {
     public class MyEventSource : EventSource
     {

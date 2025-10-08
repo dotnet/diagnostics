@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 
-namespace EventPipe.Tests.Common
+namespace EventPipe.UnitTests.Common
 {
     public class Logger
     {

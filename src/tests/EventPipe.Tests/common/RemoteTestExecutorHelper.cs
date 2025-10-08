@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.RemoteExecutor;
 using Xunit.Abstractions;
 
-namespace EventPipe.Tests.Common
+namespace EventPipe.UnitTests.Common
 {
     public static class RemoteTestExecutorHelper
     {

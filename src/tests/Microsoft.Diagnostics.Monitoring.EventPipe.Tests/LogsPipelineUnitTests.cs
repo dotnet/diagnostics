@@ -17,7 +17,7 @@ using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
-namespace Microsoft.Diagnostics.Monitoring.EventPipe.Tests
+namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     public class LogsPipelineUnitTests
     {

@@ -9,7 +9,7 @@ using Microsoft.Diagnostics.TestHelpers;
 using Xunit.Abstractions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
-namespace Microsoft.Diagnostics.Monitoring.EventPipe.Tests
+namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     internal static class PipelineTestUtilities
     {

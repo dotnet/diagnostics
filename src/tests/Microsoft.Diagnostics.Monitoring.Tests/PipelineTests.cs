@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostics.Monitoring.Tests
+namespace Microsoft.Diagnostics.Monitoring.UnitTests
 {
     public class PipelineTests
     {

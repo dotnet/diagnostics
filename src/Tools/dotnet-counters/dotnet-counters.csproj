@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="DotnetCounters.Tests" />
+    <InternalsVisibleTo Include="DotnetCounters.UnitTests" />
   </ItemGroup>
 
 </Project>

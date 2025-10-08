@@ -5,7 +5,7 @@ using System;
 using System.Buffers;
 using System.IO;
 
-namespace EventPipe.Tests.Common
+namespace EventPipe.UnitTests.Common
 {
     // This Stream implementation takes one stream
     // and proxies the Stream API to it while

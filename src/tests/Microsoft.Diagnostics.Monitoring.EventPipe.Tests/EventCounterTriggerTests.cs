@@ -20,7 +20,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
 #pragma warning disable CA1825
 
-namespace Microsoft.Diagnostics.Monitoring.EventPipe.Tests
+namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     public class EventCounterTriggerTests
     {
@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Tests
         }
 
         /// <summary>
-        /// Tests the validation of the fields of the trigger settings.
+        /// UnitTests the validation of the fields of the trigger settings.
         /// </summary>
         [Fact]
         public void EventCounterTriggerSettingsValidationTest()
@@ -318,7 +318,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.Tests
         }
 
         /// <summary>
-        /// Tests that the trigger condition can be detected on a live application
+        /// UnitTests that the trigger condition can be detected on a live application
         /// using the EventPipeTriggerPipeline.
         /// </summary>
         [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4782"), MemberData(nameof(Configurations))]

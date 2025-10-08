@@ -6,13 +6,13 @@ using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Threading;
 using System.Threading.Tasks;
-using EventPipe.Tests.Common;
+using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tracing;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace EventPipe.Tests.ContentionValidation
+namespace EventPipe.UnitTests.ContentionValidation
 {
 
     public class TestClass

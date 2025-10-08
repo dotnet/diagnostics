@@ -5,7 +5,7 @@ using System;
 using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers;
 using Xunit;
 
-namespace Microsoft.Diagnostics.Monitoring.EventPipe.Tests
+namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     public class SlidingWindowTests
     {

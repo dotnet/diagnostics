@@ -19,7 +19,7 @@ using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
 #pragma warning disable CA1825
 
-namespace Microsoft.Diagnostics.Monitoring.EventPipe.Tests
+namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     public class EventTracePipelineUnitTests
     {

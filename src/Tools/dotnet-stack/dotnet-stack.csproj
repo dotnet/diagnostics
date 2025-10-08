@@ -30,7 +30,7 @@
  </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="DotnetStack.Tests" />
+    <InternalsVisibleTo Include="DotnetStack.UnitTests" />
   </ItemGroup>
 
 </Project>

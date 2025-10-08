@@ -8,7 +8,7 @@ using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Microsoft.Diagnostics.Monitoring.EventPipe.Tests
+namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {
     public class GlobMatcherTests
     {
