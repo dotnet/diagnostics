@@ -699,7 +699,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             // Quote the path to handle spaces correctly in createdump
-            string quotedPath = $"\"{dumpPath}\"";
+            // Only add quotes if the path is not already quoted
+            string quotedPath = dumpPath.StartsWith("\"") && dumpPath.EndsWith("\"") ? dumpPath : $"\"{dumpPath}\"";
             byte[] payload = SerializePayload(quotedPath, (uint)dumpType, logDumpGeneration);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
         }
@@ -712,7 +713,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             // Quote the path to handle spaces correctly in createdump
-            string quotedPath = $"\"{dumpPath}\"";
+            // Only add quotes if the path is not already quoted
+            string quotedPath = dumpPath.StartsWith("\"") && dumpPath.EndsWith("\"") ? dumpPath : $"\"{dumpPath}\"";
             byte[] payload = SerializePayload(quotedPath, (uint)dumpType, (uint)flags);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)command, payload);
         }
