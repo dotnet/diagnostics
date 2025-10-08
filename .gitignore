@@ -8,6 +8,7 @@
 .vs/
 *.VC.db
 .venv/
+dirs.slnx
 
 # Build results
 [Aa]rtifacts/
