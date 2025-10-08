@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Trace;
+using Microsoft.Internal.Common.Utils;
 using Xunit;
 
 namespace Microsoft.Diagnostics.Tools.Trace
@@ -51,14 +52,25 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public async Task CollectCommandProviderConfigurationConsolidation(CollectArgs args, string[] expectedSubset)
         {
             MockConsole console = new(200, 30);
-            string[] rawLines = await RunAsync(args, console).ConfigureAwait(true);
-            console.AssertSanitizedLinesEqual(CollectSanitizer, expectedSubset);
+            int exitCode = await RunAsync(args, console).ConfigureAwait(true);
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            console.AssertSanitizedLinesEqual(CollectSanitizer, expectedLines: expectedSubset);
 
             byte[] expected = Encoding.UTF8.GetBytes(ExpectedPayload);
             Assert.Equal(expected, args.EventStream.ToArray());
         }
 
-        private static async Task<string[]> RunAsync(CollectArgs config, MockConsole console)
+        [Theory]
+        [MemberData(nameof(InvalidProviders))]
+        public async Task CollectCommandInvalidProviderConfiguration_Throws(CollectArgs args, string[] expectedException)
+        {
+            MockConsole console = new(200, 30);
+            int exitCode = await RunAsync(args, console).ConfigureAwait(true);
+            Assert.Equal((int)ReturnCode.TracingError, exitCode);
+            console.AssertSanitizedLinesEqual(CollectSanitizer, true, expectedException);
+        }
+
+        private static async Task<int> RunAsync(CollectArgs config, MockConsole console)
         {
             var handler = new CollectCommandHandler();
             handler.StartTraceSessionAsync = (client, cfg, ct) => Task.FromResult<CollectCommandHandler.ICollectSession>(new TestCollectSession());
@@ -66,7 +78,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             handler.CollectSessionEventStream = (name) => config.EventStream;
             handler.Console = console;
 
-            int exit = await handler.Collect(
+            return await handler.Collect(
                 config.ct,
                 config.cliConfig,
                 config.ProcessId,
@@ -87,12 +99,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 config.stoppingEventPayloadFilter,
                 config.rundown,
                 config.dsrouter
-            ).ConfigureAwait(true);
-            if (exit != 0)
-            {
-                throw new InvalidOperationException($"Collect exited with return code {exit}.");
-            }
-            return console.Lines;
+            ).ConfigureAwait(false);
         }
 
         private static string[] CollectSanitizer(string[] lines)
@@ -123,7 +130,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static IEnumerable<object[]> BasicCases()
         {
-            FileInfo fi = new("trace.nettrace");
             yield return new object[]
             {
                 new CollectArgs(),
@@ -214,12 +220,44 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
         }
 
+        public static IEnumerable<object[]> InvalidProviders()
+        {
+            yield return new object[]
+            {
+                new CollectArgs(profile: new[] { "cpu-sampling" }),
+                new [] { FormatException("The specified profile 'cpu-sampling' does not apply to `dotnet-trace collect`.", "System.ArgumentException") }
+            };
+
+            yield return new object[]
+            {
+                new CollectArgs(profile: new[] { "unknown" }),
+                new [] { FormatException("Invalid profile name: unknown", "System.ArgumentException") }
+            };
+
+            yield return new object[]
+            {
+                new CollectArgs(providers: new[] { "Foo:::Bar=0", "Foo:::Bar=1" }),
+                new [] { FormatException($"Provider \"Foo\" is declared multiple times with filter arguments.", "System.ArgumentException") }
+            };
+
+            yield return new object[]
+            {
+                new CollectArgs(clrevents: "unknown"),
+                new [] { FormatException("unknown is not a valid CLR event keyword", "System.ArgumentException") }
+            };
+
+            yield return new object[]
+            {
+                new CollectArgs(clrevents: "gc", clreventlevel: "unknown"),
+                new [] { FormatException("Unknown EventLevel: unknown", "System.ArgumentException") }
+            };
+        }
+
         private static string outputFile = $"Output File    : {Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar}trace.nettrace";
         private const string ProviderHeader = "Provider Name                           Keywords            Level               Enabled By";
         private static readonly string[] CommonTail = [
             "Process        : <PROCESS>",
             outputFile,
-            "",
             "",
             "",
             "Trace completed."
@@ -238,5 +276,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                              string.Format("{0, -8}", $"{levelName}({levelValue})");
             return string.Format("{0, -80}", display) + enabledBy;
         }
+
+        private static string FormatException(string message, string exceptionType) => $"[ERROR] {exceptionType}: {message}";
     }
 }

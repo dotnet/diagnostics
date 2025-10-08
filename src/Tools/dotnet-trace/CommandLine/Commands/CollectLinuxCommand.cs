@@ -18,10 +18,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal partial class CollectLinuxCommandHandler
     {
-        private static bool s_stopTracing;
-        private static Stopwatch s_stopwatch = new();
-        private static LineRewriter s_rewriter;
-        private static bool s_printingStatus;
+        private bool s_stopTracing;
+        private Stopwatch s_stopwatch = new();
+        private LineRewriter s_rewriter;
+        private bool s_printingStatus;
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
@@ -48,7 +48,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             if (!OperatingSystem.IsLinux())
             {
                 Console.Error.WriteLine("The collect-linux command is only supported on Linux.");
-                return (int)ReturnCode.ArgumentError;
+                return (int)ReturnCode.PlatformNotSupportedError;
             }
 
             args.Ct.Register(() => s_stopTracing = true);
@@ -71,6 +71,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
                 s_stopwatch.Start();
                 ret = RecordTraceInvoker(command, (UIntPtr)command.Length, OutputHandler);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ERROR] {ex}");
+                ret = (int)ReturnCode.TracingError;
             }
             finally
             {

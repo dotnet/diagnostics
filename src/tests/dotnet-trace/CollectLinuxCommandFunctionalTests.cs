@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Trace;
+using Microsoft.Internal.Common.Utils;
 using Xunit;
 
 namespace Microsoft.Diagnostics.Tools.Trace
@@ -23,7 +24,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string clrEventLevel = "",
             string clrEvents = "",
             string[] perfEvents = null,
-            string[] profiles = null,
+            string[] profile = null,
             FileInfo output = null,
             TimeSpan duration = default)
         {
@@ -32,7 +33,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    clrEventLevel,
                                                                    clrEvents,
                                                                    perfEvents ?? Array.Empty<string>(),
-                                                                   profiles ?? Array.Empty<string>(),
+                                                                   profile ?? Array.Empty<string>(),
                                                                    output ?? new FileInfo(CommonOptions.DefaultTraceName),
                                                                    duration);
         }
@@ -42,22 +43,48 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void CollectLinuxCommandProviderConfigurationConsolidation(object testArgs, string[] expectedLines)
         {
             MockConsole console = new(200, 30);
-            var handler = new CollectLinuxCommandHandler(console);
-            handler.RecordTraceInvoker = (cmd, len, cb) => 0;
-            int exit = handler.CollectLinux((CollectLinuxCommandHandler.CollectLinuxArgs)testArgs);
+            int exitCode = Run(testArgs, console);
             if (OperatingSystem.IsLinux())
             {
-                Assert.Equal(0, exit);
-                console.AssertSanitizedLinesEqual(null, expectedLines);
+                Assert.Equal((int)ReturnCode.Ok, exitCode);
+                console.AssertSanitizedLinesEqual(null, expectedLines: expectedLines);
             }
             else
             {
-                Assert.Equal(3, exit);
-                console.AssertSanitizedLinesEqual(null, new string[] {
+                Assert.Equal((int)ReturnCode.PlatformNotSupportedError, exitCode);
+                console.AssertSanitizedLinesEqual(null, expectedLines: new string[] {
                     "The collect-linux command is only supported on Linux.",
                 });
             }
         }
+
+        [Theory]
+        [MemberData(nameof(InvalidProviders))]
+        public void CollectLinuxCommandProviderConfigurationConsolidation_Throws(object testArgs, string[] expectedException)
+        {
+            MockConsole console = new(200, 30);
+            int exitCode = Run(testArgs, console);
+            if (OperatingSystem.IsLinux())
+            {
+                Assert.Equal((int)ReturnCode.TracingError, exitCode);
+                console.AssertSanitizedLinesEqual(null, true, expectedLines: expectedException);
+            }
+            else
+            {
+                Assert.Equal((int)ReturnCode.PlatformNotSupportedError, exitCode);
+                console.AssertSanitizedLinesEqual(null, expectedLines: new string[] {
+                    "The collect-linux command is only supported on Linux.",
+                });
+            }
+        }
+
+        private static int Run(object args, MockConsole console)
+        {
+            var handler = new CollectLinuxCommandHandler(console);
+            handler.RecordTraceInvoker = (cmd, len, cb) => 0;
+            return handler.CollectLinux((CollectLinuxCommandHandler.CollectLinuxArgs)args);
+        }
+
 
         public static IEnumerable<object[]> BasicCases()
         {
@@ -98,7 +125,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
             };
             yield return new object[] {
-                TestArgs(profiles: new[]{"cpu-sampling"}),
+                TestArgs(profile: new[]{"cpu-sampling"}),
                 new string[] {
                     "No .NET providers were configured.",
                     "",
@@ -108,7 +135,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
             };
             yield return new object[] {
-                TestArgs(providers: new[]{"Foo:0x1:4"}, profiles: new[]{"cpu-sampling"}),
+                TestArgs(providers: new[]{"Foo:0x1:4"}, profile: new[]{"cpu-sampling"}),
                 new string[] {
                     "",
                     ProviderHeader,
@@ -120,7 +147,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
             };
             yield return new object[] {
-                TestArgs(clrEvents: "gc", profiles: new[]{"cpu-sampling"}),
+                TestArgs(clrEvents: "gc", profile: new[]{"cpu-sampling"}),
                 new string[] {
                     "",
                     ProviderHeader,
@@ -132,7 +159,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
             };
             yield return new object[] {
-                TestArgs(providers: new[]{"Microsoft-Windows-DotNETRuntime:0x1:4"}, profiles: new[]{"cpu-sampling"}),
+                TestArgs(providers: new[]{"Microsoft-Windows-DotNETRuntime:0x1:4"}, profile: new[]{"cpu-sampling"}),
                 new string[] {
                     "",
                     ProviderHeader,
@@ -189,6 +216,39 @@ namespace Microsoft.Diagnostics.Tools.Trace
             };
         }
 
+        public static IEnumerable<object[]> InvalidProviders()
+        {
+            yield return new object[]
+            {
+                TestArgs(profile: new[] { "dotnet-sampled-thread-time" }),
+                new [] { FormatException("The specified profile 'dotnet-sampled-thread-time' does not apply to `dotnet-trace collect-linux`.", "System.ArgumentException") }
+            };
+
+            yield return new object[]
+            {
+                TestArgs(profile: new[] { "unknown" }),
+                new [] { FormatException("Invalid profile name: unknown", "System.ArgumentException") }
+            };
+
+            yield return new object[]
+            {
+                TestArgs(providers: new[] { "Foo:::Bar=0", "Foo:::Bar=1" }),
+                new [] { FormatException($"Provider \"Foo\" is declared multiple times with filter arguments.", "System.ArgumentException") }
+            };
+
+            yield return new object[]
+            {
+                TestArgs(clrEvents: "unknown"),
+                new [] { FormatException("unknown is not a valid CLR event keyword", "System.ArgumentException") }
+            };
+
+            yield return new object[]
+            {
+                TestArgs(clrEvents: "gc", clrEventLevel: "unknown"),
+                new [] { FormatException("Unknown EventLevel: unknown", "System.ArgumentException") }
+            };
+        }
+
         private const string ProviderHeader = "Provider Name                           Keywords            Level               Enabled By";
         private static string LinuxHeader => $"{"Linux Events",-80}Enabled By";
         private static string LinuxProfile(string name) => $"{name,-80}--profile";
@@ -200,5 +260,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                              string.Format("{0, -8}", $"{levelName}({levelValue})");
             return string.Format("{0, -80}", display) + enabledBy;
         }
+        private static string FormatException(string message, string exceptionType) => $"[ERROR] {exceptionType}: {message}";
     }
 }
