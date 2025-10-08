@@ -38,9 +38,18 @@ namespace Microsoft.Diagnostics.Tools.Stack
             {
                 // Validate that only one of processId, name, or diagnosticPort is specified
                 int optionCount = 0;
-                if (processId != 0) optionCount++;
-                if (!string.IsNullOrEmpty(name)) optionCount++;
-                if (!string.IsNullOrEmpty(diagnosticPort)) optionCount++;
+                if (processId != 0)
+                {
+                    optionCount++;
+                }
+                if (!string.IsNullOrEmpty(name))
+                {
+                    optionCount++;
+                }
+                if (!string.IsNullOrEmpty(diagnosticPort))
+                {
+                    optionCount++;
+                }
 
                 if (optionCount == 0)
                 {
