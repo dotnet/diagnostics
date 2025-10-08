@@ -27,22 +27,35 @@ namespace Microsoft.Diagnostics.Tools.Stack
         /// <param name="processId">The process to report the stack from.</param>
         /// <param name="name">The name of process to report the stack from.</param>
         /// <param name="duration">The duration of to trace the target for. </param>
+        /// <param name="diagnosticPort">The diagnostic port to connect to.</param>
         /// <returns></returns>
-        private static async Task<int> Report(CancellationToken ct, TextWriter stdOutput, TextWriter stdError, int processId, string name, TimeSpan duration)
+        private static async Task<int> Report(CancellationToken ct, TextWriter stdOutput, TextWriter stdError, int processId, string name, TimeSpan duration, string diagnosticPort)
         {
             string tempNetTraceFilename = Path.Join(Path.GetTempPath(), Path.GetRandomFileName() + ".nettrace");
             string tempEtlxFilename = "";
 
             try
             {
-                // Either processName or processId has to be specified.
+                // Validate that only one of processId, name, or diagnosticPort is specified
+                int optionCount = 0;
+                if (processId != 0) optionCount++;
+                if (!string.IsNullOrEmpty(name)) optionCount++;
+                if (!string.IsNullOrEmpty(diagnosticPort)) optionCount++;
+
+                if (optionCount == 0)
+                {
+                    stdError.WriteLine("--process-id, --name, or --diagnostic-port is required");
+                    return -1;
+                }
+                else if (optionCount > 1)
+                {
+                    stdError.WriteLine("Only one of --process-id, --name, or --diagnostic-port can be specified");
+                    return -1;
+                }
+
+                // Resolve process name to ID if needed
                 if (!string.IsNullOrEmpty(name))
                 {
-                    if (processId != 0)
-                    {
-                        Console.WriteLine("Can only specify either --name or --process-id option.");
-                        return -1;
-                    }
                     processId = CommandUtils.FindProcessIdWithName(name);
                     if (processId < 0)
                     {
@@ -55,14 +68,31 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     stdError.WriteLine("Process ID should not be negative.");
                     return -1;
                 }
-                else if (processId == 0)
+
+                DiagnosticsClient client;
+                if (!string.IsNullOrEmpty(diagnosticPort))
                 {
-                    stdError.WriteLine("--process-id is required");
-                    return -1;
+                    try
+                    {
+                        IpcEndpointConfig diagnosticPortConfig = IpcEndpointConfig.Parse(diagnosticPort);
+                        if (!diagnosticPortConfig.IsConnectConfig)
+                        {
+                            stdError.WriteLine("--diagnostic-port only supports connect mode to a runtime.");
+                            return -1;
+                        }
+                        client = new DiagnosticsClient(diagnosticPortConfig);
+                    }
+                    catch (Exception ex)
+                    {
+                        stdError.WriteLine($"--diagnostic-port argument error: {ex.Message}");
+                        return -1;
+                    }
+                }
+                else
+                {
+                    client = new DiagnosticsClient(processId);
                 }
 
-
-                DiagnosticsClient client = new(processId);
                 List<EventPipeProvider> providers = new()
                 {
                     new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
@@ -189,7 +219,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
             {
                 ProcessIdOption,
                 NameOption,
-                DurationOption
+                DurationOption,
+                DiagnosticPortOption
             };
 
             reportCommand.SetAction((parseResult, ct) => Report(ct,
@@ -197,7 +228,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 stdError: parseResult.Configuration.Error,
                 processId: parseResult.GetValue(ProcessIdOption),
                 name: parseResult.GetValue(NameOption),
-                duration: parseResult.GetValue(DurationOption)));
+                duration: parseResult.GetValue(DurationOption),
+                diagnosticPort: parseResult.GetValue(DiagnosticPortOption)));
 
             return reportCommand;
         }
@@ -220,6 +252,12 @@ namespace Microsoft.Diagnostics.Tools.Stack
             new("--name", "-n")
             {
                 Description = "The name of the process to report the stack."
+            };
+
+        private static readonly Option<string> DiagnosticPortOption =
+            new("--diagnostic-port", "--dport")
+            {
+                Description = "The path to a diagnostic port to be used."
             };
     }
 }
