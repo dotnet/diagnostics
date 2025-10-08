@@ -698,7 +698,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
             }
 
-            byte[] payload = SerializePayload(dumpPath, (uint)dumpType, logDumpGeneration);
+            // Quote the path to handle spaces correctly in createdump
+            string quotedPath = $"\"{dumpPath}\"";
+            byte[] payload = SerializePayload(quotedPath, (uint)dumpType, logDumpGeneration);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
         }
 
@@ -709,7 +711,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
             }
 
-            byte[] payload = SerializePayload(dumpPath, (uint)dumpType, (uint)flags);
+            // Quote the path to handle spaces correctly in createdump
+            string quotedPath = $"\"{dumpPath}\"";
+            byte[] payload = SerializePayload(quotedPath, (uint)dumpType, (uint)flags);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)command, payload);
         }
 
