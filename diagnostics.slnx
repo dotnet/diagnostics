@@ -47,10 +47,6 @@
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj">
-      <BuildType Solution="Checked|*" Project="Release" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
     <Project Path="src/Microsoft.Diagnostics.WebSocketServer/Microsoft.Diagnostics.WebSocketServer.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
@@ -320,10 +316,6 @@
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/SOS/SOS.UnitTests/SOS.UnitTests.csproj">
-      <BuildType Solution="Checked|*" Project="Release" />
-      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
-    </Project>
     <Project Path="src/SOS/Strike/Strike.vcxproj" Id="41f59d85-fc36-3015-861b-f177863252bc">
       <Platform Project="x64" />
       <Build Solution="*|Any CPU" Project="false" />
@@ -354,61 +346,69 @@
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/DbgShim.UnitTests/DbgShim.UnitTests.csproj">
+    <Project Path="src/tests/DbgShim.Tests/DbgShim.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/dotnet-counters/DotnetCounters.UnitTests.csproj">
+    <Project Path="src/tests/DotnetCounters.Tests/DotnetCounters.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/dotnet-stack/DotnetStack.UnitTests.csproj">
+    <Project Path="src/tests/DotnetStack.Tests/DotnetStack.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
       <Build Solution="Debug|Any CPU" Project="false" />
       <Build Solution="Release|*" Project="false" />
     </Project>
-    <Project Path="src/tests/dotnet-trace/DotnetTrace.UnitTests.csproj">
+    <Project Path="src/tests/DotnetTrace.Tests/DotnetTrace.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
     </Project>
-    <Project Path="src/tests/eventpipe/EventPipe.UnitTests.csproj">
+    <Project Path="src/tests/EventPipe.Tests/EventPipe.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/EventPipeTracee/EventPipeTracee.csproj">
+    <Project Path="src/tests/Debuggees/EventPipeTracee/EventPipeTracee.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/ExitCodeTracee/ExitCodeTracee.csproj">
+    <Project Path="src/tests/Debuggees/ExitCodeTracee/ExitCodeTracee.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/Microsoft.Diagnostics.DebugServices.UnitTests/Microsoft.Diagnostics.DebugServices.UnitTests.csproj">
+    <Project Path="src/tests/Microsoft.Diagnostics.DebugServices.Tests/Microsoft.Diagnostics.DebugServices.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/Microsoft.Diagnostics.Monitoring.EventPipe/Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests.csproj">
+    <Project Path="src/tests/Microsoft.Diagnostics.Monitoring.EventPipe.Tests/Microsoft.Diagnostics.Monitoring.EventPipe.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/Microsoft.Diagnostics.Monitoring/Microsoft.Diagnostics.Monitoring.UnitTests.csproj">
+    <Project Path="src/tests/Microsoft.Diagnostics.Monitoring.Tests/Microsoft.Diagnostics.Monitoring.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj">
+    <Project Path="src/tests/Microsoft.Diagnostics.NETCore.Client.Tests/Microsoft.Diagnostics.NETCore.Client.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/Microsoft.FileFormats.UnitTests/Microsoft.FileFormats.UnitTests.csproj">
+    <Project Path="src/tests/Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj">
+      <BuildType Solution="Checked|*" Project="Release" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/Microsoft.FileFormats.Tests/Microsoft.FileFormats.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/Microsoft.SymbolStore.UnitTests/Microsoft.SymbolStore.UnitTests.csproj">
+    <Project Path="src/tests/Microsoft.SymbolStore.Tests/Microsoft.SymbolStore.Tests.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/StackTracee/StackTracee.csproj">
+    <Project Path="src/tests/SOS.Tests/SOS.Tests.csproj">
+      <BuildType Solution="Checked|*" Project="Release" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Release" />
+    </Project>
+    <Project Path="src/tests/Debuggees/StackTracee/StackTracee.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
     </Project>
@@ -420,7 +420,7 @@
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Release" />
     </Project>
-    <Project Path="src/tests/Tracee/Tracee.csproj">
+    <Project Path="src/tests/Debuggees/Tracee/Tracee.csproj">
       <BuildType Solution="Checked|*" Project="Debug" />
       <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
     </Project>
