@@ -78,107 +78,94 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     return -1;
                 }
 
-                DiagnosticsClient client;
-                if (!string.IsNullOrEmpty(diagnosticPort))
+                DiagnosticsClientBuilder builder = new("dotnet-stack", 10);
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
                 {
-                    try
+                    if (holder == null)
                     {
-                        IpcEndpointConfig diagnosticPortConfig = IpcEndpointConfig.Parse(diagnosticPort);
-                        if (!diagnosticPortConfig.IsConnectConfig)
-                        {
-                            stdError.WriteLine("--diagnostic-port only supports connect mode to a runtime.");
-                            return -1;
-                        }
-                        client = new DiagnosticsClient(diagnosticPortConfig);
-                    }
-                    catch (Exception ex)
-                    {
-                        stdError.WriteLine($"--diagnostic-port argument error: {ex.Message}");
                         return -1;
                     }
-                }
-                else
-                {
-                    client = new DiagnosticsClient(processId);
-                }
 
-                List<EventPipeProvider> providers = new()
-                {
-                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
-                };
+                    DiagnosticsClient client = holder.Client;
 
-                // collect a *short* trace with stack samples
-                // the hidden '--duration' flag can increase the time of this trace in case 10ms
-                // is too short in a given environment, e.g., resource constrained systems
-                // N.B. - This trace INCLUDES rundown.  For sufficiently large applications, it may take non-trivial time to collect
-                //        the symbol data in rundown.
-                EventPipeSession session = await client.StartEventPipeSessionAsync(providers, requestRundown:true, token:ct).ConfigureAwait(false);
-                using (session)
-                using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
-                {
-                    Task copyTask = session.EventStream.CopyToAsync(fs, ct);
-                    await Task.Delay(duration, ct).ConfigureAwait(false);
-                    await session.StopAsync(ct).ConfigureAwait(false);
-
-                    // check if rundown is taking more than 5 seconds and add comment to report
-                    Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
-                    Task completedTask = await Task.WhenAny(copyTask, timeoutTask).ConfigureAwait(false);
-                    if (completedTask == timeoutTask)
+                    List<EventPipeProvider> providers = new()
                     {
-                        stdOutput.WriteLine($"# Sufficiently large applications can cause this reportCommand to take non-trivial amounts of time");
-                    }
-                    await copyTask.ConfigureAwait(false);
-                }
-
-                // using the generated trace file, symbolicate and compute stacks.
-                tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
-                using (SymbolReader symbolReader = new(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
-                using (TraceLog eventLog = new(tempEtlxFilename))
-                {
-                    MutableTraceEventStackSource stackSource = new(eventLog)
-                    {
-                        OnlyManagedCodeStacks = true
+                        new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                     };
 
-                    SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader);
-                    computer.GenerateThreadTimeStacks(stackSource);
-
-                    Dictionary<int, List<StackSourceSample>> samplesForThread = new();
-
-                    stackSource.ForEach((sample) => {
-                        StackSourceCallStackIndex stackIndex = sample.StackIndex;
-                        while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
-                        {
-                            stackIndex = stackSource.GetCallerIndex(stackIndex);
-                        }
-
-                        // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
-                        // Thread id is in the frame name as "Thread (<ID>)"
-                        string template = "Thread (";
-                        string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
-
-                        // we are looking for the first index of ) because
-                        // we need to handle a thread name like: Thread (4008) (.NET IO ThreadPool Worker)
-                        int firstIndex = threadFrame.IndexOf(')');
-                        int threadId = int.Parse(threadFrame.AsSpan(template.Length, firstIndex - template.Length));
-
-                        if (samplesForThread.TryGetValue(threadId, out List<StackSourceSample> samples))
-                        {
-                            samples.Add(sample);
-                        }
-                        else
-                        {
-                            samplesForThread[threadId] = new List<StackSourceSample>() { sample };
-                        }
-                    });
-
-                    // For every thread recorded in our trace, print the first stack
-                    foreach ((int threadId, List<StackSourceSample> samples) in samplesForThread)
+                    // collect a *short* trace with stack samples
+                    // the hidden '--duration' flag can increase the time of this trace in case 10ms
+                    // is too short in a given environment, e.g., resource constrained systems
+                    // N.B. - This trace INCLUDES rundown.  For sufficiently large applications, it may take non-trivial time to collect
+                    //        the symbol data in rundown.
+                    EventPipeSession session = await client.StartEventPipeSessionAsync(providers, requestRundown:true, token:ct).ConfigureAwait(false);
+                    using (session)
+                    using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
                     {
+                        Task copyTask = session.EventStream.CopyToAsync(fs, ct);
+                        await Task.Delay(duration, ct).ConfigureAwait(false);
+                        await session.StopAsync(ct).ConfigureAwait(false);
+
+                        // check if rundown is taking more than 5 seconds and add comment to report
+                        Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+                        Task completedTask = await Task.WhenAny(copyTask, timeoutTask).ConfigureAwait(false);
+                        if (completedTask == timeoutTask)
+                        {
+                            stdOutput.WriteLine($"# Sufficiently large applications can cause this reportCommand to take non-trivial amounts of time");
+                        }
+                        await copyTask.ConfigureAwait(false);
+                    }
+
+                    // using the generated trace file, symbolicate and compute stacks.
+                    tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
+                    using (SymbolReader symbolReader = new(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+                    using (TraceLog eventLog = new(tempEtlxFilename))
+                    {
+                        MutableTraceEventStackSource stackSource = new(eventLog)
+                        {
+                            OnlyManagedCodeStacks = true
+                        };
+
+                        SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader);
+                        computer.GenerateThreadTimeStacks(stackSource);
+
+                        Dictionary<int, List<StackSourceSample>> samplesForThread = new();
+
+                        stackSource.ForEach((sample) => {
+                            StackSourceCallStackIndex stackIndex = sample.StackIndex;
+                            while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
+                            {
+                                stackIndex = stackSource.GetCallerIndex(stackIndex);
+                            }
+
+                            // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
+                            // Thread id is in the frame name as "Thread (<ID>)"
+                            string template = "Thread (";
+                            string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
+
+                            // we are looking for the first index of ) because
+                            // we need to handle a thread name like: Thread (4008) (.NET IO ThreadPool Worker)
+                            int firstIndex = threadFrame.IndexOf(')');
+                            int threadId = int.Parse(threadFrame.AsSpan(template.Length, firstIndex - template.Length));
+
+                            if (samplesForThread.TryGetValue(threadId, out List<StackSourceSample> samples))
+                            {
+                                samples.Add(sample);
+                            }
+                            else
+                            {
+                                samplesForThread[threadId] = new List<StackSourceSample>() { sample };
+                            }
+                        });
+
+                        // For every thread recorded in our trace, print the first stack
+                        foreach ((int threadId, List<StackSourceSample> samples) in samplesForThread)
+                        {
 #if DEBUG
-                        stdOutput.WriteLine($"Found {samples.Count} stacks for thread 0x{threadId:X}");
+                            stdOutput.WriteLine($"Found {samples.Count} stacks for thread 0x{threadId:X}");
 #endif
-                        PrintStack(stdOutput, threadId, samples[0], stackSource);
+                            PrintStack(stdOutput, threadId, samples[0], stackSource);
+                        }
                     }
                 }
             }
