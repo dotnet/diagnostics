@@ -10942,7 +10942,10 @@ public:
                     out.WriteColumn(1, bFull ? String("") : NativePtr(ip));
 
                     // This is a clr!Frame.
-                    out.WriteColumn(2, GetFrameFromAddress(TO_TADDR(FrameData.frameAddr), pStackWalk, bFull));
+                    WString frameName = GetFrameFromAddress(TO_TADDR(FrameData.frameAddr), pStackWalk, bFull);
+                    if (IsDMLEnabled())
+                        frameName = DmlEscape(frameName);
+                    out.WriteColumn(2, frameName);
 
                     // Print out gc references for the Frame.
                     for (unsigned int i = 0; i < refCount; ++i)
@@ -10976,7 +10979,10 @@ public:
                     // The unmodified IP is displayed which points after the exception in most cases. This means that the
                     // printed IP and the printed line number often will not map to one another and this is intentional.
                     out.WriteColumn(1, InstructionPtr(ip));
-                    out.WriteColumn(2, MethodNameFromIP(ip, bSuppressLines, bFull, bFull, bAdjustIPForLineNumber));
+                    WString methodName = MethodNameFromIP(ip, bSuppressLines, bFull, bFull, bAdjustIPForLineNumber);
+                    if (IsDMLEnabled())
+                        methodName = DmlEscape(methodName);
+                    out.WriteColumn(2, methodName);
 
                     // Print out gc references.  refCount will be zero if bGC is false (or if we
                     // failed to fetch gc reference information).
