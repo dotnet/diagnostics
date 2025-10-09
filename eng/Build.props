@@ -1,5 +1,5 @@
 <Project>
-  <ItemGroup Condition="'$(DotNetBuild)' != 'true'">
+  <ItemGroup>
     <ProjectToBuild Include="$(RepoRoot)dirs.proj" />
   </ItemGroup>
 </Project>
