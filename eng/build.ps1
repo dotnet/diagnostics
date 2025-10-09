@@ -68,8 +68,8 @@ if (-not $skipnative) {
 
 # Install sdk for building, restore and build managed components.
 if (-not $skipmanaged) {
-    if (-not $skiptest) {
-        $remainingargs = "/p:BuildTests=true " + $remainingargs
+    if ($skiptest) {
+        $remainingargs = "/p:SkipTests=true " + $remainingargs
     }
 
     Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity $bl /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture $remainingargs"

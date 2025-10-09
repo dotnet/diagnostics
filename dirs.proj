@@ -2,7 +2,7 @@
 
   <ItemGroup Condition="'$(BundleTools)' != 'true' and '$(DotNetBuild)' != 'true'" >
     <ProjectReference Include="src/dirs.proj" />
-    <ProjectReference Include="src/tests/dirs.proj" Condition="'$(BuildTests)' == 'true'" />
+    <ProjectReference Include="src/tests/dirs.proj" Condition="'$(SkipTests)' != 'true'" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(BundleTools)' == 'true'" >

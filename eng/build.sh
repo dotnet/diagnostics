@@ -225,8 +225,8 @@ if [[ "$__ManagedBuild" == 1 ]]; then
     # __CommonMSBuildArgs contains TargetOS property
     echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
 
-    if [[ "$__TestBuild" == 1 ]]; then
-        __ManagedBuildArgs="$__ManagedBuildArgs /p:BuildTests=true"
+    if [[ "$__TestBuild" != 1 ]]; then
+        __ManagedBuildArgs="$__ManagedBuildArgs /p:SkipTests=true"
     fi
 
     "$__RepoRootDir/eng/common/build.sh" \
