@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Collections.Generic;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
@@ -138,6 +139,8 @@ The -all option forces all roots to be displayed instead of just the unique root
             int count = 0;
 
             bool noInternalRootData = true;
+            HashSet<ulong> uniqueRoots = new();
+
             foreach (ClrSubHeap subheap in Runtime.Heap.SubHeaps)
             {
                 MemoryRange internalRootArray = subheap.InternalRootArray;
@@ -159,7 +162,7 @@ The -all option forces all roots to be displayed instead of just the unique root
 
                     Console.CancellationToken.ThrowIfCancellationRequested();
 
-                    if (Memory.ReadPointer(address, out ulong objAddress))
+                    if (Memory.ReadPointer(address, out ulong objAddress) && !uniqueRoots.Contains(objAddress))
                     {
                         ClrObject obj = Runtime.Heap.GetObject(objAddress);
                         if (obj.IsValid)
@@ -177,6 +180,7 @@ The -all option forces all roots to be displayed instead of just the unique root
                                 PrintPath(Console, RootCache, StaticVariables, Runtime.Heap, path);
                                 Console.WriteLine();
 
+                                uniqueRoots.Add(objAddress);
                                 count++;
                             }
                         }
