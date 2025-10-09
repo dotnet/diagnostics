@@ -1,12 +1,16 @@
 <Project Sdk="Microsoft.Build.Traversal">
 
-  <ItemGroup>
-    <ProjectReference Include="src/dirs.proj" Condition="'$(BundleTools)' != 'true' and '$(DotNetBuild)' != 'true'" />
-    <ProjectReference Include="src/tests/dirs.proj" Condition="'$(BundleTools)' != 'true' and '$(DotNetBuild)' != 'true'" />
+  <ItemGroup Condition="'$(BundleTools)' != 'true' and '$(DotNetBuild)' != 'true'" >
+    <ProjectReference Include="src/dirs.proj" />
+    <ProjectReference Include="src/tests/dirs.proj" Condition="'$(BuildTests)' == 'true'" />
+  </ItemGroup>
 
-    <ProjectReference Include="src/singlefile-tools.proj" Condition="'$(BundleTools)' == 'true'" />
+  <ItemGroup Condition="'$(BundleTools)' == 'true'" >
+    <ProjectReference Include="src/singlefile-tools.proj" />
+  </ItemGroup>
 
-      <!-- Only build the NETCore.Client library in .NET product build mode. -->
-    <ProjectReference Include="src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" Condition="'$(DotNetBuild)' == 'true'" />
+  <!-- Only build the NETCore.Client library in .NET product build mode. -->
+  <ItemGroup Condition="'$(DotNetBuild)' == 'true'" >
+    <ProjectReference Include="src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
   </ItemGroup>
 </Project>
