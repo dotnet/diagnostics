@@ -58,7 +58,7 @@ namespace DiagnosticsReleaseTool.Util
                 if (repoBuilds.Count() != 1)
                 {
                     throw new InvalidOperationException(
-                        $"There's either no build for requested repos or more than one. Can't retrieve metadata.");
+                        $"There's {repoBuilds.Count()} builds that come from requested repos in the release manifest. Expected 1.");
                 }
 
                 JsonElement build = repoBuilds.First();
@@ -92,7 +92,7 @@ namespace DiagnosticsReleaseTool.Util
                 if (matchingProducts.Count() != 1)
                 {
                     throw new InvalidOperationException(
-                        $"There's either no product under the provided names or more than one in the drop.");
+                        $"There's {matchingProducts.Count()} products that could be released in the release manifest. Expected 1");
                 }
 
                 return new DirectoryInfo(matchingProducts.First().GetProperty("fileshare").GetString());

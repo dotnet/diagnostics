@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools.Common;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Internal.Common.Utils;
 
@@ -247,6 +248,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 _stdError.WriteLine(e.Message);
                 return ReturnCode.ArgumentError;
             }
+            finally
+            {
+                DsRouterProcessLauncher.Launcher.Cleanup();
+            }
         }
         public async Task<ReturnCode> Collect(
             CancellationToken ct,
@@ -349,6 +354,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 _stdError.WriteLine(e.Message);
                 return ReturnCode.ArgumentError;
+            }
+            finally
+            {
+                DsRouterProcessLauncher.Launcher.Cleanup();
             }
         }
 

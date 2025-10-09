@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Text;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -71,6 +73,22 @@ namespace Microsoft.Diagnostics.DebugServices
             return false;
         }
 
+        public static bool Read<T>(this IMemoryService memoryService, ref ulong address, out T value) where T : unmanaged
+        {
+            Span<byte> buffer = stackalloc byte[Unsafe.SizeOf<T>()];
+            if (memoryService.ReadMemory(address, buffer, out int bytesRead))
+            {
+                if (bytesRead == Unsafe.SizeOf<T>())
+                {
+                    value = MemoryMarshal.Read<T>(buffer);
+                    address += (ulong)Unsafe.SizeOf<T>();
+                    return true;
+                }
+            }
+            value = default;
+            return false;
+        }
+
         /// <summary>
         /// Return a pointer sized value from the address.
         /// </summary>
@@ -97,6 +115,45 @@ namespace Microsoft.Diagnostics.DebugServices
             value = default;
             return false;
         }
+
+        public static bool ReadPointer(this IMemoryService memoryService, ref ulong address, out ulong value)
+        {
+            bool ret = memoryService.ReadPointer(address, out value);
+            if (ret)
+            {
+                address += (ulong)memoryService.PointerSize;
+            }
+            return ret;
+        }
+
+        public static bool ReadAnsiString(this IMemoryService memoryService, uint maxLength, ulong address, out string value)
+        {
+            StringBuilder sb = new();
+            byte[] buffer = new byte[maxLength];
+            value = null;
+            if (memoryService.ReadMemory(address, buffer, out int bytesRead) && bytesRead > 0)
+            {
+                // convert null terminated ANSI char array to a string
+                for (int i = 0; i < buffer.Length; i++)
+                {
+                    // Read the string one character at a time
+                    char c = (char)buffer[i];
+                    if (buffer[i] == 0) // Stop at null terminator
+                    {
+                        value = sb.ToString();
+                        break; // Stop reading at null terminator
+                    }
+                    if (c < 0x20 || c > 0x7E) // Unexpected characters
+                    {
+                        break;
+                    }
+                    // Append the character to the string
+                    sb.Append(c);
+                }
+            }
+            return !string.IsNullOrEmpty(value);
+        }
+
 
         /// <summary>
         /// Create a stream for all of memory.

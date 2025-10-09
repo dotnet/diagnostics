@@ -17,6 +17,39 @@ namespace Microsoft.Diagnostics.DebugServices
         InternalFailFast = 3,
     }
 
+    public enum ModuleEnumerationScheme
+    {
+        /// <summary>
+        /// Enumerate no modules
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// Enumerate only the entry point module
+        /// </summary>
+        EntryPointModule,
+
+        /// <summary>
+        /// Enumerate only the entry point module and the entry point DLL module
+        /// </summary>
+        EntryPointAndEntryPointDllModule,
+
+        /// <summary>
+        /// Enumerate all modules in the target
+        /// </summary>
+        All
+    }
+
+    public interface ICrashInfoModuleService
+    {
+        /// <summary>
+        /// Create a crash info service
+        /// </summary>
+        /// <param name="moduleEnumerationScheme">module enumeration scheme</param>
+        /// <returns>ICrashInfoService</returns>
+        ICrashInfoService Create(ModuleEnumerationScheme moduleEnumerationScheme);
+    }
+
     /// <summary>
     /// Crash information service. Details about the unhandled exception or crash.
     /// </summary>

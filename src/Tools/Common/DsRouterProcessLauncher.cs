@@ -127,8 +127,10 @@ namespace Microsoft.Internal.Common.Utils
                 dotnetDsrouterTool = Path.Combine(toolsRoot, dotnetDsrouterTool);
             }
 
+            using Process currentProcess = Process.GetCurrentProcess();
+
             // Block SIGINT and SIGQUIT in child process.
-            dsrouterCommand += " --block-signals SIGINT;SIGQUIT";
+            dsrouterCommand += $" --block-signals SIGINT;SIGQUIT --parentprocess \"{currentProcess.Id}:{currentProcess.ProcessName}\"";
 
             _childProc = new Process();
 

@@ -14,7 +14,7 @@
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
-    
+
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
@@ -30,47 +30,54 @@
     </None>
   </ItemGroup>
 
-  <Target Name="GenerateGalleryManifest" DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion">
+  <Target Name="GenerateGalleryManifest"
+    DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion">
     <PropertyGroup>
       <GalleryManifestLines>
 <![CDATA[
 <?xml version="1.0" encoding="utf-8"?>
 <ExtensionPackage>
-    <Name>SOS</Name>
-    <Version>$(FileVersion)</Version> 
-    <Description>Debugging aid for .NET Core programs and runtimes</Description>
-    <Components>
-        <BinaryComponent Name="sos" Type="Engine">
-            <Files>
-                <File Architecture="amd64" Module="win-x64\sos.dll" />
-                <File Architecture="x86"   Module="win-x86\sos.dll" />
-                <File Architecture="arm64" Module="win-arm64\sos.dll" />
-            </Files>
-            <LoadTriggers>
-                <TriggerSet>
-                    <ModuleTrigger Name="coreclr.dll" />
-                </TriggerSet>
-                <TriggerSet>
-                    <ModuleTrigger Name="libcoreclr.so" />
-                </TriggerSet>
-                <TriggerSet>
-                  <ExceptionTrigger ExceptionCode="0xC0000409" >
-                    <Parameters>
-                      <Parameter Index="0" Value="0x48"/>
-                    </Parameters>
-                  </ExceptionTrigger>
-                </TriggerSet>
-            </LoadTriggers>
-            <EngineCommands>
-                <EngineCommand Name="soshelp">
-                    <EngineCommandItem>
-                        <Syntax>!soshelp</Syntax>
-                        <Description>Displays all available SOS commands or details about the command</Description>
-                    </EngineCommandItem>
-                </EngineCommand>
-            </EngineCommands>
-        </BinaryComponent>
-    </Components>
+  <Name>SOS</Name>
+  <Version>$(FileVersion)</Version>
+  <Description>Debugging aid for .NET Core programs and runtimes</Description>
+  <Components>
+    <BinaryComponent Name="sos" Type="Engine">
+      <Files>
+        <File Architecture="amd64" Module="win-x64\sos.dll" />
+        <File Architecture="x86" Module="win-x86\sos.dll" />
+        <File Architecture="arm64" Module="win-arm64\sos.dll" />
+      </Files>
+      <LoadTriggers>
+        <TriggerSet>
+          <ModuleTrigger Name="coreclr.dll" />
+        </TriggerSet>
+        <TriggerSet>
+          <ModuleTrigger Name="libcoreclr.so" />
+        </TriggerSet>
+        <TriggerSet>
+          <ExceptionTrigger ExceptionCode="0xC0000409">
+            <Parameters>
+              <Parameter Index="0" Value="0x48" />
+            </Parameters>
+          </ExceptionTrigger>
+        </TriggerSet>
+        <TriggerSet>
+          <ExceptionTrigger ExceptionCode="0xC000027B" />
+        </TriggerSet>
+        <TriggerSet>
+          <ExceptionTrigger ExceptionCode="0xC000027C" />
+        </TriggerSet>
+      </LoadTriggers>
+      <EngineCommands>
+        <EngineCommand Name="soshelp">
+          <EngineCommandItem>
+            <Syntax>!soshelp</Syntax>
+            <Description>Displays all available SOS commands or details about the command</Description>
+          </EngineCommandItem>
+        </EngineCommand>
+      </EngineCommands>
+    </BinaryComponent>
+  </Components>
 </ExtensionPackage>
 ]]>
       </GalleryManifestLines>

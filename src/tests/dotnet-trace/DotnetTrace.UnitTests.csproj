@@ -9,4 +9,8 @@
     <ProjectReference Include="..\CommonTestRunner\CommonTestRunner.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Common\MockConsole.cs" Link="MockConsole.cs" />
+  </ItemGroup>
+
 </Project>

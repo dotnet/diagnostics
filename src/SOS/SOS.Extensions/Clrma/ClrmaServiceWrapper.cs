@@ -13,6 +13,7 @@ namespace SOS.Extensions.Clrma
 {
     public sealed class ClrmaServiceWrapper : COMCallableIUnknown
     {
+        public const ModuleEnumerationScheme DefaultModuleEnumerationScheme = ModuleEnumerationScheme.EntryPointAndEntryPointDllModule;
         public static readonly Guid IID_ICLRMAService = new("1FCF4C14-60C1-44E6-84ED-20506EF3DC60");
 
         public const int E_BOUNDS = unchecked((int)0x8000000B);
@@ -34,9 +35,20 @@ namespace SOS.Extensions.Clrma
             builder.AddMethod(new GetThreadDelegate(GetThread));
             builder.AddMethod(new GetExceptionDelegate(GetException));
             builder.AddMethod(new GetObjectInspectionDelegate(GetObjectInspection));
+            builder.AddMethod(new SetModuleEnumerationPolicyDelegate((self, moduleEnumerationPolicy) =>
+            {
+                if (moduleEnumerationPolicy < 0 || moduleEnumerationPolicy > (int)ModuleEnumerationScheme.All)
+                {
+                    return HResult.E_INVALIDARG;
+                }
+                ModuleEnumerationScheme = (ModuleEnumerationScheme)moduleEnumerationPolicy;
+                return HResult.S_OK;
+            }));
             builder.Complete();
             // Since this wrapper is only created through a ServiceWrapper factory, no AddRef() is needed.
         }
+
+        public ModuleEnumerationScheme ModuleEnumerationScheme { get; private set; } = ModuleEnumerationScheme.None;
 
         protected override void Destroy()
         {
@@ -104,7 +116,15 @@ namespace SOS.Extensions.Clrma
             return HResult.E_NOTIMPL;
         }
 
-        private ICrashInfoService CrashInfoService => _crashInfoService ??= _serviceProvider.GetService<ICrashInfoService>();
+        private ICrashInfoService CrashInfoService
+        {
+            get
+            {
+                _crashInfoService ??= _serviceProvider.GetService<ICrashInfoService>(); // Use the default exception-based mechanism for obtaining crash info service
+                _crashInfoService ??= _serviceProvider.GetService<ICrashInfoModuleService>()?.Create(ModuleEnumerationScheme); // if the above fails, try to create a crash info service from the modules
+                return _crashInfoService;
+            }
+        }
 
         private IThreadService ThreadService => _serviceProvider.GetService<IThreadService>();
 
@@ -131,6 +151,11 @@ namespace SOS.Extensions.Clrma
         private delegate int GetObjectInspectionDelegate(
             [In] IntPtr self,
             [Out] out IntPtr objectInspection);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int SetModuleEnumerationPolicyDelegate(
+            [In] IntPtr self,
+            [In] uint moduleEnumerationPolicy);
 
         #endregion
     }

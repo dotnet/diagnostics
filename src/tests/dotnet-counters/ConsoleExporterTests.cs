@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
+using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Xunit;
 
@@ -241,10 +242,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
+                                     "        -----",
                                      "        blue                                87",
                                      "        red                                  0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
+                                     "        ---- ----",
                                      "        1                                   14",
                                      "             hot                           160");
         }
@@ -267,10 +270,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color LongNameTag   herOne",
+                                     "        ----- ------------- ------",
                                      "        blue  ThisDoesNotFi Hi              87",
                                      "        red                                  0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
+                                     "        ---- ----",
                                      "        1                                   14",
                                      "             hot                           160");
         }
@@ -315,10 +320,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
+                                     "        -----",
                                      "        blue                                87",
                                      "        red                                  0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
+                                     "        ---- ----",
                                      "        1                                   14",
                                      "             hot                           160");
         }
@@ -343,10 +350,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
+                                     "        -----",
                                      "        blue                              87",
                                      "        red                                0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
+                                     "        ---- ----",
                                      "        1                                 14",
                                      "             hot                         160",
                                      "[System.Runtime]",
@@ -372,10 +381,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
+                                     "        -----",
                                      "        blue                              87",
                                      "        red                                0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
+                                     "        ---- ----",
                                      "        1                                 14",
                                      "             hot                         160",
                                      "[System.Runtime]",
@@ -392,10 +403,12 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget} / 1 sec)",
                                      "        color",
+                                     "        -----",
                                      "        blue                              87               0",
                                      "        red                                0.2             0.1",
                                      "    Counter2 ({widget} / 1 sec)",
                                      "        size temp",
+                                     "        ---- ----",
                                      "        1                                 10              -4",
                                      "             hot                         160",
                                      "[System.Runtime]",
@@ -424,6 +437,7 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget})",                                            // There is no longer (unit / 1 sec) here
                                      "        color",
+                                     "        -----",
                                      "        blue                              87",
                                      "        red                                0.1",
                                      "    Counter2 ({widget})                   14");
@@ -439,6 +453,7 @@ namespace DotnetCounters.UnitTests
                                      "[Provider1]",
                                      "    Counter1 ({widget})",                                            // There is no longer (unit / 1 sec) here
                                      "        color",
+                                     "        -----",
                                      "        blue                              87               0",
                                      "        red                                0.2             0.1",
                                      "    Counter2 ({widget})                   10              -4");

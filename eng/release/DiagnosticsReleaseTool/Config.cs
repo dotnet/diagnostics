@@ -15,6 +15,8 @@ namespace DiagnosticsReleaseTool.Impl
         public string AccountName { get; }
         public string ClientId { get; }
         public string ContainerName { get; }
+        public string[] ReleaseProductAllowList { get; }
+        public string[] ReleaseRepoAllowList { get; }
 
         public Config(
             FileInfo toolManifest,
@@ -22,6 +24,8 @@ namespace DiagnosticsReleaseTool.Impl
             DirectoryInfo inputDropPath,
             DirectoryInfo stagingDirectory,
             string releaseName,
+            string[] releaseProductAllowList,
+            string[] releaseRepoAllowList,
             string accountName,
             string clientId,
             string containerName)
@@ -34,6 +38,8 @@ namespace DiagnosticsReleaseTool.Impl
             AccountName = accountName;
             ClientId = clientId;
             ContainerName = containerName;
+            ReleaseProductAllowList = releaseProductAllowList;
+            ReleaseRepoAllowList = releaseRepoAllowList;
         }
     }
 }

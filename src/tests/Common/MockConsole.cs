@@ -1,14 +1,16 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
 using System.Diagnostics;
-using Microsoft.Diagnostics.Tools.Counters.Exporters;
+using System.IO;
+using System.Text;
+using Microsoft.Diagnostics.Tools.Common;
 using Xunit;
 
-namespace DotnetCounters.UnitTests
+namespace Microsoft.Diagnostics.Tests.Common
 {
-    internal class MockConsole : IConsole
+    internal class MockConsole : TextWriter, IConsole
     {
         char[][] _chars;
 
@@ -20,15 +22,32 @@ namespace DotnetCounters.UnitTests
             WindowHeight = height;
             Clear();
         }
+
+        public override Encoding Encoding => Encoding.UTF8;
+
         public int WindowHeight { get; init; }
 
         public int WindowWidth { get; init; }
 
-        public bool CursorVisible { get => throw new NotSupportedException(); set => throw new NotImplementedException(); }
+        public bool CursorVisible { get; set; }
+
+        public int CursorLeft { get; private set; }
 
         public int CursorTop { get; private set; }
 
         public int BufferWidth { get; private set; }
+
+        public int BufferHeight { get; private set; }
+
+        public bool IsOutputRedirected { get; set; }
+
+        public bool IsInputRedirected { get; private set; }
+
+        public bool KeyAvailable { get; private set; }
+
+        public TextWriter Out => this;
+
+        public TextWriter Error => this;
 
         public void Clear()
         {
@@ -49,7 +68,7 @@ namespace DotnetCounters.UnitTests
             CursorTop = row;
             _cursorLeft = col;
         }
-        public void Write(string text)
+        public override void Write(string text)
         {
             for(int textPos = 0; textPos < text.Length; )
             {
@@ -88,14 +107,18 @@ namespace DotnetCounters.UnitTests
                 }
             }
         }
-        public void WriteLine(string text)
+        public override void WriteLine(string text)
         {
             Write(text);
             Write(Environment.NewLine);
         }
-        public void WriteLine() => Write(Environment.NewLine);
+        public override void WriteLine() => Write(Environment.NewLine);
 
         public string GetLineText(int row) => new string(_chars[row]).TrimEnd();
+
+        public ConsoleKeyInfo ReadKey() => Console.ReadKey();
+
+        public ConsoleKeyInfo ReadKey(bool intercept) => Console.ReadKey(intercept);
 
         public string[] Lines
         {
@@ -132,6 +155,32 @@ namespace DotnetCounters.UnitTests
                         $"Actual line     : {actualLine}");
                 }
 
+            }
+        }
+
+        public void AssertSanitizedLinesEqual(Func<string[], string[]> sanitizer, params string[] expectedLines)
+        {
+            string[] actualLines = Lines;
+            if (sanitizer is not null)
+            {
+                actualLines = sanitizer(actualLines);
+            }
+            Assert.True(actualLines.Length >= expectedLines.Length, "Sanitized console output had fewer lines than expected." + Environment.NewLine +
+                $"Expected line count: {expectedLines.Length}" + Environment.NewLine +
+                $"Actual line count: {actualLines.Length}");
+
+            for (int i = 0; i < expectedLines.Length; i++)
+            {
+                if (!string.Equals(expectedLines[i], actualLines[i], StringComparison.Ordinal))
+                {
+                    Assert.Fail("Sanitized console output mismatch." + Environment.NewLine +
+                        $"Line {i,2} Expected: {expectedLines[i]}" + Environment.NewLine +
+                        $"Line {i,2} Actual  : {actualLines[i]}");
+                }
+            }
+            for (int i = expectedLines.Length; i < actualLines.Length; i++)
+            {
+                Assert.True(string.IsNullOrEmpty(actualLines[i]), $"Actual line #{i} beyond expected lines is not empty: {actualLines[i]}");
             }
         }
     }

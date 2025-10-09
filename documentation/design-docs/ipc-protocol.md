@@ -1080,7 +1080,7 @@ The `extension` field is an optional data blob that can provide additional infor
 **Details:**
 - The extension blob may be empty if no extra information is present.
 - Multiple extension blobs can be concatenated if more than one piece of information is needed. Each blob starts with its own label byte.
-- For Event Metadata (`0x01`), the `metadata` array matches the NetTrace v5 PayloadBytes format.
+- For Event Metadata (`0x01`), the `metadata` array models after the [NetTrace_v5 Metadata event encoding](https://github.com/microsoft/perfview/blob/main/src/TraceEvent/EventPipe/NetTraceFormat_v5.md#metadata-event-encoding) excluding the MetadataId field.
 - For ActivityId and RelatedActivityId (`0x02`, `0x03`), the `guid` is a 16-byte value representing the GUID.
 - The size of the entire extension blob can be inferred from the extension `__rel_loc` field. See the [__rel_loc documentation](https://lwn.net/Articles/876682/) for more details.
 
@@ -1099,13 +1099,13 @@ For example, an extension blob containing both Event Metadata and ActivityId wou
 
 The `payload` points at a blob of data with the same format as an EventPipe payload – the concatenated encoded values for all the parameters.
 
-The `metadata` either points at nothing if the event doesn’t have metadata, or it points at a metadata blob matching the NetTrace version 5 formatting convention. Specifically it is the data that would be stored inside the PayloadBytes area of an event blob within a MetadataBlock described [here](https://github.com/microsoft/perfview/blob/main/src/TraceEvent/EventPipe/NetTraceFormat_v5.md#metadata-event-encoding).
+The `metadata` either points at nothing if the event doesn’t have metadata, or it points at a metadata blob matching the NetTrace version 5 formatting convention. Specifically it is the data that would be stored inside the PayloadBytes area of an event blob within a MetadataBlock described [here](https://github.com/microsoft/perfview/blob/main/src/TraceEvent/EventPipe/NetTraceFormat_v5.md#metadata-event-encoding) excluding the MetadataId field, which is not applicable to User_events-based events, as metadata will be inlined with the event instance itself.
 
 > NOTE: V5 and V6 metadata formats have the same info, but they aren’t formatted identically. Parsing and reserialization is required to convert between the two.
 
 ### Which events have metadata?
 
-The runtime will keep track per-session whether it has sent a particular event before. The first time each event is sent during a session, metadata will be included, and otherwise, it will be left empty. As a special case, runtime events currently implemented in native code will never send metadata.
+The runtime will keep track per-session whether it has sent a particular event before. The first time each event is sent during a session, metadata will be included. Should multiple threads race to write the same event to the same session, they may all emit metadata. Afterwards, all instances of that event will not emit metadata, and the responsibility is on the reader to cache and link events with their previously sent metadata. As a special case, runtime events currently implemented in native code will never send metadata.
 
 ## Dump Commands
 

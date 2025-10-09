@@ -126,7 +126,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             string[] paths = symbolPath.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
 
-            foreach (string path in paths.Reverse())
+            foreach (string path in paths.AsEnumerable().Reverse())
             {
                 string[] parts = path.Split(new char[] { '*' }, StringSplitOptions.None);
                 if (parts.Length > 0)

@@ -79,6 +79,10 @@ SET_DEFAULT_DEBUG_CHANNEL(PROCESS); // some headers have code with asserts, so d
 # endif
 #endif
 
+#if HAVE_KQUEUE
+#include <sys/event.h>
+#endif
+
 #ifdef __APPLE__
 #include <libproc.h>
 #include <pwd.h>
@@ -90,6 +94,10 @@ extern "C"
 {
 #  include <mach/thread_state.h>
 }
+
+// On macOS 26, sem_open fails if debugger and debugee are signed with different team ids.
+// Use fifos instead of semaphores to avoid this issue, https://github.com/dotnet/runtime/issues/116545
+#define ENABLE_RUNTIME_EVENTS_OVER_PIPES
 #endif // __APPLE__
 
 #ifdef __NetBSD__
@@ -258,6 +266,13 @@ static
 DWORD
 StartupHelperThread(
     LPVOID p);
+
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+static
+DWORD
+StartupHelperRuntimeEventsThread(
+    LPVOID p);
+#endif
 
 static
 BOOL
@@ -1222,18 +1237,22 @@ static uint64_t HashSemaphoreName(uint64_t a, uint64_t b)
 static const char *const TwoWayNamedPipePrefix = "clr-debug-pipe";
 static const char* IpcNameFormat = "%s-%d-%llu-%s";
 
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+static const char* RuntimeStartupPipeName = "st";
+static const char* RuntimeContinuePipeName = "co";
+#define PIPE_OPEN_RETRY_DELAY_NS 500000000 // 500 ms
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
+
 class PAL_RuntimeStartupHelper
 {
     LONG m_ref;
-    bool m_canceled;
+    volatile bool m_canceled;
+    volatile PAL_ERROR m_error;
     PPAL_STARTUP_CALLBACK m_callback;
     PVOID m_parameter;
     DWORD m_threadId;
     HANDLE m_threadHandle;
     DWORD m_processId;
-#ifdef __APPLE__
-    char m_applicationGroupId[MAX_APPLICATION_GROUP_ID_LENGTH+1];
-#endif // __APPLE__
     char m_startupSemName[CLR_SEM_MAX_NAMELEN];
     char m_continueSemName[CLR_SEM_MAX_NAMELEN];
 
@@ -1248,19 +1267,336 @@ class PAL_RuntimeStartupHelper
     // registered (m_callback) returns.
     sem_t *m_continueSem;
 
+#ifdef __APPLE__    
+    char m_applicationGroupId[MAX_APPLICATION_GROUP_ID_LENGTH+1];
+#endif // __APPLE__
+
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+    char m_startupPipeName[MAX_DEBUGGER_TRANSPORT_PIPE_NAME_LENGTH];
+    char m_continuePipeName[MAX_DEBUGGER_TRANSPORT_PIPE_NAME_LENGTH];
+    DWORD m_runtimeEventsThreadId;
+    HANDLE m_runtimeEventsThreadHandle;
+
+    typedef enum
+    {
+        RuntimeEvent_Unknown = 0,
+        RuntimeEvent_Started = 1,
+        RuntimeEvent_Continue = 2,
+    } RuntimeEvent;
+
+    static void CloseFd(int fd)
+    {
+        if (fd != -1)
+        {
+            while (close(fd) < 0 && errno == EINTR);
+        }
+    }
+    
+    static ssize_t ReadIOFunc(int fd, void *buf, size_t count)
+    {
+        return read(fd, buf, count);
+    }
+
+    static ssize_t WriteIOFunc(int fd, void *buf, size_t count)
+    {
+        return write(fd, buf, count);
+    }
+
+    static BOOL CreatePipe(const char* name)
+    {
+        int result = -1;
+        while ((result = mkfifo(name, S_IRWXU)) < 0 && errno == EINTR);
+        if (result == -1)
+        {
+            if (errno == EEXIST)
+            {
+                unlink(name);
+                while ((result = mkfifo(name, S_IRWXU)) < 0 && errno == EINTR);
+            }
+        }
+
+        if (result == -1)
+        {
+            TRACE("mkfifo failed: errno is %d (%s)\n", errno, strerror(errno));
+            return FALSE;
+        }
+
+        return TRUE;
+    }
+
+    static int OpenNonBlockingPipe(int kq, const char* name, int mode, volatile bool *canceled)
+    {
+        int fd = -1;
+        int retries = 0;
+        int flags = mode | O_NONBLOCK;
+
+#if defined(FD_CLOEXEC)
+        flags |= O_CLOEXEC;
+#endif
+
+        while (!*canceled && fd == -1)
+        {
+            fd = open(name, flags);
+            if (fd == -1)
+            {
+                if (mode == O_WRONLY && errno == ENXIO)
+                {
+                    PAL_nanosleep(PIPE_OPEN_RETRY_DELAY_NS);
+                    continue;
+                }
+                else if (errno == EINTR)
+                {
+                    continue;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        if (fd == -1)
+        {
+            if (!*canceled)
+            {
+                TRACE("open failed: errno is %d (%s)\n", errno, strerror(errno));
+            }
+            else
+            {
+                TRACE("open canceled\n");
+            }
+            return -1;
+        }
+
+#if HAVE_KQUEUE && !HAVE_BROKEN_FIFO_KEVENT
+        struct kevent change;
+        EV_SET(&change, fd, (mode & O_ACCMODE) == O_RDONLY ? EVFILT_READ : EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, NULL);
+        if (kevent(kq, &change, 1, NULL, 0, NULL) == -1)
+        {
+            TRACE("kevent failed: errno is %d (%s)\n", errno, strerror(errno));
+            CloseFd(fd);
+            return -1;
+        }
+#endif // HAVE_KQUEUE && !HAVE_BROKEN_FIFO_KEVENT
+        
+        return fd;
+    }
+
+#if HAVE_KQUEUE && !HAVE_BROKEN_FIFO_KEVENT
+    static int DoNonBlockingPipeIO(int kq, int fd, void *buf, size_t count, int timeout, ssize_t (*io_func)(int fd, void *buf, size_t count), short filter)
+    {
+        int result = -1;
+        struct timespec timeout_spec;
+        struct timespec *timeout_ptr = NULL;
+        if (timeout > 0)
+        {
+            timeout_spec.tv_sec = timeout / 1000;
+            timeout_spec.tv_nsec = (timeout % 1000) * 1000000L;
+            timeout_ptr = &timeout_spec;
+        }
+
+        struct kevent change;
+        EV_SET(&change, fd, filter, EV_ENABLE, 0, 0, NULL);
+        if (kevent(kq, &change, 1, NULL, 0, NULL) == -1)
+        {
+            return -1;
+        }
+
+        while (1)
+        {    
+            struct kevent event;
+            int nev = kevent(kq, NULL, 0, &event, 1, timeout_ptr);   
+            if (nev == -1 && errno == EINTR)
+            {
+                continue;
+            } 
+            else if (nev == 0)
+            {
+                // Check for timeout or EOF.
+                int n = io_func(fd, buf, count);
+                if (n > 0)
+                {
+                    result = n;
+                    break;
+                }
+                else if (n == 0)
+                {
+                    // EOF - pipe closed
+                    result = -2;
+                    break;
+                }
+                else if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+                {
+                    // Timeout.
+                    result = 0;
+                    break;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            else if (nev > 0)
+            {
+                if (event.filter == filter && event.ident == fd)
+                {
+                    if (event.flags & EV_EOF)
+                    {
+                        result = -2;
+                        break;
+                    }
+                    
+                    int n = io_func(fd, buf, count);
+                    if (n > 0)
+                    {
+                        result = n;
+                        break;
+                    }
+                    else if (n == 0)
+                    {
+                        // EOF - pipe closed
+                        result = -2;
+                        break;
+                    }
+                    else if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        EV_SET(&change, fd, filter, EV_DISABLE, 0, 0, NULL);
+        kevent(kq, &change, 1, NULL, 0, NULL);
+
+        return result;
+    }
+
+    static int ReadNonBlockingPipe(int kq, int fd, void *buf, size_t count, int timeout)
+    {
+        return DoNonBlockingPipeIO(kq, fd, buf, count, timeout, ReadIOFunc, EVFILT_READ);
+    }
+
+    static int WriteNonBlockingPipe(int kq, int fd, const void *buf, size_t count, int timeout)
+    {
+        return DoNonBlockingPipeIO(kq, fd, (void *)buf, count, timeout, WriteIOFunc, EVFILT_WRITE);
+    }
+#else
+    static int DoNonBlockingPipeIO(int fd, void *buf, size_t count, int timeout, ssize_t (*io_func)(int fd, void *buf, size_t count), short filter)
+    {
+        struct pollfd pfd;
+        pfd.fd = fd;
+        pfd.events = filter;
+
+        while (1)
+        {
+            int poll_ret = poll(&pfd, 1, timeout);
+            if (poll_ret > 0)
+            {
+                if (pfd.revents & filter)
+                {
+                    int n = io_func(fd, buf, count);
+                    if (n > 0)
+                    {
+                        return n;
+                    }
+                    else if (n == 0)
+                    {
+                        // EOF - pipe closed
+                        return -2;
+                    }
+                    else if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    {
+                        continue;
+                    }
+                    else if (errno == EINTR)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        return -1;
+                    }
+                }
+                else if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))
+                {
+                    return -1;
+                }
+            }
+            else if (poll_ret == 0)
+            {
+                // Check for timeout or EOF.
+                int n = io_func(fd, buf, count);
+                if (n > 0)
+                {
+                    return n;
+                }
+                else if (n == 0)
+                {
+                    // EOF - pipe closed
+                    return -2;
+                }
+                else if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+                {
+                    // Timeout.
+                    return 0;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+            else if (errno == EINTR)
+            {
+                continue;
+            }
+            else
+            {
+                return -1;
+            }
+        }
+
+        return -1;
+    }
+
+    static int ReadNonBlockingPipe(int kq, int fd, void *buf, size_t count, int timeout)
+    {
+        return DoNonBlockingPipeIO(fd, buf, count, timeout, ReadIOFunc, POLLIN);
+    }
+
+    static int
+    WriteNonBlockingPipe(int kq, int fd, const void *buf, size_t count, int timeout)
+    {
+        return DoNonBlockingPipeIO(fd, (void *)buf, count, timeout, WriteIOFunc, POLLOUT);
+    }
+#endif // HAVE_KQUEUE && !HAVE_BROKEN_FIFO_KEVENT
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
+
+#ifdef __APPLE__
     LPCSTR GetApplicationGroupId() const
     {
-#ifdef __APPLE__
         return m_applicationGroupId[0] == '\0' ? nullptr : m_applicationGroupId;
-#else // __APPLE__
-        return nullptr;
-#endif // __APPLE__
     }
+#else
+    LPCSTR GetApplicationGroupId() const
+    {
+        return nullptr;
+    }
+#endif // __APPLE__
 
 public:
     PAL_RuntimeStartupHelper(DWORD dwProcessId, PPAL_STARTUP_CALLBACK pfnCallback, PVOID parameter) :
         m_ref(1),
         m_canceled(false),
+        m_error(NO_ERROR),
         m_callback(pfnCallback),
         m_parameter(parameter),
         m_threadId(0),
@@ -1268,6 +1604,10 @@ public:
         m_processId(dwProcessId),
         m_startupSem(SEM_FAILED),
         m_continueSem(SEM_FAILED)
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+        , m_runtimeEventsThreadId(0)
+        , m_runtimeEventsThreadHandle(NULL)
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
     {
     }
 
@@ -1289,6 +1629,16 @@ public:
         {
             CloseHandle(m_threadHandle);
         }
+
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+        unlink(m_startupPipeName);
+        unlink(m_continuePipeName);
+
+        if (m_runtimeEventsThreadHandle != NULL)
+        {
+            CloseHandle(m_runtimeEventsThreadHandle);
+        }
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
     }
 
     LONG AddRef()
@@ -1369,6 +1719,16 @@ public:
         }
 #endif // __APPLE__
 
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+        PAL_GetTransportPipeName(m_startupPipeName, m_processId, GetApplicationGroupId(), RuntimeStartupPipeName);
+        PAL_GetTransportPipeName(m_continuePipeName, m_processId, GetApplicationGroupId(), RuntimeContinuePipeName);
+
+        TRACE("PAL_RuntimeStartupHelper.Register creating startup '%s' continue '%s' pipes\n", m_startupPipeName, m_continuePipeName);
+
+        CreatePipe(m_continuePipeName);
+        CreatePipe(m_startupPipeName);
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
+
         // See semaphore name format for details about this value. We store it so that
         // it can be used by the cleanup code that removes the semaphore with sem_unlink.
         ret = GetProcessIdDisambiguationKey(m_processId, &m_processIdDisambiguationKey);
@@ -1382,7 +1742,7 @@ public:
         CreateSemaphoreName(m_startupSemName, RuntimeStartupSemaphoreName, unambiguousProcessDescriptor, GetApplicationGroupId());
         CreateSemaphoreName(m_continueSemName, RuntimeContinueSemaphoreName, unambiguousProcessDescriptor, GetApplicationGroupId());
 
-        TRACE("PAL_RuntimeStartupHelper.Register creating startup '%s' continue '%s'\n", m_startupSemName, m_continueSemName);
+        TRACE("PAL_RuntimeStartupHelper.Register creating startup '%s' continue '%s' semaphores\n", m_startupSemName, m_continueSemName);
 
         // Create the continue semaphore first so we don't race with PAL_NotifyRuntimeStarted. This open will fail if another
         // debugger is trying to attach to this process because the name will already exist.
@@ -1402,6 +1762,30 @@ public:
             pe = GetSemError();
             goto exit;
         }
+
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+        // Add a reference for the thread handler
+        AddRef();
+        pe = InternalCreateThread(
+            pThread,
+            NULL,
+            0,
+            ::StartupHelperRuntimeEventsThread,
+            this,
+            0,
+            UserCreatedThread,
+            &osThreadId,
+            &m_runtimeEventsThreadHandle);
+
+        if (NO_ERROR != pe)
+        {
+            TRACE("InternalCreateThread failed %d\n", pe);
+            Release();
+            goto exit;
+        }
+
+        m_runtimeEventsThreadId = (DWORD)osThreadId;
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
 
         // Add a reference for the thread handler
         AddRef();
@@ -1443,12 +1827,20 @@ public:
             ASSERT("sem_post(startupSem) failed: errno is %d (%s)\n", errno, strerror(errno));
         }
 
-        // Don't need to wait for the worker thread if unregister called on it
+        // Don't need to wait for the worker threads if unregister called on it
         if (m_threadId != (DWORD)THREADSilentGetCurrentThreadId())
         {
             // Wait for work thread to exit for 60 seconds
             WaitForSingleObject(m_threadHandle, 60 * 1000);
         }
+
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+        if (m_runtimeEventsThreadId != (DWORD)THREADSilentGetCurrentThreadId())
+        {
+            // Wait for runtime events thread to exit for 60 seconds
+            WaitForSingleObject(m_runtimeEventsThreadHandle, 60 * 1000);
+        }
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
     }
 
     //
@@ -1536,6 +1928,163 @@ public:
         return pe;
     }
 
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+    void StartupHelperRuntimeEventsThread()
+    {
+        PAL_ERROR pe = NO_ERROR;
+        int offset = 0;
+        int kq = -1;
+        int continuePipeFd = -1;
+        int startupPipeFd = -1;
+
+#if HAVE_KQUEUE && !HAVE_BROKEN_FIFO_KEVENT
+        kq = kqueue();
+        if (kq == -1)
+        {
+            TRACE("StartupHelperRuntimeEventsThread: kqueue() failed: %d (%s)\n", errno, strerror(errno));
+            goto exit;
+        }
+#endif // HAVE_KQUEUE && !HAVE_BROKEN_FIFO_KEVENT
+
+        TRACE("StartupHelperRuntimeEventsThread: opening continue '%s' pipe\n", m_continuePipeName);
+
+        continuePipeFd = OpenNonBlockingPipe(kq, m_continuePipeName, O_WRONLY, &m_canceled);
+        if (continuePipeFd == -1)
+        {
+            if (m_canceled)
+            {
+                TRACE("StartupHelperRuntimeEventsThread: canceled opening continue pipe\n");
+            }
+            else
+            {
+                TRACE("StartupHelperRuntimeEventsThread: failed opening continue pipe\n");
+            }
+            goto exit;
+        }
+
+        TRACE("StartupHelperRuntimeEventsThread: opening startup '%s' pipe\n", m_startupPipeName);
+
+        startupPipeFd = OpenNonBlockingPipe(kq, m_startupPipeName, O_RDONLY, &m_canceled);
+        if (startupPipeFd == -1)
+        {
+            if (m_canceled)
+            {
+                TRACE("StartupHelperRuntimeEventsThread: canceled opening startup pipe\n");
+            }
+            else
+            {
+                TRACE("StartupHelperRuntimeEventsThread: failed opening startup pipe\n");
+            }
+            goto exit;
+        }
+
+        TRACE("StartupHelperRuntimeEventsThread: waiting on started event\n");
+
+        {
+            unsigned char event = (unsigned char)RuntimeEvent_Unknown;
+            unsigned char *buffer = &event;
+            int bytesToRead = sizeof(event);
+            int bytesRead = 0;
+
+            do
+            {
+                bytesRead = ReadNonBlockingPipe(kq, startupPipeFd, buffer + offset, bytesToRead - offset, 1000);
+                if (bytesRead > 0)
+                {
+                    offset += bytesRead;
+                }
+                else if (bytesRead == 0)
+                {
+                    // Timeout.
+                    continue;
+                }
+                else if (bytesRead == -2 && offset == 0)
+                {
+                    // Not connected yet, retry.
+                    continue;
+                }
+                else
+                {
+                    // Error or EOF
+                    break;
+                }
+            }
+            while (!m_canceled && offset < bytesToRead);
+
+            if (offset == bytesToRead && event == (unsigned char)RuntimeEvent_Started)
+            {
+                TRACE("StartupHelperRuntimeEventsThread: received started event\n");
+            }
+            else if (m_canceled)
+            {
+                TRACE("StartupHelperRuntimeEventsThread: canceled waiting for started event\n");
+            }
+            else
+            {
+                TRACE("StartupHelperRuntimeEventsThread: received invalid event\n");
+                m_error = ERROR_INVALID_PARAMETER;
+            }
+            
+            sem_post(m_startupSem);
+        }
+
+        TRACE("StartupHelperRuntimeEventsThread: waiting on debugger\n");
+
+        while (sem_wait(m_continueSem) != 0)
+        {
+            if (EINTR == errno)
+            {
+                TRACE("StartupHelperRuntimeEventsThread: sem_wait() failed with EINTR; re-waiting\n");
+                continue;
+            }
+            TRACE("StartupHelperRuntimeEventsThread: sem_wait(contniue) failed: errno is %d (%s)\n", errno, strerror(errno));
+        }
+
+        TRACE("StartupHelperRuntimeEventsThread: sending continue event\n");
+
+        {
+            unsigned char event = (unsigned char)RuntimeEvent_Continue;
+            unsigned char *buffer = &event;
+            int bytesToWrite = sizeof(event);
+            int bytesWritten = 0;
+
+            offset = 0;
+            do
+            {
+                bytesWritten = WriteNonBlockingPipe(kq, continuePipeFd, buffer + offset, bytesToWrite - offset, 1000);
+                if (bytesWritten > 0)
+                {
+                    offset += bytesWritten;
+                }
+            }
+            while (bytesWritten > 0 && offset < bytesToWrite);
+
+            if (offset != bytesToWrite)
+            {
+                TRACE("StartupHelperRuntimeEventsThread: failed sending continue event\n");
+            }
+        }
+
+    exit:
+
+        if (startupPipeFd != -1)
+        {
+            CloseFd(startupPipeFd);
+        }
+
+        if (continuePipeFd != -1)
+        {
+            CloseFd(continuePipeFd);
+        }
+
+        if (kq != -1)
+        {
+            CloseFd(kq);
+        }
+    }
+
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
+
     void StartupHelperThread()
     {
         PAL_ERROR pe = NO_ERROR;
@@ -1559,6 +2108,11 @@ public:
                 pe = GetSemError();
             }
 
+            if (pe == NO_ERROR && m_error != NO_ERROR)
+            {
+                pe = m_error;
+            }
+
             if (pe == NO_ERROR)
             {
                 pe = InvokeStartupCallback();
@@ -1573,6 +2127,23 @@ public:
         }
     }
 };
+
+#ifdef ENABLE_RUNTIME_EVENTS_OVER_PIPES
+static
+DWORD
+StartupHelperRuntimeEventsThread(LPVOID p)
+{
+    TRACE("StartupHelperRuntimeEventsThread: starting\n");
+
+    PAL_RuntimeStartupHelper *helper = (PAL_RuntimeStartupHelper *)p;
+    helper->StartupHelperRuntimeEventsThread();
+    helper->Release();
+
+    TRACE("StartupHelperRuntimeEventsThread: finished\n");
+
+    return 0;
+}
+#endif // ENABLE_RUNTIME_EVENTS_OVER_PIPES
 
 static
 DWORD

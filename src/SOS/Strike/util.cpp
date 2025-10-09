@@ -5588,12 +5588,17 @@ HRESULT InternalFrameManager::Init(ICorDebugThread3 * pThread3)
         &(m_rgpInternalFrame2[0]));
 }
 
-HRESULT InternalFrameManager::PrintPrecedingInternalFrames(ICorDebugFrame * pFrame)
+HRESULT InternalFrameManager::PrintPrecedingInternalFrames(ICorDebugFrame * pFrame, size_t &nPrintedFrames, size_t nNumberOfFrames)
 {
     HRESULT Status;
 
     for (; m_iInternalFrameCur < m_cInternalFramesActual; m_iInternalFrameCur++)
     {
+        if (nPrintedFrames > nNumberOfFrames && nNumberOfFrames != 0)
+        {
+            // We have printed enough frames, so we're done
+            return S_OK;
+        }
         BOOL bIsCloser = FALSE;
         IfFailRet(m_rgpInternalFrame2[m_iInternalFrameCur]->IsCloserToLeaf(pFrame, &bIsCloser));
 
@@ -5603,14 +5608,14 @@ HRESULT InternalFrameManager::PrintPrecedingInternalFrames(ICorDebugFrame * pFra
             return S_OK;
         }
 
-        IfFailRet(PrintCurrentInternalFrame());
+        IfFailRet(PrintCurrentInternalFrame(nPrintedFrames));
     }
 
     // Exhausted list of internal frames.  Done!
     return S_OK;
 }
 
-HRESULT InternalFrameManager::PrintCurrentInternalFrame()
+HRESULT InternalFrameManager::PrintCurrentInternalFrame(size_t &nPrintedFrames)
 {
     _ASSERTE(m_iInternalFrameCur < m_cInternalFramesActual);
 
@@ -5675,7 +5680,7 @@ HRESULT InternalFrameManager::PrintCurrentInternalFrame()
 
     DMLOut("%p %s ", SOS_PTR(address), SOS_PTR(0));
     ExtOut("[%s: %p]\n", szFrameType, SOS_PTR(address));
-
+    nPrintedFrames++;
     return S_OK;
 }
 
