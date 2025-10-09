@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="cdb-sos" Version="10.0.26100.1" />
+    <PackageReference Include="cdb-sos" Version="$(cdbsosversion)" />
     <PackageReference Include="NewtonSoft.Json" Version="$(NewtonSoftJsonVersion)" />
   </ItemGroup>
 

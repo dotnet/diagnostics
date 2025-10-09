@@ -81,7 +81,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages,
                 ["TestCDAC"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC"),
-                ["DotNetRoot"] = Environment.GetEnvironmentVariable("DOTNET_ROOT")
+                ["DotNetRoot"] = Environment.GetEnvironmentVariable("DOTNET_ROOT"),
             };
             if (OS.Kind == OSKind.Windows)
             {

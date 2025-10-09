@@ -3,7 +3,6 @@
     <!-- Debuggees -->
     <ProjectReference Include="*/Debuggees/*/*.csproj" />
     <ProjectReference Include="Debuggees/*/*.csproj" />
-    <ProjectReference Include="Tracees/*/*.csproj" />
 
     <!-- Tests and Helpers -->
     <ProjectReference Include="*/*.csproj" />

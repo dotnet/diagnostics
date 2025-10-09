@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="cdb-sos" Version="10.0.26100.1" />
+    <PackageReference Include="cdb-sos" Version="$(cdbsosversion)" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
   </ItemGroup>
 

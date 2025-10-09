@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)../../DotnetCounters.Tests/TestConstants.cs" Link="TestConstants.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)../../dotnet-counters/TestConstants.cs" Link="TestConstants.cs" />
   </ItemGroup>
 
   <ItemGroup>
