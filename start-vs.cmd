@@ -3,11 +3,6 @@ setlocal enabledelayedexpansion
 
 set "SDK_LOC=%~dp0.dotnet"
 
-if "%1" == "" (
-  set "SLN_OR_PROJ=%~dp0diagnostics.slnx"
-) else (
-  set "SLN_OR_PROJ=%1"
-)
 
 set "DOTNET_ROOT=%SDK_LOC%"
 set "DOTNET_ROOT(x86)=%SDK_LOC%\x86"
@@ -20,6 +15,28 @@ set PATH=%DOTNET_ROOT%;%PATH%
 IF NOT EXIST "%DOTNET_ROOT%\dotnet.exe" (
     echo [ERROR] .NET Core has not yet been installed. Run `%~dp0dotnet.cmd` to install tools
     exit /b 1
+)
+
+if "%1" == "" (
+  set "SLN_OR_PROJ=%~dp0dirs.slnx"
+  set "_USE_DEFAULT=1"
+) else (
+  set "SLN_OR_PROJ=%~1"
+)
+
+:: If using default and file missing, generate it
+if defined _USE_DEFAULT if not exist "%SLN_OR_PROJ%" (
+  echo [INFO] dirs.slnx not found. Generating via generate-slnx.ps1...
+  powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0generate-slnx.ps1"
+  if errorlevel 1 (
+    echo [ERROR] Failed to generate dirs.slnx
+    exit /b 1
+  )
+  if not exist "%SLN_OR_PROJ%" (
+    echo [ERROR] dirs.slnx still not found after generation attempt.
+    exit /b 1
+  )
+  echo [INFO] Successfully generated dirs.slnx
 )
 
 set "DEVENV=%DevEnvDir%devenv.exe"
