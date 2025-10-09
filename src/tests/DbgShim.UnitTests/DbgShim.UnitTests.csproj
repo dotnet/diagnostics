@@ -26,16 +26,6 @@
     </Content>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-    <PackageDownload Include="TestAssets.Windows.x64.6.0" Version="[$(TestAssetsVersion)]" />
-    <PackageDownload Include="TestAssets.Windows.x86.6.0" Version="[$(TestAssetsVersion)]" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(OS)' == 'Unix' OR '$(OS)' == 'Windows_NT'">
-    <PackageDownload Include="TestAssets.Linux.x64.6.0" Version="[$(TestAssetsVersion)]" />
-    <PackageDownload Include="TestAssets.Linux.arm64.6.0" Version="[$(TestAssetsVersion)]" />
-  </ItemGroup>
-
   <!--
     Windows test configuration file
   -->

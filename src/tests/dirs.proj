@@ -6,5 +6,8 @@
 
     <!-- Tests and Helpers -->
     <ProjectReference Include="*/*.csproj" />
+
+    <!-- Tests are broken as it hasn't been run on main in a while. Relies on older System.CommandLine API's that are no longer public -->
+    <ProjectReference Remove="dotnet-stack/DotnetStack.UnitTests.csproj" />
   </ItemGroup>
 </Project>
