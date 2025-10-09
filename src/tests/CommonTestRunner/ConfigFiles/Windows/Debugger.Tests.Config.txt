@@ -6,7 +6,7 @@
 
   <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
   <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
-  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\common.Tests_$(Timestamp)</LogDir>
+  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\common.unittests_$(Timestamp)</LogDir>
 
   <TestProduct>ProjectK</TestProduct>
   <DebuggeeSourceRoot>$(RepoRootDir)\src\tests</DebuggeeSourceRoot>

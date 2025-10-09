@@ -21,7 +21,7 @@ using Constants = DotnetCounters.UnitTests.TestConstants;
 namespace DotnetCounters.UnitTests
 {
     /// <summary>
-    /// UnitTests the behavior of CounterMonitor's Collect command.
+    /// Tests the behavior of CounterMonitor's Collect command.
     /// </summary>
     public class CounterMonitorPayloadTests
     {

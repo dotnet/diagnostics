@@ -34,7 +34,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         }
 
         /// <summary>
-        /// UnitTests the validation of the fields of the trigger settings.
+        /// Tests the validation of the fields of the trigger settings.
         /// </summary>
         [Fact]
         public void EventCounterTriggerSettingsValidationTest()
@@ -318,7 +318,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         }
 
         /// <summary>
-        /// UnitTests that the trigger condition can be detected on a live application
+        /// Tests that the trigger condition can be detected on a live application
         /// using the EventPipeTriggerPipeline.
         /// </summary>
         [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4782"), MemberData(nameof(Configurations))]

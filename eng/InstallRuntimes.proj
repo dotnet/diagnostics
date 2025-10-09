@@ -22,6 +22,16 @@
     <LiveRuntimeDir Condition="'$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizePath('$(LiveRuntimeDir)'))</LiveRuntimeDir>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(TargetArch)' != 'x86'">
+    <DotNetInstallRoot>$(RepoRoot).dotnet-test\</DotNetInstallRoot>
+    <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE</RegistryRoot>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetArch)' == 'x86'">
+    <DotNetInstallRoot>$(RepoRoot).dotnet-test\x86\</DotNetInstallRoot>
+    <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node</RegistryRoot>
+  </PropertyGroup>
+
   <PropertyGroup>
     <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(TargetArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
     <DotNetInstallDir>$([MSBuild]::NormalizeDirectory('$(DotNetInstallRoot)', 'shared', 'Microsoft.NETCore.App', '$(MicrosoftNETCoreAppRefVersion)'))</DotNetInstallDir>

@@ -27,11 +27,11 @@
   <ItemGroup>
     <InternalsVisibleTo Include="dotnet-monitor" />
     <InternalsVisibleTo Include="dotnet-counters" />
-    <InternalsVisibleTo Include="DotnetCounters.Tests" />
+    <InternalsVisibleTo Include="DotnetCounters.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe" />
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe.Tests" />
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.Tool.Tests" />
-    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.Tests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.Tool.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.UnitTests" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.WebApi" />
   </ItemGroup>
 </Project>

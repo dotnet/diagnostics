@@ -5,8 +5,10 @@
   <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
   <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
   <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\dbgshim.unittests_$(Timestamp)</LogDir>
 
   <TestProduct>ProjectK</TestProduct>
+  <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeSourceRoot>$(RepoRootDir)\src\tests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
   <DebuggeeName>SimpleDebuggee</DebuggeeName>
