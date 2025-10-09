@@ -1,0 +1,14 @@
+#
+# Tests that ClrStack properly displays async Main method names with angle brackets
+#
+
+CONTINUE
+
+LOADSOS
+
+# Verify that ClrStack with no options works and displays async method name correctly
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+# Verify that the method name contains <Main> and is not trimmed to Main>
+VERIFY:.*AsyncMainTest\.<Main>\(.*\).*
