@@ -13,10 +13,10 @@
   <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet-test\x86</DotNetRoot>
   <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
 
-  <ScriptRootDir>$(RepoRootDir)\src\tests\SOS.Tests\Scripts</ScriptRootDir>
+  <ScriptRootDir>$(RepoRootDir)\src\tests\SOS.UnitTests\Scripts</ScriptRootDir>
   <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
   <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
-  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\sos.Tests_$(Timestamp)</LogDir>
+  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
   <MicrosoftNETCoreAppPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\</MicrosoftNETCoreAppPath>

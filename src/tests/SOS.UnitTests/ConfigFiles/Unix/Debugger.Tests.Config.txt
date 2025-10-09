@@ -13,10 +13,10 @@
   <Import ConfigFile="$(DotNetRoot)/Debugger.Tests.Versions.txt" />
 
   <TestProduct>ProjectK</TestProduct>
-  <ScriptRootDir>$(RepoRootDir)/src/tests/SOS.Tests/Scripts</ScriptRootDir>
+  <ScriptRootDir>$(RepoRootDir)/src/tests/SOS.UnitTests/Scripts</ScriptRootDir>
   <RootBinDir>$(RepoRootDir)/artifacts</RootBinDir>
   <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
-  <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/sos.Tests_$(Timestamp)</LogDir>
+  <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(RootBinDir)/tmp/$(TargetConfiguration)\dumps</DumpDir>
 
   <SetHostExe>true</SetHostExe>

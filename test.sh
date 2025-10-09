@@ -14,3 +14,4 @@ done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 "$scriptroot/eng/build.sh" -test -skipmanaged -skipnative $@
+
