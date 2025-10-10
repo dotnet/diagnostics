@@ -9,7 +9,7 @@
   <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\common.unittests_$(Timestamp)</LogDir>
 
   <TestProduct>ProjectK</TestProduct>
-  <DebuggeeSourceRoot>$(RepoRootDir)\src\tests</DebuggeeSourceRoot>
+  <DebuggeeSourceRoot>$(RepoRootDir)\src\tests\debuggees</DebuggeeSourceRoot>
   <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
