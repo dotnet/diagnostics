@@ -1,6 +1,6 @@
 <Project>
   <ItemGroup Condition="'$(BundleTools)' != 'true' and '$(DotNetBuild)' != 'true'">
-    <ProjectToBuild Include="$(RepoRoot)dirs.proj" />
+    <ProjectToBuild Include="$(RepoRoot)build.proj" />
   </ItemGroup>
 
   <!-- Only build the NETCore.Client library in .NET product build mode. -->
