@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.Build.Traversal">
+
+  <ItemGroup>
+    <!-- Tools -->
+    <ProjectReference Include="Tools/*/*.csproj" />
+
+    <!-- SOS -->
+    <ProjectReference Include="SOS/*/*.csproj" />
+
+    <ProjectReference Include="Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.Repl/Microsoft.Diagnostics.Repl.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.DebugServices/Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.Monitoring/Microsoft.Diagnostics.Monitoring.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.Monitoring.EventPipe/Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.DebugServices.Implementation/Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.ExtensionCommands/Microsoft.Diagnostics.ExtensionCommands.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.WebSocketServer/Microsoft.Diagnostics.WebSocketServer.csproj" />
+    <ProjectReference Include="Microsoft.FileFormats/Microsoft.FileFormats.csproj" />
+    <ProjectReference Include="Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
+    <ProjectReference Include="Microsoft.SymbolManifestGenerator/Microsoft.SymbolManifestGenerator.csproj" />
+    <ProjectReference Include="Microsoft.SymbolManifestGenerator/Microsoft.SymbolManifestGenerator.csproj" />
+  </ItemGroup>
+</Project>

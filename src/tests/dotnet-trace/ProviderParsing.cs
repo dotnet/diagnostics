@@ -76,12 +76,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void ValidProviderEventLevel_CorrectlyParses(string providerToParse)
         {
             List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providerToParse);
-            Assert.Equal(1, parsedProviders.Count);
+            Assert.Single(parsedProviders);
             EventPipeProvider provider = parsedProviders.First();
             Assert.Equal("VeryCoolProvider", provider.Name);
             Assert.Equal(0, provider.Keywords);
             Assert.Equal(System.Diagnostics.Tracing.EventLevel.Informational, provider.EventLevel);
-            Assert.Equal(1, provider.Arguments.Count);
+            Assert.Single(provider.Arguments);
             Assert.Equal("QuotedValue", provider.Arguments["FilterAndPayloadSpecs"]);
         }
 
@@ -220,7 +220,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             providerTwo = parsedProviders[1];
             Assert.Equal("MyProvider", providerOne.Name);
             Assert.Equal("MyProvider2", providerTwo.Name);
-            Assert.Equal(1, providerOne.Arguments.Count);
+            Assert.Single(providerOne.Arguments);
             Assert.Equal(3, providerTwo.Arguments.Count);
             Assert.Equal("B;C=D", providerOne.Arguments["A"]);
             Assert.Equal("spaced words", providerTwo.Arguments["A"]);
@@ -313,7 +313,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providersToParse);
             Assert.Equal("DupeProvider", parsedProviders.First().Name);
-            Assert.Equal(1, parsedProviders.Count);
+            Assert.Single(parsedProviders);
             Assert.Equal(0xF, parsedProviders.First().Keywords);
             Assert.Equal(System.Diagnostics.Tracing.EventLevel.LogAlways, parsedProviders.First().EventLevel);
             Assert.Null(parsedProviders.First().Arguments);
@@ -325,7 +325,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             List<EventPipeProvider> parsedProviders = Extensions.ToProviders(providersToParse);
             Assert.Equal("DupeProvider", parsedProviders.First().Name);
-            Assert.Equal(1, parsedProviders.Count);
+            Assert.Single(parsedProviders);
             Assert.Equal(0xFF, parsedProviders.First().Keywords);
             Assert.Equal(System.Diagnostics.Tracing.EventLevel.Verbose, parsedProviders.First().EventLevel);
             Assert.Null(parsedProviders.First().Arguments);

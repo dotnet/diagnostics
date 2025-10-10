@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Tools\dotnet-trace\dotnet-trace.csproj" />
-    <ProjectReference Include="..\CommonTestRunner\CommonTestRunner.csproj" />
+    <ProjectReference Include="$(RepoRoot)src\Tools\dotnet-trace\dotnet-trace.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\CommonTestRunner\CommonTestRunner.csproj" />
   </ItemGroup>
 
   <ItemGroup>

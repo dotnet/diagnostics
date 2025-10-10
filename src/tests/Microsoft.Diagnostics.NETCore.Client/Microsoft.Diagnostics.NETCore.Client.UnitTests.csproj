@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)../../Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)../../Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="$(RepoRoot)src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)../CommonTestRunner/CommonTestRunner.csproj" />
   </ItemGroup>
 

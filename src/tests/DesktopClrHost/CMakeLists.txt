@@ -2,10 +2,11 @@ project(DesktopClrHost)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include_directories(inc)
 include_directories("$ENV{VSInstallDir}/DIA SDK/include")
 
 add_definitions(-DUSE_STL)
+
+add_compile_options(/Zl) # omit default library name in .OBJ
 
 set(DESKTOPCLRHOST_SOURCES
     DesktopClrHost.cpp

@@ -2,7 +2,6 @@ project(runcommand)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-include_directories(inc)
 include_directories("$ENV{VSInstallDir}/DIA SDK/include")
 
 add_definitions(-DUSE_STL)
