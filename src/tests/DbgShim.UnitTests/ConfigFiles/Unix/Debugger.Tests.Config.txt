@@ -8,7 +8,7 @@
   <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/dbgshim.unittests_$(Timestamp)</LogDir>
  
   <TestProduct>ProjectK</TestProduct>
-  <DebuggeeSourceRoot>$(RepoRootDir)/src/tests/Debuggees</DebuggeeSourceRoot>
+  <DebuggeeSourceRoot>$(RepoRootDir)/src/tests/DbgShim.UnitTests/Debuggees</DebuggeeSourceRoot>
   <DebuggeeMsbuildAuxRoot>$(RepoRootDir)/eng/AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
   <DebuggeeName>SimpleDebuggee</DebuggeeName>

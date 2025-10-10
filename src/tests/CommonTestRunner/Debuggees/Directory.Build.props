@@ -1,5 +1,5 @@
 <Project>
-  <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
+  <Import Project="$(MSBuildThisFileDirectory)..\..\Directory.Build.props"/>
 
   <PropertyGroup>
     <EnableAnalyzers>false</EnableAnalyzers>

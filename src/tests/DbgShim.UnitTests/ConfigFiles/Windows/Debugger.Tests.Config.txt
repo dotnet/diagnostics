@@ -9,7 +9,7 @@
 
   <TestProduct>ProjectK</TestProduct>
   <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
-  <DebuggeeSourceRoot>$(RepoRootDir)\src\tests\Debuggees</DebuggeeSourceRoot>
+  <DebuggeeSourceRoot>$(RepoRootDir)\src\tests\DbgShim.UnitTests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
   <DebuggeeName>SimpleDebuggee</DebuggeeName>
 
