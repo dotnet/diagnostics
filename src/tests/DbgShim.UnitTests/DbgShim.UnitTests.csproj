@@ -11,6 +11,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Debuggees\**" />
+    <EmbeddedResource Remove="Debuggees\**" />
+    <None Remove="Debuggees\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
     <ProjectReference Include="$(RepoRoot)src\SOS\SOS.Hosting\SOS.Hosting.csproj" />
   </ItemGroup>

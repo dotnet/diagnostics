@@ -6,6 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Debuggees\**" />
+    <EmbeddedResource Remove="Debuggees\**" />
+    <None Remove="Debuggees\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
   </ItemGroup>
 
