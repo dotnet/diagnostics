@@ -8,28 +8,27 @@ This file should be imported by eng/Versions.props
     <!-- microsoft/clrmd dependencies -->
     <MicrosoftDiagnosticsRuntimePackageVersion>4.0.0-beta.25381.2</MicrosoftDiagnosticsRuntimePackageVersion>
     <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.0.0-beta.25381.2</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
-    <!-- dotnet/command-line-api dependencies -->
-    <SystemCommandLinePackageVersion>2.0.0-beta5.25210.1</SystemCommandLinePackageVersion>
+    <!-- dotnet/dotnet dependencies -->
+    <MicrosoftAspNetCoreAppRefPackageVersion>10.0.0-rtm.25509.113</MicrosoftAspNetCoreAppRefPackageVersion>
+    <MicrosoftAspNetCoreAppRefInternalPackageVersion>10.0.0-rtm.25509.113</MicrosoftAspNetCoreAppRefInternalPackageVersion>
+    <MicrosoftCodeAnalysisPackageVersion>5.0.0-2.25509.113</MicrosoftCodeAnalysisPackageVersion>
+    <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.0.0-2.25509.113</MicrosoftCodeAnalysisAnalyzersPackageVersion>
+    <MicrosoftCodeAnalysisCSharpPackageVersion>5.0.0-2.25509.113</MicrosoftCodeAnalysisCSharpPackageVersion>
+    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>10.0.100-rtm.25509.113</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.25509.113</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.25509.113</MicrosoftDotNetCodeAnalysisPackageVersion>
+    <MicrosoftNETSdkPackageVersion>10.0.100-rtm.25509.113</MicrosoftNETSdkPackageVersion>
+    <MicrosoftNETCoreAppRefPackageVersion>10.0.0-rtm.25509.113</MicrosoftNETCoreAppRefPackageVersion>
+    <MicrosoftNETCorePlatformsPackageVersion>10.0.0-rtm.25509.113</MicrosoftNETCorePlatformsPackageVersion>
+    <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25509.113</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25509.113</runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25509.113</runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25509.113</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25509.113</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25509.113</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
+    <SystemCommandLinePackageVersion>2.0.0-rtm.25509.113</SystemCommandLinePackageVersion>
     <!-- dotnet/android dependencies -->
     <XamarinAndroidToolsAndroidSdkPackageVersion>1.0.105-preview.225</XamarinAndroidToolsAndroidSdkPackageVersion>
-    <!-- dotnet/dotnet dependencies -->
-    <MicrosoftAspNetCoreAppRefPackageVersion>10.0.0-rtm.25476.104</MicrosoftAspNetCoreAppRefPackageVersion>
-    <MicrosoftAspNetCoreAppRefInternalPackageVersion>10.0.0-rtm.25476.104</MicrosoftAspNetCoreAppRefInternalPackageVersion>
-    <MicrosoftCodeAnalysisPackageVersion>5.0.0-2.25476.104</MicrosoftCodeAnalysisPackageVersion>
-    <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.0.0-2.25476.104</MicrosoftCodeAnalysisAnalyzersPackageVersion>
-    <MicrosoftCodeAnalysisCSharpPackageVersion>5.0.0-2.25476.104</MicrosoftCodeAnalysisCSharpPackageVersion>
-    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>10.0.100-rtm.25476.104</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.25476.104</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.25476.104</MicrosoftDotNetCodeAnalysisPackageVersion>
-    <MicrosoftNETSdkPackageVersion>10.0.100-rtm.25476.104</MicrosoftNETSdkPackageVersion>
-    <MicrosoftNETCoreAppRefPackageVersion>10.0.0-rtm.25476.104</MicrosoftNETCoreAppRefPackageVersion>
-    <MicrosoftNETCorePlatformsPackageVersion>10.0.0-rtm.25476.104</MicrosoftNETCorePlatformsPackageVersion>
-    <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25476.104</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25476.104</runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25476.104</runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25476.104</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25476.104</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>10.0.0-rtm.25476.104</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
     <!-- dotnet/arcade dependencies -->
     <MicrosoftDotNetRemoteExecutorPackageVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorPackageVersion>
   </PropertyGroup>
@@ -38,10 +37,6 @@ This file should be imported by eng/Versions.props
     <!-- microsoft/clrmd dependencies -->
     <MicrosoftDiagnosticsRuntimeVersion>$(MicrosoftDiagnosticsRuntimePackageVersion)</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiagnosticsRuntimeUtilitiesVersion>$(MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion)</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
-    <!-- dotnet/command-line-api dependencies -->
-    <SystemCommandLineVersion>$(SystemCommandLinePackageVersion)</SystemCommandLineVersion>
-    <!-- dotnet/android dependencies -->
-    <XamarinAndroidToolsAndroidSdkVersion>$(XamarinAndroidToolsAndroidSdkPackageVersion)</XamarinAndroidToolsAndroidSdkVersion>
     <!-- dotnet/dotnet dependencies -->
     <MicrosoftAspNetCoreAppRefVersion>$(MicrosoftAspNetCoreAppRefPackageVersion)</MicrosoftAspNetCoreAppRefVersion>
     <MicrosoftAspNetCoreAppRefInternalVersion>$(MicrosoftAspNetCoreAppRefInternalPackageVersion)</MicrosoftAspNetCoreAppRefInternalVersion>
@@ -60,6 +55,9 @@ This file should be imported by eng/Versions.props
     <runtimeosxx64MicrosoftDotNetCdacTransportVersion>$(runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion)</runtimeosxx64MicrosoftDotNetCdacTransportVersion>
     <runtimewinarm64MicrosoftDotNetCdacTransportVersion>$(runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion)</runtimewinarm64MicrosoftDotNetCdacTransportVersion>
     <runtimewinx64MicrosoftDotNetCdacTransportVersion>$(runtimewinx64MicrosoftDotNetCdacTransportPackageVersion)</runtimewinx64MicrosoftDotNetCdacTransportVersion>
+    <SystemCommandLineVersion>$(SystemCommandLinePackageVersion)</SystemCommandLineVersion>
+    <!-- dotnet/android dependencies -->
+    <XamarinAndroidToolsAndroidSdkVersion>$(XamarinAndroidToolsAndroidSdkPackageVersion)</XamarinAndroidToolsAndroidSdkVersion>
     <!-- dotnet/arcade dependencies -->
     <MicrosoftDotNetRemoteExecutorVersion>$(MicrosoftDotNetRemoteExecutorPackageVersion)</MicrosoftDotNetRemoteExecutorVersion>
   </PropertyGroup>
