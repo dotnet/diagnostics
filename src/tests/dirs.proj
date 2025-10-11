@@ -11,7 +11,7 @@
 
     <!-- Standalone tools -->
     <ProjectReference Remove="DacCompareNativeTypes/DacCompareNativeTypes.csproj" />
-    <ProjectReference Remove="benchmark/benchmark.csproj" />
+    <ProjectReference Remove="benchmarks/benchmarks.csproj" />
     <ProjectReference Remove="EventPipeStress/**/*.csproj" />
 
     <!-- Unused -->
