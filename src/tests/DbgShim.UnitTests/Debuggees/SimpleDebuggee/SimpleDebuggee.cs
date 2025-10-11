@@ -1,9 +1,13 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Diagnostics;
 using System.IO.Pipes;
-using System.Threading;
 
-class Simple
+namespace SimpleDebuggee;
+
+public class Simple
 {
     public static int Main(string[] args)
     {
@@ -16,7 +20,7 @@ class Simple
         {
             try
             {
-                using var pipeStream = new NamedPipeClientStream(pipeServerName);
+                using NamedPipeClientStream pipeStream = new(pipeServerName);
 
                 Console.WriteLine("{0} SimpleDebuggee: connecting to pipe", pid);
                 Console.Out.Flush();

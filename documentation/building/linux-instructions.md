@@ -208,3 +208,12 @@ You now have all the required components. To clone, build and test the repo:
     cd diagnostics
     ./build.sh
     ./test.sh
+
+Loading solution file
+---------------------
+
+For a better dev inner loop experience, generate the `build.slnx` file using:
+
+    ./eng/generate-slnx.sh
+
+then load the file into VSCode.
