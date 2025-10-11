@@ -42,3 +42,14 @@ This will build SOS, the tests and the SOS plugin (libsosplugin.dylib) for the X
 
 For later versions of macOS/Xcode/lldb is TBD.
 
+Loading solution file
+---------------------
+
+For a better dev inner loop experience, generate the `build.slnx` file using
+
+```sh
+./eng/generate-slnx.sh
+```
+
+then load the file into VSCode.
+

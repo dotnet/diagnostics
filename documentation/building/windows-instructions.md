@@ -108,3 +108,13 @@ To test the resulting SOS:
 ```bat
 test.cmd
 ```
+
+## Loading solution file
+
+For a better dev inner loop experience, generate the `build.slnx` file using
+
+```pwsh
+./eng/generate-slnx.ps1
+```
+
+then load the file into either VS or VSCode.
