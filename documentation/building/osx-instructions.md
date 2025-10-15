@@ -45,10 +45,10 @@ For later versions of macOS/Xcode/lldb is TBD.
 Loading solution file
 ---------------------
 
-For a better dev inner loop experience, load `build.slnx` at the root of the repository into VSCode.
+For a better dev inner loop experience, load `build.sln` at the root of the repository into VSCode.
 
 This file is generated from the `build.proj` traversal project and can be regenerated/updated using:
 
 ```sh
-./eng/generate-slnx.sh
+./eng/generate-sln.sh
 ```

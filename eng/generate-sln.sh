@@ -3,14 +3,13 @@
 # Diagnostics Solution Generator for Unix/macOS
 #
 # SYNOPSIS:
-#     Generates and migrates Visual Studio solution files for the diagnostics repository.
+#     Generates Visual Studio solution files for the diagnostics repository.
 #
 # DESCRIPTION:
-#     This script generates solution files using SlnGen tool and migrates the legacy
-#     build.sln file to the new .slnx format, then cleans up the old file.
+#     This script generates solution files using SlnGen tool
 #
 # USAGE:
-#     ./generate-slnx.sh
+#     ./generate-sln.sh
 
 set -euo pipefail
 
@@ -74,43 +73,18 @@ main() {
         exit 1
     fi
 
-    # Make sure dotnet script is executable
-    chmod +x "$DOTNET"
-
-    # Step 1: Generate solution files with SlnGen
+    # Generate solution files with SlnGen in .sln format
     write_step "Generating solution files with SlnGen..."
     if "$DOTNET" tool exec Microsoft.VisualStudio.SlnGen.Tool --collapsefolders true --folders true --launch false; then
-        write_success "Solution files generated successfully"
+        echo ""
+        write_success "Solution generation completed successfully!"
+        echo -e "${GRAY}You can now open the generated .sln files in Visual Studio, VS Code, or any compatible IDE.${NC}"
     else
         write_error "Failed to generate solution files with SlnGen"
+        echo "Make sure the SlnGen tool is installed:"
+        echo "  $DOTNET tool install --global Microsoft.VisualStudio.SlnGen.Tool"
         exit 1
     fi
-
-    # Step 2: Check if build.sln exists before migration
-    if [ -f "build.sln" ]; then
-        write_step "Migrating build.sln to new format..."
-        if "$DOTNET" sln build.sln migrate; then
-            write_success "Migration completed successfully"
-        else
-            write_error "Failed to migrate build.sln"
-            write_warning "Continuing with cleanup..."
-        fi
-
-        # Step 3: Clean up old solution file
-        write_step "Cleaning up old build.sln file..."
-        if rm -f "build.sln"; then
-            write_success "Old solution file removed"
-        else
-            write_warning "Could not remove build.sln"
-            echo -e "${YELLOW}You may need to remove it manually${NC}"
-        fi
-    else
-        write_warning "build.sln not found, skipping migration step"
-    fi
-
-    echo ""
-    write_success "Solution generation and migration completed successfully!"
-    echo -e "${GRAY}You can now open the generated build.slnx files in Visual Studio.${NC}"
 }
 
 # Run main function

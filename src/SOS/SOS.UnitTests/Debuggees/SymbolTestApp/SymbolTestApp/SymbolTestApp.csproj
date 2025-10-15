@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AdditionalSourceCopy Include="..\SymbolTestApp.slnx" />
+    <AdditionalSourceCopy Include="..\SymbolTestApp.sln" />
   </ItemGroup>
 
   <ItemGroup>
