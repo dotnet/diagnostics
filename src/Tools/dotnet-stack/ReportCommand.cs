@@ -88,6 +88,18 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
                     DiagnosticsClient client = holder.Client;
 
+                    // Resume runtime if it was suspended (similar to --resume-runtime:true in other tools)
+                    // This is safe to call even if the runtime wasn't suspended - it's a no-op in that case
+                    try
+                    {
+                        await client.ResumeRuntimeAsync(ct).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        // ResumeRuntime is a no-op if the runtime wasn't suspended,
+                        // so we can safely ignore exceptions here
+                    }
+
                     List<EventPipeProvider> providers = new()
                     {
                         new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
@@ -98,22 +110,40 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     // is too short in a given environment, e.g., resource constrained systems
                     // N.B. - This trace INCLUDES rundown.  For sufficiently large applications, it may take non-trivial time to collect
                     //        the symbol data in rundown.
-                    EventPipeSession session = await client.StartEventPipeSessionAsync(providers, requestRundown:true, token:ct).ConfigureAwait(false);
-                    using (session)
-                    using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
+                    EventPipeSession session;
+                    try
                     {
-                        Task copyTask = session.EventStream.CopyToAsync(fs, ct);
-                        await Task.Delay(duration, ct).ConfigureAwait(false);
-                        await session.StopAsync(ct).ConfigureAwait(false);
+                        session = await client.StartEventPipeSessionAsync(providers, requestRundown:true, token:ct).ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                        stdError.WriteLine(EventPipeErrorMessage);
+                        return -1;
+                    }
 
-                        // check if rundown is taking more than 5 seconds and add comment to report
-                        Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
-                        Task completedTask = await Task.WhenAny(copyTask, timeoutTask).ConfigureAwait(false);
-                        if (completedTask == timeoutTask)
+                    try
+                    {
+                        using (session)
+                        using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
                         {
-                            stdOutput.WriteLine($"# Sufficiently large applications can cause this reportCommand to take non-trivial amounts of time");
+                            Task copyTask = session.EventStream.CopyToAsync(fs, ct);
+                            await Task.Delay(duration, ct).ConfigureAwait(false);
+                            await session.StopAsync(ct).ConfigureAwait(false);
+
+                            // check if rundown is taking more than 5 seconds and add comment to report
+                            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+                            Task completedTask = await Task.WhenAny(copyTask, timeoutTask).ConfigureAwait(false);
+                            if (completedTask == timeoutTask)
+                            {
+                                stdOutput.WriteLine($"# Sufficiently large applications can cause this reportCommand to take non-trivial amounts of time");
+                            }
+                            await copyTask.ConfigureAwait(false);
                         }
-                        await copyTask.ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                        stdError.WriteLine(EventPipeErrorMessage);
+                        return -1;
                     }
 
                     // using the generated trace file, symbolicate and compute stacks.
@@ -255,5 +285,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
             {
                 Description = "The path to a diagnostic port to be used."
             };
+
+        private const string EventPipeErrorMessage =
+            "There was a failure in reading stack data. Possible reasons could be trying to connect to a runtime that has been suspended, an unexpected close of the IPC channel, etc.";
     }
 }
