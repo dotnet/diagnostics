@@ -27,22 +27,44 @@ namespace Microsoft.Diagnostics.Tools.Stack
         /// <param name="processId">The process to report the stack from.</param>
         /// <param name="name">The name of process to report the stack from.</param>
         /// <param name="duration">The duration of to trace the target for. </param>
+        /// <param name="diagnosticPort">The diagnostic port to connect to.</param>
         /// <returns></returns>
-        private static async Task<int> Report(CancellationToken ct, TextWriter stdOutput, TextWriter stdError, int processId, string name, TimeSpan duration)
+        private static async Task<int> Report(CancellationToken ct, TextWriter stdOutput, TextWriter stdError, int processId, string name, TimeSpan duration, string diagnosticPort)
         {
             string tempNetTraceFilename = Path.Join(Path.GetTempPath(), Path.GetRandomFileName() + ".nettrace");
             string tempEtlxFilename = "";
 
             try
             {
-                // Either processName or processId has to be specified.
+                // Validate that only one of processId, name, or diagnosticPort is specified
+                int optionCount = 0;
+                if (processId != 0)
+                {
+                    optionCount++;
+                }
                 if (!string.IsNullOrEmpty(name))
                 {
-                    if (processId != 0)
-                    {
-                        Console.WriteLine("Can only specify either --name or --process-id option.");
-                        return -1;
-                    }
+                    optionCount++;
+                }
+                if (!string.IsNullOrEmpty(diagnosticPort))
+                {
+                    optionCount++;
+                }
+
+                if (optionCount == 0)
+                {
+                    stdError.WriteLine("--process-id, --name, or --diagnostic-port is required");
+                    return -1;
+                }
+                else if (optionCount > 1)
+                {
+                    stdError.WriteLine("Only one of --process-id, --name, or --diagnostic-port can be specified");
+                    return -1;
+                }
+
+                // Resolve process name to ID if needed
+                if (!string.IsNullOrEmpty(name))
+                {
                     processId = CommandUtils.FindProcessIdWithName(name);
                     if (processId < 0)
                     {
@@ -55,91 +77,125 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     stdError.WriteLine("Process ID should not be negative.");
                     return -1;
                 }
-                else if (processId == 0)
+
+                DiagnosticsClientBuilder builder = new("dotnet-stack", 10);
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
                 {
-                    stdError.WriteLine("--process-id is required");
-                    return -1;
-                }
-
-
-                DiagnosticsClient client = new(processId);
-                List<EventPipeProvider> providers = new()
-                {
-                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
-                };
-
-                // collect a *short* trace with stack samples
-                // the hidden '--duration' flag can increase the time of this trace in case 10ms
-                // is too short in a given environment, e.g., resource constrained systems
-                // N.B. - This trace INCLUDES rundown.  For sufficiently large applications, it may take non-trivial time to collect
-                //        the symbol data in rundown.
-                EventPipeSession session = await client.StartEventPipeSessionAsync(providers, requestRundown:true, token:ct).ConfigureAwait(false);
-                using (session)
-                using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
-                {
-                    Task copyTask = session.EventStream.CopyToAsync(fs, ct);
-                    await Task.Delay(duration, ct).ConfigureAwait(false);
-                    await session.StopAsync(ct).ConfigureAwait(false);
-
-                    // check if rundown is taking more than 5 seconds and add comment to report
-                    Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
-                    Task completedTask = await Task.WhenAny(copyTask, timeoutTask).ConfigureAwait(false);
-                    if (completedTask == timeoutTask)
+                    if (holder == null)
                     {
-                        stdOutput.WriteLine($"# Sufficiently large applications can cause this reportCommand to take non-trivial amounts of time");
+                        return -1;
                     }
-                    await copyTask.ConfigureAwait(false);
-                }
 
-                // using the generated trace file, symbolicate and compute stacks.
-                tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
-                using (SymbolReader symbolReader = new(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
-                using (TraceLog eventLog = new(tempEtlxFilename))
-                {
-                    MutableTraceEventStackSource stackSource = new(eventLog)
+                    DiagnosticsClient client = holder.Client;
+
+                    // Resume runtime if it was suspended (similar to --resume-runtime:true in other tools)
+                    // This is safe to call even if the runtime wasn't suspended - it's a no-op in that case
+                    try
                     {
-                        OnlyManagedCodeStacks = true
+                        await client.ResumeRuntimeAsync(ct).ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                        // ResumeRuntime is a no-op if the runtime wasn't suspended,
+                        // so we can safely ignore exceptions here
+                    }
+
+                    List<EventPipeProvider> providers = new()
+                    {
+                        new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
                     };
 
-                    SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader);
-                    computer.GenerateThreadTimeStacks(stackSource);
-
-                    Dictionary<int, List<StackSourceSample>> samplesForThread = new();
-
-                    stackSource.ForEach((sample) => {
-                        StackSourceCallStackIndex stackIndex = sample.StackIndex;
-                        while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
-                        {
-                            stackIndex = stackSource.GetCallerIndex(stackIndex);
-                        }
-
-                        // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
-                        // Thread id is in the frame name as "Thread (<ID>)"
-                        string template = "Thread (";
-                        string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
-
-                        // we are looking for the first index of ) because
-                        // we need to handle a thread name like: Thread (4008) (.NET IO ThreadPool Worker)
-                        int firstIndex = threadFrame.IndexOf(')');
-                        int threadId = int.Parse(threadFrame.AsSpan(template.Length, firstIndex - template.Length));
-
-                        if (samplesForThread.TryGetValue(threadId, out List<StackSourceSample> samples))
-                        {
-                            samples.Add(sample);
-                        }
-                        else
-                        {
-                            samplesForThread[threadId] = new List<StackSourceSample>() { sample };
-                        }
-                    });
-
-                    // For every thread recorded in our trace, print the first stack
-                    foreach ((int threadId, List<StackSourceSample> samples) in samplesForThread)
+                    // collect a *short* trace with stack samples
+                    // the hidden '--duration' flag can increase the time of this trace in case 10ms
+                    // is too short in a given environment, e.g., resource constrained systems
+                    // N.B. - This trace INCLUDES rundown.  For sufficiently large applications, it may take non-trivial time to collect
+                    //        the symbol data in rundown.
+                    EventPipeSession session;
+                    try
                     {
+                        session = await client.StartEventPipeSessionAsync(providers, requestRundown:true, token:ct).ConfigureAwait(false);
+                    }
+                    catch (Exception)
+                    {
+                        stdError.WriteLine(EventPipeErrorMessage);
+                        return -1;
+                    }
+
+                    try
+                    {
+                        using (session)
+                        using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
+                        {
+                            Task copyTask = session.EventStream.CopyToAsync(fs, ct);
+                            await Task.Delay(duration, ct).ConfigureAwait(false);
+                            await session.StopAsync(ct).ConfigureAwait(false);
+
+                            // check if rundown is taking more than 5 seconds and add comment to report
+                            Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+                            Task completedTask = await Task.WhenAny(copyTask, timeoutTask).ConfigureAwait(false);
+                            if (completedTask == timeoutTask)
+                            {
+                                stdOutput.WriteLine($"# Sufficiently large applications can cause this reportCommand to take non-trivial amounts of time");
+                            }
+                            await copyTask.ConfigureAwait(false);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        stdError.WriteLine(EventPipeErrorMessage);
+                        return -1;
+                    }
+
+                    // using the generated trace file, symbolicate and compute stacks.
+                    tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(tempNetTraceFilename);
+                    using (SymbolReader symbolReader = new(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
+                    using (TraceLog eventLog = new(tempEtlxFilename))
+                    {
+                        MutableTraceEventStackSource stackSource = new(eventLog)
+                        {
+                            OnlyManagedCodeStacks = true
+                        };
+
+                        SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader);
+                        computer.GenerateThreadTimeStacks(stackSource);
+
+                        Dictionary<int, List<StackSourceSample>> samplesForThread = new();
+
+                        stackSource.ForEach((sample) => {
+                            StackSourceCallStackIndex stackIndex = sample.StackIndex;
+                            while (!stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false).StartsWith("Thread ("))
+                            {
+                                stackIndex = stackSource.GetCallerIndex(stackIndex);
+                            }
+
+                            // long form for: int.Parse(threadFrame["Thread (".Length..^1)])
+                            // Thread id is in the frame name as "Thread (<ID>)"
+                            string template = "Thread (";
+                            string threadFrame = stackSource.GetFrameName(stackSource.GetFrameIndex(stackIndex), false);
+
+                            // we are looking for the first index of ) because
+                            // we need to handle a thread name like: Thread (4008) (.NET IO ThreadPool Worker)
+                            int firstIndex = threadFrame.IndexOf(')');
+                            int threadId = int.Parse(threadFrame.AsSpan(template.Length, firstIndex - template.Length));
+
+                            if (samplesForThread.TryGetValue(threadId, out List<StackSourceSample> samples))
+                            {
+                                samples.Add(sample);
+                            }
+                            else
+                            {
+                                samplesForThread[threadId] = new List<StackSourceSample>() { sample };
+                            }
+                        });
+
+                        // For every thread recorded in our trace, print the first stack
+                        foreach ((int threadId, List<StackSourceSample> samples) in samplesForThread)
+                        {
 #if DEBUG
-                        stdOutput.WriteLine($"Found {samples.Count} stacks for thread 0x{threadId:X}");
+                            stdOutput.WriteLine($"Found {samples.Count} stacks for thread 0x{threadId:X}");
 #endif
-                        PrintStack(stdOutput, threadId, samples[0], stackSource);
+                            PrintStack(stdOutput, threadId, samples[0], stackSource);
+                        }
                     }
                 }
             }
@@ -189,7 +245,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
             {
                 ProcessIdOption,
                 NameOption,
-                DurationOption
+                DurationOption,
+                DiagnosticPortOption
             };
 
             reportCommand.SetAction((parseResult, ct) => Report(ct,
@@ -197,7 +254,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 stdError: parseResult.Configuration.Error,
                 processId: parseResult.GetValue(ProcessIdOption),
                 name: parseResult.GetValue(NameOption),
-                duration: parseResult.GetValue(DurationOption)));
+                duration: parseResult.GetValue(DurationOption),
+                diagnosticPort: parseResult.GetValue(DiagnosticPortOption)));
 
             return reportCommand;
         }
@@ -221,5 +279,14 @@ namespace Microsoft.Diagnostics.Tools.Stack
             {
                 Description = "The name of the process to report the stack."
             };
+
+        private static readonly Option<string> DiagnosticPortOption =
+            new("--diagnostic-port", "--dport")
+            {
+                Description = "The path to a diagnostic port to be used."
+            };
+
+        private const string EventPipeErrorMessage =
+            "There was a failure in reading stack data. Possible reasons could be trying to connect to a runtime that has been suspended, an unexpected close of the IPC channel, etc.";
     }
 }
