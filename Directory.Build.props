@@ -31,6 +31,10 @@
     $(ArtifactsBinDir) - artifacts\bin directory
   -->
 
+  <PropertyGroup>
+    <ArtifactsRuntimeDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'runtime'))</ArtifactsRuntimeDir>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(TargetOS)' == ''">
     <TargetOS>linux</TargetOS>
     <TargetOS Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' == 'true'">Windows_NT</TargetOS>
