@@ -47,6 +47,7 @@
   <DesktopFramework>$(DesktopTargetFramework)</DesktopFramework>
   <NetCoreAppMinTargetFramework>$(NetCoreAppMinTargetFramework)</NetCoreAppMinTargetFramework>
   <RepoRootDir>$(RepoRoot)</RepoRootDir>
+  <ArtifactsDir>$(ArtifactsDir)</ArtifactsDir>
   <CDBPath>$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\cdb.exe</CDBPath>
 </Configuration>
 ]]>
