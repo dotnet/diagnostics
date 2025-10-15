@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     {
                         await client.ResumeRuntimeAsync(ct).ConfigureAwait(false);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         // ResumeRuntime is a no-op if the runtime wasn't suspended,
                         // so we can safely ignore exceptions here
