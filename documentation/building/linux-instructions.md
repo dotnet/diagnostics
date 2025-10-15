@@ -212,8 +212,8 @@ You now have all the required components. To clone, build and test the repo:
 Loading solution file
 ---------------------
 
-For a better dev inner loop experience, generate the `build.slnx` file using:
+For a better dev inner loop experience, load `build.slnx` at the root of the repository into VSCode.
+
+This file is generated from the `build.proj` traversal project and can be regenerated/updated using:
 
     ./eng/generate-slnx.sh
-
-then load the file into VSCode.

@@ -111,10 +111,10 @@ test.cmd
 
 ## Loading solution file
 
-For a better dev inner loop experience, generate the `build.slnx` file using
+For a better dev inner loop experience, load `build.slnx` at the root of the repository into either VS or VSCode.
+
+This file is generated from the `build.proj` traversal project and can be regenerated/updated using:
 
 ```pwsh
 ./eng/generate-slnx.ps1
 ```
-
-then load the file into either VS or VSCode.
