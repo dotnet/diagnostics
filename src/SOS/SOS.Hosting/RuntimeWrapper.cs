@@ -158,12 +158,10 @@ namespace SOS.Hosting
             }
             if (_dacHandle != IntPtr.Zero)
             {
-                DataTarget.PlatformFunctions.FreeLibrary(_dacHandle);
                 _dacHandle = IntPtr.Zero;
             }
             if (_cdacHandle != IntPtr.Zero)
             {
-                DataTarget.PlatformFunctions.FreeLibrary(_cdacHandle);
                 _cdacHandle = IntPtr.Zero;
             }
             if (_dbiHandle != IntPtr.Zero)
