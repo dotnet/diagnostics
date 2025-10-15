@@ -5,20 +5,24 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="TestBinaries\coreclr.dll.gz" />
-    <None Remove="TestBinaries\md5_build_id" />
-    <None Remove="TestBinaries\StackTraceSymbols.CoreCLR.cs.gz" />
-    <None Remove="TestBinaries\stripped_executable" />
-    <None Remove="TestBinaries\symbolized_executable" />
+    <PackageReference Include="xunit" Version="$(XUnitVersion)" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
+    <ProjectReference Include="$(RepoRoot)src\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\TestHelpers\TestHelpers.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="TestBinaries\coreclr.dll.gz" />
+    <None Remove="TestBinaries\md5_build_id" />
+    <None Remove="TestBinaries\StackTraceSymbols.CoreCLR.cs.gz" />
+    <None Remove="TestBinaries\stripped_executable" />
+    <None Remove="TestBinaries\symbolized_executable" />
   </ItemGroup>
 
   <ItemGroup>

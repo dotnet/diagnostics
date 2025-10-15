@@ -278,9 +278,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("Warning", result.LogLevel);
             Assert.Equal(7, result.EventId);
             Assert.Equal("AnotherEventId", result.EventName);
-            Assert.Equal(0, result.Scopes.Count);
+            Assert.Empty(result.Scopes);
             //We are expecting only the original format
-            Assert.Equal(1, result.Arguments.Count);
+            Assert.Single(result.Arguments);
         }
 
         private static void ValidateAppLoggerCategoryInformationMessage(StreamReader reader)
@@ -294,9 +294,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("Information", result.LogLevel);
             Assert.Equal(0, result.EventId);
             Assert.Equal(string.Empty, result.EventName);
-            Assert.Equal(0, result.Scopes.Count);
+            Assert.Empty(result.Scopes);
             //We are expecting only the original format
-            Assert.Equal(1, result.Arguments.Count);
+            Assert.Single(result.Arguments);
         }
 
         private static void ValidateAppLoggerCategoryWarningMessage(StreamReader reader)
@@ -310,9 +310,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("Warning", result.LogLevel);
             Assert.Equal(5, result.EventId);
             Assert.Equal("WarningEventId", result.EventName);
-            Assert.Equal(0, result.Scopes.Count);
+            Assert.Empty(result.Scopes);
             //We are expecting only the original format
-            Assert.Equal(1, result.Arguments.Count);
+            Assert.Single(result.Arguments);
         }
 
         private static void ValidateAppLoggerCategoryErrorMessage(StreamReader reader)
@@ -326,9 +326,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("Error", result.LogLevel);
             Assert.Equal(0, result.EventId);
             Assert.Equal(string.Empty, result.EventName);
-            Assert.Equal(0, result.Scopes.Count);
+            Assert.Empty(result.Scopes);
             //We are expecting only the original format
-            Assert.Equal(1, result.Arguments.Count);
+            Assert.Single(result.Arguments);
         }
 
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)

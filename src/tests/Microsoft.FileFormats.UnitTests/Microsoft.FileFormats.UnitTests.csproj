@@ -3,6 +3,16 @@
     <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit" Version="$(XUnitVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(RepoRoot)src\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\TestHelpers\TestHelpers.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <None Remove="TestBinaries\renamed_build_id_section" />
   </ItemGroup>
@@ -57,10 +67,4 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\TestHelpers\TestHelpers.csproj" />
-  </ItemGroup>
-
 </Project>

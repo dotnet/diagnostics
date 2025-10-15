@@ -15,4 +15,4 @@ done
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 export LLDB_PATH=/usr/bin/lldb
 export SOS_TEST_CDAC=true
-$scriptroot/../.dotnet/dotnet test --no-build --logger "console;verbosity=detailed" $scriptroot/../src/SOS/SOS.UnitTests/SOS.UnitTests.csproj --filter "Category=CDACCompatible"
+$scriptroot/../.dotnet/dotnet test --no-build --logger "console;verbosity=detailed" $scriptroot/../src/tests/SOS.UnitTests/SOS.UnitTests.csproj --filter "Category=CDACCompatible"

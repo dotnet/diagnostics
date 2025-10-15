@@ -13,7 +13,7 @@
   <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet-test\x86</DotNetRoot>
   <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
 
-  <ScriptRootDir>$(RepoRootDir)\src\SOS\SOS.UnitTests\Scripts</ScriptRootDir>
+  <ScriptRootDir>$(RepoRootDir)\src\tests\SOS.UnitTests\Scripts</ScriptRootDir>
   <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
   <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\sos.unittests_$(Timestamp)</LogDir>
@@ -38,7 +38,7 @@
   <DesktopFrameworkPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFrameworkPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</DesktopFrameworkPath>
 
-  <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
+  <DebuggeeSourceRoot>$(RepoRootDir)\src\tests\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
@@ -202,7 +202,7 @@
               <TestName>SOS.DualRuntimes</TestName>
               <SetSymbolServer>-ms -timeout 10</SetSymbolServer>
               <!-- The assembly path, class and function name of the desktop test code to load/run -->
-              <DesktopTestParameters>$(RootBinDir)\bin\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
+              <DesktopTestParameters>$(RootBinDir)\bin\debuggees\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
             </Option>
           </Options>
           <Options>
