@@ -5,7 +5,6 @@
 *.suo
 *.user
 *.sln.docstates
-build.slnx
 build.sln
 .vs/
 *.VC.db

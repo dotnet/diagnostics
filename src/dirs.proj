@@ -22,4 +22,9 @@
     <ProjectReference Include="Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
 
   </ItemGroup>
+
+  <!-- Native projects to view in Visual Studio -->
+  <ItemGroup Condition="'$(TargetOS)' == 'Windows_NT' and $(IsSlnGen) == 'true'">
+    <ProjectReference Include="**/*.vcxproj" />
+  </ItemGroup>
 </Project>

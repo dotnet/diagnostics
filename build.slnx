@@ -1,0 +1,444 @@
+<Solution>
+  <Configurations>
+    <BuildType Name="Checked" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <BuildType Name="RelWithDebInfo" />
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/shared/">
+    <Project Path="src/shared/gcdump/gcdump.vcxproj">
+      <Platform Project="x64" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/shared/utilcode/utilcode.vcxproj">
+      <Platform Project="x64" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/shared/debug/">
+    <Project Path="src/shared/debug/dbgutil/dbgutil.vcxproj">
+      <Platform Project="x64" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/SOS/">
+    <Project Path="src/SOS/extensions/extensions.vcxproj">
+      <Platform Project="x64" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/SOS/lldbplugin/lldbplugin.vcxproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Platform Solution="*|x86" Project="x86" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.Extensions/SOS.Extensions.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.Hosting/SOS.Hosting.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.InstallHelper/SOS.InstallHelper.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/Strike/Strike.vcxproj">
+      <Platform Project="x64" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/SOS/SOS.Package/">
+    <Project Path="src/SOS/SOS.Package/SOS.Package.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.Package/SOS.Symbol.Package.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/SOS/SOS.UnitTests/">
+    <Project Path="src/SOS/SOS.UnitTests/SOS.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/SOS/SOS.UnitTests/Debuggees/">
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DivZero/DivZero.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DotnetDumpCommands/DotnetDumpCommands.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DumpGCData/DumpGCData.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/DynamicMethod/DynamicMethod.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/FindRootsOlderGeneration/FindRootsOlderGeneration.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/GCPOH/GCPOH.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/GCWhere/GCWhere.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/LineNums/LineNums.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/NestedExceptionTest/NestedExceptionTest.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/Overflow/Overflow.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/ReflectionTest/ReflectionTest.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/SimpleThrow/SimpleThrow.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/VarargPInvokeInteropMD/VarargPInvokeInteropMD.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/WebApp3/WebApp3.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/SOS/SOS.UnitTests/Debuggees/SymbolTestApp/">
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/SymbolTestApp/SymbolTestApp/SymbolTestApp.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/SymbolTestApp/SymbolTestDll/SymbolTestDll.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/SOS/SOS.UnitTests/Debuggees/TaskNestedException/">
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/TaskNestedException/RandomUserLibrary/RandomUserLibrary.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/SOS/SOS.UnitTests/Debuggees/TaskNestedException/TaskNestedException/TaskNestedException.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="src/tests/CommonTestRunner/CommonTestRunner.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/dotnet-counters/DotnetCounters.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/dotnet-trace/DotnetTrace.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/eventpipe/EventPipe.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/EventPipeTracee/EventPipeTracee.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/ExitCodeTracee/ExitCodeTracee.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/Microsoft.Diagnostics.DebugServices.UnitTests/Microsoft.Diagnostics.DebugServices.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/Microsoft.Diagnostics.Monitoring.EventPipe/Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/Microsoft.Diagnostics.Monitoring/Microsoft.Diagnostics.Monitoring.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/Microsoft.FileFormats.UnitTests/Microsoft.FileFormats.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/Microsoft.SymbolStore.UnitTests/Microsoft.SymbolStore.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/StackTracee/StackTracee.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/TestExtension/TestExtension.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/TestHelpers/TestHelpers.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/tests/Tracee/Tracee.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/DbgShim.UnitTests/">
+    <Project Path="src/tests/DbgShim.UnitTests/DbgShim.UnitTests.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/DbgShim.UnitTests/Debuggees/">
+    <Project Path="src/tests/DbgShim.UnitTests/Debuggees/SimpleDebuggee/SimpleDebuggee.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/Tools/">
+    <Project Path="src/Tools/dotnet-counters/dotnet-counters.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/Tools/dotnet-dsrouter/dotnet-dsrouter.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/Tools/dotnet-dump/dotnet-dump.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/Tools/dotnet-gcdump/dotnet-gcdump.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/Tools/dotnet-sos/dotnet-sos.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/Tools/dotnet-stack/dotnet-stack.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/Tools/dotnet-symbol/dotnet-symbol.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+    <Project Path="src/Tools/dotnet-trace/dotnet-trace.csproj">
+      <BuildType Solution="Checked|*" Project="Debug" />
+      <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+      <Build Solution="Checked|*" Project="false" />
+      <Build Solution="RelWithDebInfo|*" Project="false" />
+    </Project>
+  </Folder>
+  <Project Path="build.proj" Type="C#">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/dbgshim/dbgshim.vcxproj">
+    <Platform Project="x64" />
+    <Build Solution="*|x86" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.Diagnostics.DebugServices.Implementation/Microsoft.Diagnostics.DebugServices.Implementation.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.Diagnostics.DebugServices/Microsoft.Diagnostics.DebugServices.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.Diagnostics.ExtensionCommands/Microsoft.Diagnostics.ExtensionCommands.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.Diagnostics.Monitoring.EventPipe/Microsoft.Diagnostics.Monitoring.EventPipe.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.Diagnostics.Monitoring/Microsoft.Diagnostics.Monitoring.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.Diagnostics.Repl/Microsoft.Diagnostics.Repl.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.Diagnostics.WebSocketServer/Microsoft.Diagnostics.WebSocketServer.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.FileFormats/Microsoft.FileFormats.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.SymbolManifestGenerator/Microsoft.SymbolManifestGenerator.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+  <Project Path="src/Microsoft.SymbolStore/Microsoft.SymbolStore.csproj">
+    <BuildType Solution="Checked|*" Project="Debug" />
+    <BuildType Solution="RelWithDebInfo|*" Project="Debug" />
+    <Build Solution="Checked|*" Project="false" />
+    <Build Solution="RelWithDebInfo|*" Project="false" />
+  </Project>
+</Solution>
