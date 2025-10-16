@@ -18,12 +18,12 @@
     $(VersionsPropsPath) - path of Versions.props
 
     From Directory.Build.props:
-    $(ArtifactsRuntimeDir) - artifacts\runtime directory
+    $(ArtifactsDotnetTestDir) - artifacts\dotnet-test directory
   -->
 
   <PropertyGroup>
     <LiveRuntimeDir Condition="'$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizePath('$(LiveRuntimeDir)'))</LiveRuntimeDir>
-    <DotNetInstallRoot>$(ArtifactsRuntimeDir)</DotNetInstallRoot>
+    <DotNetInstallRoot>$(ArtifactsDotnetTestDir)</DotNetInstallRoot>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetArch)' != 'x86'">

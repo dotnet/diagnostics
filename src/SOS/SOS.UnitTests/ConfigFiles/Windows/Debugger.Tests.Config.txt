@@ -9,7 +9,7 @@
 
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <DotNetRoot>$(ArtifactsDir)\runtime</DotNetRoot>
+  <DotNetRoot>$(ArtifactsDir)\dotnet-test</DotNetRoot>
   <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
 
   <ScriptRootDir>$(RepoRootDir)\src\SOS\SOS.UnitTests\Scripts</ScriptRootDir>
