@@ -29,7 +29,12 @@
     $(TargetRid) - the runtime identifier (rid) to against (win-x64, linux-arm64, linux-musl-x64, etc).
     $(Configuration) - configuration to test (Debug, Release). Defaults to Debug.
     $(ArtifactsBinDir) - artifacts\bin directory
+    $(ArtifactsDotnetTestDir) - artifacts\dotnet-test directory
   -->
+
+  <PropertyGroup>
+    <ArtifactsDotnetTestDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-test'))</ArtifactsDotnetTestDir>
+  </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetOS)' == ''">
     <TargetOS>linux</TargetOS>

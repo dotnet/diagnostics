@@ -1,26 +1,25 @@
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <DotNetRoot>$(RepoRootDir)/.dotnet-test</DotNetRoot>
+  <DotNetRoot>$(ArtifactsDir)/dotnet-test</DotNetRoot>
   <Import ConfigFile="$(DotNetRoot)/Debugger.Tests.Versions.txt" />
 
-  <RootBinDir>$(RepoRootDir)/artifacts</RootBinDir>
-  <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
-  <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/dbgshim.unittests_$(Timestamp)</LogDir>
- 
+  <InstallDir>$(ArtifactsDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <LogDir>$(ArtifactsDir)/TestResults/$(TargetConfiguration)/dbgshim.unittests_$(Timestamp)</LogDir>
+
   <TestProduct>ProjectK</TestProduct>
   <DebuggeeSourceRoot>$(RepoRootDir)/src/tests/DbgShim.UnitTests/Debuggees</DebuggeeSourceRoot>
   <DebuggeeMsbuildAuxRoot>$(RepoRootDir)/eng/AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
   <DebuggeeName>SimpleDebuggee</DebuggeeName>
 
-  !-- Use the global.json SDK to build and the test SDK/runtime to run -->
+  <!-- Use the global.json SDK to build and the test SDK/runtime to run -->
   <CliPath>$(DotNetRoot)/dotnet</CliPath>
 
   <!-- Run OpenVirtualProcess tests on Linux -->
   <RunTestsLinux_x64>false</RunTestsLinux_x64>
   <RunTestsLinux_x64 Condition="'$(OS)' == 'linux'">true</RunTestsLinux_x64>
   <RunTestsLinux_x64 Condition="'$(TargetArchitecture)' != 'x64'">false</RunTestsLinux_x64>
-  
+
   <RunTestsLinux_arm64>false</RunTestsLinux_arm64>
   <RunTestsLinux_arm64 Condition="'$(OS)' == 'linux'">true</RunTestsLinux_arm64>
   <RunTestsLinux_arm64 Condition="'$(TargetArchitecture)' != 'arm64'">false</RunTestsLinux_arm64>
@@ -61,28 +60,28 @@
         <Option Condition="'$(TestSingleFile)' == 'true'">
           <Options>
             <Option Condition="'$(RuntimeVersionLatest)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
@@ -94,22 +93,22 @@
             Default
           -->
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
-          <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>
+          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-          <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>
+          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-          <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>
+          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-          <DebuggeeBuildRoot>$(RootBinDir)/Debuggees</DebuggeeBuildRoot>
+          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
         </Option>

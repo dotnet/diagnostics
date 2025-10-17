@@ -9,15 +9,13 @@
 
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <DotNetRoot Condition="'$(TargetArchitecture)' != 'x86'">$(RepoRootDir)\.dotnet-test</DotNetRoot>
-  <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet-test\x86</DotNetRoot>
+  <DotNetRoot>$(ArtifactsDir)\dotnet-test</DotNetRoot>
   <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
 
   <ScriptRootDir>$(RepoRootDir)\src\SOS\SOS.UnitTests\Scripts</ScriptRootDir>
-  <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
-  <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
-  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\sos.unittests_$(Timestamp)</LogDir>
-  <DumpDir>$(RootBinDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
+  <InstallDir>$(ArtifactsDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <LogDir>$(ArtifactsDir)\TestResults\$(TargetConfiguration)\sos.unittests_$(Timestamp)</LogDir>
+  <DumpDir>$(ArtifactsDir)\tmp\$(TargetConfiguration)\dumps</DumpDir>
   <CDBHelperExtension>$(InstallDir)\runcommand.dll</CDBHelperExtension>
   <MicrosoftNETCoreAppPath>$(DotNetRoot)\shared\Microsoft.NETCore.App\</MicrosoftNETCoreAppPath>
 
@@ -41,7 +39,7 @@
   <DebuggeeSourceRoot>$(RepoRootDir)\src\SOS\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
-  <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
+  <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
 
   <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
 
@@ -59,7 +57,7 @@
           <Options>
             <Option Condition="'$(RuntimeVersionLatest)' != ''">
               <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
@@ -67,7 +65,7 @@
             </Option>
             <Option Condition="'$(RuntimeVersionServicing1)' != ''">
               <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
@@ -75,7 +73,7 @@
             </Option>
             <Option Condition="'$(RuntimeVersionServicing2)' != ''">
               <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
@@ -83,7 +81,7 @@
             </Option>
             <Option Condition="'$(RuntimeVersionServicing3)' != ''">
               <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
@@ -120,7 +118,7 @@
           <TestName>SOS.TestExtensions</TestName>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
-          <DotNetDiagnosticExtensions>$(RootBinDir)\bin\TestExtension\$(TargetConfiguration)\netstandard2.0\TestExtension.dll</DotNetDiagnosticExtensions>
+          <DotNetDiagnosticExtensions>$(ArtifactsDir)\bin\TestExtension\$(TargetConfiguration)\netstandard2.0\TestExtension.dll</DotNetDiagnosticExtensions>
           <Options>
             <Option>
               <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
@@ -135,13 +133,13 @@
           -->
         <Option>
           <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
+          <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees</DebuggeeBuildRoot>
           <TestName>SOS.StackAndOtherTests</TestName>
           <Options>
             <Option Condition="'$(TestSingleFile)' == 'true'">
               <Options>
                 <Option Condition="'$(RuntimeVersionLatest)' != ''">
-                  <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
                   <PublishSingleFile>true</PublishSingleFile>
                   <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
                   <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
@@ -149,21 +147,21 @@
                   <BuildType>Nightly</BuildType>
                 </Option>
                 <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-                  <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
                   <PublishSingleFile>true</PublishSingleFile>
                   <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
                   <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
                   <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
                 </Option>
                 <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-                  <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
                   <PublishSingleFile>true</PublishSingleFile>
                   <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
                   <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
                   <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
                 </Option>
                 <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-                  <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
                   <PublishSingleFile>true</PublishSingleFile>
                   <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
                   <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
@@ -202,7 +200,7 @@
               <TestName>SOS.DualRuntimes</TestName>
               <SetSymbolServer>-ms -timeout 10</SetSymbolServer>
               <!-- The assembly path, class and function name of the desktop test code to load/run -->
-              <DesktopTestParameters>$(RootBinDir)\bin\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
+              <DesktopTestParameters>$(ArtifactsDir)\bin\SymbolTestDll\$(TargetConfiguration)\$(DesktopFramework)\SymbolTestDll.dll SymbolTestDll.TestClass ThrowException</DesktopTestParameters>
             </Option>
           </Options>
           <Options>
@@ -211,7 +209,7 @@
             <TestWebApp3_SingleFile Condition="'$(RuntimeVersionLatest)' == ''">false</TestWebApp3_SingleFile>
             <Option Condition="'$(TestWebApp3_SingleFile)' == 'true'">
               <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
               <PublishSingleFile>true</PublishSingleFile>
@@ -270,7 +268,7 @@
       </Options>
       <TestProduct>Desktop</TestProduct>
       <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-      <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
+      <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees</DebuggeeBuildRoot>
       <BuildProjectFramework>$(DesktopFramework)</BuildProjectFramework>
       <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
       <DebugType>full</DebugType>
@@ -285,7 +283,7 @@
 
   <SOSPath>$(InstallDir)\sos.dll</SOSPath>
   <DotNetDumpHost>$(DotNetRoot)\dotnet.exe</DotNetDumpHost>
-  <DotNetDumpPath>$(RootBinDir)\bin\dotnet-dump\$(TargetConfiguration)\$(NetCoreAppMinTargetFramework)\publish\dotnet-dump.dll</DotNetDumpPath>
+  <DotNetDumpPath>$(ArtifactsDir)\bin\dotnet-dump\$(TargetConfiguration)\$(NetCoreAppMinTargetFramework)\publish\dotnet-dump.dll</DotNetDumpPath>
   <DebuggeeDumpOutputRootDir>$(DumpDir)\$(TestProduct)\$(RuntimeFrameworkVersion)\$(BuildProjectFramework)</DebuggeeDumpOutputRootDir>
   <DebuggeeDumpInputRootDir>$(DebuggeeDumpOutputRootDir)</DebuggeeDumpInputRootDir>
 </Configuration>
