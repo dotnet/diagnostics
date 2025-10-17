@@ -18,10 +18,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal partial class CollectLinuxCommandHandler
     {
-        private bool s_stopTracing;
-        private Stopwatch s_stopwatch = new();
-        private LineRewriter s_rewriter;
-        private bool s_printingStatus;
+        private bool stopTracing;
+        private Stopwatch stopwatch = new();
+        private LineRewriter rewriter;
+        private bool printingStatus;
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public CollectLinuxCommandHandler(IConsole console = null)
         {
             Console = console ?? new DefaultConsole(false);
-            s_rewriter = new LineRewriter(Console) { LineToClear = Console.CursorTop - 1 };
+            rewriter = new LineRewriter(Console) { LineToClear = Console.CursorTop - 1 };
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return (int)ReturnCode.PlatformNotSupportedError;
             }
 
-            args.Ct.Register(() => s_stopTracing = true);
+            args.Ct.Register(() => stopTracing = true);
             int ret = (int)ReturnCode.TracingError;
             string scriptPath = null;
             try
@@ -65,11 +65,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     durationTimer.Elapsed += (sender, e) =>
                     {
                         durationTimer.Stop();
-                        s_stopTracing = true;
+                        stopTracing = true;
                     };
                     durationTimer.Start();
                 }
-                s_stopwatch.Start();
+                stopwatch.Start();
                 ret = RecordTraceInvoker(command, (UIntPtr)command.Length, OutputHandler);
             }
             catch (Exception ex)
@@ -248,7 +248,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     if (ot == OutputType.Error)
                     {
                         Console.Error.WriteLine(text);
-                        s_stopTracing = true;
+                        stopTracing = true;
                     }
                     else
                     {
@@ -259,24 +259,24 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             if (ot == OutputType.Progress)
             {
-                if (s_printingStatus)
+                if (printingStatus)
                 {
-                    s_rewriter.RewriteConsoleLine();
+                    rewriter.RewriteConsoleLine();
                 }
                 else
                 {
-                    s_printingStatus = true;
+                    printingStatus = true;
                 }
-                Console.Out.WriteLine($"[{s_stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace.");
+                Console.Out.WriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace.");
                 Console.Out.WriteLine("Press <Enter> or <Ctrl-C> to exit...");
 
                 if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
                 {
-                    s_stopTracing = true;
+                    stopTracing = true;
                 }
             }
 
-            return s_stopTracing ? 1 : 0;
+            return stopTracing ? 1 : 0;
         }
 
         private static readonly Option<string> PerfEventsOption =
