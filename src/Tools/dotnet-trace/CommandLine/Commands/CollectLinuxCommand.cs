@@ -72,6 +72,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 stopwatch.Start();
                 ret = RecordTraceInvoker(command, (UIntPtr)command.Length, OutputHandler);
             }
+            catch (ArgumentException e)
+            {
+                Console.Error.WriteLine($"[ERROR] {e.Message}");
+                ret = (int)ReturnCode.ArgumentError;
+            }
+            catch (CommandLineErrorException e)
+            {
+                Console.Error.WriteLine($"[ERROR] {e.Message}");
+                ret = (int)ReturnCode.TracingError;
+            }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex}");

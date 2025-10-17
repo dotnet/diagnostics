@@ -54,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             MockConsole console = new(200, 30);
             int exitCode = await RunAsync(args, console).ConfigureAwait(true);
             Assert.Equal((int)ReturnCode.Ok, exitCode);
-            console.AssertSanitizedLinesEqual(CollectSanitizer, expectedLines: expectedSubset);
+            console.AssertSanitizedLinesEqual(CollectSanitizer, expectedSubset);
 
             byte[] expected = Encoding.UTF8.GetBytes(ExpectedPayload);
             Assert.Equal(expected, args.EventStream.ToArray());
@@ -66,8 +66,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             MockConsole console = new(200, 30);
             int exitCode = await RunAsync(args, console).ConfigureAwait(true);
-            Assert.Equal((int)ReturnCode.TracingError, exitCode);
-            console.AssertSanitizedLinesEqual(CollectSanitizer, true, expectedException);
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            console.AssertSanitizedLinesEqual(CollectSanitizer, expectedException);
         }
 
         private static async Task<int> RunAsync(CollectArgs config, MockConsole console)
@@ -225,31 +225,31 @@ namespace Microsoft.Diagnostics.Tools.Trace
             yield return new object[]
             {
                 new CollectArgs(profile: new[] { "cpu-sampling" }),
-                new [] { FormatException("The specified profile 'cpu-sampling' does not apply to `dotnet-trace collect`.", "System.ArgumentException") }
+                new [] { FormatException("The specified profile 'cpu-sampling' does not apply to `dotnet-trace collect`.") }
             };
 
             yield return new object[]
             {
                 new CollectArgs(profile: new[] { "unknown" }),
-                new [] { FormatException("Invalid profile name: unknown", "System.ArgumentException") }
+                new [] { FormatException("Invalid profile name: unknown") }
             };
 
             yield return new object[]
             {
                 new CollectArgs(providers: new[] { "Foo:::Bar=0", "Foo:::Bar=1" }),
-                new [] { FormatException($"Provider \"Foo\" is declared multiple times with filter arguments.", "System.ArgumentException") }
+                new [] { FormatException($"Provider \"Foo\" is declared multiple times with filter arguments.") }
             };
 
             yield return new object[]
             {
                 new CollectArgs(clrevents: "unknown"),
-                new [] { FormatException("unknown is not a valid CLR event keyword", "System.ArgumentException") }
+                new [] { FormatException("unknown is not a valid CLR event keyword") }
             };
 
             yield return new object[]
             {
                 new CollectArgs(clrevents: "gc", clreventlevel: "unknown"),
-                new [] { FormatException("Unknown EventLevel: unknown", "System.ArgumentException") }
+                new [] { FormatException("Unknown EventLevel: unknown") }
             };
         }
 
@@ -277,6 +277,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return string.Format("{0, -80}", display) + enabledBy;
         }
 
-        private static string FormatException(string message, string exceptionType) => $"[ERROR] {exceptionType}: {message}";
+        private static string FormatException(string message) => $"[ERROR] {message}";
     }
 }

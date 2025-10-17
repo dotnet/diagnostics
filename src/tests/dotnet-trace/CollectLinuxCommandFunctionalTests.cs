@@ -47,12 +47,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             if (OperatingSystem.IsLinux())
             {
                 Assert.Equal((int)ReturnCode.Ok, exitCode);
-                console.AssertSanitizedLinesEqual(CollectLinuxSanitizer, expectedLines: expectedLines);
+                console.AssertSanitizedLinesEqual(CollectLinuxSanitizer, expectedLines);
             }
             else
             {
                 Assert.Equal((int)ReturnCode.PlatformNotSupportedError, exitCode);
-                console.AssertSanitizedLinesEqual(null, expectedLines: new string[] {
+                console.AssertSanitizedLinesEqual(null, new string[] {
                     "The collect-linux command is only supported on Linux.",
                 });
             }
@@ -66,13 +66,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int exitCode = Run(testArgs, console);
             if (OperatingSystem.IsLinux())
             {
-                Assert.Equal((int)ReturnCode.TracingError, exitCode);
-                console.AssertSanitizedLinesEqual(null, true, expectedLines: expectedException);
+                Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+                console.AssertSanitizedLinesEqual(null, expectedException);
             }
             else
             {
                 Assert.Equal((int)ReturnCode.PlatformNotSupportedError, exitCode);
-                console.AssertSanitizedLinesEqual(null, expectedLines: new string[] {
+                console.AssertSanitizedLinesEqual(null, new string[] {
                     "The collect-linux command is only supported on Linux.",
                 });
             }
@@ -197,31 +197,31 @@ namespace Microsoft.Diagnostics.Tools.Trace
             yield return new object[]
             {
                 TestArgs(profile: new[] { "dotnet-sampled-thread-time" }),
-                new [] { FormatException("The specified profile 'dotnet-sampled-thread-time' does not apply to `dotnet-trace collect-linux`.", "System.ArgumentException") }
+                new [] { FormatException("The specified profile 'dotnet-sampled-thread-time' does not apply to `dotnet-trace collect-linux`.") }
             };
 
             yield return new object[]
             {
                 TestArgs(profile: new[] { "unknown" }),
-                new [] { FormatException("Invalid profile name: unknown", "System.ArgumentException") }
+                new [] { FormatException("Invalid profile name: unknown") }
             };
 
             yield return new object[]
             {
                 TestArgs(providers: new[] { "Foo:::Bar=0", "Foo:::Bar=1" }),
-                new [] { FormatException($"Provider \"Foo\" is declared multiple times with filter arguments.", "System.ArgumentException") }
+                new [] { FormatException($"Provider \"Foo\" is declared multiple times with filter arguments.") }
             };
 
             yield return new object[]
             {
                 TestArgs(clrEvents: "unknown"),
-                new [] { FormatException("unknown is not a valid CLR event keyword", "System.ArgumentException") }
+                new [] { FormatException("unknown is not a valid CLR event keyword") }
             };
 
             yield return new object[]
             {
                 TestArgs(clrEvents: "gc", clrEventLevel: "unknown"),
-                new [] { FormatException("Unknown EventLevel: unknown", "System.ArgumentException") }
+                new [] { FormatException("Unknown EventLevel: unknown") }
             };
         }
 
@@ -236,7 +236,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                              string.Format("{0, -8}", $"{levelName}({levelValue})");
             return string.Format("{0, -80}", display) + enabledBy;
         }
-        private static string FormatException(string message, string exceptionType) => $"[ERROR] {exceptionType}: {message}";
+        private static string FormatException(string message) => $"[ERROR] {message}";
         private static string DefaultOutputFile => $"Output File    : {Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar}trace.nettrace";
         private static readonly string[] CommonTail = [
             DefaultOutputFile,

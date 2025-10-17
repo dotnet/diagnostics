@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.Tests.Common
             }
         }
 
-        public void AssertSanitizedLinesEqual(Func<string[], string[]> sanitizer, bool ignorePastExpected = false, params string[] expectedLines)
+        public void AssertSanitizedLinesEqual(Func<string[], string[]> sanitizer, params string[] expectedLines)
         {
             string[] actualLines = Lines;
             if (sanitizer is not null)
@@ -178,12 +178,9 @@ namespace Microsoft.Diagnostics.Tests.Common
                         $"Line {i,2} Actual  : {actualLines[i]}");
                 }
             }
-            if (!ignorePastExpected)
+            for (int i = expectedLines.Length; i < actualLines.Length; i++)
             {
-                for (int i = expectedLines.Length; i < actualLines.Length; i++)
-                {
-                    Assert.True(string.IsNullOrEmpty(actualLines[i]), $"Actual line #{i} beyond expected lines is not empty: {actualLines[i]}");
-                }
+                Assert.True(string.IsNullOrEmpty(actualLines[i]), $"Actual line #{i} beyond expected lines is not empty: {actualLines[i]}");
             }
         }
     }

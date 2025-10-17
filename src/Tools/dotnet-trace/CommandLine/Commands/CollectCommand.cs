@@ -474,6 +474,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
             }
+            catch (ArgumentException e)
+            {
+                Console.Error.WriteLine($"[ERROR] {e.Message}");
+                collectionStopped = true;
+                ret = (int)ReturnCode.ArgumentError;
+            }
             catch (CommandLineErrorException e)
             {
                 Console.Error.WriteLine($"[ERROR] {e.Message}");
