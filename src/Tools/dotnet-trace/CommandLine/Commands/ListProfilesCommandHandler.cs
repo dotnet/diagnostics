@@ -14,13 +14,30 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     internal sealed class ListProfilesCommandHandler
     {
+        private static long defaultKeyword =    0x1 |           // GC
+                                                0x4 |           // AssemblyLoader
+                                                0x8 |           // Loader
+                                                0x10 |          // JIT
+                                                0x8000 |        // Exceptions
+                                                0x10000 |       // Threading
+                                                0x20000 |       // JittedMethodILToNativeMap
+                                                0x1000000000;   // Compilation
+
+        private static string dotnetCommonDescription = """
+                                                        Lightweight .NET runtime diagnostics designed to stay low overhead.
+                                                        Includes GC, AssemblyLoader, Loader, JIT, Exceptions, Threading, JittedMethodILToNativeMap, and Compilation events
+                                                        Equivalent to --providers "Microsoft-Windows-DotNETRuntime:0x100003801D:4".
+                                                        """;
+
         public static int GetProfiles()
         {
             try
             {
-                foreach (Profile profile in DotNETRuntimeProfiles)
+                Console.Out.WriteLine("dotnet-trace profiles:");
+                int profileNameWidth = ProfileNamesMaxWidth(TraceProfiles);
+                foreach (Profile profile in TraceProfiles)
                 {
-                    Console.Out.WriteLine($"\t{profile.Name,-16} - {profile.Description}");
+                    PrintProfile(profile, profileNameWidth);
                 }
 
                 return 0;
@@ -42,14 +59,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return listProfilesCommand;
         }
 
-        internal static IEnumerable<Profile> DotNETRuntimeProfiles { get; } = new[] {
+        internal static IEnumerable<Profile> TraceProfiles { get; } = new[] {
             new Profile(
-                "cpu-sampling",
+                "dotnet-common",
+                new EventPipeProvider[] {
+                    new("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, defaultKeyword)
+                },
+                dotnetCommonDescription),
+            new Profile(
+                "dotnet-sampled-thread-time",
                 new EventPipeProvider[] {
                     new("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
-                    new("Microsoft-Windows-DotNETRuntime", EventLevel.Informational, (long)ClrTraceEventParser.Keywords.Default)
                 },
-                "Useful for tracking CPU usage and general .NET runtime information. This is the default option if no profile or providers are specified."),
+                "Samples .NET thread stacks (~100 Hz) toestimate how much wall clock time code is using.") { VerbExclusivity = "collect" },
             new Profile(
                 "gc-verbose",
                 new EventPipeProvider[] {
@@ -101,8 +123,54 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                     )
                 },
-                "Captures ADO.NET and Entity Framework database commands")
+                "Captures ADO.NET and Entity Framework database commands"),
+            new Profile(
+                "cpu-sampling",
+                providers: Array.Empty<EventPipeProvider>(),
+                description: "Kernel CPU sampling events for measuring CPU usage.") { VerbExclusivity = "collect-linux", CollectLinuxArgs = "--on-cpu" },
+            new Profile(
+                "thread-time",
+                providers: Array.Empty<EventPipeProvider>(),
+                description: "Kernel thread context switch events for measuring CPU usage and wall clock time") { VerbExclusivity = "collect-linux", CollectLinuxArgs = "--off-cpu" },
         };
+
+        private static int ProfileNamesMaxWidth(IEnumerable<Profile> profiles)
+        {
+            int maxWidth = 0;
+            foreach (Profile profile in profiles)
+            {
+                int profileNameWidth = profile.Name.Length;
+                if (!string.IsNullOrEmpty(profile.VerbExclusivity))
+                {
+                    profileNameWidth = $"{profile.Name} ({profile.VerbExclusivity})".Length;
+                }
+                if (profileNameWidth > maxWidth)
+                {
+                    maxWidth = profileNameWidth;
+                }
+            }
+
+            return maxWidth;
+        }
+
+        private static void PrintProfile(Profile profile, int nameColumnWidth)
+        {
+            string[] descriptionLines = profile.Description.Replace("\r\n", "\n").Split('\n');
+
+            string profileColumn = $"{profile.Name}";
+            if (!string.IsNullOrEmpty(profile.VerbExclusivity))
+            {
+                profileColumn = $"{profile.Name} ({profile.VerbExclusivity})";
+            }
+
+            Console.Out.WriteLine($"\t{profileColumn.PadRight(nameColumnWidth)} - {descriptionLines[0]}");
+
+            string continuationPrefix = $"\t{new string(' ', nameColumnWidth)}   ";
+            for (int i = 1; i < descriptionLines.Length; i++)
+            {
+                Console.Out.WriteLine(continuationPrefix + descriptionLines[i]);
+            }
+        }
 
         /// <summary>
         /// Keywords for DiagnosticSourceEventSource provider
