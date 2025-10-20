@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools;
 using Microsoft.Diagnostics.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace
@@ -100,14 +101,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (traceProfile == null)
                 {
-                    throw new ArgumentException($"Invalid profile name: {profile}");
+                    throw new CommandLineErrorException($"Invalid profile name: {profile}");
                 }
 
                 if (!string.IsNullOrEmpty(verbExclusivity) &&
                     !string.IsNullOrEmpty(traceProfile.VerbExclusivity) &&
                     !string.Equals(traceProfile.VerbExclusivity, verbExclusivity, StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new ArgumentException($"The specified profile '{traceProfile.Name}' does not apply to `dotnet-trace {verbExclusivity}`.");
+                    throw new CommandLineErrorException($"The specified profile '{traceProfile.Name}' does not apply to `dotnet-trace {verbExclusivity}`.");
                 }
 
                 IEnumerable<EventPipeProvider> profileProviders = traceProfile.Providers;
@@ -157,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             if (providerConfigA.Arguments != null && providerConfigB.Arguments != null)
             {
-                throw new ArgumentException($"Provider \"{providerConfigA.Name}\" is declared multiple times with filter arguments.");
+                throw new CommandLineErrorException($"Provider \"{providerConfigA.Name}\" is declared multiple times with filter arguments.");
             }
 
             return new EventPipeProvider(providerConfigA.Name, level, providerConfigA.Keywords | providerConfigB.Keywords, providerConfigA.Arguments ?? providerConfigB.Arguments);
@@ -217,7 +218,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
                 else
                 {
-                    throw new ArgumentException($"{clrevents[i]} is not a valid CLR event keyword");
+                    throw new CommandLineErrorException($"{clrevents[i]} is not a valid CLR event keyword");
                 }
             }
 
@@ -255,7 +256,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     case "warning":
                         return EventLevel.Warning;
                     default:
-                        throw new ArgumentException($"Unknown EventLevel: {token}");
+                        throw new CommandLineErrorException($"Unknown EventLevel: {token}");
                 }
             }
         }
@@ -280,7 +281,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             if (string.IsNullOrWhiteSpace(providerName))
             {
-                throw new ArgumentException("Provider name was not specified.");
+                throw new CommandLineErrorException("Provider name was not specified.");
             }
 
             // Keywords

@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int exitCode = Run(testArgs, console);
             if (OperatingSystem.IsLinux())
             {
-                Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+                Assert.Equal((int)ReturnCode.TracingError, exitCode);
                 console.AssertSanitizedLinesEqual(null, expectedException);
             }
             else

@@ -62,7 +62,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     break;
                 default:
                     // Validation happened way before this, so we shoud never reach this...
-                    throw new ArgumentException($"Invalid TraceFileFormat \"{format}\"");
+                    throw new CommandLineErrorException($"Invalid TraceFileFormat \"{format}\"");
             }
             stdOut.WriteLine("Conversion complete");
         }
@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         break;
                     default:
                         // we should never get here
-                        throw new ArgumentException($"Invalid TraceFileFormat \"{format}\"");
+                        throw new CommandLineErrorException($"Invalid TraceFileFormat \"{format}\"");
                 }
             }
 

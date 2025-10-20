@@ -72,11 +72,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 stopwatch.Start();
                 ret = RecordTraceInvoker(command, (UIntPtr)command.Length, OutputHandler);
             }
-            catch (ArgumentException e)
-            {
-                Console.Error.WriteLine($"[ERROR] {e.Message}");
-                ret = (int)ReturnCode.ArgumentError;
-            }
             catch (CommandLineErrorException e)
             {
                 Console.Error.WriteLine($"[ERROR] {e.Message}");
@@ -195,7 +190,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 string[] split = perfEvent.Split(':', 2, StringSplitOptions.TrimEntries);
                 if (split.Length != 2 || string.IsNullOrEmpty(split[0]) || string.IsNullOrEmpty(split[1]))
                 {
-                    throw new ArgumentException($"Invalid perf event specification '{perfEvent}'. Expected format 'provider:event'.");
+                    throw new CommandLineErrorException($"Invalid perf event specification '{perfEvent}'. Expected format 'provider:event'.");
                 }
 
                 string perfProvider = split[0];
