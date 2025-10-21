@@ -197,31 +197,31 @@ namespace Microsoft.Diagnostics.Tools.Trace
             yield return new object[]
             {
                 TestArgs(profile: new[] { "dotnet-sampled-thread-time" }),
-                new [] { FormatException("The specified profile 'dotnet-sampled-thread-time' does not apply to `dotnet-trace collect-linux`.") }
+                FormatException("The specified profile 'dotnet-sampled-thread-time' does not apply to `dotnet-trace collect-linux`.")
             };
 
             yield return new object[]
             {
                 TestArgs(profile: new[] { "unknown" }),
-                new [] { FormatException("Invalid profile name: unknown") }
+                FormatException("Invalid profile name: unknown")
             };
 
             yield return new object[]
             {
                 TestArgs(providers: new[] { "Foo:::Bar=0", "Foo:::Bar=1" }),
-                new [] { FormatException($"Provider \"Foo\" is declared multiple times with filter arguments.") }
+                FormatException($"Provider \"Foo\" is declared multiple times with filter arguments.")
             };
 
             yield return new object[]
             {
                 TestArgs(clrEvents: "unknown"),
-                new [] { FormatException("unknown is not a valid CLR event keyword") }
+                FormatException("unknown is not a valid CLR event keyword")
             };
 
             yield return new object[]
             {
                 TestArgs(clrEvents: "gc", clrEventLevel: "unknown"),
-                new [] { FormatException("Unknown EventLevel: unknown") }
+                FormatException("Unknown EventLevel: unknown")
             };
         }
 
@@ -236,13 +236,23 @@ namespace Microsoft.Diagnostics.Tools.Trace
                              string.Format("{0, -8}", $"{levelName}({levelValue})");
             return string.Format("{0, -80}", display) + enabledBy;
         }
-        private static string FormatException(string message) => $"[ERROR] {message}";
+        private static string[] FormatException(string message)
+        {
+            List<string> result = new();
+            result.AddRange(PreviewMessages);
+            result.Add($"[ERROR] {message}");
+            return result.ToArray();
+        }
         private static string DefaultOutputFile => $"Output File    : {Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar}trace.nettrace";
         private static readonly string[] CommonTail = [
             DefaultOutputFile,
             "",
             "[dd:hh:mm:ss]\tRecording trace.",
             "Press <Enter> or <Ctrl-C> to exit...",
+        ];
+        private static string[] PreviewMessages = [
+            "The `collect-linux` verb is in preview. Some usage scenarios may not yet be supported, and some trace parsers may not yet support NetTrace V6.",
+            "For any bugs or unexpected behaviors, please open an issue at https://github.com/dotnet/diagnostics/issues.",
         ];
 
         private static string[] ExpectProvidersAndLinux(string[] dotnetProviders, string[] linuxPerfEvents)
@@ -251,6 +261,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static string[] ExpectProvidersAndLinuxWithMessages(string[] messages, string[] dotnetProviders, string[] linuxPerfEvents)
         {
             List<string> result = new();
+
+            result.AddRange(PreviewMessages);
 
             if (messages.Length > 0)
             {
