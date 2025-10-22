@@ -35,12 +35,12 @@ Build.cmd
 - Build configuration: `build.proj`, `Directory.Build.props`, `Directory.Build.targets`
 
 ### Common Build Options
-- `--configuration <Debug|Release>`: Build configuration (default: Debug)
-- `--architecture <x64|x86|arm|arm64>`: Target architecture
-- `--restore`: Restore dependencies before building
-- `--build`: Build the repository
-- `--rebuild`: Clean and rebuild
-- `--test`: Run tests after building
+- `-configuration <Debug|Release>`: Build configuration (default: Debug)
+- `-architecture <x64|x86|arm|arm64>`: Target architecture
+- `-restore`: Restore dependencies before building
+- `-build`: Build the repository
+- `-rebuild`: Clean and rebuild
+- `-test`: Run tests after building
 
 ## Testing
 
