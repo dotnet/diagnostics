@@ -115,7 +115,7 @@ Native code follows similar conventions:
 
 ### General Guidelines
 
-1. **Minimal changes**: Make the smallest possible changes to address the issue
+1. **Surgical changes**: Make the smallest possible changes to address the issue. Focus on solving a single problem without addressing unrelated concerns. Balance minimal code changes with preserving overall code clarity and simplicity
 2. **Preserve existing behavior**: Don't break working functionality unless explicitly required
 3. **Follow existing patterns**: Match the style and structure of surrounding code
 4. **Test thoroughly**: Run builds and tests to verify changes
