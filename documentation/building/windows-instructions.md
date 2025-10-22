@@ -108,3 +108,13 @@ To test the resulting SOS:
 ```bat
 test.cmd
 ```
+
+## Loading solution file
+
+For a better dev inner loop experience, load `build.sln` at the root of the repository into either VS or VSCode.
+
+This file is generated from the `build.proj` traversal project and can be regenerated/updated using:
+
+```pwsh
+./eng/generate-sln.ps1
+```

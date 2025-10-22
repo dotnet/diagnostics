@@ -16,19 +16,21 @@
     $(RepoRoot) - the root of the diagnostics repo
     $(RepositoryEngineeringDir) - the "eng" directory
     $(VersionsPropsPath) - path of Versions.props
+
+    From Directory.Build.props:
+    $(ArtifactsDotnetTestDir) - artifacts\dotnet-test directory
   -->
 
   <PropertyGroup>
     <LiveRuntimeDir Condition="'$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizePath('$(LiveRuntimeDir)'))</LiveRuntimeDir>
+    <DotNetInstallRoot>$(ArtifactsDotnetTestDir)</DotNetInstallRoot>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetArch)' != 'x86'">
-    <DotNetInstallRoot>$(RepoRoot).dotnet-test\</DotNetInstallRoot>
     <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE</RegistryRoot>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetArch)' == 'x86'">
-    <DotNetInstallRoot>$(RepoRoot).dotnet-test\x86\</DotNetInstallRoot>
     <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node</RegistryRoot>
   </PropertyGroup>
 
