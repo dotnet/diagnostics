@@ -88,7 +88,7 @@ The test script runs all tests in the repository. Test projects are located in t
 
 ### C# Code Style
 
-The repository follows standard .NET coding conventions:
+The repository follows standard .NET coding conventions defined in the `.editorconfig` file at the root. This is a **must** for C# code. Ensure your changes conform to these settings:
 
 1. **Indentation**: 4 spaces (no tabs)
 2. **Line endings**: LF on Linux/macOS, CRLF on Windows
@@ -98,14 +98,10 @@ The repository follows standard .NET coding conventions:
    - camelCase for local variables, parameters, private fields
    - `_camelCase` for private instance fields (with underscore prefix)
 5. **File organization**: One type per file, filename matches type name
-
-### EditorConfig
-
-The repository includes a `.editorconfig` file at the root that defines coding standards. Ensure your changes conform to these settings:
-- 4 spaces for indentation
-- Trim trailing whitespace
-- Insert final newline
-- Follow C# new line and indentation preferences
+6. **Additional EditorConfig rules**:
+   - Trim trailing whitespace
+   - Insert final newline
+   - Follow C# new line and indentation preferences
 
 ### Native Code (C/C++)
 
@@ -148,6 +144,35 @@ Native code follows similar conventions:
 2. **Test**: Run relevant tests to verify functionality
 3. **Code style**: Verify changes match the repository's coding standards
 4. **Documentation**: Update if your changes affect public APIs or behavior
+
+## Development Workflow
+
+### Typical Workflow
+
+1. **Create a branch**: Create a feature branch from `main` with a descriptive name
+2. **Make changes**: Implement your changes following the coding standards
+3. **Build locally**: Run `./build.sh` (or `Build.cmd` on Windows) to ensure the code compiles
+4. **Run tests**: Execute `./test.sh` (or `Test.cmd` on Windows) to verify functionality
+5. **Commit changes**: Make small, logical commits with clear commit messages
+6. **Push to remote**: Push your branch to the remote repository
+7. **Create pull request**: Open a PR with a clear description of your changes
+8. **Address feedback**: Respond to review comments and make necessary updates
+9. **Merge**: Once approved, the PR will be merged to `main`
+
+### Iterative Development
+
+- Make small, incremental changes rather than large, sweeping modifications
+- Test frequently to catch issues early
+- Commit logical units of work separately
+- Keep the build and tests passing at each commit when possible
+
+### Pull Request Guidelines
+
+- **Title**: Use a clear, descriptive title that summarizes the change
+- **Description**: Explain what changed, why it changed, and how to test it
+- **Link issues**: Reference related issues using "Fixes #1234" or "Addresses #1234"
+- **Keep focused**: Each PR should address a single concern or feature
+- **Respond promptly**: Address review feedback in a timely manner
 
 ## Common Patterns
 
@@ -250,7 +275,6 @@ start-vs.cmd
 - [Building on Windows](documentation/building/windows-instructions.md)
 - [Building on macOS](documentation/building/osx-instructions.md)
 - [FAQ](documentation/FAQ.md)
-- [.NET Runtime Repository](https://github.com/dotnet/runtime)
 
 ## Questions and Support
 
