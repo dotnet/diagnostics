@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public CollectLinuxCommandHandler(IConsole console = null)
         {
             Console = console ?? new DefaultConsole(false);
-            rewriter = new LineRewriter(Console) { LineToClear = Console.CursorTop - 1 };
+            rewriter = new LineRewriter(Console);
         }
 
         /// <summary>
@@ -274,6 +274,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 else
                 {
                     printingStatus = true;
+                    rewriter.LineToClear = Console.CursorTop - 1;
                 }
                 Console.Out.WriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace.");
                 Console.Out.WriteLine("Press <Enter> or <Ctrl-C> to exit...");
