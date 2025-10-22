@@ -51,8 +51,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return (int)ReturnCode.PlatformNotSupportedError;
             }
 
-            Console.WriteLine("The `collect-linux` verb is in preview. Some usage scenarios may not yet be supported, and some trace parsers may not yet support NetTrace V6.");
-            Console.WriteLine("For any bugs or unexpected behaviors, please open an issue at https://github.com/dotnet/diagnostics/issues.");
+            Console.WriteLine("==========================================================================================");
+            Console.WriteLine("The collect-linux verb is in preview. Some usage scenarios may not yet be supported,");
+            Console.WriteLine("and some trace parsers may not yet support NetTrace V6. For any bugs or unexpected");
+            Console.WriteLine("behaviors, please open an issue at https://github.com/dotnet/diagnostics/issues.");
+            Console.WriteLine("==========================================================================================");
 
             args.Ct.Register(() => stopTracing = true);
             int ret = (int)ReturnCode.TracingError;

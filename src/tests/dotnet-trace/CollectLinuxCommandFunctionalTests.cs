@@ -251,9 +251,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             "Press <Enter> or <Ctrl-C> to exit...",
         ];
         private static string[] PreviewMessages = [
-            "The `collect-linux` verb is in preview. Some usage scenarios may not yet be supported, and some trace parsers may not yet support NetTrace V6.",
-            "For any bugs or unexpected behaviors, please open an issue at https://github.com/dotnet/diagnostics/issues.",
-        ];
+            "==========================================================================================",
+            "The collect-linux verb is in preview. Some usage scenarios may not yet be supported,",
+            "and some trace parsers may not yet support NetTrace V6. For any bugs or unexpected",
+            "behaviors, please open an issue at https://github.com/dotnet/diagnostics/issues.",
+            "=========================================================================================="
+            ];
 
         private static string[] ExpectProvidersAndLinux(string[] dotnetProviders, string[] linuxPerfEvents)
             => ExpectProvidersAndLinuxWithMessages(Array.Empty<string>(), dotnetProviders, linuxPerfEvents);
