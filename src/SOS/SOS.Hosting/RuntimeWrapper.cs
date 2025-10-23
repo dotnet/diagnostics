@@ -158,10 +158,13 @@ namespace SOS.Hosting
             }
             if (_dacHandle != IntPtr.Zero)
             {
+                // Previously, the DAC was freed here, but as we transition to the cDAC which uses NativeAOT,
+                // it is no longer possible to free the DAC library when it is using the shimmed cDAC.
                 _dacHandle = IntPtr.Zero;
             }
             if (_cdacHandle != IntPtr.Zero)
             {
+                // cDAC can not be freed because it is a NativeAOT dll.
                 _cdacHandle = IntPtr.Zero;
             }
             if (_dbiHandle != IntPtr.Zero)
