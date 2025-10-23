@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="stoppingEventPayloadFilter">A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.</param>
         /// <param name="rundown">Collect rundown events.</param>
         /// <returns></returns>
-        internal async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string providers, string profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
+        internal async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string[] providers, string[] profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -119,37 +119,35 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
                 {
-                    ConsoleWriteLine("No profile or providers specified, defaulting to trace profile 'cpu-sampling'");
-                    profile = "cpu-sampling";
+                    ConsoleWriteLine("No profile or providers specified, defaulting to trace profiles 'dotnet-common' + 'dotnet-sampled-thread-time'.");
+                    profile = new[] { "dotnet-common", "dotnet-sampled-thread-time" };
                 }
 
-                Dictionary<string, string> enabledBy = new();
-
-                List<EventPipeProvider> providerCollection = Extensions.ToProviders(providers);
-                foreach (EventPipeProvider providerCollectionProvider in providerCollection)
+                List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(providers, clrevents, clreventlevel, profile, !IsQuiet, "collect", Console);
+                if (providerCollection.Count <= 0)
                 {
-                    enabledBy[providerCollectionProvider.Name] = "--providers ";
+                    Console.Error.WriteLine("No providers were specified to start a trace.");
+                    return (int)ReturnCode.ArgumentError;
                 }
 
-                long rundownKeyword = EventPipeSession.DefaultRundownKeyword;
+                long rundownKeyword = 0;
                 RetryStrategy retryStrategy = RetryStrategy.NothingToRetry;
-
-                if (profile.Length != 0)
+                foreach (string prof in profile)
                 {
-                    Profile selectedProfile = ListProfilesCommandHandler.DotNETRuntimeProfiles
-                        .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
-                    if (selectedProfile == null)
+                    // Profiles are already validated in ComputeProviderConfig
+                    Profile selectedProfile = ListProfilesCommandHandler.TraceProfiles
+                        .FirstOrDefault(p => p.Name.Equals(prof, StringComparison.OrdinalIgnoreCase));
+
+                    rundownKeyword |= selectedProfile.RundownKeyword;
+                    if (selectedProfile.RetryStrategy > retryStrategy)
                     {
-                        Console.Error.WriteLine($"Invalid profile name: {profile}");
-                        return (int)ReturnCode.ArgumentError;
+                        retryStrategy = selectedProfile.RetryStrategy;
                     }
-
-                    rundownKeyword = selectedProfile.RundownKeyword;
-                    retryStrategy = selectedProfile.RetryStrategy;
-
-                    Profile.MergeProfileAndProviders(selectedProfile, providerCollection, enabledBy);
                 }
-
+                if (rundownKeyword == 0)
+                {
+                    rundownKeyword = EventPipeSession.DefaultRundownKeyword;
+                }
                 if (rundown.HasValue)
                 {
                     if (rundown.Value)
@@ -163,31 +161,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         retryStrategy = RetryStrategy.NothingToRetry;
                     }
                 }
-
-                // Parse --clrevents parameter
-                if (clrevents.Length != 0)
-                {
-                    // Ignore --clrevents if CLR event provider was already specified via --profile or --providers command.
-                    if (enabledBy.ContainsKey(Extensions.CLREventProviderName))
-                    {
-                        ConsoleWriteLine($"The argument --clrevents {clrevents} will be ignored because the CLR provider was configured via either --profile or --providers command.");
-                    }
-                    else
-                    {
-                        EventPipeProvider clrProvider = Extensions.ToCLREventPipeProvider(clrevents, clreventlevel);
-                        providerCollection.Add(clrProvider);
-                        enabledBy[Extensions.CLREventProviderName] = "--clrevents";
-                    }
-                }
-
-
-                if (providerCollection.Count <= 0)
-                {
-                    Console.Error.WriteLine("No providers were specified to start a trace.");
-                    return (int)ReturnCode.ArgumentError;
-                }
-
-                PrintProviders(providerCollection, enabledBy);
 
                 // Validate and parse stoppingEvent parameters: stoppingEventProviderName, stoppingEventEventName, stoppingEventPayloadFilter
 
@@ -272,7 +245,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                     }
 
-                    if (string.Equals(output.Name, DefaultTraceName, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
                     {
                         DateTime now = DateTime.Now;
                         FileInfo processMainModuleFileInfo = new(processMainModuleFileName);
@@ -374,8 +347,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             {
                                 ConsoleWriteLine($"Trace Duration : {duration:dd\\:hh\\:mm\\:ss}");
                             }
-
-                            ConsoleWriteLine();
                             ConsoleWriteLine();
 
                             EventMonitor eventMonitor = null;
@@ -418,10 +389,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             }
 
                             FileInfo fileInfo = new(output.FullName);
+                            bool wroteStatus = false;
                             Action printStatus = () => {
                                 if (printStatusOverTime && rewriter.IsRewriteConsoleLineSupported)
                                 {
-                                    rewriter?.RewriteConsoleLine();
+                                    if (wroteStatus)
+                                    {
+                                        rewriter?.RewriteConsoleLine();
+                                    }
+                                    else
+                                    {
+                                        // First time writing status, so don't rewrite console yet.
+                                        wroteStatus = true;
+                                    }
                                     fileInfo.Refresh();
                                     ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(fileInfo.Length)}");
                                     ConsoleWriteLine("Press <Enter> or <Ctrl+C> to exit...");
@@ -536,20 +516,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return ret;
         }
 
-        private void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, string> enabledBy)
-        {
-            ConsoleWriteLine("");
-            ConsoleWriteLine(string.Format("{0, -40}", "Provider Name") + string.Format("{0, -20}", "Keywords") +
-                string.Format("{0, -20}", "Level") + "Enabled By");  // +4 is for the tab
-            foreach (EventPipeProvider provider in providers)
-            {
-                ConsoleWriteLine(string.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + $"{enabledBy[provider.Name]}");
-            }
-            ConsoleWriteLine("");
-        }
-        private static string GetProviderDisplayString(EventPipeProvider provider) =>
-            string.Format("{0, -40}", provider.Name) + string.Format("0x{0, -18}", $"{provider.Keywords:X16}") + string.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
-
         private static string GetSize(long length)
         {
             if (length > 1e9)
@@ -577,13 +543,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 // Options
                 CommonOptions.ProcessIdOption,
                 CircularBufferOption,
-                OutputPathOption,
-                ProvidersOption,
-                ProfileOption,
+                CommonOptions.OutputPathOption,
+                CommonOptions.ProvidersOption,
+                CommonOptions.ProfileOption,
                 CommonOptions.FormatOption,
-                DurationOption,
-                CLREventsOption,
-                CLREventLevelOption,
+                CommonOptions.DurationOption,
+                CommonOptions.CLREventsOption,
+                CommonOptions.CLREventLevelOption,
                 CommonOptions.NameOption,
                 DiagnosticPortOption,
                 ShowChildIOOption,
@@ -600,17 +566,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
             collectCommand.SetAction((parseResult, ct) =>
             {
                 CollectCommandHandler handler = new();
+                string providersValue = parseResult.GetValue(CommonOptions.ProvidersOption) ?? string.Empty;
+                string profileValue = parseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty;
+
                 return handler.Collect(ct,
                                        cliConfig: parseResult.Configuration,
                                        processId: parseResult.GetValue(CommonOptions.ProcessIdOption),
-                                       output: parseResult.GetValue(OutputPathOption),
+                                       output: parseResult.GetValue(CommonOptions.OutputPathOption),
                                        buffersize: parseResult.GetValue(CircularBufferOption),
-                                       providers: parseResult.GetValue(ProvidersOption) ?? string.Empty,
-                                       profile: parseResult.GetValue(ProfileOption) ?? string.Empty,
+                                       providers: providersValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                                       profile: profileValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                                        format: parseResult.GetValue(CommonOptions.FormatOption),
-                                       duration: parseResult.GetValue(DurationOption),
-                                       clrevents: parseResult.GetValue(CLREventsOption) ?? string.Empty,
-                                       clreventlevel: parseResult.GetValue(CLREventLevelOption) ?? string.Empty,
+                                       duration: parseResult.GetValue(CommonOptions.DurationOption),
+                                       clrevents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
+                                       clreventlevel: parseResult.GetValue(CommonOptions.CLREventLevelOption) ?? string.Empty,
                                        name: parseResult.GetValue(CommonOptions.NameOption),
                                        diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
                                        showchildio: parseResult.GetValue(ShowChildIOOption),
@@ -632,53 +601,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Description = $"Sets the size of the in-memory circular buffer in megabytes. Default {DefaultCircularBufferSizeInMB} MB.",
                 DefaultValueFactory = _ => DefaultCircularBufferSizeInMB,
-            };
-
-        public static string DefaultTraceName => "default";
-
-        private static readonly Option<FileInfo> OutputPathOption =
-            new("--output", "-o")
-            {
-                Description = $"The output path for the collected trace data. If not specified it defaults to '<appname>_<yyyyMMdd>_<HHmmss>.nettrace', e.g., 'myapp_20210315_111514.nettrace'.",
-                DefaultValueFactory = _ => new FileInfo(DefaultTraceName)
-            };
-
-        private static readonly Option<string> ProvidersOption =
-            new("--providers")
-            {
-                Description = @"A comma delimitted list of EventPipe providers to be enabled. This is in the form 'Provider[,Provider]'," +
-                             @"where Provider is in the form: 'KnownProviderName[:[Flags][:[Level][:[KeyValueArgs]]]]', and KeyValueArgs is in the form: " +
-                             @"'[key1=value1][;key2=value2]'.  Values in KeyValueArgs that contain ';' or '=' characters need to be surrounded by '""', " +
-                             @"e.g., FilterAndPayloadSpecs=""MyProvider/MyEvent:-Prop1=Prop1;Prop2=Prop2.A.B;"".  Depending on your shell, you may need to " +
-                             @"escape the '""' characters and/or surround the entire provider specification in quotes, e.g., " +
-                             @"--providers 'KnownProviderName:0x1:1:FilterSpec=\""KnownProviderName/EventName:-Prop1=Prop1;Prop2=Prop2.A.B;\""'. These providers are in " +
-                             @"addition to any providers implied by the --profile argument. If there is any discrepancy for a particular provider, the " +
-                             @"configuration here takes precedence over the implicit configuration from the profile.  See documentation for examples."
-                // TODO: Can we specify an actual type?
-            };
-
-        private static readonly Option<string> ProfileOption =
-            new("--profile")
-            {
-                Description = @"A named pre-defined set of provider configurations that allows common tracing scenarios to be specified succinctly."
-            };
-
-        private static readonly Option<TimeSpan> DurationOption =
-            new("--duration")
-            {
-                Description = @"When specified, will trace for the given timespan and then automatically stop the trace. Provided in the form of dd:hh:mm:ss."
-            };
-
-        private static readonly Option<string> CLREventsOption =
-            new("--clrevents")
-            {
-                Description = @"List of CLR runtime events to emit."
-            };
-
-        private static readonly Option<string> CLREventLevelOption =
-            new("--clreventlevel")
-            {
-                Description = @"Verbosity of CLR events to be emitted."
             };
 
         private static readonly Option<string> DiagnosticPortOption =

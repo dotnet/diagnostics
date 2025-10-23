@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("GC")]
         public void ValidSingleCLREvent(string providerToParse)
         {
-            NETCore.Client.EventPipeProvider provider = Extensions.ToCLREventPipeProvider(providerToParse, "4");
+            NETCore.Client.EventPipeProvider provider = ProviderUtils.ToCLREventPipeProvider(providerToParse, "4");
             Assert.True(provider.Name == CLRProviderName);
             Assert.True(provider.Keywords == 1);
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Informational);
@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("haha")]
         public void InValidSingleCLREvent(string providerToParse)
         {
-            Assert.Throws<ArgumentException>(() => Extensions.ToCLREventPipeProvider(providerToParse, "4"));
+            Assert.Throws<CommandLineErrorException>(() => ProviderUtils.ToCLREventPipeProvider(providerToParse, "4"));
         }
 
         [Theory]
@@ -38,7 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("GC+GCHandle")]
         public void ValidManyCLREvents(string providerToParse)
         {
-            NETCore.Client.EventPipeProvider provider = Extensions.ToCLREventPipeProvider(providerToParse, "5");
+            NETCore.Client.EventPipeProvider provider = ProviderUtils.ToCLREventPipeProvider(providerToParse, "5");
             Assert.True(provider.Name == CLRProviderName);
             Assert.True(provider.Keywords == 3);
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Verbose);
@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("InFORMationAL")]
         public void ValidCLREventLevel(string clreventlevel)
         {
-            NETCore.Client.EventPipeProvider provider = Extensions.ToCLREventPipeProvider("gc", clreventlevel);
+            NETCore.Client.EventPipeProvider provider = ProviderUtils.ToCLREventPipeProvider("gc", clreventlevel);
             Assert.True(provider.Name == CLRProviderName);
             Assert.True(provider.Keywords == 1);
             Assert.True(provider.EventLevel == System.Diagnostics.Tracing.EventLevel.Informational);
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("hello")]
         public void InvalidCLREventLevel(string clreventlevel)
         {
-            Assert.Throws<ArgumentException>(() => Extensions.ToCLREventPipeProvider("gc", clreventlevel));
+            Assert.Throws<CommandLineErrorException>(() => ProviderUtils.ToCLREventPipeProvider("gc", clreventlevel));
         }
     }
 }

@@ -3,14 +3,18 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Tracing;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools;
+using Microsoft.Diagnostics.Tools.Common;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal static class Extensions
+    internal static class ProviderUtils
     {
         public static string CLREventProviderName = "Microsoft-Windows-DotNETRuntime";
 
@@ -23,6 +27,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { "gc", 0x1 },
             { "gchandle", 0x2 },
             { "fusion", 0x4 },
+            { "assemblyloader", 0x4 },
             { "loader", 0x8 },
             { "jit", 0x10 },
             { "ngen", 0x20 },
@@ -42,6 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { "gcsampledobjectallocationhigh", 0x200000 },
             { "gcheapsurvivalandmovement", 0x400000 },
             { "gcheapcollect", 0x800000 },
+            { "managedheadcollect", 0x800000 },
             { "gcheapandtypenames", 0x1000000 },
             { "gcsampledobjectallocationlow", 0x2000000 },
             { "perftrack", 0x20000000 },
@@ -55,57 +61,145 @@ namespace Microsoft.Diagnostics.Tools.Trace
             { "compilationdiagnostic", 0x2000000000 },
             { "methoddiagnostic", 0x4000000000 },
             { "typediagnostic", 0x8000000000 },
+            { "jitinstrumentationdata", 0x10000000000 },
+            { "profiler", 0x20000000000 },
             { "waithandle", 0x40000000000 },
+            { "allocationsampling", 0x80000000000 },
         };
 
-        public static List<EventPipeProvider> ToProviders(string providersRawInput)
+        private enum ProviderSource
         {
-            if (providersRawInput == null)
-            {
-                throw new ArgumentNullException(nameof(providersRawInput));
-            }
-
-            if (string.IsNullOrWhiteSpace(providersRawInput))
-            {
-                return new List<EventPipeProvider>();
-            }
-
-            IEnumerable<EventPipeProvider> providers = providersRawInput.Split(',').Select(ToProvider).ToList();
-
-            // Dedupe the entries
-            providers = providers.GroupBy(p => p.Name)
-                                 .Select(p => {
-                                     string providerName = p.Key;
-                                     EventLevel providerLevel = EventLevel.Critical;
-                                     long providerKeywords = 0;
-                                     IDictionary<string, string> providerFilterArgs = null;
-
-                                     foreach (EventPipeProvider currentProvider in p)
-                                     {
-                                         providerKeywords |= currentProvider.Keywords;
-
-                                         if ((currentProvider.EventLevel == EventLevel.LogAlways)
-                                             || (providerLevel != EventLevel.LogAlways && currentProvider.EventLevel > providerLevel))
-                                         {
-                                             providerLevel = currentProvider.EventLevel;
-                                         }
-
-                                         if (currentProvider.Arguments != null)
-                                         {
-                                             if (providerFilterArgs != null)
-                                             {
-                                                 throw new ArgumentException($"Provider \"{providerName}\" is declared multiple times with filter arguments.");
-                                             }
-
-                                             providerFilterArgs = currentProvider.Arguments;
-                                         }
-                                     }
-
-                                     return new EventPipeProvider(providerName, providerLevel, providerKeywords, providerFilterArgs);
-                                 });
-
-            return providers.ToList();
+            ProvidersArg = 1,
+            CLREventsArg = 2,
+            ProfileArg = 4,
         }
+
+        public static List<EventPipeProvider> ComputeProviderConfig(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles, bool shouldPrintProviders = false, string verbExclusivity = null, IConsole console = null)
+        {
+            console ??= new DefaultConsole(false);
+            Dictionary<string, EventPipeProvider> merged = new(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, int> providerSources = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string providerArg in providersArg)
+            {
+                EventPipeProvider provider = ToProvider(providerArg, console);
+                if (!merged.TryGetValue(provider.Name, out EventPipeProvider existing))
+                {
+                    merged[provider.Name] = provider;
+                    providerSources[provider.Name] = (int)ProviderSource.ProvidersArg;
+                }
+                else
+                {
+                    merged[provider.Name] = MergeProviderConfigs(existing, provider);
+                }
+            }
+
+            foreach (string profile in profiles)
+            {
+                Profile traceProfile = ListProfilesCommandHandler.TraceProfiles
+                    .FirstOrDefault(p => p.Name.Equals(profile, StringComparison.OrdinalIgnoreCase));
+
+                if (traceProfile == null)
+                {
+                    throw new CommandLineErrorException($"Invalid profile name: {profile}");
+                }
+
+                if (!string.IsNullOrEmpty(verbExclusivity) &&
+                    !string.IsNullOrEmpty(traceProfile.VerbExclusivity) &&
+                    !string.Equals(traceProfile.VerbExclusivity, verbExclusivity, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new CommandLineErrorException($"The specified profile '{traceProfile.Name}' does not apply to `dotnet-trace {verbExclusivity}`.");
+                }
+
+                IEnumerable<EventPipeProvider> profileProviders = traceProfile.Providers;
+                foreach (EventPipeProvider provider in profileProviders)
+                {
+                    if (merged.TryAdd(provider.Name, provider))
+                    {
+                        providerSources[provider.Name] = (int)ProviderSource.ProfileArg;
+                    }
+                    // Prefer providers set through --providers over implicit profile configuration
+                }
+            }
+
+            if (!string.IsNullOrEmpty(clreventsArg))
+            {
+                EventPipeProvider provider = ToCLREventPipeProvider(clreventsArg, clreventlevel);
+                if (provider is not null)
+                {
+                    if (!merged.TryGetValue(provider.Name, out EventPipeProvider existing))
+                    {
+                        merged[provider.Name] = provider;
+                        providerSources[provider.Name] = (int)ProviderSource.CLREventsArg;
+                    }
+                    else if (shouldPrintProviders)
+                    {
+                        console.WriteLine($"Warning: The CLR provider was already specified through --providers or --profile. Ignoring --clrevents.");
+                    }
+                }
+            }
+
+            List<EventPipeProvider> unifiedProviders = merged.Values.ToList();
+            if (shouldPrintProviders)
+            {
+                PrintProviders(unifiedProviders, providerSources, console);
+            }
+
+            return unifiedProviders;
+        }
+
+        private static EventPipeProvider MergeProviderConfigs(EventPipeProvider providerConfigA, EventPipeProvider providerConfigB)
+        {
+            Debug.Assert(string.Equals(providerConfigA.Name, providerConfigB.Name, StringComparison.OrdinalIgnoreCase));
+
+            EventLevel level = (providerConfigA.EventLevel == EventLevel.LogAlways || providerConfigB.EventLevel == EventLevel.LogAlways) ?
+                                EventLevel.LogAlways :
+                                (providerConfigA.EventLevel > providerConfigB.EventLevel ? providerConfigA.EventLevel : providerConfigB.EventLevel);
+
+            if (providerConfigA.Arguments != null && providerConfigB.Arguments != null)
+            {
+                throw new CommandLineErrorException($"Provider \"{providerConfigA.Name}\" is declared multiple times with filter arguments.");
+            }
+
+            return new EventPipeProvider(providerConfigA.Name, level, providerConfigA.Keywords | providerConfigB.Keywords, providerConfigA.Arguments ?? providerConfigB.Arguments);
+        }
+
+        private static void PrintProviders(IReadOnlyList<EventPipeProvider> providers, Dictionary<string, int> enabledBy, IConsole console)
+        {
+            if (providers.Count == 0)
+            {
+                console.WriteLine("No .NET providers were configured.");
+                console.WriteLine("");
+                return;
+            }
+
+            console.WriteLine("");
+            console.WriteLine(string.Format("{0, -40}", "Provider Name") + string.Format("{0, -20}", "Keywords") +
+                string.Format("{0, -20}", "Level") + "Enabled By");  // +4 is for the tab
+            foreach (EventPipeProvider provider in providers)
+            {
+                List<string> providerSources = new();
+                if (enabledBy.TryGetValue(provider.Name, out int source))
+                {
+                    if ((source & (int)ProviderSource.ProvidersArg) == (int)ProviderSource.ProvidersArg)
+                    {
+                        providerSources.Add("--providers");
+                    }
+                    if ((source & (int)ProviderSource.CLREventsArg) == (int)ProviderSource.CLREventsArg)
+                    {
+                        providerSources.Add("--clrevents");
+                    }
+                    if ((source & (int)ProviderSource.ProfileArg) == (int)ProviderSource.ProfileArg)
+                    {
+                        providerSources.Add("--profile");
+                    }
+                }
+                console.WriteLine(string.Format("{0, -80}", $"{GetProviderDisplayString(provider)}") + string.Join(", ", providerSources));
+            }
+            console.WriteLine("");
+        }
+        private static string GetProviderDisplayString(EventPipeProvider provider) =>
+            string.Format("{0, -40}", provider.Name) + string.Format("0x{0, -18}", $"{provider.Keywords:X16}") + string.Format("{0, -8}", provider.EventLevel.ToString() + $"({(int)provider.EventLevel})");
 
         public static EventPipeProvider ToCLREventPipeProvider(string clreventslist, string clreventlevel)
         {
@@ -124,7 +218,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
                 else
                 {
-                    throw new ArgumentException($"{clrevents[i]} is not a valid CLR event keyword");
+                    throw new CommandLineErrorException($"{clrevents[i]} is not a valid CLR event keyword");
                 }
             }
 
@@ -162,12 +256,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     case "warning":
                         return EventLevel.Warning;
                     default:
-                        throw new ArgumentException($"Unknown EventLevel: {token}");
+                        throw new CommandLineErrorException($"Unknown EventLevel: {token}");
                 }
             }
         }
 
-        private static EventPipeProvider ToProvider(string provider)
+        private static EventPipeProvider ToProvider(string provider, IConsole console)
         {
             if (string.IsNullOrWhiteSpace(provider))
             {
@@ -182,12 +276,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             // Check if the supplied provider is a GUID and not a name.
             if (Guid.TryParse(providerName, out _))
             {
-                Console.WriteLine($"Warning: --provider argument {providerName} appears to be a GUID which is not supported by dotnet-trace. Providers need to be referenced by their textual name.");
+                console.WriteLine($"Warning: --provider argument {providerName} appears to be a GUID which is not supported by dotnet-trace. Providers need to be referenced by their textual name.");
             }
 
             if (string.IsNullOrWhiteSpace(providerName))
             {
-                throw new ArgumentException("Provider name was not specified.");
+                throw new CommandLineErrorException("Provider name was not specified.");
             }
 
             // Keywords
