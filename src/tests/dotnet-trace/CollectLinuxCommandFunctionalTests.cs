@@ -252,9 +252,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
         ];
         private static string[] PreviewMessages = [
             "==========================================================================================",
-            "The collect-linux verb is in preview. Some usage scenarios may not yet be supported,",
-            "and some trace parsers may not yet support NetTrace V6. For any bugs or unexpected",
-            "behaviors, please open an issue at https://github.com/dotnet/diagnostics/issues.",
+            "The collect-linux verb is a new preview feature and relies on an updated version of the",
+            ".nettrace file format. The latest PerfView release supports these trace files but other",
+            "ways of using the trace file may not work yet. For more details, see the docs at",
+            "https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-trace.",
             "=========================================================================================="
             ];
 
