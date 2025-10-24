@@ -29,6 +29,4 @@
       <CopyToOutputDirectory Condition="'$(PublishSingleFile)' == 'true'">PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.targets" />
 </Project>
