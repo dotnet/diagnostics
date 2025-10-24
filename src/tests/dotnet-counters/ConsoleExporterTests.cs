@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
+using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Xunit;
 

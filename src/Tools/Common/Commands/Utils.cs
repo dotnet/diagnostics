@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools.Common;
 
 namespace Microsoft.Internal.Common.Utils
 {
@@ -147,7 +148,12 @@ namespace Microsoft.Internal.Common.Utils
     {
         public int LineToClear { get; set; }
 
-        public LineRewriter() { }
+        private IConsole Console { get; }
+
+        public LineRewriter(IConsole console)
+        {
+            Console = console;
+        }
 
         // ANSI escape codes:
         //  [2K => clear current line

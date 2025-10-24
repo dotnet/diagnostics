@@ -208,3 +208,12 @@ You now have all the required components. To clone, build and test the repo:
     cd diagnostics
     ./build.sh
     ./test.sh
+
+Loading solution file
+---------------------
+
+For a better dev inner loop experience, load `build.sln` at the root of the repository into VSCode.
+
+This file is generated from the `build.proj` traversal project and can be regenerated/updated using:
+
+    ./eng/generate-sln.sh

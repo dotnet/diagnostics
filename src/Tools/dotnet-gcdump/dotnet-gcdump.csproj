@@ -27,6 +27,7 @@
     <Compile Include="..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
     <Compile Include="..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
     <Compile Include="..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
+    <Compile Include="..\Common\IConsole.cs" Link="IConsole.cs" />
  </ItemGroup>
 
 </Project>

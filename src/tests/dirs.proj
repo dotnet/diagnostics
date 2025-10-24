@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.Build.Traversal">
+  <ItemGroup>
+    <!-- Debuggees -->
+    <ProjectReference Include="*/Debuggees/*/*.csproj" />
+
+    <!-- Tests and Helpers -->
+    <ProjectReference Include="*/*.csproj" />
+
+    <!-- Tests are broken as it hasn't been run on main in a while. Relies on older System.CommandLine API's that are no longer public -->
+    <ProjectReference Remove="dotnet-stack/DotnetStack.UnitTests.csproj" />
+
+    <!-- Standalone tools -->
+    <ProjectReference Remove="DacCompareNativeTypes/DacCompareNativeTypes.csproj" />
+    <ProjectReference Remove="benchmarks/benchmarks.csproj" />
+    <ProjectReference Remove="EventPipeStress/**/*.csproj" />
+
+    <!-- Unused -->
+    <ProjectReference Remove="Grape/Grape.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.Build.Traversal">
+
+  <ItemGroup>
+    <!-- Tools -->
+    <ProjectReference Include="Tools/*/*.csproj" />
+
+    <!-- SOS -->
+    <ProjectReference Include="SOS/*/*.csproj" />
+    <ProjectReference Include="SOS/SOS.UnitTests/Debuggees/**/*.csproj" />
+
+    <ProjectReference Include="Microsoft.Diagnostics.DebugServices/Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.DebugServices.Implementation/Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.ExtensionCommands/Microsoft.Diagnostics.ExtensionCommands.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.Monitoring/Microsoft.Diagnostics.Monitoring.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.Monitoring.EventPipe/Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.Repl/Microsoft.Diagnostics.Repl.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="Microsoft.Diagnostics.WebSocketServer/Microsoft.Diagnostics.WebSocketServer.csproj" />
+    <ProjectReference Include="Microsoft.FileFormats/Microsoft.FileFormats.csproj" />
+    <ProjectReference Include="Microsoft.SymbolManifestGenerator/Microsoft.SymbolManifestGenerator.csproj" />
+    <ProjectReference Include="Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
+
+  </ItemGroup>
+
+  <!-- Native projects to view in Visual Studio -->
+  <ItemGroup Condition="'$(TargetOS)' == 'Windows_NT' and $(IsSlnGen) == 'true'">
+    <ProjectReference Include="**/*.vcxproj" />
+  </ItemGroup>
+</Project>
