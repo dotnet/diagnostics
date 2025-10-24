@@ -15,6 +15,10 @@ parameters:
   - default
   - custom
   - dotnetclimsrc-sas-token-base64
+- name: buildOnly
+  displayName: Build only (skip tests)
+  type: boolean
+  default: false
 
 trigger: none
 
@@ -75,6 +79,7 @@ extends:
           jobTemplate: ${{ variables.jobTemplate }}
           name: Windows
           osGroup: Windows_NT
+          buildOnly: ${{ parameters.buildOnly }}
           buildConfigs:
           - configuration: Debug
             architecture: x64
@@ -129,6 +134,7 @@ extends:
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
+          buildOnly: ${{ parameters.buildOnly }}
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -212,45 +218,13 @@ extends:
       #                          #
       ############################
 
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          name: Ubuntu_22_04
-          osGroup: Linux
-          container: test_ubuntu_22_04
-          dependsOn: Linux
-          testOnly: true
-          buildConfigs:
-          - configuration: Release
-            architecture: x64
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - configuration: Debug
-              architecture: x64
-
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          name: Alpine3_19
-          osGroup: Linux
-          osSuffix: -musl
-          container: test_linux_musl_x64
-          dependsOn: Linux_musl
-          testOnly: true
-          disableComponentGovernance: true
-          buildConfigs:
-          - configuration: Release
-            architecture: x64
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - configuration: Debug
-              architecture: x64
-
-      - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+      - ${{ if ne(parameters.buildOnly, true) }}:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
-            name: Debian_Bullseye
+            name: Ubuntu_22_04
             osGroup: Linux
-            container: test_debian_11_amd64
+            container: test_ubuntu_22_04
             dependsOn: Linux
             testOnly: true
             buildConfigs:
@@ -263,17 +237,50 @@ extends:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
-            name: Fedora_39
+            name: Alpine3_19
             osGroup: Linux
-            container: test_fedora
-            dependsOn: Linux
+            osSuffix: -musl
+            container: test_linux_musl_x64
+            dependsOn: Linux_musl
             testOnly: true
+            disableComponentGovernance: true
             buildConfigs:
             - configuration: Release
               architecture: x64
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               - configuration: Debug
                 architecture: x64
+
+        - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: Debian_Bullseye
+              osGroup: Linux
+              container: test_debian_11_amd64
+              dependsOn: Linux
+              testOnly: true
+              buildConfigs:
+              - configuration: Release
+                architecture: x64
+              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                - configuration: Debug
+                  architecture: x64
+
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: Fedora_39
+              osGroup: Linux
+              container: test_fedora
+              dependsOn: Linux
+              testOnly: true
+              buildConfigs:
+              - configuration: Release
+                architecture: x64
+              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                - configuration: Debug
+                  architecture: x64
 
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - stage: package
