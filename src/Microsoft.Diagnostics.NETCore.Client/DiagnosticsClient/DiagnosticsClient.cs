@@ -698,7 +698,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
             }
 
-            byte[] payload = SerializePayload(dumpPath, (uint)dumpType, logDumpGeneration);
+            // Quote the path to handle spaces correctly in createdump on Windows only
+            // Only add quotes if the path is not already quoted
+            // This is only needed on Windows where the runtime builds the command line for createdump
+            string pathToUse = dumpPath;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                pathToUse = dumpPath.StartsWith("\"") && dumpPath.EndsWith("\"") ? dumpPath : $"\"{dumpPath}\"";
+            }
+            byte[] payload = SerializePayload(pathToUse, (uint)dumpType, logDumpGeneration);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)DumpCommandId.GenerateCoreDump, payload);
         }
 
@@ -709,7 +717,15 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 throw new ArgumentNullException($"{nameof(dumpPath)} required");
             }
 
-            byte[] payload = SerializePayload(dumpPath, (uint)dumpType, (uint)flags);
+            // Quote the path to handle spaces correctly in createdump on Windows only
+            // Only add quotes if the path is not already quoted
+            // This is only needed on Windows where the runtime builds the command line for createdump
+            string pathToUse = dumpPath;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                pathToUse = dumpPath.StartsWith("\"") && dumpPath.EndsWith("\"") ? dumpPath : $"\"{dumpPath}\"";
+            }
+            byte[] payload = SerializePayload(pathToUse, (uint)dumpType, (uint)flags);
             return new IpcMessage(DiagnosticsServerCommandSet.Dump, (byte)command, payload);
         }
 
