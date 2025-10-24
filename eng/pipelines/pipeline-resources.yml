@@ -74,9 +74,9 @@ extends:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.19-WithNode
         options: --cap-add=SYS_PTRACE
 
-      test_debian_11_amd64:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-11-amd64
-        options: '--env PYTHONPATH=/usr/bin/python3.9'
+      test_debian_12_amd64:
+        image: dotnetdockerdev.azurecr.io/dotnet-buildtools/prereqs:debian-12-helix-amd64
+        options: '--env PYTHONPATH=/usr/bin/python3.11'
 
       test_fedora:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-41
