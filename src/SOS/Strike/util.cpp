@@ -73,14 +73,14 @@ const UINT kcMaxTieredVersions      = 10;
 #ifndef FEATURE_PAL
 
 // ensure we always allocate on the process heap
-void* __cdecl operator new(size_t size) throw()
+void* __cdecl operator new(size_t size) noexcept
 { return HeapAlloc(GetProcessHeap(), 0, size); }
-void __cdecl operator delete(void* pObj) throw()
+void __cdecl operator delete(void* pObj) noexcept
 { HeapFree(GetProcessHeap(), 0, pObj); }
 
-void* __cdecl operator new[](size_t size) throw()
+void* __cdecl operator new[](size_t size) noexcept
 { return HeapAlloc(GetProcessHeap(), 0, size); }
-void __cdecl operator delete[](void* pObj) throw()
+void __cdecl operator delete[](void* pObj) noexcept
 { HeapFree(GetProcessHeap(), 0, pObj); }
 
 /**********************************************************************\
