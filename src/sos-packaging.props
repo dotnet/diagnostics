@@ -62,10 +62,19 @@
   <ItemGroup>
     <None Include="@(SosRequiredBinaries)">
       <Visible>false</Visible>
-      <Pack>true</Pack>
+
+      <!-- This kind of adjusting where things go is not great - but it balances the requirements of 3 different build modes/consumers: -->
+      <!-- - Tests expect the native assets to end up in the publish directory of SOS. Hence the CopyToPublishDirectory for the rid of the current build -->
+      <!-- - Since PackAsTool now implicitly does a publish + glob - we need to exclude the native asset for the current RID to pack from the None itemgroup, but rather the publish directory -->
+      <!--   and at the same time there are packages like the WinDBG transport package that don't use the <PackAsTool> publish behavior. Those should pack as usual. -->
+      <!-- - Single file publish also needs to account for the target path correctly but only set it when that mode is on. -->
+      <!-- Long term following the publish directory is a way to test closer to the layout our customers get through the packages and make sense as a test -->
+      <Pack Condition="'$(PackAsTool)' != 'true' or '%(TargetRid)' != '$(TargetRid)'">true</Pack>
       <PackagePath>$(SOSPackagePathPrefix)/%(TargetRid)</PackagePath>
-      <Link Condition="'$(PublishSingleFile)' == 'true'">%(TargetRid)/%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory Condition="'$(PublishSingleFile)' == 'true' and '%(TargetRid)' == '$(RuntimeIdentifier)'">PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory Condition="'$(PackAsTool)' == 'true' and '%(TargetRid)' == '$(TargetRid)'">PreserveNewest</CopyToPublishDirectory>
+      <Link Condition="'$(PublishSingleFile)' == 'true'">%(TargetRid)/%(Filename)%(Extension)</Link>
+      <TargetPath>%(TargetRid)/%(Filename)%(Extension)</TargetPath>
     </None>
   </ItemGroup>
 </Project>
