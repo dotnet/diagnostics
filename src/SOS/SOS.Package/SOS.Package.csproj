@@ -9,7 +9,9 @@
     <IsPackable>true</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
-    <GalleryManifestName>$(ArtifactsPackagesDir)\GalleryManifest.xml</GalleryManifestName>
+    <GalleryManifestBase>$(MSBuildThisFileDirectory)ManifestBase.xml</GalleryManifestBase>
+    <ExtensionGalleryManifestOutputFile>$(IntermediateOutputPath)sos_GalleryManifest.xml</ExtensionGalleryManifestOutputFile>
+    <UncompressedGalleryManifestOutputFile>$(IntermediateOutputPath)GalleryManifest.xml</UncompressedGalleryManifestOutputFile>
     <BeforePack>GenerateGalleryManifest</BeforePack>
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
@@ -22,7 +24,11 @@
   <Target Name="Build" />
 
   <ItemGroup>
-    <None Include="$(GalleryManifestName)" Pack="true" Visible="false">
+    <Compile Remove="**/*.cs" />
+    <None Include="$(ExtensionGalleryManifestOutputFile)" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)</PackagePath>
+    </None>
+    <None Include="$(UncompressedGalleryManifestOutputFile)" Pack="true" Visible="false">
       <PackagePath>$(SOSPackagePathPrefix)</PackagePath>
     </None>
     <None Include="$(SOSExtensionsBinaries)" Pack="true" Visible="false">
@@ -30,64 +36,18 @@
     </None>
   </ItemGroup>
 
+  <!-- This target generates the gallery manifest files, both the extension gallery format and
+   the uncompressed one used by the SDK installer. -->
   <Target Name="GenerateGalleryManifest"
     DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion">
-    <PropertyGroup>
-      <GalleryManifestLines>
-<![CDATA[
-<?xml version="1.0" encoding="utf-8"?>
-<ExtensionPackage>
-  <Name>SOS</Name>
-  <Version>$(FileVersion)</Version>
-  <Description>Debugging aid for .NET Core programs and runtimes</Description>
-  <Components>
-    <BinaryComponent Name="sos" Type="Engine">
-      <Files>
-        <File Architecture="amd64" Module="win-x64\sos.dll" />
-        <File Architecture="x86" Module="win-x86\sos.dll" />
-        <File Architecture="arm64" Module="win-arm64\sos.dll" />
-      </Files>
-      <LoadTriggers>
-        <TriggerSet>
-          <ModuleTrigger Name="coreclr.dll" />
-        </TriggerSet>
-        <TriggerSet>
-          <ModuleTrigger Name="libcoreclr.so" />
-        </TriggerSet>
-        <TriggerSet>
-          <ExceptionTrigger ExceptionCode="0xC0000409">
-            <Parameters>
-              <Parameter Index="0" Value="0x48" />
-            </Parameters>
-          </ExceptionTrigger>
-        </TriggerSet>
-        <TriggerSet>
-          <ExceptionTrigger ExceptionCode="0xC000027B" />
-        </TriggerSet>
-        <TriggerSet>
-          <ExceptionTrigger ExceptionCode="0xC000027C" />
-        </TriggerSet>
-      </LoadTriggers>
-      <EngineCommands>
-        <EngineCommand Name="soshelp">
-          <EngineCommandItem>
-            <Syntax>!soshelp</Syntax>
-            <Description>Displays all available SOS commands or details about the command</Description>
-          </EngineCommandItem>
-        </EngineCommand>
-      </EngineCommands>
-    </BinaryComponent>
-  </Components>
-</ExtensionPackage>
-]]>
-      </GalleryManifestLines>
-    </PropertyGroup>
 
-    <WriteLinesToFile File="$(GalleryManifestName)" Lines="$(GalleryManifestLines)" Overwrite="true" />
+    <Exec Command="$(DotNetTool) run --file $(MSBuildThisFileDirectory)GenerateManifest\GenerateManifest.cs &quot;$(GalleryManifestBase)&quot; &quot;$(ExtensionGalleryManifestOutputFile)&quot; &quot;$(UncompressedGalleryManifestOutputFile)&quot; &quot;$(FileVersion)&quot;" />
 
     <ItemGroup>
-      <FileWrites Include="$(GalleryManifestName)" />
+      <FileWrites Include="$(ExtensionGalleryManifestOutputFile)" />
+      <FileWrites Include="$(UncompressedGalleryManifestOutputFile)" />
     </ItemGroup>
+
   </Target>
 
 </Project>
