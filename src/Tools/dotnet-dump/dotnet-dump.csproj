@@ -37,6 +37,4 @@
   </ItemGroup>
 
   <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
-
-  <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.targets" />
 </Project>
