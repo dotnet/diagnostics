@@ -5,11 +5,11 @@
     <IsShipping>true</IsShipping>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <PackageDescription>Internal implementation package not meant for direct consumption. Please do not reference directly.</PackageDescription>
-    <ExeSuffix Condition="$(PackageRID.StartsWith('win'))">.exe</ExeSuffix>
-    <OsFolderName Condition="$(PackageRID.StartsWith('win'))">Windows_NT</OsFolderName>
-    <OsFolderName Condition="$(PackageRID.StartsWith('linux-musl'))">Linux-musl</OsFolderName>
-    <OsFolderName Condition="$(PackageRID.StartsWith('linux')) and '$(OsFolderName)' == ''">Linux</OsFolderName>
-    <OsFolderName Condition="$(PackageRID.StartsWith('osx'))">OSX</OsFolderName>
+    <ExeSuffix Condition="$(TargetRid.StartsWith('win'))">.exe</ExeSuffix>
+    <OsFolderName Condition="$(TargetRid.StartsWith('win'))">Windows_NT</OsFolderName>
+    <OsFolderName Condition="$(TargetRid.StartsWith('linux-musl'))">Linux-musl</OsFolderName>
+    <OsFolderName Condition="$(TargetRid.StartsWith('linux')) and '$(OsFolderName)' == ''">Linux</OsFolderName>
+    <OsFolderName Condition="$(TargetRid.StartsWith('osx'))">OSX</OsFolderName>
   </PropertyGroup>
 
   <PropertyGroup>
