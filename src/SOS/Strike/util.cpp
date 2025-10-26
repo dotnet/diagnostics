@@ -5518,6 +5518,37 @@ WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssembly
     return methodOutput;
 }
 
+WString DmlEscape(const WString &input)
+{
+    const WCHAR *str = input.c_str();
+    size_t len = input.GetLength();
+    WString result;
+    
+    for (size_t i = 0; i < len; i++)
+    {
+        if (str[i] == L'<')
+        {
+            result += W("&lt;");
+        }
+        else if (str[i] == L'>')
+        {
+            result += W("&gt;");
+        }
+        else if (str[i] == L'&')
+        {
+            result += W("&amp;");
+        }
+        else
+        {
+            // Append single character
+            WCHAR temp[2] = { str[i], L'\0' };
+            result += temp;
+        }
+    }
+    
+    return result;
+}
+
 HRESULT GetGCRefs(ULONG osID, SOSStackRefData **ppRefs, unsigned int *pRefCnt, SOSStackRefError **ppErrors, unsigned int *pErrCount)
 {
     if (ppRefs == NULL || pRefCnt == NULL)
