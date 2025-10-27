@@ -3,7 +3,7 @@
 using System.Xml.Linq;
 using System.Xml.XPath;
 
-const string ExpectedParameters = "<GalleryManifestBaseTemplate> <GalleryManifestPath> <CompressedManifestPath> <ExtensionVersion>";
+const string ExpectedParameters = "<GalleryManifestBaseTemplate> <GalleryManifestPath> <UncompressedManifestPath> <ExtensionVersion>";
 
 const string FilesXpathInPackageElement = "Components/BinaryComponent/Files";
 const string CompressedGalleryManifestTemplate = """
