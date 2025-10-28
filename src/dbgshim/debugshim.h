@@ -44,6 +44,7 @@
 #endif
 
 #define CORECLR_DAC_MODULE_NAME_W W("mscordaccore")
+#define INTERNAL_DBI_MODULE_NAME_W W("mscordbi_internal")
 #define CLR_DAC_MODULE_NAME_W W("mscordacwks")
 #define MAIN_DBI_MODULE_NAME_W W("mscordbi")
 
@@ -74,6 +75,7 @@ struct ClrInfo
     BYTE DbiBuildId[MAX_BUILDID_SIZE];
     ULONG DbiBuildIdSize;
     WCHAR DbiName[MAX_PATH_FNAME];
+    WCHAR InternalDbiName[MAX_PATH_FRAME];
 
     DWORD DacTimeStamp;
     DWORD DacSizeOfImage;
@@ -105,6 +107,8 @@ struct ClrInfo
 
         swprintf_s(DbiName, MAX_PATH_FNAME, W("%s"), MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W));
         swprintf_s(DacName, MAX_PATH_FNAME, W("%s"), MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W));
+        swprintf_s(InternalDbiName, MAX_PATH_FNAME, W("%s"), MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W));
+
     }
 
     bool IsValid()

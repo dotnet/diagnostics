@@ -308,13 +308,19 @@ HRESULT CLRDebuggingImpl::ProvideLibraries(
         if (clrInfo.WindowsTarget)
         {
             // Ask library provider for DBI
-            if (FAILED(pLibraryProvider3->ProvideWindowsLibrary(
+            if ((FAILED(pLibraryProvider3->ProvideWindowsLibrary(
+                clrInfo.InternalDbiName,
+                wszRuntimeModulePath,
+                clrInfo.IndexType,
+                clrInfo.DbiTimeStamp,
+                clrInfo.DbiSizeOfImage,
+                &pDbiModulePath)) && FAILED(pLibraryProvider3->ProvideWindowsLibrary(
                 clrInfo.DbiName, 
                 wszRuntimeModulePath,
                 clrInfo.IndexType,
                 clrInfo.DbiTimeStamp,
                 clrInfo.DbiSizeOfImage,
-                &pDbiModulePath)) || pDbiModulePath == NULL)
+                &pDbiModulePath))) || pDbiModulePath == NULL)
             {
                 hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
                 goto exit;
@@ -368,13 +374,19 @@ HRESULT CLRDebuggingImpl::ProvideLibraries(
                     goto exit;
             }
             // Ask library provider for DBI
-            if (FAILED(pLibraryProvider3->ProvideUnixLibrary(
+            if ((FAILED(pLibraryProvider3->ProvideUnixLibrary(
+                clrInfo.InternalDbiName,
+                wszRuntimeModulePath,
+                clrInfo.IndexType,
+                dbiBuildId, 
+                dbiBuildIdSize,
+                &pDbiModulePath)) && FAILED(pLibraryProvider3->ProvideUnixLibrary(
                 clrInfo.DbiName, 
                 wszRuntimeModulePath,
                 clrInfo.IndexType,
                 dbiBuildId, 
                 dbiBuildIdSize,
-                &pDbiModulePath)) || pDbiModulePath == NULL)
+                &pDbiModulePath))) || pDbiModulePath == NULL)
             {
                 hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
                 goto exit;
@@ -396,7 +408,9 @@ HRESULT CLRDebuggingImpl::ProvideLibraries(
     else if (SUCCEEDED(punk->QueryInterface(__uuidof(ICLRDebuggingLibraryProvider2), (void**)&pLibraryProvider2)))
     {
         // Ask library provider for DBI
-        if (FAILED(pLibraryProvider2->ProvideLibrary2(clrInfo.DbiName, clrInfo.DbiTimeStamp, clrInfo.DbiSizeOfImage, &pDbiModulePath)) || pDbiModulePath == NULL)
+        if ((FAILED(pLibraryProvider2->ProvideLibrary2(clrInfo.InternalDbiName, clrInfo.DbiTimeStamp, clrInfo.DbiSizeOfImage, &pDbiModulePath))
+            && FAILED(pLibraryProvider2->ProvideLibrary2(clrInfo.DbiName, clrInfo.DbiTimeStamp, clrInfo.DbiSizeOfImage, &pDbiModulePath)))
+             || pDbiModulePath == NULL)
         {
             hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
             goto exit;
@@ -415,7 +429,8 @@ HRESULT CLRDebuggingImpl::ProvideLibraries(
     else if (SUCCEEDED(punk->QueryInterface(__uuidof(ICLRDebuggingLibraryProvider), (void**)&pLibraryProvider)))
     {
         // Ask library provider for DBI
-        if (FAILED(pLibraryProvider->ProvideLibrary(clrInfo.DbiName, clrInfo.DbiTimeStamp, clrInfo.DbiSizeOfImage, phDbi)) || *phDbi == NULL)
+        if ((FAILED(pLibraryProvider->ProvideLibrary(clrInfo.InternalDbiName, clrInfo.DbiTimeStamp, clrInfo.DbiSizeOfImage, phDbi))
+            && FAILED(pLibraryProvider->ProvideLibrary(clrInfo.DbiName, clrInfo.DbiTimeStamp, clrInfo.DbiSizeOfImage, phDbi))) || *phDbi == NULL)
         {
             hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
             goto exit;
@@ -654,6 +669,7 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
         {
             FormatLongDacModuleName(clrInfo.DacName, MAX_PATH_FNAME, imageFileMachine, &fixedFileInfo);
             swprintf_s(clrInfo.DbiName, MAX_PATH_FNAME, W("%s_%s.dll"), MAIN_DBI_MODULE_NAME_W, W("x86"));
+            swprintf_s(clrInfo.InternalDbiName, MAX_PATH_FNAME, W("%s_%s.dll"), INTERNAL_DBI_MODULE_NAME_W, W("x86"));
         }
         else
         {
@@ -662,6 +678,7 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
             else
                 swprintf_s(clrInfo.DacName, MAX_PATH_FNAME, W("%s.dll"), CORECLR_DAC_MODULE_NAME_W);
             swprintf_s(clrInfo.DbiName, MAX_PATH_FNAME, W("%s.dll"), MAIN_DBI_MODULE_NAME_W);
+            swprintf_s(clrInfo.InternalDbiName, MAX_PATH_FNAME, W("%s_%s.dll"), INTERNAL_DBI_MODULE_NAME_W, W("x86"));
         }
 
         if (SUCCEEDED(hr))

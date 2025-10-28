@@ -24,6 +24,7 @@
 #include <getproductversionnumber.h>
 #include <dbgenginemetrics.h>
 #include <arrayholder.h>
+#include <sys/stat.h>
 
 #ifdef TARGET_WINDOWS
 #define PSAPI_VERSION 2
@@ -1811,8 +1812,15 @@ static
 void
 AppendDbiDllName(SString & szFullDbiPath)
 {
-    const WCHAR * pDbiDllName = DIRECTORY_SEPARATOR_STR_W MAKEDLLNAME_W(W("mscordbi"));
+
+    struct stat buffer;
+    const WCHAR * pDbiDllName = DIRECTORY_SEPARATOR_STR_W MAKEDLLNAME_W(W("mscordbi_internal"));
     szFullDbiPath.Append(pDbiDllName);
+    if (stat(szFullDbiPath.GetUnicode(), &buffer))
+    {
+        szFullDbiPath.Remove(szFullDbiPath.GetCount() - u16_strlen(pDbiDllName));
+        szFullDbiPath.Append(DIRECTORY_SEPARATOR_STR_W MAKEDLLNAME_W(W("mscordbi")));
+    }
 }
 
 //-----------------------------------------------------------------------------
