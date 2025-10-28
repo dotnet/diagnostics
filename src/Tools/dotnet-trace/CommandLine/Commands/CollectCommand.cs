@@ -23,9 +23,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         internal bool IsQuiet { get; set; }
 
-        public CollectCommandHandler()
+        public CollectCommandHandler(IConsole console = null)
         {
-            Console = new DefaultConsole(false);
+            Console = console ?? new DefaultConsole(false);
             StartTraceSessionAsync = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
             ResumeRuntimeAsync = (client, ct) => client.ResumeRuntimeAsync(ct);
             CollectSessionEventStream = (name) => new FileStream(name, FileMode.Create, FileAccess.Write);
