@@ -31,7 +31,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string[] PerfEvents,
             string[] Profiles,
             FileInfo Output,
-            TimeSpan Duration);
+            TimeSpan Duration,
+            string Name,
+            int ProcessId);
 
         public CollectLinuxCommandHandler(IConsole console = null)
         {
@@ -49,6 +51,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Error.WriteLine("The collect-linux command is only supported on Linux.");
                 return (int)ReturnCode.PlatformNotSupportedError;
+            }
+
+            if (args.ProcessId != 0 || !string.IsNullOrEmpty(args.Name))
+            {
+                if (!CommandUtils.ResolveProcess(args.ProcessId, args.Name, out int resolvedProcessId, out string resolvedProcessName))
+                {
+                    return (int)ReturnCode.ArgumentError;
+                }
+                args = args with { Name = resolvedProcessName, ProcessId = resolvedProcessId };
             }
 
             Console.WriteLine("==========================================================================================");
@@ -117,6 +128,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.ProfileOption,
                 CommonOptions.OutputPathOption,
                 CommonOptions.DurationOption,
+                CommonOptions.NameOption,
+                CommonOptions.ProcessIdOption
             };
             collectLinuxCommand.TreatUnmatchedTokensAsErrors = true; // collect-linux currently does not support child process tracing.
             collectLinuxCommand.Description = "Collects diagnostic traces using perf_events, a Linux OS technology. collect-linux requires admin privileges to capture kernel- and user-mode events, and by default, captures events from all processes. This Linux-only command includes the same .NET events as dotnet-trace collect, and it uses the kernel’s user_events mechanism to emit .NET events as perf events, enabling unification of user-space .NET events with kernel-space system events.";
@@ -135,7 +148,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     PerfEvents: perfEventsValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Profiles: profilesValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Output: parseResult.GetValue(CommonOptions.OutputPathOption) ?? new FileInfo(CommonOptions.DefaultTraceName),
-                    Duration: parseResult.GetValue(CommonOptions.DurationOption)));
+                    Duration: parseResult.GetValue(CommonOptions.DurationOption),
+                    Name: parseResult.GetValue(CommonOptions.NameOption) ?? string.Empty,
+                    ProcessId: parseResult.GetValue(CommonOptions.ProcessIdOption)));
                 return Task.FromResult(rc);
             });
 
@@ -220,7 +235,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             Console.WriteLine();
 
-            FileInfo resolvedOutput = ResolveOutputPath(args.Output);
+            int pid = args.ProcessId;
+            if (pid > 0)
+            {
+                recordTraceArgs.Add($"--pid");
+                recordTraceArgs.Add($"{pid}");
+            }
+
+            FileInfo resolvedOutput = ResolveOutputPath(args.Output, args.Name);
             recordTraceArgs.Add($"--out");
             recordTraceArgs.Add(resolvedOutput.FullName);
             Console.WriteLine($"Output File    : {resolvedOutput.FullName}");
@@ -237,15 +259,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return Encoding.UTF8.GetBytes(options);
         }
 
-        private static FileInfo ResolveOutputPath(FileInfo output)
+        private static FileInfo ResolveOutputPath(FileInfo output, string processName)
         {
             if (!string.Equals(output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
             {
                 return output;
             }
 
+            string traceName = "trace";
+            if (!string.IsNullOrEmpty(processName))
+            {
+                traceName = processName;
+            }
+
             DateTime now = DateTime.Now;
-            return new FileInfo($"trace_{now:yyyyMMdd}_{now:HHmmss}.nettrace");
+            return new FileInfo($"{traceName}_{now:yyyyMMdd}_{now:HHmmss}.nettrace");
         }
 
         private int OutputHandler(uint type, IntPtr data, UIntPtr dataLen)
