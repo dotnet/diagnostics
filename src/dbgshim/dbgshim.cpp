@@ -1815,11 +1815,16 @@ AppendDbiDllName(SString & szFullDbiPath)
 
     struct stat buffer;
     const WCHAR * pDbiDllName = DIRECTORY_SEPARATOR_STR_W MAKEDLLNAME_W(W("mscordbi_internal"));
-    szFullDbiPath.Append(pDbiDllName);
-    if (stat(szFullDbiPath.GetUnicode(), &buffer))
+    SString szTempDbiPath;
+    szTempDbiPath.Set(szFullDbiPath);
+    szTempDbiPath.Append(pDbiDllName);
+    if (stat(szTempDbiPath.GetUnicode(), &buffer))
     {
-        szFullDbiPath.Remove(szFullDbiPath.GetCount() - u16_strlen(pDbiDllName));
         szFullDbiPath.Append(DIRECTORY_SEPARATOR_STR_W MAKEDLLNAME_W(W("mscordbi")));
+    }
+    else
+    {
+        szFullDbiPath.Append(DIRECTORY_SEPARATOR_STR_W MAKEDLLNAME_W(W("mscordbi_internal")));
     }
 }
 
