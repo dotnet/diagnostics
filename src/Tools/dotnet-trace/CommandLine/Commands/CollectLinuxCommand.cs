@@ -21,7 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private bool stopTracing;
         private Stopwatch stopwatch = new();
         private LineRewriter rewriter;
-        private bool printingStatus;
+        private long statusUpdateTimestamp;
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
@@ -269,24 +269,31 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
             }
 
+            if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
+            {
+                stopTracing = true;
+            }
+
             if (ot == OutputType.Progress)
             {
-                if (printingStatus)
+                long currentTimestamp = Stopwatch.GetTimestamp();
+                if (statusUpdateTimestamp != 0 && currentTimestamp < statusUpdateTimestamp)
                 {
-                    rewriter.RewriteConsoleLine();
+                    return stopTracing ? 1 : 0;
+                }
+
+                if (statusUpdateTimestamp == 0)
+                {
+                    rewriter.LineToClear = Console.CursorTop - 1;
                 }
                 else
                 {
-                    printingStatus = true;
-                    rewriter.LineToClear = Console.CursorTop - 1;
+                    rewriter.RewriteConsoleLine();
                 }
+
+                statusUpdateTimestamp = currentTimestamp + Stopwatch.Frequency;
                 Console.Out.WriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace.");
                 Console.Out.WriteLine("Press <Enter> or <Ctrl-C> to exit...");
-
-                if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
-                {
-                    stopTracing = true;
-                }
             }
 
             return stopTracing ? 1 : 0;
