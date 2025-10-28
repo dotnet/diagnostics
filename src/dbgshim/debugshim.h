@@ -107,7 +107,7 @@ struct ClrInfo
 
         swprintf_s(DbiName, MAX_PATH_FNAME, W("%s"), MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W));
         swprintf_s(DacName, MAX_PATH_FNAME, W("%s"), MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W));
-        swprintf_s(InternalDbiName, MAX_PATH_FNAME, W("%s"), MAKEDLLNAME_W(CORECLR_DAC_MODULE_NAME_W));
+        swprintf_s(InternalDbiName, MAX_PATH_FNAME, W("%s"), MAKEDLLNAME_W(INTERNAL_DBI_MODULE_NAME_W));
 
     }
 
