@@ -22,9 +22,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--moduleEnumerationScheme", Aliases = new string[] { "-e" }, Help = "Enables searching modules for the NativeAOT crashinfo data.  Default is None")]
         public ModuleEnumerationScheme ModuleEnumerationScheme { get; set; } = ModuleEnumerationScheme.None;
 
+        [FilterInvoke(Message = "This command is only supported with dumps.")]
+        public static bool FilterInvoke([ServiceImport(Optional = true)] ICrashInfoModuleService crashInfoFactory) => crashInfoFactory != null;
+
         public override void Invoke()
         {
-            ICrashInfoService crashInfo = CrashInfo ?? CrashInfoFactory.Create(ModuleEnumerationScheme);
+            ICrashInfoService crashInfo = CrashInfo ?? CrashInfoFactory?.Create(ModuleEnumerationScheme);
             if (crashInfo == null)
             {
                 throw new DiagnosticsException("No crash info to display");
