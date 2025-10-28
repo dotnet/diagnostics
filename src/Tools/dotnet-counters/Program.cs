@@ -39,7 +39,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             monitorCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Main
 
-            monitorCommand.SetAction(static (parseResult, ct) => new CounterMonitor(parseResult.Configuration.Output, parseResult.Configuration.Error).Monitor(
+            monitorCommand.SetAction(static (parseResult, ct) => new CounterMonitor().Monitor(
                 ct,
                 counters: parseResult.GetValue(CounterOption),
                 processId: parseResult.GetValue(ProcessIdOption),
@@ -79,7 +79,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             collectCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Main
 
-            collectCommand.SetAction((parseResult, ct) => new CounterMonitor(parseResult.Configuration.Output, parseResult.Configuration.Error).Collect(
+            collectCommand.SetAction((parseResult, ct) => new CounterMonitor().Collect(
                 ct,
                 counters: parseResult.GetValue(CounterOption),
                 processId: parseResult.GetValue(ProcessIdOption),

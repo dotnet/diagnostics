@@ -25,8 +25,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private const int BufferDelaySecs = 1;
         private const string EventCountersProviderPrefix = "EventCounters\\";
         private int _processId;
-        private TextWriter _stdOutput;
-        private TextWriter _stdError;
+        private IConsole _console;
         private List<EventPipeCounterGroup> _counterList;
         private ICounterRenderer _renderer;
         private string _output;
@@ -43,12 +42,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private readonly Dictionary<string, ProviderEventState> _providerEventStates = new();
         private readonly Queue<CounterPayload> _bufferedEvents = new();
 
-        public CounterMonitor(TextWriter stdOutput, TextWriter stdError)
+        public CounterMonitor(IConsole console = null)
         {
             _pauseCmdSet = false;
             _shouldExit = new TaskCompletionSource<ReturnCode>();
-            _stdOutput = stdOutput;
-            _stdError = stdError;
+            _console = console ?? new DefaultConsole(false);
         }
 
         private void MeterInstrumentEventObserved(string meterName, DateTime timestamp)
@@ -238,14 +236,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         //Cancellation token should automatically stop the session
 
-                        _stdOutput.WriteLine($"Complete");
+                        _console.Out.WriteLine($"Complete");
                         return ReturnCode.Ok;
                     }
                 }
             }
             catch (CommandLineErrorException e)
             {
-                _stdError.WriteLine(e.Message);
+                _console.Error.WriteLine(e.Message);
                 return ReturnCode.ArgumentError;
             }
             finally
@@ -306,7 +304,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _diagnosticsClient = holder.Client;
                         if (_output.Length == 0)
                         {
-                            _stdError.WriteLine("Output cannot be an empty string");
+                            _console.Error.WriteLine("Output cannot be an empty string");
                             return ReturnCode.ArgumentError;
                         }
                         if (format == CountersExportFormat.csv)
@@ -330,7 +328,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         }
                         else
                         {
-                            _stdError.WriteLine($"The output format {format} is not a valid output format.");
+                            _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                             return ReturnCode.ArgumentError;
                         }
 
@@ -352,7 +350,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             }
             catch (CommandLineErrorException e)
             {
-                _stdError.WriteLine(e.Message);
+                _console.Error.WriteLine(e.Message);
                 return ReturnCode.ArgumentError;
             }
             finally
@@ -388,7 +386,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
 
             if (counters.Count == 0)
             {
-                _stdOutput.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
+                _console.Out.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
                 ParseCounterProvider("System.Runtime", counters);
             }
             return counters;
@@ -537,7 +535,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 catch (DiagnosticsClientException ex)
                 {
-                    Console.WriteLine($"Failed to start the counter session: {ex}");
+                    _console.WriteLine($"Failed to start the counter session: {ex}");
                 }
                 catch (Exception ex)
                 {
