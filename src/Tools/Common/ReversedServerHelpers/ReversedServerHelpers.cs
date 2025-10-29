@@ -89,7 +89,7 @@ namespace Microsoft.Internal.Common.Utils
                 return _childProc;
             }
         }
-        public bool Start(string diagnosticTransportName, CancellationToken ct, bool showChildIO, bool printLaunchCommand)
+        public void Start(string diagnosticTransportName, CancellationToken ct, bool showChildIO, bool printLaunchCommand)
         {
             _childProc.StartInfo.UseShellExecute = false;
             _childProc.StartInfo.RedirectStandardOutput = !showChildIO;
@@ -114,8 +114,6 @@ namespace Microsoft.Internal.Common.Utils
                 _stdOutTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardOutput, ct);
                 _stdErrTask = ReadAndIgnoreAllStreamAsync(_childProc.StandardError, ct);
             }
-
-            return true;
         }
 
         public void Cleanup()
@@ -231,10 +229,7 @@ namespace Microsoft.Internal.Common.Utils
                 server.Start();
 
                 // Start the child proc
-                if (!ProcessLauncher.Launcher.Start(diagnosticTransportName, ct, showChildIO, printLaunchCommand))
-                {
-                    throw new InvalidOperationException($"Failed to start '{ProcessLauncher.Launcher.ChildProc.StartInfo.FileName} {ProcessLauncher.Launcher.ChildProc.StartInfo.Arguments}'.");
-                }
+                ProcessLauncher.Launcher.Start(diagnosticTransportName, ct, showChildIO, printLaunchCommand);
                 IpcEndpointInfo endpointInfo;
                 try
                 {
