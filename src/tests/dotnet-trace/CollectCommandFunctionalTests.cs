@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             MockConsole console = new(200, 30);
             int exitCode = await RunAsync(args, console).ConfigureAwait(true);
-            Assert.Equal((int)ReturnCode.TracingError, exitCode);
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
             console.AssertSanitizedLinesEqual(CollectSanitizer, expectedException);
         }
 

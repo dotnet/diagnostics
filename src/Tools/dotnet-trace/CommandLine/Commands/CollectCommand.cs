@@ -472,7 +472,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Error.WriteLine($"[ERROR] {e.Message}");
                 collectionStopped = true;
-                ret = (int)ReturnCode.TracingError;
+                ret = (int)ReturnCode.ArgumentError;
             }
             catch (OperationCanceledException)
             {

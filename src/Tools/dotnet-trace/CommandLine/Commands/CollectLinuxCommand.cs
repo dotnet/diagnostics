@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             catch (CommandLineErrorException e)
             {
                 Console.Error.WriteLine($"[ERROR] {e.Message}");
-                ret = (int)ReturnCode.TracingError;
+                ret = (int)ReturnCode.ArgumentError;
             }
             catch (Exception ex)
             {
