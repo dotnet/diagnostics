@@ -112,9 +112,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return (int)ReturnCode.ArgumentError;
                     }
                 }
-                else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
+                else
                 {
-                    return (int)ReturnCode.ArgumentError;
+                    CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort);
                 }
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)

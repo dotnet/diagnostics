@@ -60,15 +60,12 @@ namespace Microsoft.Internal.Common.Utils
         /// <param name="name">name</param>
         /// <param name="port">port</param>
         /// <returns></returns>
-        public static bool ValidateArgumentsForChildProcess(int processId, string name, string port)
+        public static void ValidateArgumentsForChildProcess(int processId, string name, string port)
         {
             if (processId != 0 || name != null || !string.IsNullOrEmpty(port))
             {
-                Console.WriteLine("None of the --name, --process-id, or --diagnostic-port options may be specified when launching a child process.");
-                return false;
+                throw new CommandLineErrorException("None of the --name, --process-id, or --diagnostic-port options may be specified when launching a child process.");
             }
-
-            return true;
         }
 
         /// <summary>
