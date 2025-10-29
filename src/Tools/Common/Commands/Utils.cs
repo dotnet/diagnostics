@@ -27,15 +27,14 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     if (commonId != -1)
                     {
-                        Console.WriteLine("There are more than one active processes with the given name: {0}", name);
-                        return -1;
+                        throw new CommandLineErrorException($"There are more than one active processes with the given name: {name}");
                     }
                     commonId = processesWithMatchingName[i].Id;
                 }
             }
             if (commonId == -1)
             {
-                Console.WriteLine("There is no active process with the given name: {0}", name);
+                throw new CommandLineErrorException($"There is no active process with the given name: {name}");
             }
             return commonId;
         }
@@ -113,10 +112,7 @@ namespace Microsoft.Internal.Common.Utils
             // Resolve name option
             else if (!string.IsNullOrEmpty(name))
             {
-                if ((processId = FindProcessIdWithName(name)) < 0)
-                {
-                    return false;
-                }
+                processId = FindProcessIdWithName(name);
             }
             else if (!string.IsNullOrEmpty(dsrouter))
             {

@@ -44,10 +44,6 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         return -1;
                     }
                     processId = CommandUtils.FindProcessIdWithName(name);
-                    if (processId < 0)
-                    {
-                        return -1;
-                    }
                 }
 
                 if (processId < 0)
@@ -60,7 +56,6 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     stdError.WriteLine("--process-id is required");
                     return -1;
                 }
-
 
                 DiagnosticsClient client = new(processId);
                 List<EventPipeProvider> providers = new()
@@ -142,6 +137,11 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         PrintStack(stdOutput, threadId, samples[0], stackSource);
                     }
                 }
+            }
+            catch (CommandLineErrorException e)
+            {
+                stdError.WriteLine($"[ERROR] {e.Message}");
+                return -1;
             }
             catch (OperationCanceledException)
             {
