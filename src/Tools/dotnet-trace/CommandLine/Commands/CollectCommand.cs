@@ -473,6 +473,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Error.WriteLine($"[ERROR] {e.Message}");
                 collectionStopped = true;
                 ret = (int)ReturnCode.ArgumentError;
+                if (e.Message.StartsWith("Failed to launch dsrouter", StringComparison.OrdinalIgnoreCase))
+                {
+                    ret = (int)ReturnCode.TracingError;
+                }
             }
             catch (OperationCanceledException)
             {
