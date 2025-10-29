@@ -185,9 +185,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // to it.
                 ValidateNonNegative(maxHistograms, nameof(maxHistograms));
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
-                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId))
+                if (!ProcessLauncher.Launcher.HasChildProc)
                 {
-                    return ReturnCode.ArgumentError;
+                    CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId);
                 }
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
@@ -274,9 +274,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // to it.
                 ValidateNonNegative(maxHistograms, nameof(maxHistograms));
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
-                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId))
+                if (!ProcessLauncher.Launcher.HasChildProc)
                 {
-                    return ReturnCode.ArgumentError;
+                    CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId);
                 }
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
