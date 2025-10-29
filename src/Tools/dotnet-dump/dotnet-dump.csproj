@@ -24,6 +24,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\IConsole.cs" Link="IConsole.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\CommandLineErrorException.cs" Link="CommandLineErrorException.cs" />
   </ItemGroup>
 
   <ItemGroup>

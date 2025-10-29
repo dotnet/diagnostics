@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools;
 using Microsoft.Diagnostics.Tools.Common;
 
 namespace Microsoft.Internal.Common.Utils
