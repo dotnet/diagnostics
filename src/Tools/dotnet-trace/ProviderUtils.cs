@@ -76,7 +76,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static List<EventPipeProvider> ComputeProviderConfig(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles, bool shouldPrintProviders = false, string verbExclusivity = null, IConsole console = null)
         {
-            console ??= new DefaultConsole(false);
+            console ??= new DefaultConsole();
             Dictionary<string, EventPipeProvider> merged = new(StringComparer.OrdinalIgnoreCase);
             Dictionary<string, int> providerSources = new(StringComparer.OrdinalIgnoreCase);
 

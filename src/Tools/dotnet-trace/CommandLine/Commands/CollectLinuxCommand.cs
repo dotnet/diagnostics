@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public CollectLinuxCommandHandler(IConsole console = null)
         {
-            Console = console ?? new DefaultConsole(false);
+            Console = console ?? new DefaultConsole();
             rewriter = new LineRewriter(Console);
         }
 

@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             _pauseCmdSet = false;
             _shouldExit = new TaskCompletionSource<ReturnCode>();
-            _console = console ?? new DefaultConsole(false);
+            _console = console ?? new DefaultConsole();
         }
 
         private void MeterInstrumentEventObserved(string meterName, DateTime timestamp)
