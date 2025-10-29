@@ -33,7 +33,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private readonly TaskCompletionSource<ReturnCode> _shouldExit;
         private DiagnosticsClient _diagnosticsClient;
         private MetricsPipelineSettings _settings;
-        private CommandUtils _commandUtils;
 
         private class ProviderEventState
         {
@@ -48,7 +47,6 @@ namespace Microsoft.Diagnostics.Tools.Counters
             _pauseCmdSet = false;
             _shouldExit = new TaskCompletionSource<ReturnCode>();
             _console = console ?? new DefaultConsole(false);
-            _commandUtils = new(_console);
         }
 
         private void MeterInstrumentEventObserved(string meterName, DateTime timestamp)
@@ -187,7 +185,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // to it.
                 ValidateNonNegative(maxHistograms, nameof(maxHistograms));
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
-                if (!ProcessLauncher.Launcher.HasChildProc && !_commandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId))
+                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId))
                 {
                     return ReturnCode.ArgumentError;
                 }
@@ -276,7 +274,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // to it.
                 ValidateNonNegative(maxHistograms, nameof(maxHistograms));
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
-                if (!ProcessLauncher.Launcher.HasChildProc && !_commandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId))
+                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId))
                 {
                     return ReturnCode.ArgumentError;
                 }

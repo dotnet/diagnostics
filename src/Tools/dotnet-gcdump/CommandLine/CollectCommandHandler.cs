@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Graphs;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tools.Common;
 using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Utils;
 
@@ -31,8 +30,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <returns></returns>
         private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter)
         {
-            CommandUtils commandUtils = new(new DefaultConsole(false));
-            if (!commandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
+            if (!CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
             {
                 return -1;
             }

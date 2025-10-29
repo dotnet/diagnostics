@@ -8,7 +8,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
-using Microsoft.Diagnostics.Tools.Common;
 using Microsoft.Diagnostics.Tools.GCDump.CommandLine;
 using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Utils;
@@ -92,8 +91,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
         private static Task<int> ReportFromProcess(int processId, string diagnosticPort, string dsrouter, CancellationToken ct)
         {
-            CommandUtils commandUtils = new(new DefaultConsole(false));
-            if (!commandUtils.ResolveProcessForAttach(processId, string.Empty, diagnosticPort, dsrouter, out int resolvedProcessId))
+            if (!CommandUtils.ResolveProcessForAttach(processId, string.Empty, diagnosticPort, dsrouter, out int resolvedProcessId))
             {
                 return Task.FromResult(-1);
             }
