@@ -22,6 +22,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
     internal class CollectCommandHandler
     {
         internal bool IsQuiet { get; set; }
+        internal CommandUtils commandUtils;
 
         public CollectCommandHandler(IConsole console = null)
         {
@@ -29,6 +30,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             StartTraceSessionAsync = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
             ResumeRuntimeAsync = (client, ct) => client.ResumeRuntimeAsync(ct);
             CollectSessionEventStream = (name) => new FileStream(name, FileMode.Create, FileAccess.Write);
+            commandUtils = new CommandUtils(Console);
         }
 
         private void ConsoleWriteLine(string str = "")
@@ -103,7 +105,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
                         return (int)ReturnCode.ArgumentError;
                     }
-                    if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
+                    if (commandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
                     {
                         processId = resolvedProcessId;
                     }
@@ -112,7 +114,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return (int)ReturnCode.ArgumentError;
                     }
                 }
-                else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
+                else if (!commandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
                 {
                     return (int)ReturnCode.ArgumentError;
                 }

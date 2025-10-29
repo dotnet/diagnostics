@@ -9,13 +9,20 @@ using Microsoft.Diagnostics.Tools.Common;
 
 namespace Microsoft.Internal.Common.Utils
 {
-    internal static class CommandUtils
+    internal sealed class CommandUtils
     {
+        private IConsole Console { get; }
+
+        public CommandUtils(IConsole console)
+        {
+            Console = console;
+        }
+
         // Returns processId that matches the given name.
         // It also checks whether the process has a diagnostics server port.
         // If there are more than 1 process with the given name or there isn't any active process
         // with the given name, then this returns -1
-        public static int FindProcessIdWithName(string name)
+        public int FindProcessIdWithName(string name)
         {
             List<int> publishedProcessesPids = new(DiagnosticsClient.GetPublishedProcesses());
             Process[] processesWithMatchingName = Process.GetProcessesByName(name);
@@ -27,7 +34,7 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     if (commonId != -1)
                     {
-                        Console.WriteLine("There are more than one active processes with the given name: {0}", name);
+                        Console.WriteLine($"There are more than one active processes with the given name: {name}");
                         return -1;
                     }
                     commonId = processesWithMatchingName[i].Id;
@@ -35,7 +42,7 @@ namespace Microsoft.Internal.Common.Utils
             }
             if (commonId == -1)
             {
-                Console.WriteLine("There is no active process with the given name: {0}", name);
+                Console.WriteLine($"There is no active process with the given name: {name}");
             }
             return commonId;
         }
@@ -45,7 +52,7 @@ namespace Microsoft.Internal.Common.Utils
         // </summary>
         // <param name="dsrouter">dsrouterCommand</param>
         // <returns>processId</returns>
-        public static int LaunchDSRouterProcess(string dsrouterCommand)
+        public int LaunchDSRouterProcess(string dsrouterCommand)
         {
             Console.WriteLine("For finer control over the dotnet-dsrouter options, run it separately and connect to it using -p" + Environment.NewLine);
 
@@ -61,7 +68,7 @@ namespace Microsoft.Internal.Common.Utils
         /// <param name="name">name</param>
         /// <param name="port">port</param>
         /// <returns></returns>
-        public static bool ValidateArgumentsForChildProcess(int processId, string name, string port)
+        public bool ValidateArgumentsForChildProcess(int processId, string name, string port)
         {
             if (processId != 0 || name != null || !string.IsNullOrEmpty(port))
             {
@@ -83,7 +90,7 @@ namespace Microsoft.Internal.Common.Utils
         /// <param name="dsrouter">dsrouter</param>
         /// <param name="resolvedProcessId">resolvedProcessId</param>
         /// <returns></returns>
-        public static bool ResolveProcessForAttach(int processId, string name, string port, string dsrouter, out int resolvedProcessId)
+        public bool ResolveProcessForAttach(int processId, string name, string port, string dsrouter, out int resolvedProcessId)
         {
             resolvedProcessId = -1;
             if (processId == 0 && string.IsNullOrEmpty(name) && string.IsNullOrEmpty(port) && string.IsNullOrEmpty(dsrouter))

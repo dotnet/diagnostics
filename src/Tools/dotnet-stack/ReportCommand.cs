@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Symbols;
+using Microsoft.Diagnostics.Tools.Common;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Etlx;
 using Microsoft.Diagnostics.Tracing.Stacks;
@@ -43,7 +44,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
                         Console.WriteLine("Can only specify either --name or --process-id option.");
                         return -1;
                     }
-                    processId = CommandUtils.FindProcessIdWithName(name);
+                    CommandUtils commandUtils = new(new DefaultConsole(false));
+                    processId = commandUtils.FindProcessIdWithName(name);
                     if (processId < 0)
                     {
                         return -1;

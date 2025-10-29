@@ -12,7 +12,7 @@ namespace Microsoft.Diagnostics.Tools.Common
     /// maybe we could map it to System.CommandLine's IConsole, but right now that interface doesn't
     /// have enough functionality for everything we need.
     /// </summary>
-    internal class DefaultConsole : IConsole
+    internal sealed class DefaultConsole : IConsole
     {
         private readonly bool _useAnsi;
         public DefaultConsole(bool useAnsi)

@@ -6,6 +6,7 @@ using System.CommandLine;
 using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools.Common;
 using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Dump
@@ -35,7 +36,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             try
             {
-                if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, string.Empty, out int resolvedProcessId))
+                CommandUtils commandUtils = new(new DefaultConsole(false));
+                if (commandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, string.Empty, out int resolvedProcessId))
                 {
                     processId = resolvedProcessId;
                 }
