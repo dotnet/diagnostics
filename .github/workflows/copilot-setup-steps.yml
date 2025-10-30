@@ -17,6 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # The NuGet MCP requires .NET 10 SDK to be available in PATH.
+      - name: Setup local dotnet and add it to PATH PATH
+        run:
+          echo "$PWD/.dotnet/" >> $GITHUB_PATH
+
       - name: Install Dependencies
         run: |
           sudo ./eng/common/native/install-dependencies.sh && \
@@ -26,11 +31,8 @@ jobs:
       - name: Restore solution
         run: ./build.sh -restore
 
-      - name: Put dotnet on the path
-        run: echo "PATH=$PWD/.dotnet:$PATH" >> $GITHUB_ENV
-
       - name: Run dotnet info
         run: dotnet --info
 
-      - name: Build clr+libs
+      - name: Build repo
         run: ./build.sh
