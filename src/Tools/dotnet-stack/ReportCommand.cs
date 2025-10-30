@@ -138,9 +138,9 @@ namespace Microsoft.Diagnostics.Tools.Stack
                     }
                 }
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                stdError.WriteLine($"[ERROR] {e.Message}");
+                stdError.WriteLine($"[ERROR] {dte.Message}");
                 return -1;
             }
             catch (OperationCanceledException)

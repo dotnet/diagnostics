@@ -241,9 +241,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                 }
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                _console.Error.WriteLine(e.Message);
+                _console.Error.WriteLine(dte.Message);
                 return ReturnCode.ArgumentError;
             }
             finally
@@ -348,9 +348,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                 }
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                _console.Error.WriteLine(e.Message);
+                _console.Error.WriteLine(dte.Message);
                 return ReturnCode.ArgumentError;
             }
             finally
@@ -363,7 +363,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (value < 0)
             {
-                throw new CommandLineErrorException($"Argument --{argName} must be non-negative");
+                throw new DiagnosticToolException($"Argument --{argName} must be non-negative");
             }
         }
 
@@ -381,7 +381,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 // the FormatException message strings thrown by ParseProviderList are controlled
                 // by us and anticipate being integrated into the command-line error text.
-                throw new CommandLineErrorException("Error parsing --counters argument: " + e.Message);
+                throw new DiagnosticToolException("Error parsing --counters argument: " + e.Message);
             }
 
             if (counters.Count == 0)

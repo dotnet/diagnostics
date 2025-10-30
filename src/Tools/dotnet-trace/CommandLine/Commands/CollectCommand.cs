@@ -468,12 +468,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                Console.Error.WriteLine($"[ERROR] {e.Message}");
+                Console.Error.WriteLine($"[ERROR] {dte.Message}");
                 collectionStopped = true;
                 ret = (int)ReturnCode.ArgumentError;
-                if (e.Message.StartsWith("Failed to launch dsrouter", StringComparison.OrdinalIgnoreCase))
+                if (dte.Message.StartsWith("Failed to launch dsrouter", StringComparison.OrdinalIgnoreCase))
                 {
                     ret = (int)ReturnCode.TracingError;
                 }

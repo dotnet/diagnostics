@@ -94,9 +94,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return -1;
                 }
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                Console.Error.WriteLine($"[ERROR] {e.Message}");
+                Console.Error.WriteLine($"[ERROR] {dte.Message}");
                 return -1;
             }
             catch (FormatException fe)

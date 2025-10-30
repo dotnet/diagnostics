@@ -126,9 +126,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     client.WriteDump(dumpType, output, flags);
                 }
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                stdError.WriteLine($"[ERROR] {e.Message}");
+                stdError.WriteLine($"[ERROR] {dte.Message}");
                 return -1;
             }
             catch (Exception ex)
