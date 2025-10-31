@@ -157,8 +157,7 @@ The repository follows standard .NET coding conventions defined in the `.editorc
    ```
 6. **Using directives**: Must be placed **outside** the namespace declaration
 7. **Var keyword**: Avoid using `var` - use explicit types (configured as error when type is apparent)
-8. **File organization**: One type per file, filename matches type name
-9. **Additional rules**:
+8. **Additional rules**:
    - Trim trailing whitespace
    - Insert final newline
    - Prefer braces even for single-line blocks
