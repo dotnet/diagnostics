@@ -14,7 +14,7 @@
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" GeneratePathProperty="true" />
-    <PackageReference Include="Microsoft.OneCollect.RecordTrace" Version="0.1.32151" PrivateAssets="All" GeneratePathProperty="true"
+    <PackageReference Include="Microsoft.OneCollect.RecordTrace" Version="0.1.32221" PrivateAssets="All" GeneratePathProperty="true"
                       Condition="'$(TargetRid)' != '' and $([System.String]::Copy('$(TargetRid)').StartsWith('linux'))" />
   </ItemGroup>
 
