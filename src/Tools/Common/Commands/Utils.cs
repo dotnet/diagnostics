@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.Diagnostics.NETCore.Client;
+using Microsoft.Diagnostics.Tools;
 using Microsoft.Diagnostics.Tools.Common;
 
 namespace Microsoft.Internal.Common.Utils
@@ -27,15 +28,14 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     if (commonId != -1)
                     {
-                        Console.WriteLine("There are more than one active processes with the given name: {0}", name);
-                        return -1;
+                        throw new DiagnosticToolException($"There are more than one active processes with the given name: {name}");
                     }
                     commonId = processesWithMatchingName[i].Id;
                 }
             }
             if (commonId == -1)
             {
-                Console.WriteLine("There is no active process with the given name: {0}", name);
+                throw new DiagnosticToolException($"There is no active process with the given name: {name}");
             }
             return commonId;
         }
@@ -61,45 +61,39 @@ namespace Microsoft.Internal.Common.Utils
         /// <param name="name">name</param>
         /// <param name="port">port</param>
         /// <returns></returns>
-        public static bool ValidateArgumentsForChildProcess(int processId, string name, string port)
+        public static void ValidateArgumentsForChildProcess(int processId, string name, string port)
         {
             if (processId != 0 || name != null || !string.IsNullOrEmpty(port))
             {
-                Console.WriteLine("None of the --name, --process-id, or --diagnostic-port options may be specified when launching a child process.");
-                return false;
+                throw new DiagnosticToolException("None of the --name, --process-id, or --diagnostic-port options may be specified when launching a child process.");
             }
-
-            return true;
         }
 
         /// <summary>
         /// A helper method for validating --process-id, --name options for collect commands and resolving the process ID and name.
         /// Only one of these options can be specified, so it checks for duplicate options specified and if there is
-        /// such duplication, it prints the appropriate error message.
+        /// such duplication, it throws the appropriate DiagnosticToolException error message.
         /// </summary>
         /// <param name="processId">process ID</param>
         /// <param name="name">name</param>
         /// <param name="resolvedProcessId">resolvedProcessId</param>
         /// <param name="resolvedProcessName">resolvedProcessName</param>
         /// <returns></returns>
-        public static bool ResolveProcess(int processId, string name, out int resolvedProcessId, out string resolvedProcessName)
+        public static void ResolveProcess(int processId, string name, out int resolvedProcessId, out string resolvedProcessName)
         {
             resolvedProcessId = -1;
             resolvedProcessName = name;
             if (processId == 0 && string.IsNullOrEmpty(name))
             {
-                Console.Error.WriteLine("Must specify either --process-id or --name.");
-                return false;
+                throw new DiagnosticToolException("Must specify either --process-id or --name.");
             }
             else if (processId < 0)
             {
-                Console.Error.WriteLine($"{processId} is not a valid process ID");
-                return false;
+                throw new DiagnosticToolException($"{processId} is not a valid process ID");
             }
             else if ((processId != 0) && !string.IsNullOrEmpty(name))
             {
-                Console.Error.WriteLine("Only one of the --name or --process-id options may be specified.");
-                return false;
+                throw new DiagnosticToolException("Only one of the --name or --process-id options may be specified.");
             }
             try
             {
@@ -116,17 +110,14 @@ namespace Microsoft.Internal.Common.Utils
             }
             catch (ArgumentException)
             {
-                Console.Error.WriteLine($"No process with ID {processId} is currently running.");
-                return false;
+                throw new DiagnosticToolException($"No process with ID {processId} is currently running.");
             }
-
-            return resolvedProcessId != -1;
         }
 
         /// <summary>
         /// A helper method for validating --process-id, --name, --diagnostic-port, --dsrouter options for collect commands and resolving the process ID.
         /// Only one of these options can be specified, so it checks for duplicate options specified and if there is
-        /// such duplication, it prints the appropriate error message.
+        /// such duplication, it throws the appropriate DiagnosticToolException error message.
         /// </summary>
         /// <param name="processId">process ID</param>
         /// <param name="name">name</param>
@@ -134,18 +125,16 @@ namespace Microsoft.Internal.Common.Utils
         /// <param name="dsrouter">dsrouter</param>
         /// <param name="resolvedProcessId">resolvedProcessId</param>
         /// <returns></returns>
-        public static bool ResolveProcessForAttach(int processId, string name, string port, string dsrouter, out int resolvedProcessId)
+        public static void ResolveProcessForAttach(int processId, string name, string port, string dsrouter, out int resolvedProcessId)
         {
             resolvedProcessId = -1;
             if (processId == 0 && string.IsNullOrEmpty(name) && string.IsNullOrEmpty(port) && string.IsNullOrEmpty(dsrouter))
             {
-                Console.WriteLine("Must specify either --process-id, --name, --diagnostic-port, or --dsrouter.");
-                return false;
+                throw new DiagnosticToolException("Must specify either --process-id, --name, --diagnostic-port, or --dsrouter.");
             }
             else if (processId < 0)
             {
-                Console.WriteLine($"{processId} is not a valid process ID");
-                return false;
+                throw new DiagnosticToolException($"{processId} is not a valid process ID");
             }
             else if ((processId != 0 ? 1 : 0) +
                      (!string.IsNullOrEmpty(name) ? 1 : 0) +
@@ -153,45 +142,38 @@ namespace Microsoft.Internal.Common.Utils
                      (!string.IsNullOrEmpty(dsrouter) ? 1 : 0)
                      != 1)
             {
-                Console.WriteLine("Only one of the --name, --process-id, --diagnostic-port, or --dsrouter options may be specified.");
-                return false;
+                throw new DiagnosticToolException("Only one of the --name, --process-id, --diagnostic-port, or --dsrouter options may be specified.");
             }
             // If we got this far it means only one of --name/--diagnostic-port/--process-id/--dsrouter was specified
             else if (!string.IsNullOrEmpty(port))
             {
-                return true;
+                return;
             }
             // Resolve name option
             else if (!string.IsNullOrEmpty(name))
             {
-                if ((processId = FindProcessIdWithName(name)) < 0)
-                {
-                    return false;
-                }
+                processId = FindProcessIdWithName(name);
             }
             else if (!string.IsNullOrEmpty(dsrouter))
             {
                 if (dsrouter != "ios" && dsrouter != "android" && dsrouter != "ios-sim" && dsrouter != "android-emu")
                 {
-                    Console.WriteLine("Invalid value for --dsrouter. Valid values are 'ios', 'ios-sim', 'android' and 'android-emu'.");
-                    return false;
+                    throw new DiagnosticToolException("Invalid value for --dsrouter. Valid values are 'ios', 'ios-sim', 'android' and 'android-emu'.");
                 }
                 if ((processId = LaunchDSRouterProcess(dsrouter)) < 0)
                 {
                     if (processId == -2)
                     {
-                        Console.WriteLine($"Failed to launch dsrouter: {dsrouter}. Make sure that dotnet-dsrouter is not already running. You can connect to an already running dsrouter with -p.");
+                        throw new DiagnosticToolException($"Failed to launch dsrouter: {dsrouter}. Make sure that dotnet-dsrouter is not already running. You can connect to an already running dsrouter with -p.");
                     }
                     else
                     {
-                        Console.WriteLine($"Failed to launch dsrouter: {dsrouter}. Please make sure that dotnet-dsrouter is installed and available in the same directory as dotnet-trace.");
-                        Console.WriteLine("You can install dotnet-dsrouter by running 'dotnet tool install --global dotnet-dsrouter'. More info at https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dsrouter");
+                        throw new DiagnosticToolException($"Failed to launch dsrouter: {dsrouter}. Please make sure that dotnet-dsrouter is installed and available in the same directory as dotnet-trace.\n" +
+                                                             "You can install dotnet-dsrouter by running 'dotnet tool install --global dotnet-dsrouter'. More info at https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dsrouter");
                     }
-                    return false;
                 }
             }
             resolvedProcessId = processId;
-            return true;
         }
     }
 

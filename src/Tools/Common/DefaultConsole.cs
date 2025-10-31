@@ -15,7 +15,7 @@ namespace Microsoft.Diagnostics.Tools.Common
     internal class DefaultConsole : IConsole
     {
         private readonly bool _useAnsi;
-        public DefaultConsole(bool useAnsi)
+        public DefaultConsole(bool useAnsi = false)
         {
             _useAnsi = useAnsi;
         }

@@ -133,7 +133,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 string[] parts = config.Split(',');
                 if (parts.Length > 2)
                 {
-                    throw new FormatException($"Unknow IPC endpoint config format, {config}.");
+                    throw new FormatException($"Unknown IPC endpoint config format, {config}.");
                 }
 
                 if (string.IsNullOrEmpty(parts[0]))
@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     else
                     {
-                        throw new FormatException($"Unknow IPC endpoint config keyword, {parts[1]} in {config}.");
+                        throw new FormatException($"Unknown IPC endpoint config keyword, {parts[1]} in {config}.");
                     }
                 }
             }

@@ -91,16 +91,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
         private static Task<int> ReportFromProcess(int processId, string diagnosticPort, string dsrouter, CancellationToken ct)
         {
-            if (!CommandUtils.ResolveProcessForAttach(processId, string.Empty, diagnosticPort, dsrouter, out int resolvedProcessId))
+            try
             {
-                return Task.FromResult(-1);
-            }
+                CommandUtils.ResolveProcessForAttach(processId, string.Empty, diagnosticPort, dsrouter, out int resolvedProcessId);
+                processId = resolvedProcessId;
 
-            processId = resolvedProcessId;
-
-            if (!string.IsNullOrEmpty(diagnosticPort))
-            {
-                try
+                if (!string.IsNullOrEmpty(diagnosticPort))
                 {
                     IpcEndpointConfig config = IpcEndpointConfig.Parse(diagnosticPort);
                     if (!config.IsConnectConfig)
@@ -108,14 +104,23 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         Console.Error.WriteLine("--diagnostic-port is only supporting connect mode.");
                         return Task.FromResult(-1);
                     }
+                    processId = 0;
                 }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"--diagnostic-port argument error: {ex.Message}");
-                    return Task.FromResult(-1);
-                }
-
-                processId = 0;
+            }
+            catch (DiagnosticToolException dte)
+            {
+                Console.Error.WriteLine($"[ERROR] {dte.Message}");
+                return Task.FromResult(-1);
+            }
+            catch (FormatException fe)
+            {
+                Console.Error.WriteLine($"--diagnostic-port argument error: {fe.Message}");
+                return Task.FromResult(-1);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[ERROR] {ex}");
+                return Task.FromResult(-1);
             }
 
             if (!CollectCommandHandler

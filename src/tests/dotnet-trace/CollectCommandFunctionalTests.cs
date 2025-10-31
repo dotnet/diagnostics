@@ -66,17 +66,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             MockConsole console = new(200, 30);
             int exitCode = await RunAsync(args, console).ConfigureAwait(true);
-            Assert.Equal((int)ReturnCode.TracingError, exitCode);
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
             console.AssertSanitizedLinesEqual(CollectSanitizer, expectedException);
         }
 
         private static async Task<int> RunAsync(CollectArgs config, MockConsole console)
         {
-            var handler = new CollectCommandHandler();
+            var handler = new CollectCommandHandler(console);
             handler.StartTraceSessionAsync = (client, cfg, ct) => Task.FromResult<CollectCommandHandler.ICollectSession>(new TestCollectSession());
             handler.ResumeRuntimeAsync = (client, ct) => Task.CompletedTask;
             handler.CollectSessionEventStream = (name) => config.EventStream;
-            handler.Console = console;
 
             return await handler.Collect(
                 config.ct,

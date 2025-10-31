@@ -43,10 +43,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static IEnumerable<object[]> InvalidProviders()
         {
-            yield return new object[] { ":::", typeof(CommandLineErrorException) };
-            yield return new object[] { ":1:1", typeof(CommandLineErrorException) };
-            yield return new object[] { "ProviderOne:0x1:UnknownLevel", typeof(CommandLineErrorException) };
-            yield return new object[] { "VeryCoolProvider:0x0:-1", typeof(CommandLineErrorException) };
+            yield return new object[] { ":::", typeof(DiagnosticToolException) };
+            yield return new object[] { ":1:1", typeof(DiagnosticToolException) };
+            yield return new object[] { "ProviderOne:0x1:UnknownLevel", typeof(DiagnosticToolException) };
+            yield return new object[] { "VeryCoolProvider:0x0:-1", typeof(DiagnosticToolException) };
             yield return new object[] { "VeryCoolProvider:0xFFFFFFFFFFFFFFFFF:5:FilterAndPayloadSpecs=\"QuotedValue\"", typeof(OverflowException) };
             yield return new object[] { "VeryCoolProvider:0x10000000000000000::FilterAndPayloadSpecs=\"QuotedValue\"", typeof(OverflowException) };
             yield return new object[] { "VeryCoolProvider:__:5:FilterAndPayloadSpecs=\"QuotedValue\"", typeof(FormatException) };
@@ -120,7 +120,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static IEnumerable<object[]> MultipleInvalidProviders()
         {
-            yield return new object[] { "ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",:2:2:key=value,ProviderThree:3:3:key=value", typeof(CommandLineErrorException) };
+            yield return new object[] { "ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",:2:2:key=value,ProviderThree:3:3:key=value", typeof(DiagnosticToolException) };
             yield return new object[] { "ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:0xFFFFFFFFFFFFFFFFF:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value", typeof(OverflowException) };
             yield return new object[] { "ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:0x10000000000000000:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value", typeof(OverflowException) };
             yield return new object[] { "ProviderOne:0x1:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderTwo:18446744073709551615:5:FilterAndPayloadSpecs=\"QuotedValue\",ProviderThree:3:3:key=value", typeof(OverflowException) };
@@ -146,7 +146,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static IEnumerable<object[]> DedupeFailureCases()
         {
-            yield return new object[] { new[]{ "MyProvider:::key=value", "MyProvider:::key=value" }, typeof(CommandLineErrorException) };
+            yield return new object[] { new[]{ "MyProvider:::key=value", "MyProvider:::key=value" }, typeof(DiagnosticToolException) };
         }
 
         [Theory]
@@ -233,7 +233,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static IEnumerable<object[]> InvalidClrEvents()
         {
-            yield return new object[] { Array.Empty<string>(), "gc+bogus", string.Empty, Array.Empty<string>(), typeof(CommandLineErrorException) };
+            yield return new object[] { Array.Empty<string>(), "gc+bogus", string.Empty, Array.Empty<string>(), typeof(DiagnosticToolException) };
         }
 
         [Theory]

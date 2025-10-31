@@ -35,14 +35,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
         {
             try
             {
-                if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, string.Empty, out int resolvedProcessId))
-                {
-                    processId = resolvedProcessId;
-                }
-                else
-                {
-                    return -1;
-                }
+                CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, string.Empty, out int resolvedProcessId);
+                processId = resolvedProcessId;
 
                 if (output == null)
                 {
@@ -131,6 +125,11 @@ namespace Microsoft.Diagnostics.Tools.Dump
                     // Send the command to the runtime to initiate the core dump
                     client.WriteDump(dumpType, output, flags);
                 }
+            }
+            catch (DiagnosticToolException dte)
+            {
+                stdError.WriteLine($"[ERROR] {dte.Message}");
+                return -1;
             }
             catch (Exception ex)
             {
