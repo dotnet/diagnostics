@@ -35,27 +35,8 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
             try
             {
-                // Either processName or processId has to be specified.
-                if (!string.IsNullOrEmpty(name))
-                {
-                    if (processId != 0)
-                    {
-                        Console.WriteLine("Can only specify either --name or --process-id option.");
-                        return -1;
-                    }
-                    processId = CommandUtils.FindProcessIdWithName(name);
-                }
-
-                if (processId < 0)
-                {
-                    stdError.WriteLine("Process ID should not be negative.");
-                    return -1;
-                }
-                else if (processId == 0)
-                {
-                    stdError.WriteLine("--process-id is required");
-                    return -1;
-                }
+                CommandUtils.ResolveProcess(processId, name, out int resolvedProcessId, out string _);
+                processId = resolvedProcessId;
 
                 DiagnosticsClient client = new(processId);
                 List<EventPipeProvider> providers = new()

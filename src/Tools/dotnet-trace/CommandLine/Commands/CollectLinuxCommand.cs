@@ -53,15 +53,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return (int)ReturnCode.PlatformNotSupportedError;
             }
 
-            if (args.ProcessId != 0 || !string.IsNullOrEmpty(args.Name))
-            {
-                if (!CommandUtils.ResolveProcess(args.ProcessId, args.Name, out int resolvedProcessId, out string resolvedProcessName))
-                {
-                    return (int)ReturnCode.ArgumentError;
-                }
-                args = args with { Name = resolvedProcessName, ProcessId = resolvedProcessId };
-            }
-
             Console.WriteLine("==========================================================================================");
             Console.WriteLine("The collect-linux verb is a new preview feature and relies on an updated version of the");
             Console.WriteLine(".nettrace file format. The latest PerfView release supports these trace files but other");
@@ -69,11 +60,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.WriteLine("https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-trace.");
             Console.WriteLine("==========================================================================================");
 
-            args.Ct.Register(() => stopTracing = true);
             int ret = (int)ReturnCode.TracingError;
             string scriptPath = null;
             try
             {
+                if (args.ProcessId != 0 || !string.IsNullOrEmpty(args.Name))
+                {
+                    CommandUtils.ResolveProcess(args.ProcessId, args.Name, out int resolvedProcessId, out string resolvedProcessName);
+                    args = args with { Name = resolvedProcessName, ProcessId = resolvedProcessId };
+                }
+
+                args.Ct.Register(() => stopTracing = true);
                 Console.CursorVisible = false;
                 byte[] command = BuildRecordTraceArgs(args, out scriptPath);
 

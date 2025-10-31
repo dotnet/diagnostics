@@ -72,31 +72,28 @@ namespace Microsoft.Internal.Common.Utils
         /// <summary>
         /// A helper method for validating --process-id, --name options for collect commands and resolving the process ID and name.
         /// Only one of these options can be specified, so it checks for duplicate options specified and if there is
-        /// such duplication, it prints the appropriate error message.
+        /// such duplication, it throws the appropriate DiagnosticToolException error message.
         /// </summary>
         /// <param name="processId">process ID</param>
         /// <param name="name">name</param>
         /// <param name="resolvedProcessId">resolvedProcessId</param>
         /// <param name="resolvedProcessName">resolvedProcessName</param>
         /// <returns></returns>
-        public static bool ResolveProcess(int processId, string name, out int resolvedProcessId, out string resolvedProcessName)
+        public static void ResolveProcess(int processId, string name, out int resolvedProcessId, out string resolvedProcessName)
         {
             resolvedProcessId = -1;
             resolvedProcessName = name;
             if (processId == 0 && string.IsNullOrEmpty(name))
             {
-                Console.Error.WriteLine("Must specify either --process-id or --name.");
-                return false;
+                throw new DiagnosticToolException("Must specify either --process-id or --name.");
             }
             else if (processId < 0)
             {
-                Console.Error.WriteLine($"{processId} is not a valid process ID");
-                return false;
+                throw new DiagnosticToolException($"{processId} is not a valid process ID");
             }
             else if ((processId != 0) && !string.IsNullOrEmpty(name))
             {
-                Console.Error.WriteLine("Only one of the --name or --process-id options may be specified.");
-                return false;
+                throw new DiagnosticToolException("Only one of the --name or --process-id options may be specified.");
             }
             try
             {
@@ -113,17 +110,14 @@ namespace Microsoft.Internal.Common.Utils
             }
             catch (ArgumentException)
             {
-                Console.Error.WriteLine($"No process with ID {processId} is currently running.");
-                return false;
+                throw new DiagnosticToolException($"No process with ID {processId} is currently running.");
             }
-
-            return resolvedProcessId != -1;
         }
 
         /// <summary>
         /// A helper method for validating --process-id, --name, --diagnostic-port, --dsrouter options for collect commands and resolving the process ID.
         /// Only one of these options can be specified, so it checks for duplicate options specified and if there is
-        /// such duplication, it prints the appropriate error message.
+        /// such duplication, it throws the appropriate DiagnosticToolException error message.
         /// </summary>
         /// <param name="processId">process ID</param>
         /// <param name="name">name</param>
