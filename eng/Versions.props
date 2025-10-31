@@ -24,8 +24,8 @@
     <!-- Uncomment this line to use the custom version of roslyn as needed. -->
     <!-- <UsingToolMicrosoftNetCompilers Condition="'$(DotNetBuildSourceOnly)' != 'true'">true</UsingToolMicrosoftNetCompilers> -->
     <!-- CoreFX -->
-    <SystemReflectionMetadataVersion>8.0.0</SystemReflectionMetadataVersion>
-    <SystemCollectionsImmutableVersion>8.0.0</SystemCollectionsImmutableVersion>
+    <SystemReflectionMetadataVersion>9.0.8</SystemReflectionMetadataVersion>
+    <SystemCollectionsImmutableVersion>9.0.8</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>9.0.8</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
@@ -44,8 +44,8 @@
     <SystemMemoryVersion>4.5.5</SystemMemoryVersion>
     <SystemRuntimeLoaderVersion>4.3.0</SystemRuntimeLoaderVersion>
     <SystemThreadingTasksExtensionsVersion>4.5.4</SystemThreadingTasksExtensionsVersion>
-    <SystemTextEncodingsWebVersion>8.0.0</SystemTextEncodingsWebVersion>
-    <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
+    <SystemTextEncodingsWebVersion>9.0.8</SystemTextEncodingsWebVersion>
+    <SystemTextJsonVersion>9.0.8</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.556</StyleCopAnalyzersVersion>
     <cdbsosversion>10.0.26100.1</cdbsosversion>
