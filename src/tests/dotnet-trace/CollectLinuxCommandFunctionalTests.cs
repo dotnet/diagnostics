@@ -26,7 +26,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string[] perfEvents = null,
             string[] profile = null,
             FileInfo output = null,
-            TimeSpan duration = default)
+            TimeSpan duration = default,
+            string name = "",
+            int processId = 0)
         {
             return new CollectLinuxCommandHandler.CollectLinuxArgs(ct,
                                                                    providers ?? Array.Empty<string>(),
@@ -35,7 +37,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    perfEvents ?? Array.Empty<string>(),
                                                                    profile ?? Array.Empty<string>(),
                                                                    output ?? new FileInfo("trace.nettrace"),
-                                                                   duration);
+                                                                   duration,
+                                                                   name,
+                                                                   processId);
         }
 
         [Theory]
