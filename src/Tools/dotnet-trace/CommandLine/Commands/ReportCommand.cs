@@ -53,9 +53,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         OnlyManagedCodeStacks = true
                     };
 
-                    SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader);
+#pragma warning disable CS0618 // Type is marked as obsolete but is still the recommended approach
+                    ThreadTimeStackComputer computer = new(eventLog, symbolReader);
 
                     computer.GenerateThreadTimeStacks(stackSource);
+#pragma warning restore CS0618
 
                     FilterParams filterParams = new()
                     {
