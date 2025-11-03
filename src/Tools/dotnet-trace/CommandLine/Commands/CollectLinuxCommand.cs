@@ -22,6 +22,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private Stopwatch stopwatch = new();
         private LineRewriter rewriter;
         private long statusUpdateTimestamp;
+        private readonly string[] supportedRids = new[]
+        {
+            "linux-x64",
+            "linux-arm64"
+        };
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
@@ -47,9 +52,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// </summary>
         internal int CollectLinux(CollectLinuxArgs args)
         {
-            if (!OperatingSystem.IsLinux())
+            string rid = CommandUtils.GetRid();
+            if (!supportedRids.Contains(rid))
             {
-                Console.Error.WriteLine("The collect-linux command is only supported on Linux.");
+                Console.Error.WriteLine($"The collect-linux command is not supported on the current platform '{rid}'.");
+                Console.Error.WriteLine($"Supported platforms are: {string.Join(", ", supportedRids)}.");
                 return (int)ReturnCode.PlatformNotSupportedError;
             }
 

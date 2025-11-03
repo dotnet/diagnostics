@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tools.Common;
 
@@ -192,6 +194,40 @@ namespace Microsoft.Internal.Common.Utils
             }
             resolvedProcessId = processId;
             return true;
+        }
+
+        public static string GetRid()
+        {
+            string os = null;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                os = "win";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                os = "osx";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                os = "linux";
+                try
+                {
+                    string ostype = File.ReadAllText("/etc/os-release");
+                    if (ostype.Contains("ID=alpine"))
+                    {
+                        os = "linux-musl";
+                    }
+                }
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException)
+                {
+                }
+            }
+            if (os == null)
+            {
+                os ??= "unknown";
+            }
+            string architectureString = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
+            return $"{os}-{architectureString}";
         }
     }
 
