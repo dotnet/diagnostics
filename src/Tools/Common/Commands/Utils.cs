@@ -222,10 +222,7 @@ namespace Microsoft.Internal.Common.Utils
                 {
                 }
             }
-            if (os == null)
-            {
-                os ??= "unknown";
-            }
+            os ??= "unknown";
             string architectureString = RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant();
             return $"{os}-{architectureString}";
         }
