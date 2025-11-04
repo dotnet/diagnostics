@@ -31,35 +31,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- For local build -->
-    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-x64/native/librecordtrace.so"
-          Link="runtimes/linux-x64/native/librecordtrace.so"
-          Visible="false"
-          CopyToOutputDirectory="PreserveNewest"
-          Condition="'$(RuntimeIdentifier)' == '' and Exists('$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-x64/native/librecordtrace.so')" />
-    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-arm64/native/librecordtrace.so"
-          Link="runtimes/linux-arm64/native/librecordtrace.so"
-          Visible="false"
-          CopyToOutputDirectory="PreserveNewest"
-          Condition="'$(RuntimeIdentifier)' == '' and Exists('$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-arm64/native/librecordtrace.so')" />
-
-    <!-- For bundled tools: include only the RID being built -->
-    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(RuntimeIdentifier)/native/librecordtrace.so"
-          Visible="false"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="PreserveNewest"
-          Condition="('$(RuntimeIdentifier)' == 'linux-x64' or '$(RuntimeIdentifier)' == 'linux-arm64') and Exists('$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(RuntimeIdentifier)/native/librecordtrace.so')" />
-
-    <!-- For NuGet package: include all supported Linux RIDs -->
-    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-x64/native/librecordtrace.so"
-          Pack="true"
-          Visible="false"
-          PackagePath="tools/$(TargetFramework)/any/runtimes/linux-x64/native/librecordtrace.so"
-          Condition="'$(PackAsTool)' == 'true' and Exists('$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-x64/native/librecordtrace.so')" />
-    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-arm64/native/librecordtrace.so"
-          Pack="true"
-          Visible="false"
-          PackagePath="tools/$(TargetFramework)/any/runtimes/linux-arm64/native/librecordtrace.so"
-          Condition="'$(PackAsTool)' == 'true' and Exists('$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-arm64/native/librecordtrace.so')" />
+    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-x64/native/librecordtrace.so">
+      <Visible>false</Visible>
+      <Link Condition="'$(PublishSingleFile)' != 'true'">runtimes/linux-x64/native/librecordtrace.so</Link>
+      <CopyToOutputDirectory Condition="'$(PublishSingleFile)' != 'true'">PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory Condition="'$(PublishSingleFile)' == 'true' and 'linux-x64' == '$(RuntimeIdentifier)'">PreserveNewest</CopyToPublishDirectory>
+    </None>
+    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-arm64/native/librecordtrace.so">
+      <Visible>false</Visible>
+      <Link Condition="'$(PublishSingleFile)' != 'true'">runtimes/linux-arm64/native/librecordtrace.so</Link>
+      <CopyToOutputDirectory Condition="'$(PublishSingleFile)' != 'true'">PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory Condition="'$(PublishSingleFile)' == 'true' and 'linux-arm64' == '$(RuntimeIdentifier)'">PreserveNewest</CopyToPublishDirectory>
+    </None>
   </ItemGroup>
 </Project>
