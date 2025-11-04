@@ -97,7 +97,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             catch (DllNotFoundException)
             {
-                Console.Error.WriteLine($"[ERROR] Could not find or load dependencies for collect-linux. For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace#dotnet-trace-collect-linux.");
+                Console.Error.WriteLine($"[ERROR] Could not find or load dependencies for collect-linux. For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace");
                 ret = (int)ReturnCode.PlatformNotSupportedError;
             }
             catch (Exception ex)
