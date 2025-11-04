@@ -164,12 +164,12 @@ namespace Microsoft.Internal.Common.Utils
                 {
                     if (processId == -2)
                     {
-                        throw new DiagnosticToolException($"Failed to launch dsrouter: {dsrouter}. Make sure that dotnet-dsrouter is not already running. You can connect to an already running dsrouter with -p.");
+                        throw new DiagnosticToolException($"Failed to launch dsrouter: {dsrouter}. Make sure that dotnet-dsrouter is not already running. You can connect to an already running dsrouter with -p.", (int)ReturnCode.TracingError);
                     }
                     else
                     {
                         throw new DiagnosticToolException($"Failed to launch dsrouter: {dsrouter}. Please make sure that dotnet-dsrouter is installed and available in the same directory as dotnet-trace.\n" +
-                                                             "You can install dotnet-dsrouter by running 'dotnet tool install --global dotnet-dsrouter'. More info at https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dsrouter");
+                                                             "You can install dotnet-dsrouter by running 'dotnet tool install --global dotnet-dsrouter'. More info at https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dsrouter", (int)ReturnCode.TracingError);
                     }
                 }
             }

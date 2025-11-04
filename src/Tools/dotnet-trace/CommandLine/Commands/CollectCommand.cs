@@ -472,11 +472,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Error.WriteLine($"[ERROR] {dte.Message}");
                 collectionStopped = true;
-                ret = (int)ReturnCode.ArgumentError;
-                if (dte.Message.StartsWith("Failed to launch dsrouter", StringComparison.OrdinalIgnoreCase))
-                {
-                    ret = (int)ReturnCode.TracingError;
-                }
+                ret = dte.ReturnCode;
             }
             catch (OperationCanceledException)
             {

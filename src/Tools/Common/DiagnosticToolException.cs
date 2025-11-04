@@ -18,6 +18,10 @@ namespace Microsoft.Diagnostics.Tools
     // contextualized error messages, don't use this type.
     internal sealed class DiagnosticToolException : Exception
     {
-        public DiagnosticToolException(string errorMessage) : base(errorMessage) { }
+        public int ReturnCode { get; }
+        public DiagnosticToolException(string errorMessage, int returnCode = 3 /* ReturnCode.ArgumentError */) : base(errorMessage)
+        {
+            ReturnCode = returnCode;
+        }
     }
 }
