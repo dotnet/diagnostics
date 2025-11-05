@@ -22,8 +22,8 @@
     <Compile Include="..\Common\DiagnosticToolException.cs" Link="DiagnosticToolException.cs" />
     <Compile Include="..\Common\ReturnCode.cs" Link="ReturnCode.cs" />
     <Compile Include="..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
-    <Compile Include="..\Common\IConsole.cs" Link="IConsole.cs" />
     <Compile Include="..\Common\DefaultConsole.cs" Link="DefaultConsole.cs" />
+    <Compile Include="..\Common\IConsole.cs" Link="IConsole.cs" />
   </ItemGroup>
 
   <ItemGroup>
