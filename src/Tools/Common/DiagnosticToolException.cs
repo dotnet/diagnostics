@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools
 {
@@ -18,8 +19,8 @@ namespace Microsoft.Diagnostics.Tools
     // contextualized error messages, don't use this type.
     internal sealed class DiagnosticToolException : Exception
     {
-        public int ReturnCode { get; }
-        public DiagnosticToolException(string errorMessage, int returnCode = 3 /* ReturnCode.ArgumentError */) : base(errorMessage)
+        public ReturnCode ReturnCode { get; }
+        public DiagnosticToolException(string errorMessage, ReturnCode returnCode = ReturnCode.ArgumentError ) : base(errorMessage)
         {
             ReturnCode = returnCode;
         }

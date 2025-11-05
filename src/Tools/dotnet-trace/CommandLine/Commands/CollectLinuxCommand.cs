@@ -90,7 +90,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             catch (DiagnosticToolException dte)
             {
                 Console.Error.WriteLine($"[ERROR] {dte.Message}");
-                ret = dte.ReturnCode;
+                ret = (int)dte.ReturnCode;
             }
             catch (Exception ex)
             {
