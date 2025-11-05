@@ -78,11 +78,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     OnlyManagedCodeStacks = true // EventPipe currently only has managed code stacks.
                 };
 
-                SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader)
+#pragma warning disable CS0618 // Type is marked as obsolete but is still the recommended approach
+                ThreadTimeStackComputer computer = new(eventLog, symbolReader)
                 {
                     IncludeEventSourceEvents = false // SpeedScope handles only CPU samples, events are not supported
                 };
                 computer.GenerateThreadTimeStacks(stackSource);
+#pragma warning restore CS0618
 
                 switch (format)
                 {
