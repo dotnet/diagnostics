@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools
 {
@@ -16,8 +17,12 @@ namespace Microsoft.Diagnostics.Tools
     //
     // For any other error conditions that were unanticipated or do not have
     // contextualized error messages, don't use this type.
-    internal sealed class CommandLineErrorException : Exception
+    internal sealed class DiagnosticToolException : Exception
     {
-        public CommandLineErrorException(string errorMessage) : base(errorMessage) { }
+        public ReturnCode ReturnCode { get; }
+        public DiagnosticToolException(string errorMessage, ReturnCode returnCode = ReturnCode.ArgumentError ) : base(errorMessage)
+        {
+            ReturnCode = returnCode;
+        }
     }
 }

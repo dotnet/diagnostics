@@ -196,7 +196,7 @@ namespace DotnetCounters.UnitTests
         {
             try
             {
-                CounterMonitor monitor = new CounterMonitor(TextWriter.Null, TextWriter.Null);
+                CounterMonitor monitor = new CounterMonitor();
 
                 using CancellationTokenSource source = new CancellationTokenSource(DefaultTimeout);
 

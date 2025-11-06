@@ -30,16 +30,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <returns></returns>
         private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter)
         {
-            if (!CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
+            try
             {
-                return -1;
-            }
+                CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId);
+                processId = resolvedProcessId;
 
-            processId = resolvedProcessId;
-
-            if (!string.IsNullOrEmpty(diagnosticPort))
-            {
-                try
+                if (!string.IsNullOrEmpty(diagnosticPort))
                 {
                     IpcEndpointConfig config = IpcEndpointConfig.Parse(diagnosticPort);
                     if (!config.IsConnectConfig)
@@ -47,18 +43,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         Console.Error.WriteLine("--diagnostic-port is only supporting connect mode.");
                         return -1;
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"--diagnostic-port argument error: {ex.Message}");
-                    return -1;
+
+                    processId = 0;
                 }
 
-                processId = 0;
-            }
-
-            try
-            {
                 output = string.IsNullOrEmpty(output)
                     ? $"{DateTime.Now:yyyyMMdd\\_HHmmss}_{processId}.gcdump"
                     : output;
@@ -105,6 +93,16 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     Console.Out.WriteLine("\tFailed to collect gcdump. Try running with '-v' for more information.");
                     return -1;
                 }
+            }
+            catch (DiagnosticToolException dte)
+            {
+                Console.Error.WriteLine($"[ERROR] {dte.Message}");
+                return -1;
+            }
+            catch (FormatException fe)
+            {
+                Console.Error.WriteLine($"--diagnostic-port argument error: {fe.Message}");
+                return -1;
             }
             catch (Exception ex)
             {

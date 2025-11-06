@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public CollectLinuxCommandHandler(IConsole console = null)
         {
-            Console = console ?? new DefaultConsole(false);
+            Console = console ?? new DefaultConsole();
             rewriter = new LineRewriter(Console);
         }
 
@@ -71,15 +71,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return (int)ReturnCode.PlatformNotSupportedError;
             }
 
-            if (args.ProcessId != 0 || !string.IsNullOrEmpty(args.Name))
-            {
-                if (!CommandUtils.ResolveProcess(args.ProcessId, args.Name, out int resolvedProcessId, out string resolvedProcessName))
-                {
-                    return (int)ReturnCode.ArgumentError;
-                }
-                args = args with { Name = resolvedProcessName, ProcessId = resolvedProcessId };
-            }
-
             Console.WriteLine("==========================================================================================");
             Console.WriteLine("The collect-linux verb is a new preview feature and relies on an updated version of the");
             Console.WriteLine(".nettrace file format. The latest PerfView release supports these trace files but other");
@@ -87,11 +78,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.WriteLine("https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-trace.");
             Console.WriteLine("==========================================================================================");
 
-            args.Ct.Register(() => stopTracing = true);
             int ret = (int)ReturnCode.TracingError;
             string scriptPath = null;
             try
             {
+                if (args.ProcessId != 0 || !string.IsNullOrEmpty(args.Name))
+                {
+                    CommandUtils.ResolveProcess(args.ProcessId, args.Name, out int resolvedProcessId, out string resolvedProcessName);
+                    args = args with { Name = resolvedProcessName, ProcessId = resolvedProcessId };
+                }
+
+                args.Ct.Register(() => stopTracing = true);
                 Console.CursorVisible = false;
                 byte[] command = BuildRecordTraceArgs(args, out scriptPath);
 
@@ -108,10 +105,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 stopwatch.Start();
                 ret = RecordTraceInvoker(command, (UIntPtr)command.Length, OutputHandler);
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                Console.Error.WriteLine($"[ERROR] {e.Message}");
-                ret = (int)ReturnCode.TracingError;
+                Console.Error.WriteLine($"[ERROR] {dte.Message}");
+                ret = (int)dte.ReturnCode;
             }
             catch (DllNotFoundException dnfe)
             {
@@ -236,7 +233,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 string[] split = perfEvent.Split(':', 2, StringSplitOptions.TrimEntries);
                 if (split.Length != 2 || string.IsNullOrEmpty(split[0]) || string.IsNullOrEmpty(split[1]))
                 {
-                    throw new CommandLineErrorException($"Invalid perf event specification '{perfEvent}'. Expected format 'provider:event'.");
+                    throw new DiagnosticToolException($"Invalid perf event specification '{perfEvent}'. Expected format 'provider:event'.");
                 }
 
                 string perfProvider = split[0];

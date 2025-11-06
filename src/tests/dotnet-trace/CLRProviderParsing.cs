@@ -29,7 +29,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("haha")]
         public void InValidSingleCLREvent(string providerToParse)
         {
-            Assert.Throws<CommandLineErrorException>(() => ProviderUtils.ToCLREventPipeProvider(providerToParse, "4"));
+            Assert.Throws<DiagnosticToolException>(() => ProviderUtils.ToCLREventPipeProvider(providerToParse, "4"));
         }
 
         [Theory]
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [InlineData("hello")]
         public void InvalidCLREventLevel(string clreventlevel)
         {
-            Assert.Throws<CommandLineErrorException>(() => ProviderUtils.ToCLREventPipeProvider("gc", clreventlevel));
+            Assert.Throws<DiagnosticToolException>(() => ProviderUtils.ToCLREventPipeProvider("gc", clreventlevel));
         }
     }
 }
