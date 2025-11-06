@@ -244,7 +244,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             catch (DiagnosticToolException dte)
             {
                 _console.Error.WriteLine(dte.Message);
-                return (ReturnCode)dte.ReturnCode;
+                return dte.ReturnCode;
             }
             finally
             {
@@ -351,7 +351,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             catch (DiagnosticToolException dte)
             {
                 _console.Error.WriteLine(dte.Message);
-                return (ReturnCode)dte.ReturnCode;
+                return dte.ReturnCode;
             }
             finally
             {
