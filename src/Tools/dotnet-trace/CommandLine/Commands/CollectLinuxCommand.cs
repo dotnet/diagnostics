@@ -95,6 +95,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Console.Error.WriteLine($"[ERROR] {e.Message}");
                 ret = (int)ReturnCode.TracingError;
             }
+            catch (DllNotFoundException dnfe)
+            {
+                Console.Error.WriteLine($"[ERROR] Could not find or load dependencies for collect-linux. For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace");
+                Console.Error.WriteLine($"[ERROR] {dnfe.Message}");
+                ret = (int)ReturnCode.PlatformNotSupportedError;
+            }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex}");
