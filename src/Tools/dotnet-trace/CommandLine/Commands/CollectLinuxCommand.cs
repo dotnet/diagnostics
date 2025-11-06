@@ -41,15 +41,33 @@ namespace Microsoft.Diagnostics.Tools.Trace
             rewriter = new LineRewriter(Console);
         }
 
+        internal static bool IsSupported()
+        {
+            bool isSupportedLinuxPlatform = false;
+            if (OperatingSystem.IsLinux())
+            {
+                isSupportedLinuxPlatform = true;
+                try
+                {
+                    string ostype = File.ReadAllText("/etc/os-release");
+                    isSupportedLinuxPlatform = !ostype.Contains("ID=alpine");
+                }
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException) {}
+            }
+
+            return isSupportedLinuxPlatform;
+        }
+
         /// <summary>
         /// Collects diagnostic traces using perf_events, a Linux OS technology. collect-linux requires admin privileges to capture kernel- and user-mode events, and by default, captures events from all processes.
         /// This Linux-only command includes the same .NET events as dotnet-trace collect, and it uses the kernel’s user_events mechanism to emit .NET events as perf events, enabling unification of user-space .NET events with kernel-space system events.
         /// </summary>
         internal int CollectLinux(CollectLinuxArgs args)
         {
-            if (!OperatingSystem.IsLinux())
+            if (!IsSupported())
             {
-                Console.Error.WriteLine("The collect-linux command is only supported on Linux.");
+                Console.Error.WriteLine("The collect-linux command is not supported on this platform.");
+                Console.Error.WriteLine("For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace.");
                 return (int)ReturnCode.PlatformNotSupportedError;
             }
 
@@ -91,6 +109,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Console.Error.WriteLine($"[ERROR] {dte.Message}");
                 ret = (int)dte.ReturnCode;
+            }
+            catch (DllNotFoundException dnfe)
+            {
+                Console.Error.WriteLine($"[ERROR] Could not find or load dependencies for collect-linux. For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace");
+                Console.Error.WriteLine($"[ERROR] {dnfe.Message}");
+                ret = (int)ReturnCode.PlatformNotSupportedError;
             }
             catch (Exception ex)
             {
