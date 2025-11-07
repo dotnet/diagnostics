@@ -30,6 +30,8 @@ extends:
       tsa:
         enabled: true
     featureFlags:
+      networkisolation:
+        policy: Permissive,CFSClean
       autoBaseline: true
 
     containers:
