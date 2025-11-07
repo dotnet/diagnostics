@@ -29,9 +29,9 @@ extends:
         enabled: true
       tsa:
         enabled: true
+    settings:
+      networkIsolationPolicy: Permissive,CFSClean,CFSClean2
     featureFlags:
-      networkisolation:
-        policy: Permissive,CFSClean
       autoBaseline: true
 
     containers:
