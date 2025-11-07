@@ -30,7 +30,8 @@ extends:
       tsa:
         enabled: true
     settings:
-      networkIsolationPolicy: Permissive,CFSClean,CFSClean2
+      # Do not add CFSClean2 yet - microbuild needs some endpoints behind it.
+      networkIsolationPolicy: Permissive,CFSClean
     featureFlags:
       autoBaseline: true
 
