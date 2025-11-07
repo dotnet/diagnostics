@@ -87,8 +87,8 @@
 
   -->
   <PropertyGroup>
-    <MicrosoftNETCoreApp90Version>9.0.4</MicrosoftNETCoreApp90Version>
-    <MicrosoftNETCoreApp80Version>8.0.15</MicrosoftNETCoreApp80Version>
+    <MicrosoftNETCoreApp90Version>9.0.10</MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp80Version>8.0.21</MicrosoftNETCoreApp80Version>
   </PropertyGroup>
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
