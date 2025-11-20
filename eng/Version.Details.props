@@ -14,22 +14,22 @@ This file should be imported by eng/Versions.props
     <XamarinAndroidToolsAndroidSdkPackageVersion>1.0.105-preview.225</XamarinAndroidToolsAndroidSdkPackageVersion>
     <!-- dotnet/dotnet dependencies -->
     <MicrosoftAspNetCoreAppRefPackageVersion>10.0.1</MicrosoftAspNetCoreAppRefPackageVersion>
-    <MicrosoftAspNetCoreAppRefInternalPackageVersion>10.0.1-servicing.25568.102</MicrosoftAspNetCoreAppRefInternalPackageVersion>
-    <MicrosoftCodeAnalysisPackageVersion>5.0.0-2.25568.102</MicrosoftCodeAnalysisPackageVersion>
-    <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.0.0-2.25568.102</MicrosoftCodeAnalysisAnalyzersPackageVersion>
-    <MicrosoftCodeAnalysisCSharpPackageVersion>5.0.0-2.25568.102</MicrosoftCodeAnalysisCSharpPackageVersion>
+    <MicrosoftAspNetCoreAppRefInternalPackageVersion>10.0.1-servicing.25569.104</MicrosoftAspNetCoreAppRefInternalPackageVersion>
+    <MicrosoftCodeAnalysisPackageVersion>5.0.0-2.25569.104</MicrosoftCodeAnalysisPackageVersion>
+    <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.0.0-2.25569.104</MicrosoftCodeAnalysisAnalyzersPackageVersion>
+    <MicrosoftCodeAnalysisCSharpPackageVersion>5.0.0-2.25569.104</MicrosoftCodeAnalysisCSharpPackageVersion>
     <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>10.0.101</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.25568.102</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.25568.102</MicrosoftDotNetCodeAnalysisPackageVersion>
-    <MicrosoftNETSdkPackageVersion>10.0.101-servicing.25568.102</MicrosoftNETSdkPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.25569.104</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.25569.104</MicrosoftDotNetCodeAnalysisPackageVersion>
+    <MicrosoftNETSdkPackageVersion>10.0.101-servicing.25569.104</MicrosoftNETSdkPackageVersion>
     <MicrosoftNETCoreAppRefPackageVersion>10.0.1</MicrosoftNETCoreAppRefPackageVersion>
-    <MicrosoftNETCorePlatformsPackageVersion>10.0.1-servicing.25568.102</MicrosoftNETCorePlatformsPackageVersion>
-    <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25568.102</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25568.102</runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25568.102</runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25568.102</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25568.102</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25568.102</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
+    <MicrosoftNETCorePlatformsPackageVersion>10.0.1-servicing.25569.104</MicrosoftNETCorePlatformsPackageVersion>
+    <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25569.104</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25569.104</runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25569.104</runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25569.104</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25569.104</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>10.0.1-servicing.25569.104</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
     <!-- dotnet/arcade dependencies -->
     <MicrosoftDotNetRemoteExecutorPackageVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorPackageVersion>
   </PropertyGroup>
