@@ -65,6 +65,40 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, expectedException);
         }
 
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_ReportsResolveProcessErrors()
+        {
+            MockConsole console = new(200, 30);
+            var args = TestArgs(processId: -1);
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            console.AssertSanitizedLinesEqual(null, FormatException("-1 is not a valid process ID"));
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_ReportsResolveProcessNameErrors()
+        {
+            MockConsole console = new(200, 30);
+            var args = TestArgs(name: "process-that-should-not-exist", processId: 0);
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            console.AssertSanitizedLinesEqual(null, FormatException("There is no active process with the given name: process-that-should-not-exist"));
+        }
+
+        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [MemberData(nameof(ResolveProcessExceptions))]
+        public void CollectLinuxCommand_ResolveProcessExceptions(object testArgs, string[] expectedError)
+        {
+            MockConsole console = new(200, 30);
+
+            int exitCode = Run(testArgs, console);
+
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            console.AssertSanitizedLinesEqual(null, expectedError);
+        }
+
         [ConditionalFact(nameof(IsCollectLinuxNotSupported))]
         public void CollectLinuxCommand_NotSupported_OnNonLinux()
         {
@@ -221,6 +255,27 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 TestArgs(clrEvents: "gc", clrEventLevel: "unknown"),
                 FormatException("Unknown EventLevel: unknown")
+            };
+        }
+
+        public static IEnumerable<object[]> ResolveProcessExceptions()
+        {
+            yield return new object[]
+            {
+                TestArgs(processId: -1, name: string.Empty),
+                FormatException("-1 is not a valid process ID")
+            };
+
+            yield return new object[]
+            {
+                TestArgs(processId: 1, name: "dummy"),
+                FormatException("Only one of the --name or --process-id options may be specified.")
+            };
+
+            yield return new object[]
+            {
+                TestArgs(processId: int.MaxValue, name: string.Empty),
+                FormatException("No process with ID 2147483647 is currently running.")
             };
         }
 
