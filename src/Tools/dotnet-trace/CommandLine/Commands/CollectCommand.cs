@@ -29,6 +29,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             StartTraceSessionAsync = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
             ResumeRuntimeAsync = (client, ct) => client.ResumeRuntimeAsync(ct);
             CollectSessionEventStream = (name) => new FileStream(name, FileMode.Create, FileAccess.Write);
+            HasChildProcess = () => ProcessLauncher.Launcher.HasChildProc;
         }
 
         private void ConsoleWriteLine(string str = "")
@@ -77,7 +78,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
 
-                if (ProcessLauncher.Launcher.HasChildProc && showchildio)
+                bool hasChildProcess = HasChildProcess();
+
+                if (hasChildProcess && showchildio)
                 {
                     // If showing IO, then all IO (including CtrlC) behavior is delegated to the child process
                     cancelOnCtrlC = false;
@@ -96,7 +99,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ct = CancellationToken.None;
                 }
 
-                if (!ProcessLauncher.Launcher.HasChildProc)
+                if (!hasChildProcess)
                 {
                     if (showchildio)
                     {
@@ -204,7 +207,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return (int)ReturnCode.Ok;
                     }
                     diagnosticsClient = holder.Client;
-                    if (ProcessLauncher.Launcher.HasChildProc)
+                    if (hasChildProcess)
                     {
                         process = Process.GetProcessById(holder.EndpointInfo.ProcessId);
                     }
@@ -667,6 +670,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         internal Func<DiagnosticsClient, CancellationToken, Task> ResumeRuntimeAsync { get; set; }
         internal Func<string, Stream> CollectSessionEventStream { get; set; }
         internal IConsole Console { get; set; }
+        internal Func<bool> HasChildProcess { get; set; }
 #endregion
     }
 }
