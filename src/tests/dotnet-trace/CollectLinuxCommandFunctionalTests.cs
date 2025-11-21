@@ -5,12 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
 using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Trace;
+using Microsoft.DotNet.XUnitExtensions;
 using Microsoft.Internal.Common.Utils;
 using Xunit;
 
@@ -18,6 +19,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 {
     public class CollectLinuxCommandFunctionalTests
     {
+        public static bool IsCollectLinuxSupported => CollectLinuxCommandHandler.IsSupported();
+        public static bool IsCollectLinuxNotSupported => !CollectLinuxCommandHandler.IsSupported();
         private static CollectLinuxCommandHandler.CollectLinuxArgs TestArgs(
             CancellationToken ct = default,
             string[] providers = null,
@@ -42,46 +45,36 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    processId);
         }
 
-        [Theory]
+        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
         [MemberData(nameof(BasicCases))]
         public void CollectLinuxCommandProviderConfigurationConsolidation(object testArgs, string[] expectedLines)
         {
             MockConsole console = new(200, 30);
             int exitCode = Run(testArgs, console);
-            if (CollectLinuxCommandHandler.IsSupported())
-            {
-                Assert.Equal((int)ReturnCode.Ok, exitCode);
-                console.AssertSanitizedLinesEqual(CollectLinuxSanitizer, expectedLines);
-            }
-            else
-            {
-                Assert.Equal((int)ReturnCode.PlatformNotSupportedError, exitCode);
-                console.AssertSanitizedLinesEqual(null, new string[] {
-                    $"The collect-linux command is not supported on this platform.",
-                    $"For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace."
-                });
-            }
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            console.AssertSanitizedLinesEqual(CollectLinuxSanitizer, expectedLines);
         }
 
-        [Theory]
+        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
         [MemberData(nameof(InvalidProviders))]
         public void CollectLinuxCommandProviderConfigurationConsolidation_Throws(object testArgs, string[] expectedException)
         {
             MockConsole console = new(200, 30);
             int exitCode = Run(testArgs, console);
-            if (CollectLinuxCommandHandler.IsSupported())
-            {
-                Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
-                console.AssertSanitizedLinesEqual(null, expectedException);
-            }
-            else
-            {
-                Assert.Equal((int)ReturnCode.PlatformNotSupportedError, exitCode);
-                console.AssertSanitizedLinesEqual(null, new string[] {
-                    $"The collect-linux command is not supported on this platform.",
-                    $"For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace."
-                });
-            }
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            console.AssertSanitizedLinesEqual(null, expectedException);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxNotSupported))]
+        public void CollectLinuxCommand_NotSupported_OnNonLinux()
+        {
+            MockConsole console = new(200, 30);
+            int exitCode = Run(TestArgs(), console);
+            Assert.Equal((int)ReturnCode.PlatformNotSupportedError, exitCode);
+            console.AssertSanitizedLinesEqual(null, new string[] {
+                "The collect-linux command is not supported on this platform.",
+                "For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace."
+            });
         }
 
         private static int Run(object args, MockConsole console)
