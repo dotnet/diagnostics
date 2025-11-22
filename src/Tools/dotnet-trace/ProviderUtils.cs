@@ -76,7 +76,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static List<EventPipeProvider> ComputeProviderConfig(string[] providersArg, string clreventsArg, string clreventlevel, string[] profiles, bool shouldPrintProviders = false, string verbExclusivity = null, IConsole console = null)
         {
-            console ??= new DefaultConsole(false);
+            console ??= new DefaultConsole();
             Dictionary<string, EventPipeProvider> merged = new(StringComparer.OrdinalIgnoreCase);
             Dictionary<string, int> providerSources = new(StringComparer.OrdinalIgnoreCase);
 
@@ -101,14 +101,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (traceProfile == null)
                 {
-                    throw new CommandLineErrorException($"Invalid profile name: {profile}");
+                    throw new DiagnosticToolException($"Invalid profile name: {profile}");
                 }
 
                 if (!string.IsNullOrEmpty(verbExclusivity) &&
                     !string.IsNullOrEmpty(traceProfile.VerbExclusivity) &&
                     !string.Equals(traceProfile.VerbExclusivity, verbExclusivity, StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new CommandLineErrorException($"The specified profile '{traceProfile.Name}' does not apply to `dotnet-trace {verbExclusivity}`.");
+                    throw new DiagnosticToolException($"The specified profile '{traceProfile.Name}' does not apply to `dotnet-trace {verbExclusivity}`.");
                 }
 
                 IEnumerable<EventPipeProvider> profileProviders = traceProfile.Providers;
@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             if (providerConfigA.Arguments != null && providerConfigB.Arguments != null)
             {
-                throw new CommandLineErrorException($"Provider \"{providerConfigA.Name}\" is declared multiple times with filter arguments.");
+                throw new DiagnosticToolException($"Provider \"{providerConfigA.Name}\" is declared multiple times with filter arguments.");
             }
 
             return new EventPipeProvider(providerConfigA.Name, level, providerConfigA.Keywords | providerConfigB.Keywords, providerConfigA.Arguments ?? providerConfigB.Arguments);
@@ -218,7 +218,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
                 else
                 {
-                    throw new CommandLineErrorException($"{clrevents[i]} is not a valid CLR event keyword");
+                    throw new DiagnosticToolException($"{clrevents[i]} is not a valid CLR event keyword");
                 }
             }
 
@@ -256,7 +256,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     case "warning":
                         return EventLevel.Warning;
                     default:
-                        throw new CommandLineErrorException($"Unknown EventLevel: {token}");
+                        throw new DiagnosticToolException($"Unknown EventLevel: {token}");
                 }
             }
         }
@@ -281,7 +281,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             if (string.IsNullOrWhiteSpace(providerName))
             {
-                throw new CommandLineErrorException("Provider name was not specified.");
+                throw new DiagnosticToolException("Provider name was not specified.");
             }
 
             // Keywords

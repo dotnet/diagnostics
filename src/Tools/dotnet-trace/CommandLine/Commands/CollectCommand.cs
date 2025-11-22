@@ -23,9 +23,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         internal bool IsQuiet { get; set; }
 
-        public CollectCommandHandler()
+        public CollectCommandHandler(IConsole console = null)
         {
-            Console = new DefaultConsole(false);
+            Console = console ?? new DefaultConsole();
             StartTraceSessionAsync = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
             ResumeRuntimeAsync = (client, ct) => client.ResumeRuntimeAsync(ct);
             CollectSessionEventStream = (name) => new FileStream(name, FileMode.Create, FileAccess.Write);
@@ -103,18 +103,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
                         return (int)ReturnCode.ArgumentError;
                     }
-                    if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
-                    {
-                        processId = resolvedProcessId;
-                    }
-                    else
-                    {
-                        return (int)ReturnCode.ArgumentError;
-                    }
+                    CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId);
+                    processId = resolvedProcessId;
                 }
-                else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
+                else
                 {
-                    return (int)ReturnCode.ArgumentError;
+                    CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort);
                 }
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
@@ -474,11 +468,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                Console.Error.WriteLine($"[ERROR] {e.Message}");
+                Console.Error.WriteLine($"[ERROR] {dte.Message}");
                 collectionStopped = true;
-                ret = (int)ReturnCode.TracingError;
+                ret = (int)dte.ReturnCode;
             }
             catch (OperationCanceledException)
             {
