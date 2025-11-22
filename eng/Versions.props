@@ -1,9 +1,14 @@
 <Project>
-  <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+
+  <Import Project="Version.Details.props" />
+
   <PropertyGroup>
-    <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
-    <PreReleaseVersionLabel>preview</PreReleaseVersionLabel>
     <VersionPrefix>9.0.0</VersionPrefix>
+    <PreReleaseVersionLabel>preview</PreReleaseVersionLabel>
+    <PreReleaseVersionIteration></PreReleaseVersionIteration>
+    <!-- Allowed values: '', 'prerelease', 'release'. Set to 'release' when stabilizing. -->
+    <DotNetFinalVersionKind></DotNetFinalVersionKind>
+
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
     <!--
@@ -14,10 +19,12 @@
       and we don't participate in prodcon.
     -->
     <SkipPackagePublishingVersionChecks>true</SkipPackagePublishingVersionChecks>
-  </PropertyGroup>
-  <PropertyGroup>
-    <!-- Opt-in/out repo features -->
+
+    <!-- Arcade features -->
     <UsingToolXliff>false</UsingToolXliff>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <AzureIdentityVersion>1.13.1</AzureIdentityVersion>
     <AzureCoreVersion>1.45.0</AzureCoreVersion>
     <AzureStorageBlobsVersion>12.23.0</AzureStorageBlobsVersion>
@@ -74,6 +81,7 @@
     -->
     <MicrosoftCodeAnalysisCSharpCodeStyleVersion>$(MicrosoftCodeAnalysisVersion_LatestVS)</MicrosoftCodeAnalysisCSharpCodeStyleVersion>
   </PropertyGroup>
+
   <!--
     SOS test runtime versions
 
@@ -89,6 +97,7 @@
     <MicrosoftNETCoreApp90Version>9.0.4</MicrosoftNETCoreApp90Version>
     <MicrosoftNETCoreApp80Version>8.0.15</MicrosoftNETCoreApp80Version>
   </PropertyGroup>
+
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
     <PrivateBuildTesting Condition="'$(PrivateBuildTesting)' == ''">false</PrivateBuildTesting>
@@ -96,6 +105,7 @@
     <InternalReleaseTesting Condition="'$(DotnetRuntimeVersion)' != 'default'">true</InternalReleaseTesting>
     <ExtraInstallArgs>-runtimesourcefeed '$(RuntimeSourceFeed)' -runtimesourcefeedkey '$(RuntimeSourceFeedKey)'</ExtraInstallArgs>
   </PropertyGroup>
+
   <ItemGroup Condition="!$(PrivateBuildTesting) AND !$(InternalReleaseTesting)">
     <RuntimeTestVersions Include="Latest">
       <RuntimeDownload>$(MicrosoftNETCorePlatformsVersion)</RuntimeDownload>
@@ -119,6 +129,7 @@
       <TargetFramework>net8.0</TargetFramework>
     </RuntimeTestVersions>
   </ItemGroup>
+
   <!-- Private build testing -->
   <ItemGroup Condition="$(PrivateBuildTesting)">
     <RuntimeTestVersions Include="Latest">
@@ -129,6 +140,7 @@
       <TargetFramework>net10.0</TargetFramework>
     </RuntimeTestVersions>
   </ItemGroup>
+
   <!-- Internal service release testing -->
   <ItemGroup Condition="$(InternalReleaseTesting)">
     <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' != 'default'">
@@ -142,4 +154,5 @@
       <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
     </RuntimeTestVersions>
   </ItemGroup>
+
 </Project>
