@@ -1,5 +1,5 @@
 <Dependencies>
-  <Source Uri="https://github.com/dotnet/dotnet" Mapping="diagnostics" Sha="cc7f6e84d8dae36ad9ea51a5112627b8235982cc" BarId="291900" />
+  <Source Uri="https://github.com/dotnet/dotnet" Mapping="diagnostics" Sha="d119b40e8ff3b88f87ad60b04c807233a159b197" BarId="292184" />
   <ProductDependencies>
     <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.25381.2">
       <Uri>https://github.com/microsoft/clrmd</Uri>
