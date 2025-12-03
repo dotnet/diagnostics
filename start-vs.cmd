@@ -3,7 +3,6 @@ setlocal enabledelayedexpansion
 
 set "SDK_LOC=%~dp0.dotnet"
 
-
 set "DOTNET_ROOT=%SDK_LOC%"
 set "DOTNET_ROOT(x86)=%SDK_LOC%\x86"
 set "DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR=%DOTNET_ROOT%"

@@ -19,5 +19,10 @@
     <ProjectReference Include="Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
     <ProjectReference Include="Microsoft.SymbolManifestGenerator/Microsoft.SymbolManifestGenerator.csproj" />
     <ProjectReference Include="Microsoft.SymbolManifestGenerator/Microsoft.SymbolManifestGenerator.csproj" />
+
+    <!-- Native projects to view in Visual Studio -->
+    <ItemGroup Condition="'$(TargetOS)' == 'Windows_NT' and $(IsSlnGen) == 'true'">
+      <ProjectReference Include="**/*.vcxproj" />
+    </ItemGroup>
   </ItemGroup>
 </Project>

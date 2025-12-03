@@ -30,12 +30,14 @@
     <MicrosoftBclAsyncInterfacesVersion>9.0.8</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.23</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <MicrosoftExtensionsLoggingVersion>9.0.8</MicrosoftExtensionsLoggingVersion>
-    <MicrosoftExtensionsLoggingAbstractionsVersion>9.0.8</MicrosoftExtensionsLoggingAbstractionsVersion>
-    <MicrosoftExtensionsLoggingConsoleVersion>9.0.8</MicrosoftExtensionsLoggingConsoleVersion>
-    <MicrosoftExtensionsConfigurationVersion>9.0.8</MicrosoftExtensionsConfigurationVersion>
-    <MicrosoftExtensionsConfigurationJsonVersion>9.0.8</MicrosoftExtensionsConfigurationJsonVersion>
-    <MicrosoftExtensionsLoggingConfigurationVersion>9.0.8</MicrosoftExtensionsLoggingConfigurationVersion>
+    <MicrosoftDotNetXUnitExtensionsVersion>11.0.0-beta.25528.108</MicrosoftDotNetXUnitExtensionsVersion>
+    <MicrosoftExtensionsLoggingVersion>8.0.1</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingAbstractionsVersion>8.0.3</MicrosoftExtensionsLoggingAbstractionsVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>8.0.1</MicrosoftExtensionsLoggingConsoleVersion>
+    <MicrosoftExtensionsConfigurationVersion>8.0.0</MicrosoftExtensionsConfigurationVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>8.0.1</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsLoggingConfigurationVersion>8.0.1</MicrosoftExtensionsLoggingConfigurationVersion>
+    <MicrosoftOneCollectRecordTraceVersions>0.1.32221</MicrosoftOneCollectRecordTraceVersions>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
@@ -86,8 +88,8 @@
 
   -->
   <PropertyGroup>
-    <MicrosoftNETCoreApp90Version>9.0.4</MicrosoftNETCoreApp90Version>
-    <MicrosoftNETCoreApp80Version>8.0.15</MicrosoftNETCoreApp80Version>
+    <MicrosoftNETCoreApp90Version>9.0.10</MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp80Version>8.0.21</MicrosoftNETCoreApp80Version>
   </PropertyGroup>
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>

@@ -4,5 +4,4 @@
     <ProjectReference Include="src/dirs.proj" />
     <ProjectReference Include="src/tests/dirs.proj" Condition="'$(SkipTests)' != 'true'" />
   </ItemGroup>
-  
 </Project>

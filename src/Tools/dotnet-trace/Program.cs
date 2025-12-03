@@ -18,6 +18,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             RootCommand rootCommand = new()
             {
                 CollectCommandHandler.CollectCommand(),
+                CollectLinuxCommandHandler.CollectLinuxCommand(),
                 ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that traces can be collected from."),
                 ListProfilesCommandHandler.ListProfilesCommand(),
                 ConvertCommandHandler.ConvertCommand(),
