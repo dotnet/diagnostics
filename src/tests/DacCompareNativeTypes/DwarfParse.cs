@@ -36,7 +36,7 @@ class DwarfParser
     {
         if (type.Parent != null)
         {
-            Match typeMatch = typeRegEx.Match(type.SourceLine);
+            Match typeMatch = typeRegEx.Match(type.SourceLine ?? string.Empty);
 
             if (typeMatch.Success)
             {

@@ -8,6 +8,7 @@ Param(
     [switch] $privatebuild,
     [switch] $ci,
     [switch][Alias('bl')]$binaryLog,
+    [switch] $skiptest,
     [switch] $skipmanaged,
     [switch] $skipnative,
     [switch] $bundletools,
@@ -67,6 +68,10 @@ if (-not $skipnative) {
 
 # Install sdk for building, restore and build managed components.
 if (-not $skipmanaged) {
+    if ($skiptest) {
+        $remainingargs = "/p:SkipTests=true " + $remainingargs
+    }
+
     Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity $bl /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
 
     if ($lastExitCode -ne 0) {
@@ -111,7 +116,8 @@ if ($test) {
           /p:DotnetRuntimeDownloadVersion="$dotnetruntimedownloadversion" `
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
           /p:RuntimeSourceFeedKey="$runtimesourcefeedkey" `
-          /p:LiveRuntimeDir="$liveRuntimeDir" 
+          /p:LiveRuntimeDir="$liveRuntimeDir" `
+          /p:IsTestRun=true
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode

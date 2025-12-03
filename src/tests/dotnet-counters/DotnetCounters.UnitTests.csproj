@@ -5,9 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../Tools/dotnet-counters/dotnet-counters.csproj" />
-    <ProjectReference Include="../../Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
-    <ProjectReference Include="../CommonTestRunner/CommonTestRunner.csproj" />
+    <ProjectReference Include="$(RepoRoot)src/Tools/dotnet-counters/dotnet-counters.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../CommonTestRunner/CommonTestRunner.csproj" />
   </ItemGroup>
 
   <ItemGroup>

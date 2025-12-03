@@ -111,10 +111,11 @@ test.cmd
 
 ## Loading solution file
 
-For a better dev inner loop experience, load `build.sln` at the root of the repository into either VS or VSCode.
-
-This file is generated from the `build.proj` traversal project and can be regenerated/updated using:
+For a better dev inner loop experience, generate the `build.slnx` file using
 
 ```pwsh
-./eng/generate-sln.ps1
+# Ensure local .dotnet is bootstrapped first (run build.cmd once if new clone)
+./eng/generate-slnx.ps1
 ```
+
+then load the file into either VS or VSCode.
