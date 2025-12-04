@@ -70,7 +70,7 @@
       <TestScripts Include="./Scripts/**/*" />
     </ItemGroup>
     <Copy SourceFiles="@(TestScripts)"
-      DestinationFolder="$(OutputPath)/../Scripts/%(RecursiveDir)"
+      DestinationFolder="$(OutputPath)/../../Scripts/%(RecursiveDir)"
       SkipUnchangedFiles="false" />
   </Target>
 </Project>
