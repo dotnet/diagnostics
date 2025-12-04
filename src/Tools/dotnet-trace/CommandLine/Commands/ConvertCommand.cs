@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common;
+using Microsoft.Internal.Common.Utils;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -21,12 +22,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             if (!Enum.IsDefined(format))
             {
                 stdError.WriteLine($"Please specify a valid option for the --format. Valid options are: {string.Join(", ", Enum.GetNames<TraceFileFormat>())}.");
-                return ErrorCodes.ArgumentError;
+                return (int)ReturnCode.ArgumentError;
             }
 
             if (!ValidateNetTraceHeader(stdError, inputFilename.FullName))
             {
-                return ErrorCodes.ArgumentError;
+                return (int)ReturnCode.ArgumentError;
             }
 
             string outputFilename = TraceFileFormatConverter.GetConvertedFilename(inputFilename.FullName, output?.FullName, format);
@@ -83,7 +84,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 catch (Exception ex)
                 {
                     stdError.WriteLine($"Error copying nettrace to {outputfile}: {ex.Message}");
-                    return ErrorCodes.UnknownError;
+                    return (int)ReturnCode.UnknownError;
                 }
 
                 return 0;
@@ -116,8 +117,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static readonly Argument<FileInfo> InputFileArgument =
             new Argument<FileInfo>(name: "input-filename")
             {
-                Description = $"Input trace file to be converted. Defaults to '{CollectCommandHandler.DefaultTraceName}'.",
-                DefaultValueFactory = _ => new FileInfo(CollectCommandHandler.DefaultTraceName),
+                Description = $"Input trace file to be converted. Defaults to '{CommonOptions.DefaultTraceName}'.",
+                DefaultValueFactory = _ => new FileInfo(CommonOptions.DefaultTraceName),
             }.AcceptExistingOnly();
 
         private static readonly Option<FileInfo> OutputOption =
