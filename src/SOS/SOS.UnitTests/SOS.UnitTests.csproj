@@ -71,6 +71,6 @@
     </ItemGroup>
     <Copy SourceFiles="@(TestScripts)"
       DestinationFolder="$(OutputPath)/../../Scripts/%(RecursiveDir)"
-      SkipUnchangedFiles="false" />
+      SkipUnchangedFiles="true" />
   </Target>
 </Project>
