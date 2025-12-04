@@ -13,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\TestHelpers\TestHelpers.csproj" />
+    <ProjectReference Include="$(SrcDir)Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
+    <ProjectReference Include="$(TestDir)TestHelpers/TestHelpers.csproj" />
   </ItemGroup>
 
   <ItemGroup>

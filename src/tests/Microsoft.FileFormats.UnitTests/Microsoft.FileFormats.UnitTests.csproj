@@ -3,8 +3,10 @@
     <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
   </PropertyGroup>
+
   <ItemGroup>
-    <None Remove="TestBinaries\renamed_build_id_section" />
+    <ProjectReference Include="$(SrcDir)Microsoft.FileFormats/Microsoft.FileFormats.csproj" />
+    <ProjectReference Include="$(TestDir)TestHelpers/TestHelpers.csproj" />
   </ItemGroup>
 
   <ItemGroup>

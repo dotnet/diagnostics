@@ -33,6 +33,8 @@
   -->
 
   <PropertyGroup>
+    <SrcDir>$([MSBuild]::NormalizeDirectory('$(RepoRoot)', 'src'))</SrcDir>
+    <TestDir>$([MSBuild]::NormalizeDirectory('$(RepoRoot)', 'src', 'tests'))</TestDir>
     <ArtifactsDotnetTestDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-test'))</ArtifactsDotnetTestDir>
   </PropertyGroup>
 
