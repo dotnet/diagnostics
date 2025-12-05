@@ -5,9 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Monitoring\Microsoft.Diagnostics.Monitoring.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Monitoring.EventPipe\Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.Monitoring/Microsoft.Diagnostics.Monitoring.csproj" />
+    <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.Monitoring.EventPipe/Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
+    <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>
