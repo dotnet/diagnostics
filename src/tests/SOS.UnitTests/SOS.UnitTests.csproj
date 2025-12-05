@@ -30,8 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\tests\TestExtension\TestExtension.csproj" />
+    <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="$(TestDir)/TestExtension/TestExtension.csproj" />
   </ItemGroup>
 
   <ItemGroup>

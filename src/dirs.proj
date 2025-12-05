@@ -6,7 +6,6 @@
 
     <!-- SOS -->
     <ProjectReference Include="SOS/*/*.csproj" />
-    <ProjectReference Include="SOS/SOS.UnitTests/Debuggees/**/*.csproj" />
 
     <ProjectReference Include="Microsoft.Diagnostics.DebugServices/Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="Microsoft.Diagnostics.DebugServices.Implementation/Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
