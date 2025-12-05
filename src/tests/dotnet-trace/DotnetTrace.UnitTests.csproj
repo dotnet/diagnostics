@@ -9,8 +9,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(RepoRoot)src\Tools\dotnet-trace\dotnet-trace.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\CommonTestRunner\CommonTestRunner.csproj" />
+    <ProjectReference Include="$(SrcDir)Tools/dotnet-trace/dotnet-trace.csproj" />
+    <ProjectReference Include="$(TestDir)CommonTestRunner/CommonTestRunner.csproj" />
   </ItemGroup>
 
   <ItemGroup>

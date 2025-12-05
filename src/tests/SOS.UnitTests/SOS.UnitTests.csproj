@@ -61,4 +61,15 @@
       <FileWrites Include="$(SOSConfigFileName)" />
     </ItemGroup>
   </Target>
+
+  <!-- Test environment setup tasks -->
+  <Target Name="CopyTestScripts" AfterTargets="Build">
+    <Message Text="Copy Script files" />
+    <ItemGroup>
+      <TestScripts Include="./Scripts/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(TestScripts)"
+      DestinationFolder="$(OutputPath)/../../Scripts/%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
+  </Target>
 </Project>

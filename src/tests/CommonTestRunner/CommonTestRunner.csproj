@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
   </ItemGroup>
 
   <ItemGroup>
