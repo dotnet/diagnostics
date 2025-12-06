@@ -1107,6 +1107,34 @@ The `metadata` either points at nothing if the event doesn’t have metadata, or
 
 The runtime will keep track per-session whether it has sent a particular event before. The first time each event is sent during a session, metadata will be included. Should multiple threads race to write the same event to the same session, they may all emit metadata. Afterwards, all instances of that event will not emit metadata, and the responsibility is on the reader to cache and link events with their previously sent metadata. As a special case, runtime events currently implemented in native code will never send metadata.
 
+#### Capability probing with CollectTracing5
+
+Clients may use `CollectTracing5` as a capability probe to determine whether a runtime supports user_events-based EventPipe sessions.
+
+A recommended probe is:
+
+* Header: `{ Magic; 24; 0x0206; 0x0000 }`
+  * `Magic` = `"DOTNET_IPC_V1"`
+  * `size` = `sizeof(IpcHeader) + sizeof(uint)` = `20 + 4 = 24`
+  * `command_set` = `0x02` (EventPipe)
+  * `command_id` = `0x06` (CollectTracing5)
+  * `reserved` = `0x0000`
+* Payload:
+  * `uint session_type = 0xFFFFFFFF;`
+
+Expected behavior:
+
+* If the runtime does not implement `CollectTracing5`, it responds with an error message using the generic `Server/Error` pattern and an error code of `DS_IPC_E_UNKNOWN_COMMAND` (`0x80131385`).
+* If the runtime implements `CollectTracing5`, it:
+  * Parses the header and `session_type`.
+  * Treats `0xFFFFFFFF` as an invalid `session_type` value.
+  * Responds with an error Diagnostic IPC Message (see [Errors](#errors)) of Server/Error with a payload of `DS_IPC_E_BAD_ENCODING` (`0x80131384L`).
+
+This allows clients to distinguish between:
+
+* Runtimes that do not support `CollectTracing5` (return `UnknownCommand`), and
+* Runtimes that understand `CollectTracing5` and its `session_type` semantics (return a non-`UnknownCommand` error for the probe message).
+
 ## Dump Commands
 
 ### `CreateCoreDump`
