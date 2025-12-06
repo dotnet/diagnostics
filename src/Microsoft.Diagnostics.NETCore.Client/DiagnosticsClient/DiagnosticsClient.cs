@@ -21,6 +21,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
     public sealed class DiagnosticsClient
     {
         private const int DefaultCircularBufferMB = 256;
+        private const uint UserEventsProbePayload = uint.MaxValue;
 
         private readonly IpcEndpoint _endpoint;
 
@@ -147,6 +148,35 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public Task<EventPipeSession> StartEventPipeSessionAsync(EventPipeSessionConfiguration configuration, CancellationToken token)
         {
             return EventPipeSession.StartAsync(_endpoint, configuration, token);
+        }
+
+        /// <summary>
+        /// Check whether the target runtime understands the CollectTracing5 user_events IPC command.
+        /// </summary>
+        /// <returns>
+        /// A boolean indicating whether the runtime understands the CollectTracing5 user_events IPC command.
+        /// </returns>
+        public bool SupportsEventPipeUserEventsCommand()
+        {
+            IpcMessage probe = CreateUserEventsCapabilityProbeMessage();
+            IpcMessage response = IpcClient.SendMessage(_endpoint, probe);
+
+            return IsCommandSupportedFromResponse(response);
+        }
+
+        /// <summary>
+        /// Check whether the target runtime understands the CollectTracing5 user_events IPC command.
+        /// </summary>
+        /// <param name="token">The token to monitor for cancellation requests.</param>
+        /// <returns>
+        /// A task that completes with a boolean indicating whether the runtime understands the CollectTracing5 user_events IPC command.
+        /// </returns>
+        public async Task<bool> SupportsEventPipeUserEventsCommandAsync(CancellationToken token = default)
+        {
+            IpcMessage probe = CreateUserEventsCapabilityProbeMessage();
+            IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, probe, token).ConfigureAwait(false);
+
+            return IsCommandSupportedFromResponse(response);
         }
 
         /// <summary>
@@ -623,6 +653,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
+        private static IpcMessage CreateUserEventsCapabilityProbeMessage()
+        {
+            byte[] payload = SerializePayload(UserEventsProbePayload);
+            return new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)EventPipeCommandId.CollectTracing5, payload);
+        }
+
         private static IpcMessage CreateAttachProfilerMessage(TimeSpan attachTimeout, Guid profilerGuid, string profilerPath, byte[] additionalData)
         {
             if (profilerGuid == null || profilerGuid == Guid.Empty)
@@ -761,6 +797,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             return ProcessInfo.ParseV3(response.Message.Payload);
+        }
+
+        private static bool IsCommandSupportedFromResponse(IpcMessage responseMessage)
+        {
+            switch ((DiagnosticsServerResponseId)responseMessage.Header.CommandId)
+            {
+                case DiagnosticsServerResponseId.OK:
+                    return true;
+
+                case DiagnosticsServerResponseId.Error:
+                    if (responseMessage.Payload == null || responseMessage.Payload.Length < sizeof(uint))
+                    {
+                        return false;
+                    }
+
+                    uint hr = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(responseMessage.Payload, 0, sizeof(uint)));
+                    return hr != (uint)DiagnosticsIpcError.UnknownCommand;
+
+                default:
+                    return false;
+            }
         }
 
         internal static bool ValidateResponseMessage(IpcMessage responseMessage, string operationName, ValidateResponseOptions options = ValidateResponseOptions.None)
