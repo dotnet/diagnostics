@@ -156,25 +156,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <returns>
         /// A boolean indicating whether the runtime understands the CollectTracing5 user_events IPC command.
         /// </returns>
-        public bool SupportsEventPipeUserEventsCommand()
+        internal bool SupportsEventPipeUserEventsCommand()
         {
             IpcMessage probe = CreateUserEventsCapabilityProbeMessage();
             IpcMessage response = IpcClient.SendMessage(_endpoint, probe);
-
-            return IsCommandSupportedFromResponse(response);
-        }
-
-        /// <summary>
-        /// Check whether the target runtime understands the CollectTracing5 user_events IPC command.
-        /// </summary>
-        /// <param name="token">The token to monitor for cancellation requests.</param>
-        /// <returns>
-        /// A task that completes with a boolean indicating whether the runtime understands the CollectTracing5 user_events IPC command.
-        /// </returns>
-        public async Task<bool> SupportsEventPipeUserEventsCommandAsync(CancellationToken token = default)
-        {
-            IpcMessage probe = CreateUserEventsCapabilityProbeMessage();
-            IpcMessage response = await IpcClient.SendMessageAsync(_endpoint, probe, token).ConfigureAwait(false);
 
             return IsCommandSupportedFromResponse(response);
         }
