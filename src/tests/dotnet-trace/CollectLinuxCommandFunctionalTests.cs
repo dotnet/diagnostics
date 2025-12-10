@@ -123,6 +123,42 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_CsvToConsole()
+        {
+            MockConsole console = new(200, 2000);
+            var args = TestArgs(probe: true, output: new FileInfo("stdout"));
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    "pid,processName,supportsCollectLinux",
+                    ""
+                }
+            );
+            console.AssertSanitizedLinesEqual(CollectLinuxProbeSanitizer, expected);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_Csv()
+        {
+            MockConsole console = new(200, 2000);
+            string tempFilePath = Path.GetTempFileName();
+            var args = TestArgs(probe: true, output: new FileInfo(tempFilePath));
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    "Successfully wrote EventPipe UserEvents IPC command support results to '" + tempFilePath + "'.",
+                }
+            );
+
+            File.Delete(tempFilePath);
+            console.AssertSanitizedLinesEqual(null, expected);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_InvalidPid()
         {
             MockConsole console = new(200, 30);
@@ -210,8 +246,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             List<string> result = new();
             foreach (string line in lines)
             {
-                // Only filter out lines that start with digits followed by a space and some text (PID and process name)
-                if (Regex.IsMatch(line, @"^\d+\s+.+"))
+                // Filter out possible pid lines
+                if (Regex.IsMatch(line, @"^\d"))
                 {
                     continue;
                 }

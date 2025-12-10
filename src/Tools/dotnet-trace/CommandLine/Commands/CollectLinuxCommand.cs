@@ -197,7 +197,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int ret;
             try
             {
-                bool generateCsv = !string.Equals(args.Output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase);
+                ProbeOutputMode mode = DetermineProbeOutputMode(args.Output.Name);
+                bool generateCsv = mode == ProbeOutputMode.CsvToConsole || mode == ProbeOutputMode.Csv;
                 StringBuilder supportedCsv = generateCsv ? new StringBuilder() : null;
                 StringBuilder unsupportedCsv = generateCsv ? new StringBuilder() : null;
 
@@ -206,16 +207,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     bool supports = ProcessSupportsUserEventsIpcCommand(args.ProcessId, args.Name, out int resolvedPid, out string resolvedName, out string detectedRuntimeVersion);
                     BuildProcessSupportCsv(resolvedPid, resolvedName, supports, supportedCsv, unsupportedCsv);
 
-                    Console.WriteLine($"Does .NET process '{resolvedName} ({resolvedPid})' support the EventPipe UserEvents IPC command used by collect-linux?");
-                    Console.WriteLine(supports.ToString().ToLower());
-                    if (!supports)
+                    if (mode == ProbeOutputMode.Console)
                     {
-                        Console.WriteLine($"Required runtime: {minRuntimeSupportingUserEventsIPCCommand}. Detected runtime: {detectedRuntimeVersion}");
+                        Console.WriteLine($".NET process '{resolvedName} ({resolvedPid})' {(supports ? "supports" : "does NOT support")} the EventPipe UserEvents IPC command used by collect-linux.");
+                        if (!supports)
+                        {
+                            Console.WriteLine($"Required runtime: '{minRuntimeSupportingUserEventsIPCCommand}'. Detected runtime: '{detectedRuntimeVersion}'.");
+                        }
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"Probing .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux. Requires runtime '{minRuntimeSupportingUserEventsIPCCommand}' or later.");
+                    if (mode == ProbeOutputMode.Console)
+                    {
+                        Console.WriteLine($"Probing .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux. Requires runtime '{minRuntimeSupportingUserEventsIPCCommand}' or later.");
+                    }
                     StringBuilder supportedProcesses = new();
                     StringBuilder unsupportedProcesses = new();
 
@@ -239,20 +245,29 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                     }
 
-
-                    Console.WriteLine($".NET processes that support the command:");
-                    Console.WriteLine(supportedProcesses.ToString());
-                    Console.WriteLine($".NET processes that do NOT support the command:");
-                    Console.WriteLine(unsupportedProcesses.ToString());
+                    if (mode == ProbeOutputMode.Console)
+                    {
+                        Console.WriteLine($".NET processes that support the command:");
+                        Console.WriteLine(supportedProcesses.ToString());
+                        Console.WriteLine($".NET processes that do NOT support the command:");
+                        Console.WriteLine(unsupportedProcesses.ToString());
+                    }
                 }
 
-                if (generateCsv)
+                if (mode == ProbeOutputMode.CsvToConsole)
                 {
-                    Console.WriteLine($"Writing to CSV file {args.Output.FullName}...");
+                    Console.WriteLine("pid,processName,supportsCollectLinux");
+                    Console.Write(supportedCsv?.ToString());
+                    Console.Write(unsupportedCsv?.ToString());
+                }
+
+                if (mode == ProbeOutputMode.Csv)
+                {
                     using StreamWriter writer = new(args.Output.FullName, append: false, Encoding.UTF8);
                     writer.WriteLine("pid,processName,supportsCollectLinux");
                     writer.Write(supportedCsv?.ToString());
                     writer.Write(unsupportedCsv?.ToString());
+                    Console.WriteLine($"Successfully wrote EventPipe UserEvents IPC command support results to '{args.Output.FullName}'.");
                 }
 
                 ret = (int)ReturnCode.Ok;
@@ -269,6 +284,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             return ret;
+        }
+
+        private static ProbeOutputMode DetermineProbeOutputMode(string outputName)
+        {
+            if (string.Equals(outputName, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
+            {
+                return ProbeOutputMode.Console;
+            }
+            if (string.Equals(outputName, "stdout", StringComparison.OrdinalIgnoreCase))
+            {
+                return ProbeOutputMode.CsvToConsole;
+            }
+            return ProbeOutputMode.Csv;
         }
 
         private bool ProcessSupportsUserEventsIpcCommand(int pid, string processName, out int resolvedPid, out string resolvedName, out string detectedRuntimeVersion)
@@ -486,8 +514,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static readonly Option<bool> ProbeOption =
             new("--probe")
             {
-                Description = "Probes .NET processes capable of being traced by collect-linux, without collecting a trace. Can be combined with -p|--process-id or -n|--name to probe a specific process. Can be combined with -o|--output to write results to a CSV file in the format 'pid,processName,supportsCollectLinux' (for example '1234,MyApp,true'), ordered with supported processes first followed by unsupported.",
+                Description = "Probe .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux, without collecting a trace. Results list supported processes first. Use '-o stdout' to print CSV (pid,processName,supportsCollectLinux) to the console, or '-o <file>' to write the CSV. Probe a single process with -n|--name or -p|--process-id.",
             };
+
+        private enum ProbeOutputMode
+        {
+            Console,
+            Csv,
+            CsvToConsole,
+        }
 
         private enum OutputType : uint
         {
