@@ -7,6 +7,7 @@ using System.CommandLine;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tests.Common;
@@ -31,7 +32,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             FileInfo output = null,
             TimeSpan duration = default,
             string name = "",
-            int processId = 0)
+            int processId = 0,
+            bool probe = false)
         {
             return new CollectLinuxCommandHandler.CollectLinuxArgs(ct,
                                                                    providers ?? Array.Empty<string>(),
@@ -42,7 +44,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    output ?? new FileInfo("trace.nettrace"),
                                                                    duration,
                                                                    name,
-                                                                   processId);
+                                                                   processId,
+                                                                   probe);
         }
 
         [ConditionalTheory(nameof(IsCollectLinuxSupported))]
@@ -99,6 +102,106 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, expectedError);
         }
 
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_ListsProcesses_WhenNoArgs()
+        {
+            MockConsole console = new(200, 2000);
+            var args = TestArgs(probe: true, output: new FileInfo(CommonOptions.DefaultTraceName));
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    "Probing .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux. Requires runtime '10.0.0' or later.",
+                    ".NET processes that support the command:",
+                    "",
+                    ".NET processes that do NOT support the command:",
+                    "",
+                }
+            );
+            console.AssertSanitizedLinesEqual(CollectLinuxProbeSanitizer, expected);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_CsvToConsole()
+        {
+            MockConsole console = new(200, 2000);
+            var args = TestArgs(probe: true, output: new FileInfo("stdout"));
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    "pid,processName,supportsCollectLinux",
+                    ""
+                }
+            );
+            console.AssertSanitizedLinesEqual(CollectLinuxProbeSanitizer, expected);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_Csv()
+        {
+            MockConsole console = new(200, 2000);
+            string tempFilePath = Path.GetTempFileName();
+            var args = TestArgs(probe: true, output: new FileInfo(tempFilePath));
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    "Successfully wrote EventPipe UserEvents IPC command support results to '" + tempFilePath + "'.",
+                }
+            );
+
+            File.Delete(tempFilePath);
+            console.AssertSanitizedLinesEqual(null, expected);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_InvalidPid()
+        {
+            MockConsole console = new(200, 30);
+            var args = TestArgs(processId: -1, probe: true);
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+
+            string[] expected = FormatException("-1 is not a valid process ID");
+
+            console.AssertSanitizedLinesEqual(null, expected);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_InvalidName()
+        {
+            MockConsole console = new(200, 30);
+            var args = TestArgs(name: "process-that-should-not-exist", processId: 0, probe: true);
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+
+            string[] expected = FormatException("There is no active process with the given name: process-that-should-not-exist");
+
+            console.AssertSanitizedLinesEqual(null, expected);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_BothPidAndName()
+        {
+            MockConsole console = new(200, 30);
+            var args = TestArgs(name: "dummy", processId: 1, probe: true);
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+
+            // When both PID and name are supplied, the banner still refers to the PID
+            // because the implementation prioritizes ProcessId when it is non-zero.
+            string[] expected = FormatException("Only one of the --name or --process-id options may be specified.");
+
+            console.AssertSanitizedLinesEqual(null, expected);
+        }
+
         [ConditionalFact(nameof(IsCollectLinuxNotSupported))]
         public void CollectLinuxCommand_NotSupported_OnNonLinux()
         {
@@ -138,11 +241,26 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return result.ToArray();
         }
 
+        private static string[] CollectLinuxProbeSanitizer(string[] lines)
+        {
+            List<string> result = new();
+            foreach (string line in lines)
+            {
+                // Filter out possible pid lines
+                if (Regex.IsMatch(line, @"^\d"))
+                {
+                    continue;
+                }
+                result.Add(line);
+            }
+            return result.ToArray();
+        }
+
         public static IEnumerable<object[]> BasicCases()
         {
             yield return new object[] {
                 TestArgs(),
-                ExpectProvidersAndLinuxWithMessages(
+                ExpectProvidersAndPerfEventsWithMessages(
                     new[]{"No providers, profiles, ClrEvents, or PerfEvents were specified, defaulting to trace profiles 'dotnet-common' + 'cpu-sampling'."},
                     new[]{FormatProvider("Microsoft-Windows-DotNETRuntime","000000100003801D","Informational",4,"--profile")},
                     new[]{LinuxProfile("cpu-sampling")})
@@ -167,7 +285,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             yield return new object[] {
                 TestArgs(profile: new[]{"cpu-sampling"}),
-                ExpectProvidersAndLinuxWithMessages(
+                ExpectProvidersAndPerfEventsWithMessages(
                     new[]{"No .NET providers were configured."},
                     Array.Empty<string>(),
                     new[]{LinuxProfile("cpu-sampling")})
@@ -196,7 +314,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             yield return new object[] {
                 TestArgs(providers: new[]{"Microsoft-Windows-DotNETRuntime:0x1:4"}, clrEvents: "gc"),
-                ExpectProvidersAndLinuxWithMessages(
+                ExpectProvidersAndPerfEventsWithMessages(
                     new[]{"Warning: The CLR provider was already specified through --providers or --profile. Ignoring --clrevents."},
                     new[]{FormatProvider("Microsoft-Windows-DotNETRuntime","0000000000000001","Informational",4,"--providers")},
                     Array.Empty<string>())
@@ -218,7 +336,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             yield return new object[] {
                 TestArgs(perfEvents: new[]{"sched:sched_switch"}),
-                ExpectProvidersAndLinuxWithMessages(
+                ExpectProvidersAndPerfEventsWithMessages(
                     new[]{"No .NET providers were configured."},
                     Array.Empty<string>(),
                     new[]{LinuxPerfEvent("sched:sched_switch")})
@@ -313,10 +431,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
             "=========================================================================================="
             ];
 
-        private static string[] ExpectProvidersAndLinux(string[] dotnetProviders, string[] linuxPerfEvents)
-            => ExpectProvidersAndLinuxWithMessages(Array.Empty<string>(), dotnetProviders, linuxPerfEvents);
+        private static string[] ExpectPreviewWithMessages(string[] messages)
+        {
+            List<string> result = new();
+            result.AddRange(PreviewMessages);
+            if (messages.Length > 0)
+            {
+                result.AddRange(messages);
+            }
+            return result.ToArray();
+        }
 
-        private static string[] ExpectProvidersAndLinuxWithMessages(string[] messages, string[] dotnetProviders, string[] linuxPerfEvents)
+        private static string[] ExpectProvidersAndLinux(string[] dotnetProviders, string[] linuxPerfEvents)
+            => ExpectProvidersAndPerfEventsWithMessages(Array.Empty<string>(), dotnetProviders, linuxPerfEvents);
+
+        private static string[] ExpectProvidersAndPerfEventsWithMessages(string[] messages, string[] dotnetProviders, string[] linuxPerfEvents)
         {
             List<string> result = new();
 

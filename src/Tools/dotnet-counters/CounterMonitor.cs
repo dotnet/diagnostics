@@ -217,7 +217,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _settings.UseCounterRateAndValuePayloads = true;
 
                         bool useSharedSession = false;
-                        if (_diagnosticsClient.GetProcessInfo().TryGetProcessClrVersion(out Version version))
+                        if (_diagnosticsClient.GetProcessInfo().TryGetProcessClrVersion(out Version version, out bool _))
                         {
                             useSharedSession = version.Major >= 8 ? true : false;
                         }
