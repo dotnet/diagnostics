@@ -71,8 +71,8 @@ namespace RuntimeHostingConstants
     constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
         {9, 0},
         {8, 0},
-        {6, 0},
         {10, 0},
+        {11, 0},
     };
 
     constexpr char DotnetRootEnvVar[] = "DOTNET_ROOT";
@@ -327,20 +327,10 @@ static std::string GetTpaListForRuntimeVersion(
     //       assembly version than the ones in the ones in the framework. The test could just
     //       have a list of assemblies we pack with the versions, and if we end up using a newer assembly
     //       fail the test and point to update this list.
-    //
-    //       There's currently no DLLs SOS requires that are of a higher version than those provided by
-    //       the supported host frameworks. In case it's needed, add: a section here before AddFilesFromDirectoryToTpaList.
-    // 
-    //           if (hostRuntimeVersion.Major < 5)
-    //           {
-    //               AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
-    //               ...
-    //           }
 
-    if (hostRuntimeVersion.Major > 0 && hostRuntimeVersion.Major < 8)
+    if (hostRuntimeVersion.Major > 0 && hostRuntimeVersion.Major < 9)
     {
         AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
-        AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
     }
 
     // Trust the runtime assemblies that are newer than the ones needed and provided by SOS's managed
