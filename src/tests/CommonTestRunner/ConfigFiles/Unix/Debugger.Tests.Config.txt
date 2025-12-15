@@ -1,18 +1,17 @@
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <DotNetRoot>$(RepoRootDir)/.dotnet-test</DotNetRoot>
+  <DotNetRoot>$(ArtifactsDir)/dotnet-test</DotNetRoot>
   <Import ConfigFile="$(DotNetRoot)/Debugger.Tests.Versions.txt" />
 
-  <RootBinDir>$(RepoRootDir)/artifacts</RootBinDir>
-  <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
-  <LogDir>$(RootBinDir)/TestResults/$(TargetConfiguration)/common.unittests_$(Timestamp)</LogDir>
- 
+  <InstallDir>$(ArtifactsDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <LogDir>$(ArtifactsDir)/TestResults/$(TargetConfiguration)/common.unittests_$(Timestamp)</LogDir>
+
   <TestProduct>ProjectK</TestProduct>
   <DebuggeeSourceRoot>$(RepoRootDir)/src/tests</DebuggeeSourceRoot>
   <DebuggeeMsbuildAuxRoot>$(RepoRootDir)/eng/AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
-  <DebuggeeBuildRoot>$(RootBinDir)</DebuggeeBuildRoot>
+  <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
 
   <CliPath>$(DotNetRoot)/dotnet</CliPath>
 
@@ -43,5 +42,5 @@
   <HostArgs Condition="'$(PublishSingleFile)' != 'true'">--fx-version $(RuntimeFrameworkVersion)</HostArgs>
 
   <DotNetTraceHost>$(DotNetRoot)/dotnet</DotNetTraceHost>
-  <DotNetTracePath>$(RootBinDir)/bin/dotnet-trace/$(TargetConfiguration)/$(NetCoreAppMinTargetFramework)/dotnet-trace.dll</DotNetTracePath>
+  <DotNetTracePath>$(ArtifactsDir)/bin/dotnet-trace/$(TargetConfiguration)/$(NetCoreAppMinTargetFramework)/dotnet-trace.dll</DotNetTracePath>
 </Configuration>

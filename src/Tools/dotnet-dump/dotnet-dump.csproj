@@ -19,11 +19,12 @@
 
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)..\Common\Commands\Utils.cs" Link="Utils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\CommandUtils.cs" Link="CommandUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)..\Common\IConsole.cs" Link="IConsole.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\DiagnosticToolException.cs" Link="DiagnosticToolException.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\ReturnCode.cs" Link="ReturnCode.cs" />
   </ItemGroup>
 
   <ItemGroup>

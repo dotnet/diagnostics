@@ -98,9 +98,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return processInfo;
         }
 
-        internal bool TryGetProcessClrVersion(out Version version)
+        internal bool TryGetProcessClrVersion(out Version version, out bool isPrerelease)
         {
             version = null;
+            isPrerelease = true;
             if (string.IsNullOrEmpty(ClrProductVersionString))
             {
                 return false;
@@ -120,6 +121,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             int prereleaseIndex = noMetadataVersion.IndexOf('-');
             if (-1 == prereleaseIndex)
             {
+                isPrerelease = false;
                 prereleaseIndex = metadataIndex;
             }
 
