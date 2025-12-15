@@ -1356,8 +1356,8 @@ Inputs:
 ```c++
 struct Payload
 {
-    string name,
-    string value
+    string name;
+    string value;
 }
 ```
 
