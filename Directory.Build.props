@@ -22,6 +22,9 @@
   </PropertyGroup>
 
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+  <PropertyGroup>
+    <CustomAfterTraversalTargets>$(RepoRoot)eng/traversalFixups.targets</CustomAfterTraversalTargets>
+  </PropertyGroup>
 
   <!--
     $(TargetOS) - target operating system (win, linux, osx). Defaults to host OS.
