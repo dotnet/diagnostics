@@ -1,5 +1,9 @@
 <Project Sdk="Microsoft.Build.Traversal">
 
+  <PropertyGroup>
+    <CustomAfterTraversalTargets>eng/traversalFixups.targets</CustomAfterTraversalTargets>
+  </PropertyGroup>
+
   <ItemGroup >
     <ProjectReference Include="src/dirs.proj" />
     <ProjectReference Include="src/tests/dirs.proj" Condition="'$(SkipTests)' != 'true'" />

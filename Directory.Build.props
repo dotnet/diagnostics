@@ -72,6 +72,9 @@
     <SupportedSubProcessTargetFrameworks>net8.0;net9.0;net10.0</SupportedSubProcessTargetFrameworks>
     <!-- This is the list of TFMs we build our unit tests as. -->
     <SupportedXUnitTestTargetFrameworks>net8.0</SupportedXUnitTestTargetFrameworks>
+    <!-- Arcade wants to be opinionated and use embedded PDBs for CI/local builds.
+      We want to test the detached case in general. -->
+    <DebugType>portable</DebugType>
   </PropertyGroup>
 
 </Project>
