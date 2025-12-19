@@ -1,0 +1,14 @@
+<Project>
+  <!-- The traversal project SDK has a test depends on build model. While this is great
+   to get us closer to the way SDK logic works for vanilla projects, it regresses the official
+   build in a few ways. It causes a full rebuild making it slow and it surfaces a bug in the SDK where
+   some settings are not considered as inputs to :
+   - dotnet test build.proj doesn't work due to dotnet/sdk#51316
+   - dotnet build /t:Test would work, but we need to fix the build scripts so that build and test are called with the
+    same properties, otherwise we trigger rebuilds that hit the bug.
+    This doesn't preclude people from doing `dotnet test` on a specific test project for inner loop.
+    -->
+  <PropertyGroup>
+    <TestDependsOn />
+  </PropertyGroup>
+</Project>
