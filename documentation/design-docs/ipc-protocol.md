@@ -1325,6 +1325,39 @@ struct Payload
 }
 ```
 
+### `SetEnvironmentVariable`
+
+Command Code: `0x0403`
+
+The `SetEnvironmentVariable` command sets an environment variable in the runtime process.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0403; 0x0000 }`
+
+Payload:
+* `string name`: The environment variable name to set.
+* `string value`: The value to assign.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+There is no payload.
+
+##### Details:
+
+Input:
+```c
+Payload
+{
+    string name
+    string value
+}
+```
+
 > Available since .NET 6.0
 
 ### `ProcessInfo2`
