@@ -324,7 +324,7 @@ enum class ProcessCommandId : uint8_t
     ProcessInfo2           = 0x04,
     EnablePerfMap          = 0x05,
     DisablePerfMap         = 0x06,
-    ApplyStartupHook       = 0x07
+    ApplyStartupHook       = 0x07,
     ProcessInfo3           = 0x08,
     // future
 }
