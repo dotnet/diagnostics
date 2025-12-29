@@ -1345,7 +1345,8 @@ Payload:
 
 Header: `{ Magic; size; 0xFF00; 0x0000; }`
 
-There is no payload.
+`SetEnvironmentVariable` returns:
+* `int32 hresult`: The result of setting the environment variable (`0` indicates success)
 
 ##### Details:
 
@@ -1355,6 +1356,14 @@ Payload
 {
     string name
     string value
+}
+```
+
+Returns:
+```c
+Payload
+{
+    int32 hresult
 }
 ```
 
