@@ -1325,6 +1325,8 @@ struct Payload
 }
 ```
 
+> Available since .NET 6.0
+
 ### `SetEnvironmentVariable`
 
 Command Code: `0x0403`
