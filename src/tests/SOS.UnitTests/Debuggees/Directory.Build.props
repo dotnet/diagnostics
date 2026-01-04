@@ -1,9 +1,10 @@
 <Project>
-  <Import Project="$(MSBuildThisFileDirectory)..\..\..\Directory.Build.props"/>
+  <Import Project="$(RepoRoot)/Directory.Build.props"/>
   <Import Project="$(RepoRoot)/eng/AuxMsbuildFiles/SdkPackOverrides.targets"/>
 
   <PropertyGroup>
     <EnableAnalyzers>false</EnableAnalyzers>
+    <DebugType>portable</DebugType>
     <DebugType Condition="'$(TargetFramework)' == '$(DesktopTargetFramework)'">full</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>false</Optimize>
