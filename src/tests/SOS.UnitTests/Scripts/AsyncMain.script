@@ -6,10 +6,10 @@ CONTINUE
 
 LOADSOS
 
-# Verify that ClrStack with /d (DML enabled) properly escapes async method name with angle brackets
-# When DML is enabled, angle brackets should be escaped as &lt; and &gt;
+# Verify that ClrStack with /d (DML enabled) properly displays async method name with angle brackets
+# The DML escape sequences are processed by the debugger and rendered back to literal angle brackets
 SOSCOMMAND:ClrStack /d
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-# Verify that the method name contains escaped angle brackets (&lt;Main&gt;) not literal angle brackets
-VERIFY:.*AsyncMainTest\.&lt;Main&gt;\(.*\).*
+# Verify that the method name contains <Main> and is not trimmed to Main>
+VERIFY:.*AsyncMainTest\.<Main>\(.*\).*
