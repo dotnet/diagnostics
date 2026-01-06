@@ -195,7 +195,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
                 using (VirtualTerminalMode vTerm = VirtualTerminalMode.TryEnable())
                 {
-                    bool useAnsi = vTerm.IsEnabled;
+                    bool useAnsi = vTerm?.IsEnabled ?? false;
                     if (holder == null)
                     {
                         return ReturnCode.Ok;
