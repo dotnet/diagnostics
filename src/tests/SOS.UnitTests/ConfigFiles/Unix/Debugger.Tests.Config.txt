@@ -13,7 +13,7 @@
   <Import ConfigFile="$(DotNetRoot)/Debugger.Tests.Versions.txt" />
 
   <TestProduct>ProjectK</TestProduct>
-  <ScriptRootDir>$(RepoRootDir)/src/SOS/SOS.UnitTests/Scripts</ScriptRootDir>
+  <ScriptRootDir>$(ArtifactsDir)/bin/SOS.UnitTests/Scripts</ScriptRootDir>
   <InstallDir>$(ArtifactsDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(ArtifactsDir)/TestResults/$(TargetConfiguration)/sos.unittests_$(Timestamp)</LogDir>
   <DumpDir>$(ArtifactsDir)/tmp/$(TargetConfiguration)\dumps</DumpDir>
@@ -27,7 +27,7 @@
   <TestSingleFile>true</TestSingleFile>
   <TestSingleFile Condition="'$(PrivateBuildTesting)' == 'true'">false</TestSingleFile>
 
-  <DebuggeeSourceRoot>$(RepoRootDir)/src/SOS/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
+  <DebuggeeSourceRoot>$(RepoRootDir)/src/tests/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
   <DebuggeeMsbuildAuxRoot>$(RepoRootDir)/eng/AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>

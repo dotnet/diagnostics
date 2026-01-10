@@ -30,8 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\tests\TestExtension\TestExtension.csproj" />
+    <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="$(TestDir)/TestExtension/TestExtension.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -61,5 +61,16 @@
     <ItemGroup>
       <FileWrites Include="$(SOSConfigFileName)" />
     </ItemGroup>
+  </Target>
+
+  <!-- Test environment setup tasks -->
+  <Target Name="CopyTestScripts" AfterTargets="Build">
+    <Message Text="Copy Script files" />
+    <ItemGroup>
+      <TestScripts Include="./Scripts/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(TestScripts)"
+      DestinationFolder="$(OutputPath)/../../Scripts/%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
   </Target>
 </Project>

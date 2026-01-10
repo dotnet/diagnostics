@@ -10,8 +10,8 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
     <GalleryManifestBase>$(MSBuildThisFileDirectory)ManifestBase.xml</GalleryManifestBase>
-    <ExtensionGalleryManifestOutputFile>$(IntermediateOutputPath)sos_GalleryManifest.xml</ExtensionGalleryManifestOutputFile>
-    <UncompressedGalleryManifestOutputFile>$(IntermediateOutputPath)GalleryManifest.xml</UncompressedGalleryManifestOutputFile>
+    <ExtensionGalleryManifestOutputFile>$(IntermediateOutputPath)GalleryManifest.xml</ExtensionGalleryManifestOutputFile>
+    <UncompressedGalleryManifestOutputFile>$(IntermediateOutputPath)sos_GalleryManifest.xml</UncompressedGalleryManifestOutputFile>
     <BeforePack>GenerateGalleryManifest</BeforePack>
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>

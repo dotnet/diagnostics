@@ -34,6 +34,7 @@ public class SOSRunner : IDisposable
     public enum DumpType
     {
         Triage,
+        Mini,
         Heap,
         Full
     }
@@ -235,6 +236,9 @@ public class SOSRunner : IDisposable
                         await runner.ContinueExecution();
                         switch (information.DumpType)
                         {
+                            case DumpType.Mini:
+                                command = ".dump /o /m %DUMP_NAME%";
+                                break;
                             case DumpType.Heap:
                                 command = ".dump /o /mw %DUMP_NAME%";
                                 break;
@@ -348,6 +352,9 @@ public class SOSRunner : IDisposable
                     }
                     switch (dumpType)
                     {
+                        case DumpType.Mini:
+                            processRunner.WithRuntimeConfiguration("DbgMiniDumpType", "1");
+                            break;
                         case DumpType.Heap:
                             processRunner.WithRuntimeConfiguration("DbgMiniDumpType", "2");
                             break;
@@ -1496,6 +1503,9 @@ public class SOSRunner : IDisposable
         {
             switch (_dumpType.Value)
             {
+                case DumpType.Mini:
+                    defines.Add("MINI_DUMP");
+                    break;
                 case DumpType.Triage:
                     defines.Add("TRIAGE_DUMP");
                     break;

@@ -23,12 +23,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         internal bool IsQuiet { get; set; }
 
-        public CollectCommandHandler()
+        public CollectCommandHandler(IConsole console = null)
         {
-            Console = new DefaultConsole(false);
+            Console = console ?? new DefaultConsole();
             StartTraceSessionAsync = async (client, config, ct) => new CollectSession(await client.StartEventPipeSessionAsync(config, ct).ConfigureAwait(false));
             ResumeRuntimeAsync = (client, ct) => client.ResumeRuntimeAsync(ct);
             CollectSessionEventStream = (name) => new FileStream(name, FileMode.Create, FileAccess.Write);
+            HasChildProcess = () => ProcessLauncher.Launcher.HasChildProc;
         }
 
         private void ConsoleWriteLine(string str = "")
@@ -77,7 +78,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Debug.Assert(output != null);
                 Debug.Assert(profile != null);
 
-                if (ProcessLauncher.Launcher.HasChildProc && showchildio)
+                bool hasChildProcess = HasChildProcess();
+
+                if (hasChildProcess && showchildio)
                 {
                     // If showing IO, then all IO (including CtrlC) behavior is delegated to the child process
                     cancelOnCtrlC = false;
@@ -96,25 +99,19 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ct = CancellationToken.None;
                 }
 
-                if (!ProcessLauncher.Launcher.HasChildProc)
+                if (!hasChildProcess)
                 {
                     if (showchildio)
                     {
                         Console.WriteLine("--show-child-io must not be specified when attaching to a process");
                         return (int)ReturnCode.ArgumentError;
                     }
-                    if (CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId))
-                    {
-                        processId = resolvedProcessId;
-                    }
-                    else
-                    {
-                        return (int)ReturnCode.ArgumentError;
-                    }
+                    CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out int resolvedProcessId);
+                    processId = resolvedProcessId;
                 }
-                else if (!CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort))
+                else
                 {
-                    return (int)ReturnCode.ArgumentError;
+                    CommandUtils.ValidateArgumentsForChildProcess(processId, name, diagnosticPort);
                 }
 
                 if (profile.Length == 0 && providers.Length == 0 && clrevents.Length == 0)
@@ -210,7 +207,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         return (int)ReturnCode.Ok;
                     }
                     diagnosticsClient = holder.Client;
-                    if (ProcessLauncher.Launcher.HasChildProc)
+                    if (hasChildProcess)
                     {
                         process = Process.GetProcessById(holder.EndpointInfo.ProcessId);
                     }
@@ -474,11 +471,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     }
                 }
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                Console.Error.WriteLine($"[ERROR] {e.Message}");
+                Console.Error.WriteLine($"[ERROR] {dte.Message}");
                 collectionStopped = true;
-                ret = (int)ReturnCode.TracingError;
+                ret = (int)dte.ReturnCode;
             }
             catch (OperationCanceledException)
             {
@@ -673,6 +670,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         internal Func<DiagnosticsClient, CancellationToken, Task> ResumeRuntimeAsync { get; set; }
         internal Func<string, Stream> CollectSessionEventStream { get; set; }
         internal IConsole Console { get; set; }
+        internal Func<bool> HasChildProcess { get; set; }
 #endregion
     }
 }

@@ -211,15 +211,6 @@ inline bool IsPointerFieldReturnKind(ReturnKind returnKind)
     return (returnKind == RT_Object || returnKind == RT_ByRef);
 }
 
-inline bool IsValidReturnRegister(size_t regNo)
-{
-    return (regNo == 0)
-#ifdef FEATURE_MULTIREG_RETURN
-        || (regNo == 1)
-#endif // FEATURE_MULTIREG_RETURN
-        ;
-}
-
 inline bool IsStructReturnKind(ReturnKind returnKind)
 {
     // Two bits encode integer/ref/float return-kinds.
@@ -260,7 +251,6 @@ inline ReturnKind GetStructReturnKind(ReturnKind reg0, ReturnKind reg1)
 inline ReturnKind ExtractRegReturnKind(ReturnKind returnKind, size_t returnRegOrdinal, bool& moreRegs)
 {
     _ASSERTE(IsValidReturnKind(returnKind));
-    _ASSERTE(IsValidReturnRegister(returnRegOrdinal));
 
     // Return kind of each return register is encoded in two bits at returnRegOrdinal*2 position from LSB
     ReturnKind regReturnKind = (ReturnKind)((returnKind >> (returnRegOrdinal * 2)) & 3);
@@ -818,18 +808,18 @@ struct RISCV64GcInfoEncoding {
     // GC Pointers are 8-bytes aligned
     static inline constexpr int32_t NORMALIZE_STACK_SLOT (int32_t x) { return ((x)>>3); }
     static inline constexpr int32_t DENORMALIZE_STACK_SLOT (int32_t x) { return ((x)<<3); }
-    // All Instructions are 4 bytes long
-    static inline constexpr uint32_t NORMALIZE_CODE_LENGTH (uint32_t x) { return ((x)>>2); }
-    static inline constexpr uint32_t DENORMALIZE_CODE_LENGTH (uint32_t x) { return ((x)<<2); }
+    // All Instructions are 2/4 bytes long
+    static inline constexpr uint32_t NORMALIZE_CODE_LENGTH (uint32_t x) { return ((x)>>1); }
+    static inline constexpr uint32_t DENORMALIZE_CODE_LENGTH (uint32_t x) { return ((x)<<1); }
     // Encode Frame pointer X8 as zero, sp/x2 as 1
     static inline constexpr uint32_t NORMALIZE_STACK_BASE_REGISTER (uint32_t x) { return ((x) == 8 ? 0u : 1u); }
     static inline constexpr uint32_t DENORMALIZE_STACK_BASE_REGISTER (uint32_t x) { return ((x) == 0 ? 8u : 2u); }
     static inline constexpr uint32_t NORMALIZE_SIZE_OF_STACK_AREA (uint32_t x) { return ((x)>>3); }
     static inline constexpr uint32_t DENORMALIZE_SIZE_OF_STACK_AREA (uint32_t x) { return ((x)<<3); }
     static const bool CODE_OFFSETS_NEED_NORMALIZATION = true;
-    // Instructions are 4 bytes long
-    static inline constexpr uint32_t NORMALIZE_CODE_OFFSET (uint32_t x) { return ((x)>>2); }
-    static inline constexpr uint32_t DENORMALIZE_CODE_OFFSET (uint32_t x) { return ((x)<<2); }
+    // Instructions are 2/4 bytes long
+    static inline constexpr uint32_t NORMALIZE_CODE_OFFSET (uint32_t x) { return ((x)>>1); }
+    static inline constexpr uint32_t DENORMALIZE_CODE_OFFSET (uint32_t x) { return ((x)<<1); }
 
     static const int PSP_SYM_STACK_SLOT_ENCBASE = 6;
     static const int GENERICS_INST_CONTEXT_STACK_SLOT_ENCBASE = 6;
@@ -864,13 +854,7 @@ struct RISCV64GcInfoEncoding {
     static const int LIVESTATE_RLE_SKIP_ENCBASE = 4;
 };
 
-#else // defined(TARGET_xxx)
-
-#ifndef TARGET_X86
-#ifdef PORTABILITY_WARNING
-PORTABILITY_WARNING("Please specialize these definitions for your platform!")
-#endif
-#endif
+#elif defined(TARGET_X86)
 
 #ifndef TARGET_POINTER_SIZE
 #define TARGET_POINTER_SIZE 4   // equal to sizeof(void*) and the managed pointer size in bytes for this target
@@ -923,6 +907,20 @@ struct X86GcInfoEncoding {
     static const int LIVESTATE_RLE_RUN_ENCBASE = 2;
     static const int LIVESTATE_RLE_SKIP_ENCBASE = 4;
 };
+
+#elif defined(TARGET_WASM)
+
+#ifndef TARGET_POINTER_SIZE
+#define TARGET_POINTER_SIZE 4   // equal to sizeof(void*) and the managed pointer size in bytes for this target
+#endif
+
+#define TargetGcInfoEncoding InterpreterGcInfoEncoding
+
+#else // No target defined
+
+#ifdef PORTABILITY_WARNING
+PORTABILITY_WARNING("Please specialize these definitions for your platform!")
+#endif // PORTABILITY_WARNING
 
 #endif // defined(TARGET_xxx)
 

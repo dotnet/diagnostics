@@ -26,6 +26,6 @@ fi
 log_dir=$results_dir/lldbplugin.tests_$(date +%Y_%m_%d_%H_%M_%S)
 mkdir -p $log_dir
 
-cd $project_root/src/SOS/lldbplugin.tests/
+cd $project_root/src/tests/lldbplugin.tests/
 rm -f StressLog.txt
-python $project_root/src/SOS/lldbplugin.tests/test_libsosplugin.py --lldb $LLDB_PATH --host "$host" --plugin $plugin --logfiledir $log_dir --assembly $test_program
+python $project_root/src/tests/lldbplugin.tests/test_libsosplugin.py --lldb $LLDB_PATH --host "$host" --plugin $plugin --logfiledir $log_dir --assembly $test_program

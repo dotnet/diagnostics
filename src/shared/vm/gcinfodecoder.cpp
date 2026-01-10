@@ -19,7 +19,11 @@
 
 
 #ifndef GET_CALLER_SP
-#define GET_CALLER_SP(pREGDISPLAY) EECodeManager::GetCallerSp(pREGDISPLAY)
+inline size_t GET_CALLER_SP(PREGDISPLAY pREGDISPLAY)
+{
+    _ASSERTE(false);
+    return 0;
+}
 #endif // !GET_CALLER_SP
 
 #ifndef VALIDATE_OBJECTREF
@@ -165,13 +169,15 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::Predecod
         return true;
     }
 
+#ifdef DECODE_OLD_FORMATS
     // Decode the offset to the PSPSym.
     // The PSPSym is relative to the caller SP on IA64 and the initial stack pointer before any stack allocation on X64 (InitialSP).
-    if (m_headerFlags & GC_INFO_HAS_PSP_SYM)
+    if (Version() < 4 && (m_headerFlags & GC_INFO_HAS_PSP_SYM))
     {
         m_PSPSymStackSlot = GcInfoEncoding::DENORMALIZE_STACK_SLOT((INT32)m_Reader.DecodeVarLengthSigned(GcInfoEncoding::PSP_SYM_STACK_SLOT_ENCBASE));
     }
     else
+#endif
     {
         m_PSPSymStackSlot = NO_PSP_SYM;
     }
@@ -377,18 +383,17 @@ TGcInfoDecoder<GcInfoEncoding>::TGcInfoDecoder(
     {
         if(m_NumSafePoints)
         {
+            UINT32 offset = m_InstructionOffset;
 #ifdef DECODE_OLD_FORMATS
-            if (Version() < 4)
+            if (Version() < 4 && (flags & DECODE_INTERRUPTIBILITY))
             {
                 // Safepoints are encoded with a -1 adjustment
                 // DECODE_GC_LIFETIMES adjusts the offset accordingly, but DECODE_INTERRUPTIBILITY does not
                 // adjust here
-                UINT32 offset = flags & DECODE_INTERRUPTIBILITY ? m_InstructionOffset - 1 : m_InstructionOffset;
-                m_SafePointIndex = FindSafePoint(offset);
+                offset--;
             }
-#else
-            m_SafePointIndex = FindSafePoint(m_InstructionOffset);
 #endif
+            m_SafePointIndex = FindSafePoint(offset);
         }
     }
     else if(flags & DECODE_FOR_RANGES_CALLBACK)
@@ -452,6 +457,11 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::HasMetho
 {
     _ASSERTE( m_Flags & DECODE_GENERICS_INST_CONTEXT );
     return (m_headerFlags & GC_INFO_HAS_GENERICS_INST_CONTEXT_MASK) == GC_INFO_HAS_GENERICS_INST_CONTEXT_MT;
+}
+
+template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::HasStackBaseRegister()
+{
+    return (m_headerFlags & GC_INFO_HAS_STACK_BASE_REGISTER) == GC_INFO_HAS_STACK_BASE_REGISTER;
 }
 
 #ifdef PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED
@@ -661,7 +671,7 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::HasTailC
 template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::WantsReportOnlyLeaf()
 {
     // Only AMD64 with JIT64 can return false here.
-#ifdef TARGET_AMD64
+#if defined(TARGET_AMD64) && defined(DECODE_OLD_FORMATS)
     return ((m_headerFlags & GC_INFO_WANTS_REPORT_ONLY_LEAF) != 0);
 #else
     return true;
@@ -759,8 +769,6 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::Enumerat
 
 
 #ifdef PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED
-    bool noTrackedRefs = false;
-
     if(m_SafePointIndex < m_NumSafePoints && !executionAborted)
     {
         // Skip interruptibility information
@@ -779,42 +787,29 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::Enumerat
         //    or execution will not resume at the current method
         //    and nothing should be reported
         //
-        if(!executionAborted)
+        int countIntersections = 0;
+        UINT32 lastNormStop = 0;
+        for(UINT32 i=0; i<m_NumInterruptibleRanges; i++)
         {
-            if(m_NumInterruptibleRanges == 0)
+            UINT32 normStartDelta = (UINT32) m_Reader.DecodeVarLengthUnsigned( GcInfoEncoding::INTERRUPTIBLE_RANGE_DELTA1_ENCBASE );
+            UINT32 normStopDelta = (UINT32) m_Reader.DecodeVarLengthUnsigned( GcInfoEncoding::INTERRUPTIBLE_RANGE_DELTA2_ENCBASE ) + 1;
+
+            UINT32 normStart = lastNormStop + normStartDelta;
+            UINT32 normStop = normStart + normStopDelta;
+            if(normBreakOffset >= normStart && normBreakOffset < normStop)
             {
-                // No ranges and no explicit safepoint - must be MinOpts with untracked refs.
-                noTrackedRefs = true;
+                _ASSERTE(pseudoBreakOffset == 0);
+                countIntersections++;
+                pseudoBreakOffset = numInterruptibleLength + normBreakOffset - normStart;
             }
+            numInterruptibleLength += normStopDelta;
+            lastNormStop = normStop;
         }
-
-        if(m_NumInterruptibleRanges != 0)
+        _ASSERTE(countIntersections <= 1);
+        if(countIntersections == 0 && executionAborted)
         {
-            int countIntersections = 0;
-            UINT32 lastNormStop = 0;
-            for(UINT32 i=0; i<m_NumInterruptibleRanges; i++)
-            {
-                UINT32 normStartDelta = (UINT32) m_Reader.DecodeVarLengthUnsigned( GcInfoEncoding::INTERRUPTIBLE_RANGE_DELTA1_ENCBASE );
-                UINT32 normStopDelta = (UINT32) m_Reader.DecodeVarLengthUnsigned( GcInfoEncoding::INTERRUPTIBLE_RANGE_DELTA2_ENCBASE ) + 1;
-
-                UINT32 normStart = lastNormStop + normStartDelta;
-                UINT32 normStop = normStart + normStopDelta;
-                if(normBreakOffset >= normStart && normBreakOffset < normStop)
-                {
-                    _ASSERTE(pseudoBreakOffset == 0);
-                    countIntersections++;
-                    pseudoBreakOffset = numInterruptibleLength + normBreakOffset - normStart;
-                }
-                numInterruptibleLength += normStopDelta;
-                lastNormStop = normStop;
-            }
-            _ASSERTE(countIntersections <= 1);
-            if(countIntersections == 0)
-            {
-                _ASSERTE(executionAborted);
-                LOG((LF_GCROOTS, LL_INFO100000, "Not reporting this frame because it is aborted and not fully interruptible.\n"));
-                goto ExitSuccess;
-            }
+            LOG((LF_GCROOTS, LL_INFO100000, "Not reporting this frame because it is aborted and not fully interruptible.\n"));
+            goto ExitSuccess;
         }
     }
 #else   // !PARTIALLY_INTERRUPTIBLE_GC_SUPPORTED
@@ -1462,6 +1457,19 @@ template <typename GcInfoEncoding> const GcSlotDesc* GcSlotDecoder<GcInfoEncodin
     return m_pLastSlot;
 }
 
+template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY     pRD)
+{
+#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
+    _ASSERTE( m_Flags & DECODE_GC_LIFETIMES );
+
+    TADDR pSlot = (TADDR) GetStackSlot(spOffset, spBase, pRD);
+    _ASSERTE(pSlot >= pRD->SP);
+
+    return (pSlot < pRD->SP + m_SizeOfStackOutgoingAndScratchArea);
+#else
+    return false;
+#endif
+}
 
 //-----------------------------------------------------------------------------
 // Platform-specific methods
@@ -1527,21 +1535,6 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratc
         | (1 << 15); // r15
 
     return !(PreservedRegMask & (1 << regNum));
-}
-
-
-template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY     pRD)
-{
-#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
-    _ASSERTE( m_Flags & DECODE_GC_LIFETIMES );
-
-    TADDR pSlot = (TADDR) GetStackSlot(spOffset, spBase, pRD);
-    _ASSERTE(pSlot >= pRD->SP);
-
-    return (pSlot < pRD->SP + m_SizeOfStackOutgoingAndScratchArea);
-#else
-    return FALSE;
-#endif
 }
 
 
@@ -1674,21 +1667,6 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratc
 }
 
 
-template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY     pRD)
-{
-#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
-    _ASSERTE( m_Flags & DECODE_GC_LIFETIMES );
-
-    TADDR pSlot = (TADDR) GetStackSlot(spOffset, spBase, pRD);
-    _ASSERTE(pSlot >= pRD->SP);
-
-    return (pSlot < pRD->SP + m_SizeOfStackOutgoingAndScratchArea);
-#else
-    return FALSE;
-#endif
-}
-
-
 template <typename GcInfoEncoding> void TGcInfoDecoder<GcInfoEncoding>::ReportRegisterToGC(  // ARM
                                 int             regNum,
                                 unsigned        gcFlags,
@@ -1769,21 +1747,6 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratc
     _ASSERTE(regNum != 18);
 
     return regNum <= 17 || regNum >= 29; // R12 and R14/LR are both scratch registers
-}
-
-template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY     pRD)
-{
-#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
-    _ASSERTE( m_Flags & DECODE_GC_LIFETIMES );
-
-    TADDR pSlot = (TADDR) GetStackSlot(spOffset, spBase, pRD);
-    _ASSERTE(pSlot >= pRD->SP);
-
-    return (pSlot < pRD->SP + m_SizeOfStackOutgoingAndScratchArea);
-#else
-    return FALSE;
-#endif
-
 }
 
 template <typename GcInfoEncoding> void TGcInfoDecoder<GcInfoEncoding>::ReportRegisterToGC( // ARM64
@@ -1926,20 +1889,6 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratc
     return (regNum <= 21 && ((regNum >= 4) || (regNum == 1)));
 }
 
-template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY     pRD)
-{
-#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
-    _ASSERTE( m_Flags & DECODE_GC_LIFETIMES );
-
-    TADDR pSlot = (TADDR) GetStackSlot(spOffset, spBase, pRD);
-    _ASSERTE(pSlot >= pRD->SP);
-
-    return (pSlot < pRD->SP + m_SizeOfStackOutgoingAndScratchArea);
-#else
-    return FALSE;
-#endif
-}
-
 template <typename GcInfoEncoding> void TGcInfoDecoder<GcInfoEncoding>::ReportRegisterToGC(
                                 int             regNum,
                                 unsigned        gcFlags,
@@ -2064,20 +2013,6 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratc
     return (regNum >= 5 && regNum <= 7) || (regNum >= 10 and regNum <= 17) || regNum >= 28 || regNum == 1;
 }
 
-template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY     pRD)
-{
-#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
-    _ASSERTE( m_Flags & DECODE_GC_LIFETIMES );
-
-    TADDR pSlot = (TADDR) GetStackSlot(spOffset, spBase, pRD);
-    _ASSERTE(pSlot >= pRD->SP);
-
-    return (pSlot < pRD->SP + m_SizeOfStackOutgoingAndScratchArea);
-#else
-    return FALSE;
-#endif
-}
-
 template <typename GcInfoEncoding> void TGcInfoDecoder<GcInfoEncoding>::ReportRegisterToGC(
                                 int             regNum,
                                 unsigned        gcFlags,
@@ -2153,12 +2088,6 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratc
     return false;
 }
 
-template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY     pRD)
-{
-    _ASSERTE( !"NYI" );
-    return false;
-}
-
 template <typename GcInfoEncoding> void TGcInfoDecoder<GcInfoEncoding>::ReportRegisterToGC(
                                 int             regNum,
                                 unsigned        gcFlags,
@@ -2170,7 +2099,47 @@ template <typename GcInfoEncoding> void TGcInfoDecoder<GcInfoEncoding>::ReportRe
     _ASSERTE( !"NYI" );
 }
 
+template <typename GcInfoEncoding> OBJECTREF* TGcInfoDecoder<GcInfoEncoding>::GetCapturedRegister(
+    int             regNum,
+    PREGDISPLAY     pRD
+    )
+{
+    _ASSERTE( !"NYI" );
+    return nullptr;
+}
+
 #endif // Unknown platform
+
+#ifdef FEATURE_INTERPRETER
+template <> OBJECTREF* TGcInfoDecoder<InterpreterGcInfoEncoding>::GetStackSlot(
+                        INT32           spOffset,
+                        GcStackSlotBase spBase,
+                        PREGDISPLAY     pRD
+                        )
+{
+    OBJECTREF* pObjRef = NULL;
+
+    if( GC_SP_REL == spBase )
+    {
+        _ASSERTE(!"GC_SP_REL is invalid for interpreter frames");
+    }
+    else if( GC_CALLER_SP_REL == spBase )
+    {
+        _ASSERTE(!"GC_CALLER_SP_REL is invalid for interpreter frames");
+    }
+    else
+    {
+        // Interpreter-TODO: Enhance GcInfoEncoder/Decoder to allow omitting the stack slot base register for interpreted
+        //  methods, since only one base (fp) is ever used for interpreter locals. See Interpreter-TODO in DecodeSlotTable.
+        _ASSERTE( GC_FRAMEREG_REL == spBase );
+        uint8_t* fp = (uint8_t *)GetFP(pRD->pCurrentContext);
+        _ASSERTE(fp);
+        pObjRef = (OBJECTREF*)(fp + spOffset);
+    }
+
+    return pObjRef;
+}
+#endif
 
 
 template <typename GcInfoEncoding> OBJECTREF* TGcInfoDecoder<GcInfoEncoding>::GetStackSlot(
@@ -2271,7 +2240,13 @@ template <typename GcInfoEncoding> void TGcInfoDecoder<GcInfoEncoding>::ReportSt
     pCallBack(hCallBack, pObjRef, gcFlags DAC_ARG(DacSlotLocation(GetStackReg(spBase), spOffset, true)));
 }
 
+#ifndef TARGET_WASM
 // Instantiate the decoder so other files can use it
 template class TGcInfoDecoder<TargetGcInfoEncoding>;
+#endif // !TARGET_WASM
+
+#ifdef FEATURE_INTERPRETER
+template class TGcInfoDecoder<InterpreterGcInfoEncoding>;
+#endif // FEATURE_INTERPRETER
 
 #endif // USE_GC_INFO_DECODER
