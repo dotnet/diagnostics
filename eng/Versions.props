@@ -58,7 +58,7 @@
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.556</StyleCopAnalyzersVersion>
     <cdbsosversion>10.0.26100.1</cdbsosversion>
-    <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
+    <NewtonSoftJsonVersion>13.0.3</NewtonSoftJsonVersion>
     <!-- Roslyn and analyzers -->
     <!-- dotnet/roslyn dependencies -->
     <!--
