@@ -5524,11 +5524,6 @@ WString DmlEscape(const WString &input)
     size_t len = input.GetLength();
     WString result;
     
-    // Pre-allocate buffer to reduce reallocations
-    // Estimate: assume worst case where every character needs escaping (e.g., all '&' -> "&amp;")
-    // This avoids most reallocations for typical input
-    size_t estimatedSize = len * 5 + 1;  // 5 chars max per escaped char ("&amp;"), plus null terminator
-    
     for (size_t i = 0; i < len; i++)
     {
         // Ampersand must be escaped FIRST to avoid double-escaping
