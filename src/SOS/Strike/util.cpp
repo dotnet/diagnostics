@@ -5511,7 +5511,8 @@ WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssembly
         if (!bSuppressLines &&
             SUCCEEDED(GetLineByOffset(TO_CDADDR(ip), &linenum, wszFileName, MAX_LONGPATH, bAdjustIPForLineNumber)))
         {
-            methodOutput += WString(W(" [")) + WString((const WCHAR*)wszFileName) + W(" @ ") + WString(Decimal(linenum)) + W("]");
+            const WCHAR* fileNamePtr = wszFileName;
+            methodOutput += WString(W(" [")) + fileNamePtr + W(" @ ") + WString(Decimal(linenum)) + W("]");
         }
     }
 
