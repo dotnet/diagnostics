@@ -456,7 +456,12 @@ int GetHex(CLRDATA_ADDRESS addr, __out_ecount(len) char *out, size_t len, bool f
 typedef std::string String;
 typedef std::basic_string<WCHAR> WString;
 
-// Forward declarations for variadic templates
+// Variadic template overloads that accept String and forward to PCSTR versions
+// Note: SFINAE (std::enable_if) is required to avoid ambiguity. Without it:
+// 1. String literals could match both const char* and const std::string& (via implicit conversion)
+// 2. The recursive call ExtOut(format.c_str(), ...) inside the template would be ambiguous
+// 3. Template instantiation would fail or cause infinite recursion
+// With SFINAE, the template only matches when the first argument is exactly String type.
 template<typename FirstArg, typename... Args>
 inline typename std::enable_if<
     std::is_same<typename std::remove_cv<typename std::remove_reference<FirstArg>::type>::type, String>::value,
