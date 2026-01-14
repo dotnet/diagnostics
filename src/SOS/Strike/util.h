@@ -456,6 +456,43 @@ int GetHex(CLRDATA_ADDRESS addr, __out_ecount(len) char *out, size_t len, bool f
 typedef std::string String;
 typedef std::basic_string<WCHAR> WString;
 
+// Forward declarations for variadic templates
+template<typename FirstArg, typename... Args>
+inline typename std::enable_if<
+    std::is_same<typename std::remove_cv<typename std::remove_reference<FirstArg>::type>::type, String>::value,
+    void
+>::type
+ExtOut(FirstArg&& format, Args&&... args) {
+    ExtOut(format.c_str(), std::forward<Args>(args)...);
+}
+
+template<typename FirstArg, typename... Args>
+inline typename std::enable_if<
+    std::is_same<typename std::remove_cv<typename std::remove_reference<FirstArg>::type>::type, String>::value,
+    void
+>::type
+ExtWarn(FirstArg&& format, Args&&... args) {
+    ExtWarn(format.c_str(), std::forward<Args>(args)...);
+}
+
+template<typename FirstArg, typename... Args>
+inline typename std::enable_if<
+    std::is_same<typename std::remove_cv<typename std::remove_reference<FirstArg>::type>::type, String>::value,
+    void
+>::type
+ExtErr(FirstArg&& format, Args&&... args) {
+    ExtErr(format.c_str(), std::forward<Args>(args)...);
+}
+
+template<typename FirstArg, typename... Args>
+inline typename std::enable_if<
+    std::is_same<typename std::remove_cv<typename std::remove_reference<FirstArg>::type>::type, String>::value,
+    void
+>::type
+DMLOut(FirstArg&& format, Args&&... args) {
+    DMLOut(format.c_str(), std::forward<Args>(args)...);
+}
+
 template<class T>
 void Flatten(__out_ecount(len) T *data, unsigned int len)
 {
