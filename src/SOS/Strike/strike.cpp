@@ -4513,9 +4513,9 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
             if (SafeReadMemory(taLTOH, &taMT, sizeof(taMT), NULL))
             {
                 if (NameForMT_s(taMT, g_mdName, mdNameLen))
-                    lastCol += WString(g_mdName) + W(" ") + ExceptionPtr(taLTOH);
+                    lastCol += WString(g_mdName) + W(" ") + WString(ExceptionPtr(taLTOH));
                 else
-                    lastCol += WString(W("<Invalid Object> (")) + Pointer(taLTOH) + W(")");
+                    lastCol += WString(W("<Invalid Object> (")) + WString(Pointer(taLTOH)) + W(")");
 
                 // Print something if there are nested exceptions on the thread
                 if (Thread.firstNestedException)
@@ -11051,12 +11051,12 @@ public:
             foundPlatform = true;
             String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
             String outputFormat2 = "    %3s=%016llx %3s=%016llx\n";
-            ExtOut(outputFormat3, "rsp", context.Amd64Context.Rsp, "rbp", context.Amd64Context.Rbp, "rip", context.Amd64Context.Rip);
-            ExtOut(outputFormat3, "rax", context.Amd64Context.Rax, "rbx", context.Amd64Context.Rbx, "rcx", context.Amd64Context.Rcx);
-            ExtOut(outputFormat3, "rdx", context.Amd64Context.Rdx, "rsi", context.Amd64Context.Rsi, "rdi", context.Amd64Context.Rdi);
-            ExtOut(outputFormat3, "r8", context.Amd64Context.R8, "r9", context.Amd64Context.R9, "r10", context.Amd64Context.R10);
-            ExtOut(outputFormat3, "r11", context.Amd64Context.R11, "r12", context.Amd64Context.R12, "r13", context.Amd64Context.R13);
-            ExtOut(outputFormat2, "r14", context.Amd64Context.R14, "r15", context.Amd64Context.R15);
+            ExtOut(outputFormat3.c_str(), "rsp", context.Amd64Context.Rsp, "rbp", context.Amd64Context.Rbp, "rip", context.Amd64Context.Rip);
+            ExtOut(outputFormat3.c_str(), "rax", context.Amd64Context.Rax, "rbx", context.Amd64Context.Rbx, "rcx", context.Amd64Context.Rcx);
+            ExtOut(outputFormat3.c_str(), "rdx", context.Amd64Context.Rdx, "rsi", context.Amd64Context.Rsi, "rdi", context.Amd64Context.Rdi);
+            ExtOut(outputFormat3.c_str(), "r8", context.Amd64Context.R8, "r9", context.Amd64Context.R9, "r10", context.Amd64Context.R10);
+            ExtOut(outputFormat3.c_str(), "r11", context.Amd64Context.R11, "r12", context.Amd64Context.R12, "r13", context.Amd64Context.R13);
+            ExtOut(outputFormat2.c_str(), "r14", context.Amd64Context.R14, "r15", context.Amd64Context.R15);
         }
 #endif
 #if defined(SOS_TARGET_X86)

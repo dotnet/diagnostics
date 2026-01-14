@@ -453,159 +453,8 @@ void ConvertToLower(__out_ecount(len) char *buffer, size_t len);
 extern const char * const DMLFormats[];
 int GetHex(CLRDATA_ADDRESS addr, __out_ecount(len) char *out, size_t len, bool fill);
 
-// A simple string class for mutable strings.  We cannot use STL, so this is a stand in replacement
-// for std::string (though it doesn't use the same interface).
-template <class T, size_t (__cdecl *LEN)(const T *), errno_t (__cdecl *COPY)(T *, size_t, const T * _Src)>
-class BaseString
-{
-public:
-    BaseString()
-        : mStr(0), mSize(0), mLength(0)
-    {
-        const size_t size = 64;
-
-        mStr = new T[size];
-        mSize = size;
-        mStr[0] = 0;
-    }
-
-    BaseString(const T *str)
-        : mStr(0), mSize(0), mLength(0)
-    {
-        CopyFrom(str, LEN(str));
-    }
-
-    BaseString(const BaseString<T, LEN, COPY> &rhs)
-        : mStr(0), mSize(0), mLength(0)
-    {
-        *this = rhs;
-    }
-
-    ~BaseString()
-    {
-        Clear();
-    }
-
-    const BaseString<T, LEN, COPY> &operator=(const BaseString<T, LEN, COPY> &rhs)
-    {
-        Clear();
-        CopyFrom(rhs.mStr, rhs.mLength);
-        return *this;
-    }
-
-    const BaseString<T, LEN, COPY> &operator=(const T *str)
-    {
-        Clear();
-        CopyFrom(str, LEN(str));
-        return *this;
-    }
-
-    const BaseString<T, LEN, COPY> &operator +=(const T *str)
-    {
-        size_t len = LEN(str);
-        CopyFrom(str, len);
-        return *this;
-    }
-
-    const BaseString<T, LEN, COPY> &operator +=(const BaseString<T, LEN, COPY> &str)
-    {
-        CopyFrom(str.mStr, str.mLength);
-        return *this;
-    }
-
-    BaseString<T, LEN, COPY> operator+(const T *str) const
-    {
-        return BaseString<T, LEN, COPY>(mStr, mLength, str, LEN(str));
-    }
-
-    BaseString<T, LEN, COPY> operator+(const BaseString<T, LEN, COPY> &str) const
-    {
-        return BaseString<T, LEN, COPY>(mStr, mLength, str.mStr, str.mLength);
-    }
-
-    operator const T *() const
-    {
-        return mStr;
-    }
-
-    const T *c_str() const
-    {
-        return mStr;
-    }
-
-    size_t GetLength() const
-    {
-        return mLength;
-    }
-
-private:
-    BaseString(const T * str1, size_t len1, const T * str2, size_t len2)
-    : mStr(0), mSize(0), mLength(0)
-    {
-        const size_t size = len1 + len2 + 1 + ((len1 + len2) >> 1);
-        mStr = new T[size];
-        mSize = size;
-
-        CopyFrom(str1, len1);
-        CopyFrom(str2, len2);
-    }
-
-    void Clear()
-    {
-        mLength = 0;
-        mSize = 0;
-        if (mStr)
-        {
-            delete [] mStr;
-            mStr = 0;
-        }
-    }
-
-    void CopyFrom(const T *str, size_t len)
-    {
-        if (mLength + len + 1 >= mSize)
-            Resize(mLength + len + 1);
-
-        COPY(mStr+mLength, mSize-mLength, str);
-        mLength += len;
-    }
-
-    void Resize(size_t size)
-    {
-        /* We always resize at least one half bigger than we need.  When CopyFrom requests a resize
-         * it asks for the exact size that's needed to concatenate strings.  However in practice
-         * it's common to add multiple strings together in a row, e.g.:
-         *    String foo = "One " + "Two " + "Three " + "Four " + "\n";
-         * Ensuring the size of the string is bigger than we need, and that the minimum size is 64,
-         * we will cut down on a lot of needless resizes at the cost of a few bytes wasted in some
-         * cases.
-         */
-        size += size >> 1;
-        if (size < 64)
-            size = 64;
-
-        T *newStr = new T[size];
-
-        if (mStr)
-        {
-            COPY(newStr, size, mStr);
-            delete [] mStr;
-        }
-        else
-        {
-            newStr[0] = 0;
-        }
-
-        mStr = newStr;
-        mSize = size;
-    }
-private:
-    T *mStr;
-    size_t mSize, mLength;
-};
-
-typedef BaseString<char, strlen, strcpy_s> String;
-typedef BaseString<WCHAR, _wcslen, wcscpy_s> WString;
+typedef std::string String;
+typedef std::basic_string<WCHAR> WString;
 
 template<class T>
 void Flatten(__out_ecount(len) T *data, unsigned int len)
@@ -778,7 +627,7 @@ namespace Output
         operator WString() const
         {
             String str = *this;
-            const char *cstr = (const char *)str;
+            const char *cstr = str.c_str();
 
             int len = MultiByteToWideChar(CP_ACP, 0, cstr, -1, NULL, 0);
             WCHAR *buffer = (WCHAR *)alloca(len*sizeof(WCHAR));
@@ -1281,12 +1130,12 @@ public:
 
     void WriteColumn(int col, const String &str)
     {
-        WriteColumn(col, Output::Format<const char *>(str));
+        WriteColumn(col, Output::Format<const char *>(str.c_str()));
     }
 
     void WriteColumn(int col, const WString &str)
     {
-        WriteColumn(col, Output::Format<const WCHAR *>(str));
+        WriteColumn(col, Output::Format<const WCHAR *>(str.c_str()));
     }
 
     void WriteColumn(int col, __in_z WCHAR *str)

@@ -5394,7 +5394,7 @@ WString GetFrameFromAddress(TADDR frameAddr, IXCLRDataStackWalk *pStackWalk, BOO
     else
         frameOutput += W("Frame");
 
-    frameOutput += WString(W(": ")) + Pointer(frameAddr) + W("] ");
+    frameOutput += WString(W(": ")) + WString(Pointer(frameAddr)) + W("] ");
 
     // Print the frame's associated function info, if it has any.
     CLRDATA_ADDRESS mdesc = 0;
@@ -5511,7 +5511,7 @@ WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssembly
         if (!bSuppressLines &&
             SUCCEEDED(GetLineByOffset(TO_CDADDR(ip), &linenum, wszFileName, MAX_LONGPATH, bAdjustIPForLineNumber)))
         {
-            methodOutput += WString(W(" [")) + wszFileName + W(" @ ") + Decimal(linenum) + W("]");
+            methodOutput += WString(W(" [")) + WString((const WCHAR*)wszFileName) + W(" @ ") + WString(Decimal(linenum)) + W("]");
         }
     }
 
@@ -5521,7 +5521,7 @@ WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssembly
 WString DmlEscape(const WString &input)
 {
     const WCHAR *str = input.c_str();
-    size_t len = input.GetLength();
+    size_t len = input.length();
     WString result;
     
     for (size_t i = 0; i < len; i++)
