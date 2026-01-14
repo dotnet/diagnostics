@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ToolCommandName>dotnet-collect-dump</ToolCommandName>
+    <RootNamespace>Microsoft.Diagnostic.Tools.DumpCollector</RootNamespace>
+    <Description>Standalone diagnostic dump collector</Description>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishAot>true</PublishAot>
+    <PublishTrimmed>true</PublishTrimmed>
+    <StripSymbols>true</StripSymbols>
+    <RuntimeIdentifiers>linux-x64;linux-arm64;win-x64;win-arm64;osx-arm64</RuntimeIdentifiers>
+    <PublishSelfContained>true</PublishSelfContained>
+    <PublishTrimmed>true</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\CommandUtils.cs" Link="CommandUtils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\DiagnosticToolException.cs" Link="DiagnosticToolException.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\ReturnCode.cs" Link="ReturnCode.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\dotnet-dump\Dumper.cs" Link="Dumper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\dotnet-dump\Dumper.Windows.cs" Link="Dumper.Windows.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\dotnet-dump\Shared\CollectCommandHandler.cs" Link="CollectCommandHandler.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
+  </ItemGroup>
+</Project>

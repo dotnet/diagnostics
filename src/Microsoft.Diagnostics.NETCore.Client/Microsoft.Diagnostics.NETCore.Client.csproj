@@ -18,6 +18,7 @@
          in the repo build. In the VMR build, do not do this so that we don't end up with overlapping package IDs.
          If both the VMR and repo produce this package, day N of the VMR will overlap with Day N+1 of the repo. -->
     <PreReleaseVersionLabel Condition="'$(DotNetBuild)' != 'true'" />
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(BuildingOutsideDiagnostics)">
@@ -41,6 +42,7 @@
     <InternalsVisibleTo Include="dotnet-monitor" />
     <InternalsVisibleTo Include="dotnet-trace" />
     <InternalsVisibleTo Include="dotnet-dump" />
+    <InternalsVisibleTo Include="dotnet-collect-dump" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe" />
     <InternalsVisibleTo Include="Microsoft.Diagnostics.WebSocketServer" />
