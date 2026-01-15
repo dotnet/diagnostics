@@ -621,8 +621,9 @@ namespace Output
         }
 
         /* Converts this object into a Wide char string.  This allows you to write the following code:
-         *    WString foo = L"bar " + ObjectPtr(obj);
+         *    WString foo = L"bar " + WString(ObjectPtr(obj));
          * Where ObjectPtr is a subclass/typedef of this Format class.
+         * Note: With std::basic_string, explicit WString() wrapping is required for concatenation.
          */
         operator WString() const
         {
@@ -638,8 +639,9 @@ namespace Output
         }
 
         /* Converts this object into a String object.  This allows you to write the following code:
-         *    String foo = "bar " + ObjectPtr(obj);
+         *    String foo = "bar " + String(ObjectPtr(obj));
          * Where ObjectPtr is a subclass/typedef of this Format class.
+         * Note: With std::string, explicit String() wrapping is required for concatenation.
          */
         operator String() const
         {
