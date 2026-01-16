@@ -6,6 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Debuggees\**" />
+    <EmbeddedResource Remove="Debuggees\**" />
+    <None Remove="Debuggees\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
   </ItemGroup>
 
@@ -52,23 +58,15 @@
   <!-- Copy debuggee sources and aux MSBuild files to artifacts for Helix testing -->
   <Target Name="CopyDebuggeeSources" AfterTargets="Build">
     <PropertyGroup>
-      <DebuggeesDestDir>$(ArtifactsDir)test/DebuggeeSources</DebuggeesDestDir>
+      <DebuggeesDestDir>$(ArtifactsDir)test/DebuggeeSources/CommonTestRunner/Debuggees</DebuggeesDestDir>
       <AuxMsbuildDestDir>$(ArtifactsDir)test/AuxMsbuildFiles</AuxMsbuildDestDir>
     </PropertyGroup>
     <ItemGroup>
-      <TraceeFiles Include="$(TestDir)Tracee/**/*" />
-      <EventPipeTraceeFiles Include="$(TestDir)EventPipeTracee/**/*" />
-      <StackTraceeFiles Include="$(TestDir)StackTracee/**/*" />
+      <CommonTestRunnerDebuggeeFiles Include="$(MSBuildThisFileDirectory)Debuggees/**/*" />
       <AuxMsbuildFiles Include="$(RepoRoot)eng/AuxMsbuildFiles/**/*" />
     </ItemGroup>
-    <Copy SourceFiles="@(TraceeFiles)"
-      DestinationFolder="$(DebuggeesDestDir)/Tracee/%(RecursiveDir)"
-      SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(EventPipeTraceeFiles)"
-      DestinationFolder="$(DebuggeesDestDir)/EventPipeTracee/%(RecursiveDir)"
-      SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(StackTraceeFiles)"
-      DestinationFolder="$(DebuggeesDestDir)/StackTracee/%(RecursiveDir)"
+    <Copy SourceFiles="@(CommonTestRunnerDebuggeeFiles)"
+      DestinationFolder="$(DebuggeesDestDir)/%(RecursiveDir)"
       SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(AuxMsbuildFiles)"
       DestinationFolder="$(AuxMsbuildDestDir)/%(RecursiveDir)"
