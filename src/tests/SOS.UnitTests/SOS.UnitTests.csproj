@@ -46,7 +46,6 @@
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
   <DesktopFramework>$(DesktopTargetFramework)</DesktopFramework>
   <NetCoreAppMinTargetFramework>$(NetCoreAppMinTargetFramework)</NetCoreAppMinTargetFramework>
-  <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <ArtifactsDir>$(ArtifactsDir)</ArtifactsDir>
   <CDBPath>$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\cdb.exe</CDBPath>
 </Configuration>
@@ -72,5 +71,25 @@
     <Copy SourceFiles="@(TestScripts)"
       DestinationFolder="$(OutputPath)/../../Scripts/%(RecursiveDir)"
       SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Copy debuggee sources and aux MSBuild files to artifacts for Helix testing -->
+  <Target Name="CopyDebuggeeSources" AfterTargets="Build">
+    <PropertyGroup>
+      <DebuggeesDestDir>$(ArtifactsDir)test/DebuggeeSources/SOS.UnitTests/Debuggees</DebuggeesDestDir>
+      <AuxMsbuildDestDir>$(ArtifactsDir)test/AuxMsbuildFiles</AuxMsbuildDestDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <SOSDebuggeeFiles Include="$(MSBuildThisFileDirectory)Debuggees/**/*" />
+      <AuxMsbuildFiles Include="$(RepoRoot)eng/AuxMsbuildFiles/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(SOSDebuggeeFiles)"
+      DestinationFolder="$(DebuggeesDestDir)/%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(AuxMsbuildFiles)"
+      DestinationFolder="$(AuxMsbuildDestDir)/%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
+    <Message Importance="High" Text="Copied debuggee sources to $(DebuggeesDestDir)" />
+    <Message Importance="High" Text="Copied aux MSBuild files to $(AuxMsbuildDestDir)" />
   </Target>
 </Project>

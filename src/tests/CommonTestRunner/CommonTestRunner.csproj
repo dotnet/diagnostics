@@ -6,6 +6,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Debuggees\**" />
+    <EmbeddedResource Remove="Debuggees\**" />
+    <None Remove="Debuggees\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
   </ItemGroup>
 
@@ -30,7 +36,6 @@
 <![CDATA[
 <Configuration>
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
-  <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <ArtifactsDir>$(ArtifactsDir)</ArtifactsDir>
   <NetCoreAppMinTargetFramework>$(NetCoreAppMinTargetFramework)</NetCoreAppMinTargetFramework>
 </Configuration>
@@ -48,6 +53,26 @@
     <ItemGroup>
       <FileWrites Include="$(CommonTestRunnerConfigFileName)" />
     </ItemGroup>
+  </Target>
+
+  <!-- Copy debuggee sources and aux MSBuild files to artifacts for Helix testing -->
+  <Target Name="CopyDebuggeeSources" AfterTargets="Build">
+    <PropertyGroup>
+      <DebuggeesDestDir>$(ArtifactsDir)test/DebuggeeSources/CommonTestRunner/Debuggees</DebuggeesDestDir>
+      <AuxMsbuildDestDir>$(ArtifactsDir)test/AuxMsbuildFiles</AuxMsbuildDestDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <CommonTestRunnerDebuggeeFiles Include="$(MSBuildThisFileDirectory)Debuggees/**/*" />
+      <AuxMsbuildFiles Include="$(RepoRoot)eng/AuxMsbuildFiles/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(CommonTestRunnerDebuggeeFiles)"
+      DestinationFolder="$(DebuggeesDestDir)/%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(AuxMsbuildFiles)"
+      DestinationFolder="$(AuxMsbuildDestDir)/%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
+    <Message Importance="High" Text="Copied debuggee sources to $(DebuggeesDestDir)" />
+    <Message Importance="High" Text="Copied aux MSBuild files to $(AuxMsbuildDestDir)" />
   </Target>
 
 </Project>

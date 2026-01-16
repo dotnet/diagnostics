@@ -27,8 +27,8 @@
   <TestSingleFile>true</TestSingleFile>
   <TestSingleFile Condition="'$(PrivateBuildTesting)' == 'true'">false</TestSingleFile>
 
-  <DebuggeeSourceRoot>$(RepoRootDir)/src/tests/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
-  <DebuggeeMsbuildAuxRoot>$(RepoRootDir)/eng/AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
+  <DebuggeeSourceRoot>$(ArtifactsDir)/test/DebuggeeSources/SOS.UnitTests/Debuggees</DebuggeeSourceRoot>
+  <DebuggeeMsbuildAuxRoot>$(ArtifactsDir)/test/AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
 
