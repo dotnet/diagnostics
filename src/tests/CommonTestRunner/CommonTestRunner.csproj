@@ -30,7 +30,6 @@
 <![CDATA[
 <Configuration>
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
-  <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <ArtifactsDir>$(ArtifactsDir)</ArtifactsDir>
   <NetCoreAppMinTargetFramework>$(NetCoreAppMinTargetFramework)</NetCoreAppMinTargetFramework>
 </Configuration>
@@ -48,6 +47,34 @@
     <ItemGroup>
       <FileWrites Include="$(CommonTestRunnerConfigFileName)" />
     </ItemGroup>
+  </Target>
+
+  <!-- Copy debuggee sources and aux MSBuild files to artifacts for Helix testing -->
+  <Target Name="CopyDebuggeeSources" AfterTargets="Build">
+    <PropertyGroup>
+      <DebuggeesDestDir>$(ArtifactsDir)test/DebuggeeSources</DebuggeesDestDir>
+      <AuxMsbuildDestDir>$(ArtifactsDir)test/AuxMsbuildFiles</AuxMsbuildDestDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <TraceeFiles Include="$(TestDir)Tracee/**/*" />
+      <EventPipeTraceeFiles Include="$(TestDir)EventPipeTracee/**/*" />
+      <StackTraceeFiles Include="$(TestDir)StackTracee/**/*" />
+      <AuxMsbuildFiles Include="$(RepoRoot)eng/AuxMsbuildFiles/**/*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(TraceeFiles)"
+      DestinationFolder="$(DebuggeesDestDir)/Tracee/%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(EventPipeTraceeFiles)"
+      DestinationFolder="$(DebuggeesDestDir)/EventPipeTracee/%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(StackTraceeFiles)"
+      DestinationFolder="$(DebuggeesDestDir)/StackTracee/%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(AuxMsbuildFiles)"
+      DestinationFolder="$(AuxMsbuildDestDir)/%(RecursiveDir)"
+      SkipUnchangedFiles="true" />
+    <Message Importance="High" Text="Copied debuggee sources to $(DebuggeesDestDir)" />
+    <Message Importance="High" Text="Copied aux MSBuild files to $(AuxMsbuildDestDir)" />
   </Target>
 
 </Project>
