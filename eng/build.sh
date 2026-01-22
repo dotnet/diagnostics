@@ -109,12 +109,12 @@ handle_arguments() {
             ;;
 
         methodfilter|-methodfilter)
-            __TestFilter="-method $2"    
+            __TestFilter="-method $2"
             __ShiftArgs=1
             ;;
         
         classfilter|-classfilter)
-            __TestFilter="-class $2"    
+            __TestFilter="-class $2"
             __ShiftArgs=1
             ;;
 
