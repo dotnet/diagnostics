@@ -21,7 +21,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public sealed record CollectArgs(
             CancellationToken ct = default,
-            CommandLineConfiguration cliConfig = null,
+            TextWriter stdOut = null,
+            TextWriter stdError = null,
             int processId = -1,
             uint buffersize = 1,
             string[] providers = null,
@@ -91,7 +92,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             return await handler.Collect(
                 config.ct,
-                config.cliConfig,
+                config.stdOut ?? Console.Out,
+                config.stdError ?? Console.Error,
                 config.ProcessId,
                 config.Output,
                 config.buffersize,

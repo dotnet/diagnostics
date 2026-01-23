@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -305,13 +306,13 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 StandardOutOption
             };
 
-            symbolicateCommand.SetAction((parseResult, ct) => Task.FromResult(Symbolicate(
-                stdOutput: parseResult.Configuration.Output,
-                stdError: parseResult.Configuration.Error,
-                inputPath: parseResult.GetValue(InputFileArgument),
-                searchDir: parseResult.GetValue(SearchDirectoryOption),
-                output: parseResult.GetValue(OutputFileOption),
-                stdout: parseResult.GetValue(StandardOutOption))));
+            symbolicateCommand.SetAction((context, ct) => Task.FromResult(Symbolicate(
+                stdOutput: context.Console.Out,
+                stdError: context.Console.Error,
+                inputPath: context.ParseResult.GetValue(InputFileArgument),
+                searchDir: context.ParseResult.GetValue(SearchDirectoryOption),
+                output: context.ParseResult.GetValue(OutputFileOption),
+                stdout: context.ParseResult.GetValue(StandardOutOption))));
 
             return symbolicateCommand;
         }

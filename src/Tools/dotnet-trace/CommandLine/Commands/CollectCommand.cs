@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="stoppingEventPayloadFilter">A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.</param>
         /// <param name="rundown">Collect rundown events.</param>
         /// <returns></returns>
-        internal async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string[] providers, string[] profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
+        internal async Task<int> Collect(CancellationToken ct, TextWriter stdOut, TextWriter stdError, int processId, FileInfo output, uint buffersize, string[] providers, string[] profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -453,7 +453,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         if (format != TraceFileFormat.NetTrace)
                         {
                             string outputFilename = TraceFileFormatConverter.GetConvertedFilename(output.FullName, outputfile: null, format);
-                            TraceFileFormatConverter.ConvertToFormat(cliConfig.Output, cliConfig.Error, format, fileToConvert: output.FullName, outputFilename);
+                            TraceFileFormatConverter.ConvertToFormat(stdOut, stdError, format, fileToConvert: output.FullName, outputFilename);
                         }
                     }
 
@@ -560,32 +560,33 @@ namespace Microsoft.Diagnostics.Tools.Trace
             collectCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Program.Main that handles UnmatchedTokens
             collectCommand.Description = "Collects a diagnostic trace from a currently running process or launch a child process and trace it. Append -- to the collect command to instruct the tool to run a command and trace it immediately. When tracing a child process, the exit code of dotnet-trace shall be that of the traced process unless the trace process encounters an error.";
 
-            collectCommand.SetAction((parseResult, ct) =>
+            collectCommand.SetAction((context, ct) =>
             {
                 CollectCommandHandler handler = new();
-                string providersValue = parseResult.GetValue(CommonOptions.ProvidersOption) ?? string.Empty;
-                string profileValue = parseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty;
+                string providersValue = context.ParseResult.GetValue(CommonOptions.ProvidersOption) ?? string.Empty;
+                string profileValue = context.ParseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty;
 
                 return handler.Collect(ct,
-                                       cliConfig: parseResult.Configuration,
-                                       processId: parseResult.GetValue(CommonOptions.ProcessIdOption),
-                                       output: parseResult.GetValue(CommonOptions.OutputPathOption),
-                                       buffersize: parseResult.GetValue(CircularBufferOption),
+                                       stdOut: context.Console.Out,
+                                       stdError: context.Console.Error,
+                                       processId: context.ParseResult.GetValue(CommonOptions.ProcessIdOption),
+                                       output: context.ParseResult.GetValue(CommonOptions.OutputPathOption),
+                                       buffersize: context.ParseResult.GetValue(CircularBufferOption),
                                        providers: providersValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                                        profile: profileValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-                                       format: parseResult.GetValue(CommonOptions.FormatOption),
-                                       duration: parseResult.GetValue(CommonOptions.DurationOption),
-                                       clrevents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
-                                       clreventlevel: parseResult.GetValue(CommonOptions.CLREventLevelOption) ?? string.Empty,
-                                       name: parseResult.GetValue(CommonOptions.NameOption),
-                                       diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
-                                       showchildio: parseResult.GetValue(ShowChildIOOption),
-                                       resumeRuntime: parseResult.GetValue(ResumeRuntimeOption),
-                                       stoppingEventProviderName: parseResult.GetValue(StoppingEventProviderNameOption),
-                                       stoppingEventEventName: parseResult.GetValue(StoppingEventEventNameOption),
-                                       stoppingEventPayloadFilter: parseResult.GetValue(StoppingEventPayloadFilterOption),
-                                       rundown: parseResult.GetValue(RundownOption),
-                                       dsrouter: parseResult.GetValue(DSRouterOption));
+                                       format: context.ParseResult.GetValue(CommonOptions.FormatOption),
+                                       duration: context.ParseResult.GetValue(CommonOptions.DurationOption),
+                                       clrevents: context.ParseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
+                                       clreventlevel: context.ParseResult.GetValue(CommonOptions.CLREventLevelOption) ?? string.Empty,
+                                       name: context.ParseResult.GetValue(CommonOptions.NameOption),
+                                       diagnosticPort: context.ParseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
+                                       showchildio: context.ParseResult.GetValue(ShowChildIOOption),
+                                       resumeRuntime: context.ParseResult.GetValue(ResumeRuntimeOption),
+                                       stoppingEventProviderName: context.ParseResult.GetValue(StoppingEventProviderNameOption),
+                                       stoppingEventEventName: context.ParseResult.GetValue(StoppingEventEventNameOption),
+                                       stoppingEventPayloadFilter: context.ParseResult.GetValue(StoppingEventPayloadFilterOption),
+                                       rundown: context.ParseResult.GetValue(RundownOption),
+                                       dsrouter: context.ParseResult.GetValue(DSRouterOption));
             });
 
             return collectCommand;
