@@ -3,7 +3,7 @@
   <PropertyGroup>
     <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
     <PreReleaseVersionLabel>preview</PreReleaseVersionLabel>
-    <VersionPrefix>9.0.0</VersionPrefix>
+    <VersionPrefix>10.0.0</VersionPrefix>
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
     <!--
@@ -88,8 +88,8 @@
 
   -->
   <PropertyGroup>
-    <MicrosoftNETCoreApp90Version>9.0.10</MicrosoftNETCoreApp90Version>
-    <MicrosoftNETCoreApp80Version>8.0.21</MicrosoftNETCoreApp80Version>
+    <MicrosoftNETCoreApp90Version>9.0.12</MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp80Version>8.0.23</MicrosoftNETCoreApp80Version>
   </PropertyGroup>
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
