@@ -4513,9 +4513,9 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
             if (SafeReadMemory(taLTOH, &taMT, sizeof(taMT), NULL))
             {
                 if (NameForMT_s(taMT, g_mdName, mdNameLen))
-                    lastCol += WString(g_mdName) + W(" ") + ExceptionPtr(taLTOH);
+                    lastCol += WString(g_mdName) + W(" ") + WString(ExceptionPtr(taLTOH));
                 else
-                    lastCol += WString(W("<Invalid Object> (")) + Pointer(taLTOH) + W(")");
+                    lastCol += WString(W("<Invalid Object> (")) + WString(Pointer(taLTOH)) + W(")");
 
                 // Print something if there are nested exceptions on the thread
                 if (Thread.firstNestedException)
@@ -10942,7 +10942,10 @@ public:
                     out.WriteColumn(1, bFull ? String("") : NativePtr(ip));
 
                     // This is a clr!Frame.
-                    out.WriteColumn(2, GetFrameFromAddress(TO_TADDR(FrameData.frameAddr), pStackWalk, bFull));
+                    WString frameName = GetFrameFromAddress(TO_TADDR(FrameData.frameAddr), pStackWalk, bFull);
+                    if (IsDMLEnabled())
+                        frameName = DmlEscape(frameName);
+                    out.WriteColumn(2, frameName);
 
                     // Print out gc references for the Frame.
                     for (unsigned int i = 0; i < refCount; ++i)
@@ -10976,7 +10979,10 @@ public:
                     // The unmodified IP is displayed which points after the exception in most cases. This means that the
                     // printed IP and the printed line number often will not map to one another and this is intentional.
                     out.WriteColumn(1, InstructionPtr(ip));
-                    out.WriteColumn(2, MethodNameFromIP(ip, bSuppressLines, bFull, bFull, bAdjustIPForLineNumber));
+                    WString methodName = MethodNameFromIP(ip, bSuppressLines, bFull, bFull, bAdjustIPForLineNumber);
+                    if (IsDMLEnabled())
+                        methodName = DmlEscape(methodName);
+                    out.WriteColumn(2, methodName);
 
                     // Print out gc references.  refCount will be zero if bGC is false (or if we
                     // failed to fetch gc reference information).
@@ -11045,12 +11051,12 @@ public:
             foundPlatform = true;
             String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
             String outputFormat2 = "    %3s=%016llx %3s=%016llx\n";
-            ExtOut(outputFormat3, "rsp", context.Amd64Context.Rsp, "rbp", context.Amd64Context.Rbp, "rip", context.Amd64Context.Rip);
-            ExtOut(outputFormat3, "rax", context.Amd64Context.Rax, "rbx", context.Amd64Context.Rbx, "rcx", context.Amd64Context.Rcx);
-            ExtOut(outputFormat3, "rdx", context.Amd64Context.Rdx, "rsi", context.Amd64Context.Rsi, "rdi", context.Amd64Context.Rdi);
-            ExtOut(outputFormat3, "r8", context.Amd64Context.R8, "r9", context.Amd64Context.R9, "r10", context.Amd64Context.R10);
-            ExtOut(outputFormat3, "r11", context.Amd64Context.R11, "r12", context.Amd64Context.R12, "r13", context.Amd64Context.R13);
-            ExtOut(outputFormat2, "r14", context.Amd64Context.R14, "r15", context.Amd64Context.R15);
+            ExtOut(outputFormat3.c_str(), "rsp", context.Amd64Context.Rsp, "rbp", context.Amd64Context.Rbp, "rip", context.Amd64Context.Rip);
+            ExtOut(outputFormat3.c_str(), "rax", context.Amd64Context.Rax, "rbx", context.Amd64Context.Rbx, "rcx", context.Amd64Context.Rcx);
+            ExtOut(outputFormat3.c_str(), "rdx", context.Amd64Context.Rdx, "rsi", context.Amd64Context.Rsi, "rdi", context.Amd64Context.Rdi);
+            ExtOut(outputFormat3.c_str(), "r8", context.Amd64Context.R8, "r9", context.Amd64Context.R9, "r10", context.Amd64Context.R10);
+            ExtOut(outputFormat3.c_str(), "r11", context.Amd64Context.R11, "r12", context.Amd64Context.R12, "r13", context.Amd64Context.R13);
+            ExtOut(outputFormat2.c_str(), "r14", context.Amd64Context.R14, "r15", context.Amd64Context.R15);
         }
 #endif
 #if defined(SOS_TARGET_X86)
@@ -11059,9 +11065,9 @@ public:
             foundPlatform = true;
             String outputFormat3 = "    %3s=%08x %3s=%08x %3s=%08x\n";
             String outputFormat2 = "    %3s=%08x %3s=%08x\n";
-            ExtOut(outputFormat3, "esp", context.X86Context.Esp, "ebp", context.X86Context.Ebp, "eip", context.X86Context.Eip);
-            ExtOut(outputFormat3, "eax", context.X86Context.Eax, "ebx", context.X86Context.Ebx, "ecx", context.X86Context.Ecx);
-            ExtOut(outputFormat3, "edx", context.X86Context.Edx, "esi", context.X86Context.Esi, "edi", context.X86Context.Edi);
+            ExtOut(outputFormat3.c_str(), "esp", context.X86Context.Esp, "ebp", context.X86Context.Ebp, "eip", context.X86Context.Eip);
+            ExtOut(outputFormat3.c_str(), "eax", context.X86Context.Eax, "ebx", context.X86Context.Ebx, "ecx", context.X86Context.Ecx);
+            ExtOut(outputFormat3.c_str(), "edx", context.X86Context.Edx, "esi", context.X86Context.Esi, "edi", context.X86Context.Edi);
         }
 #endif
 #if defined(SOS_TARGET_ARM)
@@ -11071,13 +11077,13 @@ public:
             String outputFormat3 = "    %3s=%08x %3s=%08x %3s=%08x\n";
             String outputFormat2 = "    %s=%08x %s=%08x\n";
             String outputFormat1 = "    %s=%08x\n";
-            ExtOut(outputFormat3, "r0", context.ArmContext.R0, "r1", context.ArmContext.R1, "r2", context.ArmContext.R2);
-            ExtOut(outputFormat3, "r3", context.ArmContext.R3, "r4", context.ArmContext.R4, "r5", context.ArmContext.R5);
-            ExtOut(outputFormat3, "r6", context.ArmContext.R6, "r7", context.ArmContext.R7, "r8", context.ArmContext.R8);
-            ExtOut(outputFormat3, "r9", context.ArmContext.R9, "r10", context.ArmContext.R10, "r11", context.ArmContext.R11);
-            ExtOut(outputFormat1, "r12", context.ArmContext.R12);
-            ExtOut(outputFormat3, "sp", context.ArmContext.Sp, "lr", context.ArmContext.Lr, "pc", context.ArmContext.Pc);
-            ExtOut(outputFormat2, "cpsr", context.ArmContext.Cpsr, "fpscr", context.ArmContext.Fpscr);
+            ExtOut(outputFormat3.c_str(), "r0", context.ArmContext.R0, "r1", context.ArmContext.R1, "r2", context.ArmContext.R2);
+            ExtOut(outputFormat3.c_str(), "r3", context.ArmContext.R3, "r4", context.ArmContext.R4, "r5", context.ArmContext.R5);
+            ExtOut(outputFormat3.c_str(), "r6", context.ArmContext.R6, "r7", context.ArmContext.R7, "r8", context.ArmContext.R8);
+            ExtOut(outputFormat3.c_str(), "r9", context.ArmContext.R9, "r10", context.ArmContext.R10, "r11", context.ArmContext.R11);
+            ExtOut(outputFormat1.c_str(), "r12", context.ArmContext.R12);
+            ExtOut(outputFormat3.c_str(), "sp", context.ArmContext.Sp, "lr", context.ArmContext.Lr, "pc", context.ArmContext.Pc);
+            ExtOut(outputFormat2.c_str(), "cpsr", context.ArmContext.Cpsr, "fpscr", context.ArmContext.Fpscr);
         }
 #endif
 #if defined(SOS_TARGET_ARM64)
@@ -11103,17 +11109,17 @@ public:
         {
             foundPlatform = true;
             String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
-            ExtOut(outputFormat3, "r0", context.RiscV64Context.R0, "ra", context.RiscV64Context.Ra, "sp", context.RiscV64Context.Sp);
-            ExtOut(outputFormat3, "gp", context.RiscV64Context.Gp, "tp", context.RiscV64Context.Tp, "t0", context.RiscV64Context.T0);
-            ExtOut(outputFormat3, "t1", context.RiscV64Context.T1, "t2", context.RiscV64Context.T2, "fp", context.RiscV64Context.Fp);
-            ExtOut(outputFormat3, "s1", context.RiscV64Context.S1, "a0", context.RiscV64Context.A0, "a1", context.RiscV64Context.A1);
-            ExtOut(outputFormat3, "a2", context.RiscV64Context.A2, "a3", context.RiscV64Context.A3, "a4", context.RiscV64Context.A4);
-            ExtOut(outputFormat3, "a5", context.RiscV64Context.A5, "a6", context.RiscV64Context.A6, "a7", context.RiscV64Context.A7);
-            ExtOut(outputFormat3, "s2", context.RiscV64Context.S2, "s3", context.RiscV64Context.S3, "s4", context.RiscV64Context.S4);
-            ExtOut(outputFormat3, "s5", context.RiscV64Context.S5, "s6", context.RiscV64Context.S6, "s7", context.RiscV64Context.S7);
-            ExtOut(outputFormat3, "s8", context.RiscV64Context.S8, "s9", context.RiscV64Context.S9, "s10", context.RiscV64Context.S10);
-            ExtOut(outputFormat3, "s11", context.RiscV64Context.S11, "t3", context.RiscV64Context.T3, "t4", context.RiscV64Context.T4);
-            ExtOut(outputFormat3, "t5", context.RiscV64Context.T5, "t6", context.RiscV64Context.T6, "pc", context.RiscV64Context.Pc);
+            ExtOut(outputFormat3.c_str(), "r0", context.RiscV64Context.R0, "ra", context.RiscV64Context.Ra, "sp", context.RiscV64Context.Sp);
+            ExtOut(outputFormat3.c_str(), "gp", context.RiscV64Context.Gp, "tp", context.RiscV64Context.Tp, "t0", context.RiscV64Context.T0);
+            ExtOut(outputFormat3.c_str(), "t1", context.RiscV64Context.T1, "t2", context.RiscV64Context.T2, "fp", context.RiscV64Context.Fp);
+            ExtOut(outputFormat3.c_str(), "s1", context.RiscV64Context.S1, "a0", context.RiscV64Context.A0, "a1", context.RiscV64Context.A1);
+            ExtOut(outputFormat3.c_str(), "a2", context.RiscV64Context.A2, "a3", context.RiscV64Context.A3, "a4", context.RiscV64Context.A4);
+            ExtOut(outputFormat3.c_str(), "a5", context.RiscV64Context.A5, "a6", context.RiscV64Context.A6, "a7", context.RiscV64Context.A7);
+            ExtOut(outputFormat3.c_str(), "s2", context.RiscV64Context.S2, "s3", context.RiscV64Context.S3, "s4", context.RiscV64Context.S4);
+            ExtOut(outputFormat3.c_str(), "s5", context.RiscV64Context.S5, "s6", context.RiscV64Context.S6, "s7", context.RiscV64Context.S7);
+            ExtOut(outputFormat3.c_str(), "s8", context.RiscV64Context.S8, "s9", context.RiscV64Context.S9, "s10", context.RiscV64Context.S10);
+            ExtOut(outputFormat3.c_str(), "s11", context.RiscV64Context.S11, "t3", context.RiscV64Context.T3, "t4", context.RiscV64Context.T4);
+            ExtOut(outputFormat3.c_str(), "t5", context.RiscV64Context.T5, "t6", context.RiscV64Context.T6, "pc", context.RiscV64Context.Pc);
         }
 #endif
 #if defined(SOS_TARGET_LOONGARCH64)
@@ -11121,17 +11127,17 @@ public:
         {
             foundPlatform = true;
             String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
-            ExtOut(outputFormat3, "r0", context.LoongArch64Context.R0, "ra", context.LoongArch64Context.Ra, "tp", context.LoongArch64Context.Tp);
-            ExtOut(outputFormat3, "sp", context.LoongArch64Context.Sp, "a0", context.LoongArch64Context.A0, "a1", context.LoongArch64Context.A1);
-            ExtOut(outputFormat3, "a2", context.LoongArch64Context.A2, "a3", context.LoongArch64Context.A3, "a4", context.LoongArch64Context.A4);
-            ExtOut(outputFormat3, "a5", context.LoongArch64Context.A5, "a6", context.LoongArch64Context.A6, "a7", context.LoongArch64Context.A7);
-            ExtOut(outputFormat3, "t0", context.LoongArch64Context.T0, "t1", context.LoongArch64Context.T1, "t2", context.LoongArch64Context.T2);
-            ExtOut(outputFormat3, "t3", context.LoongArch64Context.T3, "t4", context.LoongArch64Context.T4, "t5", context.LoongArch64Context.T5);
-            ExtOut(outputFormat3, "t6", context.LoongArch64Context.T6, "t7", context.LoongArch64Context.T7, "t8", context.LoongArch64Context.T8);
-            ExtOut(outputFormat3, "x0", context.LoongArch64Context.X0, "fp", context.LoongArch64Context.Fp, "s0", context.LoongArch64Context.S0);
-            ExtOut(outputFormat3, "s1", context.LoongArch64Context.S1, "s2", context.LoongArch64Context.S2, "s3", context.LoongArch64Context.S3);
-            ExtOut(outputFormat3, "s4", context.LoongArch64Context.S4, "s5", context.LoongArch64Context.S5, "s6", context.LoongArch64Context.S6);
-            ExtOut(outputFormat3, "s7", context.LoongArch64Context.S7, "s8", context.LoongArch64Context.S8, "pc", context.LoongArch64Context.Pc);
+            ExtOut(outputFormat3.c_str(), "r0", context.LoongArch64Context.R0, "ra", context.LoongArch64Context.Ra, "tp", context.LoongArch64Context.Tp);
+            ExtOut(outputFormat3.c_str(), "sp", context.LoongArch64Context.Sp, "a0", context.LoongArch64Context.A0, "a1", context.LoongArch64Context.A1);
+            ExtOut(outputFormat3.c_str(), "a2", context.LoongArch64Context.A2, "a3", context.LoongArch64Context.A3, "a4", context.LoongArch64Context.A4);
+            ExtOut(outputFormat3.c_str(), "a5", context.LoongArch64Context.A5, "a6", context.LoongArch64Context.A6, "a7", context.LoongArch64Context.A7);
+            ExtOut(outputFormat3.c_str(), "t0", context.LoongArch64Context.T0, "t1", context.LoongArch64Context.T1, "t2", context.LoongArch64Context.T2);
+            ExtOut(outputFormat3.c_str(), "t3", context.LoongArch64Context.T3, "t4", context.LoongArch64Context.T4, "t5", context.LoongArch64Context.T5);
+            ExtOut(outputFormat3.c_str(), "t6", context.LoongArch64Context.T6, "t7", context.LoongArch64Context.T7, "t8", context.LoongArch64Context.T8);
+            ExtOut(outputFormat3.c_str(), "x0", context.LoongArch64Context.X0, "fp", context.LoongArch64Context.Fp, "s0", context.LoongArch64Context.S0);
+            ExtOut(outputFormat3.c_str(), "s1", context.LoongArch64Context.S1, "s2", context.LoongArch64Context.S2, "s3", context.LoongArch64Context.S3);
+            ExtOut(outputFormat3.c_str(), "s4", context.LoongArch64Context.S4, "s5", context.LoongArch64Context.S5, "s6", context.LoongArch64Context.S6);
+            ExtOut(outputFormat3.c_str(), "s7", context.LoongArch64Context.S7, "s8", context.LoongArch64Context.S8, "pc", context.LoongArch64Context.Pc);
         }
 #endif
 

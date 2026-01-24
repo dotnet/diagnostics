@@ -324,7 +324,7 @@ enum class ProcessCommandId : uint8_t
     ProcessInfo2           = 0x04,
     EnablePerfMap          = 0x05,
     DisablePerfMap         = 0x06,
-    ApplyStartupHook       = 0x07
+    ApplyStartupHook       = 0x07,
     ProcessInfo3           = 0x08,
     // future
 }
@@ -1327,6 +1327,50 @@ struct Payload
 
 > Available since .NET 6.0
 
+### `SetEnvironmentVariable`
+
+Command Code: `0x0403`
+
+The `SetEnvironmentVariable` command sets an environment variable in the runtime process.
+
+In the event of an [error](#Errors), the runtime will attempt to send an error message and subsequently close the connection.
+
+#### Inputs:
+
+Header: `{ Magic; Size; 0x0403; 0x0000 }`
+
+Payload:
+* `string name`: The environment variable name to set.
+* `string value`: The value to assign.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; size; 0xFF00; 0x0000; }`
+
+`SetEnvironmentVariable` returns:
+* `int32 hresult`: The result of setting the environment variable (`0` indicates success)
+
+##### Details:
+
+Input:
+```c
+Payload
+{
+    string name
+    string value
+}
+```
+
+Returns:
+```c
+Payload
+{
+    int32 hresult
+}
+```
+
+> Available since .NET 6.0
+
 ### `ProcessInfo2`
 
 Command Code: `0x0404`
@@ -1573,15 +1617,21 @@ In the event an error occurs in the handling of an Ipc Message, the Diagnostic S
 
 Errors are `HRESULTS` encoded as `int32_t` when sent back to the client.  There are a few Diagnostics IPC specific `HRESULT`s:
 ```c
-#define CORDIAGIPC_E_BAD_ENCODING    = 0x80131384
-#define CORDIAGIPC_E_UNKNOWN_COMMAND = 0x80131385
-#define CORDIAGIPC_E_UNKNOWN_MAGIC   = 0x80131386
-#define CORDIAGIPC_E_UNKNOWN_ERROR   = 0x80131387
+#define DS_IPC_E_BAD_ENCODING ((ds_ipc_result_t)(0x80131384L))
+#define DS_IPC_E_UNKNOWN_COMMAND ((ds_ipc_result_t)(0x80131385L))
+#define DS_IPC_E_UNKNOWN_MAGIC ((ds_ipc_result_t)(0x80131386L))
+#define DS_IPC_E_NOTSUPPORTED ((ds_ipc_result_t)(0x80131515L))
+#define DS_IPC_E_FAIL ((ds_ipc_result_t)(0x80004005L))
+#define DS_IPC_E_NOT_YET_AVAILABLE ((ds_ipc_result_t)(0x8013135bL))
+#define DS_IPC_E_RUNTIME_UNINITIALIZED ((ds_ipc_result_t)(0x80131371L))
+#define DS_IPC_E_INVALIDARG ((ds_ipc_result_t)(0x80070057L))
+#define DS_IPC_E_INSUFFICIENT_BUFFER ((ds_ipc_result_t)(0x8007007A))
+#define DS_IPC_E_ENVVAR_NOT_FOUND ((ds_ipc_result_t)(0x800000CB))
 ```
 
 Diagnostic Server errors are sent as a Diagnostic IPC Message with:
-* a `command_set` of `0xFF`
-* a `command_id` of `0xFF`
+* a `command_set` of `0xFF` (Server)
+* a `command_id` of `0xFF` (Error)
 * a Payload consisting of a `int32_t` representing the error encountered (described above)
 
 All errors will result in the Server closing the connection.

@@ -10,13 +10,8 @@ if(CLR_CMAKE_HOST_WIN32)
 
   message(STATUS "VSInstallDir: $ENV{VSInstallDir}")
   include_directories("$ENV{VSInstallDir}/DIA SDK/include")
-
+  
   add_compile_options(/Zl) # omit default library name in .OBJ
-
-  add_subdirectory(runcommand)
-  if(NOT CLR_CMAKE_TARGET_ARCH_ARM)
-    add_subdirectory(SOS.UnitTests/Debuggees/DesktopClrHost)
-  endif(NOT CLR_CMAKE_TARGET_ARCH_ARM)
 endif(CLR_CMAKE_HOST_WIN32)
 
 add_compile_definitions(STRESS_LOG_ANALYZER)

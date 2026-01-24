@@ -110,6 +110,32 @@
       <KnownRuntimePack Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
         <LatestRuntimeFrameworkVersion>$(AspNetVersion10)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
+
+      <KnownILCompilerPack
+        Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NET.ILCompiler'">
+        <ILCompilerPackVersion>$(RuntimeVersion80)</ILCompilerPackVersion>
+      </KnownILCompilerPack>
+      <KnownILCompilerPack
+        Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.NET.ILCompiler'">
+        <ILCompilerPackVersion>$(RuntimeVersion90)</ILCompilerPackVersion>
+      </KnownILCompilerPack>
+      <KnownILCompilerPack
+        Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.NET.ILCompiler'">
+        <ILCompilerPackVersion>$(RuntimeVersion10)</ILCompilerPackVersion>
+      </KnownILCompilerPack>
+
+      <KnownILLinkPack
+        Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NET.ILLink.Tasks'">
+        <ILLinkPackVersion>$(RuntimeVersion80)</ILLinkPackVersion>
+      </KnownILLinkPack>
+      <KnownILLinkPack
+        Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.NET.ILLink.Tasks'">
+        <ILLinkPackVersion>$(RuntimeVersion90)</ILLinkPackVersion>
+      </KnownILLinkPack>
+      <KnownILLinkPack
+        Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.NET.ILLink.Tasks'">
+        <ILLinkPackVersion>$(RuntimeVersion10)</ILLinkPackVersion>
+      </KnownILLinkPack>
     </ItemGroup>
   </Target>
 </Project>

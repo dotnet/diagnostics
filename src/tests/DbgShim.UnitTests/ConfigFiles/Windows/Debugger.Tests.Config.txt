@@ -1,12 +1,10 @@
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
-  <DotNetRoot Condition="'$(TargetArchitecture)' != 'x86'">$(RepoRootDir)\.dotnet-test</DotNetRoot>
-  <DotNetRoot Condition="'$(TargetArchitecture)' == 'x86'">$(RepoRootDir)\.dotnet-test\x86</DotNetRoot>
+  <DotNetRoot>$(ArtifactsDir)\dotnet-test</DotNetRoot>
   <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
 
-  <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
-  <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
-  <LogDir>$(RootBinDir)\TestResults\$(TargetConfiguration)\dbgshim.unittests_$(Timestamp)</LogDir>
+  <InstallDir>$(ArtifactsDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <LogDir>$(ArtifactsDir)\TestResults\$(TargetConfiguration)\dbgshim.unittests_$(Timestamp)</LogDir>
 
   <TestProduct>ProjectK</TestProduct>
   <DebuggeeSourceRoot>$(RepoRootDir)\src\tests\DbgShim.UnitTests\Debuggees</DebuggeeSourceRoot>
@@ -18,7 +16,7 @@
 
   <RunTestsWindows_x64>true</RunTestsWindows_x64>
   <RunTestsWindows_x64 Condition="'$(TargetArchitecture)' != 'x64'">false</RunTestsWindows_x64>
-  
+
   <RunTestsWindows_x86>true</RunTestsWindows_x86>
   <RunTestsWindows_x86 Condition="'$(TargetArchitecture)' != 'x86'">false</RunTestsWindows_x86>
 
@@ -62,28 +60,28 @@
         <Option Condition="'$(TestSingleFile)' == 'true'">
           <Options>
             <Option Condition="'$(RuntimeVersionLatest)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-              <DebuggeeBuildRoot>$(RootBinDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
               <PublishSingleFile>true</PublishSingleFile>
               <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
@@ -95,22 +93,22 @@
             Default (debuggees cli built)
           -->
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
-          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
+          <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
+          <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
+          <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-          <DebuggeeBuildRoot>$(RootBinDir)\Debuggees</DebuggeeBuildRoot>
+          <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
         </Option>

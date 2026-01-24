@@ -5,9 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)../../Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)../../Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)../CommonTestRunner/CommonTestRunner.csproj" />
+    <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="$(TestDir)CommonTestRunner/CommonTestRunner.csproj" />
   </ItemGroup>
 
   <ItemGroup>

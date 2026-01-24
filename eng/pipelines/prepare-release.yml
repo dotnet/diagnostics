@@ -33,13 +33,11 @@ stages:
           condition: succeeded()
     variables:
     - ${{ if and(eq(parameters.isOfficialBuild, true), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/internal/release/'))) }}:
-
       - group: DotNet-Diagnostics-Storage
       - group: Release-Pipeline
     steps:
     - ${{ if or(eq(parameters.isOfficialBuild, false), eq(variables['Build.SourceBranch'], 'refs/heads/main')) }}:
-      - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release /bl'
-        workingDirectory: '$(System.ArtifactsDirectory)'
+      - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release'
         displayName: 'Build Manifest generation and asset publishing tool'
     - ${{ elseif and(eq(parameters.isOfficialBuild, true), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/internal/release/'))) }}:
       - task: UseDotNet@2

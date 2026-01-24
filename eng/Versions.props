@@ -3,7 +3,7 @@
   <PropertyGroup>
     <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
     <PreReleaseVersionLabel>preview</PreReleaseVersionLabel>
-    <VersionPrefix>9.0.0</VersionPrefix>
+    <VersionPrefix>10.0.0</VersionPrefix>
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
     <!--
@@ -25,17 +25,19 @@
     <!-- <UsingToolMicrosoftNetCompilers Condition="'$(DotNetBuildSourceOnly)' != 'true'">true</UsingToolMicrosoftNetCompilers> -->
     <!-- CoreFX -->
     <SystemReflectionMetadataVersion>8.0.0</SystemReflectionMetadataVersion>
-    <SystemCollectionsImmutableVersion>8.0.0</SystemCollectionsImmutableVersion>
+    <SystemCollectionsImmutableVersion>9.0.11</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>9.0.8</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.23</MicrosoftDiagnosticsTracingTraceEventVersion>
-    <MicrosoftExtensionsLoggingVersion>9.0.8</MicrosoftExtensionsLoggingVersion>
-    <MicrosoftExtensionsLoggingAbstractionsVersion>9.0.8</MicrosoftExtensionsLoggingAbstractionsVersion>
-    <MicrosoftExtensionsLoggingConsoleVersion>9.0.8</MicrosoftExtensionsLoggingConsoleVersion>
-    <MicrosoftExtensionsConfigurationVersion>9.0.8</MicrosoftExtensionsConfigurationVersion>
-    <MicrosoftExtensionsConfigurationJsonVersion>9.0.8</MicrosoftExtensionsConfigurationJsonVersion>
-    <MicrosoftExtensionsLoggingConfigurationVersion>9.0.8</MicrosoftExtensionsLoggingConfigurationVersion>
+    <MicrosoftDotNetXUnitExtensionsVersion>11.0.0-beta.25528.108</MicrosoftDotNetXUnitExtensionsVersion>
+    <MicrosoftExtensionsLoggingVersion>8.0.1</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingAbstractionsVersion>8.0.3</MicrosoftExtensionsLoggingAbstractionsVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>8.0.1</MicrosoftExtensionsLoggingConsoleVersion>
+    <MicrosoftExtensionsConfigurationVersion>8.0.0</MicrosoftExtensionsConfigurationVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>8.0.1</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsLoggingConfigurationVersion>8.0.1</MicrosoftExtensionsLoggingConfigurationVersion>
+    <MicrosoftOneCollectRecordTraceVersions>0.1.32221</MicrosoftOneCollectRecordTraceVersions>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
@@ -49,7 +51,7 @@
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.556</StyleCopAnalyzersVersion>
     <cdbsosversion>10.0.26100.1</cdbsosversion>
-    <NewtonSoftJsonVersion>13.0.1</NewtonSoftJsonVersion>
+    <NewtonSoftJsonVersion>13.0.3</NewtonSoftJsonVersion>
     <!-- Roslyn and analyzers -->
     <!-- dotnet/roslyn dependencies -->
     <!--
@@ -86,8 +88,8 @@
 
   -->
   <PropertyGroup>
-    <MicrosoftNETCoreApp90Version>9.0.4</MicrosoftNETCoreApp90Version>
-    <MicrosoftNETCoreApp80Version>8.0.15</MicrosoftNETCoreApp80Version>
+    <MicrosoftNETCoreApp90Version>9.0.12</MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp80Version>8.0.23</MicrosoftNETCoreApp80Version>
   </PropertyGroup>
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>

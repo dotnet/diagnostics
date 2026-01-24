@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
+    <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
+    <DefineConstants Condition="'$(TargetFramework)' == '$(DesktopTargetFramework)'">$(DefineConstants);FULL_CLR</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AdditionalSourceCopy Include="..\SymbolTestApp.sln" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SymbolTestDll\SymbolTestDll.csproj" />
+  </ItemGroup>
+
+</Project>
