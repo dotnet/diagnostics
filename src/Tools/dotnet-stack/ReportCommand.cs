@@ -36,32 +36,52 @@ namespace Microsoft.Diagnostics.Tools.Stack
 
             try
             {
-                CommandUtils.ResolveProcess(processId, name, out int resolvedProcessId, out string _);
-                processId = resolvedProcessId;
-
-                DiagnosticsClient client = new(processId);
-                List<EventPipeProvider> providers = new()
+                // Validate that only one of processId, name, or diagnosticPort is specified
+                int optionCount = 0;
+                if (processId != 0)
                 {
-                    new EventPipeProvider("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational)
-                };
-
-                // collect a *short* trace with stack samples
-                // the hidden '--duration' flag can increase the time of this trace in case 10ms
-                // is too short in a given environment, e.g., resource constrained systems
-                // N.B. - This trace INCLUDES rundown.  For sufficiently large applications, it may take non-trivial time to collect
-                //        the symbol data in rundown.
-                EventPipeSession session = await client.StartEventPipeSessionAsync(providers, requestRundown:true, token:ct).ConfigureAwait(false);
-                using (session)
-                using (FileStream fs = File.OpenWrite(tempNetTraceFilename))
+                    optionCount++;
+                }
+                if (!string.IsNullOrEmpty(name))
                 {
-                    Task copyTask = session.EventStream.CopyToAsync(fs, ct);
-                    await Task.Delay(duration, ct).ConfigureAwait(false);
-                    await session.StopAsync(ct).ConfigureAwait(false);
+                    optionCount++;
+                }
+                if (!string.IsNullOrEmpty(diagnosticPort))
+                {
+                    optionCount++;
+                }
 
-                    // check if rundown is taking more than 5 seconds and add comment to report
-                    Task timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
-                    Task completedTask = await Task.WhenAny(copyTask, timeoutTask).ConfigureAwait(false);
-                    if (completedTask == timeoutTask)
+                if (optionCount == 0)
+                {
+                    stdError.WriteLine("--process-id, --name, or --diagnostic-port is required");
+                    return -1;
+                }
+                else if (optionCount > 1)
+                {
+                    stdError.WriteLine("Only one of --process-id, --name, or --diagnostic-port can be specified");
+                    return -1;
+                }
+
+                // Resolve process name to ID if needed
+                if (!string.IsNullOrEmpty(name))
+                {
+                    processId = CommandUtils.FindProcessIdWithName(name);
+                    if (processId < 0)
+                    {
+                        return -1;
+                    }
+                }
+
+                if (processId < 0)
+                {
+                    stdError.WriteLine("Process ID should not be negative.");
+                    return -1;
+                }
+
+                DiagnosticsClientBuilder builder = new("dotnet-stack", 10);
+                using (DiagnosticsClientHolder holder = await builder.Build(ct, processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
+                {
+                    if (holder == null)
                     {
                         return -1;
                     }
