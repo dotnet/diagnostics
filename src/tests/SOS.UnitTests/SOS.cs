@@ -460,6 +460,12 @@ public class SOS
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
+    public async Task AsyncMain(TestConfiguration config)
+    {
+        await SOSTestHelpers.RunTest(config, debuggeeName: "AsyncMain", scriptName: "AsyncMain.script", Output, testTriage: true);
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task LineNums(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(

@@ -103,10 +103,10 @@ namespace sos
         {
             TADDR temp;
             if (FAILED(MOVE(temp, mAddress)))
-                sos::Throw<DataRead>("Object %s has an invalid method table.", DMLListNearObj(mAddress));
+                sos::Throw<DataRead>("Failed to read memory at Object %s.", DMLListNearObj(mAddress));
 
             if (temp == (TADDR)0)
-                sos::Throw<HeapCorruption>("Object %s has an invalid method table.", DMLListNearObj(mAddress));
+                sos::Throw<HeapCorruption>("Object %s has a corrupt method table.", DMLListNearObj(mAddress));
 
             mMT = temp & ~METHODTABLE_PTR_LOW_BITMASK;
         }
