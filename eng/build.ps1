@@ -102,12 +102,13 @@ if ($test) {
         }
 
         # Build the test filter argument if provided
+        # Use backslash-escaped quotes so they survive the additional quoting in tools.ps1
         $testFilterArg = ''
         if ($methodfilter -ne '') {
-            $testFilterArg = "/p:TestRunnerAdditionalArguments=""-method $methodfilter"""
+            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"-method $methodfilter\`""
         }
         elseif ($classfilter -ne '') {
-            $testFilterArg = "/p:TestRunnerAdditionalArguments=""-class $classfilter"""
+            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"-class $classfilter\`""
         }
 
         & "$engroot\common\build.ps1" `
@@ -124,7 +125,7 @@ if ($test) {
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
           /p:RuntimeSourceFeedKey="$runtimesourcefeedkey" `
           /p:LiveRuntimeDir="$liveRuntimeDir" `
-          $testFilterArg 
+          $testFilterArg
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
