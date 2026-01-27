@@ -12,6 +12,8 @@ Param(
     [switch] $skipnative,
     [switch] $bundletools,
     [switch] $useCdac,
+    [string] $methodfilter = '',
+    [string] $classfilter = '',
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimedownloadversion= 'default',
     [string] $runtimesourcefeed = '',
@@ -98,6 +100,20 @@ if ($test) {
         if ($useCdac) {
             $env:SOS_TEST_CDAC="true"
         }
+
+        # Build the test filter argument if provided
+        $testFilterArg = ''
+        if (($methodfilter -ne '') -and ($classfilter -ne '')) {
+            Write-Error "error: -methodfilter and -classfilter options are mutually exclusive."
+            exit 1
+        }
+        if ($methodfilter -ne '') {
+            $testFilterArg = "/p:TestRunnerAdditionalArguments=""-method $methodfilter"""
+        }
+        elseif ($classfilter -ne '') {
+            $testFilterArg = "/p:TestRunnerAdditionalArguments=""-class $classfilter"""
+        }
+
         & "$engroot\common\build.ps1" `
           -test `
           -configuration $configuration `
@@ -111,7 +127,8 @@ if ($test) {
           /p:DotnetRuntimeDownloadVersion="$dotnetruntimedownloadversion" `
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
           /p:RuntimeSourceFeedKey="$runtimesourcefeedkey" `
-          /p:LiveRuntimeDir="$liveRuntimeDir" 
+          /p:LiveRuntimeDir="$liveRuntimeDir" `
+          $testFilterArg
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode

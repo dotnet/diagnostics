@@ -29,6 +29,7 @@ __SkipGenerateVersion=0
 __InstallRuntimes=0
 __PrivateBuild=0
 __Test=0
+__TestFilter=
 __UnprocessedBuildArgs=
 __UseCdac=0
 __LiveRuntimeDir=
@@ -36,6 +37,8 @@ __LiveRuntimeDir=
 usage_list+=("-skipmanaged: do not build managed components.")
 usage_list+=("-skipnative: do not build native components.")
 usage_list+=("-test: run xunit tests")
+usage_list+=("-methodfilter: pass method filter to xunit runner (Namespace.ClassName.MethodName)")
+usage_list+=("-classfilter: pass class filter to xunit runner (Namespace.ClassName)")
 
 handle_arguments() {
     lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
@@ -103,6 +106,24 @@ handle_arguments() {
 
         test|-test)
             __Test=1
+            ;;
+
+        methodfilter|-methodfilter)
+            if [[ -n "$__TestFilter" ]]; then
+                echo "error: -methodfilter and -classfilter options are mutually exclusive." >&2
+                exit 1
+            fi
+            __TestFilter="-method $2"
+            __ShiftArgs=1
+            ;;
+
+        classfilter|-classfilter)
+            if [[ -n "$__TestFilter" ]]; then
+                echo "error: -methodfilter and -classfilter options are mutually exclusive." >&2
+                exit 1
+            fi
+            __TestFilter="-class $2"
+            __ShiftArgs=1
             ;;
 
         usecdac|-usecdac)
@@ -302,6 +323,12 @@ if [[ "$__Test" == 1 ]]; then
           export SOS_TEST_CDAC="true"
       fi
 
+      # Build the test filter argument if provided
+      __TestFilterArg=
+      if [[ -n "$__TestFilter" ]]; then
+          __TestFilterArg="/p:TestRunnerAdditionalArguments=\"$__TestFilter\""
+      fi
+
       # __CommonMSBuildArgs contains TargetOS property
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
@@ -314,6 +341,7 @@ if [[ "$__Test" == 1 ]]; then
         /p:RuntimeSourceFeed="$__RuntimeSourceFeed" \
         /p:RuntimeSourceFeedKey="$__RuntimeSourceFeedKey" \
         /p:LiveRuntimeDir="$__LiveRuntimeDir" \
+        "$__TestFilterArg" \
         $__CommonMSBuildArgs
 
       if [ $? != 0 ]; then
