@@ -80,13 +80,12 @@ namespace Microsoft.Diagnostics.Tests.Common
             {
                 try
                 {
-                    // Accumulate text in buffer and flush on newlines to avoid fragmenting output
+                    // Buffer text and write complete lines to ITestOutputHelper to avoid fragmenting output.
+                    // Lines are only flushed when a newline is detected to minimize allocations.
                     _outputBuffer.Append(text);
                     
-                    // Only check for complete lines if the incoming text contains a newline
                     if (text.Contains(Environment.NewLine))
                     {
-                        // Flush complete lines to ITestOutputHelper
                         string buffered = _outputBuffer.ToString();
                         int lastNewline = buffered.LastIndexOf(Environment.NewLine);
                         if (lastNewline >= 0)
@@ -95,7 +94,6 @@ namespace Microsoft.Diagnostics.Tests.Common
                             _outputBuffer.Clear();
                             _outputBuffer.Append(buffered.Substring(lastNewline + Environment.NewLine.Length));
                             
-                            // Write each complete line separately
                             using (StringReader reader = new StringReader(toFlush))
                             {
                                 string line;
@@ -158,6 +156,26 @@ namespace Microsoft.Diagnostics.Tests.Common
             Write(Environment.NewLine);
         }
         public override void WriteLine() => Write(Environment.NewLine);
+        
+        /// <summary>
+        /// Flushes any remaining buffered output to the ITestOutputHelper.
+        /// Call this at the end of a test to ensure all output is written.
+        /// </summary>
+        public void FlushOutput()
+        {
+            if (_outputHelper != null && _outputBuffer != null && _outputBuffer.Length > 0)
+            {
+                try
+                {
+                    _outputHelper.WriteLine(_outputBuffer.ToString());
+                    _outputBuffer.Clear();
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("no currently active test"))
+                {
+                    // Test already completed, ignore
+                }
+            }
+        }
 
         public string GetLineText(int row) => new string(_chars[row]).TrimEnd();
 
@@ -182,6 +200,7 @@ namespace Microsoft.Diagnostics.Tests.Common
 
         public void AssertLinesEqual(int startLine, params string[] expectedLines)
         {
+            FlushOutput();
             if (startLine + expectedLines.Length > Lines.Length)
             {
                 Assert.Fail("MockConsole output had fewer output lines than expected." + Environment.NewLine +
@@ -205,6 +224,7 @@ namespace Microsoft.Diagnostics.Tests.Common
 
         public void AssertSanitizedLinesEqual(Func<string[], string[]> sanitizer, params string[] expectedLines)
         {
+            FlushOutput();
             string[] actualLines = Lines;
             if (sanitizer is not null)
             {
