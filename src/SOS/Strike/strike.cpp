@@ -1020,6 +1020,59 @@ DECLARE_API(DumpSigElem)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
+*    Helper function to display class details (attributes, vtable      *
+*    slots, and fields).                                               *
+*                                                                      *
+\**********************************************************************/
+static void DisplayClassDetails(CLRDATA_ADDRESS methodTable, DacpMethodTableData *pMTData)
+{
+    ExtOut("Class Attributes:    %x  ", pMTData->dwAttrClass);
+    if (IsTdInterface(pMTData->dwAttrClass))
+        ExtOut("Interface, ");
+    if (IsTdAbstract(pMTData->dwAttrClass))
+        ExtOut("Abstract, ");
+    if (IsTdImport(pMTData->dwAttrClass))
+        ExtOut("ComImport, ");
+    if (IsTdSealed(pMTData->dwAttrClass))
+        ExtOut("Sealed, ");
+    ExtOut("\n");
+
+    if (pMTData->wNumVirtuals != 0)
+    {
+        ExtOut("Vtable Slots:    %d\n", pMTData->wNumVirtuals);
+    }
+    if (pMTData->wNumVtableSlots != 0)
+    {
+        ExtOut("Total Method Slots:  %d\n", pMTData->wNumVtableSlots);
+    }
+
+    DacpMethodTableFieldData vMethodTableFields;
+    if (SUCCEEDED(vMethodTableFields.Request(g_sos, methodTable)))
+    {
+        ExtOut("NumInstanceFields:   %d\n", vMethodTableFields.wNumInstanceFields);
+        ExtOut("NumStaticFields:     %d\n", vMethodTableFields.wNumStaticFields);
+
+        if (vMethodTableFields.wNumThreadStaticFields != 0)
+        {
+            ExtOut("NumThreadStaticFields: %d\n", vMethodTableFields.wNumThreadStaticFields);
+        }
+
+        if (vMethodTableFields.wContextStaticsSize)
+        {
+            ExtOut("ContextStaticOffset: 0x%x\n", vMethodTableFields.wContextStaticOffset);
+            ExtOut("ContextStaticsSize:  %d\n", vMethodTableFields.wContextStaticsSize);
+        }
+
+        if (vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
+        {
+            DisplayFields(methodTable, pMTData, &vMethodTableFields, (TADDR)0, TRUE, FALSE);
+        }
+    }
+}
+
+/**********************************************************************\
+* Routine Description:                                                 *
+*                                                                      *
 *    This function is called to dump the contents of an EEClass from   *
 *    a given address
 *                                                                      *
@@ -1096,57 +1149,16 @@ DECLARE_API(DumpClass)
     }
     else
     {
-        DMLOut("Parent MethodTable: %s\n", DMLMethodTable(mtdata.ParentMethodTable));
+        DMLOut("Parent:    %s\n", DMLMethodTable(mtdata.ParentMethodTable));
     }
     DMLOut("Module:          %s\n", DMLModule(mtdata.Module));
     DMLOut("Method Table:    %s\n", DMLMethodTable(methodTable));
-    if (preferMT)
+    if (preferMT && methodTable != mtdata.Class)
     {
-        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtdata.Class));
+        DMLOut("Canonical:    %s\n", DMLMethodTable(mtdata.Class));
     }
-    if (mtdata.wNumVirtuals != 0)
-    {
-        ExtOut("Vtable Slots:    %x\n", mtdata.wNumVirtuals);
-    }
-    if (mtdata.wNumVtableSlots != 0)
-    {
-        ExtOut("Total Method Slots:  %x\n", mtdata.wNumVtableSlots);
-    }
-    ExtOut("Class Attributes:    %x  ", mtdata.dwAttrClass);
 
-    if (IsTdInterface(mtdata.dwAttrClass))
-        ExtOut("Interface, ");
-    if (IsTdAbstract(mtdata.dwAttrClass))
-        ExtOut("Abstract, ");
-    if (IsTdImport(mtdata.dwAttrClass))
-        ExtOut("ComImport, ");
-
-    ExtOut("\n");
-
-    DacpMethodTableFieldData vMethodTableFields;
-    if (SUCCEEDED(vMethodTableFields.Request(g_sos, methodTable)))
-    {
-        ExtOut("NumInstanceFields:   %x\n", vMethodTableFields.wNumInstanceFields);
-        ExtOut("NumStaticFields:     %x\n", vMethodTableFields.wNumStaticFields);
-
-        if (vMethodTableFields.wNumThreadStaticFields != 0)
-        {
-            ExtOut("NumThreadStaticFields: %x\n", vMethodTableFields.wNumThreadStaticFields);
-        }
-
-
-        if (vMethodTableFields.wContextStaticsSize)
-        {
-            ExtOut("ContextStaticOffset: %x\n", vMethodTableFields.wContextStaticOffset);
-            ExtOut("ContextStaticsSize:  %x\n", vMethodTableFields.wContextStaticsSize);
-        }
-
-
-        if (vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
-        {
-            DisplayFields(methodTable, &mtdata, &vMethodTableFields, (TADDR)0, TRUE, FALSE);
-        }
-    }
+    DisplayClassDetails(methodTable, &mtdata);
 
     return Status;
 }
@@ -1168,11 +1180,13 @@ DECLARE_API(DumpMT)
     MINIDUMP_NOT_SUPPORTED();
 
     BOOL bDumpMDTable = FALSE;
+    BOOL bDumpAll = FALSE;
     BOOL dml = FALSE;
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-MD", &bDumpMDTable, COBOOL, FALSE},
+        {"-all", &bDumpAll, COBOOL, FALSE},
         {"/d", &dml, COBOOL, FALSE}
     };
     CMDValue arg[] =
@@ -1187,6 +1201,9 @@ DECLARE_API(DumpMT)
 
     EnableDMLHolder dmlHolder(dml);
     TableOutput table(2, 20, AlignLeft, false);
+
+    if (bDumpAll)
+        bDumpMDTable = TRUE;
 
     if (nArg == 0)
     {
@@ -1215,13 +1232,25 @@ DECLARE_API(DumpMT)
     DacpMethodTableCollectibleData vMethTableCollectible;
     vMethTableCollectible.Request(g_sos, TO_CDADDR(dwStartAddr));
 
-    BOOL preferCanonMT = FALSE;
-    if (SUCCEEDED(PreferCanonMTOverEEClass(vMethTable.Class, &preferCanonMT)) && preferCanonMT)
+    // Check if runtime returns canonical MT instead of EEClass (.NET 9+)
+    BOOL runtimePrefersCanonMT = FALSE;
+    CLRDATA_ADDRESS canonicalMT = 0;
+    Status = PreferCanonMTOverEEClass(vMethTable.Class, &runtimePrefersCanonMT, &canonicalMT);
+
+    table.WriteRow("Parent:", DMLMethodTable(vMethTable.ParentMethodTable));
+
+    if (SUCCEEDED(Status) && runtimePrefersCanonMT)
     {
-        table.WriteRow("Canonical MethodTable:", EEClassPtr(vMethTable.Class));
+        // .NET 9+: vMethTable.Class contains canonical MT, not EEClass
+        // Only show "Canonical" if it differs from the current MT
+        if (canonicalMT != 0 && canonicalMT != TO_CDADDR(dwStartAddr))
+        {
+            table.WriteRow("Canonical:", DMLMethodTable(canonicalMT));
+        }
     }
     else
     {
+        // Legacy: vMethTable.Class contains EEClass
         table.WriteRow("EEClass:", EEClassPtr(vMethTable.Class));
     }
 
@@ -1263,13 +1292,22 @@ DECLARE_API(DumpMT)
     }
 
     table.WriteRow("BaseSize:", PrefixHex(vMethTable.BaseSize));
-    table.WriteRow("ComponentSize:", PrefixHex(vMethTable.ComponentSize));
-    table.WriteRow("DynamicStatics:", vMethTable.bIsDynamic ? "true" : "false");
-    table.WriteRow("ContainsPointers:", vMethTable.bContainsPointers ? "true" : "false");
+    if (vMethTable.ComponentSize != 0)
+        table.WriteRow("ComponentSize:", PrefixHex(vMethTable.ComponentSize));
+    table.WriteRow("Has GC Pointers:", vMethTable.bContainsPointers ? "true" : "false");
     table.WriteRow("Number of Methods:", Decimal(vMethTable.wNumMethods));
 
     table.SetColWidth(0, 29);
     table.WriteRow("Number of IFaces in IFaceMap:", Decimal(vMethTable.wNumInterfaces));
+
+    // When -all is specified, include class details (similar to DumpClass output)
+    if (bDumpAll)
+    {
+        Print("--------------------------------------\n");
+        Print("Additional Details\n");
+
+        DisplayClassDetails(TO_CDADDR(dwStartAddr), &vMethTable);
+    }
 
     if (bDumpMDTable)
     {
@@ -1381,13 +1419,24 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
 
     ExtOut("Name:        %S\n", g_mdName);
     DMLOut("MethodTable: %s\n", DMLMethodTable(taMT));
-    BOOL preferCanonMT = FALSE;
-    if (SUCCEEDED(PreferCanonMTOverEEClass(TO_CDADDR(taMT), &preferCanonMT)) && preferCanonMT)
+
+    // Check if runtime returns canonical MT instead of EEClass (.NET 9+)
+    BOOL runtimePrefersCanonMT = FALSE;
+    CLRDATA_ADDRESS canonicalMT = 0;
+    Status = PreferCanonMTOverEEClass(mtabledata.Class, &runtimePrefersCanonMT, &canonicalMT);
+
+    if (SUCCEEDED(Status) && runtimePrefersCanonMT)
     {
-        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
+        // .NET 9+: mtabledata.Class contains canonical MT, not EEClass
+        // Only show "Canonical" if it differs from the current MT
+        if (canonicalMT != 0 && canonicalMT != TO_CDADDR(taMT))
+        {
+            DMLOut("Canonical: %s\n", DMLMethodTable(canonicalMT));
+        }
     }
     else
     {
+        // Legacy: mtabledata.Class contains EEClass
         DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
     }
     ExtOut("Size:        %d(0x%x) bytes\n", size, size);
@@ -1478,23 +1527,10 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     ExtOut("Name:        %S\n", obj.GetTypeName());
     DMLOut("MethodTable: %s\n", DMLMethodTable(objData.MethodTable));
 
-
     DacpMethodTableData mtabledata;
-    if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) == S_OK)
+    if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) != S_OK)
     {
-        BOOL preferCanonMT = FALSE;
-        if (SUCCEEDED(PreferCanonMTOverEEClass(mtabledata.Class, &preferCanonMT)) && preferCanonMT)
-        {
-            DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
-        }
-        else
-        {
-            DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
-        }
-    }
-    else
-    {
-        ExtOut("Invalid EEClass address\n");
+        ExtOut("Invalid MethodTable address\n");
         return Status;
     }
 
@@ -1557,9 +1593,12 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         CLRDATA_ADDRESS objAddr = TO_CDADDR(taObj);
         BOOL isTrackedType;
         BOOL hasTaggedMemory;
-        if (SUCCEEDED(sos11->IsTrackedType(objAddr, &isTrackedType, &hasTaggedMemory)))
+        if (SUCCEEDED(sos11->IsTrackedType(objAddr, &isTrackedType, &hasTaggedMemory))
+            && (isTrackedType || hasTaggedMemory))
         {
-            ExtOut("Tracked Type: %s\n", isTrackedType ? "true" : "false");
+            if (isTrackedType)
+                ExtOut("Tracked Type: true\n");
+
             if (hasTaggedMemory)
             {
                 CLRDATA_ADDRESS taggedMemory = (TADDR)0;
@@ -1638,10 +1677,6 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         ExtOut("String:      ");
         StringObjectContent(taObj);
         ExtOut("\n");
-    }
-    else if (objData.ObjectType == OBJ_OBJECT)
-    {
-        ExtOut("Object\n");
     }
 
     if (bPrintFields)

@@ -1123,7 +1123,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
         }
 
-        ExtOut("%2s ", (IsElementValueType(vFieldDesc.Type)) ? "1" : "0");
+        ExtOut("%2s ", (IsElementValueType(vFieldDesc.Type)) ? "T" : "F");
 
         if (vFieldDesc.bIsStatic && (vFieldDesc.bIsThreadLocal || vFieldDesc.bIsContextLocal))
         {
@@ -1229,7 +1229,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
             else
             {
-                ExtOut(" %8s", " ");
+                ExtOut(" %" POINTERSIZE "s", " ");
             }
 
 
@@ -5524,7 +5524,7 @@ WString DmlEscape(const WString &input)
     const WCHAR *str = input.c_str();
     size_t len = input.length();
     WString result;
-    
+
     for (size_t i = 0; i < len; i++)
     {
         // Ampersand must be escaped FIRST to avoid double-escaping
@@ -5548,7 +5548,7 @@ WString DmlEscape(const WString &input)
             result += temp;
         }
     }
-    
+
     return result;
 }
 
