@@ -84,30 +84,35 @@ namespace Microsoft.Diagnostics.Tests.Common
                     // Accumulate text in buffer and flush on newlines to avoid fragmenting output
                     _outputBuffer.Append(text);
                     
-                    // Flush complete lines to ITestOutputHelper
-                    string buffered = _outputBuffer.ToString();
-                    int lastNewline = buffered.LastIndexOf(Environment.NewLine);
-                    if (lastNewline >= 0)
+                    // Only check for complete lines if the incoming text contains a newline
+                    if (text.Contains(Environment.NewLine))
                     {
-                        string toFlush = buffered.Substring(0, lastNewline);
-                        _outputBuffer.Clear();
-                        _outputBuffer.Append(buffered.Substring(lastNewline + Environment.NewLine.Length));
-                        
-                        // Write each complete line separately
-                        using (StringReader reader = new StringReader(toFlush))
+                        // Flush complete lines to ITestOutputHelper
+                        string buffered = _outputBuffer.ToString();
+                        int lastNewline = buffered.LastIndexOf(Environment.NewLine);
+                        if (lastNewline >= 0)
                         {
-                            string line;
-                            while ((line = reader.ReadLine()) != null)
+                            string toFlush = buffered.Substring(0, lastNewline);
+                            _outputBuffer.Clear();
+                            _outputBuffer.Append(buffered.Substring(lastNewline + Environment.NewLine.Length));
+                            
+                            // Write each complete line separately
+                            using (StringReader reader = new StringReader(toFlush))
                             {
-                                _outputHelper.WriteLine(line);
+                                string line;
+                                while ((line = reader.ReadLine()) != null)
+                                {
+                                    _outputHelper.WriteLine(line);
+                                }
                             }
                         }
                     }
                 }
-                catch (InvalidOperationException)
+                catch (InvalidOperationException ex) when (ex.Message.Contains("no currently active test"))
                 {
-                    // ITestOutputHelper.WriteLine throws InvalidOperationException when called
-                    // after the test has completed. This is expected and can be safely ignored.
+                    // ITestOutputHelper.WriteLine throws InvalidOperationException with message
+                    // "There is no currently active test" when called after the test has completed.
+                    // This is expected and can be safely ignored.
                 }
             }
             
