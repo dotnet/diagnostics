@@ -76,7 +76,6 @@ namespace Microsoft.Diagnostics.Tests.Common
         }
         public override void Write(string text)
         {
-            // Multiplex output to ITestOutputHelper if provided
             if (_outputHelper != null && !string.IsNullOrEmpty(text))
             {
                 try
