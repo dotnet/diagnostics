@@ -18,12 +18,14 @@ namespace Microsoft.Diagnostics.Tests.Common
         int _cursorLeft;
         
         private readonly ITestOutputHelper _outputHelper;
+        private readonly StringBuilder _outputBuffer;
 
         public MockConsole(int width, int height, ITestOutputHelper outputHelper = null)
         {
             WindowWidth = BufferWidth = width;
             WindowHeight = height;
             _outputHelper = outputHelper;
+            _outputBuffer = outputHelper != null ? new StringBuilder() : null;
             Clear();
         }
 
@@ -79,11 +81,33 @@ namespace Microsoft.Diagnostics.Tests.Common
             {
                 try
                 {
-                    _outputHelper.WriteLine(text);
+                    // Accumulate text in buffer and flush on newlines to avoid fragmenting output
+                    _outputBuffer.Append(text);
+                    
+                    // Flush complete lines to ITestOutputHelper
+                    string buffered = _outputBuffer.ToString();
+                    int lastNewline = buffered.LastIndexOf(Environment.NewLine);
+                    if (lastNewline >= 0)
+                    {
+                        string toFlush = buffered.Substring(0, lastNewline);
+                        _outputBuffer.Clear();
+                        _outputBuffer.Append(buffered.Substring(lastNewline + Environment.NewLine.Length));
+                        
+                        // Write each complete line separately
+                        using (StringReader reader = new StringReader(toFlush))
+                        {
+                            string line;
+                            while ((line = reader.ReadLine()) != null)
+                            {
+                                _outputHelper.WriteLine(line);
+                            }
+                        }
+                    }
                 }
-                catch
+                catch (InvalidOperationException)
                 {
-                    // Ignore any exceptions from ITestOutputHelper to avoid breaking tests
+                    // ITestOutputHelper.WriteLine throws InvalidOperationException when called
+                    // after the test has completed. This is expected and can be safely ignored.
                 }
             }
             
