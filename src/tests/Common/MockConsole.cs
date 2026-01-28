@@ -105,7 +105,7 @@ namespace Microsoft.Diagnostics.Tests.Common
                         }
                     }
                 }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("no currently active test"))
+                catch (InvalidOperationException ex) when (ex.Message.Contains("no currently active test", StringComparison.OrdinalIgnoreCase))
                 {
                     // ITestOutputHelper.WriteLine throws InvalidOperationException with message
                     // "There is no currently active test" when called after the test has completed.
@@ -170,7 +170,7 @@ namespace Microsoft.Diagnostics.Tests.Common
                     _outputHelper.WriteLine(_outputBuffer.ToString());
                     _outputBuffer.Clear();
                 }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("no currently active test"))
+                catch (InvalidOperationException ex) when (ex.Message.Contains("no currently active test", StringComparison.OrdinalIgnoreCase))
                 {
                     // Test already completed, ignore
                 }
