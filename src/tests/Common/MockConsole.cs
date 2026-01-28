@@ -7,6 +7,7 @@ using System.IO;
 using System.Text;
 using Microsoft.Diagnostics.Tools.Common;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Tests.Common
 {
@@ -15,11 +16,14 @@ namespace Microsoft.Diagnostics.Tests.Common
         char[][] _chars;
 
         int _cursorLeft;
+        
+        private readonly ITestOutputHelper _outputHelper;
 
-        public MockConsole(int width, int height)
+        public MockConsole(int width, int height, ITestOutputHelper outputHelper = null)
         {
             WindowWidth = BufferWidth = width;
             WindowHeight = height;
+            _outputHelper = outputHelper;
             Clear();
         }
 
@@ -70,6 +74,19 @@ namespace Microsoft.Diagnostics.Tests.Common
         }
         public override void Write(string text)
         {
+            // Multiplex output to ITestOutputHelper if provided
+            if (_outputHelper != null && !string.IsNullOrEmpty(text))
+            {
+                try
+                {
+                    _outputHelper.WriteLine(text);
+                }
+                catch
+                {
+                    // Ignore any exceptions from ITestOutputHelper to avoid breaking tests
+                }
+            }
+            
             for(int textPos = 0; textPos < text.Length; )
             {
                 // This attempts to mirror the behavior of System.Console
