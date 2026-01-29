@@ -1026,15 +1026,15 @@ DECLARE_API(DumpSigElem)
 \**********************************************************************/
 static void DisplayClassDetails(CLRDATA_ADDRESS methodTable, DacpMethodTableData *pMTData)
 {
-    ExtOut("Class Attributes:    %x  ", pMTData->dwAttrClass);
+    ExtOut("Class Attributes:    %08x  ", pMTData->dwAttrClass);
     if (IsTdInterface(pMTData->dwAttrClass))
-        ExtOut("Interface, ");
+        ExtOut("Interface ");
     if (IsTdAbstract(pMTData->dwAttrClass))
-        ExtOut("Abstract, ");
+        ExtOut("Abstract ");
     if (IsTdImport(pMTData->dwAttrClass))
-        ExtOut("ComImport, ");
+        ExtOut("ComImport ");
     if (IsTdSealed(pMTData->dwAttrClass))
-        ExtOut("Sealed, ");
+        ExtOut("Sealed ");
     ExtOut("\n");
 
     if (pMTData->wNumVirtuals != 0)
@@ -1300,15 +1300,6 @@ DECLARE_API(DumpMT)
     table.SetColWidth(0, 29);
     table.WriteRow("Number of IFaces in IFaceMap:", Decimal(vMethTable.wNumInterfaces));
 
-    // When -all is specified, include class details (similar to DumpClass output)
-    if (bDumpAll)
-    {
-        Print("--------------------------------------\n");
-        Print("Additional Details\n");
-
-        DisplayClassDetails(TO_CDADDR(dwStartAddr), &vMethTable);
-    }
-
     if (bDumpMDTable)
     {
         table.ReInit(5, POINTERSIZE_HEX, AlignRight);
@@ -1400,6 +1391,14 @@ DECLARE_API(DumpMT)
                 table.WriteColumn(4, g_mdName);
             }
         }
+    }
+    // When -all is specified, include class details (similar to DumpClass output)
+    if (bDumpAll)
+    {
+        Print("--------------------------------------\n");
+        Print("Additional Details\n");
+
+        DisplayClassDetails(TO_CDADDR(dwStartAddr), &vMethTable);
     }
     return Status;
 }

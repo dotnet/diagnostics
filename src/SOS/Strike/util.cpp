@@ -574,7 +574,7 @@ void DisplayDataMember (DacpFieldDescData* pFD, DWORD_PTR dwAddr, BOOL fAlign=TR
     }
     else
     {
-        ExtOut(" %" POINTERSIZE "s", " ");
+        ExtOut("%" POINTERSIZE "s", " ");
     }
 }
 
@@ -1036,7 +1036,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
     if (bFirst)
     {
         ExtOutIndent();
-        ExtOut("%" POINTERSIZE "s %8s %8s %20s %2s %8s %" POINTERSIZE "s %s\n",
+        ExtOut("%" POINTERSIZE "s %8s %8s %20s %4s %8s %" POINTERSIZE "s %s\n",
             "MT", "Field", "Offset", "Type", "VT", "Attr", "Value", "Name");
         numInstanceFields = 0;
     }
@@ -1098,7 +1098,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
         }
 
-        DMLOut("%s %8x %8x ", DMLMethodTable(vFieldDesc.MTOfType),
+        DMLOut("%s %08x %8x ", DMLMethodTable(vFieldDesc.MTOfType),
                  TokenFromRid(vFieldDesc.mb, mdtFieldDef),
                  offset);
 
@@ -1127,7 +1127,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
         }
 
-        ExtOut("%2s ", (IsElementValueType(vFieldDesc.Type)) ? "T" : "F");
+        ExtOut("%4s ", (IsElementValueType(vFieldDesc.Type)) ? "Yes" : "No");
 
         if (vFieldDesc.bIsStatic && (vFieldDesc.bIsThreadLocal || vFieldDesc.bIsContextLocal))
         {
@@ -1233,7 +1233,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
             else
             {
-                ExtOut(" %" POINTERSIZE "s", " ");
+                ExtOut("%" POINTERSIZE "s", " ");
             }
 
 
