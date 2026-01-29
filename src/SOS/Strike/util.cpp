@@ -574,7 +574,7 @@ void DisplayDataMember (DacpFieldDescData* pFD, DWORD_PTR dwAddr, BOOL fAlign=TR
     }
     else
     {
-        ExtOut("%" POINTERSIZE "s", " ");
+        ExtOut(" %" POINTERSIZE "s", " ");
     }
 }
 
@@ -606,10 +606,14 @@ HRESULT GetStaticFieldPTR(DWORD_PTR* pOutPtr, DacpDomainLocalModuleData* pDLMD, 
         }
     }
 
-    dwTmp = (DWORD_PTR)pBaseAddress + pFDD->dwOffset;
-
     *pOutPtr = 0;
 
+    // Statics for this type may not be allocated yet, this is okay.
+    // See dynamic statics for more information.
+    if (pBaseAddress == 0)
+        return S_OK;
+
+    dwTmp = (DWORD_PTR)pBaseAddress + pFDD->dwOffset;
     if (pSOS14)
     {
         MethodTableInitializationFlags initFlags;
