@@ -32,7 +32,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+<DECVAL>\s+sh
 VERIFY:\s+>>\s+Domain:Value\s+<HEXVAL>:(<HEXVAL>|NotInit)\s+<<\s+
 ENDIF:MAJOR_RUNTIME_VERSION_2
 IFDEF:MAJOR_RUNTIME_VERSION_GE_3
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+<DECVAL>\s+static\s+<HEXVAL>\s+Null\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+No\s+static\s+<HEXVAL>\s+Null\s+
 ENDIF:MAJOR_RUNTIME_VERSION_GE_3
 
 SOSCOMMAND:DumpStackObjects
