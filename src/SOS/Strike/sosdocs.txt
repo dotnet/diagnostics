@@ -1065,11 +1065,13 @@ You can use "!DumpHeap -thinlock" to list objects locked in this way.
 \\
 
 COMMAND: dumpmt.
-!DumpMT [-MD] <MethodTable address>
+!DumpMT [-MD] [-all] <MethodTable address>
 
 Examine a MethodTable. Each managed object has a MethodTable pointer at the 
 start. If you pass the "-MD" flag, you'll also see a list of all the methods 
-defined on the object. 
+defined on the object. If you pass the "-all" flag, you'll see class details
+(attributes and fields) as well as the method list. The "-all" flag implies
+"-MD".
 \\
 
 COMMAND: dumpclass.

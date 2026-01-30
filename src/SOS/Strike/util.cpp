@@ -606,10 +606,14 @@ HRESULT GetStaticFieldPTR(DWORD_PTR* pOutPtr, DacpDomainLocalModuleData* pDLMD, 
         }
     }
 
-    dwTmp = (DWORD_PTR)pBaseAddress + pFDD->dwOffset;
-
     *pOutPtr = 0;
 
+    // Statics for this type may not be allocated yet, this is okay.
+    // See dynamic statics for more information.
+    if (pBaseAddress == 0)
+        return S_OK;
+
+    dwTmp = (DWORD_PTR)pBaseAddress + pFDD->dwOffset;
     if (pSOS14)
     {
         MethodTableInitializationFlags initFlags;
@@ -1032,7 +1036,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
     if (bFirst)
     {
         ExtOutIndent();
-        ExtOut("%" POINTERSIZE "s %8s %8s %20s %2s %8s %" POINTERSIZE "s %s\n",
+        ExtOut("%" POINTERSIZE "s %8s %8s %20s %4s %8s %" POINTERSIZE "s %s\n",
             "MT", "Field", "Offset", "Type", "VT", "Attr", "Value", "Name");
         numInstanceFields = 0;
     }
@@ -1094,7 +1098,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
         }
 
-        DMLOut("%s %8x %8x ", DMLMethodTable(vFieldDesc.MTOfType),
+        DMLOut("%s %08x %8x ", DMLMethodTable(vFieldDesc.MTOfType),
                  TokenFromRid(vFieldDesc.mb, mdtFieldDef),
                  offset);
 
@@ -1123,7 +1127,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
         }
 
-        ExtOut("%2s ", (IsElementValueType(vFieldDesc.Type)) ? "1" : "0");
+        ExtOut("%4s ", (IsElementValueType(vFieldDesc.Type)) ? "Yes" : "No");
 
         if (vFieldDesc.bIsStatic && (vFieldDesc.bIsThreadLocal || vFieldDesc.bIsContextLocal))
         {
@@ -1229,7 +1233,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
             else
             {
-                ExtOut(" %8s", " ");
+                ExtOut("%" POINTERSIZE "s", " ");
             }
 
 
@@ -5524,7 +5528,7 @@ WString DmlEscape(const WString &input)
     const WCHAR *str = input.c_str();
     size_t len = input.length();
     WString result;
-    
+
     for (size_t i = 0; i < len; i++)
     {
         // Ampersand must be escaped FIRST to avoid double-escaping
@@ -5548,7 +5552,7 @@ WString DmlEscape(const WString &input)
             result += temp;
         }
     }
-    
+
     return result;
 }
 
