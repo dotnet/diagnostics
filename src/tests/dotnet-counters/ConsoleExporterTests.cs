@@ -10,15 +10,23 @@ using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DotnetCounters.UnitTests
 {
     public class ConsoleExporterTests
     {
+        private readonly ITestOutputHelper _outputHelper;
+
+        public ConsoleExporterTests(ITestOutputHelper outputHelper)
+        {
+            _outputHelper = outputHelper;
+        }
+
         [Fact]
         public void DisplayWaitingMessage()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -29,7 +37,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void DisplayEventCounter()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
             exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "% Time in GC since last GC", "%", 12), false);
@@ -45,7 +53,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void DisplayIncrementingEventCounter()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
             exporter.CounterPayloadReceived(CreateIncrementingEventCounter("System.Runtime", "Allocation Rate", "B", 1731), false);
@@ -61,7 +69,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void DisplayMultipleProviders()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
             exporter.CounterPayloadReceived(CreateIncrementingEventCounter("System.Runtime", "Allocation Rate", "B", 1731), false);
@@ -81,7 +89,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void UpdateCounters()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -111,7 +119,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void PauseAndUnpause()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -173,7 +181,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void AlignValues()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -193,7 +201,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void NameColumnWidthAdjusts()
         {
-            MockConsole console = new MockConsole(50, 40);
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -211,7 +219,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void LongNamesAreTruncated()
         {
-            MockConsole console = new MockConsole(50, 40);
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -227,7 +235,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void MultiDimensionalCountersAreListed()
         {
-            MockConsole console = new MockConsole(50, 40);
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -255,7 +263,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void LongMultidimensionalTagsAreTruncated()
         {
-            MockConsole console = new MockConsole(50, 40);
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -283,7 +291,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void CountersAreTruncatedBeyondScreenHeight()
         {
-            MockConsole console = new MockConsole(50, 7);
+            MockConsole console = new MockConsole(50, 7, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -303,7 +311,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void ErrorStatusIsDisplayed()
         {
-            MockConsole console = new MockConsole(50, 40);
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -333,7 +341,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void DeltaColumnDisplaysInitiallyEmpty()
         {
-            MockConsole console = new MockConsole(64, 40);
+            MockConsole console = new MockConsole(64, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console, showDeltaColumn:true);
             exporter.Initialize();
 
@@ -365,7 +373,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void DeltaColumnDisplaysNumbersAfterUpdate()
         {
-            MockConsole console = new MockConsole(64, 40);
+            MockConsole console = new MockConsole(64, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console, showDeltaColumn: true);
             exporter.Initialize();
 
@@ -422,7 +430,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void MeterCounterIsAbsoluteInNet8()
         {
-            MockConsole console = new MockConsole(64, 40);
+            MockConsole console = new MockConsole(64, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console, showDeltaColumn: true);
             exporter.Initialize();
 

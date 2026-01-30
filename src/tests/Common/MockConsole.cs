@@ -7,6 +7,7 @@ using System.IO;
 using System.Text;
 using Microsoft.Diagnostics.Tools.Common;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Tests.Common
 {
@@ -15,11 +16,16 @@ namespace Microsoft.Diagnostics.Tests.Common
         char[][] _chars;
 
         int _cursorLeft;
+        
+        private readonly ITestOutputHelper _outputHelper;
+        private readonly StringBuilder _outputBuffer;
 
-        public MockConsole(int width, int height)
+        public MockConsole(int width, int height, ITestOutputHelper outputHelper = null)
         {
             WindowWidth = BufferWidth = width;
             WindowHeight = height;
+            _outputHelper = outputHelper;
+            _outputBuffer = outputHelper != null ? new StringBuilder() : null;
             Clear();
         }
 
@@ -70,6 +76,8 @@ namespace Microsoft.Diagnostics.Tests.Common
         }
         public override void Write(string text)
         {
+            BufferTestLogging(text);
+            
             for(int textPos = 0; textPos < text.Length; )
             {
                 // This attempts to mirror the behavior of System.Console
@@ -113,6 +121,68 @@ namespace Microsoft.Diagnostics.Tests.Common
             Write(Environment.NewLine);
         }
         public override void WriteLine() => Write(Environment.NewLine);
+        
+        /// <summary>
+        /// Buffers text output and writes complete lines to ITestOutputHelper to avoid fragmenting output.
+        /// Lines are only flushed when a newline is detected to minimize allocations.
+        /// </summary>
+        private void BufferTestLogging(string text)
+        {
+            if (_outputHelper != null && !string.IsNullOrEmpty(text))
+            {
+                try
+                {
+                    _outputBuffer.Append(text);
+                    
+                    if (text.Contains(Environment.NewLine))
+                    {
+                        string buffered = _outputBuffer.ToString();
+                        int lastNewline = buffered.LastIndexOf(Environment.NewLine);
+                        if (lastNewline >= 0)
+                        {
+                            string toFlush = buffered.Substring(0, lastNewline);
+                            _outputBuffer.Clear();
+                            _outputBuffer.Append(buffered.Substring(lastNewline + Environment.NewLine.Length));
+                            
+                            using (StringReader reader = new StringReader(toFlush))
+                            {
+                                string line;
+                                while ((line = reader.ReadLine()) != null)
+                                {
+                                    _outputHelper.WriteLine(line);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("no currently active test", StringComparison.OrdinalIgnoreCase))
+                {
+                    // ITestOutputHelper.WriteLine throws InvalidOperationException with message
+                    // "There is no currently active test" when called after the test has completed.
+                    // This is expected and can be safely ignored.
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Flushes any remaining buffered test logging output to the ITestOutputHelper.
+        /// Call this at the end of a test to ensure all output is written.
+        /// </summary>
+        public void FlushTestLogging()
+        {
+            if (_outputHelper != null && _outputBuffer != null && _outputBuffer.Length > 0)
+            {
+                try
+                {
+                    _outputHelper.WriteLine(_outputBuffer.ToString());
+                    _outputBuffer.Clear();
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("no currently active test", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Test already completed, ignore
+                }
+            }
+        }
 
         public string GetLineText(int row) => new string(_chars[row]).TrimEnd();
 
@@ -137,6 +207,7 @@ namespace Microsoft.Diagnostics.Tests.Common
 
         public void AssertLinesEqual(int startLine, params string[] expectedLines)
         {
+            FlushTestLogging();
             if (startLine + expectedLines.Length > Lines.Length)
             {
                 Assert.Fail("MockConsole output had fewer output lines than expected." + Environment.NewLine +
@@ -160,6 +231,7 @@ namespace Microsoft.Diagnostics.Tests.Common
 
         public void AssertSanitizedLinesEqual(Func<string[], string[]> sanitizer, params string[] expectedLines)
         {
+            FlushTestLogging();
             string[] actualLines = Lines;
             if (sanitizer is not null)
             {
