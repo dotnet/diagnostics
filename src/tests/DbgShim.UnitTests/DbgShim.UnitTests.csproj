@@ -5,6 +5,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DbgShimConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</DbgShimConfigFileName>
     <TestAssetsVersion>1.0.351101</TestAssetsVersion>
+    <CopyDebuggeeSourcesToArtifacts>true</CopyDebuggeeSourcesToArtifacts>
   </PropertyGroup>
 
   <ItemGroup>
@@ -89,23 +90,4 @@
     </ItemGroup>
   </Target>
 
-  <!-- Copy debuggee sources and aux MSBuild files to artifacts for Helix testing -->
-  <Target Name="CopyDebuggeeSources" AfterTargets="Build">
-    <PropertyGroup>
-      <DebuggeesDestDir>$(ArtifactsDir)test/DebuggeeSources/DbgShim.UnitTests/Debuggees</DebuggeesDestDir>
-      <AuxMsbuildDestDir>$(ArtifactsDir)test/AuxMsbuildFiles</AuxMsbuildDestDir>
-    </PropertyGroup>
-    <ItemGroup>
-      <DbgShimDebuggeeFiles Include="$(MSBuildThisFileDirectory)Debuggees/**/*" />
-      <AuxMsbuildFiles Include="$(RepoRoot)eng/AuxMsbuildFiles/**/*" />
-    </ItemGroup>
-    <Copy SourceFiles="@(DbgShimDebuggeeFiles)"
-      DestinationFolder="$(DebuggeesDestDir)/%(RecursiveDir)"
-      SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(AuxMsbuildFiles)"
-      DestinationFolder="$(AuxMsbuildDestDir)/%(RecursiveDir)"
-      SkipUnchangedFiles="true" />
-    <Message Importance="High" Text="Copied debuggee sources to $(DebuggeesDestDir)" />
-    <Message Importance="High" Text="Copied aux MSBuild files to $(AuxMsbuildDestDir)" />
-  </Target>
 </Project>
