@@ -92,7 +92,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (args.ProcessId != 0 || !string.IsNullOrEmpty(args.Name))
                 {
-                    if (!ProcessSupportsUserEventsIpcCommand(args.ProcessId, args.Name, out int resolvedProcessId, out string resolvedProcessName, out string detectedRuntimeVersion))
+                    UserEventsProbeResult probeResult = ProbeProcess(args.ProcessId, args.Name, out int resolvedProcessId, out string resolvedProcessName, out string detectedRuntimeVersion);
+                    if (probeResult == UserEventsProbeResult.NotSupported)
                     {
                         Console.Error.WriteLine($"[ERROR] Process '{resolvedProcessName} ({resolvedProcessId})' cannot be traced by collect-linux. Required runtime: {minRuntimeSupportingUserEventsIPCCommand}. Detected runtime: {detectedRuntimeVersion}");
                         return (int)ReturnCode.TracingError;
@@ -204,15 +205,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 if (args.ProcessId != 0 || !string.IsNullOrEmpty(args.Name))
                 {
-                    bool supports = ProcessSupportsUserEventsIpcCommand(args.ProcessId, args.Name, out int resolvedPid, out string resolvedName, out string detectedRuntimeVersion);
-                    BuildProcessSupportCsv(resolvedPid, resolvedName, supports, supportedCsv, unsupportedCsv);
+                    UserEventsProbeResult probeResult = ProbeProcess(args.ProcessId, args.Name, out int resolvedPid, out string resolvedName, out string detectedRuntimeVersion);
+                    BuildProcessSupportCsv(resolvedPid, resolvedName, probeResult, supportedCsv, unsupportedCsv);
 
                     if (mode == ProbeOutputMode.Console)
                     {
-                        Console.WriteLine($".NET process '{resolvedName} ({resolvedPid})' {(supports ? "supports" : "does NOT support")} the EventPipe UserEvents IPC command used by collect-linux.");
-                        if (!supports)
+                        switch (probeResult)
                         {
-                            Console.WriteLine($"Required runtime: '{minRuntimeSupportingUserEventsIPCCommand}'. Detected runtime: '{detectedRuntimeVersion}'.");
+                            case UserEventsProbeResult.Supported:
+                                Console.WriteLine($".NET process '{resolvedName} ({resolvedPid})' supports the EventPipe UserEvents IPC command used by collect-linux.");
+                                break;
+                            case UserEventsProbeResult.NotSupported:
+                                Console.WriteLine($".NET process '{resolvedName} ({resolvedPid})' does NOT support the EventPipe UserEvents IPC command used by collect-linux.");
+                                Console.WriteLine($"Required runtime: '{minRuntimeSupportingUserEventsIPCCommand}'. Detected runtime: '{detectedRuntimeVersion}'.");
+                                break;
                         }
                     }
                 }
@@ -225,25 +231,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     StringBuilder supportedProcesses = new();
                     StringBuilder unsupportedProcesses = new();
 
-                    IEnumerable<int> pids = DiagnosticsClient.GetPublishedProcesses();
-                    foreach (int pid in pids)
-                    {
-                        if (pid == Environment.ProcessId)
-                        {
-                            continue;
-                        }
-
-                        bool supports = ProcessSupportsUserEventsIpcCommand(pid, string.Empty, out int resolvedPid, out string resolvedName, out string detectedRuntimeVersion);
-                        BuildProcessSupportCsv(resolvedPid, resolvedName, supports, supportedCsv, unsupportedCsv);
-                        if (supports)
-                        {
-                            supportedProcesses.AppendLine($"{resolvedPid} {resolvedName}");
-                        }
-                        else
-                        {
-                            unsupportedProcesses.AppendLine($"{resolvedPid} {resolvedName} - Detected runtime: '{detectedRuntimeVersion}'");
-                        }
-                    }
+                    GetAndProbeAllProcesses(supportedProcesses, unsupportedProcesses, supportedCsv, unsupportedCsv);
 
                     if (mode == ProbeOutputMode.Console)
                     {
@@ -299,11 +287,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return ProbeOutputMode.Csv;
         }
 
-        private bool ProcessSupportsUserEventsIpcCommand(int pid, string processName, out int resolvedPid, out string resolvedName, out string detectedRuntimeVersion)
+        /// <summary>
+        /// Probes a single process for UserEvents support.
+        /// </summary>
+        private UserEventsProbeResult ProbeProcess(int pid, string processName, out int resolvedPid, out string resolvedName, out string detectedRuntimeVersion)
         {
             CommandUtils.ResolveProcess(pid, processName, out resolvedPid, out resolvedName);
 
-            bool supports = false;
             DiagnosticsClient client = new(resolvedPid);
             ProcessInfo processInfo = client.GetProcessInfo();
             detectedRuntimeVersion = processInfo.ClrProductVersionString;
@@ -311,13 +301,40 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 (version > minRuntimeSupportingUserEventsIPCCommand ||
                 (version == minRuntimeSupportingUserEventsIPCCommand && !isPrerelease)))
             {
-                supports = true;
+                return UserEventsProbeResult.Supported;
             }
-
-            return supports;
+            return UserEventsProbeResult.NotSupported;
         }
 
-        private static void BuildProcessSupportCsv(int resolvedPid, string resolvedName, bool supports, StringBuilder supportedCsv, StringBuilder unsupportedCsv)
+        /// <summary>
+        /// Gets all published processes and probes them for UserEvents support.
+        /// </summary>
+        private void GetAndProbeAllProcesses(StringBuilder supportedProcesses, StringBuilder unsupportedProcesses,
+            StringBuilder supportedCsv, StringBuilder unsupportedCsv)
+        {
+            IEnumerable<int> pids = DiagnosticsClient.GetPublishedProcesses();
+            foreach (int pid in pids)
+            {
+                if (pid == Environment.ProcessId)
+                {
+                    continue;
+                }
+
+                UserEventsProbeResult probeResult = ProbeProcess(pid, string.Empty, out int resolvedPid, out string resolvedName, out string detectedRuntimeVersion);
+                BuildProcessSupportCsv(resolvedPid, resolvedName, probeResult, supportedCsv, unsupportedCsv);
+                switch (probeResult)
+                {
+                    case UserEventsProbeResult.Supported:
+                        supportedProcesses?.AppendLine($"{resolvedPid} {resolvedName}");
+                        break;
+                    case UserEventsProbeResult.NotSupported:
+                        unsupportedProcesses?.AppendLine($"{resolvedPid} {resolvedName} - Detected runtime: '{detectedRuntimeVersion}'");
+                        break;
+                }
+            }
+        }
+
+        private static void BuildProcessSupportCsv(int resolvedPid, string resolvedName, UserEventsProbeResult probeResult, StringBuilder supportedCsv, StringBuilder unsupportedCsv)
         {
             if (supportedCsv == null && unsupportedCsv == null)
             {
@@ -325,13 +342,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             string escapedName = (resolvedName ?? string.Empty).Replace(",", string.Empty);
-            if (supports)
+            switch (probeResult)
             {
-                supportedCsv?.AppendLine($"{resolvedPid},{escapedName},true");
-            }
-            else
-            {
-                unsupportedCsv?.AppendLine($"{resolvedPid},{escapedName},false");
+                case UserEventsProbeResult.Supported:
+                    supportedCsv?.AppendLine($"{resolvedPid},{escapedName},true");
+                    break;
+                case UserEventsProbeResult.NotSupported:
+                    unsupportedCsv?.AppendLine($"{resolvedPid},{escapedName},false");
+                    break;
             }
         }
 
@@ -522,6 +540,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console,
             Csv,
             CsvToConsole,
+        }
+
+        private enum UserEventsProbeResult
+        {
+            Supported,
+            NotSupported,
         }
 
         private enum OutputType : uint
