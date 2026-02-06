@@ -6,6 +6,8 @@
     <DefineConstants>$(DefineConstants);CORE_CLR</DefineConstants>
     <NeedsPublishing>true</NeedsPublishing>
     <SOSConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</SOSConfigFileName>
+    <CopyDebuggeeSourcesToArtifacts>true</CopyDebuggeeSourcesToArtifacts>
+    <CopyLldbPluginTests>true</CopyLldbPluginTests>
   </PropertyGroup>
 
   <ItemGroup>
@@ -46,7 +48,6 @@
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
   <DesktopFramework>$(DesktopTargetFramework)</DesktopFramework>
   <NetCoreAppMinTargetFramework>$(NetCoreAppMinTargetFramework)</NetCoreAppMinTargetFramework>
-  <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <ArtifactsDir>$(ArtifactsDir)</ArtifactsDir>
   <CDBPath>$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\cdb.exe</CDBPath>
 </Configuration>
@@ -73,4 +74,5 @@
       DestinationFolder="$(OutputPath)/../../Scripts/%(RecursiveDir)"
       SkipUnchangedFiles="true" />
   </Target>
+
 </Project>

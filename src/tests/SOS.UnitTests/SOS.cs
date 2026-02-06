@@ -727,10 +727,10 @@ public class SOS
                     throw new ArgumentException($"{program} does not exists");
                 }
             }
-            string repoRootDir = TestConfiguration.MakeCanonicalPath(config.AllSettings["RepoRootDir"]);
+            string artifactsDir = TestConfiguration.MakeCanonicalPath(config.AllSettings["ArtifactsDir"]);
 
-            // Get test python script path
-            string scriptDir = Path.Combine(repoRootDir, "src", "tests", "lldbplugin.tests");
+            // Get test python script path from artifacts (copied during build)
+            string scriptDir = Path.Combine(artifactsDir, "test", "lldbplugin.tests");
             arguments.Append(Path.Combine(scriptDir, "test_libsosplugin.py"));
             arguments.Append(' ');
 
@@ -757,7 +757,7 @@ public class SOS
             arguments.AppendFormat("--logfiledir {0} ", logFileDir);
 
             // Add test debuggee assembly
-            string testDebuggee = Path.Combine(repoRootDir, "artifacts", "bin", "TestDebuggee", config.TargetConfiguration, config.BuildProjectFramework, "TestDebuggee.dll");
+            string testDebuggee = Path.Combine(artifactsDir, "bin", "TestDebuggee", config.TargetConfiguration, config.BuildProjectFramework, "TestDebuggee.dll");
             arguments.AppendFormat("--assembly {0}", testDebuggee);
 
             // Create the python script process runner
