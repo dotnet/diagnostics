@@ -260,12 +260,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.CursorVisible = true;
             console.IsOutputRedirected = true;
 
-            // Set cursor to false to simulate what happens during execution
-            console.CursorVisible = false;
-
             int exitCode = Run(TestArgs(), console);
 
-            // Cursor should remain false when output is redirected
+            // When output is redirected, the cursor restoration code in the finally block
+            // should not execute, so the cursor should remain in the state set by line 104 (false)
             Assert.False(console.CursorVisible, "Cursor should remain hidden when output is redirected");
         }
 
