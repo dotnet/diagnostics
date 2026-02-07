@@ -257,14 +257,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void CollectLinuxCommand_DoesNotRestoreCursor_WhenOutputIsRedirected()
         {
             MockConsole console = new(200, 30, _outputHelper);
-            console.CursorVisible = true;
+            bool initialCursorVisible = console.CursorVisible;
             console.IsOutputRedirected = true;
 
             int exitCode = Run(TestArgs(), console);
 
-            // When output is redirected, the cursor restoration code in the finally block
-            // should not execute, so the cursor should remain in the state set by line 104 (false)
-            Assert.False(console.CursorVisible, "Cursor should remain hidden when output is redirected");
+            // When output is redirected, the command should not change cursor visibility,
+            // so the cursor should remain in its original state.
+            Assert.Equal(initialCursorVisible, console.CursorVisible);
         }
 
         private static int Run(object args, MockConsole console)

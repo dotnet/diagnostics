@@ -82,6 +82,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             int ret = (int)ReturnCode.TracingError;
             string scriptPath = null;
+            bool cursorVisibilityChanged = false;
+            bool originalCursorVisible = false;
             try
             {
                 if (args.Probe)
@@ -101,7 +103,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
 
                 args.Ct.Register(() => stopTracing = true);
-                Console.CursorVisible = false;
+
+                // Only hide cursor if output is not redirected
+                if (!Console.IsOutputRedirected)
+                {
+                    originalCursorVisible = Console.CursorVisible;
+                    Console.CursorVisible = false;
+                    cursorVisibilityChanged = true;
+                }
+
                 byte[] command = BuildRecordTraceArgs(args, out scriptPath);
 
                 if (args.Duration != default)
@@ -135,9 +145,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             finally
             {
-                if (!Console.IsOutputRedirected)
+                // Restore cursor visibility to its original state if we changed it
+                if (cursorVisibilityChanged)
                 {
-                    Console.CursorVisible = true;
+                    Console.CursorVisible = originalCursorVisible;
                 }
 
                 if (!string.IsNullOrEmpty(scriptPath))
