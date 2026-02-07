@@ -19,13 +19,13 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26104.6">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26106.4">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>c45c9fbade8b6406d22f8100575a102a3a2c053f</Sha>
+      <Sha>58d75363f4b03e408aa2502e0db546173be722d4</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="10.0.0-beta.26104.6">
+    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="10.0.0-beta.26106.4">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>c45c9fbade8b6406d22f8100575a102a3a2c053f</Sha>
+      <Sha>58d75363f4b03e408aa2502e0db546173be722d4</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="7.0.0-beta.22316.2" Pinned="true">
       <Uri>https://github.com/dotnet/arcade</Uri>

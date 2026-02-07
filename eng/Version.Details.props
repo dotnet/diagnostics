@@ -13,8 +13,8 @@ This file should be imported by eng/Versions.props
     <!-- dotnet/android dependencies -->
     <XamarinAndroidToolsAndroidSdkPackageVersion>1.0.105-preview.225</XamarinAndroidToolsAndroidSdkPackageVersion>
     <!-- dotnet/arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26104.6</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.26104.6</MicrosoftDotNetCodeAnalysisPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26106.4</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.26106.4</MicrosoftDotNetCodeAnalysisPackageVersion>
     <MicrosoftDotNetRemoteExecutorPackageVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorPackageVersion>
     <!-- dotnet/dotnet dependencies -->
     <MicrosoftAspNetCoreAppRefPackageVersion>10.0.2</MicrosoftAspNetCoreAppRefPackageVersion>
