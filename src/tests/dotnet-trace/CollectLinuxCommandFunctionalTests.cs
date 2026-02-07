@@ -222,6 +222,53 @@ namespace Microsoft.Diagnostics.Tools.Trace
             });
         }
 
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_RestoresCursorVisibility_OnSuccess()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+            console.CursorVisible = true;
+
+            int exitCode = Run(TestArgs(), console);
+
+            // Cursor should be restored to visible after command completes
+            Assert.True(console.CursorVisible, "Cursor should be visible after command completes");
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_RestoresCursorVisibility_OnError()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+            console.CursorVisible = true;
+
+            var handler = new CollectLinuxCommandHandler(console);
+            // Simulate an error by throwing an exception in the RecordTraceInvoker
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                throw new InvalidOperationException("Simulated error");
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+
+            // Cursor should be restored to visible even when an error occurs
+            Assert.True(console.CursorVisible, "Cursor should be visible after error");
+            Assert.Equal((int)ReturnCode.TracingError, exitCode);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DoesNotRestoreCursor_WhenOutputIsRedirected()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+            console.CursorVisible = true;
+            console.IsOutputRedirected = true;
+
+            // Set cursor to false to simulate what happens during execution
+            console.CursorVisible = false;
+
+            int exitCode = Run(TestArgs(), console);
+
+            // Cursor should remain false when output is redirected
+            Assert.False(console.CursorVisible, "Cursor should remain hidden when output is redirected");
+        }
+
         private static int Run(object args, MockConsole console)
         {
             var handler = new CollectLinuxCommandHandler(console);
