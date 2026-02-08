@@ -253,11 +253,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.Equal((int)ReturnCode.TracingError, exitCode);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
-        public void CollectLinuxCommand_DoesNotRestoreCursor_WhenOutputIsRedirected()
+        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CollectLinuxCommand_DoesNotChangeCursorVisibility_WhenOutputIsRedirected(bool initialCursorVisible)
         {
             MockConsole console = new(200, 30, _outputHelper);
-            bool initialCursorVisible = console.CursorVisible;
+            console.CursorVisible = initialCursorVisible;
             console.IsOutputRedirected = true;
 
             int exitCode = Run(TestArgs(), console);
