@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -35,7 +36,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             TimeSpan Duration,
             string Name,
             int ProcessId,
-            bool Probe);
+            bool Probe,
+            string DebugLogOutput = null,
+            string DebugFilter = null);
 
         public CollectLinuxCommandHandler(IConsole console = null)
         {
@@ -54,7 +57,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     string ostype = File.ReadAllText("/etc/os-release");
                     isSupportedLinuxPlatform = !ostype.Contains("ID=alpine");
                 }
-                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException) {}
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException) { }
             }
 
             return isSupportedLinuxPlatform;
@@ -143,7 +146,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         {
                             File.Delete(scriptPath);
                         }
-                    } catch { }
+                    }
+                    catch { }
                 }
             }
 
@@ -164,15 +168,26 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.DurationOption,
                 CommonOptions.NameOption,
                 CommonOptions.ProcessIdOption,
+                DebugLogOption,
+                DebugFilterOption
             };
             collectLinuxCommand.TreatUnmatchedTokensAsErrors = true; // collect-linux currently does not support child process tracing.
             collectLinuxCommand.Description = "Collects diagnostic traces using perf_events, a Linux OS technology. collect-linux requires admin privileges to capture kernel- and user-mode events, and by default, captures events from all processes. This Linux-only command includes the same .NET events as dotnet-trace collect, and it uses the kernel’s user_events mechanism to emit .NET events as perf events, enabling unification of user-space .NET events with kernel-space system events. Use --probe (optionally with -p|--process-id or -n|--name) to only check which processes can be traced by collect-linux without collecting a trace.";
 
-            collectLinuxCommand.SetAction((parseResult, ct) => {
+            collectLinuxCommand.SetAction((parseResult, ct) =>
+            {
                 string providersValue = parseResult.GetValue(CommonOptions.ProvidersOption) ?? string.Empty;
                 string perfEventsValue = parseResult.GetValue(PerfEventsOption) ?? string.Empty;
                 string profilesValue = parseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty;
                 CollectLinuxCommandHandler handler = new();
+
+                // Handle --debug-log: null if not specified, empty string if specified without value, or the provided value
+                string debugLogOutput = null;
+                OptionResult debugLogResult = parseResult.GetResult(DebugLogOption);
+                if (debugLogResult != null)
+                {
+                    debugLogOutput = parseResult.GetValue(DebugLogOption) ?? string.Empty;
+                }
 
                 int rc = handler.CollectLinux(new CollectLinuxArgs(
                     Ct: ct,
@@ -185,7 +200,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Duration: parseResult.GetValue(CommonOptions.DurationOption),
                     Name: parseResult.GetValue(CommonOptions.NameOption) ?? string.Empty,
                     ProcessId: parseResult.GetValue(CommonOptions.ProcessIdOption),
-                    Probe: parseResult.GetValue(ProbeOption)));
+                    Probe: parseResult.GetValue(ProbeOption),
+                    DebugLogOutput: debugLogOutput,
+                    DebugFilter: parseResult.GetValue(DebugFilterOption)
+                ));
                 return Task.FromResult(rc);
             });
 
@@ -433,7 +451,37 @@ namespace Microsoft.Diagnostics.Tools.Trace
             recordTraceArgs.Add("--script-file");
             recordTraceArgs.Add(scriptPath);
 
+            if (args.DebugLogOutput is not null)
+            {
+                string logFilter = args.DebugFilter ?? "error,one_collect::helpers::dotnet::os::linux=debug";
+
+                if (string.Equals(args.DebugLogOutput, "console", StringComparison.OrdinalIgnoreCase))
+                {
+                    recordTraceArgs.Add("--log-mode");
+                    recordTraceArgs.Add("console");
+                }
+                else
+                {
+                    string logFilePath = string.IsNullOrEmpty(args.DebugLogOutput)
+                        ? resolvedOutput.FullName + ".debuglog"
+                        : args.DebugLogOutput;
+                    recordTraceArgs.Add("--log-mode");
+                    recordTraceArgs.Add("file");
+                    recordTraceArgs.Add("--log-file");
+                    recordTraceArgs.Add(logFilePath);
+                }
+
+                recordTraceArgs.Add("--log-filter");
+                recordTraceArgs.Add(logFilter);
+            }
+
             string options = string.Join(' ', recordTraceArgs);
+
+            if (args.DebugLogOutput is not null)
+            {
+                Console.WriteLine($"Generated recordtrace options: {options}");
+            }
+
             return Encoding.UTF8.GetBytes(options);
         }
 
@@ -511,11 +559,27 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Description = @"Comma-separated list of perf events (e.g. syscalls:sys_enter_execve,sched:sched_switch)."
             };
 
+
         private static readonly Option<bool> ProbeOption =
             new("--probe")
             {
                 Description = "Probe .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux, without collecting a trace. Results list supported processes first. Use '-o stdout' to print CSV (pid,processName,supportsCollectLinux) to the console, or '-o <file>' to write the CSV. Probe a single process with -n|--name or -p|--process-id.",
             };
+
+        private static readonly Option<string> DebugLogOption =
+            new("--debug-log")
+            {
+                Description = @"Enable diagnostic logging for collect-linux itself. Specify 'console' to log to the console, or a file path to log to a file. If no value is provided, logs are written to '<tracefile>.debuglog'.",
+                Arity = ArgumentArity.ZeroOrOne
+            };
+
+        private static readonly Option<string> DebugFilterOption =
+            new("--debug-filter")
+            {
+                Description = @"Override the default log filter for debug logging. Only used when --debug-log is specified. Default filter: 'error,one_collect::helpers::dotnet::os::linux=debug'.",
+                Hidden = true
+            };
+
 
         private enum ProbeOutputMode
         {
@@ -544,9 +608,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             UIntPtr commandLen,
             recordTraceCallback callback);
 
-#region testing seams
+        #region testing seams
         internal Func<byte[], UIntPtr, recordTraceCallback, int> RecordTraceInvoker { get; set; } = RunRecordTrace;
         internal IConsole Console { get; set; }
-#endregion
+        #endregion
     }
 }
