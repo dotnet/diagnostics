@@ -45,8 +45,6 @@
       <!-- Only executable projects for single-file publish (exclude libraries) -->
       <DebuggeeExecutableProjects Include="$(MSBuildProjectDirectory)/Debuggees/**/*.csproj"
                                    Exclude="$(MSBuildProjectDirectory)/Debuggees/**/*Dll.csproj;$(MSBuildProjectDirectory)/Debuggees/**/*Library.csproj" />
-      <!-- Convert TFM list to items for batching -->
-      <TargetFrameworksToPublish Include="$(SupportedSubProcessTargetFrameworks)" />
     </ItemGroup>
 
     <Message Importance="High" Text="Building debuggees from $(MSBuildProjectDirectory)/Debuggees" />
@@ -56,8 +54,12 @@
           Condition="'@(DebuggeeProjects)' != ''" />
 
     <!-- Publish single-file versions for each TFM (only executables) -->
-    <Message Importance="High" Text="Publishing single-file debuggees for TFMs: $(SupportedSubProcessTargetFrameworks)" />
-    <Exec Command="dotnet publish &quot;%(DebuggeeExecutableProjects.Identity)&quot; --configuration $(Configuration) --framework %(TargetFrameworksToPublish.Identity) --runtime $(TargetRid) --self-contained true /p:PublishSingleFile=true --output &quot;$(ArtifactsDir)bin/%(DebuggeeExecutableProjects.Filename)/SingleFile/$(Configuration)/%(TargetFrameworksToPublish.Identity)/$(TargetRid)&quot;"
+    <Message Importance="High" Text="Publishing single-file debuggees" />
+    <Exec Command="dotnet publish &quot;%(DebuggeeExecutableProjects.Identity)&quot; --configuration $(Configuration) --framework net8.0 --runtime $(TargetRid) --self-contained true /p:PublishSingleFile=true --output &quot;$(ArtifactsDir)bin/%(DebuggeeExecutableProjects.Filename)/SingleFile/$(Configuration)/net8.0/$(TargetRid)&quot;"
+          Condition="'@(DebuggeeExecutableProjects)' != ''" />
+    <Exec Command="dotnet publish &quot;%(DebuggeeExecutableProjects.Identity)&quot; --configuration $(Configuration) --framework net9.0 --runtime $(TargetRid) --self-contained true /p:PublishSingleFile=true --output &quot;$(ArtifactsDir)bin/%(DebuggeeExecutableProjects.Filename)/SingleFile/$(Configuration)/net9.0/$(TargetRid)&quot;"
+          Condition="'@(DebuggeeExecutableProjects)' != ''" />
+    <Exec Command="dotnet publish &quot;%(DebuggeeExecutableProjects.Identity)&quot; --configuration $(Configuration) --framework net10.0 --runtime $(TargetRid) --self-contained true /p:PublishSingleFile=true --output &quot;$(ArtifactsDir)bin/%(DebuggeeExecutableProjects.Filename)/SingleFile/$(Configuration)/net10.0/$(TargetRid)&quot;"
           Condition="'@(DebuggeeExecutableProjects)' != ''" />
   </Target>
 </Project>

@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.TestHelpers
     /// <summary>
     /// Compiler for prebuilt single-file debuggees.
     /// Single-file debuggees are published at build time and stored at:
-    /// &lt;DebuggeeBuildRoot&gt;/bin/&lt;DebuggeeName&gt;/SingleFile/&lt;TargetConfiguration&gt;/&lt;BuildProjectFramework&gt;/&lt;BuildProjectRuntime&gt;/
+    /// <DebuggeeBuildRoot>/bin/<DebuggeeName>/SingleFile/<TargetConfiguration>/<BuildProjectFramework>/<BuildProjectRuntime>/
     /// </summary>
     public class SdkPrebuiltSingleFileDebuggeeCompiler : IDebuggeeCompiler
     {
