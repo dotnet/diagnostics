@@ -36,8 +36,8 @@
   <DesktopFrameworkPath Condition="$(TargetArchitecture) == x64">$(WinDir)\Microsoft.Net\Framework64\v4.0.30319\</DesktopFrameworkPath>
   <DesktopFrameworkPath Condition="$(TargetArchitecture) != x64">$(WinDir)\Microsoft.Net\Framework\v4.0.30319\</DesktopFrameworkPath>
 
-  <DebuggeeSourceRoot>$(ArtifactsDir)\test\DebuggeeSources\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
-  <DebuggeeMsbuildAuxRoot>$(ArtifactsDir)\test\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
+  <DebuggeeSourceRoot>$(RepoRootDir)\src\tests\SOS.UnitTests\Debuggees</DebuggeeSourceRoot>
+  <DebuggeeMsbuildAuxRoot>$(RepoRootDir)\eng\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
 

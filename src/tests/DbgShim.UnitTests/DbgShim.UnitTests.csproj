@@ -5,7 +5,6 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DbgShimConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</DbgShimConfigFileName>
     <TestAssetsVersion>1.0.351101</TestAssetsVersion>
-    <CopyDebuggeeSourcesToArtifacts>true</CopyDebuggeeSourcesToArtifacts>
   </PropertyGroup>
 
   <ItemGroup>
@@ -47,6 +46,7 @@
 <![CDATA[
 <Configuration>
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
+  <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <ArtifactsDir>$(ArtifactsDir)</ArtifactsDir>
   <Package_TestAssets_Windows_x64_6_0>$(NuGetPackageRoot)testassets.windows.x64.6.0\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x64_6_0>
   <Package_TestAssets_Windows_x86_6_0>$(NuGetPackageRoot)testassets.windows.x86.6.0\$(TestAssetsVersion)\content</Package_TestAssets_Windows_x86_6_0>
@@ -67,6 +67,7 @@
 <![CDATA[
 <Configuration>
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
+  <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <ArtifactsDir>$(ArtifactsDir)</ArtifactsDir>
   <Package_TestAssets_Linux_x64_6_0>$(NuGetPackageRoot)testassets.linux.x64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_x64_6_0>
   <Package_TestAssets_Linux_arm64_6_0>$(NuGetPackageRoot)testassets.linux.arm64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_arm64_6_0>
@@ -89,5 +90,4 @@
       <FileWrites Include="$(DbgShimConfigFileName)" />
     </ItemGroup>
   </Target>
-
 </Project>

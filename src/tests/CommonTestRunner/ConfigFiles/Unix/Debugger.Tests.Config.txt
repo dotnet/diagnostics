@@ -7,8 +7,8 @@
   <LogDir>$(ArtifactsDir)/TestResults/$(TargetConfiguration)/common.unittests_$(Timestamp)</LogDir>
 
   <TestProduct>ProjectK</TestProduct>
-  <DebuggeeSourceRoot>$(ArtifactsDir)/test/DebuggeeSources/CommonTestRunner/Debuggees</DebuggeeSourceRoot>
-  <DebuggeeMsbuildAuxRoot>$(ArtifactsDir)/test/AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
+  <DebuggeeSourceRoot>$(RepoRootDir)/src/tests</DebuggeeSourceRoot>
+  <DebuggeeMsbuildAuxRoot>$(RepoRootDir)/eng/AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
