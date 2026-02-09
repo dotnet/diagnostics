@@ -51,39 +51,26 @@
       <TestProduct>ProjectK</TestProduct>
       <Options>
         <!--
-            Single file (debuggees cli built)
+            Single file (prebuilt single-file debuggees)
          -->
         <Option Condition="'$(TestSingleFile)' == 'true'">
+          <DebuggeeBuildProcess>sdk.prebuilt.singlefile</DebuggeeBuildProcess>
+          <PublishSingleFile>true</PublishSingleFile>
+          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <Options>
             <Option Condition="'$(RuntimeVersionLatest)' != ''">
-              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-              <PublishSingleFile>true</PublishSingleFile>
-              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-              <PublishSingleFile>true</PublishSingleFile>
-              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-              <PublishSingleFile>true</PublishSingleFile>
-              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
             </Option>
             <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-              <PublishSingleFile>true</PublishSingleFile>
-              <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
               <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
             </Option>
@@ -129,66 +116,6 @@
           </Options>
         </Option>
         <!--
-            SOS.StackAndOtherTests (cli because tested with full, embedded and portable PDBs)
-          -->
-        <Option>
-          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees</DebuggeeBuildRoot>
-          <TestName>SOS.StackAndOtherTests</TestName>
-          <Options>
-            <Option Condition="'$(TestSingleFile)' == 'true'">
-              <Options>
-                <Option Condition="'$(RuntimeVersionLatest)' != ''">
-                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-                  <PublishSingleFile>true</PublishSingleFile>
-                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-                  <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-                  <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
-                  <BuildType>Nightly</BuildType>
-                </Option>
-                <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-                  <PublishSingleFile>true</PublishSingleFile>
-                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-                  <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
-                  <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
-                </Option>
-                <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-                  <PublishSingleFile>true</PublishSingleFile>
-                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-                  <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
-                  <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
-                </Option>
-                <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-                  <PublishSingleFile>true</PublishSingleFile>
-                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-                  <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
-                  <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
-                </Option>
-              </Options>
-            </Option>
-            <Option Condition="'$(RuntimeVersionLatest)' != ''">
-              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-              <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
-              <BuildType>Nightly</BuildType>
-            </Option>
-            <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-              <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
-              <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
-            </Option>
-            <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-              <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
-              <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
-            </Option>
-            <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-              <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
-              <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
-            </Option>
-          </Options>
-        </Option>
-        <!--
             SOS.WebApp3 and SOS.DualRuntimes (runs on 3.1 and latest aspnetcore)
           -->
         <Option Condition="'$(TestWebApp3)' == 'true'">
@@ -208,8 +135,7 @@
             <TestWebApp3_SingleFile Condition="'$(TestSingleFile)' == 'true'">false</TestWebApp3_SingleFile>
             <TestWebApp3_SingleFile Condition="'$(RuntimeVersionLatest)' == ''">false</TestWebApp3_SingleFile>
             <Option Condition="'$(TestWebApp3_SingleFile)' == 'true'">
-              <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-              <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
+              <DebuggeeBuildProcess>sdk.prebuilt.singlefile</DebuggeeBuildProcess>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
               <PublishSingleFile>true</PublishSingleFile>

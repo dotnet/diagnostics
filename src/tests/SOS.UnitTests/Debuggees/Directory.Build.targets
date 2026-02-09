@@ -1,0 +1,6 @@
+<Project>
+  <!-- Block Arcade SDK targets inheritance to avoid GenerateChecksums.targets errors -->
+  <PropertyGroup>
+    <ImportDirectoryBuildTargets>false</ImportDirectoryBuildTargets>
+  </PropertyGroup>
+</Project>

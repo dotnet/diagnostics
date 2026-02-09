@@ -36,39 +36,26 @@
 
   <Options>
     <!--
-        Single file (debuggees cli built)
+        Single file (prebuilt single-file debuggees)
      -->
     <Option Condition="'$(TestSingleFile)' == 'true'">
+      <DebuggeeBuildProcess>sdk.prebuilt.singlefile</DebuggeeBuildProcess>
+      <PublishSingleFile>true</PublishSingleFile>
+      <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
       <Options>
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
-          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
-          <PublishSingleFile>true</PublishSingleFile>
-          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
-          <PublishSingleFile>true</PublishSingleFile>
-          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
-          <PublishSingleFile>true</PublishSingleFile>
-          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees/SingleFile</DebuggeeBuildRoot>
-          <PublishSingleFile>true</PublishSingleFile>
-          <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
         </Option>

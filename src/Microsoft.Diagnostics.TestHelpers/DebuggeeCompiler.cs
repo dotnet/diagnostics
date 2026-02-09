@@ -26,6 +26,10 @@ namespace Microsoft.Diagnostics.TestHelpers
                     // The .NET Core SDK layout
                     compiler = new SdkPrebuiltDebuggeeCompiler(config, debuggeeName);
                     break;
+                case "sdk.prebuilt.singlefile":
+                    // Prebuilt single-file debuggees
+                    compiler = new SdkPrebuiltSingleFileDebuggeeCompiler(config, debuggeeName);
+                    break;
                 case "cli":
                     // Builds the debuggee with the .NET Core CLI
                     compiler = new CliDebuggeeCompiler(config, debuggeeName);

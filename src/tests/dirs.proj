@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
     <!-- Debuggees -->
-    <ProjectReference Include="*/Debuggees/**/*.csproj" />
+    <!-- debuggee projects are built by targets in Directory.Build.targets -->
+    <!-- <ProjectReference Include="*/Debuggees/**/*.csproj" /> -->
 
     <!-- Tests and Helpers -->
     <ProjectReference Include="*/*.csproj" />
