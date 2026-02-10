@@ -9,7 +9,7 @@
   <TestProduct>ProjectK</TestProduct>
   <DebuggeeSourceRoot>$(ArtifactsDir)\test\DebuggeeSources\DbgShim.UnitTests\Debuggees</DebuggeeSourceRoot>
   <DebuggeeMsbuildAuxRoot>$(ArtifactsDir)\test\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
-  <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
+  <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
   <DebuggeeName>SimpleDebuggee</DebuggeeName>
 
   <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
@@ -58,7 +58,6 @@
             Single file (prebuilt single-file debuggees)
          -->
         <Option Condition="'$(TestSingleFile)' == 'true'">
-          <DebuggeeBuildProcess>sdk.prebuilt.singlefile</DebuggeeBuildProcess>
           <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
           <PublishSingleFile>true</PublishSingleFile>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>

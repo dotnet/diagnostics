@@ -54,7 +54,6 @@
             Single file (prebuilt single-file debuggees)
          -->
         <Option Condition="'$(TestSingleFile)' == 'true'">
-          <DebuggeeBuildProcess>sdk.prebuilt.singlefile</DebuggeeBuildProcess>
           <PublishSingleFile>true</PublishSingleFile>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <Options>
@@ -195,7 +194,6 @@
             <TestWebApp3_SingleFile Condition="'$(TestSingleFile)' == 'true'">false</TestWebApp3_SingleFile>
             <TestWebApp3_SingleFile Condition="'$(RuntimeVersionLatest)' == ''">false</TestWebApp3_SingleFile>
             <Option Condition="'$(TestWebApp3_SingleFile)' == 'true'">
-              <DebuggeeBuildProcess>sdk.prebuilt.singlefile</DebuggeeBuildProcess>
               <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
               <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
               <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>

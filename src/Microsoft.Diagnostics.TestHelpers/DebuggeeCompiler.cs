@@ -22,11 +22,11 @@ namespace Microsoft.Diagnostics.TestHelpers
                     // Backwards compatibility for the diagnostics test repo
                     compiler = new PrebuiltDebuggeeCompiler(config, debuggeeName);
                     break;
-                case "sdk.prebuilt":
+                case "sdk.prebuilt" when !config.PublishSingleFile:
                     // The .NET Core SDK layout
                     compiler = new SdkPrebuiltDebuggeeCompiler(config, debuggeeName);
                     break;
-                case "sdk.prebuilt.singlefile":
+                case "sdk.prebuilt" when config.PublishSingleFile:
                     // Prebuilt single-file debuggees
                     compiler = new SdkPrebuiltSingleFileDebuggeeCompiler(config, debuggeeName);
                     break;
