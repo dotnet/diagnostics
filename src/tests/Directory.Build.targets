@@ -7,7 +7,8 @@
     Optional: Set CopyLldbPluginTests=true to also copy lldbplugin.tests.
   -->
   <Target Name="CopyDebuggeeSources" AfterTargets="Build"
-          Condition="'$(CopyDebuggeeSourcesToArtifacts)' == 'true' or '$(NeedsCdb)' == 'true'">
+          Condition="'$(CopyDebuggeeSourcesToArtifacts)' == 'true' or '$(NeedsCdb)' == 'true'"
+          DependsOnTargets="CopyVersionsProps">
     <PropertyGroup>
       <DebuggeesDestDir>$(ArtifactsDir)test/DebuggeeSources/$(MSBuildProjectName)/Debuggees</DebuggeesDestDir>
       <AuxMsbuildDestDir>$(ArtifactsDir)test/AuxMsbuildFiles</AuxMsbuildDestDir>
@@ -31,6 +32,24 @@
     <Message Importance="High" Text="Copied debuggee sources to $(DebuggeesDestDir)" />
     <Message Importance="High" Text="Copied aux MSBuild files to $(AuxMsbuildDestDir)" />
     <Message Importance="High" Text="Copied lldbplugin.tests to $(LldbPluginTestsDestDir)" Condition="'$(CopyLldbPluginTests)' == 'true'" />
+  </Target>
+
+  <!--
+    Copy Versions.props (and Version.Details.props) into AuxMsbuildFiles so that
+    RuntimeTestVersions.props can import them from the debuggee build directory.
+  -->
+  <Target Name="CopyVersionsProps">
+    <PropertyGroup>
+      <_AuxDir>$(ArtifactsDir)test/AuxMsbuildFiles/</_AuxDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(_AuxDir)" />
+    <Copy SourceFiles="$(RepoRoot)eng/Versions.props"
+          DestinationFolder="$(_AuxDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(RepoRoot)eng/Version.Details.props"
+          DestinationFolder="$(_AuxDir)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(RepoRoot)eng/Version.Details.props')" />
   </Target>
 
 

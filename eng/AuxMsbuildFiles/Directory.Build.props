@@ -1,8 +1,5 @@
 <Project>
-    <!-- Importing arcade depends on the existence of a global.json. Fix
-        this to a set of well known imports when moving to Helix. -->
-    <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+    <Import Project="Versions.props" Condition="Exists('$(MSBuildThisFileDirectory)Versions.props')" />
 
     <PropertyGroup>
         <BaseOutputPath>bin\</BaseOutputPath>
