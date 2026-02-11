@@ -10,6 +10,7 @@
   <DebuggeeSourceRoot>$(ArtifactsDir)/test/DebuggeeSources/DbgShim.UnitTests/Debuggees</DebuggeeSourceRoot>
   <DebuggeeMsbuildAuxRoot>$(ArtifactsDir)/test/AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
   <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
+  <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
   <DebuggeeName>SimpleDebuggee</DebuggeeName>
 
   <!-- Use the global.json SDK to build and the test SDK/runtime to run -->
@@ -58,7 +59,6 @@
             Single file (prebuilt single-file debuggees)
          -->
         <Option Condition="'$(TestSingleFile)' == 'true'">
-          <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
           <PublishSingleFile>true</PublishSingleFile>
           <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
           <Options>
@@ -84,22 +84,18 @@
             Default
           -->
         <Option Condition="'$(RuntimeVersionLatest)' != ''">
-          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
         </Option>
         <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-          <DebuggeeBuildRoot>$(ArtifactsDir)/Debuggees</DebuggeeBuildRoot>
           <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
           <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
         </Option>
