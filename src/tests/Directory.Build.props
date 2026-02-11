@@ -1,3 +1,12 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
+
+  <PropertyGroup>
+    <PackageArtifactsRootDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'test', 'packages'))</PackageArtifactsRootDir>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsTestProject Condition="$(MSBuildProjectName.EndsWith('.UnitTests')) or $(MSBuildProjectName.EndsWith('.Tests'))">true</IsTestProject>
+    <IsTestSupportProject Condition="'$(IsTestProject)' != 'true' and '$(IsTrimmingTestProject)' != 'true'">true</IsTestSupportProject>
+  </PropertyGroup>
 </Project>

@@ -8,6 +8,7 @@
     <SOSConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</SOSConfigFileName>
     <CopyDebuggeeSourcesToArtifacts>true</CopyDebuggeeSourcesToArtifacts>
     <CopyLldbPluginTests>true</CopyLldbPluginTests>
+    <NeedsCdb>true</NeedsCdb>
   </PropertyGroup>
 
   <ItemGroup>
@@ -36,10 +37,6 @@
     <ProjectReference Include="$(TestDir)/TestExtension/TestExtension.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageDownload Include="cdb-sos" Version="[$(cdbsosversion)]" />
-  </ItemGroup>
-
   <Target Name="SOSWriteTestConfigFile" Outputs="$(SOSConfigFileName)" BeforeTargets="BeforeBuild;Publish">
     <PropertyGroup>
       <TestConfigFileLines>
@@ -49,7 +46,7 @@
   <DesktopFramework>$(DesktopTargetFramework)</DesktopFramework>
   <NetCoreAppMinTargetFramework>$(NetCoreAppMinTargetFramework)</NetCoreAppMinTargetFramework>
   <ArtifactsDir>$(ArtifactsDir)</ArtifactsDir>
-  <CDBPath>$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\cdb.exe</CDBPath>
+  <CDBPath>%24(ArtifactsDir)test\packages\cdb-sos\$(cdbsosversion)\runtimes\win-%24(TargetArchitecture)\native\cdb.exe</CDBPath>
 </Configuration>
 ]]>
       </TestConfigFileLines>
