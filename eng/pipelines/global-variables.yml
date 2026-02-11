@@ -57,3 +57,38 @@ variables:
 - ${{ if eq(parameters.runtimeFeedToken, 'dotnetclimsrc-sas-token-base64') }}:
   - name: RuntimeFeedBase64SasToken
     value: $(dotnetclimsrc-read-sas-token-base64)
+
+# Helix queue configuration
+# Public (open) queues for PR validation
+- ${{ if eq(variables['System.TeamProject'], 'public') }}:
+  - name: HelixQueuesWindows_x64
+    value: Windows.10.Amd64.Open
+  - name: HelixQueuesWindows_x86
+    value: Windows.10.Amd64.Open
+  - name: HelixQueuesLinux_x64
+    value: Ubuntu.2204.Amd64.Open
+  - name: HelixQueuesLinux_arm64
+    value: Ubuntu.2204.Arm64.Open
+  - name: HelixQueuesMacOS_x64
+    value: OSX.1200.Amd64.Open
+  - name: HelixQueuesMacOS_arm64
+    value: OSX.1200.Arm64.Open
+  - name: HelixQueuesFreeBSD
+    value: ''
+
+# Internal queues for official builds
+- ${{ if ne(variables['System.TeamProject'], 'public') }}:
+  - name: HelixQueuesWindows_x64
+    value: Windows.10.Amd64
+  - name: HelixQueuesWindows_x86
+    value: Windows.10.Amd64
+  - name: HelixQueuesLinux_x64
+    value: Ubuntu.2204.Amd64
+  - name: HelixQueuesLinux_arm64
+    value: Ubuntu.2204.Arm64
+  - name: HelixQueuesMacOS_x64
+    value: OSX.1200.Amd64
+  - name: HelixQueuesMacOS_arm64
+    value: OSX.1200.Arm64
+  - name: HelixQueuesFreeBSD
+    value: ''

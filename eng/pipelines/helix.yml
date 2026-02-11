@@ -1,0 +1,183 @@
+# Pipeline template for running tests on Helix
+# This template sends test workloads to Helix machines for distributed execution
+
+parameters:
+  # Job name suffix
+- name: name
+  type: string
+  default: 'Helix'
+
+- name: jobTemplate
+  type: string
+  default: /eng/common/templates/job/job.yml@self
+  values:
+  - /eng/common/templates-official/job/job.yml@self
+  - /eng/common/templates/job/job.yml@self
+
+- name: osGroup
+  type: string
+  default: Windows_NT
+  values:
+  - Windows_NT
+  - Linux
+  - MacOS
+
+  # Build configuration
+- name: configuration
+  type: string
+  default: Debug
+
+  # Target architecture
+- name: architecture
+  type: string
+  default: x64
+
+  # Helix queue to target (semicolon-delimited list supported)
+- name: helixQueues
+  type: string
+  default: ''
+
+  # Whether this is an internal (authenticated) build
+- name: isInternal
+  type: boolean
+  default: false
+
+  # Job timeout
+- name: timeoutInMinutes
+  type: number
+  default: 120
+
+  # Job dependencies (build job name without architecture/configuration suffix)
+- name: dependsOn
+  type: string
+  default: ''
+
+  # Template context for 1ES pipeline
+- name: templateContext
+  type: object
+  default: {}
+
+jobs:
+- template: ${{ parameters.jobTemplate }}
+  parameters:
+    name: ${{ parameters.name }}_${{ parameters.architecture }}_${{ parameters.configuration }}
+    timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
+    templateContext: ${{ parameters.templateContext }}
+    
+    # Note: cross-stage job dependencies are not supported in Azure Pipelines.
+    # The stage-level dependsOn handles this. We keep dependsOn parameter for
+    # artifact naming only.
+    
+    pool:
+      ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+        name: $(BuildPool)
+        demands: ImageOverride -equals $(WindowsImage)
+        os: windows
+
+      ${{ if eq(parameters.osGroup, 'Linux') }}:
+        name: $(BuildPool)
+        demands: ImageOverride -equals $(LinuxImage)
+        os: linux
+
+      ${{ if eq(parameters.osGroup, 'MacOS') }}:
+        name: Azure Pipelines
+        vmImage: $(macOSImage)
+        os: macOS
+
+    workspace:
+      clean: all
+
+    variables:
+    - _BuildConfig: ${{ parameters.configuration }}
+    - _HelixType: test/${{ parameters.configuration }}/${{ parameters.architecture }}/
+    
+    # Determine target OS for helix.proj
+    - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+      - _TargetOS: Windows_NT
+    - ${{ if eq(parameters.osGroup, 'Linux') }}:
+      - _TargetOS: linux
+    - ${{ if eq(parameters.osGroup, 'MacOS') }}:
+      - _TargetOS: osx
+    
+    # Helix queue configuration
+    - _HelixQueues: ${{ parameters.helixQueues }}
+    
+    # For internal builds, use the Helix access token
+    - ${{ if eq(parameters.isInternal, true) }}:
+      - group: DotNet-HelixApi-Access
+      - _HelixAccessToken: $(HelixApiAccessToken)
+      - _HelixSource: official/diagnostics/$(Build.SourceBranch)
+    - ${{ else }}:
+      - _HelixAccessToken: ''
+      - _HelixSource: pr/diagnostics/$(Build.SourceBranch)
+      - _Creator: $(Build.RequestedFor)
+
+    steps:
+    # Download build artifacts from the build job
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download Build Artifacts'
+      inputs:
+        targetPath: '$(Build.SourcesDirectory)/artifacts'
+        artifactName: Build_${{ parameters.dependsOn }}
+        checkDownloadedFiles: true
+
+    # Send tests to Helix
+    - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+      - script: >
+          $(Build.SourcesDirectory)\eng\common\msbuild.cmd
+          $(Build.SourcesDirectory)\eng\helix.proj
+          /restore
+          /t:Test
+          /p:Configuration=${{ parameters.configuration }}
+          /p:TargetArchitecture=${{ parameters.architecture }}
+          /p:TargetOS=$(_TargetOS)
+          /p:HelixTargetQueues=$(_HelixQueues)
+          /p:HelixSource=$(_HelixSource)
+          /p:HelixType=$(_HelixType)
+          /p:HelixAccessToken=$(_HelixAccessToken)
+          ${{ if eq(parameters.isInternal, false) }}:/p:Creator=$(_Creator)
+          /p:TestArtifactsDir=$(Build.SourcesDirectory)/artifacts/
+          /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/SendToHelix.binlog
+        displayName: Send Tests to Helix
+        env:
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+    - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
+      - script: >
+          $(Build.SourcesDirectory)/eng/common/msbuild.sh
+          $(Build.SourcesDirectory)/eng/helix.proj
+          /restore
+          /t:Test
+          /p:Configuration=${{ parameters.configuration }}
+          /p:TargetArchitecture=${{ parameters.architecture }}
+          /p:TargetOS=$(_TargetOS)
+          /p:HelixTargetQueues=$(_HelixQueues)
+          /p:HelixSource=$(_HelixSource)
+          /p:HelixType=$(_HelixType)
+          /p:HelixAccessToken=$(_HelixAccessToken)
+          ${{ if eq(parameters.isInternal, false) }}:/p:Creator=$(_Creator)
+          /p:TestArtifactsDir=$(Build.SourcesDirectory)/artifacts/
+          /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/SendToHelix.binlog
+        displayName: Send Tests to Helix
+        env:
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+    # Publish Helix logs
+    - task: CopyFiles@2
+      displayName: Gather Helix Logs
+      inputs:
+        sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+        contents: 'log/**'
+        targetFolder: '$(Build.StagingDirectory)/HelixLogs'
+      continueOnError: true
+      condition: always()
+
+    - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+      parameters:
+        displayName: Publish Helix Logs
+        inputs:
+          targetPath: '$(Build.StagingDirectory)/HelixLogs'
+          artifactName: HelixLogs_${{ parameters.name }}_${{ parameters.osGroup }}_${{ parameters.architecture }}_${{ parameters.configuration }}
+          sbomEnabled: false
+        continueOnError: true
+        condition: always()
