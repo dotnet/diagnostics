@@ -38,6 +38,7 @@
     Single-file builds go to: artifacts/bin/<DebuggeeName>/SingleFile/<Configuration>/<TFM>/<RID>/
   -->
   <Target Name="BuildDebuggees" AfterTargets="Build"
+          DependsOnTargets="InvokeInstallRuntimes"
           Condition="'$(CopyDebuggeeSourcesToArtifacts)' == 'true'">
     <ItemGroup>
       <!-- All debuggee projects for standard build -->
@@ -47,19 +48,30 @@
                                    Exclude="$(MSBuildProjectDirectory)/Debuggees/**/*Dll.csproj;$(MSBuildProjectDirectory)/Debuggees/**/*Library.csproj" />
     </ItemGroup>
 
+    <!-- Use dotnet-test runtime for single-file publishing to ensure runtime version match -->
+    <PropertyGroup>
+      <DotNetTestRoot>$(ArtifactsDir)dotnet-test</DotNetTestRoot>
+      <DotNetTestExe Condition="'$(OS)' == 'Windows_NT'">$(DotNetTestRoot)\dotnet.exe</DotNetTestExe>
+      <DotNetTestExe Condition="'$(OS)' != 'Windows_NT'">$(DotNetTestRoot)/dotnet</DotNetTestExe>
+    </PropertyGroup>
+
     <Message Importance="High" Text="Building debuggees from $(MSBuildProjectDirectory)/Debuggees" />
 
     <!-- Build standard versions (all projects) -->
     <Exec Command="dotnet build &quot;%(DebuggeeProjects.Identity)&quot; --configuration $(Configuration)"
           Condition="'@(DebuggeeProjects)' != ''" />
 
-    <!-- Publish single-file versions for each TFM (only executables) -->
-    <Message Importance="High" Text="Publishing single-file debuggees" />
-    <Exec Command="dotnet publish &quot;%(DebuggeeExecutableProjects.Identity)&quot; --configuration $(Configuration) --framework net8.0 --runtime $(TargetRid) --self-contained true /p:PublishSingleFile=true --output &quot;$(ArtifactsDir)bin/%(DebuggeeExecutableProjects.Filename)/SingleFile/$(Configuration)/net8.0/$(TargetRid)&quot;"
-          Condition="'@(DebuggeeExecutableProjects)' != ''" />
-    <Exec Command="dotnet publish &quot;%(DebuggeeExecutableProjects.Identity)&quot; --configuration $(Configuration) --framework net9.0 --runtime $(TargetRid) --self-contained true /p:PublishSingleFile=true --output &quot;$(ArtifactsDir)bin/%(DebuggeeExecutableProjects.Filename)/SingleFile/$(Configuration)/net9.0/$(TargetRid)&quot;"
-          Condition="'@(DebuggeeExecutableProjects)' != ''" />
-    <Exec Command="dotnet publish &quot;%(DebuggeeExecutableProjects.Identity)&quot; --configuration $(Configuration) --framework net10.0 --runtime $(TargetRid) --self-contained true /p:PublishSingleFile=true --output &quot;$(ArtifactsDir)bin/%(DebuggeeExecutableProjects.Filename)/SingleFile/$(Configuration)/net10.0/$(TargetRid)&quot;"
-          Condition="'@(DebuggeeExecutableProjects)' != ''" />
+    <!-- Publish single-file versions for each TFM (only executables)
+         Use dotnet-test with DOTNET_ROOT to ensure the embedded runtime matches what tests run against -->
+    <Message Importance="High" Text="Publishing single-file debuggees using $(DotNetTestExe)" />
+    <Exec Command="&quot;$(DotNetTestExe)&quot; publish &quot;%(DebuggeeExecutableProjects.Identity)&quot; --configuration $(Configuration) --framework net8.0 --runtime $(TargetRid) --self-contained true /p:PublishSingleFile=true --output &quot;$(ArtifactsDir)bin/%(DebuggeeExecutableProjects.Filename)/SingleFile/$(Configuration)/net8.0/$(TargetRid)&quot;"
+          Condition="'@(DebuggeeExecutableProjects)' != '' and Exists('$(DotNetTestExe)')"
+          EnvironmentVariables="DOTNET_ROOT=$(DotNetTestRoot)" />
+    <Exec Command="&quot;$(DotNetTestExe)&quot; publish &quot;%(DebuggeeExecutableProjects.Identity)&quot; --configuration $(Configuration) --framework net9.0 --runtime $(TargetRid) --self-contained true /p:PublishSingleFile=true --output &quot;$(ArtifactsDir)bin/%(DebuggeeExecutableProjects.Filename)/SingleFile/$(Configuration)/net9.0/$(TargetRid)&quot;"
+          Condition="'@(DebuggeeExecutableProjects)' != '' and Exists('$(DotNetTestExe)')"
+          EnvironmentVariables="DOTNET_ROOT=$(DotNetTestRoot)" />
+    <Exec Command="&quot;$(DotNetTestExe)&quot; publish &quot;%(DebuggeeExecutableProjects.Identity)&quot; --configuration $(Configuration) --framework net10.0 --runtime $(TargetRid) --self-contained true /p:PublishSingleFile=true --output &quot;$(ArtifactsDir)bin/%(DebuggeeExecutableProjects.Filename)/SingleFile/$(Configuration)/net10.0/$(TargetRid)&quot;"
+          Condition="'@(DebuggeeExecutableProjects)' != '' and Exists('$(DotNetTestExe)')"
+          EnvironmentVariables="DOTNET_ROOT=$(DotNetTestRoot)" />
   </Target>
 </Project>
