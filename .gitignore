@@ -133,4 +133,3 @@ StressLog.txt
 *.binlog
 *.pubxml
 **/.idea/
-.nuget/
