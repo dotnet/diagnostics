@@ -3951,7 +3951,7 @@ DECLARE_API(RCWCleanupList)
 
 enum {
     // This value is set in m_dwTransientFlags.
-    IS_EDIT_AND_CONTINUE        = 0x00000008,   // is EnC Enabled for this module
+    IS_EDIT_AND_CONTINUE        = 0x00000208,   // Flags for .NET Framework (0x00000200) and .NET Core (0x00000008)
 };
 
 void ModuleMapTraverse(UINT index, CLRDATA_ADDRESS methodTable, LPVOID token)
