@@ -35,14 +35,17 @@
   </Target>
 
   <!--
-    Copy Versions.props (and Version.Details.props) into AuxMsbuildFiles so that
-    RuntimeTestVersions.props can import them from the debuggee build directory.
+    Copy Versions.props, Version.Details.props, and Common.props into AuxMsbuildFiles so that
+    debuggee builds on Helix can import them.
   -->
   <Target Name="CopyVersionsProps">
     <PropertyGroup>
       <_AuxDir>$(ArtifactsDir)test/AuxMsbuildFiles/</_AuxDir>
     </PropertyGroup>
     <MakeDir Directories="$(_AuxDir)" />
+    <Copy SourceFiles="$(RepoRoot)eng/Common.props"
+          DestinationFolder="$(_AuxDir)"
+          SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(RepoRoot)eng/Versions.props"
           DestinationFolder="$(_AuxDir)"
           SkipUnchangedFiles="true" />

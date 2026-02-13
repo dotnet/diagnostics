@@ -5,15 +5,6 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <UseSharedCompilation>false</UseSharedCompilation>
-    <LangVersion>Latest</LangVersion>
-    <WarningLevel>4</WarningLevel>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
-    <_SkipUpgradeNetAnalyzersNuGetWarning>true</_SkipUpgradeNetAnalyzersNuGetWarning>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <PackageIconUrl>http://go.microsoft.com/fwlink/?LinkID=288859</PackageIconUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -21,6 +12,13 @@
     <RepositoryName>diagnostics</RepositoryName>
   </PropertyGroup>
 
+  <!--
+    Common.props contains build properties shared between local builds and Helix agents.
+    It is imported here for local builds, and separately by
+    AuxMsbuildFiles/Directory.Build.props for debuggee builds on Helix where the
+    Arcade SDK is not available.
+  -->
+  <Import Project="eng/Common.props" />
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <!--
