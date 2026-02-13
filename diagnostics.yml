@@ -56,7 +56,7 @@ extends:
   parameters:
     stages:
     - stage: build
-      displayName: Build and Test Diagnostics
+      displayName: Build Diagnostics
       jobs:
 
         ############################
@@ -83,7 +83,7 @@ extends:
           jobTemplate: ${{ variables.jobTemplate }}
           name: Windows
           osGroup: Windows_NT
-          buildOnly: ${{ parameters.buildOnly }}
+          buildOnly: true
           buildConfigs:
           - configuration: Debug
             architecture: x64
@@ -138,7 +138,7 @@ extends:
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
-          buildOnly: ${{ parameters.buildOnly }}
+          buildOnly: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -218,84 +218,15 @@ extends:
 
       ############################
       #                          #
-      #      Test only legs      #
+      #    Helix Test Stage      #
       #                          #
       ############################
-
-      - ${{ if ne(parameters.buildOnly, true) }}:
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Ubuntu_22_04
-            osGroup: Linux
-            container: test_ubuntu_22_04
-            dependsOn: Linux
-            testOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Alpine3_19
-            osGroup: Linux
-            osSuffix: -musl
-            container: test_linux_musl_x64
-            dependsOn: Linux_musl
-            testOnly: true
-            disableComponentGovernance: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
-
-        - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-          - template: /eng/pipelines/build.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: Debian_Bullseye
-              osGroup: Linux
-              container: test_debian_11_amd64
-              dependsOn: Linux
-              testOnly: true
-              buildConfigs:
-              - configuration: Release
-                architecture: x64
-              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                - configuration: Debug
-                  architecture: x64
-
-          - template: /eng/pipelines/build.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: Fedora_39
-              osGroup: Linux
-              container: test_fedora
-              dependsOn: Linux
-              testOnly: true
-              buildConfigs:
-              - configuration: Release
-                architecture: x64
-              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                - configuration: Debug
-                  architecture: x64
-
-    ############################
-    #                          #
-    #    Helix Test Stage      #
-    #                          #
-    ############################
 
     - ${{ if and(eq(parameters.useHelix, true), ne(parameters.buildOnly, true)) }}:
       - stage: helix
         displayName: Run Tests on Helix
         dependsOn: build
+        condition: not(canceled())
         jobs:
         # Windows x64 Helix tests
         - template: /eng/pipelines/helix.yml
@@ -333,11 +264,37 @@ extends:
             isInternal: ${{ ne(variables['System.TeamProject'], 'public') }}
             dependsOn: MacOS_x64_Release
 
+        # Windows arm64 Helix tests
+        - template: /eng/pipelines/helix.yml
+          parameters:
+            name: Helix_Windows
+            jobTemplate: ${{ variables.jobTemplate }}
+            osGroup: Windows_NT
+            configuration: Release
+            architecture: arm64
+            helixQueues: $(HelixQueuesWindows_arm64)
+            isInternal: ${{ ne(variables['System.TeamProject'], 'public') }}
+            dependsOn: Windows_arm64_Release
+
+        # Linux arm64 Helix tests
+        - template: /eng/pipelines/helix.yml
+          parameters:
+            name: Helix_Linux
+            jobTemplate: ${{ variables.jobTemplate }}
+            osGroup: Linux
+            configuration: Release
+            architecture: arm64
+            helixQueues: $(HelixQueuesLinux_arm64)
+            isInternal: ${{ ne(variables['System.TeamProject'], 'public') }}
+            dependsOn: Linux_arm64_Release
+
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - stage: package
         displayName: Package, Sign, and Generate BAR Manifests
-        ${{ if eq(parameters.useHelix, true) }}:
-          dependsOn: helix
+        ${{ if and(eq(parameters.useHelix, true), ne(parameters.buildOnly, true)) }}:
+          dependsOn:
+          - build
+          - helix
         ${{ else }}:
           dependsOn: build
         jobs:

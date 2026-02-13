@@ -1,5 +1,6 @@
 # Pipeline template for running tests on Helix
-# This template sends test workloads to Helix machines for distributed execution
+# This template downloads build artifacts and sends test workloads to Helix
+# machines for distributed execution.
 
 parameters:
   # Job name suffix
@@ -47,7 +48,7 @@ parameters:
   type: number
   default: 120
 
-  # Job dependencies (build job name without architecture/configuration suffix)
+  # Job dependency name for artifact download (e.g. Windows_x64_Release)
 - name: dependsOn
   type: string
   default: ''
@@ -63,11 +64,7 @@ jobs:
     name: ${{ parameters.name }}_${{ parameters.architecture }}_${{ parameters.configuration }}
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
     templateContext: ${{ parameters.templateContext }}
-    
-    # Note: cross-stage job dependencies are not supported in Azure Pipelines.
-    # The stage-level dependsOn handles this. We keep dependsOn parameter for
-    # artifact naming only.
-    
+
     pool:
       ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
         name: $(BuildPool)
@@ -90,7 +87,7 @@ jobs:
     variables:
     - _BuildConfig: ${{ parameters.configuration }}
     - _HelixType: test/${{ parameters.configuration }}/${{ parameters.architecture }}/
-    
+
     # Determine target OS for helix.proj
     - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
       - _TargetOS: Windows_NT
@@ -98,10 +95,16 @@ jobs:
       - _TargetOS: linux
     - ${{ if eq(parameters.osGroup, 'MacOS') }}:
       - _TargetOS: osx
-    
+
+    # Build script
+    - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+      - _buildScript: $(Build.SourcesDirectory)\build.cmd
+    - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
+      - _buildScript: $(Build.SourcesDirectory)/build.sh
+
     # Helix queue configuration
     - _HelixQueues: ${{ parameters.helixQueues }}
-    
+
     # For internal builds, use the Helix access token
     - ${{ if eq(parameters.isInternal, true) }}:
       - group: DotNet-HelixApi-Access
@@ -113,13 +116,15 @@ jobs:
       - _Creator: $(Build.RequestedFor)
 
     steps:
-    # Download build artifacts from the build job
-    - task: DownloadPipelineArtifact@2
-      displayName: 'Download Build Artifacts'
-      inputs:
-        targetPath: '$(Build.SourcesDirectory)/artifacts'
-        artifactName: Build_${{ parameters.dependsOn }}
-        checkDownloadedFiles: true
+    # Build locally (build-only, no tests) to produce test assemblies and artifacts
+    - script: $(_buildScript)
+        -ci
+        -binaryLog
+        -configuration ${{ parameters.configuration }}
+        -architecture ${{ parameters.architecture }}
+        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+      displayName: Build
+      condition: succeeded()
 
     # Send tests to Helix
     - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
@@ -135,7 +140,6 @@ jobs:
           /p:HelixSource=$(_HelixSource)
           /p:HelixType=$(_HelixType)
           /p:HelixAccessToken=$(_HelixAccessToken)
-          /p:TestArtifactsDir=$(Build.SourcesDirectory)/artifacts/
           /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/SendToHelix.binlog
         displayName: Send Tests to Helix (internal)
         condition: and(succeeded(), eq('${{ parameters.isInternal }}', 'True'))
@@ -154,7 +158,6 @@ jobs:
           /p:HelixSource=$(_HelixSource)
           /p:HelixType=$(_HelixType)
           /p:Creator=$(_Creator)
-          /p:TestArtifactsDir=$(Build.SourcesDirectory)/artifacts/
           /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/SendToHelix.binlog
         displayName: Send Tests to Helix (public)
         condition: and(succeeded(), ne('${{ parameters.isInternal }}', 'True'))
@@ -174,7 +177,6 @@ jobs:
           /p:HelixSource=$(_HelixSource)
           /p:HelixType=$(_HelixType)
           /p:HelixAccessToken=$(_HelixAccessToken)
-          /p:TestArtifactsDir=$(Build.SourcesDirectory)/artifacts/
           /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/SendToHelix.binlog
         displayName: Send Tests to Helix (internal)
         condition: and(succeeded(), eq('${{ parameters.isInternal }}', 'True'))
@@ -193,7 +195,6 @@ jobs:
           /p:HelixSource=$(_HelixSource)
           /p:HelixType=$(_HelixType)
           /p:Creator=$(_Creator)
-          /p:TestArtifactsDir=$(Build.SourcesDirectory)/artifacts/
           /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/SendToHelix.binlog
         displayName: Send Tests to Helix (public)
         condition: and(succeeded(), ne('${{ parameters.isInternal }}', 'True'))

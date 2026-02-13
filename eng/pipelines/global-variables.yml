@@ -65,6 +65,8 @@ variables:
     value: Windows.10.Amd64.Open
   - name: HelixQueuesWindows_x86
     value: Windows.10.Amd64.Open
+  - name: HelixQueuesWindows_arm64
+    value: Windows.11.Arm64.Open
   - name: HelixQueuesLinux_x64
     value: Ubuntu.2204.Amd64.Open
   - name: HelixQueuesLinux_arm64
@@ -82,6 +84,8 @@ variables:
     value: windows.amd64.server2022
   - name: HelixQueuesWindows_x86
     value: windows.amd64.server2022
+  - name: HelixQueuesWindows_arm64
+    value: windows.11.arm64
   - name: HelixQueuesLinux_x64
     value: Ubuntu.2204.Amd64
   - name: HelixQueuesLinux_arm64
