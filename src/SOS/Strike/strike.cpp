@@ -4021,6 +4021,8 @@ DECLARE_API(DumpModule)
         ExtOut("PEFile ");
     if (module.bIsReflection)
         ExtOut("Reflection ");
+    if (module.dwTransientFlags & IS_EDIT_AND_CONTINUE)
+        ExtOut("EditAndContinue ");
 
     ToRelease<IXCLRDataModule> dataModule;
     if (SUCCEEDED(g_sos->GetModule(TO_CDADDR(p_ModuleAddr), &dataModule)))
@@ -4037,9 +4039,6 @@ DECLARE_API(DumpModule)
         }
     }
     ExtOut("\n");
-
-    if (module.dwTransientFlags & IS_EDIT_AND_CONTINUE)
-        ExtOut("IS_EDIT_AND_CONTINUE\n");
 
     DMLOut("Assembly:                %s\n", DMLAssembly(module.Assembly));
 
