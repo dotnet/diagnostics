@@ -3951,7 +3951,6 @@ DECLARE_API(RCWCleanupList)
 
 enum {
     // This value is set in m_dwTransientFlags.
-    // Note that this value does not survive a prejit save/restore.
     IS_EDIT_AND_CONTINUE        = 0x00000008,   // is EnC Enabled for this module
 };
 
