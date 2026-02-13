@@ -33,8 +33,8 @@ parameters:
 
 steps:
 - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
-  - script: >
-      $(Build.SourcesDirectory)\eng\common\msbuild.cmd
+  - powershell: >
+      & $(Build.SourcesDirectory)\eng\common\msbuild.ps1
       $(Build.SourcesDirectory)\eng\helix.proj
       /restore
       /p:Configuration=${{ parameters.configuration }}
@@ -50,8 +50,8 @@ steps:
     env:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
-  - script: >
-      $(Build.SourcesDirectory)\eng\common\msbuild.cmd
+  - powershell: >
+      & $(Build.SourcesDirectory)\eng\common\msbuild.ps1
       $(Build.SourcesDirectory)\eng\helix.proj
       /restore
       /p:Configuration=${{ parameters.configuration }}
