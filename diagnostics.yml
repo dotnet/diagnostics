@@ -22,7 +22,7 @@ parameters:
 - name: useHelix
   displayName: Run tests on Helix (distributed testing)
   type: boolean
-  default: false
+  default: true
 
 trigger: none
 
