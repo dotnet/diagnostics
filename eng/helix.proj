@@ -211,7 +211,7 @@
       <HelixWorkItem Include="%(HelixTestProject.Identity)"
                      Condition="Exists('$(TestArtifactsDir)bin\%(HelixTestProject.Identity)\$(Configuration)\$(NetCoreAppMinTargetFramework)')">
         <PayloadDirectory>$(TestArtifactsDir)bin\%(HelixTestProject.Identity)\$(Configuration)\$(NetCoreAppMinTargetFramework)</PayloadDirectory>
-        <Command>dotnet test %(HelixTestProject.Identity).dll --logger "trx;LogFileName=$(_UploadRoot)\%(HelixTestProject.Identity).trx"</Command>
+        <Command>dotnet test %(HelixTestProject.Identity).dll --logger "trx;LogFileName=$(_UploadRoot)$(_PathSep)%(HelixTestProject.Identity).trx"</Command>
         <Timeout>$(TestTimeout)</Timeout>
       </HelixWorkItem>
     </ItemGroup>
