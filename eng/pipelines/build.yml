@@ -78,6 +78,11 @@ parameters:
   type: string
   default: ''
 
+  # Whether this is an official (non-PR, internal) build
+- name: isOfficialBuild
+  type: boolean
+  default: false
+
 jobs:
 - ${{ each config in parameters.buildConfigs }}:
   - template: ${{ parameters.jobTemplate }}
@@ -180,6 +185,7 @@ jobs:
             architecture: ${{ config.architecture }}
             osGroup: ${{ parameters.osGroup }}
             helixQueues: ${{ parameters.helixQueues }}
+            isOfficialBuild: ${{ parameters.isOfficialBuild }}
 
       - ${{ if ne(config.artifactUploadPath, '') }}:
         - task: CopyFiles@2

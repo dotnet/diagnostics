@@ -59,8 +59,8 @@ variables:
     value: $(dotnetclimsrc-read-sas-token-base64)
 
 # Helix queue configuration
-# Public (open) queues for PR validation
-- ${{ if eq(variables['System.TeamProject'], 'public') }}:
+# Public (open) queues for PR validation and public project builds
+- ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
   - name: HelixQueuesWindows_x64
     value: Windows.10.Amd64.Open
   - name: HelixQueuesWindows_x86
@@ -80,8 +80,8 @@ variables:
   - name: HelixQueuesMacOS_arm64
     value: OSX.1200.Arm64.Open
 
-# Internal queues for official builds
-- ${{ if ne(variables['System.TeamProject'], 'public') }}:
+# Internal queues for official builds (non-PR, non-public)
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - name: HelixQueuesWindows_x64
     value: windows.amd64.server2022
   - name: HelixQueuesWindows_x86

@@ -85,6 +85,7 @@ extends:
           osGroup: Windows_NT
           buildOnly: ${{ parameters.buildOnly }}
           useHelix: ${{ parameters.useHelix }}
+          isOfficialBuild: ${{ and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}
           helixQueues: $(HelixQueuesWindows_x64)
           buildConfigs:
           - configuration: Debug
@@ -108,6 +109,7 @@ extends:
           crossBuild: true
           buildOnly: ${{ parameters.buildOnly }}
           useHelix: ${{ parameters.useHelix }}
+          isOfficialBuild: ${{ and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}
           helixQueues: $(HelixQueuesLinux_x64)
           buildConfigs:
           - configuration: Release
@@ -128,6 +130,7 @@ extends:
           crossBuild: true
           buildOnly: ${{ parameters.buildOnly }}
           useHelix: ${{ parameters.useHelix }}
+          isOfficialBuild: ${{ and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}
           helixQueues: $(HelixQueuesLinux_musl_x64)
           buildConfigs:
           - configuration: Release
@@ -146,6 +149,7 @@ extends:
           osGroup: MacOS
           buildOnly: ${{ parameters.buildOnly }}
           useHelix: ${{ parameters.useHelix }}
+          isOfficialBuild: ${{ and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}
           helixQueues: $(HelixQueuesMacOS_x64)
           buildConfigs:
           - configuration: Release
@@ -162,6 +166,7 @@ extends:
           crossBuild: true
           buildOnly: ${{ parameters.buildOnly }}
           useHelix: ${{ parameters.useHelix }}
+          isOfficialBuild: ${{ and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}
           helixQueues: $(HelixQueuesMacOS_arm64)
           buildConfigs:
           - configuration: Release
@@ -192,6 +197,7 @@ extends:
             crossBuild: true
             buildOnly: ${{ parameters.buildOnly }}
             useHelix: ${{ parameters.useHelix }}
+            isOfficialBuild: ${{ and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}
             helixQueues: $(HelixQueuesLinux_arm64)
             buildConfigs:
             - configuration: Release
@@ -223,6 +229,7 @@ extends:
             crossBuild: true
             buildOnly: ${{ parameters.buildOnly }}
             useHelix: ${{ parameters.useHelix }}
+            isOfficialBuild: ${{ and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}
             helixQueues: $(HelixQueuesLinux_musl_arm64)
             buildConfigs:
             - configuration: Release
