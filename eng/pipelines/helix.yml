@@ -135,10 +135,29 @@ jobs:
           /p:HelixSource=$(_HelixSource)
           /p:HelixType=$(_HelixType)
           /p:HelixAccessToken=$(_HelixAccessToken)
-          ${{ if eq(parameters.isInternal, false) }}:/p:Creator=$(_Creator)
           /p:TestArtifactsDir=$(Build.SourcesDirectory)/artifacts/
           /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/SendToHelix.binlog
-        displayName: Send Tests to Helix
+        displayName: Send Tests to Helix (internal)
+        condition: and(succeeded(), eq('${{ parameters.isInternal }}', 'True'))
+        env:
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+      - script: >
+          $(Build.SourcesDirectory)\eng\common\msbuild.cmd
+          $(Build.SourcesDirectory)\eng\helix.proj
+          /restore
+          /t:Test
+          /p:Configuration=${{ parameters.configuration }}
+          /p:TargetArchitecture=${{ parameters.architecture }}
+          /p:TargetOS=$(_TargetOS)
+          /p:HelixTargetQueues=$(_HelixQueues)
+          /p:HelixSource=$(_HelixSource)
+          /p:HelixType=$(_HelixType)
+          /p:Creator=$(_Creator)
+          /p:TestArtifactsDir=$(Build.SourcesDirectory)/artifacts/
+          /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/SendToHelix.binlog
+        displayName: Send Tests to Helix (public)
+        condition: and(succeeded(), ne('${{ parameters.isInternal }}', 'True'))
         env:
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
@@ -155,10 +174,29 @@ jobs:
           /p:HelixSource=$(_HelixSource)
           /p:HelixType=$(_HelixType)
           /p:HelixAccessToken=$(_HelixAccessToken)
-          ${{ if eq(parameters.isInternal, false) }}:/p:Creator=$(_Creator)
           /p:TestArtifactsDir=$(Build.SourcesDirectory)/artifacts/
           /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/SendToHelix.binlog
-        displayName: Send Tests to Helix
+        displayName: Send Tests to Helix (internal)
+        condition: and(succeeded(), eq('${{ parameters.isInternal }}', 'True'))
+        env:
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+      - script: >
+          $(Build.SourcesDirectory)/eng/common/msbuild.sh
+          $(Build.SourcesDirectory)/eng/helix.proj
+          /restore
+          /t:Test
+          /p:Configuration=${{ parameters.configuration }}
+          /p:TargetArchitecture=${{ parameters.architecture }}
+          /p:TargetOS=$(_TargetOS)
+          /p:HelixTargetQueues=$(_HelixQueues)
+          /p:HelixSource=$(_HelixSource)
+          /p:HelixType=$(_HelixType)
+          /p:Creator=$(_Creator)
+          /p:TestArtifactsDir=$(Build.SourcesDirectory)/artifacts/
+          /bl:$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)/SendToHelix.binlog
+        displayName: Send Tests to Helix (public)
+        condition: and(succeeded(), ne('${{ parameters.isInternal }}', 'True'))
         env:
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
