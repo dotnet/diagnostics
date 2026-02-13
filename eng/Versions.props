@@ -98,7 +98,6 @@
     <InternalReleaseTesting Condition="'$(DotnetRuntimeVersion)' != 'default'">true</InternalReleaseTesting>
     <ExtraInstallArgs>-runtimesourcefeed '$(RuntimeSourceFeed)' -runtimesourcefeedkey '$(RuntimeSourceFeedKey)'</ExtraInstallArgs>
   </PropertyGroup>
-
   <ItemGroup Condition="!$(PrivateBuildTesting) AND !$(InternalReleaseTesting)">
     <RuntimeTestVersions Include="Latest">
       <RuntimeDownload>$(MicrosoftNETCorePlatformsVersion)</RuntimeDownload>

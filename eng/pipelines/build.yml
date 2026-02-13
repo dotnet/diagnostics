@@ -153,8 +153,8 @@ jobs:
       - ${{ if eq(parameters.crossBuild, true) }}:
         - _Cross: -cross
 
-      # Helix variable group (only when useHelix is true, for internal builds)
-      - ${{ if and(eq(parameters.useHelix, true), ne(variables['System.TeamProject'], 'public')) }}:
+      # Helix variable group (only when useHelix is true, for official builds)
+      - ${{ if and(eq(parameters.useHelix, true), eq(parameters.isOfficialBuild, true)) }}:
         - group: DotNet-HelixApi-Access
 
       steps:
