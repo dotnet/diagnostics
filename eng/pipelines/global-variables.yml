@@ -76,9 +76,9 @@ variables:
   - name: HelixQueuesLinux_musl_arm64
     value: Ubuntu.2204.Arm64.Open
   - name: HelixQueuesMacOS_x64
-    value: OSX.1200.Amd64.Open
+    value: OSX.15.Amd64.Open
   - name: HelixQueuesMacOS_arm64
-    value: OSX.1200.Arm64.Open
+    value: OSX.15.Arm64.Open
 
 # Internal queues for official builds (non-PR, non-public)
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -97,6 +97,6 @@ variables:
   - name: HelixQueuesLinux_musl_arm64
     value: Ubuntu.2204.Arm64
   - name: HelixQueuesMacOS_x64
-    value: OSX.1200.Amd64
+    value: OSX.15.Amd64
   - name: HelixQueuesMacOS_arm64
-    value: OSX.1200.Arm64
+    value: OSX.15.Arm64
