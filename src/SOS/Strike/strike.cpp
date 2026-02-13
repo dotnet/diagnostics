@@ -3949,11 +3949,6 @@ DECLARE_API(RCWCleanupList)
 }
 #endif // FEATURE_COMINTEROP
 
-enum {
-    // This value is set in m_dwTransientFlags.
-    IS_EDIT_AND_CONTINUE        = 0x00000208,   // Flags for .NET Framework (0x00000200) and .NET Core (0x00000008)
-};
-
 void ModuleMapTraverse(UINT index, CLRDATA_ADDRESS methodTable, LPVOID token)
 {
     ULONG32 rid = (ULONG32)(size_t)token;
@@ -4021,7 +4016,7 @@ DECLARE_API(DumpModule)
         ExtOut("PEFile ");
     if (module.bIsReflection)
         ExtOut("Reflection ");
-    if (module.dwTransientFlags & IS_EDIT_AND_CONTINUE)
+    if (module.dwTransientFlags & DacpModuleData::IsEditAndContinue)
         ExtOut("EditAndContinue ");
 
     ToRelease<IXCLRDataModule> dataModule;
