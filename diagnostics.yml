@@ -83,7 +83,9 @@ extends:
           jobTemplate: ${{ variables.jobTemplate }}
           name: Windows
           osGroup: Windows_NT
-          buildOnly: true
+          buildOnly: ${{ parameters.buildOnly }}
+          useHelix: ${{ parameters.useHelix }}
+          helixQueues: $(HelixQueuesWindows_x64)
           buildConfigs:
           - configuration: Debug
             architecture: x64
@@ -104,7 +106,9 @@ extends:
           osGroup: Linux
           container: linux_x64
           crossBuild: true
-          buildOnly: true
+          buildOnly: ${{ parameters.buildOnly }}
+          useHelix: ${{ parameters.useHelix }}
+          helixQueues: $(HelixQueuesLinux_x64)
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -122,7 +126,9 @@ extends:
           osSuffix: -musl
           container: linux_musl_x64
           crossBuild: true
-          buildOnly: true
+          buildOnly: ${{ parameters.buildOnly }}
+          useHelix: ${{ parameters.useHelix }}
+          helixQueues: $(HelixQueuesLinux_musl_x64)
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -138,7 +144,9 @@ extends:
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
-          buildOnly: true
+          buildOnly: ${{ parameters.buildOnly }}
+          useHelix: ${{ parameters.useHelix }}
+          helixQueues: $(HelixQueuesMacOS_x64)
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -152,7 +160,9 @@ extends:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
           crossBuild: true
-          buildOnly: true
+          buildOnly: ${{ parameters.buildOnly }}
+          useHelix: ${{ parameters.useHelix }}
+          helixQueues: $(HelixQueuesMacOS_arm64)
           buildConfigs:
           - configuration: Release
             architecture: arm64
@@ -180,7 +190,9 @@ extends:
             osGroup: Linux
             container: linux_arm64
             crossBuild: true
-            buildOnly: true
+            buildOnly: ${{ parameters.buildOnly }}
+            useHelix: ${{ parameters.useHelix }}
+            helixQueues: $(HelixQueuesLinux_arm64)
             buildConfigs:
             - configuration: Release
               architecture: arm64
@@ -209,94 +221,19 @@ extends:
             osSuffix: -musl
             container: linux_musl_arm64
             crossBuild: true
-            buildOnly: true
+            buildOnly: ${{ parameters.buildOnly }}
+            useHelix: ${{ parameters.useHelix }}
+            helixQueues: $(HelixQueuesLinux_musl_arm64)
             buildConfigs:
             - configuration: Release
               architecture: arm64
               artifactUploadPath: bin/linux.arm64.Release
               artifactTargetPath: bin/linux-musl.arm64.Release
 
-      ############################
-      #                          #
-      #    Helix Test Stage      #
-      #                          #
-      ############################
-
-    - ${{ if and(eq(parameters.useHelix, true), ne(parameters.buildOnly, true)) }}:
-      - stage: helix
-        displayName: Run Tests on Helix
-        dependsOn: build
-        condition: not(canceled())
-        jobs:
-        # Windows x64 Helix tests
-        - template: /eng/pipelines/helix.yml
-          parameters:
-            name: Helix_Windows
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Windows_NT
-            configuration: Release
-            architecture: x64
-            helixQueues: $(HelixQueuesWindows_x64)
-            isInternal: ${{ ne(variables['System.TeamProject'], 'public') }}
-            dependsOn: Windows_x64_Release
-
-        # Linux x64 Helix tests
-        - template: /eng/pipelines/helix.yml
-          parameters:
-            name: Helix_Linux
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Linux
-            configuration: Release
-            architecture: x64
-            helixQueues: $(HelixQueuesLinux_x64)
-            isInternal: ${{ ne(variables['System.TeamProject'], 'public') }}
-            dependsOn: Linux_x64_Release
-
-        # MacOS x64 Helix tests
-        - template: /eng/pipelines/helix.yml
-          parameters:
-            name: Helix_MacOS
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: MacOS
-            configuration: Release
-            architecture: x64
-            helixQueues: $(HelixQueuesMacOS_x64)
-            isInternal: ${{ ne(variables['System.TeamProject'], 'public') }}
-            dependsOn: MacOS_x64_Release
-
-        # Windows arm64 Helix tests
-        - template: /eng/pipelines/helix.yml
-          parameters:
-            name: Helix_Windows
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Windows_NT
-            configuration: Release
-            architecture: arm64
-            helixQueues: $(HelixQueuesWindows_arm64)
-            isInternal: ${{ ne(variables['System.TeamProject'], 'public') }}
-            dependsOn: Windows_arm64_Release
-
-        # Linux arm64 Helix tests
-        - template: /eng/pipelines/helix.yml
-          parameters:
-            name: Helix_Linux
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Linux
-            configuration: Release
-            architecture: arm64
-            helixQueues: $(HelixQueuesLinux_arm64)
-            isInternal: ${{ ne(variables['System.TeamProject'], 'public') }}
-            dependsOn: Linux_arm64_Release
-
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - stage: package
         displayName: Package, Sign, and Generate BAR Manifests
-        ${{ if and(eq(parameters.useHelix, true), ne(parameters.buildOnly, true)) }}:
-          dependsOn:
-          - build
-          - helix
-        ${{ else }}:
-          dependsOn: build
+        dependsOn: build
         jobs:
         - template: /eng/common/templates-official/job/job.yml
           parameters:

@@ -71,12 +71,14 @@ variables:
     value: Ubuntu.2204.Amd64.Open
   - name: HelixQueuesLinux_arm64
     value: Ubuntu.2204.Arm64.Open
+  - name: HelixQueuesLinux_musl_x64
+    value: Ubuntu.2204.Amd64.Open
+  - name: HelixQueuesLinux_musl_arm64
+    value: Ubuntu.2204.Arm64.Open
   - name: HelixQueuesMacOS_x64
     value: OSX.1200.Amd64.Open
   - name: HelixQueuesMacOS_arm64
     value: OSX.1200.Arm64.Open
-  - name: HelixQueuesFreeBSD
-    value: ''
 
 # Internal queues for official builds
 - ${{ if ne(variables['System.TeamProject'], 'public') }}:
@@ -90,9 +92,11 @@ variables:
     value: Ubuntu.2204.Amd64
   - name: HelixQueuesLinux_arm64
     value: Ubuntu.2204.Arm64
+  - name: HelixQueuesLinux_musl_x64
+    value: Ubuntu.2204.Amd64
+  - name: HelixQueuesLinux_musl_arm64
+    value: Ubuntu.2204.Arm64
   - name: HelixQueuesMacOS_x64
     value: OSX.1200.Amd64
   - name: HelixQueuesMacOS_arm64
     value: OSX.1200.Arm64
-  - name: HelixQueuesFreeBSD
-    value: ''
