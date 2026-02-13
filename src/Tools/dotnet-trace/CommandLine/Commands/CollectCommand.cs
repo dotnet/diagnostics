@@ -400,8 +400,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                         wroteStatus = true;
                                     }
                                     fileInfo.Refresh();
-                                    long fileLength = fileInfo.Exists ? fileInfo.Length : 0;
-                                    ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(fileLength)}");
+                                    ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(fileInfo.Length)}");
                                     ConsoleWriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                 }
 
