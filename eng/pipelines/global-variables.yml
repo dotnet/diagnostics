@@ -62,9 +62,9 @@ variables:
 # Public (open) queues for PR validation and public project builds
 - ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
   - name: HelixQueuesWindows_x64
-    value: windows.amd64.server2022
+    value: windows.11.amd64.client.Open
   - name: HelixQueuesWindows_x86
-    value: windows.amd64.server2022
+    value: windows.11.amd64.client.Open
   - name: HelixQueuesWindows_arm64
     value: Windows.11.Arm64.Open
   - name: HelixQueuesLinux_x64
@@ -83,9 +83,9 @@ variables:
 # Internal queues for official builds (non-PR, non-public)
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - name: HelixQueuesWindows_x64
-    value: windows.amd64.server2022
+    value: windows.11.amd64.client
   - name: HelixQueuesWindows_x86
-    value: windows.amd64.server2022
+    value: windows.11.amd64.client
   - name: HelixQueuesWindows_arm64
     value: windows.11.arm64
   - name: HelixQueuesLinux_x64
