@@ -4040,8 +4040,7 @@ DECLARE_API(DumpModule)
     ExtOut("\n");
 
     if (module.dwTransientFlags & IS_EDIT_AND_CONTINUE)
-        ExtOut("IS_EDIT_AND_CONTINUE");
-    ExtOut("\n");
+        ExtOut("IS_EDIT_AND_CONTINUE\n");
 
     DMLOut("Assembly:                %s\n", DMLAssembly(module.Assembly));
 
