@@ -79,9 +79,9 @@ variables:
 # Internal queues for official builds
 - ${{ if ne(variables['System.TeamProject'], 'public') }}:
   - name: HelixQueuesWindows_x64
-    value: Windows.10.Amd64
+    value: windows.amd64.server2022
   - name: HelixQueuesWindows_x86
-    value: Windows.10.Amd64
+    value: windows.amd64.server2022
   - name: HelixQueuesLinux_x64
     value: Ubuntu.2204.Amd64
   - name: HelixQueuesLinux_arm64
