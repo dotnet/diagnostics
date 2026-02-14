@@ -82,6 +82,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             int ret = (int)ReturnCode.TracingError;
             string scriptPath = null;
+            bool changedCursorState = false;
             try
             {
                 if (args.Probe)
@@ -102,6 +103,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 args.Ct.Register(() => stopTracing = true);
                 Console.CursorVisible = false;
+                changedCursorState = true;
                 byte[] command = BuildRecordTraceArgs(args, out scriptPath);
 
                 if (args.Duration != default)
@@ -135,7 +137,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             finally
             {
-                Console.CursorVisible = true;
+                if (changedCursorState)
+                    Console.CursorVisible = true;
 
                 if (!string.IsNullOrEmpty(scriptPath))
                 {
