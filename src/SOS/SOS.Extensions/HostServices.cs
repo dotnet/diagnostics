@@ -134,12 +134,21 @@ namespace SOS.Extensions
             _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!sos" : null);
             _host.ServiceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
 
-            _host.OnTargetCreate.Register((target) => target.OnDestroyEvent.Register(() => {
-                if (_targetFromDebuggerServices == target)
+            _host.OnTargetCreate.Register((target) => {
+                target.OnDestroyEvent.Register(() => {
+                    if (_targetFromDebuggerServices == target)
+                    {
+                        _targetFromDebuggerServices = null;
+                    }
+                });
+
+                // Warn if the dump was not collected by createdump (Linux/macOS only)
+                IConsoleService console = _host.Services.GetService<IConsoleService>();
+                if (console != null)
                 {
-                    _targetFromDebuggerServices = null;
+                    SpecialDiagInfo.WarnIfNotCreatedump(target, console);
                 }
-            }));
+            });
 
             _symbolService = new SymbolService(_host) {
                 DefaultTimeout = DefaultTimeout,

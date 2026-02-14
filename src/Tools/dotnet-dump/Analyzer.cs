@@ -101,6 +101,9 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 ITarget target = dumpTargetFactory.OpenDump(dump_path.FullName);
                 contextService.SetCurrentTarget(target);
 
+                // Warn if the dump was not collected by createdump (Linux/macOS only)
+                SpecialDiagInfo.WarnIfNotCreatedump(target, _fileLoggingConsoleService);
+
                 // Automatically enable symbol server support, default cache and search for symbols in the dump directory
                 symbolService.AddSymbolServer(retryCount: 3);
                 symbolService.AddCachePath(symbolService.DefaultSymbolCache);

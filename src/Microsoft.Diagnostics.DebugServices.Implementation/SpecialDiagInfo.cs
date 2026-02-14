@@ -84,6 +84,63 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
+        /// <summary>
+        /// Returns true if the special diagnostic info header is present in the dump. This indicates the dump
+        /// was collected by createdump (or the .NET runtime's crash handler) rather than a system dump tool.
+        /// </summary>
+        public bool HasDiagnosticInfo()
+        {
+            ulong address = SpecialDiagInfoAddress;
+            if (address == 0)
+            {
+                return false;
+            }
+
+            Span<byte> headerBuffer = stackalloc byte[Unsafe.SizeOf<SpecialDiagInfoHeader>()];
+            if (_memoryService.ReadMemory(address, headerBuffer, out int bytesRead) && bytesRead == headerBuffer.Length)
+            {
+                SpecialDiagInfoHeader header = Unsafe.As<byte, SpecialDiagInfoHeader>(ref MemoryMarshal.GetReference(headerBuffer));
+                ReadOnlySpan<byte> signature = new(header.Signature, SPECIAL_DIAGINFO_SIGNATURE.Length);
+                return signature.SequenceEqual(SPECIAL_DIAGINFO_SIGNATURE);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Checks whether the dump was created by createdump and emits a warning if not.
+        /// Only applicable for Linux/macOS dumps.
+        /// </summary>
+        public static void WarnIfNotCreatedump(ITarget target, IConsoleService console)
+        {
+            if (!target.IsDump || target.OperatingSystem == OSPlatform.Windows)
+            {
+                return;
+            }
+
+            try
+            {
+                IMemoryService memoryService = target.Services.GetService<IMemoryService>();
+                if (memoryService == null)
+                {
+                    return;
+                }
+
+                SpecialDiagInfo diagInfo = new(target, memoryService);
+                if (!diagInfo.HasDiagnosticInfo())
+                {
+                    console.WriteWarning(
+                        "WARNING: This dump was not collected by the .NET runtime's createdump tool. " +
+                        "System dumps may be missing memory regions required by SOS commands. " +
+                        "For best results, configure the .NET runtime to collect dumps using createdump " +
+                        "(set DOTNET_DbgEnableMiniDump=1)." + Environment.NewLine);
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning($"SpecialDiagInfo: Failed to check for diagnostic info header: {ex.Message}");
+            }
+        }
+
         public static ICrashInfoService CreateCrashInfoServiceFromException(IServiceProvider services)
         {
             EXCEPTION_RECORD64 exceptionRecord;
