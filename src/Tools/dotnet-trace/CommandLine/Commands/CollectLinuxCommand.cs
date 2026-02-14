@@ -135,6 +135,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             finally
             {
+                Console.CursorVisible = true;
+
                 if (!string.IsNullOrEmpty(scriptPath))
                 {
                     try
