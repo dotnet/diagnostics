@@ -146,18 +146,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 // Found a match
-                if (!found && !isWildcard)
+                if (!found)
                 {
-                    // Non-wildcard: print header for the module on first match
-                    if (matchCount > 0)
-                    {
-                        WriteLine("--------------------------------------");
-                    }
-                    PrintModuleHeader(module, fileName);
-                }
-                else if (!found && isWildcard)
-                {
-                    // Wildcard: print header only when we find a match
+                    // First match for this module: print header
                     if (matchCount > 0)
                     {
                         WriteLine("--------------------------------------");
