@@ -295,7 +295,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             WriteLine($"Assembly:    {fileName}");
         }
-        
+
         private void PrintTypeInfo(ClrType type)
         {
             WriteLine($"Token:       {type.MetadataToken:x16}");
