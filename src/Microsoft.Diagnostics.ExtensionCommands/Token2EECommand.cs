@@ -27,7 +27,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             string moduleName = Arguments[0];
             if (!TryParseToken(Arguments[1], out int token))
             {
-                WriteLine("Invalid token: {0}", Arguments[1]);
+                WriteLine($"Invalid token: {Arguments[1]}");
                 PrintUsage();
                 return;
             }
@@ -111,7 +111,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // Find the method by token
             ClrMethod method = FindMethodByToken(module, token);
 
-            WriteLine("Token:       {0:x8}", (uint)token);
+            WriteLine($"Token:       {(uint)token:x8}");
 
             if (method != null && method.MethodDesc != 0)
             {
@@ -121,12 +121,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 else
                 {
-                    WriteLine("MethodDesc:  {0:x16}", method.MethodDesc);
+                    WriteLine($"MethodDesc:  {method.MethodDesc:x16}");
                 }
 
                 // Use the full signature for the name (matches C++ behavior using GetMethodDescName)
                 string name = method.Signature ?? method.Name ?? "<unknown>";
-                WriteLine("Name:        {0}", name);
+                WriteLine($"Name:        {name}");
 
                 if (method.NativeCode != 0)
                 {
@@ -136,7 +136,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     else
                     {
-                        WriteLine("JITTED Code Address: {0:x16}", method.NativeCode);
+                        WriteLine($"JITTED Code Address: {method.NativeCode:x16}");
                     }
                 }
                 else
@@ -147,7 +147,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     else
                     {
-                        WriteLine("Not JITTED yet. Use !bpmd -md {0:x16} to break on run.", method.MethodDesc);
+                        WriteLine($"Not JITTED yet. Use !bpmd -md {method.MethodDesc:x16} to break on run.");
                     }
                 }
             }
@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // Method found but MethodDesc not loaded
                 WriteLine("MethodDesc:  <not loaded yet>");
                 string name = method.Name ?? "<unknown>";
-                WriteLine("Name:        {0}", name);
+                WriteLine($"Name:        {name}");
                 WriteLine("Not JITTED yet.");
             }
             else
@@ -170,7 +170,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ClrType type = FindTypeByToken(module, token);
 
-            WriteLine("Token:       {0:x8}", (uint)token);
+            WriteLine($"Token:       {(uint)token:x8}");
 
             if (type != null && type.MethodTable != 0)
             {
@@ -180,7 +180,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 else
                 {
-                    WriteLine("MethodTable: {0:x16}", type.MethodTable);
+                    WriteLine($"MethodTable: {type.MethodTable:x16}");
                 }
 
                 // The C++ version also prints EEClass
@@ -194,18 +194,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             string name = type?.Name ?? "<unknown>";
-            WriteLine("Name:        {0}", name);
+            WriteLine($"Name:        {name}");
         }
 
         private void PrintFieldInfo(ClrModule module, int token)
         {
             ClrField field = FindFieldByToken(module, token);
 
-            WriteLine("Token:       {0:x8}", (uint)token);
+            WriteLine($"Token:       {(uint)token:x8}");
 
             if (field != null)
             {
-                WriteLine("Field name:  {0}", field.Name ?? "<unknown>");
+                WriteLine($"Field name:  {field.Name ?? "<unknown>"}");
             }
             else
             {
@@ -301,10 +301,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                WriteLine("Module:      {0:x16}", module.Address);
+                WriteLine($"Module:      {module.Address:x16}");
             }
 
-            WriteLine("Assembly:    {0}", fileName);
+            WriteLine($"Assembly:    {fileName}");
         }
 
         private void PrintUsage()

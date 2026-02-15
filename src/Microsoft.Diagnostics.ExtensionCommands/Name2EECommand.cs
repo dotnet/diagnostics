@@ -299,15 +299,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                WriteLine("Module:      {0:x16}", module.Address);
+                WriteLine($"Module:      {module.Address:x16}");
             }
 
-            WriteLine("Assembly:    {0}", fileName);
+            WriteLine($"Assembly:    {fileName}");
         }
 
         private void PrintTypeInfo(ClrType type)
         {
-            WriteLine("Token:       {0:x16}", type.MetadataToken);
+            WriteLine($"Token:       {type.MetadataToken:x16}");
 
             if (type.MethodTable != 0)
             {
@@ -317,7 +317,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 else
                 {
-                    WriteLine("MethodTable: {0:x16}", type.MethodTable);
+                    WriteLine($"MethodTable: {type.MethodTable:x16}");
                 }
             }
             else
@@ -325,12 +325,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 WriteLine("MethodTable: <not loaded yet>");
             }
 
-            WriteLine("Name:        {0}", type.Name);
+            WriteLine($"Name:        {type.Name}");
         }
 
         private void PrintMethodInfo(ClrMethod method)
         {
-            WriteLine("Token:       {0:x16}", (uint)method.MetadataToken);
+            WriteLine($"Token:       {(uint)method.MetadataToken:x16}");
 
             if (method.MethodDesc != 0)
             {
@@ -340,7 +340,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 else
                 {
-                    WriteLine("MethodDesc:  {0:x16}", method.MethodDesc);
+                    WriteLine($"MethodDesc:  {method.MethodDesc:x16}");
                 }
             }
             else
@@ -348,7 +348,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 WriteLine("MethodDesc:  <not loaded yet>");
             }
 
-            WriteLine("Name:        {0}", method.Signature ?? method.Name ?? "<unknown>");
+            WriteLine($"Name:        {method.Signature ?? method.Name ?? "<unknown>"}");
 
             if (method.NativeCode != 0)
             {
@@ -358,7 +358,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
                 else
                 {
-                    WriteLine("JITTED Code Address: {0:x16}", method.NativeCode);
+                    WriteLine($"JITTED Code Address: {method.NativeCode:x16}");
                 }
             }
             else
@@ -371,7 +371,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     else
                     {
-                        WriteLine("Not JITTED yet. Use !bpmd -md {0:x16} to break on run.", method.MethodDesc);
+                        WriteLine($"Not JITTED yet. Use !bpmd -md {method.MethodDesc:x16} to break on run.");
                     }
                 }
                 else
