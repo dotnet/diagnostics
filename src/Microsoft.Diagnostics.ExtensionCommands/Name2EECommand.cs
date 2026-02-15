@@ -208,9 +208,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 return MatchKind.None;
             }
 
-            // Normalize the type name (ClrMD uses '.' for nested types in Name, but we also handle '+')
-            // Direct type match
-            if (string.Equals(typeName, name, StringComparison.Ordinal))
+            // Search for partial type names
+            if (typeName.Contains(name, StringComparison.OrdinalIgnoreCase))
             {
                 return MatchKind.Type;
             }
@@ -235,7 +234,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // If the ".." case: memberName will start with the interface method
             // e.g., "MyType..InterfaceMethod" -> typePart="MyType", memberName=".InterfaceMethod"
 
-            if (!string.Equals(typeName, typePartOfName, StringComparison.Ordinal))
+            if (!typeName.Contains(typePartOfName, StringComparison.OrdinalIgnoreCase))
             {
                 return MatchKind.None;
             }
