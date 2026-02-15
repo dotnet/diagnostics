@@ -42,8 +42,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 int bangIndex = combined.IndexOf('!');
                 if (bangIndex > 0 && bangIndex != combined.Length - 1 && combined.IndexOf('!', bangIndex + 1) == -1)
                 {
-                    moduleName = combined[..bangIndex];
-                    itemName = combined[(bangIndex + 1)..];
+                    moduleName = combined.Substring(0, bangIndex);
+                    itemName = combined.Substring(bangIndex + 1);
                 }
                 else
                 {
