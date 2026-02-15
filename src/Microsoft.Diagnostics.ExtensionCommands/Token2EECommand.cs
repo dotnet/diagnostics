@@ -61,7 +61,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 modules = Runtime.EnumerateModules().Where(m => MatchesModuleName(m, moduleName));
             }
 
-            bool first = true;
+            int matchCount = 0;
+            int nonMatchCount = 0;
             bool anyModule = false;
 
             foreach (ClrModule module in modules)
@@ -69,16 +70,34 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Console.CancellationToken.ThrowIfCancellationRequested();
                 anyModule = true;
 
-                if (!first)
+                string fileName = GetModuleFileName(module);
+                bool found = HasTokenMatch(module, token);
+
+                if (found || !isWildcard)
+                {
+                    if (matchCount > 0)
+                    {
+                        WriteLine("--------------------------------------");
+                    }
+
+                    PrintModuleHeader(module, fileName);
+                    PrintTokenInfo(module, token);
+                    matchCount++;
+                }
+                else
+                {
+                    nonMatchCount++;
+                }
+            }
+
+            if (isWildcard && nonMatchCount > 0)
+            {
+                if (matchCount > 0)
                 {
                     WriteLine("--------------------------------------");
                 }
 
-                first = false;
-
-                string fileName = GetModuleFileName(module);
-                PrintModuleHeader(module, fileName);
-                PrintTokenInfo(module, token);
+                WriteLine($"\nScanned {nonMatchCount} module{(nonMatchCount == 1 ? "" : "s")} which had no matches.");
             }
 
             if (!anyModule)
@@ -211,6 +230,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 WriteLine("<invalid module token>");
             }
+        }
+
+        /// <summary>
+        /// Returns true if the given token resolves to a type, method, or field in the module.
+        /// </summary>
+        private bool HasTokenMatch(ClrModule module, int token)
+        {
+            uint tokenType = (uint)token & 0xFF000000;
+
+            return tokenType switch
+            {
+                0x06000000 => FindMethodByToken(module, token) != null,
+                0x02000000 or 0x01000000 => FindTypeByToken(module, token) != null,
+                0x04000000 => FindFieldByToken(module, token) != null,
+                _ => false,
+            };
         }
 
         private ClrMethod FindMethodByToken(ClrModule module, int token)
@@ -381,7 +416,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 @"Token2EE displays the MethodTable and MethodDesc for the specified metadata
 token in the specified module. The specified module must be loaded in the process.
 
-You can pass * as the module name to search all loaded managed modules.
+You can pass * as the module name to search all loaded managed modules. When
+using the wildcard, only matching modules are displayed and non-matching modules
+are summarized at the end.
 
     {prompt}token2ee unittest.exe 02000003
     Module:      00007ffe5fa20000
