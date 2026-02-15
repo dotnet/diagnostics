@@ -225,7 +225,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("syncblk", new sosCommand("SyncBlk"), "Displays the SyncBlock holder info.");
     g_services->AddManagedCommand("threadpool", "Displays info about the runtime thread pool.");
     g_services->AddCommand("threadstate", new sosCommand("ThreadState"), "Pretty prints the meaning of a threads state.");
-    g_services->AddCommand("token2ee", new sosCommand("token2ee"), "Displays the MethodTable structure and MethodDesc structure for the specified token and module.");
+    g_services->AddManagedCommand("token2ee", "Displays the MethodTable structure and MethodDesc structure for the specified token and module.");
     g_services->AddManagedCommand("verifyheap", "Checks the GC heap for signs of corruption.");
     g_services->AddManagedCommand("verifyobj", "Checks the object that is passed as an argument for signs of corruption.");
     g_services->AddManagedCommand("traverseheap", "Writes out heap information to a file in a format understood by the CLR Profiler.");

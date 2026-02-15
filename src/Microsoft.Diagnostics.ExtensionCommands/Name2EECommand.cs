@@ -330,6 +330,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private void PrintMethodInfo(ClrMethod method)
         {
+            WriteLine("Token:       {0:x16}", (uint)method.MetadataToken);
+
             if (method.MethodDesc != 0)
             {
                 if (Console.SupportsDml)

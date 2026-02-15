@@ -1604,7 +1604,6 @@ HRESULT GetMetadataMemory(CLRDATA_ADDRESS address, ULONG32 bufferSize, BYTE* buf
  */
 DWORD_PTR *ModuleFromName(__in_opt LPSTR name, int *numModules);
 HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataModule** ppModule);
-void GetInfoFromModule (DWORD_PTR ModuleAddr, ULONG token, DWORD_PTR *ret=NULL);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -126,6 +126,12 @@ DECLARE_API(Name2EE)
     return ExecuteManagedOnlyCommand("name2ee", args);
 }
 
+DECLARE_API(Token2EE)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("token2ee", args);
+}
+
 DECLARE_API(ObjSize)
 {
     INIT_API_EXT();
