@@ -282,7 +282,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             WriteLine("          !name2ee *!System.String");
         }
 
-<<<<<<< Updated upstream
         private void PrintModuleHeader(ClrModule module, string fileName)
         {
             if (Console.SupportsDml)
@@ -296,9 +295,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             WriteLine($"Assembly:    {fileName}");
         }
-
-=======
->>>>>>> Stashed changes
+        
         private void PrintTypeInfo(ClrType type)
         {
             WriteLine($"Token:       {type.MetadataToken:x16}");
