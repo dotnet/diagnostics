@@ -40,10 +40,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 // Try parsing "module!type" format
                 string combined = Arguments[0];
                 int bangIndex = combined.IndexOf('!');
-                if (bangIndex > 0 && combined.IndexOf('!', bangIndex + 1) == -1)
+                if (bangIndex > 0 && bangIndex != combined.Length - 1 && combined.IndexOf('!', bangIndex + 1) == -1)
                 {
-                    moduleName = combined.Substring(0, bangIndex);
-                    itemName = combined.Substring(bangIndex + 1);
+                    moduleName = combined[..bangIndex];
+                    itemName = combined[(bangIndex + 1)..];
                 }
                 else
                 {
@@ -117,7 +117,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// </summary>
         private bool SearchModule(ClrModule module, string itemName, bool isWildcard, string fileName, ref int matchCount)
         {
-            // Normalize nested type separators: the C++ version supports both '+' and '/'
+            // Normalize nested type separators (from the original C++ version)
             string normalizedName = itemName.Replace('/', '+');
 
             // Try to find as a type first, then as method/field
