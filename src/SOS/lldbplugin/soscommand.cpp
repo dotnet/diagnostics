@@ -210,7 +210,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddManagedCommand("listnearobj", "Displays the object preceding and succeeding the specified address.");
     g_services->AddManagedCommand("loadsymbols", "Loads the .NET Core native module symbols.");
     g_services->AddManagedCommand("logging", "Enables/disables internal SOS logging.");
-    g_services->AddCommand("name2ee", new sosCommand("Name2EE"), "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.");
+    g_services->AddManagedCommand("name2ee", "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.");
     g_services->AddManagedCommand("objsize", "Displays the size of the specified object.");
     g_services->AddManagedCommand("pathto", "Displays the GC path from <root> to <target>.");
     g_services->AddCommand("pe", new sosCommand("PrintException"), "Displays and formats fields of any object derived from the Exception class at the specified address.");
