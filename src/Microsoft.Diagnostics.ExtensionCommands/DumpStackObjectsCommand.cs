@@ -443,9 +443,9 @@ The abbreviation 'dso' can be used for brevity.
                     // on an alternate or handler stack — the managed frames span two
                     // non-contiguous memory regions. The threshold is set to 4MB to
                     // avoid false positives from large stackalloc or deep native call
-                    // chains between managed frames while still being far smaller than
-                    // the actual alt-stack gap (which is typically in the TB range due
-                    // to separate mmap regions).
+                    // chains between managed frames while still being far smaller than the
+                    // address-space gap between disjoint stack regions (typically in the
+                    // multi-GB range due to separate mmap regions in the virtual address space).
                     const ulong GapThreshold = 0x400000; // 4 MB
 
                     ulong largestGap = 0;
