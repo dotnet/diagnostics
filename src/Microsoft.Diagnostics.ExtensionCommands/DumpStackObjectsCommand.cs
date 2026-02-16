@@ -479,13 +479,14 @@ The abbreviation 'dso' can be used for brevity.
                         MemoryRange lowerRange = new(AlignDown(lowerMin), AlignUp(lowerMax + 0x2000));
                         MemoryRange upperRange = new(AlignDown(upperMin), AlignUp(upperMax + 0x2000));
 
-                        if (stackPointer >= lowerMin - GapThreshold && stackPointer <= lowerMax + 0x2000)
+                        // Use Math.Max/Min to avoid underflow when frame addresses are near zero.
+                        if (stackPointer >= Math.Max(lowerMin, GapThreshold) - GapThreshold && stackPointer <= lowerMax + 0x2000)
                         {
                             lowerRange = new(AlignDown(Math.Min(stackPointer, lowerMin)), lowerRange.End);
                             additionalRange = upperRange;
                             return lowerRange;
                         }
-                        else if (stackPointer >= upperMin - GapThreshold && stackPointer <= upperMax + 0x2000)
+                        else if (stackPointer >= Math.Max(upperMin, GapThreshold) - GapThreshold && stackPointer <= upperMax + 0x2000)
                         {
                             upperRange = new(AlignDown(Math.Min(stackPointer, upperMin)), upperRange.End);
                             additionalRange = lowerRange;
