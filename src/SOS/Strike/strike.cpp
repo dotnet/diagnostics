@@ -11400,7 +11400,7 @@ private:
                     switch(tmp)
                     {
                         case 1: outVar = *((BYTE *)pByte.GetPtr()); break;
-                        case 2: outVar = *((short *)pByte.GetPtr()); break;
+                        case 2: outVar = *((unsigned short *)pByte.GetPtr()); break;
                         case 4: outVar = *((DWORD *)pByte.GetPtr()); break;
                         case 8: outVar = *((ULONG64 *)pByte.GetPtr()); break;
                         default: outVar = 0;
@@ -11492,7 +11492,7 @@ private:
                     switch(dwSize)
                     {
                         case 1: outVar = *((BYTE *) pByte.GetPtr()); break;
-                        case 2: outVar = *((short *) pByte.GetPtr()); break;
+                        case 2: outVar = *((unsigned short *) pByte.GetPtr()); break;
                         case 4: outVar = *((DWORD *) pByte.GetPtr()); break;
                         case 8: outVar = *((ULONG64 *) pByte.GetPtr()); break;
                         default: outVar = 0;
