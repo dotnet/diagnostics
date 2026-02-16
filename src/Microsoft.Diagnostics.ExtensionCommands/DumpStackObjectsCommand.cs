@@ -107,7 +107,15 @@ The abbreviation 'dso' can be used for brevity.
                 results = results.Concat(EnumerateValidObjectsWithinRange(additionalRange));
             }
 
-            foreach ((ulong address, ClrObject obj) in results.OrderBy(r => r.StackAddress))
+            // Deduplicate by StackAddress to avoid duplicate register entries and
+            // any other duplicates that may arise from scanning multiple ranges.
+            IEnumerable<(ulong StackAddress, ClrObject Object)> orderedResults =
+                results
+                    .GroupBy(r => r.StackAddress)
+                    .Select(g => g.First())
+                    .OrderBy(r => r.StackAddress);
+
+            foreach ((ulong address, ClrObject obj) in orderedResults)
             {
                 Console.CancellationToken.ThrowIfCancellationRequested();
 
