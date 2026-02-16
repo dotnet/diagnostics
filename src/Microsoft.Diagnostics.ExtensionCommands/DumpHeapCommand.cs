@@ -217,7 +217,7 @@ provides a warning about fragmentation:
 The arguments in detail:
 
 -stat          Restrict the output to the statistical type summary
--sortbycount   Sort the statistics table by object count instead of total size
+-bycount       Sort the statistics table by object count instead of total size
 -strings  Restrict the output to a statistical string value summary
 -short    Limits output to just the address of each object. This allows you
           to easily pipe output from the command to another debugger
