@@ -172,7 +172,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [HelpInvoke]
         public static string GetDetailedHelp() =>
 @"Dumpheap is a powerful command that traverses the garbage collected heap,
-collection statistics about objects. With it's various options, it can look for
+collection statistics about objects. With its various options, it can look for
 particular types, restrict to a range, or look for ThinLocks (see !SyncBlk
 documentation). Finally, it will provide a warning if it detects excessive
 fragmentation in the GC heap.
