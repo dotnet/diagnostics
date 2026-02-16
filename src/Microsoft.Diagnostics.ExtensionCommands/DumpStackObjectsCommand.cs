@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             MemoryRange range;
             MemoryRange additionalRange = default;
-            if (Bounds is not null || Bounds.Length == 0)
+            if (Bounds is null || Bounds.Length == 0)
             {
                 range = GetStackRangeWithAltStackDetection(out additionalRange);
             }
