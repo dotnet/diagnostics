@@ -78,6 +78,9 @@
     <HelixPreCommand Include="export RunningOnHelix=true" />
     <HelixPreCommand Include="cp -f &quot;$(_VersionsFile)&quot; &quot;$(_DotNetCliDir)/Debugger.Tests.Versions.txt&quot;" />
     <HelixPreCommand Include="export LLDB_PATH=`xcode-select -p`/usr/bin/lldb" />
+    <!-- Enable non-interactive debugging on macOS (LLDB needs permission to attach/launch processes) -->
+    <HelixPreCommand Include="sudo DevToolsSecurity --enable" />
+    <HelixPreCommand Include="sudo security authorizationdb write system.privilege.taskport.debug allow" />
   </ItemGroup>
 
   <!-- Linux -->
