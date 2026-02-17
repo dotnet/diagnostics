@@ -7152,6 +7152,10 @@ DECLARE_API(u)
                     {
                         ++mapIndex;
                     }
+                    if (mapIndex >= mapCount)
+                    {
+                        break;
+                    }
                     if (map[mapIndex].endAddress > map[mapIndex].startAddress)
                     {
                         break;
