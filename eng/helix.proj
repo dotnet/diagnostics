@@ -47,6 +47,8 @@
     <IncludeDotNetCli>true</IncludeDotNetCli>
     <DotNetCliPackageType>sdk</DotNetCliPackageType>
     <DotNetCliVersion Condition="'$(DotNetCliVersion)' == ''">$([System.Text.RegularExpressions.Regex]::Match('$(MicrosoftNETSdkVersion)', '^\d+\.\d+\.\d+').Value)</DotNetCliVersion>
+    <!-- Override the SDK RID for cross-arch (e.g. x86 tests on x64 Helix agents) -->
+    <DotNetCliRuntime Condition="'$(TargetOS)' == 'Windows_NT' and '$(TargetArchitecture)' == 'x86'">win-x86</DotNetCliRuntime>
 
     <!-- Platform-specific env-var and path syntax (for Helix agent commands) -->
     <_CorrelationPayload Condition="'$(TargetOS)' == 'Windows_NT'">%HELIX_CORRELATION_PAYLOAD%</_CorrelationPayload>
