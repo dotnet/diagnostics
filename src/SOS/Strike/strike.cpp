@@ -7056,10 +7056,19 @@ DECLARE_API(u)
     std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]> map(nullptr);
     ULONG32 mapCount = 0;
     // GetIntermediateLangMap may fail for IL stubs or methods without IL address maps.
-    // Treat failure as non-fatal: proceed with native-only disassembly.
+    // Treat failure as non-fatal and proceed with native-only disassembly, but propagate
+    // OOM since that indicates a real problem.
     Status = GetIntermediateLangMap(bIL, codeHeaderData, map /*out*/, mapCount /* out */, bDisplayILMap);
+    if (Status == E_OUTOFMEMORY)
+    {
+        return Status;
+    }
     if (Status != S_OK)
     {
+        if (bDisplayILMap)
+        {
+            ExtOut("Failed to get IL address map, proceeding without IL map\n");
+        }
         map.reset();
         mapCount = 0;
         Status = S_OK;
