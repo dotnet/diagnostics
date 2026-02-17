@@ -7082,6 +7082,7 @@ DECLARE_API(u)
     // fall back to native-only disassembly.
     BOOL hasIL = FALSE;
     TADDR ilAddr = (TADDR)0;
+    ULONG ilSize = 0;
     ToRelease<IMetaDataImport> pImport;
     ArrayHolder<BYTE> pArray(nullptr);
 
@@ -7095,11 +7096,11 @@ DECLARE_API(u)
         {
             pImport = pResultImport;
 
-            ULONG Size = GetILSize(ilAddr);
-            if (Size != 0)
+            ilSize = GetILSize(ilAddr);
+            if (ilSize != 0)
             {
-                pArray = new BYTE[Size];
-                Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), pArray, Size, NULL);
+                pArray = new BYTE[ilSize];
+                Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), pArray, ilSize, NULL);
                 if (Status == S_OK)
                 {
                     hasIL = TRUE;
@@ -7131,7 +7132,7 @@ DECLARE_API(u)
     if (hasIL)
     {
         buffer = pArray;
-        bufSize = GetILSize(ilAddr);
+        bufSize = ilSize;
         COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;
         header = COR_ILMETHOD_DECODER(pHeader);
         pBuffer = const_cast<BYTE*>(header.Code);
