@@ -36,7 +36,8 @@ LLDBServices::LLDBServices(lldb::SBDebugger debugger) :
     m_currentThread(nullptr),
     m_currentStopId(0),
     m_processId(0),
-    m_threadInfoInitialized(false)
+    m_threadInfoInitialized(false),
+    m_currentResult(nullptr)
 {
     ClearCache();
 
@@ -2270,17 +2271,28 @@ LLDBServices::OutputString(
     ULONG mask,
     PCSTR str)
 {
-    FILE* file;
-    if (mask == DEBUG_OUTPUT_ERROR)
+    if (m_currentResult != nullptr)
     {
-        file = m_debugger.GetErrorFileHandle();
+        // Write to the SBCommandReturnObject so programmatic callers
+        // (e.g. Python scripts using HandleCommand) can capture the output.
+        // Use Printf to avoid the extra newline that PutCString appends.
+        m_currentResult->Printf("%s", str);
     }
-    else 
+    else
     {
-        file = m_debugger.GetOutputFileHandle();
+        // No result object - write directly to the console file handles.
+        FILE* file;
+        if (mask == DEBUG_OUTPUT_ERROR)
+        {
+            file = m_debugger.GetErrorFileHandle();
+        }
+        else
+        {
+            file = m_debugger.GetOutputFileHandle();
+        }
+        fputs(str, file);
+        fflush(file);
     }
-    fputs(str, file);
-    fflush(file);
 }
 
 HRESULT 
