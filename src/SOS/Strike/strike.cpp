@@ -7065,7 +7065,7 @@ DECLARE_API(u)
     }
     if (Status != S_OK)
     {
-        if (bDisplayILMap)
+        if (bDisplayILMap || bIL)
         {
             ExtOut("Failed to get IL address map, proceeding without IL map\n");
         }
