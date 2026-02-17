@@ -7138,6 +7138,7 @@ DECLARE_API(u)
     COR_ILMETHOD_DECODER header;
     BYTE* pBuffer = nullptr;
 
+    std::function<void(ULONG*, UINT*, BYTE*)> displayILFun;
     if (hasIL)
     {
         buffer = pArray;
@@ -7197,12 +7198,7 @@ DECLARE_API(u)
                 indentCount = std::get<1>(r);
             }
         }
-    }
 
-    std::function<void(ULONG*, UINT*, BYTE*)> displayILFun;
-
-    if (hasIL)
-    {
         displayILFun =
             [&pImport, &pBuffer, bufSize, &header, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
                                                     BYTE *pIp) -> void {
