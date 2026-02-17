@@ -41,7 +41,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             TimeSpan duration = default,
             string name = "",
             int processId = 0,
-            bool probe = false)
+            bool probe = false,
+            string debugLogOutput = null,
+            string debugFilter = null)
         {
             return new CollectLinuxCommandHandler.CollectLinuxArgs(ct,
                                                                    providers ?? Array.Empty<string>(),
@@ -53,7 +55,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    duration,
                                                                    name,
                                                                    processId,
-                                                                   probe);
+                                                                   probe,
+                                                                   debugLogOutput,
+                                                                   debugFilter);
         }
 
         [ConditionalTheory(nameof(IsCollectLinuxSupported))]
@@ -220,6 +224,113 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 "The collect-linux command is not supported on this platform.",
                 "For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace."
             });
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DebugLog_Console()
+        {
+            MockConsole console = new(200, 30);
+            string recordTraceArgs = null;
+            CollectLinuxCommandHandler handler = new(console)
+            {
+                RecordTraceInvoker = (cmd, len, cb) =>
+                {
+                    recordTraceArgs = System.Text.Encoding.UTF8.GetString(cmd);
+                    cb(3, IntPtr.Zero, UIntPtr.Zero);
+                    return 0;
+                }
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs(debugLogOutput: "console"));
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            Assert.Contains("--log-mode console", recordTraceArgs);
+            Assert.Contains("--log-filter error,one_collect::helpers::dotnet::os::linux=debug", recordTraceArgs);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DebugLog_FileDefault()
+        {
+            MockConsole console = new(200, 30);
+            string recordTraceArgs = null;
+            CollectLinuxCommandHandler handler = new(console)
+            {
+                RecordTraceInvoker = (cmd, len, cb) =>
+                {
+                    recordTraceArgs = System.Text.Encoding.UTF8.GetString(cmd);
+                    cb(3, IntPtr.Zero, UIntPtr.Zero);
+                    return 0;
+                }
+            };
+
+            // Empty string means --debug-log was specified without a value, should default to file
+            int exitCode = handler.CollectLinux(TestArgs(debugLogOutput: ""));
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            Assert.Contains("--log-mode file", recordTraceArgs);
+            Assert.Contains("--log-file", recordTraceArgs);
+            Assert.Contains(".debuglog", recordTraceArgs);
+            Assert.Contains("--log-filter error,one_collect::helpers::dotnet::os::linux=debug", recordTraceArgs);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DebugLog_CustomFile()
+        {
+            MockConsole console = new(200, 30);
+            string recordTraceArgs = null;
+            CollectLinuxCommandHandler handler = new(console)
+            {
+                RecordTraceInvoker = (cmd, len, cb) =>
+                {
+                    recordTraceArgs = System.Text.Encoding.UTF8.GetString(cmd);
+                    cb(3, IntPtr.Zero, UIntPtr.Zero);
+                    return 0;
+                }
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs(debugLogOutput: "/tmp/my-debug.log"));
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            Assert.Contains("--log-mode file", recordTraceArgs);
+            Assert.Contains("--log-file /tmp/my-debug.log", recordTraceArgs);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DebugLog_CustomFilter()
+        {
+            MockConsole console = new(200, 30);
+            string recordTraceArgs = null;
+            CollectLinuxCommandHandler handler = new(console)
+            {
+                RecordTraceInvoker = (cmd, len, cb) =>
+                {
+                    recordTraceArgs = System.Text.Encoding.UTF8.GetString(cmd);
+                    cb(3, IntPtr.Zero, UIntPtr.Zero);
+                    return 0;
+                }
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs(debugLogOutput: "console", debugFilter: "trace"));
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            Assert.Contains("--log-filter trace", recordTraceArgs);
+            Assert.DoesNotContain("error,one_collect", recordTraceArgs);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DebugFilter_IgnoredWithoutDebugLog()
+        {
+            MockConsole console = new(200, 30);
+            string recordTraceArgs = null;
+            var handler = new CollectLinuxCommandHandler(console);
+            handler.RecordTraceInvoker = (cmd, len, cb) =>
+            {
+                recordTraceArgs = System.Text.Encoding.UTF8.GetString(cmd);
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                return 0;
+            };
+
+            // debugFilter is provided but debugLogOutput is null - filter should be ignored
+            int exitCode = handler.CollectLinux(TestArgs(debugFilter: "trace"));
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            Assert.DoesNotContain("--log-filter", recordTraceArgs);
+            Assert.DoesNotContain("--log-mode", recordTraceArgs);
         }
 
         private static int Run(object args, MockConsole console)
