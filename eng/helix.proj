@@ -79,7 +79,7 @@
     <HelixPreCommand Include="export TMPDIR=/private/tmp" />
     <!-- Resolve HELIX_CORRELATION_PAYLOAD through the /tmp -> /private/tmp symlink so all
          derived paths (DIAGNOSTICS_ARTIFACTS_DIR, dotnet-cli, etc.) use the canonical path -->
-    <HelixPreCommand Include="export HELIX_CORRELATION_PAYLOAD=$(python3 -c &quot;import os; print(os.path.realpath('$HELIX_CORRELATION_PAYLOAD'))&quot;)" />
+    <HelixPreCommand Include="export HELIX_CORRELATION_PAYLOAD=%24(python3 -c &quot;import os; print(os.path.realpath('$HELIX_CORRELATION_PAYLOAD'))&quot;)" />
     <HelixPreCommand Include="export DIAGNOSTICS_ARTIFACTS_DIR=&quot;$(_ArtifactsDir)&quot;" />
     <HelixPreCommand Include="export RunningOnHelix=true" />
     <HelixPreCommand Include="cp -f &quot;$(_VersionsFile)&quot; &quot;$(_DotNetCliDir)/Debugger.Tests.Versions.txt&quot;" />
@@ -110,7 +110,7 @@
   <Target Name="ResolveMacOSDotNetRoot" BeforeTargets="CoreTest" AfterTargets="AddDotNetSdk"
           Condition="'$(TargetOS)' == 'osx'">
     <PropertyGroup>
-      <HelixPreCommands>$(HelixPreCommands);export DOTNET_ROOT=$(python3 -c "import os; print(os.path.realpath('$DOTNET_ROOT'))")</HelixPreCommands>
+      <HelixPreCommands>$(HelixPreCommands);export DOTNET_ROOT=%24(python3 -c "import os; print(os.path.realpath('$DOTNET_ROOT'))")</HelixPreCommands>
     </PropertyGroup>
   </Target>
   
