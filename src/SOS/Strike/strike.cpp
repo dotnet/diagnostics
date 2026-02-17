@@ -7055,10 +7055,14 @@ DECLARE_API(u)
     DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
     std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]> map(nullptr);
     ULONG32 mapCount = 0;
+    // GetIntermediateLangMap may fail for IL stubs or methods without IL address maps.
+    // Treat failure as non-fatal: proceed with native-only disassembly.
     Status = GetIntermediateLangMap(bIL, codeHeaderData, map /*out*/, mapCount /* out */, bDisplayILMap);
     if (Status != S_OK)
     {
-        return Status;
+        map.reset();
+        mapCount = 0;
+        Status = S_OK;
     }
 
     // ///////////////////////////////////////////////////////////////////////////
@@ -7068,45 +7072,48 @@ DECLARE_API(u)
 
     if (MethodDescData.bIsDynamic && MethodDescData.managedDynamicMethodObject)
     {
-        ExtOut("Can only work with dynamic not implemented\n");
+        ExtOut("Disassembly of dynamic methods is not supported\n");
         return Status;
     }
 
-    GetILAddressResult result = GetILAddress(MethodDescData);
-    if (std::get<0>(result) == (TADDR)0)
-    {
-        ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
-        return E_FAIL;
-    }
-    ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
-    TADDR ilAddr = std::get<0>(result);
-    ToRelease<IMetaDataImport> pImport(std::get<1>(result));
+    // Only attempt IL retrieval when -il was requested.  IL stubs (e.g. P/Invoke
+    // marshalers) have a nil metadata token (0x06000000) and no IL body, so skip
+    // them even when -il is specified. Other failures are also non-fatal — we just
+    // fall back to native-only disassembly.
+    BOOL hasIL = FALSE;
+    TADDR ilAddr = (TADDR)0;
+    ToRelease<IMetaDataImport> pImport;
+    ArrayHolder<BYTE> pArray(nullptr);
 
-    /// Taken from DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
-    ULONG Size = GetILSize(ilAddr);
-    if (Size == 0)
+    if (bIL && !IsNilToken(MethodDescData.MDToken))
     {
-        ExtOut("error decoding IL\n");
-        return Status;
+        GetILAddressResult result = GetILAddress(MethodDescData);
+        ilAddr = std::get<0>(result);
+        IMetaDataImport* pResultImport = std::get<1>(result);
+
+        if (ilAddr != (TADDR)0 && pResultImport != nullptr)
+        {
+            pImport = pResultImport;
+
+            ULONG Size = GetILSize(ilAddr);
+            if (Size != 0)
+            {
+                pArray = new BYTE[Size];
+                Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), pArray, Size, NULL);
+                if (Status == S_OK)
+                {
+                    hasIL = TRUE;
+                }
+            }
+        }
+        else
+        {
+            // Release any import that was returned even on failure
+            if (pResultImport != nullptr)
+                pResultImport->Release();
+        }
     }
-    // Read the memory into a local buffer
-    ArrayHolder<BYTE> pArray = new BYTE[Size];
-    Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), pArray, Size, NULL);
-    if (Status != S_OK)
-    {
-        ExtOut("Failed to read memory\n");
-        return Status;
-    }
-    /// Taken from DecodeIL(pImport, pArray, Size);
-    // First decode the header
-    BYTE *buffer = pArray;
-    ULONG bufSize = Size;
-    COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;
-    COR_ILMETHOD_DECODER header(pHeader);
-    ULONG position = 0;
-    BYTE* pBuffer = const_cast<BYTE*>(header.Code);
-    UINT indentCount = 0;
-    ULONG endCodePosition = header.GetCodeSize();
+
     struct ILLocationRange {
         ULONG mStartPosition;
         ULONG mEndPosition;
@@ -7115,75 +7122,102 @@ DECLARE_API(u)
     };
     std::deque<ILLocationRange> ilCodePositions;
 
-    if (mapCount > 0)
+    // These must outlive the displayILFun lambda
+    BYTE *buffer = nullptr;
+    ULONG bufSize = 0;
+    COR_ILMETHOD_DECODER header;
+    BYTE* pBuffer = nullptr;
+
+    if (hasIL)
     {
-        while (position < endCodePosition)
+        buffer = pArray;
+        bufSize = GetILSize(ilAddr);
+        COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;
+        header = COR_ILMETHOD_DECODER(pHeader);
+        pBuffer = const_cast<BYTE*>(header.Code);
+
+        if (mapCount > 0)
         {
-            ULONG mapIndex = 0;
-            do
+            ULONG position = 0;
+            UINT indentCount = 0;
+            ULONG endCodePosition = header.GetCodeSize();
+
+            while (position < endCodePosition)
             {
-                while ((mapIndex < mapCount) && (position != map[mapIndex].ilOffset))
+                ULONG mapIndex = 0;
+                do
                 {
+                    while ((mapIndex < mapCount) && (position != map[mapIndex].ilOffset))
+                    {
+                        ++mapIndex;
+                    }
+                    if (map[mapIndex].endAddress > map[mapIndex].startAddress)
+                    {
+                        break;
+                    }
                     ++mapIndex;
-                }
-                if (map[mapIndex].endAddress > map[mapIndex].startAddress)
+                } while (mapIndex < mapCount);
+                std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                    pImport, pBuffer, bufSize,
+                    position, indentCount, header);
+                ExtOut("\n");
+                if (mapIndex < mapCount)
                 {
-                    break;
+                    ILLocationRange entry = {
+                        position,
+                        std::get<0>(r) - 1,
+                        (BYTE*)map[mapIndex].startAddress,
+                        (BYTE*)map[mapIndex].endAddress
+                    };
+                    ilCodePositions.push_back(std::move(entry));
                 }
-                ++mapIndex;
-            } while (mapIndex < mapCount);
-            std::tuple<ULONG, UINT> r = DecodeILAtPosition(
-                pImport, pBuffer, bufSize,
-                position, indentCount, header);
-            ExtOut("\n");
-            if (mapIndex < mapCount)
-            {
-                ILLocationRange entry = {
-                    position,
-                    std::get<0>(r) - 1,
-                    (BYTE*)map[mapIndex].startAddress,
-                    (BYTE*)map[mapIndex].endAddress
-                };
-                ilCodePositions.push_back(std::move(entry));
-            }
-            else
-            {
-                if (!ilCodePositions.empty())
+                else
                 {
-                    auto& entry = ilCodePositions.back();
-                    entry.mEndPosition = position;
+                    if (!ilCodePositions.empty())
+                    {
+                        auto& entry = ilCodePositions.back();
+                        entry.mEndPosition = position;
+                    }
                 }
+                position = std::get<0>(r);
+                indentCount = std::get<1>(r);
             }
-            position = std::get<0>(r);
-            indentCount = std::get<1>(r);
         }
     }
 
-    position = 0;
-    indentCount = 0;
-    std::function<void(ULONG*, UINT*, BYTE*)> displayILFun =
-        [&pImport, &pBuffer, bufSize, &header, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
-                                                BYTE *pIp) -> void {
-                for (auto iter = ilCodePositions.begin(); iter != ilCodePositions.end(); ++iter)
-                {
-                    if ((pIp >= iter->mStartAddress) && (pIp < iter->mEndAddress))
+    std::function<void(ULONG*, UINT*, BYTE*)> displayILFun;
+
+    if (hasIL)
+    {
+        displayILFun =
+            [&pImport, &pBuffer, bufSize, &header, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
+                                                    BYTE *pIp) -> void {
+                    for (auto iter = ilCodePositions.begin(); iter != ilCodePositions.end(); ++iter)
                     {
-                        ULONG position = iter->mStartPosition;
-                        ULONG endPosition = iter->mEndPosition;
-                        while (position <= endPosition)
+                        if ((pIp >= iter->mStartAddress) && (pIp < iter->mEndAddress))
                         {
-                            std::tuple<ULONG, UINT> r = DecodeILAtPosition(
-                                pImport, pBuffer, bufSize,
-                                position, *pIndentCount, header);
-                            ExtOut("\n");
-                            position = std::get<0>(r);
-                            *pIndentCount = std::get<1>(r);
+                            ULONG position = iter->mStartPosition;
+                            ULONG endPosition = iter->mEndPosition;
+                            while (position <= endPosition)
+                            {
+                                std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                                    pImport, pBuffer, bufSize,
+                                    position, *pIndentCount, header);
+                                ExtOut("\n");
+                                position = std::get<0>(r);
+                                *pIndentCount = std::get<1>(r);
+                            }
+                            ilCodePositions.erase(iter);
+                            break;
                         }
-                        ilCodePositions.erase(iter);
-                        break;
                     }
-                }
-    };
+        };
+    }
+    else
+    {
+        // No IL available — provide a no-op so Unassembly can call unconditionally
+        displayILFun = [](ULONG*, UINT*, BYTE*) -> void {};
+    }
 
     if (codeHeaderData.ColdRegionStart != (TADDR)0)
     {
