@@ -89,6 +89,10 @@
   </ItemGroup>
 
   <PropertyGroup>
+    <HelixPreCommands>@(HelixPreCommand)</HelixPreCommands>
+  </PropertyGroup>
+  
+  <PropertyGroup>
     <!-- Staging directory for generated Versions.txt -->
     <_VersionsStagingDir>$(ArtifactsDir)tmp\helix\dotnet-test\</_VersionsStagingDir>
     <!-- Staging directory for global.json and NuGet.config (needed for debuggee builds on Helix) -->
