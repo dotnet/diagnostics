@@ -33,6 +33,7 @@
     <HelixType>test/$(Configuration)/$(TargetArchitecture)/</HelixType>
     <HelixBuild>$(BUILD_BUILDNUMBER)</HelixBuild>
     <HelixBuild Condition="'$(HelixBuild)' == ''">0.0.0.0</HelixBuild>
+    <TestRunNamePrefix>$(TargetOS)-$(Configuration)-$(TargetArchitecture)-</TestRunNamePrefix>
 
     <!-- Test configuration -->
     <TestArtifactsDir Condition="'$(TestArtifactsDir)' == ''">$(ArtifactsDir)</TestArtifactsDir>
@@ -58,14 +59,36 @@
     <_ArtifactsDir>$(_CorrelationPayload)$(_PathSep)artifacts$(_PathSep)</_ArtifactsDir>
     <_VersionsFile>$(_ArtifactsDir)dotnet-test$(_PathSep)Debugger.Tests.Versions.txt</_VersionsFile>
 
-    <!-- Environment variables set via HelixPreCommands (run before every work item) -->
-    <HelixPreCommands Condition="'$(TargetOS)' == 'Windows_NT'">set "DIAGNOSTICS_ARTIFACTS_DIR=$(_ArtifactsDir)" &amp;&amp; set "RunningOnHelix=true" &amp;&amp; copy /Y "$(_VersionsFile)" "$(_DotNetCliDir)$(_PathSep)Debugger.Tests.Versions.txt"</HelixPreCommands>
-    <HelixPreCommands Condition="'$(TargetOS)' != 'Windows_NT'">export DIAGNOSTICS_ARTIFACTS_DIR="$(_ArtifactsDir)" &amp;&amp; export RunningOnHelix=true &amp;&amp; cp -f "$(_VersionsFile)" "$(_DotNetCliDir)/Debugger.Tests.Versions.txt"</HelixPreCommands>
+  </PropertyGroup>
 
-    <!-- Copy test-generated dumps to upload root so they appear in Helix results -->
-    <!-- <HelixPostCommands Condition="'$(TargetOS)' == 'Windows_NT'">if exist "$(_ArtifactsDir)tmp\Debug\dumps" (xcopy /S /Y "$(_ArtifactsDir)tmp\Debug\dumps\*" "%HELIX_WORKITEM_UPLOAD_ROOT%\dumps\" >nul 2>nul)</HelixPostCommands> -->
-    <!-- <HelixPostCommands Condition="'$(TargetOS)' != 'Windows_NT'">cp -r "$(_ArtifactsDir)tmp/Debug/dumps" "$HELIX_WORKITEM_UPLOAD_ROOT/dumps" 2>/dev/null || true</HelixPostCommands> -->
+  <!-- ============ Pre-commands (run before every work item) ============ -->
 
+  <!-- Windows -->
+  <ItemGroup Condition="'$(TargetOS)' == 'Windows_NT'">
+    <HelixPreCommand Include="set &quot;DIAGNOSTICS_ARTIFACTS_DIR=$(_ArtifactsDir)&quot;" />
+    <HelixPreCommand Include="set &quot;RunningOnHelix=true&quot;" />
+    <HelixPreCommand Include="copy /Y &quot;$(_VersionsFile)&quot; &quot;$(_DotNetCliDir)\Debugger.Tests.Versions.txt&quot;" />
+  </ItemGroup>
+
+  <!-- macOS -->
+  <ItemGroup Condition="'$(TargetOS)' == 'osx'">
+    <HelixPreCommand Include="export DIAGNOSTICS_ARTIFACTS_DIR=&quot;$(_ArtifactsDir)&quot;" />
+    <HelixPreCommand Include="export RunningOnHelix=true" />
+    <HelixPreCommand Include="cp -f &quot;$(_VersionsFile)&quot; &quot;$(_DotNetCliDir)/Debugger.Tests.Versions.txt&quot;" />
+    <HelixPreCommand Include="export LLDB_PATH=`xcode-select -p`/usr/bin/lldb" />
+  </ItemGroup>
+
+  <!-- Linux -->
+  <ItemGroup Condition="'$(TargetOS)' == 'linux'">
+    <HelixPreCommand Include="export DIAGNOSTICS_ARTIFACTS_DIR=&quot;$(_ArtifactsDir)&quot;" />
+    <HelixPreCommand Include="export RunningOnHelix=true" />
+    <HelixPreCommand Include="cp -f &quot;$(_VersionsFile)&quot; &quot;$(_DotNetCliDir)/Debugger.Tests.Versions.txt&quot;" />
+    <!-- Find LLDB: try common versioned names, fall back to plain lldb (mirrors eng/build.sh) -->
+    <HelixPreCommand Include="export LLDB_PATH=`which lldb-16 2>/dev/null || which lldb-15 2>/dev/null || which lldb-14 2>/dev/null || which lldb-13 2>/dev/null || which lldb-12 2>/dev/null || which lldb-11 2>/dev/null || which lldb-10 2>/dev/null || which lldb 2>/dev/null || echo ''`" />
+    <HelixPreCommand Include="echo &quot;LLDB_PATH=$LLDB_PATH&quot;" />
+  </ItemGroup>
+
+  <PropertyGroup>
     <!-- Staging directory for generated Versions.txt -->
     <_VersionsStagingDir>$(ArtifactsDir)tmp\helix\dotnet-test\</_VersionsStagingDir>
     <!-- Staging directory for global.json and NuGet.config (needed for debuggee builds on Helix) -->
