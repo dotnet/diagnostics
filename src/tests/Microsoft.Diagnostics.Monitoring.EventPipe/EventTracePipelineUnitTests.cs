@@ -78,10 +78,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestEventStreamCleanup(TestConfiguration config)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("Test tracee sigfaults for OSX/Linux");
-            }
+            //if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            //{
+            //    throw new SkipTestException("Test tracee sigfaults for OSX/Linux");
+            //}
 
             Stream eventStream = null;
             using CancellationTokenSource cancellationTokenSource = new();
