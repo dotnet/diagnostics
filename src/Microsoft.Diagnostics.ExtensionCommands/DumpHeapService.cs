@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Strings
         }
 
-        public void PrintHeap(IEnumerable<ClrObject> objects, DisplayKind displayKind, bool statsOnly, bool printFragmentation)
+        public void PrintHeap(IEnumerable<ClrObject> objects, DisplayKind displayKind, bool statsOnly, bool printFragmentation, bool sortByCount = false)
         {
             List<(ClrObject Free, ClrObject Next)> fragmentation = null;
             Dictionary<(string String, ulong Size), uint> stringTable = null;
@@ -225,7 +225,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     var statsSorted = from item in stats
                                       let MethodTable = item.Key
                                       let Size = item.Value.Size
-                                      orderby Size
+                                      let Count = item.Value.Count
+                                      orderby (sortByCount ? (long)Count : (long)Size)
                                       select new {
                                           MethodTable = item.Key,
                                           item.Value.Count,
