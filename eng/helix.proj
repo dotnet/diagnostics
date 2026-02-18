@@ -109,6 +109,11 @@
     <!-- Find LLDB: try common versioned names, fall back to plain lldb (mirrors eng/build.sh) -->
     <HelixPreCommand Include="export LLDB_PATH=`which lldb-16 2>/dev/null || which lldb-15 2>/dev/null || which lldb-14 2>/dev/null || which lldb-13 2>/dev/null || which lldb-12 2>/dev/null || which lldb-11 2>/dev/null || which lldb-10 2>/dev/null || which lldb 2>/dev/null || echo ''`" />
     <HelixPreCommand Include="echo &quot;LLDB_PATH=$LLDB_PATH&quot;" />
+    <!-- Unset PYTHONPATH: Helix sets it to a multi-path string for imports, but
+         SOS.LLDBPluginTests misuses it as the path to the Python binary. Also ensure
+         /usr/bin/python exists since the test falls back to it. -->
+    <HelixPreCommand Include="unset PYTHONPATH" />
+    <HelixPreCommand Include="test -f /usr/bin/python || sudo ln -sf %24(which python3) /usr/bin/python" />
   </ItemGroup>
 
   <PropertyGroup>
