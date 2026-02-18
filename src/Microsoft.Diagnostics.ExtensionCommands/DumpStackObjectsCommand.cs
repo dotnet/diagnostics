@@ -534,13 +534,16 @@ The abbreviation 'dso' can be used for brevity.
                     }
                 }
             }
-            else
+
+            // Fall back to ClrMD managed stack trace when IThreadUnwindService
+            // is not available (e.g. dotnet-dump) or when the unwind produced
+            // too few frames (e.g. VirtualUnwind failed for the thread).
+            if (frameSPs.Count <= 1)
             {
-                // Fallback to ClrMD managed stack trace when IThreadUnwindService
-                // is not available (e.g. dotnet-dump).
                 ClrThread clrThread = Runtime.Threads.FirstOrDefault(t => t.OSThreadId == CurrentThread.ThreadId);
                 if (clrThread is not null)
                 {
+                    frameSPs.Clear();
                     foreach (ClrStackFrame frame in clrThread.EnumerateStackTrace())
                     {
                         if (frame.StackPointer != 0)
