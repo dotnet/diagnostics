@@ -33,7 +33,7 @@
     <HelixType>test/$(Configuration)/$(TargetArchitecture)/</HelixType>
     <HelixBuild>$(BUILD_BUILDNUMBER)</HelixBuild>
     <HelixBuild Condition="'$(HelixBuild)' == ''">0.0.0.0</HelixBuild>
-    <TestRunNamePrefix>$(TargetOS) $(TargetArchitecture) $(Configuration) @ </TestRunNamePrefix>
+    <TestRunNamePrefix>$(TargetOS)$(OSSuffix) $(TargetArchitecture) $(Configuration) @ </TestRunNamePrefix>
 
     <!-- Test configuration -->
     <TestArtifactsDir Condition="'$(TestArtifactsDir)' == ''">$(ArtifactsDir)</TestArtifactsDir>

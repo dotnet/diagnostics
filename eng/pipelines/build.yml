@@ -184,6 +184,7 @@ jobs:
             configuration: ${{ config.configuration }}
             architecture: ${{ config.architecture }}
             osGroup: ${{ parameters.osGroup }}
+            osSuffix: ${{ parameters.osSuffix }}
             helixQueues: ${{ parameters.helixQueues }}
             isOfficialBuild: ${{ parameters.isOfficialBuild }}
 
