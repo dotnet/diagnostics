@@ -120,6 +120,18 @@ DECLARE_API(GCWhere)
     return ExecuteManagedOnlyCommand("gcwhere", args);
 }
 
+DECLARE_API(Name2EE)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("name2ee", args);
+}
+
+DECLARE_API(Token2EE)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("token2ee", args);
+}
+
 DECLARE_API(ObjSize)
 {
     INIT_API_EXT();

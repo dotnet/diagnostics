@@ -210,7 +210,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddManagedCommand("listnearobj", "Displays the object preceding and succeeding the specified address.");
     g_services->AddManagedCommand("loadsymbols", "Loads the .NET Core native module symbols.");
     g_services->AddManagedCommand("logging", "Enables/disables internal SOS logging.");
-    g_services->AddCommand("name2ee", new sosCommand("Name2EE"), "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.");
+    g_services->AddManagedCommand("name2ee", "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.");
     g_services->AddManagedCommand("objsize", "Displays the size of the specified object.");
     g_services->AddManagedCommand("pathto", "Displays the GC path from <root> to <target>.");
     g_services->AddCommand("pe", new sosCommand("PrintException"), "Displays and formats fields of any object derived from the Exception class at the specified address.");
@@ -225,7 +225,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("syncblk", new sosCommand("SyncBlk"), "Displays the SyncBlock holder info.");
     g_services->AddManagedCommand("threadpool", "Displays info about the runtime thread pool.");
     g_services->AddCommand("threadstate", new sosCommand("ThreadState"), "Pretty prints the meaning of a threads state.");
-    g_services->AddCommand("token2ee", new sosCommand("token2ee"), "Displays the MethodTable structure and MethodDesc structure for the specified token and module.");
+    g_services->AddManagedCommand("token2ee", "Displays the MethodTable structure and MethodDesc structure for the specified token and module.");
     g_services->AddManagedCommand("verifyheap", "Checks the GC heap for signs of corruption.");
     g_services->AddManagedCommand("verifyobj", "Checks the object that is passed as an argument for signs of corruption.");
     g_services->AddManagedCommand("traverseheap", "Writes out heap information to a file in a format understood by the CLR Profiler.");
