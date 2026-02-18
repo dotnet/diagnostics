@@ -83,7 +83,14 @@
     <HelixPreCommand Include="export DIAGNOSTICS_ARTIFACTS_DIR=&quot;$(_ArtifactsDir)&quot;" />
     <HelixPreCommand Include="export RunningOnHelix=true" />
     <HelixPreCommand Include="cp -f &quot;$(_VersionsFile)&quot; &quot;$(_DotNetCliDir)/Debugger.Tests.Versions.txt&quot;" />
-    <HelixPreCommand Include="export LLDB_PATH=`xcode-select -p`/usr/bin/lldb" />
+    <!-- Copy and ad-hoc re-sign Xcode LLDB so the .NET runtime can JIT inside the LLDB process.
+         Apple's signed LLDB enforces Hardened Runtime which blocks MAP_JIT for CoreCLR. Re-signing
+         strips the Apple signature, allowing SOS managed commands to initialize the .NET runtime.
+         See documentation/FAQ.md for the same workaround. -->
+    <HelixPreCommand Include="sudo cp -f `xcode-select -p`/usr/bin/lldb /usr/local/bin/lldb" />
+    <HelixPreCommand Include="sudo install_name_tool -add_rpath `xcode-select -p`/Contents/SharedFrameworks /usr/local/bin/lldb 2>/dev/null || true" />
+    <HelixPreCommand Include="sudo codesign --force --sign - /usr/local/bin/lldb" />
+    <HelixPreCommand Include="export LLDB_PATH=/usr/local/bin/lldb" />
     <!-- Enable non-interactive debugging on macOS (LLDB needs permission to attach/launch processes) -->
     <HelixPreCommand Include="sudo DevToolsSecurity --enable" />
     <HelixPreCommand Include="sudo security authorizationdb write system.privilege.taskport.debug allow" />
