@@ -222,6 +222,53 @@ namespace Microsoft.Diagnostics.Tools.Trace
             });
         }
 
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_RestoresCursorVisibility_OnSuccess()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+            console.CursorVisible = true;
+
+            int exitCode = Run(TestArgs(), console);
+
+            // Cursor should be restored to visible after command completes
+            Assert.True(console.CursorVisible, "Cursor should be visible after command completes");
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_RestoresCursorVisibility_OnError()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+            console.CursorVisible = true;
+
+            var handler = new CollectLinuxCommandHandler(console);
+            // Simulate an error by throwing an exception in the RecordTraceInvoker
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                throw new InvalidOperationException("Simulated error");
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+
+            // Cursor should be restored to visible even when an error occurs
+            Assert.True(console.CursorVisible, "Cursor should be visible after error");
+            Assert.Equal((int)ReturnCode.TracingError, exitCode);
+        }
+
+        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CollectLinuxCommand_DoesNotChangeCursorVisibility_WhenOutputIsRedirected(bool initialCursorVisible)
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+            console.CursorVisible = initialCursorVisible;
+            console.IsOutputRedirected = true;
+
+            int exitCode = Run(TestArgs(), console);
+
+            // When output is redirected, the command should not change cursor visibility,
+            // so the cursor should remain in its original state.
+            Assert.Equal(initialCursorVisible, console.CursorVisible);
+        }
+
         private static int Run(object args, MockConsole console)
         {
             var handler = new CollectLinuxCommandHandler(console);
