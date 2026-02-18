@@ -27,6 +27,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public IThreadService ThreadService { get; set; }
 
+        [ServiceImport(Optional = true)]
+        public IThreadUnwindService ThreadUnwindService { get; set; }
+
         [Option(Name = "-verify", Help = "Verify each object and only print ones that are valid objects.")]
         public bool Verify { get; set; }
 
@@ -365,32 +368,6 @@ The abbreviation 'dso' can be used for brevity.
 
         private static ulong GetIndex(Span<byte> buffer, int i) => Unsafe.As<byte, nuint>(ref buffer[i]);
 
-        private MemoryRange GetStackRange()
-        {
-            ulong end = 0;
-
-            int spIndex = ThreadService.StackPointerIndex;
-            if (!CurrentThread.TryGetRegisterValue(spIndex, out ulong stackPointer))
-            {
-                throw new DiagnosticsException($"Unable to get the stack pointer for thread {CurrentThread.ThreadId:x}.");
-            }
-
-            // On Windows we have the TEB to know where to end the walk.
-            ulong teb = CurrentThread.GetThreadTeb();
-            if (teb != 0)
-            {
-                // The stack base is after the first pointer, see TEB and NT_TIB.
-                MemoryService.ReadPointer(teb + (uint)MemoryService.PointerSize, out end);
-            }
-
-            if (end == 0)
-            {
-                end = stackPointer + 0xFFFF;
-            }
-
-            return new(AlignDown(stackPointer), AlignUp(end));
-        }
-
         /// <summary>
         /// Gets the stack range for the current thread, also returning an additional
         /// range if the thread appears to be executing on an alternate signal stack.
@@ -426,106 +403,155 @@ The abbreviation 'dso' can be used for brevity.
                 return new(AlignDown(stackPointer), AlignUp(end));
             }
 
-            // TEB not available (Linux/Unix). Use managed stack frames to determine
+            // TEB not available (Linux/Unix). Use stack frame SPs to determine
             // the real stack boundaries. This is important when the thread is on an
             // alternate signal stack, where the SP points to the alt stack memory
             // but managed objects reside on the normal thread stack.
-            ClrThread clrThread = Runtime.Threads.FirstOrDefault(t => t.OSThreadId == CurrentThread.ThreadId);
-            if (clrThread is not null)
+            List<ulong> frameSPs = CollectFrameSPs();
+            if (frameSPs.Count > 0)
             {
-                List<ulong> frameSPs = new(64);
-                foreach (ClrStackFrame frame in clrThread.EnumerateStackTrace())
+                frameSPs.Sort();
+
+                // Detect disjoint stack regions by finding large gaps between
+                // consecutive frame SPs. This happens when a signal handler runs
+                // on an alternate or handler stack — the managed frames span two
+                // non-contiguous memory regions. The threshold is set to 4MB to
+                // avoid false positives from large stackalloc or deep native call
+                // chains between managed frames while still being far smaller than the
+                // address-space gap between disjoint stack regions (typically in the
+                // multi-GB range due to separate mmap regions in the virtual address space).
+                const ulong GapThreshold = 0x400000; // 4 MB
+
+                ulong largestGap = 0;
+                int gapIndex = -1;
+                for (int i = 1; i < frameSPs.Count; i++)
                 {
-                    if (frame.StackPointer != 0)
+                    ulong gap = frameSPs[i] - frameSPs[i - 1];
+                    if (gap > largestGap)
                     {
-                        frameSPs.Add(frame.StackPointer);
+                        largestGap = gap;
+                        gapIndex = i;
                     }
                 }
 
-                if (frameSPs.Count > 0)
+                if (largestGap > GapThreshold && gapIndex > 0)
                 {
-                    frameSPs.Sort();
+                    // Frames span two disjoint memory regions.
+                    ulong lowerMin = frameSPs[0];
+                    ulong lowerMax = frameSPs[gapIndex - 1];
+                    ulong upperMin = frameSPs[gapIndex];
+                    ulong upperMax = frameSPs[frameSPs.Count - 1];
 
-                    // Detect disjoint stack regions by finding large gaps between
-                    // consecutive frame SPs. This happens when a signal handler runs
-                    // on an alternate or handler stack — the managed frames span two
-                    // non-contiguous memory regions. The threshold is set to 4MB to
-                    // avoid false positives from large stackalloc or deep native call
-                    // chains between managed frames while still being far smaller than the
-                    // address-space gap between disjoint stack regions (typically in the
-                    // multi-GB range due to separate mmap regions in the virtual address space).
-                    const ulong GapThreshold = 0x400000; // 4 MB
+                    MemoryRange lowerRange = new(AlignDown(lowerMin), AlignUp(lowerMax + 0x2000));
+                    MemoryRange upperRange = new(AlignDown(upperMin), AlignUp(upperMax + 0x2000));
 
-                    ulong largestGap = 0;
-                    int gapIndex = -1;
-                    for (int i = 1; i < frameSPs.Count; i++)
+                    // Use Math.Max/Min to avoid underflow when frame addresses are near zero.
+                    if (stackPointer >= Math.Max(lowerMin, GapThreshold) - GapThreshold && stackPointer <= lowerMax + 0x2000)
                     {
-                        ulong gap = frameSPs[i] - frameSPs[i - 1];
-                        if (gap > largestGap)
-                        {
-                            largestGap = gap;
-                            gapIndex = i;
-                        }
+                        lowerRange = new(AlignDown(Math.Min(stackPointer, lowerMin)), lowerRange.End);
+                        additionalRange = upperRange;
+                        return lowerRange;
                     }
-
-                    if (largestGap > GapThreshold && gapIndex > 0)
+                    else if (stackPointer >= Math.Max(upperMin, GapThreshold) - GapThreshold && stackPointer <= upperMax + 0x2000)
                     {
-                        // Frames span two disjoint memory regions.
-                        ulong lowerMin = frameSPs[0];
-                        ulong lowerMax = frameSPs[gapIndex - 1];
-                        ulong upperMin = frameSPs[gapIndex];
-                        ulong upperMax = frameSPs[frameSPs.Count - 1];
-
-                        MemoryRange lowerRange = new(AlignDown(lowerMin), AlignUp(lowerMax + 0x2000));
-                        MemoryRange upperRange = new(AlignDown(upperMin), AlignUp(upperMax + 0x2000));
-
-                        // Use Math.Max/Min to avoid underflow when frame addresses are near zero.
-                        if (stackPointer >= Math.Max(lowerMin, GapThreshold) - GapThreshold && stackPointer <= lowerMax + 0x2000)
-                        {
-                            lowerRange = new(AlignDown(Math.Min(stackPointer, lowerMin)), lowerRange.End);
-                            additionalRange = upperRange;
-                            return lowerRange;
-                        }
-                        else if (stackPointer >= Math.Max(upperMin, GapThreshold) - GapThreshold && stackPointer <= upperMax + 0x2000)
-                        {
-                            upperRange = new(AlignDown(Math.Min(stackPointer, upperMin)), upperRange.End);
-                            additionalRange = lowerRange;
-                            return upperRange;
-                        }
-                        else
-                        {
-                            // SP is in neither range. Scan around the SP and use
-                            // the larger frame region as the additional range.
-                            ulong lowerSize = lowerMax - lowerMin;
-                            ulong upperSize = upperMax - upperMin;
-                            additionalRange = upperSize >= lowerSize ? upperRange : lowerRange;
-                            return new(AlignDown(stackPointer), AlignUp(stackPointer + 0xFFFF));
-                        }
+                        upperRange = new(AlignDown(Math.Min(stackPointer, upperMin)), upperRange.End);
+                        additionalRange = lowerRange;
+                        return upperRange;
                     }
-
-                    // No large gap — all frames are on one contiguous stack.
-                    ulong minFrameSp = frameSPs[0];
-                    ulong maxFrameSp = frameSPs[frameSPs.Count - 1];
-                    ulong frameEnd = maxFrameSp + 0x2000;
-
-                    bool spBelowFrames = stackPointer < minFrameSp;
-                    bool spAboveFrames = stackPointer > frameEnd;
-                    bool isLikelyAltStack = spAboveFrames
-                        || (spBelowFrames && (minFrameSp - stackPointer) > GapThreshold);
-
-                    if (isLikelyAltStack)
+                    else
                     {
-                        additionalRange = new(AlignDown(minFrameSp), AlignUp(frameEnd));
+                        // SP is in neither range. Scan around the SP and use
+                        // the larger frame region as the additional range.
+                        ulong lowerSize = lowerMax - lowerMin;
+                        ulong upperSize = upperMax - upperMin;
+                        additionalRange = upperSize >= lowerSize ? upperRange : lowerRange;
                         return new(AlignDown(stackPointer), AlignUp(stackPointer + 0xFFFF));
                     }
-
-                    ulong start = Math.Min(stackPointer, minFrameSp);
-                    return new(AlignDown(start), AlignUp(frameEnd));
                 }
+
+                // No large gap — all frames are on one contiguous stack.
+                ulong minFrameSp = frameSPs[0];
+                ulong maxFrameSp = frameSPs[frameSPs.Count - 1];
+                ulong frameEnd = maxFrameSp + 0x2000;
+
+                bool spBelowFrames = stackPointer < minFrameSp;
+                bool spAboveFrames = stackPointer > frameEnd;
+                bool isLikelyAltStack = spAboveFrames
+                    || (spBelowFrames && (minFrameSp - stackPointer) > GapThreshold);
+
+                if (isLikelyAltStack)
+                {
+                    additionalRange = new(AlignDown(minFrameSp), AlignUp(frameEnd));
+                    return new(AlignDown(stackPointer), AlignUp(stackPointer + 0xFFFF));
+                }
+
+                ulong start = Math.Min(stackPointer, minFrameSp);
+                return new(AlignDown(start), AlignUp(frameEnd));
             }
 
             // Fallback: no frame info available
             return new(AlignDown(stackPointer), AlignUp(stackPointer + 0xFFFF));
+        }
+
+        /// <summary>
+        /// Collects the stack pointer values from each frame on the current thread's stack
+        /// by walking it with IThreadUnwindService. Falls back to ClrMD's managed stack
+        /// trace if the unwind service is unavailable (e.g. dotnet-dump).
+        /// </summary>
+        private List<ulong> CollectFrameSPs()
+        {
+            List<ulong> frameSPs = new(64);
+            int spIndex = ThreadService.StackPointerIndex;
+
+            if (ThreadUnwindService is not null)
+            {
+                // Walk the stack using IThreadUnwindService (preferred SOS facility).
+                IThread thread = ThreadService.GetThreadFromId(CurrentThread.ThreadId);
+                ReadOnlySpan<byte> initialContext = thread.GetThreadContext();
+                byte[] context = initialContext.ToArray();
+
+                const int MaxFrames = 4096;
+                ulong previousSP = 0;
+                for (int i = 0; i < MaxFrames; i++)
+                {
+                    if (ThreadService.TryGetRegisterValue(context, spIndex, out ulong sp) && sp != 0)
+                    {
+                        frameSPs.Add(sp);
+
+                        // Detect if we're stuck (SP not advancing).
+                        if (sp == previousSP)
+                        {
+                            break;
+                        }
+
+                        previousSP = sp;
+                    }
+
+                    int hr = ThreadUnwindService.Unwind(CurrentThread.ThreadId, context);
+                    if (hr < 0)
+                    {
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                // Fallback to ClrMD managed stack trace when IThreadUnwindService
+                // is not available (e.g. dotnet-dump).
+                ClrThread clrThread = Runtime.Threads.FirstOrDefault(t => t.OSThreadId == CurrentThread.ThreadId);
+                if (clrThread is not null)
+                {
+                    foreach (ClrStackFrame frame in clrThread.EnumerateStackTrace())
+                    {
+                        if (frame.StackPointer != 0)
+                        {
+                            frameSPs.Add(frame.StackPointer);
+                        }
+                    }
+                }
+            }
+
+            return frameSPs;
         }
 
         private ulong AlignDown(ulong address)
