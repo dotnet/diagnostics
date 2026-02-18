@@ -52,7 +52,7 @@ steps:
         /p:Configuration=${{ parameters.configuration }}
         /p:TargetArchitecture=${{ parameters.architecture }}
         /p:TargetOS=Windows_NT
-        /p:HelixTargetQueues=${{ parameters.helixQueues }}
+        "/p:HelixTargetQueues=${{ parameters.helixQueues }}"
         /p:HelixSource=official/diagnostics/$(Build.SourceBranch)
         /p:HelixType=test/${{ parameters.configuration }}/${{ parameters.architecture }}/
         /p:HelixAccessToken=$(HelixApiAccessToken)
@@ -70,7 +70,7 @@ steps:
         /p:TargetArchitecture=${{ parameters.architecture }}
         /p:TargetOS=linux
         /p:OSSuffix=${{ parameters.osSuffix }}
-        /p:HelixTargetQueues=${{ parameters.helixQueues }}
+        "/p:HelixTargetQueues=${{ parameters.helixQueues }}"
         /p:HelixSource=official/diagnostics/$(Build.SourceBranch)
         /p:HelixType=test/${{ parameters.configuration }}/${{ parameters.architecture }}/
         /p:HelixAccessToken=$(HelixApiAccessToken)
@@ -87,7 +87,7 @@ steps:
         /p:Configuration=${{ parameters.configuration }}
         /p:TargetArchitecture=${{ parameters.architecture }}
         /p:TargetOS=osx
-        /p:HelixTargetQueues=${{ parameters.helixQueues }}
+        "/p:HelixTargetQueues=${{ parameters.helixQueues }}"
         /p:HelixSource=official/diagnostics/$(Build.SourceBranch)
         /p:HelixType=test/${{ parameters.configuration }}/${{ parameters.architecture }}/
         /p:HelixAccessToken=$(HelixApiAccessToken)
@@ -106,7 +106,7 @@ steps:
         /p:Configuration=${{ parameters.configuration }}
         /p:TargetArchitecture=${{ parameters.architecture }}
         /p:TargetOS=Windows_NT
-        /p:HelixTargetQueues=${{ parameters.helixQueues }}
+        "/p:HelixTargetQueues=${{ parameters.helixQueues }}"
         /p:HelixSource=pr/diagnostics/$(Build.SourceBranch)
         /p:HelixType=test/${{ parameters.configuration }}/${{ parameters.architecture }}/
         /p:Creator=$(Build.RequestedFor)
@@ -124,7 +124,7 @@ steps:
         /p:TargetArchitecture=${{ parameters.architecture }}
         /p:TargetOS=linux
         /p:OSSuffix=${{ parameters.osSuffix }}
-        /p:HelixTargetQueues=${{ parameters.helixQueues }}
+        "/p:HelixTargetQueues=${{ parameters.helixQueues }}"
         /p:HelixSource=pr/diagnostics/$(Build.SourceBranch)
         /p:HelixType=test/${{ parameters.configuration }}/${{ parameters.architecture }}/
         /p:Creator=$(Build.RequestedFor)
@@ -141,7 +141,7 @@ steps:
         /p:Configuration=${{ parameters.configuration }}
         /p:TargetArchitecture=${{ parameters.architecture }}
         /p:TargetOS=osx
-        /p:HelixTargetQueues=${{ parameters.helixQueues }}
+        "/p:HelixTargetQueues=${{ parameters.helixQueues }}"
         /p:HelixSource=pr/diagnostics/$(Build.SourceBranch)
         /p:HelixType=test/${{ parameters.configuration }}/${{ parameters.architecture }}/
         /p:Creator=$(Build.RequestedFor)
