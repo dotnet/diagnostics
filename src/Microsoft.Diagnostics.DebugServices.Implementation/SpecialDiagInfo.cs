@@ -129,10 +129,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (!diagInfo.HasDiagnosticInfo())
                 {
                     console.WriteWarning(
-                        "WARNING: This dump was not collected by the .NET runtime's createdump tool. " +
+                        "WARNING: This dump doesn't contain memory the .NET runtime's dump functionality usually adds. " +
                         "System dumps may be missing memory regions required by SOS commands. " +
-                        "For best results, configure the .NET runtime to collect dumps using createdump " +
-                        "(set DOTNET_DbgEnableMiniDump=1)." + Environment.NewLine);
+                        "For best results, collect dumps using the appropriate tool for your scenario:  https://aka.ms/dotnet-dump-collection" + Environment.NewLine);
                 }
             }
             catch (Exception ex)
