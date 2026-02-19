@@ -790,10 +790,16 @@ DECLARE_API(DumpIL)
         }
         else
         {
+            if (IsNilToken(MethodDescData.MDToken))
+            {
+                ExtOut("This method has no IL body (e.g. IL stubs generated for P/Invoke or Reverse P/Invoke marshaling).\n");
+                return S_OK;
+            }
+
             GetILAddressResult result = GetILAddress(MethodDescData);
             if (std::get<0>(result) == (TADDR)0)
             {
-                ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
+                ExtOut("Unable to retrieve IL for this method (ilAddr is %p).\n", SOS_PTR(std::get<0>(result)));
                 return E_FAIL;
             }
             ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
