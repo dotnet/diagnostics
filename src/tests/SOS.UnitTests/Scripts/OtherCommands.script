@@ -64,6 +64,12 @@ EXTCOMMAND:ClrStack
 
 EXTCOMMAND:ThreadPool
 
+EXTCOMMAND:ThreadPool -stat
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
+VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
+
 EXTCOMMAND:VerifyHeap
 
 SOSCOMMAND:DumpHeap
