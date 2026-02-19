@@ -12,14 +12,15 @@ using Microsoft.Diagnostics.Tracing.Stacks.Formats;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
-    internal enum TraceFileFormat { NetTrace = 1, Speedscope, Chromium };
+    internal enum TraceFileFormat { NetTrace = 1, Speedscope, Chromium, Callgrind };
 
     internal static class TraceFileFormatConverter
     {
         private static readonly IReadOnlyDictionary<TraceFileFormat, string> TraceFileFormatExtensions = new Dictionary<TraceFileFormat, string>() {
             { TraceFileFormat.NetTrace,     "nettrace" },
             { TraceFileFormat.Speedscope,   "speedscope.json" },
-            { TraceFileFormat.Chromium,     "chromium.json" }
+            { TraceFileFormat.Chromium,     "chromium.json" },
+            { TraceFileFormat.Callgrind,    "callgrind.out" }
         };
 
         internal static string GetConvertedFilename(string fileToConvert, string outputfile, TraceFileFormat format)
@@ -40,6 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     break;
                 case TraceFileFormat.Speedscope:
                 case TraceFileFormat.Chromium:
+                case TraceFileFormat.Callgrind:
                     stdOut.WriteLine($"Processing trace data file '{fileToConvert}' to create a new {format} file '{outputFilename}'.");
                     try
                     {
@@ -91,6 +93,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         break;
                     case TraceFileFormat.Chromium:
                         ChromiumStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename, compress: false);
+                        break;
+                    case TraceFileFormat.Callgrind:
+                        CallgrindStackSourceWriter.WriteStackViewAsCallgrind(stackSource, outputFilename);
                         break;
                     default:
                         // we should never get here
