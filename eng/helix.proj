@@ -109,6 +109,8 @@
     <!-- Install LLDB 16 if not present. LLDB 14 (Ubuntu 22.04 default) has broken Python SWIG
          bindings that prevent SOS from initializing ('SwigPyObject' has no 'HandleCommand'). -->
     <HelixPreCommand Include="which lldb-16 > /dev/null 2>&amp;1 || (wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc > /dev/null &amp;&amp; echo 'deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main' | sudo tee /etc/apt/sources.list.d/llvm-16.list > /dev/null &amp;&amp; sudo apt-get -o DPkg::Lock::Timeout=120 update -qq &amp;&amp; sudo apt-get -o DPkg::Lock::Timeout=120 install -y -qq lldb-16)" />
+    <!-- Re-detect LLDB after install since apt may remove older versions (e.g. lldb-14) -->
+    <HelixPreCommand Include="export LLDB_PATH=`which lldb-16 2>/dev/null || which lldb-15 2>/dev/null || which lldb 2>/dev/null || echo ''`" />
     <HelixPreCommand Include="test -f /usr/bin/python || sudo ln -sf %24(which python3) /usr/bin/python" />
   </ItemGroup>
 
