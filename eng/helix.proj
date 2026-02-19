@@ -59,7 +59,6 @@
     <_PathSep Condition="'$(TargetOS)' != 'Windows_NT'">/</_PathSep>
     <_DotNetCliDir>$(_CorrelationPayload)$(_PathSep)dotnet-cli</_DotNetCliDir>
     <_ArtifactsDir>$(_CorrelationPayload)$(_PathSep)artifacts$(_PathSep)</_ArtifactsDir>
-    <_VersionsFile>$(_ArtifactsDir)dotnet-test$(_PathSep)Debugger.Tests.Versions.txt</_VersionsFile>
 
   </PropertyGroup>
 
@@ -69,7 +68,6 @@
   <ItemGroup Condition="'$(TargetOS)' == 'Windows_NT'">
     <HelixPreCommand Include="set &quot;DIAGNOSTICS_ARTIFACTS_DIR=$(_ArtifactsDir)&quot;" />
     <HelixPreCommand Include="set &quot;RunningOnHelix=true&quot;" />
-    <HelixPreCommand Include="copy /Y &quot;$(_VersionsFile)&quot; &quot;$(_DotNetCliDir)\Debugger.Tests.Versions.txt&quot;" />
   </ItemGroup>
 
   <!-- macOS -->
@@ -82,7 +80,6 @@
     <HelixPreCommand Include="export HELIX_CORRELATION_PAYLOAD=%24(python3 -c &quot;import os; print(os.path.realpath('$HELIX_CORRELATION_PAYLOAD'))&quot;)" />
     <HelixPreCommand Include="export DIAGNOSTICS_ARTIFACTS_DIR=&quot;$(_ArtifactsDir)&quot;" />
     <HelixPreCommand Include="export RunningOnHelix=true" />
-    <HelixPreCommand Include="cp -f &quot;$(_VersionsFile)&quot; &quot;$(_DotNetCliDir)/Debugger.Tests.Versions.txt&quot;" />
     <!-- Copy and ad-hoc re-sign Xcode LLDB so the .NET runtime can JIT inside the LLDB process.
          Apple's signed LLDB enforces Hardened Runtime which blocks MAP_JIT for CoreCLR. Re-signing
          strips the Apple signature, allowing SOS managed commands to initialize the .NET runtime.
@@ -109,20 +106,14 @@
 
   <!-- Linux non-musl (Ubuntu/glibc): install LLDB 16 via apt -->
   <ItemGroup Condition="'$(TargetOS)' == 'linux' AND '$(OSSuffix)' != '-musl'">
-    <HelixPreCommand Include="cp -f &quot;$(_VersionsFile)&quot; &quot;$(_DotNetCliDir)/Debugger.Tests.Versions.txt&quot;" />
     <!-- Install LLDB 16 if not present. LLDB 14 (Ubuntu 22.04 default) has broken Python SWIG
          bindings that prevent SOS from initializing ('SwigPyObject' has no 'HandleCommand'). -->
     <HelixPreCommand Include="which lldb-16 > /dev/null 2>&amp;1 || (wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc > /dev/null &amp;&amp; echo 'deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main' | sudo tee /etc/apt/sources.list.d/llvm-16.list > /dev/null &amp;&amp; sudo apt-get -o DPkg::Lock::Timeout=120 update -qq &amp;&amp; sudo apt-get -o DPkg::Lock::Timeout=120 install -y -qq lldb-16)" />
     <HelixPreCommand Include="test -f /usr/bin/python || sudo ln -sf %24(which python3) /usr/bin/python" />
   </ItemGroup>
 
-  <!-- Linux musl (Alpine container): correlation payload is read-only in Docker containers,
-       so create a writable DOTNET_ROOT overlay using symlinks and copy Versions.txt there.
-       The DOTNET_ROOT/PATH overrides happen in FixMuslDotNetRoot target (after AddDotNetSdk). -->
+  <!-- Linux musl (Alpine container): install LLDB and set up python -->
   <ItemGroup Condition="'$(TargetOS)' == 'linux' AND '$(OSSuffix)' == '-musl'">
-    <HelixPreCommand Include="mkdir -p /tmp/dotnet-writable" />
-    <HelixPreCommand Include="for f in $HELIX_CORRELATION_PAYLOAD/dotnet-cli/%2A%3B do ln -sf &quot;$f&quot; /tmp/dotnet-writable/%3B done" />
-    <HelixPreCommand Include="cp -f &quot;$(_VersionsFile)&quot; /tmp/dotnet-writable/Debugger.Tests.Versions.txt" />
     <HelixPreCommand Include="which lldb > /dev/null 2>&amp;1 || apk add --no-cache lldb python3" />
     <HelixPreCommand Include="test -f /usr/bin/python || ln -sf %24(which python3) /usr/bin/python" />
   </ItemGroup>
@@ -140,16 +131,6 @@
     </PropertyGroup>
   </Target>
 
-  <!-- Override DOTNET_ROOT for musl Alpine containers after Helix SDK sets it (AddDotNetSdk target).
-       The correlation payload is read-only in Docker containers so we redirect to /tmp/dotnet-writable
-       which was populated with symlinks and Versions.txt by the HelixPreCommand items above. -->
-  <Target Name="FixMuslDotNetRoot" BeforeTargets="CoreTest" AfterTargets="AddDotNetSdk"
-          Condition="'$(TargetOS)' == 'linux' AND '$(OSSuffix)' == '-musl'">
-    <PropertyGroup>
-      <HelixPreCommands>$(HelixPreCommands);export DOTNET_ROOT=/tmp/dotnet-writable;export PATH=/tmp/dotnet-writable:$PATH</HelixPreCommands>
-    </PropertyGroup>
-  </Target>
-  
   <PropertyGroup>
     <!-- Staging directory for generated Versions.txt -->
     <_VersionsStagingDir>$(ArtifactsDir)tmp\helix\dotnet-test\</_VersionsStagingDir>
