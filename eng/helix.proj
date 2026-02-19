@@ -112,8 +112,15 @@
     <HelixPreCommand Include="test -f /usr/bin/python || sudo ln -sf %24(which python3) /usr/bin/python" />
   </ItemGroup>
 
-  <!-- Linux musl (Alpine container): install LLDB and set up python -->
+  <!-- Linux musl (Alpine container): the correlation payload is mounted read-only in Docker
+       containers, so create a writable artifacts overlay. Symlink read-only content (bin, test,
+       dotnet-test) and create real writable directories for test output (TestResults, tmp, Debuggees). -->
   <ItemGroup Condition="'$(TargetOS)' == 'linux' AND '$(OSSuffix)' == '-musl'">
+    <HelixPreCommand Include="mkdir -p /tmp/artifacts-writable" />
+    <HelixPreCommand Include="for d in $HELIX_CORRELATION_PAYLOAD/artifacts/%2A%3B do ln -sf &quot;$d&quot; /tmp/artifacts-writable/%24(basename &quot;$d&quot;)%3B done" />
+    <HelixPreCommand Include="rm -f /tmp/artifacts-writable/TestResults /tmp/artifacts-writable/tmp /tmp/artifacts-writable/Debuggees" />
+    <HelixPreCommand Include="mkdir -p /tmp/artifacts-writable/TestResults /tmp/artifacts-writable/tmp /tmp/artifacts-writable/Debuggees" />
+    <HelixPreCommand Include="export DIAGNOSTICS_ARTIFACTS_DIR=/tmp/artifacts-writable/" />
     <HelixPreCommand Include="which lldb > /dev/null 2>&amp;1 || apk add --no-cache lldb python3" />
     <HelixPreCommand Include="test -f /usr/bin/python || ln -sf %24(which python3) /usr/bin/python" />
   </ItemGroup>
