@@ -117,13 +117,12 @@
   </ItemGroup>
 
   <!-- Linux musl (Alpine container): correlation payload is read-only in Docker containers,
-       so create a writable DOTNET_ROOT overlay using symlinks and copy Versions.txt there. -->
+       so create a writable DOTNET_ROOT overlay using symlinks and copy Versions.txt there.
+       The DOTNET_ROOT/PATH overrides happen in FixMuslDotNetRoot target (after AddDotNetSdk). -->
   <ItemGroup Condition="'$(TargetOS)' == 'linux' AND '$(OSSuffix)' == '-musl'">
     <HelixPreCommand Include="mkdir -p /tmp/dotnet-writable" />
-    <HelixPreCommand Include="ln -sf $(_DotNetCliDir)/* /tmp/dotnet-writable/" />
+    <HelixPreCommand Include="for f in $HELIX_CORRELATION_PAYLOAD/dotnet-cli/%2A%3B do ln -sf &quot;$f&quot; /tmp/dotnet-writable/%3B done" />
     <HelixPreCommand Include="cp -f &quot;$(_VersionsFile)&quot; /tmp/dotnet-writable/Debugger.Tests.Versions.txt" />
-    <HelixPreCommand Include="export DOTNET_ROOT=/tmp/dotnet-writable" />
-    <HelixPreCommand Include="export PATH=/tmp/dotnet-writable:$PATH" />
     <HelixPreCommand Include="which lldb > /dev/null 2>&amp;1 || apk add --no-cache lldb python3" />
     <HelixPreCommand Include="test -f /usr/bin/python || ln -sf %24(which python3) /usr/bin/python" />
   </ItemGroup>
@@ -138,6 +137,16 @@
           Condition="'$(TargetOS)' == 'osx'">
     <PropertyGroup>
       <HelixPreCommands>$(HelixPreCommands);export DOTNET_ROOT=%24(python3 -c "import os; print(os.path.realpath('$DOTNET_ROOT'))")</HelixPreCommands>
+    </PropertyGroup>
+  </Target>
+
+  <!-- Override DOTNET_ROOT for musl Alpine containers after Helix SDK sets it (AddDotNetSdk target).
+       The correlation payload is read-only in Docker containers so we redirect to /tmp/dotnet-writable
+       which was populated with symlinks and Versions.txt by the HelixPreCommand items above. -->
+  <Target Name="FixMuslDotNetRoot" BeforeTargets="CoreTest" AfterTargets="AddDotNetSdk"
+          Condition="'$(TargetOS)' == 'linux' AND '$(OSSuffix)' == '-musl'">
+    <PropertyGroup>
+      <HelixPreCommands>$(HelixPreCommands);export DOTNET_ROOT=/tmp/dotnet-writable;export PATH=/tmp/dotnet-writable:$PATH</HelixPreCommands>
     </PropertyGroup>
   </Target>
   
