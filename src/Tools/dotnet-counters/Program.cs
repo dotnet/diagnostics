@@ -34,6 +34,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 MaxTimeSeriesOption,
                 DurationOption,
                 ShowDeltasOption,
+                AbbreviateLargeNumbersOption,
                 DSRouterOption
             };
 
@@ -51,6 +52,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 maxTimeSeries: parseResult.GetValue(MaxTimeSeriesOption),
                 duration: parseResult.GetValue(DurationOption),
                 showDeltas: parseResult.GetValue(ShowDeltasOption),
+                abbreviateLargeNumbers: parseResult.GetValue(AbbreviateLargeNumbersOption),
                 dsrouter: parseResult.GetValue(DSRouterOption)
             ));
 
@@ -208,6 +210,14 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 Description = @"Shows an extra column in the metrics table that displays the delta between the previous metric value and the most recent value." +
                " This is useful to monitor the rate of change for a metric."
+            };
+
+        private static readonly Option<bool> AbbreviateLargeNumbersOption =
+            new("--abbreviateLargeNumbers")
+            {
+                DefaultValueFactory = _ => true,
+                Description = @"When true (default), values >= 100,000,000 are displayed in scientific notation (e.g. 1.2345e+09)." +
+               " Set to false to display the full numeric value instead."
             };
 
         public static int List()

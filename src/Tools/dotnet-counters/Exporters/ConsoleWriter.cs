@@ -58,8 +58,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private readonly object _lock = new();
         private readonly Dictionary<string, ObservedProvider> _providers = new(); // Tracks observed providers and counters.
         private readonly bool _showDeltaColumn;
+        private readonly bool _abbreviateLargeNumbers;
         private const int Indent = 4; // Counter name indent size.
-        private const int CounterValueLength = 15;
+        private const int DefaultCounterValueLength = 15;
+        private const int NoAbbreviateMinValueLength = 21; // Fits values up to ~10^15 with separators (e.g. unix ms timestamps).
         private const int MinimalColumnHeaderLength = 5;
 
         private int _nameColumnWidth; // fixed width of the name column. Names will be truncated if needed to fit in this space.
@@ -74,11 +76,14 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private int _consoleHeight = -1;
         private int _consoleWidth = -1;
         private IConsole _console;
+        private int _counterValueLength;
 
-        public ConsoleWriter(IConsole console, bool showDeltaColumn = false)
+        public ConsoleWriter(IConsole console, bool showDeltaColumn = false, bool abbreviateLargeNumbers = true)
         {
             _console = console;
             _showDeltaColumn = showDeltaColumn;
+            _abbreviateLargeNumbers = abbreviateLargeNumbers;
+            _counterValueLength = DefaultCounterValueLength;
         }
 
         public void Initialize()
@@ -125,9 +130,34 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
             _consoleWidth = _console.WindowWidth;
             _consoleHeight = _console.WindowHeight;
+
+            // Compute value column width. When abbreviation is disabled, start with a
+            // wider minimum column and scan all current values to grow it further if needed.
+            _counterValueLength = !_abbreviateLargeNumbers ? NoAbbreviateMinValueLength : DefaultCounterValueLength;
+            if (!_abbreviateLargeNumbers)
+            {
+                foreach (ObservedProvider provider in _providers.Values)
+                {
+                    foreach (ObservedCounter counter in provider.Counters.Values)
+                    {
+                        if (counter.TagSets.Count == 0)
+                        {
+                            _counterValueLength = Math.Max(_counterValueLength, FormatValue(counter.LastValue).Length);
+                        }
+                        else
+                        {
+                            foreach (ObservedTagSet tagSet in counter.TagSets.Values)
+                            {
+                                _counterValueLength = Math.Max(_counterValueLength, FormatValue(tagSet.LastValue).Length);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Truncate the name column if needed to prevent line wrapping
             int numValueColumns = _showDeltaColumn ? 2 : 1;
-            _nameColumnWidth = Math.Max(_consoleWidth - numValueColumns * (CounterValueLength + 1), 0);
+            _nameColumnWidth = Math.Max(_consoleWidth - numValueColumns * (_counterValueLength + 1), 0);
 
 
             int row = _console.CursorTop;
@@ -449,8 +479,8 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             // if you change line formatting, keep it in sync with IncrementaUpdateCounterValueRow below
             string nameCellText = MakeFixedWidth(name, _nameColumnWidth);
-            string valueCellText = MakeFixedWidth(value, CounterValueLength, alignRight: true);
-            string deltaCellText = MakeFixedWidth(delta, CounterValueLength, alignRight: true);
+            string valueCellText = MakeFixedWidth(value, _counterValueLength, alignRight: true);
+            string deltaCellText = MakeFixedWidth(delta, _counterValueLength, alignRight: true);
             string lineText;
             if (_showDeltaColumn)
             {
@@ -494,8 +524,11 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             }
 
             _console.SetCursorPosition(_nameColumnWidth + 1, row);
-            string valueCellText = MakeFixedWidth(FormatValue(value), CounterValueLength);
-            string deltaCellText = MakeFixedWidth(FormatValue(delta), CounterValueLength);
+            string formattedValue = FormatValue(value);
+            string formattedDelta = FormatValue(delta);
+            // When abbreviation is off, don't truncate — let wide values spill past the column edge.
+            string valueCellText = _abbreviateLargeNumbers ? MakeFixedWidth(formattedValue, _counterValueLength) : formattedValue;
+            string deltaCellText = _abbreviateLargeNumbers ? MakeFixedWidth(formattedDelta, _counterValueLength) : formattedDelta;
             string partialLineText;
             if (_showDeltaColumn)
             {
@@ -508,11 +541,12 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             _console.Write(partialLineText);
         }
 
-        private static string FormatValue(double value)
+        private string FormatValue(double value)
         {
             string valueText;
             // The value field is one of:
             //  a) If abs(value) >= 10^9 then it is formatted as 0.####e+00
+            //     (unless _abbreviateLargeNumbers is false, in which case the full value is shown)
             //  b) otherwise leading - or space, 10 leading digits with separators (or spaces), decimal separator or space,
             //     3 decimal digits or spaces.
             //
@@ -526,7 +560,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             //           7
 
 
-            if (Math.Abs(value) >= 100_000_000)
+            if (_abbreviateLargeNumbers && Math.Abs(value) >= 100_000_000)
             {
                 valueText = string.Format(CultureInfo.CurrentCulture, "{0,15:0.####e+00}   ", value);
             }
@@ -543,7 +577,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     int decimalDigits = formattedVal.Length - 1 - seperatorIndex;
                     formattedVal += new string(' ', 3 - decimalDigits);
                 }
-                valueText = string.Format(CultureInfo.CurrentCulture, "{0,15}", formattedVal);
+                valueText = formattedVal.PadLeft(_counterValueLength);
             }
             return valueText;
         }

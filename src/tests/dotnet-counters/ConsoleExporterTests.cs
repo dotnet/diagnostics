@@ -487,5 +487,100 @@ namespace DotnetCounters.UnitTests
         {
             return new CounterRateAndValuePayload(new CounterMetadata(meterName, instrumentName, unit), displayName: null, displayUnits: null, tags, rate: double.NaN, value, DateTime.MinValue);
         }
+
+        [Fact]
+        public void NoAbbreviateLargeValues()
+        {
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "% Time in GC", "%", 0.1), false);
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "BigCounter", "ns", 602341234567890123.0), false);
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 1701200000000.0), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    % Time in GC (%)                                   0.1",
+                                     "    BigCounter (ns)              602,341,234,567,890,000",
+                                     "    Offset (ms)                        1,701,200,000,000");
+        }
+
+        [Fact]
+        public void NoAbbreviateNarrowConsole()
+        {
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "ThisCounterHasAVeryLongNameThatDoesNotFit", "%", 0.1), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                 Current Value",
+                                     "[System.Runtime]",
+                                     "    ThisCounterHasAVeryLongN                 0.1");
+        }
+
+        [Fact]
+        public void NoAbbreviateMultidimensionalNarrowConsole()
+        {
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "color=red", 0.1), false);
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "color=blue", 87), false);
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter2", "{widget}", "size=1", 14), false);
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter2", "{widget}", "temp=hot", 160), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                 Current Value",
+                                     "[Provider1]",
+                                     "    Counter1 ({widget} / 1 s",
+                                     "        color",
+                                     "        -----",
+                                     "        blue                                87",
+                                     "        red                                  0.1",
+                                     "    Counter2 ({widget} / 1 s",
+                                     "        size temp",
+                                     "        ---- ----",
+                                     "        1                                   14",
+                                     "             hot                           160");
+        }
+
+        [Fact]
+        public void NoAbbreviateValueGrowsOnIncrementalUpdate()
+        {
+            // Scenario: a counter starts with a small value that fits in the 21-char
+            // minimum column, then jumps to a value that also fits in 21 chars on an
+            // incremental update (no new counters, so no full redraw).
+            // Values up to ~10^15 with separators fit in the 21-char minimum.
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            // First payload: small value. Triggers redraw (new counter).
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 42), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                                       42");
+
+            // Second payload: same counter, unix ms timestamp. Incremental update only.
+            // Fits within the 21-char minimum column — no spill.
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 1701200000000.0), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                        1,701,200,000,000");
+        }
     }
 }
