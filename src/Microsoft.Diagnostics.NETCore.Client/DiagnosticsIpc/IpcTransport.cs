@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -381,21 +382,34 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                foreach (string line in File.ReadLines(string.Format(_procStatusPathFormat, hostPid)))
-                {
-                    if (line.StartsWith("NSpid:\t", StringComparison.Ordinal))
-                    {
-                        string[] parts = line.Substring(7).Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                        if (parts.Length > 1 && int.TryParse(parts[parts.Length - 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedPid))
-                        {
-                            nsPid = parsedPid;
-                            return true;
-                        }
-                        return false;
-                    }
-                }
+                return TryParseNamespacePid(File.ReadLines(string.Format(_procStatusPathFormat, hostPid)), hostPid, out nsPid);
             }
             catch { }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Parses /proc/{pid}/status lines to extract the innermost namespace PID from the NSpid field.
+        /// Returns true if the process is in a different namespace (NSpid has multiple values).
+        /// </summary>
+        internal static bool TryParseNamespacePid(IEnumerable<string> statusLines, int hostPid, out int nsPid)
+        {
+            nsPid = hostPid;
+
+            foreach (string line in statusLines)
+            {
+                if (line.StartsWith("NSpid:\t", StringComparison.Ordinal))
+                {
+                    string[] parts = line.Substring(7).Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length > 1 && int.TryParse(parts[parts.Length - 1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedPid))
+                    {
+                        nsPid = parsedPid;
+                        return true;
+                    }
+                    return false;
+                }
+            }
 
             return false;
         }
@@ -413,17 +427,27 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             try
             {
-                // environ file uses null-separated KEY=VALUE pairs
-                string environ = Encoding.UTF8.GetString(File.ReadAllBytes(string.Format(_procEnvironPathFormat, hostPid)));
-                foreach (string envVar in environ.Split(new[] { '\0' }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    if (envVar.StartsWith("TMPDIR=", StringComparison.Ordinal))
-                    {
-                        return envVar.Substring(7);
-                    }
-                }
+                return ParseTmpDir(File.ReadAllBytes(string.Format(_procEnvironPathFormat, hostPid)));
             }
             catch { }
+
+            return Path.GetTempPath();
+        }
+
+        /// <summary>
+        /// Parses a null-separated environ byte array to extract the TMPDIR value.
+        /// Returns the platform temp directory if TMPDIR is not found.
+        /// </summary>
+        internal static string ParseTmpDir(byte[] environData)
+        {
+            string environ = Encoding.UTF8.GetString(environData);
+            foreach (string envVar in environ.Split(new[] { '\0' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (envVar.StartsWith("TMPDIR=", StringComparison.Ordinal))
+                {
+                    return envVar.Substring(7);
+                }
+            }
 
             return Path.GetTempPath();
         }
