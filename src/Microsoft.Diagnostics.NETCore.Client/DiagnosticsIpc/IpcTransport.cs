@@ -246,6 +246,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         private const string _dsrouterAddressFormatWindows = "dotnet-diagnostic-dsrouter-{0}";
         private const string _defaultAddressFormatNonWindows = "dotnet-diagnostic-{0}-{1}-socket";
         private const string _dsrouterAddressFormatNonWindows = "dotnet-diagnostic-dsrouter-{0}-{1}-socket";
+        internal const string ProcPath = "/proc";
         private const string _procStatusPathFormat = "/proc/{0}/status";
         private const string _procEnvironPathFormat = "/proc/{0}/environ";
         private const string _procRootPathFormat = "/proc/{0}/root";
@@ -256,6 +257,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </summary>
         internal static string GetProcessRootPath(int pid) =>
             RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? string.Format(_procRootPathFormat, pid) : null;
+
+        /// <summary>
+        /// Returns a file search pattern for diagnostic sockets matching the given PID.
+        /// </summary>
+        internal static string GetDiagnosticSocketSearchPattern(int pid) =>
+            string.Format(_defaultAddressFormatNonWindows, pid, "*");
 
         private int _pid;
         private IpcEndpointConfig _config;
