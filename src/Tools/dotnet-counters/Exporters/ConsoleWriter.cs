@@ -397,13 +397,19 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 }
                 else
                 {
+                    bool overflow;
                     if (tagSet != null)
                     {
-                        IncrementalUpdateCounterValueRow(tagSet.Row, tagSet.LastValue, tagSet.LastDelta.Value);
+                        overflow = IncrementalUpdateCounterValueRow(tagSet.Row, tagSet.LastValue, tagSet.LastDelta.Value);
                     }
                     else
                     {
-                        IncrementalUpdateCounterValueRow(counter.Row, counter.LastValue, counter.LastDelta.Value);
+                        overflow = IncrementalUpdateCounterValueRow(counter.Row, counter.LastValue, counter.LastDelta.Value);
+                    }
+
+                    if (overflow)
+                    {
+                        AssignRowsAndInitializeDisplay();
                     }
                 }
             }
@@ -515,20 +521,24 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             return true;
         }
 
-        private void IncrementalUpdateCounterValueRow(int row, double value, double delta)
+        private bool IncrementalUpdateCounterValueRow(int row, double value, double delta)
         {
             // prevents from displaying more counters than vertical space available
             if (row < 0 || row >= _consoleHeight + _topRow)
             {
-                return;
+                return false;
             }
 
             _console.SetCursorPosition(_nameColumnWidth + 1, row);
             string formattedValue = FormatValue(value);
             string formattedDelta = FormatValue(delta);
-            // When abbreviation is off, don't truncate — let wide values spill past the column edge.
-            string valueCellText = _abbreviateLargeNumbers ? MakeFixedWidth(formattedValue, _counterValueLength) : formattedValue;
-            string deltaCellText = _abbreviateLargeNumbers ? MakeFixedWidth(formattedDelta, _counterValueLength) : formattedDelta;
+            if (formattedValue.Length > _counterValueLength || formattedDelta.Length > _counterValueLength)
+            {
+                return true; // signal caller to redraw with wider columns
+            }
+
+            string valueCellText = MakeFixedWidth(formattedValue, _counterValueLength);
+            string deltaCellText = MakeFixedWidth(formattedDelta, _counterValueLength);
             string partialLineText;
             if (_showDeltaColumn)
             {
@@ -539,6 +549,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 partialLineText = $"{valueCellText}";
             }
             _console.Write(partialLineText);
+            return false;
         }
 
         private string FormatValue(double value)

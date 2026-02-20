@@ -582,5 +582,36 @@ namespace DotnetCounters.UnitTests
                                      "[System.Runtime]",
                                      "    Offset (ms)                        1,701,200,000,000");
         }
+
+        [Fact]
+        public void NoAbbreviateValueOverflowTriggersRedraw()
+        {
+            // Scenario: a counter starts with a small value that fits in the 21-char
+            // minimum column, then jumps to a value that exceeds 21 chars. The
+            // incremental update detects the overflow and triggers a full redraw
+            // with wider columns instead of spilling past the column edge.
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            // First payload: small value. Triggers redraw (new counter).
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 42), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                                       42");
+
+            // Second payload: same counter, value exceeds 21-char column (26 chars formatted).
+            // Incremental path detects overflow → full redraw with _counterValueLength=26.
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 17012000000000000.0), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                   17,012,000,000,000,000");
+        }
     }
 }
