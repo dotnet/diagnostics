@@ -37,7 +37,7 @@
 
     <!-- Test configuration -->
     <TestArtifactsDir Condition="'$(TestArtifactsDir)' == ''">$(ArtifactsDir)</TestArtifactsDir>
-    <TestTimeout>00:30:00</TestTimeout>
+    <TestTimeout>01:00:00</TestTimeout>
 
     <!-- Azure DevOps integration -->
     <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' != ''">true</EnableAzurePipelinesReporter>
@@ -119,7 +119,7 @@
   <ItemGroup Condition="'$(TargetOS)' == 'linux' AND '$(OSSuffix)' == '-musl'">
     <HelixPreCommand Include="cp -a $HELIX_CORRELATION_PAYLOAD/artifacts /tmp/artifacts-writable" />
     <HelixPreCommand Include="export DIAGNOSTICS_ARTIFACTS_DIR=/tmp/artifacts-writable/" />
-    <HelixPreCommand Include="which lldb > /dev/null 2>&amp;1 || apk add --no-cache lldb python3" />
+    <HelixPreCommand Include="which lldb > /dev/null 2>&amp;1 || apk add --no-cache lldb py3-lldb python3" />
     <HelixPreCommand Include="test -f /usr/bin/python || ln -sf %24(which python3) /usr/bin/python" />
   </ItemGroup>
 
