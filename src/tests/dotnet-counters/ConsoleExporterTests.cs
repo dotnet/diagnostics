@@ -613,5 +613,80 @@ namespace DotnetCounters.UnitTests
                                      "[System.Runtime]",
                                      "    Offset (ms)                   17,012,000,000,000,000");
         }
+
+        [Fact]
+        public void NoAbbreviateLongNameAndBigValueConflict()
+        {
+            // Scenario: a counter has both a long name AND a big value that exceeds
+            // the 21-char minimum column. The wide value column squeezes the name
+            // column, causing the counter name to be truncated more aggressively
+            // than it would be with smaller values.
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "ThisCounterHasAVeryLongNameThatDoesNotFit", "ms", 17012000000000000.0), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                 Current Value",
+                                     "[System.Runtime]",
+                                     "    ThisCounterHasAVery 17,012,000,000,000,000");
+        }
+
+        [Fact]
+        public void NoAbbreviateLongTagsAndBigValueConflict()
+        {
+            // Scenario: a multidimensional counter has long tag values AND big
+            // counter values simultaneously. The wide value column squeezes the
+            // name column, truncating the counter name and tag display.
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "color=red", 17012000000000000.0), false);
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "color=blue", 87), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                 Current Value",
+                                     "[Provider1]",
+                                     "    Counter1 ({widget}",
+                                     "        color",
+                                     "        -----",
+                                     "        blue                                87",
+                                     "        red             17,012,000,000,000,000");
+        }
+
+        [Fact]
+        public void NoAbbreviateColumnDoesNotShrink()
+        {
+            // Scenario: a counter starts with a big value that causes the value
+            // column to grow beyond the 21-char minimum, then the value drops to
+            // a small number. The column should NOT shrink back because the
+            // incremental update path does not trigger a redraw for smaller values.
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            // First payload: big value, triggers redraw (new counter). Column grows to 26.
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 17012000000000000.0), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                   17,012,000,000,000,000");
+
+            // Second payload: small value, incremental update only. Column stays at 26.
+            // The value is right-aligned in the wide column, showing the non-shrinking behavior.
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 42), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                                       42");
+        }
     }
 }
