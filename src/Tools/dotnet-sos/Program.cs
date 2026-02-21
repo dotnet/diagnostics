@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -31,10 +32,10 @@ namespace Microsoft.Diagnostics.Tools.SOS
                 ArchitectureOption
             };
 
-            installCommand.SetAction(parseResult => Invoke(
-                parseResult.Configuration.Output,
-                parseResult.Configuration.Error,
-                architecture: parseResult.GetValue(ArchitectureOption),
+            installCommand.SetAction(context => Invoke(
+                context.Console.Out,
+                context.Console.Error,
+                architecture: context.ParseResult.GetValue(ArchitectureOption),
                 install: true));
 
             return installCommand;
@@ -52,9 +53,9 @@ namespace Microsoft.Diagnostics.Tools.SOS
                 name: "uninstall",
                 description: "Uninstalls SOS and reverts any configuration changes to LLDB.");
 
-            uninstallCommand.SetAction(parseResult => Invoke(
-                parseResult.Configuration.Output,
-                parseResult.Configuration.Error,
+            uninstallCommand.SetAction(context => Invoke(
+                context.Console.Out,
+                context.Console.Error,
                 architecture: null,
                 install: false));
 
