@@ -1,7 +1,3 @@
-# Due to how we build the libraries native build as part of the CoreCLR build as well as standalone,
-# we can end up coming to this file twice. Only run it once to simplify our build.
-include_guard()
-
 include(${CMAKE_CURRENT_LIST_DIR}/configuretools.cmake)
 
 # Set initial flags for each configuration
@@ -9,7 +5,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/configuretools.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # We need to set this to Release as there's no way to intercept configuration-specific linker flags
@@ -36,6 +32,13 @@ if (CLR_CMAKE_HOST_UNIX)
     else()
         add_compile_options(-g)
     endif()
+endif()
+
+# Force usage of classic linker on Xcode 15
+if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND
+    CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15 AND
+    CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
+    add_link_options("-Wl,-ld_classic")
 endif()
 
 if (CMAKE_CONFIGURATION_TYPES) # multi-configuration generator?
@@ -73,6 +76,12 @@ if (MSVC)
 
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:$<TARGET_PROPERTY:CLR_EH_OPTION>>)
   add_link_options($<$<BOOL:$<TARGET_PROPERTY:CLR_CONTROL_FLOW_GUARD>>:/guard:cf>)
+
+  if (NOT CLR_CMAKE_PGO_INSTRUMENT)
+    # Load all imported DLLs from the System32 directory.
+    # Don't do this when instrumenting for PGO as a local DLL dependency is introduced by the instrumentation
+    add_linker_flag(/DEPENDENTLOADFLAG:0x800)
+  endif()
 
   # Linker flags
   #
@@ -131,17 +140,13 @@ if (MSVC)
   add_linker_flag(/OPT:NOICF CHECKED)
 
   # Release build specific flags
-  add_linker_flag(/LTCG RELEASE)
   add_linker_flag(/OPT:REF RELEASE)
   add_linker_flag(/OPT:ICF RELEASE)
   add_linker_flag(/INCREMENTAL:NO RELEASE)
-  set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
 
   # ReleaseWithDebugInfo build specific flags
-  add_linker_flag(/LTCG RELWITHDEBINFO)
   add_linker_flag(/OPT:REF RELWITHDEBINFO)
   add_linker_flag(/OPT:ICF RELWITHDEBINFO)
-  set(CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO} /LTCG")
 
 elseif (CLR_CMAKE_HOST_UNIX)
   # Set the values to display when interactively configuring CMAKE_BUILD_TYPE
@@ -304,15 +309,22 @@ elseif(CLR_CMAKE_HOST_SUNOS)
   add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-Wa,--noexecstack>)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
-  add_definitions(-D__EXTENSIONS__ -D_XPG4_2 -D_POSIX_PTHREAD_SEMANTICS)
-elseif(CLR_CMAKE_HOST_OSX AND NOT CLR_CMAKE_HOST_MACCATALYST AND NOT CLR_CMAKE_HOST_IOS AND NOT CLR_CMAKE_HOST_TVOS)
+  add_definitions(-D__EXTENSIONS__ -D_XPG4_2 -D_POSIX_PTHREAD_SEMANTICS -D_REENTRANT)
+elseif(CLR_CMAKE_HOST_APPLE)
+  # enable support for X/Open and POSIX APIs, like the <ucontext.h> header file
   add_definitions(-D_XOPEN_SOURCE)
+  # enable support for Darwin extension APIs, like pthread_getthreadid_np
+  add_definitions(-D_DARWIN_C_SOURCE)
+  # enable the non-cancellable versions of APIs with $NOCANCEL variants, like close(2)
+  add_definitions(-D__DARWIN_NON_CANCELABLE=1)
 
-  # the new linker in Xcode 15 (ld_new/ld_prime) deprecated the -bind_at_load flag for macOS which causes a warning
-  # that fails the build since we build with -Werror. Only pass the flag if we need it, i.e. older linkers.
-  check_linker_flag(C "-Wl,-bind_at_load,-fatal_warnings" LINKER_SUPPORTS_BIND_AT_LOAD_FLAG)
-  if(LINKER_SUPPORTS_BIND_AT_LOAD_FLAG)
-    add_linker_flag("-Wl,-bind_at_load")
+  if(CLR_CMAKE_HOST_OSX)
+    # the new linker in Xcode 15 (ld_new/ld_prime) deprecated the -bind_at_load flag for macOS which causes a warning
+    # that fails the build since we build with -Werror. Only pass the flag if we need it, i.e. older linkers.
+    check_linker_flag(C "-Wl,-bind_at_load,-fatal_warnings" LINKER_SUPPORTS_BIND_AT_LOAD_FLAG)
+    if(LINKER_SUPPORTS_BIND_AT_LOAD_FLAG)
+      add_linker_flag("-Wl,-bind_at_load")
+    endif()
   endif()
 elseif(CLR_CMAKE_HOST_HAIKU)
   add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-Wa,--noexecstack>)
@@ -439,6 +451,8 @@ if (CLR_CMAKE_HOST_UNIX)
     message("Detected Haiku x86_64")
   elseif(CLR_CMAKE_HOST_BROWSER)
     add_definitions(-DHOST_BROWSER)
+  elseif(CLR_CMAKE_HOST_ANDROID)
+    add_definitions(-DHOST_ANDROID)
   endif()
 elseif(CLR_CMAKE_HOST_WASI)
   add_definitions(-DHOST_WASI)
@@ -522,7 +536,7 @@ endif ()
 #--------------------------------------
 # Compile Options
 #--------------------------------------
-if (CLR_CMAKE_HOST_UNIX)
+if (CLR_CMAKE_HOST_UNIX OR CLR_CMAKE_HOST_WASI)
   # Disable frame pointer optimizations so profilers can get better call stacks
   add_compile_options(-fno-omit-frame-pointer)
 
@@ -629,6 +643,9 @@ if (CLR_CMAKE_HOST_UNIX)
 
     # clang 18.1 supressions
     add_compile_options(-Wno-switch-default)
+
+    # clang 20 suppressions
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-nontrivial-memaccess>)
   else()
     add_compile_options(-Wno-uninitialized)
     add_compile_options(-Wno-strict-aliasing)
@@ -671,26 +688,38 @@ if (CLR_CMAKE_HOST_UNIX)
     # a value for mmacosx-version-min (blank CMAKE_OSX_DEPLOYMENT_TARGET gets
     # replaced with a default value, and always gets expanded to an OS version.
     # https://gitlab.kitware.com/cmake/cmake/-/issues/20132
-    # We need to disable the warning that -tagret replaces -mmacosx-version-min
-    set(DISABLE_OVERRIDING_MIN_VERSION_ERROR -Wno-overriding-t-option)
-    add_link_options(-Wno-overriding-t-option)
+    # We need to disable the warning that -target replaces -mmacosx-version-min
+    #
+    # With https://github.com/llvm/llvm-project/commit/1c66d08b0137cef7761b8220d3b7cb7833f57cdb clang renamed the option so we need to check for both
+    check_c_compiler_flag("-Wno-overriding-option" COMPILER_SUPPORTS_W_NO_OVERRIDING_OPTION)
+    if (COMPILER_SUPPORTS_W_NO_OVERRIDING_OPTION)
+      set(DISABLE_OVERRIDING_MIN_VERSION_ERROR -Wno-overriding-option)
+    else()
+      check_c_compiler_flag("-Wno-overriding-t-option" COMPILER_SUPPORTS_W_NO_OVERRIDING_T_OPTION)
+      if (COMPILER_SUPPORTS_W_NO_OVERRIDING_T_OPTION)
+        set(DISABLE_OVERRIDING_MIN_VERSION_ERROR -Wno-overriding-t-option)
+      else()
+        message(FATAL_ERROR "Compiler does not support -Wno-overriding-option or -Wno-overriding-t-option, needed for Mac Catalyst builds.")
+      endif()
+    endif()
+    add_link_options(${DISABLE_OVERRIDING_MIN_VERSION_ERROR})
     if(CLR_CMAKE_HOST_ARCH_ARM64)
-      set(MACOS_VERSION_MIN_FLAGS "-target arm64-apple-ios15.0-macabi")
-      add_link_options(-target arm64-apple-ios15.0-macabi)
+      set(CLR_CMAKE_MACCATALYST_COMPILER_TARGET "arm64-apple-ios15.0-macabi")
+      add_link_options(-target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET})
     elseif(CLR_CMAKE_HOST_ARCH_AMD64)
-      set(MACOS_VERSION_MIN_FLAGS "-target x86_64-apple-ios15.0-macabi")
-      add_link_options(-target x86_64-apple-ios15.0-macabi)
+      set(CLR_CMAKE_MACCATALYST_COMPILER_TARGET "x86_64-apple-ios15.0-macabi")
+      add_link_options(-target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET})
     else()
       clr_unknown_arch()
     endif()
     # These options are intentionally set using the CMAKE_XXX_FLAGS instead of
     # add_compile_options so that they take effect on the configuration functions
     # in various configure.cmake files.
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MACOS_VERSION_MIN_FLAGS} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MACOS_VERSION_MIN_FLAGS} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
-    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${MACOS_VERSION_MIN_FLAGS} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
-    set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} ${MACOS_VERSION_MIN_FLAGS} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
-    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} ${MACOS_VERSION_MIN_FLAGS} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
+    set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS}-target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
+    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
   elseif(CLR_CMAKE_HOST_OSX)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0")
     if(CLR_CMAKE_HOST_ARCH_ARM64)
@@ -702,7 +731,7 @@ if (CLR_CMAKE_HOST_UNIX)
     endif()
   endif(CLR_CMAKE_HOST_MACCATALYST)
 
-endif(CLR_CMAKE_HOST_UNIX)
+endif(CLR_CMAKE_HOST_UNIX OR CLR_CMAKE_HOST_WASI)
 
 if(CLR_CMAKE_TARGET_UNIX)
   add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_UNIX>)
@@ -802,8 +831,6 @@ if (MSVC)
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/fp:precise>) # Enable precise floating point
 
   # Disable C++ RTTI
-  # /GR is added by default by CMake, so remove it manually.
-  string(REPLACE "/GR " " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
 
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/FC>) # use full pathnames in diagnostics
