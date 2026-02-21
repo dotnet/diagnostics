@@ -91,6 +91,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static async Task<int> RunAsync(CollectArgs config, MockConsole console, bool hasChildProcess = false)
         {
+            // Suppress timing-dependent status output (e.g. "Recording trace 0.00 (B)")
+            // so tests can validate provider configuration output deterministically.
+            console.IsOutputRedirected = true;
+
             var handler = new CollectCommandHandler(console);
             handler.StartTraceSessionAsync = (client, cfg, ct) => Task.FromResult<CollectCommandHandler.ICollectSession>(new TestCollectSession());
             handler.ResumeRuntimeAsync = (client, ct) => Task.CompletedTask;

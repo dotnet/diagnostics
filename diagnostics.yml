@@ -19,6 +19,10 @@ parameters:
   displayName: Build only (skip tests)
   type: boolean
   default: false
+- name: useHelix
+  displayName: Run tests on Helix (distributed testing)
+  type: boolean
+  default: true
 
 trigger: none
 
@@ -52,7 +56,7 @@ extends:
   parameters:
     stages:
     - stage: build
-      displayName: Build and Test Diagnostics
+      displayName: Build Diagnostics
       jobs:
 
         ############################
@@ -80,6 +84,9 @@ extends:
           name: Windows
           osGroup: Windows_NT
           buildOnly: ${{ parameters.buildOnly }}
+          useHelix: ${{ parameters.useHelix }}
+          isOfficialBuild: ${{ eq(variables['System.TeamProject'], 'internal') }}
+          helixQueues: $(HelixQueuesWindows_x64)
           buildConfigs:
           - configuration: Debug
             architecture: x64
@@ -100,7 +107,10 @@ extends:
           osGroup: Linux
           container: linux_x64
           crossBuild: true
-          buildOnly: true
+          buildOnly: ${{ parameters.buildOnly }}
+          useHelix: ${{ parameters.useHelix }}
+          isOfficialBuild: ${{ eq(variables['System.TeamProject'], 'internal') }}
+          helixQueues: $(HelixQueuesLinux_x64)
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -118,7 +128,10 @@ extends:
           osSuffix: -musl
           container: linux_musl_x64
           crossBuild: true
-          buildOnly: true
+          buildOnly: ${{ parameters.buildOnly }}
+          useHelix: ${{ parameters.useHelix }}
+          isOfficialBuild: ${{ eq(variables['System.TeamProject'], 'internal') }}
+          helixQueues: $(HelixQueuesLinux_musl_x64)
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -135,6 +148,9 @@ extends:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
           buildOnly: ${{ parameters.buildOnly }}
+          useHelix: ${{ parameters.useHelix }}
+          isOfficialBuild: ${{ eq(variables['System.TeamProject'], 'internal') }}
+          helixQueues: $(HelixQueuesMacOS_x64)
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -148,7 +164,10 @@ extends:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
           crossBuild: true
-          buildOnly: true
+          buildOnly: ${{ parameters.buildOnly }}
+          useHelix: ${{ parameters.useHelix }}
+          isOfficialBuild: ${{ eq(variables['System.TeamProject'], 'internal') }}
+          helixQueues: $(HelixQueuesMacOS_arm64)
           buildConfigs:
           - configuration: Release
             architecture: arm64
@@ -176,7 +195,10 @@ extends:
             osGroup: Linux
             container: linux_arm64
             crossBuild: true
-            buildOnly: true
+            buildOnly: ${{ parameters.buildOnly }}
+            useHelix: ${{ parameters.useHelix }}
+            isOfficialBuild: ${{ eq(variables['System.TeamProject'], 'internal') }}
+            helixQueues: $(HelixQueuesLinux_arm64)
             buildConfigs:
             - configuration: Release
               architecture: arm64
@@ -205,86 +227,20 @@ extends:
             osSuffix: -musl
             container: linux_musl_arm64
             crossBuild: true
-            buildOnly: true
+            buildOnly: ${{ parameters.buildOnly }}
+            useHelix: ${{ parameters.useHelix }}
+            isOfficialBuild: ${{ eq(variables['System.TeamProject'], 'internal') }}
+            helixQueues: $(HelixQueuesLinux_musl_arm64)
             buildConfigs:
             - configuration: Release
               architecture: arm64
               artifactUploadPath: bin/linux.arm64.Release
               artifactTargetPath: bin/linux-musl.arm64.Release
 
-      ############################
-      #                          #
-      #      Test only legs      #
-      #                          #
-      ############################
-
-      - ${{ if ne(parameters.buildOnly, true) }}:
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Ubuntu_22_04
-            osGroup: Linux
-            container: test_ubuntu_22_04
-            dependsOn: Linux
-            testOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Alpine3_19
-            osGroup: Linux
-            osSuffix: -musl
-            container: test_linux_musl_x64
-            dependsOn: Linux_musl
-            testOnly: true
-            disableComponentGovernance: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
-
-        - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-          - template: /eng/pipelines/build.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: Debian_Bullseye
-              osGroup: Linux
-              container: test_debian_11_amd64
-              dependsOn: Linux
-              testOnly: true
-              buildConfigs:
-              - configuration: Release
-                architecture: x64
-              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                - configuration: Debug
-                  architecture: x64
-
-          - template: /eng/pipelines/build.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: Fedora_39
-              osGroup: Linux
-              container: test_fedora
-              dependsOn: Linux
-              testOnly: true
-              buildConfigs:
-              - configuration: Release
-                architecture: x64
-              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                - configuration: Debug
-                  architecture: x64
-
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - stage: package
         displayName: Package, Sign, and Generate BAR Manifests
+        dependsOn: build
         jobs:
         - template: /eng/common/templates-official/job/job.yml
           parameters:

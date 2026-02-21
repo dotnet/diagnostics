@@ -6,7 +6,9 @@
     Projects opt-in by setting CopyDebuggeeSourcesToArtifacts=true.
     Optional: Set CopyLldbPluginTests=true to also copy lldbplugin.tests.
   -->
-  <Target Name="CopyDebuggeeSources" AfterTargets="Build" Condition="'$(CopyDebuggeeSourcesToArtifacts)' == 'true'">
+  <Target Name="CopyDebuggeeSources" AfterTargets="Build"
+          Condition="'$(CopyDebuggeeSourcesToArtifacts)' == 'true' or '$(NeedsCdb)' == 'true'"
+          DependsOnTargets="CopyVersionsProps">
     <PropertyGroup>
       <DebuggeesDestDir>$(ArtifactsDir)test/DebuggeeSources/$(MSBuildProjectName)/Debuggees</DebuggeesDestDir>
       <AuxMsbuildDestDir>$(ArtifactsDir)test/AuxMsbuildFiles</AuxMsbuildDestDir>
@@ -32,4 +34,80 @@
     <Message Importance="High" Text="Copied lldbplugin.tests to $(LldbPluginTestsDestDir)" Condition="'$(CopyLldbPluginTests)' == 'true'" />
   </Target>
 
+  <!--
+    Copy Versions.props, Version.Details.props, and Common.props into AuxMsbuildFiles so that
+    debuggee builds on Helix can import them.
+  -->
+  <Target Name="CopyVersionsProps">
+    <PropertyGroup>
+      <_AuxDir>$(ArtifactsDir)test/AuxMsbuildFiles/</_AuxDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(_AuxDir)" />
+    <Copy SourceFiles="$(RepoRoot)eng/Common.props"
+          DestinationFolder="$(_AuxDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(RepoRoot)eng/Versions.props"
+          DestinationFolder="$(_AuxDir)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(RepoRoot)eng/Version.Details.props"
+          DestinationFolder="$(_AuxDir)"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(RepoRoot)eng/Version.Details.props')" />
+  </Target>
+
+
+  <ItemGroup Condition="'$(NeedsCdb)' == 'true'">
+    <PackageDownload Include="cdb-sos"
+                     Version="[$(cdbsosversion)]" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(NeedsTestAssets)' == 'true' and '$(OS)' == 'Windows_NT'">
+    <PackageDownload Include="TestAssets.Windows.x64.6.0"
+                     Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Windows.x86.6.0"
+                     Version="[$(TestAssetsVersion)]" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(NeedsTestAssets)' == 'true'">
+    <PackageDownload Include="TestAssets.Linux.x64.6.0"
+                     Version="[$(TestAssetsVersion)]" />
+    <PackageDownload Include="TestAssets.Linux.arm64.6.0"
+                     Version="[$(TestAssetsVersion)]" />
+  </ItemGroup>
+
+  <Target Name="CopyDebugTestAssets" AfterTargets="Build"
+          Condition="'$(NeedsCdb)' == 'true' or '$(NeedsTestAssets)' == 'true'">
+    <ItemGroup>
+      <_cdbFiles Include="$(NuGetPackageRoot)cdb-sos\$(cdbsosversion)\**\*"
+                 Condition="'$(NeedsCdb)' == 'true'" />
+
+      <_testAssetsWinx64 Include="$(NuGetPackageRoot)testassets.windows.x64.6.0\$(TestAssetsVersion)\**\*"
+                         Condition="'$(NeedsTestAssets)' == 'true' and '$(OS)' == 'Windows_NT'" />
+
+      <_testAssetsWinx86 Include="$(NuGetPackageRoot)testassets.windows.x86.6.0\$(TestAssetsVersion)\**\*"
+                         Condition="'$(NeedsTestAssets)' == 'true' and '$(OS)' == 'Windows_NT'" />
+
+      <_testAssetsLinux64 Include="$(NuGetPackageRoot)testassets.linux.x64.6.0\$(TestAssetsVersion)\**\*"
+                          Condition="'$(NeedsTestAssets)' == 'true'" />
+
+      <_testAssetsLinuxArm64 Include="$(NuGetPackageRoot)testassets.linux.arm64.6.0\$(TestAssetsVersion)\**\*"
+                             Condition="'$(NeedsTestAssets)' == 'true'" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_cdbFiles)"
+          DestinationFiles="@(_cdbFiles->'$(PackageArtifactsRootDir)cdb-sos\$(cdbsosversion)\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+
+    <Copy SourceFiles="@(_testAssetsWinx64)"
+          DestinationFiles="@(_testAssetsWinx64->'$(PackageArtifactsRootDir)testassets.windows.x64.6.0\$(TestAssetsVersion)\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy SourceFiles="@(_testAssetsWinx86)"
+          DestinationFiles="@(_testAssetsWinx86->'$(PackageArtifactsRootDir)testassets.windows.x86.6.0\$(TestAssetsVersion)\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy SourceFiles="@(_testAssetsLinux64)"
+          DestinationFiles="@(_testAssetsLinux64->'$(PackageArtifactsRootDir)testassets.linux.x64.6.0\$(TestAssetsVersion)\%(RecursiveDir)%(Filename)%(Extension)')" />
+
+    <Copy SourceFiles="@(_testAssetsLinuxArm64)"
+          DestinationFiles="@(_testAssetsLinuxArm64->'$(PackageArtifactsRootDir)testassets.linux.arm64.6.0\$(TestAssetsVersion)\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
 </Project>

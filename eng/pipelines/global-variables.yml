@@ -57,3 +57,46 @@ variables:
 - ${{ if eq(parameters.runtimeFeedToken, 'dotnetclimsrc-sas-token-base64') }}:
   - name: RuntimeFeedBase64SasToken
     value: $(dotnetclimsrc-read-sas-token-base64)
+
+# Helix queue configuration
+# Public (open) queues
+- ${{ if eq(variables['System.TeamProject'], 'public') }}:
+  - name: HelixQueuesWindows_x64
+    value: Windows.Amd64.Server2022.Open
+  - name: HelixQueuesWindows_x86
+    value: Windows.Amd64.Server2022.Open
+  - name: HelixQueuesWindows_arm64
+    value: Windows.11.Arm64.Open
+  - name: HelixQueuesLinux_x64
+    value: Ubuntu.2204.Amd64.Open
+  - name: HelixQueuesLinux_arm64
+    value: Ubuntu.2204.ArmArch.Open
+  - name: HelixQueuesLinux_musl_x64
+    value: '(Alpine.323.Amd64.Open)Ubuntu.2204.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
+  - name: HelixQueuesLinux_musl_arm64
+    value: '(Alpine.323.ArmArch.Open)Ubuntu.2204.ArmArch.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-arm64v8'
+  - name: HelixQueuesMacOS_x64
+    value: OSX.15.Amd64.Open
+  - name: HelixQueuesMacOS_arm64
+    value: OSX.15.Arm64.Open
+
+# Internal queues
+- ${{ if eq(variables['System.TeamProject'], 'internal') }}:
+  - name: HelixQueuesWindows_x64
+    value: Windows.Amd64.Server2022
+  - name: HelixQueuesWindows_x86
+    value: Windows.Amd64.Server2022
+  - name: HelixQueuesWindows_arm64
+    value: Windows.11.Arm64
+  - name: HelixQueuesLinux_x64
+    value: Ubuntu.2204.Amd64
+  - name: HelixQueuesLinux_arm64
+    value: Ubuntu.2204.ArmArch
+  - name: HelixQueuesLinux_musl_x64
+    value: '(Alpine.323.Amd64)Ubuntu.2204.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
+  - name: HelixQueuesLinux_musl_arm64
+    value: '(Alpine.323.ArmArch)Ubuntu.2204.ArmArch@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-arm64v8'
+  - name: HelixQueuesMacOS_x64
+    value: OSX.15.Amd64
+  - name: HelixQueuesMacOS_arm64
+    value: OSX.15.Arm64

@@ -1,8 +1,7 @@
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
 
-  <RootBinDir>$(RepoRootDir)/artifacts</RootBinDir>
-  <InstallDir>$(RootBinDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <InstallDir>$(ArtifactsDir)bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
 
   <Options>
     <Option Condition="'$(OS)' == 'linux'">

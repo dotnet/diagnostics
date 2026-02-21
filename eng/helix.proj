@@ -1,0 +1,293 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project Sdk="Microsoft.DotNet.Helix.Sdk" DefaultTargets="Test">
+
+  <!--
+    This project file sends diagnostics tests to Helix for execution.
+
+    Required Properties:
+      $(HelixTargetQueues)    - Semicolon-delimited list of Helix queues to target
+      $(Configuration)        - Build configuration (Debug/Release)
+      $(TargetArchitecture)   - Target architecture (x64, x86, arm64)
+      $(TargetOS)             - Target OS (Windows_NT, linux, osx)
+
+    Optional Properties:
+      $(HelixAccessToken)     - Access token for internal queues (not needed for .Open queues)
+      $(Creator)              - Creator for public/external builds
+      $(TestArtifactsDir)     - Path to the artifacts directory (defaults to $(ArtifactsDir))
+
+    Architecture:
+      Granular correlation payloads mirror the artifacts/ tree on Helix agents so that
+      DIAGNOSTICS_ARTIFACTS_DIR can point at HELIX_CORRELATION_PAYLOAD/artifacts/ and all
+      config-file paths resolve correctly. All .NET runtime versions from RuntimeTestVersions
+      (Versions.props) are installed on every agent via AdditionalDotNetPackage so that all
+      Options blocks activate and each work item runs all versions sequentially.
+  -->
+
+  <PropertyGroup>
+    <Language>msbuild</Language>
+    <NetCoreAppMinTargetFramework>net8.0</NetCoreAppMinTargetFramework>
+
+    <!-- Helix telemetry -->
+    <HelixSource Condition="'$(HelixSource)' == ''">pr/$(BUILD_REPOSITORY_NAME)/$(BUILD_SOURCEBRANCH)</HelixSource>
+    <HelixSource Condition="'$(BUILD_REPOSITORY_NAME)' == ''">local/diagnostics</HelixSource>
+    <HelixType>test/$(Configuration)/$(TargetArchitecture)/</HelixType>
+    <HelixBuild>$(BUILD_BUILDNUMBER)</HelixBuild>
+    <HelixBuild Condition="'$(HelixBuild)' == ''">0.0.0.0</HelixBuild>
+    <TestRunNamePrefix>$(TargetOS)$(OSSuffix) $(TargetArchitecture) $(Configuration) @ </TestRunNamePrefix>
+
+    <!-- Test configuration -->
+    <TestArtifactsDir Condition="'$(TestArtifactsDir)' == ''">$(ArtifactsDir)</TestArtifactsDir>
+    <TestTimeout>01:00:00</TestTimeout>
+
+    <!-- Azure DevOps integration -->
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' != ''">true</EnableAzurePipelinesReporter>
+    <FailOnTestFailure>true</FailOnTestFailure>
+
+    <!-- .NET CLI installed on Helix agents -->
+    <IncludeDotNetCli>true</IncludeDotNetCli>
+    <DotNetCliPackageType>sdk</DotNetCliPackageType>
+    <DotNetCliVersion Condition="'$(DotNetCliVersion)' == ''">$([System.Text.RegularExpressions.Regex]::Match('$(MicrosoftNETSdkVersion)', '^\d+\.\d+\.\d+').Value)</DotNetCliVersion>
+    <!-- Override the SDK RID for cross-arch (e.g. x86 tests on x64 Helix agents) -->
+    <DotNetCliRuntime Condition="'$(TargetOS)' == 'Windows_NT' and '$(TargetArchitecture)' == 'x86'">win-x86</DotNetCliRuntime>
+
+    <!-- Platform-specific env-var and path syntax (for Helix agent commands) -->
+    <_CorrelationPayload Condition="'$(TargetOS)' == 'Windows_NT'">%HELIX_CORRELATION_PAYLOAD%</_CorrelationPayload>
+    <_CorrelationPayload Condition="'$(TargetOS)' != 'Windows_NT'">$HELIX_CORRELATION_PAYLOAD</_CorrelationPayload>
+    <_UploadRoot Condition="'$(TargetOS)' == 'Windows_NT'">%HELIX_WORKITEM_UPLOAD_ROOT%</_UploadRoot>
+    <_UploadRoot Condition="'$(TargetOS)' != 'Windows_NT'">$HELIX_WORKITEM_UPLOAD_ROOT</_UploadRoot>
+    <_PathSep Condition="'$(TargetOS)' == 'Windows_NT'">\</_PathSep>
+    <_PathSep Condition="'$(TargetOS)' != 'Windows_NT'">/</_PathSep>
+    <_DotNetCliDir>$(_CorrelationPayload)$(_PathSep)dotnet-cli</_DotNetCliDir>
+    <_ArtifactsDir>$(_CorrelationPayload)$(_PathSep)artifacts$(_PathSep)</_ArtifactsDir>
+
+  </PropertyGroup>
+
+  <!-- ============ Pre-commands (run before every work item) ============ -->
+
+  <!-- Windows -->
+  <ItemGroup Condition="'$(TargetOS)' == 'Windows_NT'">
+    <HelixPreCommand Include="set &quot;DIAGNOSTICS_ARTIFACTS_DIR=$(_ArtifactsDir)&quot;" />
+    <HelixPreCommand Include="set &quot;RunningOnHelix=true&quot;" />
+  </ItemGroup>
+
+  <!-- macOS -->
+  <ItemGroup Condition="'$(TargetOS)' == 'osx'">
+    <!-- Resolve /tmp symlink to /private/tmp so paths match what the runtime reports.
+         Also ensures consistent TMPDIR for diagnostic IPC socket paths. -->
+    <HelixPreCommand Include="export TMPDIR=/private/tmp" />
+    <!-- Resolve HELIX_CORRELATION_PAYLOAD through the /tmp -> /private/tmp symlink so all
+         derived paths (DIAGNOSTICS_ARTIFACTS_DIR, dotnet-cli, etc.) use the canonical path -->
+    <HelixPreCommand Include="export HELIX_CORRELATION_PAYLOAD=%24(python3 -c &quot;import os; print(os.path.realpath('$HELIX_CORRELATION_PAYLOAD'))&quot;)" />
+    <HelixPreCommand Include="export DIAGNOSTICS_ARTIFACTS_DIR=&quot;$(_ArtifactsDir)&quot;" />
+    <HelixPreCommand Include="export RunningOnHelix=true" />
+    <!-- Copy and ad-hoc re-sign Xcode LLDB so the .NET runtime can JIT inside the LLDB process.
+         Apple's signed LLDB enforces Hardened Runtime which blocks MAP_JIT for CoreCLR. Re-signing
+         strips the Apple signature, allowing SOS managed commands to initialize the .NET runtime.
+         See documentation/FAQ.md for the same workaround. -->
+    <HelixPreCommand Include="sudo cp -f `xcode-select -p`/usr/bin/lldb /usr/local/bin/lldb" />
+    <HelixPreCommand Include="sudo install_name_tool -add_rpath %24(dirname %24(xcode-select -p))/SharedFrameworks /usr/local/bin/lldb 2>/dev/null || true" />
+    <HelixPreCommand Include="sudo codesign --force --sign - /usr/local/bin/lldb" />
+    <HelixPreCommand Include="export LLDB_PATH=/usr/local/bin/lldb" />
+    <!-- Enable non-interactive debugging on macOS (LLDB needs permission to attach/launch processes) -->
+    <HelixPreCommand Include="sudo DevToolsSecurity --enable" />
+    <HelixPreCommand Include="sudo security authorizationdb write system.privilege.taskport.debug allow" />
+  </ItemGroup>
+
+  <!-- Linux (common) -->
+  <ItemGroup Condition="'$(TargetOS)' == 'linux'">
+    <HelixPreCommand Include="export DIAGNOSTICS_ARTIFACTS_DIR=&quot;$(_ArtifactsDir)&quot;" />
+    <HelixPreCommand Include="export RunningOnHelix=true" />
+    <!-- Ensure consistent TMPDIR for diagnostic IPC socket paths across all processes -->
+    <HelixPreCommand Include="export TMPDIR=/tmp" />
+    <!-- Find LLDB: try common versioned names, fall back to plain lldb (mirrors eng/build.sh) -->
+    <HelixPreCommand Include="export LLDB_PATH=`which lldb-16 2>/dev/null || which lldb-15 2>/dev/null || which lldb-14 2>/dev/null || which lldb-13 2>/dev/null || which lldb-12 2>/dev/null || which lldb-11 2>/dev/null || which lldb-10 2>/dev/null || which lldb 2>/dev/null || echo ''`" />
+    <HelixPreCommand Include="echo &quot;LLDB_PATH=$LLDB_PATH&quot;" />
+  </ItemGroup>
+
+  <!-- Linux non-musl (Ubuntu/glibc): install LLDB 16 via apt -->
+  <ItemGroup Condition="'$(TargetOS)' == 'linux' AND '$(OSSuffix)' != '-musl'">
+    <!-- Install LLDB 16 if not present. LLDB 14 (Ubuntu 22.04 default) has broken Python SWIG
+         bindings that prevent SOS from initializing ('SwigPyObject' has no 'HandleCommand'). -->
+    <HelixPreCommand Include="which lldb-16 > /dev/null 2>&amp;1 || (wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc > /dev/null &amp;&amp; echo 'deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main' | sudo tee /etc/apt/sources.list.d/llvm-16.list > /dev/null &amp;&amp; sudo apt-get -o DPkg::Lock::Timeout=120 update -qq &amp;&amp; sudo apt-get -o DPkg::Lock::Timeout=120 install -y -qq lldb-16)" />
+    <!-- Re-detect LLDB after install since apt may remove older versions (e.g. lldb-14) -->
+    <HelixPreCommand Include="export LLDB_PATH=`which lldb-16 2>/dev/null || which lldb-15 2>/dev/null || which lldb 2>/dev/null || echo ''`" />
+    <HelixPreCommand Include="test -f /usr/bin/python || sudo ln -sf %24(which python3) /usr/bin/python" />
+  </ItemGroup>
+
+  <!-- Linux musl (Alpine container): the correlation payload is mounted read-only in Docker
+       containers, so copy the artifacts directory to a writable location. -->
+  <ItemGroup Condition="'$(TargetOS)' == 'linux' AND '$(OSSuffix)' == '-musl'">
+    <HelixPreCommand Include="cp -a $HELIX_CORRELATION_PAYLOAD/artifacts /tmp/artifacts-writable" />
+    <HelixPreCommand Include="export DIAGNOSTICS_ARTIFACTS_DIR=/tmp/artifacts-writable/" />
+    <HelixPreCommand Include="which lldb > /dev/null 2>&amp;1 || apk add --no-cache lldb py3-lldb python3" />
+    <HelixPreCommand Include="test -f /usr/bin/python || ln -sf %24(which python3) /usr/bin/python" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <HelixPreCommands>@(HelixPreCommand)</HelixPreCommands>
+  </PropertyGroup>
+
+  <!-- Resolve macOS /tmp symlink in DOTNET_ROOT after Helix SDK sets it (AddDotNetSdk target).
+       The runtime reports /private/tmp/... in ProcessInfo.CommandLine while DOTNET_ROOT uses /tmp/... -->
+  <Target Name="ResolveMacOSDotNetRoot" BeforeTargets="CoreTest" AfterTargets="AddDotNetSdk"
+          Condition="'$(TargetOS)' == 'osx'">
+    <PropertyGroup>
+      <HelixPreCommands>$(HelixPreCommands);export DOTNET_ROOT=%24(python3 -c "import os; print(os.path.realpath('$DOTNET_ROOT'))")</HelixPreCommands>
+    </PropertyGroup>
+  </Target>
+
+  <PropertyGroup>
+    <!-- Staging directory for generated Versions.txt -->
+    <_VersionsStagingDir>$(ArtifactsDir)tmp\helix\dotnet-test\</_VersionsStagingDir>
+    <!-- Staging directory for global.json and NuGet.config (needed for debuggee builds on Helix) -->
+    <_BuildConfigStagingDir>$(ArtifactsDir)tmp\helix\build-config\</_BuildConfigStagingDir>
+  </PropertyGroup>
+
+  <!-- ============ Install additional .NET runtimes on Helix agents ============ -->
+  <!-- Use Runtime/AspNet (release versions) to match what SdkPackOverrides resolves via NuGet,
+       ensuring the on-disk mscordbi.dll PE timestamps match what debuggees bundle. -->
+  <ItemGroup>
+    <AdditionalDotNetPackage Include="@(RuntimeTestVersions->'%(Runtime)')">
+      <PackageType>runtime</PackageType>
+    </AdditionalDotNetPackage>
+    <AdditionalDotNetPackage Include="@(RuntimeTestVersions->'%(AspNet)')">
+      <PackageType>aspnetcore-runtime</PackageType>
+    </AdditionalDotNetPackage>
+  </ItemGroup>
+
+  <!-- ============ Test project lists ============ -->
+
+  <ItemGroup>
+    <!-- Pure unit tests: no debuggee or config-file dependencies -->
+    <HelixTestProject Include="EventPipe.UnitTests" />
+    <HelixTestProject Include="Microsoft.Diagnostics.Monitoring.UnitTests" />
+    <HelixTestProject Include="Microsoft.FileFormats.UnitTests" />
+    <HelixTestProject Include="Microsoft.SymbolStore.UnitTests" />
+    <!-- Complex tests: CommonTestRunner-based, need tracee payloads + env vars -->
+    <HelixTestProject Include="DotnetCounters.UnitTests" />
+    <HelixTestProject Include="DotnetTrace.UnitTests" />
+    <HelixTestProject Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
+    <HelixTestProject Include="Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests" />
+    <!-- Native-dependent tests: need native SOS/DbgShim + additional payloads -->
+    <HelixTestProject Include="SOS.UnitTests" />
+    <HelixTestProject Include="DbgShim.UnitTests" />
+  </ItemGroup>
+
+  <!-- ============ Correlation payloads ============ -->
+  <!-- Each payload uses Destination metadata to mirror the artifacts/ tree on agents -->
+
+  <!-- Tools referenced by test config files -->
+  <ItemGroup>
+    <HelixCorrelationPayload Include="$(TestArtifactsDir)bin\dotnet-trace" Condition="Exists('$(TestArtifactsDir)bin\dotnet-trace')">
+      <Destination>artifacts/bin/dotnet-trace</Destination>
+    </HelixCorrelationPayload>
+    <HelixCorrelationPayload Include="$(TestArtifactsDir)bin\dotnet-dump" Condition="Exists('$(TestArtifactsDir)bin\dotnet-dump')">
+      <Destination>artifacts/bin/dotnet-dump</Destination>
+    </HelixCorrelationPayload>
+    <HelixCorrelationPayload Include="$(TestArtifactsDir)bin\dotnet-counters" Condition="Exists('$(TestArtifactsDir)bin\dotnet-counters')">
+      <Destination>artifacts/bin/dotnet-counters</Destination>
+    </HelixCorrelationPayload>
+  </ItemGroup>
+
+  <!-- Test assets: debuggee sources, aux MSBuild files, lldb tests, and package assets (cdb-sos, TestAssets) -->
+  <ItemGroup>
+    <HelixCorrelationPayload Include="$(TestArtifactsDir)test" Condition="Exists('$(TestArtifactsDir)test')">
+      <Destination>artifacts/test</Destination>
+    </HelixCorrelationPayload>
+  </ItemGroup>
+
+  <!-- Native SOS/DbgShim binaries (platform-specific) -->
+  <ItemGroup>
+    <HelixCorrelationPayload Include="$(TestArtifactsDir)bin\$(TargetOS).$(TargetArchitecture).$(Configuration)"
+                             Condition="Exists('$(TestArtifactsDir)bin\$(TargetOS).$(TargetArchitecture).$(Configuration)')">
+      <Destination>artifacts/bin/$(TargetOS).$(TargetArchitecture).$(Configuration)</Destination>
+    </HelixCorrelationPayload>
+  </ItemGroup>
+
+  <!-- SOS test scripts, symbol/extension test data -->
+  <ItemGroup>
+    <HelixCorrelationPayload Include="$(TestArtifactsDir)bin\SOS.UnitTests" Condition="Exists('$(TestArtifactsDir)bin\SOS.UnitTests')">
+      <Destination>artifacts/bin/SOS.UnitTests</Destination>
+    </HelixCorrelationPayload>
+  </ItemGroup>
+
+  <!-- Debuggee binaries: tracees + SOS/DbgShim debuggees (added dynamically to avoid metadata-in-Condition errors) -->
+  <ItemGroup>
+    <_DebuggeeName Include="Tracee;EventPipeTracee;ExitCodeTracee;StackTracee" />
+    <_DebuggeeName Include="SimpleDebuggee;AsyncMain;DivZero;DumpGCData;WebApp3;LineNums;Overflow;SimpleThrow" />
+    <_DebuggeeName Include="NestedExceptionTest;TaskNestedException;ReflectionTest;GCPOH;GCWhere" />
+    <_DebuggeeName Include="MiniDumpLocalVarLookup;VarargPInvokeInteropMD;DynamicMethod;DotnetDumpCommands" />
+    <_DebuggeeName Include="FindRootsOlderGeneration;SymbolTestApp;SymbolTestDll;RandomUserLibrary;TestExtension" />
+  </ItemGroup>
+
+  <Target Name="AddDebuggeePayloads" BeforeTargets="CoreTest">
+    <ItemGroup>
+      <HelixCorrelationPayload Include="@(_DebuggeeName->'$(TestArtifactsDir)bin\%(Identity)')">
+        <Destination>artifacts/bin/%(Identity)</Destination>
+      </HelixCorrelationPayload>
+    </ItemGroup>
+  </Target>
+
+  <!-- ============ Write Versions.txt with ALL runtime versions ============ -->
+
+  <Target Name="WriteVersionsFile" BeforeTargets="CoreTest">
+    <MakeDir Directories="$(_VersionsStagingDir)" />
+
+    <ItemGroup>
+      <_VersionsLines Include="&lt;Configuration&gt;" />
+      <_VersionsLines Include="@(RuntimeTestVersions->'  &lt;RuntimeVersion%(Identity)&gt;%(Runtime)&lt;/RuntimeVersion%(Identity)&gt;')" />
+      <_VersionsLines Include="@(RuntimeTestVersions->'  &lt;AspNetCoreVersion%(Identity)&gt;%(AspNet)&lt;/AspNetCoreVersion%(Identity)&gt;')" />
+      <_VersionsLines Include="@(RuntimeTestVersions->'  &lt;TargetFramework%(Identity)&gt;%(TargetFramework)&lt;/TargetFramework%(Identity)&gt;')" />
+      <_VersionsLines Include="&lt;/Configuration&gt;" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(_VersionsStagingDir)Debugger.Tests.Versions.txt"
+                     Lines="@(_VersionsLines)" Overwrite="true" />
+
+    <Message Importance="High" Text="Wrote Versions.txt to $(_VersionsStagingDir)" />
+
+    <!-- Add the staging dir as a correlation payload destined for artifacts/dotnet-test/ -->
+    <ItemGroup>
+      <HelixCorrelationPayload Include="$(_VersionsStagingDir)">
+        <Destination>artifacts/dotnet-test</Destination>
+      </HelixCorrelationPayload>
+    </ItemGroup>
+
+  </Target>
+
+  <!-- ============ Stage global.json + NuGet.config for debuggee builds on Helix ============ -->
+
+  <Target Name="StageBuildConfig" BeforeTargets="CoreTest">
+    <MakeDir Directories="$(_BuildConfigStagingDir)" />
+
+    <Copy SourceFiles="$(RepoRoot)\global.json;$(RepoRoot)\NuGet.config"
+          DestinationFolder="$(_BuildConfigStagingDir)"
+          SkipUnchangedFiles="true" />
+
+    <Message Importance="High" Text="Staged global.json and NuGet.config to $(_BuildConfigStagingDir)" />
+
+    <!-- Place at artifacts/ root so dotnet CLI finds them when building debuggees -->
+    <ItemGroup>
+      <HelixCorrelationPayload Include="$(_BuildConfigStagingDir)">
+        <Destination>artifacts</Destination>
+      </HelixCorrelationPayload>
+    </ItemGroup>
+  </Target>
+
+  <!-- ============ Work item creation ============ -->
+
+  <Target Name="CreateWorkItems" BeforeTargets="CoreTest" DependsOnTargets="AddDebuggeePayloads;WriteVersionsFile;StageBuildConfig">
+
+    <ItemGroup>
+      <HelixWorkItem Include="%(HelixTestProject.Identity)"
+                     Condition="Exists('$(TestArtifactsDir)bin\%(HelixTestProject.Identity)\$(Configuration)\$(NetCoreAppMinTargetFramework)')">
+        <PayloadDirectory>$(TestArtifactsDir)bin\%(HelixTestProject.Identity)\$(Configuration)\$(NetCoreAppMinTargetFramework)</PayloadDirectory>
+        <Command>dotnet test %(HelixTestProject.Identity).dll --logger "trx;LogFileName=$(_UploadRoot)$(_PathSep)%(HelixTestProject.Identity).trx"</Command>
+        <Timeout>$(TestTimeout)</Timeout>
+      </HelixWorkItem>
+    </ItemGroup>
+
+    <Message Importance="High" Text="Created work items: @(HelixWorkItem->'%(Identity)', ', ')" />
+  </Target>
+
+</Project>

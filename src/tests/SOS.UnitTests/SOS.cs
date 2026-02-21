@@ -715,16 +715,19 @@ public class SOS
             }
             else
             {
-                program = Environment.GetEnvironmentVariable("PYTHONPATH");
-                if (program == null)
+                string pythonPath = Environment.GetEnvironmentVariable("PYTHONPATH");
+                if (pythonPath != null)
                 {
-                    // We should verify what python version this is. 2.7 is out of
-                    // support for a while now, but we have old OS's.
+                    // PYTHONPATH is a colon-separated search path; the first entry may be the python binary.
+                    program = pythonPath.Split(':')[0];
+                }
+                else
+                {
                     program = "/usr/bin/python";
                 }
                 if (!File.Exists(program))
                 {
-                    throw new ArgumentException($"{program} does not exists");
+                    throw new ArgumentException($"Cannot find python at {program}");
                 }
             }
             string artifactsDir = TestConfiguration.MakeCanonicalPath(config.AllSettings["ArtifactsDir"]);
