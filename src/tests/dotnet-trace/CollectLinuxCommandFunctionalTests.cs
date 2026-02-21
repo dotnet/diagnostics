@@ -100,13 +100,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         [ConditionalTheory(nameof(IsCollectLinuxSupported))]
         [MemberData(nameof(ResolveProcessExceptions))]
-        public void CollectLinuxCommand_ResolveProcessExceptions(object testArgs, string[] expectedError)
+        public void CollectLinuxCommand_ResolveProcessExceptions(object testArgs, string[] expectedError, int expectedExitCode)
         {
             MockConsole console = new(200, 30, _outputHelper);
 
             int exitCode = Run(testArgs, console);
 
-            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            Assert.Equal(expectedExitCode, exitCode);
             console.AssertSanitizedLinesEqual(null, expectedError);
         }
 
@@ -170,12 +170,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_InvalidPid()
         {
             MockConsole console = new(200, 30, _outputHelper);
-            var args = TestArgs(processId: -1, probe: true);
+            var args = TestArgs(processId: -1, probe: true, output: new FileInfo(CommonOptions.DefaultTraceName));
             int exitCode = Run(args, console);
 
-            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
 
-            string[] expected = FormatException("-1 is not a valid process ID");
+            // ProcessNotFound shows just PID when no name is provided
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    $"Could not resolve process '{FormatProcessIdentifier(-1, string.Empty)}'.",
+                }
+            );
 
             console.AssertSanitizedLinesEqual(null, expected);
         }
@@ -184,12 +189,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_InvalidName()
         {
             MockConsole console = new(200, 30, _outputHelper);
-            var args = TestArgs(name: "process-that-should-not-exist", processId: 0, probe: true);
+            var args = TestArgs(name: "process-that-should-not-exist", processId: 0, probe: true, output: new FileInfo(CommonOptions.DefaultTraceName));
             int exitCode = Run(args, console);
 
-            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
 
-            string[] expected = FormatException("There is no active process with the given name: process-that-should-not-exist");
+            // ProcessNotFound shows "name (pid)" when name is provided - pid is 0 from input
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    $"Could not resolve process '{FormatProcessIdentifier(0, "process-that-should-not-exist")}'.",
+                }
+            );
 
             console.AssertSanitizedLinesEqual(null, expected);
         }
@@ -198,14 +208,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_BothPidAndName()
         {
             MockConsole console = new(200, 30, _outputHelper);
-            var args = TestArgs(name: "dummy", processId: 1, probe: true);
+            var args = TestArgs(name: "dummy", processId: 1, probe: true, output: new FileInfo(CommonOptions.DefaultTraceName));
             int exitCode = Run(args, console);
 
-            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
 
-            // When both PID and name are supplied, the banner still refers to the PID
-            // because the implementation prioritizes ProcessId when it is non-zero.
-            string[] expected = FormatException("Only one of the --name or --process-id options may be specified.");
+            // ProcessNotFound shows "name (pid)" when both are provided
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    $"Could not resolve process '{FormatProcessIdentifier(1, "dummy")}'.",
+                }
+            );
 
             console.AssertSanitizedLinesEqual(null, expected);
         }
@@ -433,22 +446,28 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public static IEnumerable<object[]> ResolveProcessExceptions()
         {
+            // ResolveProcess throws DiagnosticToolException for invalid PID - shows ProcessNotFound error
             yield return new object[]
             {
                 TestArgs(processId: -1, name: string.Empty),
-                FormatException("-1 is not a valid process ID")
+                FormatProcessNotFoundError(FormatProcessIdentifier(-1, string.Empty)),
+                (int)ReturnCode.TracingError
             };
 
+            // When both PID and name are supplied, ResolveProcess throws - shows ProcessNotFound with "name (pid)"
             yield return new object[]
             {
                 TestArgs(processId: 1, name: "dummy"),
-                FormatException("Only one of the --name or --process-id options may be specified.")
+                FormatProcessNotFoundError(FormatProcessIdentifier(1, "dummy")),
+                (int)ReturnCode.TracingError
             };
 
+            // ResolveProcess throws for non-existent process - shows ProcessNotFound with just PID
             yield return new object[]
             {
                 TestArgs(processId: int.MaxValue, name: string.Empty),
-                FormatException("No process with ID 2147483647 is currently running.")
+                FormatProcessNotFoundError(FormatProcessIdentifier(int.MaxValue, string.Empty)),
+                (int)ReturnCode.TracingError
             };
         }
 
@@ -485,6 +504,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
             "https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-trace.",
             "=========================================================================================="
             ];
+        private static string[] FormatProcessNotFoundError(string processIdentifier)
+        {
+            List<string> result = new();
+            result.AddRange(PreviewMessages);
+            result.Add($"[ERROR] Could not resolve process '{processIdentifier}'.");
+            return result.ToArray();
+        }
+        private static string FormatProcessIdentifier(int pid, string name)
+        {
+            if (string.IsNullOrEmpty(name) || name == pid.ToString())
+            {
+                return pid.ToString();
+            }
+            return $"{name} ({pid})";
+        }
 
         private static string[] ExpectPreviewWithMessages(string[] messages)
         {
