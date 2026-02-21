@@ -309,6 +309,30 @@ namespace DotnetCounters.UnitTests
         }
 
         [Fact]
+        public void MalformedTagsDoNotCrash()
+        {
+            // Defensive test: verifies that malformed tags are handled gracefully
+            // WITHOUT the defensive fix, this test throws IndexOutOfRangeException
+            // WITH the defensive fix, malformed tags are skipped and no crash occurs
+            MockConsole console = new MockConsole(60, 40);
+            ConsoleWriter exporter = new ConsoleWriter(console);
+            exporter.Initialize();
+
+            // These would crash the old code by trying to access keyValue[1] when keyValue.Length == 1
+            // Tag with no '=' - would cause IndexOutOfRangeException in old code
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "BadTagNoEquals", 10), false);
+            
+            // Tag with only whitespace
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter2", "{widget}", "   ", 20), false);
+            
+            // Mix of valid and invalid tags - only valid one should be processed
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter3", "{widget}", "InvalidTag,color=blue", 30), false);
+
+            // If we got here without throwing IndexOutOfRangeException, the defensive code worked!
+            // The test passes simply by completing successfully
+        }
+
+        [Fact]
         public void ErrorStatusIsDisplayed()
         {
             MockConsole console = new MockConsole(50, 40, _outputHelper);
