@@ -1,12 +1,24 @@
-# See here for image contents: https://github.com/microsoft/vscode-dev-containers/tree/v0.192.0/containers/dotnet/.devcontainer/base.Dockerfile
-# For specifics about the dotnet base container see: https://github.com/microsoft/vscode-dev-containers/tree/main/containers/dotnet
+# See https://github.com/devcontainers/images/tree/main/src/dotnet/
+ARG VARIANT="10.0-noble"
+FROM mcr.microsoft.com/devcontainers/dotnet:${VARIANT}
 
-# [Choice] .NET version: 6.0, 5.0, 3.1, 2.1
-ARG VARIANT="6.0-focal"
-FROM mcr.microsoft.com/vscode/devcontainers/dotnet:0-${VARIANT}
+RUN bash -i -c 'nvm install --lts' && npm install -g @github/copilot
 
-# Set up machine requirements to build the repo
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends cmake clang \
-    curl gdb gettext git libicu-dev lldb liblldb-dev libunwind8 \
-    llvm make python python-lldb tar wget zip 
+    && apt-get -y install --no-install-recommends \
+        clang \
+        cmake \
+        cpio \
+        build-essential \
+        python3 \
+        curl \
+        git \
+        lldb \
+        llvm \
+        liblldb-dev \
+        libunwind8 \
+        libunwind8-dev \
+        liblttng-ust-dev \
+        ninja-build \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
