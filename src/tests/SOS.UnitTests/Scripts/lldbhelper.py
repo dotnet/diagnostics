@@ -1,4 +1,5 @@
 import lldb
+import sys
 
 def __lldb_init_module(debugger, internal_dict):    
     try:
@@ -16,10 +17,12 @@ def runcommand(debugger, command, result, internal_dict):
     interpreter.HandleCommand(command, commandResult)
 
     if commandResult.GetOutputSize() > 0:
-        print(commandResult.GetOutput())
+        # Use sys.stdout.write to avoid the extra newline that print() adds,
+        # since GetOutput() already includes a trailing newline.
+        sys.stdout.write(commandResult.GetOutput())
 
     if commandResult.GetErrorSize() > 0:
-        print(commandResult.GetError())
+        sys.stdout.write(commandResult.GetError())
 
     if commandResult.Succeeded():
         print("<END_COMMAND_OUTPUT>")

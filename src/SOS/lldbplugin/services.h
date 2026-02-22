@@ -21,6 +21,8 @@ private:
     std::vector<SpecialThreadInfoEntry> m_threadInfos;
     bool m_threadInfoInitialized;
 
+    lldb::SBCommandReturnObject *m_currentResult;
+
     BYTE m_cache[CACHE_SIZE];
     ULONG64 m_startCache;
     bool m_cacheValid;
@@ -435,6 +437,9 @@ public:
     void AddManagedCommand(const char* name, const char* help);
 
     bool ExecuteCommand( const char* commandName, char** arguments, lldb::SBCommandReturnObject &result);
+
+    void SetCurrentResult(lldb::SBCommandReturnObject *result) { m_currentResult = result; }
+    void ClearCurrentResult() { m_currentResult = nullptr; }
 
     HRESULT InternalOutputVaList(ULONG mask, PCSTR format, va_list args);
 };
