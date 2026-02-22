@@ -137,7 +137,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             if ((PrintWorkItems || PrintWorkItemStats) && (threadPool is null || threadPool.UsingPortableThreadPool || threadPool.UsingWindowsThreadPool))
             {
                 IEnumerable<ClrObject> workItems = PrintWorkItems ? DumpWorkItems() : EnumerateAllWorkItems();
-                
+
                 if (PrintWorkItemStats)
                 {
                     if (!DumpHeap.PrintHeap(workItems, DumpHeapService.DisplayKind.Normal, statsOnly: true, printFragmentation: false))
