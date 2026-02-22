@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
@@ -20,7 +21,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-wi", Help = "Print all work items that are queued.")]
         public bool PrintWorkItems { get; set; }
 
-        [Option(Name = "-stat", Help = "Print a summary of queued work items grouped by type (DumpHeap -stat style).")]
+        [Option(Name = "-stat", Aliases = new[] { "-summary" }, Help = "Print a summary of queued work items grouped by type (DumpHeap -stat style).")]
         public bool PrintWorkItemStats { get; set; }
 
         [ServiceImport]
@@ -135,21 +136,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // We can print managed work items even if we failed to request the ThreadPool.
             if ((PrintWorkItems || PrintWorkItemStats) && (threadPool is null || threadPool.UsingPortableThreadPool || threadPool.UsingWindowsThreadPool))
             {
-                if (PrintWorkItems)
-                {
-                    DumpWorkItems();
-                }
-
+                IEnumerable<ClrObject> workItems = PrintWorkItems ? DumpWorkItems() : EnumerateAllWorkItems();
+                
                 if (PrintWorkItemStats)
                 {
-                    List<ClrObject> workItems = EnumerateAllWorkItems().ToList();
-                    if (workItems.Count == 0)
+                    if (!DumpHeap.PrintHeap(workItems, DumpHeapService.DisplayKind.Normal, statsOnly: true, printFragmentation: false))
                     {
                         Console.WriteLine("No queued work items.");
-                    }
-                    else
-                    {
-                        DumpHeap.PrintHeap(workItems, DumpHeapService.DisplayKind.Normal, statsOnly: true, printFragmentation: false);
                     }
                 }
             }
@@ -165,14 +158,18 @@ Use -stat to display a DumpHeap-style summary of queued work items grouped by
 type, including MethodTable, Count, TotalSize, and Class Name. Use -wi -stat
 together to display individual items followed by the statistics summary.
 ";
-        private void DumpWorkItems()
+        private List<ClrObject> DumpWorkItems()
         {
+            List<ClrObject> workItems = [];
             Table output = null;
 
             foreach ((ClrObject entry, bool isHighPri) in EnumerateAllWorkItemsWithPriority())
             {
+                workItems.Add(entry);
                 WriteEntry(ref output, entry, isHighPri);
             }
+
+            return workItems;
         }
 
         private IEnumerable<ClrObject> EnumerateAllWorkItems()
