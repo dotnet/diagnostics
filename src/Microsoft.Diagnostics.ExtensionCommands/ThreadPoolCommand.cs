@@ -135,9 +135,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // We can print managed work items even if we failed to request the ThreadPool.
             if ((PrintWorkItems || PrintWorkItemStats) && (threadPool is null || threadPool.UsingPortableThreadPool || threadPool.UsingWindowsThreadPool))
             {
-                if (PrintWorkItems && PrintWorkItemStats)
+                if (PrintWorkItems)
                 {
-                    throw new ArgumentException("Cannot specify both -wi and -stat.");
+                    DumpWorkItems();
                 }
 
                 if (PrintWorkItemStats)
@@ -152,10 +152,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         DumpHeap.PrintHeap(workItems, DumpHeapService.DisplayKind.Normal, statsOnly: true, printFragmentation: false);
                     }
                 }
-                else
-                {
-                    DumpWorkItems();
-                }
             }
         }
 
@@ -166,7 +162,8 @@ of work requests in the queue, number of completion port threads, and number of
 timers.
 
 Use -stat to display a DumpHeap-style summary of queued work items grouped by
-type, including MethodTable, Count, TotalSize, and Class Name.
+type, including MethodTable, Count, TotalSize, and Class Name. Use -wi -stat
+together to display individual items followed by the statistics summary.
 ";
         private void DumpWorkItems()
         {
