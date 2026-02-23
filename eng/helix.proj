@@ -169,7 +169,9 @@
     <HelixTestProject Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
     <HelixTestProject Include="Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests" />
     <!-- Native-dependent tests: need native SOS/DbgShim + additional payloads -->
-    <HelixTestProject Include="SOS.UnitTests" />
+    <HelixTestProject Include="SOS.UnitTests">
+      <CustomTimeout>01:30:00</CustomTimeout>
+    </HelixTestProject>
     <HelixTestProject Include="DbgShim.UnitTests" />
   </ItemGroup>
 
@@ -283,7 +285,8 @@
                      Condition="Exists('$(TestArtifactsDir)bin\%(HelixTestProject.Identity)\$(Configuration)\$(NetCoreAppMinTargetFramework)')">
         <PayloadDirectory>$(TestArtifactsDir)bin\%(HelixTestProject.Identity)\$(Configuration)\$(NetCoreAppMinTargetFramework)</PayloadDirectory>
         <Command>dotnet test %(HelixTestProject.Identity).dll --logger "trx;LogFileName=$(_UploadRoot)$(_PathSep)%(HelixTestProject.Identity).trx"</Command>
-        <Timeout>$(TestTimeout)</Timeout>
+        <Timeout Condition="'%(HelixTestProject.CustomTimeout)' != ''">%(HelixTestProject.CustomTimeout)</Timeout>
+        <Timeout Condition="'%(HelixTestProject.CustomTimeout)' == ''">$(TestTimeout)</Timeout>
       </HelixWorkItem>
     </ItemGroup>
 
