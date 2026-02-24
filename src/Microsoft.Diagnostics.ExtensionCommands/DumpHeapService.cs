@@ -35,8 +35,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Strings
         }
 
-        public void PrintHeap(IEnumerable<ClrObject> objects, DisplayKind displayKind, bool statsOnly, bool printFragmentation, bool sortByCount = false)
+        /// <summary>
+        /// Prints objects in a standardized format similar to how !dumpheap does, with MT, size, and type information.  Can optionally print only statistics about the heap, and can optionally print fragmentation information.
+        /// </summary>
+        /// <param name="objects">The objects to print.</param>
+        /// <param name="displayKind">The display kind.</param>
+        /// <param name="statsOnly">Whether to print only statistics.</param>
+        /// <param name="printFragmentation">Whether to print fragmentation information.</param>
+        /// <param name="sortByCount">Whether to sort by count.</param>
+        /// <returns>True if any objects in the enumeration, false otherwise.</returns>
+        public bool PrintHeap(IEnumerable<ClrObject> objects, DisplayKind displayKind, bool statsOnly, bool printFragmentation, bool sortByCount = false)
         {
+            bool hadAny = false;
             List<(ClrObject Free, ClrObject Next)> fragmentation = null;
             Dictionary<(string String, ulong Size), uint> stringTable = null;
             Dictionary<ulong, (int Count, ulong Size, string TypeName)> stats = new();
@@ -61,11 +71,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         }
 
                         thinLockOutput.WriteRow(obj, thinLock.Thread, thinLock.Thread?.OSThreadId ?? 0, thinLock.Recursion);
+                        hadAny = true;
                     }
 
                     continue;
                 }
 
+                // Only thinlocks are further filtered by displayKind, everything else that reaches here is printed, so set hadAny = true.
+                hadAny = true;
                 if (displayKind == DisplayKind.Short)
                 {
                     Console.WriteLine(obj.Address.ToString("x12"));
@@ -247,6 +260,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // Print fragmentation if we calculated it
             PrintFragmentation(fragmentation);
+
+            return hadAny;
         }
 
         private void PrintFragmentation(List<(ClrObject Free, ClrObject Next)> fragmentation)
