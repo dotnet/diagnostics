@@ -38,6 +38,10 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         private readonly DateTime _timestamp = DateTime.Now;
 
+        // Properties set from Helix environment variables that should not be overwritten
+        // by values in imported config files (e.g., Debugger.Tests.Common.txt).
+        private readonly HashSet<string> _helixProtectedProperties = new();
+
         public IEnumerable<TestConfiguration> Configurations { get; private set; }
 
         private void ParseConfigFile(string path)
@@ -86,7 +90,35 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 initialConfig["WinDir"] = Path.GetFullPath(Environment.GetEnvironmentVariable("WINDIR"));
             }
+
+            // On Helix, override ArtifactsDir and DotNetRoot before parsing config files
+            // so all $(ArtifactsDir) and $(DotNetRoot) references resolve to Helix paths.
+            // These are marked as protected so imported config files cannot overwrite them.
+            if (Environment.GetEnvironmentVariable("RunningOnHelix") == "true")
+            {
+                initialConfig["RunningOnHelix"] = "true";
+
+                string helixArtifactsDir = Environment.GetEnvironmentVariable("DIAGNOSTICS_ARTIFACTS_DIR");
+                if (!string.IsNullOrEmpty(helixArtifactsDir))
+                {
+                    initialConfig["ArtifactsDir"] = helixArtifactsDir;
+                    _helixProtectedProperties.Add("ArtifactsDir");
+                }
+
+                string helixDotNetRoot = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+                if (string.IsNullOrEmpty(helixDotNetRoot))
+                {
+                    helixDotNetRoot = Environment.GetEnvironmentVariable("DIAGNOSTICS_DOTNET_ROOT");
+                }
+                if (!string.IsNullOrEmpty(helixDotNetRoot))
+                {
+                    initialConfig["DotNetRoot"] = helixDotNetRoot;
+                    _helixProtectedProperties.Add("DotNetRoot");
+                }
+            }
+
             IEnumerable<Dictionary<string, string>> configs = ParseConfigFile(path, new Dictionary<string, string>[] { initialConfig });
+
             Configurations = configs.Select(c => new TestConfiguration(c)).ToList();
         }
 
@@ -179,6 +211,11 @@ namespace Microsoft.Diagnostics.TestHelpers
                         // This checks the condition on an individual config value
                         if (EvaluateConditional(config, node))
                         {
+                            // Don't let imported config files overwrite Helix-protected properties
+                            if (_helixProtectedProperties.Contains(node.Name.LocalName))
+                            {
+                                continue;
+                            }
                             string resolveNodeValue = ResolveProperties(config, node.Value);
                             config[node.Name.LocalName] = resolveNodeValue;
                         }

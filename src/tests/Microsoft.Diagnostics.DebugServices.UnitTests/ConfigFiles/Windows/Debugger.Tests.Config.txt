@@ -1,8 +1,7 @@
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
 
-  <RootBinDir>$(RepoRootDir)\artifacts</RootBinDir>
-  <InstallDir>$(RootBinDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <InstallDir>$(ArtifactsDir)bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <SOSPath>$(InstallDir)\sos.dll</SOSPath>
   
   <RunTestsWindows_x64>$(RunTests)</RunTestsWindows_x64>

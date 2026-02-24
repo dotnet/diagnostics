@@ -1,7 +1,7 @@
 <Configuration>
   <Import ConfigFile="Debugger.Tests.Common.txt" />
   <DotNetRoot>$(ArtifactsDir)/dotnet-test</DotNetRoot>
-  <Import ConfigFile="$(DotNetRoot)/Debugger.Tests.Versions.txt" />
+  <Import ConfigFile="$(ArtifactsDir)/dotnet-test/Debugger.Tests.Versions.txt" />
 
   <InstallDir>$(ArtifactsDir)/bin/$(OS).$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
   <LogDir>$(ArtifactsDir)/TestResults/$(TargetConfiguration)/dbgshim.unittests_$(Timestamp)</LogDir>
