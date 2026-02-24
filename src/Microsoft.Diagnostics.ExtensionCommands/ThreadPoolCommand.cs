@@ -136,11 +136,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // We can print managed work items even if we failed to request the ThreadPool.
             if ((PrintWorkItems || PrintWorkItemStats) && (threadPool is null || threadPool.UsingPortableThreadPool || threadPool.UsingWindowsThreadPool))
             {
-                IEnumerable<ClrObject> workItems = PrintWorkItems ? DumpWorkItems() : EnumerateAllWorkItems();
+                List<(ClrObject Obj, bool IsHighPri)> workItems = EnumerateAllWorkItemsWithPriority().ToList();
+
+                if (PrintWorkItems && workItems.Count > 0)
+                {
+                    DumpWorkItems(workItems);
+                }
 
                 if (PrintWorkItemStats)
                 {
-                    if (!DumpHeap.PrintHeap(workItems, DumpHeapService.DisplayKind.Normal, statsOnly: true, printFragmentation: false))
+                    if (!DumpHeap.PrintHeap(workItems.Select(r => r.Obj), DumpHeapService.DisplayKind.Normal, statsOnly: true, printFragmentation: false))
                     {
                         Console.WriteLine("No queued work items.");
                     }
@@ -158,29 +163,16 @@ Use -stat to display a DumpHeap-style summary of queued work items grouped by
 type, including MethodTable, Count, TotalSize, and Class Name. Use -wi -stat
 together to display individual items followed by the statistics summary.
 ";
-        private List<ClrObject> DumpWorkItems()
+        private void DumpWorkItems(List<(ClrObject Obj, bool IsHighPri)> workItems)
         {
-            List<ClrObject> workItems = [];
             Table output = null;
-
-            foreach ((ClrObject entry, bool isHighPri) in EnumerateAllWorkItemsWithPriority())
+            foreach ((ClrObject obj, bool isHighPri) in workItems)
             {
-                workItems.Add(entry);
-                WriteEntry(ref output, entry, isHighPri);
-            }
-
-            return workItems;
-        }
-
-        private IEnumerable<ClrObject> EnumerateAllWorkItems()
-        {
-            foreach ((ClrObject entry, _) in EnumerateAllWorkItemsWithPriority())
-            {
-                yield return entry;
+                WriteEntry(ref output, obj, isHighPri);
             }
         }
 
-        private IEnumerable<(ClrObject Item, bool IsHighPri)> EnumerateAllWorkItemsWithPriority()
+        private IEnumerable<(ClrObject Obj, bool IsHighPri)> EnumerateAllWorkItemsWithPriority()
         {
             ClrType workQueueType = Runtime.BaseClassLibrary.GetTypeByName("System.Threading.ThreadPoolWorkQueue");
             ClrType workStealingQueueType = Runtime.BaseClassLibrary.GetTypeByName("System.Threading.ThreadPoolWorkQueue+WorkStealingQueue");
