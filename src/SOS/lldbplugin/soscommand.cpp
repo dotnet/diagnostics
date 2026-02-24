@@ -76,8 +76,10 @@ public:
                     }
                 }
                 g_services->FlushCheck();
+                g_services->SetCurrentResult(&result);
                 const char* sosArgs = str.c_str();
                 HRESULT hr = commandFunc(g_services, sosArgs);
+                g_services->ClearCurrentResult();
                 if (hr != S_OK)
                 {
                     result.SetStatus(lldb::eReturnStatusFailed);
