@@ -281,15 +281,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public static string GetDotNetHomeDirectory()
         {
-            string dotnetHome;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("USERPROFILE") ?? throw new ArgumentNullException("USERPROFILE environment variable not found"), ".dotnet");
-            }
-            else
-            {
-                dotnetHome = Path.Combine(Environment.GetEnvironmentVariable("HOME") ?? throw new ArgumentNullException("HOME environment variable not found"), ".dotnet");
-            }
+            string dotnetHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) ?? throw new ArgumentNullException("UserProfile directory not found"), ".dotnet");
             return dotnetHome;
         }
 
