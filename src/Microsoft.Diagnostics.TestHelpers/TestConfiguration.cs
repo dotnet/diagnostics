@@ -55,7 +55,9 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // tests).
                 string basePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 if (!string.IsNullOrEmpty(basePath))
+                {
                     nugetPackages = Path.Combine(basePath, ".nuget", "packages");
+                }
             }
             // The TargetArchitecture and NuGetPackageCacheDir can still be overridden
             // in a config file. This is just setting the default. The other values can
