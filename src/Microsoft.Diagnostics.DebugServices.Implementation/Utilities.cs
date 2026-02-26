@@ -281,8 +281,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public static string GetDotNetHomeDirectory()
         {
-            string dotnetHome = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) ?? throw new ArgumentNullException("UserProfile directory not found"), ".dotnet");
-            return dotnetHome;
+            string basePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrEmpty(basePath))
+            {
+                throw new ArgumentNullException("UserProfile directory not found");
+            }
+
+            return Path.Combine(Environment.GetFolderPath(basePath, ".dotnet");;
         }
 
         /// <summary>
