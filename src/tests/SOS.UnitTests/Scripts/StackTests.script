@@ -20,7 +20,12 @@ ENDIF:ALPINE
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+IFDEF:DESKTOP
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>.*\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (11|20)\s*\]\s+
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>.*\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 20\s*\]\s+
+ENDIF:DESKTOP
 IFDEF:64BIT
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 16\s*\]\s+
 ENDIF:64BIT
@@ -42,7 +47,12 @@ ENDIF:DOTNETDUMP
 SOSCOMMAND:ClrStack -f
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+IFDEF:DESKTOP
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (11|20)\s*\]\s+
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 20\s*\]\s+
+ENDIF:DESKTOP
 IFDEF:64BIT
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+(?i:NestedExceptionTest.*)!NestedExceptionTest\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 16\s*\]\s+
 ENDIF:64BIT
@@ -51,7 +61,12 @@ ENDIF:64BIT
 SOSCOMMAND:ClrStack -a
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+IFDEF:DESKTOP
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (11|20)\s*\]\s+
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 20\s*\]\s+
+ENDIF:DESKTOP
 VERIFY:\s+PARAMETERS:\s+
 VERIFY:\s+args \(0x<HEXVAL>\) = 0x<HEXVAL>\s+
 VERIFY:\s+LOCALS:\s+
@@ -69,7 +84,12 @@ SOSCOMMAND:ClrStack -r
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
+IFDEF:DESKTOP
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ (11|20)\s*\]\s+
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]NestedExceptionTest\.cs) @ 20\s*\]\s+
+ENDIF:DESKTOP
 IFDEF:ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
 ENDIF:ARM
