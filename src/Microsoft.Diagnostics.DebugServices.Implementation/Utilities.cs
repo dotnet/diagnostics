@@ -287,7 +287,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 throw new ArgumentNullException("UserProfile directory not found");
             }
 
-            return Path.Combine(Environment.GetFolderPath(basePath, ".dotnet");;
+            return Path.Combine(Environment.GetFolderPath(basePath, ".dotnet"));
         }
 
         /// <summary>
