@@ -417,7 +417,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 discoveredPids.Add(pid);
             }
 
-            foreach (int pid in GetCrossNamespacePublishedProcesses())
+            foreach (int pid in GetProcPublishedProcesses())
             {
                 discoveredPids.Add(pid);
             }
@@ -462,11 +462,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     continue;
                 }
 
-                try
-                {
-                    Process.GetProcessById(processId);
-                }
-                catch (ArgumentException)
+                if (!PidIpcEndpoint.CheckProcessExists(processId))
                 {
                     continue;
                 }
@@ -478,10 +474,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Discovers .NET processes with diagnostic sockets in different PID namespaces
-        /// by scanning /proc for cross-namespace entries. Linux-only; returns empty on other platforms.
+        /// Discovers .NET processes via /proc that aren't found by the local IPC root scan.
+        /// Finds cross-namespace processes and same-namespace processes with different TMPDIR.
+        /// Linux-only; returns empty on other platforms.
         /// </summary>
-        private static IEnumerable<int> GetCrossNamespacePublishedProcesses()
+        private static IEnumerable<int> GetProcPublishedProcesses()
         {
             List<int> discoveredPids = new();
 
@@ -490,12 +487,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return discoveredPids;
             }
 
-            string[] procEntries;
+            IEnumerable<string> procEntries;
             try
             {
-                procEntries = Directory.GetDirectories(PidIpcEndpoint.ProcPath);
+                procEntries = Directory.EnumerateDirectories(PidIpcEndpoint.ProcPath);
             }
-            catch
+            catch (UnauthorizedAccessException)
             {
                 return discoveredPids;
             }
@@ -507,23 +504,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     continue;
                 }
 
-                if (!PidIpcEndpoint.TryGetNamespacePid(hostPid, out int nsPid))
+                if (!PidIpcEndpoint.CheckProcessExists(hostPid))
                 {
                     continue;
                 }
 
-                try
+                string targetTmpDir = PidIpcEndpoint.GetProcessTmpDir(hostPid, out _);
+
+                if (PidIpcEndpoint.TryGetNamespacePid(hostPid, out int nsPid))
                 {
-                    PidIpcEndpoint.TryGetProcessTmpDir(hostPid, out string targetTmpDir);
-                    string crossNsPath = Path.Combine(PidIpcEndpoint.GetProcessRootPath(hostPid), targetTmpDir.TrimStart(Path.DirectorySeparatorChar));
-                    string[] files = Directory.GetFiles(crossNsPath, PidIpcEndpoint.GetDiagnosticSocketSearchPattern(nsPid));
-                    if (files.Length > 0)
+                    // Cross-namespace: search via /proc/{pid}/root/
+                    string crossNsDir = Path.Combine(PidIpcEndpoint.GetProcessRootPath(hostPid), targetTmpDir.TrimStart(Path.DirectorySeparatorChar));
+                    if (PidIpcEndpoint.TryResolveAddress(crossNsDir, nsPid, out _))
                     {
-                        Process.GetProcessById(hostPid);
                         discoveredPids.Add(hostPid);
                     }
                 }
-                catch { }
+                else if (!string.Equals(targetTmpDir, PidIpcEndpoint.IpcRootPath, StringComparison.Ordinal))
+                {
+                    // Same namespace but different TMPDIR
+                    if (PidIpcEndpoint.TryResolveAddress(targetTmpDir, hostPid, out _))
+                    {
+                        discoveredPids.Add(hostPid);
+                    }
+                }
             }
 
             return discoveredPids;
