@@ -259,12 +259,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
         internal static string GetProcessRootPath(int pid) =>
             RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? string.Format(_procRootPathFormat, pid) : null;
 
-        /// <summary>
-        /// Returns a file search pattern for diagnostic sockets matching the given PID.
-        /// </summary>
-        internal static string GetDiagnosticSocketSearchPattern(int pid) =>
-            string.Format(_defaultAddressFormatNonWindows, pid, "*");
-
         private int _pid;
         private IpcEndpointConfig _config;
         /// <summary>
@@ -308,10 +302,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Searches a base path for a diagnostic endpoint matching the given PID.
+        /// Searches files in a directory for a diagnostic endpoint matching the given PID.
         /// On Windows, resolves named pipes. On other platforms, searches for Unix domain sockets.
         /// </summary>
-        private static bool TryResolveAddress(string basePath, int pid, out string address)
+        internal static bool TryResolveAddress(string searchDirectory, int pid, out string address)
         {
             address = null;
 
@@ -321,7 +315,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 try
                 {
-                    string dsrouterAddress = Directory.GetFiles(basePath, string.Format(_dsrouterAddressFormatWindows, pid)).FirstOrDefault();
+                    string dsrouterAddress = Directory.GetFiles(searchDirectory, string.Format(_dsrouterAddressFormatWindows, pid)).FirstOrDefault();
                     if (!string.IsNullOrEmpty(dsrouterAddress))
                     {
                         address = dsrouterAddress;
@@ -333,11 +327,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
-                    address = Directory.GetFiles(basePath, string.Format(_defaultAddressFormatNonWindows, pid, "*"))
+                    address = Directory.GetFiles(searchDirectory, string.Format(_defaultAddressFormatNonWindows, pid, "*"))
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
-                    string dsrouterAddress = Directory.GetFiles(basePath, string.Format(_dsrouterAddressFormatNonWindows, pid, "*"))
+                    string dsrouterAddress = Directory.GetFiles(searchDirectory, string.Format(_dsrouterAddressFormatNonWindows, pid, "*"))
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
@@ -380,13 +374,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 return false;
             }
 
+            string[] lines;
             try
             {
-                return TryParseNamespacePid(File.ReadLines(string.Format(_procStatusPathFormat, hostPid)), hostPid, out nsPid);
+                lines = File.ReadAllLines(string.Format(_procStatusPathFormat, hostPid));
             }
-            catch { }
+            catch (DirectoryNotFoundException)
+            {
+                // The process may have exited between discovery and reading its status file.
+                return false;
+            }
 
-            return false;
+            return TryParseNamespacePid(lines, hostPid, out nsPid);
         }
 
         /// <summary>
@@ -415,23 +414,39 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         /// <summary>
-        /// Gets the TMPDIR environment variable for a process by reading /proc/{pid}/environ.
-        /// Falls back to the platform temp directory if TMPDIR is not set or cannot be read.
+        /// Gets the TMPDIR for a target process by reading /proc/{pid}/environ.
+        /// Falls back to the platform temp directory if TMPDIR is not set or environ cannot be read.
+        /// The environReadable output indicates whether /proc/{pid}/environ was successfully read.
         /// </summary>
-        internal static string GetProcessTmpDir(int hostPid)
+        internal static string GetProcessTmpDir(int hostPid, out bool environReadable)
         {
+            environReadable = false;
+            string tmpDirPath = Path.GetTempPath();
+
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                return Path.GetTempPath();
+                return tmpDirPath;
             }
 
+            byte[] environData;
             try
             {
-                return ParseTmpDir(File.ReadAllBytes(string.Format(_procEnvironPathFormat, hostPid)));
+                environData = File.ReadAllBytes(string.Format(_procEnvironPathFormat, hostPid));
             }
-            catch { }
+            catch (DirectoryNotFoundException)
+            {
+                // The process may have exited between discovery and reading its environ file.
+                return tmpDirPath;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // /proc/{pid}/environ is owner-readable only (0400); other users' environ is inaccessible.
+                return tmpDirPath;
+            }
 
-            return Path.GetTempPath();
+            environReadable = true;
+            tmpDirPath = ParseTmpDir(environData);
+            return tmpDirPath;
         }
 
         /// <summary>
@@ -452,51 +467,74 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return Path.GetTempPath();
         }
 
-        public static string GetDefaultAddress(int pid)
+        /// <summary>
+        /// Checks whether a process with the given PID exists and is accessible.
+        /// </summary>
+        internal static bool CheckProcessExists(int pid)
         {
             try
             {
-                Process process = Process.GetProcessById(pid);
+                Process.GetProcessById(pid);
+                return true;
             }
             catch (ArgumentException)
             {
+                return false;
+            }
+        }
+
+        public static string GetDefaultAddress(int pid)
+        {
+            if (!CheckProcessExists(pid))
+            {
                 throw new ServerNotAvailableException($"Process {pid} is not running.");
             }
-            catch (InvalidOperationException)
-            {
-                throw new ServerNotAvailableException($"Process {pid} seems to be elevated.");
-            }
 
-            if (TryGetNamespacePid(pid, out int nsPid))
+            string searchDirectory = IpcRootPath;
+            int searchPid = pid;
+            bool environReadable = false;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                if (TryResolveAddress($"{GetProcessRootPath(pid)}{GetProcessTmpDir(pid)}", nsPid, out string crossNsAddress))
+                string targetTmpDir = GetProcessTmpDir(pid, out environReadable);
+
+                if (TryGetNamespacePid(pid, out int nsPid))
                 {
-                    return crossNsAddress;
+                    searchDirectory = Path.Combine(GetProcessRootPath(pid), targetTmpDir.TrimStart(Path.DirectorySeparatorChar));
+                    searchPid = nsPid;
+                }
+                else
+                {
+                    searchDirectory = targetTmpDir;
                 }
             }
 
-            if (TryResolveAddress(IpcRootPath, pid, out string localAddress))
+            if (TryResolveAddress(searchDirectory, searchPid, out string address))
             {
-                return localAddress;
+                return address;
             }
 
             string msg = $"Unable to connect to Process {pid}.";
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                int total_length = IpcRootPath.Length + string.Format(_defaultAddressFormatNonWindows, pid, "##########").Length;
-                if (total_length > 108)
+                int total_length = searchDirectory.Length + string.Format(_defaultAddressFormatNonWindows, pid, "##########").Length;
+                if (total_length > 108) // This isn't perfect as we don't know the disambiguation key length. However it should catch most cases.
                 {
-                    msg += " The diagnostic socket path may exceed the 108-character limit."
-                        + " Try setting TMPDIR to a shorter path.";
+                    msg += " The total length of the diagnostic socket path may exceed 108 characters."
+                        + " Try setting the TMPDIR environment variable to a shorter path.";
                 }
-                msg += $" Ensure {IpcRootPath} is writable by the current user."
-                    + " If the target process sets TMPDIR, set it to the same directory.";
+                msg += $" Please verify that {searchDirectory} is writable by the current user.";
+                if (!environReadable)
+                {
+                    msg += " If the target process has environment variable TMPDIR set, please set TMPDIR to the same directory."
+                        + " Please also ensure that the target process has {TMPDIR}/dotnet-diagnostic-{pid}-{disambiguation_key}-socket shorter than 108 characters.";
+                }
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
                     msg += " If the target process is in a different container, ensure this process runs with 'pid: host'"
                         + " and has access to /proc/{pid}/root/ (requires CAP_SYS_PTRACE or privileged mode).";
                 }
-                msg += " See https://aka.ms/dotnet-diagnostics-port for more information.";
+                msg += " Please see https://aka.ms/dotnet-diagnostics-port for more information.";
             }
             throw new ServerNotAvailableException(msg);
         }

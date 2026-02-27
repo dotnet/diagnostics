@@ -159,7 +159,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         [ConditionalFact(nameof(IsLinux))]
-        public void GetProcessTmpDir_ChildProcess_ReadsTmpdir()
+        public void TryGetProcessTmpDir_ChildProcess_ReadsTmpdir()
         {
             string customTmpDir = "/custom/tmp/test";
             ProcessStartInfo psi = new("sleep", "30")
@@ -171,7 +171,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using Process child = Process.Start(psi);
             try
             {
-                string result = PidIpcEndpoint.GetProcessTmpDir(child.Id);
+                bool readable = PidIpcEndpoint.TryGetProcessTmpDir(child.Id, out string result);
+                Assert.True(readable);
                 Assert.Equal(customTmpDir, result);
             }
             finally

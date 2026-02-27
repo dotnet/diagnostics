@@ -514,7 +514,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
                 try
                 {
-                    string crossNsPath = $"{PidIpcEndpoint.GetProcessRootPath(hostPid)}{PidIpcEndpoint.GetProcessTmpDir(hostPid)}";
+                    PidIpcEndpoint.TryGetProcessTmpDir(hostPid, out string targetTmpDir);
+                    string crossNsPath = Path.Combine(PidIpcEndpoint.GetProcessRootPath(hostPid), targetTmpDir.TrimStart(Path.DirectorySeparatorChar));
                     string[] files = Directory.GetFiles(crossNsPath, PidIpcEndpoint.GetDiagnosticSocketSearchPattern(nsPid));
                     if (files.Length > 0)
                     {
