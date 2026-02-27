@@ -123,20 +123,6 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.Equal(Path.GetTempPath(), result);
         }
 
-        [Fact]
-        public void GetDiagnosticSocketSearchPattern_ReturnsExpectedFormat()
-        {
-            string pattern = PidIpcEndpoint.GetDiagnosticSocketSearchPattern(1);
-            Assert.Equal("dotnet-diagnostic-1-*-socket", pattern);
-        }
-
-        [Fact]
-        public void GetDiagnosticSocketSearchPattern_LargePid()
-        {
-            string pattern = PidIpcEndpoint.GetDiagnosticSocketSearchPattern(32768);
-            Assert.Equal("dotnet-diagnostic-32768-*-socket", pattern);
-        }
-
         #endregion
 
         #region Behavioral tests (platform-specific, real system calls)
@@ -159,7 +145,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         [ConditionalFact(nameof(IsLinux))]
-        public void TryGetProcessTmpDir_ChildProcess_ReadsTmpdir()
+        public void GetProcessTmpDir_ChildProcess_ReadsTmpdir()
         {
             string customTmpDir = "/custom/tmp/test";
             ProcessStartInfo psi = new("sleep", "30")
@@ -171,9 +157,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using Process child = Process.Start(psi);
             try
             {
-                bool readable = PidIpcEndpoint.TryGetProcessTmpDir(child.Id, out string result);
-                Assert.True(readable);
-                Assert.Equal(customTmpDir, result);
+                string result = PidIpcEndpoint.GetProcessTmpDir(child.Id, out bool environReadable);
+                if (environReadable)
+                {
+                    // environ was readable — expect the custom TMPDIR
+                    Assert.Equal(customTmpDir, result);
+                }
+                else
+                {
+                    // Systems with hidepid or restricted /proc permissions fall back to default
+                    Assert.Equal(Path.GetTempPath(), result);
+                }
             }
             finally
             {
