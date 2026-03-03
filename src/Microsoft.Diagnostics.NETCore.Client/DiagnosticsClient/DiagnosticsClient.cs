@@ -410,51 +410,127 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// </returns>
         public static IEnumerable<int> GetPublishedProcesses()
         {
-            static IEnumerable<int> GetAllPublishedProcesses(string[] files)
+            HashSet<int> discoveredPids = new();
+
+            foreach (int pid in GetLocalPublishedProcesses())
             {
-                foreach (string port in files)
-                {
-                    string fileName = new FileInfo(port).Name;
-                    Match match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
-                    if (!match.Success)
-                    {
-                        continue;
-                    }
-
-                    string group = match.Groups[1].Value;
-                    if (!int.TryParse(group, NumberStyles.Integer, CultureInfo.InvariantCulture, out int processId))
-                    {
-                        continue;
-                    }
-
-                    try
-                    {
-                        Process.GetProcessById(processId);
-                    }
-                    catch (ArgumentException)
-                    {
-                        continue;
-                    }
-
-                    yield return processId;
-                }
+                discoveredPids.Add(pid);
             }
+
+            foreach (int pid in GetProcPublishedProcesses())
+            {
+                discoveredPids.Add(pid);
+            }
+
+            return discoveredPids;
+        }
+
+        /// <summary>
+        /// Discovers .NET processes with diagnostic sockets in the local IPC root path.
+        /// </summary>
+        private static IEnumerable<int> GetLocalPublishedProcesses()
+        {
+            List<int> pids = new();
+
+            string[] files;
             try
             {
-                string[] files = Directory.GetFiles(PidIpcEndpoint.IpcRootPath);
-                return GetAllPublishedProcesses(files).Distinct();
+                files = Directory.GetFiles(PidIpcEndpoint.IpcRootPath);
             }
             catch (UnauthorizedAccessException ex)
             {
-                if (PidIpcEndpoint.IpcRootPath.StartsWith(@"\\.\pipe"))
+                if (PidIpcEndpoint.IpcRootPath.StartsWith(@"\\.\pipe", StringComparison.Ordinal))
                 {
                     throw new DiagnosticsClientException($"Enumerating {PidIpcEndpoint.IpcRootPath} is not authorized", ex);
                 }
-                else
+
+                throw;
+            }
+
+            foreach (string port in files)
+            {
+                string fileName = new FileInfo(port).Name;
+                Match match = Regex.Match(fileName, PidIpcEndpoint.DiagnosticsPortPattern);
+                if (!match.Success)
                 {
-                    throw;
+                    continue;
+                }
+
+                string group = match.Groups[1].Value;
+                if (!int.TryParse(group, NumberStyles.Integer, CultureInfo.InvariantCulture, out int processId))
+                {
+                    continue;
+                }
+
+                if (!PidIpcEndpoint.CheckProcessExists(processId))
+                {
+                    continue;
+                }
+
+                pids.Add(processId);
+            }
+
+            return pids;
+        }
+
+        /// <summary>
+        /// Discovers .NET processes via /proc that aren't found by the local IPC root scan.
+        /// Finds cross-namespace processes and same-namespace processes with different TMPDIR.
+        /// Linux-only; returns empty on other platforms.
+        /// </summary>
+        private static IEnumerable<int> GetProcPublishedProcesses()
+        {
+            List<int> discoveredPids = new();
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return discoveredPids;
+            }
+
+            IEnumerable<string> procEntries;
+            try
+            {
+                procEntries = Directory.EnumerateDirectories(PidIpcEndpoint.ProcPath);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return discoveredPids;
+            }
+
+            foreach (string procEntry in procEntries)
+            {
+                if (!int.TryParse(Path.GetFileName(procEntry), NumberStyles.Integer, CultureInfo.InvariantCulture, out int hostPid))
+                {
+                    continue;
+                }
+
+                if (!PidIpcEndpoint.CheckProcessExists(hostPid))
+                {
+                    continue;
+                }
+
+                string targetTmpDir = PidIpcEndpoint.GetProcessTmpDir(hostPid, out _);
+
+                if (PidIpcEndpoint.TryGetNamespacePid(hostPid, out int nsPid))
+                {
+                    // Cross-namespace: search via /proc/{pid}/root/
+                    string crossNsDir = Path.Combine(PidIpcEndpoint.GetProcessRootPath(hostPid), targetTmpDir.TrimStart(Path.DirectorySeparatorChar));
+                    if (PidIpcEndpoint.TryResolveAddress(crossNsDir, nsPid, out _))
+                    {
+                        discoveredPids.Add(hostPid);
+                    }
+                }
+                else if (!string.Equals(targetTmpDir, PidIpcEndpoint.IpcRootPath, StringComparison.Ordinal))
+                {
+                    // Same namespace but different TMPDIR
+                    if (PidIpcEndpoint.TryResolveAddress(targetTmpDir, hostPid, out _))
+                    {
+                        discoveredPids.Add(hostPid);
+                    }
                 }
             }
+
+            return discoveredPids;
         }
 
         internal ProcessInfo GetProcessInfo()
