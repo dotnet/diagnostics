@@ -23,6 +23,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private LineRewriter rewriter;
         private long statusUpdateTimestamp;
         private Version minRuntimeSupportingUserEventsIPCCommand = new(10, 0, 0);
+        private bool stopOnEnter = true;
+        private bool printStatusUpdate = true;
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
@@ -41,6 +43,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             Console = console ?? new DefaultConsole();
             rewriter = new LineRewriter(Console);
+            stopOnEnter = !Console.IsInputRedirected;
+            printStatusUpdate = !Console.IsOutputRedirected;
         }
 
         internal static bool IsSupported()
@@ -491,12 +495,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
             }
 
-            if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
+            if (stopOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
             {
                 stopTracing = true;
             }
 
-            if (ot == OutputType.Progress)
+            if (printStatusUpdate && ot == OutputType.Progress)
             {
                 long currentTimestamp = Stopwatch.GetTimestamp();
                 if (statusUpdateTimestamp != 0 && currentTimestamp < statusUpdateTimestamp)
