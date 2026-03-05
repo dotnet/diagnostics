@@ -47,9 +47,9 @@ namespace Microsoft.Diagnostics.Tests.Common
 
         public bool IsOutputRedirected { get; set; }
 
-        public bool IsInputRedirected { get; private set; }
+        public bool IsInputRedirected { get; set; }
 
-        public bool KeyAvailable { get; private set; }
+        public bool KeyAvailable { get; set; }
 
         public TextWriter Out => this;
 
@@ -186,9 +186,11 @@ namespace Microsoft.Diagnostics.Tests.Common
 
         public string GetLineText(int row) => new string(_chars[row]).TrimEnd();
 
-        public ConsoleKeyInfo ReadKey() => Console.ReadKey();
+        public ConsoleKeyInfo NextKeyInfo { get; set; } = new ConsoleKeyInfo('\0', ConsoleKey.Enter, false, false, false);
 
-        public ConsoleKeyInfo ReadKey(bool intercept) => Console.ReadKey(intercept);
+        public ConsoleKeyInfo ReadKey() => NextKeyInfo;
+
+        public ConsoleKeyInfo ReadKey(bool intercept) => NextKeyInfo;
 
         public string[] Lines
         {
