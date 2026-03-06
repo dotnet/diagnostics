@@ -277,18 +277,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 if (mode == ProbeOutputMode.CsvToConsole)
                 {
                     Console.WriteLine("pid,processName,supportsCollectLinux");
-                    Console.Write(supportedCsv?.ToString());
-                    Console.Write(unsupportedCsv?.ToString());
-                    Console.Write(unknownCsv?.ToString());
+                    Console.Write(supportedCsv.ToString());
+                    Console.Write(unsupportedCsv.ToString());
+                    Console.Write(unknownCsv.ToString());
                 }
 
                 if (mode == ProbeOutputMode.Csv)
                 {
                     using StreamWriter writer = new(args.Output.FullName, append: false, Encoding.UTF8);
                     writer.WriteLine("pid,processName,supportsCollectLinux");
-                    writer.Write(supportedCsv?.ToString());
-                    writer.Write(unsupportedCsv?.ToString());
-                    writer.Write(unknownCsv?.ToString());
+                    writer.Write(supportedCsv.ToString());
+                    writer.Write(unsupportedCsv.ToString());
+                    writer.Write(unknownCsv.ToString());
                     Console.WriteLine($"Successfully wrote EventPipe UserEvents IPC command support results to '{args.Output.FullName}'.");
                 }
 
