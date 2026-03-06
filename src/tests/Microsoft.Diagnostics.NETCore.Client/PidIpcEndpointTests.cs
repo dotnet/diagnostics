@@ -150,24 +150,49 @@ namespace Microsoft.Diagnostics.NETCore.Client
             string customTmpDir = "/custom/tmp/test";
             ProcessStartInfo psi = new("sleep", "30")
             {
-                Environment = { ["TMPDIR"] = customTmpDir },
                 UseShellExecute = false,
             };
+            psi.Environment["TMPDIR"] = customTmpDir;
 
             using Process child = Process.Start(psi);
             try
             {
+                // Read the child's environ directly for diagnostics
+                string environPath = $"/proc/{child.Id}/environ";
+                string environPerms = "unknown";
+                try
+                {
+                    environPerms = File.GetUnixFileMode(environPath).ToString();
+                }
+                catch (Exception ex)
+                {
+                    environPerms = $"error: {ex.GetType().Name}: {ex.Message}";
+                }
+                byte[] rawEnviron = File.ReadAllBytes(environPath);
+                string environContent = Encoding.UTF8.GetString(rawEnviron);
+                string[] envVars = environContent.Split(new[] { '\0' }, StringSplitOptions.RemoveEmptyEntries);
+                string tmpdirEntry = Array.Find(envVars, v => v.StartsWith("TMPDIR=", StringComparison.Ordinal));
+
+                bool childHasExited = child.HasExited;
+                int currentUid = Environment.ProcessId;
+
+                string diagnostics = $"Child PID: {child.Id}, "
+                    + $"child exited: {childHasExited}, "
+                    + $"environ path: {environPath}, "
+                    + $"environ permissions: {environPerms}, "
+                    + $"environ size: {rawEnviron.Length} bytes, "
+                    + $"env var count: {envVars.Length}, "
+                    + $"TMPDIR entry: '{tmpdirEntry ?? "(not found)"}', "
+                    + $"parent TMPDIR: '{Environment.GetEnvironmentVariable("TMPDIR") ?? "(not set)"}', "
+                    + $"psi.Environment TMPDIR: '{psi.Environment["TMPDIR"]}', "
+                    + $"current user: {Environment.UserName}, "
+                    + $"first 200 bytes of environ: '{(environContent.Length > 200 ? environContent.Substring(0, 200) : environContent).Replace('\0', '|')}'";
+
                 string result = PidIpcEndpoint.GetProcessTmpDir(child.Id, out bool environReadable);
-                if (environReadable)
-                {
-                    // environ was readable — expect the custom TMPDIR
-                    Assert.Equal(customTmpDir, result);
-                }
-                else
-                {
-                    // Systems with hidepid or restricted /proc permissions fall back to default
-                    Assert.Equal(Path.GetTempPath(), result);
-                }
+
+                Assert.True(environReadable, $"environ was not readable. {diagnostics}");
+                Assert.True(result == customTmpDir,
+                    $"Expected '{customTmpDir}' but got '{result}'. {diagnostics}");
             }
             finally
             {
