@@ -31,6 +31,16 @@
 #undef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
 
+// Tracks module PE addresses for which symbol loading has already failed,
+// so we don't repeatedly hit symbol servers for the same module.
+// Cleared when the symbol path changes (see ClearSymbolLookupCache).
+static std::set<ULONG64> g_failedSymbolLookups;
+
+void ClearSymbolLookupCache()
+{
+    g_failedSymbolLookups.clear();
+}
+
 #ifndef FEATURE_PAL
 HMODULE g_hmoduleSymBinder = nullptr;
 ISymUnmanagedBinder3 *g_pSymBinder = nullptr;
@@ -314,6 +324,14 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
             ExtOut("LoadSymbols GetClrModuleImages FAILED 0x%08x\n", hr);
             return hr;
         }
+
+        // Skip modules that have already failed symbol loading to avoid repeated
+        // network round-trips to symbol servers (see dotnet/diagnostics#675).
+        if (moduleBase != 0 && g_failedSymbolLookups.find(moduleBase) != g_failedSymbolLookups.end())
+        {
+            return E_FAIL;
+        }
+
         if (GetSymbolService() == nullptr || !HasPortablePDB(moduleBase))
         {
             hr = LoadSymbolsForWindowsPDB(pMD, moduleBase, pModuleName, FALSE);
@@ -328,6 +346,13 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
 #endif
     }
 
+    // Skip modules that have already failed symbol loading to avoid repeated
+    // network round-trips to symbol servers (see dotnet/diagnostics#675).
+    if (moduleData.LoadedPEAddress != 0 && g_failedSymbolLookups.find(moduleData.LoadedPEAddress) != g_failedSymbolLookups.end())
+    {
+        return E_FAIL;
+    }
+
 #ifndef FEATURE_PAL
     if (GetSymbolService() == nullptr || !HasPortablePDB(moduleData.LoadedPEAddress))
     {
@@ -340,7 +365,7 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
     }
 #endif // FEATURE_PAL
 
-    return LoadSymbolsForPortablePDB(
+    hr = LoadSymbolsForPortablePDB(
         pModuleName, 
         moduleData.IsInMemory,
         moduleData.IsFileLayout,
@@ -348,6 +373,13 @@ HRESULT SymbolReader::LoadSymbols(___in IMetaDataImport* pMD, ___in IXCLRDataMod
         moduleData.LoadedPESize, 
         moduleData.InMemoryPdbAddress,
         moduleData.InMemoryPdbSize);
+
+    if (FAILED(hr) && moduleData.LoadedPEAddress != 0)
+    {
+        g_failedSymbolLookups.insert(moduleData.LoadedPEAddress);
+    }
+    
+    return hr;
 }
 
 #ifndef FEATURE_PAL

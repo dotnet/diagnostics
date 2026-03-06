@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
+
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -78,11 +78,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestEventStreamCleanup(TestConfiguration config)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("Test tracee sigfaults for OSX/Linux");
-            }
-
             Stream eventStream = null;
             using CancellationTokenSource cancellationTokenSource = new();
             await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TestEventStreamCleanup", _output))

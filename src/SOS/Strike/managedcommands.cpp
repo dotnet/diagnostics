@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #include "exts.h"
+#include "symbols.h"
 
 // Windows host only managed command stubs
 
@@ -120,6 +121,18 @@ DECLARE_API(GCWhere)
     return ExecuteManagedOnlyCommand("gcwhere", args);
 }
 
+DECLARE_API(Name2EE)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("name2ee", args);
+}
+
+DECLARE_API(Token2EE)
+{
+    INIT_API_EXT();
+    return ExecuteManagedOnlyCommand("token2ee", args);
+}
+
 DECLARE_API(ObjSize)
 {
     INIT_API_EXT();
@@ -130,6 +143,10 @@ DECLARE_API(ObjSize)
 DECLARE_API(SetSymbolServer)
 {
     INIT_API_EXT();
+
+    // Clear negative symbol lookup cache so modules are retried with the new configuration.
+    ClearSymbolLookupCache();
+
     return ExecuteManagedOnlyCommand("setsymbolserver", args);
 }
 

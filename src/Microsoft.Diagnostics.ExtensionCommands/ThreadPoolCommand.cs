@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Emit;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
@@ -19,6 +20,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [Option(Name = "-wi", Help = "Print all work items that are queued.")]
         public bool PrintWorkItems { get; set; }
+
+        [Option(Name = "-stat", Aliases = new[] { "-summary" }, Help = "Print a summary of queued work items grouped by type (DumpHeap -stat style).")]
+        public bool PrintWorkItemStats { get; set; }
+
+        [ServiceImport]
+        public DumpHeapService DumpHeap { get; set; }
 
         public override void Invoke()
         {
@@ -127,9 +134,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             // We can print managed work items even if we failed to request the ThreadPool.
-            if (PrintWorkItems && (threadPool is null || threadPool.UsingPortableThreadPool || threadPool.UsingWindowsThreadPool))
+            if ((PrintWorkItems || PrintWorkItemStats) && (threadPool is null || threadPool.UsingPortableThreadPool || threadPool.UsingWindowsThreadPool))
             {
-                DumpWorkItems();
+                List<(ClrObject Obj, bool IsHighPri)> workItems = EnumerateAllWorkItemsWithPriority().ToList();
+
+                if (PrintWorkItems && workItems.Count > 0)
+                {
+                    DumpWorkItems(workItems);
+                }
+
+                if (PrintWorkItemStats)
+                {
+                    if (!DumpHeap.PrintHeap(workItems.Select(r => r.Obj), DumpHeapService.DisplayKind.Normal, statsOnly: true, printFragmentation: false))
+                    {
+                        Console.WriteLine("No queued work items.");
+                    }
+                }
             }
         }
 
@@ -138,11 +158,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 @"This command lists basic information about the ThreadPool, including the number
 of work requests in the queue, number of completion port threads, and number of
 timers.
+
+Use -stat to display a DumpHeap-style summary of queued work items grouped by
+type, including MethodTable, Count, TotalSize, and Class Name. Use -wi -stat
+together to display individual items followed by the statistics summary.
 ";
-        private void DumpWorkItems()
+        private void DumpWorkItems(List<(ClrObject Obj, bool IsHighPri)> workItems)
         {
             Table output = null;
+            foreach ((ClrObject obj, bool isHighPri) in workItems)
+            {
+                WriteEntry(ref output, obj, isHighPri);
+            }
+        }
 
+        private IEnumerable<(ClrObject Obj, bool IsHighPri)> EnumerateAllWorkItemsWithPriority()
+        {
             ClrType workQueueType = Runtime.BaseClassLibrary.GetTypeByName("System.Threading.ThreadPoolWorkQueue");
             ClrType workStealingQueueType = Runtime.BaseClassLibrary.GetTypeByName("System.Threading.ThreadPoolWorkQueue+WorkStealingQueue");
 
@@ -156,7 +187,7 @@ timers.
                     {
                         foreach (ClrObject entry in EnumerateConcurrentQueue(workItems))
                         {
-                            WriteEntry(ref output, entry, isHighPri: true);
+                            yield return (entry, true);
                         }
                     }
 
@@ -164,7 +195,7 @@ timers.
                     {
                         foreach (ClrObject entry in EnumerateConcurrentQueue(workItems))
                         {
-                            WriteEntry(ref output, entry, isHighPri: false);
+                            yield return (entry, false);
                         }
                     }
 
@@ -174,7 +205,7 @@ timers.
                         {
                             foreach (ClrObject entry in EnumerateConcurrentQueue(workItems))
                             {
-                                WriteEntry(ref output, entry, isHighPri: false);
+                                yield return (entry, false);
                             }
                         }
                     }
@@ -196,7 +227,7 @@ timers.
                                     ClrObject entry = Runtime.Heap.GetObject(buffer[i]);
                                     if (entry.IsValid && !entry.IsNull)
                                     {
-                                        WriteEntry(ref output, entry, isHighPri: false);
+                                        yield return (entry, false);
                                     }
                                 }
                             }

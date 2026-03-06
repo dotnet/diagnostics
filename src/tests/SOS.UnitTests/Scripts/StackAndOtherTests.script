@@ -271,12 +271,16 @@ VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (53|57):\s+
 
 ENDIF:DOTNETDUMP
 
+!IFDEF:HOST_RUNTIME_NONE
+
 # Verify that Name2EE works
 SOSCOMMAND:Name2EE *!SymbolTestApp.Program.Foo4
 VERIFY:\s*Module:\s+\s+<HEXVAL>\s+
 VERIFY:\s+Assembly:\s+(?i:SymbolTestApp).*\s+
 VERIFY:\s+Name:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+JITTED Code Address:\s+<HEXVAL>\s+
+
+ENDIF:HOST_RUNTIME_NONE
 
 # Verify that Threads (clrthreads) works
 SOSCOMMAND:clrthreads
