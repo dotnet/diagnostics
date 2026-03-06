@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -207,6 +208,38 @@ namespace Microsoft.Diagnostics.Tools.Trace
             // because the implementation prioritizes ProcessId when it is non-zero.
             string[] expected = FormatException("Only one of the --name or --process-id options may be specified.");
 
+            console.AssertSanitizedLinesEqual(null, expected);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_ReportsConnectionFailed_NonDotNetProcess()
+        {
+            // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic endpoint.
+            string pid1Name = Process.GetProcessById(1).ProcessName;
+            MockConsole console = new(200, 30, _outputHelper);
+            var args = TestArgs(processId: 1);
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.TracingError, exitCode);
+            console.AssertSanitizedLinesEqual(null, FormatException(
+                $"Unable to connect to process '{pid1Name} (1)'. The process may have exited or its diagnostic endpoint is not accessible."));
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_ReportsConnectionFailed_NonDotNetProcess()
+        {
+            // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic endpoint.
+            string pid1Name = Process.GetProcessById(1).ProcessName;
+            MockConsole console = new(200, 2000, _outputHelper);
+            var args = TestArgs(processId: 1, probe: true, output: new FileInfo(CommonOptions.DefaultTraceName));
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    $"Could not probe process '{pid1Name} (1)'. The process may have exited or its diagnostic endpoint is not accessible.",
+                }
+            );
             console.AssertSanitizedLinesEqual(null, expected);
         }
 
