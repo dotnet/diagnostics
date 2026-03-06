@@ -3644,7 +3644,7 @@ class SOSDacInterface15Simulator : public ISOSDacInterface15
         unsigned int slotCount;
         ULONG refCount;
     public:
-        SOSMethodEnum(CLRDATA_ADDRESS mt) : pMT(mt), refCount(0)
+        SOSMethodEnum(CLRDATA_ADDRESS mt) : pMT(mt), refCount(1)
         {
         }
 
@@ -3769,18 +3769,16 @@ public:
             ISOSMethodEnum **enumerator)
     {
         SOSMethodEnum *simulator = new(std::nothrow) SOSMethodEnum(mt);
+        *enumerator = simulator;
         if (simulator == NULL)
         {
             return E_OUTOFMEMORY;
         }
         HRESULT hr = simulator->Reset();
-
-        if (SUCCEEDED(hr))
-            hr = simulator->QueryInterface(__uuidof(ISOSMethodEnum), (void**)enumerator);
-
         if (FAILED(hr))
-            delete simulator;
-
+        {
+            simulator->Release();
+        }
         return hr;
     }
 } SOSDacInterface15Simulator_Instance;

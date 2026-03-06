@@ -1317,7 +1317,7 @@ DECLARE_API(DumpMT)
 
         table.WriteRow("Entry", "MethodDesc", "JIT", "Slot", "Name");
 
-        ToRelease<ISOSMethodEnum> pMethodEnumerator;
+        ISOSMethodEnum *pMethodEnumerator;
         if (SUCCEEDED(g_sos15->GetMethodTableSlotEnumerator(dwStartAddr, &pMethodEnumerator)))
         {
             SOSMethodData entry;
