@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -103,12 +104,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 OutputOption,
             };
 
-            convertCommand.SetAction((parseResult, ct) => Task.FromResult(ConvertFile(
-                stdOut: parseResult.Configuration.Output,
-                stdError: parseResult.Configuration.Error,
-                inputFilename: parseResult.GetValue(InputFileArgument),
-                format: parseResult.GetValue(CommonOptions.ConvertFormatOption),
-                output: parseResult.GetValue(OutputOption
+            convertCommand.SetAction((context, ct) => Task.FromResult(ConvertFile(
+                stdOut: context.Console.Out,
+                stdError: context.Console.Error,
+                inputFilename: context.ParseResult.GetValue(InputFileArgument),
+                format: context.ParseResult.GetValue(CommonOptions.ConvertFormatOption),
+                output: context.ParseResult.GetValue(OutputOption
             ))));
 
             return convertCommand;
