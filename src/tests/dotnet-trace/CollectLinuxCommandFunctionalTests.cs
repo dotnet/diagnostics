@@ -214,7 +214,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_ReportsConnectionFailed_NonDotNetProcess()
         {
-            // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic endpoint.
+            // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic port.
             string pid1Name = Process.GetProcessById(1).ProcessName;
             MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(processId: 1);
@@ -222,13 +222,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             Assert.Equal((int)ReturnCode.TracingError, exitCode);
             console.AssertSanitizedLinesEqual(null, FormatException(
-                $"Unable to connect to process '{pid1Name} (1)'. The process may have exited or its diagnostic endpoint is not accessible."));
+                $"Unable to connect to process '{pid1Name} (1)'. The process may have exited, or it doesn't have an accessible .NET diagnostic port."));
         }
 
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_Probe_ReportsConnectionFailed_NonDotNetProcess()
         {
-            // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic endpoint.
+            // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic port.
             string pid1Name = Process.GetProcessById(1).ProcessName;
             MockConsole console = new(200, 2000, _outputHelper);
             var args = TestArgs(processId: 1, probe: true, output: new FileInfo(CommonOptions.DefaultTraceName));
@@ -237,7 +237,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.Equal((int)ReturnCode.Ok, exitCode);
             string[] expected = ExpectPreviewWithMessages(
                 new[] {
-                    $"Could not probe process '{pid1Name} (1)'. The process may have exited or its diagnostic endpoint is not accessible.",
+                    $"Could not probe process '{pid1Name} (1)'. The process may have exited, or it doesn't have an accessible .NET diagnostic port.",
                 }
             );
             console.AssertSanitizedLinesEqual(null, expected);

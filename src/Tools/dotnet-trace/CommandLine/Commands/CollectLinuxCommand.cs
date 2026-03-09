@@ -102,7 +102,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             Console.Error.WriteLine($"[ERROR] Process '{resolvedProcessName} ({resolvedProcessId})' cannot be traced by collect-linux. Required runtime: {minRuntimeSupportingUserEventsIPCCommand}. Detected runtime: {detectedRuntimeVersion}");
                             return (int)ReturnCode.TracingError;
                         case UserEventsProbeResult.ConnectionFailed:
-                            Console.Error.WriteLine($"[ERROR] Unable to connect to process '{resolvedProcessName} ({resolvedProcessId})'. The process may have exited or its diagnostic endpoint is not accessible.");
+                            Console.Error.WriteLine($"[ERROR] Unable to connect to process '{resolvedProcessName} ({resolvedProcessId})'. The process may have exited, or it doesn't have an accessible .NET diagnostic port.");
                             return (int)ReturnCode.TracingError;
                     }
                     args = args with { Name = resolvedProcessName, ProcessId = resolvedProcessId };
@@ -243,7 +243,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 Console.WriteLine($"Required runtime: '{minRuntimeSupportingUserEventsIPCCommand}'. Detected runtime: '{detectedRuntimeVersion}'.");
                                 break;
                             case UserEventsProbeResult.ConnectionFailed:
-                                Console.WriteLine($"Could not probe process '{resolvedName} ({resolvedPid})'. The process may have exited or its diagnostic endpoint is not accessible.");
+                                Console.WriteLine($"Could not probe process '{resolvedName} ({resolvedPid})'. The process may have exited, or it doesn't have an accessible .NET diagnostic port.");
                                 break;
                         }
                     }
@@ -323,7 +323,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         /// <summary>
         /// Probes a resolved process for UserEvents support. Returns ConnectionFailed when unable to
-        /// connect to the diagnostic endpoint (e.g. process exited between discovery and probe).
+        /// connect to the .NET diagnostic port (e.g. process exited between discovery and probe).
         /// Callers must resolve the PID/name before calling this method.
         /// </summary>
         private UserEventsProbeResult ProbeProcess(int resolvedPid, out string detectedRuntimeVersion)
@@ -380,9 +380,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
                 catch (ArgumentException)
                 {
-                    // Process exited between discovery and name resolution.
-                    unknownProcesses?.AppendLine($"{pid} Unknown - Process exited");
-                    BuildProcessSupportCsv(pid, "Unknown", UserEventsProbeResult.ConnectionFailed, supportedCsv, unsupportedCsv, unknownCsv);
+                    // Process exited between discovery and name resolution, no need to report these.
                     continue;
                 }
 
@@ -397,7 +395,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         unsupportedProcesses?.AppendLine($"{pid} {processName} - Detected runtime: '{detectedRuntimeVersion}'");
                         break;
                     case UserEventsProbeResult.ConnectionFailed:
-                        unknownProcesses?.AppendLine($"{pid} {processName} - Process exited or diagnostic endpoint not accessible");
+                        unknownProcesses?.AppendLine($"{pid} {processName} - Process may have exited, or it doesn't have an accessible .NET diagnostic port");
                         break;
                 }
             }
@@ -604,7 +602,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static readonly Option<bool> ProbeOption =
             new("--probe")
             {
-                Description = "Probe .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux, without collecting a trace. Results are categorized as supported, not supported, or unknown (when the process's diagnostic endpoint is not accessible). Use '-o stdout' to print CSV (pid,processName,supportsCollectLinux) to the console, or '-o <file>' to write the CSV. Probe a single process with -n|--name or -p|--process-id.",
+                Description = "Probe .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux, without collecting a trace. Results are categorized as supported, not supported, or unknown (when the process doesn't have an accessible .NET diagnostic port). Use '-o stdout' to print CSV (pid,processName,supportsCollectLinux) to the console, or '-o <file>' to write the CSV. Probe a single process with -n|--name or -p|--process-id.",
             };
 
         private enum ProbeOutputMode
