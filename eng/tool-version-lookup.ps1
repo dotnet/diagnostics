@@ -18,21 +18,37 @@
     eng\tool-version-lookup.ps1 decode "10.0.715501+86150ac0275658c5efc6035269499a86dee68e54"
 
     Decodes the version and shows the embedded commit SHA.
+
+.EXAMPLE
+    eng\tool-version-lookup.ps1 list -Last 5
+
+    Lists the 5 most recent daily build versions on the feed.
 #>
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true, Position=0)]
-    [ValidateSet("decode")]
+    [ValidateSet("decode", "list")]
     [string]$Command,
 
     [Parameter(Position=1)]
-    [string]$Ref
+    [string]$Ref,
+
+    [ValidateSet("dotnet-trace", "dotnet-dump", "dotnet-counters", "dotnet-gcdump")]
+    [string]$Tool = "dotnet-trace",
+
+    [string]$MajorMinor,
+
+    [int]$Last = 10
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+# NuGet V3 flat container API — the simplest endpoint for listing all versions of a package.
+$FeedFlat2Base = "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/flat2"
+# Full feed URL used in the 'dotnet tool update --add-source' install command printed for users.
+$FeedBase = "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json"
 # Arcade SDK epoch constant from Version.BeforeCommonTargets.targets.
 # If Arcade changes this value, it must be updated here as well.
 $VersionBaseShortDate = 19000
@@ -80,6 +96,34 @@ function Parse-ToolVersion([string]$Version) {
     }
 }
 
+function Get-FeedVersions([string]$ToolName) {
+    $url = "$FeedFlat2Base/$ToolName/index.json"
+    try {
+        $response = Invoke-RestMethod -Uri $url
+        return $response.versions
+    }
+    catch {
+        Write-Error "Failed to query feed for ${ToolName}: $_"
+        exit 1
+    }
+}
+
+# Auto-detects the active major.minor series by finding the version with the
+# highest patch number (most recent build), since the feed contains versions
+# from multiple release branches (e.g., 6.0.x, 9.0.x, 10.0.x).
+function Get-DetectedMajorMinor([string[]]$Versions) {
+    $bestPatch = -1
+    $bestPrefix = $null
+    foreach ($v in $Versions) {
+        $parsed = Parse-ToolVersion $v
+        if ($parsed -and $parsed.Patch -gt $bestPatch) {
+            $bestPatch = $parsed.Patch
+            $bestPrefix = "$($parsed.Major).$($parsed.Minor)"
+        }
+    }
+    return $bestPrefix
+}
+
 function Invoke-Decode {
     if (-not $Ref) {
         Write-Error "Usage: tool-version-lookup.ps1 decode <version>"
@@ -103,6 +147,30 @@ function Invoke-Decode {
     }
 }
 
+function Invoke-List {
+    $versions = Get-FeedVersions $Tool
+    $prefix = if ($MajorMinor) { $MajorMinor } else { Get-DetectedMajorMinor $versions }
+
+    $filtered = $versions | Where-Object { $_.StartsWith("$prefix.") }
+    $filtered = $filtered | Sort-Object { (Parse-ToolVersion $_).Patch }
+    $show = $filtered | Select-Object -Last $Last
+
+    Write-Host "Recent $Tool $prefix.x versions on dotnet-tools feed:"
+    Write-Host ""
+    Write-Host ("{0,-20}  {1,-16}  {2}" -f "Version", "Build Date", "OfficialBuildId")
+    Write-Host ("{0,-20}  {1,-16}  {2}" -f ("-" * 20), ("-" * 16), ("-" * 15))
+    foreach ($v in $show) {
+        $parsed = Parse-ToolVersion $v
+        if ($parsed) {
+            $d = Decode-Patch $parsed.Patch
+            $dateStr = "20{0:D2}-{1:D2}-{2:D2}" -f $d.Year, $d.Month, $d.Day
+            $buildId = "20{0:D2}{1:D2}{2:D2}.{3}" -f $d.Year, $d.Month, $d.Day, $d.Revision
+            Write-Host ("{0,-20}  {1,-16}  {2}" -f $v, $dateStr, $buildId)
+        }
+    }
+}
+
 switch ($Command) {
     "decode"  { Invoke-Decode }
+    "list"    { Invoke-List }
 }
