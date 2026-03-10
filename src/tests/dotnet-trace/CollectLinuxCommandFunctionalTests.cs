@@ -23,7 +23,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static bool IsCollectLinuxSupported => CollectLinuxCommandHandler.IsSupported();
         public static bool IsCollectLinuxNotSupported => !CollectLinuxCommandHandler.IsSupported();
-        
+
         private readonly ITestOutputHelper _outputHelper;
 
         public CollectLinuxCommandFunctionalTests(ITestOutputHelper outputHelper)
@@ -273,6 +273,57 @@ namespace Microsoft.Diagnostics.Tools.Trace
             // When output is redirected, the command should not change cursor visibility,
             // so the cursor should remain in its original state.
             Assert.Equal(initialCursorVisible, console.CursorVisible);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DoesNotPrintStatusUpdates_WhenOutputIsRedirected()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+            console.IsOutputRedirected = true;
+
+            var handler = new CollectLinuxCommandHandler(console);
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                // Send progress output type.
+                cb((uint)3, IntPtr.Zero, UIntPtr.Zero);
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+
+            string[] lines = console.Lines;
+            Assert.DoesNotContain(lines, l => l.Contains("Recording trace", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(lines, l => l.Contains("Press <Enter>", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DoesNotReadKey_WhenInputIsRedirected()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+            console.IsInputRedirected = true;
+            console.KeyAvailable = true;
+            console.NextKeyInfo = new ConsoleKeyInfo('\r', ConsoleKey.Enter, false, false, false);
+
+            var handler = new CollectLinuxCommandHandler(console);
+            bool callbackInvoked = false;
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                // Send progress output type.
+                int result = cb((uint)3, IntPtr.Zero, UIntPtr.Zero);
+
+                // It should return 0, i.e., continue tracing, even though
+                // enter was pressed.
+                Assert.Equal(0, result);
+
+                callbackInvoked = true;
+
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+
+            // The important assertion is in the callback so make sure it was called.
+            Assert.True(callbackInvoked);
         }
 
         private static int Run(object args, MockConsole console)
