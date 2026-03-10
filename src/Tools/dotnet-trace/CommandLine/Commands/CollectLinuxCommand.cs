@@ -23,8 +23,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private LineRewriter rewriter;
         private long statusUpdateTimestamp;
         private Version minRuntimeSupportingUserEventsIPCCommand = new(10, 0, 0);
-        private readonly bool cancelOnEnter = true;
-        private readonly bool printStatusOverTime = true;
+        private readonly bool cancelOnEnter;
+        private readonly bool printStatusOverTime;
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
