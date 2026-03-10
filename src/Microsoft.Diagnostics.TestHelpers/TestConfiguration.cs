@@ -53,18 +53,10 @@ namespace Microsoft.Diagnostics.TestHelpers
                 // This emulates that logic so the VS Test Explorer can still run the tests for
                 // config files that don't set the NugetPackagesCacheDir value (like the SOS unit
                 // tests).
-                string nugetPackagesRoot = null;
-                if (OS.Kind == OSKind.Windows)
+                string basePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                if (!string.IsNullOrEmpty(basePath))
                 {
-                    nugetPackagesRoot = Environment.GetEnvironmentVariable("UserProfile");
-                }
-                else if (OS.Kind is OSKind.Linux or OSKind.OSX)
-                {
-                    nugetPackagesRoot = Environment.GetEnvironmentVariable("HOME");
-                }
-                if (nugetPackagesRoot != null)
-                {
-                    nugetPackages = Path.Combine(nugetPackagesRoot, ".nuget", "packages");
+                    nugetPackages = Path.Combine(basePath, ".nuget", "packages");
                 }
             }
             // The TargetArchitecture and NuGetPackageCacheDir can still be overridden
