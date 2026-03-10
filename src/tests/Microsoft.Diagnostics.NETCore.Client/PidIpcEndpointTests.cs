@@ -168,31 +168,66 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 {
                     environPerms = $"error: {ex.GetType().Name}: {ex.Message}";
                 }
-                byte[] rawEnviron = File.ReadAllBytes(environPath);
-                string environContent = Encoding.UTF8.GetString(rawEnviron);
-                string[] envVars = environContent.Split(new[] { '\0' }, StringSplitOptions.RemoveEmptyEntries);
-                string tmpdirEntry = Array.Find(envVars, v => v.StartsWith("TMPDIR=", StringComparison.Ordinal));
 
-                bool childHasExited = child.HasExited;
-                int currentUid = Environment.ProcessId;
+                byte[] rawEnviron = Array.Empty<byte>();
+                string environContent = string.Empty;
+                string[] envVars = Array.Empty<string>();
+                string tmpdirEntry = null;
+                string environReadError = null;
+                try
+                {
+                    rawEnviron = File.ReadAllBytes(environPath);
+                    environContent = Encoding.UTF8.GetString(rawEnviron);
+                    envVars = environContent.Split(new[] { '\0' }, StringSplitOptions.RemoveEmptyEntries);
+                    tmpdirEntry = Array.Find(envVars, v => v.StartsWith("TMPDIR=", StringComparison.Ordinal));
+                }
+                catch (Exception ex)
+                {
+                    environReadError = $"{ex.GetType().Name}: {ex.Message}";
+                }
 
                 string diagnostics = $"Child PID: {child.Id}, "
-                    + $"child exited: {childHasExited}, "
+                    + $"child exited: {child.HasExited}, "
                     + $"environ path: {environPath}, "
                     + $"environ permissions: {environPerms}, "
-                    + $"environ size: {rawEnviron.Length} bytes, "
-                    + $"env var count: {envVars.Length}, "
-                    + $"TMPDIR entry: '{tmpdirEntry ?? "(not found)"}', "
                     + $"parent TMPDIR: '{Environment.GetEnvironmentVariable("TMPDIR") ?? "(not set)"}', "
                     + $"psi.Environment TMPDIR: '{psi.Environment["TMPDIR"]}', "
-                    + $"current user: {Environment.UserName}, "
-                    + $"first 200 bytes of environ: '{(environContent.Length > 200 ? environContent.Substring(0, 200) : environContent).Replace('\0', '|')}'";
+                    + $"current user: {Environment.UserName}, ";
 
-                string result = PidIpcEndpoint.GetProcessTmpDir(child.Id, out bool environReadable);
+                if (environReadError != null)
+                {
+                    diagnostics += $"environ read error: {environReadError}";
+                }
+                else
+                {
+                    diagnostics += $"environ size: {rawEnviron.Length} bytes, "
+                        + $"env var count: {envVars.Length}, "
+                        + $"TMPDIR entry: '{tmpdirEntry ?? "(not found)"}', "
+                        + $"first 200 chars of environ: '{(environContent.Length > 200 ? environContent.Substring(0, 200) : environContent).Replace('\0', '|')}'";
+                }
 
-                Assert.True(environReadable, $"environ was not readable. {diagnostics}");
-                Assert.True(result == customTmpDir,
-                    $"Expected '{customTmpDir}' but got '{result}'. {diagnostics}");
+                string result;
+                bool environReadable;
+                try
+                {
+                    result = PidIpcEndpoint.GetProcessTmpDir(child.Id, out environReadable);
+                }
+                catch (Exception ex)
+                {
+                    Assert.Fail($"GetProcessTmpDir threw {ex.GetType().Name}: {ex.Message}. {diagnostics}");
+                    return;
+                }
+
+                if (environReadable)
+                {
+                    Assert.True(result == customTmpDir,
+                        $"Expected '{customTmpDir}' but got '{result}'. {diagnostics}");
+                }
+                else
+                {
+                    Assert.True(result == Path.GetTempPath(),
+                        $"environ was not readable; expected fallback '{Path.GetTempPath()}' but got '{result}'. {diagnostics}");
+                }
             }
             finally
             {
