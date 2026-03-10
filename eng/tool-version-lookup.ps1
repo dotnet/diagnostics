@@ -17,7 +17,17 @@
 .EXAMPLE
     eng\tool-version-lookup.ps1 decode "10.0.715501+86150ac0275658c5efc6035269499a86dee68e54"
 
-    Decodes the version and shows the embedded commit SHA.
+    Decodes the version and resolves the embedded commit SHA.
+
+.EXAMPLE
+    eng\tool-version-lookup.ps1 before bda9ea7b
+
+    Finds the latest daily build version published before a given commit.
+
+.EXAMPLE
+    eng\tool-version-lookup.ps1 after 18cf9d1 -Tool dotnet-dump
+
+    Finds the earliest daily build version published after a given commit.
 
 .EXAMPLE
     eng\tool-version-lookup.ps1 list -Last 5
@@ -28,11 +38,13 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true, Position=0)]
-    [ValidateSet("decode", "list")]
+    [ValidateSet("decode", "before", "after", "list")]
     [string]$Command,
 
     [Parameter(Position=1)]
     [string]$Ref,
+
+    [string]$Date,
 
     [ValidateSet("dotnet-trace", "dotnet-dump", "dotnet-counters", "dotnet-gcdump")]
     [string]$Tool = "dotnet-trace",
@@ -124,6 +136,43 @@ function Get-DetectedMajorMinor([string[]]$Versions) {
     return $bestPrefix
 }
 
+# Restrict to hex SHAs to prevent shell injection via git arguments.
+function Validate-CommitRef([string]$CommitRef) {
+    if ($CommitRef -notmatch '^[a-fA-F0-9]{4,40}$') {
+        Write-Error "Invalid commit ref: '$CommitRef'. Expected a hex SHA."
+        exit 1
+    }
+}
+
+function Get-CommitDate([string]$CommitRef) {
+    Validate-CommitRef $CommitRef
+    $result = git log -1 --format="%cI" $CommitRef 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Could not find commit $CommitRef"
+        exit 1
+    }
+    return [DateTimeOffset]::Parse($result.Trim())
+}
+
+function Get-CommitInfo([string]$CommitRef) {
+    Validate-CommitRef $CommitRef
+    $result = git log -1 --format="%h %ai %s" $CommitRef 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        return "(could not resolve $CommitRef)"
+    }
+    return $result.Trim()
+}
+
+function Resolve-MajorMinor([string[]]$Versions) {
+    if ($MajorMinor) { return $MajorMinor }
+    $detected = Get-DetectedMajorMinor $Versions
+    if (-not $detected) {
+        Write-Error "Could not determine major.minor version from feed."
+        exit 1
+    }
+    return $detected
+}
+
 function Invoke-Decode {
     if (-not $Ref) {
         Write-Error "Usage: tool-version-lookup.ps1 decode <version>"
@@ -144,6 +193,115 @@ function Invoke-Decode {
     if ($Ref.Contains("+")) {
         $sha = $Ref.Split("+")[1]
         Write-Host "Commit SHA:       $sha"
+        $info = Get-CommitInfo $sha
+        Write-Host "Commit:           $info"
+    }
+}
+
+function Invoke-BeforeOrAfter([bool]$IsBefore) {
+    $direction = if ($IsBefore) { "before" } else { "after" }
+    $label = if ($IsBefore) { "latest" } else { "earliest" }
+
+    if ($Date) {
+        $targetDate = [DateTimeOffset]::Parse($Date)
+        Write-Host "Finding $label $Tool version built $direction $Date..."
+    }
+    elseif ($Ref) {
+        $info = Get-CommitInfo $Ref
+        $targetDate = Get-CommitDate $Ref
+        Write-Host "Commit:  $info"
+        Write-Host "Date:    $($targetDate.ToString('yyyy-MM-dd HH:mm zzz'))"
+        Write-Host ""
+        Write-Host "Finding $label $Tool version built $direction $($targetDate.ToString('yyyy-MM-dd'))..."
+    }
+    else {
+        Write-Error "Usage: tool-version-lookup.ps1 $direction <commit-sha> [-Date yyyy-MM-dd]"
+        exit 1
+    }
+
+    $targetYY = $targetDate.Year - 2000
+    $targetMM = $targetDate.Month
+    $targetDD = $targetDate.Day
+
+    # For "before": use revision 0 so any build from that day is excluded
+    # (the build may or may not include the commit depending on timing).
+    # For "after": use revision 99 so any build from that day is excluded.
+    if ($IsBefore) {
+        $targetPatch = Encode-Patch $targetYY $targetMM $targetDD -Revision 0
+    }
+    else {
+        $targetPatch = Encode-Patch $targetYY $targetMM $targetDD -Revision 99
+    }
+
+    $versions = Get-FeedVersions $Tool
+    $mm = Resolve-MajorMinor $versions
+
+    $candidates = @()
+    foreach ($v in $versions) {
+        if (-not $v.StartsWith("$mm.")) { continue }
+        $parsed = Parse-ToolVersion $v
+        if (-not $parsed) { continue }
+        if ($IsBefore -and $parsed.Patch -lt $targetPatch) {
+            $candidates += @{ Version = $v; Patch = $parsed.Patch }
+        }
+        elseif (-not $IsBefore -and $parsed.Patch -gt $targetPatch) {
+            $candidates += @{ Version = $v; Patch = $parsed.Patch }
+        }
+    }
+
+    if ($candidates.Length -eq 0) {
+        Write-Host ""
+        if (-not $IsBefore) {
+            Write-Host "The fix may not have been published yet." -ForegroundColor Yellow
+        }
+        Write-Error "No $Tool $mm.x versions found $direction that date."
+        exit 1
+    }
+
+    # @() wrapper is required: Sort-Object unwraps single-element arrays in PowerShell.
+    $candidates = @($candidates | Sort-Object { $_.Patch })
+
+    if ($IsBefore) {
+        $recommended = $candidates[$candidates.Length - 1]
+        $othersLabel = "Other recent options:"
+        if ($candidates.Length -ge 2) {
+            $start = [math]::Max(0, $candidates.Length - 4)
+            $end = $candidates.Length - 2
+            $others = @($candidates[$start..$end])
+        }
+        else {
+            $others = @()
+        }
+    }
+    else {
+        $recommended = $candidates[0]
+        $othersLabel = "Other options (newer):"
+        if ($candidates.Length -ge 2) {
+            $end = [math]::Min(3, $candidates.Length - 1)
+            $others = @($candidates[1..$end])
+        }
+        else {
+            $others = @()
+        }
+    }
+
+    $feedUrl = $FeedBase
+    Write-Host ""
+    Write-Host "Recommended version: $($recommended.Version)"
+    Write-Host "  Built: $(Format-BuildDate $recommended.Patch)"
+    Write-Host ""
+    Write-Host "Install with:"
+    Write-Host "  dotnet tool update $Tool -g --version $($recommended.Version) ``"
+    Write-Host "    --add-source $feedUrl"
+
+    if ($others -and $others.Length -gt 0) {
+        Write-Host ""
+        Write-Host $othersLabel
+        foreach ($c in $others) {
+            if ($c) {
+                Write-Host ("  {0,-20}  built {1}" -f $c.Version, (Format-BuildDate $c.Patch))
+            }
+        }
     }
 }
 
@@ -172,5 +330,7 @@ function Invoke-List {
 
 switch ($Command) {
     "decode"  { Invoke-Decode }
+    "before"  { Invoke-BeforeOrAfter -IsBefore $true }
+    "after"   { Invoke-BeforeOrAfter -IsBefore $false }
     "list"    { Invoke-List }
 }
