@@ -5,6 +5,7 @@
 #   eng/tool-version-lookup.sh decode 10.0.715501
 #   eng/tool-version-lookup.sh before <commit-sha> [--tool dotnet-trace]
 #   eng/tool-version-lookup.sh after <commit-sha> [--tool dotnet-trace]
+#   eng/tool-version-lookup.sh verify 10.0.711601 [--tool dotnet-trace]
 #   eng/tool-version-lookup.sh list [--tool dotnet-trace] [--last 10]
 
 set -euo pipefail
@@ -283,6 +284,46 @@ cmd_before_or_after() {
     fi
 }
 
+cmd_verify() {
+    local version="$1"
+    local versions
+    versions=$(get_feed_versions "$TOOL")
+
+    if echo "$versions" | grep -qxF "$version"; then
+        parse_version "$version"
+        echo "[OK] $TOOL $version exists on the feed"
+        echo "  Built: $(format_build_date "$VER_PATCH")"
+    else
+        echo "[NOT FOUND] $TOOL $version NOT found on the feed" >&2
+
+        if parse_version "$version"; then
+            local target_major=$VER_MAJOR target_minor=$VER_MINOR target_patch=$VER_PATCH
+            local nearby=()
+            while IFS= read -r v; do
+                if parse_version "$v"; then
+                    if [ "$VER_MAJOR" -eq "$target_major" ] && [ "$VER_MINOR" -eq "$target_minor" ]; then
+                        local diff=$(( VER_PATCH - target_patch ))
+                        [ "$diff" -lt 0 ] && diff=$(( -diff ))
+                        if [ "$diff" -lt 500 ]; then
+                            nearby+=("$v")
+                        fi
+                    fi
+                fi
+            done <<< "$versions"
+
+            if [ ${#nearby[@]} -gt 0 ]; then
+                echo "" >&2
+                echo "  Nearby versions:" >&2
+                printf '%s\n' "${nearby[@]}" | tail -5 | while IFS= read -r v; do
+                    parse_version "$v"
+                    printf "    %-20s  built %s\n" "$v" "$(format_build_date "$VER_PATCH")" >&2
+                done
+            fi
+        fi
+        exit 1
+    fi
+}
+
 cmd_list() {
     local versions
     versions=$(get_feed_versions "$TOOL")
@@ -326,6 +367,7 @@ while [[ $# -gt 0 ]]; do
             echo "  decode <version>     Decode a tool version to its build date"
             echo "  before <commit>      Find latest feed version built before a commit/date"
             echo "  after <commit>       Find earliest feed version built after a commit/date"
+            echo "  verify <version>     Check if a version exists on the feed"
             echo "  list                 List recent versions on the feed"
             echo ""
             echo "Options:"
@@ -352,6 +394,10 @@ case "$COMMAND" in
         ;;
     after)
         cmd_before_or_after "false" "$REF_ARG"
+        ;;
+    verify)
+        [ -n "$REF_ARG" ] || die "Usage: tool-version-lookup.sh verify <version>"
+        cmd_verify "$REF_ARG"
         ;;
     list)
         cmd_list

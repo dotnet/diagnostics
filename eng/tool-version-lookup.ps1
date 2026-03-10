@@ -30,6 +30,11 @@
     Finds the earliest daily build version published after a given commit.
 
 .EXAMPLE
+    eng\tool-version-lookup.ps1 verify 10.0.711601
+
+    Checks whether a specific version exists on the dotnet-tools feed.
+
+.EXAMPLE
     eng\tool-version-lookup.ps1 list -Last 5
 
     Lists the 5 most recent daily build versions on the feed.
@@ -38,7 +43,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true, Position=0)]
-    [ValidateSet("decode", "before", "after", "list")]
+    [ValidateSet("decode", "before", "after", "verify", "list")]
     [string]$Command,
 
     [Parameter(Position=1)]
@@ -328,9 +333,54 @@ function Invoke-List {
     }
 }
 
+function Invoke-Verify {
+    if (-not $Ref) {
+        Write-Error "Usage: tool-version-lookup.ps1 verify <version>"
+        exit 1
+    }
+    $versions = Get-FeedVersions $Tool
+
+    if ($versions -contains $Ref) {
+        $parsed = Parse-ToolVersion $Ref
+        if ($parsed) {
+            Write-Host "[OK] $Tool $Ref exists on the feed"
+            Write-Host "  Built: $(Format-BuildDate $parsed.Patch)"
+        }
+        else {
+            Write-Host "[OK] $Tool $Ref exists on the feed"
+        }
+    }
+    else {
+        Write-Host "[NOT FOUND] $Tool $Ref NOT found on the feed" -ForegroundColor Red
+
+        $parsed = Parse-ToolVersion $Ref
+        if ($parsed) {
+            $nearby = @()
+            foreach ($v in $versions) {
+                $vp = Parse-ToolVersion $v
+                if ($vp -and $vp.Major -eq $parsed.Major -and $vp.Minor -eq $parsed.Minor) {
+                    if ([math]::Abs($vp.Patch - $parsed.Patch) -lt 500) {
+                        $nearby += $v
+                    }
+                }
+            }
+            if ($nearby.Length -gt 0) {
+                Write-Host ""
+                Write-Host "  Nearby versions:"
+                $nearby | Select-Object -Last 5 | ForEach-Object {
+                    $vp = Parse-ToolVersion $_
+                    Write-Host ("    {0,-20}  built {1}" -f $_, (Format-BuildDate $vp.Patch))
+                }
+            }
+        }
+        exit 1
+    }
+}
+
 switch ($Command) {
     "decode"  { Invoke-Decode }
     "before"  { Invoke-BeforeOrAfter -IsBefore $true }
     "after"   { Invoke-BeforeOrAfter -IsBefore $false }
+    "verify"  { Invoke-Verify }
     "list"    { Invoke-List }
 }
