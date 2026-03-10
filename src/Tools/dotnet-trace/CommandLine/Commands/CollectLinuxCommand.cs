@@ -356,8 +356,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         /// <summary>
-        /// Gets all published processes and probes them for UserEvents support. Processes that exit
-        /// between discovery and probing are reported as unknown.
+        /// Gets all published processes and probes them for UserEvents support.
         /// </summary>
         private void GetAndProbeAllProcesses(StringBuilder supportedProcesses, StringBuilder unsupportedProcesses, StringBuilder unknownProcesses,
             StringBuilder supportedCsv, StringBuilder unsupportedCsv, StringBuilder unknownCsv)
