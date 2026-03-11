@@ -30,13 +30,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             try
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && (targetPlatform != OSPlatform.OSX))
+                // Cross-platform dump analysis is allowed when using cDAC-only mode (ForceUseContractReader)
+                // because the cDAC is a host-native NativeAOT binary that can analyze dumps from any platform.
+                ISettingsService settingsService = _host.Services.GetService<ISettingsService>();
+                bool allowCrossPlatform = settingsService?.ForceUseContractReader == true;
+
+                if (!allowCrossPlatform)
                 {
-                    throw new NotSupportedException("Analyzing Windows or Linux dumps not supported when running on MacOS");
-                }
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && (targetPlatform != OSPlatform.Linux))
-                {
-                    throw new NotSupportedException("Analyzing Windows or MacOS dumps not supported when running on Linux");
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && (targetPlatform != OSPlatform.OSX))
+                    {
+                        throw new NotSupportedException("Analyzing Windows or Linux dumps not supported when running on MacOS");
+                    }
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && (targetPlatform != OSPlatform.Linux))
+                    {
+                        throw new NotSupportedException("Analyzing Windows or MacOS dumps not supported when running on Linux");
+                    }
                 }
                 return new TargetFromDataReader(dataTarget, targetPlatform, _host, fileName);
             }
