@@ -60,6 +60,11 @@ parameters:
   type: boolean
   default: false
 
+  # Optional: run tests with cDAC-only mode
+- name: useCdac
+  type: boolean
+  default: false
+
 # Optional: architecture cross build if true
 - name: crossBuild
   type: boolean
@@ -143,6 +148,12 @@ jobs:
 
       - ${{ if eq(parameters.testOnly, 'true') }}:
         - _TestArgs: '-test -skipnative'
+
+      - ${{ if and(eq(parameters.useCdac, 'true'), eq(parameters.testOnly, 'true')) }}:
+        - _TestArgs: '-test -skipnative -privatebuild -useCdac'
+
+      - ${{ if and(eq(parameters.useCdac, 'true'), ne(parameters.testOnly, 'true')) }}:
+        - _TestArgs: '-test -privatebuild -useCdac'
 
       - ${{ if or(eq(parameters.buildOnly, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
         - _TestArgs: ''
