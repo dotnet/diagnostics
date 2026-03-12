@@ -381,6 +381,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
 
                 scriptBuilder.Append($"let {providerNameSanitized}_flags = new_dotnet_provider_flags();\n");
+                scriptBuilder.Append($"{providerNameSanitized}_flags.with_callstacks();\n");
                 scriptBuilder.Append($"record_dotnet_provider(\"{providerName}\", 0x{keywords:X}, {eventLevel}, {providerNameSanitized}_flags);\n\n");
             }
 
