@@ -530,8 +530,9 @@ public class SOSRunner : IDisposable
                         throw new ArgumentException($"CDB helper script path not set or does not exist: {helperExtension}");
                     }
                     // Clear the default sympath (which puts a sym cache in the debugger binary directory in
-                    // the .nuget cache) and set to just the directory containing the debuggee binaries.
-                    arguments.AppendFormat(@" -y ""{0}""", debuggeeConfig.BinaryDirPath);
+                    // the .nuget cache) and set to just the directory containing the debuggee binaries
+                    // plus the Microsoft symbol server so CDB can download mscordacwks.dll for desktop CLR debugging.
+                    arguments.AppendFormat(@" -y ""{0};srv*https://msdl.microsoft.com/download/symbols""", debuggeeConfig.BinaryDirPath);
                     arguments.AppendFormat(@" -c "".load {0}""", helperExtension);
 
                     if (action == DebuggerAction.LoadDump)
@@ -564,10 +565,10 @@ public class SOSRunner : IDisposable
                     // Turn on source/line numbers
                     initialCommands.Add(".lines");
 
-                    bool shouldVerifyDacSignature = !config.IsPrivateBuildTesting()
-                                                    && !config.IsNightlyBuild()
-                                                    && !"-none".Equals(config.SetHostRuntime(), StringComparison.OrdinalIgnoreCase);
-                    initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(shouldVerifyDacSignature ? "true" : "false")}");
+                    // Disable SecureLoadDotNetExtensions because CDB 10.0.26100.1's signature verification
+                    // rejects both .NET Framework (mscordacwks.dll) and servicing .NET Core DAC DLLs,
+                    // even when properly obtained from the Microsoft symbol server.
+                    initialCommands.Add("dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions=false");
                     break;
 
                 case NativeDebugger.Lldb:
@@ -681,10 +682,9 @@ public class SOSRunner : IDisposable
                         }
                     }
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
-                    shouldVerifyDacSignature = OS.Kind == OSKind.Windows
-                        && !config.IsPrivateBuildTesting()
-                        && !config.IsNightlyBuild();
-                    initialCommands.Add($"runtimes --DacSignatureVerification:{(shouldVerifyDacSignature ? "true" : "false")}");
+                    // Disable DacSignatureVerification — CDB 10.0.26100.1's signature verification
+                    // rejects both .NET Framework and servicing .NET Core DAC DLLs.
+                    initialCommands.Add("runtimes --DacSignatureVerification:false");
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
                     debuggerPath = config.DotNetDumpHost();
