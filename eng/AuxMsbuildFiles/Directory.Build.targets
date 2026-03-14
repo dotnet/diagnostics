@@ -1,0 +1,10 @@
+<Project>
+    <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
+    <ItemGroup>
+        <KnownFrameworkReference Remove="Microsoft.WindowsDesktop.App" />
+        <KnownFrameworkReference Remove="Microsoft.WindowsDesktop.App.WPF" />
+        <KnownFrameworkReference Remove="Microsoft.WindowsDesktop.App.WindowsForms" />
+    </ItemGroup>
+    <Import Project="SdkPackOverrides.targets"/>
+</Project>

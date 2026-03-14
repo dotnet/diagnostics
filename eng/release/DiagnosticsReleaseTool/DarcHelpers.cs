@@ -1,0 +1,102 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using ReleaseTool.Core;
+
+namespace DiagnosticsReleaseTool.Util
+{
+    internal sealed class DarcHelpers
+    {
+        private readonly DirectoryInfo _dropPath;
+
+        public string ReleaseFilePath { get; }
+
+        public string ManifestFilePath { get; }
+
+        public DarcHelpers(DirectoryInfo dropPath)
+        {
+            _dropPath = dropPath;
+            ReleaseFilePath = Path.Join(_dropPath.FullName, "release.json");
+            ManifestFilePath = Path.Join(_dropPath.FullName, "manifest.json");
+
+            if (!dropPath.Exists
+                || !File.Exists(ReleaseFilePath)
+                || !File.Exists(ManifestFilePath))
+            {
+                throw new InvalidOperationException($"{_dropPath.FullName} in not a valid darc drop");
+            }
+        }
+
+        internal ReleaseMetadata GetDropMetadataForSingleRepoVariants(IEnumerable<string> repoUrls)
+        {
+            string releaseVersion;
+            using (Stream darcReleaseFile = File.OpenRead(ReleaseFilePath))
+            using (JsonDocument jsonDoc = JsonDocument.Parse(darcReleaseFile))
+            {
+                JsonElement releaseVersionElement = jsonDoc.RootElement[0].GetProperty("release");
+                releaseVersion = releaseVersionElement.GetString();
+            }
+
+            using (Stream darcManifest = File.OpenRead(ManifestFilePath))
+            using (JsonDocument jsonDoc = JsonDocument.Parse(darcManifest))
+            {
+                // TODO: Schema validation.
+                JsonElement buildList = jsonDoc.RootElement.GetProperty("builds");
+
+                // This iteration is necessary due to the public/private nature repos.
+                IEnumerable<JsonElement> repoBuilds = buildList.EnumerateArray()
+                                          .Where(build => {
+                                              Uri buildUri = new(build.GetProperty("repo").GetString());
+                                              return repoUrls.Any(repoUrl => buildUri == new Uri(repoUrl));
+                                          });
+
+                if (repoBuilds.Count() != 1)
+                {
+                    throw new InvalidOperationException(
+                        $"There's {repoBuilds.Count()} builds that come from requested repos in the release manifest. Expected 1.");
+                }
+
+                JsonElement build = repoBuilds.First();
+
+                ReleaseMetadata releaseMetadata = new(
+                    releaseVersion: releaseVersion,
+                    repoUrl: build.GetProperty("repo").GetString(),
+                    branch: build.GetProperty("branch").GetString(),
+                    commit: build.GetProperty("commit").GetString(),
+                    dateProduced: build.GetProperty("produced").GetString(),
+                    buildNumber: build.GetProperty("buildNumber").GetString(),
+                    barBuildId: build.GetProperty("barBuildId").GetInt32()
+                );
+
+                return releaseMetadata;
+            }
+        }
+
+        internal DirectoryInfo GetShippingDirectoryForSingleProjectVariants(IEnumerable<string> projectNames)
+        {
+            using (Stream darcManifest = File.OpenRead(ReleaseFilePath))
+            using (JsonDocument jsonDoc = JsonDocument.Parse(darcManifest))
+            {
+                // TODO: There's a lot of error validation that should go here. We are basically assuming a
+                // pretty stable schema.
+                JsonElement productList = jsonDoc.RootElement[0].GetProperty("products");
+
+                IEnumerable<JsonElement> matchingProducts = productList.EnumerateArray()
+                                               .Where(prod => projectNames.Contains(prod.GetProperty("name").GetString()));
+
+                if (matchingProducts.Count() != 1)
+                {
+                    throw new InvalidOperationException(
+                        $"There's {matchingProducts.Count()} products that could be released in the release manifest. Expected 1");
+                }
+
+                return new DirectoryInfo(matchingProducts.First().GetProperty("fileshare").GetString());
+            }
+        }
+    }
+}

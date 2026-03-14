@@ -1,0 +1,14 @@
+<Project>
+  <ItemGroup Condition="'$(BundleTools)' != 'true' and '$(DotNetBuild)' != 'true'">
+    <ProjectToBuild Include="$(RepoRoot)build.proj" />
+  </ItemGroup>
+
+  <!-- Only build the NETCore.Client library in .NET product build mode. -->
+  <ItemGroup Condition="'$(DotNetBuild)' == 'true'">
+    <ProjectToBuild Include="$(RepoRoot)src/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(BundleTools)' == 'true'">
+    <ProjectToBuild Include="$(RepoRoot)src/singlefile-tools.proj" />
+  </ItemGroup>
+</Project>

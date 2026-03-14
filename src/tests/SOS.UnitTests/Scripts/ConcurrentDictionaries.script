@@ -1,0 +1,78 @@
+# Concurrent dictionaries dump command
+# 1) Load the executable
+# 2) Run the executable
+# 3) Take a dump of the executable before it exits
+# 4) Open the dump, find concurrent dictionaries and compare the output
+
+IFDEF:NETCORE_OR_DOTNETDUMP
+
+# Load SOS even though it doesn't actually load the sos module on dotnet-dump but it runs some initial settings/commands.
+LOADSOS
+
+EXTCOMMAND_FAIL: dcd
+VERIFY: Missing ConcurrentDictionary address
+
+EXTCOMMAND_FAIL: dcd abcdefgh
+VERIFY: Hexadecimal address expected
+
+EXTCOMMAND_FAIL: dcd 0000000000000001
+VERIFY: is not referencing an object
+
+# Checks on ConcurrentDictionary<int, string[]>
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
+SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<System.Int32, System.String\[\]>[^+]<POUT>
+EXTCOMMAND: dcd <POUT>\n\s*(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
+VERIFY: 2 items
+VERIFY: Key: 2
+EXTCOMMAND: dumparray <POUT>Key: 1\s+Value: dumparray (<HEXVAL>)<POUT>
+VERIFY: Name:\s+System.String\[\]
+VERIFY: Number of elements 4
+
+# Checks on ConcurrentDictionary<int, int>
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
+SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<System.Int32, System.Int32>[^+]<POUT>
+EXTCOMMAND: dcd <POUT>\n\s*(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
+VERIFY: 3 items
+VERIFY: Key: 0\s+Value: 1
+VERIFY: Key: 31\s+Value: 17
+VERIFY: Key: 1521482\s+Value: 512487
+
+# Checks on ConcurrentDictionary<string, bool>
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
+SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<System.String, System.Boolean>[^+]<POUT>
+EXTCOMMAND: dcd <POUT>\n\s*(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
+VERIFY: 3 items
+VERIFY: Key: "String true"\s+Value: True
+VERIFY: Key: "String false"\s+Value: False
+VERIFY: Key: "SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS\.\.\.\s+Value: False
+
+# Checks on ConcurrentDictionary<DumpSampleStruct, DumpSampleClass>
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
+SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<DotnetDumpCommands\.Program\+DumpSampleStruct, DotnetDumpCommands\.Program\+DumpSampleClass>[^+]<POUT>
+EXTCOMMAND: dcd <POUT>\n\s*(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
+VERIFY: 2 items
+VERIFY: Key: dumpvc <HEXVAL> <HEXVAL>\s+Value: null
+VERIFY: Key: dumpvc <HEXVAL> <HEXVAL>\s+Value: dumpobj <HEXVAL>
+SOSCOMMAND: dumpobj <POUT>Value: dumpobj (<HEXVAL>)<POUT>
+VERIFY: Name:\s+DotnetDumpCommands\.Program\+DumpSampleClass
+VERIFY: instance\s+0\s+\<Value1\>
+IFDEF:64BIT
+VERIFY: instance\s+0000000000000000\s+\<Value2\>
+ENDIF:64BIT
+IFDEF:32BIT
+VERIFY: instance\s+00000000\s+\<Value2\>
+ENDIF:32BIT
+
+# Checks on ConcurrentDictionary<int, DumpSampleStruct>
+SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<
+SOSCOMMAND: DumpHeap -mt <POUT>^(<HEXVAL>) .*System.Collections.Concurrent.ConcurrentDictionary<System.Int32, DotnetDumpCommands\.Program\+DumpSampleStruct>[^+]<POUT>
+EXTCOMMAND: dcd <POUT>\n\s*(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
+VERIFY: 1 items
+VERIFY: Key: 0\s+Value: dumpvc <HEXVAL> <HEXVAL>
+SOSCOMMAND: dumpvc <POUT>dumpvc (<HEXVAL> <HEXVAL>)<POUT>
+VERIFY: Name:\s+DotnetDumpCommands\.Program\+DumpSampleStruct
+VERIFY: instance\s+12\s+IntValue
+VERIFY: instance\s+<HEXVAL>\s+StringValue
+VERIFY: instance\s+<HEXVAL>\s+Date
+
+ENDIF:NETCORE_OR_DOTNETDUMP

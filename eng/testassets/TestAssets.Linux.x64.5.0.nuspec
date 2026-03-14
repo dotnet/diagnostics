@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>TestAssets.Linux.x64.5.0</id>
+    <version>1.0.0</version>
+    <title>TestAssets.Linux.x64.5.0</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <description>
+      Test assets for Linux x64 on .NET 5.0.9 runtime
+    </description>
+    <releaseNotes>
+    </releaseNotes>
+    <summary>
+      Test assets
+    </summary>
+    <language>en-US</language>
+    <projectUrl>https://github.com/dotnet/diagnostics.git</projectUrl>
+    <iconUrl>https://nuget.org/Content/Images/packageDefaultIcon-50x50.png</iconUrl>
+    <copyright>Copyright 2021</copyright>
+  </metadata>
+  <files>
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\5.0.9\net5.0\portable\SOS.StackAndOtherTests.Heap.portable.dmp" target="content/SymbolTestApp" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\5.0.9\net5.0\portable\SOS.StackAndOtherTests.Heap.portable.dmp.xml" target="content/SymbolTestApp" />
+    <file src="..\..\artifacts\Debuggees\portable\SymbolTestApp\SymbolTestApp\bin\Debug\net5.0\publish\SymbolTestApp.dll" target="content/SymbolTestApp" />
+    <file src="..\..\artifacts\Debuggees\portable\SymbolTestApp\SymbolTestApp\bin\Debug\net5.0\publish\SymbolTestApp.pdb" target="content/SymbolTestApp" />
+    <file src="..\..\artifacts\Debuggees\portable\SymbolTestApp\SymbolTestApp\bin\Debug\net5.0\publish\SymbolTestDll.dll" target="content/SymbolTestApp" />
+    <file src="..\..\artifacts\Debuggees\portable\SymbolTestApp\SymbolTestApp\bin\Debug\net5.0\publish\SymbolTestDll.pdb" target="content/SymbolTestApp" />
+
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\5.0.9\net5.0\SOS.LineNums.Heap.dmp" target="content/LineNums" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\5.0.9\net5.0\SOS.LineNums.Heap.dmp.xml" target="content/LineNums" />
+    <file src="..\..\artifacts\bin\LineNums\Debug\net5.0\LineNums.dll" target="content/LineNums" />
+    <file src="..\..\artifacts\bin\LineNums\Debug\net5.0\LineNums.pdb" target="content/LineNums" />
+  </files>
+</package>

@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ToolCommandName>dotnet-dump</ToolCommandName>
+    <RootNamespace>Microsoft.Diagnostic.Tools.Dump</RootNamespace>
+    <Description>Diagnostic dump collect and analyze tool</Description>
+    <PackageTags>Diagnostic</PackageTags>
+    <NeedsPublishing>true</NeedsPublishing>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <SOSPackagePathPrefix>tools/$(TargetFramework)/any</SOSPackagePathPrefix>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\CommandUtils.cs" Link="CommandUtils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\DiagnosticToolException.cs" Link="DiagnosticToolException.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Common\ReturnCode.cs" Link="ReturnCode.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Repl\Microsoft.Diagnostics.Repl.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\SOS\SOS.Hosting\SOS.Hosting.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.ExtensionCommands\Microsoft.Diagnostics.ExtensionCommands.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
+</Project>

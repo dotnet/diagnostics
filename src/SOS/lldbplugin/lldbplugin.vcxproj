@@ -1,0 +1,184 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x86">
+      <Configuration>Debug</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x86">
+      <Configuration>Release</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{d52c65c4-2c7d-45e6-9f5c-6f3a96796018}</ProjectGuid>
+    <Keyword>Linux</Keyword>
+    <RootNamespace>lldbplugin</RootNamespace>
+    <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
+    <ApplicationType>Linux</ApplicationType>
+    <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
+    <TargetLinuxPlatform>Generic</TargetLinuxPlatform>
+    <LinuxProjectType>{D51BCBC9-82E9-4017-911E-C93873C4EA2B}</LinuxProjectType>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>Remote_GCC_1_0</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(ArtifactsBinDir)Linux.$(Platform).$(Configuration)\</OutDir>
+    <IntDir>$(ArtifactsObjDir)Linux.$(Platform).$(Configuration)\</IntDir>
+    <IncludePath>$(SolutionDir)src\SOS\lldbplugin;$(SolutionDir)src\SOS\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\SOS\lldbplugin\swift-4.0;$(SolutionDir)src\pal\prebuilt\inc;$(SolutionDir)src\inc;$(SolutionDir)src\pal\inc;$(SolutionDir)src\pal\inc\rt;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ClCompile Include="services.cpp" />
+    <ClCompile Include="sethostruntimecommand.cpp" />
+    <ClCompile Include="setsostidcommand.cpp" />
+    <ClCompile Include="soscommand.cpp" />
+    <ClCompile Include="sosplugin.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="mstypes.h" />
+    <ClInclude Include="services.h" />
+    <ClInclude Include="sosplugin.h" />
+    <ClInclude Include="swift-4.0\lldb\API\LLDB.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBAddress.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBAttachInfo.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBBlock.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBBreakpoint.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBBreakpointLocation.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBBroadcaster.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBCommandInterpreter.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBCommandReturnObject.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBCommunication.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBCompileUnit.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBData.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBDebugger.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBDeclaration.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBDefines.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBError.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBEvent.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBExecutionContext.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBExpressionOptions.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBFileSpec.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBFileSpecList.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBFrame.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBFunction.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBHostOS.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBInstruction.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBInstructionList.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBLanguageRuntime.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBLaunchInfo.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBLineEntry.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBListener.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBMemoryRegionInfo.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBMemoryRegionInfoList.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBModule.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBModuleSpec.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBPlatform.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBProcess.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBQueue.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBQueueItem.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBSection.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBSourceManager.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBStream.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBStringList.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBStructuredData.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBSymbol.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBSymbolContext.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBSymbolContextList.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBTarget.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBThread.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBThreadCollection.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBThreadPlan.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBType.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeCategory.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeEnumMember.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeFilter.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeFormat.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeNameSpecifier.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeSummary.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeSynthetic.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBUnixSignals.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBValue.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBValueList.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBVariablesOptions.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SBWatchpoint.h" />
+    <ClInclude Include="swift-4.0\lldb\API\SystemInitializerFull.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-defines.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-enumerations.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-forward.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-private-defines.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-private-enumerations.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-private-forward.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-private-interfaces.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-private-types.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-private.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-public.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-types.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-versioning.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\AnsiTerminal.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\CleanUp.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\ConvertEnum.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\Either.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\Iterable.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\JSON.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\LLDBAssert.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\NameMatches.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\PriorityPointerPair.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\ProcessStructReader.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\PseudoTerminal.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\Range.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\RegisterNumber.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\SafeMachO.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\SelectHelper.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\SharedCluster.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\SharingPtr.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\StringExtractor.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\StringLexer.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\TaskPool.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\Timeout.h" />
+    <ClInclude Include="swift-4.0\lldb\Utility\Utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\SOS\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\shared\inc;$(SolutionDir)src\shared\pal\inc;$(SolutionDir)src\shared\pal\inc\rt;$(SolutionDir)src\shared\pal\inc\rt\cpp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_AMD64_;_WIN64;AMD64;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;DBG_TARGET_AMD64_UNIX;BIT64=1;_SECURE_SCL=0;LINUX64;PLATFORM_UNIX=1;FEATURE_PAL;FEATURE_PAL_ANSI;UNIX_AMD64_ABI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation>true</BrowseInformation>
+    </ClCompile>
+    <Bscmake>
+      <PreserveSbr>true</PreserveSbr>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>

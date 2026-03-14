@@ -1,0 +1,100 @@
+#
+# Tests an app with both the .NET Core and Desktop runtimes
+#
+
+CONTINUE
+
+LOADSOS
+
+#
+# First test the .NET Core runtime that WebApp3 was started
+#
+
+# Verify that ClrStack with no options works
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+
+# Verify that ClrStack for all threads works
+SOSCOMMAND:ClrStack -all
+
+# Verify that ClrStack with managed/native mixed works
+SOSCOMMAND:ClrStack -f
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+
+# Verify that ClrStack all option works (locals/params)
+SOSCOMMAND:ClrStack -a
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+
+# Verify that ClrStack with the ICorDebug options works
+SOSCOMMAND:ClrStack -i
+VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
+VERIFY:.*\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:.*\s+Stack walk complete.\s+
+
+# Verify that Threads (clrthreads) works
+IFDEF:DOTNETDUMP
+SOSCOMMAND:clrthreads
+ENDIF:DOTNETDUMP
+!IFDEF:DOTNETDUMP
+SOSCOMMAND:Threads
+ENDIF:DOTNETDUMP
+VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
+VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
+VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+
+VERIFY:\s+PendingThread:\s+<DECVAL>\s+
+VERIFY:\s+DeadThread:\s+<DECVAL>\s+
+VERIFY:\s+Hosted Runtime:\s+no\s+
+VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
+VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
+
+SOSCOMMAND:DumpHeap -stat
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
+VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
+!VERIFY:.*UNKNOWN.*
+
+#
+# Now switch to and test the desktop runtime state (SymbolTestDll)
+#
+
+SOSCOMMAND:SOSStatus
+VERIFY:.*\.NET Core .*runtime.*at.*\s+
+
+IFDEF:TRIAGE_DUMP
+SOSCOMMAND:setclrpath %DESKTOP_RUNTIME_PATH%
+ENDIF:TRIAGE_DUMP
+
+SOSCOMMAND:runtimes -netfx
+VERIFY:\s*Switched to desktop .NET Framework runtime successfully\s+
+
+SOSCOMMAND:runtimes
+
+# Currently not on a desktop CLR thread so using the -all option to dump it.
+SOSCOMMAND:ClrStack -all
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestDll\.TestClass\.Foo7\(System\.String\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ (36)\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo6\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 24\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.Foo5\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 19\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestDll\.TestClass\.ThrowException\(.*\)\s+\[(?i:.*[\\|/]TestClass\.cs) @ 13\]\s*
+
+SOSCOMMAND:clrthreads
+VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
+VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
+VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+
+VERIFY:\s+PendingThread:\s+<DECVAL>\s+
+VERIFY:\s+DeadThread:\s+<DECVAL>\s+
+VERIFY:\s+Hosted Runtime:\s+no\s+
+VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
+VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
+
+SOSCOMMAND:DumpHeap
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
+VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
+!VERIFY:.*UNKNOWN.*

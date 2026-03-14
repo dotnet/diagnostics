@@ -1,0 +1,155 @@
+parameters:
+- name: runtimeFeed
+  displayName: Feed for runtime installation
+  type: string
+  default: default
+  values:
+  - default
+- name: runtimeFeedToken
+  displayName: Base 64 SAS Token for runtime installation
+  type: string
+  default: default
+  values:
+  - default
+
+trigger:
+  none
+
+schedules:
+  - cron: 0 3 * * SUN
+    displayName: Weekly Sunday CodeQL run
+    branches:
+      include:
+      - main
+    always: true
+
+variables:
+  # CG is handled in the primary CI pipeline
+  - name: skipComponentGovernanceDetection
+    value: true
+
+extends:
+  template:  /eng/pipelines/pipeline-resources.yml
+  parameters:
+    stages:
+      - stage: build
+        displayName: Build and Test Diagnostics
+        jobs:
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Windows
+            osGroup: Windows_NT
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: x64
+                Build_Release_x86:
+                  _BuildConfig: Release
+                  _BuildArch: x86
+                Build_Release_arm:
+                  _BuildConfig: Release
+                  _BuildArch: arm
+                Build_Release_arm64:
+                  _BuildConfig: Release
+                  _BuildArch: arm64
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_x64
+            osGroup: Linux
+            nativeBuildContainer: linux_x64
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: x64
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_musl
+            osGroup: Linux
+            nativeBuildContainer: linux_musl_x64
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: x64
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: MacOS
+            osGroup: MacOS
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: x64
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: MacOS_arm64
+            osGroup: MacOS_cross
+            crossBuild: true
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: arm64
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_arm
+            osGroup: Linux
+            nativeBuildContainer: linux_arm
+            crossBuild: true
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: arm
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_arm64
+            osGroup: Linux
+            nativeBuildContainer: linux_arm64
+            crossBuild: true
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: arm64
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_musl_arm
+            osGroup: Linux
+            nativeBuildContainer: linux_musl_arm
+            crossBuild: true
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: arm
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            name: Linux_musl_arm64
+            osGroup: Linux
+            nativeBuildContainer: linux_musl_arm64
+            crossBuild: true
+            isCodeQLRun: true
+            strategy:
+              matrix:
+                Build_Release:
+                  _BuildConfig: Release
+                  _BuildArch: arm64

@@ -1,0 +1,85 @@
+parameters:
+- name: isOfficialBuild
+  type: boolean
+  default: false
+- name: repoAllowList
+  type: string
+  default: ''
+- name: productAllowList
+  type: string
+  default: ''
+- name: dependsOn
+  type: object
+  default: [ publish_using_darc ]
+
+stages:
+- stage: PrepareReleaseStage
+  displayName: Release Preparation
+  dependsOn: ${{ parameters.dependsOn }}
+  jobs:
+  - job: PrepareReleaseJob
+    displayName: Prepare Release
+    pool:
+      name: $(BuildPool)
+      demands: ImageOverride -equals $(WindowsImage)
+      os: windows
+    ${{ if and(eq(parameters.isOfficialBuild, true), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/internal/release/'))) }}:
+      templateContext:
+        outputs:
+        - output: pipelineArtifact
+          path: '$(System.ArtifactsDirectory)\ReleaseStaging'
+          artifact: DiagnosticsRelease
+          displayName: 'Publish Release Drop'
+          condition: succeeded()
+    variables:
+    - ${{ if and(eq(parameters.isOfficialBuild, true), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/internal/release/'))) }}:
+      - group: DotNet-Diagnostics-Storage
+      - group: Release-Pipeline
+    steps:
+    - ${{ if or(eq(parameters.isOfficialBuild, false), eq(variables['Build.SourceBranch'], 'refs/heads/main')) }}:
+      - script: '$(Build.Repository.LocalPath)\dotnet.cmd build $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release'
+        displayName: 'Build Manifest generation and asset publishing tool'
+    - ${{ elseif and(eq(parameters.isOfficialBuild, true), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/internal/release/'))) }}:
+      - task: UseDotNet@2
+        displayName: 'Use .NET Core runtime 8.x'
+        inputs:
+          packageType: runtime
+          version: 8.x
+          installationPath: '$(Build.Repository.LocalPath)\.dotnet'
+      - template: /eng/common/templates/post-build/setup-maestro-vars.yml@self
+      - task: NuGetAuthenticate@1
+      - task: AzureCLI@2
+        displayName: 'DARC Gather build'
+        inputs:
+          azureSubscription: 'DotNetStaging'
+          scriptType: ps
+          scriptPath: '$(Build.Repository.LocalPath)/eng/release/Scripts/AcquireBuild.ps1'
+          arguments: >-
+            -BarBuildId "$(BARBuildId)"
+            -ReleaseVersion "$(Build.Repository.Name)_$(Build.BuildNumber)"
+            -DownloadTargetPath "$(System.ArtifactsDirectory)\ReleaseTarget"
+            -AzdoToken "$(dn-bot-all-drop-rw-code-rw-release-all)"
+          workingDirectory: '$(Build.Repository.LocalPath)'
+      - task: AzureCLI@2
+        displayName: 'Manifest generation and asset publishing'
+        inputs:
+          workingDirectory: '$(Build.Repository.LocalPath)\'
+          azureSubscription: 'dotnetstage-diagnostics-tools-rw'
+          scriptType: pscore
+          scriptLocation: inlineScript
+          addSpnToEnvironment: true
+          inlineScript: |
+              $(Build.Repository.LocalPath)\dotnet.cmd run `
+                --project $(Build.Repository.LocalPath)\eng\release\DiagnosticsReleaseTool\DiagnosticsReleaseTool.csproj -c Release `
+                -- `
+                prepare-release `
+                --input-drop-path "$(System.ArtifactsDirectory)\ReleaseTarget" `
+                --tool-manifest "$(Build.Repository.LocalPath)\eng\release\tool-list.json" `
+                --staging-directory "$(System.ArtifactsDirectory)\ReleaseStaging" `
+                --release-name "$(Build.Repository.Name)_$(Build.BuildNumber)" `
+                --product-allow-list ${{ parameters.productAllowList }} `
+                --repo-allow-list ${{ parameters.repoAllowList }} `
+                --account-name "$(dotnet-diagnostics-storage-accountname)" `
+                --client-id "$env:servicePrincipalId" `
+                --container-name "$(dotnet-diagnostics-container-name)" `
+                -v True

@@ -1,0 +1,65 @@
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
+using Microsoft.Diagnostics.Runtime;
+using static Microsoft.Diagnostics.ExtensionCommands.Output.ColumnKind;
+
+namespace Microsoft.Diagnostics.ExtensionCommands
+{
+    [Command(Name = "verifyobj", Aliases = new[] { "VerifyObj" }, Help = "Checks the given object for signs of corruption.")]
+    public sealed class VerifyObjectCommand : ClrRuntimeCommandBase
+    {
+        [ServiceImport]
+        public IMemoryService Memory { get; set; }
+
+        [Argument(Name = "objectaddress", Help = "The object to verify.")]
+        public string ObjectAddress { get; set; }
+
+        public override void Invoke()
+        {
+            if (!TryParseAddress(ObjectAddress, out ulong objAddress))
+            {
+                throw new ArgumentException($"Invalid object address: '{ObjectAddress}'", nameof(ObjectAddress));
+            }
+
+            bool isNotCorrupt = Runtime.Heap.FullyVerifyObject(objAddress, out IEnumerable<ObjectCorruption> corruptionEnum);
+            if (isNotCorrupt)
+            {
+                Console.WriteLine($"object 0x{objAddress:x} is a valid object");
+                return;
+            }
+
+            ObjectCorruption[] corruption = corruptionEnum.OrderBy(r => r.Offset).ToArray();
+
+            Column offsetColumn = HexOffset.WithAlignment(Align.Left);
+            offsetColumn = offsetColumn.GetAppropriateWidth(corruption.Select(r => r.Offset));
+
+            Table output = new(Console, offsetColumn, Column.ForEnum<ObjectCorruptionKind>(), Text);
+            output.WriteHeader("Offset", "Issue", "Description");
+            foreach (ObjectCorruption oc in corruption)
+            {
+                output.WriteRow(oc.Offset, oc.Kind, VerifyHeapCommand.GetObjectCorruptionMessage(Memory, Runtime.Heap, oc));
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"{corruption.Length:n0} error{(corruption.Length == 1 ? "" : "s")}  detected.");
+        }
+
+        [HelpInvoke]
+        public static string GetDetailedHelp() =>
+@"VerifyObj is a diagnostic tool that checks the object that is passed as an 
+argument for signs of corruption.
+
+    {prompt}verifyobj 028000ec
+    object 0x28000ec does not have valid method table
+
+    {prompt}verifyobj 0680017c 
+    object 0x680017c: bad member 00000001 at 06800184
+";
+    }
+}

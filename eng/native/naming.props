@@ -1,0 +1,39 @@
+<Project>
+  <PropertyGroup>
+    <StaticLibPrefix>lib</StaticLibPrefix>
+    <ExeSuffix Condition="'$(HostOS)' == 'windows'">.exe</ExeSuffix>
+  </PropertyGroup>
+
+  <!-- Add path globs specific to native binaries to exclude unnecessary files from packages. -->
+  <Choose>
+    <When Condition="$(PackageRID.StartsWith('win'))">
+      <PropertyGroup>
+        <LibSuffix>.dll</LibSuffix>
+        <StaticLibSuffix>.lib</StaticLibSuffix>
+        <SymbolsSuffix>.pdb</SymbolsSuffix>
+      </PropertyGroup>
+    </When>
+    <When Condition="$(PackageRID.StartsWith('osx')) or $(PackageRID.StartsWith('maccatalyst')) or $(PackageRID.StartsWith('ios')) or $(PackageRID.StartsWith('tvos'))">
+      <PropertyGroup>
+        <LibPrefix>lib</LibPrefix>
+        <LibSuffix>.dylib</LibSuffix>
+        <StaticLibSuffix>.a</StaticLibSuffix>
+        <SymbolsSuffix>.dwarf</SymbolsSuffix>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <LibPrefix>lib</LibPrefix>
+        <LibSuffix>.so</LibSuffix>
+        <StaticLibSuffix>.a</StaticLibSuffix>
+        <SymbolsSuffix>.dbg</SymbolsSuffix>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+
+  <ItemGroup>
+    <AdditionalLibPackageExcludes Condition="'$(SymbolsSuffix)' != ''" Include="%2A%2A\%2A$(SymbolsSuffix)" />
+    <AdditionalSymbolPackageExcludes Condition="'$(LibSuffix)' != ''" Include="%2A%2A\%2A.a;%2A%2A\%2A$(LibSuffix)" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>TestAssets.Windows.x86.5.0</id>
+    <version>1.0.0</version>
+    <title>TestAssets.Windows.x86.5.0</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <description>
+      Test assets for Windows x86 on .NET 5.0.9 runtime
+    </description>
+    <releaseNotes>
+    </releaseNotes>
+    <summary>
+      Test assets
+    </summary>
+    <language>en-US</language>
+    <projectUrl>https://github.com/dotnet/diagnostics.git</projectUrl>
+    <iconUrl>https://nuget.org/Content/Images/packageDefaultIcon-50x50.png</iconUrl>
+    <copyright>Copyright 2021</copyright>
+  </metadata>
+  <files>
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\5.0.9\net5.0\portable\SOS.StackAndOtherTests.Heap.portable.dmp" target="content/SymbolTestApp" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\5.0.9\net5.0\portable\SOS.StackAndOtherTests.Heap.portable.dmp.xml" target="content/SymbolTestApp" />
+    <file src="..\..\artifacts\Debuggees\portable\SymbolTestApp\SymbolTestApp\bin\Debug\net5.0\publish\SymbolTestApp.dll" target="content/SymbolTestApp" />
+    <file src="..\..\artifacts\Debuggees\portable\SymbolTestApp\SymbolTestApp\bin\Debug\net5.0\publish\SymbolTestApp.pdb" target="content/SymbolTestApp" />
+    <file src="..\..\artifacts\Debuggees\portable\SymbolTestApp\SymbolTestApp\bin\Debug\net5.0\publish\SymbolTestDll.dll" target="content/SymbolTestApp" />
+    <file src="..\..\artifacts\Debuggees\portable\SymbolTestApp\SymbolTestApp\bin\Debug\net5.0\publish\SymbolTestDll.pdb" target="content/SymbolTestApp" />
+
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\5.0.9\net5.0\SOS.DualRuntimes.Heap.dmp" target="content/DualRuntimes" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\5.0.9\net5.0\SOS.DualRuntimes.Heap.dmp.xml" target="content/DualRuntimes" />
+    <file src="..\..\artifacts\bin\WebApp3\Debug\net5.0\WebApp3.exe" target="content/DualRuntimes" />
+    <file src="..\..\artifacts\bin\WebApp3\Debug\net5.0\WebApp3.dll" target="content/DualRuntimes" />
+    <file src="..\..\artifacts\bin\WebApp3\Debug\net5.0\WebApp3.pdb" target="content/DualRuntimes" />
+    <file src="..\..\artifacts\bin\SymbolTestDll\Debug\net462\SymbolTestDll.dll" target="content/DualRuntimes" />
+    <file src="..\..\artifacts\bin\SymbolTestDll\Debug\net462\SymbolTestDll.pdb" target="content/DualRuntimes" />
+
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\5.0.9\net5.0\SOS.LineNums.Heap.dmp" target="content/LineNums" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\5.0.9\net5.0\SOS.LineNums.Heap.dmp.xml" target="content/LineNums" />
+    <file src="..\..\artifacts\bin\LineNums\Debug\net5.0\LineNums.dll" target="content/LineNums" />
+    <file src="..\..\artifacts\bin\LineNums\Debug\net5.0\LineNums.pdb" target="content/LineNums" />
+  </files>
+</package>

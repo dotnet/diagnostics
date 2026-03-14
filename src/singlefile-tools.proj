@@ -1,0 +1,106 @@
+<Project Sdk="Microsoft.Build.NoTargets">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+    <SupportedRids>win-x64;win-x86;win-arm64;linux-x64;linux-musl-x64;linux-musl-arm64;linux-arm64;linux-arm;linux-musl-arm</SupportedRids>
+    <ArcadeSdkMSBuildProjectDir>$([System.IO.Path]::GetDirectoryName('$(ArcadeSdkBuildTasksAssembly)'))\..\</ArcadeSdkMSBuildProjectDir>
+    <ArcadeSdkSignProject>$(ArcadeSdkMSBuildProjectDir)Sign.proj</ArcadeSdkSignProject>
+    <BundledToolsZipDirectory>$(BundledToolsPath)$(Configuration)/zips/</BundledToolsZipDirectory>
+    <SignatureManifest>$(ArtifactsTmpDir)BundleFilesSignList.props</SignatureManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <_ProjectToBundle Include="$(RepoRoot)src/Tools/**/*.csproj" Exclude="$(RepoRoot)src/Tools/dotnet-dsrouter/**/*.csproj" />
+    <SupportedRids Include="$(SupportedRids)"/>
+  </ItemGroup>
+
+  <Target Name="FanoutBundle" AfterTargets="Build">
+    <ItemGroup>
+      <!-- Take all the tool projects and batch them, adding one per (tool, rid) combination from the property $(SupportedRids). -->
+      <ProjectToBundle Include="@(_ProjectToBundle)">
+        <AdditionalProperties>Configuration=$(Configuration);BundleTools=true;RuntimeIdentifiers=$(SupportedRids);RuntimeIdentifier=%(SupportedRids.Identity)</AdditionalProperties>
+      </ProjectToBundle>
+    </ItemGroup>
+
+    <!-- First pass: restore the different tools -->
+    <MSBuild Projects="@(ProjectToBundle)"
+        BuildInParallel="true"
+        SkipNonexistentProjects="false"
+        SkipNonexistentTargets="false"
+        StopOnFirstFailure="true"
+        Targets="Restore"
+        ContinueOnError="false"
+        Properties="MSBuildRestoreSessionId=$([System.Guid]::NewGuid())"/>
+
+    <!-- Second: Get the files that we'll bundle for every rid and project combination. -->
+    <!--        and need signing. -->
+    <!-- See the Directory.Build.targets for the tools -->
+    <MSBuild Projects="@(ProjectToBundle)"
+        BuildInParallel="true"
+        SkipNonexistentProjects="false"
+        SkipNonexistentTargets="false"
+        StopOnFirstFailure="true"
+        Targets="Build;CollectBundleFilesToSign"
+        ContinueOnError="false">
+        <Output TaskParameter="TargetOutputs" ItemName="ItemsNeedingSigning" />
+    </MSBuild>
+
+    <!-- Only include PE files we build. Skip over 3rd party components and dependencies. -->
+    <ItemGroup>
+      <ItemsToSign Include="%(ItemsNeedingSigning.FullPath)"
+          Condition="$([System.String]::new('%(FullPath)').StartsWith('$(ArtifactsDir)')) and
+            ('%(Extension)' == '.exe' or '%(Extension)' == '.dll')" />
+
+      <ItemsNeedingSigning Remove="@(ItemsNeedingSigning)"/>
+      <ItemsNeedingSigning Include="@(ItemsToSign->Distinct())"/>
+    </ItemGroup>
+
+    <!-- We need to generate a manifest as arcade specifies the signing components as itemgroups
+    and the signing functionality lives in a different project. This one will get imported in eng\Signing.props -->
+    <!-- CDATA would be cleaner to read here, but the output is more legible with ItemGroup batching (one file per line)
+    and that didn't work in CDATA format. -->
+    <ItemGroup>
+      <LinesToWrite Include="&lt;Project&gt;" />
+      <LinesToWrite Include=" &lt;ItemGroup&gt;" />
+      <LinesToWrite Include="   &lt;ItemsToSign Include=&quot;%(ItemsNeedingSigning.FullPath)&quot; /&gt;"/>
+      <LinesToWrite Include=" &lt;/ItemGroup&gt;" />
+      <LinesToWrite Include="&lt;/Project&gt;" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(SignatureManifest)" Lines="@(LinesToWrite)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+
+    <!-- Sign all the files to bundle. This project lives inside the arcade SDK and doesn't import
+    most properties. Pass the few we need: the manifest we just generated, SignFilesToBundle=true so
+    only those get signed, and the signing type. -->
+    <MSBuild
+      Projects="$(ArcadeSdkSignProject)"
+      Targets="Sign"
+      Condition="'$(OfficialBuild)' == 'true' and '$(ContinuousIntegrationBuild)' == 'true'"
+      ContinueOnError="false"
+      Properties="
+        DotNetSignType=$(DotnetSignType);
+        SignFilesToBundle=true;
+        SignatureManifest=$(SignatureManifest)" />
+
+    <Delete Files="$(SignatureManifest)"/>
+
+    <!-- Now that we have the files that will get binplaced and fully signed as needed, generate the
+    actual bundles without trying to rebuild the components. -->
+    <MSBuild Projects="@(ProjectToBundle)"
+        BuildInParallel="true"
+        Properties="NoBuild=true"
+        SkipNonexistentProjects="false"
+        SkipNonexistentTargets="false"
+        StopOnFirstFailure="true"
+        Targets="Publish"
+        ContinueOnError="false" />
+
+    <ItemGroup>
+      <DirectoriesToZip Include="$(BundledToolsPath)$(Configuration)/%(SupportedRids.Identity)/" RID="%(SupportedRids.Identity)" />
+    </ItemGroup>
+
+    <MakeDir Directories="$(BundledToolsZipDirectory)" />
+    <ZipDirectory DestinationFile="$(BundledToolsZipDirectory)diagnostic-tools-%(RID).zip" SourceDirectory="@(DirectoriesToZip)" Overwrite="true" />
+  </Target>
+
+</Project>

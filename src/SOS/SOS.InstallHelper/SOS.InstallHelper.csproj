@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>SOS.InstallHelper</AssemblyName>
+    <NoWarn>;1591;1701</NoWarn>
+    <IsPackable>true</IsPackable>
+    <Description>Diagnostic SOS Install Helper</Description>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <PackageTags>SOS</PackageTags>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
+  </PropertyGroup>
+</Project>

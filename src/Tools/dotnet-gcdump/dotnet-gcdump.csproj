@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+    <RootNamespace>Microsoft.Diagnostics.Tools.GCDump</RootNamespace>
+    <ToolCommandName>dotnet-gcdump</ToolCommandName>
+    <Description>.NET Managed Heap Dump and Analysis Tool</Description>
+    <PackageTags>Diagnostic</PackageTags>
+    <NoWarn>$(NoWarn);CA1050</NoWarn>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" GeneratePathProperty="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
+    <Compile Include="..\Common\CommandUtils.cs" Link="CommandUtils.cs" />
+    <Compile Include="..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
+    <Compile Include="..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
+    <Compile Include="..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
+    <Compile Include="..\Common\DiagnosticToolException.cs" Link="DiagnosticToolException.cs" />
+    <Compile Include="..\Common\ReturnCode.cs" Link="ReturnCode.cs" />
+ </ItemGroup>
+
+</Project>

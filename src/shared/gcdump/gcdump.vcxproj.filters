@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="i386">
+      <UniqueIdentifier>{f850f02d-2875-417b-a6cc-6058817844a0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="i386\gcdumpx86.cpp">
+      <Filter>i386</Filter>
+    </ClCompile>
+    <ClCompile Include="gcdump.cpp" />
+    <ClCompile Include="gcdumpnonx86.cpp" />
+  </ItemGroup>
+</Project>

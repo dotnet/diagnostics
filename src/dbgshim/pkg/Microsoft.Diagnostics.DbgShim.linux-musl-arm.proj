@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <PackageRID>linux-musl-arm</PackageRID>
+    <PackageArch>arm</PackageArch>
+  </PropertyGroup>
+  <Import Project="Microsoft.Diagnostics.DbgShim.props" />
+</Project>

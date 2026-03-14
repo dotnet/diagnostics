@@ -1,0 +1,461 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Checked|x64">
+      <Configuration>Checked</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{41F59D85-FC36-3015-861B-F177863252BC}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>Strike</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Checked|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">sos.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">sos</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike\Checked\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">sos.dir\Checked\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">sos</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">false</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">sos.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">sos</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">sos.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">sos</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.dll</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(RepoRoot)artifacts\obj;$(RepoRoot)src\shared;$(RepoRoot)src\shared\inc;$(RepoRoot)src\shared\pal\prebuilt\inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;$(SolutionDir)src\SOS\Strike\;$(SolutionDir)src\SOS\inc;$(SolutionDir)src\SOS\extensions;$(SolutionDir)src\shared\gcdump;$(SolutionDir)src\SOS\Strike\platform;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8 /homeparams</AdditionalOptions>
+      <AssemblerListingLocation>Debug/</AssemblerListingLocation>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4960;4961;4603;4627;4838;4456;4457;4458;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <ForcedIncludeFiles>WarningControl.h</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitDefaultLibName>true</OmitDefaultLibName>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StringPooling>true</StringPooling>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4640</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UndefinePreprocessorDefinitions>_MT</UndefinePreprocessorDefinitions>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="Debug";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <BrowseInformation>true</BrowseInformation>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR=\"Debug\";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="Debug";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>%(AdditionalOptions) /ZH:SHA_256</AdditionalOptions>
+      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\..\inc\Debug\corguids.lib;;..\dbgutil\Debug\dbgutil.lib;libcmtd.lib;libcpmtd.lib;libvcruntimed.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /GUARD:CF /SUBSYSTEM:WINDOWS,6.01 /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /NOVCFEATURE</AdditionalOptions>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Debug/sos.lib</ImportLibrary>
+      <LargeAddressAware>true</LargeAddressAware>
+      <ModuleDefinitionFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/sos.def</ModuleDefinitionFile>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Debug/sos.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <Version>
+      </Version>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+    <Bscmake>
+      <PreserveSbr>true</PreserveSbr>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Checked|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
+      <AssemblerListingLocation>Checked/</AssemblerListingLocation>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4960;4961;4603;4627;4838;4456;4457;4458;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <ForcedIncludeFiles>WarningControl.h</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitDefaultLibName>true</OmitDefaultLibName>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StringPooling>true</StringPooling>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4640</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UndefinePreprocessorDefinitions>_MT</UndefinePreprocessorDefinitions>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="Checked";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR=\"Checked\";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>DEBUG;_DEBUG;_DBG;URTBLDENV_FRIENDLY=Checked;BUILDENV_CHECKED=1;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="Checked";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>%(AdditionalOptions) /ZH:SHA_256</AdditionalOptions>
+      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\..\inc\Checked\corguids.lib;..\dbgutil\Checked\dbgutil.lib;libcmtd.lib;libcpmtd.lib;libvcruntimed.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /GUARD:CF /SUBSYSTEM:WINDOWS,6.01 /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /NOVCFEATURE</AdditionalOptions>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Checked/sos.lib</ImportLibrary>
+      <LargeAddressAware>true</LargeAddressAware>
+      <ModuleDefinitionFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/sos.def</ModuleDefinitionFile>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Checked/sos.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <Version>
+      </Version>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\shared;..\..\shared\minipal;..\..\shared\pal\prebuilt\inc;..\..\shared\inc;..\..\shared\gcdump;..\inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
+      <AssemblerListingLocation>Release/</AssemblerListingLocation>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4960;4961;4603;4627;4838;4456;4457;4458;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <ForcedIncludeFiles>WarningControl.h</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitDefaultLibName>true</OmitDefaultLibName>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StringPooling>true</StringPooling>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4640</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UndefinePreprocessorDefinitions>_MT</UndefinePreprocessorDefinitions>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <PreprocessorDefinitions>HOST_WINDOWS;NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="Release";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR=\"Release\";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ArtifactsObjDir)Windows_NT.x64.Debug\src\SOS\Strike;..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="Release";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>%(AdditionalOptions) /ZH:SHA_256</AdditionalOptions>
+      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\..\inc\Release\corguids.lib;..\dbgutil\Release\dbgutil.lib;libcmt.lib;libcpmt.lib;libvcruntime.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /GUARD:CF /SUBSYSTEM:WINDOWS,6.01 /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /DEFAULTLIB:ucrt.lib</AdditionalOptions>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>libucrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Release/sos.lib</ImportLibrary>
+      <LargeAddressAware>true</LargeAddressAware>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <ModuleDefinitionFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/sos.def</ModuleDefinitionFile>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/Release/sos.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <Version>
+      </Version>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /d2Zi+ /Zm200 /ZH:SHA_256 /source-charset:utf-8</AdditionalOptions>
+      <AssemblerListingLocation>RelWithDebInfo/</AssemblerListingLocation>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4960;4961;4603;4627;4838;4456;4457;4458;4459;4091</DisableSpecificWarnings>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <ForceConformanceInForLoopScope>true</ForceConformanceInForLoopScope>
+      <ForcedIncludeFiles>WarningControl.h</ForcedIncludeFiles>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OmitDefaultLibName>true</OmitDefaultLibName>
+      <OmitFramePointers>false</OmitFramePointers>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <StringPooling>true</StringPooling>
+      <StructMemberAlignment>8Bytes</StructMemberAlignment>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatSpecificWarningsAsErrors>$(TreatSpecificWarningsAsErrors);4640</TreatSpecificWarningsAsErrors>
+      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UndefinePreprocessorDefinitions>_MT</UndefinePreprocessorDefinitions>
+      <UseFullPaths>true</UseFullPaths>
+      <WarningLevel>Level3</WarningLevel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <PreprocessorDefinitions>NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="RelWithDebInfo";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR=\"RelWithDebInfo\";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <MASM>
+      <PreprocessorDefinitions>NDEBUG;URTBLDENV_FRIENDLY=Retail;_AMD64_;_WIN64;AMD64;BIT64=1;_TARGET_64BIT_=1;_TARGET_AMD64_=1;DBG_TARGET_64BIT=1;DBG_TARGET_AMD64=1;DBG_TARGET_WIN64=1;WIN32;_WIN32;WINVER=0x0602;_WIN32_WINNT=0x0602;WIN32_LEAN_AND_MEAN=1;_CRT_SECURE_NO_WARNINGS;;FEATURE_COMINTEROP;FEATURE_HIJACK;_SECURE_SCL=0;_TARGET_WIN64_=1;SOS_TARGET_AMD64=1;SOS_TARGET_ARM64=1;STRIKE;USE_STL;FX_VER_INTERNALNAME_STR=SOS.dll;CMAKE_INTDIR="RelWithDebInfo";sos_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>%(AdditionalOptions) /ZH:SHA_256</AdditionalOptions>
+      <IncludePaths>..\..\SOS\Strike;..\..\pal\prebuilt\inc;..\..\inc;..\..\SOS\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(IncludePaths)</IncludePaths>
+    </MASM>
+    <Midl>
+      <AdditionalIncludeDirectories>Strike;..\..\pal\prebuilt\inc;..\..\inc;..\gcdump;inc;C:\Program Files (x86)\Microsoft Visual Studio\Preview\Enterprise\DIA SDK\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\..\inc\RelWithDebInfo\corguids.lib;..\dbgutil\RelWithDebInfo\dbgutil.lib;libcmt.lib;libcpmt.lib;libvcruntime.lib;kernel32.lib;user32.lib;ole32.lib;oleaut32.lib;dbghelp.lib;uuid.lib;version.lib;dbgeng.lib;advapi32.lib;psapi.lib;ntdll.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64 /GUARD:CF /SUBSYSTEM:WINDOWS,6.01 /PDBCOMPRESS /IGNORE:4197,4013,4254,4070,4221 /DEFAULTLIB:ucrt.lib</AdditionalOptions>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>libucrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/RelWithDebInfo/sos.lib</ImportLibrary>
+      <LargeAddressAware>true</LargeAddressAware>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+      <ModuleDefinitionFile>sos.def</ModuleDefinitionFile>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ProgramDataBaseFile>$(ArtifactsObjDir)Windows_NT.x64.Debug/src/SOS/Strike/RelWithDebInfo/sos.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <Version>
+      </Version>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="clrma\exception.cpp" />
+    <ClCompile Include="clrma\clrma.cpp" />
+    <ClCompile Include="clrma\thread.cpp" />
+    <ClCompile Include="clrma\managedanalysis.cpp" />
+    <ClCompile Include="dbgengservices.cpp" />
+    <ClCompile Include="disasm.cpp" />
+    <ClCompile Include="disasmARM.cpp" />
+    <ClCompile Include="disasmLOONGARCH64.cpp" />
+    <ClCompile Include="disasmRISCV64.cpp" />
+    <ClCompile Include="dllsext.cpp" />
+    <ClCompile Include="eeheap.cpp" />
+    <ClCompile Include="ExpressionNode.cpp" />
+    <ClCompile Include="exts.cpp" />
+    <ClCompile Include="gchist.cpp" />
+    <ClCompile Include="gcroot.cpp" />
+    <ClCompile Include="managedcommands.cpp" />
+    <ClCompile Include="metadata.cpp" />
+    <ClCompile Include="platform\datatarget.cpp" />
+    <ClCompile Include="platform\hostimpl.cpp" />
+    <ClCompile Include="platform\runtimeimpl.cpp" />
+    <ClCompile Include="platform\targetimpl.cpp" />
+    <ClCompile Include="sildasm.cpp" />
+    <ClCompile Include="sos.cpp" />
+    <ClCompile Include="sosextensions.cpp" />
+    <ClCompile Include="stressLogDump.cpp" />
+    <ClCompile Include="strike.cpp" />
+    <ClCompile Include="symbols.cpp" />
+    <ClCompile Include="util.cpp" />
+    <ClCompile Include="vm.cpp" />
+    <ClCompile Include="WatchCmd.cpp" />
+    <None Include="sos.def" />
+    <None Include="sos_unixexports.src" />
+    <ResourceCompile Include="Native.rc" />
+    <ClCompile Include="disasmX86.cpp" />
+    <ClCompile Include="disasmARM64.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="clrma\exception.h" />
+    <ClInclude Include="clrma\thread.h" />
+    <ClInclude Include="clrma\managedanalysis.h" />
+    <ClInclude Include="data.h" />
+    <ClInclude Include="dbgengservices.h" />
+    <ClInclude Include="disasm.h" />
+    <ClInclude Include="ExpressionNode.h" />
+    <ClInclude Include="exts.h" />
+    <ClInclude Include="ntinfo.h" />
+    <ClInclude Include="platformspecific.h" />
+    <ClInclude Include="platform\cordebugdatatarget.h" />
+    <ClInclude Include="platform\datatarget.h" />
+    <ClInclude Include="platform\hostimpl.h" />
+    <ClInclude Include="platform\runtimeimpl.h" />
+    <ClInclude Include="platform\targetimpl.h" />
+    <ClInclude Include="sos.h" />
+    <ClInclude Include="sosextensions.h" />
+    <ClInclude Include="sos_md.h" />
+    <ClInclude Include="sos_stacktrace.h" />
+    <ClInclude Include="strike.h" />
+    <ClInclude Include="symbols.h" />
+    <ClInclude Include="util.h" />
+    <ClInclude Include="WatchCmd.h" />
+    <ClInclude Include="xplat\dbgeng.h" />
+    <ClInclude Include="xplat\dbghelp.h" />
+    <ClInclude Include="xplat\wdbgexts.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+    <Text Include="sosdocs.txt" />
+    <Text Include="sosdocsunix.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>

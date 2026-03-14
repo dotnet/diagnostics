@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>TestAssets.Linux.x64.3.1</id>
+    <version>1.0.0</version>
+    <title>TestAssets.Linux.x64.3.1</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <description>
+      Test assets for Linux x64 on .NET 3.1.18 runtime
+    </description>
+    <releaseNotes>
+    </releaseNotes>
+    <summary>
+      Test assets
+    </summary>
+    <language>en-US</language>
+    <projectUrl>https://github.com/dotnet/diagnostics.git</projectUrl>
+    <iconUrl>https://nuget.org/Content/Images/packageDefaultIcon-50x50.png</iconUrl>
+    <copyright>Copyright 2021</copyright>
+  </metadata>
+  <files>
+    <file src="../../artifacts/tmp/Debug/dumps/ProjectK/3.1.18/netcoreapp3.1/portable/SOS.StackAndOtherTests.Heap.portable.dmp" target="content/SymbolTestApp" />
+    <file src="../../artifacts/tmp/Debug/dumps/ProjectK/3.1.18/netcoreapp3.1/portable/SOS.StackAndOtherTests.Heap.portable.dmp.xml" target="content/SymbolTestApp" />
+    <file src="../../artifacts/Debuggees/portable/SymbolTestApp/SymbolTestApp/bin/Debug/netcoreapp3.1/publish/SymbolTestApp.dll" target="content/SymbolTestApp" />
+    <file src="../../artifacts/Debuggees/portable/SymbolTestApp/SymbolTestApp/bin/Debug/netcoreapp3.1/publish/SymbolTestApp.pdb" target="content/SymbolTestApp" />
+    <file src="../../artifacts/Debuggees/portable/SymbolTestApp/SymbolTestApp/bin/Debug/netcoreapp3.1/publish/SymbolTestDll.dll" target="content/SymbolTestApp" />
+    <file src="../../artifacts/Debuggees/portable/SymbolTestApp/SymbolTestApp/bin/Debug/netcoreapp3.1/publish/SymbolTestDll.pdb" target="content/SymbolTestApp" />
+  </files>
+</package>

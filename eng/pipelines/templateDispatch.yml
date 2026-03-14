@@ -1,0 +1,17 @@
+parameters:
+  - name: templatePath
+    type: string
+  - name: pipelineTemplate
+    type: string
+    default: ''
+  - name: stages
+    type: stageList
+  - name: containers
+    type: object
+
+extends:
+  template: ${{ parameters.templatePath }}
+  parameters:
+    pipelineTemplate: ${{ parameters.pipelineTemplate }}
+    stages: ${{ parameters.stages }}
+    containers: ${{ parameters.containers }}

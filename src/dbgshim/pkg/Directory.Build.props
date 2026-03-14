@@ -1,0 +1,18 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\..\Directory.Build.props"/>
+
+  <PropertyGroup>
+    <IsShipping>true</IsShipping>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <PackageDescription>Internal implementation package not meant for direct consumption. Please do not reference directly.</PackageDescription>
+    <ExeSuffix Condition="$(PackageRID.StartsWith('win'))">.exe</ExeSuffix>
+    <OsFolderName Condition="$(PackageRID.StartsWith('win'))">Windows_NT</OsFolderName>
+    <OsFolderName Condition="$(PackageRID.StartsWith('linux-musl'))">Linux-musl</OsFolderName>
+    <OsFolderName Condition="$(PackageRID.StartsWith('linux')) and '$(OsFolderName)' == ''">Linux</OsFolderName>
+    <OsFolderName Condition="$(PackageRID.StartsWith('osx'))">OSX</OsFolderName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NativeBinDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', '$(OsFolderName).$(PackageArch).$(Configuration)'))</NativeBinDir>
+  </PropertyGroup>
+</Project>

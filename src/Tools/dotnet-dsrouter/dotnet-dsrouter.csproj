@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ToolCommandName>dotnet-dsrouter</ToolCommandName>
+    <RootNamespace>Microsoft.Diagnostics.Tools.DiagnosticsServerRouter</RootNamespace>
+    <Description>.NET Performance Diagnostic Server Router Tool</Description>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Common\ReversedServerHelpers\ReversedServerHelpers.cs" Link="ReversedServerHelpers.cs" />
+    <Compile Include="..\Common\DiagnosticToolException.cs" Link="DiagnosticToolException.cs" />
+    <Compile Include="..\Common\ReturnCode.cs" Link="ReturnCode.cs" />
+    <Compile Include="..\Common\ProcessTerminationHandler.cs" Link="ProcessTerminationHandler.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectReference Include="$(MSBuildThisFiledirectory)..\..\Microsoft.Diagnostics.WebSocketServer\Microsoft.Diagnostics.WebSocketServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" GeneratePathProperty="true" />
+    <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(MicrosoftExtensionsLoggingVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="$(MicrosoftExtensionsLoggingConsoleVersion)" />
+    <PackageReference Include="Xamarin.Android.Tools.AndroidSdk" Version="$(XamarinAndroidToolsAndroidSdkVersion)" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,326 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="services.cpp" />
+    <ClCompile Include="setsostidcommand.cpp" />
+    <ClCompile Include="soscommand.cpp" />
+    <ClCompile Include="sosplugin.cpp" />
+    <ClCompile Include="sethostruntimecommand.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="mstypes.h" />
+    <ClInclude Include="services.h" />
+    <ClInclude Include="sosplugin.h" />
+    <ClInclude Include="swift-4.0\lldb\lldb-defines.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-enumerations.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-forward.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-private.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-private-defines.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-private-enumerations.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-private-forward.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-private-interfaces.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-private-types.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-public.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-types.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\lldb-versioning.h">
+      <Filter>swift-4.0\lldb</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\LLDB.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBAddress.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBAttachInfo.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBBlock.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBBreakpoint.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBBreakpointLocation.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBBroadcaster.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBCommandInterpreter.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBCommandReturnObject.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBCommunication.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBCompileUnit.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBData.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBDebugger.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBDeclaration.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBDefines.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBError.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBEvent.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBExecutionContext.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBExpressionOptions.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBFileSpec.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBFileSpecList.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBFrame.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBFunction.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBHostOS.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBInstruction.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBInstructionList.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBLanguageRuntime.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBLaunchInfo.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBLineEntry.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBListener.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBMemoryRegionInfo.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBMemoryRegionInfoList.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBModule.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBModuleSpec.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBPlatform.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBProcess.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBQueue.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBQueueItem.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBSection.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBSourceManager.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBStream.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBStringList.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBStructuredData.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBSymbol.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBSymbolContext.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBSymbolContextList.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBTarget.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBThread.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBThreadCollection.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBThreadPlan.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBType.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeCategory.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeEnumMember.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeFilter.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeFormat.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeNameSpecifier.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeSummary.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBTypeSynthetic.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBUnixSignals.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBValue.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBValueList.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBVariablesOptions.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SBWatchpoint.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\API\SystemInitializerFull.h">
+      <Filter>swift-4.0\lldb\API</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\AnsiTerminal.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\CleanUp.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\ConvertEnum.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\Either.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\Iterable.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\JSON.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\LLDBAssert.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\NameMatches.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\PriorityPointerPair.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\ProcessStructReader.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\PseudoTerminal.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\Range.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\RegisterNumber.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\SafeMachO.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\SelectHelper.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\SharedCluster.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\SharingPtr.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\StringExtractor.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\StringLexer.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\TaskPool.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\Timeout.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="swift-4.0\lldb\Utility\Utils.h">
+      <Filter>swift-4.0\lldb\Utility</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="swift-4.0">
+      <UniqueIdentifier>{218787e9-5d31-4db1-bc35-232897746e27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="swift-4.0\lldb">
+      <UniqueIdentifier>{351934db-c5e0-4f1a-aeef-e882535040d3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="swift-4.0\lldb\API">
+      <UniqueIdentifier>{2b88af64-c488-40e3-8617-50dc26f41547}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="swift-4.0\lldb\Utility">
+      <UniqueIdentifier>{ffdcee4c-ef55-4963-9791-6f0784ba4151}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+  </ItemGroup>
+</Project>

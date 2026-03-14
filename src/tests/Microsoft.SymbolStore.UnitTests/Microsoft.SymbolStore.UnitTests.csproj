@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+    <NoWarn>;1591;1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="TestBinaries\coreclr.dll.gz" />
+    <None Remove="TestBinaries\md5_build_id" />
+    <None Remove="TestBinaries\StackTraceSymbols.CoreCLR.cs.gz" />
+    <None Remove="TestBinaries\stripped_executable" />
+    <None Remove="TestBinaries\symbolized_executable" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(SrcDir)Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
+    <ProjectReference Include="$(TestDir)TestHelpers/TestHelpers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(TestDir)Microsoft.FileFormats.UnitTests\TestBinaries\**">
+      <Link>TestBinaries\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\**">
+      <Link>TestBinaries\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

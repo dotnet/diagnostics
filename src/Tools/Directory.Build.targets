@@ -1,0 +1,39 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets"/>
+
+  <!-- This just returns the package version of a tool. It's used in the publishing
+  infrastructure to query the version of an arbitrary tool. Given every tool can
+  decide their own publishing mechanism, this is esential. -->
+  <Target Name="_GetPackageVersionInfo" Returns="@(_ProjectPackageVersion)">
+    <ItemGroup>
+      <_ProjectPackageVersion Include="$(MSBuildProjectFullPath)">
+        <PackageVersion>$(Version)</PackageVersion>
+      </_ProjectPackageVersion>
+    </ItemGroup>
+  </Target>
+
+  <!-- This is meant to be an extension point that hooks into ComputeFilesToPublish of any tool
+  so that it can be called from outside the project and get a list of the files that will get
+  bundled when PublishSingleFile=true. This is used to generate single-file tools signed in a single pass.
+
+  This uses the private ItemGroup _FilesToBundle that gets populated in the target chain:
+      ComputeFilesToPublish -> GenerateSingleFileBundle -> _ComputeFilesToBundle.
+  There was no extensibility point to get this, but the single file team confirmed this
+  would be the cleanest way currently and that it allows to easily consume the extension point when added.
+
+  The exclusion is to make sure we don't sign the apphost before bundling the final tool.
+  In pre 5.0-rc1 SDK's we have that the single-file host is named after the app. Afterwards
+  we have it's just called apphost with some metadata. Discard both posibilities. -->
+  <Target Name="CollectBundleFilesToSign"
+          DependsOnTargets="ComputeFilesToPublish"
+          AfterTargets="ComputeFilesToPublish"
+          Returns="@(FilesInBundleToSign)">
+    <ItemGroup>
+      <FilesInBundleToSign 
+            Include="@(_FilesToBundle)"
+            Condition="('%(_FilesToBundle.FileName)%(_FilesToBundle.Extension)' != '$(PublishedSingleFileName)') and 
+                       ('%(_FilesToBundle.RelativePath)' != '$(PublishedSingleFileName)') "/>
+    </ItemGroup>
+    <Message Importance="Low" Text="@(FilesInBundleToSign)"/>
+  </Target>
+</Project>

@@ -1,0 +1,172 @@
+<!-- All Rights Reserved. Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. See the LICENSE file in the project root for more information. -->
+<Project Sdk="Microsoft.Build.NoTargets">
+  <!--
+    $(TargetArch) - architecture to test (x64, x86, arm, arm64). Defaults to x64.
+    $(LiveRuntimeDir) - path to the locally built runtime to use for testing.
+
+    From Versions.props:
+
+    $(MicrosoftNetSdkVersion) - .NET SDK to use for testing
+    $(InternalReleaseTesting) - if true, internal service release testing
+    $(PrivateBuildTesting) - if true, test against a locally built runtime
+    @(RuntimeTestVersions) - runtime/aspnetcore versions to install and test against
+
+    From Arcade:
+
+    $(RepoRoot) - the root of the diagnostics repo
+    $(RepositoryEngineeringDir) - the "eng" directory
+    $(VersionsPropsPath) - path of Versions.props
+
+    From Directory.Build.props:
+    $(ArtifactsDotnetTestDir) - artifacts\dotnet-test directory
+  -->
+
+  <PropertyGroup>
+    <LiveRuntimeDir Condition="'$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizePath('$(LiveRuntimeDir)'))</LiveRuntimeDir>
+    <DotNetInstallRoot>$(ArtifactsDotnetTestDir)</DotNetInstallRoot>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetArch)' != 'x86'">
+    <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE</RegistryRoot>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetArch)' == 'x86'">
+    <RegistryRoot>HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node</RegistryRoot>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(TargetArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
+    <DotNetInstallDir>$([MSBuild]::NormalizeDirectory('$(DotNetInstallRoot)', 'shared', 'Microsoft.NETCore.App', '$(MicrosoftNETCoreAppRefVersion)'))</DotNetInstallDir>
+    <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
+  </PropertyGroup>
+
+  <Choose>
+    <When Condition="$([MSBuild]::IsOsPlatform(Windows))">
+      <PropertyGroup>
+        <PowershellWrapper>powershell -NonInteractive -ExecutionPolicy ByPass -NoProfile -command</PowershellWrapper>
+        <DotnetInstallScriptCmd>'$(RepositoryEngineeringDir)\dotnet-install.ps1'</DotnetInstallScriptCmd>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <DotnetInstallScriptCmd>$(RepositoryEngineeringDir)/dotnet-install.sh</DotnetInstallScriptCmd>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+
+<!--
+    Installs the runtimes for the SOS tests, handles private runtime build support or cleans up the private build registry keys
+-->
+
+  <Target Name="InstallTestRuntimes"
+          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;OverrideLatestRuntime;WriteTestVersionManifest" />
+
+<!--
+    Installs the test runtimes on Windows
+-->
+
+  <Target Name="InstallRuntimesWindows"
+          Condition="$([MSBuild]::IsOsPlatform(Windows))"
+          Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
+
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(MicrosoftNetSdkVersion) }&quot;"
+          IgnoreStandardErrorWarningFormat="true" />
+
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) %(RuntimeTestVersions.ExtraInstallArgs) -Version %(RuntimeTestVersions.RuntimeDownload) -Runtime dotnet }&quot;"
+          IgnoreStandardErrorWarningFormat="true" Condition="'%(RuntimeTestVersions.RuntimeDownload)' != ''" />
+
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) %(RuntimeTestVersions.ExtraInstallArgs) -Version %(RuntimeTestVersions.AspNetDownload) -Runtime aspnetcore }&quot;"
+          IgnoreStandardErrorWarningFormat="true" Condition="'%(RuntimeTestVersions.AspNetDownload)' != ''" />
+  </Target>
+
+<!--
+    Installs the test runtimes on Linux/MacOS
+-->
+
+  <Target Name="InstallRuntimesUnix"
+          Condition="!$([MSBuild]::IsOsPlatform(Windows))"
+          Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
+
+    <Exec Command="bash $(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(MicrosoftNetSdkVersion)"
+          IgnoreStandardErrorWarningFormat="true" />
+
+    <Exec Command="bash $(DotnetInstallScriptCmd) $(CommonInstallArgs) %(RuntimeTestVersions.ExtraInstallArgs) -Version %(RuntimeTestVersions.RuntimeDownload) -Runtime dotnet"
+          IgnoreStandardErrorWarningFormat="true"
+          Condition="'%(RuntimeTestVersions.RuntimeDownload)' != ''" />
+
+    <Exec Command="bash $(DotnetInstallScriptCmd) $(CommonInstallArgs) %(RuntimeTestVersions.ExtraInstallArgs) -Version %(RuntimeTestVersions.AspNetDownload) -Runtime aspnetcore"
+          IgnoreStandardErrorWarningFormat="true"
+          Condition="'%(RuntimeTestVersions.AspNetDownload)' != ''" />
+  </Target>
+
+  <!-- Overrides the latest runtime shared framework with local shared framework artifacts -->
+  <Target Name="OverrideLatestRuntime"
+          Condition="'$(LiveRuntimeDir)' != ''"
+          Inputs="$(VersionsPropsPath)"
+          Outputs="$(TestConfigFileName)">
+
+    <ItemGroup>
+      <_LiveRuntimeFiles Include="$(LiveRuntimeDir)\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_LiveRuntimeFiles)"
+          DestinationFolder="$(DotNetInstallDir)"
+          OverwriteReadOnlyFiles="true" />
+  </Target>
+
+<!--
+    Writes the Debugger.Tests.Versions.txt file used by tests in this repo to determine which runtimes to test against
+-->
+
+  <Target Name="WriteTestVersionManifest"
+          Inputs="$(VersionsPropsPath)"
+          Outputs="$(TestConfigFileName)">
+
+    <ItemGroup>
+      <TestConfigFileLines Include="Header">
+        <ConfigFileEntry>
+<![CDATA[
+<Configuration>
+  <InternalReleaseTesting>$(InternalReleaseTesting)</InternalReleaseTesting>
+  <PrivateBuildTesting>$(PrivateBuildTesting)</PrivateBuildTesting>
+]]>
+        </ConfigFileEntry>
+      </TestConfigFileLines>
+      <TestConfigFileLines Include="@(RuntimeTestVersions)">
+        <ConfigFileEntry>
+<![CDATA[
+  <RuntimeVersion%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.Runtime)</RuntimeVersion%(RuntimeTestVersions.Identity)>
+  <AspNetCoreVersion%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.AspNet)</AspNetCoreVersion%(RuntimeTestVersions.Identity)>
+  <TargetFramework%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.TargetFramework)</TargetFramework%(RuntimeTestVersions.Identity)>
+]]>
+        </ConfigFileEntry>
+      </TestConfigFileLines>
+      <TestConfigFileLines Include="End">
+        <ConfigFileEntry>
+<![CDATA[
+</Configuration>
+]]>
+        </ConfigFileEntry>
+      </TestConfigFileLines>
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(TestConfigFileName)" Lines="@(TestConfigFileLines->Metadata('ConfigFileEntry'))" Overwrite="true" WriteOnlyWhenDifferent="true" />
+
+    <Message Importance="High" Text="Created config file $(TestConfigFileName)" />
+
+    <ItemGroup>
+      <FileWrites Include="$(TestConfigFileName)" />
+    </ItemGroup>
+  </Target>
+
+<!--
+    Removes the test config file if internal service release or private build testing
+-->
+
+  <Target Name="CleanupVersionManifest"
+          Condition="$(InternalReleaseTesting) or $(PrivateBuildTesting)">
+
+    <!-- Make sure the config file gets regenerated in the WriteTestVersionManifest target -->
+    <Delete Files="$(TestConfigFileName)" />
+
+  </Target>
+</Project>

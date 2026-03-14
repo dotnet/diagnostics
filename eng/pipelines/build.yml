@@ -1,0 +1,275 @@
+parameters:
+  # Job name
+- name: name
+  type: string
+  default: ''
+
+- name: jobTemplate
+  type: string
+  default: /eng/common/templates-official/job/job.yml@self
+  values:
+  - /eng/common/templates-official/job/job.yml@self
+  - /eng/common/templates/job/job.yml@self
+
+- name: osGroup
+  type: string
+  default: Windows_NT
+  values:
+  - Windows_NT
+  - Linux
+  - MacOS
+  - FreeBSD
+
+- name: osSuffix
+  type: string
+  default: ''
+
+  # Additional variables
+- name: variables
+  type: object
+  default: {}
+
+  # Optional: Job timeout
+- name: timeoutInMinutes
+  type: number
+  default: 180
+
+  # Optional: Build container to use
+- name: templateContext
+  type: object
+  default: {}
+
+# Build configs. An object with the following properties: configuration, architecture.
+# Optionally it can also contain artifactUploadPath, artifactTargetPath
+- name: buildConfigs
+  type: object
+  default: {}
+
+  # Optional: container resource name
+- name: container
+  type: string
+  default: ''
+
+  # Optional: build only job if true
+- name: buildOnly
+  type: boolean
+  default: false
+
+  # Optional: test only job if true
+- name: testOnly
+  type: boolean
+  default: false
+
+# Optional: architecture cross build if true
+- name: crossBuild
+  type: boolean
+  default: false
+
+- name: dependsOn
+  type: string
+  default: ''
+
+- name: isCodeQLRun
+  type: boolean
+  default: false
+
+- name: disableComponentGovernance
+  type: boolean
+  default: false
+
+jobs:
+- ${{ each config in parameters.buildConfigs }}:
+  - template: ${{ parameters.jobTemplate }}
+    parameters:
+      name: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
+      timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
+      enableMicrobuild: true
+      runAsPublic: ${{ parameters.isCodeQLRun }}
+      disableComponentGovernance: ${{ parameters.disableComponentGovernance }}
+      templateContext: ${{ parameters.templateContext }}
+
+      pool:
+        # Public Linux Build Pool
+        ${{ if eq(parameters.osGroup, 'Linux') }}:
+          name: $(BuildPool)
+          demands: ImageOverride -equals $(LinuxImage)
+          os: linux
+
+        ${{ elseif eq(parameters.osGroup, 'Windows_NT') }}:
+          name: $(BuildPool)
+          demands: ImageOverride -equals $(WindowsImage)
+          os: windows
+
+        ${{ elseif in(parameters.osGroup, 'MacOS') }}:
+          name: Azure Pipelines
+          vmImage: $(macOSImage)
+          os: macOS
+
+        ${{ elseif and(eq(parameters.osGroup, 'FreeBSD'), ne(variables['System.TeamProject'], 'public')) }}:
+          name: dnceng-freebsd-internal
+          os: freebsd
+
+        ${{ else }}:
+          'error, Unable to identify pool for required build': error
+
+      ${{ if ne(parameters.container, '') }}:
+        container: ${{ parameters.container }}
+
+      ${{ if ne(parameters.strategy, '') }}:
+        'error, we can no longer support the strategy feature in the new pipeline system. Please remove the strategy from the job template.': error
+
+      ${{ if ne(parameters.dependsOn, '') }}:
+        dependsOn: ${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
+
+      workspace:
+        clean: all
+
+      variables:
+      - ${{ insert }}: ${{ parameters.variables }}
+
+      - _PhaseName: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
+      - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/${{ config.configuration }}/streams
+
+      - _TestArgs: '-test'
+      - _Cross: ''
+
+      - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+        - _buildScript: $(Build.SourcesDirectory)\build.cmd
+      - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
+        - _buildScript: $(Build.SourcesDirectory)/build.sh
+
+      - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
+        'error, testOnly and buildOnly cannot be true at the same time': error
+
+      - ${{ if eq(parameters.testOnly, 'true') }}:
+        - _TestArgs: '-test -skipnative'
+
+      - ${{ if or(eq(parameters.buildOnly, 'true'), eq(parameters.isCodeQLRun, 'true')) }}:
+        - _TestArgs: ''
+
+      # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
+      - _InternalInstallArgs: ''
+      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(parameters.isCodeQLRun, 'false')) }}:
+        - _InternalInstallArgs:
+            -dotnetruntimeversion '$(DotnetRuntimeVersion)'
+            -dotnetruntimedownloadversion '$(DotnetRuntimeDownloadVersion)'
+            -runtimesourcefeed '$(RuntimeFeedUrl)'
+            -runtimesourcefeedkey '$(RuntimeFeedBase64SasToken)'
+
+      # This is only required for cross builds.
+      - ${{ if eq(parameters.crossBuild, true) }}:
+        - _Cross: -cross
+
+      steps:
+      - ${{ if eq(parameters.testOnly, true) }}:
+        - ${{ if ne(parameters.osGroup, 'Linux') }}:
+          - 'error, testOnly is only supported on Linux': error
+        - task: DownloadPipelineArtifact@2
+          displayName: 'Download Build Artifacts'
+          inputs:
+            targetPath: '$(Build.ArtifactStagingDirectory)/__download__'
+            itemPattern: Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/**
+            checkDownloadedFiles: true
+        - task: CopyFiles@2
+          displayName: 'Binplace Downloaded Product'
+          inputs:
+            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/linux${{ parameters.osSuffix }}.${{ config.architecture }}.${{ config.configuration }}
+            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/linux.${{ config.architecture }}.${{ config.configuration }}'
+
+      - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
+        - task: CodeQL3000Init@0
+          displayName: CodeQL Initialize
+
+      - script: $(_buildScript)
+          -ci
+          -binaryLog
+          -configuration ${{ config.configuration }}
+          -architecture ${{ config.architecture }}
+          $(_TestArgs)
+          $(_Cross)
+          $(_InternalInstallArgs)
+          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+        ${{ if eq(parameters.testOnly, 'true') }}:
+          displayName: Test
+        ${{ elseif eq(parameters.buildOnly, 'true') }}:
+          displayName: Build
+        ${{ else }}:
+          displayName: Build / Test
+        condition: succeeded()
+
+      - ${{ if eq(parameters.isCodeQLRun, 'true') }}:
+        - task: CodeQL3000Finalize@0
+          displayName: CodeQL Finalize
+
+      - ${{ if ne(config.artifactUploadPath, '') }}:
+        - task: CopyFiles@2
+          displayName: Gather binaries for publish
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/artifacts/${{ config.artifactUploadPath }}'
+            Contents: '**'
+            TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/${{ coalesce(config.artifactTargetPath, config.artifactUploadPath) }}
+
+        - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+          parameters:
+            displayName: Publish Build Artifacts
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
+              artifactName: Build_$(_PhaseName)
+
+      - task: CopyFiles@2
+        displayName: Gather diagnostic artifacts on failure
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)/artifacts'
+          TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts_on_failure
+          Contents: |
+            bin/**
+            log/**
+            TestResults/**
+            tmp/${{ config.configuration }}/dumps/**
+            tmp/${{ config.configuration }}/streams/**
+        continueOnError: true
+        condition: failed()
+
+      - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+        parameters:
+          displayName: Publish diagnostic artifacts on failure
+          inputs:
+            targetPath: $(Build.ArtifactStagingDirectory)/artifacts_on_failure
+            artifactName: Artifacts_On_Failure_$(_PhaseName)_$(System.JobAttempt)
+            sbomEnabled: false # we don't need SBOM for non-shipping diagnostics assets
+          continueOnError: true
+          condition: failed()
+
+      - task: CopyFiles@2
+        displayName: Gather Logs
+        inputs:
+          sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+          contents: '?(log|TestResults)/**'
+          targetFolder: '$(Build.StagingDirectory)/BuildLogs'
+        continueOnError: true
+        condition: always()
+
+      - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+        parameters:
+          displayName: Publish Logs
+          inputs:
+            targetPath: '$(Build.StagingDirectory)/BuildLogs'
+            artifactName: Logs_$(_PhaseName)_$(System.JobAttempt)
+            sbomEnabled: false # we don't need SBOM for logs
+          continueOnError: true
+          condition: always()
+
+      - ${{ if and(ne(parameters.buildOnly, 'true'), ne(parameters.isCodeQLRun, 'true')) }}:
+        # Publish test results to Azure Pipelines
+        - task: PublishTestResults@2
+          inputs:
+            testResultsFormat: xUnit
+            testResultsFiles: '**/*.xml'
+            searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
+            testRunTitle: 'Tests $(_PhaseName)'
+            failTaskOnFailedTests: true
+            publishRunAttachments: true
+            mergeTestResults: true
+            buildConfiguration: ${{ config.configuration }}
+          continueOnError: true
+          condition: always()

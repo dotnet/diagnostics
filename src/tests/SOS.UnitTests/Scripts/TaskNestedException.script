@@ -1,0 +1,55 @@
+# Nested Task Exception debugging scenario
+# 1) Load the executable
+# 2) Run the executable and wait for it to crash
+# 3) Take a dump of the executable.
+# 4) Open the dump and compare the output
+# This tests that a nested task, when throwing an exception, you can access all of its properties.
+
+CONTINUE
+
+LOADSOS
+
+SOSCOMMAND:PrintException
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.AggregateException\s+
+VERIFY:Message:\s+(<Invalid Object>|One or more errors occurred\.)\s+
+VERIFY:InnerException:\s+System\.FormatException, Use !?printexception <HEXVAL> to see more\.\s+
+VERIFY:StackTrace \(generated\):\s+
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+System(::|\.)Threading(::|\.)Tasks(::|\.)Task\.Wait(\(\))?\+0x<HEXVAL>\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+.*RandomUserTask\.WaitTask(\(\))?\+0x<HEXVAL>\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+.*SosTests(::|\.)TaskException\.Main(\(\))?\+0x<HEXVAL>\s+
+
+SOSCOMMAND:PrintException -lines <POUT>InnerException:\s+System\.FormatException, Use !?printexception (<HEXVAL>) to see more<POUT>
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.FormatException\s+
+VERIFY:Message:\s+(<Invalid Object>|Bad format exception, outer\.)\s+
+VERIFY:InnerException:\s+System\.InvalidOperationException, Use !?printexception <HEXVAL> to see more\.\s+
+VERIFY:StackTrace \(generated\):\s+
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.<\.ctor>.+\+0x<HEXVAL>\s*
+!IFDEF:DESKTOP
+!IFDEF:TRIAGE_DUMP
+VERIFY:[.+[\\|/]Debuggees[\\|/].*[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ (19|26)\]
+ENDIF:TRIAGE_DUMP
+ENDIF:DESKTOP
+
+SOSCOMMAND:PrintException -lines <POUT>InnerException:\s+System\.InvalidOperationException, Use !?printexception (<HEXVAL>) to see more<POUT>
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.InvalidOperationException\s+
+VERIFY:Message:\s+(<Invalid Object>|This is an Inner InvalidOperationException\.)\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace \(generated\):\s+
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.InnerException(\(\))?\+0x<HEXVAL>\s*
+!IFDEF:DESKTOP
+!IFDEF:TRIAGE_DUMP
+VERIFY:[.+[\\|/]Debuggees[\\|/].*[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ (37|38)\]
+ENDIF:TRIAGE_DUMP
+ENDIF:DESKTOP
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>.+RandomTest(::|\.)RandomUserTask\.<\.ctor>.+\+0x<HEXVAL>\s*
+!IFDEF:DESKTOP
+!IFDEF:TRIAGE_DUMP
+VERIFY:[.+[\\|/]Debuggees[\\|/].*[Tt]ask[Nn]ested[Ee]xception[\\|/][Rr]andom[Uu]ser[Ll]ibrary[\\|/][Rr]andom[Uu]ser[Tt]ask\.cs @ 22\]
+ENDIF:TRIAGE_DUMP
+ENDIF:DESKTOP

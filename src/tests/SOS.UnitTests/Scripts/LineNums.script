@@ -1,0 +1,53 @@
+# Test source line numbers for corner cases
+
+CONTINUE
+
+LOADSOS
+
+SOSCOMMAND:PrintException
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.Exception\s+
+VERIFY:Message:\s+(<Invalid Object>|This should be line #25)\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace\s+\(generated\):\s+
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums.*!LineNums\.Program\.Bar.*\+0x<HEXVAL>\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums.*!LineNums\.Program\.Foo.*\+0x<HEXVAL>\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums.*!LineNums\.Program\.Main.*\+0x<HEXVAL>\s+
+VERIFY:HResult:\s+80131500
+
+SOSCOMMAND:PrintException -lines
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.Exception\s+
+VERIFY:Message:\s+(<Invalid Object>|This should be line #25)\s+
+VERIFY:InnerException:\s+<none>\s+
+VERIFY:StackTrace\s+\(generated\):\s+
+VERIFY:\s+SP\s+IP\s+Function\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums.*!LineNums\.Program\.Bar.*\+0x<HEXVAL>\s+
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 28\s*\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums.*!LineNums\.Program\.Foo.*\+0x<HEXVAL>\s+
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 19\s*\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums.*!LineNums\.Program\.Main.*\+0x<HEXVAL>\s+
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 13\s*\]\s*
+
+# Verify that Threads (clrthreads) works
+SOSCOMMAND:clrthreads
+VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
+VERIFY:\s+UnstartedThread:\s+<DECVAL>\s+
+VERIFY:\s+BackgroundThread:\s+<DECVAL>\s+
+VERIFY:\s+PendingThread:\s+<DECVAL>\s+
+VERIFY:\s+DeadThread:\s+<DECVAL>\s+
+VERIFY:\s+Hosted Runtime:\s+no\s+
+VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
+VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
+
+# Verify that ClrStack with no options works
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums\.Program\.Bar\(\).*\s+
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 28\s*\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums\.Program\.Foo\(\).*\s+
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 19\s*\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+LineNums\.Program\.Main\(System.String\[\]\).*\s+
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*LineNums[\\|/]Program\.cs @ 13\s*\]\s*

@@ -1,0 +1,76 @@
+#
+# Tests various SOS GC and object based commands on the pinned object heap (POH).
+#
+# Commands Verified: GCWhere, GCRoot, DumpObj, DumpHeap, DumpStackObjects
+#
+# 1) Run to the first debug break
+# 2) Load sos
+# 3) Dump stack objects to get the address of GCWhere!temp
+# 4) Run various commands on the address, verify POH
+#11) Let the program run to completion
+
+# Continue to the DebugBreak
+CONTINUE
+IFDEF:CDB
+VERIFY:Break instruction exception - code 80000003
+ENDIF:CDB
+
+LOADSOS
+
+SOSCOMMAND:DumpStackObjects
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+System.Byte\[\]\s+
+
+SOSCOMMAND:DumpObj <POUT>\w+\s+(<HEXVAL>)\s+(System.Byte\[\]!\$0_)*System.Byte\[\]\s+<POUT>
+VERIFY:\s+Name:        System.Byte\[\]\s+
+VERIFY:\s+Array:       Rank 1, Number of elements 100, Type Byte\s+
+
+SOSCOMMAND:ObjSize <PREVPOUT>
+
+SOSCOMMAND:GCWhere <PREVPOUT>
+# we care that the Gen is 'pinned' (POH)
+VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<HEXVAL>\s+pinned.*
+
+SOSCOMMAND:GCRoot <PREVPOUT>
+VERIFY:.*Thread <HEXVAL>:
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+
+
+SOSCOMMAND:GCRoot <PREVPOUT>
+VERIFY:.*Thread <HEXVAL>:
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+
+
+SOSCOMMAND:VerifyHeap
+VERIFY:.* 0 errors.*
+VERIFY:\s*No heap corruption detected.\s*
+
+SOSCOMMAND:GCHeapStat
+
+SOSCOMMAND:DumpHeap
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<DECVAL>\s+
+
+SOSCOMMAND:DumpHeap -stat
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class\s+Name\s+
+VERIFY:\s+<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+System.Byte\[\]\s+
+
+SOSCOMMAND:DumpHeap -stat -gen poh
+VERIFY:\s*Statistics:\s+
+VERIFY:\s+MT\s+Count\s+TotalSize\s+Class\s+Name\s+
+VERIFY:\s+<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+System.Byte\[\]\s+
+
+SOSCOMMAND:EEHeap
+VERIFY:\s*Loader Heap:\s+
+VERIFY:\s+System Domain:\s+<HEXVAL>\s+
+VERIFY:\s+LowFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
+VERIFY:\s+HighFrequencyHeap:\s+<HEXVAL>.*bytes.*\s+
+VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
+VERIFY:\s+JIT Manager:\s+<HEXVAL>
+VERIFY:\s+(LoaderCodeHeap|HostCodeHeap):\s+<HEXVAL>.*bytes.*
+VERIFY:\s+Total size:\s+Size:\s+0x<HEXVAL>\s+\(<DECVAL>|lu\)\s+bytes\.\s+
+VERIFY:\s+Number of GC Heaps:\s+<DECVAL>\s+
+VERIFY:\s+segment\s+begin\s+allocated\s+committed\s+allocated\s+size\s+committed\s+size\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+0x<HEXVAL>\s*\(<DECVAL>\)\s+0x<HEXVAL>\s*\(<DECVAL>\)\s+
+VERIFY:\s+Large object heap.*
+VERIFY:\s+Pinned object heap.*
+
+# Continue to the next DebugBreak
+CONTINUE

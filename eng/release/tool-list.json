@@ -1,0 +1,52 @@
+{
+  "ToolBundleAssets": {
+    "AkaMsSchema": "https://aka.ms/<FileNameNoExt>/<Rid>",
+    "AssetList": [
+      {
+        "name": "dotnet-counters",
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-arm64", "linux-arm", "linux-musl-x64", "linux-musl-arm64", "linux-musl-arm"]
+      },
+      {
+        "name": "dotnet-dump",
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-arm64", "linux-arm", "linux-musl-x64", "linux-musl-arm64", "linux-musl-arm"]
+      },
+      {
+        "name": "dotnet-gcdump",
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-arm64", "linux-arm", "linux-musl-x64", "linux-musl-arm64", "linux-musl-arm"]
+      },
+      {
+        "name": "dotnet-sos",
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-arm64", "linux-arm", "linux-musl-x64", "linux-musl-arm64", "linux-musl-arm"]
+      },
+      {
+        "name": "dotnet-trace",
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-arm64", "linux-arm", "linux-musl-x64", "linux-musl-arm64", "linux-musl-arm"]
+      },
+      {
+        "name": "dotnet-stack",
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-arm64", "linux-arm", "linux-musl-x64", "linux-musl-arm64", "linux-musl-arm"]
+      },
+      {
+        "name": "dotnet-dsrouter",
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-arm64", "linux-arm", "linux-musl-x64", "linux-musl-arm64", "linux-musl-arm"]
+      },
+      {
+        "name": "dotnet-symbol",
+        "rids": ["win-x64", "win-x86", "win-arm64", "linux-x64", "linux-arm64", "linux-arm", "linux-musl-x64", "linux-musl-arm64", "linux-musl-arm"]
+      }
+    ]
+  },
+  "NugetAssets": {
+    "AssetList":[
+      "dotnet-counters",
+      "dotnet-dump",
+      "dotnet-gcdump",
+      "dotnet-sos",
+      "dotnet-trace",
+      "dotnet-stack",
+      "dotnet-symbol",
+      "dotnet-dsrouter",
+      "Microsoft.Diagnostics.NETCore.Client"
+    ]
+  }
+}

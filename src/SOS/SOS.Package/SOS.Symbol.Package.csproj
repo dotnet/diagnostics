@@ -1,0 +1,85 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Microsoft.NETCore.SOS.Symbols</AssemblyName>
+    <Description>.NET Core SOS symbols</Description>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="**/*.cs" />
+    <None Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\netstandard2.0\publish\*.pdb" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
+    </None>
+
+    <None Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/win-x64</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(BuildX64Package)' != 'true'">
+    <None Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/win-x86</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/win-arm64</PackagePath>
+    </None>
+
+    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-x64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-x64</PackagePath>
+    </None>
+
+    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-musl-x64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-musl-x64</PackagePath>
+    </None>
+
+    <None Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-arm</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-arm</PackagePath>
+    </None>
+
+    <None Include="$(ArtifactsBinDir)\Linux.arm64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-arm64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux.arm64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-arm64</PackagePath>
+    </None>
+
+    <None Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-musl-arm64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/linux-musl-arm64</PackagePath>
+    </None>
+
+    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib.dwarf" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/osx-x64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib.dwarf" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/osx-x64</PackagePath>
+    </None>
+
+    <None Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsosplugin.dylib.dwarf" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/osx-arm64</PackagePath>
+    </None>
+    <None Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsos.dylib.dwarf" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/osx-arm64</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

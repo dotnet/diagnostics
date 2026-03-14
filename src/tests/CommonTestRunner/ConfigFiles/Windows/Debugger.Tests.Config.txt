@@ -1,0 +1,44 @@
+<Configuration>
+  <Import ConfigFile="Debugger.Tests.Common.txt" />
+  <DotNetRoot>$(ArtifactsDir)\dotnet-test</DotNetRoot>
+  <Import ConfigFile="$(DotNetRoot)\Debugger.Tests.Versions.txt" />
+
+  <InstallDir>$(ArtifactsDir)\bin\Windows_NT.$(TargetArchitecture).$(TargetConfiguration)</InstallDir>
+  <LogDir>$(ArtifactsDir)\TestResults\$(TargetConfiguration)\common.unittests_$(Timestamp)</LogDir>
+
+  <TestProduct>ProjectK</TestProduct>
+  <DebuggeeSourceRoot>$(ArtifactsDir)\test\DebuggeeSources\CommonTestRunner\Debuggees</DebuggeeSourceRoot>
+  <DebuggeeMsbuildAuxRoot>$(ArtifactsDir)\test\AuxMsbuildFiles</DebuggeeMsbuildAuxRoot>
+  <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
+  <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
+  <CliPath>$(DotNetRoot)\dotnet.exe</CliPath>
+
+  <Options>
+    <!--
+        Default (prebuilt)
+      -->
+    <Option Condition="'$(RuntimeVersionLatest)' != ''">
+      <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
+    </Option>
+    <Option Condition="'$(RuntimeVersionServicing1)' != ''">
+      <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
+    </Option>
+    <Option Condition="'$(RuntimeVersionServicing2)' != ''">
+      <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
+    </Option>
+    <Option Condition="'$(RuntimeVersionServicing3)' != ''">
+      <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
+    </Option>
+  </Options>
+
+  <!-- Single-file debuggees don't need the host -->
+  <HostExe Condition="'$(PublishSingleFile)' != 'true'">$(DotNetRoot)\dotnet.exe</HostExe>
+  <HostArgs Condition="'$(PublishSingleFile)' != 'true'">--fx-version $(RuntimeFrameworkVersion)</HostArgs>
+
+  <DotNetTraceHost>$(DotNetRoot)\dotnet.exe</DotNetTraceHost>
+  <DotNetTracePath>$(ArtifactsDir)\bin\dotnet-trace\$(TargetConfiguration)\$(NetCoreAppMinTargetFramework)\dotnet-trace.dll</DotNetTracePath>
+</Configuration>

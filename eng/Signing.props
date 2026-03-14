@@ -1,0 +1,18 @@
+<Project>
+  <ItemGroup Condition="'$(SignFilesToBundle)' != 'true'">
+    <ItemsToSign Include="$(ArtifactsPackagesDir)**/*.zip"/>
+    <ItemsToSign Include="$(ArtifactsDir)bundledtools/**/*.zip" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(SignFilesToBundle)' == 'true'">
+    <ItemsToSign Remove="@(ItemsToSign)"/>
+  </ItemGroup>
+
+  <Import Project="$(SignatureManifest)"
+          Condition="'$(SignFilesToBundle)' == 'true'" />
+
+  <ItemGroup>
+    <FileSignInfo Include="Newtonsoft.Json.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Newtonsoft.Json.Bson.dll" CertificateName="3PartySHA2" />
+  </ItemGroup>
+</Project>

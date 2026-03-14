@@ -1,0 +1,59 @@
+parameters:
+  runtimeFeed: default
+  runtimeFeedToken: default
+
+variables:
+- name: _TeamName
+  value: DotNetCore
+
+- name: _SignType
+  value: ''
+
+# # Internal build pools.
+- ${{ if ne(variables['System.TeamProject'], 'public') }}:
+  - group: DotNet-Diagnostics-SDL-Params
+  - template: /eng/common/templates-official/variables/pool-providers.yml@self
+  - name: BuildPool
+    value: $(DncEngInternalBuildPool)
+  - name: WindowsImage
+    value: windows.vs2022.amd64
+  - name: LinuxImage
+    value: Build.Ubuntu.2204.Amd64
+  - name: macOSImage
+    value: macOS-latest
+  - name: sourceBuildTemplate
+    value: /eng/common/templates-official/job/source-build.yml@self
+  - name: jobTemplate
+    value: /eng/common/templates-official/job/job.yml@self
+  - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+    - name: _SignType
+      value: real
+# Public build settings
+- ${{ else }}:
+  - template: /eng/common/templates/variables/pool-providers.yml@self
+  - name: BuildPool
+    value: $(DncEngPublicBuildPool)
+  - name: sourceBuildTemplate
+    value: /eng/common/templates/job/source-build.yml@self
+  - name: jobTemplate
+    value: /eng/common/templates/job/job.yml@self
+  - name: WindowsImage
+    value: windows.vs2022.amd64.open
+  - name: LinuxImage
+    value: Build.Ubuntu.2204.Amd64.Open
+  - name: macOSImage
+    value: macOS-latest
+
+# Custom feed and token
+- ${{ if eq(parameters.runtimeFeed, 'custom') }}:
+  - name: RuntimeFeedUrl
+    value: $(DotnetRuntimeDownloadFeed)
+- ${{ if eq(parameters.runtimeFeedToken, 'custom') }}:
+  - name: RuntimeFeedBase64SasToken
+    value: $(DotnetRuntimeDownloadBase64SasToken)
+- ${{ if eq(parameters.runtimeFeed, 'dotnetclimsrc-feed') }}:
+  - name: RuntimeFeedUrl
+    value: https://dotnetclimsrc.blob.core.windows.net/dotnet
+- ${{ if eq(parameters.runtimeFeedToken, 'dotnetclimsrc-sas-token-base64') }}:
+  - name: RuntimeFeedBase64SasToken
+    value: $(dotnetclimsrc-read-sas-token-base64)

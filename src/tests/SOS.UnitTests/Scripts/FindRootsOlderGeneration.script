@@ -1,0 +1,38 @@
+#
+# Verifies that the !findroots command searches through older generations
+# Test requires CDB for notifications
+# Added for bug fixed in https://github.com/dotnet/runtime/pull/119396
+#
+
+# Continue to the DebugBreak
+CONTINUE
+VERIFY:Break instruction exception - code 80000003
+
+LOADSOS
+
+CONTINUE
+
+# Call FindRoots to set up GCNotifications
+SOSCOMMAND:FindRoots -gen any
+
+# Enable CLRN notifications
+COMMAND:sxe CLRN
+
+# Should break on a GCNotification
+CONTINUE
+
+# Print list of threads with their stacks
+SOSCOMMAND:clrstack -all
+
+# Switch to main runtime thread
+SWITCH_THREAD:0
+
+SOSCOMMAND:DumpStackObjects
+VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+FindRootsOlderGeneration.Thing\s+
+
+SOSCOMMAND:FindRoots <POUT>\w+\s+(<HEXVAL>)\s+(FindRootsOlderGeneration.Thing)(?!\[\])<POUT>
+VERIFY:Found 1 unique roots.
+
+COMMAND:sxn CLRN
+
+CONTINUE

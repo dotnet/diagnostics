@@ -1,0 +1,644 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using Microsoft.Diagnostics.Monitoring.EventPipe;
+using Microsoft.Diagnostics.Tools.Common;
+
+namespace Microsoft.Diagnostics.Tools.Counters.Exporters
+{
+    /// <summary>
+    /// ConsoleWriter is an implementation of ICounterRenderer for rendering the counter values in real-time
+    /// to the console. This is the renderer for the `dotnet-counters monitor` command.
+    /// </summary>
+    internal class ConsoleWriter : ICounterRenderer
+    {
+        /// <summary>Information about an observed provider.</summary>
+        private class ObservedProvider
+        {
+            public ObservedProvider(string name)
+            {
+                Name = name;
+            }
+
+            public string Name { get; } // Name of the category.
+            public Dictionary<string, ObservedCounter> Counters { get; } = new Dictionary<string, ObservedCounter>(); // Counters in this category.
+        }
+
+        /// <summary>Information about an observed counter.</summary>
+        private class ObservedCounter
+        {
+            public ObservedCounter(string displayName) => DisplayName = displayName;
+            public string DisplayName { get; } // Display name for this counter.
+            public int Row { get; set; } // Assigned row for this counter. May change during operation.
+            public Dictionary<string, ObservedTagSet> TagSets { get; } = new Dictionary<string, ObservedTagSet>();
+
+            public bool RenderValueInline => TagSets.Count == 0 ||
+                       (TagSets.Count == 1 && string.IsNullOrEmpty(TagSets.Keys.First()));
+            public double LastValue { get; set; }
+            public double? LastDelta { get; set; }
+        }
+
+        private class ObservedTagSet
+        {
+            public ObservedTagSet(string tags)
+            {
+                Tags = tags;
+            }
+            public string Tags { get; }
+            public string DisplayTags => string.IsNullOrEmpty(Tags) ? "<no tags>" : Tags;
+            public int Row { get; set; } // Assigned row for this counter. May change during operation.
+            public double LastValue { get; set; }
+            public double? LastDelta { get; set; }
+        }
+
+        private readonly object _lock = new();
+        private readonly Dictionary<string, ObservedProvider> _providers = new(); // Tracks observed providers and counters.
+        private readonly bool _showDeltaColumn;
+        private readonly bool _abbreviateLargeNumbers;
+        private const int Indent = 4; // Counter name indent size.
+        private const int DefaultCounterValueLength = 15;
+        private const int NoAbbreviateMinValueLength = 21; // Fits values up to ~10^15 with separators (e.g. unix ms timestamps).
+        private const int MinimalColumnHeaderLength = 5;
+
+        private int _nameColumnWidth; // fixed width of the name column. Names will be truncated if needed to fit in this space.
+        private int _statusRow; // Row # of where we print the status of dotnet-counters
+        private int _topRow;
+        private bool _paused;
+        private bool _initialized;
+        private string _errorText;
+
+        private int _maxRow = -1;
+
+        private int _consoleHeight = -1;
+        private int _consoleWidth = -1;
+        private IConsole _console;
+        private int _counterValueLength;
+
+        public ConsoleWriter(IConsole console, bool showDeltaColumn = false, bool abbreviateLargeNumbers = true)
+        {
+            _console = console;
+            _showDeltaColumn = showDeltaColumn;
+            _abbreviateLargeNumbers = abbreviateLargeNumbers;
+            _counterValueLength = DefaultCounterValueLength;
+        }
+
+        public void Initialize()
+        {
+            AssignRowsAndInitializeDisplay();
+        }
+
+        public void EventPipeSourceConnected()
+        {
+            // Do nothing
+        }
+
+        public void SetErrorText(string errorText)
+        {
+            _errorText = errorText;
+            AssignRowsAndInitializeDisplay();
+        }
+
+        private void UpdateStatus()
+        {
+            _console.SetCursorPosition(0, _statusRow);
+            _console.Write($"    Status: {GetStatus()}{new string(' ', 40)}"); // Write enough blanks to clear previous status.
+        }
+
+        private string GetStatus() => !_initialized ? "Waiting for initial payload..." : (_paused ? "Paused" : "Running");
+
+        /// <summary>Clears display and writes out category and counter name layout.</summary>
+        public void AssignRowsAndInitializeDisplay()
+        {
+            _console.Clear();
+
+            // clear row data on all counters
+            foreach (ObservedProvider provider in _providers.Values)
+            {
+                foreach (ObservedCounter counter in provider.Counters.Values)
+                {
+                    counter.Row = -1;
+                    foreach (ObservedTagSet tagSet in counter.TagSets.Values)
+                    {
+                        tagSet.Row = -1;
+                    }
+                }
+            }
+
+            _consoleWidth = _console.WindowWidth;
+            _consoleHeight = _console.WindowHeight;
+
+            // Compute value column width. When abbreviation is disabled, start with a
+            // wider minimum column and scan all current values to grow it further if needed.
+            _counterValueLength = !_abbreviateLargeNumbers ? NoAbbreviateMinValueLength : DefaultCounterValueLength;
+            if (!_abbreviateLargeNumbers)
+            {
+                foreach (ObservedProvider provider in _providers.Values)
+                {
+                    foreach (ObservedCounter counter in provider.Counters.Values)
+                    {
+                        if (counter.TagSets.Count == 0)
+                        {
+                            _counterValueLength = Math.Max(_counterValueLength, FormatValue(counter.LastValue).Length);
+                        }
+                        else
+                        {
+                            foreach (ObservedTagSet tagSet in counter.TagSets.Values)
+                            {
+                                _counterValueLength = Math.Max(_counterValueLength, FormatValue(tagSet.LastValue).Length);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Truncate the name column if needed to prevent line wrapping
+            int numValueColumns = _showDeltaColumn ? 2 : 1;
+            _nameColumnWidth = Math.Max(_consoleWidth - numValueColumns * (_counterValueLength + 1), 0);
+
+
+            int row = _console.CursorTop;
+            _topRow = row;
+
+            string instructions = "Press p to pause, r to resume, q to quit.";
+            _console.WriteLine((instructions.Length < _consoleWidth) ? instructions : instructions.Substring(0, _consoleWidth)); row++;
+            _console.WriteLine($"    Status: {GetStatus()}"); _statusRow = row++;
+            if (_errorText != null)
+            {
+                _console.WriteLine(_errorText);
+                row += GetLineWrappedLines(_errorText);
+            }
+
+            if (RenderRow(ref row) &&                                            // Blank line.
+                RenderTableRow(ref row, "Name", "Current Value", "Last Delta"))  // Table header
+            {
+                foreach (ObservedProvider provider in _providers.Values.OrderBy(p => p.Name))
+                {
+                    if (!RenderTableRow(ref row, $"[{provider.Name}]"))
+                    {
+                        break;
+                    }
+
+                    foreach (ObservedCounter counter in provider.Counters.Values.OrderBy(c => c.DisplayName))
+                    {
+                        counter.Row = row;
+                        if (counter.RenderValueInline)
+                        {
+                            if (!RenderCounterValueRow(ref row, indentLevel: 1, counter.DisplayName, counter.LastValue, 0))
+                            {
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            if (!RenderCounterNameRow(ref row, counter.DisplayName))
+                            {
+                                break;
+                            }
+                            if (!RenderTagSetsInColumnMode(ref row, counter))
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            _maxRow = Math.Max(_maxRow, row);
+        }
+
+        private bool RenderTagSetsInColumnMode(ref int row, ObservedCounter counter)
+        {
+            List<(string header, string[] values)> observedTags = new();
+            List<int> columnHeaderLen = new();
+            List<int> maxValueColumnLen = new();
+            int tagsCount = 0;
+            foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
+            {
+                string[] tags = tagSet.DisplayTags.Split(',');
+                for (int i = 0; i < tags.Length; i++)
+                {
+                    string tag = tags[i];
+                    string[] keyValue = tag.Split("=");
+                    int posTag = observedTags.FindIndex (tag => tag.header == keyValue[0]);
+                    if (posTag == -1)
+                    {
+                        observedTags.Add((keyValue[0], new string[counter.TagSets.Count]));
+                        columnHeaderLen.Add(keyValue[0].Length);
+                        maxValueColumnLen.Add(default(int));
+                        posTag = observedTags.Count - 1;
+                    }
+                    observedTags[posTag].values[tagsCount] = keyValue[1];
+                    maxValueColumnLen[posTag] = Math.Max(keyValue[1].Length, maxValueColumnLen[posTag]);
+                }
+                tagsCount++;
+            }
+            AdjustColumnsLength(columnHeaderLen, maxValueColumnLen);
+            //print the header
+            string headerRow = "";
+            string headerDelimiter = "";
+            for (int i = 0; i < observedTags.Count; i++)
+            {
+                (string header, string[] values) observedTag = observedTags[i];
+                string headerWithSpaces = MakeFixedWidth(observedTag.header, Math.Max(maxValueColumnLen[i], columnHeaderLen[i]), truncateLeft: true);
+                headerWithSpaces += " ";
+                headerRow += headerWithSpaces;
+                headerDelimiter += new string('-', Math.Max(maxValueColumnLen[i], columnHeaderLen[i])) + " ";
+            }
+            if (!RenderCounterNameRow(ref row, headerRow, indentLevel: 2))
+            {
+                return false;
+            }
+            if (!RenderCounterNameRow(ref row, headerDelimiter, indentLevel: 2))
+            {
+                return false;
+            }
+            //print each line
+            int linePos = 0;
+            foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
+            {
+                tagSet.Row = row;
+                string tagRow = "";
+                for (int i = 0; i < observedTags.Count; i++)
+                {
+                    (string header, string[] values) observedTag = observedTags[i];
+                    string tagItem = observedTag.values[linePos];
+                    string tagWithSpaces = MakeFixedWidth(tagItem, Math.Max(maxValueColumnLen[i], columnHeaderLen[i]));
+                    tagWithSpaces += " ";
+                    tagRow += tagWithSpaces;
+                }
+                if (!RenderCounterValueRow(ref row, indentLevel: 2, tagRow, tagSet.LastValue, 0))
+                {
+                    return false;
+                }
+                linePos++;
+            }
+            return true;
+        }
+        // This method attempts to truncate column header content while prioritizing the actual content.
+        // Initially, we evenly divide the available space among columns, aiming to reduce the size
+        // of each column header until it fits on the screen. If this isn't possible due to headers
+        // reaching a minimal length (MinimalColumnHeaderLength), we then truncate the values
+        // themselves until we achieve the desired width that fits within the screen.
+        private void AdjustColumnsLength(List<int> columnHeaderLen, List<int> maxValueColumnLen)
+        {
+            int totalColumnLength = 0;
+            bool startReduceValueColumnLength = false;
+            for (int i = 0; i < columnHeaderLen.Count; i++)
+            {
+                totalColumnLength += Math.Max(columnHeaderLen[i] + 1, maxValueColumnLen[i] + 1);
+            }
+
+            int needsToReduce = totalColumnLength - (_nameColumnWidth - Indent * 2);
+            while (needsToReduce > 0)
+            {
+                bool changed = false;
+                int needsToReducePerColumn = Math.Max((needsToReduce / columnHeaderLen.Count), 1);
+                for (int i = 0; needsToReduce > 0 && i < columnHeaderLen.Count; i++)
+                {
+                    if (columnHeaderLen[i] > maxValueColumnLen[i] && columnHeaderLen[i] - needsToReducePerColumn > MinimalColumnHeaderLength)
+                    {
+                        columnHeaderLen[i] -= needsToReducePerColumn;
+                        needsToReduce -= needsToReducePerColumn;
+                        changed = true;
+                    }
+                    if (startReduceValueColumnLength)
+                    {
+                        maxValueColumnLen[i] -= needsToReducePerColumn;
+                        needsToReduce -= needsToReducePerColumn;
+                    }
+                }
+                if (!changed) //cannot reduce header anymore, start reducing the value
+                {
+                    startReduceValueColumnLength = true;
+                }
+            }
+        }
+
+        public void ToggleStatus(bool pauseCmdSet)
+        {
+            if (_paused == pauseCmdSet)
+            {
+                return;
+            }
+
+            _paused = pauseCmdSet;
+            UpdateStatus();
+        }
+
+        public void CounterPayloadReceived(CounterPayload payload, bool pauseCmdSet)
+        {
+            lock (_lock)
+            {
+                if (!_initialized)
+                {
+                    _initialized = true;
+                    AssignRowsAndInitializeDisplay();
+                }
+
+                if (pauseCmdSet)
+                {
+                    return;
+                }
+
+                string providerName = payload.CounterMetadata.ProviderName;
+                string name = payload.CounterMetadata.CounterName;
+
+                string tags = payload.CombineTags();
+
+                bool redraw = false;
+                if (!_providers.TryGetValue(providerName, out ObservedProvider provider))
+                {
+                    _providers[providerName] = provider = new ObservedProvider(providerName);
+                    redraw = true;
+                }
+
+                if (!provider.Counters.TryGetValue(name, out ObservedCounter counter))
+                {
+                    string displayName = payload.GetDisplay();
+                    provider.Counters[name] = counter = new ObservedCounter(displayName);
+                    redraw = true;
+                }
+                else
+                {
+                    counter.LastDelta = payload.Value - counter.LastValue;
+                }
+
+                ObservedTagSet tagSet = null;
+                if (string.IsNullOrEmpty(tags))
+                {
+                    counter.LastValue = payload.Value;
+                }
+                else
+                {
+                    if (!counter.TagSets.TryGetValue(tags, out tagSet))
+                    {
+                        counter.TagSets[tags] = tagSet = new ObservedTagSet(tags);
+                        redraw = true;
+                    }
+                    else
+                    {
+                        tagSet.LastDelta = payload.Value - tagSet.LastValue;
+                    }
+                    tagSet.LastValue = payload.Value;
+                }
+
+                if (_console.WindowWidth != _consoleWidth || _console.WindowHeight != _consoleHeight)
+                {
+                    redraw = true;
+                }
+
+                if (redraw)
+                {
+                    AssignRowsAndInitializeDisplay();
+                }
+                else
+                {
+                    bool overflow;
+                    if (tagSet != null)
+                    {
+                        overflow = IncrementalUpdateCounterValueRow(tagSet.Row, tagSet.LastValue, tagSet.LastDelta.Value);
+                    }
+                    else
+                    {
+                        overflow = IncrementalUpdateCounterValueRow(counter.Row, counter.LastValue, counter.LastDelta.Value);
+                    }
+
+                    if (overflow)
+                    {
+                        AssignRowsAndInitializeDisplay();
+                    }
+                }
+            }
+        }
+
+        public void CounterStopped(CounterPayload payload)
+        {
+            lock (_lock)
+            {
+                string providerName = payload.CounterMetadata.ProviderName;
+                string counterName = payload.CounterMetadata.CounterName;
+                string tags = payload.CombineTags();
+
+                if (!_providers.TryGetValue(providerName, out ObservedProvider provider))
+                {
+                    return;
+                }
+
+                if (!provider.Counters.TryGetValue(counterName, out ObservedCounter counter))
+                {
+                    return;
+                }
+
+                ObservedTagSet tagSet = null;
+                if (tags != null)
+                {
+                    if (!counter.TagSets.TryGetValue(tags, out tagSet))
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        counter.TagSets.Remove(tags);
+                        if (counter.TagSets.Count == 0)
+                        {
+                            provider.Counters.Remove(counterName);
+                        }
+                    }
+                }
+                else
+                {
+                    provider.Counters.Remove(counterName);
+                }
+                AssignRowsAndInitializeDisplay();
+            }
+        }
+
+        private int GetLineWrappedLines(string text)
+        {
+            string[] lines = text.Split(Environment.NewLine);
+            int lineCount = lines.Length;
+            int width = _console.BufferWidth;
+            foreach (string line in lines)
+            {
+                lineCount += (int)Math.Floor(((float)line.Length) / width);
+            }
+            return lineCount;
+        }
+
+        private bool RenderCounterValueRow(ref int row, int indentLevel, string name, double value, double? delta)
+        {
+            // if you change line formatting, keep it in sync with IncrementaUpdateCounterValueRow below
+            string deltaText = delta.HasValue ? "" : FormatValue(delta.Value);
+            return RenderTableRow(ref row, $"{new string(' ', Indent * indentLevel)}{name}", FormatValue(value), deltaText);
+        }
+
+        private bool RenderCounterNameRow(ref int row, string name, int indentLevel = 1)
+        {
+            return RenderTableRow(ref row, $"{new string(' ', Indent * indentLevel)}{name}");
+        }
+
+        private bool RenderTableRow(ref int row, string name, string value = null, string delta = null)
+        {
+            // if you change line formatting, keep it in sync with IncrementaUpdateCounterValueRow below
+            string nameCellText = MakeFixedWidth(name, _nameColumnWidth);
+            string valueCellText = MakeFixedWidth(value, _counterValueLength, alignRight: true);
+            string deltaCellText = MakeFixedWidth(delta, _counterValueLength, alignRight: true);
+            string lineText;
+            if (_showDeltaColumn)
+            {
+                lineText = $"{nameCellText} {valueCellText} {deltaCellText}";
+            }
+            else
+            {
+                lineText = $"{nameCellText} {valueCellText}";
+            }
+            return RenderRow(ref row, lineText);
+        }
+
+        private bool RenderRow(ref int row, string text = null)
+        {
+            if (row >= _consoleHeight + _topRow) // prevents from displaying more counters than vertical space available
+            {
+                return false;
+            }
+
+            if (text != null)
+            {
+                _console.Write(text);
+            }
+
+            if (row < _consoleHeight + _topRow - 1) // prevents screen from scrolling due to newline on last line of console
+            {
+                _console.WriteLine();
+            }
+
+            row++;
+
+            return true;
+        }
+
+        private bool IncrementalUpdateCounterValueRow(int row, double value, double delta)
+        {
+            // prevents from displaying more counters than vertical space available
+            if (row < 0 || row >= _consoleHeight + _topRow)
+            {
+                return false;
+            }
+
+            _console.SetCursorPosition(_nameColumnWidth + 1, row);
+            string formattedValue = FormatValue(value);
+            string formattedDelta = FormatValue(delta);
+            if (formattedValue.Length > _counterValueLength || formattedDelta.Length > _counterValueLength)
+            {
+                return true; // signal caller to redraw with wider columns
+            }
+
+            string valueCellText = MakeFixedWidth(formattedValue, _counterValueLength);
+            string deltaCellText = MakeFixedWidth(formattedDelta, _counterValueLength);
+            string partialLineText;
+            if (_showDeltaColumn)
+            {
+                partialLineText = $"{valueCellText} {deltaCellText}";
+            }
+            else
+            {
+                partialLineText = $"{valueCellText}";
+            }
+            _console.Write(partialLineText);
+            return false;
+        }
+
+        private string FormatValue(double value)
+        {
+            string valueText;
+            // The value field is one of:
+            //  a) If abs(value) >= 10^9 then it is formatted as 0.####e+00
+            //     (unless _abbreviateLargeNumbers is false, in which case the full value is shown)
+            //  b) otherwise leading - or space, 10 leading digits with separators (or spaces), decimal separator or space,
+            //     3 decimal digits or spaces.
+            //
+            // For example:
+            //   1,421,893.21
+            //           0.123
+            //          -0.123
+            //  4.9012e+25
+            //    -675,430.9
+            // -12,675,430.9
+            //           7
+
+
+            if (_abbreviateLargeNumbers && Math.Abs(value) >= 100_000_000)
+            {
+                valueText = string.Format(CultureInfo.CurrentCulture, "{0,15:0.####e+00}   ", value);
+            }
+            else
+            {
+                string formattedVal = value.ToString("##,###,##0.###");
+                int seperatorIndex = formattedVal.IndexOf(CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator);
+                if (seperatorIndex == -1)
+                {
+                    formattedVal += "    ";
+                }
+                else
+                {
+                    int decimalDigits = formattedVal.Length - 1 - seperatorIndex;
+                    formattedVal += new string(' ', 3 - decimalDigits);
+                }
+                valueText = formattedVal.PadLeft(_counterValueLength);
+            }
+            return valueText;
+        }
+
+        private static string MakeFixedWidth(string text, int width, bool alignRight = false, bool truncateLeft = false)
+        {
+            if (text == null)
+            {
+                return new string(' ', width);
+            }
+            else if (text.Length == width)
+            {
+                return text;
+            }
+            else if (text.Length > width)
+            {
+                if (truncateLeft)
+                {
+                    return text.Substring(text.Length-width, width);
+                }
+                return text.Substring(0, width);
+            }
+            else
+            {
+                if (alignRight)
+                {
+                    return new string(' ', width - text.Length) + text;
+                }
+                else
+                {
+                    return text + new string(' ', width - text.Length);
+                }
+            }
+        }
+
+        public void Stop()
+        {
+            lock (_lock)
+            {
+                if (_initialized)
+                {
+                    int row = _maxRow;
+
+                    if (row > -1)
+                    {
+                        _console.SetCursorPosition(0, row);
+                        _console.WriteLine();
+                    }
+                }
+            }
+        }
+    }
+}

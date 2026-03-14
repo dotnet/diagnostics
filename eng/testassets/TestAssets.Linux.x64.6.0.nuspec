@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>TestAssets.Linux.x64.6.0</id>
+    <version>1.0.0</version>
+    <title>TestAssets.Linux.x64.6.0</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft</owners>
+    <description>
+      Test assets for Linux x64 on .NET 6.0.0 runtime
+    </description>
+    <releaseNotes>
+    </releaseNotes>
+    <summary>
+      Test assets
+    </summary>
+    <language>en-US</language>
+    <projectUrl>https://github.com/dotnet/diagnostics.git</projectUrl>
+    <iconUrl>https://nuget.org/Content/Images/packageDefaultIcon-50x50.png</iconUrl>
+    <copyright>Copyright 2021</copyright>
+  </metadata>
+  <files>
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\6.0.0*\net6.0\SOS.DivZero.Heap.dmp" target="content/DivZero" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\6.0.0*\net6.0\SOS.DivZero.Heap.dmp.crashreport.json" target="content/DivZero" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\6.0.0*\net6.0\SOS.DivZero.Heap.dmp.xml" target="content/DivZero" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\6.0.0*\net6.0\SOS.DivZero.Triage.dmp" target="content/DivZero" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\6.0.0*\net6.0\SOS.DivZero.Triage.dmp.crashreport.json" target="content/DivZero" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\6.0.0*\net6.0\SOS.DivZero.Triage.dmp.xml" target="content/DivZero" />
+    <file src="..\..\artifacts\bin\DivZero\Debug\net6.0\DivZero.dll" target="content/DivZero" />
+    <file src="..\..\artifacts\bin\DivZero\Debug\net6.0\DivZero.pdb" target="content/DivZero" />
+
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\6.0.0*\net6.0\SOS.WebApp3.Heap.dmp" target="content/WebApp3" />
+    <file src="..\..\artifacts\tmp\Debug\dumps\ProjectK\6.0.0*\net6.0\SOS.WebApp3.Heap.dmp.xml" target="content/WebApp3" />
+    <file src="..\..\artifacts\bin\WebApp3\Debug\net6.0\WebApp3.dll" target="content/WebApp3" />
+    <file src="..\..\artifacts\bin\WebApp3\Debug\net6.0\WebApp3.pdb" target="content/WebApp3" />
+  </files>
+</package>

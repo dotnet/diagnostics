@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ToolCommandName>dotnet-counters</ToolCommandName>
+    <RootNamespace>Microsoft.Diagnostics.Tools.Counters</RootNamespace>
+    <Description>.NET Performance Counter Tool</Description>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
+    <Compile Include="..\Common\Rendering\Interop.Windows.cs" Link="VirtualTerminalMode.Interop.Windows.cs" />
+    <Compile Include="..\Common\Rendering\VirtualTerminalMode.cs" Link="VirtualTerminalMode.cs" />
+    <Compile Include="..\Common\ReversedServerHelpers\ReversedServerHelpers.cs" Link="ReversedServerHelpers.cs" />
+    <Compile Include="..\Common\CommandUtils.cs" Link="CommandUtils.cs" />
+    <Compile Include="..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
+    <Compile Include="..\Common\WindowsProcessExtension\WindowsProcessExtension.cs" Link="WindowsProcessExtension.cs" />
+    <Compile Include="..\Common\DiagnosticToolException.cs" Link="DiagnosticToolException.cs" />
+    <Compile Include="..\Common\ReturnCode.cs" Link="ReturnCode.cs" />
+    <Compile Include="..\Common\DsRouterProcessLauncher.cs" Link="DsRouterProcessLauncher.cs" />
+    <Compile Include="..\Common\DefaultConsole.cs" Link="DefaultConsole.cs" />
+    <Compile Include="..\Common\IConsole.cs" Link="IConsole.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.NETCore.Client\Microsoft.Diagnostics.NETCore.Client.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.Monitoring.EventPipe\Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" GeneratePathProperty="true" />
+    <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DotnetCounters.UnitTests" />
+  </ItemGroup>
+
+</Project>

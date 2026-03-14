@@ -1,0 +1,53 @@
+﻿<Project>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Microsoft.NETCore.SOS</AssemblyName>
+    <Description>.NET Core SOS binaries</Description>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
+    <GalleryManifestBase>$(MSBuildThisFileDirectory)ManifestBase.xml</GalleryManifestBase>
+    <ExtensionGalleryManifestOutputFile>$(IntermediateOutputPath)GalleryManifest.xml</ExtensionGalleryManifestOutputFile>
+    <UncompressedGalleryManifestOutputFile>$(IntermediateOutputPath)sos_GalleryManifest.xml</UncompressedGalleryManifestOutputFile>
+    <BeforePack>GenerateGalleryManifest</BeforePack>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)..\..\sos-packaging.props" />
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <Target Name="Build" />
+
+  <ItemGroup>
+    <Compile Remove="**/*.cs" />
+    <None Include="$(ExtensionGalleryManifestOutputFile)" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)</PackagePath>
+    </None>
+    <None Include="$(UncompressedGalleryManifestOutputFile)" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)</PackagePath>
+    </None>
+    <None Include="$(SOSExtensionsBinaries)" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <!-- This target generates the gallery manifest files, both the extension gallery format and
+   the uncompressed one used by the SDK installer. -->
+  <Target Name="GenerateGalleryManifest"
+    DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion">
+
+    <Exec Command="$(DotNetTool) run --file $(MSBuildThisFileDirectory)GenerateManifest\GenerateManifest.cs &quot;$(GalleryManifestBase)&quot; &quot;$(ExtensionGalleryManifestOutputFile)&quot; &quot;$(UncompressedGalleryManifestOutputFile)&quot; &quot;$(FileVersion)&quot;" />
+
+    <ItemGroup>
+      <FileWrites Include="$(ExtensionGalleryManifestOutputFile)" />
+      <FileWrites Include="$(UncompressedGalleryManifestOutputFile)" />
+    </ItemGroup>
+
+  </Target>
+
+</Project>

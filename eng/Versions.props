@@ -1,0 +1,147 @@
+<Project>
+  <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+  <PropertyGroup>
+    <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
+    <PreReleaseVersionLabel>preview</PreReleaseVersionLabel>
+    <VersionPrefix>10.0.0</VersionPrefix>
+    <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
+    <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
+    <!--
+      Our nightly tools are stable versioned but go to a non-stable feed.
+      Arcade usually disallows this, but we use such a versioning scheme by design.
+      The nightly bits are versioned in a stable manner to allow `dotnet tool` to perform
+      easy updates. If we have issues, we just respin builds as we are a leaf build node
+      and we don't participate in prodcon.
+    -->
+    <SkipPackagePublishingVersionChecks>true</SkipPackagePublishingVersionChecks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- Opt-in/out repo features -->
+    <UsingToolXliff>false</UsingToolXliff>
+    <AzureIdentityVersion>1.13.1</AzureIdentityVersion>
+    <AzureCoreVersion>1.45.0</AzureCoreVersion>
+    <AzureStorageBlobsVersion>12.23.0</AzureStorageBlobsVersion>
+    <!-- Uncomment this line to use the custom version of roslyn as needed. -->
+    <!-- <UsingToolMicrosoftNetCompilers Condition="'$(DotNetBuildSourceOnly)' != 'true'">true</UsingToolMicrosoftNetCompilers> -->
+    <!-- CoreFX -->
+    <SystemReflectionMetadataVersion>8.0.0</SystemReflectionMetadataVersion>
+    <SystemCollectionsImmutableVersion>9.0.11</SystemCollectionsImmutableVersion>
+    <!-- Other libs -->
+    <MicrosoftBclAsyncInterfacesVersion>9.0.8</MicrosoftBclAsyncInterfacesVersion>
+    <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
+    <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.23</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <MicrosoftDotNetXUnitExtensionsVersion>11.0.0-beta.25528.108</MicrosoftDotNetXUnitExtensionsVersion>
+    <MicrosoftExtensionsLoggingVersion>8.0.1</MicrosoftExtensionsLoggingVersion>
+    <MicrosoftExtensionsLoggingAbstractionsVersion>8.0.3</MicrosoftExtensionsLoggingAbstractionsVersion>
+    <MicrosoftExtensionsLoggingConsoleVersion>8.0.1</MicrosoftExtensionsLoggingConsoleVersion>
+    <MicrosoftExtensionsConfigurationVersion>8.0.0</MicrosoftExtensionsConfigurationVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>8.0.1</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsLoggingConfigurationVersion>8.0.1</MicrosoftExtensionsLoggingConfigurationVersion>
+    <MicrosoftOneCollectRecordTraceVersions>0.1.33551</MicrosoftOneCollectRecordTraceVersions>
+    <!-- Need version that understands UseAppFilters sentinel. -->
+    <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
+    <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
+    <SystemBuffersVersion>4.5.1</SystemBuffersVersion>
+    <SystemDiagnosticsDiagnosticSourceVersion>8.0.1</SystemDiagnosticsDiagnosticSourceVersion>
+    <SystemMemoryVersion>4.5.5</SystemMemoryVersion>
+    <SystemRuntimeLoaderVersion>4.3.0</SystemRuntimeLoaderVersion>
+    <SystemThreadingTasksExtensionsVersion>4.5.4</SystemThreadingTasksExtensionsVersion>
+    <SystemTextEncodingsWebVersion>8.0.0</SystemTextEncodingsWebVersion>
+    <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
+    <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
+    <StyleCopAnalyzersVersion>1.2.0-beta.556</StyleCopAnalyzersVersion>
+    <cdbsosversion>10.0.26100.1</cdbsosversion>
+    <NewtonSoftJsonVersion>13.0.3</NewtonSoftJsonVersion>
+    <!-- Roslyn and analyzers -->
+    <!-- dotnet/roslyn dependencies -->
+    <!--
+      MicrosoftCodeAnalysisVersion should not be used by any project that contributes to the design-time experience in VS, such as an analyzer, code-fix, or generator assembly.
+      Any tools that contribute to the design-time experience should use the MicrosoftCodeAnalysisVersion_LatestVS property below to ensure
+      they do not break the local dev experience.
+    -->
+    <!-- Compatibility with VS 16.11/.NET SDK 5.0.4xx -->
+    <MicrosoftCodeAnalysisVersion_3_11>3.11.0</MicrosoftCodeAnalysisVersion_3_11>
+    <!-- Compatibility with VS 17.0/.NET SDK 6.0.1xx  -->
+    <MicrosoftCodeAnalysisVersion_4_0>4.0.1</MicrosoftCodeAnalysisVersion_4_0>
+    <!-- Compatibility with VS 17.4/.NET SDK 7.0.1xx -->
+    <!--
+      The exact version is a moving target until we ship.
+      It should never go ahead of the Roslyn version included in the SDK version in dotnet/arcade's global.json to avoid causing breaks in product construction.
+    -->
+    <MicrosoftCodeAnalysisVersion_4_4>4.4.0</MicrosoftCodeAnalysisVersion_4_4>
+    <MicrosoftCodeAnalysisVersion_LatestVS>4.8.0</MicrosoftCodeAnalysisVersion_LatestVS>
+    <MicrosoftCodeAnalysisVersion_LatestVS Condition="'$(DotNetBuildSourceOnly)' == 'true'">$(MicrosoftCodeAnalysisVersion)</MicrosoftCodeAnalysisVersion_LatestVS>
+    <!--
+      These packages affect the design-time experience in VS, so we update them at the same cadance as the MicrosoftCodeAnalysisVersion_LatestVS version.
+    -->
+    <MicrosoftCodeAnalysisCSharpCodeStyleVersion>$(MicrosoftCodeAnalysisVersion_LatestVS)</MicrosoftCodeAnalysisCSharpCodeStyleVersion>
+  </PropertyGroup>
+  <!--
+    SOS test runtime versions
+
+    Internal service release testing:
+
+    $(DotnetRuntimeVersion)         - the service release version to test against (fx-version option value) i.e. 2.1.17, 3.1.3 or "default"
+    $(DotnetRuntimeDownloadVersion) - the service release package version i.e. 2.1.17, 3.1.3-servicing.20128.1 or "default"
+    $(RuntimeSourceFeed)            - the service release internal blob storage link
+    $(RuntimeSourceFeedKey)         - the service release blob feed token
+
+  -->
+  <PropertyGroup>
+    <MicrosoftNETCoreApp90Version>9.0.12</MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp80Version>8.0.23</MicrosoftNETCoreApp80Version>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
+    <PrivateBuildTesting Condition="'$(PrivateBuildTesting)' == ''">false</PrivateBuildTesting>
+    <InternalReleaseTesting>false</InternalReleaseTesting>
+    <InternalReleaseTesting Condition="'$(DotnetRuntimeVersion)' != 'default'">true</InternalReleaseTesting>
+    <ExtraInstallArgs>-runtimesourcefeed '$(RuntimeSourceFeed)' -runtimesourcefeedkey '$(RuntimeSourceFeedKey)'</ExtraInstallArgs>
+  </PropertyGroup>
+  <ItemGroup Condition="!$(PrivateBuildTesting) AND !$(InternalReleaseTesting)">
+    <RuntimeTestVersions Include="Latest">
+      <RuntimeDownload>$(MicrosoftNETCorePlatformsVersion)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreAppRefVersion)</Runtime>
+      <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
+      <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
+      <TargetFramework>net10.0</TargetFramework>
+    </RuntimeTestVersions>
+    <RuntimeTestVersions Include="Servicing2">
+      <RuntimeDownload>$(MicrosoftNETCoreApp90Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreApp90Version)</Runtime>
+      <AspNetDownload>$(MicrosoftNETCoreApp90Version)</AspNetDownload>
+      <AspNet>$(MicrosoftNETCoreApp90Version)</AspNet>
+      <TargetFramework>net9.0</TargetFramework>
+    </RuntimeTestVersions>
+    <RuntimeTestVersions Include="Servicing3">
+      <RuntimeDownload>$(MicrosoftNETCoreApp80Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreApp80Version)</Runtime>
+      <AspNetDownload>$(MicrosoftNETCoreApp80Version)</AspNetDownload>
+      <AspNet>$(MicrosoftNETCoreApp80Version)</AspNet>
+      <TargetFramework>net8.0</TargetFramework>
+    </RuntimeTestVersions>
+  </ItemGroup>
+  <!-- Private build testing -->
+  <ItemGroup Condition="$(PrivateBuildTesting)">
+    <RuntimeTestVersions Include="Latest">
+      <RuntimeDownload>$(MicrosoftNETCorePlatformsVersion)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreAppRefVersion)</Runtime>
+      <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
+      <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
+      <TargetFramework>net10.0</TargetFramework>
+    </RuntimeTestVersions>
+  </ItemGroup>
+  <!-- Internal service release testing -->
+  <ItemGroup Condition="$(InternalReleaseTesting)">
+    <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' != 'default'">
+      <RuntimeDownload>$(DotnetRuntimeDownloadVersion)</RuntimeDownload>
+      <Runtime>$(DotnetRuntimeDownloadVersion)</Runtime>
+      <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
+    </RuntimeTestVersions>
+    <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' == 'default'">
+      <RuntimeDownload>$(DotnetRuntimeVersion)</RuntimeDownload>
+      <Runtime>$(DotnetRuntimeVersion)</Runtime>
+      <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
+    </RuntimeTestVersions>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks Condition="'$(DotNetBuildSourceOnly)' != 'true'">netstandard2.0;$(NetCoreAppMinTargetFramework)</TargetFrameworks>
+    <TargetFramework Condition="'$(DotNetBuildSourceOnly)' == 'true'">netstandard2.0</TargetFramework>
+    <RootNamespace>Microsoft.Diagnostics.NETCore.Client</RootNamespace>
+    <Description>.NET Core Diagnostics Client Library</Description>
+    <VersionPrefix>0.2.0</VersionPrefix>
+    <IsPackable>true</IsPackable>
+    <PackageTags>Diagnostic</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IsShipping>true</IsShipping>
+    <BuildingOutsideDiagnostics>false</BuildingOutsideDiagnostics>
+    <BuildingOutsideDiagnostics Condition="'$(RepositoryName)' != 'diagnostics'">true</BuildingOutsideDiagnostics>
+    <!-- Set the pre-release version label to to empty, to produce a release only package version, only
+         in the repo build. In the VMR build, do not do this so that we don't end up with overlapping package IDs.
+         If both the VMR and repo produce this package, day N of the VMR will overlap with Day N+1 of the repo. -->
+    <PreReleaseVersionLabel Condition="'$(DotNetBuild)' != 'true'" />
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(BuildingOutsideDiagnostics)">
+    <DefineConstants>$(DefineConstants);DIAGNOSTICS_RUNTIME</DefineConstants>
+    <NoWarn>CS1591,CS8073,CS0162</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsLoggingAbstractionsVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'" >
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftBclAsyncInterfacesVersion)" />
+    <PackageReference Include="System.Buffers" Version="$(SystemBuffersVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="dotnet-gcdump" />
+    <InternalsVisibleTo Include="dotnet-counters" />
+    <InternalsVisibleTo Include="dotnet-dsrouter" />
+    <InternalsVisibleTo Include="dotnet-monitor" />
+    <InternalsVisibleTo Include="dotnet-trace" />
+    <InternalsVisibleTo Include="dotnet-dump" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.EventPipe" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.WebSocketServer" />
+    <!-- Temporary until Diagnostic Apis are finalized-->
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.Monitoring.WebApi" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.NETCore.Client.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Condition="$(BuildingOutsideDiagnostics)" Include="**/*.cs" />
+  </ItemGroup>
+</Project>

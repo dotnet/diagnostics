@@ -1,0 +1,9 @@
+# Users referenced in this file will automatically be requested as reviewers for PRs that modify the given paths.
+# See https://help.github.com/articles/about-code-owners/
+
+# We should just make everything require review of at least one team member.
+# However, we need /eng/ and global.json excluded for automatic updates
+# but there's no include syntax. At least make sure source and documentation
+# have proper ownership.
+/src/                       @dotnet/dotnet-diag
+/documentation/             @dotnet/dotnet-diag

@@ -1,0 +1,38 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsShipping>true</IsShipping>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Tools always ship with stable versions to allow for seamless CLI upgrade experiences. -->
+    <PreReleaseVersionLabel></PreReleaseVersionLabel>
+  </PropertyGroup>
+
+  <Choose>
+    <When Condition="'$(BundleTools)' == 'true'">
+      <PropertyGroup>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <SelfContained>false</SelfContained>
+        <PublishDir>$(BundledToolsPath)$(Configuration)\$(RuntimeIdentifier)\</PublishDir>
+        <PublishSingleFile>true</PublishSingleFile>
+        <PublishTrimmed>$(SelfContained)</PublishTrimmed>
+      </PropertyGroup>
+    </When>
+    <Otherwise>
+      <PropertyGroup>
+        <IsPackable>true</IsPackable>
+        <PackAsTool>true</PackAsTool>
+        <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
+        <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
+      </PropertyGroup>
+    </Otherwise>
+  </Choose>
+
+  <ItemGroup>
+    <None Include="$(RepoRoot)/THIRD-PARTY-NOTICES.TXT"
+          Pack="true"
+          Visible="false"
+          PackagePath="THIRD-PARTY-NOTICES.txt" />
+  </ItemGroup>
+</Project>

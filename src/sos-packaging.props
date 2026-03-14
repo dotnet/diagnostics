@@ -1,0 +1,96 @@
+<!--
+    Input:
+        SOSPackagePathPrefix - the nupkg package path prefix. The SOS native binaries are added to package relative to this.
+-->
+<Project>
+  <PropertyGroup>
+    <SOSExtensionsBinaries>$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\netstandard2.0\publish\*.dll</SOSExtensionsBinaries>
+    <IsMuslBuild Condition="$(TargetRid.StartsWith('linux-musl-'))">true</IsMuslBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll" TargetRid="win-x64"/>
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\Microsoft.DiaSymReader.Native.amd64.dll" TargetRid="win-x64" />
+    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x64" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(BuildX64Package)' != 'true'">
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll" TargetRid="win-x86" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\Microsoft.DiaSymReader.Native.x86.dll" TargetRid="win-x86" />
+
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\sos.dll" TargetRid="win-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll" TargetRid="win-arm64" />
+    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-arm64" />
+
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libsosplugin.so" TargetRid="linux-x64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libsos.so" TargetRid="linux-x64" />
+    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-x64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-x64" />
+
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-x64" TargetsMusl="true"/>
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libsos.so" TargetRid="linux-musl-x64" TargetsMusl="true"/>
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-x64" TargetsMusl="true"/>
+
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libsosplugin.so" TargetRid="linux-arm" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libsos.so" TargetRid="linux-arm" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\sosdocsunix.txt" TargetRid="linux-arm" />
+
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libsosplugin.so" TargetRid="linux-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libsos.so" TargetRid="linux-arm64" />
+    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-arm64" />
+
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm64" TargetsMusl="true"/>
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsos.so" TargetRid="linux-musl-arm64" TargetsMusl="true"/>
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm64" TargetsMusl="true"/>
+
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm" TargetsMusl="true"/>
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libsos.so" TargetRid="linux-musl-arm" TargetsMusl="true"/>
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm" TargetsMusl="true"/>
+
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-x64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libsos.dylib" TargetRid="osx-x64" />
+    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-x64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-x64" />
+
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libsos.dylib" TargetRid="osx-arm64" />
+    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-arm64" />
+
+    <SosRequiredBinaries Update="@(SosRequiredBinaries->WithMetadataValue('TargetsMusl' , 'true'))">
+      <OriginalPath>$([MSBuild]::ValueOrDefault('%(FullPath)', '').Replace('linux-musl','linux'))</OriginalPath>
+    </SosRequiredBinaries>
+  </ItemGroup>
+
+  <!-- What and where to pack SOS assets in the final packages. -->
+  <ItemGroup>
+    <None Include="@(SosRequiredBinaries)">
+      <Visible>false</Visible>
+
+      <!-- This kind of adjusting where things go is not great - but it balances the requirements of 3 different build modes/consumers: -->
+      <!-- - Tests expect the native assets to end up in the publish directory of SOS. Hence the CopyToPublishDirectory for the rid of the current build. Since our build implicitly
+            does a publish using NeedsPublishing for dotnet-dump - we can only include the native assets for the current RID in the publish directory. -->
+      <!-- - Since PackAsTool now implicitly does a publish + glob - we need to exclude the native asset we publish during build from the pack assets the None itemgroup brings
+            and at the same time there are packages like the WinDBG transport package that don't use the <PackAsTool> publish behavior. Those should pack as usual. -->
+      <!-- - Single file publish also needs to account for the target path correctly but only set it when that mode is on. -->
+      <!-- Long term following the publish directory is a way to test closer to the layout our customers get through the packages and make sense as a test. Follow up cleanup is needed here.
+            work is tracked in https://github.com/dotnet/diagnostics/issues/5566 -->
+      <Pack Condition="'$(PackAsTool)' != 'true' or '%(TargetRid)' != '$(TargetRid)'">true</Pack>
+      <PackagePath>$(SOSPackagePathPrefix)/%(TargetRid)</PackagePath>
+      <CopyToOutputDirectory Condition="'$(PublishSingleFile)' == 'true' and '%(TargetRid)' == '$(RuntimeIdentifier)'">PreserveNewest</CopyToOutputDirectory>
+      <Link Condition="'$(PublishSingleFile)' == 'true'">%(TargetRid)/%(Filename)%(Extension)</Link>
+      <TargetPath>%(TargetRid)/%(Filename)%(Extension)</TargetPath>
+      <!-- There's a little blip here too - on the linux-musl verticals, the output directory structure not as the packaging leg layout. We publish them in the next group -->
+      <CopyToPublishDirectory Condition="'$(PackAsTool)' == 'true' and '$(IsMuslBuild)' != 'true' and '%(TargetRid)' == '$(TargetRid)'">PreserveNewest</CopyToPublishDirectory>
+    </None>
+
+    <None Include="@(SosRequiredBinaries->WithMetadataValue('TargetsMusl' , 'true')->'%(OriginalPath)')" Condition="'$(IsMuslBuild)' == 'true'">
+      <Visible>false</Visible>
+      <Pack>false</Pack>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <TargetPath>%(TargetRid)/%(Filename)%(Extension)</TargetPath>
+      <CopyToPublishDirectory Condition="'$(PackAsTool)' == 'true' and '%(TargetRid)' == '$(TargetRid)'">PreserveNewest</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,126 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="disasm.cpp" />
+    <ClCompile Include="dllsext.cpp" />
+    <ClCompile Include="eeheap.cpp" />
+    <ClCompile Include="ExpressionNode.cpp" />
+    <ClCompile Include="exts.cpp" />
+    <ClCompile Include="gchist.cpp" />
+    <ClCompile Include="gcroot.cpp" />
+    <ClCompile Include="metadata.cpp" />
+    <ClCompile Include="sildasm.cpp" />
+    <ClCompile Include="sos.cpp" />
+    <ClCompile Include="stressLogDump.cpp" />
+    <ClCompile Include="strike.cpp" />
+    <ClCompile Include="util.cpp" />
+    <ClCompile Include="vm.cpp" />
+    <ClCompile Include="WatchCmd.cpp" />
+    <ClCompile Include="disasmX86.cpp" />
+    <ClCompile Include="disasmARM64.cpp" />
+    <ClCompile Include="symbols.cpp" />
+    <ClCompile Include="dbgengservices.cpp" />
+    <ClCompile Include="platform\datatarget.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="platform\hostimpl.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="platform\runtimeimpl.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="platform\targetimpl.cpp">
+      <Filter>platform</Filter>
+    </ClCompile>
+    <ClCompile Include="managedcommands.cpp" />
+    <ClCompile Include="clrma\clrma.cpp">
+      <Filter>clrma</Filter>
+    </ClCompile>
+    <ClCompile Include="clrma\managedanalysis.cpp">
+      <Filter>clrma</Filter>
+    </ClCompile>
+    <ClCompile Include="clrma\exception.cpp">
+      <Filter>clrma</Filter>
+    </ClCompile>
+    <ClCompile Include="clrma\thread.cpp">
+      <Filter>clrma</Filter>
+    </ClCompile>
+    <ClCompile Include="sosextensions.cpp" />
+    <ClCompile Include="disasmARM.cpp" />
+    <ClCompile Include="disasmLOONGARCH64.cpp" />
+    <ClCompile Include="disasmRISCV64.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="data.h" />
+    <ClInclude Include="disasm.h" />
+    <ClInclude Include="ExpressionNode.h" />
+    <ClInclude Include="exts.h" />
+    <ClInclude Include="ntinfo.h" />
+    <ClInclude Include="platformspecific.h" />
+    <ClInclude Include="sos.h" />
+    <ClInclude Include="sos_md.h" />
+    <ClInclude Include="sos_stacktrace.h" />
+    <ClInclude Include="strike.h" />
+    <ClInclude Include="util.h" />
+    <ClInclude Include="WatchCmd.h" />
+    <ClInclude Include="xplat\dbgeng.h">
+      <Filter>xplat</Filter>
+    </ClInclude>
+    <ClInclude Include="xplat\dbghelp.h">
+      <Filter>xplat</Filter>
+    </ClInclude>
+    <ClInclude Include="xplat\wdbgexts.h">
+      <Filter>xplat</Filter>
+    </ClInclude>
+    <ClInclude Include="symbols.h" />
+    <ClInclude Include="dbgengservices.h" />
+    <ClInclude Include="platform\cordebugdatatarget.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="platform\datatarget.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="platform\hostimpl.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="platform\runtimeimpl.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="platform\targetimpl.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="clrma\managedanalysis.h">
+      <Filter>clrma</Filter>
+    </ClInclude>
+    <ClInclude Include="clrma\exception.h">
+      <Filter>clrma</Filter>
+    </ClInclude>
+    <ClInclude Include="clrma\thread.h">
+      <Filter>clrma</Filter>
+    </ClInclude>
+    <ClInclude Include="sosextensions.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Native.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="sos_unixexports.src" />
+    <None Include="sos.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="xplat">
+      <UniqueIdentifier>{b766b3f8-a753-4134-bf7f-50c4f05b59b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platform">
+      <UniqueIdentifier>{8340fe5a-df30-45ca-8a4e-7811ac6ebbd2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="clrma">
+      <UniqueIdentifier>{e8809ec7-01fb-4c2b-b1fe-6be4f9c1a91a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+    <Text Include="sosdocs.txt" />
+    <Text Include="sosdocsunix.txt" />
+  </ItemGroup>
+</Project>
