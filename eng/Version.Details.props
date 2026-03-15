@@ -5,18 +5,15 @@ This file should be imported by eng/Versions.props
 -->
 <Project>
   <PropertyGroup>
-    <!-- microsoft/clrmd dependencies -->
-    <MicrosoftDiagnosticsRuntimePackageVersion>4.0.0-beta.26072.1</MicrosoftDiagnosticsRuntimePackageVersion>
-    <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.0.0-beta.26072.1</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
-    <!-- dotnet/command-line-api dependencies -->
-    <SystemCommandLinePackageVersion>2.0.0-beta5.25210.1</SystemCommandLinePackageVersion>
-    <!-- dotnet/android dependencies -->
+    <!-- dotnet-android dependencies -->
     <XamarinAndroidToolsAndroidSdkPackageVersion>1.0.105-preview.225</XamarinAndroidToolsAndroidSdkPackageVersion>
-    <!-- dotnet/arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26123.2</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.26123.2</MicrosoftDotNetCodeAnalysisPackageVersion>
+    <!-- dotnet-arcade dependencies -->
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26164.1</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.26164.1</MicrosoftDotNetCodeAnalysisPackageVersion>
     <MicrosoftDotNetRemoteExecutorPackageVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorPackageVersion>
-    <!-- dotnet/dotnet dependencies -->
+    <!-- dotnet-command-line-api dependencies -->
+    <SystemCommandLinePackageVersion>2.0.0-beta5.25210.1</SystemCommandLinePackageVersion>
+    <!-- dotnet-dotnet dependencies -->
     <MicrosoftAspNetCoreAppRefPackageVersion>10.0.2</MicrosoftAspNetCoreAppRefPackageVersion>
     <MicrosoftAspNetCoreAppRefInternalPackageVersion>10.0.2-servicing.25603.103</MicrosoftAspNetCoreAppRefInternalPackageVersion>
     <MicrosoftCodeAnalysisPackageVersion>5.0.0-2.25603.103</MicrosoftCodeAnalysisPackageVersion>
@@ -32,21 +29,21 @@ This file should be imported by eng/Versions.props
     <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.2-servicing.25603.103</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.2-servicing.25603.103</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>10.0.2-servicing.25603.103</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
+    <!-- microsoft-clrmd dependencies -->
+    <MicrosoftDiagnosticsRuntimePackageVersion>4.0.0-beta.26072.1</MicrosoftDiagnosticsRuntimePackageVersion>
+    <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.0.0-beta.26072.1</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
-    <!-- microsoft/clrmd dependencies -->
-    <MicrosoftDiagnosticsRuntimeVersion>$(MicrosoftDiagnosticsRuntimePackageVersion)</MicrosoftDiagnosticsRuntimeVersion>
-    <MicrosoftDiagnosticsRuntimeUtilitiesVersion>$(MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion)</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
-    <!-- dotnet/command-line-api dependencies -->
-    <SystemCommandLineVersion>$(SystemCommandLinePackageVersion)</SystemCommandLineVersion>
-    <!-- dotnet/android dependencies -->
+    <!-- dotnet-android dependencies -->
     <XamarinAndroidToolsAndroidSdkVersion>$(XamarinAndroidToolsAndroidSdkPackageVersion)</XamarinAndroidToolsAndroidSdkVersion>
-    <!-- dotnet/arcade dependencies -->
+    <!-- dotnet-arcade dependencies -->
     <MicrosoftDotNetArcadeSdkVersion>$(MicrosoftDotNetArcadeSdkPackageVersion)</MicrosoftDotNetArcadeSdkVersion>
     <MicrosoftDotNetCodeAnalysisVersion>$(MicrosoftDotNetCodeAnalysisPackageVersion)</MicrosoftDotNetCodeAnalysisVersion>
     <MicrosoftDotNetRemoteExecutorVersion>$(MicrosoftDotNetRemoteExecutorPackageVersion)</MicrosoftDotNetRemoteExecutorVersion>
-    <!-- dotnet/dotnet dependencies -->
+    <!-- dotnet-command-line-api dependencies -->
+    <SystemCommandLineVersion>$(SystemCommandLinePackageVersion)</SystemCommandLineVersion>
+    <!-- dotnet-dotnet dependencies -->
     <MicrosoftAspNetCoreAppRefVersion>$(MicrosoftAspNetCoreAppRefPackageVersion)</MicrosoftAspNetCoreAppRefVersion>
     <MicrosoftAspNetCoreAppRefInternalVersion>$(MicrosoftAspNetCoreAppRefInternalPackageVersion)</MicrosoftAspNetCoreAppRefInternalVersion>
     <MicrosoftCodeAnalysisVersion>$(MicrosoftCodeAnalysisPackageVersion)</MicrosoftCodeAnalysisVersion>
@@ -62,5 +59,8 @@ This file should be imported by eng/Versions.props
     <runtimeosxx64MicrosoftDotNetCdacTransportVersion>$(runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion)</runtimeosxx64MicrosoftDotNetCdacTransportVersion>
     <runtimewinarm64MicrosoftDotNetCdacTransportVersion>$(runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion)</runtimewinarm64MicrosoftDotNetCdacTransportVersion>
     <runtimewinx64MicrosoftDotNetCdacTransportVersion>$(runtimewinx64MicrosoftDotNetCdacTransportPackageVersion)</runtimewinx64MicrosoftDotNetCdacTransportVersion>
+    <!-- microsoft-clrmd dependencies -->
+    <MicrosoftDiagnosticsRuntimeVersion>$(MicrosoftDiagnosticsRuntimePackageVersion)</MicrosoftDiagnosticsRuntimeVersion>
+    <MicrosoftDiagnosticsRuntimeUtilitiesVersion>$(MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion)</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
   </PropertyGroup>
 </Project>
