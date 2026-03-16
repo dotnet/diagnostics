@@ -530,9 +530,8 @@ public class SOSRunner : IDisposable
                         throw new ArgumentException($"CDB helper script path not set or does not exist: {helperExtension}");
                     }
                     // Clear the default sympath (which puts a sym cache in the debugger binary directory in
-                    // the .nuget cache) and set to just the directory containing the debuggee binaries
-                    // plus the Microsoft symbol server so CDB can download mscordacwks.dll for desktop CLR debugging.
-                    arguments.AppendFormat(@" -y ""{0};srv*https://msdl.microsoft.com/download/symbols""", debuggeeConfig.BinaryDirPath);
+                    // the .nuget cache) and set to just the directory containing the debuggee binaries.
+                    arguments.AppendFormat(@" -y ""{0}""", debuggeeConfig.BinaryDirPath);
                     arguments.AppendFormat(@" -c "".load {0}""", helperExtension);
 
                     if (action == DebuggerAction.LoadDump)
@@ -682,7 +681,7 @@ public class SOSRunner : IDisposable
                         }
                     }
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
-                    // Disable DacSignatureVerification — CDB 10.0.26100.1's signature verification
+                    // Disable DacSignatureVerification in dotnet-dump — signature verification
                     // rejects both .NET Framework and servicing .NET Core DAC DLLs.
                     initialCommands.Add("runtimes --DacSignatureVerification:false");
                     arguments.Append(debuggerPath);
