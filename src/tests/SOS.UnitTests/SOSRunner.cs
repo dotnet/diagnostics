@@ -681,9 +681,10 @@ public class SOSRunner : IDisposable
                         }
                     }
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
-                    // Disable DacSignatureVerification in dotnet-dump — signature verification
-                    // rejects both .NET Framework and servicing .NET Core DAC DLLs.
-                    initialCommands.Add("runtimes --DacSignatureVerification:false");
+                    bool shouldVerifyDacSignature = OS.Kind == OSKind.Windows
+                        && !config.IsPrivateBuildTesting()
+                        && !config.IsNightlyBuild();
+                    initialCommands.Add($"runtimes --DacSignatureVerification:{(shouldVerifyDacSignature ? "true" : "false")}");
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
                     debuggerPath = config.DotNetDumpHost();
