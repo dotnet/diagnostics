@@ -78,6 +78,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// </summary>
         public Func<IEnumerable<ClrSubHeap>, IOrderedEnumerable<ClrSubHeap>> SortSubHeaps { get; set; }
 
+        /// <summary>
+        /// Optional callback invoked periodically during heap enumeration to report progress.
+        /// Parameters are (bytesScanned, totalBytes).
+        /// </summary>
+        public Action<long, long> ProgressCallback { get; set; }
+
+        /// <summary>
+        /// Minimum interval in milliseconds between progress reports. Default is 10 seconds.
+        /// </summary>
+        public int ProgressIntervalMs { get; set; } = 10_000;
+
         public HeapWithFilters(ClrHeap heap)
         {
             _heap = heap;
@@ -211,7 +222,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IEnumerable<ClrObject> EnumerateFilteredObjects(CancellationToken cancellation)
         {
-            foreach (ClrSegment segment in EnumerateFilteredSegments())
+            Action<long, long> progressCallback = ProgressCallback;
+            ProgressReporter progress = null;
+            IEnumerable<ClrSegment> segments = EnumerateFilteredSegments();
+
+            if (progressCallback != null)
+            {
+                // Materialize the segment list to avoid enumerating twice
+                // (once for total size, once for object enumeration).
+                List<ClrSegment> segmentList = segments.ToList();
+                long totalBytes = segmentList.Sum(s => (long)s.CommittedMemory.Length);
+                progress = new ProgressReporter(progressCallback, totalBytes, ProgressIntervalMs);
+                segments = segmentList;
+            }
+
+            foreach (ClrSegment segment in segments)
             {
                 IEnumerable<ClrObject> objs;
                 if (MemoryRange is MemoryRange range)
@@ -235,6 +260,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     if (obj.IsValid)
                     {
                         ulong size = obj.Size;
+
+                        progress?.ReportObject((long)size);
+
                         if (MinimumObjectSize != 0 && size < MinimumObjectSize)
                         {
                             continue;
