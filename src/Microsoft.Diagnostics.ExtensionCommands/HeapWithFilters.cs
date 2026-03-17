@@ -79,15 +79,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public Func<IEnumerable<ClrSubHeap>, IOrderedEnumerable<ClrSubHeap>> SortSubHeaps { get; set; }
 
         /// <summary>
+        /// Minimum interval in milliseconds between progress reports.
+        /// </summary>
+        private const int ProgressIntervalMs = 10_000;
+
+        /// <summary>
         /// Optional callback invoked periodically during heap enumeration to report progress.
         /// Parameters are (bytesScanned, totalBytes).
         /// </summary>
         public Action<long, long> ProgressCallback { get; set; }
-
-        /// <summary>
-        /// Minimum interval in milliseconds between progress reports. Default is 10 seconds.
-        /// </summary>
-        public int ProgressIntervalMs { get; set; } = 10_000;
 
         public HeapWithFilters(ClrHeap heap)
         {
