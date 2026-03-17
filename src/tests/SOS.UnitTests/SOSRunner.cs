@@ -564,10 +564,10 @@ public class SOSRunner : IDisposable
                     // Turn on source/line numbers
                     initialCommands.Add(".lines");
 
-                    bool shouldVerifyDacSignature = !config.IsPrivateBuildTesting()
-                                                    && !config.IsNightlyBuild()
-                                                    && !"-none".Equals(config.SetHostRuntime(), StringComparison.OrdinalIgnoreCase);
-                    initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(shouldVerifyDacSignature ? "true" : "false")}");
+                    // Disable SecureLoadDotNetExtensions because CDB 10.0.26100.1's signature verification
+                    // rejects both .NET Framework (mscordacwks.dll) and servicing .NET Core DAC DLLs,
+                    // even when properly obtained from the Microsoft symbol server.
+                    initialCommands.Add("dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions=false");
                     break;
 
                 case NativeDebugger.Lldb:
@@ -681,7 +681,7 @@ public class SOSRunner : IDisposable
                         }
                     }
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
-                    shouldVerifyDacSignature = OS.Kind == OSKind.Windows
+                    bool shouldVerifyDacSignature = OS.Kind == OSKind.Windows
                         && !config.IsPrivateBuildTesting()
                         && !config.IsNightlyBuild();
                     initialCommands.Add($"runtimes --DacSignatureVerification:{(shouldVerifyDacSignature ? "true" : "false")}");
