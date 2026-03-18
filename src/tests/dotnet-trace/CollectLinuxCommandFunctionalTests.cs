@@ -326,6 +326,50 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(callbackInvoked);
         }
 
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DoesNotCrash_WhenCursorTopIsZero()
+        {
+            // Regression test: when CursorTop is 0 (e.g., no TTY), LineToClear = CursorTop - 1 = -1,
+            // which caused SetCursorPosition to throw ArgumentOutOfRangeException on the second
+            // progress callback when RewriteConsoleLine was called with the negative LineToClear.
+            MockConsole console = new(200, 30, _outputHelper);
+
+            var handler = new CollectLinuxCommandHandler(console);
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                // Must send multiple callbacks — the crash occurred on the second one.
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_PrintsStatusOnce_WhenCursorRepositioningUnsupported()
+        {
+            // When cursor repositioning isn't supported, the status line should be
+            // printed exactly once — not spammed every second.
+            MockConsole console = new(200, 30, _outputHelper);
+
+            var handler = new CollectLinuxCommandHandler(console);
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                for (int i = 0; i < 5; i++)
+                {
+                    cb(3, IntPtr.Zero, UIntPtr.Zero);
+                }
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+
+            string[] lines = console.Lines;
+            int statusLineCount = lines.Count(l => l.Contains("Recording trace", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(1, statusLineCount);
+        }
+
         private static int Run(object args, MockConsole console)
         {
             var handler = new CollectLinuxCommandHandler(console);
