@@ -23,7 +23,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.0.0-2.26153.111</MicrosoftCodeAnalysisAnalyzersPackageVersion>
     <MicrosoftCodeAnalysisCSharpPackageVersion>5.0.0-2.26153.111</MicrosoftCodeAnalysisCSharpPackageVersion>
     <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>10.0.105</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
-    <MicrosoftNETSdkPackageVersion>10.0.105-servicing.26153.111</MicrosoftNETSdkPackageVersion>
+    <MicrosoftNETSdkPackageVersion>11.0.100-preview.2.26159.112</MicrosoftNETSdkPackageVersion>
     <MicrosoftNETCoreAppRefPackageVersion>10.0.5</MicrosoftNETCoreAppRefPackageVersion>
     <MicrosoftNETCorePlatformsPackageVersion>10.0.5-servicing.26153.111</MicrosoftNETCorePlatformsPackageVersion>
     <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.5-servicing.26153.111</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>

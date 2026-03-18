@@ -1,8 +1,5 @@
 <Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <!-- Debuggees -->
-    <ProjectReference Include="*/Debuggees/**/*.csproj" />
-
     <!-- Tests and Helpers -->
     <ProjectReference Include="*/*.csproj" />
 
@@ -17,4 +14,42 @@
     <!-- Unused -->
     <ProjectReference Remove="Grape/Grape.csproj" />
   </ItemGroup>
+
+  <!--
+    Install test runtimes and build debuggees using the test SDK.
+    Debuggees are built separately because they may target TFMs newer
+    than what the global.json (product) SDK supports.
+  -->
+
+  <PropertyGroup>
+    <TestDotNetPath>$([MSBuild]::NormalizePath('$(ArtifactsDotnetTestDir)', 'dotnet'))</TestDotNetPath>
+  </PropertyGroup>
+
+  <Target Name="InstallTestRuntimes"
+          AfterTargets="Build"
+          Condition="'$(SkipTests)' != 'true'">
+    <MSBuild Projects="$(RepositoryEngineeringDir)InstallRuntimes.proj"
+             Targets="InstallTestRuntimes"
+             Properties="TargetArch=$(TargetArch);TargetOS=$(TargetOS);TestArchitectures=$(TargetArch);PrivateBuildTesting=$(PrivateBuildTesting);LiveRuntimeDir=$(LiveRuntimeDir)" />
+  </Target>
+
+  <Target Name="BuildDebuggees"
+          AfterTargets="Build"
+          DependsOnTargets="InstallTestRuntimes"
+          Condition="'$(SkipTests)' != 'true'">
+    <PropertyGroup>
+      <_TestSdkVersionDir>$([MSBuild]::NormalizePath('$(ArtifactsDotnetTestDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))</_TestSdkVersionDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <DebuggeeBuildEnv Include="DOTNET_ROOT=$(ArtifactsDotnetTestDir.TrimEnd('\/'))" />
+      <DebuggeeBuildEnv Include="DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR=$(ArtifactsDotnetTestDir.TrimEnd('\/'))" />
+      <DebuggeeBuildEnv Include="DOTNET_HOST_PATH=$(TestDotNetPath)" />
+      <DebuggeeBuildEnv Include="DOTNET_INSTALL_DIR=$(ArtifactsDotnetTestDir.TrimEnd('\/'))" />
+      <!-- Override inherited MSBuild env vars that point to the build SDK -->
+      <DebuggeeBuildEnv Include="MSBuildSDKsPath=$(_TestSdkVersionDir)$([System.IO.Path]::DirectorySeparatorChar)Sdks" />
+      <DebuggeeBuildEnv Include="MSBuildExtensionsPath=$(_TestSdkVersionDir)" />
+    </ItemGroup>
+    <Exec Command="$(TestDotNetPath) build $(MSBuildThisFileDirectory)Debuggees.proj -c $(Configuration) -bl:$(ArtifactsLogDir)Debuggees.binlog /p:TargetOS=$(TargetOS) /p:TargetArch=$(TargetArch) /p:RepoRoot=$(RepoRoot)"
+          EnvironmentVariables="@(DebuggeeBuildEnv)" />
+  </Target>
 </Project>
