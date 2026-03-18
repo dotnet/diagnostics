@@ -180,7 +180,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             foreach (DebugLibraryInfo libraryInfo in _clrInfo.DebuggingLibraries)
             {
-                if (libraryInfo.Kind == kind && RuntimeInformation.IsOSPlatform(libraryInfo.Platform) && libraryInfo.TargetArchitecture == currentArch)
+                // For cDAC, skip the platform filter — cDAC is a host-native NativeAOT binary
+                // that can analyze dumps from any target platform.
+                bool platformMatch = kind == DebugLibraryKind.CDac || RuntimeInformation.IsOSPlatform(libraryInfo.Platform);
+
+                if (libraryInfo.Kind == kind && platformMatch && libraryInfo.TargetArchitecture == currentArch)
                 {
                     libraryPath = GetLocalPath(libraryInfo);
                     if (libraryPath is not null)
@@ -206,7 +210,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string localFilePath;
             if (libraryInfo.Kind == DebugLibraryKind.CDac)
             {
+                // First try the absolute path from ClrMD (works for same-platform scenarios)
                 localFilePath = libraryInfo.FileName;
+                if (File.Exists(localFilePath))
+                {
+                    return localFilePath;
+                }
+                // Fall back to RuntimeModuleDirectory if set (supports user-provided cDAC path via setclrpath)
+                if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
+                {
+                    localFilePath = Path.Combine(RuntimeModuleDirectory, Path.GetFileName(libraryInfo.FileName));
+                    if (File.Exists(localFilePath))
+                    {
+                        return localFilePath;
+                    }
+                }
+                return null;
             }
             else
             {

@@ -238,7 +238,13 @@ namespace SOS.Hosting
                 return HResult.E_INVALIDARG;
             }
             *ppClrDataProcess = IntPtr.Zero;
-            if ((flags & ClrDataProcessFlags.UseCDac) != 0)
+
+            ISettingsService settingsService = _services.GetService<ISettingsService>();
+            bool forceUseCDac = settingsService?.ForceUseContractReader == true;
+
+            // Try cDAC if explicitly requested via flags, or if ForceUseContractReader is set
+            // (which overrides the caller's flags — callers like LoadClrDebugDll may not pass UseCDac).
+            if ((flags & ClrDataProcessFlags.UseCDac) != 0 || forceUseCDac)
             {
                 if (_cdacDataProcess == IntPtr.Zero)
                 {
@@ -253,8 +259,9 @@ namespace SOS.Hosting
                 }
                 *ppClrDataProcess = _cdacDataProcess;
             }
-            // Fallback to regular DAC instance if CDac isn't enabled or there where errors creating the instance
-            if (*ppClrDataProcess == IntPtr.Zero)
+            // Skip legacy DAC fallback when cDAC-only mode is forced — there may not be a
+            // platform-matching legacy DAC available (e.g., analyzing a Linux dump on Windows).
+            if (*ppClrDataProcess == IntPtr.Zero && !forceUseCDac)
             {
                 if (_clrDataProcess == IntPtr.Zero)
                 {
@@ -271,6 +278,10 @@ namespace SOS.Hosting
             }
             if (*ppClrDataProcess == IntPtr.Zero)
             {
+                if (forceUseCDac)
+                {
+                    Trace.TraceError("cDAC-only mode (ForceUseContractReader): cDAC failed to load and legacy DAC fallback is disabled.");
+                }
                 return HResult.E_NOINTERFACE;
             }
             return HResult.S_OK;

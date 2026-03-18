@@ -94,6 +94,17 @@ extends:
               architecture: arm64
               artifactUploadPath: bin/Windows_NT.arm64.Release
 
+      - ${{ if ne(parameters.buildOnly, true) }}:
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            name: Windows_cDAC
+            osGroup: Windows_NT
+            useCdac: true
+            buildConfigs:
+            - configuration: Release
+              architecture: x64
+
       - template: /eng/pipelines/build.yml
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
@@ -233,6 +244,19 @@ extends:
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               - configuration: Debug
                 architecture: x64
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            name: Ubuntu_22_04_cDAC
+            osGroup: Linux
+            container: test_ubuntu_22_04
+            dependsOn: Linux
+            testOnly: true
+            useCdac: true
+            buildConfigs:
+            - configuration: Release
+              architecture: x64
 
         - template: /eng/pipelines/build.yml
           parameters:
