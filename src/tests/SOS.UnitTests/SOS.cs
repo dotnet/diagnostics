@@ -251,7 +251,11 @@ public class SOS
 
     private ITestOutputHelper Output { get; set; }
 
-    public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null);
+    // Desktop CLR configurations are temporarily excluded because CDB SecureLoadDotNetExtensions
+    // and dotnet-dump DacSignatureVerification reject desktop CLR DAC DLLs.
+    // Tracking: https://github.com/dotnet/diagnostics/issues/5757
+    public static IEnumerable<object[]> Configurations => SOSTestHelpers.GetConfigurations("TestName", value: null)
+        .Where(args => !((TestConfiguration)args[0]).IsDesktop);
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task MiniDumpLocalVarLookup(TestConfiguration config)
@@ -546,6 +550,12 @@ public class SOS
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.StackAndOtherTests", MemberType = typeof(SOSTestHelpers))]
     public async Task StackAndOtherTests(TestConfiguration config)
     {
+        // Single-file .NET 8 servicing DAC signature verification fails with CDB SecureLoadDotNetExtensions.
+        // Tracking: https://github.com/dotnet/diagnostics/issues/5757
+        if (OS.Kind == OSKind.Windows && config.PublishSingleFile)
+        {
+            throw new SkipTestException("Single-file DAC signature verification failure with CDB (https://github.com/dotnet/diagnostics/issues/5757)");
+        }
         if (config.RuntimeFrameworkVersionMajor == 10)
         {
             // The clrstack -i -a command regressed on .NET 10 win-x86, so skip this test for now.
@@ -623,6 +633,13 @@ public class SOS
         if (config.PublishSingleFile)
         {
             throw new SkipTestException("Single file not supported");
+        }
+        // Desktop CLR DAC signature verification fails with CDB SecureLoadDotNetExtensions
+        // and dotnet-dump DacSignatureVerification.
+        // Tracking: https://github.com/dotnet/diagnostics/issues/5757
+        if (OS.Kind == OSKind.Windows)
+        {
+            throw new SkipTestException("Desktop CLR DAC signature verification failure (https://github.com/dotnet/diagnostics/issues/5757)");
         }
         // The assembly path, class and function name of the desktop test code to load/run
         string desktopTestParameters = TestConfiguration.MakeCanonicalPath(config.GetValue("DesktopTestParameters"));
