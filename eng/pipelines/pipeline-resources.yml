@@ -71,7 +71,7 @@ extends:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-9
 
       test_linux_musl_x64:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-amd64
         options: --cap-add=SYS_PTRACE
 
       test_debian_13_amd64:
