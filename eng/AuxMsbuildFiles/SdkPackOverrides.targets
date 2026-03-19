@@ -5,13 +5,17 @@
        <RuntimeVersion80>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net8.0')->Metadata('Runtime'))</RuntimeVersion80>
        <RuntimeVersion90>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net9.0')->Metadata('Runtime'))</RuntimeVersion90>
        <RuntimeVersion10>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net10.0')->Metadata('Runtime'))</RuntimeVersion10>
+       <RuntimeVersion11>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net11.0')->Metadata('Runtime'))</RuntimeVersion11>
 
        <AspNetVersion80>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net8.0')->Metadata('AspNet'))</AspNetVersion80>
        <AspNetVersion90>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net9.0')->Metadata('AspNet'))</AspNetVersion90>
        <AspNetVersion10>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net10.0')->Metadata('AspNet'))</AspNetVersion10>
+       <AspNetVersion11>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net11.0')->Metadata('AspNet'))</AspNetVersion11>
     </PropertyGroup>
 
-    <ItemGroup>
+    <!-- Skip overrides when RuntimeTestVersions is not populated (e.g. test-time CLI builds
+         where eng/Versions.props is not imported). The SDK's built-in versions are used instead. -->
+    <ItemGroup Condition="'@(RuntimeTestVersions)' != ''">
       <!--
         CrossGen2 Pack
        -->
@@ -25,6 +29,10 @@
 
       <KnownCrossgen2Pack Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.NETCore.App.Crossgen2'">
         <Crossgen2PackVersion>$(RuntimeVersion10)</Crossgen2PackVersion>
+      </KnownCrossgen2Pack>
+
+      <KnownCrossgen2Pack Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.NETCore.App.Crossgen2'">
+        <Crossgen2PackVersion>$(RuntimeVersion11)</Crossgen2PackVersion>
       </KnownCrossgen2Pack>
 
       <!--
@@ -45,6 +53,11 @@
         <LatestRuntimeFrameworkVersion>$(RuntimeVersion10)</LatestRuntimeFrameworkVersion>
       </KnownFrameworkReference>
 
+      <KnownFrameworkReference Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
+        <TargetingPackVersion>$(RuntimeVersion11)</TargetingPackVersion>
+        <LatestRuntimeFrameworkVersion>$(RuntimeVersion11)</LatestRuntimeFrameworkVersion>
+      </KnownFrameworkReference>
+
       <KnownAppHostPack Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
         <AppHostPackVersion>$(RuntimeVersion80)</AppHostPackVersion>
       </KnownAppHostPack>
@@ -57,6 +70,10 @@
         <AppHostPackVersion>$(RuntimeVersion10)</AppHostPackVersion>
       </KnownAppHostPack>
 
+      <KnownAppHostPack Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
+        <AppHostPackVersion>$(RuntimeVersion11)</AppHostPackVersion>
+      </KnownAppHostPack>
+
       <KnownRuntimePack Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
         <LatestRuntimeFrameworkVersion>$(RuntimeVersion80)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
@@ -67,6 +84,10 @@
 
       <KnownRuntimePack Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
         <LatestRuntimeFrameworkVersion>$(RuntimeVersion10)</LatestRuntimeFrameworkVersion>
+      </KnownRuntimePack>
+
+      <KnownRuntimePack Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
+        <LatestRuntimeFrameworkVersion>$(RuntimeVersion11)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
 
       <!--
@@ -87,6 +108,11 @@
         <LatestRuntimeFrameworkVersion>$(AspNetVersion10)</LatestRuntimeFrameworkVersion>
       </KnownFrameworkReference>
 
+      <KnownFrameworkReference Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
+        <TargetingPackVersion>$(AspNetVersion11)</TargetingPackVersion>
+        <LatestRuntimeFrameworkVersion>$(AspNetVersion11)</LatestRuntimeFrameworkVersion>
+      </KnownFrameworkReference>
+
       <KnownAppHostPack Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
         <AppHostPackVersion>$(AspNetVersion80)</AppHostPackVersion>
       </KnownAppHostPack>
@@ -97,6 +123,10 @@
 
       <KnownAppHostPack Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
         <AppHostPackVersion>$(AspNetVersion10)</AppHostPackVersion>
+      </KnownAppHostPack>
+
+      <KnownAppHostPack Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
+        <AppHostPackVersion>$(AspNetVersion11)</AppHostPackVersion>
       </KnownAppHostPack>
 
       <KnownRuntimePack Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
@@ -111,6 +141,10 @@
         <LatestRuntimeFrameworkVersion>$(AspNetVersion10)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
 
+      <KnownRuntimePack Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
+        <LatestRuntimeFrameworkVersion>$(AspNetVersion11)</LatestRuntimeFrameworkVersion>
+      </KnownRuntimePack>
+
       <KnownILCompilerPack
         Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NET.ILCompiler'">
         <ILCompilerPackVersion>$(RuntimeVersion80)</ILCompilerPackVersion>
@@ -122,6 +156,10 @@
       <KnownILCompilerPack
         Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.NET.ILCompiler'">
         <ILCompilerPackVersion>$(RuntimeVersion10)</ILCompilerPackVersion>
+      </KnownILCompilerPack>
+      <KnownILCompilerPack
+        Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.NET.ILCompiler'">
+        <ILCompilerPackVersion>$(RuntimeVersion11)</ILCompilerPackVersion>
       </KnownILCompilerPack>
 
       <KnownILLinkPack
@@ -135,6 +173,10 @@
       <KnownILLinkPack
         Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.NET.ILLink.Tasks'">
         <ILLinkPackVersion>$(RuntimeVersion10)</ILLinkPackVersion>
+      </KnownILLinkPack>
+      <KnownILLinkPack
+        Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.NET.ILLink.Tasks'">
+        <ILLinkPackVersion>$(RuntimeVersion11)</ILLinkPackVersion>
       </KnownILLinkPack>
     </ItemGroup>
   </Target>

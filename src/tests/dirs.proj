@@ -37,6 +37,16 @@
           AfterTargets="Build"
           DependsOnTargets="InstallTestRuntimes"
           Condition="'$(SkipTests)' != 'true'">
+    <!-- Remove stale SDKs from the test dotnet dir so the repo root global.json
+         (rollForward:major) resolves to the correct test SDK.  InstallTestRuntimes
+         only installs $(MicrosoftNETSdkVersion); older SDKs are leftovers. -->
+    <ItemGroup>
+      <_StaleTestSdks Include="$([System.IO.Directory]::GetDirectories('$(ArtifactsDotnetTestDir)sdk'))" />
+      <_StaleTestSdks Remove="$([MSBuild]::NormalizePath('$(ArtifactsDotnetTestDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))" />
+    </ItemGroup>
+    <RemoveDir Directories="@(_StaleTestSdks)" />
+    <!-- Clean up any generated global.json from prior runs that would shadow the repo root's -->
+    <Delete Files="$(ArtifactsDir)global.json" Condition="Exists('$(ArtifactsDir)global.json')" />
     <PropertyGroup>
       <_TestSdkVersionDir>$([MSBuild]::NormalizePath('$(ArtifactsDotnetTestDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))</_TestSdkVersionDir>
     </PropertyGroup>
@@ -50,6 +60,7 @@
       <DebuggeeBuildEnv Include="MSBuildExtensionsPath=$(_TestSdkVersionDir)" />
     </ItemGroup>
     <Exec Command="$(TestDotNetPath) build $(MSBuildThisFileDirectory)Debuggees.proj -c $(Configuration) -bl:$(ArtifactsLogDir)Debuggees.binlog /p:TargetOS=$(TargetOS) /p:TargetArch=$(TargetArch) /p:RepoRoot=$(RepoRoot)"
+          WorkingDirectory="$(ArtifactsDotnetTestDir)"
           EnvironmentVariables="@(DebuggeeBuildEnv)" />
   </Target>
 </Project>
