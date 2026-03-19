@@ -589,7 +589,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 _nextUpdateTimestamp = now + Stopwatch.Frequency;
                 _console.Out.WriteLine($"[{_stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace.");
-                _console.Out.WriteLine("Press <Enter> or <Ctrl-C> to exit...");
+                _console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
             }
 
             private void Initialize()
@@ -606,7 +606,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 LineRewriter rewriter = new(_console);
                 rewriter.LineToClear = _console.CursorTop - 1;
 
-                if (rewriter.IsRewriteConsoleLineSupported)
+                if (rewriter.LineToClear >= 0 && rewriter.IsRewriteConsoleLineSupported)
                 {
                     _rewriter = rewriter;
                 }

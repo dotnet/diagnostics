@@ -327,38 +327,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
-        public void CollectLinuxCommand_DoesNotCrash_WhenCursorTopIsZero()
-        {
-            // Regression test: when CursorTop is 0 (e.g., no TTY), LineToClear = CursorTop - 1 = -1,
-            // which caused SetCursorPosition to throw ArgumentOutOfRangeException on the second
-            // progress callback when RewriteConsoleLine was called with the negative LineToClear.
-            MockConsole console = new(200, 30, _outputHelper);
-
-            var handler = new CollectLinuxCommandHandler(console);
-            handler.RecordTraceInvoker = (cmd, len, cb) => {
-                // Must send multiple callbacks — the crash occurred on the second one.
-                cb(3, IntPtr.Zero, UIntPtr.Zero);
-                cb(3, IntPtr.Zero, UIntPtr.Zero);
-                return 0;
-            };
-
-            int exitCode = handler.CollectLinux(TestArgs());
-            Assert.Equal((int)ReturnCode.Ok, exitCode);
-        }
-
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_PrintsStatusOnce_WhenCursorRepositioningUnsupported()
         {
-            // When cursor repositioning isn't supported, the status line should be
-            // printed exactly once — not spammed every second.
             MockConsole console = new(200, 30, _outputHelper);
 
             var handler = new CollectLinuxCommandHandler(console);
             handler.RecordTraceInvoker = (cmd, len, cb) => {
-                for (int i = 0; i < 5; i++)
-                {
-                    cb(3, IntPtr.Zero, UIntPtr.Zero);
-                }
+                // Simulate cursor repositioning unsupported by resetting the cursor
+                // during the callback, undoing any cursor advancement from the tool's
+                // earlier console output (banner, provider table, etc.).
+                console.Clear();
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
                 return 0;
             };
 
@@ -576,7 +556,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             DefaultOutputFile,
             "",
             "[dd:hh:mm:ss]\tRecording trace.",
-            "Press <Enter> or <Ctrl-C> to exit...",
+            "Press <Enter> or <Ctrl+C> to exit...",
         ];
         private static string[] PreviewMessages = [
             "==========================================================================================",

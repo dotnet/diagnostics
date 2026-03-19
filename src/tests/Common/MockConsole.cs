@@ -71,6 +71,12 @@ namespace Microsoft.Diagnostics.Tests.Common
         }
         public void SetCursorPosition(int col, int row)
         {
+            if (col < 0 || col >= BufferWidth)
+            {
+                throw new ArgumentOutOfRangeException(nameof(col),
+                    col,
+                    "The value must be greater than or equal to zero and less than the console's buffer size in that dimension.");
+            }
             if (row < 0 || row >= WindowHeight)
             {
                 throw new ArgumentOutOfRangeException(nameof(row),
