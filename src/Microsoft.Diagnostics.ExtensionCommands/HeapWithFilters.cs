@@ -227,9 +227,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             foreach (ClrSegment segment in segments)
             {
-                // Report at the start of each segment.
-                progressCallback?.Invoke(pastSegmentBytes, totalBytes);
-
                 long lastReportedBytesInSegment = 0;
 
                 IEnumerable<ClrObject> objs;
