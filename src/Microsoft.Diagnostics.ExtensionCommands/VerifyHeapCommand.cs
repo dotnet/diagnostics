@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             Action<long, long> progressCallback = null;
             if (!NoProgress)
             {
-                ProgressReporter reporter = new(Console.WriteLine, intervalMs: 10_000);
+                ProgressReporter reporter = new(Console.WriteLine);
                 progressCallback = reporter.Report;
             }
 

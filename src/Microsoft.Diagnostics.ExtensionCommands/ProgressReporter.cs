@@ -12,6 +12,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     /// </summary>
     internal sealed class ProgressReporter
     {
+        /// <summary>
+        /// Default minimum interval in milliseconds between progress writes.
+        /// </summary>
+        public const long DefaultReportingInterval = 5000;
+
         private readonly Action<string> _writeMessage;
         private readonly long _intervalMs;
         private readonly Func<long> _getElapsedMs;
@@ -22,7 +27,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// </summary>
         /// <param name="writeMessage">Called with the formatted progress string to display.</param>
         /// <param name="intervalMs">Minimum interval in milliseconds between writes.</param>
-        public ProgressReporter(Action<string> writeMessage, long intervalMs)
+        public ProgressReporter(Action<string> writeMessage, long intervalMs = DefaultReportingInterval)
             : this(writeMessage, intervalMs, getElapsedMs: null)
         {
         }
