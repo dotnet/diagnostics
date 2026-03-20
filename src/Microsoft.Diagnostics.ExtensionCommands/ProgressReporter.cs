@@ -7,42 +7,38 @@ using System.Diagnostics;
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
     /// <summary>
-    /// Reports progress periodically during heap enumeration based on elapsed time.
+    /// Receives byte-progress callbacks from heap enumeration and writes a formatted
+    /// progress message to the console whenever enough time has elapsed.
     /// </summary>
     internal sealed class ProgressReporter
     {
-        private readonly Action<long, long> _callback;
-        private readonly long _totalBytes;
+        private readonly Action<string> _writeMessage;
         private readonly long _intervalMs;
         private readonly Func<long> _getElapsedMs;
-        private long _scannedBytes;
         private long _lastReportMs;
 
         /// <summary>
         /// Creates a new ProgressReporter using the system clock.
         /// </summary>
-        /// <param name="callback">Invoked periodically with (bytesScanned, totalBytes).</param>
-        /// <param name="totalBytes">Total expected bytes to scan.</param>
-        /// <param name="intervalMs">Minimum interval in milliseconds between reports.</param>
-        public ProgressReporter(Action<long, long> callback, long totalBytes, long intervalMs)
-            : this(callback, totalBytes, intervalMs, getElapsedMs: null)
+        /// <param name="writeMessage">Called with the formatted progress string to display.</param>
+        /// <param name="intervalMs">Minimum interval in milliseconds between writes.</param>
+        public ProgressReporter(Action<string> writeMessage, long intervalMs)
+            : this(writeMessage, intervalMs, getElapsedMs: null)
         {
         }
 
         /// <summary>
         /// Creates a new ProgressReporter with an injectable time source for testing.
         /// </summary>
-        /// <param name="callback">Invoked periodically with (bytesScanned, totalBytes).</param>
-        /// <param name="totalBytes">Total expected bytes to scan.</param>
-        /// <param name="intervalMs">Minimum interval in milliseconds between reports.</param>
+        /// <param name="writeMessage">Called with the formatted progress string to display.</param>
+        /// <param name="intervalMs">Minimum interval in milliseconds between writes.</param>
         /// <param name="getElapsedMs">
         /// Returns the current elapsed time in milliseconds. When <see langword="null"/>,
         /// a real <see cref="Stopwatch"/> is used.
         /// </param>
-        internal ProgressReporter(Action<long, long> callback, long totalBytes, long intervalMs, Func<long> getElapsedMs)
+        internal ProgressReporter(Action<string> writeMessage, long intervalMs, Func<long> getElapsedMs)
         {
-            _callback = callback ?? throw new ArgumentNullException(nameof(callback));
-            _totalBytes = totalBytes;
+            _writeMessage = writeMessage ?? throw new ArgumentNullException(nameof(writeMessage));
             _intervalMs = intervalMs;
             if (getElapsedMs is not null)
             {
@@ -56,23 +52,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         /// <summary>
-        /// Gets the total number of bytes scanned so far.
+        /// Called by the heap enumerator with the current scan position.
+        /// Writes a progress message if enough time has elapsed since the last write.
         /// </summary>
-        public long ScannedBytes => _scannedBytes;
-
-        /// <summary>
-        /// Reports that an object of the given size has been scanned.
-        /// Invokes the callback if enough time has elapsed since the last report.
-        /// </summary>
-        public void ReportObject(long objectSize)
+        public void Report(long scannedBytes, long totalBytes)
         {
-            _scannedBytes += objectSize;
-
             long elapsedMs = _getElapsedMs();
             if (elapsedMs - _lastReportMs >= _intervalMs)
             {
                 _lastReportMs = elapsedMs;
-                _callback(_scannedBytes, _totalBytes);
+                _writeMessage(FormatProgressMessage(scannedBytes, totalBytes));
             }
         }
 

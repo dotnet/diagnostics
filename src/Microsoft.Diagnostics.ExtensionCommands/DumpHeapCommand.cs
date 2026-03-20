@@ -80,15 +80,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ParseArguments();
 
+            Action<long, long> progressCallback = null;
             if (StatOnly && !NoProgress)
             {
-                FilteredHeap.ProgressCallback = (scanned, total) =>
-                {
-                    Console.WriteLine(ProgressReporter.FormatProgressMessage(scanned, total));
-                };
+                ProgressReporter reporter = new(Console.WriteLine, intervalMs: 10_000);
+                progressCallback = reporter.Report;
             }
 
-            IEnumerable<ClrObject> objectsToPrint = FilteredHeap.EnumerateFilteredObjects(Console.CancellationToken);
+            IEnumerable<ClrObject> objectsToPrint = FilteredHeap.EnumerateFilteredObjects(Console.CancellationToken, progressCallback);
 
             bool? liveObjectWarning = null;
             if ((Live || Dead) && Short)

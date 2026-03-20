@@ -78,17 +78,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// </summary>
         public Func<IEnumerable<ClrSubHeap>, IOrderedEnumerable<ClrSubHeap>> SortSubHeaps { get; set; }
 
-        /// <summary>
-        /// Minimum interval in milliseconds between progress reports.
-        /// </summary>
-        private const int ProgressIntervalMs = 10_000;
-
-        /// <summary>
-        /// Optional callback invoked periodically during heap enumeration to report progress.
-        /// Parameters are (bytesScanned, totalBytes).
-        /// </summary>
-        public Action<long, long> ProgressCallback { get; set; }
-
         public HeapWithFilters(ClrHeap heap)
         {
             _heap = heap;
@@ -220,24 +209,29 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return segments;
         }
 
-        public IEnumerable<ClrObject> EnumerateFilteredObjects(CancellationToken cancellation)
+        public IEnumerable<ClrObject> EnumerateFilteredObjects(CancellationToken cancellation, Action<long, long> progressCallback = null)
         {
-            Action<long, long> progressCallback = ProgressCallback;
-            ProgressReporter progress = null;
             IEnumerable<ClrSegment> segments = EnumerateFilteredSegments();
 
+            long totalBytes = 0;
             if (progressCallback != null)
             {
-                // Materialize the segment list to avoid enumerating twice
-                // (once for total size, once for object enumeration).
+                // Materialize segments to compute totalBytes before enumeration begins.
                 List<ClrSegment> segmentList = segments.ToList();
-                long totalBytes = segmentList.Sum(s => (long)s.CommittedMemory.Length);
-                progress = new ProgressReporter(progressCallback, totalBytes, ProgressIntervalMs);
+                totalBytes = segmentList.Sum(s => (long)s.CommittedMemory.Length);
                 segments = segmentList;
             }
 
+            // Tracks the sum of CommittedMemory.Length for all completed segments.
+            long pastSegmentBytes = 0;
+
             foreach (ClrSegment segment in segments)
             {
+                // Report at the start of each segment.
+                progressCallback?.Invoke(pastSegmentBytes, totalBytes);
+
+                long lastReportedBytesInSegment = 0;
+
                 IEnumerable<ClrObject> objs;
                 if (MemoryRange is MemoryRange range)
                 {
@@ -257,11 +251,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     cancellation.ThrowIfCancellationRequested();
 
+                    // Report every 16KB of progress within the segment, measured by object address.
+                    if (progressCallback != null)
+                    {
+                        long bytesInSegment = (long)(obj.Address - segment.Start);
+                        if (bytesInSegment - lastReportedBytesInSegment >= 16 * 1024)
+                        {
+                            progressCallback(pastSegmentBytes + bytesInSegment, totalBytes);
+                            lastReportedBytesInSegment = bytesInSegment;
+                        }
+                    }
+
                     if (obj.IsValid)
                     {
                         ulong size = obj.Size;
-
-                        progress?.ReportObject((long)size);
 
                         if (MinimumObjectSize != 0 && size < MinimumObjectSize)
                         {
@@ -276,6 +279,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     yield return obj;
                 }
+
+                // Report at the end of each segment and advance the past-segment accumulator.
+                progressCallback?.Invoke(pastSegmentBytes + (long)segment.CommittedMemory.Length, totalBytes);
+                pastSegmentBytes += (long)segment.CommittedMemory.Length;
             }
         }
     }

@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using Xunit;
 
@@ -35,126 +34,98 @@ namespace Microsoft.Diagnostics.ExtensionCommands.UnitTests
             Assert.Equal("Scanning heap: 1 MB / 1 MB (100%)...", msg);
         }
 
-        // ─── ScannedBytes tracking ───────────────────────────────────────────────
+        // ─── Timing-based write tests (deterministic via fake clock) ──────────
 
         [Fact]
-        public void ReportObject_TracksScannedBytes()
+        public void Report_WithZeroInterval_WritesEveryTime()
         {
-            ProgressReporter reporter = new(
-                (_, _) => { },
-                totalBytes: 1000,
-                intervalMs: 60_000, // long interval so callback doesn't fire
-                getElapsedMs: () => 0);
-
-            reporter.ReportObject(100);
-            Assert.Equal(100, reporter.ScannedBytes);
-
-            reporter.ReportObject(250);
-            Assert.Equal(350, reporter.ScannedBytes);
-
-            reporter.ReportObject(50);
-            Assert.Equal(400, reporter.ScannedBytes);
-        }
-
-        // ─── Timing-based callback tests (deterministic via fake clock) ──────────
-
-        [Fact]
-        public void ReportObject_WithZeroInterval_CallsCallbackEveryTime()
-        {
-            List<(long scanned, long total)> reports = new();
+            int writeCount = 0;
             long fakeMs = 0;
 
             ProgressReporter reporter = new(
-                (scanned, total) => reports.Add((scanned, total)),
-                totalBytes: 1000,
+                _ => writeCount++,
                 intervalMs: 0,
                 getElapsedMs: () => fakeMs);
 
-            reporter.ReportObject(100);
-            reporter.ReportObject(200);
-            reporter.ReportObject(300);
+            reporter.Report(100, 1000);
+            reporter.Report(300, 1000);
+            reporter.Report(600, 1000);
 
-            Assert.Equal(3, reports.Count);
-            Assert.Equal((100, 1000), reports[0]);
-            Assert.Equal((300, 1000), reports[1]);
-            Assert.Equal((600, 1000), reports[2]);
+            Assert.Equal(3, writeCount);
         }
 
         [Fact]
-        public void ReportObject_DoesNotFireBeforeInterval()
+        public void Report_DoesNotWriteBeforeInterval()
         {
-            int callbackCount = 0;
+            int writeCount = 0;
             long fakeMs = 0;
 
             ProgressReporter reporter = new(
-                (_, _) => callbackCount++,
-                totalBytes: 1000,
+                _ => writeCount++,
                 intervalMs: 10_000,
                 getElapsedMs: () => fakeMs);
 
-            // First call at t=0ms: elapsed (0) - lastReport (0) = 0, not >= 10_000, no fire
-            reporter.ReportObject(1);
-            Assert.Equal(0, callbackCount);
+            // First call at t=0ms: elapsed (0) - lastReport (0) = 0, not >= 10_000, no write
+            reporter.Report(1, 1000);
+            Assert.Equal(0, writeCount);
 
-            // Advance to just before the interval boundary; still no fire
+            // Advance to just before the interval boundary; still no write
             fakeMs = 9_999;
-            reporter.ReportObject(1);
-            Assert.Equal(0, callbackCount);
+            reporter.Report(2, 1000);
+            Assert.Equal(0, writeCount);
         }
 
         [Fact]
-        public void ReportObject_FiresCallbackAfterInterval()
+        public void Report_WritesAfterInterval()
         {
-            int callbackCount = 0;
+            int writeCount = 0;
             long fakeMs = 0;
 
             ProgressReporter reporter = new(
-                (_, _) => callbackCount++,
-                totalBytes: 1000,
+                _ => writeCount++,
                 intervalMs: 10_000,
                 getElapsedMs: () => fakeMs);
 
-            // t=0ms: 0 - 0 = 0, not >= 10_000 → no fire
-            reporter.ReportObject(1);
-            Assert.Equal(0, callbackCount);
+            // t=0ms: 0 - 0 = 0, not >= 10_000 → no write
+            reporter.Report(1, 1000);
+            Assert.Equal(0, writeCount);
 
-            // t=10_000ms: 10_000 - 0 = 10_000, >= 10_000 → fires; lastReport becomes 10_000
+            // t=10_000ms: 10_000 - 0 = 10_000, >= 10_000 → writes; lastReport becomes 10_000
             fakeMs = 10_000;
-            reporter.ReportObject(1);
-            Assert.Equal(1, callbackCount);
+            reporter.Report(2, 1000);
+            Assert.Equal(1, writeCount);
 
-            // t=15_000ms: 15_000 - 10_000 = 5_000, not >= 10_000 → no fire
+            // t=15_000ms: 15_000 - 10_000 = 5_000, not >= 10_000 → no write
             fakeMs = 15_000;
-            reporter.ReportObject(1);
-            Assert.Equal(1, callbackCount);
+            reporter.Report(3, 1000);
+            Assert.Equal(1, writeCount);
 
-            // t=20_000ms: 20_000 - 10_000 = 10_000, >= 10_000 → fires; lastReport becomes 20_000
+            // t=20_000ms: 20_000 - 10_000 = 10_000, >= 10_000 → writes; lastReport becomes 20_000
             fakeMs = 20_000;
-            reporter.ReportObject(1);
-            Assert.Equal(2, callbackCount);
+            reporter.Report(4, 1000);
+            Assert.Equal(2, writeCount);
         }
 
         [Fact]
-        public void ReportObject_ReportsCorrectBytesInCallback()
+        public void Report_WritesFormattedMessageWithCorrectBytes()
         {
-            List<(long scanned, long total)> reports = new();
+            List<string> messages = new();
             long fakeMs = 0;
 
             ProgressReporter reporter = new(
-                (scanned, total) => reports.Add((scanned, total)),
-                totalBytes: 2000,
+                messages.Add,
                 intervalMs: 10_000,
                 getElapsedMs: () => fakeMs);
 
-            // t=0ms: no fire yet; bytes accumulate
-            reporter.ReportObject(500);
-            Assert.Empty(reports);
+            // t=0ms: no write yet
+            reporter.Report(500 * 1024 * 1024, 2000 * 1024 * 1024);
+            Assert.Empty(messages);
 
-            // t=10_000ms: fires with accumulated bytes
+            // t=10_000ms: writes with the current scanned/total values
             fakeMs = 10_000;
-            reporter.ReportObject(300);
-            Assert.Single(reports);
-            Assert.Equal((800L, 2000L), reports[0]);
+            reporter.Report(800 * 1024 * 1024, 2000 * 1024 * 1024);
+            Assert.Single(messages);
+            Assert.Equal("Scanning heap: 800 MB / 2,000 MB (40%)...", messages[0]);
         }
     }
 }

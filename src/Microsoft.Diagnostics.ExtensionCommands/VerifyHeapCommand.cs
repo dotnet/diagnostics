@@ -1,5 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Diagnostics.DebugServices;
@@ -61,15 +62,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 throw new DiagnosticsException("The GC heap is not in a valid state for traversal.  (Use -ignoreGCState to override.)");
             }
 
+            Action<long, long> progressCallback = null;
             if (!NoProgress)
             {
-                filteredHeap.ProgressCallback = (scanned, total) =>
-                {
-                    Console.WriteLine(ProgressReporter.FormatProgressMessage(scanned, total));
-                };
+                ProgressReporter reporter = new(Console.WriteLine, intervalMs: 10_000);
+                progressCallback = reporter.Report;
             }
 
-            VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken), verifySyncTable: filteredHeap.HasFilters);
+            VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken, progressCallback), verifySyncTable: filteredHeap.HasFilters);
         }
 
         [HelpInvoke]
