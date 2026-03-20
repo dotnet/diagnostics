@@ -277,9 +277,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     yield return obj;
                 }
 
-                // Report at the end of each segment and advance the past-segment accumulator.
-                progressCallback?.Invoke(pastSegmentBytes + (long)segment.CommittedMemory.Length, totalBytes);
+                // Advance the past-segment accumulator and report at the end of each segment.
                 pastSegmentBytes += (long)segment.CommittedMemory.Length;
+                progressCallback?.Invoke(pastSegmentBytes, totalBytes);
             }
         }
     }
