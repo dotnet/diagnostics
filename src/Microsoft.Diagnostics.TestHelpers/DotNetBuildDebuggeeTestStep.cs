@@ -146,6 +146,13 @@ namespace Microsoft.Diagnostics.TestHelpers
         public IDictionary<string, string> NugetFeeds { get; private set; }
         public abstract string ProjectTemplateFileName { get; }
 
+        private string GetBinLogPath(string operationName)
+        {
+            string directory = Path.GetDirectoryName(LogFilePath);
+            string fileName = Path.GetFileNameWithoutExtension(LogFilePath);
+            return Path.Combine(directory, $"{fileName}.{operationName}.binlog");
+        }
+
         protected override async Task DoWork(ITestOutputHelper output)
         {
             PrepareProjectSolution(output);
@@ -193,6 +200,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 args += extraArgs;
             }
+            string restoreBinLogPath = GetBinLogPath("restore");
+            output.WriteLine("MSBuild binlog path: {0}", restoreBinLogPath);
+            args += " /bl:\"" + restoreBinLogPath + "\"";
             output.WriteLine("Launching {0} {1}", DotNetToolPath, args);
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, args)
                 .WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0")
@@ -241,6 +251,9 @@ namespace Microsoft.Diagnostics.TestHelpers
             AssertDebuggeeProjectFileExists(output);
             AssertDebuggeeAssetsFileExists(output);
 
+            string publishBinLogPath = GetBinLogPath("publish");
+            output.WriteLine("MSBuild binlog path: {0}", publishBinLogPath);
+            dotnetArgs += " /bl:\"" + publishBinLogPath + "\"";
             output.WriteLine("Launching {0} {1}", DotNetToolPath, dotnetArgs);
             ProcessRunner runner = new ProcessRunner(DotNetToolPath, dotnetArgs)
                 .WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0")
