@@ -28,6 +28,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-ignoreGCState", Help = "Ignore the GC's marker that the heap is not walkable (will generate lots of false positive errors).")]
         public bool IgnoreGCState { get; set; }
 
+        [Option(Name = "-noprogress", Help = "Suppress periodic progress output during heap scanning.")]
+        public bool NoProgress { get; set; }
+
         [Argument(Help ="Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
@@ -58,10 +61,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 throw new DiagnosticsException("The GC heap is not in a valid state for traversal.  (Use -ignoreGCState to override.)");
             }
 
-            filteredHeap.ProgressCallback = (scanned, total) =>
+            if (!NoProgress)
             {
-                Console.WriteLine(ProgressReporter.FormatProgressMessage(scanned, total));
-            };
+                filteredHeap.ProgressCallback = (scanned, total) =>
+                {
+                    Console.WriteLine(ProgressReporter.FormatProgressMessage(scanned, total));
+                };
+            }
 
             VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken), verifySyncTable: filteredHeap.HasFilters);
         }

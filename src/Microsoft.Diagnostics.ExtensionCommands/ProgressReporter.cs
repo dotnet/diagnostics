@@ -13,23 +13,46 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     {
         private readonly Action<long, long> _callback;
         private readonly long _totalBytes;
-        private readonly int _intervalMs;
-        private readonly Stopwatch _stopwatch;
+        private readonly long _intervalMs;
+        private readonly Func<long> _getElapsedMs;
         private long _scannedBytes;
         private long _lastReportMs;
 
         /// <summary>
-        /// Creates a new ProgressReporter.
+        /// Creates a new ProgressReporter using the system clock.
         /// </summary>
         /// <param name="callback">Invoked periodically with (bytesScanned, totalBytes).</param>
         /// <param name="totalBytes">Total expected bytes to scan.</param>
         /// <param name="intervalMs">Minimum interval in milliseconds between reports.</param>
-        public ProgressReporter(Action<long, long> callback, long totalBytes, int intervalMs)
+        public ProgressReporter(Action<long, long> callback, long totalBytes, long intervalMs)
+            : this(callback, totalBytes, intervalMs, getElapsedMs: null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new ProgressReporter with an injectable time source for testing.
+        /// </summary>
+        /// <param name="callback">Invoked periodically with (bytesScanned, totalBytes).</param>
+        /// <param name="totalBytes">Total expected bytes to scan.</param>
+        /// <param name="intervalMs">Minimum interval in milliseconds between reports.</param>
+        /// <param name="getElapsedMs">
+        /// Returns the current elapsed time in milliseconds. When <see langword="null"/>,
+        /// a real <see cref="Stopwatch"/> is used.
+        /// </param>
+        internal ProgressReporter(Action<long, long> callback, long totalBytes, long intervalMs, Func<long> getElapsedMs)
         {
             _callback = callback ?? throw new ArgumentNullException(nameof(callback));
             _totalBytes = totalBytes;
             _intervalMs = intervalMs;
-            _stopwatch = Stopwatch.StartNew();
+            if (getElapsedMs is not null)
+            {
+                _getElapsedMs = getElapsedMs;
+            }
+            else
+            {
+                Stopwatch sw = Stopwatch.StartNew();
+                _getElapsedMs = () => sw.ElapsedMilliseconds;
+            }
         }
 
         /// <summary>
@@ -45,7 +68,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             _scannedBytes += objectSize;
 
-            long elapsedMs = _stopwatch.ElapsedMilliseconds;
+            long elapsedMs = _getElapsedMs();
             if (elapsedMs - _lastReportMs >= _intervalMs)
             {
                 _lastReportMs = elapsedMs;
@@ -59,7 +82,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public static string FormatProgressMessage(long scannedBytes, long totalBytes)
         {
             double pct = totalBytes > 0 ? 100.0 * scannedBytes / totalBytes : 0;
-            return $"Scanning heap: {scannedBytes / (1024 * 1024):n0} MB / {totalBytes / (1024 * 1024):n0} MB ({pct:f0}%)...";
+            return FormattableString.Invariant(
+                $"Scanning heap: {scannedBytes / (1024 * 1024):n0} MB / {totalBytes / (1024 * 1024):n0} MB ({pct:f0}%)...");
         }
     }
 }

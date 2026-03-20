@@ -68,6 +68,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-ignoreGCState", Help = "Ignore the GC's marker that the heap is not walkable (will generate lots of false positive errors).")]
         public bool IgnoreGCState { get; set; }
 
+        [Option(Name = "-noprogress", Help = "Suppress periodic progress output during heap scanning.")]
+        public bool NoProgress { get; set; }
+
         [Argument(Help = "Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
@@ -77,7 +80,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ParseArguments();
 
-            if (StatOnly)
+            if (StatOnly && !NoProgress)
             {
                 FilteredHeap.ProgressCallback = (scanned, total) =>
                 {
