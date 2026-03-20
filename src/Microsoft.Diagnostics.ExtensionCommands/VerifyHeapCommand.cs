@@ -58,6 +58,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 throw new DiagnosticsException("The GC heap is not in a valid state for traversal.  (Use -ignoreGCState to override.)");
             }
 
+            filteredHeap.ProgressCallback = (scanned, total) =>
+            {
+                Console.WriteLine(ProgressReporter.FormatProgressMessage(scanned, total));
+            };
+
             VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken), verifySyncTable: filteredHeap.HasFilters);
         }
 

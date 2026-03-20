@@ -77,6 +77,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ParseArguments();
 
+            if (StatOnly)
+            {
+                FilteredHeap.ProgressCallback = (scanned, total) =>
+                {
+                    Console.WriteLine(ProgressReporter.FormatProgressMessage(scanned, total));
+                };
+            }
+
             IEnumerable<ClrObject> objectsToPrint = FilteredHeap.EnumerateFilteredObjects(Console.CancellationToken);
 
             bool? liveObjectWarning = null;
