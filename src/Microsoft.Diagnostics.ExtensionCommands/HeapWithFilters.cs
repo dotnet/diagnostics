@@ -213,16 +213,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             IEnumerable<ClrSegment> segments = EnumerateFilteredSegments();
 
+            // Capture once so the iterator body uses a stable local, not a re-read property.
+            MemoryRange? filterRange = MemoryRange;
+
             long totalBytes = 0;
             if (progressCallback != null)
             {
                 // Materialize segments to compute totalBytes before enumeration begins.
                 List<ClrSegment> segmentList = segments.ToList();
-                totalBytes = segmentList.Sum(s => (long)s.CommittedMemory.Length);
+                totalBytes = filterRange is MemoryRange fr
+                    ? segmentList.Sum(s => OverlapLength(s.CommittedMemory, fr))
+                    : segmentList.Sum(s => (long)s.CommittedMemory.Length);
                 segments = segmentList;
             }
 
-            // Tracks the sum of CommittedMemory.Length for all completed segments.
+            // Tracks the sum of effective scan length for all completed segments.
             long pastSegmentBytes = 0;
 
             foreach (ClrSegment segment in segments)
@@ -230,13 +235,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 long lastReportedBytesInSegment = 0;
 
                 IEnumerable<ClrObject> objs;
-                if (MemoryRange is MemoryRange range)
+                ulong effectiveSegStart;
+                long effectiveSegLength;
+                if (filterRange is MemoryRange range)
                 {
                     objs = segment.EnumerateObjects(range, carefully: true);
+                    // Progress within the segment is measured from the first address that falls
+                    // inside the requested range, so bytes before range.Start are not counted.
+                    effectiveSegStart = Math.Max(segment.Start, range.Start);
+                    effectiveSegLength = OverlapLength(segment.CommittedMemory, range);
                 }
                 else
                 {
                     objs = segment.EnumerateObjects(carefully: true);
+                    effectiveSegStart = segment.Start;
+                    effectiveSegLength = (long)segment.CommittedMemory.Length;
                 }
 
                 if (Generation is Generation generation)
@@ -248,11 +261,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     cancellation.ThrowIfCancellationRequested();
 
-                    // Report every 16KB of progress within the segment, measured by object address.
+                    // Report every ProgressStepBytes of progress within the segment, measured by object address.
                     if (progressCallback != null)
                     {
-                        long bytesInSegment = (long)(obj.Address - segment.Start);
-                        if (bytesInSegment - lastReportedBytesInSegment >= 16 * 1024)
+                        long bytesInSegment = (long)(obj.Address - effectiveSegStart);
+                        if (bytesInSegment - lastReportedBytesInSegment >= ProgressStepBytes)
                         {
                             progressCallback(pastSegmentBytes + bytesInSegment, totalBytes);
                             lastReportedBytesInSegment = bytesInSegment;
@@ -278,9 +291,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 // Advance the past-segment accumulator and report at the end of each segment.
-                pastSegmentBytes += (long)segment.CommittedMemory.Length;
+                pastSegmentBytes += effectiveSegLength;
                 progressCallback?.Invoke(pastSegmentBytes, totalBytes);
             }
+        }
+
+        /// <summary>Minimum byte advancement within a segment that triggers an in-segment progress callback.</summary>
+        private const int ProgressStepBytes = 16 * 1024;
+
+        /// <summary>Returns the number of bytes shared between two memory ranges.</summary>
+        private static long OverlapLength(MemoryRange committed, MemoryRange filter)
+        {
+            ulong start = Math.Max(committed.Start, filter.Start);
+            ulong end = Math.Min(committed.End, filter.End);
+            return end > start ? (long)(end - start) : 0;
         }
     }
 }
