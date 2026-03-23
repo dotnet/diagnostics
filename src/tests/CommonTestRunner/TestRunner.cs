@@ -82,7 +82,6 @@ namespace Microsoft.Diagnostics.CommonTestRunner
 
             // Create the native debugger process running
             ProcessRunner processRunner = new ProcessRunner(exePath, arguments.ToString()).
-                WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                 WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                 WithLog(outputHelper);
 
