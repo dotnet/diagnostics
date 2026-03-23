@@ -41,6 +41,8 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public string FriendlyName { get; private set; }
 
+        protected string LogFilePath => _logFilePath;
+
         public async Task Execute(ITestOutputHelper output)
         {
             // if this step is in progress on another thread, wait for it
