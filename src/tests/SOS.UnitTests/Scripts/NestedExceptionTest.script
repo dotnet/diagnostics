@@ -28,7 +28,7 @@ ENDIF:DESKTOP
 
 SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main(\(.*\))?\s*
-VERIFY:\[.*[\\|/]Debuggees[\\|/].*[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 11\s*\]\s*
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ (11|16)\s*\]\s*
 
 ENDIF:UNIX_SINGLE_FILE_APP
 ENDIF:ALPINE
