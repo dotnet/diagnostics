@@ -247,15 +247,22 @@ namespace Microsoft.Diagnostics.Tools.Trace
                             continue;
                         }
 
-                        bool supports = ProcessSupportsUserEventsIpcCommand(pid, string.Empty, out int resolvedPid, out string resolvedName, out string detectedRuntimeVersion);
-                        BuildProcessSupportCsv(resolvedPid, resolvedName, supports, supportedCsv, unsupportedCsv);
-                        if (supports)
+                        try
                         {
-                            supportedProcesses.AppendLine($"{resolvedPid} {resolvedName}");
+                            bool supports = ProcessSupportsUserEventsIpcCommand(pid, string.Empty, out int resolvedPid, out string resolvedName, out string detectedRuntimeVersion);
+                            BuildProcessSupportCsv(resolvedPid, resolvedName, supports, supportedCsv, unsupportedCsv);
+                            if (supports)
+                            {
+                                supportedProcesses.AppendLine($"{resolvedPid} {resolvedName}");
+                            }
+                            else
+                            {
+                                unsupportedProcesses.AppendLine($"{resolvedPid} {resolvedName} - Detected runtime: '{detectedRuntimeVersion}'");
+                            }
                         }
-                        else
+                        catch (Exception ex) when (ex is DiagnosticToolException or DiagnosticsClientException)
                         {
-                            unsupportedProcesses.AppendLine($"{resolvedPid} {resolvedName} - Detected runtime: '{detectedRuntimeVersion}'");
+                            // Process may have exited between enumeration and probing — skip it.
                         }
                     }
 
