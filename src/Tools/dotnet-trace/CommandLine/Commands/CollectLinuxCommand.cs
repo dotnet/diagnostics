@@ -23,6 +23,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private LineRewriter rewriter;
         private long statusUpdateTimestamp;
         private Version minRuntimeSupportingUserEventsIPCCommand = new(10, 0, 0);
+        private readonly bool cancelOnEnter;
+        private readonly bool printStatusOverTime;
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
@@ -41,6 +43,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             Console = console ?? new DefaultConsole();
             rewriter = new LineRewriter(Console);
+            cancelOnEnter = !Console.IsInputRedirected;
+            printStatusOverTime = !Console.IsOutputRedirected;
         }
 
         internal static bool IsSupported()
@@ -82,8 +86,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             int ret = (int)ReturnCode.TracingError;
             string scriptPath = null;
-            bool cursorVisibilityChanged = false;
-            bool originalCursorVisible = false;
             try
             {
                 if (args.Probe)
@@ -110,12 +112,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 args.Ct.Register(() => stopTracing = true);
 
-                // Only hide cursor if output is not redirected
                 if (!Console.IsOutputRedirected)
                 {
-                    originalCursorVisible = Console.CursorVisible;
                     Console.CursorVisible = false;
-                    cursorVisibilityChanged = true;
                 }
 
                 byte[] command = BuildRecordTraceArgs(args, out scriptPath);
@@ -151,10 +150,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             finally
             {
-                // Restore cursor visibility to its original state if we changed it
-                if (cursorVisibilityChanged)
+                if (!Console.IsOutputRedirected)
                 {
-                    Console.CursorVisible = originalCursorVisible;
+                    Console.CursorVisible = true;
                 }
 
                 if (!string.IsNullOrEmpty(scriptPath))
@@ -454,6 +452,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
 
                 scriptBuilder.Append($"let {providerNameSanitized}_flags = new_dotnet_provider_flags();\n");
+                scriptBuilder.Append($"{providerNameSanitized}_flags.with_callstacks();\n");
                 scriptBuilder.Append($"record_dotnet_provider(\"{providerName}\", 0x{keywords:X}, {eventLevel}, {providerNameSanitized}_flags);\n\n");
             }
 
@@ -562,12 +561,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
             }
 
-            if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
+            if (cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
             {
                 stopTracing = true;
             }
 
-            if (ot == OutputType.Progress)
+            if (printStatusOverTime && ot == OutputType.Progress)
             {
                 long currentTimestamp = Stopwatch.GetTimestamp();
                 if (statusUpdateTimestamp != 0 && currentTimestamp < statusUpdateTimestamp)
