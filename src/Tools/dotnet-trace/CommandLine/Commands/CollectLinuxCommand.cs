@@ -345,6 +345,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 return UserEventsProbeResult.ConnectionFailed;
             }
+            catch (IOException)
+            {
+                // Process exited mid-response (e.g. "Connection reset by peer" during IPC read).
+                return UserEventsProbeResult.ConnectionFailed;
+            }
             catch (UnsupportedCommandException)
             {
                 // can be thrown from an older runtime that doesn't even support GetProcessInfo
