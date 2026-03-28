@@ -301,14 +301,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             internal bool Execute(IReadOnlyList<string> commandLine, IServiceProvider services)
             {
                 IConsoleService consoleService = services.GetService<IConsoleService>();
-                CommandLineConfiguration configuration = new(_rootCommand)
-                {
-                    Output = new ConsoleServiceWrapper(consoleService.Write),
-                    Error = new ConsoleServiceWrapper(consoleService.WriteError)
-                };
-
-                // Parse the command line and invoke the command
-                ParseResult parseResult = configuration.Parse(commandLine);
+               
+                // Parse the command line
+                ParseResult parseResult = _rootCommand.Parse(commandLine);
 
                 if (parseResult.Errors.Count > 0)
                 {
