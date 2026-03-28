@@ -4652,6 +4652,88 @@ GetClrMethodInstance(
 }
 
 //
+// Searches the IL address map for the entry containing the given native offset.
+// Fallback for older runtimes where GetILOffsetsByAddress is buggy or unsupported.
+HRESULT
+GetILOffsetFromAddressMap(
+    ___in IXCLRDataMethodInstance* Method,
+    ___in ULONG64 nativeOffset,
+    ___out PULONG32 MethodOffs)
+{
+    HRESULT Status;
+    CLRDATA_IL_ADDRESS_MAP MapLocal[16];
+    CLRDATA_IL_ADDRESS_MAP* Map = MapLocal;
+    ULONG32 MapCount = ARRAY_SIZE(MapLocal);
+    ULONG32 MapNeeded;
+
+    for (;;)
+    {
+        if ((Status = Method->GetILAddressMap(MapCount, &MapNeeded, Map)) != S_OK)
+        {
+            if (Map != MapLocal)
+            {
+                delete[] Map;
+            }
+            return Status;
+        }
+
+        if (MapNeeded <= MapCount)
+        {
+            break;
+        }
+
+        // Need more map entries.
+        if (Map != MapLocal)
+        {
+            delete[] Map;
+            return E_UNEXPECTED;
+        }
+
+        Map = new CLRDATA_IL_ADDRESS_MAP[MapNeeded];
+        if (!Map)
+        {
+            return E_OUTOFMEMORY;
+        }
+
+        MapCount = MapNeeded;
+    }
+
+    // Search for the entry whose native address range contains nativeOffset.
+    // The last map entry sometimes has a bogus endAddress (e.g., wrapping back to
+    // the method start). Handle this by treating any entry where endAddress <=
+    // startAddress as extending to infinity (the end of the method code).
+    Status = E_FAIL;
+    for (size_t i = 0; i < MapNeeded; i++)
+    {
+        bool inRange;
+        if (Map[i].endAddress > Map[i].startAddress)
+        {
+            // Normal range.
+            inRange = (Map[i].startAddress <= nativeOffset && nativeOffset < Map[i].endAddress);
+        }
+        else
+        {
+            // Malformed/last entry: endAddress <= startAddress. Treat as open-ended.
+            inRange = (Map[i].startAddress <= nativeOffset);
+        }
+
+        if (inRange)
+        {
+            *MethodOffs = Map[i].ilOffset;
+            Status = S_OK;
+            break;
+        }
+    }
+
+    if (Map != MapLocal)
+    {
+        delete[] Map;
+    }
+
+    return Status;
+}
+
+//
 // Enumerates over the IL address map associated with the passed in
 // managed method, and returns the highest non-epilog offset.
 HRESULT
@@ -4751,33 +4833,39 @@ ConvertNativeToIlOffset(
         }
     }
 
-    if ((Status = pMethodInst->GetILOffsetsByAddress(nativeOffset, 1, NULL, methodOffs)) != S_OK)
+    // Try the IL address map first. On older runtimes (pre-.NET 5.0), GetILOffsetsByAddress
+    // has a bug where it returns incorrect IL offsets. GetILAddressMap returns the raw mapping
+    // table which we can search correctly ourselves.
+    Status = GetILOffsetFromAddressMap(pMethodInst, nativeOffset, methodOffs);
+    if (Status != S_OK)
     {
-        ExtDbgOut("ConvertNativeToIlOffset(%p): GetILOffsetsByAddress FAILED %08x\n", nativeOffset, Status);
-        *methodOffs = 0;
-    }
-    else
-    {
-        switch((LONG)*methodOffs)
+        // Fallback to GetILOffsetsByAddress if the map is unavailable.
+        if ((Status = pMethodInst->GetILOffsetsByAddress(nativeOffset, 1, NULL, methodOffs)) != S_OK)
         {
-        case CLRDATA_IL_OFFSET_NO_MAPPING:
-            return E_NOINTERFACE;
-
-        case CLRDATA_IL_OFFSET_PROLOG:
-            // Treat all of the prologue as part of
-            // the first source line.
+            ExtDbgOut("ConvertNativeToIlOffset(%p): GetILOffsetsByAddress FAILED %08x\n", nativeOffset, Status);
             *methodOffs = 0;
-            break;
-
-        case CLRDATA_IL_OFFSET_EPILOG:
-            // Back up until we find the last real
-            // IL offset.
-            if ((Status = GetLastMethodIlOffset(pMethodInst, methodOffs)) != S_OK)
-            {
-                return Status;
-            }
-            break;
         }
+    }
+
+    switch((LONG)*methodOffs)
+    {
+    case CLRDATA_IL_OFFSET_NO_MAPPING:
+        return E_NOINTERFACE;
+
+    case CLRDATA_IL_OFFSET_PROLOG:
+        // Treat all of the prologue as part of
+        // the first source line.
+        *methodOffs = 0;
+        break;
+
+    case CLRDATA_IL_OFFSET_EPILOG:
+        // Back up until we find the last real
+        // IL offset.
+        if ((Status = GetLastMethodIlOffset(pMethodInst, methodOffs)) != S_OK)
+        {
+            return Status;
+        }
+        break;
     }
 
     return pMethodInst->GetTokenAndScope(methodToken, ppModule);
