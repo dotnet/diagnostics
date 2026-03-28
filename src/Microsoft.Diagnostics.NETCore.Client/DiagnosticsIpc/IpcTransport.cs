@@ -445,6 +445,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             environReadable = true;
+
+            if (environData.Length == 0)
+            {
+                // Empty environ can mean the process has no environment variables, or that we read
+                // between fork() and execve() before the kernel populates the environment.
+                return tmpDirPath;
+            }
+
             tmpDirPath = ParseTmpDir(environData);
             return tmpDirPath;
         }
