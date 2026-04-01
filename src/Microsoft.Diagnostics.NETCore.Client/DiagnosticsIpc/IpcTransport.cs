@@ -416,6 +416,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// Gets the TMPDIR for a target process by reading /proc/{pid}/environ.
         /// Falls back to the platform temp directory if TMPDIR is not set or environ cannot be read.
+        /// This API is a best-effort helper - it can return the default value for processes that set
+        /// TMPDIR if it's called too early during startup as the environment can change several times
+        /// and there's no clear marker that such intermmediate states are over.
         /// The environReadable output indicates whether /proc/{pid}/environ was successfully read.
         /// </summary>
         internal static string GetProcessTmpDir(int hostPid, out bool environReadable)

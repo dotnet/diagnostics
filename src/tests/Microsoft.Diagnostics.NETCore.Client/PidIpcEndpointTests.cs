@@ -163,7 +163,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 // Wait for /proc/{pid}/environ to be populated.
                 // Between fork() and execve(), the environ file may be empty (0 bytes).
                 bool environPopulated = false;
-                const long MAX_TRIES = 20;
+                const int MAX_TRIES = 20;
                 const int DELAY_MS = 50;
                 for (int attempt = 0; attempt < MAX_TRIES && !environPopulated; attempt++)
                 {
