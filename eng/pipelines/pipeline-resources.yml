@@ -75,7 +75,7 @@ extends:
         options: --cap-add=SYS_PTRACE
 
       test_debian_13_amd64:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-13-amd64
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-13-helix-amd64
 
       test_fedora:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-43
