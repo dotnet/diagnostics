@@ -68,6 +68,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-ignoreGCState", Help = "Ignore the GC's marker that the heap is not walkable (will generate lots of false positive errors).")]
         public bool IgnoreGCState { get; set; }
 
+        [Option(Name = "-noprogress", Help = "Suppress periodic progress output during heap scanning.")]
+        public bool NoProgress { get; set; }
+
         [Argument(Help = "Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
 
@@ -77,7 +80,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ParseArguments();
 
-            IEnumerable<ClrObject> objectsToPrint = FilteredHeap.EnumerateFilteredObjects(Console.CancellationToken);
+            Action<long, long> progressCallback = null;
+            if (StatOnly && !NoProgress)
+            {
+                ProgressReporter reporter = new(Console.WriteLine);
+                progressCallback = reporter.Report;
+            }
+
+            IEnumerable<ClrObject> objectsToPrint = FilteredHeap.EnumerateFilteredObjects(Console.CancellationToken, progressCallback);
 
             bool? liveObjectWarning = null;
             if ((Live || Dead) && Short)
