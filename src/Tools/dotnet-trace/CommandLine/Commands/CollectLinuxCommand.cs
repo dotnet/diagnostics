@@ -20,11 +20,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         private bool stopTracing;
         private Stopwatch stopwatch = new();
-        private LineRewriter rewriter;
-        private long statusUpdateTimestamp;
+        private ProgressWriter progressWriter;
         private Version minRuntimeSupportingUserEventsIPCCommand = new(10, 0, 0);
         private readonly bool cancelOnEnter;
-        private readonly bool printStatusOverTime;
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
@@ -42,9 +40,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
         public CollectLinuxCommandHandler(IConsole console = null)
         {
             Console = console ?? new DefaultConsole();
-            rewriter = new LineRewriter(Console);
             cancelOnEnter = !Console.IsInputRedirected;
-            printStatusOverTime = !Console.IsOutputRedirected;
+            progressWriter = new ProgressWriter(Console, stopwatch);
         }
 
         internal static bool IsSupported()
@@ -571,26 +568,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 stopTracing = true;
             }
 
-            if (printStatusOverTime && ot == OutputType.Progress)
+            if (ot == OutputType.Progress)
             {
-                long currentTimestamp = Stopwatch.GetTimestamp();
-                if (statusUpdateTimestamp != 0 && currentTimestamp < statusUpdateTimestamp)
-                {
-                    return stopTracing ? 1 : 0;
-                }
-
-                if (statusUpdateTimestamp == 0)
-                {
-                    rewriter.LineToClear = Console.CursorTop - 1;
-                }
-                else
-                {
-                    rewriter.RewriteConsoleLine();
-                }
-
-                statusUpdateTimestamp = currentTimestamp + Stopwatch.Frequency;
-                Console.Out.WriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace.");
-                Console.Out.WriteLine("Press <Enter> or <Ctrl-C> to exit...");
+                progressWriter.Update();
             }
 
             return stopTracing ? 1 : 0;
@@ -641,6 +621,84 @@ namespace Microsoft.Diagnostics.Tools.Trace
             byte[] command,
             UIntPtr commandLen,
             recordTraceCallback callback);
+
+        /// <summary>
+        /// Encapsulates progress display for the native record-trace callback.
+        /// Probes console capability on the first Update() call, then handles throttled
+        /// in-place rewrites (interactive), a single static message (non-interactive),
+        /// or silent no-op (output redirected).
+        /// </summary>
+        private sealed class ProgressWriter
+        {
+            private readonly IConsole _console;
+            private readonly Stopwatch _stopwatch;
+            private bool _initialized;
+            // Non-null after initialization only when in-place rewriting is supported.
+            private LineRewriter _rewriter;
+            private long _nextUpdateTimestamp;
+
+            public ProgressWriter(IConsole console, Stopwatch stopwatch)
+            {
+                _console = console;
+                _stopwatch = stopwatch;
+            }
+
+            /// <summary>
+            /// Called on each Progress callback from native record-trace.
+            /// No-ops if output is redirected, non-interactive, or within the 1-second throttle window.
+            /// </summary>
+            public void Update()
+            {
+                if (!_initialized)
+                {
+                    Initialize();
+                }
+
+                if (_rewriter == null)
+                {
+                    return;
+                }
+
+                long now = Stopwatch.GetTimestamp();
+                if (_nextUpdateTimestamp != 0 && now < _nextUpdateTimestamp)
+                {
+                    return;
+                }
+
+                if (_nextUpdateTimestamp != 0)
+                {
+                    _rewriter.RewriteConsoleLine();
+                }
+
+                _nextUpdateTimestamp = now + Stopwatch.Frequency;
+                _console.Out.WriteLine($"[{_stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace.");
+                _console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+            }
+
+            private void Initialize()
+            {
+                _initialized = true;
+
+                if (_console.IsOutputRedirected)
+                {
+                    return;
+                }
+
+                // Only capture the cursor position to rewrite once we've committed to writing progress output,
+                // otherwise the position becomes stale the moment any other console output occurs.
+                LineRewriter rewriter = new(_console);
+                rewriter.LineToClear = _console.CursorTop - 1;
+
+                if (rewriter.LineToClear >= 0 && rewriter.IsRewriteConsoleLineSupported)
+                {
+                    _rewriter = rewriter;
+                }
+                else
+                {
+                    _console.Out.WriteLine("Recording trace in progress. Press <Enter> or <Ctrl+C> to exit...");
+                }
+            }
+        }
 
 #region testing seams
         internal Func<byte[], UIntPtr, recordTraceCallback, int> RecordTraceInvoker { get; set; } = RunRecordTrace;

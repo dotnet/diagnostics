@@ -359,6 +359,30 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(callbackInvoked);
         }
 
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_PrintsStatusOnce_WhenCursorRepositioningUnsupported()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+
+            var handler = new CollectLinuxCommandHandler(console);
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                // Simulate cursor repositioning unsupported by resetting the cursor
+                // during the callback, undoing any cursor advancement from the tool's
+                // earlier console output (banner, provider table, etc.).
+                console.Clear();
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+
+            string[] lines = console.Lines;
+            int statusLineCount = lines.Count(l => l.Contains("Recording trace", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(1, statusLineCount);
+        }
+
         private static int Run(object args, MockConsole console)
         {
             var handler = new CollectLinuxCommandHandler(console);
@@ -565,7 +589,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             DefaultOutputFile,
             "",
             "[dd:hh:mm:ss]\tRecording trace.",
-            "Press <Enter> or <Ctrl-C> to exit...",
+            "Press <Enter> or <Ctrl+C> to exit...",
         ];
         private static string[] PreviewMessages = [
             "==========================================================================================",
