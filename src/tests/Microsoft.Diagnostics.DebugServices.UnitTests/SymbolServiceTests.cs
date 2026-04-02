@@ -91,6 +91,35 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             symbolService.DisableSymbolStore();
         }
 
+        [Fact]
+        public void OpenSymbolFile_ReturnsNull_ForInvalidPEStream()
+        {
+            SymbolService symbolService = new(this);
+
+            // OpenSymbolFile should return null (not throw) for non-PE data.
+            // The native SymbolReader::LoadSymbols layer caches these failures
+            // to avoid repeated symbol server lookups (dotnet/diagnostics#675),
+            // but that caching is in native C++ and cannot be tested here.
+            byte[] bogusData = new byte[] { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+            using System.IO.MemoryStream stream = new(bogusData);
+
+            ISymbolFile result = symbolService.OpenSymbolFile("bogus.dll", isFileLayout: false, stream);
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public void OpenSymbolFile_ReturnsNull_ForInvalidPdbStream()
+        {
+            SymbolService symbolService = new(this);
+
+            // A stream that is not a valid portable PDB should return null.
+            byte[] bogusData = new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00 };
+            using System.IO.MemoryStream stream = new(bogusData);
+
+            ISymbolFile result = symbolService.OpenSymbolFile(stream);
+            Assert.Null(result);
+        }
+
         #region IHost
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();

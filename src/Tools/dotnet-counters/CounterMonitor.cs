@@ -175,6 +175,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             int maxTimeSeries,
             TimeSpan duration,
             bool showDeltas,
+            bool abbreviateLargeNumbers,
             string dsrouter)
         {
             try
@@ -205,7 +206,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
                         _counterList = ConfigureCounters(counters);
-                        _renderer = new ConsoleWriter(new DefaultConsole(useAnsi), showDeltaColumn:showDeltas);
+                        _renderer = new ConsoleWriter(new DefaultConsole(useAnsi), showDeltaColumn:showDeltas, abbreviateLargeNumbers:abbreviateLargeNumbers);
                         _diagnosticsClient = holder.Client;
                         _settings = new MetricsPipelineSettings();
                         _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;

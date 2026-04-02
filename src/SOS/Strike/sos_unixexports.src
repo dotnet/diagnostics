@@ -38,7 +38,6 @@ HistObjFind
 HistRoot
 HistStats
 IP2MD
-Name2EE
 PrintException
 runtimes
 StopOnCatch
@@ -50,7 +49,6 @@ SuppressJitOptimization
 SyncBlk
 Threads
 ThreadState
-Token2EE
 u
 
 SOSInitializeByHost

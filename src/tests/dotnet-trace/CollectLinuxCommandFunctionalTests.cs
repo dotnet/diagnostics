@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -15,6 +16,7 @@ using Microsoft.Diagnostics.Tools.Trace;
 using Microsoft.DotNet.XUnitExtensions;
 using Microsoft.Internal.Common.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -22,6 +24,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         public static bool IsCollectLinuxSupported => CollectLinuxCommandHandler.IsSupported();
         public static bool IsCollectLinuxNotSupported => !CollectLinuxCommandHandler.IsSupported();
+
+        private readonly ITestOutputHelper _outputHelper;
+
+        public CollectLinuxCommandFunctionalTests(ITestOutputHelper outputHelper)
+        {
+            _outputHelper = outputHelper;
+        }
         private static CollectLinuxCommandHandler.CollectLinuxArgs TestArgs(
             CancellationToken ct = default,
             string[] providers = null,
@@ -52,7 +61,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(BasicCases))]
         public void CollectLinuxCommandProviderConfigurationConsolidation(object testArgs, string[] expectedLines)
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
             int exitCode = Run(testArgs, console);
             Assert.Equal((int)ReturnCode.Ok, exitCode);
             console.AssertSanitizedLinesEqual(CollectLinuxSanitizer, expectedLines);
@@ -62,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(InvalidProviders))]
         public void CollectLinuxCommandProviderConfigurationConsolidation_Throws(object testArgs, string[] expectedException)
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
             int exitCode = Run(testArgs, console);
             Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
             console.AssertSanitizedLinesEqual(null, expectedException);
@@ -71,7 +80,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_ReportsResolveProcessErrors()
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(processId: -1);
             int exitCode = Run(args, console);
 
@@ -82,7 +91,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_ReportsResolveProcessNameErrors()
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(name: "process-that-should-not-exist", processId: 0);
             int exitCode = Run(args, console);
 
@@ -94,7 +103,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(ResolveProcessExceptions))]
         public void CollectLinuxCommand_ResolveProcessExceptions(object testArgs, string[] expectedError)
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
 
             int exitCode = Run(testArgs, console);
 
@@ -105,7 +114,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_Probe_ListsProcesses_WhenNoArgs()
         {
-            MockConsole console = new(200, 2000);
+            MockConsole console = new(200, 2000, _outputHelper);
             var args = TestArgs(probe: true, output: new FileInfo(CommonOptions.DefaultTraceName));
             int exitCode = Run(args, console);
 
@@ -125,7 +134,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_Probe_CsvToConsole()
         {
-            MockConsole console = new(200, 2000);
+            MockConsole console = new(200, 2000, _outputHelper);
             var args = TestArgs(probe: true, output: new FileInfo("stdout"));
             int exitCode = Run(args, console);
 
@@ -142,7 +151,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_Probe_Csv()
         {
-            MockConsole console = new(200, 2000);
+            MockConsole console = new(200, 2000, _outputHelper);
             string tempFilePath = Path.GetTempFileName();
             var args = TestArgs(probe: true, output: new FileInfo(tempFilePath));
             int exitCode = Run(args, console);
@@ -161,7 +170,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_InvalidPid()
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(processId: -1, probe: true);
             int exitCode = Run(args, console);
 
@@ -175,7 +184,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_InvalidName()
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(name: "process-that-should-not-exist", processId: 0, probe: true);
             int exitCode = Run(args, console);
 
@@ -189,7 +198,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_BothPidAndName()
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(name: "dummy", processId: 1, probe: true);
             int exitCode = Run(args, console);
 
@@ -202,16 +211,176 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, expected);
         }
 
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_ReportsConnectionFailed_NonDotNetProcess()
+        {
+            // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic port.
+            string pid1Name = Process.GetProcessById(1).ProcessName;
+            MockConsole console = new(200, 30, _outputHelper);
+            var args = TestArgs(processId: 1);
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.TracingError, exitCode);
+            console.AssertSanitizedLinesEqual(null, FormatException(
+                $"Unable to connect to process '{pid1Name} (1)'. The process may have exited, or it doesn't have an accessible .NET diagnostic port."));
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_ReportsConnectionFailed_NonDotNetProcess()
+        {
+            // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic port.
+            string pid1Name = Process.GetProcessById(1).ProcessName;
+            MockConsole console = new(200, 2000, _outputHelper);
+            var args = TestArgs(processId: 1, probe: true, output: new FileInfo(CommonOptions.DefaultTraceName));
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    $"Could not probe process '{pid1Name} (1)'. The process may have exited, or it doesn't have an accessible .NET diagnostic port.",
+                }
+            );
+            console.AssertSanitizedLinesEqual(null, expected);
+        }
+
         [ConditionalFact(nameof(IsCollectLinuxNotSupported))]
         public void CollectLinuxCommand_NotSupported_OnNonLinux()
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
             int exitCode = Run(TestArgs(), console);
             Assert.Equal((int)ReturnCode.PlatformNotSupportedError, exitCode);
             console.AssertSanitizedLinesEqual(null, new string[] {
                 "The collect-linux command is not supported on this platform.",
                 "For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace."
             });
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_RestoresCursorVisibility_OnSuccess()
+        {
+            MockConsole console = new(200, 30, _outputHelper)
+            {
+                CursorVisible = false
+            };
+
+            int exitCode = Run(TestArgs(), console);
+
+            // Cursor visibility should always be restored to visible after command completes
+            Assert.True(console.CursorVisible, "Cursor should be visible after command completes");
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_RestoresCursorVisibility_OnError()
+        {
+            MockConsole console = new(200, 30, _outputHelper)
+            {
+                CursorVisible = false
+            };
+
+            var handler = new CollectLinuxCommandHandler(console);
+            // Simulate an error by throwing an exception in the RecordTraceInvoker
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                throw new InvalidOperationException("Simulated error");
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+
+            // Cursor visibility should always be restored to visible even when an error occurs
+            Assert.True(console.CursorVisible, "Cursor should be visible after error");
+            Assert.Equal((int)ReturnCode.TracingError, exitCode);
+        }
+
+        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CollectLinuxCommand_DoesNotChangeCursorVisibility_WhenOutputIsRedirected(bool initialCursorVisible)
+        {
+            MockConsole console = new(200, 30, _outputHelper)
+            {
+                CursorVisible = initialCursorVisible,
+                IsOutputRedirected = true
+            };
+
+            int exitCode = Run(TestArgs(), console);
+
+            // When output is redirected, the command should not change cursor visibility,
+            // so the cursor should remain in its original state.
+            Assert.Equal(initialCursorVisible, console.CursorVisible);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DoesNotPrintStatusUpdates_WhenOutputIsRedirected()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+            console.IsOutputRedirected = true;
+
+            var handler = new CollectLinuxCommandHandler(console);
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                // Send progress output type.
+                cb((uint)3, IntPtr.Zero, UIntPtr.Zero);
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+
+            string[] lines = console.Lines;
+            Assert.DoesNotContain(lines, l => l.Contains("Recording trace", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(lines, l => l.Contains("Press <Enter>", StringComparison.OrdinalIgnoreCase));
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_DoesNotReadKey_WhenInputIsRedirected()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+            console.IsInputRedirected = true;
+            console.KeyAvailable = true;
+            console.NextKeyInfo = new ConsoleKeyInfo('\r', ConsoleKey.Enter, false, false, false);
+
+            var handler = new CollectLinuxCommandHandler(console);
+            bool callbackInvoked = false;
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                // Send progress output type.
+                int result = cb((uint)3, IntPtr.Zero, UIntPtr.Zero);
+
+                // It should return 0, i.e., continue tracing, even though
+                // enter was pressed.
+                Assert.Equal(0, result);
+
+                callbackInvoked = true;
+
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+
+            // The important assertion is in the callback so make sure it was called.
+            Assert.True(callbackInvoked);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_PrintsStatusOnce_WhenCursorRepositioningUnsupported()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+
+            var handler = new CollectLinuxCommandHandler(console);
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                // Simulate cursor repositioning unsupported by resetting the cursor
+                // during the callback, undoing any cursor advancement from the tool's
+                // earlier console output (banner, provider table, etc.).
+                console.Clear();
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+
+            string[] lines = console.Lines;
+            int statusLineCount = lines.Count(l => l.Contains("Recording trace", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(1, statusLineCount);
         }
 
         private static int Run(object args, MockConsole console)
@@ -420,7 +589,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             DefaultOutputFile,
             "",
             "[dd:hh:mm:ss]\tRecording trace.",
-            "Press <Enter> or <Ctrl-C> to exit...",
+            "Press <Enter> or <Ctrl+C> to exit...",
         ];
         private static string[] PreviewMessages = [
             "==========================================================================================",

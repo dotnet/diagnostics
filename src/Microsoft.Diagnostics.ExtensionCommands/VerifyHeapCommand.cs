@@ -1,5 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.Diagnostics.DebugServices;
@@ -27,6 +28,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         [Option(Name = "-ignoreGCState", Help = "Ignore the GC's marker that the heap is not walkable (will generate lots of false positive errors).")]
         public bool IgnoreGCState { get; set; }
+
+        [Option(Name = "-noprogress", Help = "Suppress periodic progress output during heap scanning.")]
+        public bool NoProgress { get; set; }
 
         [Argument(Help ="Optional memory ranges in the form of: [Start [End]]")]
         public string[] MemoryRange { get; set; }
@@ -58,7 +62,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 throw new DiagnosticsException("The GC heap is not in a valid state for traversal.  (Use -ignoreGCState to override.)");
             }
 
-            VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken), verifySyncTable: filteredHeap.HasFilters);
+            Action<long, long> progressCallback = null;
+            if (!NoProgress)
+            {
+                ProgressReporter reporter = new(Console.WriteLine);
+                progressCallback = reporter.Report;
+            }
+
+            VerifyHeap(filteredHeap.EnumerateFilteredObjects(Console.CancellationToken, progressCallback), verifySyncTable: filteredHeap.HasFilters);
         }
 
         [HelpInvoke]

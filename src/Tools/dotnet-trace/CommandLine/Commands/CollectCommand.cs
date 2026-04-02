@@ -385,7 +385,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                 }
                             }
 
-                            FileInfo fileInfo = new(output.FullName);
                             bool wroteStatus = false;
                             Action printStatus = () => {
                                 if (printStatusOverTime && rewriter.IsRewriteConsoleLineSupported)
@@ -399,8 +398,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                         // First time writing status, so don't rewrite console yet.
                                         wroteStatus = true;
                                     }
-                                    fileInfo.Refresh();
-                                    ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(fileInfo.Length)}");
+                                    ConsoleWriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace {GetSize(eventStream.Length)}");
                                     ConsoleWriteLine("Press <Enter> or <Ctrl+C> to exit...");
                                 }
 

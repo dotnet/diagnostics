@@ -790,10 +790,16 @@ DECLARE_API(DumpIL)
         }
         else
         {
+            if (IsNilToken(MethodDescData.MDToken))
+            {
+                ExtOut("This method has no IL body (e.g. IL stubs generated for P/Invoke or Reverse P/Invoke marshaling).\n");
+                return S_OK;
+            }
+
             GetILAddressResult result = GetILAddress(MethodDescData);
             if (std::get<0>(result) == (TADDR)0)
             {
-                ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
+                ExtOut("Unable to retrieve IL for this method (ilAddr is %p).\n", SOS_PTR(std::get<0>(result)));
                 return E_FAIL;
             }
             ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
@@ -1020,6 +1026,59 @@ DECLARE_API(DumpSigElem)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
+*    Helper function to display class details (attributes, vtable      *
+*    slots, and fields).                                               *
+*                                                                      *
+\**********************************************************************/
+static void DisplayClassDetails(CLRDATA_ADDRESS methodTable, DacpMethodTableData *pMTData)
+{
+    ExtOut("Class Attributes:    %08x  ", pMTData->dwAttrClass);
+    if (IsTdInterface(pMTData->dwAttrClass))
+        ExtOut("Interface ");
+    if (IsTdAbstract(pMTData->dwAttrClass))
+        ExtOut("Abstract ");
+    if (IsTdImport(pMTData->dwAttrClass))
+        ExtOut("ComImport ");
+    if (IsTdSealed(pMTData->dwAttrClass))
+        ExtOut("Sealed ");
+    ExtOut("\n");
+
+    if (pMTData->wNumVirtuals != 0)
+    {
+        ExtOut("Vtable Slots:    %d\n", pMTData->wNumVirtuals);
+    }
+    if (pMTData->wNumVtableSlots != 0)
+    {
+        ExtOut("Total Method Slots:  %d\n", pMTData->wNumVtableSlots);
+    }
+
+    DacpMethodTableFieldData vMethodTableFields;
+    if (SUCCEEDED(vMethodTableFields.Request(g_sos, methodTable)))
+    {
+        ExtOut("NumInstanceFields:   %d\n", vMethodTableFields.wNumInstanceFields);
+        ExtOut("NumStaticFields:     %d\n", vMethodTableFields.wNumStaticFields);
+
+        if (vMethodTableFields.wNumThreadStaticFields != 0)
+        {
+            ExtOut("NumThreadStaticFields: %d\n", vMethodTableFields.wNumThreadStaticFields);
+        }
+
+        if (vMethodTableFields.wContextStaticsSize)
+        {
+            ExtOut("ContextStaticOffset: 0x%x\n", vMethodTableFields.wContextStaticOffset);
+            ExtOut("ContextStaticsSize:  %d\n", vMethodTableFields.wContextStaticsSize);
+        }
+
+        if (vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
+        {
+            DisplayFields(methodTable, pMTData, &vMethodTableFields, (TADDR)0, TRUE, FALSE);
+        }
+    }
+}
+
+/**********************************************************************\
+* Routine Description:                                                 *
+*                                                                      *
 *    This function is called to dump the contents of an EEClass from   *
 *    a given address
 *                                                                      *
@@ -1096,57 +1155,16 @@ DECLARE_API(DumpClass)
     }
     else
     {
-        DMLOut("Parent MethodTable: %s\n", DMLMethodTable(mtdata.ParentMethodTable));
+        DMLOut("Parent:    %s\n", DMLMethodTable(mtdata.ParentMethodTable));
     }
     DMLOut("Module:          %s\n", DMLModule(mtdata.Module));
     DMLOut("Method Table:    %s\n", DMLMethodTable(methodTable));
-    if (preferMT)
+    if (preferMT && methodTable != mtdata.Class)
     {
-        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtdata.Class));
+        DMLOut("Canonical:    %s\n", DMLMethodTable(mtdata.Class));
     }
-    if (mtdata.wNumVirtuals != 0)
-    {
-        ExtOut("Vtable Slots:    %x\n", mtdata.wNumVirtuals);
-    }
-    if (mtdata.wNumVtableSlots != 0)
-    {
-        ExtOut("Total Method Slots:  %x\n", mtdata.wNumVtableSlots);
-    }
-    ExtOut("Class Attributes:    %x  ", mtdata.dwAttrClass);
 
-    if (IsTdInterface(mtdata.dwAttrClass))
-        ExtOut("Interface, ");
-    if (IsTdAbstract(mtdata.dwAttrClass))
-        ExtOut("Abstract, ");
-    if (IsTdImport(mtdata.dwAttrClass))
-        ExtOut("ComImport, ");
-
-    ExtOut("\n");
-
-    DacpMethodTableFieldData vMethodTableFields;
-    if (SUCCEEDED(vMethodTableFields.Request(g_sos, methodTable)))
-    {
-        ExtOut("NumInstanceFields:   %x\n", vMethodTableFields.wNumInstanceFields);
-        ExtOut("NumStaticFields:     %x\n", vMethodTableFields.wNumStaticFields);
-
-        if (vMethodTableFields.wNumThreadStaticFields != 0)
-        {
-            ExtOut("NumThreadStaticFields: %x\n", vMethodTableFields.wNumThreadStaticFields);
-        }
-
-
-        if (vMethodTableFields.wContextStaticsSize)
-        {
-            ExtOut("ContextStaticOffset: %x\n", vMethodTableFields.wContextStaticOffset);
-            ExtOut("ContextStaticsSize:  %x\n", vMethodTableFields.wContextStaticsSize);
-        }
-
-
-        if (vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
-        {
-            DisplayFields(methodTable, &mtdata, &vMethodTableFields, (TADDR)0, TRUE, FALSE);
-        }
-    }
+    DisplayClassDetails(methodTable, &mtdata);
 
     return Status;
 }
@@ -1168,11 +1186,13 @@ DECLARE_API(DumpMT)
     MINIDUMP_NOT_SUPPORTED();
 
     BOOL bDumpMDTable = FALSE;
+    BOOL bDumpAll = FALSE;
     BOOL dml = FALSE;
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-MD", &bDumpMDTable, COBOOL, FALSE},
+        {"-all", &bDumpAll, COBOOL, FALSE},
         {"/d", &dml, COBOOL, FALSE}
     };
     CMDValue arg[] =
@@ -1187,6 +1207,9 @@ DECLARE_API(DumpMT)
 
     EnableDMLHolder dmlHolder(dml);
     TableOutput table(2, 20, AlignLeft, false);
+
+    if (bDumpAll)
+        bDumpMDTable = TRUE;
 
     if (nArg == 0)
     {
@@ -1215,13 +1238,25 @@ DECLARE_API(DumpMT)
     DacpMethodTableCollectibleData vMethTableCollectible;
     vMethTableCollectible.Request(g_sos, TO_CDADDR(dwStartAddr));
 
-    BOOL preferCanonMT = FALSE;
-    if (SUCCEEDED(PreferCanonMTOverEEClass(vMethTable.Class, &preferCanonMT)) && preferCanonMT)
+    // Check if runtime returns canonical MT instead of EEClass (.NET 9+)
+    BOOL runtimePrefersCanonMT = FALSE;
+    CLRDATA_ADDRESS canonicalMT = 0;
+    Status = PreferCanonMTOverEEClass(vMethTable.Class, &runtimePrefersCanonMT, &canonicalMT);
+
+    table.WriteRow("Parent:", DMLMethodTable(vMethTable.ParentMethodTable));
+
+    if (SUCCEEDED(Status) && runtimePrefersCanonMT)
     {
-        table.WriteRow("Canonical MethodTable:", EEClassPtr(vMethTable.Class));
+        // .NET 9+: vMethTable.Class contains canonical MT, not EEClass
+        // Only show "Canonical" if it differs from the current MT
+        if (canonicalMT != 0 && canonicalMT != TO_CDADDR(dwStartAddr))
+        {
+            table.WriteRow("Canonical:", DMLMethodTable(canonicalMT));
+        }
     }
     else
     {
+        // Legacy: vMethTable.Class contains EEClass
         table.WriteRow("EEClass:", EEClassPtr(vMethTable.Class));
     }
 
@@ -1263,9 +1298,9 @@ DECLARE_API(DumpMT)
     }
 
     table.WriteRow("BaseSize:", PrefixHex(vMethTable.BaseSize));
-    table.WriteRow("ComponentSize:", PrefixHex(vMethTable.ComponentSize));
-    table.WriteRow("DynamicStatics:", vMethTable.bIsDynamic ? "true" : "false");
-    table.WriteRow("ContainsPointers:", vMethTable.bContainsPointers ? "true" : "false");
+    if (vMethTable.ComponentSize != 0)
+        table.WriteRow("ComponentSize:", PrefixHex(vMethTable.ComponentSize));
+    table.WriteRow("Has GC Pointers:", vMethTable.bContainsPointers ? "true" : "false");
     table.WriteRow("Number of Methods:", Decimal(vMethTable.wNumMethods));
 
     table.SetColWidth(0, 29);
@@ -1282,7 +1317,7 @@ DECLARE_API(DumpMT)
 
         table.WriteRow("Entry", "MethodDesc", "JIT", "Slot", "Name");
 
-        ISOSMethodEnum *pMethodEnumerator;
+        ToRelease<ISOSMethodEnum> pMethodEnumerator;
         if (SUCCEEDED(g_sos15->GetMethodTableSlotEnumerator(dwStartAddr, &pMethodEnumerator)))
         {
             SOSMethodData entry;
@@ -1363,6 +1398,14 @@ DECLARE_API(DumpMT)
             }
         }
     }
+    // When -all is specified, include class details (similar to DumpClass output)
+    if (bDumpAll)
+    {
+        Print("--------------------------------------\n");
+        Print("Additional Details\n");
+
+        DisplayClassDetails(TO_CDADDR(dwStartAddr), &vMethTable);
+    }
     return Status;
 }
 
@@ -1381,13 +1424,24 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
 
     ExtOut("Name:        %S\n", g_mdName);
     DMLOut("MethodTable: %s\n", DMLMethodTable(taMT));
-    BOOL preferCanonMT = FALSE;
-    if (SUCCEEDED(PreferCanonMTOverEEClass(TO_CDADDR(taMT), &preferCanonMT)) && preferCanonMT)
+
+    // Check if runtime returns canonical MT instead of EEClass (.NET 9+)
+    BOOL runtimePrefersCanonMT = FALSE;
+    CLRDATA_ADDRESS canonicalMT = 0;
+    Status = PreferCanonMTOverEEClass(mtabledata.Class, &runtimePrefersCanonMT, &canonicalMT);
+
+    if (SUCCEEDED(Status) && runtimePrefersCanonMT)
     {
-        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
+        // .NET 9+: mtabledata.Class contains canonical MT, not EEClass
+        // Only show "Canonical" if it differs from the current MT
+        if (canonicalMT != 0 && canonicalMT != TO_CDADDR(taMT))
+        {
+            DMLOut("Canonical: %s\n", DMLMethodTable(canonicalMT));
+        }
     }
     else
     {
+        // Legacy: mtabledata.Class contains EEClass
         DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
     }
     ExtOut("Size:        %d(0x%x) bytes\n", size, size);
@@ -1478,23 +1532,10 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     ExtOut("Name:        %S\n", obj.GetTypeName());
     DMLOut("MethodTable: %s\n", DMLMethodTable(objData.MethodTable));
 
-
     DacpMethodTableData mtabledata;
-    if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) == S_OK)
+    if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) != S_OK)
     {
-        BOOL preferCanonMT = FALSE;
-        if (SUCCEEDED(PreferCanonMTOverEEClass(mtabledata.Class, &preferCanonMT)) && preferCanonMT)
-        {
-            DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
-        }
-        else
-        {
-            DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
-        }
-    }
-    else
-    {
-        ExtOut("Invalid EEClass address\n");
+        ExtOut("Invalid MethodTable address\n");
         return Status;
     }
 
@@ -1557,9 +1598,12 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         CLRDATA_ADDRESS objAddr = TO_CDADDR(taObj);
         BOOL isTrackedType;
         BOOL hasTaggedMemory;
-        if (SUCCEEDED(sos11->IsTrackedType(objAddr, &isTrackedType, &hasTaggedMemory)))
+        if (SUCCEEDED(sos11->IsTrackedType(objAddr, &isTrackedType, &hasTaggedMemory))
+            && (isTrackedType || hasTaggedMemory))
         {
-            ExtOut("Tracked Type: %s\n", isTrackedType ? "true" : "false");
+            if (isTrackedType)
+                ExtOut("Tracked Type: true\n");
+
             if (hasTaggedMemory)
             {
                 CLRDATA_ADDRESS taggedMemory = (TADDR)0;
@@ -1638,10 +1682,6 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         ExtOut("String:      ");
         StringObjectContent(taObj);
         ExtOut("\n");
-    }
-    else if (objData.ObjectType == OBJ_OBJECT)
-    {
-        ExtOut("Object\n");
     }
 
     if (bPrintFields)
@@ -3915,46 +3955,6 @@ DECLARE_API(RCWCleanupList)
 }
 #endif // FEATURE_COMINTEROP
 
-enum {
-    // These are the values set in m_dwTransientFlags.
-    // Note that none of these flags survive a prejit save/restore.
-
-    MODULE_IS_TENURED           = 0x00000001,   // Set once we know for sure the Module will not be freed until the appdomain itself exits
-    // unused                   = 0x00000002,
-    CLASSES_FREED               = 0x00000004,
-    IS_EDIT_AND_CONTINUE        = 0x00000008,   // is EnC Enabled for this module
-
-    IS_PROFILER_NOTIFIED        = 0x00000010,
-    IS_ETW_NOTIFIED             = 0x00000020,
-
-    //
-    // Note: the order of these must match the order defined in
-    // cordbpriv.h for DebuggerAssemblyControlFlags. The three
-    // values below should match the values defined in
-    // DebuggerAssemblyControlFlags when shifted right
-    // DEBUGGER_INFO_SHIFT bits.
-    //
-    DEBUGGER_USER_OVERRIDE_PRIV = 0x00000400,
-    DEBUGGER_ALLOW_JIT_OPTS_PRIV= 0x00000800,
-    DEBUGGER_TRACK_JIT_INFO_PRIV= 0x00001000,
-    DEBUGGER_ENC_ENABLED_PRIV   = 0x00002000,   // this is what was attempted to be set.  IS_EDIT_AND_CONTINUE is actual result.
-    DEBUGGER_PDBS_COPIED        = 0x00004000,
-    DEBUGGER_IGNORE_PDBS        = 0x00008000,
-    DEBUGGER_INFO_MASK_PRIV     = 0x0000Fc00,
-    DEBUGGER_INFO_SHIFT_PRIV    = 10,
-
-    // Used to indicate that this module has had it's IJW fixups properly installed.
-    IS_IJW_FIXED_UP             = 0x00080000,
-    IS_BEING_UNLOADED           = 0x00100000,
-
-    // Used to indicate that the module is loaded sufficiently for generic candidate instantiations to work
-    MODULE_READY_FOR_TYPELOAD  = 0x00200000,
-
-    // Used during NGen only
-    TYPESPECS_TRIAGED           = 0x40000000,
-    MODULE_SAVED                = 0x80000000,
-};
-
 void ModuleMapTraverse(UINT index, CLRDATA_ADDRESS methodTable, LPVOID token)
 {
     ULONG32 rid = (ULONG32)(size_t)token;
@@ -4022,6 +4022,8 @@ DECLARE_API(DumpModule)
         ExtOut("PEFile ");
     if (module.bIsReflection)
         ExtOut("Reflection ");
+    if (module.dwTransientFlags & DacpModuleData::IsEditAndContinue)
+        ExtOut("EditAndContinue ");
 
     ToRelease<IXCLRDataModule> dataModule;
     if (SUCCEEDED(g_sos->GetModule(TO_CDADDR(p_ModuleAddr), &dataModule)))
@@ -4037,11 +4039,6 @@ DECLARE_API(DumpModule)
                 ExtOut("IsFileLayout ");
         }
     }
-    ExtOut("\n");
-
-    ExtOut("TransientFlags:          %08x ", module.dwTransientFlags);
-    if (module.dwTransientFlags & IS_EDIT_AND_CONTINUE)
-        ExtOut("IS_EDIT_AND_CONTINUE");
     ExtOut("\n");
 
     DMLOut("Assembly:                %s\n", DMLAssembly(module.Assembly));
@@ -7064,10 +7061,23 @@ DECLARE_API(u)
     DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
     std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]> map(nullptr);
     ULONG32 mapCount = 0;
+    // GetIntermediateLangMap may fail for IL stubs or methods without IL address maps.
+    // Treat failure as non-fatal and proceed with native-only disassembly, but propagate
+    // OOM since that indicates a real problem.
     Status = GetIntermediateLangMap(bIL, codeHeaderData, map /*out*/, mapCount /* out */, bDisplayILMap);
-    if (Status != S_OK)
+    if (Status == E_OUTOFMEMORY)
     {
         return Status;
+    }
+    if (Status != S_OK)
+    {
+        if (bDisplayILMap || bIL)
+        {
+            ExtOut("Failed to get IL address map, proceeding without IL map\n");
+        }
+        map.reset();
+        mapCount = 0;
+        Status = S_OK;
     }
 
     // ///////////////////////////////////////////////////////////////////////////
@@ -7077,45 +7087,49 @@ DECLARE_API(u)
 
     if (MethodDescData.bIsDynamic && MethodDescData.managedDynamicMethodObject)
     {
-        ExtOut("Can only work with dynamic not implemented\n");
+        ExtOut("Disassembly of dynamic methods is not supported\n");
         return Status;
     }
 
-    GetILAddressResult result = GetILAddress(MethodDescData);
-    if (std::get<0>(result) == (TADDR)0)
-    {
-        ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
-        return E_FAIL;
-    }
-    ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
-    TADDR ilAddr = std::get<0>(result);
-    ToRelease<IMetaDataImport> pImport(std::get<1>(result));
+    // Only attempt IL retrieval when -il was requested.  IL stubs (e.g. P/Invoke
+    // marshalers) have a nil metadata token (0x06000000) and no IL body, so skip
+    // them even when -il is specified. Other failures are also non-fatal — we just
+    // fall back to native-only disassembly.
+    BOOL hasIL = FALSE;
+    TADDR ilAddr = (TADDR)0;
+    ULONG ilSize = 0;
+    ToRelease<IMetaDataImport> pImport;
+    ArrayHolder<BYTE> pArray(nullptr);
 
-    /// Taken from DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
-    ULONG Size = GetILSize(ilAddr);
-    if (Size == 0)
+    if (bIL && !IsNilToken(MethodDescData.MDToken))
     {
-        ExtOut("error decoding IL\n");
-        return Status;
+        GetILAddressResult result = GetILAddress(MethodDescData);
+        ilAddr = std::get<0>(result);
+        IMetaDataImport* pResultImport = std::get<1>(result);
+
+        if (ilAddr != (TADDR)0 && pResultImport != nullptr)
+        {
+            pImport = pResultImport;
+
+            ilSize = GetILSize(ilAddr);
+            if (ilSize != 0)
+            {
+                pArray = new BYTE[ilSize];
+                Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), pArray, ilSize, NULL);
+                if (Status == S_OK)
+                {
+                    hasIL = TRUE;
+                }
+            }
+        }
+        else
+        {
+            // Release any import that was returned even on failure
+            if (pResultImport != nullptr)
+                pResultImport->Release();
+        }
     }
-    // Read the memory into a local buffer
-    ArrayHolder<BYTE> pArray = new BYTE[Size];
-    Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), pArray, Size, NULL);
-    if (Status != S_OK)
-    {
-        ExtOut("Failed to read memory\n");
-        return Status;
-    }
-    /// Taken from DecodeIL(pImport, pArray, Size);
-    // First decode the header
-    BYTE *buffer = pArray;
-    ULONG bufSize = Size;
-    COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;
-    COR_ILMETHOD_DECODER header(pHeader);
-    ULONG position = 0;
-    BYTE* pBuffer = const_cast<BYTE*>(header.Code);
-    UINT indentCount = 0;
-    ULONG endCodePosition = header.GetCodeSize();
+
     struct ILLocationRange {
         ULONG mStartPosition;
         ULONG mEndPosition;
@@ -7124,75 +7138,102 @@ DECLARE_API(u)
     };
     std::deque<ILLocationRange> ilCodePositions;
 
-    if (mapCount > 0)
-    {
-        while (position < endCodePosition)
-        {
-            ULONG mapIndex = 0;
-            do
-            {
-                while ((mapIndex < mapCount) && (position != map[mapIndex].ilOffset))
-                {
-                    ++mapIndex;
-                }
-                if (map[mapIndex].endAddress > map[mapIndex].startAddress)
-                {
-                    break;
-                }
-                ++mapIndex;
-            } while (mapIndex < mapCount);
-            std::tuple<ULONG, UINT> r = DecodeILAtPosition(
-                pImport, pBuffer, bufSize,
-                position, indentCount, header);
-            ExtOut("\n");
-            if (mapIndex < mapCount)
-            {
-                ILLocationRange entry = {
-                    position,
-                    std::get<0>(r) - 1,
-                    (BYTE*)map[mapIndex].startAddress,
-                    (BYTE*)map[mapIndex].endAddress
-                };
-                ilCodePositions.push_back(std::move(entry));
-            }
-            else
-            {
-                if (!ilCodePositions.empty())
-                {
-                    auto& entry = ilCodePositions.back();
-                    entry.mEndPosition = position;
-                }
-            }
-            position = std::get<0>(r);
-            indentCount = std::get<1>(r);
-        }
-    }
+    // These must outlive the displayILFun lambda
+    BYTE *buffer = nullptr;
+    ULONG bufSize = 0;
+    COR_ILMETHOD_DECODER header;
+    BYTE* pBuffer = nullptr;
 
-    position = 0;
-    indentCount = 0;
-    std::function<void(ULONG*, UINT*, BYTE*)> displayILFun =
-        [&pImport, &pBuffer, bufSize, &header, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
-                                                BYTE *pIp) -> void {
-                for (auto iter = ilCodePositions.begin(); iter != ilCodePositions.end(); ++iter)
+    std::function<void(ULONG*, UINT*, BYTE*)> displayILFun;
+    if (hasIL)
+    {
+        buffer = pArray;
+        bufSize = ilSize;
+        COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;
+        header = COR_ILMETHOD_DECODER(pHeader);
+        pBuffer = const_cast<BYTE*>(header.Code);
+
+        if (mapCount > 0)
+        {
+            ULONG position = 0;
+            UINT indentCount = 0;
+            ULONG endCodePosition = header.GetCodeSize();
+
+            while (position < endCodePosition)
+            {
+                ULONG mapIndex = 0;
+                do
                 {
-                    if ((pIp >= iter->mStartAddress) && (pIp < iter->mEndAddress))
+                    while ((mapIndex < mapCount) && (position != map[mapIndex].ilOffset))
                     {
-                        ULONG position = iter->mStartPosition;
-                        ULONG endPosition = iter->mEndPosition;
-                        while (position <= endPosition)
-                        {
-                            std::tuple<ULONG, UINT> r = DecodeILAtPosition(
-                                pImport, pBuffer, bufSize,
-                                position, *pIndentCount, header);
-                            ExtOut("\n");
-                            position = std::get<0>(r);
-                            *pIndentCount = std::get<1>(r);
-                        }
-                        ilCodePositions.erase(iter);
+                        ++mapIndex;
+                    }
+                    if (mapIndex >= mapCount)
+                    {
                         break;
                     }
+                    if (map[mapIndex].endAddress > map[mapIndex].startAddress)
+                    {
+                        break;
+                    }
+                    ++mapIndex;
+                } while (mapIndex < mapCount);
+                std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                    pImport, pBuffer, bufSize,
+                    position, indentCount, header);
+                ExtOut("\n");
+                if (mapIndex < mapCount)
+                {
+                    ILLocationRange entry = {
+                        position,
+                        std::get<0>(r) - 1,
+                        (BYTE*)map[mapIndex].startAddress,
+                        (BYTE*)map[mapIndex].endAddress
+                    };
+                    ilCodePositions.push_back(std::move(entry));
                 }
-    };
+                else
+                {
+                    if (!ilCodePositions.empty())
+                    {
+                        auto& entry = ilCodePositions.back();
+                        entry.mEndPosition = position;
+                    }
+                }
+                position = std::get<0>(r);
+                indentCount = std::get<1>(r);
+            }
+        }
+
+        displayILFun =
+            [&pImport, &pBuffer, bufSize, &header, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
+                                                    BYTE *pIp) -> void {
+                    for (auto iter = ilCodePositions.begin(); iter != ilCodePositions.end(); ++iter)
+                    {
+                        if ((pIp >= iter->mStartAddress) && (pIp < iter->mEndAddress))
+                        {
+                            ULONG position = iter->mStartPosition;
+                            ULONG endPosition = iter->mEndPosition;
+                            while (position <= endPosition)
+                            {
+                                std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                                    pImport, pBuffer, bufSize,
+                                    position, *pIndentCount, header);
+                                ExtOut("\n");
+                                position = std::get<0>(r);
+                                *pIndentCount = std::get<1>(r);
+                            }
+                            ilCodePositions.erase(iter);
+                            break;
+                        }
+                    }
+        };
+    }
+    else
+    {
+        // No IL available — provide a no-op so Unassembly can call unconditionally
+        displayILFun = [](ULONG*, UINT*, BYTE*) -> void {};
+    }
 
     if (codeHeaderData.ColdRegionStart != (TADDR)0)
     {
@@ -8428,226 +8469,6 @@ DECLARE_API (ProcInfo)
     return Status;
 }
 #endif // FEATURE_PAL
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to find the address of EE data for a      *
-*    metadata token.                                                   *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(Token2EE)
-{
-    INIT_API();
-    MINIDUMP_NOT_SUPPORTED();
-
-    StringHolder DllName;
-    ULONG64 token = 0;
-    BOOL dml = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-
-    CMDValue arg[] =
-    {   // vptr, type
-        {&DllName.data, COSTRING},
-        {&token, COHEX}
-    };
-
-    size_t nArg;
-    if (!GetCMDOption(args,option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return E_INVALIDARG;
-    }
-    if (nArg!=2)
-    {
-        ExtOut("Usage: %stoken2ee module_name mdToken\n", SOSPrefix);
-        ExtOut("       You can pass * for module_name to search all modules.\n");
-        return E_INVALIDARG;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    int numModule;
-    ArrayHolder<DWORD_PTR> moduleList = NULL;
-
-    if (strcmp(DllName.data, "*") == 0)
-    {
-        moduleList = ModuleFromName(NULL, &numModule);
-    }
-    else
-    {
-        moduleList = ModuleFromName(DllName.data, &numModule);
-    }
-
-    if (moduleList == NULL)
-    {
-        ExtOut("Failed to request module list.\n");
-    }
-    else
-    {
-        for (int i = 0; i < numModule; i ++)
-        {
-            if (IsInterrupt())
-                break;
-
-            if (i > 0)
-            {
-                ExtOut("--------------------------------------\n");
-            }
-
-            DWORD_PTR dwAddr = moduleList[i];
-            WCHAR FileName[MAX_LONGPATH];
-            FileNameForModule(dwAddr, FileName);
-
-            // We'd like a short form for this output
-            LPCWSTR pszFilename = _wcsrchr (FileName, GetTargetDirectorySeparatorW());
-            if (pszFilename == NULL)
-            {
-                pszFilename = FileName;
-            }
-            else
-            {
-                pszFilename++; // skip past the last "\" character
-            }
-
-            DMLOut("Module:      %s\n", DMLModule(dwAddr));
-            ExtOut("Assembly:    %S\n", pszFilename);
-
-            GetInfoFromModule(dwAddr, (ULONG)token);
-        }
-    }
-
-    return Status;
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to find the address of EE data for a      *
-*    metadata token.                                                   *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(Name2EE)
-{
-    INIT_API_PROBE_MANAGED("name2ee");
-    MINIDUMP_NOT_SUPPORTED();
-
-    StringHolder DllName, TypeName;
-    BOOL dml = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-
-    CMDValue arg[] =
-    {   // vptr, type
-        {&DllName.data, COSTRING},
-        {&TypeName.data, COSTRING}
-    };
-    size_t nArg;
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return E_INVALIDARG;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-
-    if (nArg == 1)
-    {
-        // The input may be in the form <modulename>!<type>
-        // If so, do some surgery on the input params.
-
-        // There should be only 1 ! character
-        LPSTR pszSeperator = strchr (DllName.data, '!');
-        if (pszSeperator != NULL)
-        {
-            if (strchr (pszSeperator + 1, '!') == NULL)
-            {
-                size_t capacity_TypeName_data = strlen(pszSeperator + 1) + 1;
-                TypeName.data = new NOTHROW char[capacity_TypeName_data];
-                if (TypeName.data)
-                {
-                    // get the type name,
-                    strcpy_s (TypeName.data, capacity_TypeName_data, pszSeperator + 1);
-                    // and truncate DllName
-                    *pszSeperator = '\0';
-
-                    // Do some extra validation
-                    if (strlen (DllName.data) >= 1 &&
-                        strlen (TypeName.data) > 1)
-                    {
-                        nArg = 2;
-                    }
-                }
-            }
-        }
-    }
-
-    if (nArg != 2)
-    {
-        ExtOut("Usage: %sname2ee module_name item_name\n", SOSPrefix);
-        ExtOut("  or   %sname2ee module_name!item_name\n", SOSPrefix);
-        ExtOut("       use * for module_name to search all loaded modules\n");
-        ExtOut("Examples: %sname2ee  mscorlib.dll System.String.ToString\n", SOSPrefix);
-        ExtOut("          %sname2ee *!System.String\n", SOSPrefix);
-        return E_INVALIDARG;
-    }
-
-    int numModule;
-    ArrayHolder<DWORD_PTR> moduleList = NULL;
-    if (strcmp(DllName.data, "*") == 0)
-    {
-        moduleList = ModuleFromName(NULL, &numModule);
-    }
-    else
-    {
-        moduleList = ModuleFromName(DllName.data, &numModule);
-    }
-
-
-    if (moduleList == NULL)
-    {
-        ExtOut("Failed to request module list.\n", DllName.data);
-    }
-    else
-    {
-        for (int i = 0; i < numModule; i ++)
-        {
-            if (IsInterrupt())
-                break;
-
-            if (i > 0)
-            {
-                ExtOut("--------------------------------------\n");
-            }
-
-            DWORD_PTR dwAddr = moduleList[i];
-            WCHAR FileName[MAX_LONGPATH];
-            FileNameForModule (dwAddr, FileName);
-
-            // We'd like a short form for this output
-            LPCWSTR pszFilename = _wcsrchr (FileName, GetTargetDirectorySeparatorW());
-            if (pszFilename == NULL)
-            {
-                pszFilename = FileName;
-            }
-            else
-            {
-                pszFilename++; // skip past the last "\" character
-            }
-
-            DMLOut("Module:      %s\n", DMLModule(dwAddr));
-            ExtOut("Assembly:    %S\n", pszFilename);
-            GetInfoFromName(dwAddr, TypeName.data);
-        }
-    }
-
-    return Status;
-}
 
 DECLARE_API(FindRoots)
 {
@@ -11409,7 +11230,7 @@ private:
                     switch(tmp)
                     {
                         case 1: outVar = *((BYTE *)pByte.GetPtr()); break;
-                        case 2: outVar = *((short *)pByte.GetPtr()); break;
+                        case 2: outVar = *((unsigned short *)pByte.GetPtr()); break;
                         case 4: outVar = *((DWORD *)pByte.GetPtr()); break;
                         case 8: outVar = *((ULONG64 *)pByte.GetPtr()); break;
                         default: outVar = 0;
@@ -11501,7 +11322,7 @@ private:
                     switch(dwSize)
                     {
                         case 1: outVar = *((BYTE *) pByte.GetPtr()); break;
-                        case 2: outVar = *((short *) pByte.GetPtr()); break;
+                        case 2: outVar = *((unsigned short *) pByte.GetPtr()); break;
                         case 4: outVar = *((DWORD *) pByte.GetPtr()); break;
                         case 8: outVar = *((ULONG64 *) pByte.GetPtr()); break;
                         default: outVar = 0;
