@@ -209,10 +209,26 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             return segments;
         }
 
-        public IEnumerable<ClrObject> EnumerateFilteredObjects(CancellationToken cancellation)
+        public IEnumerable<ClrObject> EnumerateFilteredObjects(CancellationToken cancellation, Action<long, long> progressCallback = null)
         {
-            foreach (ClrSegment segment in EnumerateFilteredSegments())
+            IEnumerable<ClrSegment> segments = EnumerateFilteredSegments();
+
+            long totalBytes = 0;
+            if (progressCallback != null)
             {
+                // Materialize segments to compute totalBytes before enumeration begins.
+                List<ClrSegment> segmentList = segments.ToList();
+                totalBytes = segmentList.Sum(s => (long)s.CommittedMemory.Length);
+                segments = segmentList;
+            }
+
+            // Tracks the sum of CommittedMemory.Length for all completed segments.
+            long pastSegmentBytes = 0;
+
+            foreach (ClrSegment segment in segments)
+            {
+                long lastReportedBytesInSegment = 0;
+
                 IEnumerable<ClrObject> objs;
                 if (MemoryRange is MemoryRange range)
                 {
@@ -232,9 +248,21 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     cancellation.ThrowIfCancellationRequested();
 
+                    // Report every ProgressStepBytes of progress within the segment, measured by object address.
+                    if (progressCallback != null)
+                    {
+                        long bytesInSegment = (long)(obj.Address - segment.Start);
+                        if (bytesInSegment - lastReportedBytesInSegment >= ProgressStepBytes)
+                        {
+                            progressCallback(pastSegmentBytes + bytesInSegment, totalBytes);
+                            lastReportedBytesInSegment = bytesInSegment;
+                        }
+                    }
+
                     if (obj.IsValid)
                     {
                         ulong size = obj.Size;
+
                         if (MinimumObjectSize != 0 && size < MinimumObjectSize)
                         {
                             continue;
@@ -248,7 +276,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     yield return obj;
                 }
+
+                // Advance the past-segment accumulator and report at the end of each segment.
+                pastSegmentBytes += (long)segment.CommittedMemory.Length;
+                progressCallback?.Invoke(pastSegmentBytes, totalBytes);
             }
         }
+
+        /// <summary>Minimum byte advancement within a segment that triggers an in-segment progress callback.</summary>
+        private const int ProgressStepBytes = 16 * 1024;
     }
 }

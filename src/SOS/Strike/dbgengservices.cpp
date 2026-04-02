@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "hostservices.h"
 #include "exts.h"
+#include "symbols.h"
 
 extern IMachine* GetTargetMachine(ULONG processorType);
 
@@ -860,6 +861,9 @@ DbgEngServices::SetCurrentThreadIdFromSystemId(
 void 
 DbgEngServices::InitializeSymbolStoreFromSymPath()
 {
+    // Clear the negative symbol lookup cache so modules are retried with the new path.
+    ClearSymbolLookupCache();
+
     ISymbolService* symbolService = GetSymbolService();
     if (symbolService != nullptr)
     {

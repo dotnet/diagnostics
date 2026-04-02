@@ -3,7 +3,14 @@
   <PropertyGroup>
     <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <CommonTestRunnerConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</CommonTestRunnerConfigFileName>
+    <CopyDebuggeeSourcesToArtifacts>true</CopyDebuggeeSourcesToArtifacts>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Debuggees\**" />
+    <EmbeddedResource Remove="Debuggees\**" />
+    <None Remove="Debuggees\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
@@ -30,7 +37,6 @@
 <![CDATA[
 <Configuration>
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
-  <RepoRootDir>$(RepoRoot)</RepoRootDir>
   <ArtifactsDir>$(ArtifactsDir)</ArtifactsDir>
   <NetCoreAppMinTargetFramework>$(NetCoreAppMinTargetFramework)</NetCoreAppMinTargetFramework>
 </Configuration>
@@ -49,5 +55,6 @@
       <FileWrites Include="$(CommonTestRunnerConfigFileName)" />
     </ItemGroup>
   </Target>
+
 
 </Project>
