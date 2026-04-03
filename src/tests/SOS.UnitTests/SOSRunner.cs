@@ -685,6 +685,10 @@ public class SOSRunner : IDisposable
                         && !config.IsPrivateBuildTesting()
                         && !config.IsNightlyBuild();
                     initialCommands.Add($"runtimes --DacSignatureVerification:{(shouldVerifyDacSignature ? "true" : "false")}");
+                    if (config.TestCDAC)
+                    {
+                        initialCommands.Add("runtimes --forceusecdac");
+                    }
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
                     debuggerPath = config.DotNetDumpHost();
