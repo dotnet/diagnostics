@@ -595,9 +595,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     if (result.IsStateMachine && TryGetStateMachine(obj, out result.StateMachine))
                     {
                         bool gotState = TryRead(result.StateMachine!, "<>1__state", out result.AwaitState);
-                        Debug.Assert(gotState);
 
-                        if (result.StateMachine?.Type is ClrType stateMachineType)
+                        if (!gotState)
+                        {
+                            // clrmd 4.x may fail to resolve field types in certain shared generic
+                            // instantiations. Fall back to task-flag-based display.
+                            result.IsStateMachine = false;
+                            result.StateMachine = null;
+                        }
+                        else if (result.StateMachine?.Type is ClrType stateMachineType)
                         {
                             foreach (ClrMethod method in stateMachineType.Methods)
                             {
