@@ -25,7 +25,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private Version _runtimeVersion;
         private ClrRuntime _clrRuntime;
         private string _dacFilePath;
-        private bool _verifySignature;      // This only applies to the regular DAC, not the CDAC
         private string _cdacFilePath;
         private string _dbiFilePath;
 
@@ -116,20 +115,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_settingsService.ForceUseContractReader)
             {
-                // Don't verify signature when using the CDAC and don't change the cached value
-                // because it only applies to the regular DAC in _dacFilePath.
+                // Don't verify signature when using the CDAC.
                 verifySignature = false;
                 return GetCDacFilePath();
             }
-            if (_dacFilePath is null)
-            {
-                _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac);
-                if (_dacFilePath is not null)
-                {
-                    _verifySignature = _settingsService.DacSignatureVerificationEnabled;
-                }
-            }
-            verifySignature = _verifySignature;
+            _dacFilePath ??= GetLibraryPath(DebugLibraryKind.Dac);
+            // DAC signature verification is configured on the DataTarget via DataTargetOptions.VerifyDacOnWindows.
+            verifySignature = _clrInfo.DataTarget.Options.VerifyDacOnWindows;
             return _dacFilePath;
         }
 
@@ -146,7 +138,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private ClrRuntime CreateRuntime()
         {
-            string dacFilePath = GetDacFilePath(out bool verifySignature);
+            // The verification of the DAC signature is handled by the ClrInfo's DataTarget via DataTargetOptions.VerifyDacOnWindows
+            string dacFilePath = GetDacFilePath(out bool _);
             if (dacFilePath is not null)
             {
                 Trace.TraceInformation($"Creating ClrRuntime #{Id} {dacFilePath}");
@@ -154,7 +147,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     // Ignore the DAC version mismatch that can happen because the clrmd ELF dump reader
                     // returns 0.0.0.0 for the runtime module that the DAC is matched against.
-                    return _clrRuntime = _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true, verifySignature);
+                    return _clrRuntime = _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
                 }
                 catch (Exception ex) when
                    (ex is DllNotFoundException or
@@ -343,7 +336,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (_dacFilePath is not null)
             {
                 sb.AppendLine();
-                string verify = _verifySignature ? "(verify)" : "(don't verify)";
+                string verify = _clrInfo.DataTarget.Options.VerifyDacOnWindows ? "(verify)" : "(don't verify)";
                 sb.Append($"    DAC: {_dacFilePath} {verify}");
             }
             if (_cdacFilePath is not null)

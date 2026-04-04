@@ -32,10 +32,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // The ClrInfo and DataTarget instances are disposed when Runtime instance is disposed. Runtime instances are
             // not flushed when the Target/RuntimeService is flushed; they are all disposed and the list cleared. They are
             // all re-created the next time the IRuntime or ClrRuntime instance is queried.
-            DataTarget dataTarget = new(new CustomDataTarget(_services.GetService<IDataReader>())
+            ISettingsService settingsService = _services.GetService<ISettingsService>();
+            DataTarget dataTarget = new(_services.GetService<IDataReader>(), new DataTargetOptions()
             {
                 ForceCompleteRuntimeEnumeration = (flags & RuntimeEnumerationFlags.All) != 0,
-                FileLocator = null
+                FileLocator = null,
+                VerifyDacOnWindows = settingsService?.DacSignatureVerificationEnabled ?? true
             });
             for (int i = 0; i < dataTarget.ClrVersions.Length; i++)
             {
