@@ -59,9 +59,27 @@ if ($bundletools) {
     $test = $False
 }
 
+if ($useCdac) {
+    $remainingargs = "/p:PackageWithCDac=true " + $remainingargs
+}
+
 # Build native components
 if (-not $skipnative) {
     Invoke-Expression "& `"$engroot\Build-Native.cmd`" -architecture $architecture -configuration $configuration -verbosity $verbosity $remainingargs"
+    if ($lastExitCode -ne 0) {
+        exit $lastExitCode
+    }
+} elseif ($useCdac) {
+    # When native build is skipped but cDAC is requested, run native-prereqs to download the cDAC transport package
+    & "$engroot\common\msbuild.ps1" `
+      $engroot\native-prereqs.proj `
+      -verbosity $verbosity `
+      /t:InstallNativePackages `
+      /restore `
+      /bl:$logdir\InstallCdac.binlog `
+      /p:TargetOS=$os `
+      /p:TargetArch=$architecture `
+      /p:PackageWithCDac=true
     if ($lastExitCode -ne 0) {
         exit $lastExitCode
     }

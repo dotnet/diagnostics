@@ -210,20 +210,37 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string localFilePath;
             if (libraryInfo.Kind == DebugLibraryKind.CDac)
             {
+                string fileName = Path.GetFileName(libraryInfo.FileName);
+
                 // First try the absolute path from ClrMD (works for same-platform scenarios)
                 localFilePath = libraryInfo.FileName;
                 if (File.Exists(localFilePath))
                 {
                     return localFilePath;
                 }
+                // Try the RID subdirectory alongside the ClrMD-reported path. The dotnet-dump publish
+                // layout places native binaries under a RID subdirectory (e.g., win-x64/).
+                localFilePath = TryGetCDacInRidSubdirectory(Path.GetDirectoryName(libraryInfo.FileName), fileName);
+                if (localFilePath is not null)
+                {
+                    return localFilePath;
+                }
                 // Fall back to RuntimeModuleDirectory if set (supports user-provided cDAC path via setclrpath)
                 if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
                 {
-                    localFilePath = Path.Combine(RuntimeModuleDirectory, Path.GetFileName(libraryInfo.FileName));
+                    localFilePath = Path.Combine(RuntimeModuleDirectory, fileName);
                     if (File.Exists(localFilePath))
                     {
                         return localFilePath;
                     }
+                }
+                // Fall back to the directory containing the runtime module (e.g., coreclr.dll).
+                // The cDAC may ship alongside the runtime in the shared framework directory.
+                string runtimeDir = Path.GetDirectoryName(RuntimeModule.FileName);
+                localFilePath = Path.Combine(runtimeDir, fileName);
+                if (File.Exists(localFilePath))
+                {
+                    return localFilePath;
                 }
                 return null;
             }
@@ -243,6 +260,29 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 localFilePath = null;
             }
             return localFilePath;
+        }
+
+        /// <summary>
+        /// Searches for the cDAC binary under RID subdirectories (e.g., win-x64/) of the given directory.
+        /// The dotnet-dump publish layout places native assets in RID-specific subdirectories.
+        /// </summary>
+        private static string TryGetCDacInRidSubdirectory(string directory, string fileName)
+        {
+            if (string.IsNullOrEmpty(directory))
+            {
+                return null;
+            }
+            string os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win"
+                      : RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "linux"
+                      : RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx"
+                      : null;
+            if (os is null)
+            {
+                return null;
+            }
+            string rid = $"{os}-{RuntimeInformation.ProcessArchitecture.ToString().ToLowerInvariant()}";
+            string localFilePath = Path.Combine(directory, rid, fileName);
+            return File.Exists(localFilePath) ? localFilePath : null;
         }
 
         private string DownloadFile(DebugLibraryInfo libraryInfo)

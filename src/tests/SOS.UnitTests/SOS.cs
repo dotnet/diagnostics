@@ -81,7 +81,9 @@ public static class SOSTestHelpers
     {
         information.OutputHelper = output;
 
-        if (information.TestLive)
+        bool isCDacOnly = information.TestConfiguration.TestCDAC;
+
+        if (information.TestLive && !isCDacOnly)
         {
             // Live
             using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.Live))
@@ -103,10 +105,14 @@ public static class SOSTestHelpers
             // Test against a crash dump.
             if (information.DebuggeeDumpInputRootDir != null)
             {
-                // With cdb (Windows) or lldb (Linux)
-                using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
+                // With cdb (Windows) or lldb (Linux) — skip in cDAC-only mode since
+                // native debuggers don't support the ForceUseContractReader setting.
+                if (!isCDacOnly)
                 {
-                    await runner.RunScript(scriptName);
+                    using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
+                    {
+                        await runner.RunScript(scriptName);
+                    }
                 }
 
                 // Using the dotnet-dump analyze tool if the path exists in the config file.

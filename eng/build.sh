@@ -120,6 +120,7 @@ handle_arguments() {
 
         usecdac|-usecdac)
             __UseCdac=1
+            __UnprocessedBuildArgs="$__UnprocessedBuildArgs /p:PackageWithCDac=true"
             ;;
 
         -warnaserror|-nodereuse)
@@ -220,6 +221,29 @@ if [[ "$__NativeBuild" == 1 ]]; then
 
     if [ "${PIPESTATUS[0]}" != 0 ]; then
         echo "Native build FAILED"
+        exit 1
+    fi
+fi
+
+#
+# If native build is skipped but cDAC is requested, download the cDAC transport package
+#
+if [[ "$__NativeBuild" == 0 && "$__UseCdac" == 1 ]]; then
+    echo "Installing cDAC transport package..."
+    "$__RepoRootDir/eng/common/msbuild.sh" \
+        $__RepoRootDir/eng/native-prereqs.proj \
+        /bl:"$__LogsDir/InstallCdac.binlog" \
+        /t:InstallNativePackages \
+        /restore \
+        /p:Configuration="$__BuildType" \
+        /p:TargetOS="$__TargetOS" \
+        /p:TargetArch="$__TargetArch" \
+        /p:TargetRid="$__TargetRid" \
+        /p:Platform="$__TargetArch" \
+        /p:PackageWithCDac=true
+
+    if [ $? != 0 ]; then
+        echo "Installing cDAC transport package FAILED"
         exit 1
     fi
 fi
