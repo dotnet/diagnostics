@@ -595,7 +595,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     if (result.IsStateMachine && TryGetStateMachine(obj, out result.StateMachine))
                     {
                         bool gotState = TryRead(result.StateMachine!, "<>1__state", out result.AwaitState);
-                        Debug.Assert(gotState);
+
+                        if (!gotState)
+                        {
+                            IClrType? smType = result.StateMachine!.Type;
+                            string fieldNames = smType is not null
+                                ? string.Join(", ", smType.Fields.Select(f => f.Name))
+                                : "<no type>";
+                            throw new InvalidOperationException(
+                                $"Failed to read '<>1__state' from state machine. " +
+                                $"Type={smType?.Name ?? "null"}, Fields=[{fieldNames}], " +
+                                $"Object={obj.Address:x} ({obj.Type?.Name})");
+                        }
 
                         if (result.StateMachine?.Type is ClrType stateMachineType)
                         {
