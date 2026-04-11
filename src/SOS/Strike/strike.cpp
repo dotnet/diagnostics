@@ -3164,7 +3164,13 @@ DECLARE_API(PrintException)
 
     if (p_Object)
     {
-        SafeFormatException(TO_CDADDR(p_Object), bLineNumbers);
+        Status = SafeFormatException(TO_CDADDR(p_Object), bLineNumbers);
+        if (FAILED(Status))
+        {
+            // If an access violation occurred inside the DAC/cDAC, the runtime
+            // state may be corrupt. Bail out to avoid cascading crashes.
+            return Status;
+        }
     }
 
     // Are there nested exceptions?
