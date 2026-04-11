@@ -5896,6 +5896,28 @@ BOOL CheckCLRNotificationEvent(DEBUG_LAST_EVENT_INFO_EXCEPTION* pdle)
 #endif
 }
 
+// Wrapper to catch access violations from TranslateExceptionRecordToNotification.
+// When running with the cDAC in no-fallback mode, the notification callback chain may
+// encounter null pointers in contract data, causing AVs that would otherwise terminate
+// the entire SOSHandleCLRN command.
+static HRESULT SafeTranslateExceptionRecordToNotification(
+    IXCLRDataProcess* pClrData,
+    EXCEPTION_RECORD64* record,
+    IXCLRDataExceptionNotification* notification)
+{
+    HRESULT hr = E_FAIL;
+    PAL_TRY_NAKED
+    {
+        hr = pClrData->TranslateExceptionRecordToNotification(record, notification);
+    }
+    PAL_EXCEPT_NAKED(EXCEPTION_EXECUTE_HANDLER)
+    {
+        hr = E_FAIL;
+    }
+    PAL_ENDTRY_NAKED
+    return hr;
+}
+
 HRESULT HandleCLRNotificationEvent()
 {
     /*
@@ -5921,7 +5943,7 @@ HRESULT HandleCLRNotificationEvent()
 
     // Notification only needs to live for the lifetime of the call below, so it's a non-static
     // local.
-    HRESULT Status = g_clrData->TranslateExceptionRecordToNotification(&dle.ExceptionRecord, &Notification);
+    HRESULT Status = SafeTranslateExceptionRecordToNotification(g_clrData, &dle.ExceptionRecord, &Notification);
     if (Status != S_OK)
     {
         ExtErr("Error processing exception notification\n");
