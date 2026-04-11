@@ -2692,6 +2692,25 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
     return Length;
 }
 
+// Wrapper around FormatGeneratedException that catches access violations from the DAC/cDAC.
+// When running without legacy DAC fallback, some IXCLRDataProcess methods may AV instead of
+// returning error codes. This wrapper prevents the AV from terminating the entire command.
+static size_t SafeFormatGeneratedException(DWORD_PTR dataPtr, UINT bytes, WCHAR *wszBuffer, size_t bufferLength,
+    BOOL bAsync, BOOL bNestedCase = FALSE, BOOL bLineNumbers = FALSE)
+{
+    size_t result = 0;
+    PAL_TRY_NAKED
+    {
+        result = FormatGeneratedException(dataPtr, bytes, wszBuffer, bufferLength, bAsync, bNestedCase, bLineNumbers);
+    }
+    PAL_EXCEPT_NAKED(EXCEPTION_EXECUTE_HANDLER)
+    {
+        result = 0;
+    }
+    PAL_ENDTRY_NAKED
+    return result;
+}
+
 // ExtOut has an internal limit for the string size
 void SosExtOutLargeString(__inout_z __inout_ecount_opt(len) WCHAR * pwszLargeString, size_t len)
 {
@@ -2747,6 +2766,14 @@ TADDR GetStackTraceArray(CLRDATA_ADDRESS taExceptionObj, DacpObjectData *pExcept
 
     if (taStackTrace)
     {
+        // Validate that the stack trace pointer looks reasonable before using it.
+        // Invalid pointers like 0xFFFFFFFFFFFFFFFF can pass the non-zero check above
+        // but will cause an access violation when dereferenced.
+        if (taStackTrace == (TADDR)-1)
+        {
+            return 0;
+        }
+
         // If the stack trace is object[], the stack trace array is actually referenced by its first element
         sos::Object objStackTrace(taStackTrace);
         TADDR stackTraceComponentMT = objStackTrace.GetComponentMT();
@@ -2903,12 +2930,12 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
                 else
                 {
                     size_t iHeaderLength = AddExceptionHeader (NULL, 0);
-                    size_t iLength = FormatGeneratedException (dataPtr, cbStackSize, NULL, 0, bAsync, FALSE, bLineNumbers);
+                    size_t iLength = SafeFormatGeneratedException (dataPtr, cbStackSize, NULL, 0, bAsync, FALSE, bLineNumbers);
                     WCHAR *pwszBuffer = new NOTHROW WCHAR[iHeaderLength + iLength + 1];
                     if (pwszBuffer)
                     {
                         AddExceptionHeader(pwszBuffer, iHeaderLength + 1);
-                        FormatGeneratedException(dataPtr, cbStackSize, pwszBuffer + iHeaderLength, iLength + 1, bAsync, FALSE, bLineNumbers);
+                        SafeFormatGeneratedException(dataPtr, cbStackSize, pwszBuffer + iHeaderLength, iLength + 1, bAsync, FALSE, bLineNumbers);
                         SosExtOutLargeString(pwszBuffer, iHeaderLength + iLength + 1);
                         delete[] pwszBuffer;
                     }
@@ -12698,11 +12725,11 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
 
             if (stackTraceSize != 0)
             {
-                size_t iLength = FormatGeneratedException (dataPtr, cbStackSize, NULL, 0, bAsync, bNestedCase);
+                size_t iLength = SafeFormatGeneratedException (dataPtr, cbStackSize, NULL, 0, bAsync, bNestedCase);
                 WCHAR *pwszBuffer = new NOTHROW WCHAR[iLength + 1];
                 if (pwszBuffer)
                 {
-                    FormatGeneratedException(dataPtr, cbStackSize, pwszBuffer, iLength + 1, bAsync, bNestedCase);
+                    SafeFormatGeneratedException(dataPtr, cbStackSize, pwszBuffer, iLength + 1, bAsync, bNestedCase);
                     wcsncat_s(wszStackString, cchString, pwszBuffer, _TRUNCATE);
                     delete[] pwszBuffer;
                 }
