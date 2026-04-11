@@ -1118,6 +1118,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             const string defaultContent = "?";
 
             IClrValue field = GetFieldFrom(obj, propertyName);
+
+            // Check for null object references before type-based dispatch.
+            // clrmd 4.x preserves the declared type for null refs, so IsNull
+            // must be checked first to avoid emitting "dumpobj 0000000000000000".
+            if (field is ClrObject { IsNull: true })
+            {
+                return "null";
+            }
+
             if (field.Type is ClrType fieldType)
             {
                 if (fieldType.IsString)
@@ -1140,15 +1149,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     return $"dumpvc {fieldType.MethodTable:x16} {field.Address:x16}";
                 }
-            }
-            else
-            {
-                if (field is ClrObject objectField && objectField.IsNull)
-                {
-                    return "null";
-                }
-
-                return defaultContent;
             }
             return defaultContent;
         }
