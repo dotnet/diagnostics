@@ -2711,6 +2711,24 @@ static size_t SafeFormatGeneratedException(DWORD_PTR dataPtr, UINT bytes, WCHAR 
     return result;
 }
 
+// Wrapper around DacpExceptionObjectData::Request that catches access violations from the cDAC.
+// The cDAC's GetObjectExceptionData may crash reading uninitialized exception fields
+// (e.g., when _stackTrace contains 0xFFFFFFFFFFFFFFFF at exception creation time).
+static BOOL SafeGetExceptionData(CLRDATA_ADDRESS objAddr, DacpExceptionObjectData *excData)
+{
+    BOOL result = FALSE;
+    PAL_TRY_NAKED
+    {
+        result = SUCCEEDED(excData->Request(g_sos, objAddr));
+    }
+    PAL_EXCEPT_NAKED(EXCEPTION_EXECUTE_HANDLER)
+    {
+        result = FALSE;
+    }
+    PAL_ENDTRY_NAKED
+    return result;
+}
+
 // ExtOut has an internal limit for the string size
 void SosExtOutLargeString(__inout_z __inout_ecount_opt(len) WCHAR * pwszLargeString, size_t len)
 {
@@ -2823,9 +2841,11 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
 
     // Print basic info
 
-    // First try to get exception object data using ISOSDacInterface2
+    // First try to get exception object data using ISOSDacInterface2.
+    // Use SafeGetExceptionData because the cDAC's GetObjectExceptionData may AV
+    // reading uninitialized exception fields during no-fallback mode.
     DacpExceptionObjectData excData;
-    BOOL bGotExcData = SUCCEEDED(excData.Request(g_sos, taObj));
+    BOOL bGotExcData = SafeGetExceptionData(taObj, &excData);
 
     // Walk the fields, printing some fields in a special way.
     // HR, InnerException, Message, StackTrace, StackTraceString
@@ -3013,6 +3033,25 @@ HRESULT FormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers = FALSE)
     return Status;
 }
 
+// Wrapper around FormatException that catches access violations from the cDAC.
+// FormatException makes many cDAC calls (GetObjectExceptionData, GetObjFieldOffset, etc.)
+// that may crash with AV when running without legacy DAC fallback.
+static HRESULT SafeFormatException(CLRDATA_ADDRESS taObj, BOOL bLineNumbers)
+{
+    HRESULT result = E_FAIL;
+    PAL_TRY_NAKED
+    {
+        result = FormatException(taObj, bLineNumbers);
+    }
+    PAL_EXCEPT_NAKED(EXCEPTION_EXECUTE_HANDLER)
+    {
+        ExtOut("<Error: access violation while reading exception data>\n");
+        result = E_FAIL;
+    }
+    PAL_ENDTRY_NAKED
+    return result;
+}
+
 DECLARE_API(PrintException)
 {
     INIT_API_PROBE_MANAGED("printexception");
@@ -3125,7 +3164,7 @@ DECLARE_API(PrintException)
 
     if (p_Object)
     {
-        FormatException(TO_CDADDR(p_Object), bLineNumbers);
+        SafeFormatException(TO_CDADDR(p_Object), bLineNumbers);
     }
 
     // Are there nested exceptions?
@@ -3165,7 +3204,7 @@ DECLARE_API(PrintException)
             }
 
             ExtOut("\nNested exception -------------------------------------------------------------\n");
-            Status = FormatException(obj, bLineNumbers);
+            Status = SafeFormatException(obj, bLineNumbers);
             if (Status != S_OK)
             {
                 return Status;
@@ -12693,9 +12732,10 @@ HRESULT AppendExceptionInfo(CLRDATA_ADDRESS cdaObj,
         return E_INVALIDARG;
     }
 
-    // First try to get exception object data using ISOSDacInterface2
+    // First try to get exception object data using ISOSDacInterface2.
+    // Use SafeGetExceptionData because the cDAC may AV reading uninitialized exception fields.
     DacpExceptionObjectData excData;
-    BOOL bGotExcData = SUCCEEDED(excData.Request(g_sos, cdaObj));
+    BOOL bGotExcData = SafeGetExceptionData(cdaObj, &excData);
 
     int iOffset;
     // Is there a _remoteStackTraceString? We'll want to prepend that data.
