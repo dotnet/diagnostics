@@ -125,7 +125,8 @@ if ($test) {
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
           /p:RuntimeSourceFeedKey="$runtimesourcefeedkey" `
           /p:LiveRuntimeDir="$liveRuntimeDir" `
-          $testFilterArg
+          $testFilterArg `
+          $remainingargs
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
