@@ -76,9 +76,10 @@ extends:
 
       test_debian_13_amd64:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-13-helix-amd64
+        options: --cap-add=SYS_PTRACE
 
       test_fedora:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-43
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-43-amd64
         options: --cap-add=SYS_PTRACE
 
       test_opensuse_16_0:
