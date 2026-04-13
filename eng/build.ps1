@@ -14,6 +14,7 @@ Param(
     [switch] $useCdac,
     [string] $methodfilter = '',
     [string] $classfilter = '',
+    [string] $testprojects = '',
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimedownloadversion= 'default',
     [string] $runtimesourcefeed = '',
@@ -111,6 +112,11 @@ if ($test) {
             $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"-class $classfilter\`""
         }
 
+        $testProjectsArg = ''
+        if ($testprojects -ne '') {
+            $testProjectsArg = "-projects `"$testprojects`""
+        }
+
         & "$engroot\common\build.ps1" `
           -test `
           -configuration $configuration `
@@ -125,7 +131,8 @@ if ($test) {
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
           /p:RuntimeSourceFeedKey="$runtimesourcefeedkey" `
           /p:LiveRuntimeDir="$liveRuntimeDir" `
-          $testFilterArg
+          $testFilterArg `
+          $testProjectsArg
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
