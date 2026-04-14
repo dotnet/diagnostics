@@ -3,6 +3,8 @@
 # This test is Windows-only since apartment state is a Windows COM concept.
 #
 
+CONTINUE
+
 LOADSOS
 
 # Verify that clrthreads shows the apartment state column with STA and MTA values.

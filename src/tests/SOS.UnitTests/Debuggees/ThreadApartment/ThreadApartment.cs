@@ -36,15 +36,8 @@ internal sealed class ThreadApartment
         s_staReady.Wait();
         s_mtaReady.Wait();
 
-        // If a debugger is attached, break into it. Otherwise just wait.
-        if (Debugger.IsAttached)
-        {
-            Debugger.Break();
-        }
-        else
-        {
-            Console.WriteLine("Ready for dump capture");
-            Thread.Sleep(Timeout.Infinite);
-        }
+        Debugger.Break();
+
+        throw new Exception("ThreadApartment test complete");
     }
 }
