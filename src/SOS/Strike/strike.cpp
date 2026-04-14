@@ -4456,8 +4456,12 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         // Apartment state
 #ifndef FEATURE_PAL
         DWORD_PTR OleTlsDataAddr;
+        ULONG64 teb = 0;
+        IDebuggerServices* debuggerServices = GetDebuggerServices();
         if (IsWindowsTarget() && !bSwitchedOutFiber
-                && SafeReadMemory(TO_TADDR(Thread.teb + offsetof(TEB, ReservedForOle)),
+                && debuggerServices != nullptr
+                && SUCCEEDED(debuggerServices->GetThreadTeb(Thread.osThreadId, &teb)) && teb != 0
+                && SafeReadMemory(TO_TADDR(teb + offsetof(TEB, ReservedForOle)),
                             &OleTlsDataAddr,
                             sizeof(OleTlsDataAddr), NULL) && OleTlsDataAddr != 0)
         {
