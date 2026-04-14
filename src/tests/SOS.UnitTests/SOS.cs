@@ -464,6 +464,17 @@ public class SOS
     }
 
     [SkippableTheory, MemberData(nameof(Configurations))]
+    public async Task ThreadApartment(TestConfiguration config)
+    {
+        if (OS.Kind != OSKind.Windows)
+        {
+            throw new SkipTestException("Apartment state is a Windows COM concept");
+        }
+
+        await SOSTestHelpers.RunTest(config, debuggeeName: "ThreadApartment", scriptName: "ThreadApartment.script", Output);
+    }
+
+    [SkippableTheory, MemberData(nameof(Configurations))]
     public async Task AsyncMain(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(config, debuggeeName: "AsyncMain", scriptName: "AsyncMain.script", Output, testTriage: true);
