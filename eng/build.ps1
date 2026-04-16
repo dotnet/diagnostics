@@ -12,6 +12,7 @@ Param(
     [switch] $skipnative,
     [switch] $bundletools,
     [switch] $useCdac,
+    [switch] $noFallback,
     [string] $methodfilter = '',
     [string] $classfilter = '',
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
@@ -24,6 +25,11 @@ Param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ($noFallback -and -not $useCdac) {
+    Write-Error "-noFallback requires -useCdac to also be specified."
+    exit 1
+}
 
 $crossbuild = $false
 if (($architecture -eq "arm") -or ($architecture -eq "arm64")) {
@@ -99,6 +105,10 @@ if ($test) {
     if (-not $crossbuild) {
         if ($useCdac) {
             $env:SOS_TEST_CDAC="true"
+        }
+
+        if ($noFallback) {
+            $env:SOS_TEST_CDAC_NO_FALLBACK="true"
         }
 
         # Build the test filter argument if provided

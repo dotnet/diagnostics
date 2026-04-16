@@ -3,9 +3,11 @@ CONTINUE
 
 LOADSOS
 
+!IFDEF:CDAC_NO_FALLBACK_TESTING
 SOSCOMMAND:ClrStack -i -a
 VERIFY:\s+LOCALS:\s+
 
 SOSCOMMAND:DumpIL <POUT>.*System\.Reflection\.Emit\.DynamicMethod dynamicMethod @ 0x(<HEXVAL>).*\s+<POUT>
 VERIFY:\s+IL_0000: ldarg.0\s+
 VERIFY:\s+IL_0001: ldc.i4.0\s+
+ENDIF:CDAC_NO_FALLBACK_TESTING
