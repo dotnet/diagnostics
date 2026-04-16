@@ -4408,10 +4408,9 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         }
 
         BOOL bSwitchedOutFiber = Thread.osThreadId == SWITCHED_OUT_FIBER_OSID;
+        ULONG id = 0;
         if (!IsKernelDebugger())
         {
-            ULONG id = 0;
-
             if (bSwitchedOutFiber)
             {
                 table.WriteColumn(0, "<<<< ");
@@ -4456,8 +4455,19 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         // Apartment state
 #ifndef FEATURE_PAL
         DWORD_PTR OleTlsDataAddr;
-        if (IsWindowsTarget() && !bSwitchedOutFiber
-                && SafeReadMemory(TO_TADDR(Thread.teb + offsetof(TEB, ReservedForOle)),
+        ULONG64 teb = 0;
+        if (IsWindowsTarget() && !bSwitchedOutFiber && id != 0)
+        {
+            ULONG curId;
+            if (SUCCEEDED(g_ExtSystem->GetCurrentThreadId(&curId)) &&
+                SUCCEEDED(g_ExtSystem->SetCurrentThreadId(id)))
+            {
+                g_ExtSystem->GetCurrentThreadTeb(&teb);
+                g_ExtSystem->SetCurrentThreadId(curId);
+            }
+        }
+        if (teb != 0
+                && SafeReadMemory(TO_TADDR(teb + offsetof(TEB, ReservedForOle)),
                             &OleTlsDataAddr,
                             sizeof(OleTlsDataAddr), NULL) && OleTlsDataAddr != 0)
         {
