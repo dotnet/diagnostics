@@ -1,13 +1,13 @@
 <Dependencies>
   <Source Uri="https://github.com/dotnet/dotnet" Mapping="diagnostics" Sha="58dadbc4a07fa7215da2da6e2d18c6d90c89edc7" BarId="284895" />
   <ProductDependencies>
-    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.26215.2">
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.0.0-beta.26216.1">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>cb7cd841e91d72c358a8a0caec3d8db41a02dfd5</Sha>
+      <Sha>e4a1f96184ef091ad3d369e57ed2398955d79c39</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.0.0-beta.26215.2">
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.0.0-beta.26216.1">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>cb7cd841e91d72c358a8a0caec3d8db41a02dfd5</Sha>
+      <Sha>e4a1f96184ef091ad3d369e57ed2398955d79c39</Sha>
     </Dependency>
     <Dependency Name="System.CommandLine" Version="2.0.0-beta5.25210.1">
       <Uri>https://github.com/dotnet/command-line-api</Uri>
