@@ -29,10 +29,12 @@ VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
 # Verify that ClrStack with the ICorDebug options works
+!IFDEF:CDAC_NO_FALLBACK_TESTING
 SOSCOMMAND:ClrStack -i
 VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
 VERIFY:.*\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:.*\s+Stack walk complete.\s+
+ENDIF:CDAC_NO_FALLBACK_TESTING
 
 # Verify that Threads (clrthreads) works
 IFDEF:DOTNETDUMP
