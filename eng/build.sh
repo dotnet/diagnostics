@@ -26,7 +26,6 @@ __RuntimeSourceFeed=
 __RuntimeSourceFeedKey=
 __SkipConfigure=0
 __SkipGenerateVersion=0
-__InstallRuntimes=0
 __PrivateBuild=0
 __Test=0
 __TestFilter=
@@ -95,10 +94,6 @@ handle_arguments() {
 
         skipnative|-skipnative)
             __NativeBuild=0
-            ;;
-
-        installruntimes|-installruntimes)
-            __InstallRuntimes=1
             ;;
 
         privatebuild|-privatebuild)
@@ -240,12 +235,20 @@ fi
 
 if [[ "$__ManagedBuild" == 1 ]]; then
 
+    __privateBuildTesting=false
+    if [[ "$__PrivateBuild" == 1 ]]; then
+        __privateBuildTesting=true
+    fi
+
     # __CommonMSBuildArgs contains TargetOS property
+    # Runtime installation and debuggee building is handled by src/tests/dirs.proj targets.
     echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
     "$__RepoRootDir/eng/common/build.sh" \
         --configuration "$__BuildType" \
         /p:TargetArch="$__TargetArch" \
         /p:TargetRid="$__TargetRid" \
+        /p:PrivateBuildTesting="$__privateBuildTesting" \
+        /p:LiveRuntimeDir="$__LiveRuntimeDir" \
         $__CommonMSBuildArgs \
         $__ManagedBuildArgs \
         $__UnprocessedBuildArgs
@@ -253,28 +256,6 @@ if [[ "$__ManagedBuild" == 1 ]]; then
     if [ "$?" != 0 ]; then
         exit 1
     fi
-fi
-
-#
-# Install test runtimes and set up for private runtime build
-#
-
-if [[ "$__InstallRuntimes" == 1 || "$__PrivateBuild" == 1 ]]; then
-    __privateBuildTesting=false
-    if [[ "$__PrivateBuild" == 1 ]]; then
-        __privateBuildTesting=true
-    fi
-    rm -fr "$__RepoRootDir/.dotnet-test" || true
-    "$__RepoRootDir/eng/common/msbuild.sh" \
-        $__RepoRootDir/eng/InstallRuntimes.proj \
-        /t:InstallTestRuntimes \
-        /bl:"$__LogsDir/InstallRuntimes.binlog" \
-        /p:PrivateBuildTesting="$__privateBuildTesting" \
-        /p:TargetOS="$__TargetOS" \
-        /p:TargetArch="$__TargetArch" \
-        /p:TargetRid="$__TargetRid" \
-        /p:TestArchitectures="$__TargetArch" \
-        /p:LiveRuntimeDir="$__LiveRuntimeDir" 
 fi
 
 #
