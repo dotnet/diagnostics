@@ -45,10 +45,20 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             if (!EventPipeDotNetHeapDumper.DumpFromEventPipeFile(input.FullName, memoryGraph, log, heapInfo))
             {
+                Console.Error.WriteLine($"Failed to convert '{input.FullName}' to gcdump. The input file may not be a valid nettrace file, or it may not contain GC heap events. Try running with '-v' for more information.");
                 return -1;
             }
 
-            memoryGraph.AllowReading();
+            try
+            {
+                memoryGraph.AllowReading();
+            }
+            catch (ApplicationException ex)
+            {
+                Console.Error.WriteLine($"Failed to convert '{input.FullName}': {ex.Message} The nettrace file may not contain a complete GC heap dump. Try running with '-v' for more information.");
+                return -1;
+            }
+
             GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
 
             return 0;
