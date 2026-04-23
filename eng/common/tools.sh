@@ -54,7 +54,7 @@ warn_as_error=${warn_as_error:-true}
 use_installed_dotnet_cli=${use_installed_dotnet_cli:-true}
 
 # Enable repos to use a particular version of the on-line dotnet-install scripts.
-#    default URL: https://dotnet.microsoft.com/download/dotnet/scripts/v1/dotnet-install.sh
+#    default URL: https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh
 dotnetInstallScriptVersion=${dotnetInstallScriptVersion:-'v1'}
 
 # True to use global NuGet cache instead of restoring packages to repository-local directory.
@@ -184,6 +184,35 @@ function InstallDotNetSdk {
 function InstallDotNet {
   local root=$1
   local version=$2
+  local runtime=$4
+
+  local dotnetVersionLabel="'$runtime v$version'"
+  if [[ -n "${4:-}" ]] && [ "$4" != 'sdk' ]; then
+    runtimePath="$root"
+    runtimePath="$runtimePath/shared"
+    case "$runtime" in
+      dotnet)
+        runtimePath="$runtimePath/Microsoft.NETCore.App"
+        ;;
+      aspnetcore)
+        runtimePath="$runtimePath/Microsoft.AspNetCore.App"
+        ;;
+      windowsdesktop)
+        runtimePath="$runtimePath/Microsoft.WindowsDesktop.App"
+        ;;
+      *)
+        ;;
+    esac
+    runtimePath="$runtimePath/$version"
+
+    dotnetVersionLabel="runtime toolset '$runtime/$architecture v$version'"
+
+    if [ -d "$runtimePath" ]; then
+      echo "  Runtime toolset '$runtime/$architecture v$version' already installed."
+      local installSuccess=1
+      return
+    fi
+  fi
 
   GetDotNetInstallScript "$root"
   local install_script=$_GetDotNetInstallScript
@@ -205,7 +234,7 @@ function InstallDotNet {
   local public_location=("${installParameters[@]}")
   variations+=(public_location)
 
-  local dotnetbuilds=("${installParameters[@]}" --azure-feed "https://dotnetbuilds.azureedge.net/public")
+  local dotnetbuilds=("${installParameters[@]}" --azure-feed "https://ci.dot.net/public")
   variations+=(dotnetbuilds)
 
   if [[ -n "${6:-}" ]]; then
@@ -228,17 +257,17 @@ function InstallDotNet {
   for variationName in "${variations[@]}"; do
     local name="$variationName[@]"
     local variation=("${!name}")
-    echo "Attempting to install dotnet from $variationName."
+    echo "  Attempting to install $dotnetVersionLabel from $variationName."
     bash "$install_script" "${variation[@]}" && installSuccess=1
     if [[ "$installSuccess" -eq 1 ]]; then
       break
     fi
 
-    echo "Failed to install dotnet from $variationName."
+    echo "  Failed to install $dotnetVersionLabel from $variationName."
   done
 
   if [[ "$installSuccess" -eq 0 ]]; then
-    Write-PipelineTelemetryError -category 'InitializeToolset' "Failed to install dotnet SDK from any of the specified locations."
+    Write-PipelineTelemetryError -category 'InitializeToolset' "Failed to install $dotnetVersionLabel from any of the specified locations."
     ExitWithExitCode 1
   fi
 }
@@ -268,7 +297,7 @@ function with_retries {
 function GetDotNetInstallScript {
   local root=$1
   local install_script="$root/dotnet-install.sh"
-  local install_script_url="https://dotnet.microsoft.com/download/dotnet/scripts/$dotnetInstallScriptVersion/dotnet-install.sh"
+  local install_script_url="https://builds.dotnet.microsoft.com/dotnet/scripts/$dotnetInstallScriptVersion/dotnet-install.sh"
 
   if [[ ! -a "$install_script" ]]; then
     mkdir -p "$root"
@@ -312,7 +341,12 @@ function InitializeBuildTool {
   # return values
   _InitializeBuildTool="$_InitializeDotNetCli/dotnet"
   _InitializeBuildToolCommand="msbuild"
-  _InitializeBuildToolFramework="net8.0"
+  # use override if it exists - commonly set by source-build
+  if [[ "${_OverrideArcadeInitializeBuildToolFramework:-x}" == "x" ]]; then
+    _InitializeBuildToolFramework="net8.0"
+  else
+    _InitializeBuildToolFramework="${_OverrideArcadeInitializeBuildToolFramework}"
+  fi
 }
 
 # Set RestoreNoCache as a workaround for https://github.com/NuGet/Home/issues/3116
