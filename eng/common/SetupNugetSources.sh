@@ -18,8 +18,8 @@
 #  - task: Bash@3
 #    displayName: Setup Private Feeds Credentials
 #    inputs:
-#      filePath: $(Build.SourcesDirectory)/eng/common/SetupNugetSources.sh
-#      arguments: $(Build.SourcesDirectory)/NuGet.config $Token
+#      filePath: $(System.DefaultWorkingDirectory)/eng/common/SetupNugetSources.sh
+#      arguments: $(System.DefaultWorkingDirectory)/NuGet.config $Token
 #    condition: ne(variables['Agent.OS'], 'Windows_NT')
 #    env:
 #      Token: $(dn-bot-dnceng-artifact-feeds-rw)
@@ -105,7 +105,7 @@ if [ "$?" == "0" ]; then
     PackageSources+=('dotnet3.1-internal-transport')
 fi
 
-DotNetVersions=('5' '6' '7')
+DotNetVersions=('5' '6' '7' '8')
 
 for DotNetVersion in ${DotNetVersions[@]} ; do
     FeedPrefix="dotnet${DotNetVersion}";

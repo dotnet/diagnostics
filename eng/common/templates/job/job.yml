@@ -15,6 +15,7 @@ parameters:
   timeoutInMinutes: ''
   variables: []
   workspace: ''
+  templateContext: ''
 
 # Job base template specific parameters
   # See schema documentation - https://github.com/dotnet/arcade/blob/master/Documentation/AzureDevOps/TemplateSchema.md
@@ -25,7 +26,7 @@ parameters:
   enablePublishTestResults: false
   enablePublishUsingPipelines: false
   enableBuildRetry: false
-  disableComponentGovernance: false
+  disableComponentGovernance: ''
   componentGovernanceIgnoreDirectories: ''
   mergeTestResults: false
   testRunTitle: ''
@@ -36,7 +37,7 @@ parameters:
 # Sbom related params
   enableSbom: true
   PackageVersion: 7.0.0
-  BuildDropPath: '$(Build.SourcesDirectory)/artifacts'
+  BuildDropPath: '$(System.DefaultWorkingDirectory)/artifacts'
 
 jobs:
 - job: ${{ parameters.name }}
@@ -68,6 +69,9 @@ jobs:
   ${{ if ne(parameters.timeoutInMinutes, '') }}:
     timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
 
+  ${{ if ne(parameters.templateContext, '') }}:
+    templateContext: ${{ parameters.templateContext }}
+
   variables:
   - ${{ if ne(parameters.enableTelemetry, 'false') }}:
     - name: DOTNET_CLI_TELEMETRY_PROFILE
@@ -75,6 +79,10 @@ jobs:
   - ${{ if eq(parameters.enableRichCodeNavigation, 'true') }}:
     - name: EnableRichCodeNavigation
       value: 'true'
+  # Retry signature validation up to three times, waiting 2 seconds between attempts.
+  # See https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu3028#retry-untrusted-root-failures
+  - name: NUGET_EXPERIMENTAL_CHAIN_BUILD_RETRY_POLICY
+    value: 3,2000
   - ${{ each variable in parameters.variables }}:
     # handle name-value variable syntax
     # example:
@@ -83,7 +91,7 @@ jobs:
     - ${{ if ne(variable.name, '') }}:
       - name: ${{ variable.name }}
         value: ${{ variable.value }}
-    
+
     # handle variable groups
     - ${{ if ne(variable.group, '') }}:
       - group: ${{ variable.group }}
@@ -120,19 +128,23 @@ jobs:
 
   - ${{ if and(eq(parameters.runAsPublic, 'false'), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - ${{ if eq(parameters.enableMicrobuild, 'true') }}:
-      - task: MicroBuildSigningPlugin@3
+      - task: MicroBuildSigningPlugin@4
         displayName: Install MicroBuild plugin
         inputs:
           signType: $(_SignType)
           zipSources: false
           feedSource: https://dnceng.pkgs.visualstudio.com/_packaging/MicroBuildToolset/nuget/v3/index.json
+          ${{ if eq(variables['System.TeamProject'], 'DevDiv') }}:
+            ConnectedPMEServiceName: 6cc74545-d7b9-4050-9dfa-ebefcc8961ea
+          ${{ else }}:
+            ConnectedPMEServiceName: 248d384a-b39b-46e3-8ad5-c2c210d5e7ca
         env:
           TeamName: $(_TeamName)
         continueOnError: ${{ parameters.continueOnError }}
         condition: and(succeeded(), in(variables['_SignType'], 'real', 'test'), eq(variables['Agent.Os'], 'Windows_NT'))
 
   - ${{ if and(eq(parameters.runAsPublic, 'false'), eq(variables['System.TeamProject'], 'internal')) }}:
-    - task: NuGetAuthenticate@0
+    - task: NuGetAuthenticate@1
 
   - ${{ if and(ne(parameters.artifacts.download, 'false'), ne(parameters.artifacts.download, '')) }}:
     - task: DownloadPipelineArtifact@2
@@ -151,20 +163,25 @@ jobs:
       inputs:
         languages: ${{ coalesce(parameters.richCodeNavigationLanguage, 'csharp') }}
         environment: ${{ coalesce(parameters.richCodeNavigationEnvironment, 'production') }}
-        richNavLogOutputDirectory: $(Build.SourcesDirectory)/artifacts/bin
+        richNavLogOutputDirectory: $(System.DefaultWorkingDirectory)/artifacts/bin
         uploadRichNavArtifacts: ${{ coalesce(parameters.richCodeNavigationUploadArtifacts, false) }}
       continueOnError: true
 
-  - ${{ if and(eq(parameters.runAsPublic, 'false'), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), ne(parameters.disableComponentGovernance, 'true')) }}:
-      - task: ComponentGovernanceComponentDetection@0
-        continueOnError: true
-        inputs:
-          ignoreDirectories: ${{ parameters.componentGovernanceIgnoreDirectories }}
+  - template: /eng/common/templates/steps/component-governance.yml
+    parameters:
+      ${{ if eq(parameters.disableComponentGovernance, '') }}:
+        ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(parameters.runAsPublic, 'false'), or(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/dotnet/'), startsWith(variables['Build.SourceBranch'], 'refs/heads/microsoft/'), eq(variables['Build.SourceBranch'], 'refs/heads/main'))) }}:
+          disableComponentGovernance: false
+        ${{ else }}:
+          disableComponentGovernance: true
+      ${{ else }}:
+        disableComponentGovernance: ${{ parameters.disableComponentGovernance }}
+      componentGovernanceIgnoreDirectories: ${{ parameters.componentGovernanceIgnoreDirectories }}
 
   - ${{ if eq(parameters.enableMicrobuild, 'true') }}:
     - ${{ if and(eq(parameters.runAsPublic, 'false'), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - task: MicroBuildCleanup@1
-        displayName: Execute Microbuild cleanup tasks  
+        displayName: Execute Microbuild cleanup tasks
         condition: and(always(), in(variables['_SignType'], 'real', 'test'), eq(variables['Agent.Os'], 'Windows_NT'))
         continueOnError: ${{ parameters.continueOnError }}
         env:
@@ -203,7 +220,7 @@ jobs:
     - task: PublishBuildArtifacts@1
       displayName: Publish Logs
       inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)'
+        PathtoPublish: '$(System.DefaultWorkingDirectory)/artifacts/log/$(_BuildConfig)'
         PublishLocation: Container
         ArtifactName: ${{ coalesce(parameters.enablePublishBuildArtifacts.artifactName, '$(Agent.Os)_$(Agent.JobName)' ) }}
       continueOnError: true
@@ -214,8 +231,8 @@ jobs:
       displayName: Publish XUnit Test Results
       inputs:
         testResultsFormat: 'xUnit'
-        testResultsFiles: '*.xml' 
-        searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/$(_BuildConfig)'
+        testResultsFiles: '*.xml'
+        searchFolder: '$(System.DefaultWorkingDirectory)/artifacts/TestResults/$(_BuildConfig)'
         testRunTitle: ${{ coalesce(parameters.testRunTitle, parameters.name, '$(System.JobName)') }}-xunit
         mergeTestResults: ${{ parameters.mergeTestResults }}
       continueOnError: true
@@ -225,8 +242,8 @@ jobs:
       displayName: Publish TRX Test Results
       inputs:
         testResultsFormat: 'VSTest'
-        testResultsFiles: '*.trx' 
-        searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/$(_BuildConfig)'
+        testResultsFiles: '*.trx'
+        searchFolder: '$(System.DefaultWorkingDirectory)/artifacts/TestResults/$(_BuildConfig)'
         testRunTitle: ${{ coalesce(parameters.testRunTitle, parameters.name, '$(System.JobName)') }}-trx
         mergeTestResults: ${{ parameters.mergeTestResults }}
       continueOnError: true
@@ -240,7 +257,7 @@ jobs:
         IgnoreDirectories: ${{ parameters.componentGovernanceIgnoreDirectories }}
 
   - ${{ if eq(parameters.enableBuildRetry, 'true') }}:
-    - publish: $(Build.SourcesDirectory)\eng\common\BuildConfiguration
+    - publish: $(System.DefaultWorkingDirectory)\eng\common\BuildConfiguration
       artifact: BuildConfiguration
       displayName: Publish build retry configuration
       continueOnError: true
