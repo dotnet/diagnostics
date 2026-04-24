@@ -55,7 +55,7 @@ Focus on:
 
 ### 4. Write the release notes
 
-Follow the format used in previous releases (see `v9.0.661903` for reference). Structure:
+Follow the format used in the latest release to get a sense of the current format used. For example, for `v9.0.661903` the structure follows the following pattern:
 
 ```markdown
 ### General announcements
