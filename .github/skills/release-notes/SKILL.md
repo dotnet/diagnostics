@@ -12,8 +12,9 @@ description: Generate release notes for the dotnet/diagnostics repository. Use w
 Find the **last published GitHub release** — not the latest git tag. This repo may have many version tags (e.g., `v10.0.*`, `v11.0.*`) that don't correspond to published releases.
 
 ```bash
-# Query the GitHub releases API for the last published release
-# Use the github-mcp-server or the GitHub API directly
+# Get the most recent published GitHub release tag for dotnet/diagnostics
+release_tag=$(gh release list --repo dotnet/diagnostics --limit 1 --json tagName --jq '.[0].tagName')
+echo "$release_tag"
 ```
 
 The last published release may be on a different branch (e.g., `release/9.0`). Even so, use the tag directly in `git log` — **do NOT use `git merge-base`**. The release branch often contains snap/backport merges that bring `main` commits into the release, so `merge-base` returns an ancestor that is already included in the release tag. Instead:
