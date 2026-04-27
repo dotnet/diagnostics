@@ -27,8 +27,6 @@
 #endif
 
 class LinearReadCache;
-class CGCDesc;
-class CGCDescSeries;
 
 namespace sos
 {
