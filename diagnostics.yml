@@ -126,9 +126,9 @@ stages:
 
     - template: /eng/build.yml
       parameters:
-        name: CentOS_7
+        name: CentOS_9
         osGroup: Linux
-        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-7-3e800f1-20190501005343
+        dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-9-amd64
         strategy:
           matrix:
             Build_Debug:
@@ -260,7 +260,7 @@ stages:
           name: Debian_Stretch
           osGroup: Linux
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-stretch-3e800f1-20190521154431
-          dependsOn: CentOS_7
+          dependsOn: CentOS_9
           testOnly: true
           strategy:
             matrix:
@@ -273,7 +273,7 @@ stages:
 #           name: Fedora_34
 #           osGroup: Linux
 #           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-34-helix-20220331150839-4f64125
-#           dependsOn: CentOS_7
+#           dependsOn: CentOS_9
 #           testOnly: true
 #           requiresCapPtraceContainer: true
 #           strategy:
@@ -287,7 +287,7 @@ stages:
 #           name: OpenSuse_15_2
 #           osGroup: Linux
 #           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:opensuse-15.2-helix-amd64-20211018152525-9cc02fe
-#           dependsOn: CentOS_7
+#           dependsOn: CentOS_9
 #           testOnly: true
 #           strategy:
 #             matrix:
@@ -300,7 +300,7 @@ stages:
           name: Ubuntu_16_04
           osGroup: Linux
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-16.04-09ca40b-20190520220842
-          dependsOn: CentOS_7
+          dependsOn: CentOS_9
           testOnly: true
           strategy:
             matrix:
@@ -313,7 +313,7 @@ stages:
           name: Ubuntu_18_04
           osGroup: Linux
           dockerImage: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-18.04-3e800f1-20190508143252
-          dependsOn: CentOS_7
+          dependsOn: CentOS_9
           testOnly: true
           strategy:
             matrix:
@@ -329,7 +329,7 @@ stages:
             displayName: Sign, Package, and Generate BAR Manifests
             dependsOn:
             - Windows
-            - CentOS_7
+            - CentOS_9
             - Alpine3_13
             - MacOS
             - MacOS_arm64
