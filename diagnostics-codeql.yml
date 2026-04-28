@@ -27,6 +27,8 @@ variables:
   # CG is handled in the primary CI pipeline
   - name: skipComponentGovernanceDetection
     value: true
+  - name: CheckEolTargetFramework
+    value: false
 
 stages:
 - stage: build
