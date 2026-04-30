@@ -22,6 +22,13 @@
   -->
 
   <PropertyGroup>
+    <!-- Detect whether this is a cross-architecture build (host != target) -->
+    <HostArch>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</HostArch>
+    <IsCrossArchBuild Condition="'$(HostArch)' != '$(TargetArch)'">true</IsCrossArchBuild>
+    <!-- When cross-building, use a separate host-arch SDK dir for building debuggees -->
+    <DebuggeeBuildDotNetDir Condition="'$(IsCrossArchBuild)' == 'true'">$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-build'))</DebuggeeBuildDotNetDir>
+    <DebuggeeBuildDotNetDir Condition="'$(IsCrossArchBuild)' != 'true'">$(ArtifactsDotnetTestDir)</DebuggeeBuildDotNetDir>
+    <DebuggeeBuildDotNetPath>$([MSBuild]::NormalizePath('$(DebuggeeBuildDotNetDir)', 'dotnet'))</DebuggeeBuildDotNetPath>
     <TestDotNetPath>$([MSBuild]::NormalizePath('$(ArtifactsDotnetTestDir)', 'dotnet'))</TestDotNetPath>
   </PropertyGroup>
 
@@ -30,37 +37,37 @@
           Condition="'$(SkipTests)' != 'true'">
     <MSBuild Projects="$(RepositoryEngineeringDir)InstallRuntimes.proj"
              Targets="InstallTestRuntimes"
-             Properties="TargetArch=$(TargetArch);TargetOS=$(TargetOS);TestArchitectures=$(TargetArch);PrivateBuildTesting=$(PrivateBuildTesting);LiveRuntimeDir=$(LiveRuntimeDir)" />
+             Properties="TargetArch=$(TargetArch);TargetOS=$(TargetOS);TestArchitectures=$(TargetArch);PrivateBuildTesting=$(PrivateBuildTesting);LiveRuntimeDir=$(LiveRuntimeDir);HostArch=$(HostArch)" />
   </Target>
 
   <Target Name="BuildDebuggees"
           AfterTargets="Build"
           DependsOnTargets="InstallTestRuntimes"
           Condition="'$(SkipTests)' != 'true'">
-    <!-- Remove stale SDKs from the test dotnet dir so the repo root global.json
+    <!-- Remove stale SDKs from the build dotnet dir so the repo root global.json
          (rollForward:major) resolves to the correct test SDK.  InstallTestRuntimes
          only installs $(MicrosoftNETSdkVersion); older SDKs are leftovers. -->
     <ItemGroup>
-      <_StaleTestSdks Include="$([System.IO.Directory]::GetDirectories('$(ArtifactsDotnetTestDir)sdk'))" />
-      <_StaleTestSdks Remove="$([MSBuild]::NormalizePath('$(ArtifactsDotnetTestDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))" />
+      <_StaleTestSdks Include="$([System.IO.Directory]::GetDirectories('$(DebuggeeBuildDotNetDir)sdk'))" />
+      <_StaleTestSdks Remove="$([MSBuild]::NormalizePath('$(DebuggeeBuildDotNetDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))" />
     </ItemGroup>
     <RemoveDir Directories="@(_StaleTestSdks)" />
     <!-- Clean up any generated global.json from prior runs that would shadow the repo root's -->
     <Delete Files="$(ArtifactsDir)global.json" Condition="Exists('$(ArtifactsDir)global.json')" />
     <PropertyGroup>
-      <_TestSdkVersionDir>$([MSBuild]::NormalizePath('$(ArtifactsDotnetTestDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))</_TestSdkVersionDir>
+      <_BuildSdkVersionDir>$([MSBuild]::NormalizePath('$(DebuggeeBuildDotNetDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))</_BuildSdkVersionDir>
     </PropertyGroup>
     <ItemGroup>
-      <DebuggeeBuildEnv Include="DOTNET_ROOT=$(ArtifactsDotnetTestDir.TrimEnd('\/'))" />
-      <DebuggeeBuildEnv Include="DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR=$(ArtifactsDotnetTestDir.TrimEnd('\/'))" />
-      <DebuggeeBuildEnv Include="DOTNET_HOST_PATH=$(TestDotNetPath)" />
-      <DebuggeeBuildEnv Include="DOTNET_INSTALL_DIR=$(ArtifactsDotnetTestDir.TrimEnd('\/'))" />
+      <DebuggeeBuildEnv Include="DOTNET_ROOT=$(DebuggeeBuildDotNetDir.TrimEnd('\/'))" />
+      <DebuggeeBuildEnv Include="DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR=$(DebuggeeBuildDotNetDir.TrimEnd('\/'))" />
+      <DebuggeeBuildEnv Include="DOTNET_HOST_PATH=$(DebuggeeBuildDotNetPath)" />
+      <DebuggeeBuildEnv Include="DOTNET_INSTALL_DIR=$(DebuggeeBuildDotNetDir.TrimEnd('\/'))" />
       <!-- Override inherited MSBuild env vars that point to the build SDK -->
-      <DebuggeeBuildEnv Include="MSBuildSDKsPath=$(_TestSdkVersionDir)$([System.IO.Path]::DirectorySeparatorChar)Sdks" />
-      <DebuggeeBuildEnv Include="MSBuildExtensionsPath=$(_TestSdkVersionDir)" />
+      <DebuggeeBuildEnv Include="MSBuildSDKsPath=$(_BuildSdkVersionDir)$([System.IO.Path]::DirectorySeparatorChar)Sdks" />
+      <DebuggeeBuildEnv Include="MSBuildExtensionsPath=$(_BuildSdkVersionDir)" />
     </ItemGroup>
-    <Exec Command="$(TestDotNetPath) build $(MSBuildThisFileDirectory)Debuggees.proj -c $(Configuration) -bl:$(ArtifactsLogDir)Debuggees.binlog /p:TargetOS=$(TargetOS) /p:TargetArch=$(TargetArch) /p:RepoRoot=$(RepoRoot)"
-          WorkingDirectory="$(ArtifactsDotnetTestDir)"
+    <Exec Command="$(DebuggeeBuildDotNetPath) build $(MSBuildThisFileDirectory)Debuggees.proj -c $(Configuration) -bl:$(ArtifactsLogDir)Debuggees.binlog /p:TargetOS=$(TargetOS) /p:TargetArch=$(TargetArch) /p:RepoRoot=$(RepoRoot)"
+          WorkingDirectory="$(DebuggeeBuildDotNetDir)"
           EnvironmentVariables="@(DebuggeeBuildEnv)" />
   </Target>
 </Project>
