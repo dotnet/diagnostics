@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Microsoft.DotNet.XUnitExtensions;
 using Xunit;
 
@@ -157,8 +158,31 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using Process child = Process.Start(psi);
             try
             {
-                // Read the child's environ directly for diagnostics
                 string environPath = $"/proc/{child.Id}/environ";
+
+                // Wait for /proc/{pid}/environ to be populated.
+                // Between fork() and execve(), the environ file may be empty (0 bytes).
+                bool environPopulated = false;
+                const int MAX_TRIES = 20;
+                const int DELAY_MS = 50;
+                for (int attempt = 0; attempt < MAX_TRIES && !environPopulated; attempt++)
+                {
+                    try
+                    {
+                        environPopulated = File.ReadAllBytes(environPath).Length > 0;
+                    }
+                    catch (IOException)
+                    {
+                        // File may be temporarily unavailable.
+                    }
+
+                    if (!environPopulated)
+                    {
+                        Thread.Sleep(DELAY_MS);
+                    }
+                }
+
+                // Read the child's environ directly for diagnostics
                 string environPerms = "unknown";
                 try
                 {
@@ -192,7 +216,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     + $"environ permissions: {environPerms}, "
                     + $"parent TMPDIR: '{Environment.GetEnvironmentVariable("TMPDIR") ?? "(not set)"}', "
                     + $"psi.Environment TMPDIR: '{psi.Environment["TMPDIR"]}', "
-                    + $"current user: {Environment.UserName}, ";
+                    + $"current user: {Environment.UserName}, "
+                    + $"environ populated after poll: {environPopulated}, ";
 
                 if (environReadError != null)
                 {

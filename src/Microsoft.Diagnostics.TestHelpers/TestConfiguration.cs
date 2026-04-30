@@ -72,7 +72,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TargetRid"] = GetRid(),
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages,
-                ["TestCDAC"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC")
+                ["TestCDAC"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC"),
+                ["TestCDACNoFallback"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC_NO_FALLBACK")
             };
             if (OS.Kind == OSKind.Windows)
             {
@@ -454,7 +455,11 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 sb.Append(".singlefile");
             }
-            if (TestCDAC)
+            if (TestCDACNoFallback)
+            {
+                sb.Append(".cdac_no_fallback");
+            }
+            else if (TestCDAC)
             {
                 sb.Append(".cdac");
             }
@@ -558,6 +563,14 @@ namespace Microsoft.Diagnostics.TestHelpers
         public bool TestCDAC
         {
             get { return string.Equals(GetValue("TestCDAC"), "true", StringComparison.InvariantCultureIgnoreCase); }
+        }
+
+        /// <summary>
+        /// Returns true if tests should use the cDAC with no fallback to the legacy DAC.
+        /// </summary>
+        public bool TestCDACNoFallback
+        {
+            get { return string.Equals(GetValue("TestCDACNoFallback"), "true", StringComparison.InvariantCultureIgnoreCase); }
         }
 
         /// <summary>

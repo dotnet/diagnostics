@@ -237,7 +237,7 @@ extends:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
-            name: Alpine3_19
+            name: Alpine3_23
             osGroup: Linux
             osSuffix: -musl
             container: test_linux_musl_x64
@@ -255,22 +255,7 @@ extends:
           - template: /eng/pipelines/build.yml
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
-              name: Debian_Bullseye
-              osGroup: Linux
-              container: test_debian_11_amd64
-              dependsOn: Linux
-              testOnly: true
-              buildConfigs:
-              - configuration: Release
-                architecture: x64
-              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                - configuration: Debug
-                  architecture: x64
-
-          - template: /eng/pipelines/build.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: Fedora_39
+              name: Fedora_43
               osGroup: Linux
               container: test_fedora
               dependsOn: Linux

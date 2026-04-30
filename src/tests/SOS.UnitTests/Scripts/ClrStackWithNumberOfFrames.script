@@ -37,6 +37,7 @@ VERIFY:(?:[^\r\n]*\r?\n){6}[ \t]*\r?\n
 !VERIFY:(?:[^\r\n]*\r?\n){8}[ \t]*\r?\n
 
 # Verify that ClrStack with number of frames works using ICorDebug
+!IFDEF:CDAC_NO_FALLBACK_TESTING
 SOSCOMMAND:ClrStack -i -c 1
 VERIFY:(?:[^\r\n]*\r?\n){8}[ \t]*\r?\n
 !VERIFY:(?:[^\r\n]*\r?\n){10}[ \t]*\r?\n
@@ -55,3 +56,4 @@ VERIFY:(?:[^\r\n]*\r?\n){10}[ \t]*\r?\n
 SOSCOMMAND:ClrStack -i -c 4
 VERIFY:(?:[^\r\n]*\r?\n){11}[ \t]*\r?\n
 !VERIFY:(?:[^\r\n]*\r?\n){13}[ \t]*\r?\n
+ENDIF:CDAC_NO_FALLBACK_TESTING

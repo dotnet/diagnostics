@@ -91,6 +91,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static async Task<int> RunAsync(CollectArgs config, MockConsole console, bool hasChildProcess = false)
         {
+            // Disable the interactive status-printing path. It is currently non-deterministic in these tests because the
+            // MemoryStream-backed session completes near-instantly, and whether the status line fires before the loop exits
+            // depends on thread scheduling. The MemoryStream substitution also means no trace file exists on disk, so
+            // FileInfo.Length in the status printer would throw.
+            console.IsOutputRedirected = true;
+
             var handler = new CollectCommandHandler(console);
             handler.StartTraceSessionAsync = (client, cfg, ct) => Task.FromResult<CollectCommandHandler.ICollectSession>(new TestCollectSession());
             handler.ResumeRuntimeAsync = (client, ct) => Task.CompletedTask;

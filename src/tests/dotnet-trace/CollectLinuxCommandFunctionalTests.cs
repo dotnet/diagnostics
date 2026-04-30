@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -210,6 +211,38 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, expected);
         }
 
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_ReportsConnectionFailed_NonDotNetProcess()
+        {
+            // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic port.
+            string pid1Name = Process.GetProcessById(1).ProcessName;
+            MockConsole console = new(200, 30, _outputHelper);
+            var args = TestArgs(processId: 1);
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.TracingError, exitCode);
+            console.AssertSanitizedLinesEqual(null, FormatException(
+                $"Unable to connect to process '{pid1Name} (1)'. The process may have exited, or it doesn't have an accessible .NET diagnostic port."));
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_Probe_ReportsConnectionFailed_NonDotNetProcess()
+        {
+            // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic port.
+            string pid1Name = Process.GetProcessById(1).ProcessName;
+            MockConsole console = new(200, 2000, _outputHelper);
+            var args = TestArgs(processId: 1, probe: true, output: new FileInfo(CommonOptions.DefaultTraceName));
+            int exitCode = Run(args, console);
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            string[] expected = ExpectPreviewWithMessages(
+                new[] {
+                    $"Could not probe process '{pid1Name} (1)'. The process may have exited, or it doesn't have an accessible .NET diagnostic port.",
+                }
+            );
+            console.AssertSanitizedLinesEqual(null, expected);
+        }
+
         [ConditionalFact(nameof(IsCollectLinuxNotSupported))]
         public void CollectLinuxCommand_NotSupported_OnNonLinux()
         {
@@ -324,6 +357,30 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // The important assertion is in the callback so make sure it was called.
             Assert.True(callbackInvoked);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_PrintsStatusOnce_WhenCursorRepositioningUnsupported()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+
+            var handler = new CollectLinuxCommandHandler(console);
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                // Simulate cursor repositioning unsupported by resetting the cursor
+                // during the callback, undoing any cursor advancement from the tool's
+                // earlier console output (banner, provider table, etc.).
+                console.Clear();
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                cb(3, IntPtr.Zero, UIntPtr.Zero);
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs());
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+
+            string[] lines = console.Lines;
+            int statusLineCount = lines.Count(l => l.Contains("Recording trace", StringComparison.OrdinalIgnoreCase));
+            Assert.Equal(1, statusLineCount);
         }
 
         private static int Run(object args, MockConsole console)
@@ -532,7 +589,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             DefaultOutputFile,
             "",
             "[dd:hh:mm:ss]\tRecording trace.",
-            "Press <Enter> or <Ctrl-C> to exit...",
+            "Press <Enter> or <Ctrl+C> to exit...",
         ];
         private static string[] PreviewMessages = [
             "==========================================================================================",

@@ -14,7 +14,6 @@ runtime/src/coreclr/debug/inc/runtimeinfo.h             -> diagnostics/src/share
 runtime/src/coreclr/gcdump                              -> diagnostics/src/shared/gcdump
 runtime/src/coreclr/gcinfo/gcinfodumper.cpp             -> diagnostics/src/shared/gcinfo/gcinfodumper.cpp
 runtime/src/coreclr/vm/gcinfodecoder.cpp                -> diagnostics/src/shared/vm/gcinfodecoder.cpp
-runtime/src/coreclr/gc/gcdesc.h                         -> diagnostics/src/shared/gc/gcdesc.h
 runtime/src/coreclr/dlls/mscorrc/resource.h             -> diagnostics/src/shared/dlls/mscorrc/resource.h
 runtime/src/coreclr/hosts/inc/coreclrhost.h             -> diagnostics/src/shared/hosts/inc/coreclrhost.h
 runtime/src/coreclr/minipal                             -> diagnostics/src/shared/minipal
@@ -35,7 +34,7 @@ diagnostics/src/shared/pal/src/configure.cmake
 diagnostics/src/shared/pal/src/config.h.in
 diagnostics/eng/native/tryrun.cmake
 
-There are a lot of include and source files that need to be carefully merged from the runtime because 
+There are a lot of include and source files that need to be carefully merged from the runtime because
 there is functions that the diagnostics repo doesn't need (i.e. Mutexes) and functions that were removed
 from the runtime PAL that the diagnostics repo needs (i.e. RemoveDirectoryA).
 

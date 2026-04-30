@@ -4,7 +4,6 @@
 #include "strike.h"
 #include "util.h"
 #include "sos.h"
-#include "gcdesc.h"
 
 namespace sos
 {

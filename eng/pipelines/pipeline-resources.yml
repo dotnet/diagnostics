@@ -71,19 +71,18 @@ extends:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-9
 
       test_linux_musl_x64:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.19-WithNode
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-amd64
         options: --cap-add=SYS_PTRACE
 
-      test_debian_11_amd64:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-11-amd64
-        options: '--env PYTHONPATH=/usr/bin/python3.9'
+      test_debian_13_amd64:
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:debian-13-helix-amd64
 
       test_fedora:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-41
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:fedora-43-amd64
         options: --cap-add=SYS_PTRACE
 
-      test_opensuse_15_2:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:opensuse-15.2-helix-amd64
+      test_opensuse_16_0:
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:opensuse-16.0-helix-amd64
 
       test_ubuntu_22_04:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04
