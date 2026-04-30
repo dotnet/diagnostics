@@ -292,6 +292,7 @@ static BOOL getFileName(LPCWSTR lpApplicationName, LPWSTR lpCommandLine, PathCha
 static char ** buildArgv(LPCWSTR lpCommandLine, PathCharString& lpAppPath, UINT *pnArg);
 static BOOL getPath(PathCharString& lpFileName, PathCharString& lpPathFileName);
 static int checkFileType(LPCSTR lpFileName);
+static BOOL fileExistsAndIsNotDirectory(LPCSTR lpPath);
 static BOOL PROCEndProcess(HANDLE hProcess, UINT uExitCode, BOOL bTerminateUnconditionally);
 
 ProcessModules *GetProcessModulesFromHandle(IN HANDLE hProcess, OUT LPDWORD lpCount);
@@ -4064,6 +4065,43 @@ buildArgv(
 
 /*++
 Function:
+  fileExistsAndIsNotDirectory
+
+Abstract:
+    Helper function for getPath. Checks whether a candidate path exists and
+    is not a directory. This matches Windows CreateProcessW behavior, which
+    skips directories during PATH search and only considers files.
+
+Parameters:
+    IN  lpPath: path to check
+
+Return:
+    TRUE if the path exists and is not a directory
+    FALSE otherwise
+--*/
+static
+BOOL
+fileExistsAndIsNotDirectory(LPCSTR lpPath)
+{
+    struct stat stat_data;
+
+    if (stat(lpPath, &stat_data) != 0)
+    {
+        return FALSE;
+    }
+
+    if ((stat_data.st_mode & S_IFMT) == S_IFDIR)
+    {
+        TRACE("Skipping %s (is a directory)\n", lpPath);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
+/*++
+Function:
   getPath
 
 Abstract:
@@ -4147,7 +4185,7 @@ getPath(
         lpPathFileName.Append("/", 1);
         lpPathFileName.Append(lpFileNameString);
 
-        if (access(lpPathFileName, F_OK) == 0)
+        if (fileExistsAndIsNotDirectory(lpPathFileName))
         {
             TRACE("found %s in application directory (%s)\n", lpFileName, lpPathFileName.GetString());
             return TRUE;
@@ -4164,7 +4202,7 @@ getPath(
     lpPathFileName.Set("./", 2);
     lpPathFileName.Append(lpFileNameString);
 
-    if (access (lpPathFileName, R_OK) == 0)
+    if (fileExistsAndIsNotDirectory(lpPathFileName))
     {
         TRACE("found %s in current directory.\n", lpFileName);
         return TRUE;
@@ -4220,7 +4258,7 @@ getPath(
 
         lpPathFileName.Append(lpFileNameString);
 
-        if ( access (lpPathFileName, F_OK) == 0)
+        if (fileExistsAndIsNotDirectory(lpPathFileName))
         {
             TRACE("Found %s in $PATH element %s\n", lpFileName, lpNext);
             free(lpPath);

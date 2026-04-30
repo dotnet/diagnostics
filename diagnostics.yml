@@ -255,21 +255,6 @@ extends:
           - template: /eng/pipelines/build.yml
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
-              name: Debian_Trixie
-              osGroup: Linux
-              container: test_debian_13_amd64
-              dependsOn: Linux
-              testOnly: true
-              buildConfigs:
-              - configuration: Release
-                architecture: x64
-              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                - configuration: Debug
-                  architecture: x64
-
-          - template: /eng/pipelines/build.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
               name: Fedora_43
               osGroup: Linux
               container: test_fedora

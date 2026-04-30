@@ -108,6 +108,7 @@ IFDEF:NETCORE_OR_DOTNETDUMP
 !IFDEF:ALPINE
 
 # 5) Verifying that ClrStack with the ICorDebug options works
+!IFDEF:CDAC_NO_FALLBACK_TESTING
 SOSCOMMAND:ClrStack -i
 VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
 VERIFY:.*\s+Child\s+SP\s+IP\s+Call Site\s+
@@ -130,6 +131,7 @@ VERIFY:\s+\+ System.FormatException ex @ 0x<HEXVAL>\s+
 ENDIF:SINGLE_FILE_APP
 VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\[DEFAULT\] Void NestedExceptionTest\.Program\.Main\(.*\)\s+\(.*\)\s+
 VERIFY:.*\s+Stack walk complete.\s+
+ENDIF:CDAC_NO_FALLBACK_TESTING
 
 ENDIF:ALPINE
 ENDIF:NETCORE_OR_DOTNETDUMP
