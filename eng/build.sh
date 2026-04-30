@@ -31,6 +31,7 @@ __Test=0
 __TestFilter=
 __UnprocessedBuildArgs=
 __UseCdac=0
+__NoFallback=0
 __LiveRuntimeDir=
 
 usage_list+=("-skipmanaged: do not build managed components.")
@@ -117,6 +118,10 @@ handle_arguments() {
             __UseCdac=1
             ;;
 
+        nofallback|-nofallback)
+            __NoFallback=1
+            ;;
+
         -warnaserror|-nodereuse)
             __ManagedBuildArgs="$__ManagedBuildArgs $1 $2"
             __ShiftArgs=1
@@ -129,6 +134,11 @@ handle_arguments() {
 }
 
 source "$__RepoRootDir"/eng/native/build-commons.sh
+
+if [[ "$__NoFallback" == 1 && "$__UseCdac" != 1 ]]; then
+    echo "-nofallback requires -usecdac to also be specified."
+    exit 1
+fi
 
 __LogsDir="$__RootBinDir/log/$__BuildType"
 __ConfigTriplet="$__TargetOS.$__TargetArch.$__BuildType"
@@ -294,6 +304,10 @@ if [[ "$__Test" == 1 ]]; then
 
       if [[ "$__UseCdac" == 1 ]]; then
           export SOS_TEST_CDAC="true"
+      fi
+
+      if [[ "$__NoFallback" == 1 ]]; then
+          export SOS_TEST_CDAC_NO_FALLBACK="true"
       fi
 
       # Build the test filter argument if provided

@@ -1,0 +1,18 @@
+#
+# Tests that clrthreads properly displays COM apartment state (STA/MTA).
+# This test is Windows-only since apartment state is a Windows COM concept.
+#
+
+CONTINUE
+
+LOADSOS
+
+# Verify that clrthreads shows the apartment state column with STA and MTA values.
+# The ThreadApartment debuggee creates one STA and one MTA thread before breaking.
+IFDEF:WINDOWS
+SOSCOMMAND:clrthreads
+VERIFY:\s*ThreadCount:\s+<DECVAL>\s+
+VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*Apt.*
+VERIFY:.*\bSTA\b.*
+VERIFY:.*\bMTA\b.*
+ENDIF:WINDOWS

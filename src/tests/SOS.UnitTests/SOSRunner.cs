@@ -699,7 +699,12 @@ public class SOSRunner : IDisposable
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
-            if (config.TestCDAC)
+            if (config.TestCDACNoFallback)
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
+                processRunner.WithEnvironmentVariable("CDAC_NO_FALLBACK", "1");
+            }
+            else if (config.TestCDAC)
             {
                 processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
             }
@@ -1557,6 +1562,10 @@ public class SOSRunner : IDisposable
         if (!string.IsNullOrEmpty(setHostRuntime) && setHostRuntime == "-none")
         {
             defines.Add("HOST_RUNTIME_NONE");
+        }
+        if (_config.TestCDACNoFallback)
+        {
+            defines.Add("CDAC_NO_FALLBACK_TESTING");
         }
         return defines;
     }
