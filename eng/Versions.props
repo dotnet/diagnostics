@@ -39,7 +39,7 @@
     <MicrosoftExtensionsLoggingConfigurationVersion>8.0.1</MicrosoftExtensionsLoggingConfigurationVersion>
     <MicrosoftOneCollectRecordTraceVersions>0.1.33841</MicrosoftOneCollectRecordTraceVersions>
     <!-- Need version that understands UseAppFilters sentinel. -->
-    <MicrosoftExtensionsLoggingEventSourceVersion>8.0.3</MicrosoftExtensionsLoggingEventSourceVersion>
+    <MicrosoftExtensionsLoggingEventSourceVersion>8.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
     <SystemBuffersVersion>4.5.1</SystemBuffersVersion>
     <SystemDiagnosticsDiagnosticSourceVersion>8.0.1</SystemDiagnosticsDiagnosticSourceVersion>
