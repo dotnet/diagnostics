@@ -336,6 +336,7 @@ public class SOSStackTraceTests
             debuggeeName: "DivZero",
             scriptName: "ClrStackWithNumberOfFrames.script",
             Output,
+            testName: "SOS.ClrStackWithNumberOfFrames",
             testTriage: true);
     }
 }
@@ -507,6 +508,7 @@ public class SOSGCTests
             {
                 TestConfiguration = config,
                 TestLive = false,
+                TestName = "SOS.DumpGen",
                 DebuggeeName = "DotnetDumpCommands",
                 DebuggeeArguments = "dumpgen",
                 DumpNameSuffix = "dumpgen",
@@ -566,6 +568,7 @@ public class SOSDumpTests
             {
                 TestConfiguration = config,
                 TestLive = false,
+                TestName = "SOS.ConcurrentDictionaries",
                 DebuggeeName = "DotnetDumpCommands",
                 DebuggeeArguments = "dcd",
                 DumpNameSuffix = "dcd",
