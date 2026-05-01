@@ -8,20 +8,20 @@ This file should be imported by eng/Versions.props
     <!-- dotnet-android dependencies -->
     <XamarinAndroidToolsAndroidSdkPackageVersion>1.0.105-preview.225</XamarinAndroidToolsAndroidSdkPackageVersion>
     <!-- dotnet-arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26208.4</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.26208.4</MicrosoftDotNetCodeAnalysisPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26222.2</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.26222.2</MicrosoftDotNetCodeAnalysisPackageVersion>
     <MicrosoftDotNetRemoteExecutorPackageVersion>7.0.0-beta.22316.2</MicrosoftDotNetRemoteExecutorPackageVersion>
     <!-- dotnet-command-line-api dependencies -->
     <SystemCommandLinePackageVersion>2.0.0-beta5.25210.1</SystemCommandLinePackageVersion>
     <!-- dotnet-dotnet dependencies -->
-    <MicrosoftAspNetCoreAppRefPackageVersion>10.0.5</MicrosoftAspNetCoreAppRefPackageVersion>
-    <MicrosoftAspNetCoreAppRefInternalPackageVersion>10.0.5-servicing.26153.111</MicrosoftAspNetCoreAppRefInternalPackageVersion>
+    <MicrosoftAspNetCoreAppRefPackageVersion>10.0.7</MicrosoftAspNetCoreAppRefPackageVersion>
+    <MicrosoftAspNetCoreAppRefInternalPackageVersion>10.0.7-servicing.26217.108</MicrosoftAspNetCoreAppRefInternalPackageVersion>
     <MicrosoftCodeAnalysisPackageVersion>5.0.0-2.26153.111</MicrosoftCodeAnalysisPackageVersion>
     <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.0.0-2.26153.111</MicrosoftCodeAnalysisAnalyzersPackageVersion>
     <MicrosoftCodeAnalysisCSharpPackageVersion>5.0.0-2.26153.111</MicrosoftCodeAnalysisCSharpPackageVersion>
-    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>10.0.105</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
-    <MicrosoftNETSdkPackageVersion>10.0.105-servicing.26153.111</MicrosoftNETSdkPackageVersion>
-    <MicrosoftNETCoreAppRefPackageVersion>10.0.5</MicrosoftNETCoreAppRefPackageVersion>
+    <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>10.0.107</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
+    <MicrosoftNETSdkPackageVersion>10.0.107-servicing.26217.108</MicrosoftNETSdkPackageVersion>
+    <MicrosoftNETCoreAppRefPackageVersion>10.0.7</MicrosoftNETCoreAppRefPackageVersion>
     <MicrosoftNETCorePlatformsPackageVersion>10.0.5-servicing.26153.111</MicrosoftNETCorePlatformsPackageVersion>
     <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.5-servicing.26153.111</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.5-servicing.26153.111</runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>
