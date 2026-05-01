@@ -306,9 +306,11 @@ public class SOSRunner : IDisposable
                 // Setup a pipe server for the debuggee to connect to sync when to take a dump
                 if (information.UsePipeSync)
                 {
-                    // Use TestName for diagnostics + random suffix to avoid collisions in parallel runs.
-                    // Unix domain sockets (used on Linux/macOS) have ~104 byte path limit, so keep name short.
-                    pipeName = $"SOSRunner.{information.TestName}.{Random.Shared.Next():x8}";
+                    // Use random suffix to avoid collisions in parallel runs.
+                    // Unix domain sockets (used on Linux/macOS) have a 104-byte path limit.
+                    // .NET prepends "CoreFxPipe_" (11 chars) and the temp dir path (~52 chars on macOS).
+                    // This leaves ~41 chars for the pipe name. Use a short prefix + random hex.
+                    pipeName = $"sos.{Random.Shared.Next():x8}";
                     pipeServer = new NamedPipeServerStream(pipeName);
                     arguments.Append(' ');
                     arguments.Append(pipeName);
