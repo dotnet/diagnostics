@@ -306,8 +306,9 @@ public class SOSRunner : IDisposable
                 // Setup a pipe server for the debuggee to connect to sync when to take a dump
                 if (information.UsePipeSync)
                 {
-                    int runnerId = Process.GetCurrentProcess().Id;
-                    pipeName = $"SOSRunner.{runnerId}.{information.DebuggeeName}";
+                    // Use TestName for diagnostics + random suffix to avoid collisions in parallel runs.
+                    // Unix domain sockets (used on Linux/macOS) have ~104 byte path limit, so keep name short.
+                    pipeName = $"SOSRunner.{information.TestName}.{Random.Shared.Next():x8}";
                     pipeServer = new NamedPipeServerStream(pipeName);
                     arguments.Append(' ');
                     arguments.Append(pipeName);
