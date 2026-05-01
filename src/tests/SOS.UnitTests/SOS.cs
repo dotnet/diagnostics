@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -82,54 +83,72 @@ public static class SOSTestHelpers
         ITestOutputHelper output)
     {
         information.OutputHelper = output;
+        string testLabel = $"{information.DebuggeeName}/{scriptName}";
+        Stopwatch sw = Stopwatch.StartNew();
+        output.WriteLine($"[TIMING] {testLabel} started at {DateTime.UtcNow:HH:mm:ss.fff}");
 
-        if (information.TestLive)
+        try
         {
-            // Live
-            using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.Live))
+            if (information.TestLive)
             {
-                await runner.RunScript(scriptName);
-            }
-        }
-
-        if (information.TestDump)
-        {
-            string dumpName = null;
-
-            // Generate a crash dump.
-            if (information.DebuggeeDumpOutputRootDir != null)
-            {
-                dumpName = await SOSRunner.CreateDump(information);
-            }
-
-            // Test against a crash dump.
-            if (information.DebuggeeDumpInputRootDir != null)
-            {
-                // With cdb (Windows) or lldb (Linux)
-                using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
+                Stopwatch phaseSw = Stopwatch.StartNew();
+                // Live
+                using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.Live))
                 {
                     await runner.RunScript(scriptName);
                 }
+                output.WriteLine($"[TIMING] {testLabel} Live phase completed in {phaseSw.Elapsed.TotalSeconds:F1}s");
+            }
 
-                // Using the dotnet-dump analyze tool if the path exists in the config file.
-                if (information.TestConfiguration.DotNetDumpPath() != null)
+            if (information.TestDump)
+            {
+                string dumpName = null;
+
+                // Generate a crash dump.
+                if (information.DebuggeeDumpOutputRootDir != null)
                 {
-                    // Don't test dotnet-dump on triage dumps when running on desktop CLR.
-                    if (information.TestConfiguration.IsNETCore || information.DumpType != SOSRunner.DumpType.Triage)
+                    Stopwatch phaseSw = Stopwatch.StartNew();
+                    dumpName = await SOSRunner.CreateDump(information);
+                    output.WriteLine($"[TIMING] {testLabel} CreateDump completed in {phaseSw.Elapsed.TotalSeconds:F1}s");
+                }
+
+                // Test against a crash dump.
+                if (information.DebuggeeDumpInputRootDir != null)
+                {
+                    // With cdb (Windows) or lldb (Linux)
+                    Stopwatch phaseSw = Stopwatch.StartNew();
+                    using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDump))
                     {
-                        using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDumpWithDotNetDump))
+                        await runner.RunScript(scriptName);
+                    }
+                    output.WriteLine($"[TIMING] {testLabel} LoadDump phase completed in {phaseSw.Elapsed.TotalSeconds:F1}s");
+
+                    // Using the dotnet-dump analyze tool if the path exists in the config file.
+                    if (information.TestConfiguration.DotNetDumpPath() != null)
+                    {
+                        // Don't test dotnet-dump on triage dumps when running on desktop CLR.
+                        if (information.TestConfiguration.IsNETCore || information.DumpType != SOSRunner.DumpType.Triage)
                         {
-                            await runner.RunScript(scriptName);
+                            phaseSw = Stopwatch.StartNew();
+                            using (SOSRunner runner = await SOSRunner.StartDebugger(information, SOSRunner.DebuggerAction.LoadDumpWithDotNetDump))
+                            {
+                                await runner.RunScript(scriptName);
+                            }
+                            output.WriteLine($"[TIMING] {testLabel} DotNetDump phase completed in {phaseSw.Elapsed.TotalSeconds:F1}s");
                         }
                     }
                 }
-            }
 
-            // Test the crash report json file
-            if (dumpName != null && information.TestCrashReport)
-            {
-                TestCrashReport(dumpName, information);
+                // Test the crash report json file
+                if (dumpName != null && information.TestCrashReport)
+                {
+                    TestCrashReport(dumpName, information);
+                }
             }
+        }
+        finally
+        {
+            output.WriteLine($"[TIMING] {testLabel} finished in {sw.Elapsed.TotalSeconds:F1}s (total)");
         }
     }
 
@@ -145,6 +164,9 @@ public static class SOSTestHelpers
         bool testMini = false,
         SOSRunner.DumpGenerator dumpGenerator = SOSRunner.DumpGenerator.CreateDump)
     {
+        Stopwatch overallSw = Stopwatch.StartNew();
+        output.WriteLine($"[TIMING] RunTest({debuggeeName}, {scriptName}) started at {DateTime.UtcNow:HH:mm:ss.fff}");
+
         await RunTest(scriptName,
             new SOSRunner.TestInformation
             {
@@ -190,6 +212,8 @@ public static class SOSTestHelpers
                 },
                 output);
         }
+
+        output.WriteLine($"[TIMING] RunTest({debuggeeName}, {scriptName}) finished in {overallSw.Elapsed.TotalSeconds:F1}s (total)");
     }
 
     internal static void TestCrashReport(string dumpName, SOSRunner.TestInformation information)
