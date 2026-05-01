@@ -73,7 +73,7 @@ if (-not $skipnative) {
 }
 
 # Install sdk for building, restore and build managed components.
-# Runtime installation and debuggee building is handled by src/tests/dirs.proj targets.
+# Test runtime installation and debuggee building is handled by src/tests/dirs.proj targets.
 if (-not $skipmanaged) {
     $privatebuildtesting = "false"
     if ($privatebuild) {
