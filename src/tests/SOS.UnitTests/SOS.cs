@@ -13,10 +13,6 @@ using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
 
-// Newer SDKs flag MemberData(nameof(Configurations)) with this error
-// Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
-#pragma warning disable CA1825
-
 public static class SOSTestHelpers
 {
     public static IEnumerable<object[]> GetConfigurations(string key, string value)
