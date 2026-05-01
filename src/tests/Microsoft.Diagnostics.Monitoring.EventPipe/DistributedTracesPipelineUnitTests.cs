@@ -101,13 +101,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     testRunner);
             }
 
-            if (config.RuntimeFrameworkVersionMajor < 9)
-            {
-                // Note: Sampling ratio is only supported when DS 9 or greater is used
-                Assert.Empty(logger.LoggedActivities);
-                return;
-            }
-
+            // ParentRatioSampler used to be unavailable on DiagnosticSource < 9,
+            // which caused the sampler portion of the FilterAndPayloadSpec to be
+            // ignored and no activities to flow. Newer net 8 servicing runtimes
+            // honor it, so all supported TFMs now produce a single (un-recorded)
+            // activity here.
             Assert.Single(logger.LoggedActivities);
 
             var activityData = logger.LoggedActivities[0];
