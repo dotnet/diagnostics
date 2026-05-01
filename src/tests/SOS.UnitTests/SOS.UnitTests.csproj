@@ -17,6 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)ConfigFiles\Windows\Debugger.Tests.Config.txt" Condition="'$(OS)' == 'Windows_NT'">
       <Link>Debugger.Tests.Config.txt</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
