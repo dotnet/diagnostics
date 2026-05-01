@@ -241,7 +241,6 @@ public static class SOSTestHelpers
     }
 }
 
-[Collection("Windows Dump Generation")]
 public class SOS
 {
     public SOS(ITestOutputHelper output)
