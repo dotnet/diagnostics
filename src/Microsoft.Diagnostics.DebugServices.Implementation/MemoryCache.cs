@@ -162,6 +162,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 if (CacheSize >= CacheSizeLimit)
                 {
+                    Trace.TraceInformation($"[PERF] MemoryCache: SIZE LIMIT flush at {CacheSize / (1024 * 1024)}MB, {_map.Count} entries");
                     FlushCache();
                 }
 

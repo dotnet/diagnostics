@@ -86,14 +86,40 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // If the read failed or a successful partial read
             if (bytesRequested != bytesRead)
             {
+                _fallbackCallCount++;
                 // Check if the memory is in a module and cache it if it is
                 if (_memoryCache.ReadMemory(address + (uint)bytesRead, buffer.Slice(bytesRead), out int read))
                 {
                     bytesRead += read;
+                    _fallbackSuccessCount++;
                 }
             }
+            _totalReadCount++;
             return bytesRead > 0;
         }
+
+        /// <summary>
+        /// Dumps accumulated performance counters for memory reads.
+        /// Call this periodically or at end of commands to see fallback behavior.
+        /// </summary>
+        internal void DumpPerfCounters()
+        {
+            Trace.TraceInformation($"[PERF] ImageMappingMemoryService: totalReads={_totalReadCount} fallbackCalls={_fallbackCallCount} fallbackSuccess={_fallbackSuccessCount} readFromModuleCalls={_readFromModuleCallCount} readFromModuleSlow={_readFromModuleSlowCount} memoryCacheFlushes={_memoryCacheFlushCount}");
+            // Reset counters
+            _totalReadCount = 0;
+            _fallbackCallCount = 0;
+            _fallbackSuccessCount = 0;
+            _readFromModuleCallCount = 0;
+            _readFromModuleSlowCount = 0;
+            _memoryCacheFlushCount = 0;
+        }
+
+        private long _totalReadCount;
+        private long _fallbackCallCount;
+        private long _fallbackSuccessCount;
+        private long _readFromModuleCallCount;
+        private long _readFromModuleSlowCount;
+        private long _memoryCacheFlushCount;
 
         /// <summary>
         /// Write memory into target process for supported targets.
@@ -120,6 +146,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private byte[] ReadMemoryFromModule(ulong address, int bytesRequested)
         {
             Debug.Assert((address & ~_memoryService.SignExtensionMask()) == 0);
+            _readFromModuleCallCount++;
+            Stopwatch sw = Stopwatch.StartNew();
 
             // Default is to cache errors
             byte[] data = Array.Empty<byte>();
@@ -227,6 +255,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             else
             {
                 throw new InvalidOperationException($"ReadMemoryFromModule: recursion: address {address:X16} size {bytesRequested:X8}");
+            }
+            sw.Stop();
+            if (sw.ElapsedMilliseconds > 100)
+            {
+                _readFromModuleSlowCount++;
+                IModule module = _moduleService.GetModuleFromAddress(address);
+                Trace.TraceInformation($"[PERF] ReadMemoryFromModule: SLOW {sw.ElapsedMilliseconds}ms address={address:X16} result={data.Length}bytes module={module?.FileName ?? "null"}");
             }
             return data;
         }

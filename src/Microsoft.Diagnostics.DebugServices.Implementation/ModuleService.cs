@@ -359,6 +359,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <returns>version string or null</returns>
         internal string GetVersionString(IModule module)
         {
+            Stopwatch sw = Stopwatch.StartNew();
             try
             {
                 ELFFile elfFile = module.Services.GetService<ELFFile>();
@@ -374,17 +375,20 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             long loadSize = (long)programHeader.VirtualSize;
                             if (SearchVersionString(module.ImageBase + loadAddress, loadSize, out string productVersion))
                             {
+                                Trace.TraceInformation($"[PERF] GetVersionString: found in ELF {module} in {sw.ElapsedMilliseconds}ms");
                                 return productVersion;
                             }
                         }
                     }
-                    Trace.TraceInformation($"GetVersionString: not found in ELF file {module}");
+                    Trace.TraceInformation($"[PERF] GetVersionString: not found in ELF file {module} in {sw.ElapsedMilliseconds}ms");
                 }
                 else
                 {
                     MachOFile machOFile = module.Services.GetService<MachOFile>();
                     if (machOFile is not null)
                     {
+                        long totalScanSize = 0;
+                        int segmentCount = 0;
                         foreach (MachSegmentLoadCommand loadCommand in machOFile.Segments.Select((segment) => segment.LoadCommand))
                         {
                             if (loadCommand.Command == LoadCommandType.Segment64 &&
@@ -393,13 +397,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             {
                                 ulong loadAddress = loadCommand.VMAddress + machOFile.PreferredVMBaseAddress;
                                 long loadSize = (long)loadCommand.VMSize;
+                                totalScanSize += loadSize;
+                                segmentCount++;
+                                Stopwatch segSw = Stopwatch.StartNew();
                                 if (SearchVersionString(loadAddress, loadSize, out string productVersion))
                                 {
+                                    Trace.TraceInformation($"[PERF] GetVersionString: found in MachO {module} segment {loadCommand.SegName} in {sw.ElapsedMilliseconds}ms (segment took {segSw.ElapsedMilliseconds}ms, size={loadSize})");
                                     return productVersion;
+                                }
+                                segSw.Stop();
+                                if (segSw.ElapsedMilliseconds > 100)
+                                {
+                                    Trace.TraceInformation($"[PERF] GetVersionString: slow segment {loadCommand.SegName} in {module}: {segSw.ElapsedMilliseconds}ms size={loadSize} ({loadSize / 1024}KB)");
                                 }
                             }
                         }
-                        Trace.TraceInformation($"GetVersionString: not found in MachO file {module}");
+                        Trace.TraceInformation($"[PERF] GetVersionString: not found in MachO {module} in {sw.ElapsedMilliseconds}ms ({segmentCount} segments, {totalScanSize / 1024}KB total)");
                     }
                     else
                     {
@@ -424,6 +437,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private bool SearchVersionString(ulong address, long size, out string fileVersion)
         {
             byte[] buffer = new byte[s_versionString.Length];
+            int readCount = 0;
+            int readFailCount = 0;
 
             // We use the mapped memory service to find the version string in case it isn't in the dump.
             _versionCache ??= new ReadVirtualCache(MemoryService);
@@ -431,6 +446,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             while (size > 0)
             {
+                readCount++;
                 bool result = _versionCache.Read(address, buffer, s_versionString.Length, out int cbBytesRead);
                 if (result && cbBytesRead >= s_versionLength)
                 {
@@ -456,6 +472,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                             if (ch[0] == '\0')
                             {
                                 fileVersion = sb.ToString();
+                                Trace.TraceInformation($"[PERF] SearchVersionString: FOUND after {readCount} reads ({readFailCount} failures)");
                                 return true;
                             }
                             sb.Append(Encoding.ASCII.GetChars(ch));
@@ -470,11 +487,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
                 else
                 {
+                    readFailCount++;
                     address += (ulong)s_versionLength;
                     size -= s_versionLength;
                 }
             }
 
+            if (readCount > 1000)
+            {
+                Trace.TraceInformation($"[PERF] SearchVersionString: NOT FOUND after {readCount} reads ({readFailCount} failures)");
+            }
             fileVersion = null;
             return false;
         }

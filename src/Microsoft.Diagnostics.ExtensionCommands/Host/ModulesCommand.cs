@@ -44,6 +44,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
+            Stopwatch commandSw = Stopwatch.StartNew();
             if (Address.HasValue)
             {
                 IModule module = ModuleService.GetModuleFromAddress(Address.Value);
@@ -60,15 +61,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 Regex regex = ModuleName is not null ? new Regex(ModuleName, RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) : null;
                 ulong totalSize = 0;
+                int moduleCount = 0;
                 foreach (IModule module in ModuleService.EnumerateModules().OrderBy((m) => m.ModuleIndex))
                 {
                     totalSize += module.ImageSize;
                     if (regex is null || !string.IsNullOrEmpty(module.FileName) && regex.IsMatch(Path.GetFileName(module.FileName)))
                     {
                         DisplayModule(module);
+                        moduleCount++;
                     }
                 }
                 WriteLine("Total image size: {0}", totalSize);
+                if (Verbose)
+                {
+                    commandSw.Stop();
+                    Trace.TraceInformation($"[PERF] ModulesCommand: {moduleCount} modules displayed in {commandSw.ElapsedMilliseconds}ms");
+                }
             }
         }
 

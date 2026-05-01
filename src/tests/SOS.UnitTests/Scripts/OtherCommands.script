@@ -4,6 +4,9 @@
 
 LOADSOS
 
+# Enable diagnostic logging early to capture performance traces
+EXTCOMMAND:logging %LOG_PATH%/%TEST_NAME%.%LOG_SUFFIX%.diaglog
+
 # Verify that bpmd works
 IFDEF:LIVE
 # Issue: https://github.com/dotnet/diagnostics/issues/2459

@@ -45,7 +45,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public MachOFile GetMachOFile()
         {
-            _machOFile ??= Utilities.OpenMachOFile(_symbolService.DownloadModuleFile(_module));
+            if (_machOFile == null)
+            {
+                System.Diagnostics.Stopwatch sw = System.Diagnostics.Stopwatch.StartNew();
+                string path = _symbolService.DownloadModuleFile(_module);
+                sw.Stop();
+                if (sw.ElapsedMilliseconds > 50 || path != null)
+                {
+                    System.Diagnostics.Trace.TraceInformation($"[PERF] MachOModule.GetMachOFile: DownloadModuleFile took {sw.ElapsedMilliseconds}ms, result={path ?? "null"} module={_module.FileName}");
+                }
+                _machOFile = Utilities.OpenMachOFile(path);
+            }
             return _machOFile;
         }
 
