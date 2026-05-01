@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
-using Newtonsoft.Json;
+using System.Text.Json;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Extensions;
@@ -201,31 +201,29 @@ public static class SOSTestHelpers
 
             AssertX.FileExists("CrashReport", crashReportPath, outputHelper.IndentedOutput);
 
-            dynamic crashReport = JsonConvert.DeserializeObject(File.ReadAllText(crashReportPath));
-            Assert.NotNull(crashReport);
+            using JsonDocument crashReport = JsonDocument.Parse(File.ReadAllText(crashReportPath));
+            JsonElement root = crashReport.RootElement;
 
-            dynamic payload = crashReport.payload;
-            Assert.NotNull(payload);
-            Version protocol_version = Version.Parse((string)payload.protocol_version);
+            Assert.True(root.TryGetProperty("payload", out JsonElement payload));
+            Version protocol_version = Version.Parse(payload.GetProperty("protocol_version").GetString());
             Assert.True(protocol_version >= new Version("1.0.0"));
             outputHelper.IndentedOutput.WriteLine($"protocol_version {protocol_version}");
 
-            string process_name = (string)payload.process_name;
+            string process_name = payload.GetProperty("process_name").GetString();
             Assert.NotNull(process_name);
             outputHelper.IndentedOutput.WriteLine($"process_name {process_name}");
 
-            Assert.NotNull(payload.threads);
-            IEnumerable<dynamic> threads = payload.threads;
-            Assert.True(threads.Any());
-            outputHelper.IndentedOutput.WriteLine($"threads # {threads.Count()}");
+            Assert.True(payload.TryGetProperty("threads", out JsonElement threads));
+            int threadCount = threads.GetArrayLength();
+            Assert.True(threadCount > 0);
+            outputHelper.IndentedOutput.WriteLine($"threads # {threadCount}");
 
             if (OS.Kind == OSKind.OSX)
             {
-                dynamic parameters = crashReport.parameters;
-                Assert.NotNull(parameters);
-                Assert.NotNull(parameters.ExceptionType);
-                Assert.NotNull(parameters.OSVersion);
-                Assert.Equal("apple", (string)parameters.SystemManufacturer);
+                Assert.True(root.TryGetProperty("parameters", out JsonElement parameters));
+                Assert.True(parameters.TryGetProperty("ExceptionType", out _));
+                Assert.True(parameters.TryGetProperty("OSVersion", out _));
+                Assert.Equal("apple", parameters.GetProperty("SystemManufacturer").GetString());
             }
         }
         catch (Exception ex)
