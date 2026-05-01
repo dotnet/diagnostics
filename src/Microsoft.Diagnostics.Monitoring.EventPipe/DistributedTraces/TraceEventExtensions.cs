@@ -81,21 +81,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                             }
                             break;
                         case "ActivityTraceFlags":
-                            if (value is string traceFlagsValue && !string.IsNullOrEmpty(traceFlagsValue))
+                            // Only the Recorded bit is consumed downstream. Detect it by name
+                            // rather than parsing the entire enum so we tolerate flag bits
+                            // (e.g. ActivityTraceFlags.RandomTraceId from runtime#124851)
+                            // defined in newer DiagnosticSource versions than this consumer
+                            // was compiled against.
+                            if (value is string traceFlagsValue
+                                && traceFlagsValue.Contains("Recorded", StringComparison.OrdinalIgnoreCase))
                             {
-                                // Newer runtime/DiagnosticSource versions may emit flag bits this
-                                // consumer doesn't know about (e.g. ActivityTraceFlags.RandomTraceId
-                                // introduced by https://github.com/dotnet/runtime/pull/124851).
-                                // Tolerate unknown bits by masking to flags we actually consume.
-                                const ActivityTraceFlags KnownFlags = ActivityTraceFlags.Recorded;
-                                if (int.TryParse(traceFlagsValue, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int intFlags))
-                                {
-                                    traceFlags = (ActivityTraceFlags)intFlags & KnownFlags;
-                                }
-                                else if (traceFlagsValue.Contains("Recorded", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    traceFlags = ActivityTraceFlags.Recorded;
-                                }
+                                traceFlags = ActivityTraceFlags.Recorded;
                             }
                             break;
                         case "TraceStateString":
