@@ -537,6 +537,14 @@ LLDBServices::GetLastEventInformation(
 
     SpecialDiagInfoHeader header;
     size_t read = process.ReadMemory(SpecialDiagInfoAddress, &header, sizeof(header), error);
+    if ((error.Fail() || read != sizeof(header) ||
+         strncmp(header.Signature, SPECIAL_DIAGINFO_SIGNATURE, sizeof(SPECIAL_DIAGINFO_SIGNATURE)) != 0)
+        && SpecialDiagInfoAddress != SpecialDiagInfoLegacyAddress)
+    {
+        // Fall back to the legacy address for dumps produced by older createdump binaries.
+        error.Clear();
+        read = process.ReadMemory(SpecialDiagInfoLegacyAddress, &header, sizeof(header), error);
+    }
     if (error.Fail() || read != sizeof(header))
     {
         Output(DEBUG_OUTPUT_WARNING, "Special diagnostics info read failed\n");

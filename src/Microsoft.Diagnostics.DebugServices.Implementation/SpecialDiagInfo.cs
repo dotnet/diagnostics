@@ -7,6 +7,7 @@
 // ******************************************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -24,6 +25,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private static readonly byte[] SPECIAL_DIAGINFO_SIGNATURE = Encoding.ASCII.GetBytes("DIAGINFOHEADER");
         private const int SPECIAL_DIAGINFO_VERSION = 1;
 
+        // Apple Silicon (arm64) macOS user-space VM is 47 bits; addresses above 0x7FFF_FFFF_FFFF
+        // are not mappable and lldb's core file reader rejects segments at those addresses. Newer
+        // createdump targets a 47-bit-valid address there. The legacy x86_64 macOS address is kept
+        // as a fallback so dumps produced by older createdump binaries are still recognized.
+        private const ulong SpecialDiagInfoAddressMacOSArm64 = 0x00007ffffff10000;
         private const ulong SpecialDiagInfoAddressMacOS64 = 0x7fffffff10000000;
         private const ulong SpecialDiagInfoAddress64 = 0x00007ffffff10000;
         private const ulong SpecialDiagInfoAddress32 = 0x7fff1000;
@@ -58,7 +64,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _memoryService = memoryService;
         }
 
-        private ulong SpecialDiagInfoAddress
+        private IEnumerable<ulong> SpecialDiagInfoAddresses
         {
             get
             {
@@ -66,21 +72,26 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     if (_memoryService.PointerSize == 8)
                     {
-                        return SpecialDiagInfoAddressMacOS64;
+                        // Try the arm64-valid address first (also valid on x86_64 macOS for newer
+                        // createdump output); fall back to the legacy x86_64 address.
+                        yield return SpecialDiagInfoAddressMacOSArm64;
+                        if (SpecialDiagInfoAddressMacOSArm64 != SpecialDiagInfoAddressMacOS64)
+                        {
+                            yield return SpecialDiagInfoAddressMacOS64;
+                        }
                     }
                 }
                 else if (_target.OperatingSystem == OSPlatform.Linux)
                 {
                     if (_memoryService.PointerSize == 8)
                     {
-                        return SpecialDiagInfoAddress64;
+                        yield return SpecialDiagInfoAddress64;
                     }
                     else
                     {
-                        return SpecialDiagInfoAddress32;
+                        yield return SpecialDiagInfoAddress32;
                     }
                 }
-                return 0;
             }
         }
 
@@ -90,18 +101,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public bool HasDiagnosticInfo()
         {
-            ulong address = SpecialDiagInfoAddress;
-            if (address == 0)
-            {
-                return false;
-            }
-
             Span<byte> headerBuffer = stackalloc byte[Unsafe.SizeOf<SpecialDiagInfoHeader>()];
-            if (_memoryService.ReadMemory(address, headerBuffer, out int bytesRead) && bytesRead == headerBuffer.Length)
+            foreach (ulong address in SpecialDiagInfoAddresses)
             {
-                SpecialDiagInfoHeader header = Unsafe.As<byte, SpecialDiagInfoHeader>(ref MemoryMarshal.GetReference(headerBuffer));
-                ReadOnlySpan<byte> signature = new(header.Signature, SPECIAL_DIAGINFO_SIGNATURE.Length);
-                return signature.SequenceEqual(SPECIAL_DIAGINFO_SIGNATURE);
+                if (_memoryService.ReadMemory(address, headerBuffer, out int bytesRead) && bytesRead == headerBuffer.Length)
+                {
+                    SpecialDiagInfoHeader header = Unsafe.As<byte, SpecialDiagInfoHeader>(ref MemoryMarshal.GetReference(headerBuffer));
+                    ReadOnlySpan<byte> signature = new(header.Signature, SPECIAL_DIAGINFO_SIGNATURE.Length);
+                    if (signature.SequenceEqual(SPECIAL_DIAGINFO_SIGNATURE))
+                    {
+                        return true;
+                    }
+                }
             }
             return false;
         }
@@ -171,19 +182,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         internal EXCEPTION_RECORD64 GetExceptionRecord()
         {
             Span<byte> headerBuffer = stackalloc byte[Unsafe.SizeOf<SpecialDiagInfoHeader>()];
-            if (_memoryService.ReadMemory(SpecialDiagInfoAddress, headerBuffer, out int bytesRead) && bytesRead == headerBuffer.Length)
+            Span<byte> exceptionRecordBuffer = stackalloc byte[Unsafe.SizeOf<EXCEPTION_RECORD64>()];
+            foreach (ulong address in SpecialDiagInfoAddresses)
             {
-                SpecialDiagInfoHeader header = Unsafe.As<byte, SpecialDiagInfoHeader>(ref MemoryMarshal.GetReference(headerBuffer));
-                ReadOnlySpan<byte> signature = new(header.Signature, SPECIAL_DIAGINFO_SIGNATURE.Length);
-                if (signature.SequenceEqual(SPECIAL_DIAGINFO_SIGNATURE))
+                if (_memoryService.ReadMemory(address, headerBuffer, out int bytesRead) && bytesRead == headerBuffer.Length)
                 {
-                    if (header.Version >= SPECIAL_DIAGINFO_VERSION && header.ExceptionRecordAddress != 0)
+                    SpecialDiagInfoHeader header = Unsafe.As<byte, SpecialDiagInfoHeader>(ref MemoryMarshal.GetReference(headerBuffer));
+                    ReadOnlySpan<byte> signature = new(header.Signature, SPECIAL_DIAGINFO_SIGNATURE.Length);
+                    if (signature.SequenceEqual(SPECIAL_DIAGINFO_SIGNATURE))
                     {
-                        Span<byte> exceptionRecordBuffer = stackalloc byte[Unsafe.SizeOf<EXCEPTION_RECORD64>()];
-                        if (_memoryService.ReadMemory(header.ExceptionRecordAddress, exceptionRecordBuffer, out bytesRead) && bytesRead == exceptionRecordBuffer.Length)
+                        if (header.Version >= SPECIAL_DIAGINFO_VERSION && header.ExceptionRecordAddress != 0)
                         {
-                            return Unsafe.As<byte, EXCEPTION_RECORD64>(ref MemoryMarshal.GetReference(exceptionRecordBuffer));
+                            if (_memoryService.ReadMemory(header.ExceptionRecordAddress, exceptionRecordBuffer, out bytesRead) && bytesRead == exceptionRecordBuffer.Length)
+                            {
+                                return Unsafe.As<byte, EXCEPTION_RECORD64>(ref MemoryMarshal.GetReference(exceptionRecordBuffer));
+                            }
                         }
+                        return default;
                     }
                 }
             }
