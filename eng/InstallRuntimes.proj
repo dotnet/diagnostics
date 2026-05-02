@@ -59,7 +59,27 @@
 -->
 
   <Target Name="InstallTestRuntimes"
-          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;OverrideLatestRuntime;WriteTestVersionManifest" />
+          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
+
+<!--
+    When cross-building (host arch != target arch), install a host-architecture SDK
+    into a separate directory purely for building debuggees. Managed builds are
+    architecture-neutral but the dotnet host must match the machine running the build.
+-->
+
+  <Target Name="InstallBuildSdk"
+          Condition="'$(HostArch)' != '' and '$(HostArch)' != '$(TargetArch)'">
+    <PropertyGroup>
+      <DotNetBuildDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-build'))</DotNetBuildDir>
+      <BuildSdkInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(HostArch) -InstallDir $(DotNetBuildDir) -Version $(MicrosoftNETSdkVersion)</BuildSdkInstallArgs>
+    </PropertyGroup>
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(BuildSdkInstallArgs) }&quot;"
+          Condition="$([MSBuild]::IsOsPlatform(Windows))"
+          IgnoreStandardErrorWarningFormat="true" />
+    <Exec Command="bash $(DotnetInstallScriptCmd) $(BuildSdkInstallArgs)"
+          Condition="!$([MSBuild]::IsOsPlatform(Windows))"
+          IgnoreStandardErrorWarningFormat="true" />
+  </Target>
 
 <!--
     Installs the test runtimes on Windows

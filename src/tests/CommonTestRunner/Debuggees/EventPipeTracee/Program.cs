@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,13 @@ namespace EventPipeTracee
 
             Console.WriteLine($"{pid} EventPipeTracee: start process");
             Console.Out.Flush();
+
+            // Workaround for  https://github.com/dotnet/runtime/issues/127681
+            // LoggingEventSource has a static initialization order bug fields are declared after the singleton instance.
+            // If EventPipe enables the source during or before the LoggingEventSource.Instance constructor, ParseFilterSpec
+            // produces wrong rules. Force the type initializer to complete before connecting to the pipe (which signals
+            // the test harness that EventPipe can be enabled).
+            WarmLoggingEventSource();
 
             // Signal that the tracee has started
             Console.WriteLine($"{pid} EventPipeTracee: connecting to pipe");
@@ -208,6 +216,30 @@ namespace EventPipeTracee
             appCategoryLogger.LogInformation("Information message.");
             appCategoryLogger.LogWarning(new EventId(5, "WarningEventId"), "Warning message.");
             appCategoryLogger.LogError("Error message.");
+        }
+
+        /// <summary>
+        /// Forces LoggingEventSource's static constructor to run to completion before EventPipe
+        /// can enable the provider. This works around a static field initialization order bug
+        /// where ParseFilterSpec uses s_semicolon/s_colon before they are initialized.
+        /// </summary>
+        private static void WarmLoggingEventSource()
+        {
+            try
+            {
+                Type loggingEventSourceType = Type.GetType(
+                    "Microsoft.Extensions.Logging.EventSource.LoggingEventSource, Microsoft.Extensions.Logging.EventSource",
+                    throwOnError: false);
+
+                if (loggingEventSourceType != null)
+                {
+                    RuntimeHelpers.RunClassConstructor(loggingEventSourceType.TypeHandle);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"WarmLoggingEventSource failed (non-fatal): {ex.Message}");
+            }
         }
     }
 }

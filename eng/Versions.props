@@ -39,7 +39,7 @@
     <MicrosoftExtensionsLoggingConfigurationVersion>8.0.1</MicrosoftExtensionsLoggingConfigurationVersion>
     <MicrosoftOneCollectRecordTraceVersions>0.1.33841</MicrosoftOneCollectRecordTraceVersions>
     <!-- Need version that understands UseAppFilters sentinel. -->
-    <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
+    <MicrosoftExtensionsLoggingEventSourceVersion>10.0.5</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
     <SystemBuffersVersion>4.5.1</SystemBuffersVersion>
     <SystemDiagnosticsDiagnosticSourceVersion>8.0.1</SystemDiagnosticsDiagnosticSourceVersion>
@@ -88,6 +88,7 @@
 
   -->
   <PropertyGroup>
+    <MicrosoftNETCoreApp100Version>10.0.5</MicrosoftNETCoreApp100Version>
     <MicrosoftNETCoreApp90Version>9.0.14</MicrosoftNETCoreApp90Version>
     <MicrosoftNETCoreApp80Version>8.0.25</MicrosoftNETCoreApp80Version>
   </PropertyGroup>
@@ -104,6 +105,13 @@
       <Runtime>$(MicrosoftNETCoreAppRefVersion)</Runtime>
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
+      <TargetFramework>net11.0</TargetFramework>
+    </RuntimeTestVersions>
+    <RuntimeTestVersions Include="Servicing1">
+      <RuntimeDownload>$(MicrosoftNETCoreApp100Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreApp100Version)</Runtime>
+      <AspNetDownload>$(MicrosoftNETCoreApp100Version)</AspNetDownload>
+      <AspNet>$(MicrosoftNETCoreApp100Version)</AspNet>
       <TargetFramework>net10.0</TargetFramework>
     </RuntimeTestVersions>
     <RuntimeTestVersions Include="Servicing2">
@@ -128,7 +136,7 @@
       <Runtime>$(MicrosoftNETCoreAppRefVersion)</Runtime>
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
-      <TargetFramework>net10.0</TargetFramework>
+      <TargetFramework>net11.0</TargetFramework>
     </RuntimeTestVersions>
   </ItemGroup>
   <!-- Internal service release testing -->

@@ -223,6 +223,7 @@ jobs:
           TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts_on_failure
           Contents: |
             bin/**
+            Debuggees/**
             log/**
             TestResults/**
             tmp/${{ config.configuration }}/dumps/**
