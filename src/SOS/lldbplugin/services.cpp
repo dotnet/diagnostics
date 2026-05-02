@@ -893,6 +893,11 @@ LLDBServices::EnsureSectionRanges(lldb::SBTarget& target)
             {
                 continue;
             }
+            // Guard against pathological section sizes that would overflow the address space.
+            if (size > UINT64_MAX - loadAddr)
+            {
+                continue;
+            }
             SectionRange range;
             range.loadAddr = loadAddr;
             range.endAddr = loadAddr + size;
@@ -923,6 +928,12 @@ LLDBServices::ReadFromSectionCache(
         return false;
     }
 
+    // Reject reads whose end address would overflow uint64_t — preserves the
+    // containment check below from wrapping under the section.
+    if (size > UINT64_MAX - offset)
+    {
+        return false;
+    }
     uint64_t endOffset = offset + size;
     // Find first entry with loadAddr > offset; the candidate is the previous entry.
     auto it = std::upper_bound(m_sectionRanges.begin(), m_sectionRanges.end(), offset,

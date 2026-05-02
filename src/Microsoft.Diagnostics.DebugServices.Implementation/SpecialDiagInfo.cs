@@ -198,7 +198,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                 return Unsafe.As<byte, EXCEPTION_RECORD64>(ref MemoryMarshal.GetReference(exceptionRecordBuffer));
                             }
                         }
-                        return default;
+                        // Signature matched but the record couldn't be read or was empty;
+                        // try the next candidate address rather than returning eagerly.
+                        continue;
                     }
                 }
             }
