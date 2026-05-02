@@ -3,6 +3,7 @@
 
 #include <cstdarg>
 #include <cstdlib>
+#include <algorithm>
 #include <string.h>
 #include <string>
 #include <dlfcn.h>
@@ -37,7 +38,9 @@ LLDBServices::LLDBServices(lldb::SBDebugger debugger) :
     m_currentStopId(0),
     m_processId(0),
     m_threadInfoInitialized(false),
-    m_currentResult(nullptr)
+    m_currentResult(nullptr),
+    m_sectionCacheModuleCount(0),
+    m_sectionCacheValid(false)
 {
     ClearCache();
 
@@ -837,34 +840,18 @@ LLDBServices::ReadVirtual(
     }
 
     // If the read isn't complete, try reading directly from native modules in the address range.
+    // For dumps that don't include code/data segments (e.g., MachO core files) this is the common
+    // path: a sorted, cached SectionRange table is binary-searched instead of iterating
+    // numModules x numSections per call.
     if (bufferSize > 0)
     {
         lldb::SBTarget target = process.GetTarget();
-        if (!target.IsValid())
+        if (target.IsValid())
         {
-            goto exit;
-        }
-
-        int numModules = target.GetNumModules();
-        for (int i = 0; i < numModules; i++)
-        {
-            lldb::SBModule module = target.GetModuleAtIndex(i);
-            int numSections = module.GetNumSections();
-            for (int j = 0; j < numSections; j++)
+            size_t sectionBytesRead = 0;
+            if (ReadFromSectionCache(target, offset, bufferSize, buffer, error, sectionBytesRead))
             {
-                lldb::SBSection section = module.GetSectionAtIndex(j);
-                lldb::addr_t loadAddr = section.GetLoadAddress(target);
-                lldb::addr_t endAddr = loadAddr + section.GetByteSize();
-                ULONG64 endOffset = offset + bufferSize;
-                if ((loadAddr != LLDB_INVALID_ADDRESS) && (offset >= loadAddr) && (endOffset < endAddr))
-                {
-                    lldb::SBData sectionData = section.GetSectionData(offset - loadAddr, bufferSize);
-                    if (sectionData.IsValid())
-                    {
-                        bytesRead += sectionData.ReadRawData(error, 0, buffer, bufferSize);
-                        goto exit;
-                    }
-                }
+                bytesRead += sectionBytesRead;
             }
         }
     }
@@ -875,6 +862,91 @@ exit:
         *pbytesRead = bytesRead;
     }
     return bytesRead > 0 ? S_OK : E_FAIL;
+}
+
+void
+LLDBServices::EnsureSectionRanges(lldb::SBTarget& target)
+{
+    uint32_t numModules = target.GetNumModules();
+    if (m_sectionCacheValid && m_sectionCacheModuleCount == numModules)
+    {
+        return;
+    }
+
+    m_sectionRanges.clear();
+    m_sectionRanges.reserve(numModules * 8);
+
+    for (uint32_t i = 0; i < numModules; i++)
+    {
+        lldb::SBModule module = target.GetModuleAtIndex(i);
+        uint32_t numSections = module.GetNumSections();
+        for (uint32_t j = 0; j < numSections; j++)
+        {
+            lldb::SBSection section = module.GetSectionAtIndex(j);
+            lldb::addr_t loadAddr = section.GetLoadAddress(target);
+            if (loadAddr == LLDB_INVALID_ADDRESS)
+            {
+                continue;
+            }
+            lldb::addr_t size = section.GetByteSize();
+            if (size == 0)
+            {
+                continue;
+            }
+            SectionRange range;
+            range.loadAddr = loadAddr;
+            range.endAddr = loadAddr + size;
+            range.section = section;
+            m_sectionRanges.push_back(range);
+        }
+    }
+
+    std::sort(m_sectionRanges.begin(), m_sectionRanges.end(),
+        [](const SectionRange& a, const SectionRange& b) { return a.loadAddr < b.loadAddr; });
+
+    m_sectionCacheModuleCount = numModules;
+    m_sectionCacheValid = true;
+}
+
+bool
+LLDBServices::ReadFromSectionCache(
+    lldb::SBTarget& target,
+    uint64_t offset,
+    uint32_t size,
+    void* buffer,
+    lldb::SBError& error,
+    size_t& bytesRead)
+{
+    EnsureSectionRanges(target);
+    if (m_sectionRanges.empty())
+    {
+        return false;
+    }
+
+    uint64_t endOffset = offset + size;
+    // Find first entry with loadAddr > offset; the candidate is the previous entry.
+    auto it = std::upper_bound(m_sectionRanges.begin(), m_sectionRanges.end(), offset,
+        [](uint64_t value, const SectionRange& entry) { return value < entry.loadAddr; });
+    if (it == m_sectionRanges.begin())
+    {
+        return false;
+    }
+    --it;
+
+    // Original logic used (offset >= loadAddr) && (endOffset < endAddr); preserve it.
+    if (offset < it->loadAddr || endOffset >= it->endAddr)
+    {
+        return false;
+    }
+
+    lldb::SBSection section = it->section;
+    lldb::SBData sectionData = section.GetSectionData(offset - it->loadAddr, size);
+    if (!sectionData.IsValid())
+    {
+        return false;
+    }
+    bytesRead = sectionData.ReadRawData(error, 0, buffer, size);
+    return bytesRead > 0;
 }
 
 HRESULT 
