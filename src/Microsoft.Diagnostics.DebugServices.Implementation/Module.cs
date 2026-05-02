@@ -230,7 +230,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     return false;
                 }
             }
-            else if (Target.OperatingSystem == OSPlatform.Linux)
+            else if (Target.OperatingSystem == OSPlatform.Linux || Target.OperatingSystem == OSPlatform.OSX)
             {
                 if (ImageSize > 0)
                 {
@@ -238,7 +238,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (module is not null)
                     {
                         address = module.GetExportSymbolAddress(name);
-                        return address != 0;
+                        if (address != 0)
+                        {
+                            return true;
+                        }
                     }
                 }
             }
