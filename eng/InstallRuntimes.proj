@@ -59,7 +59,33 @@
 -->
 
   <Target Name="InstallTestRuntimes"
-          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
+          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallBuildSdk;OverrideLatestRuntime;CopyCDacIntoLatestRuntime;WriteTestVersionManifest" />
+
+<!--
+    Copy the cDAC binary (libmscordaccore_universal) next to libmscordaccore in the Latest test runtime
+    directory. The legacy DAC's CDAC integration in coreclr's daccess.cpp loads cdac via
+    LoadLibrary("mscordaccore_universal") relative to its own module location (i.e. the directory of the
+    legacy DAC). The runtime drop's shared framework currently does not ship the cdac transport binaries
+    in that directory, so the diagnostics test setup needs to drop them in for net 11+ tests to use cdac.
+-->
+  <Target Name="CopyCDacIntoLatestRuntime"
+          Condition="'$(_cdacRuntimeBinaryPath)' != '' and Exists('$(_cdacRuntimeBinaryPath)') and Exists('$(DotNetInstallDir)')">
+    <Copy SourceFiles="$(_cdacRuntimeBinaryPath)"
+          DestinationFolder="$(DotNetInstallDir)"
+          OverwriteReadOnlyFiles="true"
+          SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="_CopiedCDacFiles" />
+    </Copy>
+    <Message Importance="High" Text="Copied cDAC into runtime drop: @(_CopiedCDacFiles)" />
+  </Target>
+
+  <PropertyGroup>
+    <!-- $(ArtifactsBinNativeDir) holds the cdac binary copied by InstallNativePackages from the cdac
+         transport package. The platform-specific filename is selected here. -->
+    <_cdacRuntimeBinaryPath Condition="$([MSBuild]::IsOsPlatform(Windows))">$(ArtifactsBinNativeDir)mscordaccore_universal.dll</_cdacRuntimeBinaryPath>
+    <_cdacRuntimeBinaryPath Condition="$([MSBuild]::IsOsPlatform(OSX))">$(ArtifactsBinNativeDir)libmscordaccore_universal.dylib</_cdacRuntimeBinaryPath>
+    <_cdacRuntimeBinaryPath Condition="$([MSBuild]::IsOsPlatform(Linux))">$(ArtifactsBinNativeDir)libmscordaccore_universal.so</_cdacRuntimeBinaryPath>
+  </PropertyGroup>
 
 <!--
     When cross-building (host arch != target arch), install a host-architecture SDK
