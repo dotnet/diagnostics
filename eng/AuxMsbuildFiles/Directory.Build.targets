@@ -7,4 +7,34 @@
         <KnownFrameworkReference Remove="Microsoft.WindowsDesktop.App.WindowsForms" />
     </ItemGroup>
     <Import Project="SdkPackOverrides.targets"/>
+
+<!--
+    For self-contained single-file debuggees on net 11+, drop the cDAC transport
+    binary into the publish directory next to the apphost.
+
+    .NET 11+ SOS tests run with DOTNET_ENABLE_CDAC=1 / CDAC_NO_FALLBACK=1. The
+    legacy DAC's cdac integration in coreclr's daccess.cpp loads
+    "mscordaccore_universal" relative to libmscordaccore. For "prebuilt" tests
+    InstallRuntimes.proj copies the cdac binary into the runtime drop. Single-file
+    self-contained apps don't use the runtime drop — they bundle their own runtime —
+    so the cdac transport must travel with the published debuggee.
+-->
+    <PropertyGroup Condition="'$(PublishSingleFile)' == 'true' and '$(TargetFramework)' == 'net11.0'">
+        <_cdacRuntimeBinaryPath Condition="$([MSBuild]::IsOsPlatform(Windows))">$(ArtifactsBinNativeDir)mscordaccore_universal.dll</_cdacRuntimeBinaryPath>
+        <_cdacRuntimeBinaryPath Condition="$([MSBuild]::IsOsPlatform(OSX))">$(ArtifactsBinNativeDir)libmscordaccore_universal.dylib</_cdacRuntimeBinaryPath>
+        <_cdacRuntimeBinaryPath Condition="$([MSBuild]::IsOsPlatform(Linux))">$(ArtifactsBinNativeDir)libmscordaccore_universal.so</_cdacRuntimeBinaryPath>
+    </PropertyGroup>
+
+    <Target Name="CopyCDacIntoSingleFilePublishDir"
+            AfterTargets="Publish"
+            Condition="'$(PublishSingleFile)' == 'true' and '$(TargetFramework)' == 'net11.0' and '$(_cdacRuntimeBinaryPath)' != '' and Exists('$(_cdacRuntimeBinaryPath)') and '$(PublishDir)' != ''">
+        <Copy SourceFiles="$(_cdacRuntimeBinaryPath)"
+              DestinationFolder="$(PublishDir)"
+              OverwriteReadOnlyFiles="true"
+              SkipUnchangedFiles="true">
+            <Output TaskParameter="CopiedFiles" ItemName="_CopiedCDacFiles" />
+        </Copy>
+        <Message Importance="High" Text="Copied cDAC into single-file publish dir: @(_CopiedCDacFiles)" />
+    </Target>
 </Project>
+
