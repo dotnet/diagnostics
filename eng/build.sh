@@ -171,14 +171,18 @@ fi
 #
 
 if [ "$__HostOS" == "osx" ]; then
-    export LLDB_H="$__RepoRootDir"/src/SOS/lldbplugin/swift-4.0
-    export LLDB_LIB=$(xcode-select -p)/../SharedFrameworks/LLDB.framework/LLDB
-    export LLDB_PATH=$(xcode-select -p)/usr/bin/lldb
+    # Picks Homebrew LLVM lldb if available (preferred on arm64 because Apple's
+    # bundled lldb crashes on SOS extension commands), else falls back to Xcode.
+    # Sets LLDB_H / LLDB_LIB / LLDB_PATH consistently for the plugin build and
+    # the test scripts that source the same helper.
+    source "$__RepoRootDir/eng/select-lldb-paths.sh"
+    select_lldb_paths "$__RepoRootDir"
 
     export MACOSX_DEPLOYMENT_TARGET=10.12
 
-    if [ ! -f $LLDB_LIB ]; then
-        echo "Cannot find the lldb library. Try installing Xcode."
+    if [ ! -f "$LLDB_LIB" ]; then
+        echo "Cannot find the lldb library at '$LLDB_LIB'."
+        echo "On arm64 macOS install Homebrew LLVM (brew install llvm), or install Xcode."
         exit 1
     fi
 

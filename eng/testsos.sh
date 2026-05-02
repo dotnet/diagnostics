@@ -13,5 +13,7 @@ while [[ -h $source ]]; do
 done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
-export LLDB_PATH=/usr/bin/lldb
+# shellcheck disable=SC1091
+source "$scriptroot/select-lldb-paths.sh"
+select_lldb_paths "$scriptroot/.."
 $scriptroot/../.dotnet/dotnet test --no-build --logger "console;verbosity=detailed" $scriptroot/../src/tests/SOS.UnitTests/SOS.UnitTests.csproj
