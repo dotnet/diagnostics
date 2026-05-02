@@ -24,11 +24,13 @@ This file should be imported by eng/Versions.props
     <MicrosoftNETCoreAppRefPackageVersion>11.0.0-preview.5.26230.101</MicrosoftNETCoreAppRefPackageVersion>
     <MicrosoftNETCorePlatformsPackageVersion>11.0.0-preview.5.26230.101</MicrosoftNETCorePlatformsPackageVersion>
     <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.5.26230.101</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimelinuxmuslx64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.5.26230.101</runtimelinuxmuslx64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.5.26230.101</runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.5.26230.101</runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.5.26230.101</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.5.26230.101</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.5.26230.101</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimewinx86MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.5.26230.101</runtimewinx86MicrosoftDotNetCdacTransportPackageVersion>
     <!-- microsoft-clrmd dependencies -->
     <MicrosoftDiagnosticsRuntimePackageVersion>4.0.723004</MicrosoftDiagnosticsRuntimePackageVersion>
     <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.0.723004</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
@@ -54,11 +56,13 @@ This file should be imported by eng/Versions.props
     <MicrosoftNETCoreAppRefVersion>$(MicrosoftNETCoreAppRefPackageVersion)</MicrosoftNETCoreAppRefVersion>
     <MicrosoftNETCorePlatformsVersion>$(MicrosoftNETCorePlatformsPackageVersion)</MicrosoftNETCorePlatformsVersion>
     <runtimelinuxarm64MicrosoftDotNetCdacTransportVersion>$(runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion)</runtimelinuxarm64MicrosoftDotNetCdacTransportVersion>
+    <runtimelinuxmuslx64MicrosoftDotNetCdacTransportVersion>$(runtimelinuxmuslx64MicrosoftDotNetCdacTransportPackageVersion)</runtimelinuxmuslx64MicrosoftDotNetCdacTransportVersion>
     <runtimelinuxx64MicrosoftDotNetCdacTransportVersion>$(runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion)</runtimelinuxx64MicrosoftDotNetCdacTransportVersion>
     <runtimeosxarm64MicrosoftDotNetCdacTransportVersion>$(runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion)</runtimeosxarm64MicrosoftDotNetCdacTransportVersion>
     <runtimeosxx64MicrosoftDotNetCdacTransportVersion>$(runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion)</runtimeosxx64MicrosoftDotNetCdacTransportVersion>
     <runtimewinarm64MicrosoftDotNetCdacTransportVersion>$(runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion)</runtimewinarm64MicrosoftDotNetCdacTransportVersion>
     <runtimewinx64MicrosoftDotNetCdacTransportVersion>$(runtimewinx64MicrosoftDotNetCdacTransportPackageVersion)</runtimewinx64MicrosoftDotNetCdacTransportVersion>
+    <runtimewinx86MicrosoftDotNetCdacTransportVersion>$(runtimewinx86MicrosoftDotNetCdacTransportPackageVersion)</runtimewinx86MicrosoftDotNetCdacTransportVersion>
     <!-- microsoft-clrmd dependencies -->
     <MicrosoftDiagnosticsRuntimeVersion>$(MicrosoftDiagnosticsRuntimePackageVersion)</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiagnosticsRuntimeUtilitiesVersion>$(MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion)</MicrosoftDiagnosticsRuntimeUtilitiesVersion>

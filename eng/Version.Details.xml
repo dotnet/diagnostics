@@ -61,11 +61,19 @@
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>5d0de746ed8accbd81c2a5c3c7bfa4e70b2df80e</Sha>
     </Dependency>
+    <Dependency Name="runtime.win-x86.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-preview.5.26230.101">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>5d0de746ed8accbd81c2a5c3c7bfa4e70b2df80e</Sha>
+    </Dependency>
     <Dependency Name="runtime.win-arm64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-preview.5.26230.101">
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>5d0de746ed8accbd81c2a5c3c7bfa4e70b2df80e</Sha>
     </Dependency>
     <Dependency Name="runtime.linux-x64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-preview.5.26230.101">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>5d0de746ed8accbd81c2a5c3c7bfa4e70b2df80e</Sha>
+    </Dependency>
+    <Dependency Name="runtime.linux-musl-x64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-preview.5.26230.101">
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>5d0de746ed8accbd81c2a5c3c7bfa4e70b2df80e</Sha>
     </Dependency>

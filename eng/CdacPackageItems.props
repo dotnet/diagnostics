@@ -4,8 +4,10 @@
   -->
   <PropertyGroup>
     <_cdacPackageVersion Condition="'$(TargetRid)' == 'win-x64'">$(runtimewinx64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
+    <_cdacPackageVersion Condition="'$(TargetRid)' == 'win-x86'">$(runtimewinx86MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
     <_cdacPackageVersion Condition="'$(TargetRid)' == 'win-arm64'">$(runtimewinarm64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
     <_cdacPackageVersion Condition="'$(TargetRid)' == 'linux-x64'">$(runtimelinuxx64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
+    <_cdacPackageVersion Condition="'$(TargetRid)' == 'linux-musl-x64'">$(runtimelinuxmuslx64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
     <_cdacPackageVersion Condition="'$(TargetRid)' == 'linux-arm64'">$(runtimelinuxarm64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
     <_cdacPackageVersion Condition="'$(TargetRid)' == 'osx-x64'">$(runtimeosxx64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
     <_cdacPackageVersion Condition="'$(TargetRid)' == 'osx-arm64'">$(runtimeosxarm64MicrosoftDotNetCdacTransportVersion)</_cdacPackageVersion>
