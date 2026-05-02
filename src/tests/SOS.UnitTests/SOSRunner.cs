@@ -708,12 +708,6 @@ public class SOSRunner : IDisposable
             {
                 processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
             }
-            else if (config.RuntimeFrameworkVersionMajor >= 11)
-            {
-                // .NET 11+ will no longer use the legacy DAC
-                processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
-                processRunner.WithEnvironmentVariable("CDAC_NO_FALLBACK", "1");
-            }
 
             // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting debuggees.
             if (OS.Kind == OSKind.Windows)
