@@ -302,6 +302,10 @@ if [[ "$__Test" == 1 ]]; then
 
       echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
 
+      # Disable system core dumps for test debuggees that intentionally crash.
+      # The .NET createdump facility writes dumps directly and is not affected by ulimit.
+      ulimit -c 0
+
       if [[ "$__UseCdac" == 1 ]]; then
           export SOS_TEST_CDAC="true"
       fi
