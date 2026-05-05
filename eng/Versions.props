@@ -27,6 +27,7 @@
     <SystemReflectionMetadataVersion>8.0.0</SystemReflectionMetadataVersion>
     <SystemCollectionsImmutableVersion>9.0.11</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
+    <SystemCommandLineVersion>2.0.2</SystemCommandLineVersion>
     <MicrosoftBclAsyncInterfacesVersion>9.0.8</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
     <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.23</MicrosoftDiagnosticsTracingTraceEventVersion>
