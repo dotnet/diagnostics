@@ -33,6 +33,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         // MachO writable segment attribute
         private const uint VmProtWrite = 0x02;
 
+        // MachO header flag indicating the dylib is part of the dyld shared cache (macOS 11+).
+        private const uint MH_DYLIB_IN_CACHE = 0x80000000;
+
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
@@ -383,7 +386,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 else
                 {
                     MachOFile machOFile = module.Services.GetService<MachOFile>();
-                    if (machOFile is not null)
+                    // Skip version string scan for dyld shared cache modules. Since macOS 11 (Big Sur), system
+                    // libraries are in the shared cache and their writable segment pages are often not in dumps.
+                    // Scanning them triggers DownloadModuleFile fallbacks that time out.
+                    if (machOFile is not null && (machOFile.Header.Flags & MH_DYLIB_IN_CACHE) == 0)
                     {
                         foreach (MachSegmentLoadCommand loadCommand in machOFile.Segments.Select((segment) => segment.LoadCommand))
                         {

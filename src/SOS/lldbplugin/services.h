@@ -4,8 +4,19 @@
 #include <cstdarg>
 #include <string>
 #include <set>
+#include <vector>
 
 #define CACHE_SIZE  4096
+
+// Cached module section range used by ReadVirtual to satisfy reads not
+// backed by the lldb process (e.g., code/text segments missing from a
+// MachO core). Lookup is via std::upper_bound on loadAddr.
+struct SectionRange
+{
+    uint64_t loadAddr;
+    uint64_t endAddr;
+    lldb::SBSection section;
+};
 
 class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices
 {
@@ -28,6 +39,10 @@ private:
     bool m_cacheValid;
     ULONG m_cacheSize;
 
+    std::vector<SectionRange> m_sectionRanges;
+    uint32_t m_sectionCacheModuleCount;
+    bool m_sectionCacheValid;
+
     ULONG64 GetModuleBase(lldb::SBTarget& target, lldb::SBModule& module);
     ULONG64 GetModuleSize(ULONG64 baseAddress, lldb::SBModule& module);
     ULONG64 GetExpression(lldb::SBFrame& frame, lldb::SBError& error, PCSTR exp);
@@ -38,10 +53,16 @@ private:
     bool SearchVersionString(uint64_t address, int32_t size, char* versionBuffer, int versionBufferSize);
     bool ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, PULONG pcbBytesRead);
 
+    void EnsureSectionRanges(lldb::SBTarget& target);
+    bool ReadFromSectionCache(lldb::SBTarget& target, uint64_t offset, uint32_t size, void* buffer, lldb::SBError& error, size_t& bytesRead);
+
     void ClearCache()
     { 
         m_cacheValid = false;
         m_cacheSize = CACHE_SIZE;
+        m_sectionCacheValid = false;
+        m_sectionCacheModuleCount = 0;
+        m_sectionRanges.clear();
     }
 
     void LoadNativeSymbols(lldb::SBTarget target, lldb::SBModule module, PFN_MODULE_LOAD_CALLBACK callback);
