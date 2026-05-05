@@ -18,6 +18,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public const int SPECIAL_DIAGINFO_LATEST = 2;
 
         public const ulong SpecialDiagInfoAddress_OSX = 0x7fffffff10000000UL;
+        // Apple Silicon (arm64) macOS user-space VM is 47 bits, so the legacy address above is not
+        // mappable on arm64 dumps. Newer createdump targets a 47-bit-valid address there. The
+        // managed reader in CommandFormatHelpers probes both candidates so dumps from old and new
+        // createdump on either Mac arch are recognized.
+        public const ulong SpecialDiagInfoAddress_OSX_47Bit = 0x00007ffffff10000UL;
         public const ulong SpecialDiagInfoAddress_64BIT = 0x00007ffffff10000UL;
         public const ulong SpecialDiagInfoAddress_32BIT = 0x000000007fff1000UL;
         public const int SpecialDiagInfoSize = 0x1000;
@@ -55,6 +60,41 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ITarget target = services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
             IMemoryService memoryService = services.GetService<IMemoryService>();
             return target.OperatingSystem == OSPlatform.OSX ? SpecialDiagInfoAddress_OSX : (memoryService.PointerSize == 4 ? SpecialDiagInfoAddress_32BIT : SpecialDiagInfoAddress_64BIT);
+        }
+
+        /// <summary>
+        /// Yield the candidate addresses for the SpecialDiagInfo header, in priority order.
+        /// On 64-bit macOS we probe the 47-bit-valid address first (used by newer createdump,
+        /// required on Apple Silicon) and fall back to the legacy x86_64 address so older dumps
+        /// remain recognized.
+        /// </summary>
+        public static System.Collections.Generic.IEnumerable<ulong> GetCandidateAddresses(IServiceProvider services)
+        {
+            ITarget target = services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
+            IMemoryService memoryService = services.GetService<IMemoryService>();
+            if (target.OperatingSystem == OSPlatform.OSX)
+            {
+                if (memoryService.PointerSize == 8)
+                {
+                    yield return SpecialDiagInfoAddress_OSX_47Bit;
+                    if (SpecialDiagInfoAddress_OSX != SpecialDiagInfoAddress_OSX_47Bit)
+                    {
+                        yield return SpecialDiagInfoAddress_OSX;
+                    }
+                }
+                else
+                {
+                    yield return SpecialDiagInfoAddress_OSX;
+                }
+            }
+            else if (memoryService.PointerSize == 4)
+            {
+                yield return SpecialDiagInfoAddress_32BIT;
+            }
+            else
+            {
+                yield return SpecialDiagInfoAddress_64BIT;
+            }
         }
 
         public string Signature => Encoding.ASCII.GetString(RawSignature.Take(SPECIAL_DIAGINFO_SIGNATURE.Length).ToArray());
