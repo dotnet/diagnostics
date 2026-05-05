@@ -16,22 +16,22 @@ This file should be imported by eng/Versions.props
     <!-- dotnet-dotnet dependencies -->
     <MicrosoftAspNetCoreAppRefPackageVersion>10.0.7</MicrosoftAspNetCoreAppRefPackageVersion>
     <MicrosoftAspNetCoreAppRefInternalPackageVersion>10.0.7-servicing.26217.108</MicrosoftAspNetCoreAppRefInternalPackageVersion>
-    <MicrosoftCodeAnalysisPackageVersion>5.0.0-2.26153.111</MicrosoftCodeAnalysisPackageVersion>
-    <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.0.0-2.26153.111</MicrosoftCodeAnalysisAnalyzersPackageVersion>
-    <MicrosoftCodeAnalysisCSharpPackageVersion>5.0.0-2.26153.111</MicrosoftCodeAnalysisCSharpPackageVersion>
+    <MicrosoftCodeAnalysisPackageVersion>5.0.0-2.26217.108</MicrosoftCodeAnalysisPackageVersion>
+    <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.0.0-2.26217.108</MicrosoftCodeAnalysisAnalyzersPackageVersion>
+    <MicrosoftCodeAnalysisCSharpPackageVersion>5.0.0-2.26217.108</MicrosoftCodeAnalysisCSharpPackageVersion>
     <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>10.0.107</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
     <MicrosoftNETSdkPackageVersion>10.0.107-servicing.26217.108</MicrosoftNETSdkPackageVersion>
     <MicrosoftNETCoreAppRefPackageVersion>10.0.7</MicrosoftNETCoreAppRefPackageVersion>
-    <MicrosoftNETCorePlatformsPackageVersion>10.0.5-servicing.26153.111</MicrosoftNETCorePlatformsPackageVersion>
-    <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.5-servicing.26153.111</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.5-servicing.26153.111</runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.5-servicing.26153.111</runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.5-servicing.26153.111</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.5-servicing.26153.111</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
-    <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>10.0.5-servicing.26153.111</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
+    <MicrosoftNETCorePlatformsPackageVersion>10.0.7-servicing.26217.108</MicrosoftNETCorePlatformsPackageVersion>
+    <runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.7-servicing.26217.108</runtimelinuxarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.7-servicing.26217.108</runtimelinuxx64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.7-servicing.26217.108</runtimeosxarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>10.0.7-servicing.26217.108</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>10.0.7-servicing.26217.108</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
+    <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>10.0.7-servicing.26217.108</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
     <!-- microsoft-clrmd dependencies -->
-    <MicrosoftDiagnosticsRuntimePackageVersion>4.0.722801</MicrosoftDiagnosticsRuntimePackageVersion>
-    <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.0.722801</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
+    <MicrosoftDiagnosticsRuntimePackageVersion>4.0.723004</MicrosoftDiagnosticsRuntimePackageVersion>
+    <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.0.723004</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
