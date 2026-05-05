@@ -1,0 +1,33 @@
+# Interpreter frame stack-walk scenario.
+#
+# Activated only when SOS_TEST_INTERPRETER=true (config.TestInterpreter). The test
+# launches the InterpreterStackTest debuggee with DOTNET_Interpreter=* so user methods
+# are executed by the CoreCLR interpreter. We then verify SOS surfaces the [InterpreterFrame:]
+# sentinel that the runtime emits at JIT/interpreter transitions, and that the user frames
+# appear under it.
+#
+# Requires a CoreCLR build with FEATURE_INTERPRETER (Debug/Checked).
+
+CONTINUE
+
+LOADSOS
+
+# Verify the exception itself was correctly captured.
+SOSCOMMAND:PrintException
+VERIFY:Exception object:\s+<HEXVAL>\s+
+VERIFY:Exception type:\s+System\.InvalidOperationException\s+
+VERIFY:Message:\s+(<Invalid Object>|Throwing from interpreted frame:.*)\s+
+VERIFY:HResult:\s+80131509
+
+# Verify ClrStack walks through the InterpreterFrame sentinel and surfaces the
+# interpreted user methods. The [InterpreterFrame: <hex>] line is the runtime's
+# JIT<->interpreter transition marker; if interpreter support is missing or the env
+# var did not take effect, this VERIFY fails (and the user frames would appear as
+# normal JIT frames without the sentinel).
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+\[InterpreterFrame:\s+<HEXVAL>\].*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterUserHelper\.InterpTestMethodThrow.*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterUserHelper\.InterpTestMethodRunNested.*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackTestApp\.Main.*

@@ -331,6 +331,11 @@ public class SOSRunner : IDisposable
                     WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                     WithTimeout(TimeSpan.FromMinutes(10));
 
+                if (config.TestInterpreter)
+                {
+                    processRunner.WithEnvironmentVariable("DOTNET_Interpreter", "InterpTestMethod*");
+                }
+
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
                     // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
@@ -746,6 +751,11 @@ public class SOSRunner : IDisposable
             if (!string.IsNullOrEmpty(gcName))
             {
                 processRunner.WithEnvironmentVariable("DOTNET_gcName", gcName);
+            }
+
+            if (config.TestInterpreter)
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_Interpreter", "InterpTestMethod*");
             }
 
             DumpType? dumpType = null;

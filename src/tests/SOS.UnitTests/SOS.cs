@@ -390,6 +390,51 @@ public class SOSExceptionTests
     }
 }
 
+public class SOSInterpreterTests
+{
+    public SOSInterpreterTests(ITestOutputHelper output)
+    {
+        Output = output;
+    }
+
+    private ITestOutputHelper Output { get; set; }
+
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    public async Task InterpreterStackTest(TestConfiguration config)
+    {
+        if (!config.TestInterpreter)
+        {
+            throw new SkipTestException("Interpreter SOS tests are off by default. Set SOS_TEST_INTERPRETER=true and overlay a Debug/Checked CoreCLR drop with FEATURE_INTERPRETER to run them.");
+        }
+
+        // FEATURE_INTERPRETER is not enabled for x86 (see src/coreclr/clrfeatures.cmake in dotnet/runtime).
+        if (config.TargetArchitecture == "x86")
+        {
+            throw new SkipTestException("CoreCLR interpreter is not enabled for x86.");
+        }
+
+        // Single-file deployment is excluded from private-runtime-overlay testing.
+        if (config.PublishSingleFile)
+        {
+            throw new SkipTestException("Interpreter test does not run against single-file debuggees.");
+        }
+
+        await SOSTestHelpers.RunTest(
+            scriptName: "InterpreterStackTest.script",
+            new SOSRunner.TestInformation
+            {
+                TestConfiguration = config,
+                TestName = "SOS.InterpreterStackTest",
+                DebuggeeName = "InterpreterStackTest",
+                // SOSRunner sets DOTNET_Interpreter=InterpTestMethod* on the debuggee
+                // when config.TestInterpreter is true; methods named with that prefix
+                // in the debuggee execute on the CoreCLR interpreter, and the
+                // [InterpreterFrame:] sentinel appears in !ClrStack output.
+            },
+            Output);
+    }
+}
+
 public class SOSOverflowTests
 {
     public SOSOverflowTests(ITestOutputHelper output)

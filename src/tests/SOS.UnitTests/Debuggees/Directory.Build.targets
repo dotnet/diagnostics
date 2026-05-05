@@ -1,0 +1,42 @@
+<Project>
+
+  <!--
+    Shared targets for SOS test debuggees.
+
+    Interpreter activation:
+    A debuggee opts in by setting <InterpreterTest>true</InterpreterTest>. Methods
+    named with the prefix "InterpTestMethod" then run on the CoreCLR interpreter.
+    SOSRunner sets DOTNET_Interpreter=InterpTestMethod* on the debuggee at launch
+    (see ResolveRuntimeEnvironmentVariables in SOSRunner.cs).
+
+    Gating:
+    Interpreter testing is enabled globally by SOS_TEST_INTERPRETER=true. When unset,
+    the xunit test method skips and a direct `dotnet build` of an interpreter-test
+    debuggee no-ops with a message instead of producing a binary that wouldn't
+    exercise the interpreter.
+  -->
+
+  <PropertyGroup Condition="'$(InterpreterTest)' == 'true'">
+    <_InterpreterTestingEnabled>false</_InterpreterTestingEnabled>
+    <_InterpreterTestingEnabled Condition="'$([System.Environment]::GetEnvironmentVariable(`SOS_TEST_INTERPRETER`))' == 'true'">true</_InterpreterTestingEnabled>
+  </PropertyGroup>
+
+  <!-- Forward-compat. CoreCLR reads `Interpreter` from DOTNET_Interpreter env var
+       only today (clrconfig.cpp); this entry becomes effective if/when the runtime
+       starts honoring the knob from runtimeconfig.json. -->
+  <ItemGroup Condition="'$(InterpreterTest)' == 'true' and '$(_InterpreterTestingEnabled)' == 'true'">
+    <RuntimeHostConfigurationOption Include="Interpreter" Value="InterpTestMethod*" />
+  </ItemGroup>
+
+  <!-- Skip-build redirect. Rewriting BuildDependsOn (rather than overriding the
+       Build target) keeps the gate-on path identical to a normal SDK build. -->
+  <PropertyGroup Condition="'$(InterpreterTest)' == 'true' and '$(_InterpreterTestingEnabled)' != 'true'">
+    <BuildDependsOn>_SkipUngatedInterpreterTestBuild</BuildDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_SkipUngatedInterpreterTestBuild">
+    <Message Importance="High"
+             Text="Skipping interpreter-test debuggee '$(MSBuildProjectName)' because SOS_TEST_INTERPRETER is not set. Export SOS_TEST_INTERPRETER=true (or pass -testInterpreter to eng\build.cmd / eng/build.sh) to enable." />
+  </Target>
+
+</Project>

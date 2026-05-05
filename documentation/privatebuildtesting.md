@@ -54,3 +54,19 @@ Because the DAC is not properly signed for a private runtime build there are a c
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\MiniDumpAuxiliaryDlls]
 "C:\diagnostics\.dotnet\shared\Microsoft.NETCore.App\5.0.0-alpha.1.20102.3\coreclr.dll"="C:\diagnostics\.dotnet\shared\Microsoft.NETCore.App\5.0.0-alpha.1.20102.3\mscordaccore.dll"
 ```
+
+#### Interpreter-frame tests
+
+The interpreter-frame SOS tests (`SOSInterpreterTests`) are skipped by default because `FEATURE_INTERPRETER` is only compiled into Debug/Checked CoreCLR drops (see `src/coreclr/clrfeatures.cmake` in dotnet/runtime) and is therefore unavailable on the public Release runtimes the SOS tests download by default.
+
+The opt-in is layered:
+
+1. **Per-debuggee csproj flag.** `Debuggees/InterpreterStackTest/InterpreterStackTest.csproj` declares `<InterpreterTest>true</InterpreterTest>` to mark itself as an interpreter SOS test. Methods that should run on the interpreter follow the convention of being named with the prefix `InterpTestMethod` (e.g. `InterpTestMethodRunNested`). The csproj does not need to specify the method-name pattern; it is shared across all interpreter-test debuggees.
+2. **Per-test gate.** `SOS_TEST_INTERPRETER=true` (or `-testInterpreter` to `eng\build.cmd`/`eng/build.sh`) unskips the `SOSInterpreterTests.InterpreterStackTest` test method. SOSRunner sets `DOTNET_Interpreter=InterpTestMethod*` on the debuggee process at launch when this gate is on. The shared `Debuggees/Directory.Build.targets` additionally fails any direct `dotnet build` of an interpreter-test debuggee when the gate is unset (`SOSINTERP001`). Other SOS tests are unaffected.
+
+To run them:
+
+1. Build the runtime as Checked: `build.cmd -subset clr -c Checked` (or `-c Debug`).
+2. Overlay that drop onto each `artifacts\dotnet-test\shared\Microsoft.NETCore.App\<version>` directory exactly as for any private build (see the example scripts above).
+3. Set `SOS_TEST_INTERPRETER=true` (or pass `-testInterpreter` to `eng\build.cmd`/`eng/build.sh` when running with `-test`).
+4. Run `eng\testsosinterpreter.cmd` / `eng/testsosinterpreter.sh` to run only the interpreter test, or `Test.cmd` / `test.sh` to run them as part of the full SOS suite.
