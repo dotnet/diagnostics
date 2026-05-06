@@ -58,10 +58,7 @@ internal static class DumpGenerationSetup
                     {
                         foreach (string directory in Directory.GetDirectories(path))
                         {
-                            if (Path.GetFileName(directory).StartsWith("10"))
-                            {
-                                paths.Add(directory);
-                            }
+                            paths.Add(directory);
                         }
                     }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
