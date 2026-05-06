@@ -1,5 +1,10 @@
 <Project>
 
+  <!-- Inherit the parent Directory.Build.targets chain (which imports the Arcade SDK
+       targets among other things). Without this, defining a Directory.Build.targets
+       here shadows the parent and breaks /t:Test invocation on every debuggee csproj. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\Directory.Build.targets" />
+
   <!--
     Shared targets for SOS test debuggees.
 
