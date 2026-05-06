@@ -47,7 +47,13 @@ namespace EventPipeTracee
             // If EventPipe enables the source during or before the LoggingEventSource.Instance constructor, ParseFilterSpec
             // produces wrong rules. Force the type initializer to complete before connecting to the pipe (which signals
             // the test harness that EventPipe can be enabled).
-            WarmLoggingEventSource();
+            ServiceCollection serviceCollection = new();
+            serviceCollection.AddLogging(builder => {
+                builder.AddEventSourceLogger();
+                // Set application defined levels
+                builder.AddFilter(null, LogLevel.Error); // Default
+                builder.AddFilter(AppLoggerCategoryName, LogLevel.Warning);
+            });
 
             // Signal that the tracee has started
             Console.WriteLine($"{pid} EventPipeTracee: connecting to pipe");
@@ -56,13 +62,6 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} EventPipeTracee: connected to pipe");
             Console.Out.Flush();
 
-            ServiceCollection serviceCollection = new();
-            serviceCollection.AddLogging(builder => {
-                builder.AddEventSourceLogger();
-                // Set application defined levels
-                builder.AddFilter(null, LogLevel.Error); // Default
-                builder.AddFilter(AppLoggerCategoryName, LogLevel.Warning);
-            });
 
             using ILoggerFactory loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
             ILogger customCategoryLogger = loggerFactory.CreateLogger(loggerCategory);
@@ -217,29 +216,4 @@ namespace EventPipeTracee
             appCategoryLogger.LogWarning(new EventId(5, "WarningEventId"), "Warning message.");
             appCategoryLogger.LogError("Error message.");
         }
-
-        /// <summary>
-        /// Forces LoggingEventSource's static constructor to run to completion before EventPipe
-        /// can enable the provider. This works around a static field initialization order bug
-        /// where ParseFilterSpec uses s_semicolon/s_colon before they are initialized.
-        /// </summary>
-        private static void WarmLoggingEventSource()
-        {
-            try
-            {
-                Type loggingEventSourceType = Type.GetType(
-                    "Microsoft.Extensions.Logging.EventSource.LoggingEventSource, Microsoft.Extensions.Logging.EventSource",
-                    throwOnError: false);
-
-                if (loggingEventSourceType != null)
-                {
-                    RuntimeHelpers.RunClassConstructor(loggingEventSourceType.TypeHandle);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"WarmLoggingEventSource failed (non-fatal): {ex.Message}");
-            }
-        }
-    }
 }
