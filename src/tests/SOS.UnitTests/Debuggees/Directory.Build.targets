@@ -12,7 +12,7 @@
     A debuggee opts in by setting <InterpreterTest>true</InterpreterTest>. Methods
     named with the prefix "InterpTestMethod" then run on the CoreCLR interpreter.
     SOSRunner sets DOTNET_Interpreter=InterpTestMethod* on the debuggee at launch
-    (see ResolveRuntimeEnvironmentVariables in SOSRunner.cs).
+    (see CreateDump and StartDebugger in SOSRunner.cs).
 
     Gating:
     Interpreter testing is enabled globally by SOS_TEST_INTERPRETER=true. When unset,
@@ -41,7 +41,7 @@
 
   <Target Name="_SkipUngatedInterpreterTestBuild">
     <Message Importance="High"
-             Text="Skipping interpreter-test debuggee '$(MSBuildProjectName)' because SOS_TEST_INTERPRETER is not set. Export SOS_TEST_INTERPRETER=true (or pass -testInterpreter to eng\build.cmd / eng/build.sh) to enable." />
+             Text="Skipping interpreter-test debuggee '$(MSBuildProjectName)' because SOS_TEST_INTERPRETER is not set. Set SOS_TEST_INTERPRETER=true (or pass -testInterpreter to Build.cmd / build.sh) to enable." />
   </Target>
 
 </Project>

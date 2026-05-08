@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Runtime.InteropServices;
 
 public class InterpreterUserHelper
 {
@@ -12,14 +13,15 @@ public class InterpreterUserHelper
     public void InterpTestMethodRunNested(string argument)
     {
         Console.WriteLine("InterpTestMethodRunNested received: " + argument);
-        InterpTestMethodThrow(argument);
+        InterpTestMethodCrash(argument);
     }
 
-    private void InterpTestMethodThrow(string argument)
+    private void InterpTestMethodCrash(string argument)
     {
-        // Two interpreted user frames so the stack walker has at least two to walk
-        // through and the test can assert both appear under the [InterpreterFrame:]
-        // sentinel.
-        throw new InvalidOperationException("Throwing from interpreted frame: " + argument);
+        // Force a null-pointer AV. A first-chance AV is caught by every dump
+        // generator; an unhandled managed exception is not (interpreter UEF
+        // doesn't escalate to second-chance today).
+        Console.WriteLine("InterpTestMethodCrash about to AV: " + argument);
+        Marshal.ReadIntPtr(IntPtr.Zero);
     }
 }

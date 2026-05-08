@@ -8,6 +8,5 @@
          Debuggees/Directory.Build.targets gates the build on SOS_TEST_INTERPRETER
          and emits the runtime env-var sidecar. -->
     <InterpreterTest>true</InterpreterTest>
-    <InterpretedMethods>InterpreterUserHelper.*</InterpretedMethods>
   </PropertyGroup>
 </Project>

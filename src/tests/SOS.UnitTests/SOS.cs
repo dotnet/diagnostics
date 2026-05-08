@@ -426,17 +426,9 @@ public class SOSInterpreterTests
                 TestConfiguration = config,
                 TestName = "SOS.InterpreterStackTest",
                 DebuggeeName = "InterpreterStackTest",
-                // SOSRunner sets DOTNET_Interpreter=InterpTestMethod* on the debuggee
-                // when config.TestInterpreter is true; methods named with that prefix
-                // in the debuggee execute on the CoreCLR interpreter, and the
-                // [InterpreterFrame:] sentinel appears in !ClrStack output.
-                //
-                // Skip live debugging and use createdump directly. The runtime's
-                // unhandled-exception path through interpreter-touched call chains
-                // does not currently escalate to a second-chance SEH exception, so
-                // a debugger-attached live run never breaks. createdump is invoked
-                // by the runtime itself via DbgEnableMiniDump on the same UEF path
-                // and produces a usable dump for SOS analysis.
+                // SOSRunner sets DOTNET_Interpreter=InterpTestMethod* when
+                // config.TestInterpreter is true so InterpTestMethod*-prefixed
+                // user methods execute on the CoreCLR interpreter.
                 TestLive = false,
                 DumpGenerator = SOSRunner.DumpGenerator.CreateDump,
             },
