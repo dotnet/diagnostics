@@ -93,9 +93,7 @@ public class SOSRunner : IDisposable
             {
                 return _testDump &&
                     // Only single file dumps on Windows
-                    (!TestConfiguration.PublishSingleFile || OS.Kind == OSKind.Windows) &&
-                    // Generate and test dumps if on OSX or Alpine only if the runtime is 6.0 or greater
-                    (!(OS.Kind == OSKind.OSX || OS.IsAlpine) || TestConfiguration.RuntimeFrameworkVersionMajor > 5);
+                    (!TestConfiguration.PublishSingleFile || OS.Kind == OSKind.Windows);
             }
             set { _testDump = value; }
         }
@@ -151,7 +149,7 @@ public class SOSRunner : IDisposable
 
         public bool TestCrashReport
         {
-            get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows && TestConfiguration.RuntimeFrameworkVersionMajor >= 6; }
+            get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows; }
             set { _testCrashReport = value; }
         }
 
@@ -397,7 +395,7 @@ public class SOSRunner : IDisposable
 
                         // Start dotnet-dump collect
                         DumpType dumpType = information.DumpType;
-                        if (config.IsDesktop || config.RuntimeFrameworkVersionMajor < 6)
+                        if (config.IsDesktop)
                         {
                             dumpType = DumpType.Full;
                         }
@@ -1501,31 +1499,12 @@ public class SOSRunner : IDisposable
         };
         try
         {
+            const int MinSupportedMajorVersion = 8;
             int major = _config.RuntimeFrameworkVersionMajor;
             defines.Add("MAJOR_RUNTIME_VERSION_" + major.ToString());
-            if (major >= 3)
+            for (int v = MinSupportedMajorVersion; v <= major; v++)
             {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_3");
-            }
-            if (major >= 5)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_5");
-            }
-            if (major >= 6)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_6");
-            }
-            if (major >= 7)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_7");
-            }
-            if (major >= 8)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_8");
-            }
-            if (major >= 9)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_9");
+                defines.Add($"MAJOR_RUNTIME_VERSION_GE_{v}");
             }
         }
         catch (SkipTestException)
