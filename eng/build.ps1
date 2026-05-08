@@ -13,6 +13,7 @@ Param(
     [switch] $bundletools,
     [switch] $useCdac,
     [switch] $noFallback,
+    [switch] $testInterpreter,
     [string] $methodfilter = '',
     [string] $classfilter = '',
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
@@ -109,6 +110,10 @@ if ($test) {
 
         if ($noFallback) {
             $env:SOS_TEST_CDAC_NO_FALLBACK="true"
+        }
+
+        if ($testInterpreter) {
+            $env:SOS_TEST_INTERPRETER="true"
         }
 
         # Build the test filter argument if provided
