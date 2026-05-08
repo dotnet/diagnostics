@@ -22,6 +22,7 @@
   -->
 
   <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <LiveRuntimeDir Condition="'$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizePath('$(LiveRuntimeDir)'))</LiveRuntimeDir>
     <DotNetInstallRoot>$(ArtifactsDotnetTestDir)</DotNetInstallRoot>
   </PropertyGroup>
@@ -59,6 +60,7 @@
 -->
 
   <Target Name="InstallTestRuntimes"
+          AfterTargets="Build"
           DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
 
 <!--

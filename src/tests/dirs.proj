@@ -13,10 +13,15 @@
 
     <!-- Unused -->
     <ProjectReference Remove="Grape/Grape.csproj" />
+
+    <!-- Install test runtimes (SDK, shared frameworks) into artifacts/dotnet-test/.
+         Using ProjectReference ensures the install runs exactly once via MSBuild's
+         result cache, even when multiple test projects depend on it. -->
+    <ProjectReference Include="$(RepositoryEngineeringDir)InstallRuntimes.proj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 
   <!--
-    Install test runtimes and build debuggees using the test SDK.
+    Build debuggees using the test SDK.
     Debuggees are built separately because they may target TFMs newer
     than what the global.json (product) SDK supports.
   -->
@@ -32,17 +37,8 @@
     <TestDotNetPath>$([MSBuild]::NormalizePath('$(ArtifactsDotnetTestDir)', 'dotnet'))</TestDotNetPath>
   </PropertyGroup>
 
-  <Target Name="InstallTestRuntimes"
-          AfterTargets="Build"
-          Condition="'$(SkipTests)' != 'true'">
-    <MSBuild Projects="$(RepositoryEngineeringDir)InstallRuntimes.proj"
-             Targets="InstallTestRuntimes"
-             Properties="TargetArch=$(TargetArch);TargetOS=$(TargetOS);TestArchitectures=$(TargetArch);PrivateBuildTesting=$(PrivateBuildTesting);LiveRuntimeDir=$(LiveRuntimeDir);HostArch=$(HostArch)" />
-  </Target>
-
   <Target Name="BuildDebuggees"
           AfterTargets="Build"
-          DependsOnTargets="InstallTestRuntimes"
           Condition="'$(SkipTests)' != 'true'">
     <!-- Remove stale SDKs from the build dotnet dir so the repo root global.json
          (rollForward:major) resolves to the correct test SDK.  InstallTestRuntimes
