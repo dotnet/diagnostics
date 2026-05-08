@@ -426,9 +426,6 @@ public class SOSInterpreterTests
                 TestConfiguration = config,
                 TestName = "SOS.InterpreterStackTest",
                 DebuggeeName = "InterpreterStackTest",
-                // SOSRunner sets DOTNET_Interpreter=InterpTestMethod* when
-                // config.TestInterpreter is true so InterpTestMethod*-prefixed
-                // user methods execute on the CoreCLR interpreter.
                 TestLive = false,
                 DumpGenerator = SOSRunner.DumpGenerator.CreateDump,
             },
@@ -460,9 +457,6 @@ public class SOSInterpreterTests
                 TestConfiguration = config,
                 TestName = "SOS.InterpreterStackInterleavedTest",
                 DebuggeeName = "InterpreterStackInterleavedTest",
-                // The debuggee routes through a JIT'd trampoline in a separate
-                // assembly so the stack has two [InterpreterFrame:] regions
-                // separated by JIT'd code.
                 TestLive = false,
                 DumpGenerator = SOSRunner.DumpGenerator.CreateDump,
             },
