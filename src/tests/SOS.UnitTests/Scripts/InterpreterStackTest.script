@@ -17,6 +17,6 @@ SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+\[InterpreterFrame:\s+<HEXVAL>\].*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterUserHelper\.InterpTestMethodCrash.*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterUserHelper\.InterpTestMethodRunNested.*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackTestApp\.InterpTestMethodCrash.*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackTestApp\.InterpTestMethodRunNested.*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackTestApp\.Main.*
