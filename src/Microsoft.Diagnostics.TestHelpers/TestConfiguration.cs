@@ -73,7 +73,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages,
                 ["TestCDAC"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC"),
-                ["TestCDACNoFallback"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC_NO_FALLBACK")
+                ["TestCDACNoFallback"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC_NO_FALLBACK"),
+                ["TestInterpreter"] = Environment.GetEnvironmentVariable("SOS_TEST_INTERPRETER")
             };
             if (OS.Kind == OSKind.Windows)
             {
@@ -463,6 +464,10 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 sb.Append(".cdac");
             }
+            if (TestInterpreter)
+            {
+                sb.Append(".interpreter");
+            }
             if (!string.IsNullOrEmpty(version))
             {
                 sb.Append('.');
@@ -571,6 +576,16 @@ namespace Microsoft.Diagnostics.TestHelpers
         public bool TestCDACNoFallback
         {
             get { return string.Equals(GetValue("TestCDACNoFallback"), "true", StringComparison.InvariantCultureIgnoreCase); }
+        }
+
+        /// <summary>
+        /// Returns true if interpreter-frame SOS tests should run. Requires a Debug/Checked
+        /// CoreCLR drop with FEATURE_INTERPRETER compiled in. When true, opted-in tests
+        /// launch their debuggee with DOTNET_Interpreter set so user methods are interpreted.
+        /// </summary>
+        public bool TestInterpreter
+        {
+            get { return string.Equals(GetValue("TestInterpreter"), "true", StringComparison.InvariantCultureIgnoreCase); }
         }
 
         /// <summary>

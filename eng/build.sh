@@ -32,6 +32,7 @@ __TestFilter=
 __UnprocessedBuildArgs=
 __UseCdac=0
 __NoFallback=0
+__TestInterpreter=0
 __LiveRuntimeDir=
 
 usage_list+=("-skipmanaged: do not build managed components.")
@@ -120,6 +121,10 @@ handle_arguments() {
 
         nofallback|-nofallback)
             __NoFallback=1
+            ;;
+
+        testinterpreter|-testinterpreter)
+            __TestInterpreter=1
             ;;
 
         -warnaserror|-nodereuse)
@@ -312,6 +317,10 @@ if [[ "$__Test" == 1 ]]; then
 
       if [[ "$__NoFallback" == 1 ]]; then
           export SOS_TEST_CDAC_NO_FALLBACK="true"
+      fi
+
+      if [[ "$__TestInterpreter" == 1 ]]; then
+          export SOS_TEST_INTERPRETER="true"
       fi
 
       # Build the test filter argument if provided
