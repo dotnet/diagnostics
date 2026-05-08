@@ -216,4 +216,5 @@ namespace EventPipeTracee
             appCategoryLogger.LogWarning(new EventId(5, "WarningEventId"), "Warning message.");
             appCategoryLogger.LogError("Error message.");
         }
+    }
 }
