@@ -25,6 +25,8 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LiveRuntimeDir Condition="'$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizePath('$(LiveRuntimeDir)'))</LiveRuntimeDir>
     <DotNetInstallRoot>$(ArtifactsDotnetTestDir)</DotNetInstallRoot>
+    <!-- Detect host architecture for cross-arch build SDK installation -->
+    <HostArch>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</HostArch>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetArch)' != 'x86'">

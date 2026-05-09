@@ -43,7 +43,7 @@
     <!-- Remove stale SDKs from the build dotnet dir so the repo root global.json
          (rollForward:major) resolves to the correct test SDK.  InstallTestRuntimes
          only installs $(MicrosoftNETSdkVersion); older SDKs are leftovers. -->
-    <ItemGroup>
+    <ItemGroup Condition="Exists('$(DebuggeeBuildDotNetDir)sdk')">
       <_StaleTestSdks Include="$([System.IO.Directory]::GetDirectories('$(DebuggeeBuildDotNetDir)sdk'))" />
       <_StaleTestSdks Remove="$([MSBuild]::NormalizePath('$(DebuggeeBuildDotNetDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))" />
     </ItemGroup>
