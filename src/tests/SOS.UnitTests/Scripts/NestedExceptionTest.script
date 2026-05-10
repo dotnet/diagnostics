@@ -93,7 +93,12 @@ VERIFY:InnerException:\s+System\.FormatException, Use !?printexception <HEXVAL> 
 VERIFY:StackTrace \(generated\):
 VERIFY:\s+SP\s+IP\s+Function\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Nn]ested[Ee]xception[Tt]est.*!NestedExceptionTest\.Program\.Main(\(.*\))?\+0x<HEXVAL>\s*
+IFDEF:DESKTOP
 VERIFY:\[.*[\\|/]Debuggees[\\|/].*[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ (11|20)\s*\]\s*
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 20\s*\]\s*
+ENDIF:DESKTOP
 VERIFY:(StackTraceString: <none>\s+)?
 VERIFY:HResult:\s+80131509\s+
 VERIFY:There are nested exceptions on this thread. Run with -nested for details
@@ -114,4 +119,9 @@ SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+NestedExceptionTest\.Program\.Main(\(.*\))?\s*
+IFDEF:DESKTOP
 VERIFY:\[.*[\\|/]Debuggees[\\|/].*[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ (11|20)\s*\]\s*
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 20\s*\]\s*
+ENDIF:DESKTOP
