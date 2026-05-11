@@ -40,7 +40,7 @@ private:
     ULONG m_cacheSize;
 
     std::vector<SectionRange> m_sectionRanges;
-    uint32_t m_sectionCacheModuleCount;
+    uint32_t m_sectionCacheStopId;
 
     ULONG64 GetModuleBase(lldb::SBTarget& target, lldb::SBModule& module);
     ULONG64 GetModuleSize(ULONG64 baseAddress, lldb::SBModule& module);
@@ -56,11 +56,9 @@ private:
     bool ReadFromSectionCache(lldb::SBTarget& target, uint64_t offset, uint32_t size, void* buffer, lldb::SBError& error, size_t& bytesRead);
 
     void ClearCache()
-    { 
+    {
         m_cacheValid = false;
         m_cacheSize = CACHE_SIZE;
-        m_sectionCacheModuleCount = 0;
-        m_sectionRanges.clear();
     }
 
     void LoadNativeSymbols(lldb::SBTarget target, lldb::SBModule module, PFN_MODULE_LOAD_CALLBACK callback);
@@ -76,7 +74,7 @@ private:
 public:
     LLDBServices(lldb::SBDebugger debugger);
     ~LLDBServices();
- 
+
     std::vector<SpecialThreadInfoEntry>& ThreadInfos() { return m_threadInfos; }
 
     void AddThreadInfoEntry(uint32_t tid, uint32_t index);
@@ -86,8 +84,8 @@ public:
         return (lldb::SBProcess*)InterlockedExchangePointer(&m_currentProcess, process);
     }
 
-    lldb::SBThread* SetCurrentThread(lldb::SBThread* thread) 
-    { 
+    lldb::SBThread* SetCurrentThread(lldb::SBThread* thread)
+    {
         return (lldb::SBThread*)InterlockedExchangePointer(&m_currentThread, thread);
     }
 
@@ -197,7 +195,7 @@ public:
         ULONG frameContextsSize,
         ULONG frameContextsEntrySize,
         PULONG framesFilled);
-    
+
     //----------------------------------------------------------------------------
     // IDebugDataSpaces
     //----------------------------------------------------------------------------
@@ -276,7 +274,7 @@ public:
         ULONG fileBufferSize,
         PULONG fileSize,
         PULONG64 displacement);
-     
+
     HRESULT STDMETHODCALLTYPE GetSourceFileLineOffsets(
         PCSTR file,
         PULONG64 buffer,
@@ -344,7 +342,7 @@ public:
         PFN_MODULE_LOAD_CALLBACK callback);
 
     HRESULT STDMETHODCALLTYPE AddModuleSymbol(
-        void* param, 
+        void* param,
         const char* symbolFileName);
 
     HRESULT STDMETHODCALLTYPE GetModuleInfo(
@@ -410,16 +408,16 @@ public:
         ULONG nameBufferSize,
         PULONG nameSize,
         PULONG64 displacement);
- 
+
     HRESULT STDMETHODCALLTYPE GetOffsetBySymbol(
         ULONG moduleIndex,
         PCSTR name,
         PULONG64 offset);
-    
+
     HRESULT STDMETHODCALLTYPE GetTypeId(
         ULONG moduleIndex,
         PCSTR typeName,
-        PULONG64 typeId); 
+        PULONG64 typeId);
 
     HRESULT STDMETHODCALLTYPE GetFieldOffset(
         ULONG moduleIndex,
