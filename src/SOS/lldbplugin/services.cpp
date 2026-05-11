@@ -39,8 +39,7 @@ LLDBServices::LLDBServices(lldb::SBDebugger debugger) :
     m_processId(0),
     m_threadInfoInitialized(false),
     m_currentResult(nullptr),
-    m_sectionCacheModuleCount(0),
-    m_sectionCacheValid(false)
+    m_sectionCacheStopId(UINT32_MAX)
 {
     ClearCache();
 
@@ -867,13 +866,14 @@ exit:
 void
 LLDBServices::EnsureSectionRanges(lldb::SBTarget& target)
 {
-    uint32_t numModules = target.GetNumModules();
-    if (m_sectionCacheValid && m_sectionCacheModuleCount == numModules)
+    if (m_sectionCacheStopId == m_currentStopId)
     {
         return;
     }
 
     m_sectionRanges.clear();
+
+    uint32_t numModules = target.GetNumModules();
     m_sectionRanges.reserve(numModules * 8);
 
     for (uint32_t i = 0; i < numModules; i++)
@@ -909,8 +909,7 @@ LLDBServices::EnsureSectionRanges(lldb::SBTarget& target)
     std::sort(m_sectionRanges.begin(), m_sectionRanges.end(),
         [](const SectionRange& a, const SectionRange& b) { return a.loadAddr < b.loadAddr; });
 
-    m_sectionCacheModuleCount = numModules;
-    m_sectionCacheValid = true;
+    m_sectionCacheStopId = m_currentStopId;
 }
 
 bool
