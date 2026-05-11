@@ -239,6 +239,7 @@ jobs:
       - pwsh: |
           $source = "$(Build.SourcesDirectory)/artifacts"
           $dest = "$(Build.ArtifactStagingDirectory)/artifacts_on_failure"
+          New-Item -ItemType Directory -Force -Path $dest
 
           # Move non-dump artifacts
           $patterns = @("bin", "Debuggees", "log", "TestResults")

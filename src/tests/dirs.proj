@@ -28,7 +28,7 @@
 
   <PropertyGroup>
     <!-- Detect whether this is a cross-architecture build (host != target) -->
-    <HostArch>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant)</HostArch>
+    <HostArch>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</HostArch>
     <IsCrossArchBuild Condition="'$(HostArch)' != '$(TargetArch)'">true</IsCrossArchBuild>
     <!-- When cross-building, use a separate host-arch SDK dir for building debuggees -->
     <DebuggeeBuildDotNetDir Condition="'$(IsCrossArchBuild)' == 'true'">$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-build'))</DebuggeeBuildDotNetDir>
