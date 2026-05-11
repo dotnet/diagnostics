@@ -251,7 +251,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             AssertDebuggeeProjectFileExists(output);
             AssertDebuggeeAssetsFileExists(output);
 
-            string publishBinLogPath = GetBinLogPath("publish");
+            string publishBinLogPath = GetBinLogPath("build");
             output.WriteLine("MSBuild binlog path: {0}", publishBinLogPath);
             dotnetArgs += " /bl:\"" + publishBinLogPath + "\"";
             output.WriteLine("Launching {0} {1}", DotNetToolPath, dotnetArgs);
