@@ -40,7 +40,8 @@ private:
     ULONG m_cacheSize;
 
     std::vector<SectionRange> m_sectionRanges;
-    uint32_t m_sectionCacheStopId;
+    uint32_t m_sectionCacheModuleCount;
+    bool m_sectionCacheValid;
 
     ULONG64 GetModuleBase(lldb::SBTarget& target, lldb::SBModule& module);
     ULONG64 GetModuleSize(ULONG64 baseAddress, lldb::SBModule& module);
@@ -59,6 +60,9 @@ private:
     { 
         m_cacheValid = false;
         m_cacheSize = CACHE_SIZE;
+        m_sectionCacheValid = false;
+        m_sectionCacheModuleCount = 0;
+        m_sectionRanges.clear();
     }
 
     void LoadNativeSymbols(lldb::SBTarget target, lldb::SBModule module, PFN_MODULE_LOAD_CALLBACK callback);
