@@ -53,6 +53,8 @@ EXTCOMMAND: dcd <POUT>\n\s*(<HEXVAL>)\s+<HEXVAL>\s+\d+<POUT>
 VERIFY: 2 items
 VERIFY: Key: dumpvc <HEXVAL> <HEXVAL>\s+Value: null
 VERIFY: Key: dumpvc <HEXVAL> <HEXVAL>\s+Value: dumpobj <HEXVAL>
+# Issue: https://github.com/dotnet/diagnostics/issues/5840 - SIGSEGV crash during dumpobj on Alpine/musl
+!IFDEF:ALPINE
 SOSCOMMAND: dumpobj <POUT>Value: dumpobj (<HEXVAL>)<POUT>
 VERIFY: Name:\s+DotnetDumpCommands\.Program\+DumpSampleClass
 VERIFY: instance\s+0\s+\<Value1\>
@@ -62,6 +64,7 @@ ENDIF:64BIT
 IFDEF:32BIT
 VERIFY: instance\s+00000000\s+\<Value2\>
 ENDIF:32BIT
+ENDIF:ALPINE
 
 # Checks on ConcurrentDictionary<int, DumpSampleStruct>
 SOSCOMMAND: DumpHeap -stat -type System.Collections.Concurrent.ConcurrentDictionary<

@@ -1,6 +1,13 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets"/>
 
+  <!-- Projects that use debuggees/tracees depend on the test runtime installation.
+       Using ProjectReference ensures the install runs exactly once via MSBuild's
+       result cache, even when multiple test projects reference it in parallel. -->
+  <ItemGroup Condition="'$(CopyDebuggeeSourcesToArtifacts)' == 'true'">
+    <ProjectReference Include="$(RepositoryEngineeringDir)InstallRuntimes.proj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" />
+  </ItemGroup>
+
   <!--
     Shared target to copy debuggee sources and aux MSBuild files to artifacts for Helix testing.
     Projects opt-in by setting CopyDebuggeeSourcesToArtifacts=true.

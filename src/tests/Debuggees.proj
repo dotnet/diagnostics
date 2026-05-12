@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.Build.Traversal">
+
+  <!-- Debuggee and tracee projects, built using the test SDK from artifacts/dotnet-test/ -->
+  <ItemGroup>
+    <ProjectReference Include="SOS.UnitTests/Debuggees/**/*.csproj" />
+    <ProjectReference Include="CommonTestRunner/Debuggees/**/*.csproj" />
+    <ProjectReference Include="DbgShim.UnitTests/Debuggees/**/*.csproj" />
+  </ItemGroup>
+
+</Project>
