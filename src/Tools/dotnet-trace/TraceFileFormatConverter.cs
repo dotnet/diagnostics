@@ -69,38 +69,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         private static void Convert(TraceFileFormat format, string fileToConvert, string outputFilename, bool continueOnError = false)
         {
-            string etlxFilePath = TraceLog.CreateFromEventPipeDataFile(fileToConvert, null, new TraceLogOptions() { ContinueOnError = continueOnError });
-            using (SymbolReader symbolReader = new(TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
-            using (TraceLog eventLog = new(etlxFilePath))
+            // Speedscope/Chromium outputs only understand CPU samples; exclude EventSource events.
+            MutableTraceEventStackSource stackSource = ThreadTimeStackSourceHelper.GenerateStackSourceFromTrace(fileToConvert, includeEventSourceEvents: false, continueOnError);
+
+            switch (format)
             {
-                MutableTraceEventStackSource stackSource = new(eventLog)
-                {
-                    OnlyManagedCodeStacks = true // EventPipe currently only has managed code stacks.
-                };
-
-                SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader)
-                {
-                    IncludeEventSourceEvents = false // SpeedScope handles only CPU samples, events are not supported
-                };
-                computer.GenerateThreadTimeStacks(stackSource);
-
-                switch (format)
-                {
-                    case TraceFileFormat.Speedscope:
-                        SpeedScopeStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename);
-                        break;
-                    case TraceFileFormat.Chromium:
-                        ChromiumStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename, compress: false);
-                        break;
-                    default:
-                        // we should never get here
-                        throw new DiagnosticToolException($"Invalid TraceFileFormat \"{format}\"");
-                }
-            }
-
-            if (File.Exists(etlxFilePath))
-            {
-                File.Delete(etlxFilePath);
+                case TraceFileFormat.Speedscope:
+                    SpeedScopeStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename);
+                    break;
+                case TraceFileFormat.Chromium:
+                    ChromiumStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename, compress: false);
+                    break;
+                default:
+                    // we should never get here
+                    throw new DiagnosticToolException($"Invalid TraceFileFormat \"{format}\"");
             }
         }
     }

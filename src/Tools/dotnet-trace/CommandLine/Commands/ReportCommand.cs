@@ -41,55 +41,43 @@ namespace Microsoft.Diagnostics.Tools.Trace
         {
             try
             {
-                string tempEtlxFilename = TraceLog.CreateFromEventPipeDataFile(traceFile);
                 int count = 0;
                 int index = 0;
                 List<CallTreeNodeBase> nodesToReport = new();
-                using (SymbolReader symbolReader = new(System.IO.TextWriter.Null) { SymbolPath = SymbolPath.MicrosoftSymbolServerPath })
-                using (TraceLog eventLog = new(tempEtlxFilename))
+                MutableTraceEventStackSource stackSource = ThreadTimeStackSourceHelper.GenerateStackSourceFromTrace(traceFile);
+
+                FilterParams filterParams = new()
                 {
-                    MutableTraceEventStackSource stackSource = new(eventLog)
-                    {
-                        OnlyManagedCodeStacks = true
-                    };
+                    FoldRegExs = "CPU_TIME;UNMANAGED_CODE_TIME;{Thread (}",
+                };
+                FilterStackSource filterStack = new(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
+                CallTree callTree = new(ScalingPolicyKind.ScaleToData);
+                callTree.StackSource = filterStack;
 
-                    SampleProfilerThreadTimeComputer computer = new(eventLog, symbolReader);
+                List<CallTreeNodeBase> callTreeNodes = null;
 
-                    computer.GenerateThreadTimeStacks(stackSource);
-
-                    FilterParams filterParams = new()
-                    {
-                        FoldRegExs = "CPU_TIME;UNMANAGED_CODE_TIME;{Thread (}",
-                    };
-                    FilterStackSource filterStack = new(filterParams, stackSource, ScalingPolicyKind.ScaleToData);
-                    CallTree callTree = new(ScalingPolicyKind.ScaleToData);
-                    callTree.StackSource = filterStack;
-
-                    List<CallTreeNodeBase> callTreeNodes = null;
-
-                    if (!inclusive)
-                    {
-                        callTreeNodes = callTree.ByIDSortedExclusiveMetric();
-                    }
-                    else
-                    {
-                        callTreeNodes = callTree.ByIDSortedInclusiveMetric();
-                    }
-
-                    int totalElements = callTreeNodes.Count;
-                    while (count < number && index < totalElements)
-                    {
-                        CallTreeNodeBase node = callTreeNodes[index];
-                        index++;
-                        if (!unwantedMethodNames.Any(node.Name.Contains))
-                        {
-                            nodesToReport.Add(node);
-                            count++;
-                        }
-                    }
-
-                    PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, verbose);
+                if (!inclusive)
+                {
+                    callTreeNodes = callTree.ByIDSortedExclusiveMetric();
                 }
+                else
+                {
+                    callTreeNodes = callTree.ByIDSortedInclusiveMetric();
+                }
+
+                int totalElements = callTreeNodes.Count;
+                while (count < number && index < totalElements)
+                {
+                    CallTreeNodeBase node = callTreeNodes[index];
+                    index++;
+                    if (!unwantedMethodNames.Any(node.Name.Contains))
+                    {
+                        nodesToReport.Add(node);
+                        count++;
+                    }
+                }
+
+                PrintReportHelper.TopNWriteToStdOut(nodesToReport, inclusive, verbose);
                 return 0;
             }
             catch (Exception ex)

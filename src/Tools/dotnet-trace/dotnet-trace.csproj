@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" GeneratePathProperty="true" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" />
     <PackageReference Include="Microsoft.OneCollect.RecordTrace" Version="$(MicrosoftOneCollectRecordTraceVersions)" PrivateAssets="All" GeneratePathProperty="true" />
   </ItemGroup>
 

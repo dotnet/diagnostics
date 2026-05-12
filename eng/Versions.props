@@ -29,7 +29,7 @@
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>9.0.8</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
-    <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.23</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.28</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftDotNetXUnitExtensionsVersion>11.0.0-beta.25528.108</MicrosoftDotNetXUnitExtensionsVersion>
     <MicrosoftExtensionsLoggingVersion>8.0.1</MicrosoftExtensionsLoggingVersion>
     <MicrosoftExtensionsLoggingAbstractionsVersion>8.0.3</MicrosoftExtensionsLoggingAbstractionsVersion>
@@ -46,8 +46,8 @@
     <SystemMemoryVersion>4.5.5</SystemMemoryVersion>
     <SystemRuntimeLoaderVersion>4.3.0</SystemRuntimeLoaderVersion>
     <SystemThreadingTasksExtensionsVersion>4.5.4</SystemThreadingTasksExtensionsVersion>
-    <SystemTextEncodingsWebVersion>8.0.0</SystemTextEncodingsWebVersion>
-    <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
+    <SystemTextEncodingsWebVersion>9.0.8</SystemTextEncodingsWebVersion>
+    <SystemTextJsonVersion>9.0.8</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.556</StyleCopAnalyzersVersion>
     <cdbsosversion>10.0.26100.1</cdbsosversion>
