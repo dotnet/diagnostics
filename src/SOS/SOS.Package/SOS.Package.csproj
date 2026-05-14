@@ -41,7 +41,7 @@
   <Target Name="GenerateGalleryManifest"
     DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion">
 
-    <Exec Command="$(DotNetTool) run --file $(MSBuildThisFileDirectory)GenerateManifest\GenerateManifest.cs &quot;$(GalleryManifestBase)&quot; &quot;$(ExtensionGalleryManifestOutputFile)&quot; &quot;$(UncompressedGalleryManifestOutputFile)&quot; &quot;$(FileVersion)&quot;" />
+    <Exec Command="&quot;$(DotNetTool)&quot; run --file &quot;$(MSBuildThisFileDirectory)GenerateManifest\GenerateManifest.cs&quot; &quot;$(GalleryManifestBase)&quot; &quot;$(ExtensionGalleryManifestOutputFile)&quot; &quot;$(UncompressedGalleryManifestOutputFile)&quot; &quot;$(FileVersion)&quot;" />
 
     <ItemGroup>
       <FileWrites Include="$(ExtensionGalleryManifestOutputFile)" />
