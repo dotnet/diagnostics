@@ -31,7 +31,7 @@ namespace Microsoft.Internal.Common.Utils
         private static ProcessTerminationHandler ConfigureTerminationHandler(ParseResult parseResult, string blockedSignals)
         {
             // Use custom process terminate handler for the command line tool parse result.
-            parseResult.Configuration.ProcessTerminationTimeout = null;
+            // Note: ProcessTerminationTimeout property was removed in System.CommandLine 2.0+
             return new ProcessTerminationHandler(blockedSignals);
         }
 

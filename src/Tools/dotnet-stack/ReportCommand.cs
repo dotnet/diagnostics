@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Threading;
@@ -173,12 +174,12 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 DurationOption
             };
 
-            reportCommand.SetAction((parseResult, ct) => Report(ct,
-                stdOutput: parseResult.Configuration.Output,
-                stdError: parseResult.Configuration.Error,
-                processId: parseResult.GetValue(ProcessIdOption),
-                name: parseResult.GetValue(NameOption),
-                duration: parseResult.GetValue(DurationOption)));
+            reportCommand.SetAction((context, ct) => Report(ct,
+                stdOutput: context.Console.Out,
+                stdError: context.Console.Error,
+                processId: context.ParseResult.GetValue(ProcessIdOption),
+                name: context.ParseResult.GetValue(NameOption),
+                duration: context.ParseResult.GetValue(DurationOption)));
 
             return reportCommand;
         }

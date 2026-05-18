@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -23,7 +24,7 @@ namespace Microsoft.Internal.Common.Commands
         public static Command ProcessStatusCommand(string description)
         {
             Command statusCommand = new(name: "ps", description);
-            statusCommand.SetAction((parseResult, ct) => Task.FromResult(ProcessStatus(parseResult.Configuration.Output, parseResult.Configuration.Error)));
+            statusCommand.SetAction((context, ct) => Task.FromResult(ProcessStatus(context.Console.Out, context.Console.Error)));
             return statusCommand;
         }
 

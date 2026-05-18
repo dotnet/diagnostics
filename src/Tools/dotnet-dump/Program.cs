@@ -3,6 +3,7 @@
 
 using System;
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common;
@@ -31,16 +32,16 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 ProcessIdOption, OutputOption, DiagnosticLoggingOption, CrashReportOption, TypeOption, ProcessNameOption, DiagnosticPortOption
             };
 
-            command.SetAction((parseResult) => new Dumper().Collect(
-                stdOutput: parseResult.Configuration.Output,
-                stdError: parseResult.Configuration.Error,
-                processId: parseResult.GetValue(ProcessIdOption),
-                output: parseResult.GetValue(OutputOption),
-                diag: parseResult.GetValue(DiagnosticLoggingOption),
-                crashreport: parseResult.GetValue(CrashReportOption),
-                type: parseResult.GetValue(TypeOption),
-                name: parseResult.GetValue(ProcessNameOption),
-                diagnosticPort: parseResult.GetValue(DiagnosticPortOption)));
+            command.SetAction((context) => new Dumper().Collect(
+                stdOutput: context.Console.Out,
+                stdError: context.Console.Error,
+                processId: context.ParseResult.GetValue(ProcessIdOption),
+                output: context.ParseResult.GetValue(OutputOption),
+                diag: context.ParseResult.GetValue(DiagnosticLoggingOption),
+                crashreport: context.ParseResult.GetValue(CrashReportOption),
+                type: context.ParseResult.GetValue(TypeOption),
+                name: context.ParseResult.GetValue(ProcessNameOption),
+                diagnosticPort: context.ParseResult.GetValue(DiagnosticPortOption)));
 
             return command;
         }
