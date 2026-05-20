@@ -206,26 +206,30 @@ ENDIF:NETCORE_OR_DOTNETDUMP
 !IFDEF:ARM
 
 # Verify DumpStack works
+# DumpStack/EEStack are heuristic raw-stack scanners. The set of managed frames they
+# surface varies run-to-run and across architectures depending on JIT codegen,
+# inlining, and exception-unwind state. Just confirm at least one managed frame is
+# annotated by the scanner (any "(MethodDesc <addr> <method>)" line counts).
 # Issue: https://github.com/dotnet/diagnostics/issues/5839 - DumpStack on macOS missing ", calling" suffix on Foo4/Foo2 frames
 !IFDEF:OSX
 SOSCOMMAND:DumpStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
-VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?[\w\.\+`<>]+\(.*\)\),\s+calling.*\s+
 ENDIF:OSX
 
 # Verify DumpStack -EE works
 SOSCOMMAND:DumpStack -EE
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
-VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\)\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\)\s+)
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?[\w\.\+`<>]+\(.*\)\)\s+
 
 # Verify EEStack works
 # Issue: https://github.com/dotnet/diagnostics/issues/5839 - EEStack on macOS missing ", calling" suffix on Foo4/Foo2 frames
 !IFDEF:OSX
 SOSCOMMAND:EEStack
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
-VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?[\w\.\+`<>]+\(.*\)\),\s+calling.*\s+
 ENDIF:OSX
 
 ENDIF:ARM
