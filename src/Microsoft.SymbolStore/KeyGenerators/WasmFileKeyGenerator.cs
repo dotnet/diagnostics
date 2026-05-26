@@ -34,6 +34,12 @@ namespace Microsoft.SymbolStore.KeyGenerators
         private const string IdentityPrefix = "wasm-buildid";
         private const string SymbolPrefix = "wasm-buildid-sym";
 
+        /// <summary>
+        /// Maximum reasonable build ID length (256 bytes). Protects against
+        /// malformed input causing large allocations.
+        /// </summary>
+        private const int MaxBuildIdLength = 256;
+
         private readonly SymbolStoreFile _file;
         private byte[] _buildId;
         private bool _parsed;
@@ -100,11 +106,15 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     uint sectionSize = ReadLEB128Unsigned(stream);
                     long sectionEnd = stream.Position + sectionSize;
 
+                    if (sectionEnd > stream.Length)
+                    {
+                        break;
+                    }
+
                     if (sectionId == CustomSectionId)
                     {
-                        long nameStart = stream.Position;
                         string name = ReadWasmString(stream);
-                        if (name != null && name.StartsWith(".debug_"))
+                        if (name != null && name.StartsWith(".debug_", StringComparison.Ordinal))
                         {
                             return true;
                         }
@@ -178,15 +188,20 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     uint sectionSize = ReadLEB128Unsigned(stream);
                     long sectionEnd = stream.Position + sectionSize;
 
+                    // Validate that the section doesn't extend beyond the stream
+                    if (sectionEnd > stream.Length)
+                    {
+                        break;
+                    }
+
                     if (sectionId == CustomSectionId)
                     {
-                        long nameStart = stream.Position;
                         string name = ReadWasmString(stream);
                         if (name == BuildIdSectionName)
                         {
                             // The remainder of the section payload is the build ID
                             int buildIdLength = (int)(sectionEnd - stream.Position);
-                            if (buildIdLength > 0)
+                            if (buildIdLength > 0 && buildIdLength <= MaxBuildIdLength)
                             {
                                 _buildId = new byte[buildIdLength];
                                 if (stream.Read(_buildId, 0, buildIdLength) == buildIdLength)
@@ -254,9 +269,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 return null;
             }
 
-            byte[] bytes = new byte[length];
-            int bytesRead = stream.Read(bytes, 0, (int)length);
-            if (bytesRead != (int)length)
+            int stringLength = (int)length;
+            byte[] bytes = new byte[stringLength];
+            int bytesRead = stream.Read(bytes, 0, stringLength);
+            if (bytesRead != stringLength)
             {
                 return null;
             }
