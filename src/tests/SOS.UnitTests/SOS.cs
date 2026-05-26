@@ -22,6 +22,28 @@ public static class SOSTestHelpers
     public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", value: null)
         .Where(args => !((TestConfiguration)args[0]).IsDesktop);
 
+    public static IEnumerable<object[]> InterpreterConfigurations
+    {
+        get
+        {
+            // Global gate: SOS_TEST_INTERPRETER=true. Requires a Debug/Checked CoreCLR
+            // drop with FEATURE_INTERPRETER overlaid; see documentation/privatebuildtesting.md.
+            if (!string.Equals(Environment.GetEnvironmentVariable("SOS_TEST_INTERPRETER"), "true", StringComparison.OrdinalIgnoreCase))
+            {
+                return new[] { new object[] { TestConfiguration.Empty } };
+            }
+
+            List<object[]> configs = Configurations
+                .Where(args => !((TestConfiguration)args[0]).PublishSingleFile)
+                // FEATURE_INTERPRETER is not enabled for x86 (src/coreclr/clrfeatures.cmake in dotnet/runtime).
+                .Where(args => !string.Equals(((TestConfiguration)args[0]).TargetArchitecture, "x86", StringComparison.OrdinalIgnoreCase))
+                .Select(args => new object[] { new TestConfiguration(new Dictionary<string, string>(((TestConfiguration)args[0]).AllSettings) { ["UseInterpreter"] = "true" }) })
+                .ToList();
+
+            return configs.Count == 0 ? new[] { new object[] { TestConfiguration.Empty } } : configs;
+        }
+    }
+
     public static IEnumerable<object[]> GetConfigurations(string key, string value)
     {
         return TestRunConfiguration.Instance.Configurations.Where((c) => key == null || c.AllSettings.GetValueOrDefault(key) == value).DefaultIfEmpty(TestConfiguration.Empty).Select(c => new[] { c });
@@ -399,24 +421,12 @@ public class SOSInterpreterTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.InterpreterConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task InterpreterStackTest(TestConfiguration config)
     {
-        if (!config.TestInterpreter)
+        if (!config.UseInterpreter)
         {
             throw new SkipTestException("Interpreter SOS tests are off by default. Set SOS_TEST_INTERPRETER=true and overlay a Debug/Checked CoreCLR drop with FEATURE_INTERPRETER to run them.");
-        }
-
-        // FEATURE_INTERPRETER is not enabled for x86 (see src/coreclr/clrfeatures.cmake in dotnet/runtime).
-        if (config.TargetArchitecture == "x86")
-        {
-            throw new SkipTestException("CoreCLR interpreter is not enabled for x86.");
-        }
-
-        // Single-file deployment is excluded from private-runtime-overlay testing.
-        if (config.PublishSingleFile)
-        {
-            throw new SkipTestException("Interpreter test does not run against single-file debuggees.");
         }
 
         await SOSTestHelpers.RunTest(
@@ -432,22 +442,12 @@ public class SOSInterpreterTests
             Output);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.InterpreterConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task InterpreterStackInterleavedTest(TestConfiguration config)
     {
-        if (!config.TestInterpreter)
+        if (!config.UseInterpreter)
         {
             throw new SkipTestException("Interpreter SOS tests are off by default. Set SOS_TEST_INTERPRETER=true and overlay a Debug/Checked CoreCLR drop with FEATURE_INTERPRETER to run them.");
-        }
-
-        if (config.TargetArchitecture == "x86")
-        {
-            throw new SkipTestException("CoreCLR interpreter is not enabled for x86.");
-        }
-
-        if (config.PublishSingleFile)
-        {
-            throw new SkipTestException("Interpreter test does not run against single-file debuggees.");
         }
 
         await SOSTestHelpers.RunTest(

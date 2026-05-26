@@ -73,8 +73,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages,
                 ["TestCDAC"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC"),
-                ["TestCDACNoFallback"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC_NO_FALLBACK"),
-                ["TestInterpreter"] = Environment.GetEnvironmentVariable("SOS_TEST_INTERPRETER")
+                ["TestCDACNoFallback"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC_NO_FALLBACK")
             };
             if (OS.Kind == OSKind.Windows)
             {
@@ -464,7 +463,7 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 sb.Append(".cdac");
             }
-            if (TestInterpreter)
+            if (UseInterpreter)
             {
                 sb.Append(".interpreter");
             }
@@ -579,13 +578,15 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
-        /// Returns true if interpreter-frame SOS tests should run. Requires a Debug/Checked
-        /// CoreCLR drop with FEATURE_INTERPRETER compiled in. When true, opted-in tests
-        /// launch their debuggee with DOTNET_Interpreter set so user methods are interpreted.
+        /// Returns true if this configuration runs its debuggee on the CoreCLR interpreter.
+        /// Set only on the dedicated interpreter-variant configurations cloned by
+        /// SOSTestHelpers.InterpreterConfigurations; opt-in tests consume those via their
+        /// own MemberData source. When set, SOSRunner launches the debuggee with
+        /// DOTNET_Interpreter=InterpTestMethod*
         /// </summary>
-        public bool TestInterpreter
+        public bool UseInterpreter
         {
-            get { return string.Equals(GetValue("TestInterpreter"), "true", StringComparison.InvariantCultureIgnoreCase); }
+            get { return string.Equals(GetValue("UseInterpreter"), "true", StringComparison.InvariantCultureIgnoreCase); }
         }
 
         /// <summary>

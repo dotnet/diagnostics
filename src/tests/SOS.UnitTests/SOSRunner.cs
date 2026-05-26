@@ -328,7 +328,7 @@ public class SOSRunner : IDisposable
                     WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                     WithTimeout(TimeSpan.FromMinutes(10));
 
-                if (config.TestInterpreter)
+                if (config.UseInterpreter)
                 {
                     processRunner.WithEnvironmentVariable("DOTNET_Interpreter", "InterpTestMethod*");
                 }
@@ -749,7 +749,7 @@ public class SOSRunner : IDisposable
                 processRunner.WithEnvironmentVariable("DOTNET_gcName", gcName);
             }
 
-            if (config.TestInterpreter)
+            if (config.UseInterpreter)
             {
                 processRunner.WithEnvironmentVariable("DOTNET_Interpreter", "InterpTestMethod*");
             }
