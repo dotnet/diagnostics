@@ -589,6 +589,20 @@ namespace Microsoft.SymbolStore.Tests
                 IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
                 Assert.True(!identityKey.Any());
             }
+
+            // Test 4: Wasm file with a custom section name longer than 64 chars before build_id
+            const string WasmLongNamePath = "TestBinaries/test_module_long_section_name.wasm";
+            using (Stream stream = File.OpenRead(WasmLongNamePath))
+            {
+                var file = new SymbolStoreFile(stream, WasmLongNamePath);
+                var generator = new WasmFileKeyGenerator(_tracer, file);
+
+                Assert.True(generator.IsValid());
+
+                IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                Assert.True(identityKey.Count() == 1);
+                Assert.True(identityKey.First().Index == "test_module_long_section_name.wasm/deadbeef0123456789abcdeffedcba98/test_module_long_section_name.wasm");
+            }
         }
     }
 }

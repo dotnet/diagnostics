@@ -50,6 +50,11 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
         public override bool IsValid()
         {
+            return HasIndexableWasmBuildId();
+        }
+
+        public bool HasIndexableWasmBuildId()
+        {
             ParseWasmFile();
             return _isValid;
         }
@@ -91,9 +96,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
             _parsed = true;
             _isValid = false;
 
+            Stream stream = _file.Stream;
+            long prevPosition = stream.Position;
             try
             {
-                Stream stream = _file.Stream;
                 stream.Position = 0;
 
                 // Validate magic number
@@ -124,7 +130,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     }
                 }
 
-                // Scan sections for the buildId custom section
+                // Scan sections for the build_id custom section
                 while (stream.Position < stream.Length)
                 {
                     int sectionId = stream.ReadByte();
@@ -144,7 +150,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
                     if (sectionId == CustomSectionId)
                     {
-                        string name = ReadWasmString(stream);
+                        string name = ReadWasmString(stream, sectionEnd);
                         if (name == BuildIdSectionName)
                         {
                             // The remainder of the section payload is the build ID
@@ -167,6 +173,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
             catch (Exception ex) when (ex is IOException || ex is OverflowException || ex is ArgumentOutOfRangeException)
             {
                 Tracer.Verbose("Error parsing Wasm file {0}: {1}", _file.FileName, ex.Message);
+            }
+            finally
+            {
+                stream.Position = prevPosition;
             }
         }
 
@@ -203,16 +213,23 @@ namespace Microsoft.SymbolStore.KeyGenerators
         }
 
         /// <summary>
-        /// Reads a Wasm string (LEB128 length prefix followed by UTF-8 bytes).
+        /// Maximum section name length we'll read. Names longer than this are
+        /// skipped since they cannot match the sections we're looking for.
         /// </summary>
-        private static string ReadWasmString(Stream stream)
+        private const int MaxSectionNameLength = 64;
+
+        /// <summary>
+        /// Reads a Wasm string (LEB128 length prefix followed by UTF-8 bytes).
+        /// Returns null if the string is too long or extends past the section boundary.
+        /// </summary>
+        private static string ReadWasmString(Stream stream, long sectionEnd)
         {
             uint length = ReadLEB128Unsigned(stream);
             if (length == 0)
             {
                 return string.Empty;
             }
-            if (length > int.MaxValue)
+            if (length > MaxSectionNameLength || stream.Position + length > sectionEnd)
             {
                 return null;
             }
