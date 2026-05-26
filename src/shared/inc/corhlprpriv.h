@@ -3,7 +3,7 @@
 
 /*****************************************************************************
  **                                                                         **
- ** Corhlprpriv.h -                                                                 **
+ ** Corhlprpriv.h -                                                         **
  **                                                                         **
  *****************************************************************************/
 
@@ -182,11 +182,6 @@ public:
         _Alloc<TRUE /*bGrow*/, TRUE /*bThrow*/>(iItems);
     }
 
-#ifdef __GNUC__
-    // This makes sure that we will not get an undefined symbol
-    // when building a release version of libcoreclr using LLVM/GCC.
-    __attribute__((used))
-#endif // __GNUC__
     HRESULT ReSizeNoThrow(SIZE_T iItems);
 
     void Shrink(SIZE_T iItems)
