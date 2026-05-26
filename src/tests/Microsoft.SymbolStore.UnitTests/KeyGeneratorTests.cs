@@ -571,7 +571,7 @@ namespace Microsoft.SymbolStore.Tests
 
                 IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
                 Assert.True(identityKey.Count() == 1);
-                Assert.True(identityKey.First().Index == "test_module_symbols.wasm.s/deadbeef0123456789abcdeffedcba98/test_module_symbols.wasm.s");
+                Assert.True(identityKey.First().Index == "test_module_symbols.wasm/deadbeef0123456789abcdeffedcba98/test_module_symbols.wasm");
 
                 IEnumerable<SymbolStoreKey> symbolKey = generator.GetKeys(KeyTypeFlags.SymbolKey);
                 Assert.True(!symbolKey.Any());

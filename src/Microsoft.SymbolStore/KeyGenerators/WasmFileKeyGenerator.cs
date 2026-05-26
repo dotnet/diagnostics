@@ -31,8 +31,6 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// </summary>
         private const string BuildIdSectionName = "build_id";
 
-        private const string SymbolFileSuffix = ".s";
-
         /// <summary>
         /// Maximum reasonable build ID length (256 bytes). Protects against
         /// malformed input causing large allocations.
@@ -62,8 +60,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
             {
                 if ((flags & KeyTypeFlags.IdentityKey) != 0)
                 {
-                    bool isSymbolFile = IsSymbolFile();
-                    yield return GetKey(_file.FileName, _buildId, isSymbolFile);
+                    yield return GetKey(_file.FileName, _buildId);
                 }
             }
         }
@@ -73,65 +70,13 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// </summary>
         /// <param name="path">file name and path</param>
         /// <param name="buildId">build ID bytes from the build_id custom section</param>
-        /// <param name="symbolFile">if true, this is a symbol file (contains DWARF sections)</param>
         /// <returns>symbol store key</returns>
-        public static SymbolStoreKey GetKey(string path, byte[] buildId, bool symbolFile)
+        public static SymbolStoreKey GetKey(string path, byte[] buildId)
         {
             Debug.Assert(path != null);
             Debug.Assert(buildId != null && buildId.Length > 0);
             string file = GetFileName(path).ToLowerInvariant();
-            if (symbolFile)
-            {
-                file += SymbolFileSuffix;
-            }
             return BuildKey(path, prefix: null, buildId, file);
-        }
-
-        /// <summary>
-        /// Determines whether this Wasm module is a symbol file by checking
-        /// for the presence of DWARF debug custom sections.
-        /// </summary>
-        private bool IsSymbolFile()
-        {
-            try
-            {
-                Stream stream = _file.Stream;
-                stream.Position = 8; // Skip magic and version
-
-                while (stream.Position < stream.Length)
-                {
-                    int sectionId = stream.ReadByte();
-                    if (sectionId == -1)
-                    {
-                        break;
-                    }
-
-                    uint sectionSize = ReadLEB128Unsigned(stream);
-                    long sectionEnd = stream.Position + sectionSize;
-
-                    if (sectionEnd > stream.Length)
-                    {
-                        break;
-                    }
-
-                    if (sectionId == CustomSectionId)
-                    {
-                        string name = ReadWasmString(stream);
-                        if (name != null && name.StartsWith(".debug_", StringComparison.Ordinal))
-                        {
-                            return true;
-                        }
-                    }
-
-                    stream.Position = sectionEnd;
-                }
-            }
-            catch (Exception ex) when (ex is IOException || ex is OverflowException || ex is ArgumentOutOfRangeException)
-            {
-                Tracer.Verbose("Error checking Wasm symbol sections in {0}: {1}", _file.FileName, ex.Message);
-            }
-
-            return false;
         }
 
         /// <summary>
