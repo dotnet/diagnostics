@@ -551,7 +551,7 @@ namespace Microsoft.SymbolStore.Tests
 
                 IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
                 Assert.True(identityKey.Count() == 1);
-                Assert.True(identityKey.First().Index == "test_module.wasm/wasm-buildid-deadbeef0123456789abcdeffedcba98/test_module.wasm");
+                Assert.True(identityKey.First().Index == "test_module.wasm/deadbeef0123456789abcdeffedcba98/test_module.wasm");
 
                 IEnumerable<SymbolStoreKey> symbolKey = generator.GetKeys(KeyTypeFlags.SymbolKey);
                 Assert.True(!symbolKey.Any());
@@ -571,7 +571,7 @@ namespace Microsoft.SymbolStore.Tests
 
                 IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
                 Assert.True(identityKey.Count() == 1);
-                Assert.True(identityKey.First().Index == "test_module_symbols.wasm/wasm-buildid-sym-deadbeef0123456789abcdeffedcba98/test_module_symbols.wasm");
+                Assert.True(identityKey.First().Index == "test_module_symbols.wasm.s/deadbeef0123456789abcdeffedcba98/test_module_symbols.wasm.s");
 
                 IEnumerable<SymbolStoreKey> symbolKey = generator.GetKeys(KeyTypeFlags.SymbolKey);
                 Assert.True(!symbolKey.Any());

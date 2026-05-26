@@ -31,8 +31,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// </summary>
         private const string BuildIdSectionName = "build_id";
 
-        private const string IdentityPrefix = "wasm-buildid";
-        private const string SymbolPrefix = "wasm-buildid-sym";
+        private const string SymbolFileSuffix = ".s";
 
         /// <summary>
         /// Maximum reasonable build ID length (256 bytes). Protects against
@@ -73,15 +72,19 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// Create a symbol store key for a Wasm file with a build ID.
         /// </summary>
         /// <param name="path">file name and path</param>
-        /// <param name="buildId">build ID bytes from the buildId custom section</param>
+        /// <param name="buildId">build ID bytes from the build_id custom section</param>
         /// <param name="symbolFile">if true, this is a symbol file (contains DWARF sections)</param>
         /// <returns>symbol store key</returns>
         public static SymbolStoreKey GetKey(string path, byte[] buildId, bool symbolFile)
         {
             Debug.Assert(path != null);
             Debug.Assert(buildId != null && buildId.Length > 0);
-            string prefix = symbolFile ? SymbolPrefix : IdentityPrefix;
-            return BuildKey(path, prefix, buildId);
+            string file = GetFileName(path).ToLowerInvariant();
+            if (symbolFile)
+            {
+                file += SymbolFileSuffix;
+            }
+            return BuildKey(path, prefix: null, buildId, file);
         }
 
         /// <summary>
