@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
+    <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
+
+    <!-- Marks this debuggee as an interpreter SOS test. The shared
+         Debuggees/Directory.Build.targets gates the build on SOS_TEST_INTERPRETER
+         and emits the runtime env-var sidecar. -->
+    <InterpreterTest>true</InterpreterTest>
+  </PropertyGroup>
+</Project>

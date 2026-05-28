@@ -93,9 +93,7 @@ public class SOSRunner : IDisposable
             {
                 return _testDump &&
                     // Only single file dumps on Windows
-                    (!TestConfiguration.PublishSingleFile || OS.Kind == OSKind.Windows) &&
-                    // Generate and test dumps if on OSX or Alpine only if the runtime is 6.0 or greater
-                    (!(OS.Kind == OSKind.OSX || OS.IsAlpine) || TestConfiguration.RuntimeFrameworkVersionMajor > 5);
+                    (!TestConfiguration.PublishSingleFile || OS.Kind == OSKind.Windows);
             }
             set { _testDump = value; }
         }
@@ -151,7 +149,7 @@ public class SOSRunner : IDisposable
 
         public bool TestCrashReport
         {
-            get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows && TestConfiguration.RuntimeFrameworkVersionMajor >= 6; }
+            get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows; }
             set { _testCrashReport = value; }
         }
 
@@ -306,8 +304,11 @@ public class SOSRunner : IDisposable
                 // Setup a pipe server for the debuggee to connect to sync when to take a dump
                 if (information.UsePipeSync)
                 {
-                    int runnerId = Process.GetCurrentProcess().Id;
-                    pipeName = $"SOSRunner.{runnerId}.{information.DebuggeeName}";
+                    // Use random suffix to avoid collisions in parallel runs.
+                    // Unix domain sockets (used on Linux/macOS) have a 104-byte path limit.
+                    // .NET prepends "CoreFxPipe_" (11 chars) and the temp dir path (~52 chars on macOS).
+                    // This leaves ~41 chars for the pipe name. Use a short prefix + random hex.
+                    pipeName = $"sos.{Random.Shared.Next():x8}";
                     pipeServer = new NamedPipeServerStream(pipeName);
                     arguments.Append(' ');
                     arguments.Append(pipeName);
@@ -322,11 +323,15 @@ public class SOSRunner : IDisposable
 
                 // Create the debuggee process runner
                 ProcessRunner processRunner = new ProcessRunner(exePath, ReplaceVariables(variables, arguments.ToString())).
-                    WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                     WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                     WithRuntimeConfiguration("DbgEnableElfDumpOnMacOS", "1").
                     WithLog(new TestRunner.TestLogger(outputHelper.IndentedOutput)).
                     WithTimeout(TimeSpan.FromMinutes(10));
+
+                if (config.UseInterpreter)
+                {
+                    processRunner.WithEnvironmentVariable("DOTNET_Interpreter", "InterpTestMethod*");
+                }
 
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
@@ -394,7 +399,7 @@ public class SOSRunner : IDisposable
 
                         // Start dotnet-dump collect
                         DumpType dumpType = information.DumpType;
-                        if (config.IsDesktop || config.RuntimeFrameworkVersionMajor < 6)
+                        if (config.IsDesktop)
                         {
                             dumpType = DumpType.Full;
                         }
@@ -474,7 +479,9 @@ public class SOSRunner : IDisposable
             NativeDebugger debugger = GetNativeDebuggerToUse(config, action);
 
             // Restore and build the debuggee.
+            Stopwatch compileSw = Stopwatch.StartNew();
             DebuggeeConfiguration debuggeeConfig = await DebuggeeCompiler.Execute(config, information.DebuggeeName, outputHelper);
+            outputHelper.WriteLine("[TIMING] DebuggeeCompiler.Execute took {0:F1}s", compileSw.Elapsed.TotalSeconds);
 
             outputHelper.WriteLine("SOSRunner processing {0}", information.TestName);
             outputHelper.WriteLine("{");
@@ -694,7 +701,6 @@ public class SOSRunner : IDisposable
 
             // Create the native debugger process running
             ProcessRunner processRunner = new ProcessRunner(debuggerPath, ReplaceVariables(variables, arguments.ToString())).
-                WithEnvironmentVariable("DOTNET_MULTILEVEL_LOOKUP", "0").
                 WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
@@ -743,6 +749,11 @@ public class SOSRunner : IDisposable
                 processRunner.WithEnvironmentVariable("DOTNET_gcName", gcName);
             }
 
+            if (config.UseInterpreter)
+            {
+                processRunner.WithEnvironmentVariable("DOTNET_Interpreter", "InterpTestMethod*");
+            }
+
             DumpType? dumpType = null;
             if (action is DebuggerAction.LoadDump or DebuggerAction.LoadDumpWithDotNetDump)
             {
@@ -753,6 +764,7 @@ public class SOSRunner : IDisposable
             sosRunner = new SOSRunner(debugger, config, outputHelper, variables, scriptLogger, processRunner, dumpType);
 
             // Start the native debugger
+            Stopwatch launchSw = Stopwatch.StartNew();
             processRunner.Start();
 
             // Set the coredump_filter flags on the gdb process so the coredump it
@@ -764,6 +776,8 @@ public class SOSRunner : IDisposable
 
             // Execute the initial debugger commands
             await sosRunner.RunCommands(initialCommands);
+            outputHelper.WriteLine("[TIMING] Debugger launch + initial commands took {0:F1}s ({1} initial commands, debugger={2}, action={3})",
+                launchSw.Elapsed.TotalSeconds, initialCommands.Count, debugger, action);
 
             return sosRunner;
         }
@@ -783,6 +797,8 @@ public class SOSRunner : IDisposable
 
     public async Task RunScript(string scriptRelativePath)
     {
+        Stopwatch scriptSw = Stopwatch.StartNew();
+        int commandCount = 0;
         try
         {
             string scriptFile = Path.Combine(_config.ScriptRootDir, scriptRelativePath);
@@ -933,6 +949,7 @@ public class SOSRunner : IDisposable
                 }
 
                 await QuitDebugger();
+                commandCount++;
             }
             catch (Exception)
             {
@@ -958,6 +975,10 @@ public class SOSRunner : IDisposable
         {
             WriteLine(ex.ToString());
             throw;
+        }
+        finally
+        {
+            WriteLine("[TIMING] RunScript({0}) completed in {1:F1}s", scriptRelativePath, scriptSw.Elapsed.TotalSeconds);
         }
     }
 
@@ -1361,10 +1382,12 @@ public class SOSRunner : IDisposable
 
     private async Task<bool> HandleCommand(string input, bool addPrefix)
     {
+        Stopwatch waitPromptSw = Stopwatch.StartNew();
         if (!await _scriptLogger.WaitForCommandPrompt())
         {
             throw new Exception(string.Format("{0} exited unexpectedly executing '{1}'", DebuggerToString, input));
         }
+        long waitPromptMs = waitPromptSw.ElapsedMilliseconds;
 
         // The PREVPOUT convention is to write a command like this:
         // COMMAND: Some stuff <PREVPOUT> more stuff
@@ -1427,7 +1450,15 @@ public class SOSRunner : IDisposable
         }
         _processRunner.StandardInputWriteLine(command);
 
+        Stopwatch cmdSw = Stopwatch.StartNew();
         ScriptLogger.CommandResult result = await _scriptLogger.WaitForCommandOutput();
+        long cmdMs = cmdSw.ElapsedMilliseconds;
+
+        // Log per-command timing for commands taking more than 500ms
+        if (waitPromptMs + cmdMs > 500)
+        {
+            WriteLine("    [CMD_TIMING] wait={0}ms exec={1}ms total={2}ms cmd=\"{3}\"", waitPromptMs, cmdMs, waitPromptMs + cmdMs, input.Length > 80 ? input.Substring(0, 80) + "..." : input);
+        }
         _lastCommandOutput = result.CommandOutput;
         if (Debugger == NativeDebugger.Cdb)
         {
@@ -1476,31 +1507,12 @@ public class SOSRunner : IDisposable
         };
         try
         {
+            const int MinSupportedMajorVersion = 8;
             int major = _config.RuntimeFrameworkVersionMajor;
             defines.Add("MAJOR_RUNTIME_VERSION_" + major.ToString());
-            if (major >= 3)
+            for (int v = MinSupportedMajorVersion; v <= major; v++)
             {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_3");
-            }
-            if (major >= 5)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_5");
-            }
-            if (major >= 6)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_6");
-            }
-            if (major >= 7)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_7");
-            }
-            if (major >= 8)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_8");
-            }
-            if (major >= 9)
-            {
-                defines.Add("MAJOR_RUNTIME_VERSION_GE_9");
+                defines.Add($"MAJOR_RUNTIME_VERSION_GE_{v}");
             }
         }
         catch (SkipTestException)

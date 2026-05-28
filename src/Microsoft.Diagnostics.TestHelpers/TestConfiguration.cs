@@ -463,6 +463,10 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 sb.Append(".cdac");
             }
+            if (UseInterpreter)
+            {
+                sb.Append(".interpreter");
+            }
             if (!string.IsNullOrEmpty(version))
             {
                 sb.Append('.');
@@ -571,6 +575,18 @@ namespace Microsoft.Diagnostics.TestHelpers
         public bool TestCDACNoFallback
         {
             get { return string.Equals(GetValue("TestCDACNoFallback"), "true", StringComparison.InvariantCultureIgnoreCase); }
+        }
+
+        /// <summary>
+        /// Returns true if this configuration runs its debuggee on the CoreCLR interpreter.
+        /// Set only on the dedicated interpreter-variant configurations cloned by
+        /// SOSTestHelpers.InterpreterConfigurations; opt-in tests consume those via their
+        /// own MemberData source. When set, SOSRunner launches the debuggee with
+        /// DOTNET_Interpreter=InterpTestMethod*
+        /// </summary>
+        public bool UseInterpreter
+        {
+            get { return string.Equals(GetValue("UseInterpreter"), "true", StringComparison.InvariantCultureIgnoreCase); }
         }
 
         /// <summary>

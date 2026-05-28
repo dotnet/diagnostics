@@ -1,0 +1,26 @@
+# Interpreter frame stack-walk scenario, interleaved with a JIT'd trampoline.
+#
+# Gated by SOS_TEST_INTERPRETER=true. The debuggee runs InterpTestMethod*
+# methods on the CoreCLR interpreter and AVs from the deepest one. A
+# trampoline lives in a separate assembly and stays JIT'd, producing two
+# distinct [InterpreterFrame:] regions on the stack separated by the JIT'd
+# bounce.
+#
+# Requires a CoreCLR build with FEATURE_INTERPRETER (Debug/Checked).
+
+CONTINUE
+
+LOADSOS
+
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+# Inner interpreter region: [InterpreterFrame] -> InterpTestMethodInner
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+\[InterpreterFrame:\s+<HEXVAL>\].*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackInterleavedTestApp\.InterpTestMethodInner.*
+# JIT'd trampoline (separate assembly, not in g_interpModule).
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackInterleavedTest\.Trampoline\.JitTrampoline\.Bounce.*
+# Outer interpreter region: [InterpreterFrame] -> InterpTestMethodOuter -> Main
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+\[InterpreterFrame:\s+<HEXVAL>\].*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackInterleavedTestApp\.InterpTestMethodOuter.*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackInterleavedTestApp\.Main.*

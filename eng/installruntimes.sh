@@ -13,5 +13,5 @@ while [[ -h $source ]]; do
 done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
-"$scriptroot/../eng/build.sh" -installruntimes -skipmanaged -skipnative $@
+"$scriptroot/common/msbuild.sh" "$scriptroot/InstallRuntimes.proj" /t:InstallTestRuntimes $@
 

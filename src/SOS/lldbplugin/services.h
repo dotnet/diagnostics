@@ -4,8 +4,19 @@
 #include <cstdarg>
 #include <string>
 #include <set>
+#include <vector>
 
 #define CACHE_SIZE  4096
+
+// Cached module section range used by ReadVirtual to satisfy reads not
+// backed by the lldb process (e.g., code/text segments missing from a
+// MachO core). Lookup is via std::upper_bound on loadAddr.
+struct SectionRange
+{
+    uint64_t loadAddr;
+    uint64_t endAddr;
+    lldb::SBSection section;
+};
 
 class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices
 {
@@ -28,6 +39,9 @@ private:
     bool m_cacheValid;
     ULONG m_cacheSize;
 
+    std::vector<SectionRange> m_sectionRanges;
+    uint32_t m_sectionCacheStopId;
+
     ULONG64 GetModuleBase(lldb::SBTarget& target, lldb::SBModule& module);
     ULONG64 GetModuleSize(ULONG64 baseAddress, lldb::SBModule& module);
     ULONG64 GetExpression(lldb::SBFrame& frame, lldb::SBError& error, PCSTR exp);
@@ -38,8 +52,11 @@ private:
     bool SearchVersionString(uint64_t address, int32_t size, char* versionBuffer, int versionBufferSize);
     bool ReadVirtualCache(ULONG64 address, PVOID buffer, ULONG bufferSize, PULONG pcbBytesRead);
 
+    void EnsureSectionRanges(lldb::SBTarget& target);
+    bool ReadFromSectionCache(lldb::SBTarget& target, uint64_t offset, uint32_t size, void* buffer, lldb::SBError& error, size_t& bytesRead);
+
     void ClearCache()
-    { 
+    {
         m_cacheValid = false;
         m_cacheSize = CACHE_SIZE;
     }
@@ -57,7 +74,7 @@ private:
 public:
     LLDBServices(lldb::SBDebugger debugger);
     ~LLDBServices();
- 
+
     std::vector<SpecialThreadInfoEntry>& ThreadInfos() { return m_threadInfos; }
 
     void AddThreadInfoEntry(uint32_t tid, uint32_t index);
@@ -67,8 +84,8 @@ public:
         return (lldb::SBProcess*)InterlockedExchangePointer(&m_currentProcess, process);
     }
 
-    lldb::SBThread* SetCurrentThread(lldb::SBThread* thread) 
-    { 
+    lldb::SBThread* SetCurrentThread(lldb::SBThread* thread)
+    {
         return (lldb::SBThread*)InterlockedExchangePointer(&m_currentThread, thread);
     }
 
@@ -178,7 +195,7 @@ public:
         ULONG frameContextsSize,
         ULONG frameContextsEntrySize,
         PULONG framesFilled);
-    
+
     //----------------------------------------------------------------------------
     // IDebugDataSpaces
     //----------------------------------------------------------------------------
@@ -257,7 +274,7 @@ public:
         ULONG fileBufferSize,
         PULONG fileSize,
         PULONG64 displacement);
-     
+
     HRESULT STDMETHODCALLTYPE GetSourceFileLineOffsets(
         PCSTR file,
         PULONG64 buffer,
@@ -325,7 +342,7 @@ public:
         PFN_MODULE_LOAD_CALLBACK callback);
 
     HRESULT STDMETHODCALLTYPE AddModuleSymbol(
-        void* param, 
+        void* param,
         const char* symbolFileName);
 
     HRESULT STDMETHODCALLTYPE GetModuleInfo(
@@ -391,16 +408,16 @@ public:
         ULONG nameBufferSize,
         PULONG nameSize,
         PULONG64 displacement);
- 
+
     HRESULT STDMETHODCALLTYPE GetOffsetBySymbol(
         ULONG moduleIndex,
         PCSTR name,
         PULONG64 offset);
-    
+
     HRESULT STDMETHODCALLTYPE GetTypeId(
         ULONG moduleIndex,
         PCSTR typeName,
-        PULONG64 typeId); 
+        PULONG64 typeId);
 
     HRESULT STDMETHODCALLTYPE GetFieldOffset(
         ULONG moduleIndex,

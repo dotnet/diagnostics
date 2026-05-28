@@ -71,6 +71,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         public override void Invoke()
         {
             ClrRuntime runtime = Runtime;
+
+            if (runtime.ClrInfo.Version.Major >= 11)
+            {
+                WriteLineWarning("Warning: .NET 11+ uses runtime-async which changes how async state machines work.");
+                WriteLineWarning("The dump async command doesn't fully support .NET 11+ async stacks. They may be incomplete or missing.");
+            }
+
             ClrHeap heap = runtime.Heap;
             if (!heap.CanWalkHeap)
             {
