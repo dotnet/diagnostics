@@ -271,6 +271,14 @@ void InternalOutputVaList(
     PCSTR format,
     va_list args)
 {
+    IDebuggerServices* debuggerServices = GetDebuggerServices();
+    if (debuggerServices == nullptr)
+    {
+        // No debugger services to output to (e.g. the dotnet-dump host). Avoid dereferencing a
+        // null pointer; callers like the CLRMA logging helpers can run in this configuration.
+        return;
+    }
+
     char str[1024];
     va_list argsCopy;
     va_copy(argsCopy, args);
@@ -279,7 +287,7 @@ void InternalOutputVaList(
     size_t length = vsnprintf(str, sizeof(str), format, args);
     if (length < sizeof(str))
     {
-        GetDebuggerServices()->OutputString(mask, str);
+        debuggerServices->OutputString(mask, str);
     }
     else
     {
@@ -288,7 +296,7 @@ void InternalOutputVaList(
         if (str_ptr != nullptr)
         {
             vsnprintf(str_ptr, length + 1, format, argsCopy);
-            GetDebuggerServices()->OutputString(mask, str_ptr);
+            debuggerServices->OutputString(mask, str_ptr);
             ::free(str_ptr);
         }
     }
@@ -299,9 +307,14 @@ void InternalOutputVaList(
 /// </summary>
 void TraceHostingError(PCSTR format, ...)
 {
+    IDebuggerServices* debuggerServices = GetDebuggerServices();
+    if (debuggerServices == nullptr)
+    {
+        return;
+    }
     va_list args;
     va_start(args, format);
-    GetDebuggerServices()->OutputString(DEBUG_OUTPUT_ERROR, "SOS_HOSTING: ");
+    debuggerServices->OutputString(DEBUG_OUTPUT_ERROR, "SOS_HOSTING: ");
     InternalOutputVaList(DEBUG_OUTPUT_ERROR, format, args);
     va_end(args);
 }

@@ -125,3 +125,20 @@ ENDIF:DESKTOP
 !IFDEF:DESKTOP
 VERIFY:\[.*[\\|/]Debuggees[\\|/].*[Nn]ested[Ee]xception[Tt]est[\\|/][Nn]ested[Ee]xception[Tt]est\.cs @ 20\s*\]\s*
 ENDIF:DESKTOP
+
+# Verify the SOS clrma command (CLRMA managed analysis) under dotnet-dump. This exercises the
+# CLRMACreateInstance/ICLRManagedAnalysis path used by Watson/!analyze, but in the dotnet-dump
+# host so it can be validated locally without windbg/lldb. We only check the structural fields
+# (provider, current exception type/HResult and the inner exception type/HResult) that !pe above
+# already proved are available on these dumps.
+IFDEF:DOTNETDUMP
+SOSCOMMAND:clrma
+VERIFY:Managed analysis provider:\s+SOSCLRMA\s+
+VERIFY:OSThreadId:\s+<HEXVAL>\s+
+VERIFY:Current exception:\s+
+VERIFY:\s+Exception type:\s+System\.InvalidOperationException\s+
+VERIFY:\s+HResult:\s+80131509\s+
+VERIFY:\s+InnerException:\s+
+VERIFY:\s+Exception type:\s+System\.FormatException\s+
+VERIFY:\s+HResult:\s+80131537\s+
+ENDIF:DOTNETDUMP

@@ -68,8 +68,59 @@ IXCLRDataStackWalk::GetContext()
 IXCLRDataStackWalk::Next()
 ```
 
+### Testing CLRMA locally with the `clrma` command
+
+The `clrma` SOS command exercises the CLRMA contract end-to-end (`CLRMACreateInstance` →
+`ICLRManagedAnalysis.AssociateClient` → `GetThread`/`GetException`) and prints the managed thread
+stack, the current/nested exceptions, their types, messages, HResults and exception stack traces.
+This is the same data Watson/`!analyze` extract from CLRMA, so the command is a local proxy for
+"upload to Watson and see how it buckets" — without needing the debugger engine's `!clrma`/`!analyze`.
+
+The command runs in any SOS host. In particular it works under `dotnet-dump`, so no Windows
+debugger (windbg/cdb) or lldb is required:
+
+```
+dotnet-dump analyze <dump> -c "clrma" -c "exit"
+```
+
+By default it analyzes the current/faulting thread and its current exception. Pass `-t <osThreadId>`
+to target a specific managed thread. Use `clrmaconfig` to switch between the managed (Native AOT
+crash-info) provider and the direct-DAC provider, e.g. `clrmaconfig -enable -dac`.
+
+To produce a dump to test against, run a managed app under `createdump` (no debugger needed):
+
+```
+set DOTNET_DbgEnableMiniDump=1
+set DOTNET_DbgMiniDumpType=4
+set DOTNET_DbgMiniDumpName=<path-to-dump>
+<run the crashing app>
+```
+
+Example output for an `InvalidOperationException` that wraps an inner `ArgumentException`:
+
+```
+Managed analysis provider: SOSCLRMA
+OSThreadId: 800c
+Managed stack trace:
+    ... clrmatest.dll!Program.Main()+0x8b
+    ... clrmatest.dll!Program.Inner()+0x67
+Current exception:
+    Exception type:   System.InvalidOperationException
+    Message:          Outer failure from CLRMA test debuggee
+    HResult:          80131509
+    StackTrace (generated):
+        ... clrmatest.dll!Program.Main+0x8a
+    InnerException:
+        Exception type:   System.ArgumentException
+        Message:          Inner failure: bad argument value
+        HResult:          80070057
+```
+
+> Note: under `dotnet-dump` the `Extensions` debugger-services layer is not registered (SOS uses the
+> legacy dbgeng-compat layer there), so CLRMA `-logging` output is suppressed in that host.
+
 ### References
 
-SOS CLRMA export code: https://github.com/dotnet/diagnostics/blob/main/src/SOS/Strike/clrma/clrma.cpp. 
+SOS CLRMA export code: https://github.com/dotnet/diagnostics/blob/main/src/SOS/Strike/clrma/clrma.cpp.
 
 SOS CLRMA wrapper code: https://github.com/dotnet/diagnostics/blob/main/src/SOS/SOS.Extensions/Clrma/ClrmaServiceWrapper.cs. 

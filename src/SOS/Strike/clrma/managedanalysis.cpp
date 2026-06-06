@@ -225,8 +225,10 @@ ClrmaManagedAnalysis::AssociateClient(
     }
 
     Extensions* extensions = Extensions::GetInstance();
-    if (extensions != nullptr && extensions->GetDebuggerServices() != nullptr)
+    if (extensions != nullptr)
     {
+        // FlushCheck is a no-op when there are no debugger services (e.g. the dotnet-dump host),
+        // but the target/runtime are still available through the host so CLRMA can run there too.
         extensions->FlushCheck();
 
         ITarget* target = extensions->GetTarget();
