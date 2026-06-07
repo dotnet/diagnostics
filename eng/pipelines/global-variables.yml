@@ -20,7 +20,7 @@ variables:
   - name: LinuxImage
     value: Build.Ubuntu.2204.Amd64
   - name: macOSImage
-    value: macos-26-arm64
+    value: macOS-latest
   - name: sourceBuildTemplate
     value: /eng/common/templates-official/job/source-build.yml@self
   - name: jobTemplate
@@ -42,7 +42,7 @@ variables:
   - name: LinuxImage
     value: Build.Ubuntu.2204.Amd64.Open
   - name: macOSImage
-    value: macos-26-arm64
+    value: macOS-latest
 
 # Custom feed and token
 - ${{ if eq(parameters.runtimeFeed, 'custom') }}:

@@ -96,7 +96,7 @@ jobs:
           os: windows
 
         ${{ elseif in(parameters.osGroup, 'MacOS') }}:
-          name: GitHub-hosted Agents
+          name: Azure Pipelines
           vmImage: $(macOSImage)
           os: macOS
 
