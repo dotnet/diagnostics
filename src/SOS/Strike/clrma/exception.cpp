@@ -92,9 +92,17 @@ ClrmaException::Initialize()
             if (m_exceptionData.Message == 0)
             {
                 // To match the built-in SOS provider that scrapes !pe output.
-                const WCHAR* none = L"<none>";
-                m_message = new (std::nothrow) WCHAR[wcslen(none) + 1];
-                wcscpy(m_message, none);
+                const WCHAR* none = W("<none>");
+                size_t noneLen = 0;
+                while (none[noneLen] != 0)
+                {
+                    noneLen++;
+                }
+                m_message = new (std::nothrow) WCHAR[noneLen + 1];
+                if (m_message != nullptr)
+                {
+                    memcpy(m_message, none, (noneLen + 1) * sizeof(WCHAR));
+                }
             }
             else
             {
@@ -232,7 +240,7 @@ ClrmaException::get_Type(
     if (typeName == nullptr)
     {
         // To match the built-in SOS provider that scrapes !pe output
-        typeName = L"<Unknown>";
+        typeName = W("<Unknown>");
     }
 
     *pValue = SysAllocString(typeName);

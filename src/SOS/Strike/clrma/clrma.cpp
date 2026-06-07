@@ -174,8 +174,8 @@ PrintClrmaFrames(T* frameProvider, PCSTR indent)
                 indent,
                 SOS_PTR(sp),
                 SOS_PTR(ip),
-                module != nullptr ? module : L"<unknown_module>",
-                function != nullptr ? function : L"<unknown_function>",
+                module != nullptr ? module : W("<unknown_module>"),
+                function != nullptr ? function : W("<unknown_function>"),
                 (unsigned long long)displacement);
         }
         SysFreeString(module);
@@ -208,8 +208,8 @@ PrintClrmaException(ICLRMAClrException* exception, int nestingLevel)
     exception->get_Message(&message);
 
     ExtOut("%sException object: %p\n", indent, SOS_PTR(address));
-    ExtOut("%sException type:   %S\n", indent, type != nullptr ? type : L"<Unknown>");
-    ExtOut("%sMessage:          %S\n", indent, message != nullptr ? message : L"<none>");
+    ExtOut("%sException type:   %S\n", indent, type != nullptr ? type : W("<Unknown>"));
+    ExtOut("%sMessage:          %S\n", indent, message != nullptr ? message : W("<none>"));
     ExtOut("%sHResult:          %08x\n", indent, exceptionHResult);
     ExtOut("%sStackTrace (generated):\n", indent);
     PrintClrmaFrames(exception, indent);

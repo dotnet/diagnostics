@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #include "managedanalysis.h"
+#include "exts.h"
 
 extern bool IsWindowsTarget();
 extern "C" IXCLRDataProcess * GetClrDataFromDbgEng();
@@ -33,6 +34,7 @@ HRESULT
 ClrmaManagedAnalysis::QueryDebugClient(IUnknown* pUnknown)
 {
     HRESULT hr;
+#ifndef FEATURE_PAL
     ReleaseHolder<IDebugClient> debugClient;
     if (FAILED(hr = pUnknown->QueryInterface(__uuidof(IDebugClient), (void**)&debugClient)))
     {
@@ -63,6 +65,25 @@ ClrmaManagedAnalysis::QueryDebugClient(IUnknown* pUnknown)
     m_debugSystem = debugSystem.Detach();
     m_debugControl = debugControl.Detach();
     m_debugSymbols = debugSymbols.Detach();
+#else
+    // On Unix there is no COM IDebugClient. The cross-platform debugger services (ILLDBServices,
+    // wrapped by the xplat dbgeng compat) are exposed through the ExtQuery globals that the
+    // INIT_API_EXT in the clrma command already initialized from this same client.
+    if (pUnknown == nullptr || g_ExtData == nullptr || g_ExtSystem == nullptr || g_ExtControl == nullptr || g_ExtSymbols == nullptr)
+    {
+        return E_UNEXPECTED;
+    }
+    m_debugClient = pUnknown;
+    m_debugClient->AddRef();
+    m_debugData = g_ExtData;
+    m_debugData->AddRef();
+    m_debugSystem = g_ExtSystem;
+    m_debugSystem->AddRef();
+    m_debugControl = g_ExtControl;
+    m_debugControl->AddRef();
+    m_debugSymbols = g_ExtSymbols;
+    m_debugSymbols->AddRef();
+#endif
 
     if (FAILED(hr = m_debugControl->GetExecutingProcessorType(&m_processorType)))
     {
@@ -312,7 +333,7 @@ ClrmaManagedAnalysis::get_ProviderName(
         return E_INVALIDARG;
     }
 
-    *bstrProvider = SysAllocString(L"SOSCLRMA");
+    *bstrProvider = SysAllocString(W("SOSCLRMA"));
 
     if ((*bstrProvider) == nullptr)
     {
@@ -358,6 +379,7 @@ ClrmaManagedAnalysis::GetThread(
     // Last event thread?
     else if (osThreadId == (ULONG)-1)
     {
+#ifndef FEATURE_PAL
         ULONG lastEventType = 0;
         ULONG lastEventProcessId = 0;
         ULONG lastEventThreadIdIndex = DEBUG_ANY_ID;
@@ -379,6 +401,13 @@ ClrmaManagedAnalysis::GetThread(
             return hr;
         }
         osThreadId = sysIds;
+#else
+        // The Unix cross-platform debugger services don't expose thread enumeration by index, so
+        // the "last event thread" lookup isn't available. The clrma command never requests it
+        // (it defaults to the current thread), so this only affects external CLRMA API callers.
+        TraceError("GetThread last-event thread (osThreadId == -1) is not supported on this host\n");
+        return E_NOTIMPL;
+#endif
     }
 
     if (m_clrmaService != nullptr)
@@ -535,6 +564,7 @@ ClrmaManagedAnalysis::GetMethodDescInfo(CLRDATA_ADDRESS methodDesc, StackFrame& 
             ArrayHolder<WCHAR> wszModuleName = new WCHAR[MAX_LONGPATH + 1];
             if (baseAddress != 0 || index != DEBUG_ANY_ID)
             {
+#ifndef FEATURE_PAL
                 if (SUCCEEDED(hr = m_debugSymbols->GetModuleNameStringWide(DEBUG_MODNAME_MODULE, index, baseAddress, wszModuleName, MAX_LONGPATH, nullptr)))
                 {
                     frame.Module = wszModuleName;
@@ -543,6 +573,25 @@ ClrmaManagedAnalysis::GetMethodDescInfo(CLRDATA_ADDRESS methodDesc, StackFrame& 
                 {
                     TraceError("GetMethodDescInfo(%016llx) GetModuleNameStringWide(%d, %016llx) FAILED %08x\n", methodDesc, index, baseAddress, hr);
                 }
+#else
+                // The Unix cross-platform debugger services only provide the narrow (ASCII)
+                // GetModuleNames, so read the module name and widen it.
+                ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
+                szModuleName[0] = '\0';
+                if (SUCCEEDED(hr = m_debugSymbols->GetModuleNames(index, baseAddress, nullptr, 0, nullptr, szModuleName, MAX_LONGPATH, nullptr, nullptr, 0, nullptr)))
+                {
+                    std::basic_string<WCHAR> moduleName;
+                    for (const char* p = szModuleName; *p != '\0'; ++p)
+                    {
+                        moduleName.push_back((WCHAR)(unsigned char)*p);
+                    }
+                    frame.Module = moduleName;
+                }
+                else
+                {
+                    TraceError("GetMethodDescInfo(%016llx) GetModuleNames(%d, %016llx) FAILED %08x\n", methodDesc, index, baseAddress, hr);
+                }
+#endif
             }
 
             // Fallback if we can't get it from the debugger
@@ -622,11 +671,11 @@ ClrmaManagedAnalysis::GetMethodDescInfo(CLRDATA_ADDRESS methodDesc, StackFrame& 
     }
     if (frame.Module.empty())
     {
-        frame.Module = L"UNKNOWN";
+        frame.Module = W("UNKNOWN");
     }
     if (frame.Function.empty())
     {
-        frame.Function = L"UNKNOWN";
+        frame.Function = W("UNKNOWN");
     }
     return S_OK;
 }
