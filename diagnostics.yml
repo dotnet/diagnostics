@@ -137,11 +137,11 @@ extends:
           buildOnly: ${{ parameters.buildOnly }}
           buildConfigs:
           - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin/osx.x64.Release
+            architecture: arm64
+            artifactUploadPath: bin/osx.arm64.Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
-              architecture: x64
+              architecture: arm64
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -151,11 +151,11 @@ extends:
           buildOnly: true
           buildConfigs:
           - configuration: Release
-            architecture: arm64
-            artifactUploadPath: bin/osx.arm64.Release
+            architecture: x64
+            artifactUploadPath: bin/osx.x64.Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
-              architecture: arm64
+              architecture: x64
 
       - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         - template: /eng/pipelines/build.yml
