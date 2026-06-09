@@ -18,10 +18,4 @@
       Condition="$(NeedsPublishing) == 'true'"
       DependsOnTargets="$(_BeforePublishNoBuildTargets);$(_CorePublishTargets)" />
 
-  <Target Name="InvokeInstallRuntimes"
-      Condition="'$(IsUnitTestProject)' == 'true'"
-      BeforeTargets="RunTests;VSTest">
-      <MSBuild Projects="$(RepositoryEngineeringDir)InstallRuntimes.proj" Targets="InstallTestRuntimes" />
-  </Target>
-
 </Project>

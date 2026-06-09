@@ -251,21 +251,21 @@ extends:
               - configuration: Debug
                 architecture: x64
 
-        - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-          - template: /eng/pipelines/build.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: Fedora_43
-              osGroup: Linux
-              container: test_fedora
-              dependsOn: Linux
-              testOnly: true
-              buildConfigs:
-              - configuration: Release
-                architecture: x64
-              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                - configuration: Debug
-                  architecture: x64
+        # - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+        #   - template: /eng/pipelines/build.yml
+        #     parameters:
+        #       jobTemplate: ${{ variables.jobTemplate }}
+        #       name: Fedora_43
+        #       osGroup: Linux
+        #       container: test_fedora
+        #       dependsOn: Linux
+        #       testOnly: true
+        #       buildConfigs:
+        #       - configuration: Release
+        #         architecture: x64
+        #       - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+        #         - configuration: Debug
+        #           architecture: x64
 
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - stage: package

@@ -6,6 +6,9 @@
 #endif
 
 #include "gcinfodecoder.h"
+#ifdef FEATURE_INTERPRETER
+#include "interpexec.h"
+#endif // FEATURE_INTERPRETER
 
 #ifdef USE_GC_INFO_DECODER
 
@@ -253,9 +256,10 @@ template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::Predecod
         return true;
     }
 
-#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
-    m_SizeOfStackOutgoingAndScratchArea = GcInfoEncoding::DENORMALIZE_SIZE_OF_STACK_AREA((UINT32)m_Reader.DecodeVarLengthUnsigned(GcInfoEncoding::SIZE_OF_STACK_AREA_ENCBASE));
-#endif // FIXED_STACK_PARAMETER_SCRATCH_AREA
+    if constexpr (GcInfoEncoding::HAS_FIXED_STACK_PARAMETER_SCRATCH_AREA)
+    {
+        m_SizeOfStackOutgoingAndScratchArea = GcInfoEncoding::DENORMALIZE_SIZE_OF_STACK_AREA((UINT32)m_Reader.DecodeVarLengthUnsigned(GcInfoEncoding::SIZE_OF_STACK_AREA_ENCBASE));
+    }
 
     return false;
 }
@@ -344,9 +348,10 @@ TGcInfoDecoder<GcInfoEncoding>::TGcInfoDecoder(
 
         m_ReversePInvokeFrameStackSlot = NO_REVERSE_PINVOKE_FRAME;
 
-#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
-        m_SizeOfStackOutgoingAndScratchArea = 0;
-#endif // FIXED_STACK_PARAMETER_SCRATCH_AREA
+        if constexpr (GcInfoEncoding::HAS_FIXED_STACK_PARAMETER_SCRATCH_AREA)
+        {
+            m_SizeOfStackOutgoingAndScratchArea = 0;
+        }
 
         remainingFlags &= ~(DECODE_CODE_LENGTH
                             | DECODE_PROLOG_LENGTH
@@ -716,16 +721,10 @@ template <typename GcInfoEncoding> size_t TGcInfoDecoder<GcInfoEncoding>::GetNum
     return (m_Reader.GetCurrentPos() + 7) / 8;
 }
 
-
-#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
-
 template <typename GcInfoEncoding> UINT32 TGcInfoDecoder<GcInfoEncoding>::GetSizeOfStackParameterArea()
 {
     return m_SizeOfStackOutgoingAndScratchArea;
 }
-
-#endif // FIXED_STACK_PARAMETER_SCRATCH_AREA
-
 
 template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::EnumerateLiveSlots(
                 PREGDISPLAY         pRD,
@@ -1248,6 +1247,8 @@ template <typename GcInfoEncoding> void GcSlotDecoder<GcInfoEncoding>::DecodeSlo
     {
         // We have untracked stack slots left and more room to predecode
 
+        // Interpreter-TODO: Add a configurable way to skip encoding/decoding the base for the interpreter, because
+        //  all interpreter locals are at positive offsets relative to FP.
         GcStackSlotBase spBase = (GcStackSlotBase) reader.Read(2);
         UINT32 normSpOffset = (INT32) reader.DecodeVarLengthSigned(GcInfoEncoding::STACK_SLOT_ENCBASE);
         INT32 spOffset = GcInfoEncoding::DENORMALIZE_STACK_SLOT(normSpOffset);
@@ -1459,17 +1460,21 @@ template <typename GcInfoEncoding> const GcSlotDesc* GcSlotDecoder<GcInfoEncodin
 
 template <typename GcInfoEncoding> bool TGcInfoDecoder<GcInfoEncoding>::IsScratchStackSlot(INT32 spOffset, GcStackSlotBase spBase, PREGDISPLAY     pRD)
 {
-#ifdef FIXED_STACK_PARAMETER_SCRATCH_AREA
-    _ASSERTE( m_Flags & DECODE_GC_LIFETIMES );
+    if constexpr (GcInfoEncoding::HAS_FIXED_STACK_PARAMETER_SCRATCH_AREA)
+    {
+        _ASSERTE( m_Flags & DECODE_GC_LIFETIMES );
 
-    TADDR pSlot = (TADDR) GetStackSlot(spOffset, spBase, pRD);
-    _ASSERTE(pSlot >= pRD->SP);
+        TADDR pSlot = (TADDR) GetStackSlot(spOffset, spBase, pRD);
+        _ASSERTE(pSlot >= pRD->SP);
 
-    return (pSlot < pRD->SP + m_SizeOfStackOutgoingAndScratchArea);
-#else
-    return false;
-#endif
+        return (pSlot < pRD->SP + m_SizeOfStackOutgoingAndScratchArea);
+    }
+    else
+    {
+        return false;
+    }
 }
+
 
 //-----------------------------------------------------------------------------
 // Platform-specific methods
@@ -2111,6 +2116,7 @@ template <typename GcInfoEncoding> OBJECTREF* TGcInfoDecoder<GcInfoEncoding>::Ge
 #endif // Unknown platform
 
 #ifdef FEATURE_INTERPRETER
+
 template <> OBJECTREF* TGcInfoDecoder<InterpreterGcInfoEncoding>::GetStackSlot(
                         INT32           spOffset,
                         GcStackSlotBase spBase,
@@ -2136,11 +2142,33 @@ template <> OBJECTREF* TGcInfoDecoder<InterpreterGcInfoEncoding>::GetStackSlot(
         _ASSERTE(fp);
         pObjRef = (OBJECTREF*)(fp + spOffset);
     }
+    InterpMethodContextFrame* pFrame = (InterpMethodContextFrame*)GetSP(pRD->pCurrentContext);
+    _ASSERTE(pFrame->pStack == (int8_t *)GetFP(pRD->pCurrentContext));
+    InterpMethodContextFrame* pFrameCallee = pFrame->pNext;
 
+    // If the stack slot is in a callee's frame, then we do not actually need to report it. This should ONLY happen if the
+    // stack slot is in the argument area of the caller. As a double check, we validate in the caller of this function that
+    // the stack slot in question is a interior pinned slot (which when FEATURE_INTERPRETER is defined indicates a conservatively reported stack slot).
+    if (pFrameCallee != NULL)
+    {
+        if (pFrameCallee->ip != 0)
+        {
+            _ASSERTE(pFrameCallee->pStack > pFrame->pStack); // Since only the last funclet is GC reported, we shouldn't have any cases where the stack doesn't grow
+            if (pFrameCallee->pStack <= (int8_t*)pObjRef)
+            {
+                // The stack slot is in the callee's frame, not the caller's frame.
+                // Return as a sentinel to indicate nothing is reported here.
+                pObjRef = NULL;
+            }
+        }
+    }
     return pObjRef;
 }
 #endif
 
+#ifdef TARGET_WASM
+TADDR GetWasmFramePointerFromStackPointer(TADDR sp);
+#endif
 
 template <typename GcInfoEncoding> OBJECTREF* TGcInfoDecoder<GcInfoEncoding>::GetStackSlot(
                         INT32           spOffset,
@@ -2163,6 +2191,17 @@ template <typename GcInfoEncoding> OBJECTREF* TGcInfoDecoder<GcInfoEncoding>::Ge
         _ASSERTE( GC_FRAMEREG_REL == spBase );
         _ASSERTE( NO_STACK_BASE_REGISTER != m_StackBaseRegister );
 
+#ifdef TARGET_WASM
+        // Wasm is a bit strange and when we do SetStackBaseRegister(REG_FPBASE)
+        //  what that actually does is set it to REG_NA, which currently has the value 2.
+        _ASSERTE( 2 == m_StackBaseRegister );
+        // We have the stack pointer, use it to recover the frame pointer.
+        TADDR pFrameReg = GetWasmFramePointerFromStackPointer((TADDR)pRD->SP);
+
+        pObjRef = (OBJECTREF*)(pFrameReg + spOffset);
+
+#else // TARGET_WASM
+
         SIZE_T * pFrameReg = (SIZE_T*) GetRegisterSlot(m_StackBaseRegister, pRD);
 
 #if defined(TARGET_UNIX) && !defined(FEATURE_NATIVEAOT)
@@ -2176,6 +2215,7 @@ template <typename GcInfoEncoding> OBJECTREF* TGcInfoDecoder<GcInfoEncoding>::Ge
 #endif // TARGET_UNIX && !FEATURE_NATIVEAOT
 
         pObjRef = (OBJECTREF*)(*pFrameReg + spOffset);
+#endif // !TARGET_WASM
     }
 
     return pObjRef;
@@ -2218,7 +2258,16 @@ template <typename GcInfoEncoding> void TGcInfoDecoder<GcInfoEncoding>::ReportSt
 
     OBJECTREF* pObjRef = GetStackSlot(spOffset, spBase, pRD);
     _ASSERTE(IS_ALIGNED(pObjRef, sizeof(OBJECTREF*)));
-
+#ifdef FEATURE_INTERPRETER
+    // This value is returned when the interpreter stack slot is not actually meaningful.
+    // This should only happen for stack slots which are conservatively reported, and for better perf
+    // we completely skip reporting them.
+    if (pObjRef == (OBJECTREF*)NULL)
+    {
+        _ASSERTE((gcFlags & (GC_CALL_PINNED | GC_CALL_INTERIOR)) == (GC_CALL_PINNED | GC_CALL_INTERIOR));
+        return;
+    }
+#endif // FEATURE_INTERPRETER
 #ifdef _DEBUG
     LOG((LF_GCROOTS, LL_INFO1000, /* Part One */
              "Reporting %s" FMT_STK,
@@ -2240,10 +2289,8 @@ template <typename GcInfoEncoding> void TGcInfoDecoder<GcInfoEncoding>::ReportSt
     pCallBack(hCallBack, pObjRef, gcFlags DAC_ARG(DacSlotLocation(GetStackReg(spBase), spOffset, true)));
 }
 
-#ifndef TARGET_WASM
 // Instantiate the decoder so other files can use it
 template class TGcInfoDecoder<TargetGcInfoEncoding>;
-#endif // !TARGET_WASM
 
 #ifdef FEATURE_INTERPRETER
 template class TGcInfoDecoder<InterpreterGcInfoEncoding>;

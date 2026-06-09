@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -56,11 +57,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 in exception,
                 eventData.FormattedMessage,
                 messageTemplate,
-                eventData.ActivityTraceId == null ? default : ActivityTraceId.CreateFromString(eventData.ActivityTraceId),
-                eventData.ActivitySpanId == null ? default : ActivitySpanId.CreateFromString(eventData.ActivitySpanId),
-                eventData.ActivityTraceFlags == "1"
-                    ? ActivityTraceFlags.Recorded
-                    : ActivityTraceFlags.None);
+                string.IsNullOrEmpty(eventData.ActivityTraceId) ? default : ActivityTraceId.CreateFromString(eventData.ActivityTraceId),
+                string.IsNullOrEmpty(eventData.ActivitySpanId)  ? default : ActivitySpanId.CreateFromString(eventData.ActivitySpanId),
+                ParseActivityTraceFlags(eventData.ActivityTraceFlags));
 
             ReadOnlySpan<KeyValuePair<string, object?>> Attributes = new(_AttributeStorage, 0, numberOfAttributes);
 
@@ -70,6 +69,22 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 in LogRecord,
                 Attributes,
                 new(Scopes));
+        }
+
+        // Newer Microsoft.Extensions.Logging.EventSource versions (net 11+ via runtime#124851)
+        // emit the ActivityTraceFlags field as the integer value (e.g. "0", "1", "2", "3")
+        // instead of just "0" or "1". Older versions emitted only "0"/"1". The empty string
+        // indicates no current Activity. We only consume the Recorded bit; ignore other bits
+        // such as RandomTraceId so this consumer remains compatible across versions.
+        private static ActivityTraceFlags ParseActivityTraceFlags(string? value)
+        {
+            if (!string.IsNullOrEmpty(value)
+                && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int flags)
+                && (flags & (int)ActivityTraceFlags.Recorded) != 0)
+            {
+                return ActivityTraceFlags.Recorded;
+            }
+            return ActivityTraceFlags.None;
         }
 
         private int ParseAttributesFromJson(string argumentsJson, out string? messageTemplate)

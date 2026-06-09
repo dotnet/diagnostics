@@ -36,7 +36,7 @@ configuration:
           days: 3
       actions:
       - addReply:
-          reply: Hi @${issueAuthor}. We are closing this issue due to inactivity. If you comment within 30 days it will automatically reopen. If you are not the author of this issue and you're facing the same problem, feel free to open a new issue referencing this one.
+          reply: Hi ${issueAuthor}. We are closing this issue due to inactivity. If you comment within 30 days it will automatically reopen. If you are not the author of this issue and you're facing the same problem, feel free to open a new issue referencing this one.
       - closeIssue
     - description: '[Idle Issue Management] Add no recent activity label to issues'
       frequencies:
@@ -174,7 +174,7 @@ configuration:
           label: 'Needs: Author Feedback'
       then:
       - addReply:
-          reply: 'Hi @${issueAuthor}. We have added the "Needs: Author Feedback" label to this issue, which indicates that we have an open question for you before we can take further action. This issue will be closed automatically in 7 days if we do not hear back from you by then - please feel free to re-open it if you come back to this issue after that time.'
+          reply: 'Hi ${issueAuthor}. We have added the "Needs: Author Feedback" label to this issue, which indicates that we have an open question for you before we can take further action. This issue will be closed automatically in 7 days if we do not hear back from you by then - please feel free to re-open it if you come back to this issue after that time.'
       triggerOnOwnActions: false
 onFailure: 
 onSuccess: 

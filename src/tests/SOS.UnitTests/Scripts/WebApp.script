@@ -95,10 +95,12 @@ VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
 ENDIF:X86
 
 # Verify that ClrStack with the ICorDebug options works
+!IFDEF:CDAC_NO_FALLBACK_TESTING
 SOSCOMMAND:ClrStack -i
 VERIFY:.*\s+Dumping managed stack and managed variables using ICorDebug.\s+
 VERIFY:.*\s+Child\s+SP\s+IP\s+Call Site\s+
 VERIFY:.*\s+Stack walk complete.\s+
+ENDIF:CDAC_NO_FALLBACK_TESTING
 
 # Verify that Threads (clrthreads) works
 SOSCOMMAND:clrthreads
@@ -119,11 +121,20 @@ VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
 !VERIFY:.*UNKNOWN.*
 
 SOSCOMMAND:DumpAsync --completed
+IFDEF:MAJOR_RUNTIME_VERSION_GE_11
+VERIFY:Warning:.*runtime-async.*
+ENDIF:MAJOR_RUNTIME_VERSION_GE_11
+!IFDEF:MAJOR_RUNTIME_VERSION_GE_11
 VERIFY:\s*STACK <DECVAL>\s*
 VERIFY?:\s*<< Awaiting: <HEXVAL>\s+<HEXVAL>\s+.* >>\s+
 VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+\((<DECVAL>)?\)\s+.*
+ENDIF:MAJOR_RUNTIME_VERSION_GE_11
 
 SOSCOMMAND:DumpAsync --stats
+IFDEF:MAJOR_RUNTIME_VERSION_GE_11
+VERIFY:Warning:.*runtime-async.*
+ENDIF:MAJOR_RUNTIME_VERSION_GE_11
+!IFDEF:MAJOR_RUNTIME_VERSION_GE_11
 VERIFY:\s+MT\s+Count\s+Type\s+
 VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+.*
 !VERIFY:.*UNKNOWN.*
@@ -139,3 +150,4 @@ SOSCOMMAND:DumpMT <PREVPOUT>
 SOSCOMMAND:DumpAsync --coalesce
 VERIFY:\s*STACKS <DECVAL>\s*
 VERIFY:\s*\[<DECVAL>\]\s+<HEXVAL>\s+\((<DECVAL>)?\)\s+.*
+ENDIF:MAJOR_RUNTIME_VERSION_GE_11

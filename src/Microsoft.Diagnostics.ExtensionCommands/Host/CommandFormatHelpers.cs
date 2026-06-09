@@ -33,28 +33,44 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             ITarget target = command.Services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
             if (target.OperatingSystem != OSPlatform.Windows)
             {
-                ulong address = SpecialDiagInfoHeader.GetAddress(command.Services);
-                command.Console.Write($"{indent}SpecialDiagInfoHeader   : {address:X16}");
-                if (SpecialDiagInfoHeader.TryRead(command.Services, address, out SpecialDiagInfoHeader info))
+                ulong matchedAddress = 0;
+                SpecialDiagInfoHeader info = default;
+                bool valid = false;
+                foreach (ulong candidate in SpecialDiagInfoHeader.GetCandidateAddresses(command.Services))
                 {
-                    command.Console.WriteLine(info.IsValid ? "" : " <INVALID>");
-                    command.Console.WriteLine($"{indent}    Signature:              {info.Signature}");
-                    command.Console.WriteLine($"{indent}    Version:                {info.Version}");
-                    command.Console.WriteLine($"{indent}    ExceptionRecordAddress: {info.ExceptionRecordAddress:X16}");
-                    command.Console.WriteLine($"{indent}    RuntimeBaseAddress:     {info.RuntimeBaseAddress:X16}");
-
-                    if (info.Version >= SpecialDiagInfoHeader.SPECIAL_DIAGINFO_RUNTIME_BASEADDRESS && info.RuntimeBaseAddress != 0)
+                    if (SpecialDiagInfoHeader.TryRead(command.Services, candidate, out info))
                     {
-                        IModule runtimeModule = command.Services.GetService<IModuleService>().GetModuleFromBaseAddress(info.RuntimeBaseAddress);
-                        if (runtimeModule != null)
+                        matchedAddress = candidate;
+                        if (info.IsValid)
                         {
-                            command.DisplayRuntimeExports(runtimeModule, error: true, indent + "    ");
+                            valid = true;
+                            break;
                         }
                     }
                 }
-                else
+
+                if (matchedAddress == 0)
                 {
-                    command.Console.WriteLine(" <NONE>");
+                    // Couldn't read at any candidate address — display the primary one with NONE.
+                    ulong primary = SpecialDiagInfoHeader.GetAddress(command.Services);
+                    command.Console.WriteLine($"{indent}SpecialDiagInfoHeader   : {primary:X16} <NONE>");
+                    return;
+                }
+
+                command.Console.Write($"{indent}SpecialDiagInfoHeader   : {matchedAddress:X16}");
+                command.Console.WriteLine(valid ? "" : " <INVALID>");
+                command.Console.WriteLine($"{indent}    Signature:              {info.Signature}");
+                command.Console.WriteLine($"{indent}    Version:                {info.Version}");
+                command.Console.WriteLine($"{indent}    ExceptionRecordAddress: {info.ExceptionRecordAddress:X16}");
+                command.Console.WriteLine($"{indent}    RuntimeBaseAddress:     {info.RuntimeBaseAddress:X16}");
+
+                if (valid && info.Version >= SpecialDiagInfoHeader.SPECIAL_DIAGINFO_RUNTIME_BASEADDRESS && info.RuntimeBaseAddress != 0)
+                {
+                    IModule runtimeModule = command.Services.GetService<IModuleService>().GetModuleFromBaseAddress(info.RuntimeBaseAddress);
+                    if (runtimeModule != null)
+                    {
+                        command.DisplayRuntimeExports(runtimeModule, error: true, indent + "    ");
+                    }
                 }
             }
         }

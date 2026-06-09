@@ -172,6 +172,8 @@ together to display individual items followed by the statistics summary.
             }
         }
 
+        private const int MaxAssignableWorkItemQueueCount = 8192;
+
         private IEnumerable<(ClrObject Obj, bool IsHighPri)> EnumerateAllWorkItemsWithPriority()
         {
             ClrType workQueueType = Runtime.BaseClassLibrary.GetTypeByName("System.Threading.ThreadPoolWorkQueue");
@@ -199,11 +201,26 @@ together to display individual items followed by the statistics summary.
                         }
                     }
 
-                    if (obj.Type.Fields.Any(r => r.Name == "_assignableWorkItems"))
+                    if (obj.TryReadObjectField("lowPriorityWorkItems", out workItems))
                     {
-                        if (obj.TryReadObjectField("_assignableWorkItems", out workItems))
+                        foreach (ClrObject entry in EnumerateConcurrentQueue(workItems))
                         {
-                            foreach (ClrObject entry in EnumerateConcurrentQueue(workItems))
+                            yield return (entry, false);
+                        }
+                    }
+
+                    if (obj.TryReadObjectField("_assignableWorkItemQueues", out ClrObject assignableWorkItemQueues) &&
+                        assignableWorkItemQueues.IsValid &&
+                        assignableWorkItemQueues.IsArray)
+                    {
+                        ClrArray queues = assignableWorkItemQueues.AsArray();
+                        int len = Math.Min(MaxAssignableWorkItemQueueCount, queues.Length);
+                        for (int i = 0; i < len; i++)
+                        {
+                            Console.CancellationToken.ThrowIfCancellationRequested();
+
+                            ClrObject queue = queues.GetObjectValue(i);
+                            foreach (ClrObject entry in EnumerateConcurrentQueue(queue))
                             {
                                 yield return (entry, false);
                             }

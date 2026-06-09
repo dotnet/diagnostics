@@ -9,7 +9,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/configuretools.cmake)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # We need to set this to Release as there's no way to intercept configuration-specific linker flags
@@ -774,6 +774,11 @@ if(CLR_CMAKE_HOST_UNIX_ARMV6)
    add_compile_options(-mcpu=arm1176jzf-s)
    add_compile_options(-mfloat-abi=hard)
 endif(CLR_CMAKE_HOST_UNIX_ARMV6)
+
+if(CLR_CMAKE_HOST_UNIX_RISCV64)
+  add_compile_options(-march=rv64gc)
+  add_compile_options(-mabi=lp64d)
+endif(CLR_CMAKE_HOST_UNIX_RISCV64)
 
 if(CLR_CMAKE_HOST_UNIX_X86)
   add_compile_options(-msse2)

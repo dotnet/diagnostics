@@ -1,14 +1,19 @@
 <Project>
-  <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+
+  <Import Project="Version.Details.props" />
+
   <PropertyGroup>
-    <RepositoryUrl>https://github.com/dotnet/diagnostics</RepositoryUrl>
     <PreReleaseVersionLabel/>
+    <!-- Allowed values: '', 'prerelease', 'release'. Set to 'release' when stabilizing. -->
+    <!-- Only the release branch of the diagnostics repo should set this to 'release'. -->
+    <DotNetFinalVersionKind></DotNetFinalVersionKind>
 
     <!-- Lines intentionally left blank to prevent merge conflicts when upgrading version -->
     <VersionPrefix>10.0.0</VersionPrefix>
 
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
+
     <!--
       Our nightly tools are stable versioned but go to a non-stable feed.
       Arcade usually disallows this, but we use such a versioning scheme by design.
@@ -17,10 +22,12 @@
       and we don't participate in prodcon.
     -->
     <SkipPackagePublishingVersionChecks>true</SkipPackagePublishingVersionChecks>
-  </PropertyGroup>
-  <PropertyGroup>
-    <!-- Opt-in/out repo features -->
+
+    <!-- Arcade features -->
     <UsingToolXliff>false</UsingToolXliff>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <AzureIdentityVersion>1.13.1</AzureIdentityVersion>
     <AzureCoreVersion>1.45.0</AzureCoreVersion>
     <AzureStorageBlobsVersion>12.23.0</AzureStorageBlobsVersion>
@@ -40,17 +47,17 @@
     <MicrosoftExtensionsConfigurationVersion>8.0.0</MicrosoftExtensionsConfigurationVersion>
     <MicrosoftExtensionsConfigurationJsonVersion>8.0.1</MicrosoftExtensionsConfigurationJsonVersion>
     <MicrosoftExtensionsLoggingConfigurationVersion>8.0.1</MicrosoftExtensionsLoggingConfigurationVersion>
-    <MicrosoftOneCollectRecordTraceVersions>0.1.33841</MicrosoftOneCollectRecordTraceVersions>
+    <MicrosoftOneCollectRecordTraceVersions>0.1.34271</MicrosoftOneCollectRecordTraceVersions>
     <!-- Need version that understands UseAppFilters sentinel. -->
-    <MicrosoftExtensionsLoggingEventSourceVersion>5.0.1</MicrosoftExtensionsLoggingEventSourceVersion>
+    <MicrosoftExtensionsLoggingEventSourceVersion>10.0.5</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
     <SystemBuffersVersion>4.5.1</SystemBuffersVersion>
     <SystemDiagnosticsDiagnosticSourceVersion>8.0.1</SystemDiagnosticsDiagnosticSourceVersion>
-    <SystemMemoryVersion>4.5.5</SystemMemoryVersion>
+    <SystemMemoryVersion>4.6.3</SystemMemoryVersion>
     <SystemRuntimeLoaderVersion>4.3.0</SystemRuntimeLoaderVersion>
-    <SystemThreadingTasksExtensionsVersion>4.5.4</SystemThreadingTasksExtensionsVersion>
-    <SystemTextEncodingsWebVersion>8.0.0</SystemTextEncodingsWebVersion>
-    <SystemTextJsonVersion>8.0.5</SystemTextJsonVersion>
+    <SystemThreadingTasksExtensionsVersion>4.6.3</SystemThreadingTasksExtensionsVersion>
+    <SystemTextEncodingsWebVersion>10.0.3</SystemTextEncodingsWebVersion>
+    <SystemTextJsonVersion>10.0.3</SystemTextJsonVersion>
     <XUnitAbstractionsVersion>2.0.3</XUnitAbstractionsVersion>
     <StyleCopAnalyzersVersion>1.2.0-beta.556</StyleCopAnalyzersVersion>
     <cdbsosversion>10.0.26100.1</cdbsosversion>
@@ -79,6 +86,7 @@
     -->
     <MicrosoftCodeAnalysisCSharpCodeStyleVersion>$(MicrosoftCodeAnalysisVersion_LatestVS)</MicrosoftCodeAnalysisCSharpCodeStyleVersion>
   </PropertyGroup>
+
   <!--
     SOS test runtime versions
 
@@ -91,9 +99,11 @@
 
   -->
   <PropertyGroup>
+    <MicrosoftNETCoreApp100Version>10.0.5</MicrosoftNETCoreApp100Version>
     <MicrosoftNETCoreApp90Version>9.0.14</MicrosoftNETCoreApp90Version>
     <MicrosoftNETCoreApp80Version>8.0.25</MicrosoftNETCoreApp80Version>
   </PropertyGroup>
+
   <PropertyGroup>
     <DotnetRuntimeVersion Condition="'$(DotnetRuntimeVersion)' == ''">default</DotnetRuntimeVersion>
     <PrivateBuildTesting Condition="'$(PrivateBuildTesting)' == ''">false</PrivateBuildTesting>
@@ -101,12 +111,20 @@
     <InternalReleaseTesting Condition="'$(DotnetRuntimeVersion)' != 'default'">true</InternalReleaseTesting>
     <ExtraInstallArgs>-runtimesourcefeed '$(RuntimeSourceFeed)' -runtimesourcefeedkey '$(RuntimeSourceFeedKey)'</ExtraInstallArgs>
   </PropertyGroup>
+
   <ItemGroup Condition="!$(PrivateBuildTesting) AND !$(InternalReleaseTesting)">
     <RuntimeTestVersions Include="Latest">
       <RuntimeDownload>$(MicrosoftNETCorePlatformsVersion)</RuntimeDownload>
       <Runtime>$(MicrosoftNETCoreAppRefVersion)</Runtime>
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
+      <TargetFramework>net11.0</TargetFramework>
+    </RuntimeTestVersions>
+    <RuntimeTestVersions Include="Servicing1">
+      <RuntimeDownload>$(MicrosoftNETCoreApp100Version)</RuntimeDownload>
+      <Runtime>$(MicrosoftNETCoreApp100Version)</Runtime>
+      <AspNetDownload>$(MicrosoftNETCoreApp100Version)</AspNetDownload>
+      <AspNet>$(MicrosoftNETCoreApp100Version)</AspNet>
       <TargetFramework>net10.0</TargetFramework>
     </RuntimeTestVersions>
     <RuntimeTestVersions Include="Servicing2">
@@ -124,6 +142,7 @@
       <TargetFramework>net8.0</TargetFramework>
     </RuntimeTestVersions>
   </ItemGroup>
+
   <!-- Private build testing -->
   <ItemGroup Condition="$(PrivateBuildTesting)">
     <RuntimeTestVersions Include="Latest">
@@ -131,9 +150,10 @@
       <Runtime>$(MicrosoftNETCoreAppRefVersion)</Runtime>
       <AspNetDownload>$(MicrosoftAspNetCoreAppRefInternalVersion)</AspNetDownload>
       <AspNet>$(MicrosoftAspNetCoreAppRefVersion)</AspNet>
-      <TargetFramework>net10.0</TargetFramework>
+      <TargetFramework>net11.0</TargetFramework>
     </RuntimeTestVersions>
   </ItemGroup>
+
   <!-- Internal service release testing -->
   <ItemGroup Condition="$(InternalReleaseTesting)">
     <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' != 'default'">
@@ -147,4 +167,5 @@
       <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
     </RuntimeTestVersions>
   </ItemGroup>
+
 </Project>

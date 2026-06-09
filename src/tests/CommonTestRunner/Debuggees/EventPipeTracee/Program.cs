@@ -41,13 +41,11 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} EventPipeTracee: start process");
             Console.Out.Flush();
 
-            // Signal that the tracee has started
-            Console.WriteLine($"{pid} EventPipeTracee: connecting to pipe");
-            Console.Out.Flush();
-            pipeStream.Connect(5 * 60 * 1000);
-            Console.WriteLine($"{pid} EventPipeTracee: connected to pipe");
-            Console.Out.Flush();
-
+            // Workaround for  https://github.com/dotnet/runtime/issues/127681
+            // LoggingEventSource has a static initialization order bug fields are declared after the singleton instance.
+            // If EventPipe enables the source during or before the LoggingEventSource.Instance constructor, ParseFilterSpec
+            // produces wrong rules. Force the type initializer to complete before connecting to the pipe (which signals
+            // the test harness that EventPipe can be enabled).
             ServiceCollection serviceCollection = new();
             serviceCollection.AddLogging(builder => {
                 builder.AddEventSourceLogger();
@@ -55,6 +53,14 @@ namespace EventPipeTracee
                 builder.AddFilter(null, LogLevel.Error); // Default
                 builder.AddFilter(AppLoggerCategoryName, LogLevel.Warning);
             });
+
+            // Signal that the tracee has started
+            Console.WriteLine($"{pid} EventPipeTracee: connecting to pipe");
+            Console.Out.Flush();
+            pipeStream.Connect(5 * 60 * 1000);
+            Console.WriteLine($"{pid} EventPipeTracee: connected to pipe");
+            Console.Out.Flush();
+
 
             using ILoggerFactory loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
             ILogger customCategoryLogger = loggerFactory.CreateLogger(loggerCategory);
