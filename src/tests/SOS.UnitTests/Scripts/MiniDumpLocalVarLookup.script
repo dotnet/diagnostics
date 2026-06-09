@@ -11,5 +11,7 @@ LOADSOS
 SOSCOMMAND:clrstack -l
 
 # stackwalk through ICorDebug with locals
+!IFDEF:CDAC_NO_FALLBACK_TESTING
 SOSCOMMAND:clrstack -i -l
 VERIFY:int\s+length\s+=\s+13
+ENDIF:CDAC_NO_FALLBACK_TESTING

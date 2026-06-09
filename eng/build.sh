@@ -26,12 +26,13 @@ __RuntimeSourceFeed=
 __RuntimeSourceFeedKey=
 __SkipConfigure=0
 __SkipGenerateVersion=0
-__InstallRuntimes=0
 __PrivateBuild=0
 __Test=0
 __TestFilter=
 __UnprocessedBuildArgs=
 __UseCdac=0
+__NoFallback=0
+__TestInterpreter=0
 __LiveRuntimeDir=
 
 usage_list+=("-skipmanaged: do not build managed components.")
@@ -96,10 +97,6 @@ handle_arguments() {
             __NativeBuild=0
             ;;
 
-        installruntimes|-installruntimes)
-            __InstallRuntimes=1
-            ;;
-
         privatebuild|-privatebuild)
             __PrivateBuild=1
             ;;
@@ -122,6 +119,14 @@ handle_arguments() {
             __UseCdac=1
             ;;
 
+        nofallback|-nofallback)
+            __NoFallback=1
+            ;;
+
+        testinterpreter|-testinterpreter)
+            __TestInterpreter=1
+            ;;
+
         -warnaserror|-nodereuse)
             __ManagedBuildArgs="$__ManagedBuildArgs $1 $2"
             __ShiftArgs=1
@@ -134,6 +139,11 @@ handle_arguments() {
 }
 
 source "$__RepoRootDir"/eng/native/build-commons.sh
+
+if [[ "$__NoFallback" == 1 && "$__UseCdac" != 1 ]]; then
+    echo "-nofallback requires -usecdac to also be specified."
+    exit 1
+fi
 
 __LogsDir="$__RootBinDir/log/$__BuildType"
 __ConfigTriplet="$__TargetOS.$__TargetArch.$__BuildType"
@@ -230,12 +240,20 @@ fi
 
 if [[ "$__ManagedBuild" == 1 ]]; then
 
+    __privateBuildTesting=false
+    if [[ "$__PrivateBuild" == 1 ]]; then
+        __privateBuildTesting=true
+    fi
+
     # __CommonMSBuildArgs contains TargetOS property
+    # Runtime installation and debuggee building is handled by src/tests/dirs.proj targets.
     echo "Commencing managed build for $__BuildType in $__RootBinDir/bin"
     "$__RepoRootDir/eng/common/build.sh" \
         --configuration "$__BuildType" \
         /p:TargetArch="$__TargetArch" \
         /p:TargetRid="$__TargetRid" \
+        /p:PrivateBuildTesting="$__privateBuildTesting" \
+        /p:LiveRuntimeDir="$__LiveRuntimeDir" \
         $__CommonMSBuildArgs \
         $__ManagedBuildArgs \
         $__UnprocessedBuildArgs
@@ -243,28 +261,6 @@ if [[ "$__ManagedBuild" == 1 ]]; then
     if [ "$?" != 0 ]; then
         exit 1
     fi
-fi
-
-#
-# Install test runtimes and set up for private runtime build
-#
-
-if [[ "$__InstallRuntimes" == 1 || "$__PrivateBuild" == 1 ]]; then
-    __privateBuildTesting=false
-    if [[ "$__PrivateBuild" == 1 ]]; then
-        __privateBuildTesting=true
-    fi
-    rm -fr "$__RepoRootDir/.dotnet-test" || true
-    "$__RepoRootDir/eng/common/msbuild.sh" \
-        $__RepoRootDir/eng/InstallRuntimes.proj \
-        /t:InstallTestRuntimes \
-        /bl:"$__LogsDir/InstallRuntimes.binlog" \
-        /p:PrivateBuildTesting="$__privateBuildTesting" \
-        /p:TargetOS="$__TargetOS" \
-        /p:TargetArch="$__TargetArch" \
-        /p:TargetRid="$__TargetRid" \
-        /p:TestArchitectures="$__TargetArch" \
-        /p:LiveRuntimeDir="$__LiveRuntimeDir" 
 fi
 
 #
@@ -311,8 +307,20 @@ if [[ "$__Test" == 1 ]]; then
 
       echo "lldb: '$LLDB_PATH' gdb: '$GDB_PATH'"
 
+      # Disable system core dumps for test debuggees that intentionally crash.
+      # The .NET createdump facility writes dumps directly and is not affected by ulimit.
+      ulimit -c 0
+
       if [[ "$__UseCdac" == 1 ]]; then
           export SOS_TEST_CDAC="true"
+      fi
+
+      if [[ "$__NoFallback" == 1 ]]; then
+          export SOS_TEST_CDAC_NO_FALLBACK="true"
+      fi
+
+      if [[ "$__TestInterpreter" == 1 ]]; then
+          export SOS_TEST_INTERPRETER="true"
       fi
 
       # Build the test filter argument if provided

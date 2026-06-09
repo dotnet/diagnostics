@@ -4,7 +4,6 @@ Param(
     [ValidateSet("Debug","Release")][string][Alias('c')] $configuration = "Debug",
     [string][Alias('v')] $verbosity = "minimal",
     [switch][Alias('t')] $test,
-    [switch] $installruntimes,
     [switch] $privatebuild,
     [switch] $ci,
     [switch][Alias('bl')]$binaryLog,
@@ -12,6 +11,8 @@ Param(
     [switch] $skipnative,
     [switch] $bundletools,
     [switch] $useCdac,
+    [switch] $noFallback,
+    [switch] $testInterpreter,
     [string] $methodfilter = '',
     [string] $classfilter = '',
     [ValidatePattern("(default|\d+\.\d+.\d+(-[a-z0-9\.]+)?)")][string] $dotnetruntimeversion = 'default',
@@ -24,6 +25,11 @@ Param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ($noFallback -and -not $useCdac) {
+    Write-Error "-noFallback requires -useCdac to also be specified."
+    exit 1
+}
 
 $crossbuild = $false
 if (($architecture -eq "arm") -or ($architecture -eq "arm64")) {
@@ -68,30 +74,17 @@ if (-not $skipnative) {
 }
 
 # Install sdk for building, restore and build managed components.
+# Test runtime installation and debuggee building is handled by src/tests/dirs.proj targets.
 if (-not $skipmanaged) {
-    Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity $bl /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture $remainingargs"
-
-    if ($lastExitCode -ne 0) {
-        exit $lastExitCode
-    }
-}
-
-if ($installruntimes -or $privatebuild) {
     $privatebuildtesting = "false"
     if ($privatebuild) {
         $privatebuildtesting = "true"
     }
-    Remove-Item -Force -Recurse -ErrorAction SilentlyContinue "$reporoot\.dotnet-test"
-    & "$engroot\common\msbuild.ps1" `
-      $engroot\InstallRuntimes.proj `
-      -verbosity $verbosity `
-      /t:InstallTestRuntimes `
-      /bl:$logdir\InstallRuntimes.binlog `
-      /p:PrivateBuildTesting=$privatebuildtesting `
-      /p:TargetOS=$os `
-      /p:TargetArch=$architecture `
-      /p:TestArchitectures=$architecture `
-      /p:LiveRuntimeDir="$liveRuntimeDir"
+    Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity $bl /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture /p:PrivateBuildTesting=$privatebuildtesting /p:LiveRuntimeDir=`"$liveRuntimeDir`" $remainingargs"
+
+    if ($lastExitCode -ne 0) {
+        exit $lastExitCode
+    }
 }
 
 # Run the xunit tests
@@ -99,6 +92,14 @@ if ($test) {
     if (-not $crossbuild) {
         if ($useCdac) {
             $env:SOS_TEST_CDAC="true"
+        }
+
+        if ($noFallback) {
+            $env:SOS_TEST_CDAC_NO_FALLBACK="true"
+        }
+
+        if ($testInterpreter) {
+            $env:SOS_TEST_INTERPRETER="true"
         }
 
         # Build the test filter argument if provided

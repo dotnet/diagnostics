@@ -1,0 +1,22 @@
+# Interpreter frame stack-walk scenario.
+#
+# Gated by SOS_TEST_INTERPRETER=true. The debuggee runs InterpTestMethod*
+# methods on the CoreCLR interpreter and AVs from the deepest one. We verify
+# !ClrStack surfaces the [InterpreterFrame:] sentinel and the interpreted
+# user frames under it.
+#
+# Requires a CoreCLR build with FEATURE_INTERPRETER (Debug/Checked).
+
+CONTINUE
+
+LOADSOS
+
+# If interpreter support is missing or the env var didn't take effect, the
+# [InterpreterFrame:] sentinel is absent and these VERIFYs fail.
+SOSCOMMAND:ClrStack
+VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
+VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+\[InterpreterFrame:\s+<HEXVAL>\].*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackTestApp\.InterpTestMethodCrash.*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackTestApp\.InterpTestMethodRunNested.*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+InterpreterStackTestApp\.Main.*

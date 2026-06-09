@@ -16,7 +16,7 @@ namespace Microsoft.Diagnostics.Tests.Common
         char[][] _chars;
 
         int _cursorLeft;
-        
+
         private readonly ITestOutputHelper _outputHelper;
         private readonly StringBuilder _outputBuffer;
 
@@ -89,7 +89,7 @@ namespace Microsoft.Diagnostics.Tests.Common
         public override void Write(string text)
         {
             BufferTestLogging(text);
-            
+
             for(int textPos = 0; textPos < text.Length; )
             {
                 // This attempts to mirror the behavior of System.Console
@@ -133,7 +133,7 @@ namespace Microsoft.Diagnostics.Tests.Common
             Write(Environment.NewLine);
         }
         public override void WriteLine() => Write(Environment.NewLine);
-        
+
         /// <summary>
         /// Buffers text output and writes complete lines to ITestOutputHelper to avoid fragmenting output.
         /// Lines are only flushed when a newline is detected to minimize allocations.
@@ -145,7 +145,7 @@ namespace Microsoft.Diagnostics.Tests.Common
                 try
                 {
                     _outputBuffer.Append(text);
-                    
+
                     if (text.Contains(Environment.NewLine))
                     {
                         string buffered = _outputBuffer.ToString();
@@ -155,7 +155,7 @@ namespace Microsoft.Diagnostics.Tests.Common
                             string toFlush = buffered.Substring(0, lastNewline);
                             _outputBuffer.Clear();
                             _outputBuffer.Append(buffered.Substring(lastNewline + Environment.NewLine.Length));
-                            
+
                             using (StringReader reader = new StringReader(toFlush))
                             {
                                 string line;
@@ -175,7 +175,7 @@ namespace Microsoft.Diagnostics.Tests.Common
                 }
             }
         }
-        
+
         /// <summary>
         /// Flushes any remaining buffered test logging output to the ITestOutputHelper.
         /// Call this at the end of a test to ensure all output is written.

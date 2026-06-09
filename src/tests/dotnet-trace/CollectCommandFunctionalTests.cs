@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
     public class CollectCommandFunctionalTests
     {
         private const string ExpectedPayload = "CollectCommandFunctionalTestsTraceData";
-        
+
         private readonly ITestOutputHelper _outputHelper;
 
         public CollectCommandFunctionalTests(ITestOutputHelper outputHelper)
