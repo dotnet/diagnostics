@@ -70,10 +70,14 @@ IXCLRDataStackWalk::Next()
 
 ### Testing CLRMA locally with the `clrma` command
 
+> **Note:** `clrma` is an internal diagnostic/validation command used to exercise the CLRMA path.
+> It is intentionally hidden from the `help`/`soshelp` command list and is not a supported,
+> publicly advertised triage command. It is still invocable by name in any SOS host.
+
 The `clrma` SOS command exercises the CLRMA contract end-to-end (`CLRMACreateInstance` →
 `ICLRManagedAnalysis.AssociateClient` → `GetThread`/`GetException`) and prints the managed thread
 stack, the current/nested exceptions, their types, messages, HResults and exception stack traces.
-This is the same data Watson/`!analyze` extract from CLRMA, so the command is a local proxy for
+This is the same data Watson/`!analyze` extracts from CLRMA, so the command is a local proxy for
 "upload to Watson and see how it buckets" — without needing the debugger engine's `!clrma`/`!analyze`.
 
 The command runs in any SOS host. In particular it works under `dotnet-dump`, so no Windows

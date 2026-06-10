@@ -92,6 +92,11 @@ ClrmaException::Initialize()
             if (m_exceptionData.Message == 0)
             {
                 // To match the built-in SOS provider that scrapes !pe output.
+                //
+                // Use W() and a manual length/copy rather than L"<none>" with wcslen/wcscpy: on
+                // Unix wchar_t is 4 bytes while WCHAR (and BSTR) are UTF-16, so the wide CRT
+                // functions don't operate on WCHAR buffers. W() yields a UTF-16 literal on all
+                // platforms.
                 const WCHAR* none = W("<none>");
                 size_t noneLen = 0;
                 while (none[noneLen] != 0)
@@ -239,7 +244,8 @@ ClrmaException::get_Type(
     const WCHAR* typeName = m_typeName;
     if (typeName == nullptr)
     {
-        // To match the built-in SOS provider that scrapes !pe output
+        // To match the built-in SOS provider that scrapes !pe output. W() (not L"") so the
+        // literal is UTF-16 to match WCHAR/BSTR where wchar_t differs from WCHAR on Unix.
         typeName = W("<Unknown>");
     }
 

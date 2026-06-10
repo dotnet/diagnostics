@@ -284,8 +284,14 @@ void InternalOutputVaList(
     va_copy(argsCopy, args);
 
     // Try and format our string into a fixed buffer first and see if it fits
-    size_t length = vsnprintf(str, sizeof(str), format, args);
-    if (length < sizeof(str))
+    int length = vsnprintf(str, sizeof(str), format, args);
+    if (length < 0)
+    {
+        // Encoding error; nothing we can safely output.
+        va_end(argsCopy);
+        return;
+    }
+    if ((size_t)length < sizeof(str))
     {
         debuggerServices->OutputString(mask, str);
     }
@@ -300,6 +306,7 @@ void InternalOutputVaList(
             ::free(str_ptr);
         }
     }
+    va_end(argsCopy);
 }
 
 /// <summary>
