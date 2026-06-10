@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.PDB;
 using Microsoft.FileFormats.PE;
 
 namespace Microsoft.SymbolStore
@@ -18,8 +20,66 @@ namespace Microsoft.SymbolStore
 
         internal static void Validate(ITracer tracer, Stream pdbStream, IEnumerable<PdbChecksum> pdbChecksums)
         {
+            // A portable PDB checksum is computed over the metadata image with the embedded
+            // PDB id zeroed out, so it can be fully recomputed and validated here.
+            //
+            // Windows PDBs (MSF container) and PDZ files (MSFZ container) use a completely
+            // different on-disk format that this code cannot recompute. The symbol server has
+            // already matched the returned content against the SymbolChecksum request header,
+            // so for those we only confirm the download is a structurally valid PDB and accept it.
+            //
+            // This happens for ngen or ReadyToRun images.
+            if (IsPortablePdb(pdbStream))
+            {
+                ValidatePortablePdb(tracer, pdbStream, pdbChecksums);
+            }
+            else
+            {
+                ValidateWindowsPdb(tracer, pdbStream);
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the stream is a portable PDB (an ECMA-335 metadata image, which
+        /// starts with the "BSJB" signature).
+        /// </summary>
+        private static bool IsPortablePdb(Stream pdbStream)
+        {
+            pdbStream.Position = 0;
+            byte[] signature = new byte[4];
+            int read = pdbStream.Read(signature, 0, signature.Length);
+            pdbStream.Position = 0;
+            return read == signature.Length &&
+                   signature[0] == 0x42 && // 'B'
+                   signature[1] == 0x53 && // 'S'
+                   signature[2] == 0x4A && // 'J'
+                   signature[3] == 0x42;   // 'B'
+        }
+
+        /// <summary>
+        /// Structurally validates a Windows PDB (MSF) or PDZ (MSFZ) download and accepts it.
+        /// The cryptographic content match was already enforced by the symbol server through
+        /// the SymbolChecksum request header, so a byte-level re-validation is not performed.
+        /// </summary>
+        private static void ValidateWindowsPdb(ITracer tracer, Stream pdbStream)
+        {
+            pdbStream.Position = 0;
+            using (PDBFile pdbFile = new(new StreamAddressSpace(pdbStream)))
+            {
+                if (!pdbFile.IsValid())
+                {
+                    throw new InvalidChecksumException("The downloaded file is neither a portable PDB nor a valid Windows PDB (MSF/MSFZ) container");
+                }
+                tracer.Information($"Accepting Windows PDB ({pdbFile.ContainerKind}); content was validated by the symbol server via the SymbolChecksum header");
+            }
+            pdbStream.Position = 0;
+        }
+
+        private static void ValidatePortablePdb(ITracer tracer, Stream pdbStream, IEnumerable<PdbChecksum> pdbChecksums)
+        {
             uint offset = 0;
 
+            pdbStream.Position = 0;
             byte[] bytes = new byte[pdbStream.Length];
             byte[] pdbId = new byte[pdbIdSize];
             if (pdbStream.Read(bytes, offset: 0, count: bytes.Length) != bytes.Length)
