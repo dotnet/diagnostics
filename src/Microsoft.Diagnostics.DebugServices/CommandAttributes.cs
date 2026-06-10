@@ -31,6 +31,13 @@ namespace Microsoft.Diagnostics.DebugServices
         /// A string of options that are parsed before the command line options
         /// </summary>
         public string DefaultOptions;
+
+        /// <summary>
+        /// When true, the command is still registered and invocable but is omitted from the
+        /// command list shown by the help command. Use for internal diagnostic/validation
+        /// commands that should not be advertised to users.
+        /// </summary>
+        public bool Hidden;
     }
 
     /// <summary>

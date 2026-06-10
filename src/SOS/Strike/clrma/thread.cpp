@@ -434,7 +434,7 @@ ClrmaThread::GetFrameLocation(
     CLRDATA_ADDRESS* sp)
 {
     ULONG32 contextSize = 0;
-    ULONG32 contextFlags = CONTEXT_ARM64_CONTROL;
+    ULONG32 contextFlags = 0;
     ULONG processorType = m_managedAnalysis->ProcessorType();
     switch (processorType)
     {
