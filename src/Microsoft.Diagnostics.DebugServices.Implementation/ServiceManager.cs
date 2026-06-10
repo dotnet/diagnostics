@@ -360,8 +360,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 "Microsoft.FileFormats",
                 "Microsoft.SymbolStore",
                 "SOS.Extensions",
-                "SOS.Hosting",
-                "SOS.InstallHelper"
+                "SOS.Hosting"
             };
 
             private static readonly string _defaultAssembliesPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);

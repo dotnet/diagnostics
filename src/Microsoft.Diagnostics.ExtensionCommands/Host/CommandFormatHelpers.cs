@@ -20,8 +20,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ISettingsService settingsService = command.Services.GetService<ISettingsService>() ?? throw new DiagnosticsException("Settings service required");
             command.Console.WriteLine("Settings:");
-            command.Console.WriteLine($"-> Use CDAC contract reader: {settingsService.UseContractReader}");
-            command.Console.WriteLine($"-> Force use CDAC contract reader: {settingsService.ForceUseContractReader}");
+            command.Console.WriteLine($"-> Use cDAC: {settingsService.UseCDac switch { true => "true", false => "false", _ => "policy (default)" }}");
             command.Console.WriteLine($"-> DAC signature verification check enabled: {settingsService.DacSignatureVerificationEnabled}");
         }
 

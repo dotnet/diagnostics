@@ -4,10 +4,10 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
+using Microsoft.Diagnostics.Shared;
 
 namespace SOS.Hosting
 {
@@ -16,21 +16,24 @@ namespace SOS.Hosting
     /// </summary>
     public sealed class SOSLibrary : IDisposable
     {
-       /// <summary>
-       /// Provides the SOS module path and handle
-       /// </summary>
-       public interface ISOSModule
-       {
-           /// <summary>
-           /// The SOS module path
-           /// </summary>
-           string SOSPath { get; }
+        /// <summary>
+        /// Provided by a native debugger host to tell SOS hosting where the native sos module was
+        /// loaded from and its handle. This is the source where sos (and the cDAC that
+        /// ships next to it) comes from. When absent (in-process hosts such as dotnet-dump that load
+        /// sos themselves), the directory is derived from the tool's package layout instead.
+        /// </summary>
+        public interface ISOSModule
+        {
+            /// <summary>
+            /// The directory containing the native sos module (and the cDAC next to it).
+            /// </summary>
+            string SOSPath { get; }
 
-           /// <summary>
-           /// The SOS module handle
-           /// </summary>
-           IntPtr SOSHandle { get; }
-       }
+            /// <summary>
+            /// The native sos module handle.
+            /// </summary>
+            IntPtr SOSHandle { get; }
+        }
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int SOSCommandDelegate(
@@ -67,12 +70,12 @@ namespace SOS.Hosting
         public string SOSPath { get; set; }
 
         [ServiceExport(Scope = ServiceScope.Global)]
-        public static SOSLibrary TryCreate(IHost host, [ServiceImport(Optional = true)] ISOSModule sosModule)
+        public static SOSLibrary TryCreate(IHost host, IHostAssetResolver assetResolver, [ServiceImport(Optional = true)] ISOSModule sosModule)
         {
             SOSLibrary sosLibrary = null;
             try
             {
-                sosLibrary = new SOSLibrary(host, sosModule);
+                sosLibrary = new SOSLibrary(host, assetResolver, sosModule);
                 sosLibrary.Initialize();
             }
             catch
@@ -86,10 +89,16 @@ namespace SOS.Hosting
         /// <summary>
         /// Create an instance of the hosting class
         /// </summary>
-        /// <param name="target">target instance</param>
-        /// <param name="host">sos library info or null</param>
-        private SOSLibrary(IHost host, ISOSModule sosModule)
+        /// <param name="host">the host instance</param>
+        /// <param name="assetResolver">resolves where the native sos binaries live (the host's sos
+        /// directory, or this tool's package layout)</param>
+        /// <param name="sosModule">the host-loaded sos module (handle/ownership), or null when this
+        /// host loads sos itself (dotnet-dump)</param>
+        private SOSLibrary(IHost host, IHostAssetResolver assetResolver, ISOSModule sosModule)
         {
+            // The asset resolver is the single source of truth for the native binaries directory; it
+            // already accounts for a host-supplied sos location. ISOSModule, when present, only tells
+            // us the host already loaded sos so we reuse its handle instead of loading/unloading it.
             if (sosModule is not null)
             {
                 SOSPath = sosModule.SOSPath;
@@ -97,8 +106,7 @@ namespace SOS.Hosting
             }
             else
             {
-                string rid = InstallHelper.GetRid();
-                SOSPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
+                SOSPath = assetResolver.NativeBinariesDirectory;
                 _uninitializeLibrary = true;
             }
             _hostWrapper = new HostWrapper(host);

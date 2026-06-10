@@ -20,6 +20,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class Runtime : IRuntime, IDisposable
     {
         private readonly ClrInfo _clrInfo;
+        private readonly IHostAssetResolver _hostAssetResolver;
         private readonly ISettingsService _settingsService;
         private readonly ISymbolService _symbolService;
         private Version _runtimeVersion;
@@ -36,6 +37,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Target = services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
             Id = id;
             _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
+            _hostAssetResolver = services.GetService<IHostAssetResolver>() ?? throw new ArgumentException("IHostAssetResolver required");
             _settingsService = services.GetService<ISettingsService>() ?? throw new ArgumentException("ISettingsService required");
             _symbolService = services.GetService<ISymbolService>() ?? throw new ArgumentException("ISymbolService required");
 
@@ -100,27 +102,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
         }
 
-        public string GetCDacFilePath()
-        {
-            if (_cdacFilePath is null)
-            {
-                if (_settingsService.UseContractReader || _settingsService.ForceUseContractReader)
-                {
-                    _cdacFilePath = GetLibraryPath(DebugLibraryKind.CDac);
-                }
-            }
-            return _cdacFilePath;
-        }
-
         public string GetDacFilePath(out bool verifySignature)
         {
-            if (_settingsService.ForceUseContractReader)
-            {
-                // Don't verify signature when using the CDAC and don't change the cached value
-                // because it only applies to the regular DAC in _dacFilePath.
-                verifySignature = false;
-                return GetCDacFilePath();
-            }
             if (_dacFilePath is null)
             {
                 _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac);
@@ -133,6 +116,26 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return _dacFilePath;
         }
 
+        public string GetCDacFilePath()
+        {
+            // ShouldUseCDac() evaluates the cDAC loading policy. When it returns false the caller
+            // uses the in-box DAC from GetDacFilePath instead.
+            if (!ShouldUseCDac())
+            {
+                return null;
+            }
+
+            // The cDAC is bundled with the diagnostics tool and is never downloaded, so a missing
+            // path means it isn't available for this host.
+            _cdacFilePath ??= GetLibraryPath(DebugLibraryKind.CDac);
+            if (_cdacFilePath is null && _settingsService.UseCDac == true)
+            {
+                // The cDAC was explicitly forced but isn't bundled with this tool.
+                throw new DiagnosticsException($"The cDAC was explicitly requested but no matching cDAC is available for this runtime: {RuntimeModule.FileName}");
+            }
+            return _cdacFilePath;
+        }
+
         public string GetDbiFilePath()
         {
             _dbiFilePath ??= GetLibraryPath(DebugLibraryKind.Dbi);
@@ -142,11 +145,58 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         #endregion
 
         /// <summary>
+        /// The minimum runtime major version that supports the cDAC.
+        /// </summary>
+        private const int MinCDacRuntimeMajorVersion = 11;
+
+        /// <summary>
+        /// Evaluates the cDAC loading policy for this runtime. This is the single place that
+        /// decides whether the diagnostics tool should load the cDAC itself in place of the
+        /// in-box DAC, based on the <see cref="ISettingsService.UseCDac"/> setting and the
+        /// target runtime version.
+        /// </summary>
+        private bool ShouldUseCDac()
+        {
+            return _settingsService.UseCDac switch
+            {
+                false => false,                 // Never load the cDAC.
+                true => true,                   // Always use the cDAC, regardless of the runtime version. Availability is
+                                                //  checked by the caller (a missing forced cDAC is a hard error).
+                _ => ShouldUseCDacByDefault(),  // No explicit setting: evaluate the default policy.
+            };
+        }
+
+        /// <summary>
+        /// The default cDAC policy used when <see cref="ISettingsService.UseCDac"/> is not set.
+        /// </summary>
+        private bool ShouldUseCDacByDefault()
+        {
+            // When DOTNET_ENABLE_CDAC is requested, the in-box (legacy) DAC loads and drives the
+            // cDAC contract reader itself, including its own dac-vs-cdac fallback/comparison
+            // (see CDAC_NO_FALLBACK). Defer to that mechanism rather than loading the cDAC
+            // directly so those scenarios (for example, the runtime's cDAC test pipeline that
+            // points at a freshly built cDAC via -liveruntimedir) keep working.
+            if (Environment.GetEnvironmentVariable("DOTNET_ENABLE_CDAC") == "1"
+               || Environment.GetEnvironmentVariable("COMPlus_ENABLE_CDAC") == "1")
+            {
+                return false;
+            }
+
+            // Default policy: use the cDAC only for runtimes that support it. This needs to be
+            //  changed to consider native AOT and singlefile. This is a dummy policy for work
+            //  we will offload to dbgshim.
+            return RuntimeVersion is not null && RuntimeVersion.Major >= MinCDacRuntimeMajorVersion;
+        }
+
+        /// <summary>
         /// Create ClrRuntime instance
         /// </summary>
         private ClrRuntime CreateRuntime()
         {
-            string dacFilePath = GetDacFilePath(out _);
+            // Prefer the cDAC for the ClrMD data-access path when policy selects it; fall back to the in-box DAC.
+            // We ignore the dac verification param since it's already set as part of the CLRMD DataTarget creation
+            // now (it's a global setting to the session).
+            string dacFilePath = GetCDacFilePath() ?? GetDacFilePath(out _);
             if (dacFilePath is not null)
             {
                 Trace.TraceInformation($"Creating ClrRuntime #{Id} {dacFilePath}");
@@ -187,6 +237,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         break;
                     }
+                    // The cDAC is an analyzer-host artifact shipped inside the diagnostics tool
+                    // (next to sos.dll, matching the host's RID). It is not symbol-store indexed
+                    // by the target runtime, so never attempt to download it.
+                    if (libraryInfo.Kind == DebugLibraryKind.CDac)
+                    {
+                        continue;
+                    }
                     if (libraryInfo.ArchivedUnder != SymbolProperties.None)
                     {
                         libraryPath = DownloadFile(libraryInfo);
@@ -206,7 +263,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string localFilePath;
             if (libraryInfo.Kind == DebugLibraryKind.CDac)
             {
-                localFilePath = libraryInfo.FileName;
+                // The cDAC ships next to the native sos module. Ask the host asset resolver where it
+                // is rather than reasoning about layouts here (ClrMD's DebuggingLibraries entry points
+                // at the managed-assembly base directory, so it is ignored). The shared existence
+                // check below verifies the path, so the in-box DAC is used when the cDAC isn't bundled.
+                localFilePath = _hostAssetResolver?.GetCDacPath();
             }
             else
             {
@@ -219,7 +280,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     localFilePath = Path.Combine(Path.GetDirectoryName(RuntimeModule.FileName), Path.GetFileName(libraryInfo.FileName));
                 }
             }
-            if (!File.Exists(localFilePath))
+            if (localFilePath is null || !File.Exists(localFilePath))
             {
                 localFilePath = null;
             }

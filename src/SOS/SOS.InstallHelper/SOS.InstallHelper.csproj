@@ -10,4 +10,8 @@
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)..\SOS.Hosting\SOSPackageLayout.cs" Link="SOSPackageLayout.cs" />
+  </ItemGroup>
 </Project>
