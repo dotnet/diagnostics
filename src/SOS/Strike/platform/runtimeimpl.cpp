@@ -509,7 +509,7 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
             LPCSTR cdacFilePath = GetCDacFilePath();
             if (cdacFilePath != nullptr)
             {
-                m_cdacDataProcess = CreateClrDataProcessInstance(cdacFilePath);
+                m_cdacDataProcess = CreateClrDataProcessInstance(cdacFilePath, GetContractDescriptorAddress());
             }
         }
         if (m_cdacDataProcess != nullptr)
@@ -529,7 +529,7 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         {
             return CORDBG_E_NO_IMAGE_AVAILABLE;
         }
-        m_clrDataProcess = CreateClrDataProcessInstance(dacFilePath);
+        m_clrDataProcess = CreateClrDataProcessInstance(dacFilePath, 0);
         if (m_clrDataProcess == nullptr)
         {
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
@@ -577,7 +577,7 @@ bool Runtime::ShouldUseCDac()
  * Loads the given DAC/cDAC module and creates an IXCLRDataProcess from it.
  * Returns nullptr on failure.
 \**********************************************************************/
-IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath)
+IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath, ULONG64 contractDescriptorAddress)
 {
     HMODULE hdac = LoadLibraryA(dacFilePath);
     if (hdac == NULL)
@@ -591,7 +591,7 @@ IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath)
         FreeLibrary(hdac);
         return nullptr;
     }
-    ICLRDataTarget *target = new DataTarget(GetModuleAddress());
+    ICLRDataTarget *target = new DataTarget(GetModuleAddress(), contractDescriptorAddress);
     IXCLRDataProcess* clrDataProcess = nullptr;
     HRESULT hr = pfnCLRDataCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&clrDataProcess);
     if (FAILED(hr))
@@ -613,6 +613,37 @@ IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath)
         clrDataProcess->SetOtherNotificationFlags(notificationFlags);
     }
     return clrDataProcess;
+}
+
+/**********************************************************************\
+ * Resolves the address of the cDAC contract descriptor export
+ * (DotNetRuntimeContractDescriptor) in the runtime module, or 0 if it
+ * can't be located. Mirrors the export lookup in GetSingleFileInfo: the
+ * cross-platform reader-based lookup for ELF/Mach-O targets and the
+ * debugger's symbol resolution for Windows (PE) targets.
+\**********************************************************************/
+ULONG64 Runtime::GetContractDescriptorAddress()
+{
+    const char* symbolName = "DotNetRuntimeContractDescriptor";
+    ULONG64 symbolAddress = 0;
+    if (m_target->GetOperatingSystem() == ITarget::OperatingSystem::Linux ||
+        m_target->GetOperatingSystem() == ITarget::OperatingSystem::OSX)
+    {
+        if (!::TryGetSymbolWithCallback(ReaderReadMemory, m_address, symbolName, &symbolAddress))
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        IDebuggerServices* debuggerServices = GetDebuggerServices();
+        if (debuggerServices == nullptr ||
+            FAILED(debuggerServices->GetOffsetBySymbol(m_index, symbolName, &symbolAddress)))
+        {
+            return 0;
+        }
+    }
+    return symbolAddress;
 }
 
 /**********************************************************************\

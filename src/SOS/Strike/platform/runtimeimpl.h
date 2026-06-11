@@ -150,7 +150,13 @@ private:
     }
 
     // Loads the given DAC/cDAC module and creates an IXCLRDataProcess from it (nullptr on failure).
-    IXCLRDataProcess* CreateClrDataProcessInstance(LPCSTR dacFilePath);
+    // contractDescriptorAddress is the cDAC contract descriptor address (0 for the in-box DAC, which
+    // does not use it).
+    IXCLRDataProcess* CreateClrDataProcessInstance(LPCSTR dacFilePath, ULONG64 contractDescriptorAddress);
+
+    // Resolves the address of the cDAC contract descriptor export (DotNetRuntimeContractDescriptor)
+    // in the runtime module, or 0 if it can't be found. The cDAC requires this via ICLRContractLocator.
+    ULONG64 GetContractDescriptorAddress();
 
     // Evaluates the cDAC loading policy: cDAC is used for supported runtimes (.NET 11+) unless
     // DOTNET_ENABLE_CDAC requests that the in-box DAC drive the cDAC contract reader itself.

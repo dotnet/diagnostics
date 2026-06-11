@@ -11,9 +11,10 @@
 
 #define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
 
-DataTarget::DataTarget(ULONG64 baseAddress) :
+DataTarget::DataTarget(ULONG64 baseAddress, ULONG64 contractDescriptorAddress) :
     m_ref(0),
-    m_baseAddress(baseAddress)
+    m_baseAddress(baseAddress),
+    m_contractDescriptorAddress(contractDescriptorAddress)
 {
 }
 
@@ -52,6 +53,12 @@ DataTarget::QueryInterface(
     else if (InterfaceId == IID_ICLRRuntimeLocator)
     {
         *Interface = (ICLRRuntimeLocator*)this;
+        AddRef();
+        return S_OK;
+    }
+    else if (InterfaceId == IID_ICLRContractLocator)
+    {
+        *Interface = (ICLRContractLocator*)this;
         AddRef();
         return S_OK;
     }
@@ -383,5 +390,26 @@ DataTarget::GetRuntimeBase(
     /* [out] */ CLRDATA_ADDRESS* baseAddress)
 {
     *baseAddress = m_baseAddress;
+    return S_OK;
+}
+
+// ICLRContractLocator
+
+HRESULT STDMETHODCALLTYPE
+DataTarget::GetContractDescriptor(
+    /* [out] */ CLRDATA_ADDRESS* contractAddress)
+{
+    if (contractAddress == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    // The contract descriptor address is resolved by the runtime (which knows the target OS, the
+    // runtime module index, and has a memory-reading callback) and handed to us at construction.
+    // The cDAC requires it via ICLRContractLocator; the legacy DAC never queries this interface.
+    if (m_contractDescriptorAddress == 0)
+    {
+        return E_FAIL;
+    }
+    *contractAddress = m_contractDescriptorAddress;
     return S_OK;
 }

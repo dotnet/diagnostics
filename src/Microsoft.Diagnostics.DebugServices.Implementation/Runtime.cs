@@ -37,7 +37,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Target = services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
             Id = id;
             _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
-            _hostAssetResolver = services.GetService<IHostAssetResolver>() ?? throw new ArgumentException("IHostAssetResolver required");
+            // IHostAssetResolver is optional: it is registered by the SOS hosting layer to locate
+            // the bundled cDAC. When absent (hosts without SOS.Hosting, e.g. some test hosts), cDAC
+            // resolution returns null and the in-box DAC is used.
+            _hostAssetResolver = services.GetService<IHostAssetResolver>();
             _settingsService = services.GetService<ISettingsService>() ?? throw new ArgumentException("ISettingsService required");
             _symbolService = services.GetService<ISymbolService>() ?? throw new ArgumentException("ISymbolService required");
 
