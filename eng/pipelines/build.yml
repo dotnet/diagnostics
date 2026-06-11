@@ -113,7 +113,7 @@ jobs:
       ${{ if ne(parameters.strategy, '') }}:
         'error, we can no longer support the strategy feature in the new pipeline system. Please remove the strategy from the job template.': error
 
-      ${{ if ne(parameters.dependsOn, '') }}:
+      ${{ if and(ne(parameters.dependsOn, ''), ne(parameters.testOnly, true)) }}:
         dependsOn: ${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
 
       workspace:
@@ -132,6 +132,19 @@ jobs:
         - _buildScript: $(Build.SourcesDirectory)\build.cmd
       - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
         - _buildScript: $(Build.SourcesDirectory)/build.sh
+
+      # Native artifact folder names used by the test-only legs.
+      # _downloadOSFolder: the folder name as published by the build leg.
+      # _localOSFolder: the folder name expected by the build script on the test machine.
+      - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+        - _downloadOSFolder: Windows_NT
+        - _localOSFolder: Windows_NT
+      - ${{ elseif eq(parameters.osGroup, 'MacOS') }}:
+        - _downloadOSFolder: osx
+        - _localOSFolder: osx
+      - ${{ else }}:
+        - _downloadOSFolder: linux${{ parameters.osSuffix }}
+        - _localOSFolder: linux
 
       - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
         'error, testOnly and buildOnly cannot be true at the same time': error
@@ -157,8 +170,8 @@ jobs:
 
       steps:
       - ${{ if eq(parameters.testOnly, true) }}:
-        - ${{ if ne(parameters.osGroup, 'Linux') }}:
-          - 'error, testOnly is only supported on Linux': error
+        - ${{ if notIn(parameters.osGroup, 'Windows_NT', 'MacOS', 'Linux') }}:
+          - 'error, testOnly is only supported on Windows_NT, MacOS, and Linux': error
         - task: DownloadPipelineArtifact@2
           displayName: 'Download Build Artifacts'
           inputs:
@@ -168,8 +181,8 @@ jobs:
         - task: CopyFiles@2
           displayName: 'Binplace Downloaded Product'
           inputs:
-            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/linux${{ parameters.osSuffix }}.${{ config.architecture }}.${{ config.configuration }}
-            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/linux.${{ config.architecture }}.${{ config.configuration }}'
+            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/$(_downloadOSFolder).${{ config.architecture }}.${{ config.configuration }}
+            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/$(_localOSFolder).${{ config.architecture }}.${{ config.configuration }}'
 
       - script: $(_buildScript)
           -ci
