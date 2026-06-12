@@ -142,11 +142,10 @@ namespace Microsoft.SymbolStore.SymbolStores
                 if (needsChecksumMatch)
                 {
                     // Portable PDBs are validated against their checksum here. Windows PDBs (MSF)
-                    // and PDZ (MSFZ) are structurally validated and accepted (the server already
-                    // matched them via the SymbolChecksum header). A truncated/corrupt portable
-                    // PDB can still throw an EndOfStreamException while parsing its metadata; in
-                    // that case skip this candidate so any other bound PDB can be tried (e.g. ngen
-                    // or ReadyToRun images can have multiple bound PDBs).
+                    // and PDZ (MSFZ) are structurally validated and accepted. A truncated/corrupt
+                    // portable PDB can still throw an EndOfStreamException while parsing its
+                    // metadata; in that case skip this candidate so any other bound PDB can be
+                    // tried (e.g. ngen or ReadyToRun images can have multiple bound PDBs).
                     try
                     {
                         ChecksumValidator.Validate(Tracer, stream, key.PdbChecksums);
