@@ -4188,7 +4188,7 @@ DECLARE_API(DumpDomain)
         {
             DMLOut("Shared Domain:      %s\n", DMLDomain(adsData.sharedDomain));
         }
-        else if (p_DomainAddr == adsData.systemDomain)
+        else if (adsData.systemDomain != (TADDR)0 && p_DomainAddr == adsData.systemDomain)
         {
             DMLOut("System Domain:      %s\n", DMLDomain(adsData.systemDomain));
         }
@@ -4202,14 +4202,17 @@ DECLARE_API(DumpDomain)
     }
 
     ExtOut("--------------------------------------\n");
-    DMLOut("System Domain:      %s\n", DMLDomain(adsData.systemDomain));
-    DacpAppDomainData appDomain;
-    if ((Status=appDomain.Request(g_sos,adsData.systemDomain))!=S_OK)
+    if (adsData.systemDomain != (TADDR)0)
     {
-        ExtOut("Unable to get system domain info.\n");
-        return Status;
+        DMLOut("System Domain:      %s\n", DMLDomain(adsData.systemDomain));
+        DacpAppDomainData appDomain;
+        if ((Status=appDomain.Request(g_sos,adsData.systemDomain))!=S_OK)
+        {
+            ExtOut("Unable to get system domain info.\n");
+            return Status;
+        }
+        DomainInfo(&appDomain);
     }
-    DomainInfo(&appDomain);
 
     if (adsData.sharedDomain != (TADDR)0)
     {
@@ -6398,7 +6401,7 @@ DECLARE_API(FindAppDomain)
             ExtOut("Name:      Shared Domain\n");
             ExtOut("ID:        (shared domain)\n");
         }
-        else if (appDomain == adstore.systemDomain)
+        else if (adstore.systemDomain != (TADDR)0 && appDomain == adstore.systemDomain)
         {
             ExtOut("Name:      System Domain\n");
             ExtOut("ID:        (system domain)\n");
@@ -8609,7 +8612,11 @@ public:
             if (adsData.Request(g_sos) != S_OK)
                 return FALSE;
 
-            LONG numSpecialDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
+            LONG numSpecialDomains = 0;
+            if (adsData.sharedDomain != (TADDR)0)
+                numSpecialDomains++;
+            if (adsData.systemDomain != (TADDR)0)
+                numSpecialDomains++;
             m_numDomains = adsData.DomainCount + numSpecialDomains;
             ArrayHolder<CLRDATA_ADDRESS> pArray = new NOTHROW CLRDATA_ADDRESS[m_numDomains];
             if (pArray == NULL)
@@ -8621,10 +8628,14 @@ public:
                 pArray[i++] = adsData.sharedDomain;
             }
 
-            pArray[i] = adsData.systemDomain;
-
             m_sharedDomainIndex = i - 1; // The m_sharedDomainIndex is set to -1 if there is no shared domain
-            m_systemDomainIndex = i;
+
+            if (adsData.systemDomain != (TADDR)0)
+            {
+                pArray[i] = adsData.systemDomain;
+                m_systemDomainIndex = i;
+                i++;
+            }
 
             if (g_sos->GetAppDomainList(adsData.DomainCount, pArray+numSpecialDomains, NULL) != S_OK)
                 return FALSE;
