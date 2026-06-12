@@ -4188,7 +4188,7 @@ DECLARE_API(DumpDomain)
         {
             DMLOut("Shared Domain:      %s\n", DMLDomain(adsData.sharedDomain));
         }
-        else if (adsData.systemDomain != (TADDR)0 && p_DomainAddr == adsData.systemDomain)
+        else if (p_DomainAddr == adsData.systemDomain)
         {
             DMLOut("System Domain:      %s\n", DMLDomain(adsData.systemDomain));
         }
@@ -4202,10 +4202,10 @@ DECLARE_API(DumpDomain)
     }
 
     ExtOut("--------------------------------------\n");
+    DacpAppDomainData appDomain;
     if (adsData.systemDomain != (TADDR)0)
     {
         DMLOut("System Domain:      %s\n", DMLDomain(adsData.systemDomain));
-        DacpAppDomainData appDomain;
         if ((Status=appDomain.Request(g_sos,adsData.systemDomain))!=S_OK)
         {
             ExtOut("Unable to get system domain info.\n");
@@ -6401,7 +6401,7 @@ DECLARE_API(FindAppDomain)
             ExtOut("Name:      Shared Domain\n");
             ExtOut("ID:        (shared domain)\n");
         }
-        else if (adstore.systemDomain != (TADDR)0 && appDomain == adstore.systemDomain)
+        else if (appDomain == adstore.systemDomain)
         {
             ExtOut("Name:      System Domain\n");
             ExtOut("ID:        (system domain)\n");
