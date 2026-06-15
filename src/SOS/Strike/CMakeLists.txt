@@ -158,6 +158,10 @@ else(CLR_CMAKE_HOST_WIN32)
     sos.cpp
     sosextensions.cpp
     util.cpp
+    clrma/clrma.cpp
+    clrma/managedanalysis.cpp
+    clrma/exception.cpp
+    clrma/thread.cpp
     platform/datatarget.cpp
     platform/hostimpl.cpp
     platform/targetimpl.cpp

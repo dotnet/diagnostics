@@ -73,14 +73,14 @@ const UINT kcMaxTieredVersions      = 10;
 #ifndef FEATURE_PAL
 
 // ensure we always allocate on the process heap
-void* __cdecl operator new(size_t size) throw()
+void* __cdecl operator new(size_t size)
 { return HeapAlloc(GetProcessHeap(), 0, size); }
-void __cdecl operator delete(void* pObj) throw()
+void __cdecl operator delete(void* pObj)
 { HeapFree(GetProcessHeap(), 0, pObj); }
 
-void* __cdecl operator new[](size_t size) throw()
+void* __cdecl operator new[](size_t size)
 { return HeapAlloc(GetProcessHeap(), 0, size); }
-void __cdecl operator delete[](void* pObj) throw()
+void __cdecl operator delete[](void* pObj)
 { HeapFree(GetProcessHeap(), 0, pObj); }
 
 /**********************************************************************\
@@ -2171,7 +2171,11 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
     ArrayHolder<CLRDATA_ADDRESS> pAssemblyArray = NULL;
     ArrayHolder<CLRDATA_ADDRESS> pModules = NULL;
     int arrayLength = 0;
-    int numSpecialDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
+    int numSpecialDomains = 0;
+    if (adsData.systemDomain != (TADDR)0)
+        numSpecialDomains++;
+    if (adsData.sharedDomain != (TADDR)0)
+        numSpecialDomains++;
     if (!ClrSafeInt<int>::addition(adsData.DomainCount, numSpecialDomains, arrayLength))
     {
         ExtOut("<integer overflow>\n");
@@ -2184,10 +2188,14 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
         return NULL;
     }
 
-    pArray[0] = adsData.systemDomain;
+    int i = 0;
+    if (adsData.systemDomain != (TADDR)0)
+    {
+        pArray[i++] = adsData.systemDomain;
+    }
     if (adsData.sharedDomain != (TADDR)0)
     {
-        pArray[1] = adsData.sharedDomain;
+        pArray[i++] = adsData.sharedDomain;
     }
     if ((hr = g_sos->GetAppDomainList(adsData.DomainCount, pArray.GetPtr() + numSpecialDomains, NULL)) != S_OK)
     {
@@ -2839,7 +2847,11 @@ void GetDomainList (DWORD_PTR *&domainList, int &numDomain)
     // Do prefast integer checks before the malloc.
     size_t AllocSize;
     LONG DomainAllocCount;
-    LONG NumExtraDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
+    LONG NumExtraDomains = 0;
+    if (adsData.systemDomain != (TADDR)0)
+        NumExtraDomains++;
+    if (adsData.sharedDomain != (TADDR)0)
+        NumExtraDomains++;
     if (!ClrSafeInt<LONG>::addition(adsData.DomainCount, NumExtraDomains, DomainAllocCount) ||
         !ClrSafeInt<size_t>::multiply(DomainAllocCount, sizeof(PVOID), AllocSize) ||
         (domainList = new DWORD_PTR[DomainAllocCount]) == NULL)
@@ -2847,7 +2859,10 @@ void GetDomainList (DWORD_PTR *&domainList, int &numDomain)
         return;
     }
 
-    domainList[numDomain++] = (DWORD_PTR) adsData.systemDomain;
+    if (adsData.systemDomain != (TADDR)0)
+    {
+        domainList[numDomain++] = (DWORD_PTR) adsData.systemDomain;
+    }
     if (adsData.sharedDomain != (TADDR)0)
     {
         domainList[numDomain++] = (DWORD_PTR) adsData.sharedDomain;

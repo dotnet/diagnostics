@@ -161,7 +161,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     try
                     {
-                        if (handler.IsCommandSupported(group.Parser, services))
+                        if (!handler.Hidden && handler.IsCommandSupported(group.Parser, services))
                         {
                             string invocation = handler.HelpInvocation;
                             help.Add((invocation, handler.Help));
@@ -545,6 +545,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             /// Returns the command's help text
             /// </summary>
             internal string Help => _commandAttribute.Help;
+
+            /// <summary>
+            /// When true, the command is omitted from the help command's command list, but
+            /// remains registered and invocable.
+            /// </summary>
+            internal bool Hidden => _commandAttribute.Hidden;
 
             /// <summary>
             /// Filter invoke message or null if no attribute or message
