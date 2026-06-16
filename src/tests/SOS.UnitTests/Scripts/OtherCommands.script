@@ -75,7 +75,9 @@ VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
 VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
 
 SOSCOMMAND:DumpDomain
+IFDEF:DESKTOP
 VERIFY:\s*System Domain:\s+<HEXVAL>\s+
+ENDIF:DESKTOP
 VERIFY:\s*LowFrequencyHeap:\s+<HEXVAL>\s+
 VERIFY:\s*HighFrequencyHeap:\s+<HEXVAL>\s+
 VERIFY:\s*Domain 1:\s+<HEXVAL>\s+
