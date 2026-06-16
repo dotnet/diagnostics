@@ -103,6 +103,8 @@ namespace Microsoft.Diagnostics.Repl
                         // End of the redirected input stream (EOF) - e.g. the parent process
                         // driving us exited or closed our stdin. There will never be more
                         // input, so stop the REPL instead of looping forever.
+                        m_shutdown = true;
+                        Console.CancelKeyPress -= new ConsoleCancelEventHandler(OnCtrlBreakKeyPress);
                         break;
                     }
 
