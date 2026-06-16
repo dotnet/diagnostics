@@ -142,5 +142,8 @@ SOSCOMMAND:DumpGCData
 
 SOSCOMMAND:DumpRuntimeTypes
 
+SOSCOMMAND:DumpLog
+VERIFY:SUCCESS: Stress log dumped
+
 EXTCOMMAND:logclose
 EXTCOMMAND:logging --disable

@@ -664,6 +664,7 @@ public class SOSDumpTests
                 TestConfiguration = config,
                 TestName = "SOS.OtherCommands",
                 DebuggeeName = "SymbolTestApp",
+                EnableStressLog = true,
                 // Assumes that SymbolTestDll.dll that is dynamically loaded is the parent directory of the single file app
                 DebuggeeArguments = config.PublishSingleFile ? Path.Combine("%DEBUG_ROOT%", "..") : "%DEBUG_ROOT%"
             },
