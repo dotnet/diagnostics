@@ -98,10 +98,19 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     // The input has been redirected (i.e. testing or in script)
                     string line = Console.ReadLine();
-                    if (string.IsNullOrEmpty(line))
+                    if (line == null)
+                    {
+                        // End of the redirected input stream (EOF) - e.g. the parent process
+                        // driving us exited or closed our stdin. There will never be more
+                        // input, so stop the REPL instead of looping forever.
+                        break;
+                    }
+
+                    if (line.Length == 0)
                     {
                         continue;
                     }
+
                     bool result = Dispatch(line, dispatchCommand);
                     if (!m_shutdown)
                     {
