@@ -13,10 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.TestHelpers\Microsoft.Diagnostics.TestHelpers.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\SOS\SOS.Extensions\SOS.Extensions.csproj" />
+    <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.DebugServices.Implementation/Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
+    <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.DebugServices/Microsoft.Diagnostics.DebugServices.csproj" />
+    <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
+    <ProjectReference Include="$(SrcDir)SOS/SOS.Extensions/SOS.Extensions.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="$(RunTests) AND '$(OS)' == 'Windows_NT'">

@@ -14,8 +14,7 @@
   <ItemGroup>
     <PackageReference Include="System.CommandLine" Version="$(SystemCommandLineVersion)" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" GeneratePathProperty="true" />
-    <PackageReference Include="Microsoft.OneCollect.RecordTrace" Version="0.1.32151" PrivateAssets="All" GeneratePathProperty="true"
-                      Condition="'$(TargetRid)' != '' and $([System.String]::Copy('$(TargetRid)').StartsWith('linux'))" />
+    <PackageReference Include="Microsoft.OneCollect.RecordTrace" Version="$(MicrosoftOneCollectRecordTraceVersions)" PrivateAssets="All" GeneratePathProperty="true" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,8 +30,18 @@
     <InternalsVisibleTo Include="DotnetTrace.UnitTests" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetRid)' != '' and $([System.String]::Copy('$(TargetRid)').StartsWith('linux'))">
-    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(TargetRid)/native/librecordtrace.so" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
-          Condition="Exists('$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/$(TargetRid)/native/librecordtrace.so')" />
+  <ItemGroup>
+    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-x64/native/librecordtrace.so">
+      <Visible>false</Visible>
+      <Link Condition="'$(PublishSingleFile)' != 'true'">runtimes/linux-x64/native/librecordtrace.so</Link>
+      <CopyToOutputDirectory Condition="'$(PublishSingleFile)' != 'true'">PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory Condition="'$(PublishSingleFile)' == 'true' and 'linux-x64' == '$(RuntimeIdentifier)'">PreserveNewest</CopyToPublishDirectory>
+    </None>
+    <None Include="$(PkgMicrosoft_OneCollect_RecordTrace)/runtimes/linux-arm64/native/librecordtrace.so">
+      <Visible>false</Visible>
+      <Link Condition="'$(PublishSingleFile)' != 'true'">runtimes/linux-arm64/native/librecordtrace.so</Link>
+      <CopyToOutputDirectory Condition="'$(PublishSingleFile)' != 'true'">PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory Condition="'$(PublishSingleFile)' == 'true' and 'linux-arm64' == '$(RuntimeIdentifier)'">PreserveNewest</CopyToPublishDirectory>
+    </None>
   </ItemGroup>
 </Project>

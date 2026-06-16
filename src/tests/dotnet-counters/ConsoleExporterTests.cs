@@ -10,15 +10,23 @@ using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace DotnetCounters.UnitTests
 {
     public class ConsoleExporterTests
     {
+        private readonly ITestOutputHelper _outputHelper;
+
+        public ConsoleExporterTests(ITestOutputHelper outputHelper)
+        {
+            _outputHelper = outputHelper;
+        }
+
         [Fact]
         public void DisplayWaitingMessage()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -29,7 +37,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void DisplayEventCounter()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
             exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "% Time in GC since last GC", "%", 12), false);
@@ -45,7 +53,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void DisplayIncrementingEventCounter()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
             exporter.CounterPayloadReceived(CreateIncrementingEventCounter("System.Runtime", "Allocation Rate", "B", 1731), false);
@@ -61,7 +69,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void DisplayMultipleProviders()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
             exporter.CounterPayloadReceived(CreateIncrementingEventCounter("System.Runtime", "Allocation Rate", "B", 1731), false);
@@ -81,7 +89,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void UpdateCounters()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -111,7 +119,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void PauseAndUnpause()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -173,7 +181,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void AlignValues()
         {
-            MockConsole console = new MockConsole(60, 40);
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -193,7 +201,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void NameColumnWidthAdjusts()
         {
-            MockConsole console = new MockConsole(50, 40);
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -211,7 +219,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void LongNamesAreTruncated()
         {
-            MockConsole console = new MockConsole(50, 40);
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -227,7 +235,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void MultiDimensionalCountersAreListed()
         {
-            MockConsole console = new MockConsole(50, 40);
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -255,7 +263,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void LongMultidimensionalTagsAreTruncated()
         {
-            MockConsole console = new MockConsole(50, 40);
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -283,7 +291,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void CountersAreTruncatedBeyondScreenHeight()
         {
-            MockConsole console = new MockConsole(50, 7);
+            MockConsole console = new MockConsole(50, 7, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -303,7 +311,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void ErrorStatusIsDisplayed()
         {
-            MockConsole console = new MockConsole(50, 40);
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console);
             exporter.Initialize();
 
@@ -333,7 +341,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void DeltaColumnDisplaysInitiallyEmpty()
         {
-            MockConsole console = new MockConsole(64, 40);
+            MockConsole console = new MockConsole(64, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console, showDeltaColumn:true);
             exporter.Initialize();
 
@@ -365,7 +373,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void DeltaColumnDisplaysNumbersAfterUpdate()
         {
-            MockConsole console = new MockConsole(64, 40);
+            MockConsole console = new MockConsole(64, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console, showDeltaColumn: true);
             exporter.Initialize();
 
@@ -422,7 +430,7 @@ namespace DotnetCounters.UnitTests
         [Fact]
         public void MeterCounterIsAbsoluteInNet8()
         {
-            MockConsole console = new MockConsole(64, 40);
+            MockConsole console = new MockConsole(64, 40, _outputHelper);
             ConsoleWriter exporter = new ConsoleWriter(console, showDeltaColumn: true);
             exporter.Initialize();
 
@@ -478,6 +486,207 @@ namespace DotnetCounters.UnitTests
         private static CounterPayload CreateMeterCounterPostNet8(string meterName, string instrumentName, string unit, string tags, double value)
         {
             return new CounterRateAndValuePayload(new CounterMetadata(meterName, instrumentName, unit), displayName: null, displayUnits: null, tags, rate: double.NaN, value, DateTime.MinValue);
+        }
+
+        [Fact]
+        public void NoAbbreviateLargeValues()
+        {
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "% Time in GC", "%", 0.1), false);
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "BigCounter", "ns", 602341234567890123.0), false);
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 1701200000000.0), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    % Time in GC (%)                                   0.1",
+                                     "    BigCounter (ns)              602,341,234,567,890,000",
+                                     "    Offset (ms)                        1,701,200,000,000");
+        }
+
+        [Fact]
+        public void NoAbbreviateNarrowConsole()
+        {
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "ThisCounterHasAVeryLongNameThatDoesNotFit", "%", 0.1), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                 Current Value",
+                                     "[System.Runtime]",
+                                     "    ThisCounterHasAVeryLongN                 0.1");
+        }
+
+        [Fact]
+        public void NoAbbreviateMultidimensionalNarrowConsole()
+        {
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "color=red", 0.1), false);
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "color=blue", 87), false);
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter2", "{widget}", "size=1", 14), false);
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter2", "{widget}", "temp=hot", 160), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                 Current Value",
+                                     "[Provider1]",
+                                     "    Counter1 ({widget} / 1 s",
+                                     "        color",
+                                     "        -----",
+                                     "        blue                                87",
+                                     "        red                                  0.1",
+                                     "    Counter2 ({widget} / 1 s",
+                                     "        size temp",
+                                     "        ---- ----",
+                                     "        1                                   14",
+                                     "             hot                           160");
+        }
+
+        [Fact]
+        public void NoAbbreviateValueGrowsOnIncrementalUpdate()
+        {
+            // Scenario: a counter starts with a small value that fits in the 21-char
+            // minimum column, then jumps to a value that also fits in 21 chars on an
+            // incremental update (no new counters, so no full redraw).
+            // Values up to ~10^15 with separators fit in the 21-char minimum.
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            // First payload: small value. Triggers redraw (new counter).
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 42), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                                       42");
+
+            // Second payload: same counter, unix ms timestamp. Incremental update only.
+            // Fits within the 21-char minimum column — no spill.
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 1701200000000.0), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                        1,701,200,000,000");
+        }
+
+        [Fact]
+        public void NoAbbreviateValueOverflowTriggersRedraw()
+        {
+            // Scenario: a counter starts with a small value that fits in the 21-char
+            // minimum column, then jumps to a value that exceeds 21 chars. The
+            // incremental update detects the overflow and triggers a full redraw
+            // with wider columns instead of spilling past the column edge.
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            // First payload: small value. Triggers redraw (new counter).
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 42), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                                       42");
+
+            // Second payload: same counter, value exceeds 21-char column (26 chars formatted).
+            // Incremental path detects overflow → full redraw with _counterValueLength=26.
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 17012000000000000.0), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                   17,012,000,000,000,000");
+        }
+
+        [Fact]
+        public void NoAbbreviateLongNameAndBigValueConflict()
+        {
+            // Scenario: a counter has both a long name AND a big value that exceeds
+            // the 21-char minimum column. The wide value column squeezes the name
+            // column, causing the counter name to be truncated more aggressively
+            // than it would be with smaller values.
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "ThisCounterHasAVeryLongNameThatDoesNotFit", "ms", 17012000000000000.0), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                 Current Value",
+                                     "[System.Runtime]",
+                                     "    ThisCounterHasAVery 17,012,000,000,000,000");
+        }
+
+        [Fact]
+        public void NoAbbreviateLongTagsAndBigValueConflict()
+        {
+            // Scenario: a multidimensional counter has long tag values AND big
+            // counter values simultaneously. The wide value column squeezes the
+            // name column, truncating the counter name and tag display.
+            MockConsole console = new MockConsole(50, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "color=red", 17012000000000000.0), false);
+            exporter.CounterPayloadReceived(CreateMeterCounterPreNet8("Provider1", "Counter1", "{widget}", "color=blue", 87), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                 Current Value",
+                                     "[Provider1]",
+                                     "    Counter1 ({widget}",
+                                     "        color",
+                                     "        -----",
+                                     "        blue                                87",
+                                     "        red             17,012,000,000,000,000");
+        }
+
+        [Fact]
+        public void NoAbbreviateColumnDoesNotShrink()
+        {
+            // Scenario: a counter starts with a big value that causes the value
+            // column to grow beyond the 21-char minimum, then the value drops to
+            // a small number. The column should NOT shrink back because the
+            // incremental update path does not trigger a redraw for smaller values.
+            MockConsole console = new MockConsole(60, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console, abbreviateLargeNumbers: false);
+            exporter.Initialize();
+
+            // First payload: big value, triggers redraw (new counter). Column grows to 26.
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 17012000000000000.0), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                   17,012,000,000,000,000");
+
+            // Second payload: small value, incremental update only. Column stays at 26.
+            // The value is right-aligned in the wide column, showing the non-shrinking behavior.
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 42), false);
+            console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
+                                     "    Status: Running",
+                                     "",
+                                     "Name                                           Current Value",
+                                     "[System.Runtime]",
+                                     "    Offset (ms)                                       42");
         }
     }
 }

@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 new EventPipeProvider[] {
                     new("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
                 },
-                "Samples .NET thread stacks (~100 Hz) toestimate how much wall clock time code is using.") { VerbExclusivity = "collect" },
+                "Samples .NET thread stacks (~100 Hz) to estimate how much wall clock time code is using.") { VerbExclusivity = "collect" },
             new Profile(
                 "gc-verbose",
                 new EventPipeProvider[] {

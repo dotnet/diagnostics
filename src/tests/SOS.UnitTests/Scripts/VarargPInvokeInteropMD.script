@@ -1,0 +1,41 @@
+#
+# Verifies that the !clrstack command properly prints out the correct
+# method name in vararg PInvoke scenarios. On some platforms this utilizes a special
+# 'reportInteropMD' to find the correct MethodDesc.
+#
+
+# Continue to the DebugBreak
+CONTINUE
+VERIFY:Break instruction exception - code 80000003
+
+LOADSOS
+
+COMMAND:bm msvcrt!printf
+
+CONTINUE
+
+# Print the stack trace
+SOSCOMMAND:clrstack
+
+# Verify InlinedCallFrame method is correct
+VERIFY:\s*<HEXVAL>\s*<HEXVAL>\s*\[InlinedCallFrame.*\]\s*VarargPInvokeInteropMD.Interop.printf\(System.String, ...\)
+
+# Verify IL_STUB displays
+VERIFY:\s*<HEXVAL>\s*<HEXVAL>\s*ILStubClass.IL_STUB_PInvoke\(System.String, Int32, Double, ...\)
+
+# Verify that !u works on IL stubs (issue #1907: clru used to fail with "Unknown error in reading function IL")
+SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+ILStubClass\.IL_STUB_PInvoke.*<POUT>
+SOSCOMMAND:clru <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
+VERIFY:\s*Normal JIT generated code\s+
+VERIFY:\s+ILStubClass\.IL_STUB_PInvoke\(
+VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
+!VERIFY:.*Unknown error in reading function IL.*
+!VERIFY:.*failed.*
+
+# Verify that !u -il works on IL stubs (should succeed without IL interleaving since stubs have no IL body)
+SOSCOMMAND:clru -il <PREVPOUT>
+VERIFY:\s*Normal JIT generated code\s+
+VERIFY:\s+ILStubClass\.IL_STUB_PInvoke\(
+VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
+!VERIFY:.*Unknown error in reading function IL.*
+!VERIFY:.*failed.*

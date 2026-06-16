@@ -3,6 +3,7 @@
 
 #include <cstdarg>
 #include <cstdlib>
+#include <algorithm>
 #include <string.h>
 #include <string>
 #include <dlfcn.h>
@@ -18,11 +19,11 @@
 #define InvalidTimeStamp    0xFFFFFFFE;
 #define InvalidChecksum     0xFFFFFFFF;
 
-#ifndef PAGE_SIZE 
+#ifndef PAGE_SIZE
 #define PAGE_SIZE 0x1000
 #endif
 
-#undef PAGE_MASK 
+#undef PAGE_MASK
 #define PAGE_MASK (~(PAGE_SIZE-1))
 
 char *g_coreclrDirectory = nullptr;
@@ -36,7 +37,9 @@ LLDBServices::LLDBServices(lldb::SBDebugger debugger) :
     m_currentThread(nullptr),
     m_currentStopId(0),
     m_processId(0),
-    m_threadInfoInitialized(false)
+    m_threadInfoInitialized(false),
+    m_currentResult(nullptr),
+    m_sectionCacheStopId(UINT32_MAX)
 {
     ClearCache();
 
@@ -90,7 +93,7 @@ LLDBServices::QueryInterface(
 ULONG
 LLDBServices::AddRef()
 {
-    LONG ref = InterlockedIncrement(&m_ref);    
+    LONG ref = InterlockedIncrement(&m_ref);
     return ref;
 }
 
@@ -193,7 +196,7 @@ LLDBServices::GetExpression(
 // and return the next frame so we have to stick with the native frames
 // lldb has found and find the closest frame to the incoming context SP.
 //
-HRESULT 
+HRESULT
 LLDBServices::VirtualUnwind(
     DWORD threadID,
     ULONG32 contextSize,
@@ -238,7 +241,7 @@ LLDBServices::VirtualUnwind(
 #else
 #error "spToFind undefined for this platform"
 #endif
-    
+
     int numFrames = thread.GetNumFrames();
     for (int i = 0; i < numFrames; i++)
     {
@@ -278,11 +281,11 @@ LLDBServices::VirtualUnwind(
     return S_OK;
 }
 
-bool 
+bool
 ExceptionBreakpointCallback(
-    void *baton, 
+    void *baton,
     lldb::SBProcess &process,
-    lldb::SBThread &thread, 
+    lldb::SBThread &thread,
     lldb::SBBreakpointLocation &location)
 {
     lldb::SBProcess* savedProcess = g_services->SetCurrentProcess(&process);
@@ -299,7 +302,7 @@ ExceptionBreakpointCallback(
 
 lldb::SBBreakpoint g_exceptionbp;
 
-HRESULT 
+HRESULT
 LLDBServices::SetExceptionCallback(
     PFN_EXCEPTION_CALLBACK callback)
 {
@@ -324,7 +327,7 @@ LLDBServices::SetExceptionCallback(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::ClearExceptionCallback()
 {
     if (g_exceptionbp.IsValid())
@@ -347,7 +350,7 @@ LLDBServices::ClearExceptionCallback()
 // Checks for a user interrupt, such a Ctrl-C
 // or stop button.
 // This method is reentrant.
-HRESULT 
+HRESULT
 LLDBServices::GetInterrupt()
 {
     return E_FAIL;
@@ -358,7 +361,7 @@ LLDBServices::GetInterrupt()
 // by the current output control mask and
 // according to the output distribution
 // settings.
-HRESULT 
+HRESULT
 LLDBServices::Output(
     ULONG mask,
     PCSTR format,
@@ -371,7 +374,7 @@ LLDBServices::Output(
     return result;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::OutputVaList(
     ULONG mask,
     PCSTR format,
@@ -388,7 +391,7 @@ LLDBServices::OutputVaList(
 // the default is desired.  These methods require
 // extra work in the engine so they should
 // only be used when necessary.
-HRESULT 
+HRESULT
 LLDBServices::ControlledOutput(
     ULONG outputControl,
     ULONG mask,
@@ -402,7 +405,7 @@ LLDBServices::ControlledOutput(
     return result;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::ControlledOutputVaList(
     ULONG outputControl,
     ULONG mask,
@@ -414,12 +417,12 @@ LLDBServices::ControlledOutputVaList(
 
 // Returns information about the debuggee such
 // as user vs. kernel, dump vs. live, etc.
-HRESULT 
+HRESULT
 LLDBServices::GetDebuggeeType(
     PULONG debugClass,
     PULONG qualifier)
 {
-    *debugClass = DEBUG_CLASS_USER_WINDOWS; 
+    *debugClass = DEBUG_CLASS_USER_WINDOWS;
     *qualifier = 0;
 
     lldb::SBProcess process = GetCurrentProcess();
@@ -438,7 +441,7 @@ LLDBServices::GetDebuggeeType(
 // Returns the page size for the currently executing
 // processor context.  The page size may vary between
 // processor types.
-HRESULT 
+HRESULT
 LLDBServices::GetPageSize(
     PULONG size)
 {
@@ -446,7 +449,7 @@ LLDBServices::GetPageSize(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetProcessorType(
     PULONG type)
 {
@@ -468,7 +471,7 @@ LLDBServices::GetProcessorType(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::Execute(
     ULONG outputControl,
     PCSTR command,
@@ -479,7 +482,7 @@ LLDBServices::Execute(
     return status <= lldb::eReturnStatusSuccessContinuingResult ? S_OK : E_FAIL;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetLastEventInformation(
     PULONG type,
     PULONG processId,
@@ -516,7 +519,7 @@ LLDBServices::GetLastEventInformation(
     }
 
     DEBUG_LAST_EVENT_INFO_EXCEPTION *pdle = (DEBUG_LAST_EVENT_INFO_EXCEPTION *)extraInformation;
-    pdle->FirstChance = 1; 
+    pdle->FirstChance = 1;
     lldb::SBError error;
 
     lldb::SBProcess process = GetCurrentProcess();
@@ -536,6 +539,14 @@ LLDBServices::GetLastEventInformation(
 
     SpecialDiagInfoHeader header;
     size_t read = process.ReadMemory(SpecialDiagInfoAddress, &header, sizeof(header), error);
+    if ((error.Fail() || read != sizeof(header) ||
+         strncmp(header.Signature, SPECIAL_DIAGINFO_SIGNATURE, sizeof(SPECIAL_DIAGINFO_SIGNATURE)) != 0)
+        && SpecialDiagInfoAddress != SpecialDiagInfoLegacyAddress)
+    {
+        // Fall back to the legacy address for dumps produced by older createdump binaries.
+        error.Clear();
+        read = process.ReadMemory(SpecialDiagInfoLegacyAddress, &header, sizeof(header), error);
+    }
     if (error.Fail() || read != sizeof(header))
     {
         Output(DEBUG_OUTPUT_WARNING, "Special diagnostics info read failed\n");
@@ -561,7 +572,7 @@ LLDBServices::GetLastEventInformation(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::Disassemble(
     ULONG64 offset,
     ULONG flags,
@@ -642,7 +653,7 @@ LLDBServices::Disassemble(
         bufferSize--;
         if (++cch >= 21)
             break;
-    } 
+    }
 
     cch = snprintf(buffer, bufferSize, "%s", instruction.GetMnemonic(target));
     buffer += cch;
@@ -655,7 +666,7 @@ LLDBServices::Disassemble(
         bufferSize--;
         if (++cch >= 8)
             break;
-    } 
+    }
     snprintf(buffer, bufferSize, "%s\n", instruction.GetOperands(target));
 
 exit:
@@ -758,12 +769,12 @@ exit:
     }
     return hr;
 }
-    
+
 //----------------------------------------------------------------------------
 // IDebugDataSpaces
 //----------------------------------------------------------------------------
 
-HRESULT 
+HRESULT
 LLDBServices::ReadVirtual(
     ULONG64 offset,
     PVOID buffer,
@@ -828,34 +839,18 @@ LLDBServices::ReadVirtual(
     }
 
     // If the read isn't complete, try reading directly from native modules in the address range.
+    // For dumps that don't include code/data segments (e.g., MachO core files) this is the common
+    // path: a sorted, cached SectionRange table is binary-searched instead of iterating
+    // numModules x numSections per call.
     if (bufferSize > 0)
     {
         lldb::SBTarget target = process.GetTarget();
-        if (!target.IsValid())
+        if (target.IsValid())
         {
-            goto exit;
-        }
-
-        int numModules = target.GetNumModules();
-        for (int i = 0; i < numModules; i++)
-        {
-            lldb::SBModule module = target.GetModuleAtIndex(i);
-            int numSections = module.GetNumSections();
-            for (int j = 0; j < numSections; j++)
+            size_t sectionBytesRead = 0;
+            if (ReadFromSectionCache(target, offset, bufferSize, buffer, error, sectionBytesRead))
             {
-                lldb::SBSection section = module.GetSectionAtIndex(j);
-                lldb::addr_t loadAddr = section.GetLoadAddress(target);
-                lldb::addr_t endAddr = loadAddr + section.GetByteSize();
-                ULONG64 endOffset = offset + bufferSize;
-                if ((loadAddr != LLDB_INVALID_ADDRESS) && (offset >= loadAddr) && (endOffset < endAddr))
-                {
-                    lldb::SBData sectionData = section.GetSectionData(offset - loadAddr, bufferSize);
-                    if (sectionData.IsValid())
-                    {
-                        bytesRead += sectionData.ReadRawData(error, 0, buffer, bufferSize);
-                        goto exit;
-                    }
-                }
+                bytesRead += sectionBytesRead;
             }
         }
     }
@@ -868,7 +863,103 @@ exit:
     return bytesRead > 0 ? S_OK : E_FAIL;
 }
 
-HRESULT 
+void
+LLDBServices::EnsureSectionRanges(lldb::SBTarget& target)
+{
+    if (m_sectionCacheStopId == m_currentStopId)
+    {
+        return;
+    }
+
+    m_sectionRanges.clear();
+
+    uint32_t numModules = target.GetNumModules();
+    m_sectionRanges.reserve(numModules * 8);
+
+    for (uint32_t i = 0; i < numModules; i++)
+    {
+        lldb::SBModule module = target.GetModuleAtIndex(i);
+        uint32_t numSections = module.GetNumSections();
+        for (uint32_t j = 0; j < numSections; j++)
+        {
+            lldb::SBSection section = module.GetSectionAtIndex(j);
+            lldb::addr_t loadAddr = section.GetLoadAddress(target);
+            if (loadAddr == LLDB_INVALID_ADDRESS)
+            {
+                continue;
+            }
+            lldb::addr_t size = section.GetByteSize();
+            if (size == 0)
+            {
+                continue;
+            }
+            // Guard against pathological section sizes that would overflow the address space.
+            if (size > UINT64_MAX - loadAddr)
+            {
+                continue;
+            }
+            SectionRange range;
+            range.loadAddr = loadAddr;
+            range.endAddr = loadAddr + size;
+            range.section = section;
+            m_sectionRanges.push_back(range);
+        }
+    }
+
+    std::sort(m_sectionRanges.begin(), m_sectionRanges.end(),
+        [](const SectionRange& a, const SectionRange& b) { return a.loadAddr < b.loadAddr; });
+
+    m_sectionCacheStopId = m_currentStopId;
+}
+
+bool
+LLDBServices::ReadFromSectionCache(
+    lldb::SBTarget& target,
+    uint64_t offset,
+    uint32_t size,
+    void* buffer,
+    lldb::SBError& error,
+    size_t& bytesRead)
+{
+    EnsureSectionRanges(target);
+    if (m_sectionRanges.empty())
+    {
+        return false;
+    }
+
+    // Reject reads whose end address would overflow uint64_t — preserves the
+    // containment check below from wrapping under the section.
+    if (size > UINT64_MAX - offset)
+    {
+        return false;
+    }
+    uint64_t endOffset = offset + size;
+    // Find first entry with loadAddr > offset; the candidate is the previous entry.
+    auto it = std::upper_bound(m_sectionRanges.begin(), m_sectionRanges.end(), offset,
+        [](uint64_t value, const SectionRange& entry) { return value < entry.loadAddr; });
+    if (it == m_sectionRanges.begin())
+    {
+        return false;
+    }
+    --it;
+
+    // Original logic used (offset >= loadAddr) && (endOffset < endAddr); preserve it.
+    if (offset < it->loadAddr || endOffset >= it->endAddr)
+    {
+        return false;
+    }
+
+    lldb::SBSection section = it->section;
+    lldb::SBData sectionData = section.GetSectionData(offset - it->loadAddr, size);
+    if (!sectionData.IsValid())
+    {
+        return false;
+    }
+    bytesRead = sectionData.ReadRawData(error, 0, buffer, size);
+    return bytesRead > 0;
+}
+
+HRESULT
 LLDBServices::WriteVirtual(
     ULONG64 offset,
     PVOID buffer,
@@ -901,7 +992,7 @@ exit:
 // IDebugSymbols
 //----------------------------------------------------------------------------
 
-HRESULT 
+HRESULT
 LLDBServices::GetSymbolOptions(
     PULONG options)
 {
@@ -909,7 +1000,7 @@ LLDBServices::GetSymbolOptions(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetNameByOffset(
     ULONG64 offset,
     PSTR nameBuffer,
@@ -920,7 +1011,7 @@ LLDBServices::GetNameByOffset(
     return GetNameByOffset(DEBUG_ANY_ID, offset, nameBuffer, nameBufferSize, nameSize, displacement);
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetNameByOffset(
     ULONG moduleIndex,
     ULONG64 offset,
@@ -972,7 +1063,7 @@ LLDBServices::GetNameByOffset(
             str.append(file.GetFilename());
         }
     }
-    else 
+    else
     {
         module = target.GetModuleAtIndex(moduleIndex);
         if (!module.IsValid())
@@ -1033,7 +1124,7 @@ exit:
     return hr;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetNumberModules(
     PULONG loaded,
     PULONG unloaded)
@@ -1068,7 +1159,7 @@ HRESULT LLDBServices::GetModuleByIndex(
 {
     lldb::SBTarget target;
     lldb::SBModule module;
-    
+
     target = m_debugger.GetSelectedTarget();
     if (!target.IsValid())
     {
@@ -1093,7 +1184,7 @@ HRESULT LLDBServices::GetModuleByIndex(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetModuleByModuleName(
     PCSTR name,
     ULONG startIndex,
@@ -1150,7 +1241,7 @@ LLDBServices::GetModuleByModuleName(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetModuleByOffset(
     ULONG64 offset,
     ULONG startIndex,
@@ -1209,7 +1300,7 @@ LLDBServices::GetModuleByOffset(
     return E_FAIL;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetModuleNames(
     ULONG index,
     ULONG64 base,
@@ -1295,7 +1386,7 @@ LLDBServices::GetModuleNames(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetLineByOffset(
     ULONG64 offset,
     PULONG fileLine,
@@ -1381,8 +1472,8 @@ exit:
     }
     return hr;
 }
- 
-HRESULT 
+
+HRESULT
 LLDBServices::GetSourceFileLineOffsets(
     PCSTR file,
     PULONG64 buffer,
@@ -1396,7 +1487,7 @@ LLDBServices::GetSourceFileLineOffsets(
     return E_NOTIMPL;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::FindSourceFile(
     ULONG startElement,
     PCSTR file,
@@ -1470,8 +1561,8 @@ LLDBServices::GetModuleSize(
             size += section.GetByteSize();
         }
     }
-    // For core dumps lldb doesn't return the section sizes when it 
-    // doesn't have access to the actual module file, but SOS (like 
+    // For core dumps lldb doesn't return the section sizes when it
+    // doesn't have access to the actual module file, but SOS (like
     // the SymbolReader code) still needs a non-zero module size.
     return size != 0 ? size : LONG_MAX;
 }
@@ -1480,11 +1571,11 @@ LLDBServices::GetModuleSize(
 // IDebugSystemObjects
 //----------------------------------------------------------------------------
 
-HRESULT 
+HRESULT
 LLDBServices::GetCurrentProcessSystemId(
     PULONG sysId)
 {
-    if (sysId == NULL)  
+    if (sysId == NULL)
     {
         return E_INVALIDARG;
     }
@@ -1502,11 +1593,11 @@ LLDBServices::GetCurrentProcessSystemId(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetCurrentThreadId(
     PULONG id)
 {
-    if (id == NULL)  
+    if (id == NULL)
     {
         return E_INVALIDARG;
     }
@@ -1522,7 +1613,7 @@ LLDBServices::GetCurrentThreadId(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::SetCurrentThreadId(
     ULONG id)
 {
@@ -1540,11 +1631,11 @@ LLDBServices::SetCurrentThreadId(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetCurrentThreadSystemId(
     PULONG sysId)
 {
-    if (sysId == NULL)  
+    if (sysId == NULL)
     {
         return E_INVALIDARG;
     }
@@ -1560,13 +1651,13 @@ LLDBServices::GetCurrentThreadSystemId(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetThreadIdBySystemId(
     ULONG sysId,
     PULONG threadId)
 {
 
-    if (threadId == NULL)  
+    if (threadId == NULL)
     {
         return E_INVALIDARG;
     }
@@ -1582,7 +1673,7 @@ LLDBServices::GetThreadIdBySystemId(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetThreadContextBySystemId(
     /* in */ ULONG32 sysId,
     /* in */ ULONG32 contextFlags,
@@ -1769,7 +1860,7 @@ LLDBServices::GetContextFromFrame(
 }
 
 // Internal function
-DWORD_PTR 
+DWORD_PTR
 LLDBServices::GetRegister(
     /* const */ lldb::SBFrame& frame,
     const char *name)
@@ -1809,7 +1900,7 @@ LLDBServices::GetValueByName(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetInstructionOffset(
     PULONG64 offset)
 {
@@ -1824,7 +1915,7 @@ LLDBServices::GetInstructionOffset(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetStackOffset(
     PULONG64 offset)
 {
@@ -1839,7 +1930,7 @@ LLDBServices::GetStackOffset(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetFrameOffset(
     PULONG64 offset)
 {
@@ -1901,7 +1992,7 @@ LLDBServices::LoadNativeSymbols(
     }
 }
 
-HRESULT 
+HRESULT
 LLDBServices::LoadNativeSymbols(
     bool runtimeOnly,
     PFN_MODULE_LOAD_CALLBACK callback)
@@ -1919,7 +2010,7 @@ LLDBServices::LoadNativeSymbols(
             LoadNativeSymbols(target, module, callback);
         }
     }
-    else 
+    else
     {
         uint32_t numTargets = m_debugger.GetNumTargets();
         for (int ti = 0; ti < numTargets; ti++)
@@ -1939,7 +2030,7 @@ LLDBServices::LoadNativeSymbols(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::AddModuleSymbol(
     void* param,
     const char* symbolFileName)
@@ -1958,7 +2049,7 @@ HRESULT LLDBServices::GetModuleInfo(
     PULONG pTimestamp,
     PULONG pChecksum)
 {
-    lldb::SBTarget target; 
+    lldb::SBTarget target;
     lldb::SBModule module;
 
     target = m_debugger.GetSelectedTarget();
@@ -1997,7 +2088,7 @@ HRESULT LLDBServices::GetModuleInfo(
 
 #define VersionBufferSize 1024
 
-HRESULT 
+HRESULT
 LLDBServices::GetModuleVersionInformation(
     ULONG index,
     ULONG64 base,
@@ -2094,11 +2185,11 @@ LLDBServices::GetModuleVersionInformation(
 
 lldb::SBBreakpoint g_runtimeLoadedBp;
 
-bool 
+bool
 RuntimeLoadedBreakpointCallback(
-    void *baton, 
+    void *baton,
     lldb::SBProcess &process,
-    lldb::SBThread &thread, 
+    lldb::SBThread &thread,
     lldb::SBBreakpointLocation &location)
 {
     lldb::SBProcess* savedProcess = g_services->SetCurrentProcess(&process);
@@ -2126,7 +2217,7 @@ RuntimeLoadedBreakpointCallback(
     return result;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::SetRuntimeLoadedCallback(
     PFN_RUNTIME_LOADED_CALLBACK callback)
 {
@@ -2221,7 +2312,7 @@ public:
     }
 };
 
-HRESULT 
+HRESULT
 LLDBServices::AddCommand(
     PCSTR commandName,
     PCSTR help,
@@ -2234,12 +2325,12 @@ LLDBServices::AddCommand(
     }
     // Check if it is a lldb command or alias
     if (m_interpreter.CommandExists(commandName) || m_interpreter.AliasExists(commandName))
-    { 
+    {
         return E_PENDING;
     }
     // Check if it one of our user commands (the above functions don't see user commands)
     if (m_commands.find(commandName) != m_commands.end())
-    { 
+    {
         return E_PENDING;
     }
     ExtensionCommand* extensionCommand = new ExtensionCommand(commandName);
@@ -2270,20 +2361,31 @@ LLDBServices::OutputString(
     ULONG mask,
     PCSTR str)
 {
-    FILE* file;
-    if (mask == DEBUG_OUTPUT_ERROR)
+    if (m_currentResult != nullptr)
     {
-        file = m_debugger.GetErrorFileHandle();
+        // Write to the SBCommandReturnObject so programmatic callers
+        // (e.g. Python scripts using HandleCommand) can capture the output.
+        // Use Printf to avoid the extra newline that PutCString appends.
+        m_currentResult->Printf("%s", str);
     }
-    else 
+    else
     {
-        file = m_debugger.GetOutputFileHandle();
+        // No result object - write directly to the console file handles.
+        FILE* file;
+        if (mask == DEBUG_OUTPUT_ERROR)
+        {
+            file = m_debugger.GetErrorFileHandle();
+        }
+        else
+        {
+            file = m_debugger.GetOutputFileHandle();
+        }
+        fputs(str, file);
+        fflush(file);
     }
-    fputs(str, file);
-    fflush(file);
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetNumberThreads(
     PULONG number)
 {
@@ -2301,7 +2403,7 @@ LLDBServices::GetNumberThreads(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetThreadIdsByIndex(
     ULONG start,
     ULONG count,
@@ -2337,7 +2439,7 @@ LLDBServices::GetThreadIdsByIndex(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::SetCurrentThreadSystemId(
     ULONG sysId)
 {
@@ -2353,7 +2455,7 @@ LLDBServices::SetCurrentThreadSystemId(
     return S_OK;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetThreadTeb(
     ULONG sysId,
     PULONG64 pteb)
@@ -2361,7 +2463,7 @@ LLDBServices::GetThreadTeb(
     return E_NOTIMPL;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetSymbolPath(
     PSTR buffer,
     ULONG bufferSize,
@@ -2369,8 +2471,8 @@ LLDBServices::GetSymbolPath(
 {
     return E_NOTIMPL;
 }
- 
-HRESULT 
+
+HRESULT
 LLDBServices::GetSymbolByOffset(
     ULONG moduleIndex,
     ULONG64 offset,
@@ -2382,7 +2484,7 @@ LLDBServices::GetSymbolByOffset(
     return GetNameByOffset(moduleIndex, offset, nameBuffer, nameBufferSize, nameSize, displacement);
 }
 
-HRESULT 
+HRESULT
 LLDBServices::GetOffsetBySymbol(
     ULONG moduleIndex,
     PCSTR name,
@@ -2595,7 +2697,7 @@ LLDBServices::FlushCheck()
             Extensions::GetInstance()->FlushTarget();
         }
     }
-    else 
+    else
     {
         Extensions::GetInstance()->DestroyTarget();
         m_threadInfoInitialized = false;
@@ -2701,7 +2803,7 @@ LLDBServices::InitializeThreadInfo(lldb::SBProcess process)
 #endif
 }
 
-lldb::SBThread 
+lldb::SBThread
 LLDBServices::GetThreadBySystemId(
     ULONG sysId)
 {
@@ -2738,7 +2840,7 @@ exit:
     return thread;
 }
 
-void 
+void
 LLDBServices::AddThreadInfoEntry(uint32_t tid, uint32_t index)
 {
     // Make sure there is room in the thread infos vector
@@ -2751,13 +2853,13 @@ LLDBServices::AddThreadInfoEntry(uint32_t tid, uint32_t index)
     m_threadInfos[index - 1] = SpecialThreadInfoEntry{ tid, 0 };
 }
 
-uint32_t 
+uint32_t
 LLDBServices::GetProcessId(lldb::SBProcess process)
 {
     return m_processId != 0 ? m_processId : process.GetProcessID();
 }
 
-uint32_t 
+uint32_t
 LLDBServices::GetThreadId(lldb::SBThread thread)
 {
     uint32_t index = thread.GetIndexID() - 1;
@@ -2792,7 +2894,7 @@ LLDBServices::GetCurrentProcess()
     return process;
 }
 
-lldb::SBThread 
+lldb::SBThread
 LLDBServices::GetCurrentThread()
 {
     lldb::SBThread thread;
@@ -2813,7 +2915,7 @@ LLDBServices::GetCurrentThread()
     return thread;
 }
 
-lldb::SBFrame 
+lldb::SBFrame
 LLDBServices::GetCurrentFrame()
 {
     lldb::SBFrame frame;
@@ -2827,7 +2929,7 @@ LLDBServices::GetCurrentFrame()
     return frame;
 }
 
-void 
+void
 DummyFunction()
 {
 }
@@ -2894,9 +2996,9 @@ LLDBServices::GetVersionStringFromSection(lldb::SBTarget& target, lldb::SBSectio
 #define VersionLength 12
 static const char* g_versionString = "@(#)Version ";
 
-bool 
+bool
 LLDBServices::SearchVersionString(
-    uint64_t address, 
+    uint64_t address,
     int32_t size,
     char* versionBuffer,
     int versionBufferSize)
@@ -2907,7 +3009,7 @@ LLDBServices::SearchVersionString(
 
     ClearCache();
 
-    while (size > 0) 
+    while (size > 0)
     {
         result = ReadVirtualCache(address, buffer, VersionLength, &cbBytesRead);
         if (result && cbBytesRead >= VersionLength)
@@ -3040,7 +3142,7 @@ LLDBServices::ExecuteCommand(
         commandArguments.append(arg);
         commandArguments.append(" ");
     }
-    // Load and initialize the managed extensions and commands before we check the m_commands list. 
+    // Load and initialize the managed extensions and commands before we check the m_commands list.
     IHostServices* hostservices = GetHostServices();
 
     // If the command is a native SOS or managed extension command execute it through the lldb command added.
@@ -3058,7 +3160,7 @@ LLDBServices::ExecuteCommand(
         return true;
     }
 
-    // Fallback to dispatch it as a managed command for those commands that couldn't be added 
+    // Fallback to dispatch it as a managed command for those commands that couldn't be added
     // directly to the lldb interpreter because of existing commands or aliases.
     if (hostservices != nullptr)
     {
@@ -3075,7 +3177,7 @@ LLDBServices::ExecuteCommand(
     return false;
 }
 
-HRESULT 
+HRESULT
 LLDBServices::InternalOutputVaList(
     ULONG mask,
     PCSTR format,

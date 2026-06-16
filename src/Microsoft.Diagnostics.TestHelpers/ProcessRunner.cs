@@ -122,10 +122,8 @@ namespace Microsoft.Diagnostics.TestHelpers
             return this;
         }
 
-        // Remove COMPlus_ fallback once minimum supported runtime is .NET 8
         public ProcessRunner WithRuntimeConfiguration(string key, string value) =>
-            WithEnvironmentVariable($"DOTNET_{key}", value)
-            .WithEnvironmentVariable($"COMPlus_{key}", value);
+            WithEnvironmentVariable($"DOTNET_{key}", value);
 
         public ProcessRunner WithEnvironmentVariable(string key, string value)
         {

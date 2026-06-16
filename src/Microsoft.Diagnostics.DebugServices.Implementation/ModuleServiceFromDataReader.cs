@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -160,6 +161,30 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
             return modules;
+        }
+
+        public override IModule EntryPointModule
+        {
+            get
+            {
+                foreach (IModule module in ((IModuleService)this).EnumerateModules())
+                {
+                    if (Target.OperatingSystem == OSPlatform.Windows)
+                    {
+                        // The entry point module is not necessarily the first module in the sorted list of modules.
+                        if (module.FileName?.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            return module;
+                        }
+                    }
+                    else
+                    {
+                        // On non-Windows, assume the entry point module is the first module.
+                        return module;
+                    }
+                }
+                return null;
+            }
         }
     }
 }

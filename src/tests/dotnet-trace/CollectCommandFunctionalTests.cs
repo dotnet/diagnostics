@@ -12,12 +12,20 @@ using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Trace;
 using Microsoft.Internal.Common.Utils;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
     public class CollectCommandFunctionalTests
     {
         private const string ExpectedPayload = "CollectCommandFunctionalTestsTraceData";
+
+        private readonly ITestOutputHelper _outputHelper;
+
+        public CollectCommandFunctionalTests(ITestOutputHelper outputHelper)
+        {
+            _outputHelper = outputHelper;
+        }
 
         public sealed record CollectArgs(
             CancellationToken ct = default,
@@ -51,7 +59,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(BasicCases))]
         public async Task CollectCommandProviderConfigurationConsolidation(CollectArgs args, string[] expectedSubset)
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
             int exitCode = await RunAsync(args, console).ConfigureAwait(true);
             Assert.Equal((int)ReturnCode.Ok, exitCode);
             console.AssertSanitizedLinesEqual(CollectSanitizer, expectedSubset);
@@ -64,19 +72,36 @@ namespace Microsoft.Diagnostics.Tools.Trace
         [MemberData(nameof(InvalidProviders))]
         public async Task CollectCommandInvalidProviderConfiguration_Throws(CollectArgs args, string[] expectedException)
         {
-            MockConsole console = new(200, 30);
+            MockConsole console = new(200, 30, _outputHelper);
             int exitCode = await RunAsync(args, console).ConfigureAwait(true);
-            Assert.Equal((int)ReturnCode.TracingError, exitCode);
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
             console.AssertSanitizedLinesEqual(CollectSanitizer, expectedException);
         }
 
-        private static async Task<int> RunAsync(CollectArgs config, MockConsole console)
+        [Theory]
+        [MemberData(nameof(InvalidProcessSpecifierConfigurations))]
+        public async Task CollectCommand_InvalidProcessSpecifierConfigurations(CollectArgs args, bool childMode, string expectedError)
         {
-            var handler = new CollectCommandHandler();
+            MockConsole console = new(200, 30, _outputHelper);
+            int exitCode = await RunAsync(args, console, hasChildProcess: childMode).ConfigureAwait(true);
+
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            console.AssertSanitizedLinesEqual(CollectSanitizer, new[] { expectedError });
+        }
+
+        private static async Task<int> RunAsync(CollectArgs config, MockConsole console, bool hasChildProcess = false)
+        {
+            // Disable the interactive status-printing path. It is currently non-deterministic in these tests because the
+            // MemoryStream-backed session completes near-instantly, and whether the status line fires before the loop exits
+            // depends on thread scheduling. The MemoryStream substitution also means no trace file exists on disk, so
+            // FileInfo.Length in the status printer would throw.
+            console.IsOutputRedirected = true;
+
+            var handler = new CollectCommandHandler(console);
             handler.StartTraceSessionAsync = (client, cfg, ct) => Task.FromResult<CollectCommandHandler.ICollectSession>(new TestCollectSession());
             handler.ResumeRuntimeAsync = (client, ct) => Task.CompletedTask;
             handler.CollectSessionEventStream = (name) => config.EventStream;
-            handler.Console = console;
+            handler.HasChildProcess = () => hasChildProcess;
 
             return await handler.Collect(
                 config.ct,
@@ -101,6 +126,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 config.dsrouter
             ).ConfigureAwait(false);
         }
+
 
         private static string[] CollectSanitizer(string[] lines)
         {
@@ -251,6 +277,26 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 new CollectArgs(clrevents: "gc", clreventlevel: "unknown"),
                 new [] { FormatException("Unknown EventLevel: unknown") }
             };
+        }
+
+        public static IEnumerable<object[]> InvalidProcessSpecifierConfigurations()
+        {
+            const string childErrorMsg = "None of the --name, --process-id, or --diagnostic-port options may be specified when launching a child process.";
+            const string attachMissingMsg = "Must specify either --process-id, --name, --diagnostic-port, or --dsrouter.";
+            const string attachOnlyOneMsg = "Only one of the --name, --process-id, --diagnostic-port, or --dsrouter options may be specified.";
+
+            yield return new object[] { new CollectArgs(processId: 0, name: ""), false, FormatException(attachMissingMsg) };
+            yield return new object[] { new CollectArgs(processId: -5, name: ""), false, FormatException("-5 is not a valid process ID") };
+            yield return new object[] { new CollectArgs(processId: 1234, name: "foo"), false, FormatException(attachOnlyOneMsg) };
+            yield return new object[] { new CollectArgs(processId: 0, name: "foo", diagnosticPort: "socket"), false, FormatException(attachOnlyOneMsg) };
+            yield return new object[] { new CollectArgs(processId: 1234, name: "", diagnosticPort: "socket"), false, FormatException(attachOnlyOneMsg) };
+            yield return new object[] { new CollectArgs(processId: 0, name: "", dsrouter: "invalid"), false, FormatException("Invalid value for --dsrouter. Valid values are 'ios', 'ios-sim', 'android' and 'android-emu'.") };
+            yield return new object[] { new CollectArgs(processId: 0, name: "foo", dsrouter: "android"), false, FormatException(attachOnlyOneMsg) };
+
+            yield return new object[] { new CollectArgs(processId: 1234, name: ""), true, FormatException(childErrorMsg) };
+            yield return new object[] { new CollectArgs(processId: 0, name: "foo"), true, FormatException(childErrorMsg) };
+            yield return new object[] { new CollectArgs(processId: 0, name: "", diagnosticPort: "socket"), true, FormatException(childErrorMsg) };
+            yield return new object[] { new CollectArgs(processId: 1234, name: "foo", diagnosticPort: "socket"), true, FormatException(childErrorMsg) };
         }
 
         private static string outputFile = $"Output File    : {Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar}trace.nettrace";

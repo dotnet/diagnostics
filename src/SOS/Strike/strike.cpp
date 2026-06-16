@@ -790,10 +790,16 @@ DECLARE_API(DumpIL)
         }
         else
         {
+            if (IsNilToken(MethodDescData.MDToken))
+            {
+                ExtOut("This method has no IL body (e.g. IL stubs generated for P/Invoke or Reverse P/Invoke marshaling).\n");
+                return S_OK;
+            }
+
             GetILAddressResult result = GetILAddress(MethodDescData);
             if (std::get<0>(result) == (TADDR)0)
             {
-                ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
+                ExtOut("Unable to retrieve IL for this method (ilAddr is %p).\n", SOS_PTR(std::get<0>(result)));
                 return E_FAIL;
             }
             ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
@@ -1020,6 +1026,59 @@ DECLARE_API(DumpSigElem)
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
+*    Helper function to display class details (attributes, vtable      *
+*    slots, and fields).                                               *
+*                                                                      *
+\**********************************************************************/
+static void DisplayClassDetails(CLRDATA_ADDRESS methodTable, DacpMethodTableData *pMTData)
+{
+    ExtOut("Class Attributes:    %08x  ", pMTData->dwAttrClass);
+    if (IsTdInterface(pMTData->dwAttrClass))
+        ExtOut("Interface ");
+    if (IsTdAbstract(pMTData->dwAttrClass))
+        ExtOut("Abstract ");
+    if (IsTdImport(pMTData->dwAttrClass))
+        ExtOut("ComImport ");
+    if (IsTdSealed(pMTData->dwAttrClass))
+        ExtOut("Sealed ");
+    ExtOut("\n");
+
+    if (pMTData->wNumVirtuals != 0)
+    {
+        ExtOut("Vtable Slots:    %d\n", pMTData->wNumVirtuals);
+    }
+    if (pMTData->wNumVtableSlots != 0)
+    {
+        ExtOut("Total Method Slots:  %d\n", pMTData->wNumVtableSlots);
+    }
+
+    DacpMethodTableFieldData vMethodTableFields;
+    if (SUCCEEDED(vMethodTableFields.Request(g_sos, methodTable)))
+    {
+        ExtOut("NumInstanceFields:   %d\n", vMethodTableFields.wNumInstanceFields);
+        ExtOut("NumStaticFields:     %d\n", vMethodTableFields.wNumStaticFields);
+
+        if (vMethodTableFields.wNumThreadStaticFields != 0)
+        {
+            ExtOut("NumThreadStaticFields: %d\n", vMethodTableFields.wNumThreadStaticFields);
+        }
+
+        if (vMethodTableFields.wContextStaticsSize)
+        {
+            ExtOut("ContextStaticOffset: 0x%x\n", vMethodTableFields.wContextStaticOffset);
+            ExtOut("ContextStaticsSize:  %d\n", vMethodTableFields.wContextStaticsSize);
+        }
+
+        if (vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
+        {
+            DisplayFields(methodTable, pMTData, &vMethodTableFields, (TADDR)0, TRUE, FALSE);
+        }
+    }
+}
+
+/**********************************************************************\
+* Routine Description:                                                 *
+*                                                                      *
 *    This function is called to dump the contents of an EEClass from   *
 *    a given address
 *                                                                      *
@@ -1096,57 +1155,16 @@ DECLARE_API(DumpClass)
     }
     else
     {
-        DMLOut("Parent MethodTable: %s\n", DMLMethodTable(mtdata.ParentMethodTable));
+        DMLOut("Parent:    %s\n", DMLMethodTable(mtdata.ParentMethodTable));
     }
     DMLOut("Module:          %s\n", DMLModule(mtdata.Module));
     DMLOut("Method Table:    %s\n", DMLMethodTable(methodTable));
-    if (preferMT)
+    if (preferMT && methodTable != mtdata.Class)
     {
-        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtdata.Class));
+        DMLOut("Canonical:    %s\n", DMLMethodTable(mtdata.Class));
     }
-    if (mtdata.wNumVirtuals != 0)
-    {
-        ExtOut("Vtable Slots:    %x\n", mtdata.wNumVirtuals);
-    }
-    if (mtdata.wNumVtableSlots != 0)
-    {
-        ExtOut("Total Method Slots:  %x\n", mtdata.wNumVtableSlots);
-    }
-    ExtOut("Class Attributes:    %x  ", mtdata.dwAttrClass);
 
-    if (IsTdInterface(mtdata.dwAttrClass))
-        ExtOut("Interface, ");
-    if (IsTdAbstract(mtdata.dwAttrClass))
-        ExtOut("Abstract, ");
-    if (IsTdImport(mtdata.dwAttrClass))
-        ExtOut("ComImport, ");
-
-    ExtOut("\n");
-
-    DacpMethodTableFieldData vMethodTableFields;
-    if (SUCCEEDED(vMethodTableFields.Request(g_sos, methodTable)))
-    {
-        ExtOut("NumInstanceFields:   %x\n", vMethodTableFields.wNumInstanceFields);
-        ExtOut("NumStaticFields:     %x\n", vMethodTableFields.wNumStaticFields);
-
-        if (vMethodTableFields.wNumThreadStaticFields != 0)
-        {
-            ExtOut("NumThreadStaticFields: %x\n", vMethodTableFields.wNumThreadStaticFields);
-        }
-
-
-        if (vMethodTableFields.wContextStaticsSize)
-        {
-            ExtOut("ContextStaticOffset: %x\n", vMethodTableFields.wContextStaticOffset);
-            ExtOut("ContextStaticsSize:  %x\n", vMethodTableFields.wContextStaticsSize);
-        }
-
-
-        if (vMethodTableFields.wNumInstanceFields + vMethodTableFields.wNumStaticFields > 0)
-        {
-            DisplayFields(methodTable, &mtdata, &vMethodTableFields, (TADDR)0, TRUE, FALSE);
-        }
-    }
+    DisplayClassDetails(methodTable, &mtdata);
 
     return Status;
 }
@@ -1168,11 +1186,13 @@ DECLARE_API(DumpMT)
     MINIDUMP_NOT_SUPPORTED();
 
     BOOL bDumpMDTable = FALSE;
+    BOOL bDumpAll = FALSE;
     BOOL dml = FALSE;
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-MD", &bDumpMDTable, COBOOL, FALSE},
+        {"-all", &bDumpAll, COBOOL, FALSE},
         {"/d", &dml, COBOOL, FALSE}
     };
     CMDValue arg[] =
@@ -1187,6 +1207,9 @@ DECLARE_API(DumpMT)
 
     EnableDMLHolder dmlHolder(dml);
     TableOutput table(2, 20, AlignLeft, false);
+
+    if (bDumpAll)
+        bDumpMDTable = TRUE;
 
     if (nArg == 0)
     {
@@ -1215,13 +1238,25 @@ DECLARE_API(DumpMT)
     DacpMethodTableCollectibleData vMethTableCollectible;
     vMethTableCollectible.Request(g_sos, TO_CDADDR(dwStartAddr));
 
-    BOOL preferCanonMT = FALSE;
-    if (SUCCEEDED(PreferCanonMTOverEEClass(vMethTable.Class, &preferCanonMT)) && preferCanonMT)
+    // Check if runtime returns canonical MT instead of EEClass (.NET 9+)
+    BOOL runtimePrefersCanonMT = FALSE;
+    CLRDATA_ADDRESS canonicalMT = 0;
+    Status = PreferCanonMTOverEEClass(vMethTable.Class, &runtimePrefersCanonMT, &canonicalMT);
+
+    table.WriteRow("Parent:", DMLMethodTable(vMethTable.ParentMethodTable));
+
+    if (SUCCEEDED(Status) && runtimePrefersCanonMT)
     {
-        table.WriteRow("Canonical MethodTable:", EEClassPtr(vMethTable.Class));
+        // .NET 9+: vMethTable.Class contains canonical MT, not EEClass
+        // Only show "Canonical" if it differs from the current MT
+        if (canonicalMT != 0 && canonicalMT != TO_CDADDR(dwStartAddr))
+        {
+            table.WriteRow("Canonical:", DMLMethodTable(canonicalMT));
+        }
     }
     else
     {
+        // Legacy: vMethTable.Class contains EEClass
         table.WriteRow("EEClass:", EEClassPtr(vMethTable.Class));
     }
 
@@ -1263,9 +1298,9 @@ DECLARE_API(DumpMT)
     }
 
     table.WriteRow("BaseSize:", PrefixHex(vMethTable.BaseSize));
-    table.WriteRow("ComponentSize:", PrefixHex(vMethTable.ComponentSize));
-    table.WriteRow("DynamicStatics:", vMethTable.bIsDynamic ? "true" : "false");
-    table.WriteRow("ContainsPointers:", vMethTable.bContainsPointers ? "true" : "false");
+    if (vMethTable.ComponentSize != 0)
+        table.WriteRow("ComponentSize:", PrefixHex(vMethTable.ComponentSize));
+    table.WriteRow("Has GC Pointers:", vMethTable.bContainsPointers ? "true" : "false");
     table.WriteRow("Number of Methods:", Decimal(vMethTable.wNumMethods));
 
     table.SetColWidth(0, 29);
@@ -1282,7 +1317,7 @@ DECLARE_API(DumpMT)
 
         table.WriteRow("Entry", "MethodDesc", "JIT", "Slot", "Name");
 
-        ISOSMethodEnum *pMethodEnumerator;
+        ToRelease<ISOSMethodEnum> pMethodEnumerator;
         if (SUCCEEDED(g_sos15->GetMethodTableSlotEnumerator(dwStartAddr, &pMethodEnumerator)))
         {
             SOSMethodData entry;
@@ -1363,6 +1398,14 @@ DECLARE_API(DumpMT)
             }
         }
     }
+    // When -all is specified, include class details (similar to DumpClass output)
+    if (bDumpAll)
+    {
+        Print("--------------------------------------\n");
+        Print("Additional Details\n");
+
+        DisplayClassDetails(TO_CDADDR(dwStartAddr), &vMethTable);
+    }
     return Status;
 }
 
@@ -1381,13 +1424,24 @@ HRESULT PrintVC(TADDR taMT, TADDR taObject, BOOL bPrintFields = TRUE)
 
     ExtOut("Name:        %S\n", g_mdName);
     DMLOut("MethodTable: %s\n", DMLMethodTable(taMT));
-    BOOL preferCanonMT = FALSE;
-    if (SUCCEEDED(PreferCanonMTOverEEClass(TO_CDADDR(taMT), &preferCanonMT)) && preferCanonMT)
+
+    // Check if runtime returns canonical MT instead of EEClass (.NET 9+)
+    BOOL runtimePrefersCanonMT = FALSE;
+    CLRDATA_ADDRESS canonicalMT = 0;
+    Status = PreferCanonMTOverEEClass(mtabledata.Class, &runtimePrefersCanonMT, &canonicalMT);
+
+    if (SUCCEEDED(Status) && runtimePrefersCanonMT)
     {
-        DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
+        // .NET 9+: mtabledata.Class contains canonical MT, not EEClass
+        // Only show "Canonical" if it differs from the current MT
+        if (canonicalMT != 0 && canonicalMT != TO_CDADDR(taMT))
+        {
+            DMLOut("Canonical: %s\n", DMLMethodTable(canonicalMT));
+        }
     }
     else
     {
+        // Legacy: mtabledata.Class contains EEClass
         DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
     }
     ExtOut("Size:        %d(0x%x) bytes\n", size, size);
@@ -1478,23 +1532,10 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
     ExtOut("Name:        %S\n", obj.GetTypeName());
     DMLOut("MethodTable: %s\n", DMLMethodTable(objData.MethodTable));
 
-
     DacpMethodTableData mtabledata;
-    if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) == S_OK)
+    if ((Status=mtabledata.Request(g_sos,objData.MethodTable)) != S_OK)
     {
-        BOOL preferCanonMT = FALSE;
-        if (SUCCEEDED(PreferCanonMTOverEEClass(mtabledata.Class, &preferCanonMT)) && preferCanonMT)
-        {
-            DMLOut("Canonical MethodTable: %s\n", DMLClass(mtabledata.Class));
-        }
-        else
-        {
-            DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
-        }
-    }
-    else
-    {
-        ExtOut("Invalid EEClass address\n");
+        ExtOut("Invalid MethodTable address\n");
         return Status;
     }
 
@@ -1557,9 +1598,12 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         CLRDATA_ADDRESS objAddr = TO_CDADDR(taObj);
         BOOL isTrackedType;
         BOOL hasTaggedMemory;
-        if (SUCCEEDED(sos11->IsTrackedType(objAddr, &isTrackedType, &hasTaggedMemory)))
+        if (SUCCEEDED(sos11->IsTrackedType(objAddr, &isTrackedType, &hasTaggedMemory))
+            && (isTrackedType || hasTaggedMemory))
         {
-            ExtOut("Tracked Type: %s\n", isTrackedType ? "true" : "false");
+            if (isTrackedType)
+                ExtOut("Tracked Type: true\n");
+
             if (hasTaggedMemory)
             {
                 CLRDATA_ADDRESS taggedMemory = (TADDR)0;
@@ -1638,10 +1682,6 @@ HRESULT PrintObj(TADDR taObj, BOOL bPrintFields = TRUE)
         ExtOut("String:      ");
         StringObjectContent(taObj);
         ExtOut("\n");
-    }
-    else if (objData.ObjectType == OBJ_OBJECT)
-    {
-        ExtOut("Object\n");
     }
 
     if (bPrintFields)
@@ -3915,46 +3955,6 @@ DECLARE_API(RCWCleanupList)
 }
 #endif // FEATURE_COMINTEROP
 
-enum {
-    // These are the values set in m_dwTransientFlags.
-    // Note that none of these flags survive a prejit save/restore.
-
-    MODULE_IS_TENURED           = 0x00000001,   // Set once we know for sure the Module will not be freed until the appdomain itself exits
-    // unused                   = 0x00000002,
-    CLASSES_FREED               = 0x00000004,
-    IS_EDIT_AND_CONTINUE        = 0x00000008,   // is EnC Enabled for this module
-
-    IS_PROFILER_NOTIFIED        = 0x00000010,
-    IS_ETW_NOTIFIED             = 0x00000020,
-
-    //
-    // Note: the order of these must match the order defined in
-    // cordbpriv.h for DebuggerAssemblyControlFlags. The three
-    // values below should match the values defined in
-    // DebuggerAssemblyControlFlags when shifted right
-    // DEBUGGER_INFO_SHIFT bits.
-    //
-    DEBUGGER_USER_OVERRIDE_PRIV = 0x00000400,
-    DEBUGGER_ALLOW_JIT_OPTS_PRIV= 0x00000800,
-    DEBUGGER_TRACK_JIT_INFO_PRIV= 0x00001000,
-    DEBUGGER_ENC_ENABLED_PRIV   = 0x00002000,   // this is what was attempted to be set.  IS_EDIT_AND_CONTINUE is actual result.
-    DEBUGGER_PDBS_COPIED        = 0x00004000,
-    DEBUGGER_IGNORE_PDBS        = 0x00008000,
-    DEBUGGER_INFO_MASK_PRIV     = 0x0000Fc00,
-    DEBUGGER_INFO_SHIFT_PRIV    = 10,
-
-    // Used to indicate that this module has had it's IJW fixups properly installed.
-    IS_IJW_FIXED_UP             = 0x00080000,
-    IS_BEING_UNLOADED           = 0x00100000,
-
-    // Used to indicate that the module is loaded sufficiently for generic candidate instantiations to work
-    MODULE_READY_FOR_TYPELOAD  = 0x00200000,
-
-    // Used during NGen only
-    TYPESPECS_TRIAGED           = 0x40000000,
-    MODULE_SAVED                = 0x80000000,
-};
-
 void ModuleMapTraverse(UINT index, CLRDATA_ADDRESS methodTable, LPVOID token)
 {
     ULONG32 rid = (ULONG32)(size_t)token;
@@ -4022,6 +4022,8 @@ DECLARE_API(DumpModule)
         ExtOut("PEFile ");
     if (module.bIsReflection)
         ExtOut("Reflection ");
+    if (module.dwTransientFlags & DacpModuleData::IsEditAndContinue)
+        ExtOut("EditAndContinue ");
 
     ToRelease<IXCLRDataModule> dataModule;
     if (SUCCEEDED(g_sos->GetModule(TO_CDADDR(p_ModuleAddr), &dataModule)))
@@ -4037,11 +4039,6 @@ DECLARE_API(DumpModule)
                 ExtOut("IsFileLayout ");
         }
     }
-    ExtOut("\n");
-
-    ExtOut("TransientFlags:          %08x ", module.dwTransientFlags);
-    if (module.dwTransientFlags & IS_EDIT_AND_CONTINUE)
-        ExtOut("IS_EDIT_AND_CONTINUE");
     ExtOut("\n");
 
     DMLOut("Assembly:                %s\n", DMLAssembly(module.Assembly));
@@ -4205,14 +4202,17 @@ DECLARE_API(DumpDomain)
     }
 
     ExtOut("--------------------------------------\n");
-    DMLOut("System Domain:      %s\n", DMLDomain(adsData.systemDomain));
     DacpAppDomainData appDomain;
-    if ((Status=appDomain.Request(g_sos,adsData.systemDomain))!=S_OK)
+    if (adsData.systemDomain != (TADDR)0)
     {
-        ExtOut("Unable to get system domain info.\n");
-        return Status;
+        DMLOut("System Domain:      %s\n", DMLDomain(adsData.systemDomain));
+        if ((Status=appDomain.Request(g_sos,adsData.systemDomain))!=S_OK)
+        {
+            ExtOut("Unable to get system domain info.\n");
+            return Status;
+        }
+        DomainInfo(&appDomain);
     }
-    DomainInfo(&appDomain);
 
     if (adsData.sharedDomain != (TADDR)0)
     {
@@ -4411,10 +4411,9 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         }
 
         BOOL bSwitchedOutFiber = Thread.osThreadId == SWITCHED_OUT_FIBER_OSID;
+        ULONG id = 0;
         if (!IsKernelDebugger())
         {
-            ULONG id = 0;
-
             if (bSwitchedOutFiber)
             {
                 table.WriteColumn(0, "<<<< ");
@@ -4459,8 +4458,19 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
         // Apartment state
 #ifndef FEATURE_PAL
         DWORD_PTR OleTlsDataAddr;
-        if (IsWindowsTarget() && !bSwitchedOutFiber
-                && SafeReadMemory(TO_TADDR(Thread.teb + offsetof(TEB, ReservedForOle)),
+        ULONG64 teb = 0;
+        if (IsWindowsTarget() && !bSwitchedOutFiber && id != 0)
+        {
+            ULONG curId;
+            if (SUCCEEDED(g_ExtSystem->GetCurrentThreadId(&curId)) &&
+                SUCCEEDED(g_ExtSystem->SetCurrentThreadId(id)))
+            {
+                g_ExtSystem->GetCurrentThreadTeb(&teb);
+                g_ExtSystem->SetCurrentThreadId(curId);
+            }
+        }
+        if (teb != 0
+                && SafeReadMemory(TO_TADDR(teb + offsetof(TEB, ReservedForOle)),
                             &OleTlsDataAddr,
                             sizeof(OleTlsDataAddr), NULL) && OleTlsDataAddr != 0)
         {
@@ -4513,9 +4523,9 @@ HRESULT PrintThreadsFromThreadStore(BOOL bMiniDump, BOOL bPrintLiveThreadsOnly)
             if (SafeReadMemory(taLTOH, &taMT, sizeof(taMT), NULL))
             {
                 if (NameForMT_s(taMT, g_mdName, mdNameLen))
-                    lastCol += WString(g_mdName) + W(" ") + ExceptionPtr(taLTOH);
+                    lastCol += WString(g_mdName) + W(" ") + WString(ExceptionPtr(taLTOH));
                 else
-                    lastCol += WString(W("<Invalid Object> (")) + Pointer(taLTOH) + W(")");
+                    lastCol += WString(W("<Invalid Object> (")) + WString(Pointer(taLTOH)) + W(")");
 
                 // Print something if there are nested exceptions on the thread
                 if (Thread.firstNestedException)
@@ -7064,10 +7074,23 @@ DECLARE_API(u)
     DacpCodeHeaderData& codeHeaderData = std::get<1>(p);
     std::unique_ptr<CLRDATA_IL_ADDRESS_MAP[]> map(nullptr);
     ULONG32 mapCount = 0;
+    // GetIntermediateLangMap may fail for IL stubs or methods without IL address maps.
+    // Treat failure as non-fatal and proceed with native-only disassembly, but propagate
+    // OOM since that indicates a real problem.
     Status = GetIntermediateLangMap(bIL, codeHeaderData, map /*out*/, mapCount /* out */, bDisplayILMap);
-    if (Status != S_OK)
+    if (Status == E_OUTOFMEMORY)
     {
         return Status;
+    }
+    if (Status != S_OK)
+    {
+        if (bDisplayILMap || bIL)
+        {
+            ExtOut("Failed to get IL address map, proceeding without IL map\n");
+        }
+        map.reset();
+        mapCount = 0;
+        Status = S_OK;
     }
 
     // ///////////////////////////////////////////////////////////////////////////
@@ -7077,45 +7100,49 @@ DECLARE_API(u)
 
     if (MethodDescData.bIsDynamic && MethodDescData.managedDynamicMethodObject)
     {
-        ExtOut("Can only work with dynamic not implemented\n");
+        ExtOut("Disassembly of dynamic methods is not supported\n");
         return Status;
     }
 
-    GetILAddressResult result = GetILAddress(MethodDescData);
-    if (std::get<0>(result) == (TADDR)0)
-    {
-        ExtOut("ilAddr is %p\n", SOS_PTR(std::get<0>(result)));
-        return E_FAIL;
-    }
-    ExtOut("ilAddr is %p pImport is %p\n", SOS_PTR(std::get<0>(result)), SOS_PTR(std::get<1>(result)));
-    TADDR ilAddr = std::get<0>(result);
-    ToRelease<IMetaDataImport> pImport(std::get<1>(result));
+    // Only attempt IL retrieval when -il was requested.  IL stubs (e.g. P/Invoke
+    // marshalers) have a nil metadata token (0x06000000) and no IL body, so skip
+    // them even when -il is specified. Other failures are also non-fatal — we just
+    // fall back to native-only disassembly.
+    BOOL hasIL = FALSE;
+    TADDR ilAddr = (TADDR)0;
+    ULONG ilSize = 0;
+    ToRelease<IMetaDataImport> pImport;
+    ArrayHolder<BYTE> pArray(nullptr);
 
-    /// Taken from DecodeILFromAddress(IMetaDataImport *pImport, TADDR ilAddr)
-    ULONG Size = GetILSize(ilAddr);
-    if (Size == 0)
+    if (bIL && !IsNilToken(MethodDescData.MDToken))
     {
-        ExtOut("error decoding IL\n");
-        return Status;
+        GetILAddressResult result = GetILAddress(MethodDescData);
+        ilAddr = std::get<0>(result);
+        IMetaDataImport* pResultImport = std::get<1>(result);
+
+        if (ilAddr != (TADDR)0 && pResultImport != nullptr)
+        {
+            pImport = pResultImport;
+
+            ilSize = GetILSize(ilAddr);
+            if (ilSize != 0)
+            {
+                pArray = new BYTE[ilSize];
+                Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), pArray, ilSize, NULL);
+                if (Status == S_OK)
+                {
+                    hasIL = TRUE;
+                }
+            }
+        }
+        else
+        {
+            // Release any import that was returned even on failure
+            if (pResultImport != nullptr)
+                pResultImport->Release();
+        }
     }
-    // Read the memory into a local buffer
-    ArrayHolder<BYTE> pArray = new BYTE[Size];
-    Status = g_ExtData->ReadVirtual(TO_CDADDR(ilAddr), pArray, Size, NULL);
-    if (Status != S_OK)
-    {
-        ExtOut("Failed to read memory\n");
-        return Status;
-    }
-    /// Taken from DecodeIL(pImport, pArray, Size);
-    // First decode the header
-    BYTE *buffer = pArray;
-    ULONG bufSize = Size;
-    COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;
-    COR_ILMETHOD_DECODER header(pHeader);
-    ULONG position = 0;
-    BYTE* pBuffer = const_cast<BYTE*>(header.Code);
-    UINT indentCount = 0;
-    ULONG endCodePosition = header.GetCodeSize();
+
     struct ILLocationRange {
         ULONG mStartPosition;
         ULONG mEndPosition;
@@ -7124,75 +7151,102 @@ DECLARE_API(u)
     };
     std::deque<ILLocationRange> ilCodePositions;
 
-    if (mapCount > 0)
-    {
-        while (position < endCodePosition)
-        {
-            ULONG mapIndex = 0;
-            do
-            {
-                while ((mapIndex < mapCount) && (position != map[mapIndex].ilOffset))
-                {
-                    ++mapIndex;
-                }
-                if (map[mapIndex].endAddress > map[mapIndex].startAddress)
-                {
-                    break;
-                }
-                ++mapIndex;
-            } while (mapIndex < mapCount);
-            std::tuple<ULONG, UINT> r = DecodeILAtPosition(
-                pImport, pBuffer, bufSize,
-                position, indentCount, header);
-            ExtOut("\n");
-            if (mapIndex < mapCount)
-            {
-                ILLocationRange entry = {
-                    position,
-                    std::get<0>(r) - 1,
-                    (BYTE*)map[mapIndex].startAddress,
-                    (BYTE*)map[mapIndex].endAddress
-                };
-                ilCodePositions.push_back(std::move(entry));
-            }
-            else
-            {
-                if (!ilCodePositions.empty())
-                {
-                    auto& entry = ilCodePositions.back();
-                    entry.mEndPosition = position;
-                }
-            }
-            position = std::get<0>(r);
-            indentCount = std::get<1>(r);
-        }
-    }
+    // These must outlive the displayILFun lambda
+    BYTE *buffer = nullptr;
+    ULONG bufSize = 0;
+    COR_ILMETHOD_DECODER header;
+    BYTE* pBuffer = nullptr;
 
-    position = 0;
-    indentCount = 0;
-    std::function<void(ULONG*, UINT*, BYTE*)> displayILFun =
-        [&pImport, &pBuffer, bufSize, &header, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
-                                                BYTE *pIp) -> void {
-                for (auto iter = ilCodePositions.begin(); iter != ilCodePositions.end(); ++iter)
+    std::function<void(ULONG*, UINT*, BYTE*)> displayILFun;
+    if (hasIL)
+    {
+        buffer = pArray;
+        bufSize = ilSize;
+        COR_ILMETHOD *pHeader = (COR_ILMETHOD *) buffer;
+        header = COR_ILMETHOD_DECODER(pHeader);
+        pBuffer = const_cast<BYTE*>(header.Code);
+
+        if (mapCount > 0)
+        {
+            ULONG position = 0;
+            UINT indentCount = 0;
+            ULONG endCodePosition = header.GetCodeSize();
+
+            while (position < endCodePosition)
+            {
+                ULONG mapIndex = 0;
+                do
                 {
-                    if ((pIp >= iter->mStartAddress) && (pIp < iter->mEndAddress))
+                    while ((mapIndex < mapCount) && (position != map[mapIndex].ilOffset))
                     {
-                        ULONG position = iter->mStartPosition;
-                        ULONG endPosition = iter->mEndPosition;
-                        while (position <= endPosition)
-                        {
-                            std::tuple<ULONG, UINT> r = DecodeILAtPosition(
-                                pImport, pBuffer, bufSize,
-                                position, *pIndentCount, header);
-                            ExtOut("\n");
-                            position = std::get<0>(r);
-                            *pIndentCount = std::get<1>(r);
-                        }
-                        ilCodePositions.erase(iter);
+                        ++mapIndex;
+                    }
+                    if (mapIndex >= mapCount)
+                    {
                         break;
                     }
+                    if (map[mapIndex].endAddress > map[mapIndex].startAddress)
+                    {
+                        break;
+                    }
+                    ++mapIndex;
+                } while (mapIndex < mapCount);
+                std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                    pImport, pBuffer, bufSize,
+                    position, indentCount, header);
+                ExtOut("\n");
+                if (mapIndex < mapCount)
+                {
+                    ILLocationRange entry = {
+                        position,
+                        std::get<0>(r) - 1,
+                        (BYTE*)map[mapIndex].startAddress,
+                        (BYTE*)map[mapIndex].endAddress
+                    };
+                    ilCodePositions.push_back(std::move(entry));
                 }
-    };
+                else
+                {
+                    if (!ilCodePositions.empty())
+                    {
+                        auto& entry = ilCodePositions.back();
+                        entry.mEndPosition = position;
+                    }
+                }
+                position = std::get<0>(r);
+                indentCount = std::get<1>(r);
+            }
+        }
+
+        displayILFun =
+            [&pImport, &pBuffer, bufSize, &header, &ilCodePositions](ULONG *pPosition, UINT *pIndentCount,
+                                                    BYTE *pIp) -> void {
+                    for (auto iter = ilCodePositions.begin(); iter != ilCodePositions.end(); ++iter)
+                    {
+                        if ((pIp >= iter->mStartAddress) && (pIp < iter->mEndAddress))
+                        {
+                            ULONG position = iter->mStartPosition;
+                            ULONG endPosition = iter->mEndPosition;
+                            while (position <= endPosition)
+                            {
+                                std::tuple<ULONG, UINT> r = DecodeILAtPosition(
+                                    pImport, pBuffer, bufSize,
+                                    position, *pIndentCount, header);
+                                ExtOut("\n");
+                                position = std::get<0>(r);
+                                *pIndentCount = std::get<1>(r);
+                            }
+                            ilCodePositions.erase(iter);
+                            break;
+                        }
+                    }
+        };
+    }
+    else
+    {
+        // No IL available — provide a no-op so Unassembly can call unconditionally
+        displayILFun = [](ULONG*, UINT*, BYTE*) -> void {};
+    }
 
     if (codeHeaderData.ColdRegionStart != (TADDR)0)
     {
@@ -8429,226 +8483,6 @@ DECLARE_API (ProcInfo)
 }
 #endif // FEATURE_PAL
 
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to find the address of EE data for a      *
-*    metadata token.                                                   *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(Token2EE)
-{
-    INIT_API();
-    MINIDUMP_NOT_SUPPORTED();
-
-    StringHolder DllName;
-    ULONG64 token = 0;
-    BOOL dml = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-
-    CMDValue arg[] =
-    {   // vptr, type
-        {&DllName.data, COSTRING},
-        {&token, COHEX}
-    };
-
-    size_t nArg;
-    if (!GetCMDOption(args,option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return E_INVALIDARG;
-    }
-    if (nArg!=2)
-    {
-        ExtOut("Usage: %stoken2ee module_name mdToken\n", SOSPrefix);
-        ExtOut("       You can pass * for module_name to search all modules.\n");
-        return E_INVALIDARG;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-    int numModule;
-    ArrayHolder<DWORD_PTR> moduleList = NULL;
-
-    if (strcmp(DllName.data, "*") == 0)
-    {
-        moduleList = ModuleFromName(NULL, &numModule);
-    }
-    else
-    {
-        moduleList = ModuleFromName(DllName.data, &numModule);
-    }
-
-    if (moduleList == NULL)
-    {
-        ExtOut("Failed to request module list.\n");
-    }
-    else
-    {
-        for (int i = 0; i < numModule; i ++)
-        {
-            if (IsInterrupt())
-                break;
-
-            if (i > 0)
-            {
-                ExtOut("--------------------------------------\n");
-            }
-
-            DWORD_PTR dwAddr = moduleList[i];
-            WCHAR FileName[MAX_LONGPATH];
-            FileNameForModule(dwAddr, FileName);
-
-            // We'd like a short form for this output
-            LPCWSTR pszFilename = _wcsrchr (FileName, GetTargetDirectorySeparatorW());
-            if (pszFilename == NULL)
-            {
-                pszFilename = FileName;
-            }
-            else
-            {
-                pszFilename++; // skip past the last "\" character
-            }
-
-            DMLOut("Module:      %s\n", DMLModule(dwAddr));
-            ExtOut("Assembly:    %S\n", pszFilename);
-
-            GetInfoFromModule(dwAddr, (ULONG)token);
-        }
-    }
-
-    return Status;
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to find the address of EE data for a      *
-*    metadata token.                                                   *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(Name2EE)
-{
-    INIT_API_PROBE_MANAGED("name2ee");
-    MINIDUMP_NOT_SUPPORTED();
-
-    StringHolder DllName, TypeName;
-    BOOL dml = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-
-    CMDValue arg[] =
-    {   // vptr, type
-        {&DllName.data, COSTRING},
-        {&TypeName.data, COSTRING}
-    };
-    size_t nArg;
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return E_INVALIDARG;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-
-    if (nArg == 1)
-    {
-        // The input may be in the form <modulename>!<type>
-        // If so, do some surgery on the input params.
-
-        // There should be only 1 ! character
-        LPSTR pszSeperator = strchr (DllName.data, '!');
-        if (pszSeperator != NULL)
-        {
-            if (strchr (pszSeperator + 1, '!') == NULL)
-            {
-                size_t capacity_TypeName_data = strlen(pszSeperator + 1) + 1;
-                TypeName.data = new NOTHROW char[capacity_TypeName_data];
-                if (TypeName.data)
-                {
-                    // get the type name,
-                    strcpy_s (TypeName.data, capacity_TypeName_data, pszSeperator + 1);
-                    // and truncate DllName
-                    *pszSeperator = '\0';
-
-                    // Do some extra validation
-                    if (strlen (DllName.data) >= 1 &&
-                        strlen (TypeName.data) > 1)
-                    {
-                        nArg = 2;
-                    }
-                }
-            }
-        }
-    }
-
-    if (nArg != 2)
-    {
-        ExtOut("Usage: %sname2ee module_name item_name\n", SOSPrefix);
-        ExtOut("  or   %sname2ee module_name!item_name\n", SOSPrefix);
-        ExtOut("       use * for module_name to search all loaded modules\n");
-        ExtOut("Examples: %sname2ee  mscorlib.dll System.String.ToString\n", SOSPrefix);
-        ExtOut("          %sname2ee *!System.String\n", SOSPrefix);
-        return E_INVALIDARG;
-    }
-
-    int numModule;
-    ArrayHolder<DWORD_PTR> moduleList = NULL;
-    if (strcmp(DllName.data, "*") == 0)
-    {
-        moduleList = ModuleFromName(NULL, &numModule);
-    }
-    else
-    {
-        moduleList = ModuleFromName(DllName.data, &numModule);
-    }
-
-
-    if (moduleList == NULL)
-    {
-        ExtOut("Failed to request module list.\n", DllName.data);
-    }
-    else
-    {
-        for (int i = 0; i < numModule; i ++)
-        {
-            if (IsInterrupt())
-                break;
-
-            if (i > 0)
-            {
-                ExtOut("--------------------------------------\n");
-            }
-
-            DWORD_PTR dwAddr = moduleList[i];
-            WCHAR FileName[MAX_LONGPATH];
-            FileNameForModule (dwAddr, FileName);
-
-            // We'd like a short form for this output
-            LPCWSTR pszFilename = _wcsrchr (FileName, GetTargetDirectorySeparatorW());
-            if (pszFilename == NULL)
-            {
-                pszFilename = FileName;
-            }
-            else
-            {
-                pszFilename++; // skip past the last "\" character
-            }
-
-            DMLOut("Module:      %s\n", DMLModule(dwAddr));
-            ExtOut("Assembly:    %S\n", pszFilename);
-            GetInfoFromName(dwAddr, TypeName.data);
-        }
-    }
-
-    return Status;
-}
-
 DECLARE_API(FindRoots)
 {
     INIT_API();
@@ -8778,7 +8612,11 @@ public:
             if (adsData.Request(g_sos) != S_OK)
                 return FALSE;
 
-            LONG numSpecialDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
+            LONG numSpecialDomains = 0;
+            if (adsData.sharedDomain != (TADDR)0)
+                numSpecialDomains++;
+            if (adsData.systemDomain != (TADDR)0)
+                numSpecialDomains++;
             m_numDomains = adsData.DomainCount + numSpecialDomains;
             ArrayHolder<CLRDATA_ADDRESS> pArray = new NOTHROW CLRDATA_ADDRESS[m_numDomains];
             if (pArray == NULL)
@@ -8790,10 +8628,14 @@ public:
                 pArray[i++] = adsData.sharedDomain;
             }
 
-            pArray[i] = adsData.systemDomain;
-
             m_sharedDomainIndex = i - 1; // The m_sharedDomainIndex is set to -1 if there is no shared domain
-            m_systemDomainIndex = i;
+
+            if (adsData.systemDomain != (TADDR)0)
+            {
+                pArray[i] = adsData.systemDomain;
+                m_systemDomainIndex = i;
+                i++;
+            }
 
             if (g_sos->GetAppDomainList(adsData.DomainCount, pArray+numSpecialDomains, NULL) != S_OK)
                 return FALSE;
@@ -10942,7 +10784,10 @@ public:
                     out.WriteColumn(1, bFull ? String("") : NativePtr(ip));
 
                     // This is a clr!Frame.
-                    out.WriteColumn(2, GetFrameFromAddress(TO_TADDR(FrameData.frameAddr), pStackWalk, bFull));
+                    WString frameName = GetFrameFromAddress(TO_TADDR(FrameData.frameAddr), pStackWalk, bFull);
+                    if (IsDMLEnabled())
+                        frameName = DmlEscape(frameName);
+                    out.WriteColumn(2, frameName);
 
                     // Print out gc references for the Frame.
                     for (unsigned int i = 0; i < refCount; ++i)
@@ -10976,7 +10821,10 @@ public:
                     // The unmodified IP is displayed which points after the exception in most cases. This means that the
                     // printed IP and the printed line number often will not map to one another and this is intentional.
                     out.WriteColumn(1, InstructionPtr(ip));
-                    out.WriteColumn(2, MethodNameFromIP(ip, bSuppressLines, bFull, bFull, bAdjustIPForLineNumber));
+                    WString methodName = MethodNameFromIP(ip, bSuppressLines, bFull, bFull, bAdjustIPForLineNumber);
+                    if (IsDMLEnabled())
+                        methodName = DmlEscape(methodName);
+                    out.WriteColumn(2, methodName);
 
                     // Print out gc references.  refCount will be zero if bGC is false (or if we
                     // failed to fetch gc reference information).
@@ -11045,12 +10893,12 @@ public:
             foundPlatform = true;
             String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
             String outputFormat2 = "    %3s=%016llx %3s=%016llx\n";
-            ExtOut(outputFormat3, "rsp", context.Amd64Context.Rsp, "rbp", context.Amd64Context.Rbp, "rip", context.Amd64Context.Rip);
-            ExtOut(outputFormat3, "rax", context.Amd64Context.Rax, "rbx", context.Amd64Context.Rbx, "rcx", context.Amd64Context.Rcx);
-            ExtOut(outputFormat3, "rdx", context.Amd64Context.Rdx, "rsi", context.Amd64Context.Rsi, "rdi", context.Amd64Context.Rdi);
-            ExtOut(outputFormat3, "r8", context.Amd64Context.R8, "r9", context.Amd64Context.R9, "r10", context.Amd64Context.R10);
-            ExtOut(outputFormat3, "r11", context.Amd64Context.R11, "r12", context.Amd64Context.R12, "r13", context.Amd64Context.R13);
-            ExtOut(outputFormat2, "r14", context.Amd64Context.R14, "r15", context.Amd64Context.R15);
+            ExtOut(outputFormat3.c_str(), "rsp", context.Amd64Context.Rsp, "rbp", context.Amd64Context.Rbp, "rip", context.Amd64Context.Rip);
+            ExtOut(outputFormat3.c_str(), "rax", context.Amd64Context.Rax, "rbx", context.Amd64Context.Rbx, "rcx", context.Amd64Context.Rcx);
+            ExtOut(outputFormat3.c_str(), "rdx", context.Amd64Context.Rdx, "rsi", context.Amd64Context.Rsi, "rdi", context.Amd64Context.Rdi);
+            ExtOut(outputFormat3.c_str(), "r8", context.Amd64Context.R8, "r9", context.Amd64Context.R9, "r10", context.Amd64Context.R10);
+            ExtOut(outputFormat3.c_str(), "r11", context.Amd64Context.R11, "r12", context.Amd64Context.R12, "r13", context.Amd64Context.R13);
+            ExtOut(outputFormat2.c_str(), "r14", context.Amd64Context.R14, "r15", context.Amd64Context.R15);
         }
 #endif
 #if defined(SOS_TARGET_X86)
@@ -11059,9 +10907,9 @@ public:
             foundPlatform = true;
             String outputFormat3 = "    %3s=%08x %3s=%08x %3s=%08x\n";
             String outputFormat2 = "    %3s=%08x %3s=%08x\n";
-            ExtOut(outputFormat3, "esp", context.X86Context.Esp, "ebp", context.X86Context.Ebp, "eip", context.X86Context.Eip);
-            ExtOut(outputFormat3, "eax", context.X86Context.Eax, "ebx", context.X86Context.Ebx, "ecx", context.X86Context.Ecx);
-            ExtOut(outputFormat3, "edx", context.X86Context.Edx, "esi", context.X86Context.Esi, "edi", context.X86Context.Edi);
+            ExtOut(outputFormat3.c_str(), "esp", context.X86Context.Esp, "ebp", context.X86Context.Ebp, "eip", context.X86Context.Eip);
+            ExtOut(outputFormat3.c_str(), "eax", context.X86Context.Eax, "ebx", context.X86Context.Ebx, "ecx", context.X86Context.Ecx);
+            ExtOut(outputFormat3.c_str(), "edx", context.X86Context.Edx, "esi", context.X86Context.Esi, "edi", context.X86Context.Edi);
         }
 #endif
 #if defined(SOS_TARGET_ARM)
@@ -11071,13 +10919,13 @@ public:
             String outputFormat3 = "    %3s=%08x %3s=%08x %3s=%08x\n";
             String outputFormat2 = "    %s=%08x %s=%08x\n";
             String outputFormat1 = "    %s=%08x\n";
-            ExtOut(outputFormat3, "r0", context.ArmContext.R0, "r1", context.ArmContext.R1, "r2", context.ArmContext.R2);
-            ExtOut(outputFormat3, "r3", context.ArmContext.R3, "r4", context.ArmContext.R4, "r5", context.ArmContext.R5);
-            ExtOut(outputFormat3, "r6", context.ArmContext.R6, "r7", context.ArmContext.R7, "r8", context.ArmContext.R8);
-            ExtOut(outputFormat3, "r9", context.ArmContext.R9, "r10", context.ArmContext.R10, "r11", context.ArmContext.R11);
-            ExtOut(outputFormat1, "r12", context.ArmContext.R12);
-            ExtOut(outputFormat3, "sp", context.ArmContext.Sp, "lr", context.ArmContext.Lr, "pc", context.ArmContext.Pc);
-            ExtOut(outputFormat2, "cpsr", context.ArmContext.Cpsr, "fpscr", context.ArmContext.Fpscr);
+            ExtOut(outputFormat3.c_str(), "r0", context.ArmContext.R0, "r1", context.ArmContext.R1, "r2", context.ArmContext.R2);
+            ExtOut(outputFormat3.c_str(), "r3", context.ArmContext.R3, "r4", context.ArmContext.R4, "r5", context.ArmContext.R5);
+            ExtOut(outputFormat3.c_str(), "r6", context.ArmContext.R6, "r7", context.ArmContext.R7, "r8", context.ArmContext.R8);
+            ExtOut(outputFormat3.c_str(), "r9", context.ArmContext.R9, "r10", context.ArmContext.R10, "r11", context.ArmContext.R11);
+            ExtOut(outputFormat1.c_str(), "r12", context.ArmContext.R12);
+            ExtOut(outputFormat3.c_str(), "sp", context.ArmContext.Sp, "lr", context.ArmContext.Lr, "pc", context.ArmContext.Pc);
+            ExtOut(outputFormat2.c_str(), "cpsr", context.ArmContext.Cpsr, "fpscr", context.ArmContext.Fpscr);
         }
 #endif
 #if defined(SOS_TARGET_ARM64)
@@ -11103,17 +10951,17 @@ public:
         {
             foundPlatform = true;
             String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
-            ExtOut(outputFormat3, "r0", context.RiscV64Context.R0, "ra", context.RiscV64Context.Ra, "sp", context.RiscV64Context.Sp);
-            ExtOut(outputFormat3, "gp", context.RiscV64Context.Gp, "tp", context.RiscV64Context.Tp, "t0", context.RiscV64Context.T0);
-            ExtOut(outputFormat3, "t1", context.RiscV64Context.T1, "t2", context.RiscV64Context.T2, "fp", context.RiscV64Context.Fp);
-            ExtOut(outputFormat3, "s1", context.RiscV64Context.S1, "a0", context.RiscV64Context.A0, "a1", context.RiscV64Context.A1);
-            ExtOut(outputFormat3, "a2", context.RiscV64Context.A2, "a3", context.RiscV64Context.A3, "a4", context.RiscV64Context.A4);
-            ExtOut(outputFormat3, "a5", context.RiscV64Context.A5, "a6", context.RiscV64Context.A6, "a7", context.RiscV64Context.A7);
-            ExtOut(outputFormat3, "s2", context.RiscV64Context.S2, "s3", context.RiscV64Context.S3, "s4", context.RiscV64Context.S4);
-            ExtOut(outputFormat3, "s5", context.RiscV64Context.S5, "s6", context.RiscV64Context.S6, "s7", context.RiscV64Context.S7);
-            ExtOut(outputFormat3, "s8", context.RiscV64Context.S8, "s9", context.RiscV64Context.S9, "s10", context.RiscV64Context.S10);
-            ExtOut(outputFormat3, "s11", context.RiscV64Context.S11, "t3", context.RiscV64Context.T3, "t4", context.RiscV64Context.T4);
-            ExtOut(outputFormat3, "t5", context.RiscV64Context.T5, "t6", context.RiscV64Context.T6, "pc", context.RiscV64Context.Pc);
+            ExtOut(outputFormat3.c_str(), "r0", context.RiscV64Context.R0, "ra", context.RiscV64Context.Ra, "sp", context.RiscV64Context.Sp);
+            ExtOut(outputFormat3.c_str(), "gp", context.RiscV64Context.Gp, "tp", context.RiscV64Context.Tp, "t0", context.RiscV64Context.T0);
+            ExtOut(outputFormat3.c_str(), "t1", context.RiscV64Context.T1, "t2", context.RiscV64Context.T2, "fp", context.RiscV64Context.Fp);
+            ExtOut(outputFormat3.c_str(), "s1", context.RiscV64Context.S1, "a0", context.RiscV64Context.A0, "a1", context.RiscV64Context.A1);
+            ExtOut(outputFormat3.c_str(), "a2", context.RiscV64Context.A2, "a3", context.RiscV64Context.A3, "a4", context.RiscV64Context.A4);
+            ExtOut(outputFormat3.c_str(), "a5", context.RiscV64Context.A5, "a6", context.RiscV64Context.A6, "a7", context.RiscV64Context.A7);
+            ExtOut(outputFormat3.c_str(), "s2", context.RiscV64Context.S2, "s3", context.RiscV64Context.S3, "s4", context.RiscV64Context.S4);
+            ExtOut(outputFormat3.c_str(), "s5", context.RiscV64Context.S5, "s6", context.RiscV64Context.S6, "s7", context.RiscV64Context.S7);
+            ExtOut(outputFormat3.c_str(), "s8", context.RiscV64Context.S8, "s9", context.RiscV64Context.S9, "s10", context.RiscV64Context.S10);
+            ExtOut(outputFormat3.c_str(), "s11", context.RiscV64Context.S11, "t3", context.RiscV64Context.T3, "t4", context.RiscV64Context.T4);
+            ExtOut(outputFormat3.c_str(), "t5", context.RiscV64Context.T5, "t6", context.RiscV64Context.T6, "pc", context.RiscV64Context.Pc);
         }
 #endif
 #if defined(SOS_TARGET_LOONGARCH64)
@@ -11121,17 +10969,17 @@ public:
         {
             foundPlatform = true;
             String outputFormat3 = "    %3s=%016llx %3s=%016llx %3s=%016llx\n";
-            ExtOut(outputFormat3, "r0", context.LoongArch64Context.R0, "ra", context.LoongArch64Context.Ra, "tp", context.LoongArch64Context.Tp);
-            ExtOut(outputFormat3, "sp", context.LoongArch64Context.Sp, "a0", context.LoongArch64Context.A0, "a1", context.LoongArch64Context.A1);
-            ExtOut(outputFormat3, "a2", context.LoongArch64Context.A2, "a3", context.LoongArch64Context.A3, "a4", context.LoongArch64Context.A4);
-            ExtOut(outputFormat3, "a5", context.LoongArch64Context.A5, "a6", context.LoongArch64Context.A6, "a7", context.LoongArch64Context.A7);
-            ExtOut(outputFormat3, "t0", context.LoongArch64Context.T0, "t1", context.LoongArch64Context.T1, "t2", context.LoongArch64Context.T2);
-            ExtOut(outputFormat3, "t3", context.LoongArch64Context.T3, "t4", context.LoongArch64Context.T4, "t5", context.LoongArch64Context.T5);
-            ExtOut(outputFormat3, "t6", context.LoongArch64Context.T6, "t7", context.LoongArch64Context.T7, "t8", context.LoongArch64Context.T8);
-            ExtOut(outputFormat3, "x0", context.LoongArch64Context.X0, "fp", context.LoongArch64Context.Fp, "s0", context.LoongArch64Context.S0);
-            ExtOut(outputFormat3, "s1", context.LoongArch64Context.S1, "s2", context.LoongArch64Context.S2, "s3", context.LoongArch64Context.S3);
-            ExtOut(outputFormat3, "s4", context.LoongArch64Context.S4, "s5", context.LoongArch64Context.S5, "s6", context.LoongArch64Context.S6);
-            ExtOut(outputFormat3, "s7", context.LoongArch64Context.S7, "s8", context.LoongArch64Context.S8, "pc", context.LoongArch64Context.Pc);
+            ExtOut(outputFormat3.c_str(), "r0", context.LoongArch64Context.R0, "ra", context.LoongArch64Context.Ra, "tp", context.LoongArch64Context.Tp);
+            ExtOut(outputFormat3.c_str(), "sp", context.LoongArch64Context.Sp, "a0", context.LoongArch64Context.A0, "a1", context.LoongArch64Context.A1);
+            ExtOut(outputFormat3.c_str(), "a2", context.LoongArch64Context.A2, "a3", context.LoongArch64Context.A3, "a4", context.LoongArch64Context.A4);
+            ExtOut(outputFormat3.c_str(), "a5", context.LoongArch64Context.A5, "a6", context.LoongArch64Context.A6, "a7", context.LoongArch64Context.A7);
+            ExtOut(outputFormat3.c_str(), "t0", context.LoongArch64Context.T0, "t1", context.LoongArch64Context.T1, "t2", context.LoongArch64Context.T2);
+            ExtOut(outputFormat3.c_str(), "t3", context.LoongArch64Context.T3, "t4", context.LoongArch64Context.T4, "t5", context.LoongArch64Context.T5);
+            ExtOut(outputFormat3.c_str(), "t6", context.LoongArch64Context.T6, "t7", context.LoongArch64Context.T7, "t8", context.LoongArch64Context.T8);
+            ExtOut(outputFormat3.c_str(), "x0", context.LoongArch64Context.X0, "fp", context.LoongArch64Context.Fp, "s0", context.LoongArch64Context.S0);
+            ExtOut(outputFormat3.c_str(), "s1", context.LoongArch64Context.S1, "s2", context.LoongArch64Context.S2, "s3", context.LoongArch64Context.S3);
+            ExtOut(outputFormat3.c_str(), "s4", context.LoongArch64Context.S4, "s5", context.LoongArch64Context.S5, "s6", context.LoongArch64Context.S6);
+            ExtOut(outputFormat3.c_str(), "s7", context.LoongArch64Context.S7, "s8", context.LoongArch64Context.S8, "pc", context.LoongArch64Context.Pc);
         }
 #endif
 
@@ -11403,7 +11251,7 @@ private:
                     switch(tmp)
                     {
                         case 1: outVar = *((BYTE *)pByte.GetPtr()); break;
-                        case 2: outVar = *((short *)pByte.GetPtr()); break;
+                        case 2: outVar = *((unsigned short *)pByte.GetPtr()); break;
                         case 4: outVar = *((DWORD *)pByte.GetPtr()); break;
                         case 8: outVar = *((ULONG64 *)pByte.GetPtr()); break;
                         default: outVar = 0;
@@ -11495,7 +11343,7 @@ private:
                     switch(dwSize)
                     {
                         case 1: outVar = *((BYTE *) pByte.GetPtr()); break;
-                        case 2: outVar = *((short *) pByte.GetPtr()); break;
+                        case 2: outVar = *((unsigned short *) pByte.GetPtr()); break;
                         case 4: outVar = *((DWORD *) pByte.GetPtr()); break;
                         case 8: outVar = *((ULONG64 *) pByte.GetPtr()); break;
                         default: outVar = 0;

@@ -71,8 +71,8 @@ namespace RuntimeHostingConstants
     constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
         {9, 0},
         {8, 0},
-        {6, 0},
         {10, 0},
+        {11, 0},
     };
 
     constexpr char DotnetRootEnvVar[] = "DOTNET_ROOT";
@@ -146,7 +146,7 @@ private:
 
 public:
     bool Open(const char* directory)
-    { 
+    {
         m_directory = directory;
         m_dir = opendir(directory);
         if (m_dir == nullptr) {
@@ -184,7 +184,7 @@ public:
                     fullFilename.append(m_entry->d_name);
 
                     struct stat sb;
-                    if (stat(fullFilename.c_str(), &sb) == 0) 
+                    if (stat(fullFilename.c_str(), &sb) == 0)
                     {
                         if (S_ISREG(sb.st_mode) || S_ISDIR(sb.st_mode)) {
                             return true;
@@ -205,7 +205,7 @@ public:
         }
     }
 
-    bool IsDirectory() 
+    bool IsDirectory()
     {
         return m_entry->d_type == DT_DIR;
     }
@@ -246,7 +246,7 @@ public:
         }
     }
 
-    bool IsDirectory() 
+    bool IsDirectory()
     {
         return (m_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
     }
@@ -327,20 +327,13 @@ static std::string GetTpaListForRuntimeVersion(
     //       assembly version than the ones in the ones in the framework. The test could just
     //       have a list of assemblies we pack with the versions, and if we end up using a newer assembly
     //       fail the test and point to update this list.
-    //
-    //       There's currently no DLLs SOS requires that are of a higher version than those provided by
-    //       the supported host frameworks. In case it's needed, add: a section here before AddFilesFromDirectoryToTpaList.
-    // 
-    //           if (hostRuntimeVersion.Major < 5)
-    //           {
-    //               AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
-    //               ...
-    //           }
-
-    if (hostRuntimeVersion.Major > 0 && hostRuntimeVersion.Major < 8)
+    //       This is also not fully correct as it doesn't consider the patch version (i.e. a 10.0.3 host doesn't
+    //       satisfy a 10.0.7 requirement). The only correct fix is to look at the two lists and choose the highest version of each assembly.
+    if (hostRuntimeVersion.Major > 0 && hostRuntimeVersion.Major < 10)
     {
         AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
-        AddFileToTpaList(directory, "System.Reflection.Metadata.dll", tpaList);
+        AddFileToTpaList(directory, "System.Text.Json.dll", tpaList);
+        AddFileToTpaList(directory, "System.Text.Encodings.Web.dll", tpaList);
     }
 
     // Trust the runtime assemblies that are newer than the ones needed and provided by SOS's managed
@@ -379,7 +372,7 @@ static bool FindDotNetVersion(const RuntimeVersion& runtimeVersion, std::string&
                     }
                 }
             }
-        } 
+        }
         while (find.Next());
     }
 
@@ -467,7 +460,7 @@ struct ProbingStrategy
 
 /**********************************************************************\
  * Returns the path to the coreclr to use for hosting and it's
- * directory. Attempts to use the best installed version of the 
+ * directory. Attempts to use the best installed version of the
  * runtime, otherwise it defaults to the target's runtime version.
 \**********************************************************************/
 static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntimeDirectory, RuntimeVersion& hostRuntimeVersion)
@@ -669,7 +662,7 @@ static HRESULT InitializeNetCoreHost()
             return hr;
         }
     }
-    try 
+    try
     {
         hr = g_extensionsInitializeFunc(sosModulePath.c_str());
     }

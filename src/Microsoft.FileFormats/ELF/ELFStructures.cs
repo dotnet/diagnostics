@@ -110,7 +110,9 @@ namespace Microsoft.FileFormats.ELF
         Relocatable = 1,
         Executable = 2,
         Shared = 3,
-        Core = 4
+        Core = 4,
+        LowOS = 0xFE00,
+        HighOS = 0xFEFF
     }
 
     public class ELFHeader : ELFHeaderIdent

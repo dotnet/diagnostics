@@ -3,6 +3,7 @@
 ; See the LICENSE file in the project root for more information.
 
 bpmd
+clrma
 ClrStack
 dbgout
 DumpALC
@@ -38,7 +39,6 @@ HistObjFind
 HistRoot
 HistStats
 IP2MD
-Name2EE
 PrintException
 runtimes
 StopOnCatch
@@ -50,7 +50,6 @@ SuppressJitOptimization
 SyncBlk
 Threads
 ThreadState
-Token2EE
 u
 
 SOSInitializeByHost

@@ -20,8 +20,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
     {
         private bool stopTracing;
         private Stopwatch stopwatch = new();
-        private LineRewriter rewriter;
-        private bool printingStatus;
+        private ProgressWriter progressWriter;
+        private Version minRuntimeSupportingUserEventsIPCCommand = new(10, 0, 0);
+        private readonly bool cancelOnEnter;
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
@@ -31,12 +32,33 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string[] PerfEvents,
             string[] Profiles,
             FileInfo Output,
-            TimeSpan Duration);
+            TimeSpan Duration,
+            string Name,
+            int ProcessId,
+            bool Probe);
 
         public CollectLinuxCommandHandler(IConsole console = null)
         {
-            Console = console ?? new DefaultConsole(false);
-            rewriter = new LineRewriter(Console);
+            Console = console ?? new DefaultConsole();
+            cancelOnEnter = !Console.IsInputRedirected;
+            progressWriter = new ProgressWriter(Console, stopwatch);
+        }
+
+        internal static bool IsSupported()
+        {
+            bool isSupportedLinuxPlatform = false;
+            if (OperatingSystem.IsLinux())
+            {
+                isSupportedLinuxPlatform = true;
+                try
+                {
+                    string ostype = File.ReadAllText("/etc/os-release");
+                    isSupportedLinuxPlatform = !ostype.Contains("ID=alpine");
+                }
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException) {}
+            }
+
+            return isSupportedLinuxPlatform;
         }
 
         /// <summary>
@@ -45,9 +67,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// </summary>
         internal int CollectLinux(CollectLinuxArgs args)
         {
-            if (!OperatingSystem.IsLinux())
+            if (!IsSupported())
             {
-                Console.Error.WriteLine("The collect-linux command is only supported on Linux.");
+                Console.Error.WriteLine("The collect-linux command is not supported on this platform.");
+                Console.Error.WriteLine("For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace.");
                 return (int)ReturnCode.PlatformNotSupportedError;
             }
 
@@ -58,12 +81,39 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Console.WriteLine("https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-trace.");
             Console.WriteLine("==========================================================================================");
 
-            args.Ct.Register(() => stopTracing = true);
             int ret = (int)ReturnCode.TracingError;
             string scriptPath = null;
             try
             {
-                Console.CursorVisible = false;
+                if (args.Probe)
+                {
+                    ret = SupportsCollectLinux(args);
+                    return ret;
+                }
+
+                if (args.ProcessId != 0 || !string.IsNullOrEmpty(args.Name))
+                {
+                    CommandUtils.ResolveProcess(args.ProcessId, args.Name, out int resolvedProcessId, out string resolvedProcessName);
+                    UserEventsProbeResult probeResult = ProbeProcess(resolvedProcessId, out string detectedRuntimeVersion);
+                    switch (probeResult)
+                    {
+                        case UserEventsProbeResult.NotSupported:
+                            Console.Error.WriteLine($"[ERROR] Process '{resolvedProcessName} ({resolvedProcessId})' cannot be traced by collect-linux. Required runtime: {minRuntimeSupportingUserEventsIPCCommand}. Detected runtime: {detectedRuntimeVersion}");
+                            return (int)ReturnCode.TracingError;
+                        case UserEventsProbeResult.ConnectionFailed:
+                            Console.Error.WriteLine($"[ERROR] Unable to connect to process '{resolvedProcessName} ({resolvedProcessId})'. The process may have exited, or it doesn't have an accessible .NET diagnostic port.");
+                            return (int)ReturnCode.TracingError;
+                    }
+                    args = args with { Name = resolvedProcessName, ProcessId = resolvedProcessId };
+                }
+
+                args.Ct.Register(() => stopTracing = true);
+
+                if (!Console.IsOutputRedirected)
+                {
+                    Console.CursorVisible = false;
+                }
+
                 byte[] command = BuildRecordTraceArgs(args, out scriptPath);
 
                 if (args.Duration != default)
@@ -79,10 +129,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 stopwatch.Start();
                 ret = RecordTraceInvoker(command, (UIntPtr)command.Length, OutputHandler);
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                Console.Error.WriteLine($"[ERROR] {e.Message}");
-                ret = (int)ReturnCode.TracingError;
+                Console.Error.WriteLine($"[ERROR] {dte.Message}");
+                ret = (int)dte.ReturnCode;
+            }
+            catch (DllNotFoundException dnfe)
+            {
+                Console.Error.WriteLine($"[ERROR] Could not find or load dependencies for collect-linux. For requirements, please visit https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-trace");
+                Console.Error.WriteLine($"[ERROR] {dnfe.Message}");
+                ret = (int)ReturnCode.PlatformNotSupportedError;
             }
             catch (Exception ex)
             {
@@ -91,6 +147,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             finally
             {
+                if (!Console.IsOutputRedirected)
+                {
+                    Console.CursorVisible = true;
+                }
+
                 if (!string.IsNullOrEmpty(scriptPath))
                 {
                     try
@@ -114,12 +175,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.CLREventLevelOption,
                 CommonOptions.CLREventsOption,
                 PerfEventsOption,
+                ProbeOption,
                 CommonOptions.ProfileOption,
                 CommonOptions.OutputPathOption,
                 CommonOptions.DurationOption,
+                CommonOptions.NameOption,
+                CommonOptions.ProcessIdOption,
             };
             collectLinuxCommand.TreatUnmatchedTokensAsErrors = true; // collect-linux currently does not support child process tracing.
-            collectLinuxCommand.Description = "Collects diagnostic traces using perf_events, a Linux OS technology. collect-linux requires admin privileges to capture kernel- and user-mode events, and by default, captures events from all processes. This Linux-only command includes the same .NET events as dotnet-trace collect, and it uses the kernel’s user_events mechanism to emit .NET events as perf events, enabling unification of user-space .NET events with kernel-space system events.";
+            collectLinuxCommand.Description = "Collects diagnostic traces using perf_events, a Linux OS technology. collect-linux requires admin privileges to capture kernel- and user-mode events, and by default, captures events from all processes. This Linux-only command includes the same .NET events as dotnet-trace collect, and it uses the kernel’s user_events mechanism to emit .NET events as perf events, enabling unification of user-space .NET events with kernel-space system events. Use --probe (optionally with -p|--process-id or -n|--name) to only check which processes can be traced by collect-linux without collecting a trace.";
 
             collectLinuxCommand.SetAction((parseResult, ct) => {
                 string providersValue = parseResult.GetValue(CommonOptions.ProvidersOption) ?? string.Empty;
@@ -135,11 +199,227 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     PerfEvents: perfEventsValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Profiles: profilesValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Output: parseResult.GetValue(CommonOptions.OutputPathOption) ?? new FileInfo(CommonOptions.DefaultTraceName),
-                    Duration: parseResult.GetValue(CommonOptions.DurationOption)));
+                    Duration: parseResult.GetValue(CommonOptions.DurationOption),
+                    Name: parseResult.GetValue(CommonOptions.NameOption) ?? string.Empty,
+                    ProcessId: parseResult.GetValue(CommonOptions.ProcessIdOption),
+                    Probe: parseResult.GetValue(ProbeOption)));
                 return Task.FromResult(rc);
             });
 
             return collectLinuxCommand;
+        }
+
+        internal int SupportsCollectLinux(CollectLinuxArgs args)
+        {
+            int ret;
+            try
+            {
+                ProbeOutputMode mode = DetermineProbeOutputMode(args.Output.Name);
+                bool generateCsv = mode == ProbeOutputMode.CsvToConsole || mode == ProbeOutputMode.Csv;
+                StringBuilder supportedCsv = generateCsv ? new StringBuilder() : null;
+                StringBuilder unsupportedCsv = generateCsv ? new StringBuilder() : null;
+                StringBuilder unknownCsv = generateCsv ? new StringBuilder() : null;
+
+                if (args.ProcessId != 0 || !string.IsNullOrEmpty(args.Name))
+                {
+                    CommandUtils.ResolveProcess(args.ProcessId, args.Name, out int resolvedPid, out string resolvedName);
+                    UserEventsProbeResult probeResult = ProbeProcess(resolvedPid, out string detectedRuntimeVersion);
+                    BuildProcessSupportCsv(resolvedPid, resolvedName, probeResult, supportedCsv, unsupportedCsv, unknownCsv);
+
+                    if (mode == ProbeOutputMode.Console)
+                    {
+                        switch (probeResult)
+                        {
+                            case UserEventsProbeResult.Supported:
+                                Console.WriteLine($".NET process '{resolvedName} ({resolvedPid})' supports the EventPipe UserEvents IPC command used by collect-linux.");
+                                break;
+                            case UserEventsProbeResult.NotSupported:
+                                Console.WriteLine($".NET process '{resolvedName} ({resolvedPid})' does NOT support the EventPipe UserEvents IPC command used by collect-linux.");
+                                Console.WriteLine($"Required runtime: '{minRuntimeSupportingUserEventsIPCCommand}'. Detected runtime: '{detectedRuntimeVersion}'.");
+                                break;
+                            case UserEventsProbeResult.ConnectionFailed:
+                                Console.WriteLine($"Could not probe process '{resolvedName} ({resolvedPid})'. The process may have exited, or it doesn't have an accessible .NET diagnostic port.");
+                                break;
+                        }
+                    }
+                }
+                else
+                {
+                    if (mode == ProbeOutputMode.Console)
+                    {
+                        Console.WriteLine($"Probing .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux. Requires runtime '{minRuntimeSupportingUserEventsIPCCommand}' or later.");
+                    }
+                    StringBuilder supportedProcesses = new();
+                    StringBuilder unsupportedProcesses = new();
+                    StringBuilder unknownProcesses = new();
+
+                    GetAndProbeAllProcesses(supportedProcesses, unsupportedProcesses, unknownProcesses, supportedCsv, unsupportedCsv, unknownCsv);
+
+                    if (mode == ProbeOutputMode.Console)
+                    {
+                        Console.WriteLine($".NET processes that support the command:");
+                        Console.WriteLine(supportedProcesses.ToString());
+                        Console.WriteLine($".NET processes that do NOT support the command:");
+                        Console.WriteLine(unsupportedProcesses.ToString());
+                        if (unknownProcesses.Length > 0)
+                        {
+                            Console.WriteLine($".NET processes that could not be probed:");
+                            Console.WriteLine(unknownProcesses.ToString());
+                        }
+                    }
+                }
+
+                if (mode == ProbeOutputMode.CsvToConsole)
+                {
+                    Console.WriteLine("pid,processName,supportsCollectLinux");
+                    Console.Write(supportedCsv.ToString());
+                    Console.Write(unsupportedCsv.ToString());
+                    Console.Write(unknownCsv.ToString());
+                }
+
+                if (mode == ProbeOutputMode.Csv)
+                {
+                    using StreamWriter writer = new(args.Output.FullName, append: false, Encoding.UTF8);
+                    writer.WriteLine("pid,processName,supportsCollectLinux");
+                    writer.Write(supportedCsv.ToString());
+                    writer.Write(unsupportedCsv.ToString());
+                    writer.Write(unknownCsv.ToString());
+                    Console.WriteLine($"Successfully wrote EventPipe UserEvents IPC command support results to '{args.Output.FullName}'.");
+                }
+
+                ret = (int)ReturnCode.Ok;
+            }
+            catch (DiagnosticToolException dte)
+            {
+                Console.WriteLine($"[ERROR] {dte.Message}");
+                ret = (int)ReturnCode.ArgumentError;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex);
+                ret = (int)ReturnCode.UnknownError;
+            }
+
+            return ret;
+        }
+
+        private static ProbeOutputMode DetermineProbeOutputMode(string outputName)
+        {
+            if (string.Equals(outputName, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
+            {
+                return ProbeOutputMode.Console;
+            }
+            if (string.Equals(outputName, "stdout", StringComparison.OrdinalIgnoreCase))
+            {
+                return ProbeOutputMode.CsvToConsole;
+            }
+            return ProbeOutputMode.Csv;
+        }
+
+        /// <summary>
+        /// Probes a resolved process for UserEvents support. Returns ConnectionFailed when unable to
+        /// connect to the .NET diagnostic port (e.g. process exited between discovery and probe).
+        /// Callers must resolve the PID/name before calling this method.
+        /// </summary>
+        private UserEventsProbeResult ProbeProcess(int resolvedPid, out string detectedRuntimeVersion)
+        {
+            detectedRuntimeVersion = string.Empty;
+
+            try
+            {
+                DiagnosticsClient client = new(resolvedPid);
+                ProcessInfo processInfo = client.GetProcessInfo();
+                detectedRuntimeVersion = processInfo.ClrProductVersionString;
+                if (processInfo.TryGetProcessClrVersion(out Version version, out bool isPrerelease) &&
+                    (version > minRuntimeSupportingUserEventsIPCCommand ||
+                    (version == minRuntimeSupportingUserEventsIPCCommand && !isPrerelease)))
+                {
+                    return UserEventsProbeResult.Supported;
+                }
+                return UserEventsProbeResult.NotSupported;
+            }
+            catch (ServerNotAvailableException)
+            {
+                return UserEventsProbeResult.ConnectionFailed;
+            }
+            catch (IOException)
+            {
+                // Process exited mid-response (e.g. "Connection reset by peer" during IPC read).
+                return UserEventsProbeResult.ConnectionFailed;
+            }
+            catch (UnsupportedCommandException)
+            {
+                // can be thrown from an older runtime that doesn't even support GetProcessInfo
+                // treat as NotSupported instead of propagating the exception.
+                return UserEventsProbeResult.NotSupported;
+            }
+        }
+
+        /// <summary>
+        /// Gets all published processes and probes them for UserEvents support.
+        /// </summary>
+        private void GetAndProbeAllProcesses(StringBuilder supportedProcesses, StringBuilder unsupportedProcesses, StringBuilder unknownProcesses,
+            StringBuilder supportedCsv, StringBuilder unsupportedCsv, StringBuilder unknownCsv)
+        {
+            IEnumerable<int> pids = DiagnosticsClient.GetPublishedProcesses();
+            foreach (int pid in pids)
+            {
+                if (pid == Environment.ProcessId)
+                {
+                    continue;
+                }
+
+                // Resolve name before probing: a process that exits after probing is untraceable
+                // regardless of its probe result, so knowing the name for the failure message
+                // is more valuable than knowing the probe result without a name.
+                string processName;
+                try
+                {
+                    processName = Process.GetProcessById(pid).ProcessName;
+                }
+                catch (ArgumentException)
+                {
+                    // Process exited between discovery and name resolution, no need to report these.
+                    continue;
+                }
+
+                UserEventsProbeResult probeResult = ProbeProcess(pid, out string detectedRuntimeVersion);
+                BuildProcessSupportCsv(pid, processName, probeResult, supportedCsv, unsupportedCsv, unknownCsv);
+                switch (probeResult)
+                {
+                    case UserEventsProbeResult.Supported:
+                        supportedProcesses?.AppendLine($"{pid} {processName}");
+                        break;
+                    case UserEventsProbeResult.NotSupported:
+                        unsupportedProcesses?.AppendLine($"{pid} {processName} - Detected runtime: '{detectedRuntimeVersion}'");
+                        break;
+                    case UserEventsProbeResult.ConnectionFailed:
+                        unknownProcesses?.AppendLine($"{pid} {processName} - Process may have exited, or it doesn't have an accessible .NET diagnostic port");
+                        break;
+                }
+            }
+        }
+
+        private static void BuildProcessSupportCsv(int resolvedPid, string resolvedName, UserEventsProbeResult probeResult, StringBuilder supportedCsv, StringBuilder unsupportedCsv, StringBuilder unknownCsv)
+        {
+            if (supportedCsv == null && unsupportedCsv == null && unknownCsv == null)
+            {
+                return;
+            }
+
+            string escapedName = (resolvedName ?? string.Empty).Replace(",", string.Empty);
+            switch (probeResult)
+            {
+                case UserEventsProbeResult.Supported:
+                    supportedCsv?.AppendLine($"{resolvedPid},{escapedName},true");
+                    break;
+                case UserEventsProbeResult.NotSupported:
+                    unsupportedCsv?.AppendLine($"{resolvedPid},{escapedName},false");
+                    break;
+                case UserEventsProbeResult.ConnectionFailed:
+                    unknownCsv?.AppendLine($"{resolvedPid},{escapedName},unknown");
+                    break;
+            }
         }
 
         private byte[] BuildRecordTraceArgs(CollectLinuxArgs args, out string scriptPath)
@@ -174,6 +454,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
 
                 scriptBuilder.Append($"let {providerNameSanitized}_flags = new_dotnet_provider_flags();\n");
+                scriptBuilder.Append($"{providerNameSanitized}_flags.with_callstacks();\n");
                 scriptBuilder.Append($"record_dotnet_provider(\"{providerName}\", 0x{keywords:X}, {eventLevel}, {providerNameSanitized}_flags);\n\n");
             }
 
@@ -197,7 +478,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 string[] split = perfEvent.Split(':', 2, StringSplitOptions.TrimEntries);
                 if (split.Length != 2 || string.IsNullOrEmpty(split[0]) || string.IsNullOrEmpty(split[1]))
                 {
-                    throw new CommandLineErrorException($"Invalid perf event specification '{perfEvent}'. Expected format 'provider:event'.");
+                    throw new DiagnosticToolException($"Invalid perf event specification '{perfEvent}'. Expected format 'provider:event'.");
                 }
 
                 string perfProvider = split[0];
@@ -220,7 +501,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
             Console.WriteLine();
 
-            FileInfo resolvedOutput = ResolveOutputPath(args.Output);
+            int pid = args.ProcessId;
+            if (pid > 0)
+            {
+                recordTraceArgs.Add($"--pid");
+                recordTraceArgs.Add($"{pid}");
+            }
+
+            FileInfo resolvedOutput = ResolveOutputPath(args.Output, args.Name);
             recordTraceArgs.Add($"--out");
             recordTraceArgs.Add(resolvedOutput.FullName);
             Console.WriteLine($"Output File    : {resolvedOutput.FullName}");
@@ -237,15 +525,21 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return Encoding.UTF8.GetBytes(options);
         }
 
-        private static FileInfo ResolveOutputPath(FileInfo output)
+        private static FileInfo ResolveOutputPath(FileInfo output, string processName)
         {
             if (!string.Equals(output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
             {
                 return output;
             }
 
+            string traceName = "trace";
+            if (!string.IsNullOrEmpty(processName))
+            {
+                traceName = processName;
+            }
+
             DateTime now = DateTime.Now;
-            return new FileInfo($"trace_{now:yyyyMMdd}_{now:HHmmss}.nettrace");
+            return new FileInfo($"{traceName}_{now:yyyyMMdd}_{now:HHmmss}.nettrace");
         }
 
         private int OutputHandler(uint type, IntPtr data, UIntPtr dataLen)
@@ -269,24 +563,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 }
             }
 
+            if (cancelOnEnter && Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
+            {
+                stopTracing = true;
+            }
+
             if (ot == OutputType.Progress)
             {
-                if (printingStatus)
-                {
-                    rewriter.RewriteConsoleLine();
-                }
-                else
-                {
-                    printingStatus = true;
-                    rewriter.LineToClear = Console.CursorTop - 1;
-                }
-                Console.Out.WriteLine($"[{stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace.");
-                Console.Out.WriteLine("Press <Enter> or <Ctrl-C> to exit...");
-
-                if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
-                {
-                    stopTracing = true;
-                }
+                progressWriter.Update();
             }
 
             return stopTracing ? 1 : 0;
@@ -297,6 +581,26 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 Description = @"Comma-separated list of perf events (e.g. syscalls:sys_enter_execve,sched:sched_switch)."
             };
+
+        private static readonly Option<bool> ProbeOption =
+            new("--probe")
+            {
+                Description = "Probe .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux, without collecting a trace. Results are categorized as supported, not supported, or unknown (when the process doesn't have an accessible .NET diagnostic port). Use '-o stdout' to print CSV (pid,processName,supportsCollectLinux) to the console, or '-o <file>' to write the CSV. Probe a single process with -n|--name or -p|--process-id.",
+            };
+
+        private enum ProbeOutputMode
+        {
+            Console,
+            Csv,
+            CsvToConsole,
+        }
+
+        private enum UserEventsProbeResult
+        {
+            Supported,
+            NotSupported,
+            ConnectionFailed,
+        }
 
         private enum OutputType : uint
         {
@@ -317,6 +621,84 @@ namespace Microsoft.Diagnostics.Tools.Trace
             byte[] command,
             UIntPtr commandLen,
             recordTraceCallback callback);
+
+        /// <summary>
+        /// Encapsulates progress display for the native record-trace callback.
+        /// Probes console capability on the first Update() call, then handles throttled
+        /// in-place rewrites (interactive), a single static message (non-interactive),
+        /// or silent no-op (output redirected).
+        /// </summary>
+        private sealed class ProgressWriter
+        {
+            private readonly IConsole _console;
+            private readonly Stopwatch _stopwatch;
+            private bool _initialized;
+            // Non-null after initialization only when in-place rewriting is supported.
+            private LineRewriter _rewriter;
+            private long _nextUpdateTimestamp;
+
+            public ProgressWriter(IConsole console, Stopwatch stopwatch)
+            {
+                _console = console;
+                _stopwatch = stopwatch;
+            }
+
+            /// <summary>
+            /// Called on each Progress callback from native record-trace.
+            /// No-ops if output is redirected, non-interactive, or within the 1-second throttle window.
+            /// </summary>
+            public void Update()
+            {
+                if (!_initialized)
+                {
+                    Initialize();
+                }
+
+                if (_rewriter == null)
+                {
+                    return;
+                }
+
+                long now = Stopwatch.GetTimestamp();
+                if (_nextUpdateTimestamp != 0 && now < _nextUpdateTimestamp)
+                {
+                    return;
+                }
+
+                if (_nextUpdateTimestamp != 0)
+                {
+                    _rewriter.RewriteConsoleLine();
+                }
+
+                _nextUpdateTimestamp = now + Stopwatch.Frequency;
+                _console.Out.WriteLine($"[{_stopwatch.Elapsed:dd\\:hh\\:mm\\:ss}]\tRecording trace.");
+                _console.Out.WriteLine("Press <Enter> or <Ctrl+C> to exit...");
+            }
+
+            private void Initialize()
+            {
+                _initialized = true;
+
+                if (_console.IsOutputRedirected)
+                {
+                    return;
+                }
+
+                // Only capture the cursor position to rewrite once we've committed to writing progress output,
+                // otherwise the position becomes stale the moment any other console output occurs.
+                LineRewriter rewriter = new(_console);
+                rewriter.LineToClear = _console.CursorTop - 1;
+
+                if (rewriter.LineToClear >= 0 && rewriter.IsRewriteConsoleLineSupported)
+                {
+                    _rewriter = rewriter;
+                }
+                else
+                {
+                    _console.Out.WriteLine("Recording trace in progress. Press <Enter> or <Ctrl+C> to exit...");
+                }
+            }
+        }
 
 #region testing seams
         internal Func<byte[], UIntPtr, recordTraceCallback, int> RecordTraceInvoker { get; set; } = RunRecordTrace;

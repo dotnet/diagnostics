@@ -8,6 +8,7 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace SOS.Hosting
 {
+    [Command(Name = "clrma",             DefaultOptions = "clrma",               Hidden = true, Help = "Diagnostic that drives the CLRMA provider used by Watson/!analyze and prints the managed thread and exception analysis. Primarily for validating the CLRMA path; not a general triage command.")]
     [Command(Name = "clrstack",          DefaultOptions = "ClrStack",            Help = "Provides a stack trace of managed code only.")]
     [Command(Name = "clrthreads",        DefaultOptions = "Threads",             Help = "Lists the managed threads running.")]
     [Command(Name = "dbgout",            DefaultOptions = "dbgout",              Help = "Enables/disables (-off) internal SOS logging.")]
@@ -40,7 +41,6 @@ namespace SOS.Hosting
     [Command(Name = "histroot",          DefaultOptions = "HistRoot",            Help = "Displays information related to both promotions and relocations of the specified root.")]
     [Command(Name = "histstats",         DefaultOptions = "HistStats",           Help = "Displays stress log stats.")]
     [Command(Name = "ip2md",             DefaultOptions = "IP2MD",               Help = "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.")]
-    [Command(Name = "name2ee",           DefaultOptions = "Name2EE",             Help = "Displays the MethodTable structure and EEClass structure for the specified type or method in the specified module.")]
     [Command(Name = "printexception",    DefaultOptions = "PrintException",      Aliases = new string[] { "pe" }, Help = "Displays and formats fields of any object derived from the Exception class at the specified address.")]
     [Command(Name = "syncblk",           DefaultOptions = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
     [Command(Name = "threadstate",       DefaultOptions = "ThreadState",         Help = "Pretty prints the meaning of a threads state.")]

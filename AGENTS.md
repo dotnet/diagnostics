@@ -38,13 +38,50 @@ Build.cmd
 - `-configuration <Debug|Release>`: Build configuration (default: Debug)
 - `-architecture <x64|x86|arm|arm64>`: Target architecture
 - `-restore`: Restore dependencies before building
-- `-build`: Build the repository
-- `-rebuild`: Clean and rebuild
+- `-build`: Build the repository (incremental, only changed projects)
+- `-rebuild`: Clean and rebuild (required after changing .props/.targets files)
+- `-bl`: Requests a binlog.
 - `-test`: Run tests after building
+
+### Build Output Locations
+
+Understanding where build outputs are placed is essential for verification and debugging:
+
+- **Managed Build outputs**: `artifacts/bin/<ProjectName>/<Configuration>/<TargetFramework>/`
+- **SOS Build outputs**: `artifacts/bin/<OS>.<Architecture>.<Configuration>`
+- **Test results when using global test script**: `artifacts/TestResults/`
+- **Build logs**: `artifacts/log/` (including `Build.binlog` for detailed analysis)
+- **NuGet packages**: `artifacts/packages/<Configuration>/`
+- **Temporary files**: `artifacts/tmp/`
+- **Intermediate files**: `artifacts/obj/` (such as obj files, generated files, etc.)
+
+### Quick Build Commands
+
+After a full build of the repo has been done, some commands can be used to iterate faster on changes:
+
+### For changes under src/Tools:
+
+```bash
+# Build the relevant tool
+dotnet build src/Tools/dotnet-dump/dotnet-dump.csproj
+
+# Build without restoring (faster if dependencies haven't changed)
+dotnet build --no-restore
+```
+
+### For changes under to native files:
+
+```bash
+# Build the native components to verify compilation works
+./build.sh -skipmanaged
+
+# Do a full test run:
+./build -test
+```
 
 ## Testing
 
-### Running Tests
+### Running All Tests
 
 **Linux/macOS:**
 ```bash
@@ -56,12 +93,27 @@ Build.cmd
 Test.cmd
 ```
 
-The test script runs all tests in the repository. Test projects are located in the `src/tests` directory.
+The test script runs all tests in the repository. **Important**: `test.sh` calls `eng/build.sh -test -skipmanaged -skipnative`, which means it only runs tests without rebuilding. Always build first if you've made code changes.
 
 ### Test Organization
-- Unit tests are typically in `*.Tests` projects
-- Integration tests may be in separate test projects
-- Test helpers are in `Microsoft.Diagnostics.TestHelpers`
+
+Test projects are usually located in `src/tests/` with the following structure:
+
+- **Tool and libraries tests**: `*.UnitTests.csproj` or `*.Tests.csproj` under the appropriate tool's folder in `src/tests`.
+- Changes with native dependencies (SOS, DBGShim, dotnet-sos, dotnet-dump) are better tested with the global test script.
+
+### Running Specific Tests
+
+```bash
+# Run tests for a specific project
+dotnet test src/tests/Microsoft.Diagnostics.DebugServices.UnitTests/
+
+# Run tests with detailed output
+dotnet test --logger "console;verbosity=detailed"
+
+# Run a specific test by name
+dotnet test --filter "FullyQualifiedName~TestMethodName"
+```
 
 ## Project Structure
 
@@ -91,17 +143,24 @@ The test script runs all tests in the repository. Test projects are located in t
 The repository follows standard .NET coding conventions defined in the `.editorconfig` file at the root. This is a **must** for C# code. Ensure your changes conform to these settings:
 
 1. **Indentation**: 4 spaces (no tabs)
-2. **Line endings**: LF on Linux/macOS, CRLF on Windows
+2. **Line endings**: LF on Linux/macOS, CRLF on Windows (EditorConfig enforces this)
 3. **Braces**: Opening braces on new lines for types, methods, properties, control blocks
-4. **Naming**:
-   - PascalCase for types, methods, properties, public fields
-   - camelCase for local variables, parameters, private fields
-   - `_camelCase` for private instance fields (with underscore prefix)
-5. **File organization**: One type per file, filename matches type name
-6. **Additional EditorConfig rules**:
+4. **Naming conventions** (strictly enforced):
+   - PascalCase for types, methods, properties, public fields, constants
+   - camelCase for local variables and parameters
+   - `_camelCase` for private/internal instance fields (underscore prefix)
+   - `s_camelCase` for static private/internal fields (s_ prefix)
+5. **File headers**: All C# files must include the MIT license header:
+   ```csharp
+   // Licensed to the .NET Foundation under one or more agreements.
+   // The .NET Foundation licenses this file to you under the MIT license.
+   ```
+6. **Using directives**: Must be placed **outside** the namespace declaration
+7. **Var keyword**: Avoid using `var` - use explicit types (configured as error when type is apparent)
+8. **Additional rules**:
    - Trim trailing whitespace
    - Insert final newline
-   - Follow C# new line and indentation preferences
+   - Prefer braces even for single-line blocks
 
 ### Native Code (C/C++)
 
@@ -110,6 +169,14 @@ Native code follows similar conventions:
 - Braces on same line for control structures in C++
 - Use clear, descriptive names
 - Follow existing patterns in the codebase
+
+### Platform-Specific Line Endings
+
+**Critical**: Line endings must match the platform to avoid breaking scripts:
+- Shell scripts (`.sh`): **LF only** (will break on Linux/macOS if CRLF)
+- Batch files (`.cmd`, `.bat`): **CRLF only**
+- C# files: LF on Linux/macOS, CRLF on Windows
+- The `.editorconfig` file enforces these rules automatically
 
 ## Making Changes
 
@@ -141,9 +208,32 @@ Native code follows similar conventions:
 ### After Making Changes
 
 1. **Build**: Ensure your changes compile without errors or new warnings
+   ```bash
+   ./build.sh  # or Build.cmd on Windows
+   ```
 2. **Test**: Run relevant tests to verify functionality
+   ```bash
+   ./test.sh  # or Test.cmd on Windows
+   ```
 3. **Code style**: Verify changes match the repository's coding standards
+   - Check file headers (.NET Foundation header)
+   - Verify naming conventions (especially field prefixes)
+   - Ensure using directives are outside namespace
+   - Confirm line endings are correct for file type
 4. **Documentation**: Update if your changes affect public APIs or behavior
+
+### Investigating Build or Test Failures
+
+When builds or tests fail, follow this diagnostic process:
+
+1. **Check build logs**: Look at `artifacts/log/Build.binlog` using the Binary Log Viewer
+2. **Review terminal output**: MSBuild errors will show the failing project and error code
+3. **Check test results**: Detailed test logs are in `artifacts/TestResults/`
+4. **For native builds**: Review CMake output for missing dependencies or configuration issues
+5. **Clean and rebuild**: Sometimes required after changing build configuration files:
+   ```bash
+   ./build.sh -rebuild
+   ```
 
 ## Development Workflow
 
@@ -178,16 +268,43 @@ Native code follows similar conventions:
 
 ### Solution Files
 
-The main solution file is `build.sln` at the root. This file is generated from `build.proj` and can be regenerated using:
-```bash
-./eng/generate-sln.sh
-```
+The main solution file is `build.sln` at the root. **Important**: This file is auto-generated from `build.proj`.
+
+- **Do NOT manually edit** `build.sln`
+- Regenerate after adding/removing projects:
+  - Linux/macOS: `./eng/generate-sln.sh`
+  - Windows: `.\eng\generate-sln.ps1`
+- The solution is regenerated automatically during builds when needed
 
 ### Dependency Management
 
-- NuGet packages: `eng/Versions.props` defines package versions
-- Project references: Use relative paths in `.csproj` files
-- Native dependencies: Handled through CMake
+**NuGet Package Versions**:
+
+The repository uses a centralized version management system:
+
+- **`eng/Versions.props`**: Defines all NuGet package versions for the repo
+  - **Always update this file** when changing package versions
+  - Use the `nuget` MCP tool to query and resolve version conflicts
+- **`eng/Version.Details.props`**: Auto-generated by Arcade/Darc
+  - **Never edit directly** - requires modifying Version.Details.xml.
+- **`eng/Version.Details.xml`**: Dependency tracking metadata
+  - **Never edit directly** - requires metadata not available to agents.
+
+**Package Source Configuration**:
+
+- Never modify `NuGet.config` to add a source feed unless explicitly requested
+- **Never** add `nuget.org` as a source to `NuGet.config`
+- Use the `nuget` MCP tool for querying packages and resolving conflicts
+
+**Project References**:
+
+- Use relative paths in `.csproj` files when adding dependencies between projects
+  Example: `<ProjectReference Include="..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />`
+
+**Native Dependencies**:
+
+- Handled through machine-wide installation or container installation
+- See `documentation/building/` for platform-specific prerequisites
 
 ### Platform-Specific Code
 
@@ -212,15 +329,24 @@ start-vs.cmd
 
 ### Common Issues
 
-1. **Build failures**: Ensure all prerequisites are installed (see documentation/building/)
-2. **Test failures**: Some tests may require specific runtime versions or configurations
-3. **Native component issues**: Check CMake output for missing dependencies
+1. **Build failures**:
+   - Ensure all prerequisites are installed (see `documentation/building/`)
+   - Check `artifacts/log/Build.binlog` for detailed error information
+2. **Test failures**:
+   - Some tests require specific runtime versions or configurations
+   - Check test output in `artifacts/TestResults/` if using global test script
+   - Verify you built before testing (test scripts don't rebuild)
+3. **Native component issues**:
+   - Check terminal output for cl/clang/cmake error output.
+4. **Line ending issues**:
+   - Shell scripts fail on Linux/macOS: Check for CRLF line endings
+   - Ensure `.editorconfig` settings are being respected by your editor
 
 ## Dependencies and Security
 
 ### Adding Dependencies
 
-1. **NuGet packages**: Add to `eng/Versions.props` with appropriate version
+1. **NuGet packages**: Add to `eng/Versions.props` with appropriate version and never modify `NuGet.config` to add a source feed unless asked to do so specifically. Particularly, *never* add `nuget.org` as a source to `NuGet.config`. Use the `nuget` MCP as needed to query and solve for assembly version conflicts.
 2. **Security**: Be mindful of security implications when adding dependencies
 3. **Licensing**: Ensure new dependencies are compatible with MIT license
 4. **Minimize dependencies**: Only add when necessary
@@ -279,6 +405,7 @@ start-vs.cmd
 ## Questions and Support
 
 If you encounter issues or have questions:
+
 1. Check existing documentation in `/documentation`
 2. Review closed issues and pull requests for similar problems
 3. Consult the [FAQ](documentation/FAQ.md)

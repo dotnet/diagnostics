@@ -25,8 +25,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private const int BufferDelaySecs = 1;
         private const string EventCountersProviderPrefix = "EventCounters\\";
         private int _processId;
-        private TextWriter _stdOutput;
-        private TextWriter _stdError;
+        private IConsole _console;
         private List<EventPipeCounterGroup> _counterList;
         private ICounterRenderer _renderer;
         private string _output;
@@ -43,12 +42,11 @@ namespace Microsoft.Diagnostics.Tools.Counters
         private readonly Dictionary<string, ProviderEventState> _providerEventStates = new();
         private readonly Queue<CounterPayload> _bufferedEvents = new();
 
-        public CounterMonitor(TextWriter stdOutput, TextWriter stdError)
+        public CounterMonitor(IConsole console = null)
         {
             _pauseCmdSet = false;
             _shouldExit = new TaskCompletionSource<ReturnCode>();
-            _stdOutput = stdOutput;
-            _stdError = stdError;
+            _console = console ?? new DefaultConsole();
         }
 
         private void MeterInstrumentEventObserved(string meterName, DateTime timestamp)
@@ -177,6 +175,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             int maxTimeSeries,
             TimeSpan duration,
             bool showDeltas,
+            bool abbreviateLargeNumbers,
             string dsrouter)
         {
             try
@@ -187,9 +186,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // to it.
                 ValidateNonNegative(maxHistograms, nameof(maxHistograms));
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
-                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId))
+                if (!ProcessLauncher.Launcher.HasChildProc)
                 {
-                    return ReturnCode.ArgumentError;
+                    CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId);
                 }
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
@@ -197,7 +196,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 using (DiagnosticsClientHolder holder = await builder.Build(ct, _processId, diagnosticPort, showChildIO: false, printLaunchCommand: false).ConfigureAwait(false))
                 using (VirtualTerminalMode vTerm = VirtualTerminalMode.TryEnable())
                 {
-                    bool useAnsi = vTerm.IsEnabled;
+                    bool useAnsi = vTerm?.IsEnabled ?? false;
                     if (holder == null)
                     {
                         return ReturnCode.Ok;
@@ -207,7 +206,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         // the launch command may misinterpret app arguments as the old space separated
                         // provider list so we need to ignore it in that case
                         _counterList = ConfigureCounters(counters);
-                        _renderer = new ConsoleWriter(new DefaultConsole(useAnsi), showDeltaColumn:showDeltas);
+                        _renderer = new ConsoleWriter(new DefaultConsole(useAnsi), showDeltaColumn:showDeltas, abbreviateLargeNumbers:abbreviateLargeNumbers);
                         _diagnosticsClient = holder.Client;
                         _settings = new MetricsPipelineSettings();
                         _settings.Duration = duration == TimeSpan.Zero ? Timeout.InfiniteTimeSpan : duration;
@@ -219,7 +218,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _settings.UseCounterRateAndValuePayloads = true;
 
                         bool useSharedSession = false;
-                        if (_diagnosticsClient.GetProcessInfo().TryGetProcessClrVersion(out Version version))
+                        if (_diagnosticsClient.GetProcessInfo().TryGetProcessClrVersion(out Version version, out bool _))
                         {
                             useSharedSession = version.Major >= 8 ? true : false;
                         }
@@ -238,15 +237,15 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     {
                         //Cancellation token should automatically stop the session
 
-                        _stdOutput.WriteLine($"Complete");
+                        _console.Out.WriteLine($"Complete");
                         return ReturnCode.Ok;
                     }
                 }
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                _stdError.WriteLine(e.Message);
-                return ReturnCode.ArgumentError;
+                _console.Error.WriteLine(dte.Message);
+                return dte.ReturnCode;
             }
             finally
             {
@@ -276,9 +275,9 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 // to it.
                 ValidateNonNegative(maxHistograms, nameof(maxHistograms));
                 ValidateNonNegative(maxTimeSeries, nameof(maxTimeSeries));
-                if (!ProcessLauncher.Launcher.HasChildProc && !CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId))
+                if (!ProcessLauncher.Launcher.HasChildProc)
                 {
-                    return ReturnCode.ArgumentError;
+                    CommandUtils.ResolveProcessForAttach(processId, name, diagnosticPort, dsrouter, out _processId);
                 }
                 ct.Register(() => _shouldExit.TrySetResult((int)ReturnCode.Ok));
 
@@ -306,7 +305,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         _diagnosticsClient = holder.Client;
                         if (_output.Length == 0)
                         {
-                            _stdError.WriteLine("Output cannot be an empty string");
+                            _console.Error.WriteLine("Output cannot be an empty string");
                             return ReturnCode.ArgumentError;
                         }
                         if (format == CountersExportFormat.csv)
@@ -330,7 +329,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                         }
                         else
                         {
-                            _stdError.WriteLine($"The output format {format} is not a valid output format.");
+                            _console.Error.WriteLine($"The output format {format} is not a valid output format.");
                             return ReturnCode.ArgumentError;
                         }
 
@@ -350,10 +349,10 @@ namespace Microsoft.Diagnostics.Tools.Counters
                     }
                 }
             }
-            catch (CommandLineErrorException e)
+            catch (DiagnosticToolException dte)
             {
-                _stdError.WriteLine(e.Message);
-                return ReturnCode.ArgumentError;
+                _console.Error.WriteLine(dte.Message);
+                return dte.ReturnCode;
             }
             finally
             {
@@ -365,7 +364,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
         {
             if (value < 0)
             {
-                throw new CommandLineErrorException($"Argument --{argName} must be non-negative");
+                throw new DiagnosticToolException($"Argument --{argName} must be non-negative");
             }
         }
 
@@ -383,12 +382,12 @@ namespace Microsoft.Diagnostics.Tools.Counters
             {
                 // the FormatException message strings thrown by ParseProviderList are controlled
                 // by us and anticipate being integrated into the command-line error text.
-                throw new CommandLineErrorException("Error parsing --counters argument: " + e.Message);
+                throw new DiagnosticToolException("Error parsing --counters argument: " + e.Message);
             }
 
             if (counters.Count == 0)
             {
-                _stdOutput.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
+                _console.Out.WriteLine($"--counters is unspecified. Monitoring System.Runtime counters by default.");
                 ParseCounterProvider("System.Runtime", counters);
             }
             return counters;
@@ -537,7 +536,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
                 }
                 catch (DiagnosticsClientException ex)
                 {
-                    Console.WriteLine($"Failed to start the counter session: {ex}");
+                    _console.WriteLine($"Failed to start the counter session: {ex}");
                 }
                 catch (Exception ex)
                 {

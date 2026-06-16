@@ -5,6 +5,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
+    <ProjectReference Include="$(SrcDir)Microsoft.FileFormats/Microsoft.FileFormats.csproj" />
   </ItemGroup>
 </Project>

@@ -73,14 +73,14 @@ const UINT kcMaxTieredVersions      = 10;
 #ifndef FEATURE_PAL
 
 // ensure we always allocate on the process heap
-void* __cdecl operator new(size_t size, const std::nothrow_t&) noexcept
+void* __cdecl operator new(size_t size)
 { return HeapAlloc(GetProcessHeap(), 0, size); }
-void __cdecl operator delete(void* pObj, const std::nothrow_t&) noexcept
+void __cdecl operator delete(void* pObj)
 { HeapFree(GetProcessHeap(), 0, pObj); }
 
-void* __cdecl operator new[](size_t size, const std::nothrow_t&) noexcept
+void* __cdecl operator new[](size_t size)
 { return HeapAlloc(GetProcessHeap(), 0, size); }
-void __cdecl operator delete[](void* pObj, const std::nothrow_t&) noexcept
+void __cdecl operator delete[](void* pObj)
 { HeapFree(GetProcessHeap(), 0, pObj); }
 
 /**********************************************************************\
@@ -606,10 +606,14 @@ HRESULT GetStaticFieldPTR(DWORD_PTR* pOutPtr, DacpDomainLocalModuleData* pDLMD, 
         }
     }
 
-    dwTmp = (DWORD_PTR)pBaseAddress + pFDD->dwOffset;
-
     *pOutPtr = 0;
 
+    // Statics for this type may not be allocated yet, this is okay.
+    // See dynamic statics for more information.
+    if (pBaseAddress == 0)
+        return S_OK;
+
+    dwTmp = (DWORD_PTR)pBaseAddress + pFDD->dwOffset;
     if (pSOS14)
     {
         MethodTableInitializationFlags initFlags;
@@ -1032,7 +1036,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
     if (bFirst)
     {
         ExtOutIndent();
-        ExtOut("%" POINTERSIZE "s %8s %8s %20s %2s %8s %" POINTERSIZE "s %s\n",
+        ExtOut("%" POINTERSIZE "s %8s %8s %20s %4s %8s %" POINTERSIZE "s %s\n",
             "MT", "Field", "Offset", "Type", "VT", "Attr", "Value", "Name");
         numInstanceFields = 0;
     }
@@ -1094,7 +1098,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
         }
 
-        DMLOut("%s %8x %8x ", DMLMethodTable(vFieldDesc.MTOfType),
+        DMLOut("%s %08x %8x ", DMLMethodTable(vFieldDesc.MTOfType),
                  TokenFromRid(vFieldDesc.mb, mdtFieldDef),
                  offset);
 
@@ -1123,7 +1127,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
         }
 
-        ExtOut("%2s ", (IsElementValueType(vFieldDesc.Type)) ? "1" : "0");
+        ExtOut("%4s ", (IsElementValueType(vFieldDesc.Type)) ? "Yes" : "No");
 
         if (vFieldDesc.bIsStatic && (vFieldDesc.bIsThreadLocal || vFieldDesc.bIsContextLocal))
         {
@@ -1229,7 +1233,7 @@ void DisplayFields(CLRDATA_ADDRESS cdaMT, DacpMethodTableData *pMTD, DacpMethodT
             }
             else
             {
-                ExtOut(" %8s", " ");
+                ExtOut("%" POINTERSIZE "s", " ");
             }
 
 
@@ -2167,7 +2171,11 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
     ArrayHolder<CLRDATA_ADDRESS> pAssemblyArray = NULL;
     ArrayHolder<CLRDATA_ADDRESS> pModules = NULL;
     int arrayLength = 0;
-    int numSpecialDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
+    int numSpecialDomains = 0;
+    if (adsData.systemDomain != (TADDR)0)
+        numSpecialDomains++;
+    if (adsData.sharedDomain != (TADDR)0)
+        numSpecialDomains++;
     if (!ClrSafeInt<int>::addition(adsData.DomainCount, numSpecialDomains, arrayLength))
     {
         ExtOut("<integer overflow>\n");
@@ -2180,10 +2188,14 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
         return NULL;
     }
 
-    pArray[0] = adsData.systemDomain;
+    int i = 0;
+    if (adsData.systemDomain != (TADDR)0)
+    {
+        pArray[i++] = adsData.systemDomain;
+    }
     if (adsData.sharedDomain != (TADDR)0)
     {
-        pArray[1] = adsData.sharedDomain;
+        pArray[i++] = adsData.sharedDomain;
     }
     if ((hr = g_sos->GetAppDomainList(adsData.DomainCount, pArray.GetPtr() + numSpecialDomains, NULL)) != S_OK)
     {
@@ -2438,128 +2450,6 @@ HRESULT GetModuleFromAddress(___in CLRDATA_ADDRESS peAddress, ___out IXCLRDataMo
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
-*    Find the EE data given a name.                                    *
-*                                                                      *
-\**********************************************************************/
-void GetInfoFromName(DWORD_PTR ModulePtr, const char* name, mdTypeDef* retMdTypeDef)
-{
-    DWORD_PTR ignoredModuleInfoRet = (TADDR)0;
-    if (retMdTypeDef)
-        *retMdTypeDef = 0;
-
-    ToRelease<IMetaDataImport> pImport = MDImportForModule (ModulePtr);
-    if (pImport == 0)
-        return;
-
-    static WCHAR wszName[MAX_CLASSNAME_LENGTH];
-    size_t n;
-    size_t length = strlen (name);
-    for (n = 0; n <= length; n ++)
-        wszName[n] = name[n];
-
-    // First enumerate methods. We're taking advantage of the DAC's
-    // CLRDataModule::EnumMethodDefinitionByName which can parse
-    // method names (whether in nested classes, or explicit interface
-    // method implementations).
-    ToRelease<IXCLRDataModule> ModuleDefinition;
-    if (g_sos->GetModule(ModulePtr, &ModuleDefinition) == S_OK)
-    {
-        CLRDATA_ENUM h;
-        if (ModuleDefinition->StartEnumMethodDefinitionsByName(wszName, 0, &h) == S_OK)
-        {
-            IXCLRDataMethodDefinition *pMeth = NULL;
-            BOOL fStatus = FALSE;
-            while (ModuleDefinition->EnumMethodDefinitionByName(&h, &pMeth) == S_OK)
-            {
-                if (fStatus && !retMdTypeDef)
-                    ExtOut("-----------------------\n");
-
-                mdTypeDef token;
-                if (pMeth->GetTokenAndScope(&token, NULL) == S_OK)
-                {
-                    GetInfoFromModule(ModulePtr, token, retMdTypeDef ? &ignoredModuleInfoRet : NULL);
-                    fStatus = TRUE;
-                }
-                pMeth->Release();
-            }
-            ModuleDefinition->EndEnumMethodDefinitionsByName(h);
-            if (fStatus)
-                return;
-        }
-    }
-
-    // Now look for types, type members and fields
-    mdTypeDef cl;
-    mdToken tkEnclose = mdTokenNil;
-    WCHAR *pName;
-    WCHAR *pHead = wszName;
-    while ( ((pName = (WCHAR*)u16_strchr (pHead,L'+')) != NULL) ||
-            ((pName = (WCHAR*)u16_strchr (pHead,L'/')) != NULL)) {
-        pName[0] = L'\0';
-        if (FAILED(pImport->FindTypeDefByName(pHead,tkEnclose,&tkEnclose)))
-            return;
-        pHead = pName+1;
-    }
-
-    pName = pHead;
-
-    // @todo:  Handle Nested classes correctly.
-    if (SUCCEEDED (pImport->FindTypeDefByName (pName, tkEnclose, &cl)))
-    {
-        if (retMdTypeDef)
-            *retMdTypeDef = cl;
-
-        GetInfoFromModule(ModulePtr, cl, retMdTypeDef ? &ignoredModuleInfoRet : NULL);
-        return;
-    }
-
-    // See if it is a method
-    WCHAR *pwzMethod;
-    if ((pwzMethod = (WCHAR*)u16_strrchr(pName, L'.')) == NULL)
-        return;
-
-    if (pwzMethod[-1] == L'.')
-        pwzMethod --;
-    pwzMethod[0] = L'\0';
-    pwzMethod ++;
-
-    // @todo:  Handle Nested classes correctly.
-    if (SUCCEEDED(pImport->FindTypeDefByName (pName, tkEnclose, &cl)))
-    {
-        if (retMdTypeDef)
-            *retMdTypeDef = cl;
-
-        mdMethodDef token;
-        ULONG cTokens;
-        HCORENUM henum = NULL;
-
-        // is Member?
-        henum = NULL;
-        if (SUCCEEDED (pImport->EnumMembersWithName (&henum, cl, pwzMethod,
-                                                     &token, 1, &cTokens))
-            && cTokens == 1)
-        {
-            if (!retMdTypeDef) ExtOut("Member (mdToken token) of\n");
-            GetInfoFromModule(ModulePtr, cl, retMdTypeDef ? &ignoredModuleInfoRet : NULL);
-            return;
-        }
-
-        // is Field?
-        henum = NULL;
-        if (SUCCEEDED (pImport->EnumFieldsWithName (&henum, cl, pwzMethod,
-                                                     &token, 1, &cTokens))
-            && cTokens == 1)
-        {
-            if (!retMdTypeDef) ExtOut("Field (mdToken token) of\n");
-            GetInfoFromModule(ModulePtr, cl, retMdTypeDef ? &ignoredModuleInfoRet : NULL);
-            return;
-        }
-    }
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
 *    Find the EE data given a token.                                   *
 *                                                                      *
 \**********************************************************************/
@@ -2584,58 +2474,6 @@ DWORD_PTR GetMethodDescFromModule(DWORD_PTR ModuleAddr, ULONG token)
     }
 
     return (DWORD_PTR)md;
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    Find the MethodDefinitions given a name.                          *
-*                                                                      *
-\**********************************************************************/
-HRESULT GetMethodDefinitionsFromName(TADDR ModulePtr, IXCLRDataModule* mod, const char *name, IXCLRDataMethodDefinition **ppOut, int numMethods, int *numMethodsNeeded)
-{
-    if (name == NULL)
-        return E_FAIL;
-
-    size_t n;
-    size_t length = strlen (name);
-    for (n = 0; n <= length; n ++)
-        g_mdName[n] = name[n];
-
-    CLRDATA_ENUM h;
-    int methodCount = 0;
-    if (mod->StartEnumMethodDefinitionsByName(g_mdName, 0, &h) == S_OK)
-    {
-        IXCLRDataMethodDefinition *pMeth = NULL;
-        while (mod->EnumMethodDefinitionByName(&h, &pMeth) == S_OK)
-        {
-            methodCount++;
-            pMeth->Release();
-        }
-        mod->EndEnumMethodDefinitionsByName(h);
-    }
-
-    if(numMethodsNeeded != NULL)
-        *numMethodsNeeded = methodCount;
-    if(ppOut == NULL)
-        return S_OK;
-    if(numMethods > methodCount)
-        numMethods = methodCount;
-
-    if (methodCount > 0)
-    {
-        if (mod->StartEnumMethodDefinitionsByName(g_mdName, 0, &h) == S_OK)
-        {
-            IXCLRDataMethodDefinition *pMeth = NULL;
-            for (int i = 0; i < numMethods && mod->EnumMethodDefinitionByName(&h, &pMeth) == S_OK; i++)
-            {
-                ppOut[i] = pMeth;
-            }
-            mod->EndEnumMethodDefinitionsByName(h);
-        }
-    }
-
-    return S_OK;
 }
 
 /**********************************************************************\
@@ -2704,138 +2542,6 @@ HRESULT GetMethodDescsFromName(DWORD_PTR ModulePtr, IXCLRDataModule* mod, const 
     }
 
     return S_OK;
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    Find the EE data given a token.                                   *
-*                                                                      *
-\**********************************************************************/
-void GetInfoFromModule (DWORD_PTR ModuleAddr, ULONG token, DWORD_PTR *ret)
-{
-    switch (TypeFromToken(token))
-    {
-        case mdtMethodDef:
-            break;
-        case mdtTypeDef:
-            break;
-        case mdtTypeRef:
-            break;
-        case mdtFieldDef:
-            break;
-        default:
-            ExtOut("This token type is not supported\n");
-            return;
-            break;
-    }
-
-    CLRDATA_ADDRESS md = 0;
-    if (FAILED(g_sos->GetMethodDescFromToken(ModuleAddr, token, &md)) || !IsValidToken (ModuleAddr, token))
-    {
-        ExtOut("<invalid module token>\n");
-        return;
-    }
-
-    if (ret != NULL)
-    {
-        *ret = (DWORD_PTR)md;
-        return;
-    }
-
-    ExtOut("Token:       %p\n", SOS_PTR(token));
-
-    switch (TypeFromToken(token))
-    {
-        case mdtFieldDef:
-        {
-            NameForToken_s(ModuleAddr, token, g_mdName, mdNameLen);
-            ExtOut("Field name:  %S\n", g_mdName);
-            break;
-        }
-        case mdtMethodDef:
-        {
-            if (md)
-            {
-                DMLOut("MethodDesc:  %s\n", DMLMethodDesc(md));
-
-                // Easiest to get full parameterized method name from ..::GetMethodName
-                if (g_sos->GetMethodDescName(md, mdNameLen, g_mdName, NULL) != S_OK)
-                {
-                    // Fall back to just method name without parameters..
-                    NameForToken_s(ModuleAddr, token, g_mdName, mdNameLen);
-                }
-            }
-            else
-            {
-                ExtOut("MethodDesc:  <not loaded yet>\n");
-                NameForToken_s(ModuleAddr, token, g_mdName, mdNameLen);
-            }
-
-            ExtOut("Name:        %S\n", g_mdName);
-            // Nice to have a little more data
-            if (md)
-            {
-                DacpMethodDescData MethodDescData;
-                if (MethodDescData.Request(g_sos, md) == S_OK)
-                {
-                    if (MethodDescData.bHasNativeCode)
-                    {
-                        DMLOut("JITTED Code Address: %s\n", DMLIP(MethodDescData.NativeCodeAddr));
-                    }
-                    else
-                    {
-#ifndef FEATURE_PAL
-                        if (IsDMLEnabled())
-                            DMLOut("Not JITTED yet. Use <exec cmd=\"!bpmd -md %p\">!bpmd -md %p</exec> to break on run.\n",
-                                SOS_PTR(md), SOS_PTR(md));
-                        else
-                            ExtOut("Not JITTED yet. Use !bpmd -md %p to break on run.\n", SOS_PTR(md));
-#else
-                        ExtOut("Not JITTED yet. Use 'bpmd -md %p' to break on run.\n", SOS_PTR(md));
-#endif
-                    }
-                }
-                else
-                {
-                    ExtOut ("<Error getting MethodDesc information>\n");
-                }
-            }
-            else
-            {
-                ExtOut("Not JITTED yet.\n");
-            }
-            break;
-        }
-        case mdtTypeDef:
-        case mdtTypeRef:
-        {
-            if (md)
-            {
-                DMLOut("MethodTable: %s\n", DMLMethodTable(md));
-                DacpMethodTableData mtabledata;
-                if (mtabledata.Request(g_sos, md) == S_OK)
-                {
-                    DMLOut("EEClass:     %s\n", DMLClass(mtabledata.Class));
-                }
-                else
-                {
-                    ExtOut("EEClass:     <error getting EEClass>\n");
-                }
-            }
-            else
-            {
-                ExtOut("MethodTable: <not loaded yet>\n");
-                ExtOut("EEClass:     <not loaded yet>\n");
-            }
-            NameForToken_s(ModuleAddr, token, g_mdName, mdNameLen);
-            ExtOut("Name:        %S\n", g_mdName);
-            break;
-        }
-        default:
-            break;
-    }
-    return;
 }
 
 BOOL IsMTForFreeObj(DWORD_PTR pMT)
@@ -3141,7 +2847,11 @@ void GetDomainList (DWORD_PTR *&domainList, int &numDomain)
     // Do prefast integer checks before the malloc.
     size_t AllocSize;
     LONG DomainAllocCount;
-    LONG NumExtraDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
+    LONG NumExtraDomains = 0;
+    if (adsData.systemDomain != (TADDR)0)
+        NumExtraDomains++;
+    if (adsData.sharedDomain != (TADDR)0)
+        NumExtraDomains++;
     if (!ClrSafeInt<LONG>::addition(adsData.DomainCount, NumExtraDomains, DomainAllocCount) ||
         !ClrSafeInt<size_t>::multiply(DomainAllocCount, sizeof(PVOID), AllocSize) ||
         (domainList = new DWORD_PTR[DomainAllocCount]) == NULL)
@@ -3149,7 +2859,10 @@ void GetDomainList (DWORD_PTR *&domainList, int &numDomain)
         return;
     }
 
-    domainList[numDomain++] = (DWORD_PTR) adsData.systemDomain;
+    if (adsData.systemDomain != (TADDR)0)
+    {
+        domainList[numDomain++] = (DWORD_PTR) adsData.systemDomain;
+    }
     if (adsData.sharedDomain != (TADDR)0)
     {
         domainList[numDomain++] = (DWORD_PTR) adsData.sharedDomain;
@@ -3946,7 +3659,7 @@ class SOSDacInterface15Simulator : public ISOSDacInterface15
         unsigned int slotCount;
         ULONG refCount;
     public:
-        SOSMethodEnum(CLRDATA_ADDRESS mt) : pMT(mt), refCount(1)
+        SOSMethodEnum(CLRDATA_ADDRESS mt) : pMT(mt), refCount(0)
         {
         }
 
@@ -4071,16 +3784,18 @@ public:
             ISOSMethodEnum **enumerator)
     {
         SOSMethodEnum *simulator = new(std::nothrow) SOSMethodEnum(mt);
-        *enumerator = simulator;
         if (simulator == NULL)
         {
             return E_OUTOFMEMORY;
         }
         HRESULT hr = simulator->Reset();
+
+        if (SUCCEEDED(hr))
+            hr = simulator->QueryInterface(__uuidof(ISOSMethodEnum), (void**)enumerator);
+
         if (FAILED(hr))
-        {
-            simulator->Release();
-        }
+            delete simulator;
+
         return hr;
     }
 } SOSDacInterface15Simulator_Instance;
@@ -4952,6 +4667,88 @@ GetClrMethodInstance(
 }
 
 //
+// Searches the IL address map for the entry containing the given native offset.
+// Fallback for older runtimes where GetILOffsetsByAddress is buggy or unsupported.
+HRESULT
+GetILOffsetFromAddressMap(
+    ___in IXCLRDataMethodInstance* Method,
+    ___in ULONG64 nativeOffset,
+    ___out PULONG32 MethodOffs)
+{
+    HRESULT Status;
+    CLRDATA_IL_ADDRESS_MAP MapLocal[16];
+    CLRDATA_IL_ADDRESS_MAP* Map = MapLocal;
+    ULONG32 MapCount = ARRAY_SIZE(MapLocal);
+    ULONG32 MapNeeded;
+
+    for (;;)
+    {
+        if ((Status = Method->GetILAddressMap(MapCount, &MapNeeded, Map)) != S_OK)
+        {
+            if (Map != MapLocal)
+            {
+                delete[] Map;
+            }
+            return Status;
+        }
+
+        if (MapNeeded <= MapCount)
+        {
+            break;
+        }
+
+        // Need more map entries.
+        if (Map != MapLocal)
+        {
+            delete[] Map;
+            return E_UNEXPECTED;
+        }
+
+        Map = new NOTHROW CLRDATA_IL_ADDRESS_MAP[MapNeeded];
+        if (!Map)
+        {
+            return E_OUTOFMEMORY;
+        }
+
+        MapCount = MapNeeded;
+    }
+
+    // Search for the entry whose native address range contains nativeOffset.
+    // The last map entry sometimes has a bogus endAddress (e.g., wrapping back to
+    // the method start). Handle this by treating any entry where endAddress <=
+    // startAddress as extending to infinity (the end of the method code).
+    Status = E_FAIL;
+    for (size_t i = 0; i < MapNeeded; i++)
+    {
+        bool inRange;
+        if (Map[i].endAddress > Map[i].startAddress)
+        {
+            // Normal range.
+            inRange = (Map[i].startAddress <= nativeOffset && nativeOffset < Map[i].endAddress);
+        }
+        else
+        {
+            // Malformed/last entry: endAddress <= startAddress. Treat as open-ended.
+            inRange = (Map[i].startAddress <= nativeOffset);
+        }
+
+        if (inRange)
+        {
+            *MethodOffs = Map[i].ilOffset;
+            Status = S_OK;
+            break;
+        }
+    }
+
+    if (Map != MapLocal)
+    {
+        delete[] Map;
+    }
+
+    return Status;
+}
+
+//
 // Enumerates over the IL address map associated with the passed in
 // managed method, and returns the highest non-epilog offset.
 HRESULT
@@ -4987,7 +4784,7 @@ GetLastMethodIlOffset(
             return E_UNEXPECTED;
         }
 
-        Map = new CLRDATA_IL_ADDRESS_MAP[MapNeeded];
+        Map = new NOTHROW CLRDATA_IL_ADDRESS_MAP[MapNeeded];
         if (!Map)
         {
             return E_OUTOFMEMORY;
@@ -5051,33 +4848,49 @@ ConvertNativeToIlOffset(
         }
     }
 
-    if ((Status = pMethodInst->GetILOffsetsByAddress(nativeOffset, 1, NULL, methodOffs)) != S_OK)
+    // For runtimes prior to .NET 5.0, GetILOffsetsByAddress can return S_OK with incorrect IL
+    // offsets (the bug we're working around for issue #794). For those runtimes, walk the IL
+    // address map ourselves. On .NET 5.0+ GetILOffsetsByAddress is correct and is preferred,
+    // because the raw map can ambiguously place an IP at the previous statement when an IP
+    // sits exactly on a sequence-point boundary.
+    if (!IsRuntimeVersionAtLeast(5))
+    {
+        Status = GetILOffsetFromAddressMap(pMethodInst, nativeOffset, methodOffs);
+        if (Status != S_OK)
+        {
+            // Map unavailable -- fall back to the runtime API even though it may be wrong.
+            if ((Status = pMethodInst->GetILOffsetsByAddress(nativeOffset, 1, NULL, methodOffs)) != S_OK)
+            {
+                ExtDbgOut("ConvertNativeToIlOffset(%p): GetILOffsetsByAddress FAILED %08x\n", nativeOffset, Status);
+                *methodOffs = 0;
+            }
+        }
+    }
+    else if ((Status = pMethodInst->GetILOffsetsByAddress(nativeOffset, 1, NULL, methodOffs)) != S_OK)
     {
         ExtDbgOut("ConvertNativeToIlOffset(%p): GetILOffsetsByAddress FAILED %08x\n", nativeOffset, Status);
         *methodOffs = 0;
     }
-    else
+
+    switch((LONG)*methodOffs)
     {
-        switch((LONG)*methodOffs)
+    case CLRDATA_IL_OFFSET_NO_MAPPING:
+        return E_NOINTERFACE;
+
+    case CLRDATA_IL_OFFSET_PROLOG:
+        // Treat all of the prologue as part of
+        // the first source line.
+        *methodOffs = 0;
+        break;
+
+    case CLRDATA_IL_OFFSET_EPILOG:
+        // Back up until we find the last real
+        // IL offset.
+        if ((Status = GetLastMethodIlOffset(pMethodInst, methodOffs)) != S_OK)
         {
-        case CLRDATA_IL_OFFSET_NO_MAPPING:
-            return E_NOINTERFACE;
-
-        case CLRDATA_IL_OFFSET_PROLOG:
-            // Treat all of the prologue as part of
-            // the first source line.
-            *methodOffs = 0;
-            break;
-
-        case CLRDATA_IL_OFFSET_EPILOG:
-            // Back up until we find the last real
-            // IL offset.
-            if ((Status = GetLastMethodIlOffset(pMethodInst, methodOffs)) != S_OK)
-            {
-                return Status;
-            }
-            break;
+            return Status;
         }
+        break;
     }
 
     return pMethodInst->GetTokenAndScope(methodToken, ppModule);
@@ -5394,7 +5207,7 @@ WString GetFrameFromAddress(TADDR frameAddr, IXCLRDataStackWalk *pStackWalk, BOO
     else
         frameOutput += W("Frame");
 
-    frameOutput += WString(W(": ")) + Pointer(frameAddr) + W("] ");
+    frameOutput += WString(W(": ")) + WString(Pointer(frameAddr)) + W("] ");
 
     // Print the frame's associated function info, if it has any.
     CLRDATA_ADDRESS mdesc = 0;
@@ -5511,11 +5324,45 @@ WString MethodNameFromIP(CLRDATA_ADDRESS ip, BOOL bSuppressLines, BOOL bAssembly
         if (!bSuppressLines &&
             SUCCEEDED(GetLineByOffset(TO_CDADDR(ip), &linenum, wszFileName, MAX_LONGPATH, bAdjustIPForLineNumber)))
         {
-            methodOutput += WString(W(" [")) + wszFileName + W(" @ ") + Decimal(linenum) + W("]");
+            const WCHAR* fileNamePtr = wszFileName;
+            methodOutput += WString(W(" [")) + fileNamePtr + W(" @ ") + WString(Decimal(linenum)) + W("]");
         }
     }
 
     return methodOutput;
+}
+
+WString DmlEscape(const WString &input)
+{
+    const WCHAR *str = input.c_str();
+    size_t len = input.length();
+    WString result;
+    
+    for (size_t i = 0; i < len; i++)
+    {
+        // Ampersand must be escaped FIRST to avoid double-escaping
+        // For example, if input contains "&lt;", we want to preserve it as "&amp;lt;" not double-escape it
+        if (str[i] == L'&')
+        {
+            result += W("&amp;");
+        }
+        else if (str[i] == L'<')
+        {
+            result += W("&lt;");
+        }
+        else if (str[i] == L'>')
+        {
+            result += W("&gt;");
+        }
+        else
+        {
+            // Append single character
+            WCHAR temp[2] = { str[i], L'\0' };
+            result += temp;
+        }
+    }
+    
+    return result;
 }
 
 HRESULT GetGCRefs(ULONG osID, SOSStackRefData **ppRefs, unsigned int *pRefCnt, SOSStackRefError **ppErrors, unsigned int *pErrCount)

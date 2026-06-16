@@ -10,8 +10,8 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
     <GalleryManifestBase>$(MSBuildThisFileDirectory)ManifestBase.xml</GalleryManifestBase>
-    <ExtensionGalleryManifestOutputFile>$(IntermediateOutputPath)sos_GalleryManifest.xml</ExtensionGalleryManifestOutputFile>
-    <UncompressedGalleryManifestOutputFile>$(IntermediateOutputPath)GalleryManifest.xml</UncompressedGalleryManifestOutputFile>
+    <ExtensionGalleryManifestOutputFile>$(IntermediateOutputPath)GalleryManifest.xml</ExtensionGalleryManifestOutputFile>
+    <UncompressedGalleryManifestOutputFile>$(IntermediateOutputPath)sos_GalleryManifest.xml</UncompressedGalleryManifestOutputFile>
     <BeforePack>GenerateGalleryManifest</BeforePack>
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
@@ -41,7 +41,7 @@
   <Target Name="GenerateGalleryManifest"
     DependsOnTargets="GetAssemblyVersion;AddSourceRevisionToInformationalVersion">
 
-    <Exec Command="$(DotNetTool) run --file $(MSBuildThisFileDirectory)GenerateManifest\GenerateManifest.cs &quot;$(GalleryManifestBase)&quot; &quot;$(ExtensionGalleryManifestOutputFile)&quot; &quot;$(UncompressedGalleryManifestOutputFile)&quot; &quot;$(FileVersion)&quot;" />
+    <Exec Command="&quot;$(DotNetTool)&quot; run --file &quot;$(MSBuildThisFileDirectory)GenerateManifest\GenerateManifest.cs&quot; &quot;$(GalleryManifestBase)&quot; &quot;$(ExtensionGalleryManifestOutputFile)&quot; &quot;$(UncompressedGalleryManifestOutputFile)&quot; &quot;$(FileVersion)&quot;" />
 
     <ItemGroup>
       <FileWrites Include="$(ExtensionGalleryManifestOutputFile)" />

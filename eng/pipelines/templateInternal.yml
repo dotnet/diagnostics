@@ -29,6 +29,8 @@ extends:
         enabled: true
       tsa:
         enabled: true
+    settings:
+      networkIsolationPolicy: Permissive,CFSClean,CFSClean2
     featureFlags:
       autoBaseline: true
 

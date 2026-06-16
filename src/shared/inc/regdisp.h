@@ -258,7 +258,7 @@ struct REGDISPLAY : public REGDISPLAY_BASE {
     REGDISPLAY()
     {
         // Initialize
-        memset(this, 0, sizeof(REGDISPLAY));
+        memset(static_cast<void*>(this), 0, sizeof(REGDISPLAY));
     }
 };
 

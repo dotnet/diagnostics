@@ -27,7 +27,6 @@
 
 #include "sos.h"
 #include "disasm.h"
-#include "gcdesc.h"
 #include "safemath.h"
 
 inline size_t ALIGN_DOWN( size_t val, size_t alignment )

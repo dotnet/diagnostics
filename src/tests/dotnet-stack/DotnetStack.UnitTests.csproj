@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Tools\dotnet-stack\dotnet-stack.csproj" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\CommonTestRunner\CommonTestRunner.csproj" />
+    <ProjectReference Include="$(SrcDir)Tools/dotnet-stack/dotnet-stack.csproj" />
+    <ProjectReference Include="$(TestDir)CommonTestRunner/CommonTestRunner.csproj" />
   </ItemGroup>
 
 </Project>
