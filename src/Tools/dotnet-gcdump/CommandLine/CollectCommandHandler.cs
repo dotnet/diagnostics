@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="diagnosticPort">The diagnostic IPC channel to collect the gcdump from.</param>
         /// <param name="dsrouter">The dsrouter command to use for collecting the gcdump.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter)
+        private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter, bool nonLossy)
         {
             try
             {
@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
 
                 Task<bool> dumpTask = Task.Run(() => {
-                    if (TryCollectMemoryGraph(ct, processId, diagnosticPort, timeout, verbose, out MemoryGraph memoryGraph))
+                    if (TryCollectMemoryGraph(ct, processId, diagnosticPort, timeout, verbose, nonLossy, out MemoryGraph memoryGraph))
                     {
                         GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
                         return true;
@@ -104,6 +104,16 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Console.Error.WriteLine($"--diagnostic-port argument error: {fe.Message}");
                 return -1;
             }
+            catch (UnsupportedCommandException) when (nonLossy)
+            {
+                // The target runtime is too old to understand CollectTracing6 (the non-lossy/Block command).
+                // TODO: Once .NET 11 has shipped, proactively probe support before starting the session via
+                // DiagnosticsClient.GetProcessInfo()/TryGetProcessClrVersion() (>= 11.0), like dotnet-trace
+                // collect-linux, so we can fail fast without first attempting the command.
+                Console.Error.WriteLine("[ERROR] The target process does not support non-lossy gcdump collection, which requires a .NET 11+ runtime.");
+                Console.Error.WriteLine("Collect without the --non-lossy option to capture a gcdump using the default (lossy) buffering.");
+                return -1;
+            }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex}");
@@ -115,14 +125,14 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
-        internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, string diagnosticPort, int timeout, bool verbose, out MemoryGraph memoryGraph)
+        internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, string diagnosticPort, int timeout, bool verbose, bool nonLossy, out MemoryGraph memoryGraph)
         {
             DotNetHeapInfo heapInfo = new();
             TextWriter log = verbose ? Console.Out : TextWriter.Null;
 
             memoryGraph = new MemoryGraph(50_000);
 
-            if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, diagnosticPort, memoryGraph, log, timeout, heapInfo))
+            if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, diagnosticPort, memoryGraph, log, timeout, heapInfo, nonLossy))
             {
                 return false;
             }
@@ -143,7 +153,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 TimeoutOption,
                 NameOption,
                 DiagnosticPortOption,
-                DsRouterOption
+                DsRouterOption,
+                NonLossyOption
             };
 
             collectCommand.SetAction(static (parseResult, ct) => Collect(ct,
@@ -153,7 +164,8 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     verbose: parseResult.GetValue(VerboseOption),
                     name: parseResult.GetValue(NameOption),
                     diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
-                    dsrouter: parseResult.GetValue(DsRouterOption) ?? string.Empty));
+                    dsrouter: parseResult.GetValue(DsRouterOption) ?? string.Empty,
+                    nonLossy: parseResult.GetValue(NonLossyOption)));
 
             return collectCommand;
         }
@@ -200,6 +212,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             new("--dsrouter")
             {
                 Description = "The dsrouter command to use for collecting the gcdump. If specified, the --process-id, --name, or --diagnostic-port options cannot be used."
+            };
+
+        private static readonly Option<bool> NonLossyOption =
+            new("--non-lossy")
+            {
+                Description = "Collect without dropping events: the runtime blocks producers until the buffer is drained rather than overwriting events when the buffer fills. This produces a complete gcdump on large heaps, but requires a target runtime that supports it (.NET 11+) and can make collection slower."
             };
     }
 }

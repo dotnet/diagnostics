@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
 
             if (!CollectCommandHandler
-                .TryCollectMemoryGraph(ct, processId, diagnosticPort, CollectCommandHandler.DefaultTimeout, false, out Graphs.MemoryGraph mg))
+                .TryCollectMemoryGraph(ct, processId, diagnosticPort, CollectCommandHandler.DefaultTimeout, false, false, out Graphs.MemoryGraph mg))
             {
                 Console.Error.WriteLine("An error occured while collecting gcdump.");
                 return Task.FromResult(-1);
