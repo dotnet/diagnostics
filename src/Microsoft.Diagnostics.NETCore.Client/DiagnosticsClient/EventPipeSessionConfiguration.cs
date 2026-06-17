@@ -14,6 +14,18 @@ namespace Microsoft.Diagnostics.NETCore.Client
         NetTrace
     }
 
+    // Session type as encoded on the CollectTracing5+ wire. This is NOT the runtime's internal
+    // EventPipeSessionType; the IPC collect command maps wire 0 => IpcStream, 1 => UserEvents.
+    internal enum EventPipeSessionType : uint
+    {
+        IpcStream = 0,
+
+        // This client does not support starting/tracing a user_events session (that path needs an
+        // out-of-band file descriptor, see the IPC protocol docs); the value exists only for wire
+        // correctness when describing the CollectTracing5+ session-type field.
+        UserEvents = 1
+    }
+
     public sealed class EventPipeSessionConfiguration
     {
         /// <summary>
@@ -183,6 +195,28 @@ namespace Microsoft.Diagnostics.NETCore.Client
             return serializedData;
         }
 
+        public static byte[] SerializeV5(this EventPipeSessionConfiguration config)
+        {
+            byte[] serializedData = null;
+            using (MemoryStream stream = new())
+            using (BinaryWriter writer = new(stream))
+            {
+                // This client only creates streaming (IpcStream) sessions.
+                writer.Write((uint)EventPipeSessionType.IpcStream);
+                writer.Write(config.CircularBufferSizeInMB);
+                writer.Write((uint)config.Format);
+                writer.Write(config.RundownKeyword);
+                writer.Write(config.RequestStackwalk);
+
+                SerializeProvidersV5(config, writer);
+
+                writer.Flush();
+                serializedData = stream.ToArray();
+            }
+
+            return serializedData;
+        }
+
         private static void SerializeProviders(EventPipeSessionConfiguration config, BinaryWriter writer)
         {
             writer.Write(config.Providers.Count);
@@ -192,6 +226,40 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 writer.Write((uint)provider.EventLevel);
                 writer.WriteString(provider.Name);
                 writer.WriteString(provider.GetArgumentString());
+            }
+        }
+
+        // CollectTracing5+ per-provider layout: the V4 fields plus a trailing event filter.
+        private static void SerializeProvidersV5(EventPipeSessionConfiguration config, BinaryWriter writer)
+        {
+            writer.Write(config.Providers.Count);
+            foreach (EventPipeProvider provider in config.Providers)
+            {
+                writer.Write(unchecked((ulong)provider.Keywords));
+                writer.Write((uint)provider.EventLevel);
+                writer.WriteString(provider.Name);
+                writer.WriteString(provider.GetArgumentString());
+                SerializeEventFilter(writer, provider.EventFilter);
+            }
+        }
+
+        // Serializes a provider's CollectTracing5+ event filter. A null filter (no explicit Event ID
+        // filter) is written as a disabled, empty filter (enable=false, count=0), which the runtime
+        // interprets as "allow all events".
+        private static void SerializeEventFilter(BinaryWriter writer, EventPipeProviderEventFilter filter)
+        {
+            if (filter == null)
+            {
+                writer.Write(false);
+                writer.Write(0u);
+                return;
+            }
+
+            writer.Write(filter.Enable);
+            writer.Write((uint)filter.EventIds.Count);
+            foreach (uint eventId in filter.EventIds)
+            {
+                writer.Write(eventId);
             }
         }
     }

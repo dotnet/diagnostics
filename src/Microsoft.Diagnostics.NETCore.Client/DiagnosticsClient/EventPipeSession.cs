@@ -97,7 +97,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // To keep backward compatibility with older runtimes we only use newer serialization format when needed
             EventPipeCommandId command;
             byte[] payload;
-            if (config.RundownKeyword != DefaultRundownKeyword && config.RundownKeyword != 0)
+            if (HasEventFilter(config))
+            {
+                // V5 adds a per-provider event-id filter (and a session-type prefix)
+                command = EventPipeCommandId.CollectTracing5;
+                payload = config.SerializeV5();
+            }
+            else if (config.RundownKeyword != DefaultRundownKeyword && config.RundownKeyword != 0)
             {
                 // V4 has added support to specify rundown keyword
                 command = EventPipeCommandId.CollectTracing4;
@@ -116,6 +122,20 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             return new IpcMessage(DiagnosticsServerCommandSet.EventPipe, (byte)command, payload);
+        }
+
+        // A per-provider Event ID filter is available on CollectTracing5 and later.
+        private static bool HasEventFilter(EventPipeSessionConfiguration config)
+        {
+            foreach (EventPipeProvider provider in config.Providers)
+            {
+                if (provider.EventFilter != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static EventPipeSession CreateSessionFromResponse(IpcEndpoint endpoint, ref IpcResponse? response, string operationName)
