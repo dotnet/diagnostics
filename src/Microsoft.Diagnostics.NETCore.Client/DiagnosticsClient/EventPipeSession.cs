@@ -92,7 +92,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        private static IpcMessage CreateStartMessage(EventPipeSessionConfiguration config)
+        // Internal for unit testing of the version/command selection logic.
+        internal static IpcMessage CreateStartMessage(EventPipeSessionConfiguration config)
         {
             // To keep backward compatibility with older runtimes we only use newer serialization format when needed
             EventPipeCommandId command;
