@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     public class CrashInfoServiceTests
     {
         [Fact]
-        public void Create_AllowsMessageOnlyNativeAotCrashInfo()
+        public void CreateAllowsMessageOnlyNativeAotCrashInfo()
         {
             string triageJson = """{"version":"1.0.0","runtime_base":"0x7FFF80270000","runtime_type":"4","runtime_version":"9.0.16","reason":"2","thread":"0x7050","message":"Delegate_GarbageCollected"}""";
 
