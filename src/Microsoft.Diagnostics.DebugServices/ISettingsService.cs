@@ -17,16 +17,9 @@ namespace Microsoft.Diagnostics.DebugServices
         bool DacSignatureVerificationEnabled { get; set; }
 
         /// <summary>
-        /// Controls whether the cDAC is used in place of the in-box DAC:
-        /// <list type="bullet">
-        ///   <item><c>null</c> (default): evaluate policy and fall back. The cDAC is used
-        ///     when the target runtime supports it and a matching cDAC is available next
-        ///     to the diagnostics tool; otherwise the in-box DAC is used.</item>
-        ///   <item><c>true</c>: always use the cDAC. Runtime construction fails if no
-        ///     matching cDAC is available.</item>
-        ///   <item><c>false</c>: always use the in-box DAC. The cDAC is never loaded.</item>
-        /// </list>
+        /// Controls whether the cDAC is used in place of the in-box DAC. See
+        /// <see cref="DebugServices.CDacLoadPolicy"/> for the individual policy values.
         /// </summary>
-        bool? UseCDac { get; set; }
+        CDacLoadPolicy CDacLoadPolicy { get; set; }
     }
 }

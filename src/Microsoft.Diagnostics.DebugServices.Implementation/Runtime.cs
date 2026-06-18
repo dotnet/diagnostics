@@ -131,7 +131,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // The cDAC is bundled with the diagnostics tool and is never downloaded, so a missing
             // path means it isn't available for this host.
             _cdacFilePath ??= GetLibraryPath(DebugLibraryKind.CDac);
-            if (_cdacFilePath is null && _settingsService.UseCDac == true)
+            if (_cdacFilePath is null && _settingsService.CDacLoadPolicy == CDacLoadPolicy.UseCDac)
             {
                 // The cDAC was explicitly forced but isn't bundled with this tool.
                 throw new DiagnosticsException($"The cDAC was explicitly requested but no matching cDAC is available for this runtime: {RuntimeModule.FileName}");
@@ -155,22 +155,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Evaluates the cDAC loading policy for this runtime. This is the single place that
         /// decides whether the diagnostics tool should load the cDAC itself in place of the
-        /// in-box DAC, based on the <see cref="ISettingsService.UseCDac"/> setting and the
+        /// in-box DAC, based on the <see cref="ISettingsService.CDacLoadPolicy"/> setting and the
         /// target runtime version.
         /// </summary>
         private bool ShouldUseCDac()
         {
-            return _settingsService.UseCDac switch
+            return _settingsService.CDacLoadPolicy switch
             {
-                false => false,                 // Never load the cDAC.
-                true => true,                   // Always use the cDAC, regardless of the runtime version. Availability is
-                                                //  checked by the caller (a missing forced cDAC is a hard error).
-                _ => ShouldUseCDacByDefault(),  // No explicit setting: evaluate the default policy.
+                CDacLoadPolicy.UseLegacyDac => false,   // Never load the cDAC.
+                CDacLoadPolicy.UseCDac => true,         // Always use the cDAC, regardless of the runtime version. Availability is
+                                                        //  checked by the caller (a missing forced cDAC is a hard error).
+                _ => ShouldUseCDacByDefault(),          // No explicit setting: evaluate the default policy.
             };
         }
 
         /// <summary>
-        /// The default cDAC policy used when <see cref="ISettingsService.UseCDac"/> is not set.
+        /// The default cDAC policy used when <see cref="ISettingsService.CDacLoadPolicy"/> is not set.
         /// </summary>
         private bool ShouldUseCDacByDefault()
         {

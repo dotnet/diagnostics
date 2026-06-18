@@ -52,11 +52,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             bool flush = false;
             if (UseCDac is not null)
             {
-                SettingsService.UseCDac = UseCDac.ToLowerInvariant() switch
+                SettingsService.CDacLoadPolicy = UseCDac.ToLowerInvariant() switch
                 {
-                    "true" => true,
-                    "false" => false,
-                    "policy" or "default" => (bool?)null,
+                    "true" => CDacLoadPolicy.UseCDac,
+                    "false" => CDacLoadPolicy.UseLegacyDac,
+                    "policy" or "default" => CDacLoadPolicy.Default,
                     _ => throw new DiagnosticsException($"Invalid --usecdac value '{UseCDac}'. Expected true, false, or policy."),
                 };
                 flush = true;

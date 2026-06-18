@@ -118,7 +118,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public virtual bool DacSignatureVerificationEnabled { get; set; }
 
-        public bool? UseCDac { get; set; }
+        public CDacLoadPolicy CDacLoadPolicy { get; set; }
 
         #endregion
 
