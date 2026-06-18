@@ -18,6 +18,17 @@
       <None Include="$(NativeBinDir)$(LibPrefix)dbgshim$(LibSuffix)"
             PackagePath="runtimes/$(PackageRID)/native"
             Pack="true" />
+      <!--
+        Include the cDAC native binary (mscordaccore_universal[.dll/.so/.dylib]) alongside
+        dbgshim when PackageWithCDac is set. The file is staged into $(NativeBinDir) by the
+        InstallNativePackages target which downloads it from the runtime's cDAC transport
+        package. Avoid pulling in any SOS-related assets here — dbgshim is a standalone
+        native package consumed independently of SOS.
+      -->
+      <None Condition="'$(PackageWithCDac)' == 'true'"
+            Include="$(NativeBinDir)$(LibPrefix)mscordaccore_universal$(LibSuffix)"
+            PackagePath="runtimes/$(PackageRID)/native"
+            Pack="true" />
     </ItemGroup>
 
     <Target Name="AddRuntimeSpecificNativeSymbolToPackage">

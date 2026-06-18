@@ -21,10 +21,14 @@
     <PackageSourceFiles Include="$(NuGetPackageRoot)microsoft.diasymreader.native\$(MicrosoftDiaSymReaderNativeVersion)\runtimes\$(TargetRid)\native\*" Condition="'$(OS)' == 'Windows_NT'" />
   </ItemGroup>
 
-  <Import Condition="'$(PackageWithCDac)' == 'true'" Project="$(RepositoryEngineeringDir)CdacPackageItems.props" />
+  <ItemGroup Condition="'$(PackageWithCDac)' == 'true'">
+    <PackageDownload Include="runtime.$(TargetRid).Microsoft.DotNet.Cdac.Transport"
+                     Version="[$(runtimewinx64MicrosoftDotNetCdacTransportVersion)]" />
+    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.$(TargetRid).microsoft.dotnet.cdac.transport\$(runtimewinx64MicrosoftDotNetCdacTransportVersion)\runtimes\$(TargetRid)\native\*" />
+  </ItemGroup>
 
 <!--
-    Installs the above packages into the $(ArtifactsBinNativeDir) directory. 
+    Installs the above packages into the $(ArtifactsBinNativeDir) directory.
 -->
   <Target Name="InstallNativePackages">
     <Message Importance="High" Text="Installing packages to $(ArtifactsBinNativeDir)..." />

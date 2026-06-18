@@ -11,6 +11,12 @@
     <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
+
+    <!-- See sos-packaging.props for SingleTargetRidPackage semantics: when 'true', only
+         symbols matching the current $(TargetRid) are packed so a local single-rid
+         package is buildable on any host. Otherwise the full cross-rid set is required
+         and any missing artifact is intentionally a pack error. -->
+    <_PackAllTargetRids Condition="'$(SingleTargetRidPackage)' != 'true'">true</_PackAllTargetRids>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,65 +25,79 @@
       <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
     </None>
 
-    <None Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'win-x64'">
       <PackagePath>$(SOSPackagePathPrefix)/win-x64</PackagePath>
     </None>
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(BuildX64Package)' != 'true'">
-    <None Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'win-x86'">
       <PackagePath>$(SOSPackagePathPrefix)/win-x86</PackagePath>
     </None>
-    <None Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'win-arm64'">
       <PackagePath>$(SOSPackagePathPrefix)/win-arm64</PackagePath>
     </None>
 
-    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-x64'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-x64</PackagePath>
     </None>
-    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Linux.x64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-x64'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-x64</PackagePath>
     </None>
 
-    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-musl-x64'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-musl-x64</PackagePath>
     </None>
-    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Linux-musl.x64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-musl-x64'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-musl-x64</PackagePath>
     </None>
 
-    <None Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-arm'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-arm</PackagePath>
     </None>
-    <None Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-arm'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-arm</PackagePath>
     </None>
 
-    <None Include="$(ArtifactsBinDir)\Linux.arm64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Linux.arm64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-arm64'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-arm64</PackagePath>
     </None>
-    <None Include="$(ArtifactsBinDir)\Linux.arm64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Linux.arm64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-arm64'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-arm64</PackagePath>
     </None>
 
-    <None Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-musl-arm64'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-musl-arm64</PackagePath>
     </None>
-    <None Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\Linux-musl.arm64.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-musl-arm64'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-musl-arm64</PackagePath>
     </None>
 
-    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib.dwarf" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsosplugin.dylib.dwarf" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'osx-x64'">
       <PackagePath>$(SOSPackagePathPrefix)/osx-x64</PackagePath>
     </None>
-    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib.dwarf" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\OSX.x64.$(Configuration)\libsos.dylib.dwarf" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'osx-x64'">
       <PackagePath>$(SOSPackagePathPrefix)/osx-x64</PackagePath>
     </None>
 
-    <None Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsosplugin.dylib.dwarf" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsosplugin.dylib.dwarf" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'osx-arm64'">
       <PackagePath>$(SOSPackagePathPrefix)/osx-arm64</PackagePath>
     </None>
-    <None Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsos.dylib.dwarf" Pack="true" Visible="false">
+    <None Include="$(ArtifactsBinDir)\OSX.arm64.$(Configuration)\libsos.dylib.dwarf" Pack="true" Visible="false"
+          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'osx-arm64'">
       <PackagePath>$(SOSPackagePathPrefix)/osx-arm64</PackagePath>
     </None>
   </ItemGroup>

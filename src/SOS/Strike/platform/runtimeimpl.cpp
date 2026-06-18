@@ -27,7 +27,7 @@
 
 #define CORDBG_E_NO_IMAGE_AVAILABLE EMAKEHR(0x1c64)
 
-typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImpl2FnPtr)(ULONG64 clrInstanceId, 
+typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImpl2FnPtr)(ULONG64 clrInstanceId,
     IUnknown * pDataTarget,
     LPCWSTR pDacModulePath,
     CLR_DEBUGGING_VERSION * pMaxDebuggerSupportedVersion,
@@ -35,7 +35,7 @@ typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImpl2FnPtr)(ULONG64 clrInsta
     IUnknown ** ppInstance,
     CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
 
-typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImplFnPtr)(ULONG64 clrInstanceId, 
+typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImplFnPtr)(ULONG64 clrInstanceId,
     IUnknown * pDataTarget,
     HMODULE hDacDll,
     CLR_DEBUGGING_VERSION * pMaxDebuggerSupportedVersion,
@@ -43,7 +43,7 @@ typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImplFnPtr)(ULONG64 clrInstan
     IUnknown ** ppInstance,
     CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
 
-typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcess2FnPtr)(ULONG64 clrInstanceId, 
+typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcess2FnPtr)(ULONG64 clrInstanceId,
     IUnknown * pDataTarget,
     HMODULE hDacDll,
     REFIID riid,
@@ -104,7 +104,7 @@ static HRESULT GetSingleFileInfo(ITarget* target, PULONG pModuleIndex, PULONG64 
                 continue;
             }
         }
-        else 
+        else
         {
             hr = debuggerServices->GetOffsetBySymbol(index, symbolName, &symbolAddress);
             if (FAILED(hr)) {
@@ -176,11 +176,11 @@ HRESULT Runtime::CreateInstance(ITarget* target, RuntimeConfiguration configurat
         // If the previous operations were successful, create the Runtime instance
         if (SUCCEEDED(hr))
         {
-            if (moduleSize > 0) 
+            if (moduleSize > 0)
             {
                 *ppRuntime = new Runtime(target, configuration, moduleIndex, moduleAddress, moduleSize, runtimeInfo);
             }
-            else 
+            else
             {
                 ExtOut("Runtime (%s) module size == 0\n", runtimeModuleName);
                 hr = E_INVALIDARG;
@@ -204,8 +204,10 @@ Runtime::Runtime(ITarget* target, RuntimeConfiguration configuration, ULONG inde
     m_runtimeInfo(runtimeInfo),
     m_runtimeDirectory(nullptr),
     m_dacFilePath(nullptr),
+    m_cdacFilePath(nullptr),
     m_dbiFilePath(nullptr),
     m_clrDataProcess(nullptr),
+    m_cdacDataProcess(nullptr),
     m_pCorDebugProcess(nullptr)
 {
     _ASSERTE(index != -1);
@@ -240,6 +242,11 @@ Runtime::~Runtime()
         free((void*)m_dacFilePath);
         m_dacFilePath = nullptr;
     }
+    if (m_cdacFilePath != nullptr)
+    {
+        free((void*)m_cdacFilePath);
+        m_cdacFilePath = nullptr;
+    }
     if (m_dbiFilePath != nullptr)
     {
         free((void*)m_dbiFilePath);
@@ -255,6 +262,11 @@ Runtime::~Runtime()
     {
         m_clrDataProcess->Release();
         m_clrDataProcess = nullptr;
+    }
+    if (m_cdacDataProcess != nullptr)
+    {
+        m_cdacDataProcess->Release();
+        m_cdacDataProcess = nullptr;
     }
 }
 
@@ -299,6 +311,65 @@ LPCSTR Runtime::GetDacFilePath()
     return m_dacFilePath;
 }
 
+#ifndef FEATURE_PAL
+extern HMODULE g_hInstance;
+#else
+// A file-local anchor used to resolve the directory of the SOS module via dladdr.
+static void CDacModuleAnchor() {}
+#endif
+
+/**********************************************************************\
+ * Returns the cDAC (mscordaccore_universal) module path bundled next to
+ * sos in the diagnostics tool package, or nullptr when it isn't present.
+ * The cDAC is shipped with the tool and is never downloaded.
+\**********************************************************************/
+LPCSTR Runtime::GetCDacFilePath()
+{
+    if (m_cdacFilePath == nullptr)
+    {
+        // The cDAC lives in the same directory as the loaded sos module (the host's platform
+        // subfolder of the package), not in the target runtime directory.
+        ArrayHolder<char> szSOSModulePath = new char[MAX_LONGPATH + 1];
+#ifdef FEATURE_PAL
+        Dl_info info;
+        if (dladdr((void*)&CDacModuleAnchor, &info) == 0 || info.dli_fname == nullptr)
+        {
+            ExtDbgOut("GetCDacFilePath: dladdr failed to locate the sos module\n");
+            return nullptr;
+        }
+        strcpy_s(szSOSModulePath.GetPtr(), MAX_LONGPATH, info.dli_fname);
+#else
+        if (GetModuleFileNameA(g_hInstance, szSOSModulePath, MAX_LONGPATH) == 0)
+        {
+            ExtDbgOut("GetCDacFilePath: GetModuleFileNameA failed %08x\n", HRESULT_FROM_WIN32(GetLastError()));
+            return nullptr;
+        }
+#endif
+        std::string cdacModulePath(szSOSModulePath.GetPtr());
+        size_t lastSlash = cdacModulePath.rfind(DIRECTORY_SEPARATOR_CHAR_A);
+        if (lastSlash == std::string::npos)
+        {
+            ExtDbgOut("GetCDacFilePath: failed to parse sos module directory from %s\n", cdacModulePath.c_str());
+            return nullptr;
+        }
+        cdacModulePath.erase(lastSlash + 1);
+        cdacModulePath.append(NETCORE_CDAC_DLL_NAME_A);
+
+        // The cDAC must exist on disk next to sos; it is never downloaded. When it is not
+        // bundled (for example, RIDs without a cDAC), callers fall back to the in-box DAC.
+#ifdef FEATURE_PAL
+        bool exists = access(cdacModulePath.c_str(), F_OK) == 0;
+#else
+        bool exists = GetFileAttributesA(cdacModulePath.c_str()) != INVALID_FILE_ATTRIBUTES;
+#endif
+        if (exists)
+        {
+            m_cdacFilePath = _strdup(cdacModulePath.c_str());
+        }
+    }
+    return m_cdacFilePath;
+}
+
 /**********************************************************************\
  * Returns the DBI module path to the rest of SOS
 \**********************************************************************/
@@ -333,6 +404,10 @@ void Runtime::Flush()
     {
         m_clrDataProcess->Flush();
     }
+    if (m_cdacDataProcess != nullptr)
+    {
+        m_cdacDataProcess->Flush();
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -360,7 +435,7 @@ HRESULT Runtime::QueryInterface(
 
 ULONG Runtime::AddRef()
 {
-    LONG ref = InterlockedIncrement(&m_ref);    
+    LONG ref = InterlockedIncrement(&m_ref);
     return ref;
 }
 
@@ -423,6 +498,28 @@ LPCSTR Runtime::GetRuntimeDirectory()
 \**********************************************************************/
 HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess** ppClrDataProcess)
 {
+    // When the cDAC is requested (e.g. by CLRMA or the main SOS DAC-load path) and the policy
+    // selects it (supported runtime version, DOTNET_ENABLE_CDAC not deferring to the in-box DAC),
+    // prefer it for the data-access path and fall back to the in-box DAC if it isn't bundled or
+    // fails to initialize.
+    if ((flags & ClrDataProcessFlags::UseCDac) != 0 && ShouldUseCDac())
+    {
+        if (m_cdacDataProcess == nullptr)
+        {
+            LPCSTR cdacFilePath = GetCDacFilePath();
+            if (cdacFilePath != nullptr)
+            {
+                m_cdacDataProcess = CreateClrDataProcessInstance(cdacFilePath, GetContractDescriptorAddress());
+            }
+        }
+        if (m_cdacDataProcess != nullptr)
+        {
+            *ppClrDataProcess = m_cdacDataProcess;
+            return S_OK;
+        }
+        // Fall through to the DAC.
+    }
+
     if (m_clrDataProcess == nullptr)
     {
         *ppClrDataProcess = nullptr;
@@ -432,39 +529,128 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         {
             return CORDBG_E_NO_IMAGE_AVAILABLE;
         }
-        HMODULE hdac = LoadLibraryA(dacFilePath);
-        if (hdac == NULL)
+        m_clrDataProcess = CreateClrDataProcessInstance(dacFilePath, 0);
+        if (m_clrDataProcess == nullptr)
         {
-            ExtDbgOut("LoadLibraryA(%s) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
         }
-        PFN_CLRDataCreateInstance pfnCLRDataCreateInstance = (PFN_CLRDataCreateInstance)GetProcAddress(hdac, "CLRDataCreateInstance");
-        if (pfnCLRDataCreateInstance == nullptr)
-        {
-            FreeLibrary(hdac);
-            return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
-        }
-        ICLRDataTarget *target = new DataTarget(GetModuleAddress());
-        HRESULT hr = pfnCLRDataCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&m_clrDataProcess);
-        if (FAILED(hr))
-        {
-            m_clrDataProcess = nullptr;
-            return hr;
-        }
-        ULONG32 flags = 0;
-        m_clrDataProcess->GetOtherNotificationFlags(&flags);
-        flags |= (CLRDATA_NOTIFY_ON_MODULE_LOAD | CLRDATA_NOTIFY_ON_MODULE_UNLOAD | CLRDATA_NOTIFY_ON_EXCEPTION);
-        m_clrDataProcess->SetOtherNotificationFlags(flags);
     }
     *ppClrDataProcess = m_clrDataProcess;
     return S_OK;
 }
 
+// The minimum runtime major version that supports the cDAC.
+static const DWORD MinCDacRuntimeMajorVersion = 11;
+
+// Returns true if the named environment variable is set to "1".
+static bool IsEnvironmentVariableSetToOne(const char* name)
+{
+    char buffer[16];
+    DWORD length = GetEnvironmentVariableA(name, buffer, ARRAY_SIZE(buffer));
+    return length > 0 && length < ARRAY_SIZE(buffer) && strcmp(buffer, "1") == 0;
+}
+
 /**********************************************************************\
- * Loads and initializes the public ICorDebug interfaces. This should be 
- * called at least once per debugger stop state to ensure that the 
+ * Evaluates the cDAC loading policy for this runtime.
+\**********************************************************************/
+bool Runtime::ShouldUseCDac()
+{
+    // When DOTNET_ENABLE_CDAC is requested, the in-box (legacy) DAC loads and drives the cDAC
+    // contract reader itself (including its own dac-vs-cdac fallback/comparison). Defer to that
+    // mechanism rather than loading the cDAC directly so those scenarios keep working.
+    if (IsEnvironmentVariableSetToOne("DOTNET_ENABLE_CDAC") || IsEnvironmentVariableSetToOne("COMPlus_ENABLE_CDAC"))
+    {
+        return false;
+    }
+
+    // Use the cDAC only for runtimes that support it (.NET 11+).
+    VS_FIXEDFILEINFO fileInfo;
+    if (FAILED(GetEEVersion(&fileInfo, nullptr, 0)))
+    {
+        return false;
+    }
+    DWORD majorVersion = (fileInfo.dwFileVersionMS >> 16) & 0xFFFF;
+    return majorVersion >= MinCDacRuntimeMajorVersion;
+}
+
+/**********************************************************************\
+ * Loads the given DAC/cDAC module and creates an IXCLRDataProcess from it.
+ * Returns nullptr on failure.
+\**********************************************************************/
+IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath, ULONG64 contractDescriptorAddress)
+{
+    HMODULE hdac = LoadLibraryA(dacFilePath);
+    if (hdac == NULL)
+    {
+        ExtDbgOut("LoadLibraryA(%s) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
+        return nullptr;
+    }
+    PFN_CLRDataCreateInstance pfnCLRDataCreateInstance = (PFN_CLRDataCreateInstance)GetProcAddress(hdac, "CLRDataCreateInstance");
+    if (pfnCLRDataCreateInstance == nullptr)
+    {
+        FreeLibrary(hdac);
+        return nullptr;
+    }
+    ICLRDataTarget *target = new DataTarget(GetModuleAddress(), contractDescriptorAddress);
+    IXCLRDataProcess* clrDataProcess = nullptr;
+    HRESULT hr = pfnCLRDataCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&clrDataProcess);
+    if (FAILED(hr))
+    {
+        // CLRDataCreateInstance only AddRefs the data target on success; release our reference
+        // (created at ref count 0) to delete it, and unload the module.
+        target->AddRef();
+        target->Release();
+        FreeLibrary(hdac);
+        return nullptr;
+    }
+    // Best-effort: enable module load/unload and exception notifications so SOS flushes its caches
+    // across stop states when the cDAC/DAC is used against a live target. Ignore failures (the
+    // cDAC may not implement these yet).
+    ULONG32 notificationFlags = 0;
+    if (SUCCEEDED(clrDataProcess->GetOtherNotificationFlags(&notificationFlags)))
+    {
+        notificationFlags |= (CLRDATA_NOTIFY_ON_MODULE_LOAD | CLRDATA_NOTIFY_ON_MODULE_UNLOAD | CLRDATA_NOTIFY_ON_EXCEPTION);
+        clrDataProcess->SetOtherNotificationFlags(notificationFlags);
+    }
+    return clrDataProcess;
+}
+
+/**********************************************************************\
+ * Resolves the address of the cDAC contract descriptor export
+ * (DotNetRuntimeContractDescriptor) in the runtime module, or 0 if it
+ * can't be located. Mirrors the export lookup in GetSingleFileInfo: the
+ * cross-platform reader-based lookup for ELF/Mach-O targets and the
+ * debugger's symbol resolution for Windows (PE) targets.
+\**********************************************************************/
+ULONG64 Runtime::GetContractDescriptorAddress()
+{
+    const char* symbolName = "DotNetRuntimeContractDescriptor";
+    ULONG64 symbolAddress = 0;
+    if (m_target->GetOperatingSystem() == ITarget::OperatingSystem::Linux ||
+        m_target->GetOperatingSystem() == ITarget::OperatingSystem::OSX)
+    {
+        if (!::TryGetSymbolWithCallback(ReaderReadMemory, m_address, symbolName, &symbolAddress))
+        {
+            return 0;
+        }
+    }
+    else
+    {
+        IDebuggerServices* debuggerServices = GetDebuggerServices();
+        if (debuggerServices == nullptr ||
+            FAILED(debuggerServices->GetOffsetBySymbol(m_index, symbolName, &symbolAddress)))
+        {
+            return 0;
+        }
+    }
+    return symbolAddress;
+}
+
+/**********************************************************************\
+ * Loads and initializes the public ICorDebug interfaces. This should be
+ * called at least once per debugger stop state to ensure that the
  * interface is available and that it doesn't hold stale data. Calling
- * it more than once isn't an error, but does have perf overhead from 
+ * it more than once isn't an error, but does have perf overhead from
  * needlessly flushing memory caches.
 \**********************************************************************/
 HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
@@ -516,7 +702,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         return hr;
     }
     const char* dbiFilePath = GetDbiFilePath();
-    if (dbiFilePath == nullptr) 
+    if (dbiFilePath == nullptr)
     {
         ExtErr("Could not find matching DBI\n");
         return CORDBG_E_NO_IMAGE_AVAILABLE;
@@ -553,7 +739,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         }
 #ifdef FEATURE_PAL
         // On Linux/MacOS the DAC module handle needs to be re-created using the DAC PAL instance
-        // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share 
+        // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share
         // the same PAL where dbgshim has it's own.
         LoadLibraryWFnPtr loadLibraryWFn = (LoadLibraryWFnPtr)GetProcAddress(hDac, "LoadLibraryW");
         if (loadLibraryWFn != nullptr)

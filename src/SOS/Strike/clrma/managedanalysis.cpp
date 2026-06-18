@@ -8,8 +8,8 @@ extern bool IsWindowsTarget();
 extern "C" IXCLRDataProcess * GetClrDataFromDbgEng();
 
 _Use_decl_annotations_
-ClrmaManagedAnalysis::ClrmaManagedAnalysis() : 
-    m_lRefs(1), 
+ClrmaManagedAnalysis::ClrmaManagedAnalysis() :
+    m_lRefs(1),
     m_pointerSize(0),
     m_fileSeparator(0),
     m_processorType(0),
@@ -289,6 +289,8 @@ ClrmaManagedAnalysis::AssociateClient(
                 }
                 if (FAILED(hr = runtime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::UseCDac, &m_clrData)))
                 {
+                    TraceInformation("AssociateClient Runtime based DAC retrieval failed with code %08x, falling back to CLRMA\n", hr);
+
                     m_clrData = GetClrDataFromDbgEng();
                     if (m_clrData == nullptr)
                     {

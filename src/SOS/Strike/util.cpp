@@ -3810,7 +3810,7 @@ public:
 HRESULT LoadClrDebugDll(void)
 {
     _ASSERTE(g_pRuntime != nullptr);
-    HRESULT hr = g_pRuntime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::None, &g_clrData);
+    HRESULT hr = g_pRuntime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::UseCDac, &g_clrData);
     if (FAILED(hr))
     {
         g_clrData = GetClrDataFromDbgEng();
@@ -5337,7 +5337,7 @@ WString DmlEscape(const WString &input)
     const WCHAR *str = input.c_str();
     size_t len = input.length();
     WString result;
-    
+
     for (size_t i = 0; i < len; i++)
     {
         // Ampersand must be escaped FIRST to avoid double-escaping
@@ -5361,7 +5361,7 @@ WString DmlEscape(const WString &input)
             result += temp;
         }
     }
-    
+
     return result;
 }
 
