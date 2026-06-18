@@ -149,7 +149,14 @@ namespace SOS.Extensions.Clrma
                 {
                     try
                     {
-                        _nestedExceptions = _crashInfoService.GetNestedExceptions(ThreadId).Select((exception) => new ExceptionWrapper(exception)).ToArray();
+                        if (_crashInfoService.GetThreadException(ThreadId) is null)
+                        {
+                            _nestedExceptions = Array.Empty<ExceptionWrapper>();
+                        }
+                        else
+                        {
+                            _nestedExceptions = _crashInfoService.GetNestedExceptions(ThreadId).Select((exception) => new ExceptionWrapper(exception)).ToArray();
+                        }
                     }
                     catch (ArgumentOutOfRangeException)
                     {
