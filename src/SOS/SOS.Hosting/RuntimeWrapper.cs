@@ -389,6 +389,20 @@ namespace SOS.Hosting
                 Trace.TraceError($"Could not find matching DBI {dbiFilePath ?? ""} for this runtime: {_runtime.RuntimeModule.FileName}");
                 return IntPtr.Zero;
             }
+
+            // Load the in-box DAC before the DBI. The DBI has a hard load-time dependency on the in-box DAC
+            // (libmscordaccore.so / mscordaccore.dll is a NEEDED import resolved next to the runtime).
+            // as it's the PAL provider for the debugger process. For senarios where the DBI is not collocated with the DAC
+            // (e.x. single-file), each is downloaded into its own  symbol-cache directory, so the loader can only satisfy the DBI's dependency if the DAC is
+            // already resident in the process. When the cDAC serves the data-access path the in-box DAC is otherwise never loaded, so load it explicitly here first.
+            // This also verifies the DAC signature before the DBI is passed the DAC path or handle.
+            IntPtr dacHandle = GetDacHandle();
+            if (dacHandle == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+            string dacFilePath = _runtime.GetDacFilePath(out bool _);
+
             if (_dbiHandle == IntPtr.Zero)
             {
                 try
@@ -415,16 +429,6 @@ namespace SOS.Hosting
             int hresult = 0;
             try
             {
-                // This will verify the DAC signature if needed before DBI is passed the DAC path or handle
-                IntPtr dacHandle = GetDacHandle();
-                if (dacHandle == IntPtr.Zero)
-                {
-                    return IntPtr.Zero;
-                }
-
-                // The DAC was verified in the GetDacHandle call above. Ignore the verifySignature parameter here.
-                string dacFilePath = _runtime.GetDacFilePath(out bool _);
-
                 OpenVirtualProcessImpl2Delegate openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
                 if (openVirtualProcessImpl2 != null)
                 {
