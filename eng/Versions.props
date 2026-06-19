@@ -15,6 +15,14 @@
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
 
     <!--
+      Embed the cDAC native binary into the diagnostics-tool packages on preview branches.
+      Release/servicing branches (PreReleaseVersionLabel != 'preview') keep the legacy
+      behavior of pulling the DAC from the runtime install or symbol server. This can be
+      overridden explicitly on the command line with /p:PackageWithCDac=true|false.
+    -->
+    <PackageWithCDac Condition="'$(PackageWithCDac)' == '' and '$(PreReleaseVersionLabel)' == 'preview'">true</PackageWithCDac>
+
+    <!--
       Our nightly tools are stable versioned but go to a non-stable feed.
       Arcade usually disallows this, but we use such a versioning scheme by design.
       The nightly bits are versioned in a stable manner to allow `dotnet tool` to perform

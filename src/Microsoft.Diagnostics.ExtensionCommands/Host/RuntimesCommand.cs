@@ -36,11 +36,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Forces all runtimes to be enumerated.")]
         public bool All { get; set; }
 
-        [Option(Name = "--usecdac", Help = "Use the CDAC if available and requested (true/false).")]
-        public bool? UseContractReader { get; set; }
-
-        [Option(Name = "--forceusecdac", Help = "Always use the CDAC (true/false).")]
-        public bool? ForceUseContractReader { get; set; }
+        [Option(Name = "--usecdac", Help = "Controls cDAC usage: true (always), false (never), or policy (default: use for supported runtimes when bundled).")]
+        public string UseCDac { get; set; }
 
         [Option(Name = "--DacSignatureVerification", Aliases = new string[] { "-v" }, Help = "Enforce the proper DAC certificate signing when loaded (true/false).")]
         public bool? DacSignatureVerification { get; set; }
@@ -53,16 +50,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             bool flush = false;
-            if (UseContractReader.HasValue)
+            if (UseCDac is not null)
             {
-                SettingsService.UseContractReader = UseContractReader.Value;
-                flush = true;
-            }
-
-            if (ForceUseContractReader.HasValue)
-            {
-                SettingsService.UseContractReader = ForceUseContractReader.Value;
-                SettingsService.ForceUseContractReader = ForceUseContractReader.Value;
+                SettingsService.CDacLoadPolicy = UseCDac.ToLowerInvariant() switch
+                {
+                    "true" => CDacLoadPolicy.UseCDac,
+                    "false" => CDacLoadPolicy.UseLegacyDac,
+                    "policy" or "default" => CDacLoadPolicy.Default,
+                    _ => throw new DiagnosticsException($"Invalid --usecdac value '{UseCDac}'. Expected true, false, or policy."),
+                };
                 flush = true;
             }
 

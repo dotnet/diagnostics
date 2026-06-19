@@ -1,6 +1,17 @@
 <!--
     Input:
-        SOSPackagePathPrefix - the nupkg package path prefix. The SOS native binaries are added to package relative to this.
+        SOSPackagePathPrefix    - the nupkg package path prefix. The SOS native binaries are added to package relative to this.
+        SingleTargetRidPackage  - when 'true', only include assets matching the current
+                                  $(TargetRid). Used for local single-rid test packages
+                                  (for example, building an x64-only dotnet-dump on Windows,
+                                  or a linux-x64-only one on Linux) so packing is testable
+                                  on any host without requiring a full cross-rid build.
+        PackageWithCDac         - when 'true', include the cDAC native binary alongside SOS.
+
+    Every `SosRequiredBinaries Include="..."` entry refers to a build output that is
+    expected to exist for the rids in scope: missing native artifacts are intentionally a
+    pack error, not a silent skip. To pack a subset locally, set
+    SingleTargetRidPackage=true so only the current $(TargetRid) is required.
 -->
 <Project>
   <PropertyGroup>
@@ -8,56 +19,81 @@
     <IsMuslBuild Condition="$(TargetRid.StartsWith('linux-musl-'))">true</IsMuslBuild>
   </PropertyGroup>
 
-  <ItemGroup>
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll" TargetRid="win-x64"/>
+  <!-- Each RID's required binaries are grouped in an ItemGroup guarded by SingleTargetRidPackage:
+       when 'true' only the current $(TargetRid) is packed (a locally buildable single-rid package),
+       otherwise the full cross-rid set is required and a missing artifact is intentionally a pack
+       error. The cDAC entries are additionally guarded by PackageWithCDac. -->
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'win-x64'">
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\sos.dll" TargetRid="win-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\Microsoft.DiaSymReader.Native.amd64.dll" TargetRid="win-x64" />
-    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x64" Condition="'$(PackageWithCDac)' == 'true'" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(BuildX64Package)' != 'true'">
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'win-x86'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\sos.dll" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\Microsoft.DiaSymReader.Native.x86.dll" TargetRid="win-x86" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x86" Condition="'$(PackageWithCDac)' == 'true'" />
+  </ItemGroup>
 
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'win-arm64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\sos.dll" TargetRid="win-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll" TargetRid="win-arm64" />
-    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
+  </ItemGroup>
 
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-x64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libsosplugin.so" TargetRid="linux-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libsos.so" TargetRid="linux-x64" />
-    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-x64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-x64" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-x64" />
+  </ItemGroup>
 
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-x64" TargetsMusl="true"/>
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libsos.so" TargetRid="linux-musl-x64" TargetsMusl="true"/>
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-x64" TargetsMusl="true"/>
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-musl-x64'">
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-x64" TargetsMusl="true" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libsos.so" TargetRid="linux-musl-x64" TargetsMusl="true" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-x64" TargetsMusl="true" />
+  </ItemGroup>
 
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-arm'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libsosplugin.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libsos.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\sosdocsunix.txt" TargetRid="linux-arm" />
+  </ItemGroup>
 
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-arm64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libsosplugin.so" TargetRid="linux-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libsos.so" TargetRid="linux-arm64" />
-    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-arm64" />
+  </ItemGroup>
 
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm64" TargetsMusl="true"/>
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsos.so" TargetRid="linux-musl-arm64" TargetsMusl="true"/>
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm64" TargetsMusl="true"/>
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-musl-arm64'">
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm64" TargetsMusl="true" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsos.so" TargetRid="linux-musl-arm64" TargetsMusl="true" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm64" TargetsMusl="true" />
+  </ItemGroup>
 
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm" TargetsMusl="true"/>
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libsos.so" TargetRid="linux-musl-arm" TargetsMusl="true"/>
-    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm" TargetsMusl="true"/>
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-musl-arm'">
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libsosplugin.so" TargetRid="linux-musl-arm" TargetsMusl="true" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libsos.so" TargetRid="linux-musl-arm" TargetsMusl="true" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm" TargetsMusl="true" />
+  </ItemGroup>
 
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'osx-x64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libsos.dylib" TargetRid="osx-x64" />
-    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-x64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-x64" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-x64" />
+  </ItemGroup>
 
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'osx-arm64'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libsosplugin.dylib" TargetRid="osx-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libsos.dylib" TargetRid="osx-arm64" />
-    <SosRequiredBinaries Condition="'$(PackageWithCDac)' == 'true'" Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-arm64" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-arm64" />
+  </ItemGroup>
 
+  <ItemGroup>
     <SosRequiredBinaries Update="@(SosRequiredBinaries->WithMetadataValue('TargetsMusl' , 'true'))">
       <OriginalPath>$([MSBuild]::ValueOrDefault('%(FullPath)', '').Replace('linux-musl','linux'))</OriginalPath>
     </SosRequiredBinaries>

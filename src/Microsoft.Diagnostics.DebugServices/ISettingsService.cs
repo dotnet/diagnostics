@@ -17,13 +17,9 @@ namespace Microsoft.Diagnostics.DebugServices
         bool DacSignatureVerificationEnabled { get; set; }
 
         /// <summary>
-        /// If true, uses the CDAC contract reader if available.
+        /// Controls whether the cDAC is used in place of the in-box DAC. See
+        /// <see cref="DebugServices.CDacLoadPolicy"/> for the individual policy values.
         /// </summary>
-        bool UseContractReader { get; set; }
-
-        /// <summary>
-        /// If true, always use the CDAC contract reader even when not requested
-        /// </summary>
-        bool ForceUseContractReader { get; set; }
+        CDacLoadPolicy CDacLoadPolicy { get; set; }
     }
 }

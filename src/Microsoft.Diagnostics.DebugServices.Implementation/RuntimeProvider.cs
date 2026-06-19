@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -33,10 +35,33 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // not flushed when the Target/RuntimeService is flushed; they are all disposed and the list cleared. They are
             // all re-created the next time the IRuntime or ClrRuntime instance is queried.
             ISettingsService settingsService = _services.GetService<ISettingsService>();
+            bool verifyDac = settingsService?.DacSignatureVerificationEnabled ?? true;
+
+            // The cDAC (mscordaccore_universal) ships inside the (signed) diagnostics tool package and
+            // carries no individual DAC signature, so it cannot satisfy ClrMD's signature check. Trust it
+            // the same way the native and SOS-hosting cDAC load paths do (load without verification), while
+            // still verifying the in-box DAC. We trust ONLY the exact cDAC path the host resolver provides
+            // (the bundled binary next to sos); matching by file name alone would let a name-hijacked DLL
+            // loaded from elsewhere (target runtime dir, symbol cache, ...) bypass verification.
+            string trustedCDacPath = _services.GetService<IHostAssetResolver>()?.GetCDacPath();
+            string normalizedTrustedCDacPath = string.IsNullOrEmpty(trustedCDacPath) ? null : Path.GetFullPath(trustedCDacPath);
+            StringComparison pathComparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
             DataTarget dataTarget = new(_services.GetService<IDataReader>(), new DataTargetOptions()
             {
                 ForceCompleteRuntimeEnumeration = (flags & RuntimeEnumerationFlags.All) != 0,
-                VerifyDacOnWindows = settingsService?.DacSignatureVerificationEnabled ?? true
+                VerifyDacOnWindows = verifyDac,
+                // Takes priority over VerifyDacOnWindows: skip verification only for the exact bundled cDAC.
+                DacSignatureVerificationOverride = (dacFilePath) =>
+                {
+                    if (normalizedTrustedCDacPath is not null
+                        && !string.IsNullOrEmpty(dacFilePath)
+                        && string.Equals(Path.GetFullPath(dacFilePath), normalizedTrustedCDacPath, pathComparison))
+                    {
+                        return false;
+                    }
+                    return verifyDac;
+                }
             });
             for (int i = 0; i < dataTarget.ClrVersions.Length; i++)
             {
