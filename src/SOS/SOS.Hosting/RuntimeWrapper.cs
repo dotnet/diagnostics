@@ -238,22 +238,22 @@ namespace SOS.Hosting
                 return HResult.E_INVALIDARG;
             }
             *ppClrDataProcess = IntPtr.Zero;
-            if ((flags & ClrDataProcessFlags.UseCDac) != 0)
+            // Prefer the cDAC for the data-access (IXCLRDataProcess) path when the runtime policy
+            // selects it (GetCDacFilePath returns non-null); fall back to the in-box DAC otherwise.
+            // The ICorDebug/DBI path (CreateCorDebugProcess) always uses the in-box DAC. The flags
+            // parameter is retained for the native IRuntime contract but no longer consulted here.
+            if (_cdacDataProcess == IntPtr.Zero)
             {
-                if (_cdacDataProcess == IntPtr.Zero)
+                try
                 {
-                    try
-                    {
-                        _cdacDataProcess = CreateClrDataProcess(GetCDacHandle());
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.TraceError(ex.ToString());
-                    }
+                    _cdacDataProcess = CreateClrDataProcess(GetCDacHandle());
                 }
-                *ppClrDataProcess = _cdacDataProcess;
+                catch (Exception ex)
+                {
+                    Trace.TraceError(ex.ToString());
+                }
             }
-            // Fallback to regular DAC instance if CDac isn't enabled or there where errors creating the instance
+            *ppClrDataProcess = _cdacDataProcess;
             if (*ppClrDataProcess == IntPtr.Zero)
             {
                 if (_clrDataProcess == IntPtr.Zero)
@@ -389,6 +389,20 @@ namespace SOS.Hosting
                 Trace.TraceError($"Could not find matching DBI {dbiFilePath ?? ""} for this runtime: {_runtime.RuntimeModule.FileName}");
                 return IntPtr.Zero;
             }
+
+            // Load the in-box DAC before the DBI. The DBI has a hard load-time dependency on the in-box DAC
+            // (libmscordaccore.so / mscordaccore.dll is a NEEDED import resolved next to the runtime).
+            // as it's the PAL provider for the debugger process. For senarios where the DBI is not collocated with the DAC
+            // (e.x. single-file), each is downloaded into its own  symbol-cache directory, so the loader can only satisfy the DBI's dependency if the DAC is
+            // already resident in the process. When the cDAC serves the data-access path the in-box DAC is otherwise never loaded, so load it explicitly here first.
+            // This also verifies the DAC signature before the DBI is passed the DAC path or handle.
+            IntPtr dacHandle = GetDacHandle();
+            if (dacHandle == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+            string dacFilePath = _runtime.GetDacFilePath(out bool _);
+
             if (_dbiHandle == IntPtr.Zero)
             {
                 try
@@ -415,16 +429,6 @@ namespace SOS.Hosting
             int hresult = 0;
             try
             {
-                // This will verify the DAC signature if needed before DBI is passed the DAC path or handle
-                IntPtr dacHandle = GetDacHandle();
-                if (dacHandle == IntPtr.Zero)
-                {
-                    return IntPtr.Zero;
-                }
-
-                // The DAC was verified in the GetDacHandle call above. Ignore the verifySignature parameter here.
-                string dacFilePath = _runtime.GetDacFilePath(out bool _);
-
                 OpenVirtualProcessImpl2Delegate openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
                 if (openVirtualProcessImpl2 != null)
                 {
@@ -518,7 +522,13 @@ namespace SOS.Hosting
         {
             if (_dacHandle == IntPtr.Zero)
             {
-                _dacHandle = GetDacHandle(useCDac: false);
+                string dacFilePath = _runtime.GetDacFilePath(out bool verifySignature);
+                if (dacFilePath == null)
+                {
+                    Trace.TraceError($"Could not find matching DAC for this runtime: {_runtime.RuntimeModule.FileName}");
+                    return IntPtr.Zero;
+                }
+                _dacHandle = LoadDacLibrary(dacFilePath, verifySignature);
             }
             return _dacHandle;
         }
@@ -527,27 +537,27 @@ namespace SOS.Hosting
         {
             if (_cdacHandle == IntPtr.Zero)
             {
-                _cdacHandle = GetDacHandle(useCDac: true);
+                string cdacFilePath = _runtime.GetCDacFilePath();
+                if (cdacFilePath == null)
+                {
+                    // The cDAC isn't selected for this runtime; the caller falls back to the in-box DAC.
+                    return IntPtr.Zero;
+                }
+                // The cDAC ships in the signed tool install directory, so it is never signature-verified.
+                _cdacHandle = LoadDacLibrary(cdacFilePath, verifySignature: false);
             }
             return _cdacHandle;
         }
 
-        private IntPtr GetDacHandle(bool useCDac)
+        private static IntPtr LoadDacLibrary(string dacFilePath, bool verifySignature)
         {
-            bool verifySignature = false;
-            string dacFilePath = useCDac ? _runtime.GetCDacFilePath() : _runtime.GetDacFilePath(out verifySignature);
-            if (dacFilePath == null)
-            {
-                Trace.TraceError($"Could not find matching DAC {dacFilePath ?? ""} {useCDac} for this runtime: {_runtime.RuntimeModule.FileName}");
-                return IntPtr.Zero;
-            }
             IntPtr dacHandle = IntPtr.Zero;
             IDisposable fileLock = null;
             try
             {
                 if (verifySignature)
                 {
-                    Trace.TraceInformation($"Verifying DAC signing and cert {dacFilePath} {useCDac}");
+                    Trace.TraceInformation($"Verifying DAC signing and cert {dacFilePath}");
 
                     // Check if the DAC cert is valid before loading
                     if (!AuthenticodeUtil.VerifyDacDll(dacFilePath, out fileLock))
@@ -561,7 +571,7 @@ namespace SOS.Hosting
                 }
                 catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
                 {
-                    Trace.TraceError($"LoadLibrary({dacFilePath}) {useCDac} FAILED {ex}");
+                    Trace.TraceError($"LoadLibrary({dacFilePath}) FAILED {ex}");
                     return IntPtr.Zero;
                 }
             }
