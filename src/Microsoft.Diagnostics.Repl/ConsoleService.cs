@@ -485,7 +485,10 @@ namespace Microsoft.Diagnostics.Repl
                 default:
                     if (keyInfo.KeyChar != 0)
                     {
-                        if ((keyInfo.Modifiers & (ConsoleModifiers.Control | ConsoleModifiers.Alt)) == 0)
+                        ConsoleModifiers ctrlAltModifiers = keyInfo.Modifiers & (ConsoleModifiers.Control | ConsoleModifiers.Alt);
+                        bool noCtrlAltModifiers = ctrlAltModifiers == 0;
+                        bool isAltGr = ctrlAltModifiers == (ConsoleModifiers.Control | ConsoleModifiers.Alt);
+                        if (noCtrlAltModifiers || isAltGr)
                         {
                             AppendNewText(new string(keyInfo.KeyChar, 1));
                         }
