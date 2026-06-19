@@ -508,6 +508,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
 
+            if (_exception is null)
+            {
+                return [];
+            }
+
             List<IException> exceptions = new() {
                 _exception
             };
@@ -516,8 +521,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             void AddExceptions(IEnumerable<IException> inner)
             {
+                if (inner is null)
+                {
+                    return;
+                }
                 foreach (IException exception in inner)
                 {
+                    if (exception is null)
+                    {
+                        continue;
+                    }
                     exceptions.Add(exception);
                     AddExceptions(exception.InnerExceptions);
                 }
