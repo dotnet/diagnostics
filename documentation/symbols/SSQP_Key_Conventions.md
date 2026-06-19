@@ -195,12 +195,26 @@ Example:
 
 ### WASM (WebAssembly) Modules
 
-WebAssembly symbols, which can be used by browser developer tools to provide source-level debugging experiences, are based on the DWARF format. These are indexed by their DWARF Build ID 
-(built with `-Wl,--build-id` arguments) and the name of the module being debugged via the 
-[buildId property](https://chromedevtools.github.io/devtools-protocol/tot/Debugger/#event-scriptParsed), and the symbol file itself is suffixed with `.s` to disambiguate from the WASM file.
+WebAssembly symbols, which can be used by browser developer tools to provide source-level debugging experiences, are based on the DWARF format. These are indexed by the Build ID stored in the `build_id` custom section of the Wasm binary. The Build ID is a byte sequence typically produced by the linker (e.g., with `-Wl,--build-id` arguments). Both the module and its corresponding symbol file contain the same `build_id` section, allowing them to be matched.
+
+The key uses the actual filename of the file being indexed. For split symbol files, toolchains such as Emscripten produce a separate file (e.g., `foo.debug.wasm`) that contains the DWARF debug sections (`.debug_info`, `.debug_line`, etc.) stripped from the original module.
+
+The final key is formatted as follows:
+
+`<file_name>/<build_id_byte_sequence>/<file_name>`
+
+Example (module):
 
 **File name:** `main.wasm`
 
-**Build ID of file:** `e3b0c44298fc1c149afbf4c8996fb92427ae41e4`
+**Build ID bytes:** `0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4`
 
-**Lookup key:**: `main.wasm.s/e3b0c44298fc1c149afbf4c8996fb92427ae41e4/main.wasm.s`
+**Lookup key:** `main.wasm/e3b0c44298fc1c149afbf4c8996fb92427ae41e4/main.wasm`
+
+Example (split symbol file):
+
+**File name:** `main.debug.wasm`
+
+**Build ID bytes:** `(same as module)`
+
+**Lookup key:** `main.debug.wasm/e3b0c44298fc1c149afbf4c8996fb92427ae41e4/main.debug.wasm`
