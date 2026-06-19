@@ -60,13 +60,15 @@ namespace Microsoft.Diagnostics.DebugServices
         string RuntimeModuleDirectory { get; set; }
 
         /// <summary>
-        /// Returns the DAC file path
+        /// Returns the DAC file path to use for this runtime.
         /// </summary>
-        /// <param name="verifySignature">returns if the DAC signature should be verified</param>
+        /// <param name="verifySignature">returns whether the returned DAC requires signature verification.</param>
         string GetDacFilePath(out bool verifySignature);
 
         /// <summary>
-        /// Returns the CDac file path if enabled by global settings
+        /// Returns the cDAC (mscordaccore_universal) file path to use for this runtime, or null
+        /// when the cDAC should not be used (policy disabled or unsupported runtime) or isn't
+        /// available.
         /// </summary>
         string GetCDacFilePath();
 

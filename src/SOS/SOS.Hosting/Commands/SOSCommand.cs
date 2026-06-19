@@ -8,6 +8,7 @@ using Microsoft.Diagnostics.DebugServices;
 
 namespace SOS.Hosting
 {
+    [Command(Name = "clrma",             DefaultOptions = "clrma",               Hidden = true, Help = "Diagnostic that drives the CLRMA provider used by Watson/!analyze and prints the managed thread and exception analysis. Primarily for validating the CLRMA path; not a general triage command.")]
     [Command(Name = "clrstack",          DefaultOptions = "ClrStack",            Help = "Provides a stack trace of managed code only.")]
     [Command(Name = "clrthreads",        DefaultOptions = "Threads",             Help = "Lists the managed threads running.")]
     [Command(Name = "dbgout",            DefaultOptions = "dbgout",              Help = "Enables/disables (-off) internal SOS logging.")]

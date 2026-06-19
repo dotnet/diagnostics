@@ -98,10 +98,21 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     // The input has been redirected (i.e. testing or in script)
                     string line = Console.ReadLine();
-                    if (string.IsNullOrEmpty(line))
+                    if (line == null)
+                    {
+                        // End of the redirected input stream (EOF) - e.g. the parent process
+                        // driving us exited or closed our stdin. There will never be more
+                        // input, so stop the REPL instead of looping forever.
+                        m_shutdown = true;
+                        Console.CancelKeyPress -= new ConsoleCancelEventHandler(OnCtrlBreakKeyPress);
+                        break;
+                    }
+
+                    if (line.Length == 0)
                     {
                         continue;
                     }
+
                     bool result = Dispatch(line, dispatchCommand);
                     if (!m_shutdown)
                     {
@@ -474,7 +485,10 @@ namespace Microsoft.Diagnostics.Repl
                 default:
                     if (keyInfo.KeyChar != 0)
                     {
-                        if ((keyInfo.Modifiers & (ConsoleModifiers.Control | ConsoleModifiers.Alt)) == 0)
+                        ConsoleModifiers ctrlAltModifiers = keyInfo.Modifiers & (ConsoleModifiers.Control | ConsoleModifiers.Alt);
+                        bool noCtrlAltModifiers = ctrlAltModifiers == 0;
+                        bool isAltGr = ctrlAltModifiers == (ConsoleModifiers.Control | ConsoleModifiers.Alt);
+                        if (noCtrlAltModifiers || isAltGr)
                         {
                             AppendNewText(new string(keyInfo.KeyChar, 1));
                         }
