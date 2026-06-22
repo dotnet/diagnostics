@@ -44,15 +44,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _settingsService = services.GetService<ISettingsService>() ?? throw new ArgumentException("ISettingsService required");
             _symbolService = services.GetService<ISymbolService>() ?? throw new ArgumentException("ISymbolService required");
 
-            RuntimeType = RuntimeType.Unknown;
-            if (clrInfo.Flavor == ClrFlavor.Core)
-            {
-                RuntimeType = RuntimeType.NetCore;
-            }
-            else if (clrInfo.Flavor == ClrFlavor.Desktop)
-            {
-                RuntimeType = RuntimeType.Desktop;
-            }
+            RuntimeType = GetRuntimeType(clrInfo.Flavor);
             RuntimeModule = services.GetService<IModuleService>().GetModuleFromBaseAddress(clrInfo.ModuleInfo.ImageBase);
 
             ServiceContainerFactory containerFactory = services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Runtime, services);
@@ -382,7 +374,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             "Desktop .NET Framework",
             ".NET Core",
             ".NET Core (single-file)",
+            "Native AOT",
             "Other"
+        };
+
+        private static RuntimeType GetRuntimeType(ClrFlavor flavor) => flavor switch
+        {
+            ClrFlavor.Core => RuntimeType.NetCore,
+            ClrFlavor.Desktop => RuntimeType.Desktop,
+            ClrFlavor.NativeAOT => RuntimeType.NativeAOT,
+            _ => RuntimeType.Unknown,
         };
 
         public override string ToString()
