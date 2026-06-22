@@ -147,6 +147,8 @@ public class SOSRunner : IDisposable
 
         public bool EnableSOSLogging { get; set; } = true;
 
+        public bool EnableStressLog { get; set; }
+
         public bool TestCrashReport
         {
             get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows; }
@@ -331,6 +333,18 @@ public class SOSRunner : IDisposable
                 if (config.UseInterpreter)
                 {
                     processRunner.WithEnvironmentVariable("DOTNET_Interpreter", "InterpTestMethod*");
+                }
+
+                // Enable stress logging so DumpLog tests have data to read.
+                // Must be set before any dump generation path so the stress log
+                // is captured regardless of how the dump is generated.
+                if (information.EnableStressLog)
+                {
+                    processRunner.
+                        WithRuntimeConfiguration("StressLog", "1").
+                        WithRuntimeConfiguration("LogFacility", "0xffffffbf").
+                        WithRuntimeConfiguration("LogLevel", "6").
+                        WithRuntimeConfiguration("StressLogSize", "65536");
                 }
 
                 if (dumpGeneration == DumpGenerator.CreateDump)
@@ -713,6 +727,16 @@ public class SOSRunner : IDisposable
             else if (config.TestCDAC)
             {
                 processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
+            }
+
+            // Enable stress logging for both live and dump paths when requested
+            if (information.EnableStressLog)
+            {
+                processRunner.
+                    WithEnvironmentVariable("DOTNET_StressLog", "1").
+                    WithEnvironmentVariable("DOTNET_LogFacility", "0xffffffbf").
+                    WithEnvironmentVariable("DOTNET_LogLevel", "6").
+                    WithEnvironmentVariable("DOTNET_StressLogSize", "65536");
             }
 
             // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting debuggees.

@@ -7573,6 +7573,9 @@ HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderDat
 *             will dump the stress log associated with any DLL linked  *
 *             against utilcode.lib, most commonly mscordbi.dll         *
 *             (e.g. !DumpLog -addr mscordbi!StressLog::theLog)         *
+*    !DumpLog -legacy [filename]                                       *
+*             will force the legacy raw-read path instead of           *
+*             ISOSDacInterface17                                       *
 *                                                                      *
 \**********************************************************************/
 DECLARE_API(DumpLog)
@@ -7593,15 +7596,15 @@ DECLARE_API(DumpLog)
         return E_FAIL;
     }
 
-    LoadRuntimeSymbols();
-
     const char* fileName = "StressLog.txt";
     CLRDATA_ADDRESS StressLogAddress = (TADDR)0;
+    BOOL useLegacy = FALSE;
 
     StringHolder sFileName, sLogAddr;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
-        {"-addr", &sLogAddr.data, COSTRING, TRUE}
+        {"-addr", &sLogAddr.data, COSTRING, TRUE},
+        {"-legacy", &useLegacy, COBOOL, FALSE}
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -7616,6 +7619,28 @@ DECLARE_API(DumpLog)
     {
         fileName = sFileName.data;
     }
+
+    ExtOut("Attempting to dump Stress log to file '%s'\n", fileName);
+
+    // Try the cDAC-based path (ISOSDacInterface17) first unless -legacy is specified.
+    if (!useLegacy)
+    {
+        HRESULT hrInterface17 = StressLog::DumpViaInterface17(fileName, g_ExtData);
+        if (hrInterface17 != E_NOINTERFACE)
+        {
+            Status = hrInterface17;
+            if (Status == S_OK)
+                ExtOut("SUCCESS: Stress log dumped\n");
+            else if (Status == S_FALSE)
+                ExtOut("No Stress log in the image, no file written\n");
+            else
+                ExtOut("FAILURE: Stress log not dumped\n");
+            return Status;
+        }
+    }
+
+    // Fall back to the legacy raw-read path.
+    LoadRuntimeSymbols();
 
     // allow users to specify -addr mscordbdi!StressLog::theLog, for example.
     if (sLogAddr.data != NULL)
@@ -7653,10 +7678,6 @@ DECLARE_API(DumpLog)
         ExtOut("Please provide the -addr argument for the address of the stress log, since no recognized runtime is loaded.\n");
         return E_FAIL;
     }
-
-    ExtOut("Attempting to dump Stress log to file '%s'\n", fileName);
-
-
 
     Status = StressLog::Dump(StressLogAddress, fileName, g_ExtData);
 

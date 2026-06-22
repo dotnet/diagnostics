@@ -11,6 +11,7 @@
 #include "util.h"
 #include <stdio.h>
 #include <ctype.h>
+#include <vector>
 
 #ifndef STRESS_LOG
 #define STRESS_LOG
@@ -362,6 +363,236 @@ StressMsg* GetStressMsgInLatestVersion(StressMsg* rawMsg, int version)
 }
 
 /*********************************************************************************/
+// Try to dump the stress log using ISOSDacInterface17.
+// Returns S_OK on success, S_FALSE if no messages, or E_NOINTERFACE if the
+// interface is not available (caller should fall back to legacy path).
+HRESULT StressLog::DumpViaInterface17(const char* fileName, struct IDebugDataSpaces* memCallBack)
+{
+    // Try to get ISOSDacInterface17
+    if (g_clrData == NULL)
+    {
+        return E_NOINTERFACE;
+    }
+    ReleaseHolder<ISOSDacInterface17> pSos17;
+    HRESULT hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface17), (void**)&pSos17);
+    if (FAILED(hr) || pSos17 == NULL)
+    {
+        return E_NOINTERFACE;
+    }
+
+    // Get stress log header data
+    SOSStressLogData logData;
+    hr = pSos17->GetStressLogData(&logData);
+    if (hr != S_OK)
+    {
+        return FAILED(hr) ? hr : S_FALSE;
+    }
+
+    FILE* file = NULL;
+
+    // Get thread enumerator
+    ReleaseHolder<ISOSStressLogThreadEnum> pThreadEnum;
+    hr = pSos17->GetStressLogThreadEnumerator(pThreadEnum.GetAddr());
+    if (FAILED(hr) || pThreadEnum == NULL)
+    {
+        return FAILED(hr) ? hr : E_FAIL;
+    }
+
+    // Collect all threads
+    struct ThreadInfo
+    {
+        SOSThreadStressLogData data;
+        uint64_t latestTimestamp;
+    };
+
+    std::vector<ThreadInfo> threads;
+    SOSThreadStressLogData threadData;
+    unsigned int fetched = 0;
+    for (;;)
+    {
+        fetched = 0;
+        hr = pThreadEnum->Next(1, &threadData, &fetched);
+        if (FAILED(hr) || fetched == 0)
+            break;
+        threads.push_back({ threadData, 0 });
+    }
+    pThreadEnum.Release();
+
+    if (threads.empty())
+    {
+        ExtOut("----- No thread logs in the image -----\n");
+        return S_FALSE;
+    }
+
+    // Create message enumerators for each thread and find the latest timestamp
+    struct ThreadMsgState
+    {
+        ReleaseHolder<ISOSStressLogMsgEnum> pEnum;
+        SOSStressMsgData currentMsg;
+        bool hasMsg;
+        uint64_t threadId;
+    };
+
+    unsigned int threadCount = (unsigned int)threads.size();
+    ArrayHolder<ThreadMsgState> msgStates = new (std::nothrow) ThreadMsgState[threadCount];
+    if (msgStates == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
+    unsigned int msgStateCount = 0;
+    uint64_t lastTimeStamp = 0;
+
+    for (auto& t : threads)
+    {
+        ISOSStressLogMsgEnum* pMsgEnum = NULL;
+        hr = pSos17->GetStressLogMessageEnumerator(t.data.ThreadLogAddress, &pMsgEnum);
+        if (FAILED(hr) || pMsgEnum == NULL)
+            continue;
+
+        ThreadMsgState& state = msgStates[msgStateCount];
+        state.pEnum = pMsgEnum;
+        state.threadId = t.data.ThreadId;
+        state.hasMsg = false;
+
+        // Prime the enumerator with the first message
+        fetched = 0;
+        hr = pMsgEnum->Next(1, &state.currentMsg, &fetched);
+        if (SUCCEEDED(hr) && fetched > 0)
+        {
+            state.hasMsg = true;
+            if (state.currentMsg.Timestamp > lastTimeStamp)
+                lastTimeStamp = state.currentMsg.Timestamp;
+        }
+
+        msgStateCount++;
+    }
+
+    // Open the output file
+    if ((file = fopen(fileName, "w")) == NULL)
+    {
+        return GetLastError();
+    }
+
+    // Print header -- match legacy format exactly
+    FILETIME startTime;
+    memcpy(&startTime, &logData.StartTime, sizeof(FILETIME));
+    double totalSecs = 0;
+    if (lastTimeStamp > logData.StartTimestamp && logData.TickFrequency > 0)
+    {
+        totalSecs = ((double)(lastTimeStamp - logData.StartTimestamp)) / logData.TickFrequency;
+    }
+    FILETIME endTime;
+    INT64 endTimeVal = *((INT64*)&startTime) + ((INT64)(totalSecs * 1.0E7));
+    memcpy(&endTime, &endTimeVal, sizeof(FILETIME));
+
+    WCHAR timeBuff[64];
+    fprintf(file, "STRESS LOG:\n"
+              "    facilitiesToLog  = 0x%x\n"
+              "    levelToLog       = %d\n"
+              "    MaxLogSizePerThread = 0x%x (%d)\n"
+              "    MaxTotalLogSize = 0x%x (%d)\n"
+              "    CurrentTotalLogChunk = %d\n"
+              "    ThreadsWithLogs  = %d\n",
+        logData.LoggedFacilities, logData.Level,
+        logData.MaxSizePerThread, logData.MaxSizePerThread,
+        logData.MaxSizeTotal, logData.MaxSizeTotal,
+        logData.TotalChunks, (int)threads.size());
+
+    fprintf(file, "    Clock frequency  = %5.3f GHz\n", logData.TickFrequency / 1.0E9);
+    fprintf(file, "    Start time         %S\n", getTime(&startTime, timeBuff, 64));
+    fprintf(file, "    Last message time  %S\n", getTime(&endTime, timeBuff, 64));
+    fprintf(file, "    Total elapsed time %5.3f sec\n", totalSecs);
+
+    fprintf(file, "\nTHREAD  TIMESTAMP     FACILITY                              MESSAGE\n");
+    fprintf(file, "  ID  (sec from start)\n");
+    fprintf(file, "--------------------------------------------------------------------------------------\n");
+
+    // Merge messages across all threads by timestamp (newest first)
+    char format[257];
+    format[256] = format[0] = 0;
+    unsigned msgCtr = 0;
+
+    for (;;)
+    {
+        // Find the thread with the newest message
+        int newestIdx = -1;
+        uint64_t newestTimestamp = 0;
+
+        for (unsigned int i = 0; i < msgStateCount; i++)
+        {
+            if (msgStates[i].hasMsg && msgStates[i].currentMsg.Timestamp > newestTimestamp)
+            {
+                newestTimestamp = msgStates[i].currentMsg.Timestamp;
+                newestIdx = i;
+            }
+        }
+
+        if (newestIdx < 0)
+            break;
+
+        if (IsInterrupt())
+        {
+            fprintf(file, "----- Interrupted by user -----\n");
+            break;
+        }
+
+        ThreadMsgState& state = msgStates[newestIdx];
+        SOSStressMsgData& msg = state.currentMsg;
+
+        if (msg.FormatString != 0)
+        {
+            // Read the format string from target memory
+            hr = memCallBack->ReadVirtual(msg.FormatString, format, 256, 0);
+            if (hr != S_OK)
+                strcpy_s(format, ARRAY_SIZE(format), "Could not read address of format string");
+
+            double deltaTime = ((double)(msg.Timestamp - logData.StartTimestamp)) / logData.TickFrequency;
+
+            // Read arguments
+            void* args[StressMsg::maxArgCnt] = {};
+            if (msg.ArgumentCount > 0)
+            {
+                CLRDATA_ADDRESS argAddrs[StressMsg::maxArgCnt] = {};
+                unsigned int argsFetched = 0;
+                unsigned int argsToFetch = msg.ArgumentCount;
+                if (argsToFetch > StressMsg::maxArgCnt)
+                    argsToFetch = StressMsg::maxArgCnt;
+                state.pEnum->GetArguments(0, argsToFetch, argAddrs, &argsFetched);
+                for (unsigned int i = 0; i < argsFetched; i++)
+                    args[i] = (void*)(size_t)argAddrs[i];
+            }
+
+            // Handle TaskSwitch marker the same way as the legacy path
+            if (strcmp(format, ThreadStressLog::TaskSwitchMsg()) == 0)
+            {
+                fprintf(file, "Task was switched from %x\n", (unsigned)(size_t)args[0]);
+                state.threadId = (unsigned)(size_t)args[0];
+            }
+            else
+            {
+                formatOutput(memCallBack, file, format, (unsigned)state.threadId, deltaTime, msg.Facility, args);
+            }
+            msgCtr++;
+        }
+
+        // Advance to the next message for this thread
+        fetched = 0;
+        hr = state.pEnum->Next(1, &state.currentMsg, &fetched);
+        if (fetched == 0 || FAILED(hr))
+        {
+            state.hasMsg = false;
+            fprintf(file, "------------ Last message from thread %x -----------\n", (unsigned)state.threadId);
+        }
+    }
+
+    // Match legacy footer format
+    fprintf(file, "---------------------------- %d total entries ------------------------------------\n", msgCtr);
+    fclose(file);
+
+    return msgCtr > 0 ? S_OK : S_FALSE;
+}
+
+/*********************************************************************************/
 HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugDataSpaces* memCallBack)
 {
     ULONG64 g_hThisInst;
@@ -482,7 +713,6 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
         hr = GetLastError();
         goto FREE_MEM;
     }
-    hr = S_FALSE;       // return false if there are no message to print to the log
 
     vDoOut(bDoGcHist, file, "STRESS LOG:\n"
               "    facilitiesToLog  = 0x%x\n"
@@ -540,8 +770,7 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
         if (latestMsg->GetFormatOffset() != 0 && !latestLog->CompletedDump())
         {
             TADDR taFmt = GetFormatAddr(inProcLog, latestMsg->GetFormatOffset(), bHasModuleTable);
-            hr = memCallBack->ReadVirtual(TO_CDADDR(taFmt), format, 256, 0);
-            if (hr != S_OK)
+            if (memCallBack->ReadVirtual(TO_CDADDR(taFmt), format, 256, 0) != S_OK)
                 strcpy_s(format, ARRAY_SIZE(format), "Could not read address of format string");
 
             double deltaTime = ((double) (latestMsg->GetTimeStamp() - inProcLog.startTimeStamp)) / inProcLog.tickFrequency;
@@ -587,6 +816,8 @@ HRESULT StressLog::Dump(ULONG64 outProcLog, const char* fileName, struct IDebugD
         }
     }
     ExtOut("\n");
+
+    hr = (msgCtr > 0) ? S_OK : S_FALSE;
 
     vDoOut(bDoGcHist, file, "---------------------------- %d total entries ------------------------------------\n", msgCtr);
     if (!bDoGcHist)
