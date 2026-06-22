@@ -33,7 +33,7 @@ namespace Microsoft.Diagnostics.Shared;
 /// so they agree on the layout. Because it is compiled into each consumer, the
 /// package base directory is the directory of the consuming assembly.
 /// </summary>
-internal static class SOSPackageLayout
+public static class SOSPackageLayout
 {
     /// <summary>
     /// The directory of the package this type is compiled into. All package-relative
