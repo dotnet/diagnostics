@@ -118,7 +118,7 @@ public static class SymbolManifestGenerator
 
                 if (adjacentCorrelatedFiles.Length > 1)
                 {
-                    tracer.Error($"Multiple adjacent files '${correlatedFileName}' found for runtime '{runtimeModule.FullName}': {string.Join<FileInfo>(", ", adjacentCorrelatedFiles)}.");
+                    tracer.Error($"Multiple adjacent files '{correlatedFileName}' found for runtime '{runtimeModule.FullName}': {string.Join<FileInfo>(", ", adjacentCorrelatedFiles)}.");
                 }
 
                 return adjacentCorrelatedFiles.Length switch
@@ -133,7 +133,7 @@ public static class SymbolManifestGenerator
 
             if (correlatedFiles.Length > 1)
             {
-                tracer.Error($"Multiple files '${correlatedFileName}' found for runtime '{runtimeModule.FullName}': {string.Join<FileInfo>(", ", correlatedFiles)}.");
+                tracer.Error($"Multiple files '{correlatedFileName}' found for runtime '{runtimeModule.FullName}': {string.Join<FileInfo>(", ", correlatedFiles)}.");
             }
 
             return correlatedFiles.Length switch
