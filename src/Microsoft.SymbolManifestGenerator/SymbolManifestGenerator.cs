@@ -111,9 +111,23 @@ public static class SymbolManifestGenerator
 
             if (specialFilesRequireAdjacentRuntime)
             {
-                FileInfo correlatedFile = new(Path.Combine(runtimeModule.DirectoryName, correlatedFileName));
-                return (FoundMultipleCandidates: false,
-                        File: correlatedFile.Exists ? correlatedFile : default);
+                FileInfo[] adjacentCorrelatedFiles = allFiles
+                    .Where(file =>
+                        file.DirectoryName.Equals(runtimeModule.DirectoryName, StringComparison.Ordinal) &&
+                        file.Name.Equals(correlatedFileName, StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+
+                if (adjacentCorrelatedFiles.Length > 1)
+                {
+                    tracer.Error($"Multiple adjacent files '${correlatedFileName}' found for runtime '{runtimeModule.FullName}': {string.Join<FileInfo>(", ", adjacentCorrelatedFiles)}.");
+                }
+
+                return adjacentCorrelatedFiles.Length switch
+                {
+                    0 => (FoundMultipleCandidates: false, default),
+                    1 => (FoundMultipleCandidates: false, adjacentCorrelatedFiles[0]),
+                    _ => (FoundMultipleCandidates: true, default)
+                };
             }
 
             FileInfo[] correlatedFiles = allFiles.Where(file => file.Name.Equals(correlatedFileName, StringComparison.OrdinalIgnoreCase)).ToArray();
