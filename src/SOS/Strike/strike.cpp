@@ -6689,6 +6689,118 @@ DECLARE_API(EHInfo)
     return Status;
 }
 
+// Try to dump GC info using ISOSDacInterface18 (cDAC path).
+// Returns S_OK if successful, or an error HRESULT if the interface is not available or fails.
+static HRESULT TryDumpGCInfoViaInterface18(CLRDATA_ADDRESS ip)
+{
+    ReleaseHolder<ISOSDacInterface18> pSos18;
+    HRESULT hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface18), (void**)&pSos18);
+    if (FAILED(hr) || pSos18 == NULL)
+        return E_NOINTERFACE;
+
+    // Get and print the header
+    SOSGCInfoHeader header = {};
+    hr = pSos18->GetGCInfoHeader(ip, &header);
+    if (FAILED(hr))
+        return hr;
+
+    ExtOut("GC Info Header:\n");
+    ExtOut("  GcInfoVersion: %u\n", header.GcInfoVersion);
+    ExtOut("  CodeSize: %u (0x%x)\n", header.CodeSize, header.CodeSize);
+    ExtOut("  PrologSize: %u\n", header.PrologSize);
+    ExtOut("  StackBaseRegister: %u\n", header.StackBaseRegister);
+    ExtOut("  SizeOfStackParameterArea: %u\n", header.SizeOfStackParameterArea);
+    ExtOut("  ReturnKind: %u\n", header.ReturnKind);
+    ExtOut("  IsVarArg: %s\n", header.IsVarArg ? "true" : "false");
+    ExtOut("  WantsReportOnlyLeaf: %s\n", header.WantsReportOnlyLeaf ? "true" : "false");
+    ExtOut("  HasTailCalls: %s\n", header.HasTailCalls ? "true" : "false");
+    if (header.GSCookieIsPresent)
+        ExtOut("  GS Cookie: slot %d, valid range [%u, %u]\n", header.GSCookieStackSlot, header.GSCookieValidRangeStart, header.GSCookieValidRangeEnd);
+    if (header.PSPSymIsPresent)
+        ExtOut("  PSP Sym: slot %d\n", header.PSPSymStackSlot);
+    if (header.GenericsInstContextIsPresent)
+        ExtOut("  Generics Inst Context: slot %d, kind %u\n", header.GenericsInstContextStackSlot, header.GenericsInstContextKind);
+
+    // Get and print interruptible ranges
+    ULONG rangeCount = 0;
+    hr = pSos18->GetGCInfoInterruptibleRanges(ip, 0, nullptr, &rangeCount);
+    if (SUCCEEDED(hr) && rangeCount > 0)
+    {
+        ExtOut("\nInterruptible Ranges (%u):\n", rangeCount);
+        ArrayHolder<SOSCodeRange> ranges = new NOTHROW SOSCodeRange[rangeCount];
+        if (ranges != NULL)
+        {
+            ULONG fetched = 0;
+            hr = pSos18->GetGCInfoInterruptibleRanges(ip, rangeCount, ranges, &fetched);
+            if (SUCCEEDED(hr))
+            {
+                for (ULONG i = 0; i < fetched; i++)
+                    ExtOut("  [0x%04x - 0x%04x)\n", ranges[i].BeginOffset, ranges[i].EndOffset);
+            }
+        }
+    }
+
+    // Get and print safe points
+    ULONG safePointCount = 0;
+    hr = pSos18->GetGCInfoSafePoints(ip, 0, nullptr, &safePointCount);
+    if (SUCCEEDED(hr) && safePointCount > 0)
+    {
+        ExtOut("\nSafe Points (%u):\n", safePointCount);
+        ArrayHolder<unsigned int> offsets = new NOTHROW unsigned int[safePointCount];
+        if (offsets != NULL)
+        {
+            ULONG fetched = 0;
+            hr = pSos18->GetGCInfoSafePoints(ip, safePointCount, offsets, &fetched);
+            if (SUCCEEDED(hr))
+            {
+                for (ULONG i = 0; i < fetched; i++)
+                    ExtOut("  0x%04x\n", offsets[i]);
+            }
+        }
+    }
+
+    // Get and print register lifetimes
+    ULONG regCount = 0;
+    hr = pSos18->GetGCInfoRegisterLifetimes(ip, 0, nullptr, &regCount);
+    if (SUCCEEDED(hr) && regCount > 0)
+    {
+        ExtOut("\nRegister Lifetimes (%u):\n", regCount);
+        ArrayHolder<SOSGCRegisterLifetime> regs = new NOTHROW SOSGCRegisterLifetime[regCount];
+        if (regs != NULL)
+        {
+            ULONG fetched = 0;
+            hr = pSos18->GetGCInfoRegisterLifetimes(ip, regCount, regs, &fetched);
+            if (SUCCEEDED(hr))
+            {
+                for (ULONG i = 0; i < fetched; i++)
+                    ExtOut("  reg %u [0x%04x - 0x%04x) flags=0x%x\n", regs[i].RegisterNumber, regs[i].BeginOffset, regs[i].EndOffset, regs[i].GcFlags);
+            }
+        }
+    }
+
+    // Get and print stack slot lifetimes
+    ULONG stackCount = 0;
+    hr = pSos18->GetGCInfoStackSlotLifetimes(ip, 0, nullptr, &stackCount);
+    if (SUCCEEDED(hr) && stackCount > 0)
+    {
+        ExtOut("\nStack Slot Lifetimes (%u):\n", stackCount);
+        ArrayHolder<SOSGCStackSlotLifetime> stacks = new NOTHROW SOSGCStackSlotLifetime[stackCount];
+        if (stacks != NULL)
+        {
+            ULONG fetched = 0;
+            hr = pSos18->GetGCInfoStackSlotLifetimes(ip, stackCount, stacks, &fetched);
+            if (SUCCEEDED(hr))
+            {
+                for (ULONG i = 0; i < fetched; i++)
+                    ExtOut("  sp%+d base=%u [0x%04x - 0x%04x) flags=0x%x\n", stacks[i].SpOffset, stacks[i].BaseRegister, stacks[i].BeginOffset, stacks[i].EndOffset, stacks[i].GcFlags);
+            }
+        }
+    }
+
+    ExtOut("\n");
+    return S_OK;
+}
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -6782,6 +6894,15 @@ DECLARE_API(GCInfo)
     else if (codeHeaderData.JITType == TYPE_PJIT)
     {
         ExtOut("preJIT generated code\n");
+    }
+
+    // Try the new ISOSDacInterface18 path first (cDAC)
+    {
+        CLRDATA_ADDRESS methodIP = TO_CDADDR(codeHeaderData.MethodStart);
+        HRESULT hr18 = TryDumpGCInfoViaInterface18(methodIP);
+        if (SUCCEEDED(hr18))
+            return Status;
+        // Fall through to legacy raw-bytes path if Interface18 is not available
     }
 
     taGCInfoAddr = TO_TADDR(codeHeaderData.GCInfo);

@@ -462,7 +462,8 @@ typedef
 enum SOSStackSourceType
     {
         SOS_StackSourceIP   = 0,
-        SOS_StackSourceFrame    = ( SOS_StackSourceIP + 1 )
+        SOS_StackSourceFrame    = ( SOS_StackSourceIP + 1 ),
+        SOS_StackSourceOther    = ( SOS_StackSourceFrame + 1 )
     }   SOSStackSourceType;
 
 typedef
@@ -3767,9 +3768,8 @@ EXTERN_C const IID IID_ISOSDacInterface16;
 
 #ifndef _SOS_StressLogData
 #define _SOS_StressLogData
-
 typedef struct _SOSStressLogData
-{
+    {
     unsigned int LoggedFacilities;
     unsigned int Level;
     unsigned int MaxSizePerThread;
@@ -3778,33 +3778,31 @@ typedef struct _SOSStressLogData
     UINT64 TickFrequency;
     UINT64 StartTimestamp;
     UINT64 StartTime;
-} SOSStressLogData;
+    } 	SOSStressLogData;
 
-#endif //_SOS_StressLogData
+#endif // _SOS_StressLogData
 
 #ifndef _SOS_ThreadStressLogData
 #define _SOS_ThreadStressLogData
-
 typedef struct _SOSThreadStressLogData
-{
+    {
     CLRDATA_ADDRESS ThreadLogAddress;
     UINT64 ThreadId;
-} SOSThreadStressLogData;
+    } 	SOSThreadStressLogData;
 
-#endif //_SOS_ThreadStressLogData
+#endif // _SOS_ThreadStressLogData
 
 #ifndef _SOS_StressMsgData
 #define _SOS_StressMsgData
-
 typedef struct _SOSStressMsgData
-{
+    {
     unsigned int Facility;
     CLRDATA_ADDRESS FormatString;
     UINT64 Timestamp;
     unsigned int ArgumentCount;
-} SOSStressMsgData;
+    } 	SOSStressMsgData;
 
-#endif //_SOS_StressMsgData
+#endif // _SOS_StressMsgData
 
 #ifndef __ISOSStressLogThreadEnum_INTERFACE_DEFINED__
 #define __ISOSStressLogThreadEnum_INTERFACE_DEFINED__
@@ -3837,8 +3835,9 @@ EXTERN_C const IID IID_ISOSStressLogThreadEnum;
 
         HRESULT ( STDMETHODCALLTYPE *QueryInterface )(
             ISOSStressLogThreadEnum * This,
-            REFIID riid,
-            void **ppvObject);
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */
+            _COM_Outptr_  void **ppvObject);
 
         ULONG ( STDMETHODCALLTYPE *AddRef )(
             ISOSStressLogThreadEnum * This);
@@ -3848,14 +3847,14 @@ EXTERN_C const IID IID_ISOSStressLogThreadEnum;
 
         HRESULT ( STDMETHODCALLTYPE *Skip )(
             ISOSStressLogThreadEnum * This,
-            unsigned int count);
+            uint32_t count);
 
         HRESULT ( STDMETHODCALLTYPE *Reset )(
             ISOSStressLogThreadEnum * This);
 
         HRESULT ( STDMETHODCALLTYPE *GetCount )(
             ISOSStressLogThreadEnum * This,
-            unsigned int *pCount);
+            uint32_t *pCount);
 
         HRESULT ( STDMETHODCALLTYPE *Next )(
             ISOSStressLogThreadEnum * This,
@@ -3871,7 +3870,41 @@ EXTERN_C const IID IID_ISOSStressLogThreadEnum;
         CONST_VTBL struct ISOSStressLogThreadEnumVtbl *lpVtbl;
     };
 
+
+
+#ifdef COBJMACROS
+
+
+#define ISOSStressLogThreadEnum_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) )
+
+#define ISOSStressLogThreadEnum_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) )
+
+#define ISOSStressLogThreadEnum_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) )
+
+
+#define ISOSStressLogThreadEnum_Skip(This,count)	\
+    ( (This)->lpVtbl -> Skip(This,count) )
+
+#define ISOSStressLogThreadEnum_Reset(This)	\
+    ( (This)->lpVtbl -> Reset(This) )
+
+#define ISOSStressLogThreadEnum_GetCount(This,pCount)	\
+    ( (This)->lpVtbl -> GetCount(This,pCount) )
+
+
+#define ISOSStressLogThreadEnum_Next(This,count,values,pFetched)	\
+    ( (This)->lpVtbl -> Next(This,count,values,pFetched) )
+
+#endif /* COBJMACROS */
+
+
 #endif 	/* C style interface */
+
+
+
 
 #endif 	/* __ISOSStressLogThreadEnum_INTERFACE_DEFINED__ */
 
@@ -3913,8 +3946,9 @@ EXTERN_C const IID IID_ISOSStressLogMsgEnum;
 
         HRESULT ( STDMETHODCALLTYPE *QueryInterface )(
             ISOSStressLogMsgEnum * This,
-            REFIID riid,
-            void **ppvObject);
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */
+            _COM_Outptr_  void **ppvObject);
 
         ULONG ( STDMETHODCALLTYPE *AddRef )(
             ISOSStressLogMsgEnum * This);
@@ -3924,14 +3958,14 @@ EXTERN_C const IID IID_ISOSStressLogMsgEnum;
 
         HRESULT ( STDMETHODCALLTYPE *Skip )(
             ISOSStressLogMsgEnum * This,
-            unsigned int count);
+            uint32_t count);
 
         HRESULT ( STDMETHODCALLTYPE *Reset )(
             ISOSStressLogMsgEnum * This);
 
         HRESULT ( STDMETHODCALLTYPE *GetCount )(
             ISOSStressLogMsgEnum * This,
-            unsigned int *pCount);
+            uint32_t *pCount);
 
         HRESULT ( STDMETHODCALLTYPE *Next )(
             ISOSStressLogMsgEnum * This,
@@ -3954,7 +3988,44 @@ EXTERN_C const IID IID_ISOSStressLogMsgEnum;
         CONST_VTBL struct ISOSStressLogMsgEnumVtbl *lpVtbl;
     };
 
+
+
+#ifdef COBJMACROS
+
+
+#define ISOSStressLogMsgEnum_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) )
+
+#define ISOSStressLogMsgEnum_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) )
+
+#define ISOSStressLogMsgEnum_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) )
+
+
+#define ISOSStressLogMsgEnum_Skip(This,count)	\
+    ( (This)->lpVtbl -> Skip(This,count) )
+
+#define ISOSStressLogMsgEnum_Reset(This)	\
+    ( (This)->lpVtbl -> Reset(This) )
+
+#define ISOSStressLogMsgEnum_GetCount(This,pCount)	\
+    ( (This)->lpVtbl -> GetCount(This,pCount) )
+
+
+#define ISOSStressLogMsgEnum_Next(This,count,values,pFetched)	\
+    ( (This)->lpVtbl -> Next(This,count,values,pFetched) )
+
+#define ISOSStressLogMsgEnum_GetArguments(This,messageIndex,argCount,args,pFetched)	\
+    ( (This)->lpVtbl -> GetArguments(This,messageIndex,argCount,args,pFetched) )
+
+#endif /* COBJMACROS */
+
+
 #endif 	/* C style interface */
+
+
+
 
 #endif 	/* __ISOSStressLogMsgEnum_INTERFACE_DEFINED__ */
 
@@ -3995,8 +4066,9 @@ EXTERN_C const IID IID_ISOSDacInterface17;
 
         HRESULT ( STDMETHODCALLTYPE *QueryInterface )(
             ISOSDacInterface17 * This,
-            REFIID riid,
-            void **ppvObject);
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */
+            _COM_Outptr_  void **ppvObject);
 
         ULONG ( STDMETHODCALLTYPE *AddRef )(
             ISOSDacInterface17 * This);
@@ -4029,6 +4101,7 @@ EXTERN_C const IID IID_ISOSDacInterface17;
 
 #ifdef COBJMACROS
 
+
 #define ISOSDacInterface17_QueryInterface(This,riid,ppvObject)	\
     ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) )
 
@@ -4037,6 +4110,7 @@ EXTERN_C const IID IID_ISOSDacInterface17;
 
 #define ISOSDacInterface17_Release(This)	\
     ( (This)->lpVtbl -> Release(This) )
+
 
 #define ISOSDacInterface17_GetStressLogData(This,data)	\
     ( (This)->lpVtbl -> GetStressLogData(This,data) )
@@ -4053,7 +4127,205 @@ EXTERN_C const IID IID_ISOSDacInterface17;
 #endif 	/* C style interface */
 
 
+
+
 #endif 	/* __ISOSDacInterface17_INTERFACE_DEFINED__ */
+
+
+#ifndef _SOS_GCInfoData
+#define _SOS_GCInfoData
+typedef struct _SOSCodeRange
+    {
+    unsigned int BeginOffset;
+    unsigned int EndOffset;
+    } 	SOSCodeRange;
+
+typedef struct _SOSGCInfoHeader
+    {
+    ULONG SizeOf;
+    unsigned int GcInfoVersion;
+    unsigned int CodeSize;
+    unsigned int PrologSize;
+    unsigned int StackBaseRegister;
+    unsigned int SizeOfStackParameterArea;
+    unsigned int ReturnKind;
+    BOOL IsVarArg;
+    BOOL WantsReportOnlyLeaf;
+    BOOL HasTailCalls;
+    BOOL GSCookieIsPresent;
+    int GSCookieStackSlot;
+    unsigned int GSCookieValidRangeStart;
+    unsigned int GSCookieValidRangeEnd;
+    BOOL PSPSymIsPresent;
+    int PSPSymStackSlot;
+    BOOL GenericsInstContextIsPresent;
+    int GenericsInstContextStackSlot;
+    unsigned int GenericsInstContextKind;
+    } 	SOSGCInfoHeader;
+
+typedef struct _SOSGCRegisterLifetime
+    {
+    unsigned int BeginOffset;
+    unsigned int EndOffset;
+    unsigned int RegisterNumber;
+    unsigned int GcFlags;
+    } 	SOSGCRegisterLifetime;
+
+typedef struct _SOSGCStackSlotLifetime
+    {
+    unsigned int BeginOffset;
+    unsigned int EndOffset;
+    int SpOffset;
+    unsigned int BaseRegister;
+    unsigned int GcFlags;
+    } 	SOSGCStackSlotLifetime;
+
+#endif // _SOS_GCInfoData
+
+#ifndef __ISOSDacInterface18_INTERFACE_DEFINED__
+#define __ISOSDacInterface18_INTERFACE_DEFINED__
+
+/* interface ISOSDacInterface18 */
+/* [uuid][local][object] */
+
+
+EXTERN_C const IID IID_ISOSDacInterface18;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+
+    MIDL_INTERFACE("3dccf95b-bca2-40ee-8b83-d8d7574a1df0")
+    ISOSDacInterface18 : public IUnknown
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE GetGCInfoHeader(
+            CLRDATA_ADDRESS ip,
+            SOSGCInfoHeader *header) = 0;
+
+        virtual HRESULT STDMETHODCALLTYPE GetGCInfoInterruptibleRanges(
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            SOSCodeRange *ranges,
+            ULONG *pNeeded) = 0;
+
+        virtual HRESULT STDMETHODCALLTYPE GetGCInfoSafePoints(
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            unsigned int *offsets,
+            ULONG *pNeeded) = 0;
+
+        virtual HRESULT STDMETHODCALLTYPE GetGCInfoRegisterLifetimes(
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            SOSGCRegisterLifetime *lifetimes,
+            ULONG *pNeeded) = 0;
+
+        virtual HRESULT STDMETHODCALLTYPE GetGCInfoStackSlotLifetimes(
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            SOSGCStackSlotLifetime *lifetimes,
+            ULONG *pNeeded) = 0;
+
+    };
+
+
+#else 	/* C style interface */
+
+    typedef struct ISOSDacInterface18Vtbl
+    {
+        BEGIN_INTERFACE
+
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )(
+            ISOSDacInterface18 * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */
+            _COM_Outptr_  void **ppvObject);
+
+        ULONG ( STDMETHODCALLTYPE *AddRef )(
+            ISOSDacInterface18 * This);
+
+        ULONG ( STDMETHODCALLTYPE *Release )(
+            ISOSDacInterface18 * This);
+
+        HRESULT ( STDMETHODCALLTYPE *GetGCInfoHeader )(
+            ISOSDacInterface18 * This,
+            CLRDATA_ADDRESS ip,
+            SOSGCInfoHeader *header);
+
+        HRESULT ( STDMETHODCALLTYPE *GetGCInfoInterruptibleRanges )(
+            ISOSDacInterface18 * This,
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            SOSCodeRange *ranges,
+            ULONG *pNeeded);
+
+        HRESULT ( STDMETHODCALLTYPE *GetGCInfoSafePoints )(
+            ISOSDacInterface18 * This,
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            unsigned int *offsets,
+            ULONG *pNeeded);
+
+        HRESULT ( STDMETHODCALLTYPE *GetGCInfoRegisterLifetimes )(
+            ISOSDacInterface18 * This,
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            SOSGCRegisterLifetime *lifetimes,
+            ULONG *pNeeded);
+
+        HRESULT ( STDMETHODCALLTYPE *GetGCInfoStackSlotLifetimes )(
+            ISOSDacInterface18 * This,
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            SOSGCStackSlotLifetime *lifetimes,
+            ULONG *pNeeded);
+
+        END_INTERFACE
+    } ISOSDacInterface18Vtbl;
+
+    interface ISOSDacInterface18
+    {
+        CONST_VTBL struct ISOSDacInterface18Vtbl *lpVtbl;
+    };
+
+
+
+#ifdef COBJMACROS
+
+
+#define ISOSDacInterface18_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) )
+
+#define ISOSDacInterface18_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) )
+
+#define ISOSDacInterface18_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) )
+
+
+#define ISOSDacInterface18_GetGCInfoHeader(This,ip,header)	\
+    ( (This)->lpVtbl -> GetGCInfoHeader(This,ip,header) )
+
+#define ISOSDacInterface18_GetGCInfoInterruptibleRanges(This,ip,count,ranges,pNeeded)	\
+    ( (This)->lpVtbl -> GetGCInfoInterruptibleRanges(This,ip,count,ranges,pNeeded) )
+
+#define ISOSDacInterface18_GetGCInfoSafePoints(This,ip,count,offsets,pNeeded)	\
+    ( (This)->lpVtbl -> GetGCInfoSafePoints(This,ip,count,offsets,pNeeded) )
+
+#define ISOSDacInterface18_GetGCInfoRegisterLifetimes(This,ip,count,lifetimes,pNeeded)	\
+    ( (This)->lpVtbl -> GetGCInfoRegisterLifetimes(This,ip,count,lifetimes,pNeeded) )
+
+#define ISOSDacInterface18_GetGCInfoStackSlotLifetimes(This,ip,count,lifetimes,pNeeded)	\
+    ( (This)->lpVtbl -> GetGCInfoStackSlotLifetimes(This,ip,count,lifetimes,pNeeded) )
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* __ISOSDacInterface18_INTERFACE_DEFINED__ */
 
 
 /* Additional Prototypes for ALL interfaces */
@@ -4065,5 +4337,4 @@ EXTERN_C const IID IID_ISOSDacInterface17;
 #endif
 
 #endif
-
 
