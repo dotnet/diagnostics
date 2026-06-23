@@ -111,11 +111,10 @@ public static class SymbolManifestGenerator
 
             if (specialFilesRequireAdjacentRuntime)
             {
-                FileInfo[] adjacentCorrelatedFiles = allFiles
-                    .Where(file =>
-                        file.DirectoryName.Equals(runtimeModule.DirectoryName, StringComparison.Ordinal) &&
-                        file.Name.Equals(correlatedFileName, StringComparison.OrdinalIgnoreCase))
-                    .ToArray();
+                FileInfo[] adjacentCorrelatedFiles = runtimeModule.Directory?.GetFiles()
+                    .Where(file => file.Name.Equals(correlatedFileName, StringComparison.OrdinalIgnoreCase))
+                    .ToArray()
+                    ?? Array.Empty<FileInfo>();
 
                 if (adjacentCorrelatedFiles.Length > 1)
                 {
