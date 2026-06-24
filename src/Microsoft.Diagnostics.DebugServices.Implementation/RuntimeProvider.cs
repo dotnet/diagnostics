@@ -61,7 +61,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         return false;
                     }
                     return verifyDac;
-                }
+                },
+                SymbolProvider = _services.GetService<IClrSymbolProvider>(),
             });
             for (int i = 0; i < dataTarget.ClrVersions.Length; i++)
             {
