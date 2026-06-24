@@ -6698,106 +6698,160 @@ static HRESULT TryDumpGCInfoViaInterface18(CLRDATA_ADDRESS ip)
     if (FAILED(hr) || pSos18 == NULL)
         return E_NOINTERFACE;
 
-    // Get and print the header
+    // Get GC register names for the target platform
+    LPCSTR* gcRegNames = nullptr;
+    unsigned int gcRegCount = 0;
+    g_targetMachine->GetGCRegisters(&gcRegNames, &gcRegCount);
+
+    auto getRegName = [&](unsigned int regNum) -> const char* {
+        if (regNum < gcRegCount && gcRegNames != nullptr)
+            return gcRegNames[regNum];
+        return "???";
+    };
+
+    // Get the header
     SOSGCInfoHeader header = {};
     hr = pSos18->GetGCInfoHeader(ip, &header);
     if (FAILED(hr))
         return hr;
 
-    ExtOut("GC Info Header:\n");
-    ExtOut("  GcInfoVersion: %u\n", header.GcInfoVersion);
-    ExtOut("  CodeSize: %u (0x%x)\n", header.CodeSize, header.CodeSize);
-    ExtOut("  PrologSize: %u\n", header.PrologSize);
-    ExtOut("  StackBaseRegister: %u\n", header.StackBaseRegister);
-    ExtOut("  SizeOfStackParameterArea: %u\n", header.SizeOfStackParameterArea);
-    ExtOut("  ReturnKind: %u\n", header.ReturnKind);
-    ExtOut("  IsVarArg: %s\n", header.IsVarArg ? "true" : "false");
-    ExtOut("  WantsReportOnlyLeaf: %s\n", header.WantsReportOnlyLeaf ? "true" : "false");
-    ExtOut("  HasTailCalls: %s\n", header.HasTailCalls ? "true" : "false");
-    if (header.GSCookieIsPresent)
-        ExtOut("  GS Cookie: slot %d, valid range [%u, %u]\n", header.GSCookieStackSlot, header.GSCookieValidRangeStart, header.GSCookieValidRangeEnd);
-    if (header.PSPSymIsPresent)
-        ExtOut("  PSP Sym: slot %d\n", header.PSPSymStackSlot);
+    // Print header in legacy format
     if (header.GenericsInstContextIsPresent)
-        ExtOut("  Generics Inst Context: slot %d, kind %u\n", header.GenericsInstContextStackSlot, header.GenericsInstContextKind);
+        ExtOut("GenericInst slot: sp%+d (kind=%u)\n", header.GenericsInstContextStackSlot, header.GenericsInstContextKind);
+    else
+        ExtOut("GenericInst slot: <none>\n");
+    ExtOut("Varargs: %d\n", header.IsVarArg ? 1 : 0);
+    if (header.StackBaseRegister != 0xFFFFFFFF)
+        ExtOut("Frame pointer: %s\n", getRegName(header.StackBaseRegister));
+    else
+        ExtOut("Frame pointer: <none>\n");
+    ExtOut("Wants Report Only Leaf: %d\n", header.WantsReportOnlyLeaf ? 1 : 0);
+    ExtOut("Size of parameter area: %x\n", header.SizeOfStackParameterArea);
+    if (header.GSCookieIsPresent)
+        ExtOut("GS Cookie: sp%+d, valid range [%04x, %04x)\n", header.GSCookieStackSlot, header.GSCookieValidRangeStart, header.GSCookieValidRangeEnd);
+    if (header.PSPSymIsPresent)
+        ExtOut("PSP sym: sp%+d\n", header.PSPSymStackSlot);
+    ExtOut("Has Tail Calls: %d\n", header.HasTailCalls ? 1 : 0);
+    ExtOut("Code size: %x\n", header.CodeSize);
 
-    // Get and print interruptible ranges
+    // Get interruptible ranges
     ULONG rangeCount = 0;
     hr = pSos18->GetGCInfoInterruptibleRanges(ip, 0, nullptr, &rangeCount);
+    ArrayHolder<SOSCodeRange> ranges = nullptr;
     if (SUCCEEDED(hr) && rangeCount > 0)
     {
-        ExtOut("\nInterruptible Ranges (%u):\n", rangeCount);
-        ArrayHolder<SOSCodeRange> ranges = new NOTHROW SOSCodeRange[rangeCount];
+        ranges = new NOTHROW SOSCodeRange[rangeCount];
         if (ranges != NULL)
         {
             ULONG fetched = 0;
-            hr = pSos18->GetGCInfoInterruptibleRanges(ip, rangeCount, ranges, &fetched);
-            if (SUCCEEDED(hr))
-            {
-                for (ULONG i = 0; i < fetched; i++)
-                    ExtOut("  [0x%04x - 0x%04x)\n", ranges[i].BeginOffset, ranges[i].EndOffset);
-            }
+            pSos18->GetGCInfoInterruptibleRanges(ip, rangeCount, ranges, &fetched);
+            rangeCount = fetched;
         }
     }
 
-    // Get and print safe points
-    ULONG safePointCount = 0;
-    hr = pSos18->GetGCInfoSafePoints(ip, 0, nullptr, &safePointCount);
-    if (SUCCEEDED(hr) && safePointCount > 0)
+    // Get slot lifetimes
+    ULONG slotCount = 0;
+    hr = pSos18->GetGCInfoSlotLifetimes(ip, 0, nullptr, &slotCount);
+    ArrayHolder<SOSGCSlotLifetime> slots = nullptr;
+    if (SUCCEEDED(hr) && slotCount > 0)
     {
-        ExtOut("\nSafe Points (%u):\n", safePointCount);
-        ArrayHolder<unsigned int> offsets = new NOTHROW unsigned int[safePointCount];
-        if (offsets != NULL)
+        slots = new NOTHROW SOSGCSlotLifetime[slotCount];
+        if (slots != NULL)
         {
             ULONG fetched = 0;
-            hr = pSos18->GetGCInfoSafePoints(ip, safePointCount, offsets, &fetched);
-            if (SUCCEEDED(hr))
-            {
-                for (ULONG i = 0; i < fetched; i++)
-                    ExtOut("  0x%04x\n", offsets[i]);
-            }
+            pSos18->GetGCInfoSlotLifetimes(ip, slotCount, slots, &fetched);
+            slotCount = fetched;
         }
     }
 
-    // Get and print register lifetimes
-    ULONG regCount = 0;
-    hr = pSos18->GetGCInfoRegisterLifetimes(ip, 0, nullptr, &regCount);
-    if (SUCCEEDED(hr) && regCount > 0)
+    const char* frameRegName = (header.StackBaseRegister != 0xFFFFFFFF) ? getRegName(header.StackBaseRegister) : "sp";
+
+    // Print untracked slots (those with BeginOffset=0, EndOffset=CodeSize)
+    if (slots != NULL)
     {
-        ExtOut("\nRegister Lifetimes (%u):\n", regCount);
-        ArrayHolder<SOSGCRegisterLifetime> regs = new NOTHROW SOSGCRegisterLifetime[regCount];
-        if (regs != NULL)
+        for (ULONG i = 0; i < slotCount; i++)
         {
-            ULONG fetched = 0;
-            hr = pSos18->GetGCInfoRegisterLifetimes(ip, regCount, regs, &fetched);
-            if (SUCCEEDED(hr))
+            if (slots[i].BeginOffset == 0 && slots[i].EndOffset == header.CodeSize)
             {
-                for (ULONG i = 0; i < fetched; i++)
-                    ExtOut("  reg %u [0x%04x - 0x%04x) flags=0x%x\n", regs[i].RegisterNumber, regs[i].BeginOffset, regs[i].EndOffset, regs[i].GcFlags);
+                if (slots[i].IsRegister)
+                    ExtOut("Untracked: %s%s\n", slots[i].GcFlags & 0x2 ? "pinned " : "", getRegName(slots[i].RegisterNumber));
+                else
+                    ExtOut("Untracked: %s+%s%+d\n", slots[i].GcFlags & 0x2 ? "pinned " : "", frameRegName, slots[i].SpOffset);
             }
         }
     }
 
-    // Get and print stack slot lifetimes
-    ULONG stackCount = 0;
-    hr = pSos18->GetGCInfoStackSlotLifetimes(ip, 0, nullptr, &stackCount);
-    if (SUCCEEDED(hr) && stackCount > 0)
+    // Build timeline: interleave interruptible range transitions and slot live/dead transitions
+    // sorted by code offset
+    struct TimelineEvent
     {
-        ExtOut("\nStack Slot Lifetimes (%u):\n", stackCount);
-        ArrayHolder<SOSGCStackSlotLifetime> stacks = new NOTHROW SOSGCStackSlotLifetime[stackCount];
-        if (stacks != NULL)
+        unsigned int offset;
+        int type; // 0=interruptible start, 1=interruptible end, 2=slot live, 3=slot dead
+        ULONG slotIndex;
+    };
+
+    std::vector<TimelineEvent> events;
+
+    if (ranges != NULL)
+    {
+        for (ULONG i = 0; i < rangeCount; i++)
         {
-            ULONG fetched = 0;
-            hr = pSos18->GetGCInfoStackSlotLifetimes(ip, stackCount, stacks, &fetched);
-            if (SUCCEEDED(hr))
-            {
-                for (ULONG i = 0; i < fetched; i++)
-                    ExtOut("  sp%+d base=%u [0x%04x - 0x%04x) flags=0x%x\n", stacks[i].SpOffset, stacks[i].BaseRegister, stacks[i].BeginOffset, stacks[i].EndOffset, stacks[i].GcFlags);
-            }
+            events.push_back({ranges[i].BeginOffset, 0, 0});
+            events.push_back({ranges[i].EndOffset, 1, 0});
         }
     }
 
-    ExtOut("\n");
+    if (slots != NULL)
+    {
+        for (ULONG i = 0; i < slotCount; i++)
+        {
+            // Skip untracked (already printed above)
+            if (slots[i].BeginOffset == 0 && slots[i].EndOffset == header.CodeSize)
+                continue;
+            events.push_back({slots[i].BeginOffset, 2, i});
+            events.push_back({slots[i].EndOffset, 3, i});
+        }
+    }
+
+    // Sort by offset, then by type (interruptible transitions first)
+    std::sort(events.begin(), events.end(), [](const TimelineEvent& a, const TimelineEvent& b) {
+        if (a.offset != b.offset) return a.offset < b.offset;
+        return a.type < b.type;
+    });
+
+    // Print timeline
+    for (const auto& ev : events)
+    {
+        switch (ev.type)
+        {
+        case 0:
+            ExtOut("%08x interruptible\n", ev.offset);
+            break;
+        case 1:
+            ExtOut("%08x not interruptible\n", ev.offset);
+            break;
+        case 2:
+        {
+            const SOSGCSlotLifetime& s = slots[ev.slotIndex];
+            const char* prefix = s.GcFlags & 0x1 ? "&" : "+";
+            if (s.IsRegister)
+                ExtOut("%08x %s%s%s\n", ev.offset, s.GcFlags & 0x2 ? "pinned " : "", prefix, getRegName(s.RegisterNumber));
+            else
+                ExtOut("%08x %s%s%s%+d\n", ev.offset, s.GcFlags & 0x2 ? "pinned " : "", prefix, frameRegName, s.SpOffset);
+            break;
+        }
+        case 3:
+        {
+            const SOSGCSlotLifetime& s = slots[ev.slotIndex];
+            if (s.IsRegister)
+                ExtOut("%08x -%s\n", ev.offset, getRegName(s.RegisterNumber));
+            else
+                ExtOut("%08x -%s%+d\n", ev.offset, frameRegName, s.SpOffset);
+            break;
+        }
+        }
+    }
+
     return S_OK;
 }
 
