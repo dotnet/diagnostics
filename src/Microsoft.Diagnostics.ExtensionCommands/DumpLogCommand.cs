@@ -19,6 +19,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "-addr", Help = "The hex address of a StressLog to dump instead of the runtime's own stress log.")]
         public string AddressString { get; set; }
 
+        // The sentinel ClrMD's stress-log reader emits for a message whose format
+        // string could not be read from the target. When the runtime's read-only
+        // data (where the format strings live) is missing from the dump and the
+        // runtime binary cannot be located, every message renders this way.
+        private const string UnresolvedFormatMarker = "<unresolved-format>";
+
+        // Warn only when an overwhelming majority is unresolved; a handful of
+        // unresolved formats is normal (e.g. a format string in a module that is
+        // genuinely absent from both the dump and the symbol path).
+        private const int UnresolvedWarningThresholdPercent = 50;
+
         public override void Invoke()
         {
             string fileName = string.IsNullOrWhiteSpace(FileName) ? "StressLog.txt" : FileName;
@@ -56,6 +67,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 int pointerHexDigits = stressLog.PointerSize * 2;
                 int messageCount = 0;
+                int unresolvedCount = 0;
                 bool interrupted = false;
 
                 using (StreamWriter writer = new(fileName))
@@ -75,6 +87,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         else
                         {
                             string text = StressLogFormat.FormatMessageText(Runtime, message, pointerHexDigits);
+                            if (text.Contains(UnresolvedFormatMarker, StringComparison.Ordinal))
+                            {
+                                unresolvedCount++;
+                            }
+
                             writer.WriteLine($"{message.OSThreadId,4:x} {message.ElapsedSeconds,13:F9} : {StressLogFormat.FacilityName(message.Facility),-20} {text}");
                         }
 
@@ -91,6 +108,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 }
 
                 Console.WriteLine(interrupted ? "Stress log dump interrupted by user" : "SUCCESS: Stress log dumped");
+
+                if (!interrupted)
+                {
+                    WarnIfFormatsUnresolved(messageCount, unresolvedCount);
+                }
             }
             catch (IOException ex)
             {
@@ -120,6 +142,48 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             threadCount = threads.Count;
             elapsedSeconds = elapsed;
+        }
+
+        private void WarnIfFormatsUnresolved(int messageCount, int unresolvedCount)
+        {
+            if (messageCount <= 0 || unresolvedCount <= 0)
+            {
+                return;
+            }
+
+            int percent = (int)((long)unresolvedCount * 100 / messageCount);
+            if (percent < UnresolvedWarningThresholdPercent)
+            {
+                return;
+            }
+
+            string runtimeModule = GetRuntimeModuleFileName();
+            WriteLineWarning(
+                "WARNING: {0} of {1} messages ({2}%) could not resolve their format strings.",
+                unresolvedCount, messageCount, percent);
+            WriteLineWarning(
+                "The format strings live in the .NET runtime's read-only data, which this dump does not contain.");
+            WriteLineWarning(
+                "Set the symbol path to the matching runtime and re-run dumplog, for example:");
+            WriteLineWarning(
+                "    setsymbolserver -directory <dir>   (where <dir> contains {0})", runtimeModule);
+        }
+
+        private string GetRuntimeModuleFileName()
+        {
+            try
+            {
+                string fileName = Runtime?.ClrInfo?.ModuleInfo?.FileName;
+                if (!string.IsNullOrEmpty(fileName))
+                {
+                    return Path.GetFileName(fileName);
+                }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException)
+            {
+            }
+
+            return "the .NET runtime (libcoreclr.so or coreclr.dll)";
         }
 
         [HelpInvoke]
