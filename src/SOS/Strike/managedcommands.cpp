@@ -216,6 +216,62 @@ DECLARE_API(dumplocks)
     return ExecuteManagedOnlyCommand("dumplocks", args);
 }
 
+DECLARE_API(DumpLog)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("dumplog", args);
+}
+
+DECLARE_API(HistInit)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("histinit", args);
+}
+
+DECLARE_API(HistClear)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("histclear", args);
+}
+
+DECLARE_API(HistObj)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("histobj", args);
+}
+
+DECLARE_API(HistObjFind)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("histobjfind", args);
+}
+
+DECLARE_API(HistRoot)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("histroot", args);
+}
+
+DECLARE_API(HistStats)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("histstats", args);
+}
+
+DECLARE_API(GCHandleLeaks)
+{
+    INIT_API_EXT();
+    MINIDUMP_NOT_SUPPORTED();
+    return ExecuteManagedOnlyCommand("gchandleleaks", args);
+}
+
 typedef HRESULT (*PFN_COMMAND)(PDEBUG_CLIENT client, PCSTR args);
 
 //
