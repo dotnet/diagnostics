@@ -569,8 +569,11 @@ public class SOSRunner : IDisposable
                     }
                     initialCommands.Add(".extpath " + Path.GetDirectoryName(config.SOSPath()));
 
-                    // Add the path to runtime so cdb/SOS can find DAC/DBI for triage dumps
-                    if (information.DumpType == DumpType.Triage)
+                    // Always add the runtime install directory to the symbol path so CDB can
+                    // find mscordaccore.dll locally (next to coreclr.dll). Without this, when
+                    // the symbol server is restricted (see env-var lockdown below), CDB's
+                    // auto-discovery may fail for newer runtimes and report
+                    // "Failed to load data access module, 0x80004002".
                     {
                         string runtimeSymbolsPath = config.RuntimeSymbolsPath;
                         if (runtimeSymbolsPath != null)
@@ -718,6 +721,30 @@ public class SOSRunner : IDisposable
                 WithEnvironmentVariable("DOTNET_ROOT", config.DotNetRoot).
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
+
+            if (debugger is NativeDebugger.Cdb)
+            {
+                // CDB can get into a state where symbol loading hangs for a long time (up to the entire ProcessRunner timeout window) if it tries to load symbols from a public symbol server and the CI agent is slow or has no network access. Since the tests don't need any public symbols, we can avoid this by clearing the symbol path environment variables so CDB doesn't even try to reach out to the symbol servers.
+                // Prevent CDB/dotnet-dump from reaching out to public symbol servers during
+                // initial module loading.
+                // Tests set their own symbol paths via setsymbolserver/SetSymbolServer
+                // initial commands when they need symbols.
+
+                // Log the inherited symbol-related env vars so CI runs reveal exactly what
+                // state the agent started us with. Helps verify that the lockdown actually
+                // applies and that public-server entries are not coming from somewhere we
+                // didn't expect (e.g. registry / parent process / DBGENG defaults).
+                foreach (string name in new[] { "_NT_SYMBOL_PATH", "_NT_ALT_SYMBOL_PATH", "_NT_SOURCE_PATH", "_NT_SYMBOL_PROXY", "DBGHELP_HOMEDIR" })
+                {
+                    string value = Environment.GetEnvironmentVariable(name);
+                    outputHelper.WriteLine($"[DIAG] inherited {name} = {(value == null ? "<unset>" : value)}");
+                }
+
+                processRunner.RemoveEnvironmentVariable("_NT_SYMBOL_PATH");
+                processRunner.RemoveEnvironmentVariable("_NT_ALT_SYMBOL_PATH");
+                processRunner.RemoveEnvironmentVariable("_NT_SOURCE_PATH");
+                outputHelper.WriteLine("[DIAG] Removed _NT_SYMBOL_PATH/_NT_ALT_SYMBOL_PATH/_NT_SOURCE_PATH from spawned debugger environment");
+            }
 
             if (config.TestCDACNoFallback)
             {
@@ -1306,7 +1333,21 @@ public class SOSRunner : IDisposable
 
         if (new Regex(regex, RegexOptions.Multiline).IsMatch(_lastCommandOutput) != match)
         {
-            throw new Exception("Debugger output did not match the expression: " + regex);
+            // Include the actual debugger output so CI failures show WHAT the debugger
+            // produced, not just the pattern we were looking for. Truncate to keep the
+            // exception message readable.
+            const int MaxOutputChars = 4000;
+            string outputForMessage = _lastCommandOutput;
+            if (outputForMessage.Length > MaxOutputChars)
+            {
+                outputForMessage = outputForMessage.Substring(0, MaxOutputChars) + "\n... (truncated, full output above)";
+            }
+            string verb = match ? "did not match" : "unexpectedly matched";
+            throw new Exception(
+                $"Debugger output {verb} the expression: {regex}\n" +
+                $"---- last command output ({_lastCommandOutput.Length} chars) ----\n" +
+                $"{outputForMessage}\n" +
+                "---- end last command output ----");
         }
     }
 

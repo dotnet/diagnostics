@@ -185,6 +185,11 @@ namespace Microsoft.SymbolStore.SymbolStores
                     {
                         request.Headers.Authorization = await _authenticationFunc(token).ConfigureAwait(false);
                     }
+                    // Logged at Information level so CI runs surface every outgoing HTTP
+                    // symbol-store fetch. If tests are supposed to be running with local-only
+                    // symbol stores, grepping for "[HttpSymbolStore] GET" in the test output
+                    // immediately reveals leaks back to public symbol servers.
+                    Tracer.Information("[HttpSymbolStore] GET {0}", requestUri.AbsoluteUri);
                     using HttpResponseMessage response = await _client.SendAsync(request, token).ConfigureAwait(false);
                     if (response.StatusCode == HttpStatusCode.OK)
                     {
