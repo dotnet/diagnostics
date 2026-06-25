@@ -578,11 +578,11 @@ namespace Microsoft.Diagnostics.TestHelpers
                 string mode = Environment.GetEnvironmentVariable("SOS_TEST_DAC_MODE");
                 return (mode ?? string.Empty).Trim().ToLowerInvariant() switch
                 {
-                    "" => TestHelpers.DacMode.Default,
-                    "cdac" => TestHelpers.DacMode.CDac,
-                    "cdacfallback" => TestHelpers.DacMode.CDacFallback,
-                    "cdacverify" => TestHelpers.DacMode.CDacVerify,
-                    "dac" => TestHelpers.DacMode.Dac,
+                    "" => DacMode.Default,
+                    "cdac" => DacMode.CDac,
+                    "cdacfallback" => DacMode.CDacFallback,
+                    "cdacverify" => DacMode.CDacVerify,
+                    "dac" => DacMode.Dac,
                     _ => throw new NotSupportedException($"Unknown DacMode '{mode}'. Expected cdac, cdacfallback, cdacverify, dac, or empty."),
                 };
             }
