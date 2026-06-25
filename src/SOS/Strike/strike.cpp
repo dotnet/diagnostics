@@ -127,6 +127,7 @@
 #include "predeftlsslot.h"
 #include "hillclimbing.h"
 #include "sos_md.h"
+#include "gcinfoprovider.h"
 
 #ifndef FEATURE_PAL
 
@@ -6710,10 +6711,12 @@ DECLARE_API(GCInfo)
     TADDR taStartAddr = (TADDR)0;
     TADDR taGCInfoAddr;
     BOOL dml = FALSE;
+    BOOL useLegacy = FALSE;
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
+        {"-legacy", &useLegacy, COBOOL, FALSE},
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -6790,6 +6793,20 @@ DECLARE_API(GCInfo)
         ExtOut("preJIT generated code\n");
     }
 
+    // Use GCInfoData abstraction (tries ISOSDacInterface18 first, then legacy)
+    if (!useLegacy)
+    {
+        GCInfoData gcInfo;
+        CLRDATA_ADDRESS methodIP = TO_CDADDR(codeHeaderData.MethodStart);
+        HRESULT hr = GCInfoData::Create(methodIP, gcInfo);
+        if (SUCCEEDED(hr) && gcInfo.IsValid)
+        {
+            gcInfo.DumpToOutput(ExtOut);
+            return Status;
+        }
+    }
+
+    // Final fallback: raw GC info blob + DumpGCInfo (for older runtimes without Interface18)
     taGCInfoAddr = TO_TADDR(codeHeaderData.GCInfo);
 
     ExtOut("GC info %p\n", SOS_PTR(taGCInfoAddr));
@@ -6811,15 +6828,12 @@ DECLARE_API(GCInfo)
     }
 
     memset(table, 0, tableSize);
-    // We avoid using move here, because we do not want to return
     if (!SafeReadMemory(taGCInfoAddr, table, tableSize, NULL))
     {
         ExtOut("Could not read memory %p\n", SOS_PTR(taGCInfoAddr));
         return Status;
     }
 
-    // Mutable table pointer since we need to pass the appropriate
-    // offset into the table to DumpGCTable.
     GCInfoToken gcInfoToken = { table, GCInfoVersion() };
     unsigned int methodSize = (unsigned int)codeHeaderData.MethodSize;
 
@@ -7475,6 +7489,24 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
 
     if (fWithGCInfo)
     {
+        if (!g_gcEncodingInfo.Initialize())
+        {
+            return E_OUTOFMEMORY;
+        }
+
+        // Try the GCInfoData abstraction first (ISOSDacInterface18, then legacy decoder)
+        {
+            GCInfoData gcInfo;
+            CLRDATA_ADDRESS methodIP = TO_CDADDR(codeHeaderData.MethodStart);
+            HRESULT hr = GCInfoData::Create(methodIP, gcInfo);
+            if (SUCCEEDED(hr) && gcInfo.IsValid)
+            {
+                gcInfo.DumpToOutput(DecodeGCTableEntry);
+                return S_OK;
+            }
+        }
+
+        // Final fallback: raw GC info blob + DumpGCInfo (for older runtimes)
         // assume that GC encoding table is never more than 40 + methodSize * 2
         int tableSize = 0;
         if (!ClrSafeInt<int>::multiply(codeHeaderData.MethodSize, 2, tableSize) ||
@@ -7505,11 +7537,6 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
         // Skip the info header
         //
         unsigned int methodSize = (unsigned int)codeHeaderData.MethodSize;
-
-        if (!g_gcEncodingInfo.Initialize())
-        {
-            return E_OUTOFMEMORY;
-        }
 
         GCInfoToken gcInfoToken = { table, GCInfoVersion() };
         g_targetMachine->DumpGCInfo(gcInfoToken, methodSize, DecodeGCTableEntry, false /*encBytes*/, false /*bPrintHeader*/);

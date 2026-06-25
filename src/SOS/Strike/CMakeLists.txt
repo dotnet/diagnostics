@@ -89,6 +89,7 @@ if (CLR_CMAKE_HOST_WIN32)
     sos.cpp
     sosextensions.cpp
     stressLogDump.cpp
+    gcinfoprovider.cpp
     strike.cpp
     util.cpp
     vm.cpp
@@ -154,6 +155,7 @@ else(CLR_CMAKE_HOST_WIN32)
     sigparser.cpp
     sildasm.cpp
     stressLogDump.cpp
+    gcinfoprovider.cpp
     strike.cpp
     sos.cpp
     sosextensions.cpp

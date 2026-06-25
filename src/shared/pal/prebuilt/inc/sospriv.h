@@ -4056,6 +4056,153 @@ EXTERN_C const IID IID_ISOSDacInterface17;
 #endif 	/* __ISOSDacInterface17_INTERFACE_DEFINED__ */
 
 
+/* GCInfo data structures for ISOSDacInterface18 */
+
+#ifndef _SOS_GCInfoData
+#define _SOS_GCInfoData
+
+typedef struct _SOSCodeRange
+{
+    unsigned int BeginOffset;
+    unsigned int EndOffset;
+} SOSCodeRange;
+
+typedef struct _SOSGCInfoHeader
+{
+    ULONG  SizeOf;
+
+    unsigned int GcInfoVersion;
+    unsigned int CodeSize;
+    unsigned int PrologSize;
+    unsigned int StackBaseRegister;
+    unsigned int SizeOfStackParameterArea;
+
+    BOOL   IsVarArg;
+    BOOL   WantsReportOnlyLeaf;
+    BOOL   HasTailCalls;
+
+    BOOL   GSCookieIsPresent;
+    int    GSCookieStackSlot;
+    unsigned int GSCookieValidRangeStart;
+    unsigned int GSCookieValidRangeEnd;
+
+    BOOL   PSPSymIsPresent;
+    int    PSPSymStackSlot;
+
+    BOOL   GenericsInstContextIsPresent;
+    int    GenericsInstContextStackSlot;
+    unsigned int GenericsInstContextKind;
+} SOSGCInfoHeader;
+
+typedef struct _SOSGCSlotLifetime
+{
+    unsigned int BeginOffset;
+    unsigned int EndOffset;
+    int          IsRegister;
+    unsigned int RegisterNumber;
+    int          SpOffset;
+    unsigned int BaseRegister;
+    unsigned int GcFlags;
+} SOSGCSlotLifetime;
+
+#endif //_SOS_GCInfoData
+
+#ifndef __ISOSDacInterface18_INTERFACE_DEFINED__
+#define __ISOSDacInterface18_INTERFACE_DEFINED__
+
+/* interface ISOSDacInterface18 */
+/* [uuid][local][object] */
+
+
+EXTERN_C const IID IID_ISOSDacInterface18;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+
+    MIDL_INTERFACE("3dccf95b-bca2-40ee-8b83-d8d7574a1df0")
+    ISOSDacInterface18 : public IUnknown
+    {
+    public:
+        virtual HRESULT STDMETHODCALLTYPE GetGCInfoHeader(
+            CLRDATA_ADDRESS ip,
+            SOSGCInfoHeader *header) = 0;
+
+        virtual HRESULT STDMETHODCALLTYPE GetGCInfoInterruptibleRanges(
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            SOSCodeRange *ranges,
+            ULONG *pNeeded) = 0;
+
+        virtual HRESULT STDMETHODCALLTYPE GetGCInfoSafePoints(
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            unsigned int *offsets,
+            ULONG *pNeeded) = 0;
+
+        virtual HRESULT STDMETHODCALLTYPE GetGCInfoSlotLifetimes(
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            SOSGCSlotLifetime *lifetimes,
+            ULONG *pNeeded) = 0;
+
+    };
+
+
+#else 	/* C style interface */
+
+    typedef struct ISOSDacInterface18Vtbl
+    {
+        BEGIN_INTERFACE
+
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )(
+            ISOSDacInterface18 * This,
+            REFIID riid,
+            void **ppvObject);
+
+        ULONG ( STDMETHODCALLTYPE *AddRef )(
+            ISOSDacInterface18 * This);
+
+        ULONG ( STDMETHODCALLTYPE *Release )(
+            ISOSDacInterface18 * This);
+
+        HRESULT ( STDMETHODCALLTYPE *GetGCInfoHeader )(
+            ISOSDacInterface18 * This,
+            CLRDATA_ADDRESS ip,
+            SOSGCInfoHeader *header);
+
+        HRESULT ( STDMETHODCALLTYPE *GetGCInfoInterruptibleRanges )(
+            ISOSDacInterface18 * This,
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            SOSCodeRange *ranges,
+            ULONG *pNeeded);
+
+        HRESULT ( STDMETHODCALLTYPE *GetGCInfoSafePoints )(
+            ISOSDacInterface18 * This,
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            unsigned int *offsets,
+            ULONG *pNeeded);
+
+        HRESULT ( STDMETHODCALLTYPE *GetGCInfoSlotLifetimes )(
+            ISOSDacInterface18 * This,
+            CLRDATA_ADDRESS ip,
+            ULONG count,
+            SOSGCSlotLifetime *lifetimes,
+            ULONG *pNeeded);
+
+        END_INTERFACE
+    } ISOSDacInterface18Vtbl;
+
+    interface ISOSDacInterface18
+    {
+        CONST_VTBL struct ISOSDacInterface18Vtbl *lpVtbl;
+    };
+
+#endif 	/* C style interface */
+
+#endif 	/* __ISOSDacInterface18_INTERFACE_DEFINED__ */
+
+
 /* Additional Prototypes for ALL interfaces */
 
 /* end of Additional Prototypes */
