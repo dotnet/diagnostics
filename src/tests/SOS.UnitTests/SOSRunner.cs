@@ -719,14 +719,30 @@ public class SOSRunner : IDisposable
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
-            if (config.TestCDACNoFallback)
+            // Configure which DAC/cDAC SOS loads, driven entirely by the DacMode test setting (see
+            // TestConfiguration.DacMode). The harness translates the mode through two channels:
+            //  * Runtime-side env vars (DOTNET_ENABLE_CDAC / CDAC_NO_FALLBACK) set here, which make the
+            //    in-box DAC host the cDAC reader and have no SOS-command equivalent. These must be set
+            //    on the debuggee process before it launches.
+            //  * SOS's own cDAC load policy ("runtimes --usecdac"), applied in LoadSosExtension. That
+            //    command is an SOS extension command and is not available until SOS has been loaded, so
+            //    it cannot be issued as a pre-SOS initial debugger command.
+            switch (config.DacMode)
             {
-                processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
-                processRunner.WithEnvironmentVariable("CDAC_NO_FALLBACK", "1");
-            }
-            else if (config.TestCDAC)
-            {
-                processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
+                case DacMode.CDacFallback:
+                    // cDAC hosted by the in-box DAC, with per-API fallback to the legacy DAC.
+                    processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
+                    break;
+                case DacMode.CDacVerify:
+                    // cDAC hosted by the in-box DAC, with no fallback to the legacy DAC.
+                    processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
+                    processRunner.WithEnvironmentVariable("CDAC_NO_FALLBACK", "1");
+                    break;
+                case DacMode.CDac:
+                case DacMode.Dac:
+                case DacMode.Default:
+                    // No debuggee env vars; the SOS load policy (if any) is applied in LoadSosExtension.
+                    break;
             }
 
             // Enable stress logging for both live and dump paths when requested
@@ -1134,6 +1150,23 @@ public class SOSRunner : IDisposable
             default:
                 throw new Exception($"{DebuggerToString} cannot load sos extension");
         }
+
+        // Apply the cDAC load policy selected by the test's DacMode now that SOS is loaded (the
+        // "runtimes" command is unavailable before this) and before any runtime is accessed, so SOS
+        // uses the requested DAC/cDAC the first time it resolves the runtime. CDacFallback/CDacVerify
+        // instead rely on the in-box DAC via env vars set in StartDebugger and keep SOS's default
+        // policy (which does not load the standalone cDAC when DOTNET_ENABLE_CDAC is set).
+        string cdacPolicyCommand = _config.DacMode switch
+        {
+            DacMode.CDac => "runtimes --usecdac true",    // Force the standalone cDAC next to sos.dll.
+            DacMode.Dac => "runtimes --usecdac false",     // Force the legacy in-box DAC.
+            _ => null,
+        };
+        if (cdacPolicyCommand is not null && Debugger != NativeDebugger.Gdb)
+        {
+            commands.Add((Debugger == NativeDebugger.Cdb ? "!" : "") + cdacPolicyCommand);
+        }
+
         await RunCommands(commands);
 
         // Helper function to switch to the thread with an exception
@@ -1599,7 +1632,7 @@ public class SOSRunner : IDisposable
         {
             defines.Add("HOST_RUNTIME_NONE");
         }
-        if (_config.TestCDACNoFallback)
+        if (_config.DacMode == DacMode.CDacVerify)
         {
             defines.Add("CDAC_NO_FALLBACK_TESTING");
         }

@@ -72,8 +72,6 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TargetRid"] = GetRid(),
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages,
-                ["TestCDAC"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC"),
-                ["TestCDACNoFallback"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC_NO_FALLBACK")
             };
             if (OS.Kind == OSKind.Windows)
             {
@@ -455,13 +453,20 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 sb.Append(".singlefile");
             }
-            if (TestCDACNoFallback)
+            switch (DacMode)
             {
-                sb.Append(".cdac_no_fallback");
-            }
-            else if (TestCDAC)
-            {
-                sb.Append(".cdac");
+                case DacMode.CDacFallback:
+                    sb.Append(".cdacfallback");
+                    break;
+                case DacMode.CDacVerify:
+                    sb.Append(".cdacverify");
+                    break;
+                case DacMode.CDac:
+                    sb.Append(".cdac");
+                    break;
+                case DacMode.Dac:
+                    sb.Append(".dac");
+                    break;
             }
             if (UseInterpreter)
             {
@@ -562,19 +567,25 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
-        /// Returns true if test should use the cDAC.
+        /// Controls which DAC/cDAC the SOS tests load (see <see cref="TestHelpers.DacMode"/>). The value comes
+        /// from the SOS_TEST_DAC_MODE environment variable, which eng/build.* sets from its -dacMode argument
+        /// (and which direct "dotnet test" runs can set themselves).
         /// </summary>
-        public bool TestCDAC
+        public DacMode DacMode
         {
-            get { return string.Equals(GetValue("TestCDAC"), "true", StringComparison.InvariantCultureIgnoreCase); }
-        }
-
-        /// <summary>
-        /// Returns true if tests should use the cDAC with no fallback to the legacy DAC.
-        /// </summary>
-        public bool TestCDACNoFallback
-        {
-            get { return string.Equals(GetValue("TestCDACNoFallback"), "true", StringComparison.InvariantCultureIgnoreCase); }
+            get
+            {
+                string mode = Environment.GetEnvironmentVariable("SOS_TEST_DAC_MODE");
+                return (mode ?? string.Empty).Trim().ToLowerInvariant() switch
+                {
+                    "" => TestHelpers.DacMode.Default,
+                    "cdac" => TestHelpers.DacMode.CDac,
+                    "cdacfallback" => TestHelpers.DacMode.CDacFallback,
+                    "cdacverify" => TestHelpers.DacMode.CDacVerify,
+                    "dac" => TestHelpers.DacMode.Dac,
+                    _ => throw new NotSupportedException($"Unknown DacMode '{mode}'. Expected cdac, cdacfallback, cdacverify, dac, or empty."),
+                };
+            }
         }
 
         /// <summary>
@@ -950,6 +961,40 @@ namespace Microsoft.Diagnostics.TestHelpers
         Linux,
         OSX,
         Unknown,
+    }
+
+    /// <summary>
+    /// Controls which DAC/cDAC the SOS tests load. The harness (SOSRunner) translates this into the
+    /// DOTNET_ENABLE_CDAC / CDAC_NO_FALLBACK environment variables and the "runtimes --usecdac" SOS
+    /// command, so there are no per-mode special cases elsewhere.
+    /// </summary>
+    public enum DacMode
+    {
+        /// <summary>
+        /// Unspecified: the harness applies no DAC/cDAC configuration (SOS uses its default load policy).
+        /// </summary>
+        Default,
+
+        /// <summary>
+        /// cDAC hosted by the in-box DAC, with per-API fallback to the legacy DAC.
+        /// </summary>
+        CDacFallback,
+
+        /// <summary>
+        /// cDAC hosted by the in-box DAC, with no fallback to the legacy DAC (still verifies against it).
+        /// </summary>
+        CDacVerify,
+
+        /// <summary>
+        /// The standalone cDAC (mscordaccore_universal) loaded directly through SOS hosting -- the
+        /// canonical cDAC path.
+        /// </summary>
+        CDac,
+
+        /// <summary>
+        /// The legacy in-box DAC only.
+        /// </summary>
+        Dac,
     }
 
     /// <summary>

@@ -10,8 +10,8 @@ Param(
     [switch] $skipmanaged,
     [switch] $skipnative,
     [switch] $bundletools,
-    [switch] $useCdac,
-    [switch] $noFallback,
+    [ValidateSet("", "cdac", "cdacfallback", "cdacverify", "dac")][string] $dacMode = '',
+    [string] $cdacPath = '',
     [switch] $testInterpreter,
     [string] $methodfilter = '',
     [string] $classfilter = '',
@@ -26,10 +26,11 @@ Param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-if ($noFallback -and -not $useCdac) {
-    Write-Error "-noFallback requires -useCdac to also be specified."
+if ($cdacPath -ne '' -and $dacMode -ne 'cdac') {
+    Write-Error "-cdacPath is only valid with -dacMode cdac."
     exit 1
 }
+
 
 $crossbuild = $false
 if (($architecture -eq "arm") -or ($architecture -eq "arm64")) {
@@ -73,6 +74,20 @@ if (-not $skipnative) {
     }
 }
 
+# Overlay an externally-provided cDAC (mscordaccore_universal) next to the freshly built sos.dll. SOS
+# resolves the cDAC from its own native binaries directory, so this is the only spot it is picked up
+# from. Used by the cdac DacMode to exercise the runtime-under-test's own cDAC instead of the copy
+# restored from a referenced runtime package.
+if ($cdacPath -ne '') {
+    if (-not (Test-Path $cdacPath)) {
+        Write-Error "-cdacPath '$cdacPath' does not exist."
+        exit 1
+    }
+    $cdacDest = Join-Path (Join-Path $artifactsdir "bin\$os.$architecture.$configuration") "mscordaccore_universal.dll"
+    Write-Host "Overlaying cDAC: $cdacPath -> $cdacDest"
+    Copy-Item $cdacPath $cdacDest -Force
+}
+
 # Install sdk for building, restore and build managed components.
 # Test runtime installation and debuggee building is handled by src/tests/dirs.proj targets.
 if (-not $skipmanaged) {
@@ -90,12 +105,8 @@ if (-not $skipmanaged) {
 # Run the xunit tests
 if ($test) {
     if (-not $crossbuild) {
-        if ($useCdac) {
-            $env:SOS_TEST_CDAC="true"
-        }
-
-        if ($noFallback) {
-            $env:SOS_TEST_CDAC_NO_FALLBACK="true"
+        if ($dacMode -ne '') {
+            $env:SOS_TEST_DAC_MODE=$dacMode
         }
 
         if ($testInterpreter) {
