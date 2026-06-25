@@ -567,7 +567,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
-        /// Controls which DAC/cDAC the SOS tests load (see <see cref="TestHelpers.DacMode"/>). The value comes
+        /// Controls which DAC/cDAC the SOS tests load (see <see cref="Microsoft.Diagnostics.TestHelpers.DacMode"/>). The value comes
         /// from the SOS_TEST_DAC_MODE environment variable, which eng/build.* sets from its -dacMode argument
         /// (and which direct "dotnet test" runs can set themselves).
         /// </summary>

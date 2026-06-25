@@ -40,6 +40,8 @@ usage_list+=("-skipnative: do not build native components.")
 usage_list+=("-test: run xunit tests")
 usage_list+=("-methodfilter: pass method filter to xunit runner (Namespace.ClassName.MethodName)")
 usage_list+=("-classfilter: pass class filter to xunit runner (Namespace.ClassName)")
+usage_list+=("-dacmode: which DAC/cDAC the SOS tests load: cdac, cdacfallback, cdacverify, or dac.")
+usage_list+=("-cdacpath: path to an mscordaccore_universal to overlay next to sos.dll (only with -dacmode cdac).")
 
 handle_arguments() {
     lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
@@ -255,6 +257,7 @@ if [[ -n "$__CDacPath" ]]; then
     else
         __CDacDestName="libmscordaccore_universal.so"
     fi
+    mkdir -p "$__BinDir"
     echo "Overlaying cDAC: $__CDacPath -> $__BinDir/$__CDacDestName"
     cp -f "$__CDacPath" "$__BinDir/$__CDacDestName"
 fi

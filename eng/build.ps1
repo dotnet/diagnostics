@@ -84,6 +84,7 @@ if ($cdacPath -ne '') {
         exit 1
     }
     $cdacDest = Join-Path (Join-Path $artifactsdir "bin\$os.$architecture.$configuration") "mscordaccore_universal.dll"
+    New-Item -ItemType Directory -Force -Path (Split-Path $cdacDest -Parent) | Out-Null
     Write-Host "Overlaying cDAC: $cdacPath -> $cdacDest"
     Copy-Item $cdacPath $cdacDest -Force
 }

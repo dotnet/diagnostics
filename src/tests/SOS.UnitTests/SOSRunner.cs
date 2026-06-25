@@ -721,9 +721,9 @@ public class SOSRunner : IDisposable
 
             // Configure which DAC/cDAC SOS loads, driven entirely by the DacMode test setting (see
             // TestConfiguration.DacMode). The harness translates the mode through two channels:
-            //  * Runtime-side env vars (DOTNET_ENABLE_CDAC / CDAC_NO_FALLBACK) set here, which make the
-            //    in-box DAC host the cDAC reader and have no SOS-command equivalent. These must be set
-            //    on the debuggee process before it launches.
+            //  * Env vars (DOTNET_ENABLE_CDAC / CDAC_NO_FALLBACK) set here on the debugger process. The
+            //    in-box DAC, loaded into the debugger host, reads them and hosts the cDAC reader itself;
+            //    there is no SOS-command equivalent. They are set before the debugger launches.
             //  * SOS's own cDAC load policy ("runtimes --usecdac"), applied in LoadSosExtension. That
             //    command is an SOS extension command and is not available until SOS has been loaded, so
             //    it cannot be issued as a pre-SOS initial debugger command.
