@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Generic;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 
@@ -31,32 +32,29 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // Check for duplicate Reloc or Promote messages within one GC.
             bool errorFound = false;
+            HashSet<ulong> seenRoots = new();
             foreach (GCRecord record in History.Records)
             {
                 Console.CancellationToken.ThrowIfCancellationRequested();
                 ulong gcCount = record.GCCount;
 
-                for (int i = 0; i < record.Promotes.Count; i++)
+                seenRoots.Clear();
+                foreach (PromoteRecord promote in record.Promotes)
                 {
-                    for (int j = i + 1; j < record.Promotes.Count; j++)
+                    if (!seenRoots.Add(promote.Root))
                     {
-                        if (record.Promotes[i].Root == record.Promotes[j].Root)
-                        {
-                            WriteLine($"Root {record.Promotes[i].Root:x} promoted multiple times in gc {gcCount}");
-                            errorFound = true;
-                        }
+                        WriteLine($"Root {promote.Root:x} promoted multiple times in gc {gcCount}");
+                        errorFound = true;
                     }
                 }
 
-                for (int i = 0; i < record.Relocs.Count; i++)
+                seenRoots.Clear();
+                foreach (RelocRecord reloc in record.Relocs)
                 {
-                    for (int j = i + 1; j < record.Relocs.Count; j++)
+                    if (!seenRoots.Add(reloc.Root))
                     {
-                        if (record.Relocs[i].Root == record.Relocs[j].Root)
-                        {
-                            WriteLine($"Root {record.Relocs[i].Root:x} relocated multiple times in gc {gcCount}");
-                            errorFound = true;
-                        }
+                        WriteLine($"Root {reloc.Root:x} relocated multiple times in gc {gcCount}");
+                        errorFound = true;
                     }
                 }
             }

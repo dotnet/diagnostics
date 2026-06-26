@@ -16,14 +16,45 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     /// </summary>
     internal static class StressLogFormat
     {
-        private static readonly StressLogFacility[] s_facilityFlags =
+        // Runtime facility names indexed by bit position (0..31), mirroring the native
+        // getFacilityName walk over coreclr/inc/loglf.h. ClrMD's StressLogFacility enum
+        // cannot be used for this: its named values (e.g. GCRoots = 0x2) do NOT match the
+        // runtime's actual facility bits (LF_GCROOTS = 0x80000; 0x2 is LF_GCINFO), so the
+        // raw facility value must be decoded against the runtime's own bit table.
+        private static readonly string[] s_facilityNames =
         {
-            StressLogFacility.GC,
-            StressLogFacility.GCRoots,
-            StressLogFacility.GCAlloc,
-            StressLogFacility.GCInfo,
-            StressLogFacility.EEMem,
-            StressLogFacility.Always,
+            "GC",                // 0x00000001
+            "GCINFO",            // 0x00000002
+            "STUBS",             // 0x00000004
+            "JIT",               // 0x00000008
+            "LOADER",            // 0x00000010
+            "METADATA",          // 0x00000020
+            "SYNC",              // 0x00000040
+            "EEMEM",             // 0x00000080
+            "GCALLOC",           // 0x00000100
+            "CORDB",             // 0x00000200
+            "CLASSLOADER",       // 0x00000400
+            "CORPROF",           // 0x00000800
+            "DIAGNOSTICS_PORT",  // 0x00001000
+            "DBGALLOC",          // 0x00002000
+            "EH",                // 0x00004000
+            "ENC",               // 0x00008000
+            "ASSERT",            // 0x00010000
+            "VERIFIER",          // 0x00020000
+            "THREADPOOL",        // 0x00040000
+            "GCROOTS",           // 0x00080000
+            "INTEROP",           // 0x00100000
+            "MARSHALER",         // 0x00200000
+            "TIEREDCOMPILATION", // 0x00400000
+            "ZAP",               // 0x00800000
+            "STARTUP",           // 0x01000000
+            "APPDOMAIN",         // 0x02000000
+            "CODESHARING",       // 0x04000000
+            "STORE",             // 0x08000000
+            "SECURITY",          // 0x10000000
+            "LOCKS",             // 0x20000000
+            "BCL",               // 0x40000000
+            "ALWAYS",            // 0x80000000
         };
 
         public static void WriteHeader(TextWriter writer, StressLog log, int threadCount, double elapsedSeconds)
@@ -66,23 +97,23 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         /// <summary>Renders a facility bitmask as a backtick-delimited list of names.</summary>
         public static string FacilityName(StressLogFacility facility)
         {
+            uint value = (uint)facility;
+
+            // Mirrors the native getFacilityName: LF_ALL renders as a single name.
+            if (value == 0xFFFFFFFF)
+            {
+                return "`ALL`";
+            }
+
             StringBuilder sb = new();
             sb.Append('`');
 
-            uint known = 0;
-            foreach (StressLogFacility flag in s_facilityFlags)
+            for (int bit = 0; bit < s_facilityNames.Length; bit++)
             {
-                known |= (uint)flag;
-                if ((facility & flag) != 0)
+                if ((value & (1u << bit)) != 0)
                 {
-                    sb.Append(flag).Append('`');
+                    sb.Append(s_facilityNames[bit]).Append('`');
                 }
-            }
-
-            uint leftover = (uint)facility & ~known;
-            if (leftover != 0)
-            {
-                sb.Append("0x").Append(leftover.ToString("x")).Append('`');
             }
 
             return sb.ToString();

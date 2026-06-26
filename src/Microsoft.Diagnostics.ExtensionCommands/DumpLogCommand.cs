@@ -64,8 +64,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 WriteLine($"Attempting to dump Stress log to file '{fileName}'");
 
-                // First pass: thread count and total elapsed time, needed for the header.
-                CountThreadsAndElapsed(stressLog, Console.CancellationToken, out int threadCount, out double elapsedSeconds);
+                // First pass: gather header stats (thread count, elapsed) and the column
+                // widths needed so the table aligns without ever truncating a value.
+                DumpLogStats stats = GatherStats(stressLog, Console.CancellationToken);
 
                 int pointerHexDigits = stressLog.PointerSize * 2;
                 int messageCount = 0;
@@ -74,15 +75,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                 using (StreamWriter writer = new(fileName))
                 {
-                    StressLogFormat.WriteHeader(writer, stressLog, threadCount, elapsedSeconds);
+                    StressLogFormat.WriteHeader(writer, stressLog, stats.ThreadCount, stats.ElapsedSeconds);
                     writer.WriteLine();
 
                     TextWriterConsole tableConsole = new(writer, Console.CancellationToken);
                     Table output = new(tableConsole,
-                        new Column(Align.Left, 6, Formats.Text),    // THREAD (hex thread id)
-                        new Column(Align.Right, 16, Formats.Text),  // TIMESTAMP (seconds from start)
-                        new Column(Align.Left, 20, Formats.Text),   // FACILITY
-                        ColumnKind.Text);                           // MESSAGE
+                        new Column(Align.Left, Math.Max(6, stats.ThreadWidth), new Format()),       // THREAD (hex thread id)
+                        new Column(Align.Right, Math.Max(9, stats.TimestampWidth), new Format()),   // TIMESTAMP (seconds from start)
+                        new Column(Align.Left, Math.Max(8, stats.FacilityWidth), new Format()),     // FACILITY
+                        ColumnKind.Text);                                                           // MESSAGE
                     output.WriteHeader("THREAD", "TIMESTAMP", "FACILITY", "MESSAGE");
 
                     foreach (StressLogMessage message in stressLog.EnumerateMessages(Console.CancellationToken))
@@ -99,11 +100,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                 unresolvedCount++;
                             }
 
+                            // Stress-log format strings carry their own trailing newline;
+                            // the table adds the row's line break, so strip it to avoid
+                            // double-spacing the output.
                             output.WriteRow(
                                 message.OSThreadId.ToString("x"),
                                 message.ElapsedSeconds.ToString("F9"),
                                 StressLogFormat.FacilityName(message.Facility),
-                                text);
+                                text.TrimEnd('\r', '\n'));
                         }
 
                         messageCount++;
@@ -138,10 +142,34 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private static void CountThreadsAndElapsed(StressLog stressLog, CancellationToken cancellationToken, out int threadCount, out double elapsedSeconds)
+        // Header stats and per-column display widths, gathered in a single pass over the
+        // log so the dump table can be sized to its widest value (no truncation) while
+        // still aligning columns. TaskSwitch messages are rendered outside the table, so
+        // only table rows (the non-TaskSwitch messages) contribute to the column widths.
+        private readonly struct DumpLogStats
+        {
+            public DumpLogStats(int threadCount, double elapsedSeconds, int threadWidth, int timestampWidth, int facilityWidth)
+            {
+                ThreadCount = threadCount;
+                ElapsedSeconds = elapsedSeconds;
+                ThreadWidth = threadWidth;
+                TimestampWidth = timestampWidth;
+                FacilityWidth = facilityWidth;
+            }
+
+            public int ThreadCount { get; }
+            public double ElapsedSeconds { get; }
+            public int ThreadWidth { get; }
+            public int TimestampWidth { get; }
+            public int FacilityWidth { get; }
+        }
+
+        private static DumpLogStats GatherStats(StressLog stressLog, CancellationToken cancellationToken)
         {
             HashSet<ulong> threads = new();
             double elapsed = 0;
+            int threadWidth = 0, timestampWidth = 0, facilityWidth = 0;
+
             foreach (StressLogMessage message in stressLog.EnumerateMessages(cancellationToken))
             {
                 threads.Add(message.OSThreadId);
@@ -149,10 +177,18 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     elapsed = message.ElapsedSeconds;
                 }
+
+                if (message.KnownFormat == StressLogKnownFormat.TaskSwitch)
+                {
+                    continue;
+                }
+
+                threadWidth = Math.Max(threadWidth, message.OSThreadId.ToString("x").Length);
+                timestampWidth = Math.Max(timestampWidth, message.ElapsedSeconds.ToString("F9").Length);
+                facilityWidth = Math.Max(facilityWidth, StressLogFormat.FacilityName(message.Facility).Length);
             }
 
-            threadCount = threads.Count;
-            elapsedSeconds = elapsed;
+            return new DumpLogStats(threads.Count, elapsed, threadWidth, timestampWidth, facilityWidth);
         }
 
         private void WarnIfFormatsUnresolved(int messageCount, int unresolvedCount)

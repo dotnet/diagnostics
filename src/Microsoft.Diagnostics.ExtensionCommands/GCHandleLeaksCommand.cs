@@ -74,10 +74,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             int pointerSize = MemoryService.PointerSize;
             byte[] buffer = new byte[BufferSize];
             bool aborted = false;
+            bool allFound = false;
 
             foreach (IMemoryRegion region in AddressHelper.MemoryRegionService.EnumerateRegions())
             {
-                if (aborted)
+                if (aborted || allFound)
                 {
                     break;
                 }
@@ -130,8 +131,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             {
                                 found.Add(value);
                                 Console.WriteLine($"Found {value:x} at location {location:x}");
+
+                                // Every handle has been located in memory; no need to keep scanning.
+                                if (found.Count == handleSet.Count)
+                                {
+                                    allFound = true;
+                                    break;
+                                }
                             }
                         }
+                    }
+
+                    if (allFound)
+                    {
+                        break;
                     }
 
                     offset += (ulong)bytesRead;
@@ -191,7 +204,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [HelpInvoke]
         public static string GetDetailedHelp() =>
 @"-------------------------------------------------------------------------------
-GCHandleLeaks [/d]
+GCHandleLeaks
 
 Reports any strong or pinned GCHandles that could not be found in a scan of
 process memory. The command enumerates the pinned and strong handles, then scans

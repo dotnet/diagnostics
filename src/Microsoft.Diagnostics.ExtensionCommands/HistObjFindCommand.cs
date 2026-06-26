@@ -6,7 +6,7 @@ using Microsoft.Diagnostics.ExtensionCommands.Output;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [Command(Name = "histobjfind", Aliases = new[] { "HistObjFind" }, Help = "Displays all the log entries that reference an object at the specified address.")]
+    [Command(Name = "histobjfind", Aliases = new[] { "HistObjFind", "hof" }, Help = "Displays all the log entries that reference an object at the specified address.")]
     public sealed class HistObjFindCommand : ClrRuntimeCommandBase
     {
         [ServiceImport]
