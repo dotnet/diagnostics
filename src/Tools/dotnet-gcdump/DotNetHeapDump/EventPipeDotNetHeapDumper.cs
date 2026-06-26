@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="timeout"></param>
         /// <param name="dotNetInfo"></param>
         /// <returns></returns>
-        public static bool DumpFromEventPipe(CancellationToken ct, int processId, string diagnosticPort, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo, bool nonLossy = false)
+        public static bool DumpFromEventPipe(CancellationToken ct, int processId, string diagnosticPort, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo, EventPipeBufferingMode bufferingMode = EventPipeBufferingMode.Block)
         {
             DateTime start = DateTime.Now;
             Func<TimeSpan> getElapsed = () => DateTime.Now - start;
@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 using EventPipeSessionController gcDumpSession = new(processId, diagnosticPort, new List<EventPipeProvider> {
                     new("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(ClrTraceEventParser.Keywords.GCHeapSnapshot))
-                }, nonLossy: nonLossy);
+                }, bufferingMode: bufferingMode);
                 log.WriteLine("{0,5:n1}s: gcdump EventPipe Session started", getElapsed().TotalSeconds);
 
                 int gcNum = -1;
@@ -299,12 +299,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     dumper.ConvertHeapDataToGraph();        // Finish the conversion.
                 }
             }
-            catch (UnsupportedCommandException) when (nonLossy)
-            {
-                // The runtime is too old for the non-lossy (CollectTracing6) command. Surface this to the
-                // caller rather than swallowing it like other gcdump errors, so a helpful message is shown.
-                throw;
-            }
             catch (Exception e)
             {
                 log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception during gcdump: {e}");
@@ -330,7 +324,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
         public bool UseWildcardProcessId => _diagnosticPort != null;
 
-        public EventPipeSessionController(int pid, string diagnosticPort, List<EventPipeProvider> providers, bool requestRundown = true, bool nonLossy = false)
+        public EventPipeSessionController(int pid, string diagnosticPort, List<EventPipeProvider> providers, bool requestRundown = true, EventPipeBufferingMode bufferingMode = EventPipeBufferingMode.Drop)
         {
             if (string.IsNullOrEmpty(diagnosticPort))
             {
@@ -366,10 +360,21 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 _client = new DiagnosticsClient(pid);
             }
 
-            EventPipeBufferingMode bufferingMode = nonLossy ? EventPipeBufferingMode.Block : EventPipeBufferingMode.Drop;
-
-            EventPipeSessionConfiguration sessionConfig = new(providers, 1024, requestRundown, requestStackwalk: true, bufferingMode: bufferingMode);
-            _session = _client.StartEventPipeSession(sessionConfig);
+            EventPipeSessionConfiguration sessionConfig = new(providers, 1024, rundownKeyword: requestRundown ? EventPipeSession.DefaultRundownKeyword : 0, requestStackwalk: true, bufferingMode: bufferingMode);
+            try
+            {
+                _session = _client.StartEventPipeSession(sessionConfig);
+            }
+            catch (UnknownCommandException) when (bufferingMode != EventPipeBufferingMode.Drop)
+            {
+                // The runtime doesn't recognize the CollectTracing v6 command used for non-lossy (Block)
+                // buffering (introduced in .NET 11). Fall back to the default lossy buffering so a gcdump can
+                // still be collected. A runtime that understands the command but rejects the payload throws
+                // InvalidCommandArgumentException instead, which is not caught here and so surfaces normally.
+                Console.Error.WriteLine("Warning: the target runtime does not support non-lossy (Block) buffering, which requires .NET 11+. Falling back to the default lossy buffering; the gcdump may be incomplete on large heaps.");
+                EventPipeSessionConfiguration fallbackConfig = new(providers, 1024, rundownKeyword: requestRundown ? EventPipeSession.DefaultRundownKeyword : 0, requestStackwalk: true, bufferingMode: EventPipeBufferingMode.Drop);
+                _session = _client.StartEventPipeSession(fallbackConfig);
+            }
             _source = new EventPipeEventSource(_session.EventStream);
         }
 
