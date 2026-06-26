@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.StressLogs;
 
@@ -40,13 +41,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 if (!TryParseAddress(AddressString, out ulong address))
                 {
-                    WriteLineError("Could not parse stress log address '{0}'.", AddressString);
+                    WriteLineError($"Could not parse stress log address '{AddressString}'.");
                     return;
                 }
 
                 if (!StressLog.TryOpen(Runtime.DataTarget, address, out stressLog, out string addressFailure))
                 {
-                    WriteLineError("{0}", addressFailure);
+                    WriteLineError($"{addressFailure}");
                     return;
                 }
 
@@ -54,7 +55,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else if (!Runtime.TryGetStressLog(out stressLog, out string failureReason))
             {
-                WriteLineError("{0}", failureReason);
+                WriteLineError($"{failureReason}");
                 return;
             }
 
@@ -74,9 +75,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 {
                     StressLogFormat.WriteHeader(writer, stressLog, threadCount, elapsedSeconds);
                     writer.WriteLine();
-                    writer.WriteLine("THREAD  TIMESTAMP     FACILITY                              MESSAGE");
-                    writer.WriteLine("  ID  (sec from start)");
-                    writer.WriteLine("--------------------------------------------------------------------------------------");
+
+                    TextWriterConsole tableConsole = new(writer, Console.CancellationToken);
+                    Table output = new(tableConsole,
+                        new Column(Align.Left, 6, Formats.Text),    // THREAD (hex thread id)
+                        new Column(Align.Right, 16, Formats.Text),  // TIMESTAMP (seconds from start)
+                        new Column(Align.Left, 20, Formats.Text),   // FACILITY
+                        ColumnKind.Text);                           // MESSAGE
+                    output.WriteHeader("THREAD", "TIMESTAMP", "FACILITY", "MESSAGE");
 
                     foreach (StressLogMessage message in stressLog.EnumerateMessages(Console.CancellationToken))
                     {
@@ -92,7 +98,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                                 unresolvedCount++;
                             }
 
-                            writer.WriteLine($"{message.OSThreadId,4:x} {message.ElapsedSeconds,13:F9} : {StressLogFormat.FacilityName(message.Facility),-20} {text}");
+                            output.WriteRow(
+                                message.OSThreadId.ToString("x"),
+                                message.ElapsedSeconds.ToString("F9"),
+                                StressLogFormat.FacilityName(message.Facility),
+                                text);
                         }
 
                         messageCount++;
@@ -116,7 +126,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             catch (IOException ex)
             {
-                WriteLineError("Failed to write stress log to '{0}': {1}", fileName, ex.Message);
+                WriteLineError($"Failed to write stress log to '{fileName}': {ex.Message}");
             }
             finally
             {
@@ -159,14 +169,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             string runtimeModule = GetRuntimeModuleFileName();
             WriteLineWarning(
-                "WARNING: {0} of {1} messages ({2}%) could not resolve their format strings.",
-                unresolvedCount, messageCount, percent);
+                $"WARNING: {unresolvedCount} of {messageCount} messages ({percent}%) could not resolve their format strings.");
             WriteLineWarning(
                 "The format strings live in the .NET runtime's read-only data, which this dump does not contain.");
             WriteLineWarning(
                 "Set the symbol path to the matching runtime and re-run dumplog, for example:");
             WriteLineWarning(
-                "    setsymbolserver -directory <dir>   (where <dir> contains {0})", runtimeModule);
+                $"    setsymbolserver -directory <dir>   (where <dir> contains {runtimeModule})");
         }
 
         private string GetRuntimeModuleFileName()

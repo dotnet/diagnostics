@@ -38,8 +38,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             // Collect the pinned and strong handle slot addresses (low bit masked,
             // matching the native FindAllPinnedAndStrong filter).
-            List<ulong> handles = new();
-            HashSet<ulong> handleSet = new();
+            List<ulong> handles = [];
+            HashSet<ulong> handleSet = [];
             foreach (ClrHandle handle in Runtime.EnumerateHandles())
             {
                 if (handle.IsStrong || handle.HandleKind is ClrHandleKind.Pinned or ClrHandleKind.AsyncPinned)
@@ -58,11 +58,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Console.Write($"{handles[i]:x}\t");
                 if ((i + 1) % 4 == 0)
                 {
-                    Console.WriteLine("");
+                    Console.WriteLine();
                 }
             }
 
-            Console.WriteLine("");
+            Console.WriteLine();
             Console.WriteLine("Searching memory");
 
             MemoryRange[] stressRanges = (Runtime.StressLog?.EnumerateMemoryRanges() ?? Enumerable.Empty<MemoryRange>()).ToArray();
@@ -70,7 +70,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 ? "Reference found in stress log will be ignored"
                 : "Failed to read whole or part of stress log, some references may come from stress log");
 
-            HashSet<ulong> found = new();
+            HashSet<ulong> found = [];
             int pointerSize = MemoryService.PointerSize;
             byte[] buffer = new byte[BufferSize];
             bool aborted = false;
@@ -157,11 +157,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     Console.Write($"{notFound[i]:x}\t");
                     if ((i + 1) % 4 == 0)
                     {
-                        Console.WriteLine("");
+                        Console.WriteLine();
                     }
                 }
 
-                Console.WriteLine("");
+                Console.WriteLine();
             }
             else
             {

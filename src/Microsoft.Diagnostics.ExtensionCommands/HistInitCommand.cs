@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             string failureReason = History.Initialize();
             if (failureReason != null)
             {
-                WriteLineError("{0}", failureReason);
+                WriteLineError($"{failureReason}");
                 WriteLine("FAILURE: Stress log unreadable");
                 return;
             }
