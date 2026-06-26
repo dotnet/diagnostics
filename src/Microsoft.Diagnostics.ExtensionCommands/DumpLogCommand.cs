@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security;
 using System.Threading;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
@@ -129,7 +130,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     WarnIfFormatsUnresolved(messageCount, unresolvedCount);
                 }
             }
-            catch (IOException ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or SecurityException)
             {
                 WriteLineError($"Failed to write stress log to '{fileName}': {ex.Message}");
             }

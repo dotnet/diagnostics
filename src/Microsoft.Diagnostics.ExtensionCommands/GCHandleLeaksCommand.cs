@@ -74,7 +74,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             int pointerSize = MemoryService.PointerSize;
             byte[] buffer = new byte[BufferSize];
             bool aborted = false;
-            bool allFound = false;
+            // No strong/pinned handles means there is nothing to find in memory, so skip the
+            // (potentially very slow) full address-space scan entirely.
+            bool allFound = handleSet.Count == 0;
 
             foreach (IMemoryRegion region in AddressHelper.MemoryRegionService.EnumerateRegions())
             {

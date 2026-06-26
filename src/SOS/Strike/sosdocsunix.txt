@@ -37,9 +37,9 @@ PrintException (pe)                EEStack (eestack)
 Examining CLR data structures      Diagnostic Utilities
 -----------------------------      -----------------------------
 DumpDomain (dumpdomain)            VerifyHeap
-Name2EE (name2ee)                  SuppressJitOptimization
-SyncBlk (syncblk)                  FindAppDomain
-DumpMT (dumpmt)
+Name2EE (name2ee)                  DumpLog (dumplog)
+SyncBlk (syncblk)                  SuppressJitOptimization
+DumpMT (dumpmt)                    FindAppDomain          
 DumpClass (dumpclass)
 DumpMD (dumpmd)
 DumpModule (dumpmodule)
@@ -48,17 +48,17 @@ DumpIL (dumpil)
 DumpSig
 DumpSigElem
 GCHandles (gchandles)
-Token2EE
+Token2EE                           
 
-Other
------------------------------
-SetHostRuntime (sethostruntime)
-SetSymbolServer (setsymbolserver, loadsymbols)
-SetClrPath (setclrpath)
-SOSFlush (sosflush)
-SOSStatus (sosstatus)
-FAQ
-Help (soshelp)
+Examining the GC history           Other
+-----------------------------      -----------------------------
+HistInit (histinit)                SetHostRuntime (sethostruntime)
+HistRoot (histroot)                SetSymbolServer (setsymbolserver, loadsymbols)
+HistObj  (histobj)                 SetClrPath (setclrpath)
+HistObjFind (histobjfind)          SOSFlush (sosflush)
+HistClear (histclear)              SOSStatus (sosstatus)
+HistStats (histstats)              FAQ
+                                   Help (soshelp)
 \\
 
 COMMAND: faq.
@@ -1295,6 +1295,110 @@ generations too, and report those roots.
 
 \\
 
+COMMAND: dumplog.
+DumpLog [-addr <addressOfStressLog>] [<Filename>]
+
+To aid in diagnosing hard-to-reproduce stress failures, the CLR team added an 
+in-memory log capability. The idea was to avoid using locks or I/O which could 
+disturb a fragile repro environment. The DumpLog function allows you to write 
+that log out to a file. If no Filename is specified, the file "Stresslog.txt" 
+in the current directory is created.
+
+The optional -addr argument specifies the hex address of a stress log other than
+the default one.
+
+    (lldb) dumplog
+    Attempting to dump Stress log to file 'StressLog.txt'
+    .................
+    SUCCESS: Stress log dumped
+
+To turn on the stress log, set the following environment variables before
+starting the .NET Core app:
+
+export DOTNET_StressLog = 1
+export DOTNET_LogFacility = 0xffffffbf (This is a bit mask, almost all logging is on.
+                                        This is also the default value if the key
+                                        isn't specified)
+export DOTNET_StressLogSize = 65536 (This is the default value if the key isn't
+                                     specified)
+export DOTNET_LogLevel = 6 (This is the default value if the key isn't
+                            specified. The higher the number the more
+                            detailed logs are generated. The maximum
+                            value is decimal 10)
+
+StressLogSize is the size in bytes of the in-memory log allocated for each 
+thread in the process. In the case above, each thread gets a 64K log. You 
+could increase this to get more logging, but more memory will be required for 
+this log in the process. For example, 20 threads with 524288 bytes per thread 
+has a memory demand of 10 Megabytes. The stress log is circular so new entries 
+will replace older ones on threads which have reached their buffer limit.
+
+The log facilities are defined as follows:
+    GC           0x00000001
+    GCINFO       0x00000002
+    STUBS        0x00000004
+    JIT          0x00000008
+    LOADER       0x00000010
+    METADATA     0x00000020
+    SYNC         0x00000040
+    EEMEM        0x00000080
+    GCALLOC      0x00000100
+    CORDB        0x00000200
+    CLASSLOADER  0x00000400
+    CORPROF      0x00000800
+    REMOTING     0x00001000
+    DBGALLOC     0x00002000
+    EH           0x00004000
+    ENC          0x00008000
+    ASSERT       0x00010000
+    VERIFIER     0x00020000
+    THREADPOOL   0x00040000
+    GCROOTS      0x00080000
+    INTEROP      0x00100000
+    MARSHALER    0x00200000
+    IJW          0x00400000
+    ZAP          0x00800000
+    STARTUP      0x01000000
+    APPDOMAIN    0x02000000
+    CODESHARING  0x04000000
+    STORE        0x08000000
+    SECURITY     0x10000000
+    LOCKS        0x20000000
+    BCL          0x40000000
+
+Here is some sample output:
+
+    3560   9.981137099 : `SYNC`               RareEnablePremptiveGC: entering. 
+    Thread state = a030
+
+    3560   9.981135033 : `GC`GCALLOC`GCROOTS` ========== ENDGC 4194 (gen = 2, 
+    collect_classes = 0) ==========={
+
+    3560   9.981125826 : `GC`                         Segment mem 00C61000 alloc 
+    = 00D071F0 used 00D09254 committed 00D17000
+
+    3560   9.981125726 : `GC`                     Generation 0 [00CED07C, 00000000
+    ] cur = 00000000
+
+    3560   9.981125529 : `GC`                     Generation 1 [00CED070, 00000000
+    ] cur = 00000000
+
+    3560   9.981125103 : `GC`                     Generation 2 [00C61000, 00000000
+    ] cur = 00000000
+
+    3560   9.981124963 : `GC`                 GC Heap 00000000
+
+    3560   9.980618994 : `GC`GCROOTS`         GcScanHandles (Promotion Phase = 0)
+
+The first column is the OS thread ID for the thread appending to the log, 
+the second column is the timestamp, the third is the facility category for the 
+log entry, and the fourth contains the log message. The facility field is 
+expressed as `facility1`facility2`facility3`.  This facilitates the creation of 
+filters for displaying only specific message categories.  To make sense of this 
+log, you would probably want the Shared Source CLI to find out exactly where 
+the log comes from.
+\\
+
 COMMAND: findappdomain.
 FindAppDomain <Object address>
 
@@ -1391,6 +1495,138 @@ reference count:
     Handles:
         Strong Handles:       14
         Pinned Handles:       5
+\\
+
+COMMAND: histinit.
+HistInit
+
+Before running any of the Hist - family commands you need to initialize the SOS 
+structures from the stress log saved in the debuggee.  This is achieved by the 
+HistInit command.
+
+Sample output:
+
+    (lldb) histinit
+    Attempting to read Stress log
+    STRESS LOG:
+        facilitiesToLog  = 0xffffffff
+        levelToLog       = 6
+        MaxLogSizePerThread = 0x10000 (65536)
+        MaxTotalLogSize = 0x1000000 (16777216)
+        CurrentTotalLogChunk = 9
+        ThreadsWithLogs  = 3
+        Clock frequency  = 3.392 GHz
+        Start time         15:26:31
+        Last message time  15:26:56
+        Total elapsed time 25.077 sec
+    .....................................
+    ---------------------------- 2407 total entries -----------------------------
+
+
+    SUCCESS: GCHist structures initialized
+
+\\
+
+COMMAND: histobjfind.
+HistObjFind <obj_address>
+
+To examine log entries related to an object whose present address is known one 
+would use this command. The output of this command contains all entries that 
+reference the object:
+
+    (lldb) histobjfind 028970d4 
+     GCCount   Object                                  Message
+    ---------------------------------------------------------
+        2296 028970d4 Promotion for root 01e411b8 (MT = 5b6c5cd8)
+        2296 028970d4 Relocation NEWVALUE for root 00223fc4
+        2296 028970d4 Relocation NEWVALUE for root 01e411b8
+    ...
+        2295 028970d4 Promotion for root 01e411b8 (MT = 5b6c5cd8)
+        2295 028970d4 Relocation NEWVALUE for root 00223fc4
+        2295 028970d4 Relocation NEWVALUE for root 01e411b8
+    ...
+
+\\
+
+COMMAND: histroot.
+HistRoot <root>
+
+The root value obtained from sos HistObjFind can be used to track the movement of 
+an object through the GCs.
+
+HistRoot provides information related to both promotions and relocations of the 
+root specified as the argument.
+
+    (lldb) histroot 01e411b8 
+     GCCount    Value       MT Promoted?                Notes
+    ---------------------------------------------------------
+        2296 028970d4 5b6c5cd8       yes 
+        2295 028970d4 5b6c5cd8       yes 
+        2294 028970d4 5b6c5cd8       yes 
+        2293 028970d4 5b6c5cd8       yes 
+        2292 028970d4 5b6c5cd8       yes 
+        2291 028970d4 5b6c5cd8       yes 
+        2290 028970d4 5b6c5cd8       yes 
+        2289 028970d4 5b6c5cd8       yes 
+        2288 028970d4 5b6c5cd8       yes 
+        2287 028970d4 5b6c5cd8       yes 
+        2286 028970d4 5b6c5cd8       yes 
+        2285 028970d4 5b6c5cd8       yes 
+         322 028970e8 5b6c5cd8       yes Duplicate promote/relocs
+    ...
+
+\\
+
+COMMAND: histobj.
+HistObj <obj_address>
+
+This command examines all stress log relocation records and displays the chain 
+of GC relocations that may have led to the address passed in as an argument.
+Conceptually the output is:
+
+        GenN    obj_address   root1, root2, root3,
+        GenN-1  prev_obj_addr root1, root2,
+        GenN-2  prev_prev_oa  root1, root4, 
+        ...
+
+Sample output:
+    (lldb) histobj 028970d4 
+     GCCount   Object                                    Roots
+    ---------------------------------------------------------
+        2296 028970d4 00223fc4, 01e411b8, 
+        2295 028970d4 00223fc4, 01e411b8, 
+        2294 028970d4 00223fc4, 01e411b8, 
+        2293 028970d4 00223fc4, 01e411b8, 
+        2292 028970d4 00223fc4, 01e411b8, 
+        2291 028970d4 00223fc4, 01e411b8, 
+        2290 028970d4 00223fc4, 01e411b8, 
+        2289 028970d4 00223fc4, 01e411b8, 
+        2288 028970d4 00223fc4, 01e411b8, 
+        2287 028970d4 00223fc4, 01e411b8, 
+        2286 028970d4 00223fc4, 01e411b8, 
+        2285 028970d4 00223fc4, 01e411b8, 
+         322 028970d4 01e411b8, 
+           0 028970d4 
+
+\\
+
+COMMAND: histclear.
+HistClear
+
+This command releases any resources used by the Hist-family of commands. 
+Generally there's no need to call this explicitly, as each HistInit will first 
+cleanup the previous resources.
+
+    (lldb) histclear
+    Completed successfully.
+\\
+
+COMMAND: histstats.
+HistStats
+
+Displays per-GC counts of promote and relocate messages reconstructed from the
+stress log, then reports any root that was promoted or relocated more than once
+within a single GC. Run HistInit first.
 \\
 
 COMMAND: sethostruntime.
