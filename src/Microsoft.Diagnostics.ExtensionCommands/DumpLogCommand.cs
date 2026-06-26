@@ -205,14 +205,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             string runtimeModule = GetRuntimeModuleFileName();
-            WriteLineWarning(
-                $"WARNING: {unresolvedCount} of {messageCount} messages ({percent}%) could not resolve their format strings.");
-            WriteLineWarning(
-                "The format strings live in the .NET runtime's read-only data, which this dump does not contain.");
-            WriteLineWarning(
-                "Set the symbol path to the matching runtime and re-run dumplog, for example:");
-            WriteLineWarning(
-                $"    setsymbolserver -directory <dir>   (where <dir> contains {runtimeModule})");
+            WriteLineWarning($"WARNING: {unresolvedCount} of {messageCount} messages ({percent}%) could not resolve their format strings.");
+            WriteLineWarning("The format strings live in the .NET runtime's read-only data, which this dump does not contain.");
+            WriteLineWarning("Set the symbol path to the matching runtime and re-run dumplog, for example:");
+            WriteLineWarning($"    setsymbolserver -directory <dir>   (where <dir> contains {runtimeModule})");
         }
 
         private string GetRuntimeModuleFileName()
