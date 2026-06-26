@@ -1191,6 +1191,11 @@ GetTargetCLRMetrics(
             {
                 return E_FAIL;
             }
+            // Make sure the entire RuntimeInfo structure is contained within the module before reading it.
+            if (!pedecoder.CheckRva(pedecoder.GetDataRva((TADDR)runtimeInfoExport), sizeof(RuntimeInfo)))
+            {
+                return E_FAIL;
+            }
             RuntimeInfo* pRuntimeInfo = reinterpret_cast<RuntimeInfo*>(runtimeInfoExport);
             if (strncmp(pRuntimeInfo->Signature, RUNTIME_INFO_SIGNATURE, sizeof(pRuntimeInfo->Signature)) != 0)
             {
