@@ -46,7 +46,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     return;
                 }
 
-                if (!StressLog.TryOpen(Runtime.DataTarget, address, out stressLog, out string addressFailure))
+                if (!StressLog.TryOpen(Runtime.DataTarget.DataReader, address, out stressLog, out string addressFailure))
                 {
                     WriteLineError($"{addressFailure}");
                     return;
