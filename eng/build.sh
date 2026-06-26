@@ -30,8 +30,8 @@ __PrivateBuild=0
 __Test=0
 __TestFilter=
 __UnprocessedBuildArgs=
-__UseCdac=0
-__NoFallback=0
+__DacMode=
+__CDacPath=
 __TestInterpreter=0
 __LiveRuntimeDir=
 
@@ -40,6 +40,8 @@ usage_list+=("-skipnative: do not build native components.")
 usage_list+=("-test: run xunit tests")
 usage_list+=("-methodfilter: pass method filter to xunit runner (Namespace.ClassName.MethodName)")
 usage_list+=("-classfilter: pass class filter to xunit runner (Namespace.ClassName)")
+usage_list+=("-dacmode: which DAC/cDAC the SOS tests load: cdac, cdacfallback, cdacverify, or dac.")
+usage_list+=("-cdacpath: path to an mscordaccore_universal to overlay next to sos.dll (only with -dacmode cdac).")
 
 handle_arguments() {
     lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
@@ -115,12 +117,14 @@ handle_arguments() {
             __ShiftArgs=1
             ;;
 
-        usecdac|-usecdac)
-            __UseCdac=1
+        dacmode|-dacmode)
+            __DacMode="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+            __ShiftArgs=1
             ;;
 
-        nofallback|-nofallback)
-            __NoFallback=1
+        cdacpath|-cdacpath)
+            __CDacPath="$2"
+            __ShiftArgs=1
             ;;
 
         testinterpreter|-testinterpreter)
@@ -140,8 +144,12 @@ handle_arguments() {
 
 source "$__RepoRootDir"/eng/native/build-commons.sh
 
-if [[ "$__NoFallback" == 1 && "$__UseCdac" != 1 ]]; then
-    echo "-nofallback requires -usecdac to also be specified."
+case "$__DacMode" in
+    ""|cdac|cdacfallback|cdacverify|dac) ;;
+    *) echo "Invalid -dacmode '$__DacMode'. Expected cdac, cdacfallback, cdacverify, or dac."; exit 1 ;;
+esac
+if [[ -n "$__CDacPath" && "$__DacMode" != "cdac" ]]; then
+    echo "-cdacpath is only valid with -dacmode cdac."
     exit 1
 fi
 
@@ -235,6 +243,26 @@ if [[ "$__NativeBuild" == 1 ]]; then
 fi
 
 #
+# Overlay an externally-provided cDAC (libmscordaccore_universal) next to the freshly built sos so
+# SOS resolves it from its own native binaries directory. Used by the cdac DacMode to exercise the
+# runtime-under-test's own cDAC instead of the copy restored from a referenced runtime package.
+#
+if [[ -n "$__CDacPath" ]]; then
+    if [[ ! -f "$__CDacPath" ]]; then
+        echo "-cdacpath '$__CDacPath' does not exist."
+        exit 1
+    fi
+    if [[ "$__TargetOS" == "osx" ]]; then
+        __CDacDestName="libmscordaccore_universal.dylib"
+    else
+        __CDacDestName="libmscordaccore_universal.so"
+    fi
+    mkdir -p "$__BinDir"
+    echo "Overlaying cDAC: $__CDacPath -> $__BinDir/$__CDacDestName"
+    cp -f "$__CDacPath" "$__BinDir/$__CDacDestName"
+fi
+
+#
 # Managed build
 #
 
@@ -311,12 +339,8 @@ if [[ "$__Test" == 1 ]]; then
       # The .NET createdump facility writes dumps directly and is not affected by ulimit.
       ulimit -c 0
 
-      if [[ "$__UseCdac" == 1 ]]; then
-          export SOS_TEST_CDAC="true"
-      fi
-
-      if [[ "$__NoFallback" == 1 ]]; then
-          export SOS_TEST_CDAC_NO_FALLBACK="true"
+      if [[ -n "$__DacMode" ]]; then
+          export SOS_TEST_DAC_MODE="$__DacMode"
       fi
 
       if [[ "$__TestInterpreter" == 1 ]]; then
