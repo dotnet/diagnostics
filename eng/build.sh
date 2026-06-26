@@ -353,9 +353,36 @@ if [[ "$__Test" == 1 ]]; then
           __TestFilterArg="/p:TestRunnerAdditionalArguments=\"$__TestFilter\""
       fi
 
+      # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt
+      # product binaries), the test SDK and runtimes that are normally installed during the
+      # managed build (InstallRuntimes.proj, InstallTestRuntimes AfterTargets=Build) were never
+      # installed on this machine. Build just that project here so the runtimes are present
+      # before the tests run. This is ordered ahead of --test, unlike relying on the parallel
+      # test traversal, and avoids rebuilding the downloaded product.
+      __TestRestoreArg=
+      if [[ "$__ManagedBuild" == 0 ]]; then
+          __TestRestoreArg=--restore
+
+          "$__RepoRootDir/eng/common/build.sh" \
+            --restore \
+            --build \
+            --projects "$__RepoRootDir/eng/InstallRuntimes.proj" \
+            --configuration "$__BuildType" \
+            /bl:"$__LogsDir"/InstallTestRuntimes.binlog \
+            /p:TargetArch="$__TargetArch" \
+            /p:TargetRid="$__TargetRid" \
+            /p:LiveRuntimeDir="$__LiveRuntimeDir" \
+            $__CommonMSBuildArgs
+
+          if [ "$?" != 0 ]; then
+              exit 1
+          fi
+      fi
+
       # __CommonMSBuildArgs contains TargetOS property
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
+        $__TestRestoreArg \
         --configuration "$__BuildType" \
         /bl:"$__LogsDir"/Test.binlog \
         /p:TargetArch="$__TargetArch" \

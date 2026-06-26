@@ -80,6 +80,7 @@ extends:
           name: Windows
           osGroup: Windows_NT
           buildOnly: true
+          publishTestArtifacts: true
           buildConfigs:
           - configuration: Debug
             architecture: x64
@@ -102,6 +103,7 @@ extends:
           container: linux_x64
           crossBuild: true
           buildOnly: true
+          publishTestArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -120,6 +122,7 @@ extends:
           container: linux_musl_x64
           crossBuild: true
           buildOnly: true
+          publishTestArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -136,6 +139,7 @@ extends:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
           buildOnly: true
+          publishTestArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: x64
