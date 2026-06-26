@@ -147,6 +147,7 @@ else(CLR_CMAKE_HOST_WIN32)
     exts.cpp
     gcroot.cpp
     symbols.cpp
+    managedcommands.cpp
     metadata.cpp
     sigparser.cpp
     sildasm.cpp
