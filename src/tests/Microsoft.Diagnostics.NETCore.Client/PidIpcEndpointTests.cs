@@ -297,9 +297,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     unreadableEnvironPid = pid;
                     break;
                 }
-                catch
+                catch (UnauthorizedAccessException)
                 {
-                    // Another user's process (UnauthorizedAccessException) is a different code path; keep looking.
+                    // Another user's process is a different code path; keep looking.
                 }
             }
 
