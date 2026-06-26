@@ -35,6 +35,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             bool boring = false;
             foreach (GCRecord record in History.Records)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
+
                 PromoteRecord? promote = null;
                 bool promotedMoreThanOnce = false;
                 foreach (PromoteRecord p in record.Promotes)

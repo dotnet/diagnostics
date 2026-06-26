@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
@@ -64,7 +65,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 WriteLine($"Attempting to dump Stress log to file '{fileName}'");
 
                 // First pass: thread count and total elapsed time, needed for the header.
-                CountThreadsAndElapsed(stressLog, out int threadCount, out double elapsedSeconds);
+                CountThreadsAndElapsed(stressLog, Console.CancellationToken, out int threadCount, out double elapsedSeconds);
 
                 int pointerHexDigits = stressLog.PointerSize * 2;
                 int messageCount = 0;
@@ -137,11 +138,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
         }
 
-        private static void CountThreadsAndElapsed(StressLog stressLog, out int threadCount, out double elapsedSeconds)
+        private static void CountThreadsAndElapsed(StressLog stressLog, CancellationToken cancellationToken, out int threadCount, out double elapsedSeconds)
         {
             HashSet<ulong> threads = new();
             double elapsed = 0;
-            foreach (StressLogMessage message in stressLog.EnumerateMessages())
+            foreach (StressLogMessage message in stressLog.EnumerateMessages(cancellationToken))
             {
                 threads.Add(message.OSThreadId);
                 if (message.ElapsedSeconds > elapsed)

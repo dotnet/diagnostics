@@ -25,6 +25,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             foreach (GCRecord record in History.Records)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
                 output.WriteRow(record.GCCount, record.Promotes.Count, record.Relocs.Count);
             }
 
@@ -32,6 +33,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             bool errorFound = false;
             foreach (GCRecord record in History.Records)
             {
+                Console.CancellationToken.ThrowIfCancellationRequested();
                 ulong gcCount = record.GCCount;
 
                 for (int i = 0; i < record.Promotes.Count; i++)
