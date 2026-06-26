@@ -9,7 +9,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Adapter exposing the host's <see cref="IModuleService"/> /
     /// <see cref="IModuleSymbols"/> through ClrMD's
-    /// <see cref="IClrSymbolProvider"/> contract.
+    /// <see cref="IClrSymbolProvider"/> contract: symbol name/address resolution
+    /// plus type field-offset lookups (backed by the debugger's type system).
     /// </summary>
     [ServiceExport(Type = typeof(IClrSymbolProvider), Scope = ServiceScope.Target)]
     public sealed class HostSymbolProvider : IClrSymbolProvider
@@ -99,6 +100,50 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return true;
             }
             return false;
+        }
+
+        public bool TryGetFieldOffset(ulong moduleBase, string typeName, string fieldName, out uint offset)
+        {
+            offset = 0;
+            if (string.IsNullOrEmpty(typeName) || string.IsNullOrEmpty(fieldName))
+            {
+                return false;
+            }
+
+            moduleBase &= _signExtensionMask;
+
+            IModule scopedModule;
+            try
+            {
+                scopedModule = _moduleService.GetModuleFromBaseAddress(moduleBase);
+            }
+            catch (DiagnosticsException)
+            {
+                return false;
+            }
+            if (scopedModule is null)
+            {
+                return false;
+            }
+
+            IModuleSymbols scopedSymbols = scopedModule.Services.GetService<IModuleSymbols>();
+            if (scopedSymbols is null)
+            {
+                return false;
+            }
+
+            if (!scopedSymbols.TryGetType(typeName, out IType type) || type is null)
+            {
+                return false;
+            }
+
+            if (!type.TryGetField(fieldName, out IField field) || field is null)
+            {
+                return false;
+            }
+
+            offset = field.Offset;
+            return true;
         }
     }
 }
