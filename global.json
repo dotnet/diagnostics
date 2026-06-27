@@ -5,7 +5,15 @@
     "rollForward": "major"
   },
   "tools": {
-    "dotnet": "10.0.108"
+    "dotnet": "10.0.108",
+    "runtimes": {
+      "dotnet": [
+        "$(MicrosoftNETCoreApp80Version)"
+      ],
+      "dotnet/x86": [
+        "$(MicrosoftNETCoreApp80Version)"
+      ]
+    }
   },
   "msbuild-sdks": {
     "Microsoft.Build.NoTargets": "3.7.0",

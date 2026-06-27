@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <IsPackable>false</IsPackable>
     <NoWarn>;1591;1701</NoWarn>
     <DefineConstants>$(DefineConstants);CORE_CLR</DefineConstants>
