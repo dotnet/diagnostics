@@ -130,6 +130,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     WarnIfFormatsUnresolved(messageCount, unresolvedCount);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("Stress log dump interrupted by user");
+            }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or SecurityException)
             {
                 WriteLineError($"Failed to write stress log to '{fileName}': {ex.Message}");
