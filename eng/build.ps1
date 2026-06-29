@@ -125,28 +125,10 @@ if ($test) {
         }
 
         # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt
-        # product binaries), the test SDK and runtimes that are normally installed during the
-        # managed build (InstallRuntimes.proj, InstallTestRuntimes AfterTargets=Build) were never
-        # installed on this machine. Build just that project here so the runtimes are present
-        # before the tests run. This is ordered ahead of -test, unlike relying on the parallel
-        # test traversal, and avoids rebuilding the downloaded product.
-        if ($skipmanaged) {
-            & "$engroot\common\build.ps1" `
-              -restore `
-              -build `
-              -projects "$engroot\InstallRuntimes.proj" `
-              -configuration $configuration `
-              -verbosity $verbosity `
-              -ci:$ci `
-              /bl:$logdir\InstallTestRuntimes.binlog `
-              /p:TargetOS=$os `
-              /p:TargetArch=$architecture `
-              /p:LiveRuntimeDir="$liveRuntimeDir"
-
-            if ($lastExitCode -ne 0) {
-                exit $lastExitCode
-            }
-        }
+        # product binaries), the test SDK, runtimes, and debuggees that are normally produced by
+        # the managed build (InstallRuntimes.proj + BuildDebuggees in src/tests/dirs.proj) were
+        # downloaded as part of TestArtifacts. Skip rebuilding them so this leg only runs tests.
+        $skipTestArtifactsBuild = if ($skipmanaged) { 'true' } else { 'false' }
 
         & "$engroot\common\build.ps1" `
           -test `
@@ -158,6 +140,7 @@ if ($test) {
           /p:TargetOS=$os `
           /p:TargetArch=$architecture `
           /p:TestArchitectures=$architecture `
+          /p:SkipTestArtifactsBuild=$skipTestArtifactsBuild `
           /p:DotnetRuntimeVersion="$dotnetruntimeversion" `
           /p:DotnetRuntimeDownloadVersion="$dotnetruntimedownloadversion" `
           /p:RuntimeSourceFeed="$runtimesourcefeed" `

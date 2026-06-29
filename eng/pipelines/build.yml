@@ -218,6 +218,7 @@ jobs:
             Contents: |
               bin/**
               test/**
+              dotnet-test/**
             TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
 
         - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
