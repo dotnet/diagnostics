@@ -159,9 +159,6 @@ if(TIZEN)
   else()
     find_toolchain_dir("${CROSS_ROOTFS}/usr/lib64/gcc/${TIZEN_TOOLCHAIN}")
   endif()
-
-  message(STATUS "TIZEN_TOOLCHAIN_PATH set to: ${TIZEN_TOOLCHAIN_PATH}")
-
   include_directories(SYSTEM ${TIZEN_TOOLCHAIN_PATH}/include/c++)
   include_directories(SYSTEM ${TIZEN_TOOLCHAIN_PATH}/include/c++/${TIZEN_TOOLCHAIN})
 endif()
@@ -229,7 +226,7 @@ elseif(HAIKU)
     set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES} -lssp")
     set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lssp")
 
-    if ($ENV{CCC_CC} MATCHES ".*gcc.*")
+    if ("$ENV{CCC_CC}" MATCHES ".*gcc.*")
         set(CMAKE_PROGRAM_PATH "${CMAKE_PROGRAM_PATH};${CROSS_ROOTFS}/cross-tools-x86_64/bin")
         locate_toolchain_exec(gcc CMAKE_C_COMPILER)
         locate_toolchain_exec(g++ CMAKE_CXX_COMPILER)
