@@ -1195,8 +1195,8 @@ public class SOSRunner : IDisposable
                 case NativeDebugger.Cdb:
                     // Workaround for a race condition in cdb: if a background thread fires an event
                     // while the debugger is processing the breakpoint, we can end up hitting the same
-                    // breakpoint again. Single stepping over the breakpoint then continuing prevents
-                    // this from happening.
+                    // breakpoint again. Single-stepping once (t) and then continuing prevents this
+                    // from happening.
                     command = "t; g";
                     // Don't add the !runcommand prefix because it gets printed when cdb stops
                     // again because the helper extension used .pcmd to set a stop command.
