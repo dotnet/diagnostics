@@ -125,10 +125,26 @@ if ($test) {
         }
 
         # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt
-        # product binaries), the test SDK, runtimes, and debuggees that are normally produced by
-        # the managed build (InstallRuntimes.proj + BuildDebuggees in src/tests/dirs.proj) were
+        # product binaries), the debuggees built by BuildDebuggees in src/tests/dirs.proj were
         # downloaded as part of TestArtifacts. Skip rebuilding them so this leg only runs tests.
+        # Test runtimes are still installed locally below (cheap, ensures correct file permissions).
         $skipTestArtifactsBuild = if ($skipmanaged) { 'true' } else { 'false' }
+
+        # The managed build normally installs the test SDK/runtimes via an InstallRuntimes.proj
+        # ProjectReference. The -test step runs with Build=false, so install them explicitly here.
+        if ($skipmanaged) {
+            & "$engroot\common\build.ps1" `
+              -restore -build `
+              -projects "$engroot\InstallRuntimes.proj" `
+              -configuration $configuration `
+              -verbosity $verbosity `
+              -ci:$ci `
+              /p:TargetOS=$os `
+              /p:TargetArch=$architecture
+            if ($lastExitCode -ne 0) {
+                exit $lastExitCode
+            }
+        }
 
         & "$engroot\common\build.ps1" `
           -test `
