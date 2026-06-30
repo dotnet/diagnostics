@@ -134,16 +134,24 @@ jobs:
       - _TestArgs: '-test'
       - _Cross: ''
 
-      - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
-        - _buildScript: $(Build.SourcesDirectory)\build.cmd
-      - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
-        - _buildScript: $(Build.SourcesDirectory)/build.sh
-
       - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
         'error, testOnly and buildOnly cannot be true at the same time': error
 
+      # Test-only legs invoke test.cmd/test.sh, which already encode
+      # '-test -skipmanaged -skipnative' and do not prepend '-restore -build'. All other legs
+      # (build-only and build+test) use build.cmd/build.sh, which prepend '-restore -build'.
       - ${{ if eq(parameters.testOnly, 'true') }}:
-        - _TestArgs: '-test -skipnative -skipmanaged'
+        - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+          - _buildScript: $(Build.SourcesDirectory)\test.cmd
+        - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
+          - _buildScript: $(Build.SourcesDirectory)/test.sh
+        - _TestArgs: ''
+
+      - ${{ if ne(parameters.testOnly, 'true') }}:
+        - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+          - _buildScript: $(Build.SourcesDirectory)\build.cmd
+        - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
+          - _buildScript: $(Build.SourcesDirectory)/build.sh
 
       - ${{ if eq(parameters.buildOnly, 'true') }}:
         - _TestArgs: ''
@@ -217,6 +225,7 @@ jobs:
             SourceFolder: '$(Build.SourcesDirectory)/artifacts'
             Contents: |
               bin/**
+              obj/**
               test/**
             TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
 
