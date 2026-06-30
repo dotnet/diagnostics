@@ -40,8 +40,7 @@
   </PropertyGroup>
 
   <Target Name="_SkipUngatedInterpreterTestBuild">
-    <Message Importance="High"
-             Text="Skipping interpreter-test debuggee '$(MSBuildProjectName)' because SOS_TEST_INTERPRETER is not set. Set SOS_TEST_INTERPRETER=true (or pass -testInterpreter to Build.cmd / build.sh) to enable." />
+    <Message Text="Skipping interpreter-test debuggee '$(MSBuildProjectName)' because SOS_TEST_INTERPRETER is not set. Set SOS_TEST_INTERPRETER=true (or pass -testInterpreter to Build.cmd / build.sh) to enable." />
   </Target>
 
 </Project>
