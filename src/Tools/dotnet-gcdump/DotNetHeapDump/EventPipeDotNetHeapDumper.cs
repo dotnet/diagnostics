@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="timeout"></param>
         /// <param name="dotNetInfo"></param>
         /// <returns></returns>
-        public static bool DumpFromEventPipe(CancellationToken ct, int processId, string diagnosticPort, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo)
+        public static bool DumpFromEventPipe(CancellationToken ct, int processId, string diagnosticPort, MemoryGraph memoryGraph, TextWriter log, int timeout, DotNetHeapInfo dotNetInfo, bool nonLossy = false)
         {
             DateTime start = DateTime.Now;
             Func<TimeSpan> getElapsed = () => DateTime.Now - start;
@@ -158,7 +158,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 using EventPipeSessionController gcDumpSession = new(processId, diagnosticPort, new List<EventPipeProvider> {
                     new("Microsoft-Windows-DotNETRuntime", EventLevel.Verbose, (long)(ClrTraceEventParser.Keywords.GCHeapSnapshot))
-                });
+                }, nonLossy: nonLossy);
                 log.WriteLine("{0,5:n1}s: gcdump EventPipe Session started", getElapsed().TotalSeconds);
 
                 int gcNum = -1;
@@ -299,6 +299,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     dumper.ConvertHeapDataToGraph();        // Finish the conversion.
                 }
             }
+            catch (UnsupportedCommandException) when (nonLossy)
+            {
+                // The runtime is too old for the non-lossy (CollectTracing6) command. Surface this to the
+                // caller rather than swallowing it like other gcdump errors, so a helpful message is shown.
+                throw;
+            }
             catch (Exception e)
             {
                 log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception during gcdump: {e}");
@@ -324,7 +330,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
         public bool UseWildcardProcessId => _diagnosticPort != null;
 
-        public EventPipeSessionController(int pid, string diagnosticPort, List<EventPipeProvider> providers, bool requestRundown = true)
+        public EventPipeSessionController(int pid, string diagnosticPort, List<EventPipeProvider> providers, bool requestRundown = true, bool nonLossy = false)
         {
             if (string.IsNullOrEmpty(diagnosticPort))
             {
@@ -360,7 +366,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 _client = new DiagnosticsClient(pid);
             }
 
-            _session = _client.StartEventPipeSession(providers, requestRundown, 1024);
+            EventPipeBufferingMode bufferingMode = nonLossy ? EventPipeBufferingMode.Block : EventPipeBufferingMode.Default;
+
+            EventPipeSessionConfiguration sessionConfig = new(providers, 1024, requestRundown, requestStackwalk: true, bufferingMode: bufferingMode);
+            _session = _client.StartEventPipeSession(sessionConfig);
             _source = new EventPipeEventSource(_session.EventStream);
         }
 
