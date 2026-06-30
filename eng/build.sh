@@ -353,13 +353,39 @@ if [[ "$__Test" == 1 ]]; then
           __TestFilterArg="/p:TestRunnerAdditionalArguments=\"$__TestFilter\""
       fi
 
+      # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt
+      # product binaries), the debuggees built by BuildDebuggees in src/tests/dirs.proj were
+      # downloaded as part of TestArtifacts. Skip rebuilding them so this leg only runs tests.
+      # Test runtimes are still installed locally below (cheap, ensures correct file permissions).
+      __TestRestoreArg=
+      __SkipTestArtifactsBuild=false
+      if [[ "$__ManagedBuild" == 0 ]]; then
+          __TestRestoreArg=--restore
+          __SkipTestArtifactsBuild=true
+
+          # The managed build normally installs the test SDK/runtimes via an InstallRuntimes.proj
+          # ProjectReference. The --test step runs with Build=false, so install them explicitly here.
+          "$__RepoRootDir/eng/common/build.sh" \
+            --restore --build \
+            --projects "$__RepoRootDir/eng/InstallRuntimes.proj" \
+            --configuration "$__BuildType" \
+            /p:TargetArch="$__TargetArch" \
+            /p:TargetRid="$__TargetRid" \
+            $__CommonMSBuildArgs
+          if [ $? != 0 ]; then
+              exit 1
+          fi
+      fi
+
       # __CommonMSBuildArgs contains TargetOS property
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
+        $__TestRestoreArg \
         --configuration "$__BuildType" \
         /bl:"$__LogsDir"/Test.binlog \
         /p:TargetArch="$__TargetArch" \
         /p:TargetRid="$__TargetRid" \
+        /p:SkipTestArtifactsBuild="$__SkipTestArtifactsBuild" \
         /p:DotnetRuntimeVersion="$__DotnetRuntimeVersion" \
         /p:DotnetRuntimeDownloadVersion="$__DotnetRuntimeDownloadVersion" \
         /p:RuntimeSourceFeed="$__RuntimeSourceFeed" \
