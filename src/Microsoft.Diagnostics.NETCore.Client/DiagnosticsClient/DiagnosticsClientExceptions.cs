@@ -36,6 +36,19 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public UnsupportedCommandException(string msg) : base(msg) { }
     }
 
+    // When the runtime doesn't recognize the command id (DiagnosticsIpcError.UnknownCommand). This is
+    // distinct from a recognized command whose arguments are rejected (see InvalidCommandArgumentException).
+    public class UnknownCommandException : UnsupportedCommandException
+    {
+        public UnknownCommandException(string msg) : base(msg) { }
+    }
+
+    // When the runtime recognizes the command but rejects its arguments (DiagnosticsIpcError.InvalidArgument).
+    public class InvalidCommandArgumentException : UnsupportedCommandException
+    {
+        public InvalidCommandArgumentException(string msg) : base(msg) { }
+    }
+
     // When the runtime already has loaded profiler
     public class ProfilerAlreadyActiveException : ServerErrorException
     {
