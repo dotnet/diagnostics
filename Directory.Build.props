@@ -22,6 +22,12 @@
     <RepositoryName>diagnostics</RepositoryName>
   </PropertyGroup>
 
+  <!-- Inject overrides that must run after the Microsoft.Build.Traversal SDK targets
+       (e.g. dropping the Test->Build dependency on prebuilt test-only legs). -->
+  <PropertyGroup>
+    <CustomAfterTraversalTargets>$(MSBuildThisFileDirectory)eng/TraversalOverrides.targets</CustomAfterTraversalTargets>
+  </PropertyGroup>
+
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <!--
