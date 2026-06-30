@@ -98,9 +98,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // To keep backward compatibility with older runtimes we only use newer serialization format when needed
             EventPipeCommandId command;
             byte[] payload;
-            if (config.BufferingMode != EventPipeBufferingMode.Default)
+            if (config.BufferingMode != EventPipeBufferingMode.Drop)
             {
-                // V6 adds an opt-in session buffering mode (its payload also carries any event filters)
+                // V6 adds an opt-in session buffering mode
                 command = EventPipeCommandId.CollectTracing6;
                 payload = config.SerializeV6();
             }

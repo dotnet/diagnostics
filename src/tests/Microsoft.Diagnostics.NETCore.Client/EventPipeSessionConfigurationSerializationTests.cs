@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void Selects_CollectTracing6_ForBlockBufferingMode()
         {
-            EventPipeSessionConfiguration config = new(Providers(), circularBufferSizeMB: 256, requestRundown: true, requestStackwalk: true, bufferingMode: EventPipeBufferingMode.Block);
+            EventPipeSessionConfiguration config = new(Providers(), circularBufferSizeMB: 256, rundownKeyword: EventPipeSession.DefaultRundownKeyword, requestStackwalk: true, bufferingMode: EventPipeBufferingMode.Block);
             Assert.Equal((byte)EventPipeCommandId.CollectTracing6, CommandId(config));
         }
 
@@ -64,7 +64,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             EventPipeSessionConfiguration config = new(
                 Providers(new EventPipeProviderEventFilter(enable: false, new uint[] { 2 })),
-                circularBufferSizeMB: 256, requestRundown: true, requestStackwalk: true, bufferingMode: EventPipeBufferingMode.Block);
+                circularBufferSizeMB: 256, rundownKeyword: EventPipeSession.DefaultRundownKeyword, requestStackwalk: true, bufferingMode: EventPipeBufferingMode.Block);
             Assert.Equal((byte)EventPipeCommandId.CollectTracing6, CommandId(config));
         }
 
@@ -82,7 +82,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         [Fact]
         public void SerializeV6_IsV5PayloadPlusTrailingBufferingMode()
         {
-            EventPipeSessionConfiguration config = new(Providers(), circularBufferSizeMB: 256, requestRundown: true, requestStackwalk: true, bufferingMode: EventPipeBufferingMode.Block);
+            EventPipeSessionConfiguration config = new(Providers(), circularBufferSizeMB: 256, rundownKeyword: EventPipeSession.DefaultRundownKeyword, requestStackwalk: true, bufferingMode: EventPipeBufferingMode.Block);
             byte[] v5 = config.SerializeV5();
             byte[] v6 = config.SerializeV6();
 

@@ -366,7 +366,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 _client = new DiagnosticsClient(pid);
             }
 
-            EventPipeBufferingMode bufferingMode = nonLossy ? EventPipeBufferingMode.Block : EventPipeBufferingMode.Default;
+            EventPipeBufferingMode bufferingMode = nonLossy ? EventPipeBufferingMode.Block : EventPipeBufferingMode.Drop;
 
             EventPipeSessionConfiguration sessionConfig = new(providers, 1024, requestRundown, requestStackwalk: true, bufferingMode: bufferingMode);
             _session = _client.StartEventPipeSession(sessionConfig);

@@ -35,7 +35,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// <summary>
         /// The runtime default: a circular buffer that drops events when it overflows (lossy).
         /// </summary>
-        Default = 0,
+        Drop = 0,
 
         /// <summary>
         /// Non-lossy: producers block until the reader frees buffer capacity rather than dropping
@@ -94,13 +94,30 @@ namespace Microsoft.Diagnostics.NETCore.Client
             EventPipeBufferingMode bufferingMode) : this(circularBufferSizeMB, EventPipeSerializationFormat.NetTrace, providers, requestStackwalk, (requestRundown ? EventPipeSession.DefaultRundownKeyword : 0), bufferingMode)
         {}
 
+        /// <summary>
+        /// Creates a new configuration object for the EventPipeSession with a specific rundown keyword and
+        /// buffering mode. For details, see the documentation of each property of this object.
+        /// </summary>
+        /// <param name="providers">An IEnumerable containing the list of Providers to turn on.</param>
+        /// <param name="circularBufferSizeMB">The size of the runtime's buffer for collecting events in MB</param>
+        /// <param name="rundownKeyword">The keyword for rundown events.</param>
+        /// <param name="requestStackwalk">If true, record a stacktrace for every emitted event.</param>
+        /// <param name="bufferingMode">The session buffering mode; Block requests non-lossy collection (CollectTracing6, .NET 11+).</param>
+        public EventPipeSessionConfiguration(
+            IEnumerable<EventPipeProvider> providers,
+            int circularBufferSizeMB,
+            long rundownKeyword,
+            bool requestStackwalk,
+            EventPipeBufferingMode bufferingMode) : this(circularBufferSizeMB, EventPipeSerializationFormat.NetTrace, providers, requestStackwalk, rundownKeyword, bufferingMode)
+        {}
+
         private EventPipeSessionConfiguration(
             int circularBufferSizeMB,
             EventPipeSerializationFormat format,
             IEnumerable<EventPipeProvider> providers,
             bool requestStackwalk,
             long rundownKeyword,
-            EventPipeBufferingMode bufferingMode = EventPipeBufferingMode.Default)
+            EventPipeBufferingMode bufferingMode = EventPipeBufferingMode.Drop)
         {
             if (circularBufferSizeMB == 0)
             {
