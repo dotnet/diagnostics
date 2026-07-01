@@ -6689,6 +6689,172 @@ DECLARE_API(EHInfo)
     return Status;
 }
 
+// Try to dump GC info using ISOSDacInterface18 (cDAC path).
+// Returns S_OK if successful, or an error HRESULT if the interface is not available or fails.
+static HRESULT TryDumpGCInfoViaInterface18(CLRDATA_ADDRESS ip)
+{
+    ReleaseHolder<ISOSDacInterface18> pSos18;
+    HRESULT hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface18), (void**)&pSos18);
+    if (FAILED(hr) || pSos18 == NULL)
+        return E_NOINTERFACE;
+
+    // Get GC register names for the target platform
+    LPCSTR* gcRegNames = nullptr;
+    unsigned int gcRegCount = 0;
+    g_targetMachine->GetGCRegisters(&gcRegNames, &gcRegCount);
+
+    auto getRegName = [&](unsigned int regNum) -> const char* {
+        if (regNum < gcRegCount && gcRegNames != nullptr)
+            return gcRegNames[regNum];
+        return "???";
+    };
+
+    // Get the header
+    SOSGCInfoHeader header = {};
+    hr = pSos18->GetGCInfoHeader(ip, &header);
+    if (FAILED(hr))
+        return hr;
+
+    // Print header in legacy format
+    if (header.GenericsInstContextIsPresent)
+        ExtOut("GenericInst slot: sp%+d (kind=%u)\n", header.GenericsInstContextStackSlot, header.GenericsInstContextKind);
+    else
+        ExtOut("GenericInst slot: <none>\n");
+    ExtOut("Varargs: %d\n", header.IsVarArg ? 1 : 0);
+    if (header.StackBaseRegister != 0xFFFFFFFF)
+        ExtOut("Frame pointer: %s\n", getRegName(header.StackBaseRegister));
+    else
+        ExtOut("Frame pointer: <none>\n");
+    ExtOut("Wants Report Only Leaf: %d\n", header.WantsReportOnlyLeaf ? 1 : 0);
+    ExtOut("Size of parameter area: %x\n", header.SizeOfStackParameterArea);
+    if (header.GSCookieIsPresent)
+        ExtOut("GS Cookie: sp%+d, valid range [%04x, %04x)\n", header.GSCookieStackSlot, header.GSCookieValidRangeStart, header.GSCookieValidRangeEnd);
+    if (header.PSPSymIsPresent)
+        ExtOut("PSP sym: sp%+d\n", header.PSPSymStackSlot);
+    ExtOut("Has Tail Calls: %d\n", header.HasTailCalls ? 1 : 0);
+    ExtOut("Code size: %x\n", header.CodeSize);
+
+    // Get interruptible ranges
+    ULONG rangeCount = 0;
+    hr = pSos18->GetGCInfoInterruptibleRanges(ip, 0, nullptr, &rangeCount);
+    ArrayHolder<SOSCodeRange> ranges = nullptr;
+    if (SUCCEEDED(hr) && rangeCount > 0)
+    {
+        ranges = new NOTHROW SOSCodeRange[rangeCount];
+        if (ranges != NULL)
+        {
+            ULONG fetched = 0;
+            pSos18->GetGCInfoInterruptibleRanges(ip, rangeCount, ranges, &fetched);
+            rangeCount = fetched;
+        }
+    }
+
+    // Get slot lifetimes
+    ULONG slotCount = 0;
+    hr = pSos18->GetGCInfoSlotLifetimes(ip, 0, nullptr, &slotCount);
+    ArrayHolder<SOSGCSlotLifetime> slots = nullptr;
+    if (SUCCEEDED(hr) && slotCount > 0)
+    {
+        slots = new NOTHROW SOSGCSlotLifetime[slotCount];
+        if (slots != NULL)
+        {
+            ULONG fetched = 0;
+            pSos18->GetGCInfoSlotLifetimes(ip, slotCount, slots, &fetched);
+            slotCount = fetched;
+        }
+    }
+
+    const char* frameRegName = (header.StackBaseRegister != 0xFFFFFFFF) ? getRegName(header.StackBaseRegister) : "sp";
+
+    // Print untracked slots (those with BeginOffset=0, EndOffset=CodeSize)
+    if (slots != NULL)
+    {
+        for (ULONG i = 0; i < slotCount; i++)
+        {
+            if (slots[i].BeginOffset == 0 && slots[i].EndOffset == header.CodeSize)
+            {
+                if (slots[i].IsRegister)
+                    ExtOut("Untracked: %s%s\n", slots[i].GcFlags & 0x2 ? "pinned " : "", getRegName(slots[i].RegisterNumber));
+                else
+                    ExtOut("Untracked: %s+%s%+d\n", slots[i].GcFlags & 0x2 ? "pinned " : "", frameRegName, slots[i].SpOffset);
+            }
+        }
+    }
+
+    // Build timeline: interleave interruptible range transitions and slot live/dead transitions
+    // sorted by code offset
+    struct TimelineEvent
+    {
+        unsigned int offset;
+        int type; // 0=interruptible start, 1=interruptible end, 2=slot live, 3=slot dead
+        ULONG slotIndex;
+    };
+
+    std::vector<TimelineEvent> events;
+
+    if (ranges != NULL)
+    {
+        for (ULONG i = 0; i < rangeCount; i++)
+        {
+            events.push_back({ranges[i].BeginOffset, 0, 0});
+            events.push_back({ranges[i].EndOffset, 1, 0});
+        }
+    }
+
+    if (slots != NULL)
+    {
+        for (ULONG i = 0; i < slotCount; i++)
+        {
+            // Skip untracked (already printed above)
+            if (slots[i].BeginOffset == 0 && slots[i].EndOffset == header.CodeSize)
+                continue;
+            events.push_back({slots[i].BeginOffset, 2, i});
+            events.push_back({slots[i].EndOffset, 3, i});
+        }
+    }
+
+    // Sort by offset, then by type (interruptible transitions first)
+    std::sort(events.begin(), events.end(), [](const TimelineEvent& a, const TimelineEvent& b) {
+        if (a.offset != b.offset) return a.offset < b.offset;
+        return a.type < b.type;
+    });
+
+    // Print timeline
+    for (const auto& ev : events)
+    {
+        switch (ev.type)
+        {
+        case 0:
+            ExtOut("%08x interruptible\n", ev.offset);
+            break;
+        case 1:
+            ExtOut("%08x not interruptible\n", ev.offset);
+            break;
+        case 2:
+        {
+            const SOSGCSlotLifetime& s = slots[ev.slotIndex];
+            const char* prefix = s.GcFlags & 0x1 ? "&" : "+";
+            if (s.IsRegister)
+                ExtOut("%08x %s%s%s\n", ev.offset, s.GcFlags & 0x2 ? "pinned " : "", prefix, getRegName(s.RegisterNumber));
+            else
+                ExtOut("%08x %s%s%s%+d\n", ev.offset, s.GcFlags & 0x2 ? "pinned " : "", prefix, frameRegName, s.SpOffset);
+            break;
+        }
+        case 3:
+        {
+            const SOSGCSlotLifetime& s = slots[ev.slotIndex];
+            if (s.IsRegister)
+                ExtOut("%08x -%s\n", ev.offset, getRegName(s.RegisterNumber));
+            else
+                ExtOut("%08x -%s%+d\n", ev.offset, frameRegName, s.SpOffset);
+            break;
+        }
+        }
+    }
+
+    return S_OK;
+}
+
 /**********************************************************************\
 * Routine Description:                                                 *
 *                                                                      *
@@ -6782,6 +6948,15 @@ DECLARE_API(GCInfo)
     else if (codeHeaderData.JITType == TYPE_PJIT)
     {
         ExtOut("preJIT generated code\n");
+    }
+
+    // Try the new ISOSDacInterface18 path first (cDAC)
+    {
+        CLRDATA_ADDRESS methodIP = TO_CDADDR(codeHeaderData.MethodStart);
+        HRESULT hr18 = TryDumpGCInfoViaInterface18(methodIP);
+        if (SUCCEEDED(hr18))
+            return Status;
+        // Fall through to legacy raw-bytes path if Interface18 is not available
     }
 
     taGCInfoAddr = TO_TADDR(codeHeaderData.GCInfo);

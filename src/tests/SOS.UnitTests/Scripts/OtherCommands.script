@@ -99,8 +99,12 @@ SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo1.*\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo1\(Int32, System\.String\)\s+
 VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 27\s+
 
-# Verify DumpMD
-SOSCOMMAND:DumpMD <POUT>\s+MethodDesc:\s+(<HEXVAL>)\s+<POUT>
+# Verify GCInfo (uses MethodDesc from IP2MD)
+SOSCOMMAND:GCInfo <POUT>\s+MethodDesc:\s+(<HEXVAL>)\s+<POUT>
+VERIFY:.*Code size:\s+[0-9a-fA-F]+\s*
+
+# Verify DumpMD (reuse MethodDesc captured by GCInfo's POUT above)
+SOSCOMMAND:DumpMD <PREVPOUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo1\(Int32, System\.String\)\s+
 
 # Verify DumpClass
