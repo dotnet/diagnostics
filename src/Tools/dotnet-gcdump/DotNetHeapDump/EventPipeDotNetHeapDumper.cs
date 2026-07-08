@@ -365,12 +365,13 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             {
                 _session = _client.StartEventPipeSession(sessionConfig);
             }
-            catch (UnknownCommandException) when (bufferingMode != EventPipeBufferingMode.Drop)
+            catch (UnsupportedCommandException) when (bufferingMode != EventPipeBufferingMode.Drop)
             {
                 // The runtime doesn't recognize the CollectTracing v6 command used for non-lossy (Block)
                 // buffering (introduced in .NET 11). Fall back to the default lossy buffering so a gcdump can
-                // still be collected. A runtime that understands the command but rejects the payload throws
-                // InvalidCommandArgumentException instead, which is not caught here and so surfaces normally.
+                // still be collected. A runtime that understands the command but rejects the payload responds
+                // with BadEncoding (a BadEncodingException, not an UnsupportedCommandException), which is not
+                // caught here and so surfaces normally.
                 Console.Error.WriteLine("Warning: the target runtime does not support non-lossy (Block) buffering, which requires .NET 11+. Falling back to the default lossy buffering; the gcdump may be incomplete on large heaps.");
                 EventPipeSessionConfiguration fallbackConfig = new(providers, 1024, rundownKeyword: requestRundown ? EventPipeSession.DefaultRundownKeyword : 0, requestStackwalk: true, bufferingMode: EventPipeBufferingMode.Drop);
                 _session = _client.StartEventPipeSession(fallbackConfig);

@@ -873,7 +873,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             {
                                 return false;
                             }
-                            throw new UnknownCommandException($"{operationName} failed - Command is not supported.");
+                            throw new UnsupportedCommandException($"{operationName} failed - Command is not supported.");
 
                         case (uint)DiagnosticsIpcError.ProfilerAlreadyActive:
                             throw new ProfilerAlreadyActiveException($"{operationName} failed - A profiler is already loaded.");
@@ -883,7 +883,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             {
                                 throw new ServerErrorException($"{operationName} failed - The runtime must be suspended for this command.");
                             }
-                            throw new InvalidCommandArgumentException($"{operationName} failed - Invalid command argument.");
+                            throw new UnsupportedCommandException($"{operationName} failed - Invalid command argument.");
+
+                        case (uint)DiagnosticsIpcError.BadEncoding:
+                            throw new BadEncodingException($"{operationName} failed - the target runtime rejected the request as invalid (bad encoding), likely because it does not support one or more of the configured options. Retry with options supported by the target runtime's version.");
 
                         case (uint)DiagnosticsIpcError.NotSupported:
                             message = $"{operationName} - Not supported by this runtime.";

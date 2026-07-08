@@ -8,9 +8,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
 {
     /// <summary>
     /// Tests that <see cref="DiagnosticsClient.ValidateResponseMessage"/> maps the runtime's wire error
-    /// codes to distinct exception types, so callers can tell "the runtime doesn't recognize this command"
-    /// (UnknownCommand) apart from "the command was understood but its arguments were rejected"
-    /// (InvalidArgument).
+    /// codes to the right exception types: UnknownCommand to UnsupportedCommandException (so gcdump/dotnet-trace
+    /// can fall back or downgrade for a runtime too old for a command), and BadEncoding to BadEncodingException
+    /// (a ServerErrorException that is deliberately not an UnsupportedCommandException, so a malformed payload is
+    /// not mistaken for an unsupported command or swept into command-downgrade retries).
     /// </summary>
     public class ValidateResponseMessageTests
     {
@@ -18,24 +19,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
             new(DiagnosticsServerCommandSet.Server, (byte)DiagnosticsServerResponseId.Error, BitConverter.GetBytes((uint)error));
 
         [Fact]
-        public void UnknownCommand_ThrowsUnknownCommandException()
+        public void UnknownCommand_ThrowsUnsupportedCommandException()
         {
-            UnknownCommandException ex = Assert.Throws<UnknownCommandException>(() =>
+            // A command the runtime doesn't recognize (too old) surfaces as UnsupportedCommandException, which
+            // gcdump/dotnet-trace catch to fall back or downgrade to an older command form.
+            Assert.Throws<UnsupportedCommandException>(() =>
                 DiagnosticsClient.ValidateResponseMessage(ErrorResponse(DiagnosticsIpcError.UnknownCommand), "Start"));
-
-            // Derives from UnsupportedCommandException so existing catch blocks keep working.
-            Assert.IsAssignableFrom<UnsupportedCommandException>(ex);
         }
 
         [Fact]
-        public void InvalidArgument_ThrowsInvalidCommandArgumentException_NotUnknownCommand()
+        public void BadEncoding_ThrowsBadEncodingException_NotUnsupportedCommand()
         {
-            InvalidCommandArgumentException ex = Assert.Throws<InvalidCommandArgumentException>(() =>
-                DiagnosticsClient.ValidateResponseMessage(ErrorResponse(DiagnosticsIpcError.InvalidArgument), "Start"));
+            // A malformed payload for a recognized command returns BadEncoding. It must surface as a
+            // BadEncodingException that is NOT an UnsupportedCommandException, so it is not swept into the
+            // command-downgrade retries (EventPipeStreamProvider/dotnet-trace) and gcdump's
+            // UnsupportedCommandException fallback does not catch it, letting a genuine payload/protocol bug surface.
+            BadEncodingException ex = Assert.Throws<BadEncodingException>(() =>
+                DiagnosticsClient.ValidateResponseMessage(ErrorResponse(DiagnosticsIpcError.BadEncoding), "Start"));
 
-            // An invalid-argument rejection must not be mistaken for an unknown command.
-            Assert.IsNotType<UnknownCommandException>(ex);
-            Assert.IsAssignableFrom<UnsupportedCommandException>(ex);
+            Assert.IsNotAssignableFrom<UnsupportedCommandException>(ex);
+            Assert.IsAssignableFrom<ServerErrorException>(ex);
         }
 
         [Fact]

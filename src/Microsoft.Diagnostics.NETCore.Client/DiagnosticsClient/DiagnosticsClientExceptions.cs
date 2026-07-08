@@ -36,22 +36,17 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public UnsupportedCommandException(string msg) : base(msg) { }
     }
 
-    // When the runtime doesn't recognize the command id (DiagnosticsIpcError.UnknownCommand). This is
-    // distinct from a recognized command whose arguments are rejected (see InvalidCommandArgumentException).
-    public class UnknownCommandException : UnsupportedCommandException
-    {
-        public UnknownCommandException(string msg) : base(msg) { }
-    }
-
-    // When the runtime recognizes the command but rejects its arguments (DiagnosticsIpcError.InvalidArgument).
-    public class InvalidCommandArgumentException : UnsupportedCommandException
-    {
-        public InvalidCommandArgumentException(string msg) : base(msg) { }
-    }
-
     // When the runtime already has loaded profiler
     public class ProfilerAlreadyActiveException : ServerErrorException
     {
         public ProfilerAlreadyActiveException(string msg) : base(msg) { }
+    }
+
+    // When the runtime cannot decode the command payload (DiagnosticsIpcError.BadEncoding). From a well-formed
+    // client this usually means the target runtime is too old to understand a configured option value (e.g. a
+    // newer buffering mode) and rejects it while parsing.
+    public class BadEncodingException : ServerErrorException
+    {
+        public BadEncodingException(string msg) : base(msg) { }
     }
 }

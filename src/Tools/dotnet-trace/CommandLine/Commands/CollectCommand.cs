@@ -264,7 +264,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         }
                         catch (UnsupportedCommandException e)
                         {
-                            if (bufferingMode == EventPipeBufferingMode.Block && e is UnknownCommandException)
+                            if (bufferingMode == EventPipeBufferingMode.Block)
                             {
                                 Console.Error.WriteLine("The runtime version being traced does not support the non-lossy (Block) buffering mode, which requires .NET 11+. Retry with --buffering-mode Drop or omit --buffering-mode.");
                                 return (int)ReturnCode.SessionCreationError;
