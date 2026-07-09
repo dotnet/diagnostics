@@ -28,7 +28,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         /// <param name="diagnosticPort">The diagnostic IPC channel to collect the gcdump from.</param>
         /// <param name="dsrouter">The dsrouter command to use for collecting the gcdump.</param>
         /// <returns></returns>
-        private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter, EventPipeBufferingMode bufferingMode)
+        private static async Task<int> Collect(CancellationToken ct, int processId, string output, int timeout, bool verbose, string name, string diagnosticPort, string dsrouter)
         {
             try
             {
@@ -66,7 +66,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 Console.Out.WriteLine($"Writing gcdump to '{outputFileInfo.FullName}'...");
 
                 Task<bool> dumpTask = Task.Run(() => {
-                    if (TryCollectMemoryGraph(ct, processId, diagnosticPort, timeout, verbose, bufferingMode, out MemoryGraph memoryGraph))
+                    if (TryCollectMemoryGraph(ct, processId, diagnosticPort, timeout, verbose, out MemoryGraph memoryGraph))
                     {
                         GCHeapDump.WriteMemoryGraph(memoryGraph, outputFileInfo.FullName, "dotnet-gcdump");
                         return true;
@@ -115,14 +115,14 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
         }
 
-        internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, string diagnosticPort, int timeout, bool verbose, EventPipeBufferingMode bufferingMode, out MemoryGraph memoryGraph)
+        internal static bool TryCollectMemoryGraph(CancellationToken ct, int processId, string diagnosticPort, int timeout, bool verbose, out MemoryGraph memoryGraph)
         {
             DotNetHeapInfo heapInfo = new();
             TextWriter log = verbose ? Console.Out : TextWriter.Null;
 
             memoryGraph = new MemoryGraph(50_000);
 
-            if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, diagnosticPort, memoryGraph, log, timeout, heapInfo, bufferingMode))
+            if (!EventPipeDotNetHeapDumper.DumpFromEventPipe(ct, processId, diagnosticPort, memoryGraph, log, timeout, heapInfo))
             {
                 return false;
             }
@@ -143,8 +143,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 TimeoutOption,
                 NameOption,
                 DiagnosticPortOption,
-                DsRouterOption,
-                BufferingModeOption
+                DsRouterOption
             };
 
             collectCommand.SetAction(static (parseResult, ct) => Collect(ct,
@@ -154,8 +153,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     verbose: parseResult.GetValue(VerboseOption),
                     name: parseResult.GetValue(NameOption),
                     diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
-                    dsrouter: parseResult.GetValue(DsRouterOption) ?? string.Empty,
-                    bufferingMode: parseResult.GetValue(BufferingModeOption)));
+                    dsrouter: parseResult.GetValue(DsRouterOption) ?? string.Empty));
 
             return collectCommand;
         }
@@ -202,13 +200,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             new("--dsrouter")
             {
                 Description = "The dsrouter command to use for collecting the gcdump. If specified, the --process-id, --name, or --diagnostic-port options cannot be used."
-            };
-
-        public static readonly Option<EventPipeBufferingMode> BufferingModeOption =
-            new("--buffering-mode")
-            {
-                Description = "How the runtime buffers events. 'Block' (default) never drops events, producing a complete gcdump on large heaps; requires .NET 11+, and older runtimes fall back to 'Drop'. 'Drop' is the lossy circular buffer. Accepts Block/Drop or 1/0.",
-                DefaultValueFactory = _ => EventPipeBufferingMode.Block,
             };
     }
 }

@@ -25,8 +25,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 FileNameArgument,
                 ProcessIdOption,
                 ReportTypeOption,
-                DiagnosticPortOption,
-                CollectCommandHandler.BufferingModeOption
+                DiagnosticPortOption
             };
 
             reportCommand.SetAction((parseResult, ct) => Report(
@@ -34,13 +33,12 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 gcdump_filename: parseResult.GetValue(FileNameArgument),
                 processId: parseResult.GetValue(ProcessIdOption),
                 type: parseResult.GetValue(ReportTypeOption),
-                diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty,
-                bufferingMode: parseResult.GetValue(CollectCommandHandler.BufferingModeOption)
+                diagnosticPort: parseResult.GetValue(DiagnosticPortOption) ?? string.Empty
             ));
 
             return reportCommand;
         }
-        private static Task<int> Report(CancellationToken ct, FileInfo gcdump_filename, int? processId = null, ReportType type = ReportType.HeapStat, string diagnosticPort = null, EventPipeBufferingMode bufferingMode = EventPipeBufferingMode.Block)
+        private static Task<int> Report(CancellationToken ct, FileInfo gcdump_filename, int? processId = null, ReportType type = ReportType.HeapStat, string diagnosticPort = null)
         {
             //
             // Validation
@@ -79,7 +77,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
             return (source, type) switch
             {
-                (ReportSource.Process, ReportType.HeapStat) => ReportFromProcess(processId ?? 0, diagnosticPort, dsrouter: string.Empty, bufferingMode: bufferingMode, ct: ct),
+                (ReportSource.Process, ReportType.HeapStat) => ReportFromProcess(processId ?? 0, diagnosticPort, dsrouter: string.Empty, ct: ct),
                 (ReportSource.DumpFile, ReportType.HeapStat) => ReportFromFile(gcdump_filename),
                 _ => HandleUnknownParam()
             };
@@ -91,7 +89,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             return Task.FromResult(-1);
         }
 
-        private static Task<int> ReportFromProcess(int processId, string diagnosticPort, string dsrouter, EventPipeBufferingMode bufferingMode, CancellationToken ct)
+        private static Task<int> ReportFromProcess(int processId, string diagnosticPort, string dsrouter, CancellationToken ct)
         {
             try
             {
@@ -126,7 +124,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
             }
 
             if (!CollectCommandHandler
-                .TryCollectMemoryGraph(ct, processId, diagnosticPort, CollectCommandHandler.DefaultTimeout, false, bufferingMode, out Graphs.MemoryGraph mg))
+                .TryCollectMemoryGraph(ct, processId, diagnosticPort, CollectCommandHandler.DefaultTimeout, false, out Graphs.MemoryGraph mg))
             {
                 Console.Error.WriteLine("An error occured while collecting gcdump.");
                 return Task.FromResult(-1);

@@ -753,7 +753,7 @@ Header: `{ Magic; 20 + Payload Size; 0x0207; 0x0000 }`
 * `ulong rundownKeyword`: Indicates the keyword for the rundown provider
 * `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
 * `array<streaming_provider_config> providers`: The providers to turn on for the session
-* `uint sessionBufferMode`: Selects the session's buffering behavior. `0` = Drop (default): the circular buffer drops events when it overflows (lossy). `1` = Block: producers block until the reader frees buffer capacity instead of dropping events (non-lossy).
+* `uint sessionBufferMode`: Selects the session's buffering behavior. `0` = Drop (default): the buffer drops the newest events when it overflows (lossy). `1` = Block: producers block until the reader frees buffer capacity instead of dropping events (non-lossy).
 
 The `streaming_provider_config` and its `event_filter` are encoded exactly as in [`CollectTracing5`](#collecttracing5).
 
