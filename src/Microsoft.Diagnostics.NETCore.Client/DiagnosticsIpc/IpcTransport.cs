@@ -379,9 +379,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 lines = File.ReadAllLines(string.Format(_procStatusPathFormat, hostPid));
             }
-            catch (DirectoryNotFoundException)
+            catch (IOException)
             {
-                // The process may have exited between discovery and reading its status file.
+                // Exited or otherwise unreadable process: the status read surfaces as a plain IOException.
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // status is inaccessible for another user's process under hidepid.
                 return false;
             }
 
@@ -436,9 +441,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 environData = File.ReadAllBytes(string.Format(_procEnvironPathFormat, hostPid));
             }
-            catch (DirectoryNotFoundException)
+            catch (IOException)
             {
-                // The process may have exited between discovery and reading its environ file.
+                // Kernel threads have no environ (IOException) and exited processes' files vanish (DirectoryNotFoundException).
                 return tmpDirPath;
             }
             catch (UnauthorizedAccessException)

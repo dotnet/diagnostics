@@ -146,6 +146,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         [ConditionalFact(nameof(IsLinux))]
+        public void TryGetNamespacePid_NonExistentPid_DoesNotThrow()
+        {
+            bool result = PidIpcEndpoint.TryGetNamespacePid(int.MaxValue, out int nsPid);
+            Assert.False(result);
+            Assert.Equal(int.MaxValue, nsPid);
+        }
+
+        [ConditionalFact(nameof(IsLinux))]
         public void GetProcessTmpDir_ChildProcess_ReadsTmpdir()
         {
             string customTmpDir = "/custom/tmp/test";
@@ -267,6 +275,44 @@ namespace Microsoft.Diagnostics.NETCore.Client
             ServerNotAvailableException ex = Assert.Throws<ServerNotAvailableException>(
                 () => PidIpcEndpoint.GetDefaultAddress(int.MaxValue));
             Assert.Contains("is not running", ex.Message);
+        }
+
+        [ConditionalFact(nameof(IsLinux))]
+        public void GetProcessTmpDir_KernelThread_DoesNotThrow()
+        {
+            int unreadableEnvironPid = -1;
+            foreach (string procEntry in Directory.EnumerateDirectories("/proc"))
+            {
+                if (!int.TryParse(Path.GetFileName(procEntry), out int pid))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    File.ReadAllBytes($"/proc/{pid}/environ");
+                }
+                catch (IOException)
+                {
+                    unreadableEnvironPid = pid;
+                    break;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Another user's process is a different code path; keep looking.
+                }
+            }
+
+            if (unreadableEnvironPid == -1)
+            {
+                throw new SkipTestException("No process with an unreadable (IOException) /proc/{pid}/environ was found.");
+            }
+
+            bool environReadable = true;
+            string result = PidIpcEndpoint.GetProcessTmpDir(unreadableEnvironPid, out environReadable);
+
+            Assert.False(environReadable, $"environ for PID {unreadableEnvironPid} was unexpectedly reported as readable.");
+            Assert.Equal(Path.GetTempPath(), result);
         }
 
         #endregion

@@ -1912,25 +1912,6 @@ struct MemRange
 
 #ifndef FEATURE_PAL
 
-class StressLogMem
-{
-private:
-    // use a linked list for now, could be optimazied later
-    MemRange * list;
-
-    void AddRange (ULONG64 s, size_t l)
-    {
-        list = new MemRange (s, l, list);
-    }
-
-public:
-    StressLogMem () : list (NULL)
-        {}
-    ~StressLogMem ();
-    bool Init (ULONG64 stressLogAddr, IDebugDataSpaces* memCallBack);
-    bool IsInStressLog (ULONG64 addr);
-}; //class StressLogMem
-
 // An adapter class that DIA consumes so that it can read PE data from the an image
 // This implementation gets the backing data from the image loaded in debuggee memory
 // that has been layed out identical to the disk format (ie not seperated by section)

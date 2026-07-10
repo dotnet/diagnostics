@@ -57,7 +57,7 @@ HistRoot (histroot)                SetSymbolServer (setsymbolserver, loadsymbols
 HistObj  (histobj)                 SetClrPath (setclrpath)
 HistObjFind (histobjfind)          SOSFlush (sosflush)
 HistClear (histclear)              SOSStatus (sosstatus)
-                                   FAQ
+HistStats (histstats)              FAQ
                                    Help (soshelp)
 \\
 
@@ -1304,8 +1304,8 @@ disturb a fragile repro environment. The DumpLog function allows you to write
 that log out to a file. If no Filename is specified, the file "Stresslog.txt" 
 in the current directory is created.
 
-The optional argument addr allows one to specify a stress log other then the 
-default one.
+The optional -addr argument specifies the hex address of a stress log other than
+the default one.
 
     (lldb) dumplog
     Attempting to dump Stress log to file 'StressLog.txt'
@@ -1619,6 +1619,14 @@ cleanup the previous resources.
 
     (lldb) histclear
     Completed successfully.
+\\
+
+COMMAND: histstats.
+HistStats
+
+Displays per-GC counts of promote and relocate messages reconstructed from the
+stress log, then reports any root that was promoted or relocated more than once
+within a single GC. Run HistInit first.
 \\
 
 COMMAND: sethostruntime.
