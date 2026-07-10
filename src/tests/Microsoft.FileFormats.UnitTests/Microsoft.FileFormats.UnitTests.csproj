@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+    <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
   </PropertyGroup>
 
