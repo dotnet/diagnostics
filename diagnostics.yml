@@ -52,7 +52,7 @@ extends:
   parameters:
     stages:
     - stage: build
-      displayName: Build and Test Diagnostics
+      displayName: Build Diagnostics
       jobs:
 
         ############################
@@ -79,10 +79,12 @@ extends:
           jobTemplate: ${{ variables.jobTemplate }}
           name: Windows
           osGroup: Windows_NT
-          buildOnly: ${{ parameters.buildOnly }}
+          buildOnly: true
+          publishTestArtifacts: true
           buildConfigs:
           - configuration: Debug
             architecture: x64
+            artifactUploadPath: bin/Windows_NT.x64.Debug
           - configuration: Release
             architecture: x64
             artifactUploadPath: bin
@@ -101,6 +103,7 @@ extends:
           container: linux_x64
           crossBuild: true
           buildOnly: true
+          publishTestArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -119,6 +122,7 @@ extends:
           container: linux_musl_x64
           crossBuild: true
           buildOnly: true
+          publishTestArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -134,7 +138,8 @@ extends:
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
-          buildOnly: ${{ parameters.buildOnly }}
+          buildOnly: true
+          publishTestArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -142,6 +147,7 @@ extends:
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
               architecture: x64
+              artifactUploadPath: bin/osx.x64.Debug
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -212,13 +218,47 @@ extends:
               artifactUploadPath: bin/linux.arm64.Release
               artifactTargetPath: bin/linux-musl.arm64.Release
 
-      ############################
-      #                          #
-      #      Test only legs      #
-      #                          #
-      ############################
+    ############################
+    #                          #
+    #        Test stage        #
+    #                          #
+    ############################
 
-      - ${{ if ne(parameters.buildOnly, true) }}:
+    - ${{ if ne(parameters.buildOnly, true) }}:
+      - stage: test
+        displayName: Test Diagnostics
+        dependsOn: build
+        jobs:
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            name: Windows_Test
+            osGroup: Windows_NT
+            dependsOn: Windows
+            testOnly: true
+            buildConfigs:
+            - configuration: Debug
+              architecture: x64
+            - configuration: Release
+              architecture: x64
+            - configuration: Release
+              architecture: x86
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            name: MacOS_Test
+            osGroup: MacOS
+            dependsOn: MacOS
+            testOnly: true
+            buildConfigs:
+            - configuration: Release
+              architecture: x64
+            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+              - configuration: Debug
+                architecture: x64
+
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
@@ -267,9 +307,16 @@ extends:
         #         - configuration: Debug
         #           architecture: x64
 
+    ############################
+    #                          #
+    #      Package stage       #
+    #                          #
+    ############################
+
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - stage: package
         displayName: Package, Sign, and Generate BAR Manifests
+        dependsOn: build
         jobs:
         - template: /eng/common/templates-official/job/job.yml
           parameters:

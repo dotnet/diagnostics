@@ -124,8 +124,31 @@ if ($test) {
             $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"-class $classfilter\`""
         }
 
+        # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt
+        # product binaries), the debuggees built by BuildDebuggees in src/tests/dirs.proj were
+        # downloaded as part of TestArtifacts. Skip rebuilding them so this leg only runs tests.
+        # Test runtimes are still installed locally below (cheap, ensures correct file permissions).
+        $skipTestArtifactsBuild = if ($skipmanaged) { 'true' } else { 'false' }
+
+        # The managed build normally installs the test SDK/runtimes via an InstallRuntimes.proj
+        # ProjectReference. The -test step runs with Build=false, so install them explicitly here.
+        if ($skipmanaged) {
+            & "$engroot\common\build.ps1" `
+              -restore -build `
+              -projects "$engroot\InstallRuntimes.proj" `
+              -configuration $configuration `
+              -verbosity $verbosity `
+              -ci:$ci `
+              /p:TargetOS=$os `
+              /p:TargetArch=$architecture
+            if ($lastExitCode -ne 0) {
+                exit $lastExitCode
+            }
+        }
+
         & "$engroot\common\build.ps1" `
           -test `
+          -restore:$skipmanaged `
           -configuration $configuration `
           -verbosity $verbosity `
           -ci:$ci `
@@ -133,6 +156,7 @@ if ($test) {
           /p:TargetOS=$os `
           /p:TargetArch=$architecture `
           /p:TestArchitectures=$architecture `
+          /p:SkipTestArtifactsBuild=$skipTestArtifactsBuild `
           /p:DotnetRuntimeVersion="$dotnetruntimeversion" `
           /p:DotnetRuntimeDownloadVersion="$dotnetruntimedownloadversion" `
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
