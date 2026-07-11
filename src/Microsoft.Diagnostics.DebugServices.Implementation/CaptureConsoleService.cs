@@ -22,21 +22,28 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #region IConsoleService
 
-        public void Write(string text) => _charToLineConverter.Input(text);
-
-        public void WriteWarning(string text) => _charToLineConverter.Input(text);
-
-        public void WriteError(string text) => _charToLineConverter.Input(text);
-
-        public bool SupportsDml => false;
-
-        public void WriteDml(string text) => throw new NotSupportedException();
-
-        public void WriteDmlExec(string text, string _) => throw new NotSupportedException();
-
-        public CancellationToken CancellationToken { get; set; } = CancellationToken.None;
+        bool IConsoleService.SupportsDml => false;
 
         int IConsoleService.WindowWidth => int.MaxValue;
+
+        CancellationToken IConsoleService.CancellationToken { get; set; } = CancellationToken.None;
+
+        void IConsoleService.WriteString(OutputType type, string text)
+        {
+            switch (type)
+            {
+                case OutputType.Normal:
+                case OutputType.Warning:
+                case OutputType.Error:
+                    _charToLineConverter.Input(text);
+                    break;
+                case OutputType.Dml:
+                    throw new NotSupportedException();
+                case OutputType.Logging:
+                default:
+                    break;
+            }
+        }
 
         #endregion
     }

@@ -189,11 +189,13 @@ namespace Microsoft.Diagnostics.Repl
         /// <param name="type">output type</param>
         /// <param name="message">text</param>
         /// <exception cref="OperationCanceledException">ctrl-c interrupted the command</exception>
+        /// <exception cref="NotSupportedException">thrown if OutputType.Dml</exception>
         public void WriteOutput(OutputType type, string message)
         {
             switch (type)
             {
                 case OutputType.Normal:
+                case OutputType.Logging:
                     m_consoleConverter.Input(message);
                     break;
 
@@ -204,6 +206,9 @@ namespace Microsoft.Diagnostics.Repl
                 case OutputType.Error:
                     m_errorConverter.Input(message);
                     break;
+
+                case OutputType.Dml:
+                    throw new NotSupportedException();
             }
         }
 
@@ -601,19 +606,7 @@ namespace Microsoft.Diagnostics.Repl
 
         #region IConsoleService
 
-        void IConsoleService.Write(string text) => WriteOutput(OutputType.Normal, text);
-
-        void IConsoleService.WriteWarning(string text) => WriteOutput(OutputType.Warning, text);
-
-        void IConsoleService.WriteError(string text) => WriteOutput(OutputType.Error, text);
-
         bool IConsoleService.SupportsDml => false;
-
-        void IConsoleService.WriteDml(string text) => WriteOutput(OutputType.Normal, text);
-
-        void IConsoleService.WriteDmlExec(string text, string _) => WriteOutput(OutputType.Normal, text);
-
-        CancellationToken IConsoleService.CancellationToken { get; set; }
 
         int IConsoleService.WindowWidth
         {
@@ -629,6 +622,10 @@ namespace Microsoft.Diagnostics.Repl
                 }
             }
         }
+
+        CancellationToken IConsoleService.CancellationToken { get; set; }
+
+        void IConsoleService.WriteString(OutputType type, string text) => WriteOutput(type, text);
 
         #endregion
     }

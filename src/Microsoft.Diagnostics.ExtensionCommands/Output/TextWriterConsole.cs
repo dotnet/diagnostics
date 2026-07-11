@@ -23,20 +23,27 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             CancellationToken = cancellationToken;
         }
 
-        public void Write(string value) => _writer.Write(value);
-
-        public void WriteWarning(string value) => _writer.Write(value);
-
-        public void WriteError(string value) => _writer.Write(value);
-
         public bool SupportsDml => false;
-
-        public void WriteDml(string text) => throw new NotSupportedException();
-
-        public void WriteDmlExec(string text, string action) => throw new NotSupportedException();
 
         public CancellationToken CancellationToken { get; set; }
 
         public int WindowWidth => int.MaxValue;
+
+        void IConsoleService.WriteString(OutputType type, string text)
+        {
+            switch (type)
+            {
+                case OutputType.Normal:
+                case OutputType.Warning:
+                case OutputType.Error:
+                    _writer.Write(text);
+                    break;
+                case OutputType.Dml:
+                    throw new NotSupportedException();
+                case OutputType.Logging:
+                default:
+                    break;
+            }
+        }
     }
 }

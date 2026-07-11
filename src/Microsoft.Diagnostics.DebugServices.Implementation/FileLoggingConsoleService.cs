@@ -95,84 +95,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #region IConsoleService
 
-        public void Write(string text)
-        {
-            _consoleService.Write(text);
-            foreach (StreamWriter writer in _writers)
-            {
-                try
-                {
-                    writer.Write(text);
-                }
-                catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
-                {
-                }
-            }
-        }
-
-        public void WriteWarning(string text)
-        {
-            _consoleService.WriteWarning(text);
-            foreach (StreamWriter writer in _writers)
-            {
-                try
-                {
-                    writer.Write(text);
-                }
-                catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
-                {
-                }
-            }
-        }
-
-        public void WriteError(string text)
-        {
-            _consoleService.WriteError(text);
-            foreach (StreamWriter writer in _writers)
-            {
-                try
-                {
-                    writer.Write(text);
-                }
-                catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
-                {
-                }
-            }
-        }
-
         public bool SupportsDml => _consoleService.SupportsDml;
 
-        public void WriteDml(string text)
-        {
-            _consoleService.WriteDml(text);
-            foreach (StreamWriter writer in _writers)
-            {
-                try
-                {
-                    // TODO: unwrap the DML?
-                    writer.Write(text);
-                }
-                catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
-                {
-                }
-            }
-        }
-
-        public void WriteDmlExec(string text, string action)
-        {
-            _consoleService.WriteDmlExec(text, action);
-
-            foreach (StreamWriter writer in _writers)
-            {
-                try
-                {
-                    writer.Write(text);
-                }
-                catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
-                {
-                }
-            }
-        }
+        public int WindowWidth => _consoleService.WindowWidth;
 
         public CancellationToken CancellationToken
         {
@@ -180,7 +105,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             set { _consoleService.CancellationToken = value; }
         }
 
-        public int WindowWidth => _consoleService.WindowWidth;
+        public void WriteString(OutputType type, string text)
+        {
+            _consoleService.WriteString(type, text);
+            if (type != OutputType.Dml)
+            {
+                foreach (StreamWriter writer in _writers)
+                {
+                    try
+                    {
+                        writer.Write(text);
+                    }
+                    catch (Exception ex) when (ex is IOException or ObjectDisposedException or NotSupportedException)
+                    {
+                    }
+                }
+            }
+        }
 
         #endregion
     }
