@@ -11,35 +11,14 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IConsoleService
     {
         /// <summary>
-        /// Write text to console's standard out
+        /// Gets whether <see cref="OutputType.Dml"/> is supported.
         /// </summary>
-        /// <param name="value">text</param>
-        void Write(string value);
-
-        /// <summary>
-        /// Write warning text to console
-        /// </summary>
-        /// <param name="value"></param>
-        void WriteWarning(string value);
-
-        /// <summary>
-        /// Write error text to console
-        /// </summary>
-        /// <param name="value"></param>
-        void WriteError(string value);
-
-        /// <summary>Writes Debugger Markup Language (DML) markup text.</summary>
-        void WriteDml(string text);
-
-        /// <summary>
-        /// Writes an exec tag to the output stream.
-        /// </summary>
-        /// <param name="text">The display text.</param>
-        /// <param name="action">The action to perform.</param>
-        void WriteDmlExec(string text, string action);
-
-        /// <summary>Gets whether <see cref="WriteDml"/> is supported.</summary>
         bool SupportsDml { get; }
+
+        /// <summary>
+        /// Screen or window width or 0.
+        /// </summary>
+        int WindowWidth { get; }
 
         /// <summary>
         /// Cancellation token for current command
@@ -47,8 +26,10 @@ namespace Microsoft.Diagnostics.DebugServices
         CancellationToken CancellationToken { get; set; }
 
         /// <summary>
-        /// Screen or window width or 0.
+        /// Writes text to the console
         /// </summary>
-        int WindowWidth { get; }
+        /// <param name="type">type of text to write</param>
+        /// <param name="text">text to write</param>
+        void WriteString(OutputType type, string text);
     }
 }

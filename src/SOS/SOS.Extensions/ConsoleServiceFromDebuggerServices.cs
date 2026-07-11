@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Threading;
 using System.Xml.Linq;
 using Microsoft.Diagnostics.DebugServices;
@@ -20,32 +21,32 @@ namespace SOS.Extensions
 
         #region IConsoleService
 
-        public void Write(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.NORMAL, text);
-
-        public void WriteWarning(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.WARNING, text);
-
-        public void WriteError(string text) => _debuggerServices.OutputString(DEBUG_OUTPUT.ERROR, text);
-
-        public void WriteDml(string text) => _debuggerServices.OutputDmlString(DEBUG_OUTPUT.NORMAL, text);
-
-        public void WriteDmlExec(string text, string cmd)
-        {
-            if (!SupportsDml || string.IsNullOrWhiteSpace(cmd))
-            {
-                Write(text);
-            }
-            else
-            {
-                string dml = $"<exec cmd=\"{DmlEscape(cmd)}\">{DmlEscape(text)}</exec>";
-                WriteDml(dml);
-            }
-        }
-
         public bool SupportsDml => _supportsDml ??= _debuggerServices.SupportsDml;
 
         public CancellationToken CancellationToken { get; set; }
 
         int IConsoleService.WindowWidth => _debuggerServices.GetOutputWidth();
+
+        void IConsoleService.WriteString(OutputType type, string text)
+        {
+            switch (type)
+            {
+                case OutputType.Normal:
+                    _debuggerServices.OutputString(DEBUG_OUTPUT.NORMAL, text);
+                    break;
+                case OutputType.Warning:
+                    _debuggerServices.OutputString(DEBUG_OUTPUT.WARNING, text);
+                    break;
+                case OutputType.Error:
+                    _debuggerServices.OutputString(DEBUG_OUTPUT.ERROR, text);
+                    break;
+                case OutputType.Dml:
+                    _debuggerServices.OutputDmlString(DEBUG_OUTPUT.NORMAL, text);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
+            }
+        }
 
         #endregion
 
