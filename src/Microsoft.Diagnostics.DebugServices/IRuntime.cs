@@ -75,6 +75,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Returns the DBI file path
         /// </summary>
-        string GetDbiFilePath();
+        /// <param name="verifySignature">returns whether the returned DBI requires signature verification.</param>
+        string GetDbiFilePath(out bool verifySignature);
     }
 }

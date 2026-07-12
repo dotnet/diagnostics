@@ -23,10 +23,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly IHostAssetResolver _hostAssetResolver;
         private readonly ISettingsService _settingsService;
         private readonly ISymbolService _symbolService;
+        private readonly IConsoleService _consoleService;
         private Version _runtimeVersion;
         private ClrRuntime _clrRuntime;
         private string _dacFilePath;
-        private bool _verifySignature;      // This only applies to the regular DAC, not the CDAC
         private string _cdacFilePath;
         private string _dbiFilePath;
 
@@ -43,6 +43,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _hostAssetResolver = services.GetService<IHostAssetResolver>();
             _settingsService = services.GetService<ISettingsService>() ?? throw new ArgumentException("ISettingsService required");
             _symbolService = services.GetService<ISymbolService>() ?? throw new ArgumentException("ISymbolService required");
+            // IConsoleService is optional: when present it is used to surface actionable guidance
+            // (for example, to run 'setclrpath') when the DAC/DBI cannot be found or downloaded.
+            _consoleService = services.GetService<IConsoleService>();
 
             RuntimeType = GetRuntimeType(clrInfo.Flavor);
             RuntimeModule = services.GetService<IModuleService>().GetModuleFromBaseAddress(clrInfo.ModuleInfo.ImageBase);
@@ -101,13 +104,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_dacFilePath is null)
             {
-                _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac);
-                if (_dacFilePath is not null)
+                _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac, allowDownload: DownloadAllowed);
+                if (_dacFilePath is null)
                 {
-                    _verifySignature = _settingsService.DacSignatureVerificationEnabled;
+                    WriteDebugLibraryNotFoundWarning(DebugLibraryKind.Dac);
                 }
             }
-            verifySignature = _verifySignature;
+            verifySignature = VerifyDebugLibrarySignature(_dacFilePath);
             return _dacFilePath;
         }
 
@@ -122,7 +125,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // The cDAC is bundled with the diagnostics tool and is never downloaded, so a missing
             // path means it isn't available for this host.
-            _cdacFilePath ??= GetLibraryPath(DebugLibraryKind.CDac);
+            _cdacFilePath ??= GetLibraryPath(DebugLibraryKind.CDac, allowDownload: false);
             if (_cdacFilePath is null && _settingsService.CDacLoadPolicy == CDacLoadPolicy.UseCDac)
             {
                 // The cDAC was explicitly forced but isn't bundled with this tool.
@@ -131,11 +134,27 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return _cdacFilePath;
         }
 
-        public string GetDbiFilePath()
+        public string GetDbiFilePath(out bool verifySignature)
         {
-            _dbiFilePath ??= GetLibraryPath(DebugLibraryKind.Dbi);
+            if (_dbiFilePath is null)
+            {
+                _dbiFilePath = GetLibraryPath(DebugLibraryKind.Dbi, allowDownload: DownloadAllowed);
+                if (_dbiFilePath is null)
+                {
+                    WriteDebugLibraryNotFoundWarning(DebugLibraryKind.Dbi);
+                }
+            }
+            verifySignature = VerifyDebugLibrarySignature(_dbiFilePath);
             return _dbiFilePath;
         }
+
+        /// <summary>
+        /// The DAC and DBI are both verified according to the single DacSignatureVerificationEnabled
+        /// setting; there is no path where one is verified and the other is not. The cDAC is the only
+        /// debugging library that is never verified, and it is loaded through a separate path.
+        /// </summary>
+        private bool VerifyDebugLibrarySignature(string libraryPath) =>
+            libraryPath is not null && _settingsService.DacSignatureVerificationEnabled;
 
         #endregion
 
@@ -218,7 +237,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return null;
         }
 
-        private string GetLibraryPath(DebugLibraryKind kind)
+        private string GetLibraryPath(DebugLibraryKind kind, bool allowDownload)
         {
             Architecture currentArch = RuntimeInformation.ProcessArchitecture;
             string libraryPath = null;
@@ -239,7 +258,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         continue;
                     }
-                    if (libraryInfo.ArchivedUnder != SymbolProperties.None)
+                    if (libraryInfo.ArchivedUnder != SymbolProperties.None && allowDownload)
                     {
                         libraryPath = DownloadFile(libraryInfo);
                         if (libraryPath is not null)
@@ -251,6 +270,32 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             return libraryPath;
+        }
+
+        /// <summary>
+        /// Symbol-server download of a DAC/DBI is only permitted when the downloaded binary will be
+        /// authenticode-verified before it is loaded and run. That requires a Windows host (authenticode
+        /// verification is Windows-only, and a non-Windows host cannot load a foreign-format PE DAC/DBI
+        /// anyway) AND that verification has not been disabled. The DacSignatureVerification override only
+        /// relaxes verification for locally-provided DAC/DBI (see 'setclrpath'); it must never allow a
+        /// remotely-acquired, unauthenticated binary to be loaded. When download is not permitted the
+        /// matching DAC/DBI must be provided locally.
+        /// </summary>
+        private bool DownloadAllowed =>
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && _settingsService.DacSignatureVerificationEnabled;
+
+        private void WriteDebugLibraryNotFoundWarning(DebugLibraryKind kind)
+        {
+            if (DownloadAllowed)
+            {
+                return;
+            }
+            string library = kind == DebugLibraryKind.Dbi ? "DBI" : "DAC";
+            _consoleService?.WriteWarning(
+                $"Could not find matching {library} for runtime: {RuntimeModule.FileName}{Environment.NewLine}" +
+                $"Downloading debugging libraries from the symbol server is only supported on Windows with DAC signature verification enabled.{Environment.NewLine}" +
+                $"Use 'setclrpath <directory>' to point at the directory that contains the matching DAC/DBI files{Environment.NewLine}" +
+                $"(for example the runtime's shared framework directory). See 'soshelp setclrpath' for more information.{Environment.NewLine}");
         }
 
         private string GetLocalPath(DebugLibraryInfo libraryInfo)
@@ -408,7 +453,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (_dacFilePath is not null)
             {
                 sb.AppendLine();
-                string verify = _verifySignature ? "(verify)" : "(don't verify)";
+                string verify = VerifyDebugLibrarySignature(_dacFilePath) ? "(verify)" : "(don't verify)";
                 sb.Append($"    DAC: {_dacFilePath} {verify}");
             }
             if (_cdacFilePath is not null)
@@ -419,7 +464,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (_dbiFilePath is not null)
             {
                 sb.AppendLine();
-                sb.Append($"    DBI: {_dbiFilePath}");
+                string verify = VerifyDebugLibrarySignature(_dbiFilePath) ? "(verify)" : "(don't verify)";
+                sb.Append($"    DBI: {_dbiFilePath} {verify}");
             }
             return sb.ToString();
         }

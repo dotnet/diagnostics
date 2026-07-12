@@ -383,7 +383,7 @@ namespace SOS.Hosting
 
         private IntPtr CreateCorDebugProcess()
         {
-            string dbiFilePath = _runtime.GetDbiFilePath();
+            string dbiFilePath = _runtime.GetDbiFilePath(out bool verifyDbiSignature);
             if (dbiFilePath == null)
             {
                 Trace.TraceError($"Could not find matching DBI {dbiFilePath ?? ""} for this runtime: {_runtime.RuntimeModule.FileName}");
@@ -405,16 +405,13 @@ namespace SOS.Hosting
 
             if (_dbiHandle == IntPtr.Zero)
             {
-                try
+                // Verify the DBI signature (when required) and load it, holding the verification
+                // file lock through LoadLibrary to prevent a TOCTOU swap between verify and load.
+                _dbiHandle = VerifyAndLoadLibrary(dbiFilePath, verifyDbiSignature, "DBI");
+                if (_dbiHandle == IntPtr.Zero)
                 {
-                    _dbiHandle = DataTarget.PlatformFunctions.LoadLibrary(dbiFilePath);
-                }
-                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
-                {
-                    Trace.TraceError($"LoadLibrary({dbiFilePath}) FAILED {ex}");
                     return IntPtr.Zero;
                 }
-                Debug.Assert(_dbiHandle != IntPtr.Zero);
             }
             ClrDebuggingVersion maxDebuggerSupportedVersion = new()
             {
@@ -549,38 +546,53 @@ namespace SOS.Hosting
             return _cdacHandle;
         }
 
-        private static IntPtr LoadDacLibrary(string dacFilePath, bool verifySignature)
+        /// <summary>
+        /// Verifies the signature (when required) and loads the native library, holding the
+        /// verification file lock through LoadLibrary to prevent a TOCTOU race where the file could
+        /// be swapped after verification but before loading. Returns IntPtr.Zero on failure.
+        /// </summary>
+        private static IntPtr VerifyAndLoadLibrary(string filePath, bool verifySignature, string description)
         {
-            IntPtr dacHandle = IntPtr.Zero;
+            IntPtr handle = IntPtr.Zero;
             IDisposable fileLock = null;
             try
             {
                 if (verifySignature)
                 {
-                    Trace.TraceInformation($"Verifying DAC signing and cert {dacFilePath}");
+                    Trace.TraceInformation($"Verifying {description} signing and cert {filePath}");
 
-                    // Check if the DAC cert is valid before loading
-                    if (!AuthenticodeUtil.VerifyDacDll(dacFilePath, out fileLock))
+                    // Check if the cert is valid before loading
+                    if (!AuthenticodeUtil.VerifyDacDll(filePath, out fileLock))
                     {
                         return IntPtr.Zero;
                     }
                 }
                 try
                 {
-                    dacHandle = DataTarget.PlatformFunctions.LoadLibrary(dacFilePath);
+                    handle = DataTarget.PlatformFunctions.LoadLibrary(filePath);
                 }
                 catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
                 {
-                    Trace.TraceError($"LoadLibrary({dacFilePath}) FAILED {ex}");
+                    Trace.TraceError($"LoadLibrary({filePath}) FAILED {ex}");
                     return IntPtr.Zero;
                 }
             }
             finally
             {
-                // Keep DAC file locked until it loaded
+                // Keep the file locked until it is loaded
                 fileLock?.Dispose();
             }
-            Debug.Assert(dacHandle != IntPtr.Zero);
+            Debug.Assert(handle != IntPtr.Zero);
+            return handle;
+        }
+
+        private static IntPtr LoadDacLibrary(string dacFilePath, bool verifySignature)
+        {
+            IntPtr dacHandle = VerifyAndLoadLibrary(dacFilePath, verifySignature, "DAC");
+            if (dacHandle == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 DllMainDelegate dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(dacHandle, "DllMain");

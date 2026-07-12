@@ -148,6 +148,14 @@ namespace Microsoft.SymbolStore.Tests
                 Assert.False(dacdbiKeys.ContainsKey("libsos.so/elf-buildid-coreclr-ef8f58a0b402d11c68f78342ef4fcc7d23798d4c/libsos.so"));
                 Assert.False(dacdbiKeys.ContainsKey("sos.netcore.dll/elf-buildid-coreclr-ef8f58a0b402d11c68f78342ef4fcc7d23798d4c/sos.netcore.dll"));
 
+                // WindowsDebuggingLibrariesOnly restricts the DAC/DBI special files to the Windows-hosted
+                // cross-OS PE images (mscordaccore.dll / mscordbi.dll); the native ELF images are excluded.
+                Dictionary<string, SymbolStoreKey> peDacDbiKeys = generator.GetKeys(KeyTypeFlags.DacDbiKeys | KeyTypeFlags.WindowsDebuggingLibrariesOnly).ToDictionary((key) => key.Index);
+                Assert.True(peDacDbiKeys.ContainsKey("mscordaccore.dll/elf-buildid-coreclr-ef8f58a0b402d11c68f78342ef4fcc7d23798d4c/mscordaccore.dll"));
+                Assert.True(peDacDbiKeys.ContainsKey("mscordbi.dll/elf-buildid-coreclr-ef8f58a0b402d11c68f78342ef4fcc7d23798d4c/mscordbi.dll"));
+                Assert.False(peDacDbiKeys.ContainsKey("libmscordaccore.so/elf-buildid-coreclr-ef8f58a0b402d11c68f78342ef4fcc7d23798d4c/libmscordaccore.so"));
+                Assert.False(peDacDbiKeys.ContainsKey("libmscordbi.so/elf-buildid-coreclr-ef8f58a0b402d11c68f78342ef4fcc7d23798d4c/libmscordbi.so"));
+
                 Dictionary<string, SymbolStoreKey> runtimeKeys = generator.GetKeys(KeyTypeFlags.RuntimeKeys).ToDictionary((key) => key.Index);
                 Assert.True(runtimeKeys.ContainsKey("libcoreclr.so/elf-buildid-ef8f58a0b402d11c68f78342ef4fcc7d23798d4c/libcoreclr.so"));
             }
@@ -256,6 +264,12 @@ namespace Microsoft.SymbolStore.Tests
                 Assert.True(dacdbiKeys.ContainsKey("libmscordbi.dylib/mach-uuid-coreclr-3e0f66c5527338b18141e9d63b8ab415/libmscordbi.dylib"));
                 Assert.False(dacdbiKeys.ContainsKey("libsos.dylib/mach-uuid-coreclr-3e0f66c5527338b18141e9d63b8ab415/libsos.dylib"));
                 Assert.False(dacdbiKeys.ContainsKey("sos.netcore.dll/mach-uuid-coreclr-3e0f66c5527338b18141e9d63b8ab415/sos.netcore.dll"));
+
+                // There is no Windows-hosted cross-OS DAC/DBI for macOS, so WindowsDebuggingLibrariesOnly
+                // excludes the native Mach-O DAC/DBI images and produces no DAC/DBI keys.
+                Dictionary<string, SymbolStoreKey> peDacDbiKeys = generator.GetKeys(KeyTypeFlags.DacDbiKeys | KeyTypeFlags.WindowsDebuggingLibrariesOnly).ToDictionary((key) => key.Index);
+                Assert.False(peDacDbiKeys.ContainsKey("libmscordaccore.dylib/mach-uuid-coreclr-3e0f66c5527338b18141e9d63b8ab415/libmscordaccore.dylib"));
+                Assert.False(peDacDbiKeys.ContainsKey("libmscordbi.dylib/mach-uuid-coreclr-3e0f66c5527338b18141e9d63b8ab415/libmscordbi.dylib"));
 
             }
         }
