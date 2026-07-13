@@ -272,15 +272,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Remote symbol-server download of a DAC/DBI is only allowed when the downloaded binary will
-        /// be authenticode-verified before it is loaded and run. Authenticode verification is a
-        /// Windows-only capability, so remote download requires a Windows host, and it also requires
-        /// that verification has not been disabled: when DacSignatureVerificationEnabled is off the
-        /// DAC/DBI is loaded unverified, so it must be provided from a trusted local source rather than
-        /// downloaded. Explicitly-configured local symbol stores (cache/directory) are always allowed.
+        /// Remote symbol-server download of a DAC/DBI is only supported on a Windows host: a
+        /// non-Windows host cannot load a foreign-format PE DAC/DBI in-process, and authenticode
+        /// verification (which gates loading) is a Windows-only capability. Download itself is not
+        /// gated on the DacSignatureVerificationEnabled setting: that setting separately controls
+        /// whether the loaded DAC is verified (via ClrMD's VerifyDacOnWindows and the SOS-hosting
+        /// load path). On non-Windows hosts the matching DAC/DBI must be provided locally
+        /// (see 'setclrpath'). Explicitly-configured local symbol stores are always allowed.
         /// </summary>
-        private bool RemoteDownloadAllowed =>
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && _settingsService.DacSignatureVerificationEnabled;
+        private static bool RemoteDownloadAllowed => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
         private void WriteDebugLibraryNotFoundWarning(DebugLibraryKind kind)
         {
