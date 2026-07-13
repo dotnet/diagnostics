@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_dacFilePath is null)
             {
-                _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac, allowDownload: DownloadAllowed);
+                _dacFilePath = GetLibraryPath(DebugLibraryKind.Dac, remoteDownloadAllowed: RemoteDownloadAllowed);
                 if (_dacFilePath is null)
                 {
                     WriteDebugLibraryNotFoundWarning(DebugLibraryKind.Dac);
@@ -125,7 +125,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // The cDAC is bundled with the diagnostics tool and is never downloaded, so a missing
             // path means it isn't available for this host.
-            _cdacFilePath ??= GetLibraryPath(DebugLibraryKind.CDac, allowDownload: false);
+            _cdacFilePath ??= GetLibraryPath(DebugLibraryKind.CDac, remoteDownloadAllowed: false);
             if (_cdacFilePath is null && _settingsService.CDacLoadPolicy == CDacLoadPolicy.UseCDac)
             {
                 // The cDAC was explicitly forced but isn't bundled with this tool.
@@ -138,7 +138,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             if (_dbiFilePath is null)
             {
-                _dbiFilePath = GetLibraryPath(DebugLibraryKind.Dbi, allowDownload: DownloadAllowed);
+                _dbiFilePath = GetLibraryPath(DebugLibraryKind.Dbi, remoteDownloadAllowed: RemoteDownloadAllowed);
                 if (_dbiFilePath is null)
                 {
                     WriteDebugLibraryNotFoundWarning(DebugLibraryKind.Dbi);
@@ -237,7 +237,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return null;
         }
 
-        private string GetLibraryPath(DebugLibraryKind kind, bool allowDownload)
+        private string GetLibraryPath(DebugLibraryKind kind, bool remoteDownloadAllowed)
         {
             Architecture currentArch = RuntimeInformation.ProcessArchitecture;
             string libraryPath = null;
@@ -252,15 +252,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         break;
                     }
                     // The cDAC is an analyzer-host artifact shipped inside the diagnostics tool
-                    // (next to sos.dll, matching the host's RID). It is not symbol-store indexed
-                    // by the target runtime, so never attempt to download it.
+                    // (next to sos.dll, matching the host's RID), never look elsewhere.
                     if (libraryInfo.Kind == DebugLibraryKind.CDac)
                     {
                         continue;
                     }
-                    if (libraryInfo.ArchivedUnder != SymbolProperties.None && allowDownload)
+                    if (libraryInfo.ArchivedUnder != SymbolProperties.None)
                     {
-                        libraryPath = DownloadFile(libraryInfo);
+                        libraryPath = DownloadFile(libraryInfo, remoteDownloadAllowed);
                         if (libraryPath is not null)
                         {
                             break;
@@ -273,27 +272,26 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Symbol-server download of a DAC/DBI is only permitted when the downloaded binary will be
-        /// authenticode-verified before it is loaded and run. That requires a Windows host (authenticode
-        /// verification is Windows-only, and a non-Windows host cannot load a foreign-format PE DAC/DBI
-        /// anyway) AND that verification has not been disabled. The DacSignatureVerification override only
-        /// relaxes verification for locally-provided DAC/DBI (see 'setclrpath'); it must never allow a
-        /// remotely-acquired, unauthenticated binary to be loaded. When download is not permitted the
-        /// matching DAC/DBI must be provided locally.
+        /// Remote symbol-server download of a DAC/DBI is only allowed when the downloaded binary will
+        /// be authenticode-verified before it is loaded and run. Authenticode verification is a
+        /// Windows-only capability, so remote download requires a Windows host, and it also requires
+        /// that verification has not been disabled: when DacSignatureVerificationEnabled is off the
+        /// DAC/DBI is loaded unverified, so it must be provided from a trusted local source rather than
+        /// downloaded. Explicitly-configured local symbol stores (cache/directory) are always allowed.
         /// </summary>
-        private bool DownloadAllowed =>
+        private bool RemoteDownloadAllowed =>
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && _settingsService.DacSignatureVerificationEnabled;
 
         private void WriteDebugLibraryNotFoundWarning(DebugLibraryKind kind)
         {
-            if (DownloadAllowed)
+            if (RemoteDownloadAllowed)
             {
                 return;
             }
             string library = kind == DebugLibraryKind.Dbi ? "DBI" : "DAC";
             _consoleService?.WriteWarning(
                 $"Could not find matching {library} for runtime: {RuntimeModule.FileName}{Environment.NewLine}" +
-                $"Downloading debugging libraries from the symbol server is only supported on Windows with DAC signature verification enabled.{Environment.NewLine}" +
+                $"The debugging libraries were not found locally and are not downloaded from the symbol server in this configuration.{Environment.NewLine}" +
                 $"Use 'setclrpath <directory>' to point at the directory that contains the matching DAC/DBI files{Environment.NewLine}" +
                 $"(for example the runtime's shared framework directory). See 'soshelp setclrpath' for more information.{Environment.NewLine}");
         }
@@ -327,7 +325,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return localFilePath;
         }
 
-        private string DownloadFile(DebugLibraryInfo libraryInfo)
+        private string DownloadFile(DebugLibraryInfo libraryInfo, bool remoteAllowed)
         {
             OSPlatform platform = Target.OperatingSystem;
             string filePath = null;
@@ -393,7 +391,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (key is not null)
                 {
                     // Now download the DAC module from the symbol server
-                    filePath = _symbolService.DownloadFile(key.Index, key.FullPathName);
+                    filePath = _symbolService.DownloadFile(key.Index, key.FullPathName, remoteAllowed);
                 }
             }
             else

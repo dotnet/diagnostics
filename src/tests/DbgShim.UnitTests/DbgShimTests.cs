@@ -244,6 +244,16 @@ namespace Microsoft.Diagnostics
             {
                 throw new SkipTestException("Not supported on Alpine Linux (musl)");
             }
+            // This test analyzes a downloaded 6.0 dump whose matching DAC/DBI are not present locally
+            // (the test asset package ships only the dump), so they must be acquired from the symbol
+            // server. On non-Windows the DAC/DBI are native ELF/Mach-O images that cannot be
+            // authenticode-verified, so they are not downloaded (see Runtime.RemoteDownloadAllowed) and
+            // there is nothing to point 'setclrpath' at. Skip until the assets ship the matching DAC/DBI.
+            // Tracking: https://github.com/dotnet/diagnostics/issues/TODO
+            if (OS.Kind != OSKind.Windows)
+            {
+                throw new SkipTestException("Native DAC/DBI are not downloaded on non-Windows and are not bundled in the 6.0 test asset");
+            }
             if (!config.AllSettings.ContainsKey("DumpFile"))
             {
                 throw new SkipTestException("OpenVirtualProcessTest: No dump file");

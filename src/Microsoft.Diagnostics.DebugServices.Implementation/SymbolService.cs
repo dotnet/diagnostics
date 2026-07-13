@@ -458,7 +458,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         /// <param name="index">index to lookup on symbol server</param>
         /// <param name="file">the full path name of the file</param>
-        public string DownloadFile(string index, string file) => DownloadFile(new SymbolStoreKey(index, file));
+        /// <param name="remoteAllowed">if false, remote symbol servers are skipped</param>
+        public string DownloadFile(string index, string file, bool remoteAllowed) => DownloadFile(new SymbolStoreKey(index, file), remoteAllowed);
 
         /// <summary>
         /// Returns the portable PDB reader for the assembly path
@@ -697,7 +698,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
-            string downloadFilePath = DownloadFile(fileKey);
+            string downloadFilePath = DownloadFile(fileKey, remoteAllowed: true);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
                 Trace.TraceInformation("DownloadPE: downloaded {0}", downloadFilePath);
@@ -754,7 +755,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
-            string downloadFilePath = DownloadFile(fileKey);
+            string downloadFilePath = DownloadFile(fileKey, remoteAllowed: true);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
                 Trace.TraceInformation("DownloadELF: downloaded {0}", downloadFilePath);
@@ -811,7 +812,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
-            string downloadFilePath = DownloadFile(fileKey);
+            string downloadFilePath = DownloadFile(fileKey, remoteAllowed: true);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
                 Trace.TraceInformation("DownloadMachO: downloaded {0}", downloadFilePath);
@@ -825,14 +826,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Download a file from the symbol stores/server.
         /// </summary>
         /// <param name="key">index of the file to download</param>
+        /// <param name="remoteAllowed">if false, remote symbol servers are skipped</param>
         /// <returns>path to the downloaded file either in the cache or in the temp directory or null if error</returns>
-        private string DownloadFile(SymbolStoreKey key)
+        private string DownloadFile(SymbolStoreKey key, bool remoteAllowed)
         {
             string downloadFilePath = null;
 
             if (IsSymbolStoreEnabled)
             {
-                using SymbolStoreFile file = GetSymbolStoreFile(key);
+                using SymbolStoreFile file = GetSymbolStoreFile(key, remoteAllowed);
                 if (file != null)
                 {
                     try
@@ -917,7 +919,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         Debug.Assert(codeViewEntry.MinorVersion == ImageDebugDirectory.PortablePDBMinorVersion);
                         SymbolStoreKey key = PortablePDBFileKeyGenerator.GetKey(pdbPath, data.Guid);
-                        pdbStream = GetSymbolStoreFile(key)?.Stream;
+                        pdbStream = GetSymbolStoreFile(key, remoteAllowed: true)?.Stream;
                     }
                     if (pdbStream == null)
                     {
@@ -1021,13 +1023,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Attempts to download/retrieve from cache the key.
         /// </summary>
         /// <param name="key">index of the file to retrieve</param>
+        /// <param name="remoteAllowed">if false, remote symbol servers are skipped</param>
         /// <returns>stream or null</returns>
-        private SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key)
+        private SymbolStoreFile GetSymbolStoreFile(SymbolStoreKey key, bool remoteAllowed)
         {
             Debug.Assert(IsSymbolStoreEnabled);
             try
             {
-                return _symbolStore.GetFile(key, CancellationToken.None).GetAwaiter().GetResult();
+                return _symbolStore.GetFile(key, remoteAllowed, CancellationToken.None).GetAwaiter().GetResult();
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or BadImageFormatException or IOException)
             {

@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 
@@ -20,6 +21,11 @@ namespace Microsoft.Diagnostics.TestHelpers
             : base(config)
         {
             _host = new Host(HostType.DotnetDump);
+
+            // Mirror the production dotnet-dump default (see Analyzer): enable DAC signature
+            // verification on Windows. This is also what permits the DAC/DBI to be downloaded from
+            // the symbol server, since debugging libraries that cannot be verified are not downloaded.
+            _host.DacSignatureVerificationEnabled = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
             // Loading extensions or adding service factories not allowed after this point.
             ServiceContainer serviceContainer = _host.CreateServiceContainer();

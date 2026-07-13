@@ -79,7 +79,7 @@ namespace SOS.Hosting
                 try
                 {
                     SymbolStoreKey key = PEFileKeyGenerator.GetKey(imagePath, imageTimestamp, imageSize);
-                    string localFilePath = symbolService.DownloadFile(key.Index, key.FullPathName);
+                    string localFilePath = symbolService.DownloadFile(key.Index, key.FullPathName, remoteAllowed: true);
                     if (!string.IsNullOrWhiteSpace(localFilePath))
                     {
                         Stream peStream = TryOpenFile(localFilePath);
@@ -149,7 +149,7 @@ namespace SOS.Hosting
                 try
                 {
                     SymbolStoreKey key = PEFileKeyGenerator.GetKey(imagePath, imageTimestamp, imageSize);
-                    string localFilePath = symbolService.DownloadFile(key.Index, key.FullPathName);
+                    string localFilePath = symbolService.DownloadFile(key.Index, key.FullPathName, remoteAllowed: true);
                     if (!string.IsNullOrWhiteSpace(localFilePath))
                     {
                         localFilePath += "\0";              // null terminate the string
