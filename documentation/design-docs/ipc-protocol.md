@@ -287,6 +287,7 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing3 = 0x04, // create/start a given session with/without collecting stacks
     CollectTracing4 = 0x05, // create/start a given session with specific rundown keyword
     CollectTracing5 = 0x06, // create/start a given session with/without user_events
+    CollectTracing6 = 0x07, // create/start a given session with a specific buffering mode
 }
 ```
 See: [EventPipe Commands](#EventPipe-Commands)
@@ -348,6 +349,7 @@ enum class EventPipeCommandId : uint8_t
     CollectTracing3 = 0x04, // create/start a given session with/without collecting stacks
     CollectTracing4 = 0x05, // create/start a given session with specific rundown keyword
     CollectTracing5 = 0x06, // create/start a given session with/without user_events
+    CollectTracing6 = 0x07, // create/start a given session with a specific buffering mode
 }
 ```
 EventPipe Payloads are encoded with the following rules:
@@ -731,6 +733,44 @@ Header: `{ Magic; 28; 0xFF00; 0x0000; }`
 A Streaming Session started with `CollectTracing5` is followed by an Optional Continuation of a `nettrace` format stream of events.
 
 A User_events Session started with `CollectTracing5` expects the Optional Continuation to contain another message passing along the SCM_RIGHTS `user_events_data` file descriptor. See [details](#passing_file_descriptor)
+
+### `CollectTracing6`
+
+Command Code: `0x0207`
+
+The `CollectTracing6` command is an extension of the `CollectTracing5` command. It has all the capabilities of `CollectTracing5` and adds a trailing `sessionBufferMode` field to the **streaming session payload** that selects how the runtime's per-session event buffer behaves when it fills faster than the session is drained. The user_events session payload is unchanged from `CollectTracing5`, since a user_events session does not use the buffer manager.
+
+> Note available for .NET 11.0 and later.
+
+#### Inputs:
+
+Header: `{ Magic; 20 + Payload Size; 0x0207; 0x0000 }`
+
+#### Streaming Session Payload:
+* `uint session_type`: 0
+* `uint streaming_circularBufferMB`: Specifies the size of the Streaming session's circular buffer used for buffering event data.
+* `uint streaming_format`: 0 for the legacy NetPerf format and 1 for the NetTrace V4 format. Specifies the format in which event data will be serialized into the IPC Stream
+* `ulong rundownKeyword`: Indicates the keyword for the rundown provider
+* `bool requestStackwalk`: Indicates whether stacktrace information should be recorded.
+* `array<streaming_provider_config> providers`: The providers to turn on for the session
+* `uint sessionBufferMode`: Selects the session's buffering behavior. `0` = Drop (default): the buffer drops the newest events when it overflows (lossy). `1` = Block: producers block until the reader frees buffer capacity instead of dropping events (non-lossy).
+
+The `streaming_provider_config` and its `event_filter` are encoded exactly as in [`CollectTracing5`](#collecttracing5).
+
+#### User_events Session Payload:
+
+Identical to the [`CollectTracing5`](#collecttracing5) user_events session payload; it has no `sessionBufferMode` field.
+
+#### Returns (as an IPC Message Payload):
+
+Header: `{ Magic; 28; 0xFF00; 0x0000; }`
+
+`CollectTracing6` returns:
+* `ulong sessionId`: the ID for the EventPipe Session started
+
+A Streaming Session started with `CollectTracing6` is followed by an Optional Continuation of a `nettrace` format stream of events.
+
+A User_events Session started with `CollectTracing6` expects the Optional Continuation to contain another message passing along the SCM_RIGHTS `user_events_data` file descriptor. See [details](#passing_file_descriptor)
 
 ## EventPipe Payload Serialization Examples
 
