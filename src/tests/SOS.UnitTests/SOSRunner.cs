@@ -1101,9 +1101,10 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"sethostruntime {setHostRuntime}");
                 }
-                // Disabled until https://github.com/dotnet/diagnostics/issues/3265 is fixed.
-#if DISABLED
-                // If a single-file app, add the path to runtime so SOS can find DAC/DBI locally.
+                // Single-file apps bundle the runtime, so the DAC/DBI are not next to the debuggee and,
+                // under the "never download unverified executable code" policy, are not downloaded from
+                // the symbol server on non-Windows. Point SOS at the runtime directory so it resolves the
+                // DAC/DBI locally. (Previously disabled by https://github.com/dotnet/diagnostics/issues/3265.)
                 if (_config.PublishSingleFile)
                 {
                     if (!string.IsNullOrEmpty(runtimeSymbolsPath))
@@ -1111,7 +1112,6 @@ public class SOSRunner : IDisposable
                         commands.Add($"setclrpath {runtimeSymbolsPath}");
                     }
                 }
-#endif
                 if (!isHostRuntimeNone)
                 {
                     // If single-file app, add the debuggee directory containing the PDBs and
