@@ -47,6 +47,35 @@
 #define CLR_DAC_MODULE_NAME_W W("mscordacwks")
 #define MAIN_DBI_MODULE_NAME_W W("mscordbi")
 
+// The cDAC (contract-based data access) is bundled next to dbgshim and is never downloaded.
+#define CORECLR_CDAC_MODULE_NAME_W W("mscordaccore_universal")
+
+// Controls how OpenVirtualProcess locates the data-access layer when a data-access interface
+// (for example IXCLRDataProcess) is requested. Mirrors the diagnostics CDacLoadPolicy.
+enum CDacLoadPolicy
+{
+    // Prefer the co-located cDAC; fall back to the legacy DAC via the library provider. (default)
+    CDacLoadPolicy_PreferCDac = 0,
+    // Use only the cDAC; do not fall back to the legacy DAC.
+    CDacLoadPolicy_CDacOnly = 1,
+    // Use only the legacy DAC; do not try the cDAC.
+    CDacLoadPolicy_LegacyDacOnly = 2,
+};
+
+// A small dbgshim-owned control interface, implemented by the same object as ICLRDebugging, that
+// lets a consumer attach a cDAC load policy to the debugging object before requesting a data-access
+// interface from OpenVirtualProcess. ICLRDebugging itself is a frozen published interface, so the
+// policy is carried on this sibling interface instead of being added there.
+// {2D3B4F6A-1C7E-4B2A-9E5D-7F1A6C0B8D34}
+MIDL_INTERFACE("2D3B4F6A-1C7E-4B2A-9E5D-7F1A6C0B8D34")
+ICLRDebuggingDataAccessControl : public IUnknown
+{
+public:
+    // policy is a CDacLoadPolicy value.
+    virtual HRESULT STDMETHODCALLTYPE SetCDacLoadPolicy(DWORD policy) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetCDacLoadPolicy(DWORD* pPolicy) = 0;
+};
+
 #define MAX_BUILDID_SIZE 24
 
 // The format of the special debugging resource we embed in CLRs starting in v4
@@ -130,6 +159,31 @@ struct ClrInfo
         }
         return false;
     }
+
+    // Like IsValid, but only requires the DAC index to be present. Used by the data-access path,
+    // which resolves only the DAC and never needs the DBI index.
+    bool IsDacValid()
+    {
+        if (IndexType == LIBRARY_PROVIDER_INDEX_TYPE::Identity)
+        {
+            if (WindowsTarget)
+            {
+                return DacTimeStamp != 0 && DacSizeOfImage != 0;
+            }
+            else
+            {
+                return DacBuildIdSize > 0;
+            }
+        }
+        else if (IndexType == LIBRARY_PROVIDER_INDEX_TYPE::Runtime)
+        {
+            if (!WindowsTarget)
+            {
+                return RuntimeBuildIdSize > 0;
+            }
+        }
+        return false;
+    }
 };
 
 extern "C" bool TryGetSymbol(ICorDebugDataTarget* dataTarget, uint64_t baseAddress, const char* symbolName, uint64_t* symbolAddress);
@@ -143,11 +197,11 @@ extern "C" bool TryGetBuildIdFromFile(const WCHAR* modulePath, BYTE* buffer, ULO
 struct ICorDebugDataTarget;
 
 // ICLRDebugging implementation.
-class CLRDebuggingImpl : public ICLRDebugging
+class CLRDebuggingImpl : public ICLRDebugging, public ICLRDebuggingDataAccessControl
 {
 
 public:
-    CLRDebuggingImpl(GUID skuId) : m_cRef(0), m_skuId(skuId)
+    CLRDebuggingImpl(GUID skuId) : m_cRef(0), m_skuId(skuId), m_cdacLoadPolicy(CDacLoadPolicy_PreferCDac)
     {
     }
 
@@ -167,21 +221,70 @@ public:
 
     STDMETHOD(CanUnloadNow(HMODULE hModule));
 
-	// IUnknown methods:
-	STDMETHOD(QueryInterface(REFIID riid, void **ppvObject));
+    // ICLRDebuggingDataAccessControl methods:
+    STDMETHOD(SetCDacLoadPolicy(DWORD policy));
+    STDMETHOD(GetCDacLoadPolicy(DWORD* pPolicy));
 
-	// Standard AddRef implementation
-	STDMETHOD_(ULONG, AddRef());
+    // IUnknown methods:
+    STDMETHOD(QueryInterface(REFIID riid, void **ppvObject));
 
-	// Standard Release implementation.
-	STDMETHOD_(ULONG, Release());
+    // Standard AddRef implementation
+    STDMETHOD_(ULONG, AddRef());
 
+    // Standard Release implementation.
+    STDMETHOD_(ULONG, Release());
+
+    // Used by other dbgshim implementation classes to resolve the DBI and DAC.
     static HRESULT ProvideLibraries(ClrInfo& clrInfo,
                                     ICLRDebuggingLibraryProvider3* pLibraryProvider,
                                     SString& dbiModulePath,
                                     SString& dacModulePath);
 
 private:
+    // Locates and activates the data-access (IXCLRDataProcess) interface for the runtime module
+    // at moduleBaseAddress WITHOUT loading DBI. This is the worker behind an OpenVirtualProcess call
+    // that requests a data-access interface (see IsDataAccessInterface). Honors the object's cDAC
+    // load policy: prefers the cDAC (mscordaccore_universal) bundled next to dbgshim, and falls back
+    // to the DAC located via the library provider unless the policy forbids it. The caller owns the
+    // returned interface and may hand it to other consumers (for example ClrMD).
+    //
+    //   moduleBaseAddress - base address of the runtime module in the target
+    //   pDataTarget       - a per-runtime data target (ICLRDataTarget, and ICLRContractLocator for
+    //                       the cDAC) over process/dump-wide memory
+    //   pLibraryProvider  - ICLRDebuggingLibraryProvider3 used only for the DAC fallback; may be NULL
+    //   riid              - the interface to create, typically IID_IXCLRDataProcess
+    //   ppInstance        - out: the created interface on success
+    HRESULT OpenDataAccessProcess(
+        ULONG64 moduleBaseAddress,
+        IUnknown* pDataTarget,
+        IUnknown* pLibraryProvider,
+        REFIID riid,
+        IUnknown** ppInstance);
+
+    // Returns true for IXCLRDataProcess and the base ISOSDacInterface, which OpenVirtualProcess
+    // services directly from the DAC/cDAC (bypassing DBI) rather than through an ICorDebugProcess.
+    static bool IsDataAccessInterface(REFIID riid);
+
+    // Resolves ONLY the DAC via the library provider. The data-access path (OpenDataAccessProcess)
+    // needs the DAC but not the DBI, so this does not ask the provider for a DBI - a provider that
+    // cannot supply a DBI must not block a data-access-only request. Requires a path-returning
+    // provider (ICLRDebuggingLibraryProvider2 or 3); the handle-only v1 provider is not supported.
+    static HRESULT ProvideDacLibrary(ClrInfo& clrInfo,
+                                     IUnknown* pLibraryProvider,
+                                     SString& dacModulePath);
+
+    // Loads the given DAC/cDAC module and creates the requested data-access interface from it.
+    // The module is intentionally left resident (matching CanUnloadNow == S_FALSE, and the fact
+    // that the NativeAOT cDAC cannot be safely unloaded).
+    static HRESULT ActivateDataAccess(const WCHAR* dacModulePath,
+                                      IUnknown* pDataTarget,
+                                      REFIID riid,
+                                      IUnknown** ppInstance);
+
+    // Returns the path of the cDAC (mscordaccore_universal): the DOTNET_CDAC_PATH override if set,
+    // otherwise the copy bundled in dbgshim's own directory.
+    static HRESULT GetCDacPath(SString& cdacPath);
+
     static HRESULT ProvideLibraries(ClrInfo& clrInfo,
                                     IUnknown* pLibraryProvider,
                                     SString& dbiModulePath,
@@ -204,6 +307,7 @@ private:
 
 	volatile LONG m_cRef;
     GUID m_skuId;
+    CDacLoadPolicy m_cdacLoadPolicy;
 
 };  // class CLRDebuggingImpl
 

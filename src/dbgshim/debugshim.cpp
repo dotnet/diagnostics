@@ -11,8 +11,12 @@
 #include "dbgutil.h"
 #include <crtdbg.h>
 #include <clrinternal.h> //has the CLR_ID_V4_DESKTOP guid in it
+#include <clrdata.h>      //ICLRDataTarget, PFN_CLRDataCreateInstance
 #include <ntimageex.h>
 #include "palclr.h"
+#ifndef HOST_WINDOWS
+#include <dlfcn.h>
+#endif
 
 //*****************************************************************************
 // CLRDebuggingImpl implementation (ICLRDebugging)
@@ -90,6 +94,16 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
     CLR_DEBUGGING_PROCESS_FLAGS * pFlags)
 {
     //PRECONDITION(CheckPointer(pDataTarget));
+
+    // A request for a data-access interface (for example IXCLRDataProcess) is serviced directly from
+    // the DAC/cDAC: no DBI is loaded and no ICorDebugProcess is created. This shares the runtime
+    // identification path (GetCLRInfo) but honors this object's cDAC load policy for locating the
+    // data-access layer, and does not use the DBI-oriented pFlags/pMaxDebuggerSupportedVersion checks
+    // below. Historically this riid returned E_NOINTERFACE here, so servicing it is purely additive.
+    if (ppProcess != NULL && IsDataAccessInterface(riidProcess))
+    {
+        return OpenDataAccessProcess(moduleBaseAddress, pDataTarget, pLibraryProvider, riidProcess, ppProcess);
+    }
 
     HRESULT hr = S_OK;
     ClrInfo clrInfo;
@@ -856,19 +870,367 @@ STDMETHODIMP CLRDebuggingImpl::CanUnloadNow(HMODULE hModule)
     return hr;
 }
 
+// Anchor used to locate the directory containing the loaded dbgshim module.
+static void DbgShimModuleAnchor() {}
+
+// Returns the full path of the cDAC (mscordaccore_universal) that is bundled next to dbgshim.
+// The cDAC ships with the tool and is never downloaded; when it is not present (for example RIDs
+// that do not carry a cDAC) callers fall back to the in-box DAC via the library provider.
+HRESULT CLRDebuggingImpl::GetCDacPath(SString& cdacPath)
+{
+    cdacPath.Clear();
+
+    // An explicit override wins over the co-located cDAC. This lets a tool point dbgshim at a
+    // specific cDAC build without having to place it next to dbgshim (e.g. to test a newer contract
+    // reader against an older runtime, or a locally built cDAC). The value is a full path to the
+    // cDAC library.
+#ifdef HOST_WINDOWS
+    {
+        WCHAR overrideBuffer[MAX_LONGPATH];
+        DWORD overrideLen = GetEnvironmentVariableW(W("DOTNET_CDAC_PATH"), overrideBuffer, ARRAY_SIZE(overrideBuffer));
+        if (overrideLen > 0 && overrideLen < ARRAY_SIZE(overrideBuffer))
+        {
+            cdacPath.Set(overrideBuffer);
+            return S_OK;
+        }
+    }
+#else
+    {
+        const char* overridePath = getenv("DOTNET_CDAC_PATH");
+        if (overridePath != NULL && overridePath[0] != '\0')
+        {
+            cdacPath.SetUTF8((const UTF8*)overridePath);
+            return S_OK;
+        }
+    }
+#endif
+
+    SString modulePath;
+#ifdef HOST_WINDOWS
+    HMODULE hModule = NULL;
+    if (!GetModuleHandleExW(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            (LPCWSTR)&DbgShimModuleAnchor,
+            &hModule))
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    WCHAR buffer[MAX_LONGPATH];
+    if (GetModuleFileNameW(hModule, buffer, ARRAY_SIZE(buffer)) == 0)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+    modulePath.Set(buffer);
+#else
+    // dbgshim links libdl; dladdr resolves the file that contains the anchor symbol.
+    Dl_info info;
+    if (dladdr((void*)&DbgShimModuleAnchor, &info) == 0 || info.dli_fname == NULL)
+    {
+        return E_FAIL;
+    }
+    modulePath.SetUTF8((const UTF8*)info.dli_fname);
+#endif
+
+    // Replace dbgshim's file name with the cDAC file name in the same directory.
+    SString::Iterator lastSeparator = modulePath.End();
+    if (!modulePath.FindBack(lastSeparator, DIRECTORY_SEPARATOR_CHAR_W))
+    {
+        return E_FAIL;
+    }
+    lastSeparator++;
+    modulePath.Truncate(lastSeparator);
+    modulePath.Append(MAKEDLLNAME_W(CORECLR_CDAC_MODULE_NAME_W));
+
+    cdacPath.Set(modulePath);
+    return S_OK;
+}
+
+// Loads the given DAC/cDAC module and creates the requested data-access interface from it by
+// calling its CLRDataCreateInstance export. The module is intentionally left resident.
+HRESULT CLRDebuggingImpl::ActivateDataAccess(
+    const WCHAR* dacModulePath,
+    IUnknown* pDataTarget,
+    REFIID riid,
+    IUnknown** ppInstance)
+{
+    HMODULE hDac = LoadLibraryW(dacModulePath);
+    if (hDac == NULL)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    PFN_CLRDataCreateInstance pfnCLRDataCreateInstance =
+        (PFN_CLRDataCreateInstance)GetProcAddress(hDac, "CLRDataCreateInstance");
+    if (pfnCLRDataCreateInstance == NULL)
+    {
+        // Leave the module resident (never unload the cDAC); report the missing export.
+        return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
+    }
+
+    // CLRDataCreateInstance takes an ICLRDataTarget; the cDAC additionally queries the same object
+    // for ICLRContractLocator to find the target's contract descriptor.
+    ICLRDataTarget* pDacDataTarget = NULL;
+    HRESULT hr = pDataTarget->QueryInterface(__uuidof(ICLRDataTarget), (void**)&pDacDataTarget);
+    if (FAILED(hr))
+    {
+        return CORDBG_E_MISSING_DATA_TARGET_INTERFACE;
+    }
+
+    hr = pfnCLRDataCreateInstance(riid, pDacDataTarget, (void**)ppInstance);
+    pDacDataTarget->Release();
+    return hr;
+}
+
+HRESULT CLRDebuggingImpl::OpenDataAccessProcess(
+    ULONG64 moduleBaseAddress,
+    IUnknown* pDataTarget,
+    IUnknown* pLibraryProvider,
+    REFIID riid,
+    IUnknown** ppInstance)
+{
+    if (pDataTarget == NULL || ppInstance == NULL)
+    {
+        return E_INVALIDARG;
+    }
+    *ppInstance = NULL;
+
+    // Track the most specific failure so that, when every allowed source fails, the caller sees why
+    // the cDAC declined rather than a generic error.
+    HRESULT activationHr = CORDBG_E_NOT_CLR;
+
+    // Step 1: prefer the cDAC (DOTNET_CDAC_PATH override, else bundled next to dbgshim), unless the
+    // policy forbids it. The cDAC self-validates the target through its embedded contract descriptor,
+    // which it reads via ICLRDataTarget/ICLRContractLocator on pDataTarget. This path therefore needs
+    // neither the runtime identity index nor ICorDebugDataTarget::GetPlatform; both are computed lazily
+    // only for the DAC fallback below. moduleBaseAddress is not consulted here - the data target's
+    // ICLRContractLocator already knows where the descriptor lives.
+    if (m_cdacLoadPolicy != CDacLoadPolicy_LegacyDacOnly)
+    {
+        SString cdacPath;
+        HRESULT cdacPathHr = GetCDacPath(cdacPath);
+        if (SUCCEEDED(cdacPathHr))
+        {
+            HRESULT cdacHr = ActivateDataAccess(cdacPath.GetUnicode(), pDataTarget, riid, ppInstance);
+            if (SUCCEEDED(cdacHr))
+            {
+                return S_OK;
+            }
+
+            // The cDAC could not service this target: it is older than the runtime, or the target
+            // predates the cDAC contract descriptor. The cDAC (a NativeAOT library) is intentionally
+            // left resident. cdacHr carries a cDAC-specific code (CDAC_E_*) that policy can surface.
+            // Fall through to the DAC unless the policy forbids it.
+            *ppInstance = NULL;
+            activationHr = cdacHr;
+        }
+        else
+        {
+            // No cDAC is available (not bundled and no override). Remember why for the CDacOnly case.
+            activationHr = cdacPathHr;
+        }
+
+        if (m_cdacLoadPolicy == CDacLoadPolicy_CDacOnly)
+        {
+            // Policy forbids the legacy DAC fallback; report why the cDAC declined or was unavailable.
+            return activationHr;
+        }
+    }
+
+    // Step 2: fall back to the DAC located via the library provider (DAC-only; DBI is not needed).
+    // Only this path needs the runtime identity index, so the ICorDebugDataTarget QI and GetCLRInfo
+    // work (which reads the target's platform and version/index resources) is deferred to here.
+    if (pLibraryProvider == NULL)
+    {
+        return activationHr;
+    }
+
+    ReleaseHolder<ICorDebugDataTarget> pDt;
+    HRESULT hr = pDataTarget->QueryInterface(__uuidof(ICorDebugDataTarget), (void**)&pDt);
+    if (FAILED(hr))
+    {
+        return CORDBG_E_MISSING_DATA_TARGET_INTERFACE;
+    }
+
+    ClrInfo clrInfo;
+    CLR_DEBUGGING_VERSION version = {};
+    hr = GetCLRInfo(pDt, moduleBaseAddress, &version, clrInfo);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    SString dacModulePath;
+    hr = ProvideDacLibrary(clrInfo, pLibraryProvider, dacModulePath);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    return ActivateDataAccess(dacModulePath.GetUnicode(), pDataTarget, riid, ppInstance);
+}
+
+// Resolves ONLY the DAC via the library provider. Mirrors the DAC half of ProvideLibraries so that
+// a data-access-only request is not coupled to the provider also being able to supply a DBI. The
+// small duplication with ProvideLibraries is deliberate: ProvideLibraries is a stable, tested path
+// and is left untouched rather than being refactored underneath the DBI scenario.
+HRESULT CLRDebuggingImpl::ProvideDacLibrary(
+    ClrInfo& clrInfo,
+    IUnknown* punk,
+    SString& dacModulePath)
+{
+    ReleaseHolder<ICLRDebuggingLibraryProvider3> pLibraryProvider3;
+    ReleaseHolder<ICLRDebuggingLibraryProvider2> pLibraryProvider2;
+    LPWSTR pDacModulePath = NULL;
+    HRESULT hr = S_OK;
+
+    _ASSERTE(punk != NULL);
+
+    if (!clrInfo.IsDacValid())
+    {
+        hr = CORDBG_E_INCOMPATIBLE_PROTOCOL;
+        goto exit;
+    }
+
+    if (SUCCEEDED(punk->QueryInterface(__uuidof(ICLRDebuggingLibraryProvider3), (void**)&pLibraryProvider3)))
+    {
+        const WCHAR* wszRuntimeModulePath = !clrInfo.RuntimeModulePath.IsEmpty() ? clrInfo.RuntimeModulePath.GetUnicode() : NULL;
+        if (clrInfo.WindowsTarget)
+        {
+            if (FAILED(pLibraryProvider3->ProvideWindowsLibrary(
+                clrInfo.DacName,
+                wszRuntimeModulePath,
+                clrInfo.IndexType,
+                clrInfo.DacTimeStamp,
+                clrInfo.DacSizeOfImage,
+                &pDacModulePath)) || pDacModulePath == NULL)
+            {
+                hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+                goto exit;
+            }
+        }
+        else
+        {
+            BYTE* dacBuildId = NULL;
+            ULONG dacBuildIdSize = 0;
+            switch (clrInfo.IndexType)
+            {
+                case LIBRARY_PROVIDER_INDEX_TYPE::Identity:
+                    if (clrInfo.DacBuildIdSize > 0)
+                    {
+                        dacBuildId = clrInfo.DacBuildId;
+                        dacBuildIdSize = clrInfo.DacBuildIdSize;
+                    }
+                    break;
+                case LIBRARY_PROVIDER_INDEX_TYPE::Runtime:
+                    if (clrInfo.RuntimeBuildIdSize > 0)
+                    {
+                        dacBuildId = clrInfo.RuntimeBuildId;
+                        dacBuildIdSize = clrInfo.RuntimeBuildIdSize;
+                    }
+                    break;
+                default:
+                    hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+                    goto exit;
+            }
+            if (FAILED(pLibraryProvider3->ProvideUnixLibrary(
+                clrInfo.DacName,
+                wszRuntimeModulePath,
+                clrInfo.IndexType,
+                dacBuildId,
+                dacBuildIdSize,
+                &pDacModulePath)) || pDacModulePath == NULL)
+            {
+                hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+                goto exit;
+            }
+        }
+    }
+    else if (SUCCEEDED(punk->QueryInterface(__uuidof(ICLRDebuggingLibraryProvider2), (void**)&pLibraryProvider2)))
+    {
+        // Adjust the timestamp and size of image if this DAC is a known buggy version and needs to be retargeted
+        RetargetDacIfNeeded(&clrInfo.DacTimeStamp, &clrInfo.DacSizeOfImage);
+
+        if (FAILED(pLibraryProvider2->ProvideLibrary2(clrInfo.DacName, clrInfo.DacTimeStamp, clrInfo.DacSizeOfImage, &pDacModulePath)) || pDacModulePath == NULL)
+        {
+            hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+            goto exit;
+        }
+    }
+    else
+    {
+        // The data-access path needs a module path; the handle-only v1 provider is not supported here.
+        hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        goto exit;
+    }
+
+exit:
+    if (pDacModulePath != NULL)
+    {
+        dacModulePath.Set(pDacModulePath);
+#ifdef HOST_UNIX
+        free(pDacModulePath);
+#else
+        CoTaskMemFree(pDacModulePath);
+#endif
+    }
+    return hr;
+}
+
+// Data-access interfaces OpenVirtualProcess services directly from the DAC/cDAC (bypassing DBI).
+bool CLRDebuggingImpl::IsDataAccessInterface(REFIID riid)
+{
+    // IID_IXCLRDataProcess {5c552ab6-fc09-4cb3-8e36-22fa03c798b7}
+    static const GUID IID_IXCLRDataProcess_Local =
+        { 0x5c552ab6, 0xfc09, 0x4cb3, { 0x8e, 0x36, 0x22, 0xfa, 0x03, 0xc7, 0x98, 0xb7 } };
+
+    // IID_ISOSDacInterface {436f00f2-b42a-4b9f-870c-e73db66ae930}
+    static const GUID IID_ISOSDacInterface_Local =
+        { 0x436f00f2, 0xb42a, 0x4b9f, { 0x87, 0x0c, 0xe7, 0x3d, 0xb6, 0x6a, 0xe9, 0x30 } };
+
+    return riid == IID_IXCLRDataProcess_Local || riid == IID_ISOSDacInterface_Local;
+}
+
+STDMETHODIMP CLRDebuggingImpl::SetCDacLoadPolicy(DWORD policy)
+{
+    if (policy > CDacLoadPolicy_LegacyDacOnly)
+    {
+        return E_INVALIDARG;
+    }
+    m_cdacLoadPolicy = (CDacLoadPolicy)policy;
+    return S_OK;
+}
+
+STDMETHODIMP CLRDebuggingImpl::GetCDacLoadPolicy(DWORD* pPolicy)
+{
+    if (pPolicy == NULL)
+    {
+        return E_POINTER;
+    }
+    *pPolicy = (DWORD)m_cdacLoadPolicy;
+    return S_OK;
+}
+
+
 STDMETHODIMP CLRDebuggingImpl::QueryInterface(REFIID riid, void **ppvObject)
 {
     HRESULT hr = S_OK;
 
     if (riid == __uuidof(IUnknown))
     {
-        IUnknown *pItf = static_cast<IUnknown *>(this);
+        IUnknown *pItf = static_cast<IUnknown *>(static_cast<ICLRDebugging *>(this));
         pItf->AddRef();
         *ppvObject = pItf;
     }
     else if (riid == __uuidof(ICLRDebugging))
     {
         ICLRDebugging *pItf = static_cast<ICLRDebugging *>(this);
+        pItf->AddRef();
+        *ppvObject = pItf;
+    }
+    else if (riid == __uuidof(ICLRDebuggingDataAccessControl))
+    {
+        ICLRDebuggingDataAccessControl *pItf = static_cast<ICLRDebuggingDataAccessControl *>(this);
         pItf->AddRef();
         *ppvObject = pItf;
     }
