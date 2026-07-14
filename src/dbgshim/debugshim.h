@@ -261,39 +261,12 @@ private:
         REFIID riid,
         IUnknown** ppInstance);
 
-    // Returns true for IXCLRDataProcess and the base ISOSDacInterface, which OpenVirtualProcess
-    // services directly from the DAC/cDAC (bypassing DBI) rather than through an ICorDebugProcess.
-    static bool IsDataAccessInterface(REFIID riid);
-
-    // Resolves ONLY the DAC via the library provider. The data-access path (OpenDataAccessProcess)
-    // needs the DAC but not the DBI, so this does not ask the provider for a DBI - a provider that
-    // cannot supply a DBI must not block a data-access-only request. Requires a path-returning
-    // provider (ICLRDebuggingLibraryProvider2 or 3); the handle-only v1 provider is not supported.
-    static HRESULT ProvideDacLibrary(ClrInfo& clrInfo,
-                                     IUnknown* pLibraryProvider,
-                                     SString& dacModulePath);
-
-    // Loads the given DAC/cDAC module and creates the requested data-access interface from it.
-    // The module is intentionally left resident (matching CanUnloadNow == S_FALSE, and the fact
-    // that the NativeAOT cDAC cannot be safely unloaded).
-    static HRESULT ActivateDataAccess(const WCHAR* dacModulePath,
-                                      IUnknown* pDataTarget,
-                                      REFIID riid,
-                                      IUnknown** ppInstance);
-
-    // Returns the path of the cDAC (mscordaccore_universal): the DOTNET_CDAC_PATH override if set,
-    // otherwise the copy bundled in dbgshim's own directory.
-    static HRESULT GetCDacPath(SString& cdacPath);
-
     static HRESULT ProvideLibraries(ClrInfo& clrInfo,
                                     IUnknown* pLibraryProvider,
                                     SString& dbiModulePath,
                                     SString& dacModulePath,
                                     HMODULE* phDbi,
                                     HMODULE* phDac);
-
-    static VOID RetargetDacIfNeeded(DWORD* pdwTimeStamp,
-                                    DWORD* pdwSizeOfImage);
 
     HRESULT GetCLRInfo(ICorDebugDataTarget * pDataTarget,
                        ULONG64 moduleBaseAddress,
