@@ -42,6 +42,7 @@ namespace SOS.Hosting
         private readonly string _dbiModulePath;
         private readonly string _dacModulePath;
         private ISymbolService _symbolService;
+        private string _tempDirectory;
 
         public LibraryProviderWrapper(string runtimeModulePath, string dbiModulePath, string dacModulePath)
            : this(GetRunningOS(), GetBuildId(runtimeModulePath), dbiModulePath, dacModulePath)
@@ -504,7 +505,17 @@ namespace SOS.Hosting
 
         public int AddTarget(ITarget target) => throw new NotImplementedException();
 
-        public string GetTempDirectory() => throw new NotImplementedException();
+        public string GetTempDirectory()
+        {
+            if (_tempDirectory == null)
+            {
+                // Per-process temp directory for files the symbol service downloads (for example the
+                // cross-OS DAC/DBI) that are not already present on disk. SOS requires a trailing separator.
+                _tempDirectory = Path.Combine(Path.GetTempPath(), "dbgshim" + Process.GetCurrentProcess().Id) + Path.DirectorySeparatorChar;
+                Directory.CreateDirectory(_tempDirectory);
+            }
+            return _tempDirectory;
+        }
 
         #endregion
 
