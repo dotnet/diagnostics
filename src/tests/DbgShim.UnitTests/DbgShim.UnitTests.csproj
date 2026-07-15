@@ -4,7 +4,7 @@
     <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DbgShimConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</DbgShimConfigFileName>
-    <TestAssetsVersion>1.0.351101</TestAssetsVersion>
+    <TestAssetsVersion>1.0.736301</TestAssetsVersion>
     <CopyDebuggeeSourcesToArtifacts>true</CopyDebuggeeSourcesToArtifacts>
   </PropertyGroup>
 
