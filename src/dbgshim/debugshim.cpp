@@ -23,9 +23,9 @@
 //*****************************************************************************
 
 // Data-access activation helpers. These are translation-unit-local: they need no CLRDebuggingImpl
-// state, so they are free functions rather than class members. GetCDacPath doubles as the module
-// anchor - taking the address of any function defined here resolves the dbgshim module on disk.
+// state, so they are free functions rather than class members.
 static bool IsDataAccessInterface(REFIID riid);
+static HRESULT GetDbiPath(SString& dbiPath);
 static HRESULT GetCDacPath(SString& cdacPath);
 static HRESULT ActivateDataAccess(const WCHAR* dacModulePath,
                                   IUnknown* pDataTarget,
@@ -127,6 +127,7 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
     HMODULE hDac = NULL;
     ICorDebugDataTarget * pDt = NULL;
     CLR_DEBUGGING_VERSION version = {};
+    bool usingProviderDac = m_cdacLoadPolicy == CDacLoadPolicy_LegacyDacOnly;
 
     // argument checking
     if ((ppProcess != NULL || pFlags != NULL) && pLibraryProvider == NULL)
@@ -161,16 +162,25 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
     // mscordbi and DAC and do the version specific OVP work
     if (SUCCEEDED(hr) && (ppProcess != NULL || pFlags != NULL))
     {
-        hr = ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
-
-        // Need to load the DAC first because DBI references the PAL exports in the DAC
-        if (SUCCEEDED(hr) && hDac == NULL)
+        if (m_cdacLoadPolicy == CDacLoadPolicy_LegacyDacOnly)
         {
-            hDac = LoadLibraryW(dacModulePath);
-            if (hDac == NULL)
+            hr = ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
+
+            // Need to load the DAC first because DBI references the PAL exports in the DAC
+            if (SUCCEEDED(hr) && hDac == NULL)
             {
-                hr = HRESULT_FROM_WIN32(GetLastError());
+                hDac = LoadLibraryW(dacModulePath);
+                if (hDac == NULL)
+                {
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                }
             }
+        }
+        else
+        {
+            // The cDAC DBI pair ships with dbgshim. Do not consult the runtime library provider
+            // unless PreferCDac needs to fall back to the target's matching legacy DBI and DAC.
+            hr = GetDbiPath(dbiModulePath);
         }
 
         if (SUCCEEDED(hr) && hDbi == NULL)
@@ -182,13 +192,93 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
             }
         }
 
+        if (FAILED(hr) && m_cdacLoadPolicy == CDacLoadPolicy_PreferCDac)
+        {
+            // If bundled DBI cannot be resolved or loaded, retry with the target-matching DBI and
+            // DAC from the provider.
+            hDbi = NULL;
+            dbiModulePath.Clear();
+            dacModulePath.Clear();
+            hr = ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
+            if (SUCCEEDED(hr) && hDac == NULL)
+            {
+                hDac = LoadLibraryW(dacModulePath);
+                if (hDac == NULL)
+                {
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                }
+            }
+            if (SUCCEEDED(hr) && hDbi == NULL)
+            {
+                hDbi = LoadLibraryW(dbiModulePath);
+                if (hDbi == NULL)
+                {
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                }
+            }
+            usingProviderDac = true;
+        }
+
         *ppProcess = NULL;
 
-        if (SUCCEEDED(hr) && !dacModulePath.IsEmpty())
+        if (SUCCEEDED(hr))
         {
             // Get access to the latest OVP implementation and call it
             OpenVirtualProcessImpl2FnPtr ovpFn = (OpenVirtualProcessImpl2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl2");
-            if (ovpFn != NULL)
+            if (ovpFn != NULL && !usingProviderDac)
+            {
+                SString cdacModulePath;
+                hr = GetCDacPath(cdacModulePath);
+                if (SUCCEEDED(hr))
+                {
+                    hr = ovpFn(moduleBaseAddress, pDataTarget, cdacModulePath, pMaxDebuggerSupportedVersion, riidProcess, ppProcess, pFlags);
+                    if (SUCCEEDED(hr) && *ppProcess == NULL)
+                    {
+                        hr = E_FAIL;
+                    }
+                }
+            }
+            else if (ovpFn == NULL && !usingProviderDac)
+            {
+                hr = CORDBG_E_MISSING_DEBUGGER_EXPORTS;
+            }
+
+            if (FAILED(hr) && m_cdacLoadPolicy == CDacLoadPolicy_PreferCDac)
+            {
+                _ASSERTE(ppProcess == NULL || *ppProcess == NULL);
+                _ASSERTE(pFlags == NULL || *pFlags == 0);
+
+                // The cDAC declined the target or was unavailable. Resolve and load the
+                // target-matching DBI and DAC only now.
+                hDbi = NULL;
+                hDac = NULL;
+                dbiModulePath.Clear();
+                dacModulePath.Clear();
+                hr = ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
+                if (SUCCEEDED(hr) && hDac == NULL)
+                {
+                    hDac = LoadLibraryW(dacModulePath);
+                    if (hDac == NULL)
+                    {
+                        hr = HRESULT_FROM_WIN32(GetLastError());
+                    }
+                }
+                if (SUCCEEDED(hr) && hDbi == NULL)
+                {
+                    hDbi = LoadLibraryW(dbiModulePath);
+                    if (hDbi == NULL)
+                    {
+                        hr = HRESULT_FROM_WIN32(GetLastError());
+                    }
+                }
+                if (SUCCEEDED(hr))
+                {
+                    ovpFn = (OpenVirtualProcessImpl2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl2");
+                }
+                usingProviderDac = true;
+            }
+
+            if (SUCCEEDED(hr) && ovpFn != NULL && !dacModulePath.IsEmpty() && *ppProcess == NULL)
             {
                 hr = ovpFn(moduleBaseAddress, pDataTarget, dacModulePath, pMaxDebuggerSupportedVersion, riidProcess, ppProcess, pFlags);
                 if (FAILED(hr))
@@ -198,7 +288,7 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
                 }
             }
 #ifdef HOST_UNIX
-            else
+            if (ovpFn == NULL && !dacModulePath.IsEmpty())
             {
                 // On Linux/MacOS the DAC module handle needs to be re-created using the DAC PAL instance
                 // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share
@@ -349,7 +439,7 @@ HRESULT CLRDebuggingImpl::ProvideLibraries(
             }
             // Ask library provider for DAC
             if (FAILED(pLibraryProvider3->ProvideWindowsLibrary(
-                clrInfo.DacName, 
+                clrInfo.DacName,
                 wszRuntimeModulePath,
                 clrInfo.IndexType,
                 clrInfo.DacTimeStamp,
@@ -409,7 +499,7 @@ HRESULT CLRDebuggingImpl::ProvideLibraries(
             }
             // Ask library provider for DAC
             if (FAILED(pLibraryProvider3->ProvideUnixLibrary(
-                clrInfo.DacName, 
+                clrInfo.DacName,
                 wszRuntimeModulePath,
                 clrInfo.IndexType,
                 dacBuildId,
@@ -884,33 +974,34 @@ STDMETHODIMP CLRDebuggingImpl::CanUnloadNow(HMODULE hModule)
     return hr;
 }
 
-// Returns the full path of the cDAC (mscordaccore_universal) that is bundled next to dbgshim.
-// The cDAC ships with the tool and is never downloaded; when it is not present (for example RIDs
-// that do not carry a cDAC) callers fall back to the in-box DAC via the library provider.
-static HRESULT GetCDacPath(SString& cdacPath)
+// Returns an override path or a path to a library bundled next to dbgshim. This function's address
+// is the single module anchor used to locate dbgshim on disk.
+static HRESULT GetBundledLibraryPath(
+    const WCHAR* windowsOverrideName,
+    const char* unixOverrideName,
+    const WCHAR* libraryName,
+    SString& libraryPath)
 {
-    cdacPath.Clear();
+    libraryPath.Clear();
 
-    // An explicit override wins over the co-located cDAC. This lets a tool point dbgshim at a
-    // specific cDAC build without having to place it next to dbgshim (e.g. to test a newer contract
-    // reader against an older runtime, or a locally built cDAC). The value is a full path to the
-    // cDAC library.
 #ifdef HOST_WINDOWS
+    (void)unixOverrideName;
     {
         WCHAR overrideBuffer[MAX_LONGPATH];
-        DWORD overrideLen = GetEnvironmentVariableW(W("DOTNET_CDAC_PATH"), overrideBuffer, ARRAY_SIZE(overrideBuffer));
+        DWORD overrideLen = GetEnvironmentVariableW(windowsOverrideName, overrideBuffer, ARRAY_SIZE(overrideBuffer));
         if (overrideLen > 0 && overrideLen < ARRAY_SIZE(overrideBuffer))
         {
-            cdacPath.Set(overrideBuffer);
+            libraryPath.Set(overrideBuffer);
             return S_OK;
         }
     }
 #else
+    (void)windowsOverrideName;
     {
-        const char* overridePath = getenv("DOTNET_CDAC_PATH");
+        const char* overridePath = getenv(unixOverrideName);
         if (overridePath != NULL && overridePath[0] != '\0')
         {
-            cdacPath.SetUTF8((const UTF8*)overridePath);
+            libraryPath.SetUTF8((const UTF8*)overridePath);
             return S_OK;
         }
     }
@@ -918,12 +1009,10 @@ static HRESULT GetCDacPath(SString& cdacPath)
 
     SString modulePath;
 #ifdef HOST_WINDOWS
-    // GetCDacPath's own address lies within the dbgshim module, so it doubles as the anchor whose
-    // containing module we resolve to find dbgshim's directory on disk.
     HMODULE hModule = NULL;
     if (!GetModuleHandleExW(
             GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-            (LPCWSTR)&GetCDacPath,
+            (LPCWSTR)&GetBundledLibraryPath,
             &hModule))
     {
         return HRESULT_FROM_WIN32(GetLastError());
@@ -936,17 +1025,14 @@ static HRESULT GetCDacPath(SString& cdacPath)
     }
     modulePath.Set(buffer);
 #else
-    // dbgshim links libdl; dladdr resolves the file that contains GetCDacPath, which lives in
-    // the dbgshim module and so serves as the anchor.
     Dl_info info;
-    if (dladdr((void*)&GetCDacPath, &info) == 0 || info.dli_fname == NULL)
+    if (dladdr((void*)&GetBundledLibraryPath, &info) == 0 || info.dli_fname == NULL)
     {
         return E_FAIL;
     }
     modulePath.SetUTF8((const UTF8*)info.dli_fname);
 #endif
 
-    // Replace dbgshim's file name with the cDAC file name in the same directory.
     SString::Iterator lastSeparator = modulePath.End();
     if (!modulePath.FindBack(lastSeparator, DIRECTORY_SEPARATOR_CHAR_W))
     {
@@ -954,10 +1040,30 @@ static HRESULT GetCDacPath(SString& cdacPath)
     }
     lastSeparator++;
     modulePath.Truncate(lastSeparator);
-    modulePath.Append(MAKEDLLNAME_W(CORECLR_CDAC_MODULE_NAME_W));
+    modulePath.Append(libraryName);
 
-    cdacPath.Set(modulePath);
+    libraryPath.Set(modulePath);
     return S_OK;
+}
+
+// DBI and cDAC are a matched pair bundled with dbgshim for the cDAC DBI route. Overrides are full
+// paths and are intended for development and testing.
+static HRESULT GetDbiPath(SString& dbiPath)
+{
+    return GetBundledLibraryPath(
+        W("DOTNET_DBI_PATH"),
+        "DOTNET_DBI_PATH",
+        MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W),
+        dbiPath);
+}
+
+static HRESULT GetCDacPath(SString& cdacPath)
+{
+    return GetBundledLibraryPath(
+        W("DOTNET_CDAC_PATH"),
+        "DOTNET_CDAC_PATH",
+        MAKEDLLNAME_W(CORECLR_CDAC_MODULE_NAME_W),
+        cdacPath);
 }
 
 // Loads the given DAC/cDAC module and creates the requested data-access interface from it by
