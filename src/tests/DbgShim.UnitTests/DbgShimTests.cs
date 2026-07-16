@@ -267,6 +267,12 @@ namespace Microsoft.Diagnostics
 
                 TestDump testDump = new(cfg);
                 ITarget target = testDump.Target;
+                // dotnet-dump enables DAC signature verification on Windows (see Analyzer), which the
+                // DAC/DBI download policy requires before it will acquire them from the symbol server.
+                // TestDump does not run through Analyzer, so enable it here to match real usage. This
+                // test only reaches here on Windows (the non-Windows cases are skipped above), where the
+                // matching DAC/DBI are host-loadable Windows PEs indexed under the target runtime's id.
+                target.Services.GetService<ISettingsService>().DacSignatureVerificationEnabled = true;
                 IRuntimeService runtimeService = target.Services.GetService<IRuntimeService>();
                 IRuntime runtime = runtimeService.EnumerateRuntimes().Single();
 
