@@ -1540,11 +1540,11 @@ LLDBServices::GetModuleBase(
 
 ULONG64
 LLDBServices::GetModuleSize(
+    /* const */ lldb::SBTarget& target,
     ULONG64 baseAddress,
     /* const */ lldb::SBModule& module)
 {
     ULONG64 size = 0;
-    lldb::SBTarget target = m_debugger.GetSelectedTarget();
 
     // Include section alignment gaps in the module range.
     int numSections = module.GetNumSections();
@@ -1993,7 +1993,7 @@ LLDBServices::LoadNativeSymbols(
                 path.append("/");
                 path.append(filename);
 
-                int moduleSize = GetModuleSize(moduleAddress, module);
+                int moduleSize = GetModuleSize(target, moduleAddress, module);
 
                 callback(&module, path.c_str(), moduleAddress, moduleSize);
             }
@@ -2082,7 +2082,7 @@ HRESULT LLDBServices::GetModuleInfo(
     }
     if (pSize)
     {
-        *pSize = GetModuleSize(moduleBase, module);
+        *pSize = GetModuleSize(target, moduleBase, module);
     }
     if (pTimestamp)
     {
