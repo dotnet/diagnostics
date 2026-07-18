@@ -33,6 +33,34 @@ static HRESULT DacCreateInstance(const WCHAR* dacModulePath,
 static HRESULT ProvideDacLibrary(ClrInfo& clrInfo,
                                  IUnknown* pLibraryProvider,
                                  SString& dacModulePath);
+static HRESULT ProvideLibraries(ClrInfo& clrInfo,
+                                IUnknown* pLibraryProvider,
+                                SString& dbiModulePath,
+                                SString& dacModulePath,
+                                HMODULE* phDbi,
+                                HMODULE* phDac);
+static HRESULT LoadProviderLibraries(ClrInfo& clrInfo,
+                                     IUnknown* pLibraryProvider,
+                                     SString& dbiModulePath,
+                                     SString& dacModulePath,
+                                     HMODULE* phDbi,
+                                     HMODULE* phDac);
+static HRESULT OpenVirtualProcessWithCDac(
+    ULONG64 moduleBaseAddress,
+    IUnknown* pDataTarget,
+    CLR_DEBUGGING_VERSION* pMaxDebuggerSupportedVersion,
+    REFIID riidProcess,
+    IUnknown** ppProcess,
+    CLR_DEBUGGING_PROCESS_FLAGS* pFlags);
+static HRESULT OpenVirtualProcessWithLibraryProvider(
+    ULONG64 moduleBaseAddress,
+    IUnknown* pDataTarget,
+    ClrInfo& clrInfo,
+    IUnknown* pLibraryProvider,
+    CLR_DEBUGGING_VERSION* pMaxDebuggerSupportedVersion,
+    REFIID riidProcess,
+    IUnknown** ppProcess,
+    CLR_DEBUGGING_PROCESS_FLAGS* pFlags);
 static VOID RetargetDacIfNeeded(DWORD* pdwTimeStamp, DWORD* pdwSizeOfImage);
 
 typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImpl2FnPtr)(ULONG64 clrInstanceId,
@@ -120,21 +148,11 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
 
     HRESULT hr = S_OK;
     ClrInfo clrInfo;
-    SString dacModulePath;
-    SString dbiModulePath;
-    HMODULE hDbi = NULL;
-    HMODULE hDac = NULL;
     ICorDebugDataTarget * pDt = NULL;
     CLR_DEBUGGING_VERSION version = {};
-    bool usingProviderDac = m_cdacLoadPolicy == CDacLoadPolicy_LegacyDacOnly;
 
     // argument checking
-    if ((ppProcess != NULL || pFlags != NULL) && pLibraryProvider == NULL)
-    {
-        hr = E_POINTER; // the library provider must be specified if either
-                            // ppProcess or pFlags is non-NULL
-    }
-    else if ((ppProcess != NULL || pFlags != NULL) && pMaxDebuggerSupportedVersion == NULL)
+    if ((ppProcess != NULL || pFlags != NULL) && pMaxDebuggerSupportedVersion == NULL)
     {
         hr = E_POINTER; // the max supported version must be specified if either
                             // ppProcess or pFlags is non-NULL
@@ -161,158 +179,55 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
     // mscordbi and DAC and do the version specific OVP work
     if (SUCCEEDED(hr) && (ppProcess != NULL || pFlags != NULL))
     {
-        if (m_cdacLoadPolicy == CDacLoadPolicy_LegacyDacOnly)
+        if (ppProcess != NULL)
         {
-            hr = LoadProviderLibraries(
+            *ppProcess = NULL;
+        }
+        if (pFlags != NULL)
+        {
+            *pFlags = (CLR_DEBUGGING_PROCESS_FLAGS)0;
+        }
+
+        HRESULT cdacLoadAttemptHr = E_FAIL;
+        HRESULT libraryProviderLoadAttemptHr = pLibraryProvider == NULL ? E_POINTER : E_FAIL;
+
+        if (m_cdacLoadPolicy != CDacLoadPolicy_LegacyDacOnly)
+        {
+            cdacLoadAttemptHr = OpenVirtualProcessWithCDac(
+                moduleBaseAddress,
+                pDataTarget,
+                pMaxDebuggerSupportedVersion,
+                riidProcess,
+                ppProcess,
+                pFlags);
+        }
+
+        if (FAILED(cdacLoadAttemptHr) &&
+            pLibraryProvider != NULL &&
+            m_cdacLoadPolicy != CDacLoadPolicy_CDacOnly)
+        {
+            libraryProviderLoadAttemptHr = OpenVirtualProcessWithLibraryProvider(
+                moduleBaseAddress,
+                pDataTarget,
                 clrInfo,
                 pLibraryProvider,
-                dbiModulePath,
-                dacModulePath,
-                &hDbi,
-                &hDac);
+                pMaxDebuggerSupportedVersion,
+                riidProcess,
+                ppProcess,
+                pFlags);
+        }
+
+        if (m_cdacLoadPolicy == CDacLoadPolicy_CDacOnly)
+        {
+            hr = cdacLoadAttemptHr;
+        }
+        else if (m_cdacLoadPolicy == CDacLoadPolicy_LegacyDacOnly)
+        {
+            hr = libraryProviderLoadAttemptHr;
         }
         else
         {
-            // The cDAC DBI pair ships with dbgshim. Do not consult the runtime library provider
-            // unless PreferCDac needs to fall back to the target's matching legacy DBI and DAC.
-            hr = GetDbiPath(dbiModulePath);
-        }
-
-        if (SUCCEEDED(hr) && hDbi == NULL)
-        {
-            hDbi = LoadLibraryW(dbiModulePath);
-            if (hDbi == NULL)
-            {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-            }
-        }
-
-        if (FAILED(hr) && m_cdacLoadPolicy == CDacLoadPolicy_PreferCDac)
-        {
-            // If bundled DBI cannot be resolved or loaded, retry with the target-matching DBI and
-            // DAC from the provider.
-            hDbi = NULL;
-            dbiModulePath.Clear();
-            dacModulePath.Clear();
-            hr = LoadProviderLibraries(
-                clrInfo,
-                pLibraryProvider,
-                dbiModulePath,
-                dacModulePath,
-                &hDbi,
-                &hDac);
-            usingProviderDac = true;
-        }
-
-        *ppProcess = NULL;
-
-        if (SUCCEEDED(hr))
-        {
-            // Get access to the latest OVP implementation and call it
-            OpenVirtualProcessImpl2FnPtr ovpFn = (OpenVirtualProcessImpl2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl2");
-            if (ovpFn != NULL && !usingProviderDac)
-            {
-                SString cdacModulePath;
-                hr = GetCDacPath(cdacModulePath);
-                if (SUCCEEDED(hr))
-                {
-                    hr = ovpFn(moduleBaseAddress, pDataTarget, cdacModulePath, pMaxDebuggerSupportedVersion, riidProcess, ppProcess, pFlags);
-                    if (SUCCEEDED(hr) && *ppProcess == NULL)
-                    {
-                        hr = E_FAIL;
-                    }
-                }
-            }
-            else if (ovpFn == NULL && !usingProviderDac)
-            {
-                hr = CORDBG_E_MISSING_DEBUGGER_EXPORTS;
-            }
-
-            if (FAILED(hr) && m_cdacLoadPolicy == CDacLoadPolicy_PreferCDac)
-            {
-                _ASSERTE(ppProcess == NULL || *ppProcess == NULL);
-                _ASSERTE(pFlags == NULL || *pFlags == 0);
-
-                // The cDAC declined the target or was unavailable. Resolve and load the
-                // target-matching DBI and DAC only now.
-                hDbi = NULL;
-                hDac = NULL;
-                dbiModulePath.Clear();
-                dacModulePath.Clear();
-                hr = LoadProviderLibraries(
-                    clrInfo,
-                    pLibraryProvider,
-                    dbiModulePath,
-                    dacModulePath,
-                    &hDbi,
-                    &hDac);
-                if (SUCCEEDED(hr))
-                {
-                    ovpFn = (OpenVirtualProcessImpl2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl2");
-                }
-                usingProviderDac = true;
-            }
-
-            if (SUCCEEDED(hr) && ovpFn != NULL && !dacModulePath.IsEmpty() && *ppProcess == NULL)
-            {
-                hr = ovpFn(moduleBaseAddress, pDataTarget, dacModulePath, pMaxDebuggerSupportedVersion, riidProcess, ppProcess, pFlags);
-                if (FAILED(hr))
-                {
-                    _ASSERTE(ppProcess == NULL || *ppProcess == NULL);
-                    _ASSERTE(pFlags == NULL || *pFlags == 0);
-                }
-            }
-#ifdef HOST_UNIX
-            if (ovpFn == NULL && !dacModulePath.IsEmpty())
-            {
-                // On Linux/MacOS the DAC module handle needs to be re-created using the DAC PAL instance
-                // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share
-                // the same PAL where dbgshim has it's own.
-                LoadLibraryWFnPtr loadLibraryWFn = (LoadLibraryWFnPtr)GetProcAddress(hDac, "LoadLibraryW");
-                if (loadLibraryWFn != NULL)
-                {
-                    hDac = loadLibraryWFn(dacModulePath);
-                    if (hDac == NULL)
-                    {
-                        hr = E_HANDLE;
-                    }
-                }
-                else
-                {
-                    hr = E_HANDLE;
-                }
-            }
-#endif // HOST_UNIX
-        }
-
-        // If no errors so far and "OpenVirtualProcessImpl2" doesn't exist
-        if (SUCCEEDED(hr) && *ppProcess == NULL)
-        {
-            // Get access to OVP and call it
-            OpenVirtualProcessImplFnPtr ovpFn = (OpenVirtualProcessImplFnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl");
-            if (ovpFn == NULL)
-            {
-                // Fallback to CLR v4 Beta1 path, but skip some of the checking we'd normally do (maxSupportedVersion, etc.)
-                OpenVirtualProcess2FnPtr ovp2Fn = (OpenVirtualProcess2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcess2");
-                if (ovp2Fn == NULL)
-                {
-                    hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
-                }
-                else
-                {
-                    hr = ovp2Fn(moduleBaseAddress, pDataTarget, hDac, riidProcess, ppProcess, pFlags);
-                }
-            }
-            else
-            {
-                // Have a CLR v4 Beta2+ DBI, call it and let it do the version check
-                hr = ovpFn(moduleBaseAddress, pDataTarget, hDac, pMaxDebuggerSupportedVersion, riidProcess, ppProcess, pFlags);
-                if (FAILED(hr))
-                {
-                    _ASSERTE(ppProcess == NULL || *ppProcess == NULL);
-                    _ASSERTE(pFlags == NULL || *pFlags == 0);
-                }
-            }
+            hr = FAILED(libraryProviderLoadAttemptHr) ? cdacLoadAttemptHr : libraryProviderLoadAttemptHr;
         }
     }
 
@@ -331,6 +246,168 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
     return hr;
 }
 
+static HRESULT OpenVirtualProcessWithCDac(
+    ULONG64 moduleBaseAddress,
+    IUnknown* pDataTarget,
+    CLR_DEBUGGING_VERSION* pMaxDebuggerSupportedVersion,
+    REFIID riidProcess,
+    IUnknown** ppProcess,
+    CLR_DEBUGGING_PROCESS_FLAGS* pFlags)
+{
+    if (ppProcess != NULL)
+    {
+        *ppProcess = NULL;
+    }
+    if (pFlags != NULL)
+    {
+        *pFlags = (CLR_DEBUGGING_PROCESS_FLAGS)0;
+    }
+
+    SString dbiModulePath;
+    HRESULT hr = GetDbiPath(dbiModulePath);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    HMODULE hDbi = LoadLibraryW(dbiModulePath);
+    if (hDbi == NULL)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    OpenVirtualProcessImpl2FnPtr ovpFn =
+        (OpenVirtualProcessImpl2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl2");
+    if (ovpFn == NULL)
+    {
+        return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
+    }
+
+    SString cdacModulePath;
+    hr = GetCDacPath(cdacModulePath);
+    if (SUCCEEDED(hr))
+    {
+        hr = ovpFn(
+            moduleBaseAddress,
+            pDataTarget,
+            cdacModulePath,
+            pMaxDebuggerSupportedVersion,
+            riidProcess,
+            ppProcess,
+            pFlags);
+    }
+
+    if (SUCCEEDED(hr) && ppProcess != NULL && *ppProcess == NULL)
+    {
+        hr = E_FAIL;
+    }
+    if (FAILED(hr))
+    {
+        _ASSERTE(ppProcess == NULL || *ppProcess == NULL);
+        _ASSERTE(pFlags == NULL || *pFlags == 0);
+    }
+    return hr;
+}
+
+static HRESULT OpenVirtualProcessWithLibraryProvider(
+    ULONG64 moduleBaseAddress,
+    IUnknown* pDataTarget,
+    ClrInfo& clrInfo,
+    IUnknown* pLibraryProvider,
+    CLR_DEBUGGING_VERSION* pMaxDebuggerSupportedVersion,
+    REFIID riidProcess,
+    IUnknown** ppProcess,
+    CLR_DEBUGGING_PROCESS_FLAGS* pFlags)
+{
+    if (ppProcess != NULL)
+    {
+        *ppProcess = NULL;
+    }
+    if (pFlags != NULL)
+    {
+        *pFlags = (CLR_DEBUGGING_PROCESS_FLAGS)0;
+    }
+
+    SString dbiModulePath;
+    SString dacModulePath;
+    HMODULE hDbi = NULL;
+    HMODULE hDac = NULL;
+    HRESULT hr = LoadProviderLibraries(
+        clrInfo,
+        pLibraryProvider,
+        dbiModulePath,
+        dacModulePath,
+        &hDbi,
+        &hDac);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    OpenVirtualProcessImpl2FnPtr ovpImpl2Fn =
+        (OpenVirtualProcessImpl2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl2");
+    if (ovpImpl2Fn != NULL && !dacModulePath.IsEmpty())
+    {
+        hr = ovpImpl2Fn(
+            moduleBaseAddress,
+            pDataTarget,
+            dacModulePath,
+            pMaxDebuggerSupportedVersion,
+            riidProcess,
+            ppProcess,
+            pFlags);
+    }
+
+#ifdef HOST_UNIX
+    if (SUCCEEDED(hr) && ovpImpl2Fn == NULL && !dacModulePath.IsEmpty())
+    {
+        // DBI and DAC share a PAL, so recreate the DAC handle through the DAC's loader.
+        LoadLibraryWFnPtr loadLibraryWFn = (LoadLibraryWFnPtr)GetProcAddress(hDac, "LoadLibraryW");
+        hDac = loadLibraryWFn != NULL ? loadLibraryWFn(dacModulePath) : NULL;
+        if (hDac == NULL)
+        {
+            hr = E_HANDLE;
+        }
+    }
+#endif
+
+    if (SUCCEEDED(hr) && (ovpImpl2Fn == NULL || dacModulePath.IsEmpty()))
+    {
+        OpenVirtualProcessImplFnPtr ovpImplFn =
+            (OpenVirtualProcessImplFnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl");
+        if (ovpImplFn != NULL)
+        {
+            hr = ovpImplFn(
+                moduleBaseAddress,
+                pDataTarget,
+                hDac,
+                pMaxDebuggerSupportedVersion,
+                riidProcess,
+                ppProcess,
+                pFlags);
+        }
+        else
+        {
+            OpenVirtualProcess2FnPtr ovp2Fn =
+                (OpenVirtualProcess2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcess2");
+            hr = ovp2Fn != NULL
+                ? ovp2Fn(moduleBaseAddress, pDataTarget, hDac, riidProcess, ppProcess, pFlags)
+                : CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        }
+    }
+
+    if (SUCCEEDED(hr) && ppProcess != NULL && *ppProcess == NULL)
+    {
+        hr = E_FAIL;
+    }
+    if (FAILED(hr))
+    {
+        _ASSERTE(ppProcess == NULL || *ppProcess == NULL);
+        _ASSERTE(pFlags == NULL || *pFlags == 0);
+    }
+    return hr;
+}
+
 // Call the library provider to get the DBI and DAC
 //
 // Arguments:
@@ -346,7 +423,7 @@ HRESULT CLRDebuggingImpl::ProvideLibraries(
 {
     HMODULE hDbi = NULL;
     HMODULE hDac = NULL;
-    HRESULT hr = CLRDebuggingImpl::ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
+    HRESULT hr = ::ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
     if (SUCCEEDED(hr))
     {
         // The dbgshim create DBI instance APIs don't support just ICLRDebuggingLibraryProvider which is what
@@ -369,7 +446,7 @@ HRESULT CLRDebuggingImpl::ProvideLibraries(
 //   dacModulePath - returns the DAC module path
 //   phDbi - returns the DBI module handle if old library provider
 //   phDac - returns the DAC module handle if old library provider
-HRESULT CLRDebuggingImpl::ProvideLibraries(
+static HRESULT ProvideLibraries(
     ClrInfo& clrInfo,
     IUnknown* punk,
     SString& dbiModulePath,
@@ -552,7 +629,7 @@ exit:
     return hr;
 }
 
-HRESULT CLRDebuggingImpl::LoadProviderLibraries(
+static HRESULT LoadProviderLibraries(
     ClrInfo& clrInfo,
     IUnknown* pLibraryProvider,
     SString& dbiModulePath,

@@ -261,20 +261,6 @@ private:
         REFIID riid,
         IUnknown** ppInstance);
 
-    static HRESULT ProvideLibraries(ClrInfo& clrInfo,
-                                    IUnknown* pLibraryProvider,
-                                    SString& dbiModulePath,
-                                    SString& dacModulePath,
-                                    HMODULE* phDbi,
-                                    HMODULE* phDac);
-
-    static HRESULT LoadProviderLibraries(ClrInfo& clrInfo,
-                                         IUnknown* pLibraryProvider,
-                                         SString& dbiModulePath,
-                                         SString& dacModulePath,
-                                         HMODULE* phDbi,
-                                         HMODULE* phDac);
-
     HRESULT GetCLRInfo(ICorDebugDataTarget * pDataTarget,
                        ULONG64 moduleBaseAddress,
                        CLR_DEBUGGING_VERSION* pVersion,
