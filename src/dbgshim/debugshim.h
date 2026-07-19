@@ -112,12 +112,12 @@ struct ClrInfo
 
     ClrInfo()
     {
-#ifdef HOST_UNIX 
+#ifdef HOST_UNIX
         WindowsTarget = FALSE;
 #else
         WindowsTarget = TRUE;
 #endif
-        IndexType = LIBRARY_PROVIDER_INDEX_TYPE::UnknownIndex; 
+        IndexType = LIBRARY_PROVIDER_INDEX_TYPE::UnknownIndex;
 
         memset(&RuntimeBuildId, 0, sizeof(RuntimeBuildId));
         RuntimeBuildIdSize = 0;
@@ -144,7 +144,7 @@ struct ClrInfo
             {
                 return DbiTimeStamp != 0 && DbiSizeOfImage != 0 && DacTimeStamp != 0 && DacSizeOfImage;
             }
-            else 
+            else
             {
                 return DbiBuildIdSize > 0 && DacBuildIdSize > 0;
             }
@@ -234,24 +234,18 @@ public:
     // Standard Release implementation.
     STDMETHOD_(ULONG, Release());
 
-    // Used by other dbgshim implementation classes to resolve the DBI and DAC.
-    static HRESULT ProvideLibraries(ClrInfo& clrInfo,
-                                    ICLRDebuggingLibraryProvider3* pLibraryProvider,
-                                    SString& dbiModulePath,
-                                    SString& dacModulePath);
+    // Used by other dbgshim implementation classes to resolve DBI and DAC paths.
+    static HRESULT ResolveLibraryPaths(ClrInfo& clrInfo,
+                                       ICLRDebuggingLibraryProvider3* pLibraryProvider,
+                                       SString& dbiModulePath,
+                                       SString& dacModulePath);
 
 private:
-    // Locates and activates the data-access (IXCLRDataProcess) interface for the runtime module
-    // at moduleBaseAddress WITHOUT loading DBI. This is the worker behind an OpenVirtualProcess call
-    // that requests a data-access interface (see IsDataAccessInterface). Honors the object's cDAC
-    // load policy: prefers the cDAC (mscordaccore_universal) bundled next to dbgshim, and falls back
-    // to the DAC located via the library provider unless the policy forbids it. The caller owns the
-    // returned interface and may hand it to other consumers (for example ClrMD).
-    //
+    // Locates and activates the DAC interfaces for runtimes at at moduleBaseAddress WITHOUT loading DBI in a
+    // DAC/cDAC load policy aware fashion. This is the worker behind an OpenVirtualProcess call that requests a DAC interfaces (see IsDataAccessInterface).
     //   moduleBaseAddress - base address of the runtime module in the target
-    //   pDataTarget       - a per-runtime data target (ICLRDataTarget, and ICLRContractLocator for
-    //                       the cDAC) over process/dump-wide memory
-    //   pLibraryProvider  - ICLRDebuggingLibraryProvider3 used only for the DAC fallback; may be NULL
+    //   pDataTarget       - a per-runtime data target (ICLRDataTarget, and ICLRContractLocator for the cDAC) over process/dump-wide memory
+    //   pLibraryProvider  - ICLRDebuggingLibraryProvider3 used only for the DAC fallback; may be NULL if no DAC fallback is desired.
     //   riid              - the interface to create, typically IID_IXCLRDataProcess
     //   ppInstance        - out: the created interface on success
     HRESULT OpenDataAccessProcess(
@@ -260,6 +254,16 @@ private:
         IUnknown* pLibraryProvider,
         REFIID riid,
         IUnknown** ppInstance);
+
+    HRESULT OpenCorDebugProcess(
+        ULONG64 moduleBaseAddress,
+        IUnknown * pDataTarget,
+        ICLRDebuggingLibraryProvider * pLibraryProvider,
+        CLR_DEBUGGING_VERSION * pMaxDebuggerSupportedVersion,
+        REFIID riidProcess,
+        IUnknown ** ppProcess,
+        CLR_DEBUGGING_VERSION * pVersion,
+        CLR_DEBUGGING_PROCESS_FLAGS * pFlags);
 
     HRESULT GetCLRInfo(ICorDebugDataTarget * pDataTarget,
                        ULONG64 moduleBaseAddress,
