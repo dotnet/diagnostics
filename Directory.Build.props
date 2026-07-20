@@ -22,6 +22,12 @@
     <RepositoryName>diagnostics</RepositoryName>
   </PropertyGroup>
 
+  <!-- Inject overrides that must run after the Microsoft.Build.Traversal SDK targets
+       (e.g. dropping the Test->Build dependency on prebuilt test-only legs). -->
+  <PropertyGroup>
+    <CustomAfterTraversalTargets>$(MSBuildThisFileDirectory)eng/TraversalOverrides.targets</CustomAfterTraversalTargets>
+  </PropertyGroup>
+
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <!--
@@ -69,10 +75,18 @@
      -->
     <NetCoreAppMinVersion>8.0</NetCoreAppMinVersion>
     <NetCoreAppMinTargetFramework>net$(NetCoreAppMinVersion)</NetCoreAppMinTargetFramework>
+    <!--
+        The TFM our unit tests run as. The tools must remain on $(NetCoreAppMinTargetFramework),
+        but the tests run on the SDK version from global.json, so they can target a newer TFM.
+        Keeping the tests on the live SDK's TFM means the SDK already ships the matching runtime,
+        so no extra shared runtime needs to be installed via global.json's tools.runtimes node.
+     -->
+    <NetCoreAppTestVersion>10.0</NetCoreAppTestVersion>
+    <NetCoreAppTestTargetFramework>net$(NetCoreAppTestVersion)</NetCoreAppTestTargetFramework>
     <!-- This is the list of TFMs we build our debuggees and tracees as. -->
     <SupportedSubProcessTargetFrameworks>net8.0;net9.0;net10.0;net11.0</SupportedSubProcessTargetFrameworks>
     <!-- This is the list of TFMs we build our unit tests as. -->
-    <SupportedXUnitTestTargetFrameworks>net8.0</SupportedXUnitTestTargetFrameworks>
+    <SupportedXUnitTestTargetFrameworks>$(NetCoreAppTestTargetFramework)</SupportedXUnitTestTargetFrameworks>
   </PropertyGroup>
 
 </Project>

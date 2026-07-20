@@ -13,7 +13,7 @@
        <AspNetVersion11>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net11.0')->Metadata('AspNet'))</AspNetVersion11>
     </PropertyGroup>
 
-    <Message Importance="High" Text="OverrideTestingVersions: RuntimeTestVersions='@(RuntimeTestVersions)'" />
+    <Message Importance="Low" Text="OverrideTestingVersions: RuntimeTestVersions=@(RuntimeTestVersions -> '%(Runtime)')" />
 
     <!-- Skip overrides when RuntimeTestVersions is not populated (e.g. test-time CLI builds
          where eng/Versions.props is not imported). The SDK's built-in versions are used instead. -->
