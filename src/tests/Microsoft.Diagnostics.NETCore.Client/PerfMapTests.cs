@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
@@ -149,7 +148,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task GenerateAllTest(TestConfiguration config)
         {
             if (config.RuntimeFrameworkVersionMajor >= 8)
@@ -159,7 +158,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await GenerateTestCore(PerfMapType.All, config);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task GeneratePerfMapTest(TestConfiguration config)
         {
             if (config.RuntimeFrameworkVersionMajor >= 8)
@@ -169,7 +168,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await GenerateTestCore(PerfMapType.PerfMap, config);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task GenerateJitDumpTest(TestConfiguration config)
         {
             await GenerateTestCore(PerfMapType.JitDump, config);

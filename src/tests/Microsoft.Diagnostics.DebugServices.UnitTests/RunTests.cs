@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -12,7 +12,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.TestHelpers;
 using SOS.Extensions;
-using Xunit.Abstractions;
+using Xunit;
 using Xunit.Extensions;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
@@ -125,6 +125,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         #region ITestOutputHelper
+
+        string ITestOutputHelper.Output => string.Empty;
+
+        void ITestOutputHelper.Write(string message) => Write(message);
+
+        void ITestOutputHelper.Write(string format, params object[] args) => Write(string.Format(format, args));
 
         void ITestOutputHelper.WriteLine(string message) => WriteLine(message);
 

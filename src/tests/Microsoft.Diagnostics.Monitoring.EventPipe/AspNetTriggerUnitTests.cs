@@ -5,7 +5,6 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.AspNet;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 {

@@ -12,8 +12,6 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
@@ -29,7 +27,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             _output = output;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestTracesPipeline(TestConfiguration config)
         {
             TestActivityLogger logger = new();
@@ -80,7 +78,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("18", tags["custom.tag.int"]);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestTracesPipelineWithSamplingRatio(TestConfiguration config)
         {
             TestActivityLogger logger = new();

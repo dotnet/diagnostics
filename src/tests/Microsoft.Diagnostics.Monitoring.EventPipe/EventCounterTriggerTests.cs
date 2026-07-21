@@ -12,7 +12,6 @@ using Microsoft.Diagnostics.Monitoring.EventPipe.Triggers.Pipelines;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
@@ -321,7 +320,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Tests that the trigger condition can be detected on a live application
         /// using the EventPipeTriggerPipeline.
         /// </summary>
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4782"), MemberData(nameof(Configurations))]
+        [Theory(Skip = "https://github.com/dotnet/diagnostics/issues/4782"), MemberData(nameof(Configurations))]
         public async Task EventCounterTriggerWithEventPipePipelineTest(TestConfiguration config)
         {
             if (config.RuntimeFrameworkVersionMajor < 6)

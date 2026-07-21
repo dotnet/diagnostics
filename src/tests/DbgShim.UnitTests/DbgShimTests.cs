@@ -16,7 +16,6 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.Diagnostics.TestHelpers;
 using SOS.Hosting;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Extensions;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
@@ -49,7 +48,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartup for launch
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Launch1(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(Launch1), static async (string configXml) => {
@@ -65,7 +64,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartupEx for launch
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Launch2(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(Launch2), static async (string configXml) => {
@@ -81,7 +80,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartup3 for launch
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Launch3(TestConfiguration config)
         {
             if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
@@ -106,7 +105,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartup for attach
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Attach1(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(Attach1), static async (string configXml) => {
@@ -119,7 +118,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartupEx for attach
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Attach2(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(Attach2), static async (string configXml) => {
@@ -132,7 +131,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartup3 for attach
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Attach3(TestConfiguration config)
         {
             if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
@@ -154,7 +153,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test EnumerateCLRs/CloseCLREnumeration
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task EnumerateCLRs(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(EnumerateCLRs), static async (string configXml) => {
@@ -178,7 +177,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test CreateVersionStringFromModule/CreateDebuggingInterfaceFromVersion
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersion(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion), static async (string configXml) => {
@@ -191,7 +190,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test CreateVersionStringFromModule/CreateDebuggingInterfaceFromVersionEx
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersionEx(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersionEx), static async (string configXml) => {
@@ -204,7 +203,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test CreateVersionStringFromModule/CreateDebuggingInterfaceFromVersion2
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersion2(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion2), static async (string configXml) => {
@@ -217,7 +216,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test CreateVersionStringFromModule/CreateDebuggingInterfaceFromVersion3
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersion3(TestConfiguration config)
         {
             if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
@@ -236,7 +235,7 @@ namespace Microsoft.Diagnostics
             });
         }
 
-        [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "OpenVirtualProcess")]
+        [Theory, MemberData(nameof(GetConfigurations), "TestName", "OpenVirtualProcess")]
         public async Task OpenVirtualProcess(TestConfiguration config)
         {
             // The current Linux test assets are not alpine/musl

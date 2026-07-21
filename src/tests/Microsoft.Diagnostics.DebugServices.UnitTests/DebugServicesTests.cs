@@ -11,7 +11,6 @@ using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Extensions;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
@@ -59,7 +58,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         void IDisposable.Dispose() => Trace.Listeners.Remove(ListenerName);
 
-        [SkippableTheory, MemberData(nameof(GetConfigurations))]
+        [Theory, MemberData(nameof(GetConfigurations))]
         public void TargetTests(TestHost host)
         {
             ITarget target = host.Target;
@@ -73,7 +72,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             host.TestData.CompareMembers(host.TestData.Target, target);
         }
 
-        [SkippableTheory, MemberData(nameof(GetConfigurations))]
+        [Theory, MemberData(nameof(GetConfigurations))]
         public void ModuleTests(TestHost host)
         {
             IModuleService moduleService = host.Target.Services.GetService<IModuleService>();
@@ -219,7 +218,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
         }
 
-        [SkippableTheory, MemberData(nameof(GetConfigurations))]
+        [Theory, MemberData(nameof(GetConfigurations))]
         public void ThreadTests(TestHost host)
         {
             IThreadService threadService = host.Target.Services.GetService<IThreadService>();
@@ -262,7 +261,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
         }
 
-        [SkippableTheory, MemberData(nameof(GetConfigurations))]
+        [Theory, MemberData(nameof(GetConfigurations))]
         public void RuntimeTests(TestHost host)
         {
             // The current Linux test assets are not alpine/musl

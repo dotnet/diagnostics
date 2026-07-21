@@ -7,7 +7,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using Microsoft.DotNet.XUnitExtensions;
 using Xunit;
 
 namespace Microsoft.Diagnostics.NETCore.Client
@@ -128,34 +127,38 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         #region Behavioral tests (platform-specific, real system calls)
 
-        [ConditionalFact(nameof(IsLinux))]
+        [Fact]
         public void TryGetNamespacePid_CurrentProcess_SameNamespace_ReturnsFalse()
         {
+            Assert.SkipUnless(IsLinux, "Condition 'IsLinux' was not met.");
             int currentPid = Process.GetCurrentProcess().Id;
             bool result = PidIpcEndpoint.TryGetNamespacePid(currentPid, out int nsPid);
             Assert.False(result);
             Assert.Equal(currentPid, nsPid);
         }
 
-        [ConditionalFact(nameof(IsNotLinux))]
+        [Fact]
         public void TryGetNamespacePid_NonLinux_ReturnsFalse()
         {
+            Assert.SkipUnless(IsNotLinux, "Condition 'IsNotLinux' was not met.");
             bool result = PidIpcEndpoint.TryGetNamespacePid(1, out int nsPid);
             Assert.False(result);
             Assert.Equal(1, nsPid);
         }
 
-        [ConditionalFact(nameof(IsLinux))]
+        [Fact]
         public void TryGetNamespacePid_NonExistentPid_DoesNotThrow()
         {
+            Assert.SkipUnless(IsLinux, "Condition 'IsLinux' was not met.");
             bool result = PidIpcEndpoint.TryGetNamespacePid(int.MaxValue, out int nsPid);
             Assert.False(result);
             Assert.Equal(int.MaxValue, nsPid);
         }
 
-        [ConditionalFact(nameof(IsLinux))]
+        [Fact]
         public void GetProcessTmpDir_ChildProcess_ReadsTmpdir()
         {
+            Assert.SkipUnless(IsLinux, "Condition 'IsLinux' was not met.");
             string customTmpDir = "/custom/tmp/test";
             ProcessStartInfo psi = new("sleep", "30")
             {
@@ -277,9 +280,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.Contains("is not running", ex.Message);
         }
 
-        [ConditionalFact(nameof(IsLinux))]
+        [Fact]
         public void GetProcessTmpDir_KernelThread_DoesNotThrow()
         {
+            Assert.SkipUnless(IsLinux, "Condition 'IsLinux' was not met.");
             int unreadableEnvironPid = -1;
             foreach (string procEntry in Directory.EnumerateDirectories("/proc"))
             {
@@ -305,7 +309,8 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (unreadableEnvironPid == -1)
             {
-                throw new SkipTestException("No process with an unreadable (IOException) /proc/{pid}/environ was found.");
+                Assert.Skip("No process with an unreadable (IOException) /proc/{pid}/environ was found.");
+                return;
             }
 
             bool environReadable = true;

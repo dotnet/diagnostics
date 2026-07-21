@@ -7,7 +7,6 @@ using System.Linq;
 using Microsoft.SymbolStore.KeyGenerators;
 using TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.SymbolStore.Tests
 {

@@ -114,14 +114,17 @@ if ($test) {
             $env:SOS_TEST_INTERPRETER="true"
         }
 
-        # Build the test filter argument if provided
+        # Build the test filter argument if provided.
+        # Tests run as xUnit v3 / Microsoft.Testing.Platform executables, so use the MTP
+        # filter options (--filter-method / --filter-class) instead of the old xunit.console
+        # -method / -class flags.
         # Use backslash-escaped quotes so they survive the additional quoting in tools.ps1
         $testFilterArg = ''
         if ($methodfilter -ne '') {
-            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"-method $methodfilter\`""
+            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"--filter-method $methodfilter\`""
         }
         elseif ($classfilter -ne '') {
-            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"-class $classfilter\`""
+            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"--filter-class $classfilter\`""
         }
 
         # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt

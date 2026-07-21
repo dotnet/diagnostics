@@ -1,11 +1,10 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
@@ -26,13 +25,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _output = outputHelper;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task BasicEnvTest(TestConfiguration config)
         {
             return BasicEnvTestCore(config, useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task BasicEnvTestAsync(TestConfiguration config)
         {
             return BasicEnvTestCore(config, useAsync: true);

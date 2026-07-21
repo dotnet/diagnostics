@@ -14,8 +14,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.RemoteExecutor" Version="$(MicrosoftDotNetRemoteExecutorVersion)" />
-    <PackageReference Include="xunit" Version="$(XUnitVersion)" />
-    <PackageReference Include="xunit.abstractions" Version="$(XUnitAbstractionsVersion)" />
+    <PackageReference Include="xunit.v3.extensibility.core" Version="$(XUnitV3Version)" />
+    <PackageReference Include="xunit.v3.assert" Version="$(XUnitV3Version)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -6,6 +6,12 @@
     <!-- Tests are broken as it hasn't been run on main in a while. Relies on older System.CommandLine API's that are no longer public -->
     <ProjectReference Remove="dotnet-stack/DotnetStack.UnitTests.csproj" />
 
+    <!-- TODO (xUnit v3 + MTP migration): SOS.UnitTests is not yet migrated. It self-orchestrates
+         debuggee subprocesses through SOSRunner/TestRunConfiguration and ships a custom
+         xunit.runner.json, all of which need to be validated/ported against the xUnit v3 runner
+         and MTP execution model. Re-enable once that work is done. -->
+    <ProjectReference Remove="SOS.UnitTests/SOS.UnitTests.csproj" />
+
     <!-- Standalone tools -->
     <ProjectReference Remove="DacCompareNativeTypes/DacCompareNativeTypes.csproj" />
     <ProjectReference Remove="benchmarks/benchmarks.csproj" />

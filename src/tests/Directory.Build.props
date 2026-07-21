@@ -1,3 +1,27 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
+
+  <!--
+    xUnit v3 + Microsoft.Testing.Platform (MTP) opt-in for all test projects.
+
+    Arcade's tools/Tests.props (imported via the root Directory.Build.props ->
+    Arcade Sdk.props) sets IsTestProject=true for projects whose name ends in
+    '.UnitTests' or '.Tests'. Setting TestRunnerName=XUnitV3 makes Arcade inject
+    xunit.v3 and the MTP packages and default UseMicrosoftTestingPlatformRunner=true.
+    xUnit v3 test projects must be built as executables.
+
+    To temporarily keep a project off xUnit v3 (e.g. while it is being migrated),
+    exclude it from the build in dirs.proj. A global escape hatch is available by
+    setting EnableXUnitV3=false (e.g. on the command line).
+  -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true' and '$(EnableXUnitV3)' != 'false'">
+    <TestRunnerName>XUnitV3</TestRunnerName>
+    <OutputType>Exe</OutputType>
+    <!-- xUnit1051: prefer TestContext.Current.CancellationToken on APIs taking a
+         CancellationToken. xUnit1031: blocking task operations in tests. Both are new
+         analyzers in xUnit v3 flagging pre-existing patterns; they are advisory, not
+         correctness failures, so suppress them repo-wide so TreatWarningsAsErrors
+         doesn't fail the migration build. -->
+    <NoWarn>$(NoWarn);xUnit1051;xUnit1031</NoWarn>
+  </PropertyGroup>
 </Project>

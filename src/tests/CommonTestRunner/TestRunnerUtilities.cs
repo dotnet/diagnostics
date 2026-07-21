@@ -5,7 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
-using Xunit.Abstractions;
+using Xunit;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace CommonTestRunner

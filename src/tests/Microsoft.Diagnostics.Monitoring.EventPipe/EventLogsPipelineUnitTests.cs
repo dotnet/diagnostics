@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -12,7 +12,6 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
@@ -40,7 +39,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that all log events are collected if no filters are specified.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesAllLevels(TestConfiguration config)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -68,7 +67,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events at or above the default level are collected.
         /// </summary>
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/2541"), MemberData(nameof(Configurations))]
+        [Theory(Skip = "https://github.com/dotnet/diagnostics/issues/2541"), MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevel(TestConfiguration config)
         {
             using Stream outputStream = await GetLogsAsync(config, settings => {
@@ -90,7 +89,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events at the default level are collected for categories without a specified level.
         /// </summary>
-        [SkippableTheory(Skip = "Unreliable test https://github.com/dotnet/diagnostics/issues/3143"), MemberData(nameof(Configurations))]
+        [Theory(Skip = "Unreliable test https://github.com/dotnet/diagnostics/issues/3143"), MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevelFallback(TestConfiguration config)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -122,7 +121,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that LogLevel.None is not supported as the default log level.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevelNoneNotSupported(TestConfiguration config)
         {
             // Pipeline should throw PipelineException with inner exception of NotSupportedException.
@@ -140,7 +139,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events are collected for the categories and levels specified by the application.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsUseAppFilters(TestConfiguration config)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -164,7 +163,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Test that log events are collected for the categories and levels specified by the application
         /// and for the categories and levels specified in the filter specs.
         /// </summary>
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/2541"), MemberData(nameof(Configurations))]
+        [Theory(Skip = "https://github.com/dotnet/diagnostics/issues/2541"), MemberData(nameof(Configurations))]
         public async Task TestLogsUseAppFiltersAndFilterSpecs(TestConfiguration config)
         {
             using Stream outputStream = await GetLogsAsync(config, settings => {
@@ -188,7 +187,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events are collected for wildcard categories.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsWildcardCategory(TestConfiguration config)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

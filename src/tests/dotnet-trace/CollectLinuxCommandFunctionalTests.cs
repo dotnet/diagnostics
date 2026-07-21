@@ -13,10 +13,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Trace;
-using Microsoft.DotNet.XUnitExtensions;
 using Microsoft.Internal.Common.Utils;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -57,29 +55,32 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    probe);
         }
 
-        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [Theory]
         [MemberData(nameof(BasicCases))]
         public void CollectLinuxCommandProviderConfigurationConsolidation(object testArgs, string[] expectedLines)
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
             int exitCode = Run(testArgs, console);
             Assert.Equal((int)ReturnCode.Ok, exitCode);
             console.AssertSanitizedLinesEqual(CollectLinuxSanitizer, expectedLines);
         }
 
-        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [Theory]
         [MemberData(nameof(InvalidProviders))]
         public void CollectLinuxCommandProviderConfigurationConsolidation_Throws(object testArgs, string[] expectedException)
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
             int exitCode = Run(testArgs, console);
             Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
             console.AssertSanitizedLinesEqual(null, expectedException);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_ReportsResolveProcessErrors()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(processId: -1);
             int exitCode = Run(args, console);
@@ -88,9 +89,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, FormatException("-1 is not a valid process ID"));
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_ReportsResolveProcessNameErrors()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(name: "process-that-should-not-exist", processId: 0);
             int exitCode = Run(args, console);
@@ -99,10 +101,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, FormatException("There is no active process with the given name: process-that-should-not-exist"));
         }
 
-        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [Theory]
         [MemberData(nameof(ResolveProcessExceptions))]
         public void CollectLinuxCommand_ResolveProcessExceptions(object testArgs, string[] expectedError)
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
 
             int exitCode = Run(testArgs, console);
@@ -111,9 +114,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, expectedError);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_Probe_ListsProcesses_WhenNoArgs()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 2000, _outputHelper);
             var args = TestArgs(probe: true, output: new FileInfo(CommonOptions.DefaultTraceName));
             int exitCode = Run(args, console);
@@ -131,9 +135,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(CollectLinuxProbeSanitizer, expected);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_Probe_CsvToConsole()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 2000, _outputHelper);
             var args = TestArgs(probe: true, output: new FileInfo("stdout"));
             int exitCode = Run(args, console);
@@ -148,9 +153,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(CollectLinuxProbeSanitizer, expected);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_Probe_Csv()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 2000, _outputHelper);
             string tempFilePath = Path.GetTempFileName();
             var args = TestArgs(probe: true, output: new FileInfo(tempFilePath));
@@ -167,9 +173,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, expected);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_InvalidPid()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(processId: -1, probe: true);
             int exitCode = Run(args, console);
@@ -181,9 +188,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, expected);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_InvalidName()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(name: "process-that-should-not-exist", processId: 0, probe: true);
             int exitCode = Run(args, console);
@@ -195,9 +203,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, expected);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_Probe_ReportsResolveProcessErrors_BothPidAndName()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
             var args = TestArgs(name: "dummy", processId: 1, probe: true);
             int exitCode = Run(args, console);
@@ -211,9 +220,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, expected);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_ReportsConnectionFailed_NonDotNetProcess()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic port.
             string pid1Name = Process.GetProcessById(1).ProcessName;
             MockConsole console = new(200, 30, _outputHelper);
@@ -225,9 +235,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 $"Unable to connect to process '{pid1Name} (1)'. The process may have exited, or it doesn't have an accessible .NET diagnostic port."));
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_Probe_ReportsConnectionFailed_NonDotNetProcess()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             // PID 1 (init/systemd) exists but is not a .NET process — no diagnostic port.
             string pid1Name = Process.GetProcessById(1).ProcessName;
             MockConsole console = new(200, 2000, _outputHelper);
@@ -243,9 +254,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(null, expected);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxNotSupported))]
+        [Fact]
         public void CollectLinuxCommand_NotSupported_OnNonLinux()
         {
+            Assert.SkipUnless(IsCollectLinuxNotSupported, "Condition 'IsCollectLinuxNotSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
             int exitCode = Run(TestArgs(), console);
             Assert.Equal((int)ReturnCode.PlatformNotSupportedError, exitCode);
@@ -255,9 +267,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             });
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_RestoresCursorVisibility_OnSuccess()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper)
             {
                 CursorVisible = false
@@ -269,9 +282,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(console.CursorVisible, "Cursor should be visible after command completes");
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_RestoresCursorVisibility_OnError()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper)
             {
                 CursorVisible = false
@@ -290,11 +304,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.Equal((int)ReturnCode.TracingError, exitCode);
         }
 
-        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [Theory]
         [InlineData(true)]
         [InlineData(false)]
         public void CollectLinuxCommand_DoesNotChangeCursorVisibility_WhenOutputIsRedirected(bool initialCursorVisible)
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper)
             {
                 CursorVisible = initialCursorVisible,
@@ -308,9 +323,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.Equal(initialCursorVisible, console.CursorVisible);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_DoesNotPrintStatusUpdates_WhenOutputIsRedirected()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
             console.IsOutputRedirected = true;
 
@@ -329,9 +345,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.DoesNotContain(lines, l => l.Contains("Press <Enter>", StringComparison.OrdinalIgnoreCase));
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_DoesNotReadKey_WhenInputIsRedirected()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
             console.IsInputRedirected = true;
             console.KeyAvailable = true;
@@ -359,9 +376,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.True(callbackInvoked);
         }
 
-        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        [Fact]
         public void CollectLinuxCommand_PrintsStatusOnce_WhenCursorRepositioningUnsupported()
         {
+            Assert.SkipUnless(IsCollectLinuxSupported, "Condition 'IsCollectLinuxSupported' was not met.");
             MockConsole console = new(200, 30, _outputHelper);
 
             var handler = new CollectLinuxCommandHandler(console);

@@ -3,7 +3,7 @@
 
 using System;
 using System.IO;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
@@ -22,6 +22,24 @@ namespace Microsoft.Diagnostics.TestHelpers
             _logWriter = new StreamWriter(fs);
             _logWriter.AutoFlush = true;
             _lock = new object();
+        }
+
+        public string Output => string.Empty;
+
+        public void Write(string message)
+        {
+            lock (_lock)
+            {
+                _logWriter.Write(message);
+            }
+        }
+
+        public void Write(string format, params object[] args)
+        {
+            lock (_lock)
+            {
+                _logWriter.Write(format, args);
+            }
         }
 
         public void WriteLine(string message)

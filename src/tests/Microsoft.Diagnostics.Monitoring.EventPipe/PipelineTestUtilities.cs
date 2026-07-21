@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
-using Xunit.Abstractions;
+using Xunit;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests

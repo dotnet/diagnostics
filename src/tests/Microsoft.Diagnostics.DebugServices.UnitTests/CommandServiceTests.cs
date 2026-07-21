@@ -7,8 +7,6 @@ using System.Linq;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 
 [assembly: SuppressMessage("Performance", "CA1825:Avoid zero-length array allocations.", Justification = "<Pending>")]
 
@@ -43,7 +41,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         void IDisposable.Dispose() => Trace.Listeners.Remove(ListenerName);
 
-        [SkippableTheory, MemberData(nameof(GetConfiguration))]
+        [Theory, MemberData(nameof(GetConfiguration))]
         public void CommandServiceTest1(TestConfiguration config)
         {
             using TestDump testDump = new(config);

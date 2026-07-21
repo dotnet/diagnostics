@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -7,8 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
@@ -32,7 +30,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _output = outputHelper;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task PublishedProcessTest1(TestConfiguration config)
         {
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
@@ -47,7 +45,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             runner.WakeupTracee();
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task MultiplePublishedProcessTest(TestConfiguration config)
         {
             TestRunner[] runner = new TestRunner[3];
@@ -87,7 +85,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task WaitForConnectionTest(TestConfiguration config)
         {
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");

@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
@@ -7,7 +7,6 @@ using System.Text;
 using Microsoft.Diagnostics.CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
@@ -91,7 +90,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public void VerifyExitCode(TestConfiguration config)
         {
             VerifyExitCodeX(config, "232", 232);
@@ -105,7 +104,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             Assert.Contains($"Process exited with code '{exitCode}'.", stdOut);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public void VerifyHideIO(TestConfiguration config)
         {
             LaunchDotNetTrace(config, "collect -o VerifyHideIO.nettrace", "0 this is a message", out int dotnetTraceExitCode, out string stdOut, out string stdErr);
@@ -119,7 +118,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public void VerifyShowIO(TestConfiguration config)
         {
             LaunchDotNetTrace(config, "collect -o VerifyShowIO.nettrace --show-child-io", "0 this is a message", out int dotnetTraceExitCode, out string stdOut, out string stdErr);
