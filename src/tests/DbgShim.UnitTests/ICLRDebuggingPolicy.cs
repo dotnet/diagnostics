@@ -25,7 +25,7 @@ namespace Microsoft.Diagnostics
         public static ICLRDebuggingPolicy Create(IntPtr punk) => punk != IntPtr.Zero ? new ICLRDebuggingPolicy(punk) : null;
 
         private ICLRDebuggingPolicy(IntPtr punk)
-            : base(new RefCountedFreeLibrary(IntPtr.Zero), IID_ICLRDebuggingPolicy, punk)
+            : base(IID_ICLRDebuggingPolicy, punk)
         {
             SuppressRelease();
         }
