@@ -43,6 +43,8 @@ namespace SOS.Hosting
         private readonly string _dacModulePath;
         private ISymbolService _symbolService;
 
+        public int CallCount { get; private set; }
+
         public LibraryProviderWrapper(string runtimeModulePath, string dbiModulePath, string dacModulePath)
            : this(GetRunningOS(), GetBuildId(runtimeModulePath), dbiModulePath, dacModulePath)
         {
@@ -103,6 +105,7 @@ namespace SOS.Hosting
             uint sizeOfImage,
             out IntPtr moduleHandle)
         {
+            CallCount++;
             Trace.TraceInformation($"LibraryProviderWrapper.ProvideLibrary {fileName} {timeStamp:X8} {sizeOfImage:X8}");
             try
             {
@@ -154,6 +157,7 @@ namespace SOS.Hosting
             uint sizeOfImage,
             out IntPtr modulePathOut)
         {
+            CallCount++;
             Trace.TraceInformation($"LibraryProviderWrapper.ProvideLibrary2 {fileName} {timeStamp:X8} {sizeOfImage:X8}");
             try
             {
@@ -209,6 +213,7 @@ namespace SOS.Hosting
             uint sizeOfImage,
             out IntPtr modulePathOut)
         {
+            CallCount++;
             Trace.TraceInformation($"LibraryProviderWrapper.ProvideWindowsLibrary {fileName} {runtimeModulePath} {timeStamp:X8} {sizeOfImage:X8}");
             try
             {
@@ -266,6 +271,7 @@ namespace SOS.Hosting
             int buildIdSize,
             out IntPtr modulePathOut)
         {
+            CallCount++;
             try
             {
                 // Should only be called for Unix targets
