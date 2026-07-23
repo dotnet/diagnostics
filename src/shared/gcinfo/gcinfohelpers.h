@@ -15,16 +15,38 @@
 
 // Duplicated from log.h
 // NOTE: ICorJitInfo::logMsg appears to accept these same levels and is accessible from GcInfoEncoder.
+#ifndef LL_EVERYTHING
 #define LL_EVERYTHING  10
+#endif
+#ifndef LL_INFO1000000
 #define LL_INFO1000000  9       // can be expected to generate 1,000,000 logs per small but not trivial run
+#endif
+#ifndef LL_INFO100000
 #define LL_INFO100000   8       // can be expected to generate 100,000 logs per small but not trivial run
+#endif
+#ifndef LL_INFO10000
 #define LL_INFO10000    7       // can be expected to generate 10,000 logs per small but not trivial run
+#endif
+#ifndef LL_INFO1000
 #define LL_INFO1000     6       // can be expected to generate 1,000 logs per small but not trivial run
+#endif
+#ifndef LL_INFO100
 #define LL_INFO100      5       // can be expected to generate 100 logs per small but not trivial run
+#endif
+#ifndef LL_INFO10
 #define LL_INFO10       4       // can be expected to generate 10 logs per small but not trivial run
+#endif
+#ifndef LL_WARNING
 #define LL_WARNING      3
+#endif
+#ifndef LL_ERROR
 #define LL_ERROR        2
+#endif
+#ifndef LL_FATALERROR
 #define LL_FATALERROR   1
-#define LL_ALWAYS   	0		// impossible to turn off (log level never negative)
+#endif
+#ifndef LL_ALWAYS
+#define LL_ALWAYS       0       // impossible to turn off (log level never negative)
+#endif
 
 #endif // _GCINFOHELPERS_H_

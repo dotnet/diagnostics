@@ -103,6 +103,12 @@ VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 27\s+
 SOSCOMMAND:DumpMD <POUT>\s+MethodDesc:\s+(<HEXVAL>)\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo1\(Int32, System\.String\)\s+
 
+# Verify that the cDAC GCInfo path precisely matches the legacy decoder.
+SOSCOMMAND:GCInfo <PREVPOUT>
+SAVE_OUTPUT:GCInfo
+SOSCOMMAND:GCInfo -legacy <PREVPOUT>
+COMPARE_OUTPUT:GCInfo
+
 # Verify DumpClass
 SOSCOMMAND:DumpClass <POUT>\s*Class:\s+(<HEXVAL>)\s+<POUT>
 VERIFY:\s*Class Name:\s+SymbolTestApp.Program\s+
