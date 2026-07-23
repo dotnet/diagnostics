@@ -113,6 +113,9 @@ SAVE_OUTPUT:GCInfo
 SOSCOMMAND:GCInfo -legacy <PREVPOUT>
 COMPARE_OUTPUT:GCInfo
 
+# Restore DumpMD output for DumpClass's POUT capture.
+SOSCOMMAND:DumpMD <PREVPOUT>
+
 # Verify DumpClass
 SOSCOMMAND:DumpClass <POUT>\s*Class:\s+(<HEXVAL>)\s+<POUT>
 VERIFY:\s*Class Name:\s+SymbolTestApp.Program\s+
