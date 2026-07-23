@@ -218,21 +218,18 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             int tagsCount = 0;
             foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
             {
-                string[] tags = tagSet.DisplayTags.Split(',');
-                for (int i = 0; i < tags.Length; i++)
+                foreach ((string tagKey, string tagValue) in CounterTagFormatter.Decode(tagSet.Tags))
                 {
-                    string tag = tags[i];
-                    string[] keyValue = tag.Split("=");
-                    int posTag = observedTags.FindIndex (tag => tag.header == keyValue[0]);
+                    int posTag = observedTags.FindIndex(tag => tag.header == tagKey);
                     if (posTag == -1)
                     {
-                        observedTags.Add((keyValue[0], new string[counter.TagSets.Count]));
-                        columnHeaderLen.Add(keyValue[0].Length);
+                        observedTags.Add((tagKey, new string[counter.TagSets.Count]));
+                        columnHeaderLen.Add(tagKey.Length);
                         maxValueColumnLen.Add(default(int));
                         posTag = observedTags.Count - 1;
                     }
-                    observedTags[posTag].values[tagsCount] = keyValue[1];
-                    maxValueColumnLen[posTag] = Math.Max(keyValue[1].Length, maxValueColumnLen[posTag]);
+                    observedTags[posTag].values[tagsCount] = tagValue;
+                    maxValueColumnLen[posTag] = Math.Max(tagValue.Length, maxValueColumnLen[posTag]);
                 }
                 tagsCount++;
             }
