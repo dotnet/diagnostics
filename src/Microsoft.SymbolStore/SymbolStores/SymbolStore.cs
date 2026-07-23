@@ -16,6 +16,13 @@ namespace Microsoft.SymbolStore.SymbolStores
         public SymbolStore BackingStore { get; }
 
         /// <summary>
+        /// True if this store acquires files from a remote location (for example an HTTP symbol
+        /// server). Local stores (cache/directory) return false. Used to skip remote acquisition
+        /// when only explicitly-configured local stores should be consulted.
+        /// </summary>
+        public virtual bool IsRemote => false;
+
+        /// <summary>
         /// Trace/logging source
         /// </summary>
         protected readonly ITracer Tracer;
@@ -43,12 +50,30 @@ namespace Microsoft.SymbolStore.SymbolStores
         /// <returns>file or null if not found</returns>
         public async Task<SymbolStoreFile> GetFile(SymbolStoreKey key, CancellationToken token)
         {
-            SymbolStoreFile file = await GetFileInner(key, token).ConfigureAwait(false);
+            return await GetFile(key, remoteAllowed: true, token).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Downloads the file or retrieves it from a cache from the symbol store chain, optionally
+        /// skipping any remote stores (see <see cref="IsRemote"/>) so only explicitly-configured
+        /// local stores (cache/directory) are consulted.
+        /// </summary>
+        /// <param name="key">symbol index to retrieve</param>
+        /// <param name="remoteAllowed">if false, remote stores in the chain are skipped</param>
+        /// <param name="token">to cancel requests</param>
+        /// <returns>file or null if not found</returns>
+        public async Task<SymbolStoreFile> GetFile(SymbolStoreKey key, bool remoteAllowed, CancellationToken token)
+        {
+            SymbolStoreFile file = null;
+            if (remoteAllowed || !IsRemote)
+            {
+                file = await GetFileInner(key, token).ConfigureAwait(false);
+            }
             if (file == null)
             {
                 if (BackingStore != null)
                 {
-                    file = await BackingStore.GetFile(key, token).ConfigureAwait(false);
+                    file = await BackingStore.GetFile(key, remoteAllowed, token).ConfigureAwait(false);
                     if (file != null)
                     {
                         await WriteFileInner(key, file).ConfigureAwait(false);

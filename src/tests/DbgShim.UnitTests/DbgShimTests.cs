@@ -272,6 +272,16 @@ namespace Microsoft.Diagnostics
             {
                 throw new SkipTestException("Not supported on Alpine Linux (musl)");
             }
+            // This test analyzes a downloaded 6.0 dump whose matching DAC/DBI are not present locally
+            // (the test asset package ships only the dump), so they must be acquired from the symbol
+            // server. On non-Windows the DAC/DBI are native ELF/Mach-O images that cannot be
+            // authenticode-verified, so they are not downloaded (see Runtime.RemoteDownloadAllowed) and
+            // there is nothing to point 'setclrpath' at. Skip until the assets ship the matching DAC/DBI.
+            // Tracking: https://github.com/dotnet/diagnostics/issues/TODO
+            if (OS.Kind != OSKind.Windows)
+            {
+                throw new SkipTestException("Native DAC/DBI are not downloaded on non-Windows and are not bundled in the 6.0 test asset");
+            }
             if (!config.AllSettings.ContainsKey("DumpFile"))
             {
                 throw new SkipTestException("OpenVirtualProcessTest: No dump file");
@@ -285,11 +295,17 @@ namespace Microsoft.Diagnostics
 
                 TestDump testDump = new(cfg);
                 ITarget target = testDump.Target;
+                // dotnet-dump enables DAC signature verification on Windows (see Analyzer), which the
+                // DAC/DBI download policy requires before it will acquire them from the symbol server.
+                // TestDump does not run through Analyzer, so enable it here to match real usage. This
+                // test only reaches here on Windows (the non-Windows cases are skipped above), where the
+                // matching DAC/DBI are host-loadable Windows PEs indexed under the target runtime's id.
+                target.Services.GetService<ISettingsService>().DacSignatureVerificationEnabled = true;
                 IRuntimeService runtimeService = target.Services.GetService<IRuntimeService>();
                 IRuntime runtime = runtimeService.EnumerateRuntimes().Single();
 
                 CorDebugDataTargetWrapper dataTarget = new(target.Services, runtime);
-                LibraryProviderWrapper libraryProvider = new(target.OperatingSystem, runtime.RuntimeModule.BuildId, runtime.GetDbiFilePath(), runtime.GetDacFilePath(out bool verifySignature));
+                LibraryProviderWrapper libraryProvider = new(target.OperatingSystem, runtime.RuntimeModule.BuildId, runtime.GetDbiFilePath(out bool _), runtime.GetDacFilePath(out _));
                 ClrDebuggingVersion maxDebuggerSupportedVersion = new()
                 {
                     StructVersion = 0,

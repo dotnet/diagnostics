@@ -294,8 +294,16 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     ClrInfo clrInfo = runtime.Services.GetService<ClrInfo>();
                     Assert.NotNull(clrInfo);
 
+                    // These 5.0/6.0 dumps require downloading the matching DAC from the symbol server.
+                    // Under the "never download unverified executable code" policy the DAC is only
+                    // downloaded when it will be signature-verified, and these downloaded DACs do not pass
+                    // ClrMD's DAC-EKU signature check, so the runtime cannot be created. Skip when the DAC
+                    // could not be acquired; supply it locally (bundle it in the test assets) to run this.
                     ClrRuntime clrRuntime = runtime.Services.GetService<ClrRuntime>();
-                    Assert.NotNull(clrRuntime);
+                    if (clrRuntime is null)
+                    {
+                        throw new SkipTestException("DAC could not be acquired under the DAC/DBI download policy; supply the matching DAC locally");
+                    }
                     Assert.NotEmpty(clrRuntime.AppDomains);
                     Assert.NotEmpty(clrRuntime.Threads);
                     Assert.NotEmpty(clrRuntime.EnumerateModules());
