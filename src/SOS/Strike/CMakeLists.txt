@@ -87,6 +87,7 @@ if (CLR_CMAKE_HOST_WIN32)
     sildasm.cpp
     sos.cpp
     sosextensions.cpp
+    gcinfoprovider.cpp
     strike.cpp
     util.cpp
     vm.cpp
@@ -150,6 +151,7 @@ else(CLR_CMAKE_HOST_WIN32)
     metadata.cpp
     sigparser.cpp
     sildasm.cpp
+    gcinfoprovider.cpp
     strike.cpp
     sos.cpp
     sosextensions.cpp

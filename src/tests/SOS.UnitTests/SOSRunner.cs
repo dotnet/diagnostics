@@ -850,6 +850,7 @@ public class SOSRunner : IDisposable
             LogProcessingReproInfo(scriptFile, enabledDefines);
             string[] scriptLines = File.ReadAllLines(scriptFile);
             Dictionary<string, bool> activeDefines = new();
+            Dictionary<string, string> savedOutputs = new();
             bool isActiveDefineRegionEnabled = IsActiveDefineRegionEnabled(activeDefines, enabledDefines);
             int i = 0;
             try
@@ -976,6 +977,27 @@ public class SOSRunner : IDisposable
                     {
                         string verifyLine = line.Substring("!VERIFY:".Length);
                         VerifyOutput(verifyLine, match: false);
+                    }
+                    else if (line.StartsWith("SAVE_OUTPUT:"))
+                    {
+                        string name = line.Substring("SAVE_OUTPUT:".Length).Trim();
+                        if (_lastCommandOutput == null)
+                        {
+                            throw new Exception("SAVE_OUTPUT: no last command output");
+                        }
+                        savedOutputs[name] = _lastCommandOutput;
+                    }
+                    else if (line.StartsWith("COMPARE_OUTPUT:"))
+                    {
+                        string name = line.Substring("COMPARE_OUTPUT:".Length).Trim();
+                        if (!savedOutputs.TryGetValue(name, out string savedOutput))
+                        {
+                            throw new Exception("COMPARE_OUTPUT: no saved output named " + name);
+                        }
+                        if (_lastCommandOutput == null || !string.Equals(savedOutput, _lastCommandOutput, StringComparison.Ordinal))
+                        {
+                            throw new Exception("Debugger output did not match saved output: " + name);
+                        }
                     }
                     else
                     {

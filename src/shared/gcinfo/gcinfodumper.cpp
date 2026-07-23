@@ -4,6 +4,8 @@
 #ifndef SOS_INCLUDE
 #include "common.h"
 #endif
+
+#include "gcinfohelpers.h"
 #include "gcinfodumper.h"
 #include "gcinfodecoder.h"
 
@@ -15,7 +17,7 @@
 #ifdef HOST_64BIT
 // All stack offsets are INT32's, so this guarantees a disjoint range of
 // addresses for each register.
-#define ADDRESS_SPACING UI64(0x100000000)
+#define ADDRESS_SPACING 0x100000000ULL
 #elif defined(TARGET_ARM)
 #define ADDRESS_SPACING 0x100000
 #else
@@ -620,7 +622,7 @@ GcInfoDumper::EnumerateStateChangesResults GcInfoDumper::EnumerateStateChanges (
 
     REGDISPLAY regdisp;
 
-    ZeroMemory(static_cast<void*>(&regdisp), sizeof(regdisp));
+    ZeroMemory(&regdisp, sizeof(regdisp));
 
     regdisp.pContext = &regdisp.ctxOne;
     regdisp.IsCallerContextValid = TRUE;
