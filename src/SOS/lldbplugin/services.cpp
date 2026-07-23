@@ -1540,12 +1540,13 @@ LLDBServices::GetModuleBase(
 
 ULONG64
 LLDBServices::GetModuleSize(
+    /* const */ lldb::SBTarget& target,
     ULONG64 baseAddress,
     /* const */ lldb::SBModule& module)
 {
     ULONG64 size = 0;
 
-    // Find the first section with an valid base address
+    // Include section alignment gaps in the module range.
     int numSections = module.GetNumSections();
     for (int si = 0; si < numSections; si++)
     {
@@ -1558,7 +1559,15 @@ LLDBServices::GetModuleSize(
                 continue;
             }
  #endif
-            size += section.GetByteSize();
+            lldb::addr_t sectionAddress = section.GetLoadAddress(target);
+            lldb::addr_t sectionSize = section.GetByteSize();
+            if (sectionAddress == LLDB_INVALID_ADDRESS ||
+                sectionAddress < baseAddress ||
+                sectionSize > UINT64_MAX - sectionAddress)
+            {
+                continue;
+            }
+            size = std::max(size, sectionAddress + sectionSize - baseAddress);
         }
     }
     // For core dumps lldb doesn't return the section sizes when it
@@ -1984,7 +1993,7 @@ LLDBServices::LoadNativeSymbols(
                 path.append("/");
                 path.append(filename);
 
-                int moduleSize = GetModuleSize(moduleAddress, module);
+                int moduleSize = GetModuleSize(target, moduleAddress, module);
 
                 callback(&module, path.c_str(), moduleAddress, moduleSize);
             }
@@ -2073,7 +2082,7 @@ HRESULT LLDBServices::GetModuleInfo(
     }
     if (pSize)
     {
-        *pSize = GetModuleSize(moduleBase, module);
+        *pSize = GetModuleSize(target, moduleBase, module);
     }
     if (pTimestamp)
     {

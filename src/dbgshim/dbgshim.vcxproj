@@ -364,6 +364,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="cordbdatatarget.cpp" />
     <ClCompile Include="dbgshim.cpp" />
     <ClCompile Include="debugshim.cpp" />
     <None Include="dbgshim.ntdef" />
@@ -385,6 +386,7 @@
     <None Include="CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cordbdatatarget.h" />
     <ClInclude Include="dbgshim.h" />
     <ClInclude Include="debugshim.h" />
   </ItemGroup>
