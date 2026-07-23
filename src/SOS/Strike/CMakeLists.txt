@@ -79,7 +79,6 @@ if (CLR_CMAKE_HOST_WIN32)
     ExpressionNode.cpp
     dbgengservices.cpp
     exts.cpp
-    gchist.cpp
     gcroot.cpp
     symbols.cpp
     managedcommands.cpp
@@ -88,7 +87,6 @@ if (CLR_CMAKE_HOST_WIN32)
     sildasm.cpp
     sos.cpp
     sosextensions.cpp
-    stressLogDump.cpp
     gcinfoprovider.cpp
     strike.cpp
     util.cpp
@@ -148,13 +146,11 @@ else(CLR_CMAKE_HOST_WIN32)
     disasm.cpp
     eeheap.cpp
     exts.cpp
-    gchist.cpp
     gcroot.cpp
     symbols.cpp
     metadata.cpp
     sigparser.cpp
     sildasm.cpp
-    stressLogDump.cpp
     gcinfoprovider.cpp
     strike.cpp
     sos.cpp

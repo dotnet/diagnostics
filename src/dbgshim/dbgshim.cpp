@@ -370,7 +370,7 @@ public:
             SString dacModulePath;
             if (m_pLibraryProvider != NULL)
             {
-                hr = CLRDebuggingImpl::ProvideLibraries(clrInfo, m_pLibraryProvider, dbiModulePath, dacModulePath);
+                hr = CLRDebuggingImpl::ResolveLibraryPaths(clrInfo, m_pLibraryProvider, dbiModulePath, dacModulePath);
                 if (FAILED(hr))
                 {
                     goto exit;
@@ -548,7 +548,7 @@ public:
                 SString dacModulePath;
                 if (m_pLibraryProvider != NULL)
                 {
-                    hr = CLRDebuggingImpl::ProvideLibraries(clrRuntimeInfo.ClrInfo, m_pLibraryProvider, dbiModulePath, dacModulePath);
+                    hr = CLRDebuggingImpl::ResolveLibraryPaths(clrRuntimeInfo.ClrInfo, m_pLibraryProvider, dbiModulePath, dacModulePath);
                     if (FAILED(hr))
                     {
                         goto exit;
@@ -1191,6 +1191,11 @@ GetTargetCLRMetrics(
             {
                 return E_FAIL;
             }
+            // Make sure the entire RuntimeInfo structure is contained within the module before reading it.
+            if (!pedecoder.CheckRva(pedecoder.GetDataRva((TADDR)runtimeInfoExport), sizeof(RuntimeInfo)))
+            {
+                return E_FAIL;
+            }
             RuntimeInfo* pRuntimeInfo = reinterpret_cast<RuntimeInfo*>(runtimeInfoExport);
             if (strncmp(pRuntimeInfo->Signature, RUNTIME_INFO_SIGNATURE, sizeof(pRuntimeInfo->Signature)) != 0)
             {
@@ -1297,7 +1302,7 @@ GetTargetCLRMetrics(
         if (IsCoreClr(wszModulePath))
         {
             // Get the runtime index info (build id) for Linux/MacOS. If getting the build id fails for any reason, return success
-            // but with an invalid ClrInfo (unknown index type, no build id) so ProvideLibraries fails in InvokeStartupCallback and
+            // but with an invalid ClrInfo (unknown index type, no build id) so ResolveLibraryPaths fails in InvokeStartupCallback and
             // invokes the callback with an error.
             if (TryGetBuildIdFromFile(wszModulePath, pClrInfoOut->RuntimeBuildId, MAX_BUILDID_SIZE, &pClrInfoOut->RuntimeBuildIdSize)) 
             {
@@ -2074,7 +2079,7 @@ CreateDebuggingInterfaceFromVersion3(
             if (SUCCEEDED(hr))
             {
                 clrInfo.RuntimeModulePath.Set(szFullCoreClrPath);
-                hr = CLRDebuggingImpl::ProvideLibraries(clrInfo, pLibraryProvider, szFullDbiPath, szFullDacPath);
+                hr = CLRDebuggingImpl::ResolveLibraryPaths(clrInfo, pLibraryProvider, szFullDbiPath, szFullDacPath);
             }
         }
         else

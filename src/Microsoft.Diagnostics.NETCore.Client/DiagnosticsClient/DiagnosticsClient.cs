@@ -885,6 +885,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                             }
                             throw new UnsupportedCommandException($"{operationName} failed - Invalid command argument.");
 
+                        case (uint)DiagnosticsIpcError.BadEncoding:
+                            throw new BadEncodingException($"{operationName} failed - the target runtime rejected the request as invalid (bad encoding), likely because it does not support one or more of the configured options. Retry with options supported by the target runtime's version.");
+
                         case (uint)DiagnosticsIpcError.NotSupported:
                             message = $"{operationName} - Not supported by this runtime.";
                             break;

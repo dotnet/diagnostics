@@ -14,5 +14,5 @@ done
 
 scriptroot="$( cd -P "$( dirname "$source" )" && pwd )"
 export LLDB_PATH=/usr/bin/lldb
-export SOS_TEST_CDAC=true
+export SOS_TEST_DAC_MODE=cdacfallback
 $scriptroot/../.dotnet/dotnet test --no-build --logger "console;verbosity=detailed" $scriptroot/../src/tests/SOS.UnitTests/SOS.UnitTests.csproj --filter "Category=CDACCompatible"

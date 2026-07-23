@@ -63,8 +63,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="stoppingEventEventName">A string, parsed as-is, that will stop the trace upon hitting an event with the matching event name. Requires `--stopping-event-provider-name` to be set. For a more specific stopping event, additionally provide `--stopping-event-payload-filter`.</param>
         /// <param name="stoppingEventPayloadFilter">A string, parsed as [payload_field_name]:[payload_field_value] pairs separated by commas, that will stop the trace upon hitting an event with a matching payload. Requires `--stopping-event-provider-name` and `--stopping-event-event-name` to be set.</param>
         /// <param name="rundown">Collect rundown events.</param>
+        /// <param name="bufferingMode">The session buffering mode; Block requests non-lossy collection (requires a .NET 11+ target).</param>
         /// <returns></returns>
-        internal async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string[] providers, string[] profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter)
+        internal async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string[] providers, string[] profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter, EventPipeBufferingMode bufferingMode)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -258,11 +259,16 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         ICollectSession session = null;
                         try
                         {
-                            EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: rundownKeyword, requestStackwalk: true);
+                            EventPipeSessionConfiguration config = new(providerCollection, (int)buffersize, rundownKeyword: rundownKeyword, requestStackwalk: true, bufferingMode: bufferingMode);
                             session = await StartTraceSessionAsync(diagnosticsClient, config, ct).ConfigureAwait(false);
                         }
                         catch (UnsupportedCommandException e)
                         {
+                            if (bufferingMode == EventPipeBufferingMode.Block)
+                            {
+                                Console.Error.WriteLine("The runtime version being traced does not support the 'Block' buffering mode, which requires .NET 11+. Retry with --buffering-mode Drop or omit --buffering-mode.");
+                                return (int)ReturnCode.SessionCreationError;
+                            }
                             if (retryStrategy == RetryStrategy.DropKeywordKeepRundown)
                             {
                                 Console.Error.WriteLine("The runtime version being traced doesn't support the custom rundown feature used by this tracing configuration, retrying with the standard rundown keyword");
@@ -553,6 +559,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 StoppingEventEventNameOption,
                 StoppingEventPayloadFilterOption,
                 RundownOption,
+                BufferingModeOption,
                 DSRouterOption
             };
             collectCommand.TreatUnmatchedTokensAsErrors = false; // see the logic in Program.Main that handles UnmatchedTokens
@@ -583,7 +590,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                        stoppingEventEventName: parseResult.GetValue(StoppingEventEventNameOption),
                                        stoppingEventPayloadFilter: parseResult.GetValue(StoppingEventPayloadFilterOption),
                                        rundown: parseResult.GetValue(RundownOption),
-                                       dsrouter: parseResult.GetValue(DSRouterOption));
+                                       dsrouter: parseResult.GetValue(DSRouterOption),
+                                       bufferingMode: parseResult.GetValue(BufferingModeOption));
             });
 
             return collectCommand;
@@ -639,6 +647,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new("--rundown")
             {
                 Description = @"Collect rundown events unless specified false."
+            };
+
+        private static readonly Option<EventPipeBufferingMode> BufferingModeOption =
+            new("--buffering-mode")
+            {
+                Description = "How the runtime buffers events. 'Drop' (default) is the lossy circular buffer. 'Block' never drops events for a non-lossy trace; requires .NET 11+, fails otherwise. Accepts Drop/Block or 0/1.",
+                DefaultValueFactory = _ => EventPipeBufferingMode.Drop,
             };
 
         private static readonly Option<string> DSRouterOption =

@@ -19,6 +19,7 @@ namespace SOS.Hosting {
         private static readonly Guid IID_ICLRMetadataLocator = new("aa8fa804-bc05-4642-b2c5-c353ed22fc63");
         private static readonly Guid IID_ICLRRuntimeLocator = new("b760bf44-9377-4597-8be7-58083bdc5146");
         private static readonly Guid IID_ICLRContractLocator = new("17d5b8c6-34a9-407f-af4f-a930201d4e02");
+        private static readonly Guid IID_ICLRSymbolProvider = new("c4f8b7e2-9d3a-4f6c-b1e5-8a2d7c3f9b1e");
 
         // For ClrMD's magic hand shake
         private const ulong MagicCallbackConstant = 0x43;
@@ -31,6 +32,7 @@ namespace SOS.Hosting {
         private readonly IModuleService _moduleService;
         private readonly IThreadUnwindService _threadUnwindService;
         private readonly IRemoteMemoryService _remoteMemoryService;
+        private readonly IClrSymbolProvider _symbolProvider;
         private readonly ulong _ignoreAddressBitsMask;
 
         public IntPtr IDataTarget { get; }
@@ -47,6 +49,7 @@ namespace SOS.Hosting {
             _threadUnwindService = services.GetService<IThreadUnwindService>();
             _moduleService = services.GetService<IModuleService>();
             _remoteMemoryService = services.GetService<IRemoteMemoryService>();
+            _symbolProvider = services.GetService<IClrSymbolProvider>();
             _ignoreAddressBitsMask = _memoryService.SignExtensionMask();
 
             VTableBuilder builder = AddInterface(IID_ICLRDataTarget, false);
@@ -71,6 +74,12 @@ namespace SOS.Hosting {
 
             builder = AddInterface(IID_ICLRContractLocator, false);
             builder.AddMethod(new GetContractDescriptorDelegate(GetContractDescriptor));
+            builder.Complete();
+
+            builder = AddInterface(IID_ICLRSymbolProvider, false);
+            builder.AddMethod(new TryGetSymbolNameDelegate(TryGetSymbolName));
+            builder.AddMethod(new TryGetSymbolAddressDelegate(TryGetSymbolAddress));
+            builder.AddMethod(new TryGetFieldOffsetDelegate(TryGetFieldOffset));
             builder.Complete();
 
             AddRef();
@@ -378,6 +387,153 @@ namespace SOS.Hosting {
 
         #endregion
 
+        #region ICLRSymbolProvider
+
+        private int TryGetSymbolName(
+            IntPtr self,
+            ulong address,
+            uint cchName,
+            char* pName,
+            uint* pcchNameActual,
+            ulong* pDisplacement)
+        {
+            if (cchName > int.MaxValue)
+            {
+                return HResult.E_INVALIDARG;
+            }
+
+            address &= _ignoreAddressBitsMask;
+
+            try
+            {
+                if (_symbolProvider is null)
+                {
+                    return HResult.E_NOTIMPL;
+                }
+
+                if (!_symbolProvider.TryGetSymbolName(address, out string symbolName, out ulong displacement)
+                    || string.IsNullOrEmpty(symbolName))
+                {
+                    return HResult.E_FAIL;
+                }
+
+                if (pcchNameActual != null)
+                {
+                    *pcchNameActual = (uint)symbolName.Length + 1;
+                }
+                if (pDisplacement != null)
+                {
+                    *pDisplacement = displacement;
+                }
+
+                if (cchName == 0 || pName == null)
+                {
+                    return HResult.S_OK;
+                }
+
+                int copy = Math.Min(symbolName.Length, (int)cchName - 1);
+                for (int i = 0; i < copy; i++)
+                {
+                    pName[i] = symbolName[i];
+                }
+                pName[copy] = '\0';
+                return copy < symbolName.Length ? HResult.S_FALSE : HResult.S_OK;
+            }
+            catch
+            {
+                return HResult.E_FAIL;
+            }
+        }
+
+        private int TryGetSymbolAddress(
+            IntPtr self,
+            ulong moduleBase,
+            string name,
+            ulong* pAddress)
+        {
+            if (pAddress == null)
+            {
+                return HResult.E_INVALIDARG;
+            }
+            *pAddress = 0;
+
+            moduleBase &= _ignoreAddressBitsMask;
+
+            try
+            {
+                if (_symbolProvider is null)
+                {
+                    return HResult.E_NOTIMPL;
+                }
+
+                if (string.IsNullOrEmpty(name))
+                {
+                    return HResult.E_INVALIDARG;
+                }
+
+                // Bare symbol names only — '!' is reserved as the SOS module
+                // separator and is not produced by any of the mangling toolchains
+                // we target.
+                if (name.IndexOf('!') >= 0)
+                {
+                    return HResult.E_INVALIDARG;
+                }
+
+                if (_symbolProvider.TryGetSymbolAddress(moduleBase, name, out ulong address) && address != 0)
+                {
+                    *pAddress = address;
+                    return HResult.S_OK;
+                }
+                return HResult.E_FAIL;
+            }
+            catch
+            {
+                return HResult.E_FAIL;
+            }
+        }
+
+        private int TryGetFieldOffset(
+            IntPtr self,
+            ulong moduleBase,
+            string typeName,
+            string fieldName,
+            uint* pOffset)
+        {
+            if (pOffset == null)
+            {
+                return HResult.E_INVALIDARG;
+            }
+            *pOffset = 0;
+
+            moduleBase &= _ignoreAddressBitsMask;
+
+            try
+            {
+                if (_symbolProvider is null)
+                {
+                    return HResult.E_NOTIMPL;
+                }
+
+                if (string.IsNullOrEmpty(typeName) || string.IsNullOrEmpty(fieldName))
+                {
+                    return HResult.E_INVALIDARG;
+                }
+
+                if (_symbolProvider.TryGetFieldOffset(moduleBase, typeName, fieldName, out uint offset))
+                {
+                    *pOffset = offset;
+                    return HResult.S_OK;
+                }
+                return HResult.E_FAIL;
+            }
+            catch
+            {
+                return HResult.E_FAIL;
+            }
+        }
+
+        #endregion
+
         #region ICLRDataTarget delegates
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
@@ -520,6 +676,34 @@ namespace SOS.Hosting {
         private delegate int GetContractDescriptorDelegate(
             [In] IntPtr self,
             [Out] out ulong address);
+
+        #endregion
+
+        #region ICLRSymbolProvider delegates
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int TryGetSymbolNameDelegate(
+            [In] IntPtr self,
+            [In] ulong address,
+            [In] uint cchName,
+            [Out] char* pName,
+            [Out] uint* pcchNameActual,
+            [Out] ulong* pDisplacement);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int TryGetSymbolAddressDelegate(
+            [In] IntPtr self,
+            [In] ulong moduleBase,
+            [In][MarshalAs(UnmanagedType.LPWStr)] string name,
+            [Out] ulong* pAddress);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int TryGetFieldOffsetDelegate(
+            [In] IntPtr self,
+            [In] ulong moduleBase,
+            [In][MarshalAs(UnmanagedType.LPWStr)] string typeName,
+            [In][MarshalAs(UnmanagedType.LPWStr)] string fieldName,
+            [Out] uint* pOffset);
 
         #endregion
     }

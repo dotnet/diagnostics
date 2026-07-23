@@ -28,6 +28,12 @@ namespace Microsoft.Diagnostics
     public class DbgShimTests : IDisposable
     {
         private const string ListenerName = "DbgShimTests";
+        private const string DataAccessRoute = "DataAccess";
+        private const string DbiRoute = "Dbi";
+        private const string LoadPolicyRouteKey = "LoadPolicyRoute";
+        private const string LoadPolicyKey = "LoadPolicy";
+        private const string LoadPolicySuccessExpectedKey = "LoadPolicySuccessExpected";
+        private const string LoadPolicyProviderCallsExpectedKey = "LoadPolicyProviderCallsExpected";
 
         public static IEnumerable<object[]> GetConfigurations(string key, string value)
         {
@@ -35,6 +41,28 @@ namespace Microsoft.Diagnostics
         }
 
         public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", null);
+
+        public static IEnumerable<object[]> OpenVirtualProcessLoadPolicyConfigurations
+        {
+            get
+            {
+                foreach (object[] configuration in GetConfigurations("TestName", "OpenVirtualProcess"))
+                {
+                    // For these tests we inject a fake cDAC path to ensure that the cDAC can't be loaded and we can see provider usage.
+                    TestConfiguration config = (TestConfiguration)configuration[0];
+                    // We only expect the library provider to be called in legacy paths. The fallback shouldn't occur
+                    // in cdaconly mode and we should fail to get the interface back.
+                    yield return new object[] { config, DataAccessRoute, DbgShimCDacLoadPolicy.CDacOnly, false, 0 };
+                    yield return new object[] { config, DbiRoute, DbgShimCDacLoadPolicy.CDacOnly, false, 0 };
+                    // When loading the DAC via permissive policies with a fake cDAC path, we expect the library provider to be called once to get the DAC and succeed.
+                    yield return new object[] { config, DataAccessRoute, DbgShimCDacLoadPolicy.LegacyDacOnly, true, 1 };
+                    yield return new object[] { config, DataAccessRoute, DbgShimCDacLoadPolicy.PreferCDac, true, 1 };
+                    // For the Dbi route, we expect the library provider to be called twice to get both the DAC and DBI and succeed.
+                    yield return new object[] { config, DbiRoute, DbgShimCDacLoadPolicy.LegacyDacOnly, true, 2 };
+                    yield return new object[] { config, DbiRoute, DbgShimCDacLoadPolicy.PreferCDac, true, 2 };
+                }
+            }
+        }
 
         private ITestOutputHelper Output { get; }
 
@@ -287,6 +315,178 @@ namespace Microsoft.Diagnostics
                 Assert.Equal(0, clrDebugging.Release());
                 return Task.FromResult(0);
             });
+        }
+
+        [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "OpenVirtualProcess")]
+        public async Task OpenVirtualProcessWithClrDataTarget(TestConfiguration config)
+        {
+            if (OS.IsAlpine)
+            {
+                throw new SkipTestException("Not supported on Alpine Linux (musl)");
+            }
+            if (!config.AllSettings.ContainsKey("DumpFile"))
+            {
+                throw new SkipTestException("OpenVirtualProcessTest: No dump file");
+            }
+            await RemoteInvoke(config, nameof(OpenVirtualProcessWithClrDataTarget), static (string configXml) => {
+                AfterInvoke(configXml, out TestConfiguration cfg, out ITestOutputHelper output);
+
+                DbgShimAPI.Initialize(cfg.DbgShimPath());
+                AssertResult(DbgShimAPI.CLRCreateInstance(out ICLRDebugging clrDebugging));
+                Assert.NotNull(clrDebugging);
+
+                TestDump testDump = new(cfg);
+                ITarget target = testDump.Target;
+                IRuntimeService runtimeService = target.Services.GetService<IRuntimeService>();
+                IRuntime runtime = runtimeService.EnumerateRuntimes().Single();
+
+                DataTargetWrapper dataTarget = new(target.Services, runtime);
+                LibraryProviderWrapper libraryProvider = new(
+                    target.OperatingSystem,
+                    runtime.RuntimeModule.BuildId,
+                    runtime.GetDbiFilePath(),
+                    runtime.GetDacFilePath(out _));
+                ClrDebuggingVersion maxDebuggerSupportedVersion = new()
+                {
+                    StructVersion = 0,
+                    Major = 4,
+                    Minor = 0,
+                    Build = 0,
+                    Revision = 0,
+                };
+                HResult hr = clrDebugging.OpenVirtualProcess(
+                    runtime.RuntimeModule.ImageBase,
+                    dataTarget.IDataTarget,
+                    libraryProvider.ILibraryProvider,
+                    maxDebuggerSupportedVersion,
+                    in RuntimeWrapper.IID_IXCLRDataProcess,
+                    out IntPtr dataProcess,
+                    out _,
+                    out _);
+
+                AssertResult(hr);
+                Assert.NotEqual(IntPtr.Zero, dataProcess);
+                COMHelper.Release(dataProcess);
+                Assert.Equal(0, clrDebugging.Release());
+                return Task.FromResult(0);
+            });
+        }
+
+        [SkippableTheory, MemberData(nameof(OpenVirtualProcessLoadPolicyConfigurations))]
+        public async Task OpenVirtualProcessLoadPolicy(
+            TestConfiguration config,
+            string route,
+            DbgShimCDacLoadPolicy policy,
+            bool successExpected,
+            int providerCallsExpected)
+        {
+            if (OS.IsAlpine)
+            {
+                throw new SkipTestException("Not supported on Alpine Linux (musl)");
+            }
+            if (!config.AllSettings.ContainsKey("DumpFile"))
+            {
+                throw new SkipTestException("OpenVirtualProcessTest: No dump file");
+            }
+            Dictionary<string, string> settings = new(config.AllSettings)
+            {
+                [LoadPolicyRouteKey] = route,
+                [LoadPolicyKey] = policy.ToString(),
+                [LoadPolicySuccessExpectedKey] = successExpected.ToString(),
+                [LoadPolicyProviderCallsExpectedKey] = providerCallsExpected.ToString(),
+            };
+            TestConfiguration remoteConfig = new(settings);
+            await RemoteInvoke(
+                remoteConfig,
+                $"{nameof(OpenVirtualProcessLoadPolicy)}.{route}.{policy}",
+                static configXml => RunOpenVirtualProcessLoadPolicy(configXml));
+        }
+
+        private static Task<int> RunOpenVirtualProcessLoadPolicy(string configXml)
+        {
+            AfterInvoke(configXml, out TestConfiguration cfg, out ITestOutputHelper output);
+
+            string route = cfg.AllSettings[LoadPolicyRouteKey];
+            DbgShimCDacLoadPolicy policy = Enum.Parse<DbgShimCDacLoadPolicy>(cfg.AllSettings[LoadPolicyKey]);
+            bool successExpected = bool.Parse(cfg.AllSettings[LoadPolicySuccessExpectedKey]);
+            int providerCallsExpected = int.Parse(cfg.AllSettings[LoadPolicyProviderCallsExpectedKey]);
+
+            DbgShimAPI.Initialize(cfg.DbgShimPath());
+            TestDump testDump = new(cfg);
+            ITarget target = testDump.Target;
+            IRuntimeService runtimeService = target.Services.GetService<IRuntimeService>();
+            IRuntime runtime = runtimeService.EnumerateRuntimes().Single();
+            DataTargetWrapper clrDataTarget = new(target.Services, runtime);
+            CorDebugDataTargetWrapper corDebugDataTarget = new(target.Services, runtime);
+            IntPtr dataTarget = route == DataAccessRoute
+                ? clrDataTarget.IDataTarget
+                : corDebugDataTarget.ICorDebugDataTarget;
+            Guid requestedInterface = route == DataAccessRoute
+                ? RuntimeWrapper.IID_IXCLRDataProcess
+                : RuntimeWrapper.IID_ICorDebugProcess;
+            ClrDebuggingVersion maxDebuggerSupportedVersion = new()
+            {
+                StructVersion = 0,
+                Major = 4,
+                Minor = 0,
+                Build = 0,
+                Revision = 0,
+            };
+
+            string originalCDacPath = Environment.GetEnvironmentVariable("DOTNET_CDAC_PATH");
+            Environment.SetEnvironmentVariable(
+                "DOTNET_CDAC_PATH",
+                Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.dll"));
+            try
+            {
+                AssertResult(DbgShimAPI.CLRCreateInstance(out ICLRDebugging clrDebugging));
+                Assert.NotNull(clrDebugging);
+                AssertResult(COMHelper.QueryInterface(
+                    clrDebugging.InterfacePointer,
+                    ICLRDebuggingPolicy.IID_ICLRDebuggingPolicy,
+                    out IntPtr debuggingPolicyPointer));
+                ICLRDebuggingPolicy debuggingPolicy = ICLRDebuggingPolicy.Create(debuggingPolicyPointer);
+                Assert.NotNull(debuggingPolicy);
+                AssertResult(debuggingPolicy.SetCDacLoadPolicy(policy));
+                AssertResult(debuggingPolicy.GetCDacLoadPolicy(out DbgShimCDacLoadPolicy actualPolicy));
+                Assert.Equal(policy, actualPolicy);
+
+                LibraryProviderWrapper libraryProvider = new(
+                    target.OperatingSystem,
+                    runtime.RuntimeModule.BuildId,
+                    runtime.GetDbiFilePath(),
+                    runtime.GetDacFilePath(out _));
+                HResult hr = clrDebugging.OpenVirtualProcess(
+                    runtime.RuntimeModule.ImageBase,
+                    dataTarget,
+                    libraryProvider.ILibraryProvider,
+                    maxDebuggerSupportedVersion,
+                    in requestedInterface,
+                    out IntPtr process,
+                    out _,
+                    out _);
+
+                if (successExpected)
+                {
+                    AssertResult(hr);
+                    Assert.NotEqual(IntPtr.Zero, process);
+                    COMHelper.Release(process);
+                }
+                else
+                {
+                    Assert.True(hr != HResult.S_OK);
+                    Assert.Equal(IntPtr.Zero, process);
+                }
+
+                Assert.Equal(providerCallsExpected, libraryProvider.CallCount);
+                Assert.Equal(1, debuggingPolicy.Release());
+                Assert.Equal(0, clrDebugging.Release());
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("DOTNET_CDAC_PATH", originalCDacPath);
+            }
+            return Task.FromResult(0);
         }
 
         #region Helper functions
