@@ -64,10 +64,6 @@ static HRESULT OpenCorDebugProcessWithProvider(
     IUnknown** ppProcess,
     CLR_DEBUGGING_PROCESS_FLAGS* pFlags);
 static VOID RetargetDacIfNeeded(DWORD* pdwTimeStamp, DWORD* pdwSizeOfImage);
-static HRESULT SelectActivationResult(
-    HRESULT cdacHr,
-    HRESULT fallbackHr,
-    bool cdacEvaluated);
 
 typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImpl2FnPtr)(ULONG64 clrInstanceId,
     IUnknown * pDataTarget,
@@ -283,7 +279,8 @@ static HRESULT OpenCorDebugProcessWithCDac(
     CLR_DEBUGGING_PROCESS_FLAGS* pFlags)
 {
     SString dbiModulePath;
-    if (!GetDbiPath(dbiModulePath))
+    SString cdacModulePath;
+    if (!GetCDacAndDbiPaths(cdacModulePath, dbiModulePath))
     {
         return E_FAIL;
     }
@@ -301,19 +298,14 @@ static HRESULT OpenCorDebugProcessWithCDac(
         return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
     }
 
-    SString cdacModulePath;
-    HRESULT hr = E_FAIL;
-    if (GetCDacPath(cdacModulePath))
-    {
-        hr = ovpFn(
-            moduleBaseAddress,
-            pDataTarget,
-            cdacModulePath,
-            pMaxDebuggerSupportedVersion,
-            riidProcess,
-            ppProcess,
-            pFlags);
-    }
+    HRESULT hr = ovpFn(
+        moduleBaseAddress,
+        pDataTarget,
+        cdacModulePath,
+        pMaxDebuggerSupportedVersion,
+        riidProcess,
+        ppProcess,
+        pFlags);
 
     if (SUCCEEDED(hr) && ppProcess != NULL && *ppProcess == NULL)
     {
@@ -693,13 +685,10 @@ static HRESULT LoadResolvedLibraries(
     return hr;
 }
 
-// Selects the final HRESULT after the cDAC and/or fallback activation attempts have run.
-//   - A cDAC success wins, then a fallback success.
-//   - On total failure, if the cDAC was evaluated (any policy other than LegacyDacOnly) its error
-//     is surfaced so tools can log why the cDAC rejected the target.
-//   - Otherwise (LegacyDacOnly) the fallback error is surfaced. Callers seed fallbackHr with
-//     E_POINTER so the LegacyDacOnly no-provider case preserves its historical HRESULT.
-static HRESULT SelectActivationResult(
+// Picks the final HRESULT after a cDAC attempt (cdacHr) and a legacy fallback attempt (fallbackHr).
+// On total failure the cDAC error is surfaced when it was attempted so tools can log why the cDAC
+// rejected the target; otherwise the fallback error (seeded by callers) is surfaced.
+HRESULT SelectActivationResult(
     HRESULT cdacHr,
     HRESULT fallbackHr,
     bool cdacEvaluated)
@@ -1196,6 +1185,30 @@ static bool GetCDacPath(SString& cdacPath)
         cdacPath);
 }
 
+bool GetCDacAndDbiPaths(SString& cdacPath, SString& dbiPath)
+{
+    SString resolvedDbiPath;
+    SString resolvedCDacPath;
+    if (!GetDbiPath(resolvedDbiPath) || !GetCDacPath(resolvedCDacPath))
+    {
+        return false;
+    }
+
+    DWORD dbiAttributes = GetFileAttributesW(resolvedDbiPath);
+    DWORD cdacAttributes = GetFileAttributesW(resolvedCDacPath);
+    if (dbiAttributes == INVALID_FILE_ATTRIBUTES ||
+        (dbiAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 ||
+        cdacAttributes == INVALID_FILE_ATTRIBUTES ||
+        (cdacAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+    {
+        return false;
+    }
+
+    cdacPath.Set(resolvedCDacPath);
+    dbiPath.Set(resolvedDbiPath);
+    return true;
+}
+
 // Loads the given DAC/cDAC module and creates the requested data-access interface from it by
 // calling its CLRDataCreateInstance export. The module is intentionally left resident.
 static HRESULT DacCreateInstance(
@@ -1349,13 +1362,13 @@ static bool IsDataAccessInterface(REFIID riid)
     return riid == IID_IXCLRDataProcess_Local || riid == IID_ISOSDacInterface_Local;
 }
 
-STDMETHODIMP CLRDebuggingImpl::SetCDacLoadPolicy(DWORD policy)
+STDMETHODIMP CLRDebuggingImpl::SetCDacLoadPolicy(CDacLoadPolicy policy)
 {
     if (policy > CDacLoadPolicy_LegacyDacOnly)
     {
         return E_INVALIDARG;
     }
-    m_cdacLoadPolicy = (CDacLoadPolicy)policy;
+    m_cdacLoadPolicy = policy;
     return S_OK;
 }
 

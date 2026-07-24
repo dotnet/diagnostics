@@ -64,6 +64,23 @@ namespace Microsoft.Diagnostics
             }
         }
 
+        public static IEnumerable<object[]> LiveLoadPolicyConfigurations
+        {
+            get
+            {
+                foreach (object[] configuration in GetConfigurations("TestName", null))
+                {
+                    TestConfiguration config = (TestConfiguration)configuration[0];
+                    // A fake cDAC path forces the cDAC attempt to fail so provider fallback is observable.
+                    // CDacOnly must not fall back to the provider and must fail; the permissive policies
+                    // fall back to the provider and succeed.
+                    yield return new object[] { config, DbgShimCDacLoadPolicy.CDacOnly, false, false };
+                    yield return new object[] { config, DbgShimCDacLoadPolicy.LegacyDacOnly, true, true };
+                    yield return new object[] { config, DbgShimCDacLoadPolicy.PreferCDac, true, true };
+                }
+            }
+        }
+
         private ITestOutputHelper Output { get; }
 
         public DbgShimTests(ITestOutputHelper output)
@@ -262,6 +279,94 @@ namespace Microsoft.Diagnostics
                 TestCreateDebuggingInterface(debuggeeInfo, 3);
                 return 0;
             });
+        }
+
+        /// <summary>
+        /// Test that the SetCDacLoadPolicy export gates the cDAC/legacy fallback for the
+        /// CreateDebuggingInterfaceFromVersion3 live path.
+        /// </summary>
+        [SkippableTheory, MemberData(nameof(LiveLoadPolicyConfigurations))]
+        public async Task CreateDebuggingInterfaceFromVersion3LoadPolicy(
+            TestConfiguration config,
+            DbgShimCDacLoadPolicy policy,
+            bool successExpected,
+            bool providerCallExpected)
+        {
+            if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
+            {
+                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 single-file on MacOS");
+            }
+            DbgShimAPI.Initialize(config.DbgShimPath());
+            if (!DbgShimAPI.IsCreateDebuggingInterfaceFromVersion3Supported)
+            {
+                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 not supported");
+            }
+            if (!DbgShimAPI.IsSetCDacLoadPolicySupported)
+            {
+                throw new SkipTestException("SetCDacLoadPolicy not supported");
+            }
+            TestConfiguration policyConfig = new(new Dictionary<string, string>(config.AllSettings)
+            {
+                [LoadPolicyKey] = policy.ToString(),
+                [LoadPolicySuccessExpectedKey] = successExpected.ToString(),
+                [LoadPolicyProviderCallsExpectedKey] = providerCallExpected.ToString(),
+            });
+            await RemoteInvoke(
+                policyConfig,
+                $"{nameof(CreateDebuggingInterfaceFromVersion3LoadPolicy)}.{policy}",
+                static async (string configXml) => {
+                    using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
+                    TestConfiguration cfg = debuggeeInfo.TestConfiguration;
+                    DbgShimCDacLoadPolicy policy = Enum.Parse<DbgShimCDacLoadPolicy>(cfg.AllSettings[LoadPolicyKey]);
+                    bool successExpected = bool.Parse(cfg.AllSettings[LoadPolicySuccessExpectedKey]);
+                    bool providerCallExpected = bool.Parse(cfg.AllSettings[LoadPolicyProviderCallsExpectedKey]);
+                    TestCreateDebuggingInterfaceLoadPolicy(debuggeeInfo, policy, successExpected, providerCallExpected);
+                    return 0;
+                });
+        }
+
+        /// <summary>
+        /// Test that the SetCDacLoadPolicy export gates the cDAC/legacy fallback for the
+        /// RegisterForRuntimeStartup3 live path.
+        /// </summary>
+        [SkippableTheory, MemberData(nameof(LiveLoadPolicyConfigurations))]
+        public async Task RegisterForRuntimeStartup3LoadPolicy(
+            TestConfiguration config,
+            DbgShimCDacLoadPolicy policy,
+            bool successExpected,
+            bool providerCallExpected)
+        {
+            if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
+            {
+                throw new SkipTestException("RegisterForRuntimeStartup3 single-file on MacOS");
+            }
+            DbgShimAPI.Initialize(config.DbgShimPath());
+            if (!DbgShimAPI.IsRegisterForRuntimeStartup3Supported)
+            {
+                throw new SkipTestException("RegisterForRuntimeStartup3 not supported");
+            }
+            if (!DbgShimAPI.IsSetCDacLoadPolicySupported)
+            {
+                throw new SkipTestException("SetCDacLoadPolicy not supported");
+            }
+            TestConfiguration policyConfig = new(new Dictionary<string, string>(config.AllSettings)
+            {
+                [LoadPolicyKey] = policy.ToString(),
+                [LoadPolicySuccessExpectedKey] = successExpected.ToString(),
+                [LoadPolicyProviderCallsExpectedKey] = providerCallExpected.ToString(),
+            });
+            await RemoteInvoke(
+                policyConfig,
+                $"{nameof(RegisterForRuntimeStartup3LoadPolicy)}.{policy}",
+                static async (string configXml) => {
+                    using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
+                    TestConfiguration cfg = debuggeeInfo.TestConfiguration;
+                    DbgShimCDacLoadPolicy policy = Enum.Parse<DbgShimCDacLoadPolicy>(cfg.AllSettings[LoadPolicyKey]);
+                    bool successExpected = bool.Parse(cfg.AllSettings[LoadPolicySuccessExpectedKey]);
+                    bool providerCallExpected = bool.Parse(cfg.AllSettings[LoadPolicyProviderCallsExpectedKey]);
+                    TestRegisterForRuntimeStartup3LoadPolicy(debuggeeInfo, policy, successExpected, providerCallExpected);
+                    return 0;
+                });
         }
 
         [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "OpenVirtualProcess")]
@@ -630,6 +735,76 @@ namespace Microsoft.Diagnostics
             Trace.TraceInformation("RegisterForRuntimeStartup pid {0} DONE", debuggeeInfo.ProcessId);
         }
 
+        private static void TestRegisterForRuntimeStartup3LoadPolicy(
+            DebuggeeInfo debuggeeInfo,
+            DbgShimCDacLoadPolicy policy,
+            bool successExpected,
+            bool providerCallExpected)
+        {
+            TestConfiguration config = debuggeeInfo.TestConfiguration;
+            AutoResetEvent wait = new(false);
+            (IntPtr, GCHandle) unregister = (IntPtr.Zero, default);
+            HResult callbackResult = HResult.S_OK;
+            Exception callbackException = null;
+            ICorDebug corDebug = null;
+
+            Trace.TraceInformation("TestRegisterForRuntimeStartup3LoadPolicy pid {0} policy {1} START", debuggeeInfo.ProcessId, policy);
+
+            string originalCDacPath = Environment.GetEnvironmentVariable("DOTNET_CDAC_PATH");
+            Environment.SetEnvironmentVariable(
+                "DOTNET_CDAC_PATH",
+                Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.dll"));
+            try
+            {
+                AssertResult(DbgShimAPI.SetCDacLoadPolicy(policy));
+
+                DbgShimAPI.RuntimeStartupCallbackDelegate callback = (ICorDebug cordbg, object parameter, HResult hr) => {
+                    corDebug = cordbg;
+                    callbackResult = hr;
+                    try
+                    {
+                        if (hr)
+                        {
+                            TestICorDebug(debuggeeInfo, cordbg);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.TraceError(ex.ToString());
+                        callbackException = ex;
+                    }
+                    wait.Set();
+                };
+
+                LibraryProviderWrapper libraryProvider = new(config.RuntimeModulePath(), config.DbiModulePath(), config.DacModulePath());
+                AssertResult(DbgShimAPI.RegisterForRuntimeStartup3(debuggeeInfo.ProcessId, applicationGroupId: null, parameter: IntPtr.Zero, libraryProvider.ILibraryProvider, out unregister, callback));
+
+                Assert.True(wait.WaitOne());
+                AssertResult(DbgShimAPI.UnregisterForRuntimeStartup(unregister));
+                Assert.Null(callbackException);
+
+                Assert.Equal(successExpected, callbackResult == HResult.S_OK);
+                Assert.Equal(providerCallExpected, libraryProvider.CallCount > 0);
+
+                if (successExpected)
+                {
+                    AssertResult(debuggeeInfo.WaitForCreateProcess());
+                    Assert.Equal(0, corDebug.Release());
+                }
+                else
+                {
+                    Assert.Null(corDebug);
+                    debuggeeInfo.Kill();
+                }
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("DOTNET_CDAC_PATH", originalCDacPath);
+            }
+
+            Trace.TraceInformation("TestRegisterForRuntimeStartup3LoadPolicy pid {0} DONE", debuggeeInfo.ProcessId);
+        }
+
         private static void TestCreateDebuggingInterface(DebuggeeInfo debuggeeInfo, int api)
         {
             Trace.TraceInformation("TestCreateDebuggingInterface pid {0} api {1} START", debuggeeInfo.ProcessId, api);
@@ -698,6 +873,59 @@ namespace Microsoft.Diagnostics
             });
             AssertResult(hr);
             Trace.TraceInformation("TestCreateDebuggingInterface pid {0} DONE", debuggeeInfo.ProcessId);
+        }
+
+        private static void TestCreateDebuggingInterfaceLoadPolicy(
+            DebuggeeInfo debuggeeInfo,
+            DbgShimCDacLoadPolicy policy,
+            bool successExpected,
+            bool providerCallExpected)
+        {
+            Trace.TraceInformation("TestCreateDebuggingInterfaceLoadPolicy pid {0} policy {1} START", debuggeeInfo.ProcessId, policy);
+
+            string originalCDacPath = Environment.GetEnvironmentVariable("DOTNET_CDAC_PATH");
+            Environment.SetEnvironmentVariable(
+                "DOTNET_CDAC_PATH",
+                Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.dll"));
+            try
+            {
+                AssertResult(DbgShimAPI.SetCDacLoadPolicy(policy));
+
+                HResult hr = DbgShimAPI.EnumerateCLRs(debuggeeInfo.ProcessId, (IntPtr[] continueEventHandles, string[] moduleNames) => {
+                    TestConfiguration config = debuggeeInfo.TestConfiguration;
+                    Assert.Single(continueEventHandles);
+                    Assert.Single(moduleNames);
+                    for (int i = 0; i < continueEventHandles.Length; i++)
+                    {
+                        AssertResult(DbgShimAPI.CreateVersionStringFromModule(debuggeeInfo.ProcessId, moduleNames[i], out string versionString));
+                        Assert.False(string.IsNullOrWhiteSpace(versionString));
+
+                        LibraryProviderWrapper libraryProvider = new(config.RuntimeModulePath(), config.DbiModulePath(), config.DacModulePath());
+                        HResult result = DbgShimAPI.CreateDebuggingInterfaceFromVersion3(DbgShimAPI.CorDebugVersion_4_0, versionString, applicationGroupId: null, libraryProvider.ILibraryProvider, out ICorDebug corDebug);
+
+                        Assert.Equal(successExpected, result == HResult.S_OK);
+                        Assert.Equal(providerCallExpected, libraryProvider.CallCount > 0);
+
+                        if (successExpected)
+                        {
+                            TestICorDebug(debuggeeInfo, corDebug);
+                            AssertResult(debuggeeInfo.WaitForCreateProcess());
+                            Assert.Equal(0, corDebug.Release());
+                        }
+                        else
+                        {
+                            Assert.Null(corDebug);
+                        }
+                    }
+                });
+                AssertResult(hr);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("DOTNET_CDAC_PATH", originalCDacPath);
+            }
+
+            Trace.TraceInformation("TestCreateDebuggingInterfaceLoadPolicy pid {0} DONE", debuggeeInfo.ProcessId);
         }
 
         private static readonly Guid IID_ICorDebugProcess = new("3D6F5F64-7538-11D3-8D5B-00104B35E7EF");
