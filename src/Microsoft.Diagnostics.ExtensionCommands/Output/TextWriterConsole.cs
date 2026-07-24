@@ -23,20 +23,24 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
             CancellationToken = cancellationToken;
         }
 
-        public void Write(string value) => _writer.Write(value);
-
-        public void WriteWarning(string value) => _writer.Write(value);
-
-        public void WriteError(string value) => _writer.Write(value);
-
         public bool SupportsDml => false;
-
-        public void WriteDml(string text) => throw new NotSupportedException();
-
-        public void WriteDmlExec(string text, string action) => throw new NotSupportedException();
 
         public CancellationToken CancellationToken { get; set; }
 
         public int WindowWidth => int.MaxValue;
+
+        void IConsoleService.WriteString(OutputType type, OutputLevel level, string text)
+        {
+            switch (type)
+            {
+                case OutputType.Default:
+                    _writer.Write(text);
+                    break;
+                case OutputType.Logging:
+                    break;
+                default:
+                    throw new NotSupportedException($"Output type {type} is not supported in the capture console");
+            }
+        }
     }
 }
