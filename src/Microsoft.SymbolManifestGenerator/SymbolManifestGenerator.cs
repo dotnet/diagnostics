@@ -111,16 +111,29 @@ public static class SymbolManifestGenerator
 
             if (specialFilesRequireAdjacentRuntime)
             {
-                FileInfo correlatedFile = new(Path.Combine(runtimeModule.DirectoryName, correlatedFileName));
-                return (FoundMultipleCandidates: false,
-                        File: correlatedFile.Exists ? correlatedFile : default);
+                FileInfo[] adjacentCorrelatedFiles = runtimeModule.Directory?.GetFiles()
+                    .Where(file => file.Name.Equals(correlatedFileName, StringComparison.OrdinalIgnoreCase))
+                    .ToArray()
+                    ?? Array.Empty<FileInfo>();
+
+                if (adjacentCorrelatedFiles.Length > 1)
+                {
+                    tracer.Error($"Multiple adjacent files '{correlatedFileName}' found for runtime '{runtimeModule.FullName}': {string.Join<FileInfo>(", ", adjacentCorrelatedFiles)}.");
+                }
+
+                return adjacentCorrelatedFiles.Length switch
+                {
+                    0 => (FoundMultipleCandidates: false, default),
+                    1 => (FoundMultipleCandidates: false, adjacentCorrelatedFiles[0]),
+                    _ => (FoundMultipleCandidates: true, default)
+                };
             }
 
             FileInfo[] correlatedFiles = allFiles.Where(file => file.Name.Equals(correlatedFileName, StringComparison.OrdinalIgnoreCase)).ToArray();
 
             if (correlatedFiles.Length > 1)
             {
-                tracer.Error($"Multiple files '${correlatedFileName}' found for runtime '{runtimeModule.FullName}': {string.Join<FileInfo>(", ", correlatedFiles)}.");
+                tracer.Error($"Multiple files '{correlatedFileName}' found for runtime '{runtimeModule.FullName}': {string.Join<FileInfo>(", ", correlatedFiles)}.");
             }
 
             return correlatedFiles.Length switch

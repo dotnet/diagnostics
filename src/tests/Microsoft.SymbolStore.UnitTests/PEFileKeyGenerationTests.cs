@@ -135,5 +135,42 @@ namespace Microsoft.SymbolStore.Tests
                 Assert.Empty(runtimeKeys);
             }
         }
+
+        [Fact]
+        public void PEFileGenerateRuntimeKeysCaseInsensitiveRuntimeName()
+        {
+            using var mockFileStream = new FileStream("TestBinaries/mockclr_amd64.dll", FileMode.Open, FileAccess.Read);
+            var mockSymbolStoreFile = new SymbolStoreFile(mockFileStream, "CLR.DLL");
+            var generator = new PEFileKeyGenerator(_tracer, mockSymbolStoreFile);
+
+            var runtimeKeys = generator.GetKeys(KeyTypeFlags.RuntimeKeys);
+            Assert.Single(runtimeKeys);
+            Assert.Equal("clr.dll/4D4F434B434c52/clr.dll", runtimeKeys.Single().Index);
+        }
+
+        [Fact]
+        public void PEFileGenerateClrKeysCaseInsensitiveRuntimeName()
+        {
+            using var mockFileStream = new FileStream("TestBinaries/mockclr_amd64.dll", FileMode.Open, FileAccess.Read);
+            var mockSymbolStoreFile = new SymbolStoreFile(mockFileStream, "CLR.DLL");
+            var generator = new PEFileKeyGenerator(_tracer, mockSymbolStoreFile);
+
+            var clrKeys = generator.GetKeys(KeyTypeFlags.ClrKeys).ToDictionary((key) => key.Index);
+            Assert.Contains("sos_amd64_amd64_1.2.3.45.dll/4D4F434B434c52/sos_amd64_amd64_1.2.3.45.dll", clrKeys.Keys);
+            Assert.Contains("mscordacwks.dll/4D4F434B434c52/mscordacwks.dll", clrKeys.Keys);
+            Assert.Contains("mscordbi.dll/4D4F434B434c52/mscordbi.dll", clrKeys.Keys);
+        }
+
+        [Fact]
+        public void PEFileGenerateIdentityKeysCaseInsensitiveSpecialName()
+        {
+            using var mockFileStream = new FileStream("TestBinaries/mockdac.dll", FileMode.Open, FileAccess.Read);
+            var mockSymbolStoreFile = new SymbolStoreFile(mockFileStream, "MSCORDACWKS.DLL");
+            var generator = new PEFileKeyGenerator(_tracer, mockSymbolStoreFile);
+
+            SymbolStoreKey identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey).Single();
+            Assert.Equal("mscordacwks.dll/4D4F434B444143/mscordacwks.dll", identityKey.Index);
+            Assert.True(identityKey.IsClrSpecialFile);
+        }
     }
 }
