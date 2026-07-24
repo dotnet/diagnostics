@@ -28,8 +28,9 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Writes text to the console
         /// </summary>
-        /// <param name="type">type of text to write</param>
+        /// <param name="type">type of text to write (default, ,logging, dml)</param>
+        /// <param name="level">level of text to write (normal, error, warning, verbose)</param>
         /// <param name="text">text to write</param>
-        void WriteString(OutputType type, string text);
+        void WriteString(OutputType type, OutputLevel level, string text);
     }
 }

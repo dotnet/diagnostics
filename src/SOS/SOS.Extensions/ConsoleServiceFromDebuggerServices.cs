@@ -27,18 +27,28 @@ namespace SOS.Extensions
 
         int IConsoleService.WindowWidth => _debuggerServices.GetOutputWidth();
 
-        void IConsoleService.WriteString(OutputType type, string text)
+        void IConsoleService.WriteString(OutputType type, OutputLevel level, string text)
         {
             switch (type)
             {
-                case OutputType.Normal:
-                    _debuggerServices.OutputString(DEBUG_OUTPUT.NORMAL, text);
-                    break;
-                case OutputType.Warning:
-                    _debuggerServices.OutputString(DEBUG_OUTPUT.WARNING, text);
-                    break;
-                case OutputType.Error:
-                    _debuggerServices.OutputString(DEBUG_OUTPUT.ERROR, text);
+                case OutputType.Default:
+                    switch (level)
+                    {
+                        case OutputLevel.Normal:
+                            _debuggerServices.OutputString(DEBUG_OUTPUT.NORMAL, text);
+                            break;
+                        case OutputLevel.Warning:
+                            _debuggerServices.OutputString(DEBUG_OUTPUT.WARNING, text);
+                            break;
+                        case OutputLevel.Error:
+                            _debuggerServices.OutputString(DEBUG_OUTPUT.ERROR, text);
+                            break;
+                        case OutputLevel.Verbose:
+                            _debuggerServices.OutputString(DEBUG_OUTPUT.VERBOSE, text);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(level), level, null);
+                        }
                     break;
                 case OutputType.Dml:
                     _debuggerServices.OutputDmlString(DEBUG_OUTPUT.NORMAL, text);

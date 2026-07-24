@@ -28,20 +28,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         CancellationToken IConsoleService.CancellationToken { get; set; } = CancellationToken.None;
 
-        void IConsoleService.WriteString(OutputType type, string text)
+        void IConsoleService.WriteString(OutputType type, OutputLevel level, string text)
         {
             switch (type)
             {
-                case OutputType.Normal:
-                case OutputType.Warning:
-                case OutputType.Error:
+                case OutputType.Default:
                     _charToLineConverter.Input(text);
                     break;
-                case OutputType.Dml:
-                    throw new NotSupportedException();
                 case OutputType.Logging:
-                default:
                     break;
+                default:
+                    throw new NotSupportedException($"Output type {type} is not supported in the capture console");
             }
         }
 
