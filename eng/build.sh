@@ -347,10 +347,19 @@ if [[ "$__Test" == 1 ]]; then
           export SOS_TEST_INTERPRETER="true"
       fi
 
-      # Build the test filter argument if provided
+      # Build the test filter argument if provided.
+      #
+      # A filter is applied to EVERY project in the test traversal, so projects that don't
+      # contain a matching test legitimately run zero tests. MTP returns exit code 8 ("zero
+      # tests ran") in that case, which Arcade would otherwise treat as a failure. Append
+      # --ignore-exit-code 8 so those non-matching projects don't fail the run. The trade-off
+      # (a mistyped filter that matches nothing anywhere would pass silently) is covered by the
+      # "at least one test ran" guard after the test run below.
       __TestFilterArg=
+      __TestFilterActive=0
       if [[ -n "$__TestFilter" ]]; then
-          __TestFilterArg="/p:TestRunnerAdditionalArguments=\"$__TestFilter\""
+          __TestFilterActive=1
+          __TestFilterArg="/p:TestRunnerAdditionalArguments=\"$__TestFilter --ignore-exit-code 8\""
       fi
 
       # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt
@@ -377,6 +386,17 @@ if [[ "$__Test" == 1 ]]; then
           fi
       fi
 
+      # When a filter is active it is applied to every project in the traversal, so non-matching
+      # projects run zero tests. --ignore-exit-code 8 (added to __TestFilterArg above) keeps those
+      # from failing the run; to still catch a filter that matches nothing ANYWHERE, count the
+      # tests that ran after the build. Clear this run's result XMLs first so the post-run count
+      # only reflects the current run (result file names embed the target framework, so stale
+      # files from a previous run would not otherwise be overwritten).
+      __ResultsDir="$__RootBinDir/TestResults/$__BuildType"
+      if [[ "$__TestFilterActive" == 1 && -d "$__ResultsDir" ]]; then
+          rm -f "$__ResultsDir"/*.xml
+      fi
+
       # __CommonMSBuildArgs contains TargetOS property
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
@@ -396,6 +416,23 @@ if [[ "$__Test" == 1 ]]; then
 
       if [ $? != 0 ]; then
           exit 1
+      fi
+
+      # Guard against a filter that silently matches nothing (see note above): sum the test
+      # counts from the xUnit result XMLs this run produced and fail if nothing ran.
+      if [[ "$__TestFilterActive" == 1 ]]; then
+          __TestsRan=0
+          if [[ -d "$__ResultsDir" ]]; then
+              __TestsRan=$(cat "$__ResultsDir"/*.xml 2>/dev/null | grep -oE '<assembly [^>]*total="[0-9]+"' | grep -oE 'total="[0-9]+"' | grep -oE '[0-9]+' | awk '{s+=$1} END {print s+0}')
+          fi
+          if [[ -z "$__TestsRan" ]]; then
+              __TestsRan=0
+          fi
+          if [[ "$__TestsRan" == 0 ]]; then
+              echo "ERROR: The test filter matched zero tests across all projects. Check the -methodfilter/-classfilter value."
+              exit 1
+          fi
+          echo "Test filter matched $__TestsRan test(s) across the run."
       fi
    fi
 fi

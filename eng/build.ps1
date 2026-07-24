@@ -118,13 +118,23 @@ if ($test) {
         # Tests run as xUnit v3 / Microsoft.Testing.Platform executables, so use the MTP
         # filter options (--filter-method / --filter-class) instead of the old xunit.console
         # -method / -class flags.
-        # Use backslash-escaped quotes so they survive the additional quoting in tools.ps1
+        # Use backslash-escaped quotes so they survive the additional quoting in tools.ps1.
+        #
+        # A filter is applied to EVERY project in the test traversal, so projects that don't
+        # contain a matching test legitimately run zero tests. MTP returns exit code 8 ("zero
+        # tests ran") in that case, which Arcade would otherwise treat as a failure. Append
+        # --ignore-exit-code 8 so those non-matching projects don't fail the run. The trade-off
+        # (a mistyped filter that matches nothing anywhere would pass silently) is covered by the
+        # "at least one test ran" guard after the test run below.
+        $testFilterActive = $false
         $testFilterArg = ''
         if ($methodfilter -ne '') {
-            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"--filter-method $methodfilter\`""
+            $testFilterActive = $true
+            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"--filter-method $methodfilter --ignore-exit-code 8\`""
         }
         elseif ($classfilter -ne '') {
-            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"--filter-class $classfilter\`""
+            $testFilterActive = $true
+            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"--filter-class $classfilter --ignore-exit-code 8\`""
         }
 
         # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt
@@ -149,6 +159,17 @@ if ($test) {
             }
         }
 
+        # When a filter is active it is applied to every project in the traversal, so non-matching
+        # projects run zero tests. --ignore-exit-code 8 (added to $testFilterArg above) keeps those
+        # from failing the run; to still catch a filter that matches nothing ANYWHERE, count the
+        # tests that ran after the build. Clear this run's result XMLs first so the post-run count
+        # only reflects the current run (result file names embed the target framework, so stale
+        # files from a previous run would not otherwise be overwritten).
+        $resultsDir = Join-Path (Join-Path $artifactsdir "TestResults") $configuration
+        if ($testFilterActive -and (Test-Path $resultsDir)) {
+            Remove-Item (Join-Path $resultsDir "*.xml") -Force -ErrorAction SilentlyContinue
+        }
+
         & "$engroot\common\build.ps1" `
           -test `
           -restore:$skipmanaged `
@@ -169,6 +190,27 @@ if ($test) {
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
+        }
+
+        # Guard against a filter that silently matches nothing (see note above): sum the test
+        # counts from the xUnit result XMLs this run produced and fail if nothing ran.
+        if ($testFilterActive) {
+            $testsRan = 0
+            if (Test-Path $resultsDir) {
+                foreach ($xml in Get-ChildItem $resultsDir -Filter *.xml -File -ErrorAction SilentlyContinue) {
+                    try {
+                        [xml]$doc = Get-Content -LiteralPath $xml.FullName -Raw
+                        foreach ($asm in @($doc.assemblies.assembly)) {
+                            if ($asm -and $asm.total) { $testsRan += [int]$asm.total }
+                        }
+                    } catch { }
+                }
+            }
+            if ($testsRan -eq 0) {
+                Write-Host "ERROR: The test filter matched zero tests across all projects. Check the -methodfilter/-classfilter value." -ForegroundColor Red
+                exit 1
+            }
+            Write-Host "Test filter matched $testsRan test(s) across the run." -ForegroundColor Green
         }
     }
 }
