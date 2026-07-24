@@ -229,6 +229,51 @@ HRESULT CreateCoreDbg(
     return hr;
 }
 
+// Policy for the live-debugging paths (RegisterForRuntimeStartup* and
+// CreateDebuggingInterfaceFromVersion*), which don't flow through ICLRDebuggingPolicy. Set via the
+// SetCDacLoadPolicy export.
+static CDacLoadPolicy g_cdacLoadPolicy = CDacLoadPolicy_PreferCDac;
+
+// Only the bundled DBI can report whether it can consume the cDAC for this target, so this invokes it
+// rather than pre-judging from file presence.
+static HRESULT TryCreateCoreDbgWithCDac(
+    HMODULE hModule,
+    DWORD processId,
+    LPCWSTR lpApplicationGroupId,
+    int iDebuggerVersion,
+    IUnknown** ppCordb)
+{
+    SString cdacPath;
+    SString dbiPath;
+    if (!GetCDacAndDbiPaths(cdacPath, dbiPath))
+    {
+        return E_FAIL;
+    }
+
+    return CreateCoreDbg(hModule, processId, dbiPath, cdacPath, lpApplicationGroupId, iDebuggerVersion, ppCordb);
+}
+
+// Legacy fallback that resolves the DBI/DAC through the library provider and activates them.
+static HRESULT TryCreateCoreDbgWithProvider(
+    ClrInfo& clrInfo,
+    ICLRDebuggingLibraryProvider3* pLibraryProvider,
+    HMODULE hModule,
+    DWORD processId,
+    LPCWSTR lpApplicationGroupId,
+    int iDebuggerVersion,
+    IUnknown** ppCordb)
+{
+    SString dbiModulePath;
+    SString dacModulePath;
+    HRESULT hr = CLRDebuggingImpl::ResolveLibraryPaths(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    return CreateCoreDbg(hModule, processId, dbiModulePath, dacModulePath, lpApplicationGroupId, iDebuggerVersion, ppCordb);
+}
+
 //
 // Helper class for RegisterForRuntimeStartup
 //
@@ -250,7 +295,7 @@ class RuntimeStartupHelper
 #endif // TARGET_UNIX
 
 public:
-    
+
     RuntimeStartupHelper(DWORD dwProcessId, ICLRDebuggingLibraryProvider3* pLibraryProvider, PSTARTUP_CALLBACK pfnCallback, PVOID parameter) :
         m_ref(1),
         m_processId(dwProcessId),
@@ -361,36 +406,52 @@ public:
             // Get the DBI/DAC index info for regular and single-file apps
             hr = GetTargetCLRMetrics(clrInfo.RuntimeModulePath, NULL, &clrInfo, NULL);
             if (FAILED(hr))
-            { 
+            {
                 // Runtime module not found (return false). This isn't an error that needs to be reported via the callback.
                 return false;
             }
 
             SString dbiModulePath;
             SString dacModulePath;
-            if (m_pLibraryProvider != NULL)
+
+            // Snapshot so a concurrent SetCDacLoadPolicy can't change decisions mid-call.
+            CDacLoadPolicy policy = g_cdacLoadPolicy;
+
+            HRESULT cdacHr = E_FAIL;
+            bool cdacEvaluated = policy != CDacLoadPolicy_LegacyDacOnly;
+            if (cdacEvaluated)
             {
-                hr = CLRDebuggingImpl::ResolveLibraryPaths(clrInfo, m_pLibraryProvider, dbiModulePath, dacModulePath);
-                if (FAILED(hr))
-                {
-                    goto exit;
-                }
-            }
-            else
-            {
-                // Fallback to loading DBI side-by-side the runtime module
-                const char *pszLast = strrchr(pszModulePath, DIRECTORY_SEPARATOR_CHAR_A);
-                if (pszLast == NULL)
-                {
-                    _ASSERT(!"InvokeStartupCallback: can find separator in coreclr path\n");
-                    hr = E_INVALIDARG;
-                    goto exit;
-                }
-                dbiModulePath.SetASCII(pszModulePath, pszLast - pszModulePath);
-                AppendDbiDllName(dbiModulePath);
+                cdacHr = TryCreateCoreDbgWithCDac(hModule, m_processId, m_applicationGroupId, CorDebugVersion_2_0, &pCordb);
             }
 
-            hr = CreateCoreDbg(hModule, m_processId, dbiModulePath, dacModulePath, m_applicationGroupId, CorDebugVersion_2_0, &pCordb);
+            HRESULT fallbackHr = E_FAIL;
+            if (FAILED(cdacHr) && policy != CDacLoadPolicy_CDacOnly)
+            {
+                if (m_pLibraryProvider != NULL)
+                {
+                    fallbackHr = TryCreateCoreDbgWithProvider(clrInfo, m_pLibraryProvider, hModule, m_processId, m_applicationGroupId, CorDebugVersion_2_0, &pCordb);
+                }
+                else
+                {
+                    // Load DBI side-by-side the runtime module. Unlike the other paths this skips the
+                    // version check because the runtime path here is the ASCII module path reported by
+                    // the startup callback rather than a resolved index.
+                    const char *pszLast = strrchr(pszModulePath, DIRECTORY_SEPARATOR_CHAR_A);
+                    if (pszLast == NULL)
+                    {
+                        _ASSERT(!"InvokeStartupCallback: can find separator in coreclr path\n");
+                        fallbackHr = E_INVALIDARG;
+                    }
+                    else
+                    {
+                        dbiModulePath.SetASCII(pszModulePath, pszLast - pszModulePath);
+                        AppendDbiDllName(dbiModulePath);
+                        fallbackHr = CreateCoreDbg(hModule, m_processId, dbiModulePath, dacModulePath, m_applicationGroupId, CorDebugVersion_2_0, &pCordb);
+                    }
+                }
+            }
+
+            hr = SelectActivationResult(cdacHr, fallbackHr, cdacEvaluated);
             _ASSERTE((pCordb == NULL) == FAILED(hr));
             if (FAILED(hr))
             {
@@ -471,7 +532,7 @@ public:
                 {
                     return hr;
                 }
-                // If GetRuntime succeeded but the handle is INVALID_HANDLE_VALUE, then sleep and retry also. This fixes a 
+                // If GetRuntime succeeded but the handle is INVALID_HANDLE_VALUE, then sleep and retry also. This fixes a
                 // race condition where dbgshim catches the coreclr module just being loaded but before g_hContinueStartupEvent
                 // has been initialized.
                 if (clrRuntimeInfo.ContinueStartupEvent != INVALID_HANDLE_VALUE)
@@ -546,38 +607,46 @@ public:
 
                 SString dbiModulePath;
                 SString dacModulePath;
-                if (m_pLibraryProvider != NULL)
-                {
-                    hr = CLRDebuggingImpl::ResolveLibraryPaths(clrRuntimeInfo.ClrInfo, m_pLibraryProvider, dbiModulePath, dacModulePath);
-                    if (FAILED(hr))
-                    {
-                        goto exit;
-                    }
-                }
-                else 
-                {
-                    dbiModulePath.Set(clrRuntimeInfo.ClrInfo.RuntimeModulePath);
-                    SString::Iterator iter = dbiModulePath.End();
-                    if (dbiModulePath.FindBack(iter, DIRECTORY_SEPARATOR_CHAR_W))
-                    {
-                        iter++;
-                        dbiModulePath.Truncate(iter);
-                    }
-                    else 
-                    {
-                        hr = E_FAIL;
-                        goto exit;
-                    }
-                    AppendDbiDllName(dbiModulePath);
 
-                    if (!CheckDbiAndRuntimeVersion(dbiModulePath, clrRuntimeInfo.ClrInfo.RuntimeModulePath))
-                    {
-                        hr = CORDBG_E_INCOMPATIBLE_PROTOCOL;
-                        goto exit;
-                    }
+                // Snapshot so a concurrent SetCDacLoadPolicy can't change decisions mid-call.
+                CDacLoadPolicy policy = g_cdacLoadPolicy;
+
+                HRESULT cdacHr = E_FAIL;
+                bool cdacEvaluated = policy != CDacLoadPolicy_LegacyDacOnly;
+                if (cdacEvaluated)
+                {
+                    cdacHr = TryCreateCoreDbgWithCDac(clrRuntimeInfo.ModuleHandle, m_processId, NULL, clrRuntimeInfo.EngineMetrics.dwDbiVersion, &pCordb);
                 }
 
-                hr = CreateCoreDbg(clrRuntimeInfo.ModuleHandle, m_processId, dbiModulePath, dacModulePath, NULL, clrRuntimeInfo.EngineMetrics.dwDbiVersion, &pCordb);
+                HRESULT fallbackHr = E_FAIL;
+                if (FAILED(cdacHr) && policy != CDacLoadPolicy_CDacOnly)
+                {
+                    if (m_pLibraryProvider != NULL)
+                    {
+                        fallbackHr = TryCreateCoreDbgWithProvider(clrRuntimeInfo.ClrInfo, m_pLibraryProvider, clrRuntimeInfo.ModuleHandle, m_processId, NULL, clrRuntimeInfo.EngineMetrics.dwDbiVersion, &pCordb);
+                    }
+                    else
+                    {
+                        dbiModulePath.Set(clrRuntimeInfo.ClrInfo.RuntimeModulePath);
+                        SString::Iterator iter = dbiModulePath.End();
+                        if (dbiModulePath.FindBack(iter, DIRECTORY_SEPARATOR_CHAR_W))
+                        {
+                            iter++;
+                            dbiModulePath.Truncate(iter);
+                            AppendDbiDllName(dbiModulePath);
+
+                            fallbackHr = CheckDbiAndRuntimeVersion(dbiModulePath, clrRuntimeInfo.ClrInfo.RuntimeModulePath)
+                                ? CreateCoreDbg(clrRuntimeInfo.ModuleHandle, m_processId, dbiModulePath, dacModulePath, NULL, clrRuntimeInfo.EngineMetrics.dwDbiVersion, &pCordb)
+                                : CORDBG_E_INCOMPATIBLE_PROTOCOL;
+                        }
+                        else
+                        {
+                            fallbackHr = E_FAIL;
+                        }
+                    }
+                }
+
+                hr = SelectActivationResult(cdacHr, fallbackHr, cdacEvaluated);
                 _ASSERTE((pCordb == NULL) == FAILED(hr));
                 if (FAILED(hr))
                 {
@@ -1156,20 +1225,20 @@ GetTargetCLRMetrics(
     }
 
     // If we are looking for the DotNetRuntimeInfo export for a single-file app, do this before looking for
-    // engine metrics export ordinal for a faster out of the module search loop. There are plenty of other 
+    // engine metrics export ordinal for a faster out of the module search loop. There are plenty of other
     // native modules with the metrics ordinal #2.
     if (pClrInfoOut != NULL)
     {
         if (IsCoreClr(wszModulePath))
         {
-            PEDecoder_ResourceCallbackFunction callback = ([](LPCWSTR lpName, LPCWSTR lpType, DWORD langid, BYTE* data, COUNT_T cbData, void* context) { 
+            PEDecoder_ResourceCallbackFunction callback = ([](LPCWSTR lpName, LPCWSTR lpType, DWORD langid, BYTE* data, COUNT_T cbData, void* context) {
                 CLR_DEBUG_RESOURCE* pDebugResource = (CLR_DEBUG_RESOURCE*)data;
                 ClrInfo* pClrInfo = (ClrInfo*)context;
                 if (cbData != sizeof(CLR_DEBUG_RESOURCE) || pDebugResource->dwVersion != 0 || pDebugResource->signature != CLR_ID_ONECORE_CLR)
                 {
                     return false;
                 }
-                pClrInfo->IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Identity; 
+                pClrInfo->IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Identity;
                 pClrInfo->DbiTimeStamp = pDebugResource->dwDbiTimeStamp;
                 pClrInfo->DbiSizeOfImage = pDebugResource->dwDbiSizeOfImage;
                 pClrInfo->DacTimeStamp = pDebugResource->dwDacTimeStamp;
@@ -1185,7 +1254,7 @@ GetTargetCLRMetrics(
             }
         }
         else
-        { 
+        {
             PTR_VOID runtimeInfoExport = pedecoder.GetExport(RUNTIME_INFO_SIGNATURE);
             if (runtimeInfoExport == NULL)
             {
@@ -1209,7 +1278,7 @@ GetTargetCLRMetrics(
             {
                 return E_FAIL;
             }
-            pClrInfoOut->IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Identity; 
+            pClrInfoOut->IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Identity;
             pClrInfoOut->DbiTimeStamp = *((DWORD*)&pRuntimeInfo->DbiModuleIndex[1]);
             pClrInfoOut->DbiSizeOfImage = *((DWORD*)&pRuntimeInfo->DbiModuleIndex[5]);
             pClrInfoOut->DacTimeStamp = *((DWORD*)&pRuntimeInfo->DacModuleIndex[1]);
@@ -1232,10 +1301,10 @@ GetTargetCLRMetrics(
             reinterpret_cast<IMAGE_EXPORT_DIRECTORY *>(pedecoder.GetDirectoryData(pExportDirectoryEntry));
 
         // At this point we have checked that everything in the export directory is readable.
-    
+
         // Check to make sure the ordinal we have fits in the table in the export directory.
         // The "base" here is like the starting index of the arrays in the export directory.
-        if ((pExportDir->Base > kOrdinalForMetrics) || 
+        if ((pExportDir->Base > kOrdinalForMetrics) ||
             (pExportDir->NumberOfFunctions < (kOrdinalForMetrics - pExportDir->Base)))
         {
             return E_FAIL;
@@ -1304,13 +1373,13 @@ GetTargetCLRMetrics(
             // Get the runtime index info (build id) for Linux/MacOS. If getting the build id fails for any reason, return success
             // but with an invalid ClrInfo (unknown index type, no build id) so ResolveLibraryPaths fails in InvokeStartupCallback and
             // invokes the callback with an error.
-            if (TryGetBuildIdFromFile(wszModulePath, pClrInfoOut->RuntimeBuildId, MAX_BUILDID_SIZE, &pClrInfoOut->RuntimeBuildIdSize)) 
+            if (TryGetBuildIdFromFile(wszModulePath, pClrInfoOut->RuntimeBuildId, MAX_BUILDID_SIZE, &pClrInfoOut->RuntimeBuildIdSize))
             {
                 pClrInfoOut->IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Runtime;
             }
         }
         else
-        { 
+        {
             RuntimeInfo runtimeInfo;
             if (!TryReadSymbolFromFile(wszModulePath, RUNTIME_INFO_SIGNATURE, (BYTE*)&runtimeInfo, sizeof(RuntimeInfo)))
             {
@@ -1320,7 +1389,7 @@ GetTargetCLRMetrics(
             {
                 return E_FAIL;
             }
-            pClrInfoOut->IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Identity; 
+            pClrInfoOut->IndexType = LIBRARY_PROVIDER_INDEX_TYPE::Identity;
 
             // The first byte is the number of bytes in the index
             pClrInfoOut->DbiBuildIdSize = runtimeInfo.DbiModuleIndex[0];
@@ -1425,7 +1494,7 @@ GetRuntime(
         return hr;
     }
 
-    // This assumes we are only going to find one .NET runtime in the process. We do the module 
+    // This assumes we are only going to find one .NET runtime in the process. We do the module
     // enumeration only once because looking for single-file runtime info symbol is expensive.
 
     WCHAR modulePath[MAX_LONGPATH];
@@ -1441,7 +1510,7 @@ GetRuntime(
             modulePath[MAX_LONGPATH - 1] = 0; // on older OS'es this doesn't get null terminated automatically on truncation
         }
 
-        // Get the DBI/DAC index info for the regular coreclr module or check if single-file app by looking for the 
+        // Get the DBI/DAC index info for the regular coreclr module or check if single-file app by looking for the
         // DotNetRuntimeInfo export. We need to get the metrics too because that is required to get the startup event.
         DWORD rvaContinueStartupEvent = 0;
         hr = GetTargetCLRMetrics(modulePath, &clrRuntimeInfo.EngineMetrics, &clrRuntimeInfo.ClrInfo, &rvaContinueStartupEvent);
@@ -1467,7 +1536,7 @@ GetRuntime(
                             clrRuntimeInfo.ContinueStartupEvent = continueEvent;
                         }
                     }
-                    else 
+                    else
                     {
                         clrRuntimeInfo.ContinueStartupEvent = continueEvent;
                     }
@@ -2040,6 +2109,12 @@ CreateDebuggingInterfaceFromVersion3(
     SString szFullDacPath;
     HRESULT hr = S_OK;
 
+    // Declared before any goto so the error labels don't bypass their initialization.
+    CDacLoadPolicy policy = g_cdacLoadPolicy;
+    bool cdacEvaluated = policy != CDacLoadPolicy_LegacyDacOnly;
+    HRESULT cdacHr = E_FAIL;
+    HRESULT fallbackHr = E_FAIL;
+
     LOG((LF_CORDB, LL_EVERYTHING, "Calling CreateDebuggerInterfaceFromVersion3, ver=%S\n", szDebuggeeVersion));
 
     if ((szDebuggeeVersion == NULL) || (ppCordb == NULL))
@@ -2068,48 +2143,55 @@ CreateDebuggingInterfaceFromVersion3(
 
     EX_TRY
     {
-        SString szFullCoreClrPath;
-        GetDbiFilenameNextToRuntime(pidDebuggee, hmodTargetCLR, szFullDbiPath, szFullCoreClrPath);
-
-        if (pLibraryProvider != NULL)
-        { 
-            // Get the DBI/DAC index info for regular and single-file apps
-            ClrInfo clrInfo;
-            hr = GetTargetCLRMetrics(szFullCoreClrPath, NULL, &clrInfo, NULL);
-            if (SUCCEEDED(hr))
-            {
-                clrInfo.RuntimeModulePath.Set(szFullCoreClrPath);
-                hr = CLRDebuggingImpl::ResolveLibraryPaths(clrInfo, pLibraryProvider, szFullDbiPath, szFullDacPath);
-            }
-        }
-        else
+        if (cdacEvaluated)
         {
-            // Check for dbi next to target CLR.
-            // This will be very common for internal developer setups, but not common in end-user setups.
-            if (!CheckDbiAndRuntimeVersion(szFullDbiPath, szFullCoreClrPath))
+            cdacHr = TryCreateCoreDbgWithCDac(hmodTargetCLR, pidDebuggee, szApplicationGroupId, iDebuggerVersion, &pCordb);
+        }
+
+        if (FAILED(cdacHr) && policy != CDacLoadPolicy_CDacOnly)
+        {
+            SString szFullCoreClrPath;
+            GetDbiFilenameNextToRuntime(pidDebuggee, hmodTargetCLR, szFullDbiPath, szFullCoreClrPath);
+
+            if (pLibraryProvider != NULL)
             {
-                hr = CORDBG_E_INCOMPATIBLE_PROTOCOL;
-                goto exit;
+                // Get the DBI/DAC index info for regular and single-file apps
+                ClrInfo clrInfo;
+                fallbackHr = GetTargetCLRMetrics(szFullCoreClrPath, NULL, &clrInfo, NULL);
+                if (SUCCEEDED(fallbackHr))
+                {
+                    clrInfo.RuntimeModulePath.Set(szFullCoreClrPath);
+                    fallbackHr = TryCreateCoreDbgWithProvider(clrInfo, pLibraryProvider, hmodTargetCLR, pidDebuggee, szApplicationGroupId, iDebuggerVersion, &pCordb);
+                }
+
+                // ERROR_PARTIAL_COPY/ERROR_BAD_LENGTH from CreateToolhelp32Snapshot() are transient and
+                // preserved so the debugger can retry; anything else maps to a missing-component error.
+                if (FAILED(fallbackHr) &&
+                    (fallbackHr != HRESULT_FROM_WIN32(ERROR_PARTIAL_COPY)) &&
+                    (fallbackHr != HRESULT_FROM_WIN32(ERROR_BAD_LENGTH)))
+                {
+                    fallbackHr = CORDBG_E_DEBUG_COMPONENT_MISSING;
+                }
+            }
+            else
+            {
+                fallbackHr = CheckDbiAndRuntimeVersion(szFullDbiPath, szFullCoreClrPath)
+                    ? CreateCoreDbg(hmodTargetCLR, pidDebuggee, szFullDbiPath, szFullDacPath, szApplicationGroupId, iDebuggerVersion, &pCordb)
+                    : CORDBG_E_INCOMPATIBLE_PROTOCOL;
             }
         }
     }
     EX_CATCH_HRESULT(hr);
 
-    if (FAILED(hr))
+    if (SUCCEEDED(hr))
     {
-        // Check for the following two HRESULTs and return them specifically.  These are returned by
-        // CreateToolhelp32Snapshot() and could be transient errors.  The debugger may choose to retry.
-        if ((hr != HRESULT_FROM_WIN32(ERROR_PARTIAL_COPY)) && (hr != HRESULT_FROM_WIN32(ERROR_BAD_LENGTH)))
-        {
-            hr = CORDBG_E_DEBUG_COMPONENT_MISSING;
-        }
-        goto exit;
+        hr = SelectActivationResult(cdacHr, fallbackHr, cdacEvaluated);
+    }
+    else if ((hr != HRESULT_FROM_WIN32(ERROR_PARTIAL_COPY)) && (hr != HRESULT_FROM_WIN32(ERROR_BAD_LENGTH)))
+    {
+        hr = CORDBG_E_DEBUG_COMPONENT_MISSING;
     }
 
-    //
-    // Step 3: Load DBI and instantiate an ICorDebug instance.
-    //
-    hr = CreateCoreDbg(hmodTargetCLR, pidDebuggee, szFullDbiPath, szFullDacPath, szApplicationGroupId, iDebuggerVersion, &pCordb);
     _ASSERTE((pCordb == NULL) == FAILED(hr));
 
 exit:
@@ -2163,6 +2245,30 @@ CLRCreateInstance(
         return E_OUTOFMEMORY;
 
     return pDebuggingImpl->QueryInterface(riid, ppInterface);
+}
+
+//-----------------------------------------------------------------------------
+// Public API.
+//
+// Sets the process-wide cDAC load policy for the live-debugging creation exports
+// (RegisterForRuntimeStartup* and CreateDebuggingInterfaceFromVersion*), which create an ICorDebug
+// directly and so can't use the per-instance ICLRDebuggingPolicy that OpenVirtualProcess honors.
+// Returns E_INVALIDARG for an unrecognized policy.
+//-----------------------------------------------------------------------------
+DLLEXPORT
+HRESULT
+SetCDacLoadPolicy(
+    _In_ CDacLoadPolicy policy)
+{
+    PUBLIC_CONTRACT;
+
+    if (policy > CDacLoadPolicy_LegacyDacOnly)
+    {
+        return E_INVALIDARG;
+    }
+
+    g_cdacLoadPolicy = policy;
+    return S_OK;
 }
 
 HRESULT CreateCoreDbgRemotePort(HMODULE hDBIModule, LPCWSTR szIp, DWORD dwPort, LPCWSTR szPlatform, BOOL bIsServer, LPCWSTR assemblyBasePath, IUnknown **ppCordb)

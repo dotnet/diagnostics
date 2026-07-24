@@ -19,3 +19,4 @@ EXPORTS
     CreateDebuggingInterfaceFromVersion3
     CLRCreateInstance
     RegisterForRuntimeStartupRemotePort
+    SetCDacLoadPolicy
