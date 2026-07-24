@@ -11,47 +11,47 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Write text to console's standard out
         /// </summary>
-        public static void Write(this IConsoleService console, string text) => console.WriteString(OutputType.Normal, text);
+        public static void Write(this IConsoleService console, string text) => console.WriteString(OutputType.Default, OutputLevel.Normal, text);
 
         /// <summary>
         /// Display a blank line
         /// </summary>
-        public static void WriteLine(this IConsoleService console) => console.WriteString(OutputType.Normal, Environment.NewLine);
+        public static void WriteLine(this IConsoleService console) => console.WriteString(OutputType.Default, OutputLevel.Normal, Environment.NewLine);
 
         /// <summary>
         /// Display text
         /// </summary>
-        public static void WriteLine(this IConsoleService console, string text) => console.WriteString(OutputType.Normal, text + Environment.NewLine);
+        public static void WriteLine(this IConsoleService console, string text) => console.WriteString(OutputType.Default, OutputLevel.Normal, text + Environment.NewLine);
 
         /// <summary>
         /// Display formatted text
         /// </summary>
-        public static void WriteLine(this IConsoleService console, string format, params object[] args) => console.WriteString(OutputType.Normal, string.Format(format, args) + Environment.NewLine);
+        public static void WriteLine(this IConsoleService console, string format, params object[] args) => console.WriteString(OutputType.Default, OutputLevel.Normal, string.Format(format, args) + Environment.NewLine);
 
         /// <summary>
         /// Write warning text to console
         /// </summary>
-        public static void WriteWarning(this IConsoleService console, string text) => console.WriteString(OutputType.Warning, text);
+        public static void WriteWarning(this IConsoleService console, string text) => console.WriteString(OutputType.Default, OutputLevel.Warning, text);
 
         /// <summary>
         /// Display formatted warning text
         /// </summary>
-        public static void WriteLineWarning(this IConsoleService console, string format, params object[] args) => console.WriteString(OutputType.Warning, string.Format(format, args) + Environment.NewLine);
+        public static void WriteLineWarning(this IConsoleService console, string format, params object[] args) => console.WriteString(OutputType.Default, OutputLevel.Warning, string.Format(format, args) + Environment.NewLine);
 
         /// <summary>
         /// Write error text to console
         /// </summary>
-        public static void WriteError(this IConsoleService console, string text) => console.WriteString(OutputType.Error, text);
+        public static void WriteError(this IConsoleService console, string text) => console.WriteString(OutputType.Default, OutputLevel.Error, text);
 
         /// <summary>
         /// Display formatted error text
         /// </summary>
-        public static void WriteLineError(this IConsoleService console, string format, params object[] args) => console.WriteString(OutputType.Error, string.Format(format, args) + Environment.NewLine);
+        public static void WriteLineError(this IConsoleService console, string format, params object[] args) => console.WriteString(OutputType.Default, OutputLevel.Error, string.Format(format, args) + Environment.NewLine);
 
         /// <summary>
         /// Writes Debugger Markup Language (DML) markup text
         /// </summary>
-        public static void WriteDml(this IConsoleService console, string text) => console.WriteString(OutputType.Dml, text);
+        public static void WriteDml(this IConsoleService console, string text) => console.WriteString(OutputType.Dml, OutputLevel.Normal, text);
 
         /// <summary>
         /// Writes an exec tag to the output stream.
@@ -63,12 +63,12 @@ namespace Microsoft.Diagnostics.DebugServices
         {
             if (!console.SupportsDml || string.IsNullOrWhiteSpace(cmd))
             {
-                console.WriteString(OutputType.Normal, text);
+                console.WriteString(OutputType.Default, OutputLevel.Normal, text);
             }
             else
             {
                 string dml = $"<exec cmd=\"{DmlEscape(cmd)}\">{DmlEscape(text)}</exec>";
-                console.WriteString(OutputType.Dml, dml);
+                console.WriteString(OutputType.Dml, OutputLevel.Normal, dml);
             }
         }
 

@@ -105,9 +105,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             set { _consoleService.CancellationToken = value; }
         }
 
-        public void WriteString(OutputType type, string text)
+        public void WriteString(OutputType type, OutputLevel level, string text)
         {
-            _consoleService.WriteString(type, text);
+            _consoleService.WriteString(type, level, text);
             if (type != OutputType.Dml)
             {
                 foreach (StreamWriter writer in _writers)

@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.Repl
             // console provider when the output has been redirected.
             if (!m_interactiveConsole)
             {
-                WriteLine(OutputType.Normal, "<END_COMMAND_OUTPUT>");
+                WriteLine(OutputLevel.Normal, "<END_COMMAND_OUTPUT>");
             }
 
             // Start keyboard processing
@@ -118,11 +118,11 @@ namespace Microsoft.Diagnostics.Repl
                     {
                         if (result)
                         {
-                            WriteLine(OutputType.Normal, "<END_COMMAND_OUTPUT>");
+                            WriteLine(OutputLevel.Normal, "<END_COMMAND_OUTPUT>");
                         }
                         else
                         {
-                            WriteLine(OutputType.Normal, "<END_COMMAND_ERROR>");
+                            WriteLine(OutputLevel.Normal, "<END_COMMAND_ERROR>");
                         }
                     }
                 }
@@ -178,37 +178,34 @@ namespace Microsoft.Diagnostics.Repl
         /// <summary>
         /// Writes a message with a new line to console.
         /// </summary>
-        public void WriteLine(OutputType type, string format, params object[] parameters)
+        public void WriteLine(OutputLevel level, string format, params object[] parameters)
         {
-            WriteOutput(type, string.Format(format, parameters) + Environment.NewLine);
+            WriteOutput(level, string.Format(format, parameters) + Environment.NewLine);
         }
 
         /// <summary>
         /// Write text on the console screen
         /// </summary>
-        /// <param name="type">output type</param>
+        /// <param name="level">output level</param>
         /// <param name="message">text</param>
         /// <exception cref="OperationCanceledException">ctrl-c interrupted the command</exception>
         /// <exception cref="NotSupportedException">thrown if OutputType.Dml</exception>
-        public void WriteOutput(OutputType type, string message)
+        public void WriteOutput(OutputLevel level, string message)
         {
-            switch (type)
+            switch (level)
             {
-                case OutputType.Normal:
-                case OutputType.Logging:
+                case OutputLevel.Normal:
+                case OutputLevel.Verbose:
                     m_consoleConverter.Input(message);
                     break;
 
-                case OutputType.Warning:
+                case OutputLevel.Warning:
                     m_warningConverter.Input(message);
                     break;
 
-                case OutputType.Error:
+                case OutputLevel.Error:
                     m_errorConverter.Input(message);
                     break;
-
-                case OutputType.Dml:
-                    throw new NotSupportedException();
             }
         }
 
@@ -529,11 +526,11 @@ namespace Microsoft.Diagnostics.Repl
                 {
                     if (!string.IsNullOrEmpty(ex.Message))
                     {
-                        WriteLine(OutputType.Error, "ERROR: {0}", ex.Message);
+                        WriteLine(OutputLevel.Error, "ERROR: {0}", ex.Message);
                     }
                     if (ex is CommandParsingException parsingException)
                     {
-                        WriteLine(OutputType.Normal, parsingException.DetailedHelp);
+                        WriteLine(OutputLevel.Normal, parsingException.DetailedHelp);
                     }
                     Trace.TraceError(ex.ToString());
                     m_lastCommandLine = null;
@@ -625,7 +622,18 @@ namespace Microsoft.Diagnostics.Repl
 
         CancellationToken IConsoleService.CancellationToken { get; set; }
 
-        void IConsoleService.WriteString(OutputType type, string text) => WriteOutput(type, text);
+        void IConsoleService.WriteString(OutputType type, OutputLevel level, string text)
+        {
+            switch (type)
+            {
+                case OutputType.Default:
+                case OutputType.Logging:
+                    WriteOutput(level, text);
+                    break;
+                default:
+                    throw new NotSupportedException($"Output type {type} is not supported in the console provider");
+            }
+        }
 
         #endregion
     }
