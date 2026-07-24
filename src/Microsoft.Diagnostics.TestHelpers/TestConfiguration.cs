@@ -376,7 +376,13 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static TestConfiguration Empty { get; } = new TestConfiguration();
 
-        public static string BaseDir { get; set; } = Path.GetFullPath(".");
+        // Default to the directory containing the test assembly (where Debugger.Tests.Config.txt
+        // and the other test assets are copied) rather than the current working directory. Under
+        // the classic xunit.console runner the working directory happened to be the output
+        // directory, so "." resolved correctly; the Microsoft.Testing.Platform runner launches the
+        // test executable with a different working directory, so relying on "." no longer finds the
+        // config file. Callers can still override this.
+        public static string BaseDir { get; set; } = Path.GetFullPath(AppContext.BaseDirectory);
 
         private static readonly Regex versionRegex = GetVersionRegex();
 
