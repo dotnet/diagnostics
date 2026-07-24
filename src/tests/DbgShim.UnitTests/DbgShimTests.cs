@@ -34,6 +34,7 @@ namespace Microsoft.Diagnostics
         private const string LoadPolicyKey = "LoadPolicy";
         private const string LoadPolicySuccessExpectedKey = "LoadPolicySuccessExpected";
         private const string LoadPolicyProviderCallsExpectedKey = "LoadPolicyProviderCallsExpected";
+        private const string LoadPolicySideBySideAllowedKey = "LoadPolicySideBySideAllowed";
 
         public static IEnumerable<object[]> GetConfigurations(string key, string value)
         {
@@ -77,6 +78,24 @@ namespace Microsoft.Diagnostics
                     yield return new object[] { config, DbgShimCDacLoadPolicy.CDacOnly, false, false };
                     yield return new object[] { config, DbgShimCDacLoadPolicy.LegacyDacOnly, true, true };
                     yield return new object[] { config, DbgShimCDacLoadPolicy.PreferCDac, true, true };
+                }
+            }
+        }
+
+        public static IEnumerable<object[]> LiveSideBySideConfigurations
+        {
+            get
+            {
+                foreach (object[] configuration in GetConfigurations("TestName", null))
+                {
+                    TestConfiguration config = (TestConfiguration)configuration[0];
+                    // No library provider is supplied, so activation must fall back to the DBI
+                    // collocated with the runtime module. A fake cDAC path forces the cDAC attempt
+                    // to fail so the side-by-side path is what is exercised. CDacOnly must not fall
+                    // back to side-by-side; the permissive policies must.
+                    yield return new object[] { config, DbgShimCDacLoadPolicy.CDacOnly, false };
+                    yield return new object[] { config, DbgShimCDacLoadPolicy.LegacyDacOnly, true };
+                    yield return new object[] { config, DbgShimCDacLoadPolicy.PreferCDac, true };
                 }
             }
         }
@@ -365,6 +384,48 @@ namespace Microsoft.Diagnostics
                     bool successExpected = bool.Parse(cfg.AllSettings[LoadPolicySuccessExpectedKey]);
                     bool providerCallExpected = bool.Parse(cfg.AllSettings[LoadPolicyProviderCallsExpectedKey]);
                     TestRegisterForRuntimeStartup3LoadPolicy(debuggeeInfo, policy, successExpected, providerCallExpected);
+                    return 0;
+                });
+        }
+
+        /// <summary>
+        /// Test that the no-provider (side-by-side) live path activates using the DBI collocated
+        /// with the runtime module reported by EnumerateCLRs, and that SetCDacLoadPolicy still gates
+        /// the cDAC/legacy fallback when no library provider is supplied.
+        /// </summary>
+        [SkippableTheory, MemberData(nameof(LiveSideBySideConfigurations))]
+        public async Task CreateDebuggingInterfaceFromVersion3SideBySide(
+            TestConfiguration config,
+            DbgShimCDacLoadPolicy policy,
+            bool sideBySideAllowed)
+        {
+            if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
+            {
+                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 single-file on MacOS");
+            }
+            DbgShimAPI.Initialize(config.DbgShimPath());
+            if (!DbgShimAPI.IsCreateDebuggingInterfaceFromVersion3Supported)
+            {
+                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 not supported");
+            }
+            if (!DbgShimAPI.IsSetCDacLoadPolicySupported)
+            {
+                throw new SkipTestException("SetCDacLoadPolicy not supported");
+            }
+            TestConfiguration policyConfig = new(new Dictionary<string, string>(config.AllSettings)
+            {
+                [LoadPolicyKey] = policy.ToString(),
+                [LoadPolicySideBySideAllowedKey] = sideBySideAllowed.ToString(),
+            });
+            await RemoteInvoke(
+                policyConfig,
+                $"{nameof(CreateDebuggingInterfaceFromVersion3SideBySide)}.{policy}",
+                static async (string configXml) => {
+                    using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
+                    TestConfiguration cfg = debuggeeInfo.TestConfiguration;
+                    DbgShimCDacLoadPolicy policy = Enum.Parse<DbgShimCDacLoadPolicy>(cfg.AllSettings[LoadPolicyKey]);
+                    bool sideBySideAllowed = bool.Parse(cfg.AllSettings[LoadPolicySideBySideAllowedKey]);
+                    TestCreateDebuggingInterfaceSideBySide(debuggeeInfo, policy, sideBySideAllowed);
                     return 0;
                 });
         }
@@ -926,6 +987,65 @@ namespace Microsoft.Diagnostics
             }
 
             Trace.TraceInformation("TestCreateDebuggingInterfaceLoadPolicy pid {0} DONE", debuggeeInfo.ProcessId);
+        }
+
+        private static void TestCreateDebuggingInterfaceSideBySide(
+            DebuggeeInfo debuggeeInfo,
+            DbgShimCDacLoadPolicy policy,
+            bool sideBySideAllowed)
+        {
+            TestConfiguration config = debuggeeInfo.TestConfiguration;
+            Trace.TraceInformation("TestCreateDebuggingInterfaceSideBySide pid {0} policy {1} START", debuggeeInfo.ProcessId, policy);
+
+            string originalCDacPath = Environment.GetEnvironmentVariable("DOTNET_CDAC_PATH");
+            Environment.SetEnvironmentVariable(
+                "DOTNET_CDAC_PATH",
+                Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.dll"));
+            try
+            {
+                AssertResult(DbgShimAPI.SetCDacLoadPolicy(policy));
+
+                HResult hr = DbgShimAPI.EnumerateCLRs(debuggeeInfo.ProcessId, (IntPtr[] continueEventHandles, string[] moduleNames) => {
+                    Assert.Single(continueEventHandles);
+                    Assert.Single(moduleNames);
+                    for (int i = 0; i < continueEventHandles.Length; i++)
+                    {
+                        AssertResult(DbgShimAPI.CreateVersionStringFromModule(debuggeeInfo.ProcessId, moduleNames[i], out string versionString));
+                        Assert.False(string.IsNullOrWhiteSpace(versionString));
+
+                        // With no library provider the shim derives the DBI from the runtime module
+                        // EnumerateCLRs reported, so the DBI it loads is the one next to that module.
+                        // Confirm that collocated DBI is present exactly when the runtime is not a
+                        // single-file app (whose runtime module has no adjacent DBI).
+                        string collocatedDbi = Path.Combine(Path.GetDirectoryName(moduleNames[i]), Path.GetFileName(config.DbiModulePath()));
+                        bool collocatedDbiExists = !config.PublishSingleFile;
+                        Assert.Equal(collocatedDbiExists, File.Exists(collocatedDbi));
+
+                        bool successExpected = sideBySideAllowed && collocatedDbiExists;
+                        HResult result = DbgShimAPI.CreateDebuggingInterfaceFromVersion3(DbgShimAPI.CorDebugVersion_4_0, versionString, applicationGroupId: null, libraryProvider: IntPtr.Zero, out ICorDebug corDebug);
+
+                        Assert.Equal(successExpected, result == HResult.S_OK);
+
+                        if (successExpected)
+                        {
+                            TestICorDebug(debuggeeInfo, corDebug);
+                            AssertResult(debuggeeInfo.WaitForCreateProcess());
+                            Assert.Equal(0, corDebug.Release());
+                        }
+                        else
+                        {
+                            Assert.Null(corDebug);
+                        }
+                    }
+                });
+                AssertResult(hr);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("DOTNET_CDAC_PATH", originalCDacPath);
+            }
+
+            Trace.TraceInformation("TestCreateDebuggingInterfaceSideBySide pid {0} DONE", debuggeeInfo.ProcessId);
         }
 
         private static readonly Guid IID_ICorDebugProcess = new("3D6F5F64-7538-11D3-8D5B-00104B35E7EF");
