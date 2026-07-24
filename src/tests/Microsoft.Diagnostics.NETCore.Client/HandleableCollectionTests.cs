@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             // Task.Delay intentionally shorter than default timeout to check that Handle*
             // calls did not complete quickly.
-            Task delayTask = Task.Delay(TimeSpan.FromSeconds(1));
+            Task delayTask = Task.Delay(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
             Task completedTask = await Task.WhenAny(delayTask, handleTask, handleAsyncTask);
 
             // Check that the handle tasks didn't complete
@@ -298,7 +298,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             // Task.Delay intentionally shorter than default timeout to check that HandleAsync
             // calls did not complete quickly.
-            Task delayTask = Task.Delay(TimeSpan.FromSeconds(1));
+            Task delayTask = Task.Delay(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
             Task completedTask = await Task.WhenAny(delayTask, handleAsyncTask);
 
             // Check that the handle task didn't complete
@@ -318,7 +318,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
             // Task.Delay intentionally longer than default timeout to check that HandleAsync
             // does complete by handling a value. The delay Task is used in case the handler doesn't
             // handle a value and doesn't respect cancellation so as to not stall the test indefinitely.
-            delayTask = Task.Delay(2 * DefaultPositiveVerificationTimeout);
+            delayTask = Task.Delay(2 * DefaultPositiveVerificationTimeout, TestContext.Current.CancellationToken);
             completedTask = await Task.WhenAny(delayTask, handleAsyncTask);
 
             // Check that the handle task did complete

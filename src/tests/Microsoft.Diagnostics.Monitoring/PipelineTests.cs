@@ -24,7 +24,7 @@ namespace Microsoft.Diagnostics.Monitoring.UnitTests
             CancellationTokenSource cancellationTokenSource = new();
             CancellationToken token = cancellationTokenSource.Token;
 
-            await Assert.ThrowsAsync<PipelineException>(() => timePipeline.StopAsync());
+            await Assert.ThrowsAsync<PipelineException>(() => timePipeline.StopAsync(TestContext.Current.CancellationToken));
 
             Task startTask = timePipeline.RunAsync(token);
             Task secondStartCall = timePipeline.RunAsync(token);

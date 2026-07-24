@@ -213,9 +213,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         runner.WakeupTracee();
                     }
-                });
+                }, TestContext.Current.CancellationToken);
                 runner.WriteLine("Waiting for stream Task");
-                streamTask.Wait(10000);
+#pragma warning disable xUnit1031 // Intentional blocking wait; the proper async fix is tied to the race condition in https://github.com/dotnet/diagnostics/issues/4717
+                streamTask.Wait(10000, TestContext.Current.CancellationToken);
+#pragma warning restore xUnit1031
                 runner.WriteLine("Done waiting for stream Task");
                 session.Stop();
                 await streamTask;

@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -61,7 +61,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         /// <summary>
@@ -115,7 +115,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateLoggerRemoteCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         /// <summary>
@@ -156,7 +156,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         /// <summary>
@@ -181,7 +181,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         /// <summary>
@@ -212,7 +212,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         private async Task<Stream> GetLogsAsync(TestConfiguration config, Action<EventLogsPipelineSettings> settingsCallback = null)

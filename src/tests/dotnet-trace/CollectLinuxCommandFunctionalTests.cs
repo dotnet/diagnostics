@@ -30,7 +30,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             _outputHelper = outputHelper;
         }
         private static CollectLinuxCommandHandler.CollectLinuxArgs TestArgs(
-            CancellationToken ct = default,
             string[] providers = null,
             string clrEventLevel = "",
             string clrEvents = "",
@@ -42,7 +41,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int processId = 0,
             bool probe = false)
         {
-            return new CollectLinuxCommandHandler.CollectLinuxArgs(ct,
+            return new CollectLinuxCommandHandler.CollectLinuxArgs(TestContext.Current.CancellationToken,
                                                                    providers ?? Array.Empty<string>(),
                                                                    clrEventLevel,
                                                                    clrEvents,

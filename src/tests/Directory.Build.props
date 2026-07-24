@@ -17,11 +17,5 @@
   <PropertyGroup Condition="'$(IsTestProject)' == 'true' and '$(EnableXUnitV3)' != 'false'">
     <TestRunnerName>XUnitV3</TestRunnerName>
     <OutputType>Exe</OutputType>
-    <!-- xUnit1051: prefer TestContext.Current.CancellationToken on APIs taking a
-         CancellationToken. xUnit1031: blocking task operations in tests. Both are new
-         analyzers in xUnit v3 flagging pre-existing patterns; they are advisory, not
-         correctness failures, so suppress them repo-wide so TreatWarningsAsErrors
-         doesn't fail the migration build. -->
-    <NoWarn>$(NoWarn);xUnit1051;xUnit1031</NoWarn>
   </PropertyGroup>
 </Project>
