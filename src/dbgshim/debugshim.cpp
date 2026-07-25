@@ -68,6 +68,16 @@ static HRESULT SelectActivationResult(
     HRESULT cdacHr,
     HRESULT fallbackHr,
     bool cdacEvaluated);
+static HRESULT TryGetContractDescriptorAddress(
+    ULONG64 moduleBaseAddress,
+    IUnknown* pDataTarget,
+    ULONG64* pContractDescriptor);
+static HRESULT CDacCreateInstanceFromContractDescriptor(
+    const WCHAR* cdacModulePath,
+    IUnknown* pDataTarget,
+    ULONG64 contractDescriptor,
+    REFIID riid,
+    IUnknown** ppInstance);
 
 typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImpl2FnPtr)(ULONG64 clrInstanceId,
     IUnknown * pDataTarget,
@@ -93,6 +103,15 @@ typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcess2FnPtr)(ULONG64 clrInstanceI
     CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
 
 typedef HMODULE (STDAPICALLTYPE  *LoadLibraryWFnPtr)(LPCWSTR lpLibFileName);
+
+// Private to dbgshim: the contract-based entry point exported only by the cDAC universal binary
+// (mscordaccore_universal). The caller supplies the runtime module's contract descriptor address
+// directly, so the data target does not need to implement ICLRContractLocator.
+typedef HRESULT (STDAPICALLTYPE  *PFN_DbgShimCreateInstanceFromContractDescriptor)(
+    REFIID riid,
+    ICLRDataTarget* pTarget,
+    ULONG64 contractDescriptor,
+    void** ppInstance);
 
 static bool IsTargetWindows(ICorDebugDataTarget* pDataTarget)
 {
@@ -1232,6 +1251,96 @@ static HRESULT DacCreateInstance(
     return hr;
 }
 
+// Resolves the address of the runtime module's exported DotNetRuntimeContractDescriptor symbol.
+// Returns S_OK with *pContractDescriptor set to the non-zero address on success. A failed HRESULT
+// (with *pContractDescriptor == 0) means the descriptor could not be resolved.
+static HRESULT TryGetContractDescriptorAddress(
+    ULONG64 moduleBaseAddress,
+    IUnknown* pDataTarget,
+    ULONG64* pContractDescriptor)
+{
+    *pContractDescriptor = 0;
+
+    ReleaseHolder<ICorDebugDataTarget> pCorDbgDataTarget;
+    HRESULT hr = pDataTarget->QueryInterface(__uuidof(ICorDebugDataTarget), (void**)&pCorDbgDataTarget);
+    if (FAILED(hr))
+    {
+        ReleaseHolder<ICLRDataTarget> pLegacyTarget;
+        if (FAILED(pDataTarget->QueryInterface(__uuidof(ICLRDataTarget), (void**)&pLegacyTarget)))
+        {
+            return CORDBG_E_MISSING_DATA_TARGET_INTERFACE;
+        }
+        ICorDebugDataTarget* pAdapter = NULL;
+        hr = CreateCordbDataTargetFromClrDataTarget(moduleBaseAddress, pLegacyTarget, &pAdapter);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+        pCorDbgDataTarget = pAdapter;
+    }
+
+    const char* symbolName = CONTRACT_DESCRIPTOR_SYMBOL;
+    uint64_t symbolAddress = 0;
+#ifdef HOST_WINDOWS
+    if (IsTargetWindows(pCorDbgDataTarget))
+    {
+        if (TryGetPEExportSymbol(pCorDbgDataTarget, moduleBaseAddress, symbolName, &symbolAddress))
+        {
+            *pContractDescriptor = symbolAddress;
+            return S_OK;
+        }
+        return E_FAIL;
+    }
+#endif // HOST_WINDOWS
+    if (TryGetSymbol(pCorDbgDataTarget, moduleBaseAddress, symbolName, &symbolAddress))
+    {
+        *pContractDescriptor = symbolAddress;
+        return S_OK;
+    }
+    return E_FAIL;
+}
+
+// Loads the cDAC universal binary and activates the requested data-access interface. Prefers the
+// contract-based entry point, supplying the contract descriptor address directly so the data target
+// does not need to implement ICLRContractLocator. When the cDAC binary is too old to expose that
+// entry point, falls back to CLRDataCreateInstance on the same binary, which sources the descriptor
+// through ICLRContractLocator. The module is intentionally left resident.
+static HRESULT CDacCreateInstanceFromContractDescriptor(
+    const WCHAR* cdacModulePath,
+    IUnknown* pDataTarget,
+    ULONG64 contractDescriptor,
+    REFIID riid,
+    IUnknown** ppInstance)
+{
+    HMODULE hCDac = LoadLibraryW(cdacModulePath);
+    if (hCDac == NULL)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    PFN_DbgShimCreateInstanceFromContractDescriptor pfnCreate =
+        (PFN_DbgShimCreateInstanceFromContractDescriptor)GetProcAddress(hCDac, "DbgShimCreateInstanceFromContractDescriptor");
+    if (pfnCreate == NULL)
+    {
+        // This cDAC binary is too old to expose the contract-based entry point; source the descriptor
+        // through ICLRContractLocator instead. Leave the module resident (never unload the cDAC).
+        return DacCreateInstance(cdacModulePath, pDataTarget, riid, ppInstance);
+    }
+
+    // The contract-based entry point takes an ICLRDataTarget but does not query it for
+    // ICLRContractLocator - the descriptor address is passed explicitly.
+    ICLRDataTarget* pDacDataTarget = NULL;
+    HRESULT hr = pDataTarget->QueryInterface(__uuidof(ICLRDataTarget), (void**)&pDacDataTarget);
+    if (FAILED(hr))
+    {
+        return CORDBG_E_MISSING_DATA_TARGET_INTERFACE;
+    }
+
+    hr = pfnCreate(riid, pDacDataTarget, contractDescriptor, (void**)ppInstance);
+    pDacDataTarget->Release();
+    return hr;
+}
+
 HRESULT CLRDebuggingImpl::OpenDataAccessProcess(
     ULONG64 moduleBaseAddress,
     IUnknown* pDataTarget,
@@ -1252,10 +1361,16 @@ HRESULT CLRDebuggingImpl::OpenDataAccessProcess(
     bool cdacEvaluated = policy != CDacLoadPolicy_LegacyDacOnly;
     if (cdacEvaluated)
     {
+        // The cDAC can only inspect a target whose runtime module exports its contract descriptor
+        // (DotNetRuntimeContractDescriptor). If the descriptor cannot be resolved, no cDAC path can
+        // succeed, so we skip cDAC entirely and let the legacy DAC fallback handle the target.
         SString cdacPath;
-        if (GetCDacPath(cdacPath))
+        ULONG64 contractDescriptor = 0;
+        if (GetCDacPath(cdacPath) &&
+            SUCCEEDED(TryGetContractDescriptorAddress(moduleBaseAddress, pDataTarget, &contractDescriptor)))
         {
-            cdacHr = DacCreateInstance(cdacPath.GetUnicode(), pDataTarget, riid, ppInstance);
+            cdacHr = CDacCreateInstanceFromContractDescriptor(
+                cdacPath.GetUnicode(), pDataTarget, contractDescriptor, riid, ppInstance);
         }
         if (FAILED(cdacHr))
         {

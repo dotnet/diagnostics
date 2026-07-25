@@ -8,6 +8,10 @@ typedef unsigned char SYMBOL_INDEX;
 #define RUNTIME_INFO_SIGNATURE  "DotNetRuntimeInfo"
 #define RUNTIME_INFO_VERSION    2
 
+// Name of the symbol the runtime module exports whose address is the cDAC contract descriptor
+// (DotNetRuntimeContractDescriptor). Shared by every component that resolves it over a target.
+#define CONTRACT_DESCRIPTOR_SYMBOL  "DotNetRuntimeContractDescriptor"
+
 // Make sure that if you update this structure
 //    - You do so in a in a way that it is backwards compatible. For example, only tail append to this.
 //    - Rev the version.
