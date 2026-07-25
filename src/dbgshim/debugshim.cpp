@@ -282,7 +282,7 @@ static HRESULT OpenCorDebugProcessWithCDac(
     SString cdacModulePath;
     if (!GetCDacAndDbiPaths(cdacModulePath, dbiModulePath))
     {
-        return E_FAIL;
+        return CORDBG_E_DEBUG_COMPONENT_MISSING;
     }
 
     HMODULE hDbi = LoadLibraryW(dbiModulePath);
@@ -1372,13 +1372,13 @@ STDMETHODIMP CLRDebuggingImpl::SetCDacLoadPolicy(CDacLoadPolicy policy)
     return S_OK;
 }
 
-STDMETHODIMP CLRDebuggingImpl::GetCDacLoadPolicy(DWORD* pPolicy)
+STDMETHODIMP CLRDebuggingImpl::GetCDacLoadPolicy(CDacLoadPolicy* pPolicy)
 {
     if (pPolicy == NULL)
     {
         return E_POINTER;
     }
-    *pPolicy = (DWORD)m_cdacLoadPolicy;
+    *pPolicy = m_cdacLoadPolicy;
     return S_OK;
 }
 

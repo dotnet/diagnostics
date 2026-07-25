@@ -232,7 +232,7 @@ HRESULT CreateCoreDbg(
 // Policy for the live-debugging paths (RegisterForRuntimeStartup* and
 // CreateDebuggingInterfaceFromVersion*), which don't flow through ICLRDebuggingPolicy. Set via the
 // SetCDacLoadPolicy export.
-static CDacLoadPolicy g_cdacLoadPolicy = CDacLoadPolicy_PreferCDac;
+static Volatile<CDacLoadPolicy> g_cdacLoadPolicy = CDacLoadPolicy_PreferCDac;
 
 // Only the bundled DBI can report whether it can consume the cDAC for this target, so this invokes it
 // rather than pre-judging from file presence.
@@ -247,7 +247,7 @@ static HRESULT TryCreateCoreDbgWithCDac(
     SString dbiPath;
     if (!GetCDacAndDbiPaths(cdacPath, dbiPath))
     {
-        return E_FAIL;
+        return CORDBG_E_DEBUG_COMPONENT_MISSING;
     }
 
     return CreateCoreDbg(hModule, processId, dbiPath, cdacPath, lpApplicationGroupId, iDebuggerVersion, ppCordb);

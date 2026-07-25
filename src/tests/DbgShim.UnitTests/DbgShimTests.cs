@@ -764,7 +764,7 @@ namespace Microsoft.Diagnostics
             AssertResult(result);
 
             Trace.TraceInformation("RegisterForRuntimeStartup pid {0} waiting for callback", debuggeeInfo.ProcessId);
-            Assert.True(wait.WaitOne());
+            Assert.True(wait.WaitOne(TimeSpan.FromMinutes(5)), "Timed out waiting for the RegisterForRuntimeStartup callback.");
             Trace.TraceInformation("RegisterForRuntimeStartup pid {0} after callback wait", debuggeeInfo.ProcessId);
 
             AssertResult(DbgShimAPI.UnregisterForRuntimeStartup(unregister));
@@ -840,7 +840,7 @@ namespace Microsoft.Diagnostics
                 LibraryProviderWrapper libraryProvider = new(config.RuntimeModulePath(), config.DbiModulePath(), config.DacModulePath());
                 AssertResult(DbgShimAPI.RegisterForRuntimeStartup3(debuggeeInfo.ProcessId, applicationGroupId: null, parameter: IntPtr.Zero, libraryProvider.ILibraryProvider, out unregister, callback));
 
-                Assert.True(wait.WaitOne());
+                Assert.True(wait.WaitOne(TimeSpan.FromMinutes(5)), "Timed out waiting for the RegisterForRuntimeStartup3 callback.");
                 AssertResult(DbgShimAPI.UnregisterForRuntimeStartup(unregister));
                 Assert.Null(callbackException);
 

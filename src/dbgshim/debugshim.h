@@ -273,7 +273,7 @@ private:
 // overrides), returning false if either is missing.
 bool GetCDacAndDbiPaths(SString& cdacPath, SString& dbiPath);
 
-// Picks the final HRESULT after tthe different activation attempts (cDAC vs. fallback) have completed.
+// Picks the final HRESULT after the different activation attempts (cDAC vs. fallback) have completed.
 HRESULT SelectActivationResult(HRESULT cdacHr, HRESULT fallbackHr, bool cdacEvaluated);
 
 #endif
