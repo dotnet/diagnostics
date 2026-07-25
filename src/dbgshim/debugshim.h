@@ -61,7 +61,7 @@ ICLRDebuggingPolicy : public IUnknown
 {
 public:
     virtual HRESULT STDMETHODCALLTYPE SetCDacLoadPolicy(CDacLoadPolicy policy) = 0;
-    virtual HRESULT STDMETHODCALLTYPE GetCDacLoadPolicy(CDacLoadPolicy * pPolicy) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetCDacLoadPolicy(CDacLoadPolicy* pPolicy) = 0;
 };
 
 #define MAX_BUILDID_SIZE 24
@@ -211,7 +211,7 @@ public:
 
     // ICLRDebuggingPolicy methods:
     STDMETHOD(SetCDacLoadPolicy(CDacLoadPolicy policy));
-    STDMETHOD(GetCDacLoadPolicy(DWORD* pPolicy));
+    STDMETHOD(GetCDacLoadPolicy(CDacLoadPolicy* pPolicy));
 
     // IUnknown methods:
     STDMETHOD(QueryInterface(REFIID riid, void **ppvObject));
