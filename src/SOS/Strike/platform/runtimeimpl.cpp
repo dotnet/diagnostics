@@ -624,7 +624,7 @@ IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath, ULON
 \**********************************************************************/
 ULONG64 Runtime::GetContractDescriptorAddress()
 {
-    const char* symbolName = "DotNetRuntimeContractDescriptor";
+    const char* symbolName = CONTRACT_DESCRIPTOR_SYMBOL;
     ULONG64 symbolAddress = 0;
     if (m_target->GetOperatingSystem() == ITarget::OperatingSystem::Linux ||
         m_target->GetOperatingSystem() == ITarget::OperatingSystem::OSX)
