@@ -68,7 +68,7 @@ enum CDacLoadPolicy
 // policy is carried on this sibling interface instead of being added there.
 // {2D3B4F6A-1C7E-4B2A-9E5D-7F1A6C0B8D34}
 MIDL_INTERFACE("2D3B4F6A-1C7E-4B2A-9E5D-7F1A6C0B8D34")
-ICLRDebuggingDataAccessControl : public IUnknown
+ICLRDebuggingPolicy : public IUnknown
 {
 public:
     // policy is a CDacLoadPolicy value.
@@ -197,7 +197,7 @@ extern "C" bool TryGetBuildIdFromFile(const WCHAR* modulePath, BYTE* buffer, ULO
 struct ICorDebugDataTarget;
 
 // ICLRDebugging implementation.
-class CLRDebuggingImpl : public ICLRDebugging, public ICLRDebuggingDataAccessControl
+class CLRDebuggingImpl : public ICLRDebugging, public ICLRDebuggingPolicy
 {
 
 public:
@@ -221,7 +221,7 @@ public:
 
     STDMETHOD(CanUnloadNow(HMODULE hModule));
 
-    // ICLRDebuggingDataAccessControl methods:
+    // ICLRDebuggingPolicy methods:
     STDMETHOD(SetCDacLoadPolicy(DWORD policy));
     STDMETHOD(GetCDacLoadPolicy(DWORD* pPolicy));
 
@@ -267,6 +267,13 @@ private:
                                     SString& dacModulePath,
                                     HMODULE* phDbi,
                                     HMODULE* phDac);
+
+    static HRESULT LoadProviderLibraries(ClrInfo& clrInfo,
+                                         IUnknown* pLibraryProvider,
+                                         SString& dbiModulePath,
+                                         SString& dacModulePath,
+                                         HMODULE* phDbi,
+                                         HMODULE* phDac);
 
     HRESULT GetCLRInfo(ICorDebugDataTarget * pDataTarget,
                        ULONG64 moduleBaseAddress,

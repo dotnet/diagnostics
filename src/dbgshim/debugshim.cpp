@@ -14,6 +14,7 @@
 #include <clrdata.h>      //ICLRDataTarget, PFN_CLRDataCreateInstance
 #include <ntimageex.h>
 #include "palclr.h"
+#include "winwrap.h"
 #ifndef HOST_WINDOWS
 #include <dlfcn.h>
 #endif
@@ -22,15 +23,13 @@
 // CLRDebuggingImpl implementation (ICLRDebugging)
 //*****************************************************************************
 
-// Data-access activation helpers. These are translation-unit-local: they need no CLRDebuggingImpl
-// state, so they are free functions rather than class members.
 static bool IsDataAccessInterface(REFIID riid);
 static HRESULT GetDbiPath(SString& dbiPath);
 static HRESULT GetCDacPath(SString& cdacPath);
-static HRESULT ActivateDataAccess(const WCHAR* dacModulePath,
-                                  IUnknown* pDataTarget,
-                                  REFIID riid,
-                                  IUnknown** ppInstance);
+static HRESULT DacCreateInstance(const WCHAR* dacModulePath,
+                                 IUnknown* pDataTarget,
+                                 REFIID riid,
+                                 IUnknown** ppInstance);
 static HRESULT ProvideDacLibrary(ClrInfo& clrInfo,
                                  IUnknown* pLibraryProvider,
                                  SString& dacModulePath);
@@ -164,17 +163,13 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
     {
         if (m_cdacLoadPolicy == CDacLoadPolicy_LegacyDacOnly)
         {
-            hr = ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
-
-            // Need to load the DAC first because DBI references the PAL exports in the DAC
-            if (SUCCEEDED(hr) && hDac == NULL)
-            {
-                hDac = LoadLibraryW(dacModulePath);
-                if (hDac == NULL)
-                {
-                    hr = HRESULT_FROM_WIN32(GetLastError());
-                }
-            }
+            hr = LoadProviderLibraries(
+                clrInfo,
+                pLibraryProvider,
+                dbiModulePath,
+                dacModulePath,
+                &hDbi,
+                &hDac);
         }
         else
         {
@@ -199,23 +194,13 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
             hDbi = NULL;
             dbiModulePath.Clear();
             dacModulePath.Clear();
-            hr = ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
-            if (SUCCEEDED(hr) && hDac == NULL)
-            {
-                hDac = LoadLibraryW(dacModulePath);
-                if (hDac == NULL)
-                {
-                    hr = HRESULT_FROM_WIN32(GetLastError());
-                }
-            }
-            if (SUCCEEDED(hr) && hDbi == NULL)
-            {
-                hDbi = LoadLibraryW(dbiModulePath);
-                if (hDbi == NULL)
-                {
-                    hr = HRESULT_FROM_WIN32(GetLastError());
-                }
-            }
+            hr = LoadProviderLibraries(
+                clrInfo,
+                pLibraryProvider,
+                dbiModulePath,
+                dacModulePath,
+                &hDbi,
+                &hDac);
             usingProviderDac = true;
         }
 
@@ -254,23 +239,13 @@ STDMETHODIMP CLRDebuggingImpl::OpenVirtualProcess(
                 hDac = NULL;
                 dbiModulePath.Clear();
                 dacModulePath.Clear();
-                hr = ProvideLibraries(clrInfo, pLibraryProvider, dbiModulePath, dacModulePath, &hDbi, &hDac);
-                if (SUCCEEDED(hr) && hDac == NULL)
-                {
-                    hDac = LoadLibraryW(dacModulePath);
-                    if (hDac == NULL)
-                    {
-                        hr = HRESULT_FROM_WIN32(GetLastError());
-                    }
-                }
-                if (SUCCEEDED(hr) && hDbi == NULL)
-                {
-                    hDbi = LoadLibraryW(dbiModulePath);
-                    if (hDbi == NULL)
-                    {
-                        hr = HRESULT_FROM_WIN32(GetLastError());
-                    }
-                }
+                hr = LoadProviderLibraries(
+                    clrInfo,
+                    pLibraryProvider,
+                    dbiModulePath,
+                    dacModulePath,
+                    &hDbi,
+                    &hDac);
                 if (SUCCEEDED(hr))
                 {
                     ovpFn = (OpenVirtualProcessImpl2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl2");
@@ -574,6 +549,44 @@ exit:
         CoTaskMemFree(pDacModulePath);
 #endif
     }
+    return hr;
+}
+
+HRESULT CLRDebuggingImpl::LoadProviderLibraries(
+    ClrInfo& clrInfo,
+    IUnknown* pLibraryProvider,
+    SString& dbiModulePath,
+    SString& dacModulePath,
+    HMODULE* phDbi,
+    HMODULE* phDac)
+{
+    HRESULT hr = ProvideLibraries(
+        clrInfo,
+        pLibraryProvider,
+        dbiModulePath,
+        dacModulePath,
+        phDbi,
+        phDac);
+
+    // Load DAC first because DBI references exports from the matching DAC PAL.
+    if (SUCCEEDED(hr) && *phDac == NULL)
+    {
+        *phDac = LoadLibraryW(dacModulePath);
+        if (*phDac == NULL)
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+        }
+    }
+
+    if (SUCCEEDED(hr) && *phDbi == NULL)
+    {
+        *phDbi = LoadLibraryW(dbiModulePath);
+        if (*phDbi == NULL)
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+        }
+    }
+
     return hr;
 }
 
@@ -974,64 +987,57 @@ STDMETHODIMP CLRDebuggingImpl::CanUnloadNow(HMODULE hModule)
     return hr;
 }
 
-// Returns an override path or a path to a library bundled next to dbgshim. This function's address
-// is the single module anchor used to locate dbgshim on disk.
-static HRESULT GetBundledLibraryPath(
-    const WCHAR* windowsOverrideName,
-    const char* unixOverrideName,
-    const WCHAR* libraryName,
-    SString& libraryPath)
+static HRESULT GetCurrentModulePath(SString& modulePath)
 {
-    libraryPath.Clear();
+    modulePath.Clear();
 
-#ifdef HOST_WINDOWS
-    (void)unixOverrideName;
-    {
-        WCHAR overrideBuffer[MAX_LONGPATH];
-        DWORD overrideLen = GetEnvironmentVariableW(windowsOverrideName, overrideBuffer, ARRAY_SIZE(overrideBuffer));
-        if (overrideLen > 0 && overrideLen < ARRAY_SIZE(overrideBuffer))
-        {
-            libraryPath.Set(overrideBuffer);
-            return S_OK;
-        }
-    }
-#else
-    (void)windowsOverrideName;
-    {
-        const char* overridePath = getenv(unixOverrideName);
-        if (overridePath != NULL && overridePath[0] != '\0')
-        {
-            libraryPath.SetUTF8((const UTF8*)overridePath);
-            return S_OK;
-        }
-    }
-#endif
-
-    SString modulePath;
 #ifdef HOST_WINDOWS
     HMODULE hModule = NULL;
     if (!GetModuleHandleExW(
             GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-            (LPCWSTR)&GetBundledLibraryPath,
+            (LPCWSTR)&GetCurrentModulePath,
             &hModule))
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
 
-    WCHAR buffer[MAX_LONGPATH];
-    if (GetModuleFileNameW(hModule, buffer, ARRAY_SIZE(buffer)) == 0)
+    if (WszGetModuleFileName(hModule, modulePath) == 0)
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
-    modulePath.Set(buffer);
 #else
     Dl_info info;
-    if (dladdr((void*)&GetBundledLibraryPath, &info) == 0 || info.dli_fname == NULL)
+    if (dladdr((void*)&GetCurrentModulePath, &info) == 0 || info.dli_fname == NULL)
     {
         return E_FAIL;
     }
     modulePath.SetUTF8((const UTF8*)info.dli_fname);
 #endif
+
+    return S_OK;
+}
+
+// Returns an override path or a path to a library bundled next to dbgshim.
+static HRESULT GetBundledLibraryPath(
+    const WCHAR* overrideName,
+    const WCHAR* libraryName,
+    SString& libraryPath)
+{
+    libraryPath.Clear();
+
+    SString overridePath;
+    if (WszGetEnvironmentVariable(overrideName, overridePath) > 0)
+    {
+        libraryPath.Set(overridePath);
+        return S_OK;
+    }
+
+    SString modulePath;
+    HRESULT hr = GetCurrentModulePath(modulePath);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
     SString::Iterator lastSeparator = modulePath.End();
     if (!modulePath.FindBack(lastSeparator, DIRECTORY_SEPARATOR_CHAR_W))
@@ -1052,7 +1058,6 @@ static HRESULT GetDbiPath(SString& dbiPath)
 {
     return GetBundledLibraryPath(
         W("DOTNET_DBI_PATH"),
-        "DOTNET_DBI_PATH",
         MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W),
         dbiPath);
 }
@@ -1061,14 +1066,13 @@ static HRESULT GetCDacPath(SString& cdacPath)
 {
     return GetBundledLibraryPath(
         W("DOTNET_CDAC_PATH"),
-        "DOTNET_CDAC_PATH",
         MAKEDLLNAME_W(CORECLR_CDAC_MODULE_NAME_W),
         cdacPath);
 }
 
 // Loads the given DAC/cDAC module and creates the requested data-access interface from it by
 // calling its CLRDataCreateInstance export. The module is intentionally left resident.
-static HRESULT ActivateDataAccess(
+static HRESULT DacCreateInstance(
     const WCHAR* dacModulePath,
     IUnknown* pDataTarget,
     REFIID riid,
@@ -1102,6 +1106,143 @@ static HRESULT ActivateDataAccess(
     return hr;
 }
 
+class CLRDataTargetAdapter final : public ICorDebugDataTarget
+{
+public:
+    CLRDataTargetAdapter(ICLRDataTarget* target, bool windowsTarget)
+        : m_refCount(1),
+          m_target(target),
+          m_windowsTarget(windowsTarget)
+    {
+        m_target->AddRef();
+    }
+
+    ~CLRDataTargetAdapter()
+    {
+        m_target->Release();
+    }
+
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppInterface) override
+    {
+        if (ppInterface == NULL)
+        {
+            return E_POINTER;
+        }
+        *ppInterface = NULL;
+
+        if (riid == __uuidof(IUnknown) || riid == __uuidof(ICorDebugDataTarget))
+        {
+            *ppInterface = static_cast<ICorDebugDataTarget*>(this);
+            AddRef();
+            return S_OK;
+        }
+
+        return E_NOINTERFACE;
+    }
+
+    ULONG STDMETHODCALLTYPE AddRef() override
+    {
+        return InterlockedIncrement(&m_refCount);
+    }
+
+    ULONG STDMETHODCALLTYPE Release() override
+    {
+        LONG refCount = InterlockedDecrement(&m_refCount);
+        if (refCount == 0)
+        {
+            delete this;
+        }
+        return refCount;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetPlatform(CorDebugPlatform* pPlatform) override
+    {
+        ULONG32 machineType;
+        HRESULT hr = m_target->GetMachineType(&machineType);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        ULONG32 expectedPointerSize;
+        CorDebugPlatform platform;
+        switch (machineType)
+        {
+            case IMAGE_FILE_MACHINE_I386:
+                expectedPointerSize = 4;
+                platform = m_windowsTarget ? CORDB_PLATFORM_WINDOWS_X86 : CORDB_PLATFORM_POSIX_X86;
+                break;
+            case IMAGE_FILE_MACHINE_AMD64:
+                expectedPointerSize = 8;
+                platform = m_windowsTarget ? CORDB_PLATFORM_WINDOWS_AMD64 : CORDB_PLATFORM_POSIX_AMD64;
+                break;
+            case IMAGE_FILE_MACHINE_ARMNT:
+                expectedPointerSize = 4;
+                platform = m_windowsTarget ? CORDB_PLATFORM_WINDOWS_ARM : CORDB_PLATFORM_POSIX_ARM;
+                break;
+            case IMAGE_FILE_MACHINE_ARM64:
+                expectedPointerSize = 8;
+                platform = m_windowsTarget ? CORDB_PLATFORM_WINDOWS_ARM64 : CORDB_PLATFORM_POSIX_ARM64;
+                break;
+            case IMAGE_FILE_MACHINE_LOONGARCH64:
+                if (m_windowsTarget)
+                {
+                    return E_NOTIMPL;
+                }
+                expectedPointerSize = 8;
+                platform = CORDB_PLATFORM_POSIX_LOONGARCH64;
+                break;
+            case IMAGE_FILE_MACHINE_RISCV64:
+                if (m_windowsTarget)
+                {
+                    return E_NOTIMPL;
+                }
+                expectedPointerSize = 8;
+                platform = CORDB_PLATFORM_POSIX_RISCV64;
+                break;
+            default:
+                return E_NOTIMPL;
+        }
+
+        ULONG32 pointerSize;
+        hr = m_target->GetPointerSize(&pointerSize);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+        if (pointerSize != expectedPointerSize)
+        {
+            return E_UNEXPECTED;
+        }
+
+        *pPlatform = platform;
+        return S_OK;
+    }
+
+    HRESULT STDMETHODCALLTYPE ReadVirtual(
+        CORDB_ADDRESS address,
+        BYTE* pBuffer,
+        ULONG32 bytesRequested,
+        ULONG32* pBytesRead) override
+    {
+        return m_target->ReadVirtual(address, pBuffer, bytesRequested, pBytesRead);
+    }
+
+    HRESULT STDMETHODCALLTYPE GetThreadContext(
+        DWORD threadID,
+        ULONG32 contextFlags,
+        ULONG32 contextSize,
+        BYTE* pContext) override
+    {
+        return m_target->GetThreadContext(threadID, contextFlags, contextSize, pContext);
+    }
+
+private:
+    LONG m_refCount;
+    ICLRDataTarget* m_target;
+    bool m_windowsTarget;
+};
+
 HRESULT CLRDebuggingImpl::OpenDataAccessProcess(
     ULONG64 moduleBaseAddress,
     IUnknown* pDataTarget,
@@ -1131,7 +1272,7 @@ HRESULT CLRDebuggingImpl::OpenDataAccessProcess(
         HRESULT cdacPathHr = GetCDacPath(cdacPath);
         if (SUCCEEDED(cdacPathHr))
         {
-            HRESULT cdacHr = ActivateDataAccess(cdacPath.GetUnicode(), pDataTarget, riid, ppInstance);
+            HRESULT cdacHr = DacCreateInstance(cdacPath.GetUnicode(), pDataTarget, riid, ppInstance);
             if (SUCCEEDED(cdacHr))
             {
                 return S_OK;
@@ -1169,7 +1310,35 @@ HRESULT CLRDebuggingImpl::OpenDataAccessProcess(
     HRESULT hr = pDataTarget->QueryInterface(__uuidof(ICorDebugDataTarget), (void**)&pDt);
     if (FAILED(hr))
     {
-        return CORDBG_E_MISSING_DATA_TARGET_INTERFACE;
+        ReleaseHolder<ICLRDataTarget> pLegacyTarget;
+        hr = pDataTarget->QueryInterface(__uuidof(ICLRDataTarget), (void**)&pLegacyTarget);
+        if (FAILED(hr))
+        {
+            return CORDBG_E_MISSING_DATA_TARGET_INTERFACE;
+        }
+
+        USHORT imageSignature;
+        ULONG32 bytesRead;
+        hr = pLegacyTarget->ReadVirtual(
+            moduleBaseAddress,
+            reinterpret_cast<BYTE*>(&imageSignature),
+            sizeof(imageSignature),
+            &bytesRead);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+        if (bytesRead != sizeof(imageSignature))
+        {
+            return HRESULT_FROM_WIN32(ERROR_PARTIAL_COPY);
+        }
+
+        bool windowsTarget = imageSignature == IMAGE_DOS_SIGNATURE;
+        pDt = new (nothrow) CLRDataTargetAdapter(pLegacyTarget, windowsTarget);
+        if (pDt == NULL)
+        {
+            return E_OUTOFMEMORY;
+        }
     }
 
     ClrInfo clrInfo;
@@ -1187,7 +1356,7 @@ HRESULT CLRDebuggingImpl::OpenDataAccessProcess(
         return hr;
     }
 
-    return ActivateDataAccess(dacModulePath.GetUnicode(), pDataTarget, riid, ppInstance);
+    return DacCreateInstance(dacModulePath.GetUnicode(), pDataTarget, riid, ppInstance);
 }
 
 // Resolves ONLY the DAC via the library provider. Mirrors the DAC half of ProvideLibraries so that
@@ -1271,7 +1440,8 @@ static HRESULT ProvideDacLibrary(
         // Adjust the timestamp and size of image if this DAC is a known buggy version and needs to be retargeted
         RetargetDacIfNeeded(&clrInfo.DacTimeStamp, &clrInfo.DacSizeOfImage);
 
-        if (FAILED(pLibraryProvider2->ProvideLibrary2(clrInfo.DacName, clrInfo.DacTimeStamp, clrInfo.DacSizeOfImage, &pDacModulePath)) || pDacModulePath == NULL)        {
+        if (FAILED(pLibraryProvider2->ProvideLibrary2(clrInfo.DacName, clrInfo.DacTimeStamp, clrInfo.DacSizeOfImage, &pDacModulePath)) || pDacModulePath == NULL)
+        {
             hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
             goto exit;
         }
@@ -1347,9 +1517,9 @@ STDMETHODIMP CLRDebuggingImpl::QueryInterface(REFIID riid, void **ppvObject)
         pItf->AddRef();
         *ppvObject = pItf;
     }
-    else if (riid == __uuidof(ICLRDebuggingDataAccessControl))
+    else if (riid == __uuidof(ICLRDebuggingPolicy))
     {
-        ICLRDebuggingDataAccessControl *pItf = static_cast<ICLRDebuggingDataAccessControl *>(this);
+        ICLRDebuggingPolicy *pItf = static_cast<ICLRDebuggingPolicy *>(this);
         pItf->AddRef();
         *ppvObject = pItf;
     }
