@@ -1192,7 +1192,7 @@ static bool GetDbiPath(SString& dbiPath)
 {
     return GetBundledLibraryPath(
         W("DOTNET_DBI_PATH"),
-        MAKEDLLNAME_W(MAIN_DBI_MODULE_NAME_W),
+        MAKEDLLNAME_W(UNIVERSAL_DBI_MODULE_NAME_W),
         dbiPath);
 }
 
