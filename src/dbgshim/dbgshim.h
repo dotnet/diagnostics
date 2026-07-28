@@ -5,10 +5,24 @@
 //
 //*****************************************************************************
 
+#ifndef _DBG_SHIM_H_
+#define _DBG_SHIM_H_
+
 #include <windows.h>
 #include "metahost.h"
 
 typedef VOID (*PSTARTUP_CALLBACK)(IUnknown *pCordb, PVOID parameter, HRESULT hr);
+
+// Selects how dbgshim locates the data-access layer (DAC/cDAC) for a target.
+enum CDacLoadPolicy
+{
+    // Prefer the debugging tool bundled cDAC, falling back to the legacy DAC. This is the default.
+    CDacLoadPolicy_PreferCDac = 0,
+    // Use only the cDAC.
+    CDacLoadPolicy_CDacOnly = 1,
+    // Use only the legacy DAC.
+    CDacLoadPolicy_LegacyDacOnly = 2,
+};
 
 EXTERN_C HRESULT
 CreateProcessForLaunch(
@@ -115,3 +129,9 @@ RegisterForRuntimeStartupRemotePort(
     _In_ LPCWSTR szMscordbiPath,
     _In_ LPCWSTR szAssemblyBasePath,
     _Out_ IUnknown ** ppCordb);
+
+EXTERN_C HRESULT
+SetCDacLoadPolicy(
+    _In_ CDacLoadPolicy policy);
+
+#endif // _DBG_SHIM_H_
