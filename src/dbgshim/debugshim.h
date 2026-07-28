@@ -48,8 +48,9 @@
 #define CLR_DAC_MODULE_NAME_W W("mscordacwks")
 #define MAIN_DBI_MODULE_NAME_W W("mscordbi")
 
-// The cDAC (contract-based data access) is bundled next to dbgshim and is never downloaded.
+// The cDAC and universal DBI are bundled next to dbgshim and are never downloaded.
 #define CORECLR_CDAC_MODULE_NAME_W W("mscordaccore_universal")
+#define UNIVERSAL_DBI_MODULE_NAME_W W("mscordbi_universal")
 
 // A small dbgshim-owned control interface, implemented by the same object as ICLRDebugging, that
 // lets a consumer attach a cDAC load policy to the debugging object before requesting a data-access
