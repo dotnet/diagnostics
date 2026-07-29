@@ -3813,6 +3813,10 @@ HRESULT LoadClrDebugDll(void)
     HRESULT hr = g_pRuntime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::UseCDac, &g_clrData);
     if (FAILED(hr))
     {
+        if (Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseCDac)
+        {
+            return hr;
+        }
         g_clrData = GetClrDataFromDbgEng();
         if (g_clrData == nullptr)
         {
