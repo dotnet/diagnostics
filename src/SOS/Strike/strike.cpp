@@ -13432,21 +13432,70 @@ DECLARE_API(SetClrPath)
 //
 // Lists and selects the current runtime
 //
+static void DisplayCDacLoadPolicy()
+{
+    PCSTR cdacPolicy = "policy (default)";
+    switch (Runtime::GetCDacLoadPolicy())
+    {
+        case CDacLoadPolicy::UseCDac:
+            cdacPolicy = "true";
+            break;
+        case CDacLoadPolicy::UseLegacyDac:
+            cdacPolicy = "false";
+            break;
+        default:
+            break;
+    }
+    ExtOut("Settings:\n");
+    ExtOut("-> Use cDAC: %s\n", cdacPolicy);
+}
+
 DECLARE_API(runtimes)
 {
-    INIT_API_NODAC_PROBE_MANAGED("runtimes");
+    INIT_API_NOEE_PROBE_MANAGED("runtimes");
 
     BOOL bNetFx = FALSE;
     BOOL bNetCore = FALSE;
+    StringHolder useCDac;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-netfx", &bNetFx, COBOOL, FALSE},
         {"-netcore", &bNetCore, COBOOL, FALSE},
+        {"--usecdac", &useCDac.data, COSTRING, TRUE},
     };
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return E_INVALIDARG;
     }
+    if (useCDac.data != nullptr)
+    {
+        CDacLoadPolicy policy;
+        if (_stricmp(useCDac.data, "true") == 0)
+        {
+            policy = CDacLoadPolicy::UseCDac;
+        }
+        else if (_stricmp(useCDac.data, "false") == 0)
+        {
+            policy = CDacLoadPolicy::UseLegacyDac;
+        }
+        else if (_stricmp(useCDac.data, "policy") == 0 || _stricmp(useCDac.data, "default") == 0)
+        {
+            policy = CDacLoadPolicy::Default;
+        }
+        else
+        {
+            ExtErr("Invalid --usecdac value '%s'. Expected true, false, or policy.\n", useCDac.data);
+            return E_INVALIDARG;
+        }
+        Runtime::SetCDacLoadPolicy(policy);
+        GetTarget()->Flush();
+    }
+    if (useCDac.data != nullptr && !bNetCore && !bNetFx)
+    {
+        DisplayCDacLoadPolicy();
+        return Status;
+    }
+    INIT_API_EE();
     if (bNetCore || bNetFx)
     {
 #ifndef FEATURE_PAL
@@ -13470,6 +13519,7 @@ DECLARE_API(runtimes)
     else
     {
         Target::DisplayStatus();
+        DisplayCDacLoadPolicy();
     }
     return Status;
 }

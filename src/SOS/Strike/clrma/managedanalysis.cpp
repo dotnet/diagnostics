@@ -289,6 +289,11 @@ ClrmaManagedAnalysis::AssociateClient(
                 }
                 if (FAILED(hr = runtime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::UseCDac, &m_clrData)))
                 {
+                    if (Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseCDac)
+                    {
+                        TraceError("AssociateClient forced cDAC retrieval failed with code %08x\n", hr);
+                        return hr;
+                    }
                     TraceInformation("AssociateClient Runtime based DAC retrieval failed with code %08x, falling back to CLRMA\n", hr);
 
                     m_clrData = GetClrDataFromDbgEng();

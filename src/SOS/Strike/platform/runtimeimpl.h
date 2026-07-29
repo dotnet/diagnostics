@@ -44,6 +44,13 @@
 
 extern IRuntime* g_pRuntime;
 
+enum class CDacLoadPolicy
+{
+    Default,
+    UseCDac,
+    UseLegacyDac,
+};
+
 // Returns the runtime configuration as a string
 inline static const char* GetRuntimeConfigurationName(IRuntime::RuntimeConfiguration config)
 {
@@ -164,6 +171,10 @@ private:
 
 public:
     static HRESULT CreateInstance(ITarget* target, RuntimeConfiguration configuration, Runtime** ppRuntime);
+
+    static CDacLoadPolicy GetCDacLoadPolicy();
+
+    static void SetCDacLoadPolicy(CDacLoadPolicy policy);
 
     void Flush();
 
