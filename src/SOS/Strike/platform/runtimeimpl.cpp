@@ -509,7 +509,15 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         if (m_cdacDataProcess == nullptr)
         {
             LPCSTR cdacFilePath = GetCDacFilePath();
-            if (cdacFilePath != nullptr)
+            if (cdacFilePath == nullptr)
+            {
+                if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
+                {
+                    *ppClrDataProcess = nullptr;
+                    return CORDBG_E_NO_IMAGE_AVAILABLE;
+                }
+            }
+            else
             {
                 m_cdacDataProcess = CreateClrDataProcessInstance(cdacFilePath, GetContractDescriptorAddress());
             }

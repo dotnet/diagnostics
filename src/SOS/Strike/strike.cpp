@@ -13484,7 +13484,7 @@ DECLARE_API(runtimes)
         }
         else
         {
-            ExtErr("Invalid --usecdac value '%s'. Expected true, false, or policy.\n", useCDac.data);
+            ExtErr("Invalid --usecdac value '%s'. Expected true, false, policy, or default.\n", useCDac.data);
             return E_INVALIDARG;
         }
         Runtime::SetCDacLoadPolicy(policy);
