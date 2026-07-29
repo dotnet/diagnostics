@@ -14,6 +14,9 @@
 typedef VOID (*PSTARTUP_CALLBACK)(IUnknown *pCordb, PVOID parameter, HRESULT hr);
 
 // Selects how dbgshim locates the data-access layer (DAC/cDAC) for a target.
+// For the live-debugging paths (RegisterForRuntimeStartup* and CreateDebuggingInterfaceFromVersion*),
+// cDAC is additionally gated by the DOTNET_CDAC_LIVE_DEBUGGING=1 env var. Without it, the cDAC
+// attempt is skipped and the legacy DAC is used regardless of this policy.
 enum CDacLoadPolicy
 {
     // Prefer the debugging tool bundled cDAC, falling back to the legacy DAC. This is the default.
