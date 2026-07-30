@@ -15,6 +15,7 @@ class Target : public ITarget
 {
 private:
     LONG m_ref;
+    IDebuggerServices* m_debuggerServices;
     LPCSTR m_tmpPath;
 #ifndef FEATURE_PAL
     Runtime* m_desktop;
@@ -28,20 +29,19 @@ private:
 #endif
     void DisplayStatusInstance();
 
-    Target();
+    Target(IDebuggerServices* debuggerServices);
     virtual ~Target();
 
 public:
-    static ITarget* GetInstance();
+    static ITarget* GetInstance(IDebuggerServices* debuggerServices);
 
     HRESULT CreateInstance(IRuntime** ppRuntime);
 
 #ifndef FEATURE_PAL
     static bool SwitchRuntime(bool desktop)
     {
-        GetInstance();
         _ASSERTE(s_target != nullptr);
-        return s_target->SwitchRuntimeInstance(desktop);
+        return s_target != nullptr && s_target->SwitchRuntimeInstance(desktop);
     }
 #endif
 

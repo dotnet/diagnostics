@@ -12,14 +12,15 @@ class Host : public IHost
 {
 private:
     LONG m_ref;
+    IDebuggerServices* m_debuggerServices;
 
     static Host* s_host;
 
-    Host();
+    Host(IDebuggerServices* debuggerServices);
     virtual ~Host();
 
 public:
-    static IHost* GetInstance();
+    static IHost* GetInstance(IDebuggerServices* debuggerServices);
 
     //----------------------------------------------------------------------------
     // IUnknown
