@@ -433,10 +433,6 @@ public:
             if (cdacEvaluated)
             {
                 cdacHr = TryCreateCoreDbgWithCDac(hModule, m_processId, m_applicationGroupId, CorDebugVersion_2_0, &pCordb);
-                if (cdacHr == E_NOTIMPL)
-                {
-                    cdacEvaluated = false;
-                }
             }
 
             HRESULT fallbackHr = E_FAIL;
@@ -631,10 +627,6 @@ public:
                 if (cdacEvaluated)
                 {
                     cdacHr = TryCreateCoreDbgWithCDac(clrRuntimeInfo.ModuleHandle, m_processId, NULL, clrRuntimeInfo.EngineMetrics.dwDbiVersion, &pCordb);
-                    if (cdacHr == E_NOTIMPL)
-                    {
-                        cdacEvaluated = false;
-                    }
                 }
 
                 HRESULT fallbackHr = E_FAIL;
@@ -2165,10 +2157,6 @@ CreateDebuggingInterfaceFromVersion3(
         if (cdacEvaluated)
         {
             cdacHr = TryCreateCoreDbgWithCDac(hmodTargetCLR, pidDebuggee, szApplicationGroupId, iDebuggerVersion, &pCordb);
-            if (cdacHr == E_NOTIMPL)
-            {
-                cdacEvaluated = false;
-            }
         }
 
         if (FAILED(cdacHr) && policy != CDacLoadPolicy_CDacOnly)
