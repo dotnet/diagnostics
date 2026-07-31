@@ -244,8 +244,17 @@ namespace SOS.Hosting
                     // dbgshim (co-located with native SOS) finds and validates the co-located cDAC and
                     // returns the IXCLRDataProcess. If the cDAC declines this yields Zero and we fall
                     // through to the in-box DAC below.
+                    Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: trying dbgshim seam (cDAC preferred)");
                     IClrDataProcessActivator activator = _services.GetService<IClrDataProcessActivator>();
                     _cdacDataProcess = activator?.CreateClrDataProcess(_runtime) ?? IntPtr.Zero;
+                    if (_cdacDataProcess != IntPtr.Zero)
+                    {
+                        Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: serviced by the cDAC via the dbgshim seam");
+                    }
+                    else
+                    {
+                        Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: dbgshim seam declined; falling back to the in-box DAC");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -259,6 +268,7 @@ namespace SOS.Hosting
                 {
                     try
                     {
+                        Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: creating IXCLRDataProcess from the in-box DAC");
                         _clrDataProcess = CreateClrDataProcess(GetDacHandle());
                     }
                     catch (Exception ex)

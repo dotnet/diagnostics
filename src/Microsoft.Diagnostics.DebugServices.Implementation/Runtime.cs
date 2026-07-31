@@ -188,13 +188,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private ClrRuntime CreateRuntime()
         {
             CDacLoadPolicy policy = _settingsService.CDacLoadPolicy;
+            Trace.TraceInformation($"Runtime #{Id} data-access: begin (cDAC policy={policy}, cDAC selected={ShouldUseCDac()})");
 
-            // First try the dbgshim activation seam. SOS already enumerated this runtime, so hand the
-            // runtime module base to dbgshim, let it prefer the co-located cDAC, and register the
-            // resulting IXCLRDataProcess with ClrMD so it builds a runtime WITHOUT loading a DAC
-            // itself. dbgshim only returns a live interface when the cDAC actually serviced the
-            // target; when it declines (an older or otherwise unsupported runtime) it returns a null
-            // interface and we fall through to the in-box DAC below, so those targets are unaffected.
+            // 1. dbgshim activation seam. SOS already enumerated this runtime, so hand the runtime
+            // module base to dbgshim, let it prefer the co-located cDAC, and register the resulting
+            // IXCLRDataProcess with ClrMD so it builds a runtime WITHOUT loading a DAC itself. dbgshim
+            // only returns a live interface when the cDAC actually serviced the target; when it
+            // declines it returns a null interface and we fall through to the in-box DAC below.
             //
             // Activation is one-way: once dbgshim hands back a live IXCLRDataProcess we register it on
             // the ClrInfo, and ClrMD builds every runtime for that ClrInfo over the registered
@@ -206,15 +206,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 if (activator is not null)
                 {
                     seamTriedCDac = true;
+                    Trace.TraceInformation($"Runtime #{Id} data-access: trying dbgshim seam (cDAC preferred)");
                     IntPtr clrDataProcess = activator.CreateClrDataProcess(this);
                     if (clrDataProcess != IntPtr.Zero)
                     {
+                        Trace.TraceInformation($"Runtime #{Id} data-access: dbgshim seam activated an IXCLRDataProcess (cDAC)");
                         return CreateRuntimeFromClrDataProcess(clrDataProcess);
                     }
+                    Trace.TraceInformation($"Runtime #{Id} data-access: dbgshim seam declined; the cDAC did not service this target");
+                }
+                else
+                {
+                    Trace.TraceInformation($"Runtime #{Id} data-access: no dbgshim seam in this host (activator not registered)");
                 }
             }
 
-            // Direct ClrMD cDAC load, for hosts without the dbgshim seam (the activator is absent).
+            // 2. Direct ClrMD cDAC load, for hosts without the dbgshim seam (the activator is absent).
             // When the seam already tried the same co-located cDAC and it declined, skip this - the
             // cDAC would decline here too - and go straight to the in-box DAC.
             if (ShouldUseCDac() && !seamTriedCDac)
@@ -222,20 +229,22 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 string cdacFilePath = GetCDacFilePath();
                 if (cdacFilePath is not null)
                 {
+                    Trace.TraceInformation($"Runtime #{Id} data-access: trying direct ClrMD cDAC load {cdacFilePath}");
                     ClrRuntime cdacRuntime = TryCreateRuntimeFromLibrary(cdacFilePath);
                     if (cdacRuntime is not null)
                     {
+                        Trace.TraceInformation($"Runtime #{Id} data-access: serviced by direct cDAC load");
                         return cdacRuntime;
                     }
+                    Trace.TraceInformation($"Runtime #{Id} data-access: direct cDAC load declined this target");
                 }
             }
 
-            // The cDAC either was not selected or could not service this runtime. Fall back to the
-            // in-box DAC, unless the cDAC was explicitly forced - then a decline is a hard failure and
-            // we do not silently use the DAC.
+            // 3. In-box DAC fallback, unless the cDAC was explicitly forced - then a decline is a hard
+            // failure and we do not silently use the DAC.
             if (policy == CDacLoadPolicy.UseCDac)
             {
-                Trace.TraceError($"The cDAC was requested but could not service this runtime: {RuntimeModule.FileName}");
+                Trace.TraceError($"Runtime #{Id} data-access: cDAC was forced (UseCDac) but could not service this runtime; not falling back to the DAC: {RuntimeModule.FileName}");
                 return null;
             }
 
@@ -244,10 +253,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string dacFilePath = GetDacFilePath(out _);
             if (dacFilePath is not null)
             {
+                Trace.TraceInformation($"Runtime #{Id} data-access: falling back to the in-box DAC {dacFilePath}");
                 return TryCreateRuntimeFromLibrary(dacFilePath);
             }
 
-            Trace.TraceError($"Could not find or download matching DAC for this runtime: {RuntimeModule.FileName}");
+            Trace.TraceError($"Runtime #{Id} data-access: could not find or download a matching DAC for this runtime: {RuntimeModule.FileName}");
             return null;
         }
 
