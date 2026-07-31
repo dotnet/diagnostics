@@ -294,3 +294,17 @@ VERIFY:\s+DeadThread:\s+<DECVAL>\s+
 VERIFY:\s+Hosted Runtime:\s+no\s+
 VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
 VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
+
+# Exercise the native (non-hosted) CLRMA path under cdb. With no managed host, clrma associates
+# through the DAC CLRMA provider, which drives the SOS native Target/DataTarget/Runtime objects.
+# Those must resolve the target OS (for the module path separator) and thread context through the
+# session-lifetime IDebuggerServices; the exported CLRMACreateInstance path runs outside command
+# scope where the command-scoped debugger client globals are null, so relying on them faults there.
+IFDEF:HOST_RUNTIME_NONE
+IFDEF:WINDOWS
+SOSCOMMAND:clrma
+VERIFY:Managed analysis provider:\s+SOSCLRMA\s+
+VERIFY:OSThreadId:\s+<HEXVAL>\s+
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp!SymbolTestApp\.Program\.Main\(.*\).*
+ENDIF:WINDOWS
+ENDIF:HOST_RUNTIME_NONE
