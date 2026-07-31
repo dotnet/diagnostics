@@ -104,7 +104,6 @@ namespace SOS.Hosting
         private IntPtr _cdacDataProcess = IntPtr.Zero;
         private IntPtr _corDebugProcess = IntPtr.Zero;
         private IntPtr _dacHandle = IntPtr.Zero;
-        private IntPtr _cdacHandle = IntPtr.Zero;
         private IntPtr _dbiHandle = IntPtr.Zero;
 
         public IntPtr IRuntime { get; }
@@ -161,11 +160,6 @@ namespace SOS.Hosting
                 // Previously, the DAC was freed here, but as we transition to the cDAC which uses NativeAOT,
                 // it is no longer possible to free the DAC library when it is using the shimmed cDAC.
                 _dacHandle = IntPtr.Zero;
-            }
-            if (_cdacHandle != IntPtr.Zero)
-            {
-                // cDAC can not be freed because it is a NativeAOT dll.
-                _cdacHandle = IntPtr.Zero;
             }
             if (_dbiHandle != IntPtr.Zero)
             {
@@ -242,11 +236,16 @@ namespace SOS.Hosting
             // selects it (GetCDacFilePath returns non-null); fall back to the in-box DAC otherwise.
             // The ICorDebug/DBI path (CreateCorDebugProcess) always uses the in-box DAC. The flags
             // parameter is retained for the native IRuntime contract but no longer consulted here.
-            if (_cdacDataProcess == IntPtr.Zero)
+            if (_cdacDataProcess == IntPtr.Zero && _runtime.GetCDacFilePath() is not null)
             {
                 try
                 {
-                    _cdacDataProcess = CreateClrDataProcess(GetCDacHandle());
+                    // Activate the cDAC through the dbgshim seam, shared with the managed ClrMD path:
+                    // dbgshim (co-located with native SOS) finds and validates the co-located cDAC and
+                    // returns the IXCLRDataProcess. If the cDAC declines this yields Zero and we fall
+                    // through to the in-box DAC below.
+                    IClrDataProcessActivator activator = _services.GetService<IClrDataProcessActivator>();
+                    _cdacDataProcess = activator?.CreateClrDataProcess(_runtime) ?? IntPtr.Zero;
                 }
                 catch (Exception ex)
                 {
@@ -531,22 +530,6 @@ namespace SOS.Hosting
                 _dacHandle = LoadDacLibrary(dacFilePath, verifySignature);
             }
             return _dacHandle;
-        }
-
-        private IntPtr GetCDacHandle()
-        {
-            if (_cdacHandle == IntPtr.Zero)
-            {
-                string cdacFilePath = _runtime.GetCDacFilePath();
-                if (cdacFilePath == null)
-                {
-                    // The cDAC isn't selected for this runtime; the caller falls back to the in-box DAC.
-                    return IntPtr.Zero;
-                }
-                // The cDAC ships in the signed tool install directory, so it is never signature-verified.
-                _cdacHandle = LoadDacLibrary(cdacFilePath, verifySignature: false);
-            }
-            return _cdacHandle;
         }
 
         private static IntPtr LoadDacLibrary(string dacFilePath, bool verifySignature)
