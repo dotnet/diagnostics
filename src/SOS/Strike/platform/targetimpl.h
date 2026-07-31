@@ -40,8 +40,15 @@ public:
 #ifndef FEATURE_PAL
     static bool SwitchRuntime(bool desktop)
     {
-        _ASSERTE(s_target != nullptr);
-        return s_target != nullptr && s_target->SwitchRuntimeInstance(desktop);
+        // Lazily create the local target with the session-lifetime debugger services so
+        // -netfx/-netcore switching works even when no command has created a target yet.
+        ITarget* target = GetInstance(GetDebuggerServices());
+        bool switched = s_target != nullptr && s_target->SwitchRuntimeInstance(desktop);
+        if (target != nullptr)
+        {
+            target->Release();
+        }
+        return switched;
     }
 #endif
 
