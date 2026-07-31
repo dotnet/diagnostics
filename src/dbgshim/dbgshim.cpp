@@ -234,6 +234,10 @@ HRESULT CreateCoreDbg(
 // SetCDacLoadPolicy export.
 static Volatile<CDacLoadPolicy> g_cdacLoadPolicy = CDacLoadPolicy_PreferCDac;
 
+// cDAC live debugging is opt-in. Without this env var set to "1", TryCreateCoreDbgWithCDac
+// returns E_NOTIMPL and the caller falls back to the legacy DAC.
+#define DOTNET_CDAC_LIVE_DEBUGGING W("DOTNET_CDAC_LIVE_DEBUGGING")
+
 // Only the bundled DBI can report whether it can consume the cDAC for this target, so this invokes it
 // rather than pre-judging from file presence.
 static HRESULT TryCreateCoreDbgWithCDac(
@@ -243,6 +247,13 @@ static HRESULT TryCreateCoreDbgWithCDac(
     int iDebuggerVersion,
     IUnknown** ppCordb)
 {
+    SString enabledVar;
+    if (WszGetEnvironmentVariable(DOTNET_CDAC_LIVE_DEBUGGING, enabledVar) == 0
+        || !enabledVar.Equals(SL(W("1"))))
+    {
+        return E_NOTIMPL;
+    }
+
     SString cdacPath;
     SString dbiPath;
     if (!GetCDacAndDbiPaths(cdacPath, dbiPath))

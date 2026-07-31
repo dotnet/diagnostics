@@ -706,7 +706,8 @@ static HRESULT LoadResolvedLibraries(
 
 // Picks the final HRESULT after a cDAC attempt (cdacHr) and a legacy fallback attempt (fallbackHr).
 // On total failure the cDAC error is surfaced when it was attempted so tools can log why the cDAC
-// rejected the target; otherwise the fallback error (seeded by callers) is surfaced.
+// rejected the target. E_NOTIMPL does not describe a target rejection, so the fallback error is more
+// actionable in that case.
 HRESULT SelectActivationResult(
     HRESULT cdacHr,
     HRESULT fallbackHr,
@@ -720,7 +721,7 @@ HRESULT SelectActivationResult(
     {
         return fallbackHr;
     }
-    if (cdacEvaluated)
+    if (cdacEvaluated && cdacHr != E_NOTIMPL)
     {
         return cdacHr;
     }
