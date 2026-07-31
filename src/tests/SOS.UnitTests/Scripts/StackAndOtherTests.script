@@ -305,6 +305,6 @@ IFDEF:WINDOWS
 SOSCOMMAND:clrma
 VERIFY:Managed analysis provider:\s+SOSCLRMA\s+
 VERIFY:OSThreadId:\s+<HEXVAL>\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp!SymbolTestApp\.Program\.Main\(.*\).*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\).*
 ENDIF:WINDOWS
 ENDIF:HOST_RUNTIME_NONE
