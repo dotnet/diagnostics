@@ -15,6 +15,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DbgShim.UnitTests" />
+  </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />

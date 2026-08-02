@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="cordbdatatarget.cpp" />
     <ClCompile Include="dbgshim.cpp" />
     <ClCompile Include="debugshim.cpp" />
   </ItemGroup>
@@ -57,6 +58,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cordbdatatarget.h" />
     <ClInclude Include="debugshim.h" />
     <ClInclude Include="dbgshim.h" />
   </ItemGroup>

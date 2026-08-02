@@ -3,7 +3,7 @@
 
 using System;
 using System.Diagnostics;
-using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.Diagnostics.DebugServices;
 using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.TestHelpers
