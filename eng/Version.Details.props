@@ -10,6 +10,7 @@ This file should be imported by eng/Versions.props
     <!-- dotnet-arcade dependencies -->
     <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26358.3</MicrosoftDotNetArcadeSdkPackageVersion>
     <MicrosoftDotNetCodeAnalysisPackageVersion>10.0.0-beta.26358.3</MicrosoftDotNetCodeAnalysisPackageVersion>
+    <MicrosoftDotNetRemoteExecutorPackageVersion>10.0.0-beta.26358.3</MicrosoftDotNetRemoteExecutorPackageVersion>
     <!-- dotnet-command-line-api dependencies -->
     <SystemCommandLinePackageVersion>2.0.0-beta5.25210.1</SystemCommandLinePackageVersion>
     <!-- dotnet-dotnet dependencies -->
@@ -19,7 +20,6 @@ This file should be imported by eng/Versions.props
     <MicrosoftCodeAnalysisAnalyzersPackageVersion>5.10.0-1.26401.101</MicrosoftCodeAnalysisAnalyzersPackageVersion>
     <MicrosoftCodeAnalysisCSharpPackageVersion>5.10.0-1.26401.101</MicrosoftCodeAnalysisCSharpPackageVersion>
     <MicrosoftCodeAnalysisNetAnalyzersPackageVersion>11.0.100-rc.1.26401.101</MicrosoftCodeAnalysisNetAnalyzersPackageVersion>
-    <MicrosoftDotNetRemoteExecutorPackageVersion>11.0.0-beta.26401.101</MicrosoftDotNetRemoteExecutorPackageVersion>
     <MicrosoftNETSdkPackageVersion>11.0.100-rc.1.26401.101</MicrosoftNETSdkPackageVersion>
     <MicrosoftNETCoreAppRefPackageVersion>11.0.0-rc.1.26401.101</MicrosoftNETCoreAppRefPackageVersion>
     <MicrosoftNETCorePlatformsPackageVersion>11.0.0-rc.1.26401.101</MicrosoftNETCorePlatformsPackageVersion>
@@ -40,6 +40,7 @@ This file should be imported by eng/Versions.props
     <!-- dotnet-arcade dependencies -->
     <MicrosoftDotNetArcadeSdkVersion>$(MicrosoftDotNetArcadeSdkPackageVersion)</MicrosoftDotNetArcadeSdkVersion>
     <MicrosoftDotNetCodeAnalysisVersion>$(MicrosoftDotNetCodeAnalysisPackageVersion)</MicrosoftDotNetCodeAnalysisVersion>
+    <MicrosoftDotNetRemoteExecutorVersion>$(MicrosoftDotNetRemoteExecutorPackageVersion)</MicrosoftDotNetRemoteExecutorVersion>
     <!-- dotnet-command-line-api dependencies -->
     <SystemCommandLineVersion>$(SystemCommandLinePackageVersion)</SystemCommandLineVersion>
     <!-- dotnet-dotnet dependencies -->
@@ -49,7 +50,6 @@ This file should be imported by eng/Versions.props
     <MicrosoftCodeAnalysisAnalyzersVersion>$(MicrosoftCodeAnalysisAnalyzersPackageVersion)</MicrosoftCodeAnalysisAnalyzersVersion>
     <MicrosoftCodeAnalysisCSharpVersion>$(MicrosoftCodeAnalysisCSharpPackageVersion)</MicrosoftCodeAnalysisCSharpVersion>
     <MicrosoftCodeAnalysisNetAnalyzersVersion>$(MicrosoftCodeAnalysisNetAnalyzersPackageVersion)</MicrosoftCodeAnalysisNetAnalyzersVersion>
-    <MicrosoftDotNetRemoteExecutorVersion>$(MicrosoftDotNetRemoteExecutorPackageVersion)</MicrosoftDotNetRemoteExecutorVersion>
     <MicrosoftNETSdkVersion>$(MicrosoftNETSdkPackageVersion)</MicrosoftNETSdkVersion>
     <MicrosoftNETCoreAppRefVersion>$(MicrosoftNETCoreAppRefPackageVersion)</MicrosoftNETCoreAppRefVersion>
     <MicrosoftNETCorePlatformsVersion>$(MicrosoftNETCorePlatformsPackageVersion)</MicrosoftNETCorePlatformsVersion>
