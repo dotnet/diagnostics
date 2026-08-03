@@ -30,8 +30,8 @@ This file should be imported by eng/Versions.props
     <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-rc.1.26401.101</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-rc.1.26401.101</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
     <!-- microsoft-clrmd dependencies -->
-    <MicrosoftDiagnosticsRuntimePackageVersion>4.1.736701</MicrosoftDiagnosticsRuntimePackageVersion>
-    <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.1.736701</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
+    <MicrosoftDiagnosticsRuntimePackageVersion>4.1.737102</MicrosoftDiagnosticsRuntimePackageVersion>
+    <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.1.737102</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
