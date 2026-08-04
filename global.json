@@ -8,12 +8,7 @@
     "runner": "Microsoft.Testing.Platform"
   },
   "tools": {
-    "dotnet": "10.0.110",
-    "runtimes": {
-      "dotnet/x86": [
-        "$(MicrosoftNETCoreApp100Version)"
-      ]
-    }
+    "dotnet": "10.0.110"
   },
   "msbuild-sdks": {
     "Microsoft.Build.NoTargets": "3.7.0",

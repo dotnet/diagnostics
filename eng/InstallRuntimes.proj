@@ -63,7 +63,7 @@
 
   <Target Name="InstallTestRuntimes"
           AfterTargets="Build"
-          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
+          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
 
 <!--
     When cross-building (host arch != target arch), install a host-architecture SDK
@@ -82,6 +82,24 @@
           IgnoreStandardErrorWarningFormat="true" />
     <Exec Command="bash $(DotnetInstallScriptCmd) $(BuildSdkInstallArgs)"
           Condition="!$([MSBuild]::IsOsPlatform(Windows))"
+          IgnoreStandardErrorWarningFormat="true" />
+  </Target>
+
+<!--
+    Stage the x86 host shared framework so the xUnit v3 / MTP test executable can start on the
+    Windows x86 test leg. Arcade's XUnitV3 RunTests target launches each test exe with
+    DOTNET_ROOT_X86=$(TestDotNetRoot)x86 (== $(ArtifactsDotnetTestDir)x86). A 32-bit apphost
+    reads DOTNET_ROOT_X86 before DOTNET_ROOT and does not fall back if it is set, so the x86
+    runtime must live in that subdirectory. The rest of the x86 install (SDK + all
+    RuntimeTestVersions) stays at the $(ArtifactsDotnetTestDir) root, where debuggees resolve it
+    via DotNetRoot. This replaces the global.json tools.runtimes.dotnet/x86 entry that used to
+    stage the same x86 shared framework into .dotnet.
+-->
+
+  <Target Name="InstallHostRuntimeX86"
+          Condition="'$(TargetArch)' == 'x86' and $([MSBuild]::IsOsPlatform(Windows)) and !Exists('$(DotNetInstallRoot)x86\shared\Microsoft.NETCore.App\$(MicrosoftNETCoreApp100Version)')">
+
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) -NoPath -SkipNonVersionedFiles -Architecture x86 -Runtime dotnet -Version $(MicrosoftNETCoreApp100Version) -InstallDir $(DotNetInstallRoot)x86 }&quot;"
           IgnoreStandardErrorWarningFormat="true" />
   </Target>
 
