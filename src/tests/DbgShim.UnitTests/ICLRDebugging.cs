@@ -19,8 +19,10 @@ namespace Microsoft.Diagnostics
 
         public static ICLRDebugging Create(IntPtr punk) => punk != IntPtr.Zero ? new ICLRDebugging(punk) : null;
 
+        public IntPtr InterfacePointer => Self;
+
         private ICLRDebugging(IntPtr punk)
-            : base(new RefCountedFreeLibrary(IntPtr.Zero), IID_ICLRDebugging, punk)
+            : base(IID_ICLRDebugging, punk)
         {
             SuppressRelease();
         }

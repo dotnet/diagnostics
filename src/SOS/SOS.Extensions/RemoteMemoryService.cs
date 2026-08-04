@@ -17,7 +17,7 @@ namespace SOS.Extensions
         private ref readonly IRemoteMemoryServiceVTable VTable => ref Unsafe.AsRef<IRemoteMemoryServiceVTable>(_vtable);
 
         internal RemoteMemoryService(IntPtr punk)
-            : base(new RefCountedFreeLibrary(IntPtr.Zero), IID_IRemoteMemoryService, punk)
+            : base(IID_IRemoteMemoryService, punk)
         {
         }
 

@@ -60,6 +60,12 @@ parameters:
   type: boolean
   default: false
 
+  # Optional: publish the full build outputs (managed + native + debuggees) as a
+  # 'TestArtifacts_<phase>' artifact so the matching test-only legs can run without rebuilding.
+- name: publishTestArtifacts
+  type: boolean
+  default: false
+
 # Optional: architecture cross build if true
 - name: crossBuild
   type: boolean
@@ -113,7 +119,7 @@ jobs:
       ${{ if ne(parameters.strategy, '') }}:
         'error, we can no longer support the strategy feature in the new pipeline system. Please remove the strategy from the job template.': error
 
-      ${{ if ne(parameters.dependsOn, '') }}:
+      ${{ if and(ne(parameters.dependsOn, ''), ne(parameters.testOnly, true)) }}:
         dependsOn: ${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
 
       workspace:
@@ -128,16 +134,24 @@ jobs:
       - _TestArgs: '-test'
       - _Cross: ''
 
-      - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
-        - _buildScript: $(Build.SourcesDirectory)\build.cmd
-      - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
-        - _buildScript: $(Build.SourcesDirectory)/build.sh
-
       - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
         'error, testOnly and buildOnly cannot be true at the same time': error
 
+      # Test-only legs invoke test.cmd/test.sh, which already encode
+      # '-test -skipmanaged -skipnative' and do not prepend '-restore -build'. All other legs
+      # (build-only and build+test) use build.cmd/build.sh, which prepend '-restore -build'.
       - ${{ if eq(parameters.testOnly, 'true') }}:
-        - _TestArgs: '-test -skipnative'
+        - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+          - _buildScript: $(Build.SourcesDirectory)\test.cmd
+        - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
+          - _buildScript: $(Build.SourcesDirectory)/test.sh
+        - _TestArgs: ''
+
+      - ${{ if ne(parameters.testOnly, 'true') }}:
+        - ${{ if eq(parameters.osGroup, 'Windows_NT') }}:
+          - _buildScript: $(Build.SourcesDirectory)\build.cmd
+        - ${{ if ne(parameters.osGroup, 'Windows_NT') }}:
+          - _buildScript: $(Build.SourcesDirectory)/build.sh
 
       - ${{ if eq(parameters.buildOnly, 'true') }}:
         - _TestArgs: ''
@@ -157,19 +171,18 @@ jobs:
 
       steps:
       - ${{ if eq(parameters.testOnly, true) }}:
-        - ${{ if ne(parameters.osGroup, 'Linux') }}:
-          - 'error, testOnly is only supported on Linux': error
+        - ${{ if notIn(parameters.osGroup, 'Windows_NT', 'MacOS', 'Linux') }}:
+          - 'error, testOnly is only supported on Windows_NT, MacOS, and Linux': error
+        # The matching build leg published its full outputs (managed assemblies, native
+        # binaries, and debuggees) as TestArtifacts_<phase>. Restore them into the repo
+        # artifacts directory so the test run can skip both the native and managed builds
+        # (-skipnative -skipmanaged) and only execute the tests.
         - task: DownloadPipelineArtifact@2
           displayName: 'Download Build Artifacts'
           inputs:
-            targetPath: '$(Build.ArtifactStagingDirectory)/__download__'
-            itemPattern: Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/**
+            artifact: TestArtifacts_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
+            targetPath: '$(Build.SourcesDirectory)/artifacts'
             checkDownloadedFiles: true
-        - task: CopyFiles@2
-          displayName: 'Binplace Downloaded Product'
-          inputs:
-            sourceFolder: $(Build.ArtifactStagingDirectory)/__download__/Build_${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}/bin/linux${{ parameters.osSuffix }}.${{ config.architecture }}.${{ config.configuration }}
-            targetFolder: '$(Build.SourcesDirectory)/artifacts/bin/linux.${{ config.architecture }}.${{ config.configuration }}'
 
       - script: $(_buildScript)
           -ci
@@ -201,6 +214,27 @@ jobs:
             inputs:
               targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
               artifactName: Build_$(_PhaseName)
+
+      # Publish the full build outputs for the matching test-only legs to consume. This lets the
+      # test legs run with -skipnative -skipmanaged instead of rebuilding the product themselves.
+      # Only valid on build-only legs (publishTestArtifacts without buildOnly is a configuration error).
+      - ${{ if and(eq(parameters.publishTestArtifacts, true), eq(parameters.buildOnly, true)) }}:
+        - task: CopyFiles@2
+          displayName: Gather test artifacts for publish
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/artifacts'
+            Contents: |
+              bin/**
+              obj/**
+              test/**
+            TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
+
+        - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+          parameters:
+            displayName: Publish Test Artifacts
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)/testartifacts'
+              artifactName: TestArtifacts_$(_PhaseName)
 
       - ${{ if ne(parameters.buildOnly, 'true') }}:
         # Publish test results to Azure Pipelines

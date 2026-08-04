@@ -8,6 +8,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Trace;
 using Microsoft.Internal.Common.Utils;
@@ -46,7 +47,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string stoppingEventEventName = "",
             string stoppingEventPayloadFilter = "",
             bool? rundown = false,
-            string dsrouter = "")
+            string dsrouter = "",
+            EventPipeBufferingMode bufferingMode = EventPipeBufferingMode.Drop)
         {
             internal TraceFileFormat Format => (TraceFileFormat)formatValue;
             public int ProcessId => processId == -1 ? Environment.ProcessId : processId;
@@ -123,7 +125,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 config.stoppingEventEventName,
                 config.stoppingEventPayloadFilter,
                 config.rundown,
-                config.dsrouter
+                config.dsrouter,
+                config.bufferingMode
             ).ConfigureAwait(false);
         }
 

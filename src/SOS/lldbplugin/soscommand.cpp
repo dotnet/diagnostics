@@ -178,7 +178,7 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddManagedCommand("dumphttp", "Displays information about HTTP requests.");
     g_services->AddManagedCommand("dumprequests", "Displays all currently active incoming HTTP requests.");
     g_services->AddCommand("dumpil", new sosCommand("DumpIL"), "Displays the Microsoft intermediate language (MSIL) that's associated with a managed method.");
-    g_services->AddCommand("dumplog", new sosCommand("DumpLog"), "Writes the contents of an in-memory stress log to the specified file.");
+    g_services->AddManagedCommand("dumplog", "Writes the contents of an in-memory stress log to the specified file.");
     g_services->AddCommand("dumpmd", new sosCommand("DumpMD"), "Displays information about a MethodDesc structure at the specified address.");
     g_services->AddCommand("dumpmodule", new sosCommand("DumpModule"), "Displays information about a EE module structure at the specified address.");
     g_services->AddCommand("dumpmt", new sosCommand("DumpMT"), "Displays information about a method table at the specified address.");
@@ -202,12 +202,12 @@ sosCommandInitialize(lldb::SBDebugger debugger)
     g_services->AddCommand("gcinfo", new sosCommand("GCInfo"), "Displays info JIT GC encoding for a method.");
     g_services->AddManagedCommand("gcroot", "Displays info about references (or roots) to an object at the specified address.");
     g_services->AddManagedCommand("gcwhere", "Displays the location in the GC heap of the specified address.");
-    g_services->AddCommand("histclear", new sosCommand("HistClear"), "Releases any resources used by the family of Hist commands.");
-    g_services->AddCommand("histinit", new sosCommand("HistInit"), "Initializes the SOS structures from the stress log saved in the debuggee.");
-    g_services->AddCommand("histobj", new sosCommand("HistObj"), "Examines all stress log relocation records and displays the chain of garbage collection relocations that may have led to the address passed in as an argument.");
-    g_services->AddCommand("histobjfind", new sosCommand("HistObjFind"), "Displays all the log entries that reference an object at the specified address.");
-    g_services->AddCommand("histroot", new sosCommand("HistRoot"), "Displays information related to both promotions and relocations of the specified root.");
-    g_services->AddCommand("histstats", new sosCommand("HistStats"), "Displays stress log stats.");
+    g_services->AddManagedCommand("histclear", "Releases any resources used by the family of Hist commands.");
+    g_services->AddManagedCommand("histinit", "Initializes the SOS structures from the stress log saved in the debuggee.");
+    g_services->AddManagedCommand("histobj", "Examines all stress log relocation records and displays the chain of garbage collection relocations that may have led to the address passed in as an argument.");
+    g_services->AddManagedCommand("histobjfind", "Displays all the log entries that reference an object at the specified address.");
+    g_services->AddManagedCommand("histroot", "Displays information related to both promotions and relocations of the specified root.");
+    g_services->AddManagedCommand("histstats", "Displays stress log stats.");
     g_services->AddCommand("ip2md", new sosCommand("IP2MD"), "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.");
     g_services->AddManagedCommand("listnearobj", "Displays the object preceding and succeeding the specified address.");
     g_services->AddManagedCommand("loadsymbols", "Loads the .NET Core native module symbols.");

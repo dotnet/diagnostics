@@ -61,7 +61,7 @@ HistRoot                           SetSymbolServer (setsymbolserver)
 HistObj                            SetClrPath (setclrpath)
 HistObjFind                        SOSFlush (sosflush)
 HistClear                          SOSStatus (sosstatus)
-                                   FAQ
+HistStats                          FAQ
                                    Help (soshelp)
 \\
 
@@ -1479,8 +1479,8 @@ disturb a fragile repro environment. The !DumpLog function allows you to write
 that log out to a file. If no Filename is specified, the file "Stresslog.txt" 
 in the current directory is created.
 
-The optional argument addr allows one to specify a stress log other then the 
-default one.
+The optional -addr argument allows one to specify the hex address of a stress 
+log other than the default one.
 
     0:000> !DumpLog
     Attempting to dump Stress log to file 'StressLog.txt'
@@ -1909,6 +1909,14 @@ cleanup the previous resources.
     0:003> !HistClear
     Completed successfully.
 
+\\
+
+COMMAND: histstats.
+!HistStats
+
+This command displays per-GC counts of promote and relocate messages 
+reconstructed from the stress log, then reports any root that was promoted or 
+relocated more than once within a single GC. Run HistInit first.
 \\
 
 COMMAND: dumprcw.

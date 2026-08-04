@@ -29,6 +29,10 @@
             Include="$(NativeBinDir)$(LibPrefix)mscordaccore_universal$(LibSuffix)"
             PackagePath="runtimes/$(PackageRID)/native"
             Pack="true" />
+      <None Condition="'$(PackageWithCDac)' == 'true'"
+            Include="$(NativeBinDir)$(LibPrefix)mscordbi_universal$(LibSuffix)"
+            PackagePath="runtimes/$(PackageRID)/native"
+            Pack="true" />
     </ItemGroup>
 
     <Target Name="AddRuntimeSpecificNativeSymbolToPackage">

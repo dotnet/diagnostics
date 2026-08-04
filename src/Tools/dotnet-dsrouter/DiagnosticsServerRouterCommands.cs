@@ -516,7 +516,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
             message.AppendLine($"dotnet build -t:Run -c Release -p:DiagnosticAddress={deviceTcpIpAddress} -p:DiagnosticPort={deviceTcpIpPort} -p:DiagnosticSuspend=true -p:DiagnosticListenMode={listenMode}");
             if (string.IsNullOrEmpty(parentProcess))
             {
-                message.AppendLine($"Run diagnotic tool connecting application on {deviceName} through dotnet-dsrouter pid={pid}:");
+                message.AppendLine($"Run diagnostic tool connecting application on {deviceName} through dotnet-dsrouter pid={pid}:");
                 message.AppendLine($"dotnet-trace collect -p {pid}");
             }
             message.AppendLine($"See https://learn.microsoft.com/en-us/dotnet/core/diagnostics/dotnet-dsrouter for additional details and examples.");

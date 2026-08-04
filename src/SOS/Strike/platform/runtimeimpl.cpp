@@ -55,6 +55,8 @@ typedef HMODULE (STDAPICALLTYPE  *LoadLibraryWFnPtr)(LPCWSTR lpLibFileName);
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
 
+static CDacLoadPolicy s_cdacLoadPolicy = CDacLoadPolicy::Default;
+
 extern "C" bool TryGetSymbolWithCallback(
     bool (*readMemory)(void* address, void* buffer, size_t size),
     ULONG64 baseAddress,
@@ -507,7 +509,15 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         if (m_cdacDataProcess == nullptr)
         {
             LPCSTR cdacFilePath = GetCDacFilePath();
-            if (cdacFilePath != nullptr)
+            if (cdacFilePath == nullptr)
+            {
+                if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
+                {
+                    *ppClrDataProcess = nullptr;
+                    return CORDBG_E_NO_IMAGE_AVAILABLE;
+                }
+            }
+            else
             {
                 m_cdacDataProcess = CreateClrDataProcessInstance(cdacFilePath, GetContractDescriptorAddress());
             }
@@ -516,6 +526,11 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         {
             *ppClrDataProcess = m_cdacDataProcess;
             return S_OK;
+        }
+        if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
+        {
+            *ppClrDataProcess = nullptr;
+            return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
         }
         // Fall through to the DAC.
     }
@@ -555,6 +570,15 @@ static bool IsEnvironmentVariableSetToOne(const char* name)
 \**********************************************************************/
 bool Runtime::ShouldUseCDac()
 {
+    if (s_cdacLoadPolicy == CDacLoadPolicy::UseLegacyDac)
+    {
+        return false;
+    }
+    if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
+    {
+        return true;
+    }
+
     // When DOTNET_ENABLE_CDAC is requested, the in-box (legacy) DAC loads and drives the cDAC
     // contract reader itself (including its own dac-vs-cdac fallback/comparison). Defer to that
     // mechanism rather than loading the cDAC directly so those scenarios keep working.
@@ -571,6 +595,16 @@ bool Runtime::ShouldUseCDac()
     }
     DWORD majorVersion = (fileInfo.dwFileVersionMS >> 16) & 0xFFFF;
     return majorVersion >= MinCDacRuntimeMajorVersion;
+}
+
+CDacLoadPolicy Runtime::GetCDacLoadPolicy()
+{
+    return s_cdacLoadPolicy;
+}
+
+void Runtime::SetCDacLoadPolicy(CDacLoadPolicy policy)
+{
+    s_cdacLoadPolicy = policy;
 }
 
 /**********************************************************************\
@@ -624,7 +658,7 @@ IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath, ULON
 \**********************************************************************/
 ULONG64 Runtime::GetContractDescriptorAddress()
 {
-    const char* symbolName = "DotNetRuntimeContractDescriptor";
+    const char* symbolName = CONTRACT_DESCRIPTOR_SYMBOL;
     ULONG64 symbolAddress = 0;
     if (m_target->GetOperatingSystem() == ITarget::OperatingSystem::Linux ||
         m_target->GetOperatingSystem() == ITarget::OperatingSystem::OSX)

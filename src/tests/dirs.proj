@@ -16,7 +16,9 @@
 
     <!-- Install test runtimes (SDK, shared frameworks) into artifacts/dotnet-test/.
          Using ProjectReference ensures the install runs exactly once via MSBuild's
-         result cache, even when multiple test projects depend on it. -->
+         result cache, even when multiple test projects depend on it.
+         Test-only legs install runtimes locally too (cheap, gets correct file perms)
+         and only skip the expensive debuggee rebuild via $(SkipTestArtifactsBuild). -->
     <ProjectReference Include="$(RepositoryEngineeringDir)InstallRuntimes.proj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 
@@ -39,7 +41,7 @@
 
   <Target Name="BuildDebuggees"
           AfterTargets="Build"
-          Condition="'$(SkipTests)' != 'true'">
+          Condition="'$(SkipTests)' != 'true' and '$(SkipTestArtifactsBuild)' != 'true'">
     <!-- Remove stale SDKs from the build dotnet dir so the repo root global.json
          (rollForward:major) resolves to the correct test SDK.  InstallTestRuntimes
          only installs $(MicrosoftNETSdkVersion); older SDKs are leftovers. -->

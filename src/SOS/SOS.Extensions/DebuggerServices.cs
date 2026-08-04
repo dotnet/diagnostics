@@ -40,7 +40,7 @@ namespace SOS.Extensions
         public IDebugClient5 DebugClient { get; }
 
         internal DebuggerServices(IntPtr punk, HostType hostType)
-            : base(new RefCountedFreeLibrary(IntPtr.Zero), IID_IDebuggerServices, punk)
+            : base(IID_IDebuggerServices, punk)
         {
             _hostType = hostType;
 

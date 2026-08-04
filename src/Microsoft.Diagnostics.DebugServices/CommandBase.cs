@@ -52,7 +52,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="message">line message</param>
         protected void WriteLine(string message)
         {
-            Console.Write(message + Environment.NewLine);
+            Console.WriteLine(message);
             Console.CancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -63,7 +63,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="args">arguments</param>
         protected void WriteLine(string format, params object[] args)
         {
-            Console.Write(string.Format(format, args) + Environment.NewLine);
+            Console.WriteLine(format, args);
             Console.CancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="args">arguments</param>
         protected void WriteLineWarning(string format, params object[] args)
         {
-            Console.WriteWarning(string.Format(format, args) + Environment.NewLine);
+            Console.WriteLineWarning(format, args);
             Console.CancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -85,7 +85,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="args">arguments</param>
         protected void WriteLineError(string format, params object[] args)
         {
-            Console.WriteError(string.Format(format, args) + Environment.NewLine);
+            Console.WriteLineError(format, args);
             Console.CancellationToken.ThrowIfCancellationRequested();
         }
 

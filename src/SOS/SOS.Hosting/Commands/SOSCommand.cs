@@ -20,7 +20,6 @@ namespace SOS.Hosting
     [Command(Name = "dumpdomain",        DefaultOptions = "DumpDomain",          Help = "Displays the Microsoft intermediate language (MSIL) that's associated with a managed method.")]
     [Command(Name = "dumpgcdata",        DefaultOptions = "DumpGCData",          Help = "Displays information about the GC data.")]
     [Command(Name = "dumpil",            DefaultOptions = "DumpIL",              Help = "Displays the Microsoft intermediate language (MSIL) that is associated with a managed method.")]
-    [Command(Name = "dumplog",           DefaultOptions = "DumpLog",             Help = "Writes the contents of an in-memory stress log to the specified file.")]
     [Command(Name = "dumpmd",            DefaultOptions = "DumpMD",              Help = "Displays information about a MethodDesc structure at the specified address.")]
     [Command(Name = "dumpmodule",        DefaultOptions = "DumpModule",          Help = "Displays information about a EE module structure at the specified address.")]
     [Command(Name = "dumpmt",            DefaultOptions = "DumpMT",              Help = "Displays information about a method table at the specified address.")]
@@ -34,12 +33,6 @@ namespace SOS.Hosting
     [Command(Name = "findappdomain",     DefaultOptions = "FindAppDomain",       Help = "Attempts to resolve the AppDomain of a GC object.")]
     [Command(Name = "gchandles",         DefaultOptions = "GCHandles",           Help = "Provides statistics about GCHandles in the process.")]
     [Command(Name = "gcinfo",            DefaultOptions = "GCInfo",              Help = "Displays JIT GC encoding for a method.")]
-    [Command(Name = "histclear",         DefaultOptions = "HistClear",           Help = "Releases any resources used by the family of Hist commands.")]
-    [Command(Name = "histinit",          DefaultOptions = "HistInit",            Help = "Initializes the SOS structures from the stress log saved in the debuggee.")]
-    [Command(Name = "histobj",           DefaultOptions = "HistObj",             Help = "Examines all stress log relocation records and displays the chain of garbage collection relocations that may have led to  the address passed in as an argument.")]
-    [Command(Name = "histobjfind",       DefaultOptions = "HistObjFind",         Help = "Displays all the log entries that reference an object at the specified address.")]
-    [Command(Name = "histroot",          DefaultOptions = "HistRoot",            Help = "Displays information related to both promotions and relocations of the specified root.")]
-    [Command(Name = "histstats",         DefaultOptions = "HistStats",           Help = "Displays stress log stats.")]
     [Command(Name = "ip2md",             DefaultOptions = "IP2MD",               Help = "Displays the MethodDesc structure at the specified address in code that has been JIT-compiled.")]
     [Command(Name = "printexception",    DefaultOptions = "PrintException",      Aliases = new string[] { "pe" }, Help = "Displays and formats fields of any object derived from the Exception class at the specified address.")]
     [Command(Name = "syncblk",           DefaultOptions = "SyncBlk",             Help = "Displays the SyncBlock holder info.")]
@@ -57,7 +50,6 @@ namespace SOS.Hosting
     [Command(Name = "dumprcw",           DefaultOptions = "DumpRCW",             Help = "Displays information about a Runtime Callable Wrapper.")]
     [Command(Name = "dumpccw",           DefaultOptions = "DumpCCW",             Help = "Displays information about a COM Callable Wrapper.")]
     [Command(Name = "dumppermissionset", DefaultOptions = "DumpPermissionSet",   Help = "Displays a PermissionSet object (debug build only).")]
-    [Command(Name = "gchandleleaks",     DefaultOptions = "GCHandleLeaks",       Help = "Helps in tracking down GCHandle leaks.")]
     [Command(Name = "watsonbuckets",     DefaultOptions = "WatsonBuckets",       Help = "Displays the Watson buckets.")]
     public class WindowsSOSCommand : SOSCommandBase
     {

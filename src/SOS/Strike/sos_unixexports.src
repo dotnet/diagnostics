@@ -14,7 +14,6 @@ DumpDelegate
 DumpDomain
 DumpGCData
 DumpIL
-DumpLog
 DumpMD
 DumpModule
 DumpMT
@@ -32,12 +31,6 @@ FindRoots
 GCHandles
 GCInfo
 Help
-HistClear
-HistInit
-HistObj
-HistObjFind
-HistRoot
-HistStats
 IP2MD
 PrintException
 runtimes

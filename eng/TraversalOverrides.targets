@@ -1,0 +1,22 @@
+<Project>
+
+  <!--
+    Imported via $(CustomAfterTraversalTargets) after the Microsoft.Build.Traversal SDK targets,
+    so it can override properties the SDK sets unconditionally.
+
+    The Traversal SDK hardcodes <TestDependsOn>Build</TestDependsOn>, which makes every traversal's
+    "Test" target build its entire subgraph (product + tests + their project references) before
+    running tests, regardless of whether -build was passed. On the test-only CI legs the product and
+    test binaries are downloaded as prebuilt TestArtifacts, so rebuilding them is pure waste - and
+    because pipeline artifact downloads do not preserve file timestamps, the up-to-date check fails
+    and it becomes a full recompile.
+
+    Drop the Build dependency when the managed build was skipped ($(SkipTestArtifactsBuild) is set by
+    build.ps1 / build.sh for -skipmanaged). The traversal "Test" target still invokes "Test" on each
+    referenced project, so tests run directly against the downloaded binaries with no build.
+  -->
+  <PropertyGroup Condition="'$(SkipTestArtifactsBuild)' == 'true'">
+    <TestDependsOn></TestDependsOn>
+  </PropertyGroup>
+
+</Project>

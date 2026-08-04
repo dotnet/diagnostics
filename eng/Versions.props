@@ -107,9 +107,9 @@
 
   -->
   <PropertyGroup>
-    <MicrosoftNETCoreApp100Version>10.0.5</MicrosoftNETCoreApp100Version>
-    <MicrosoftNETCoreApp90Version>9.0.14</MicrosoftNETCoreApp90Version>
-    <MicrosoftNETCoreApp80Version>8.0.25</MicrosoftNETCoreApp80Version>
+    <MicrosoftNETCoreApp100Version>10.0.10</MicrosoftNETCoreApp100Version>
+    <MicrosoftNETCoreApp90Version>9.0.18</MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp80Version>8.0.29</MicrosoftNETCoreApp80Version>
   </PropertyGroup>
 
   <PropertyGroup>

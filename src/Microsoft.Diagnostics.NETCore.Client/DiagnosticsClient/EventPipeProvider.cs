@@ -7,14 +7,52 @@ using System.Linq;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
+    /// <summary>
+    /// An optional per-provider filter on Event IDs, applied by the runtime after the keyword/level
+    /// filter. Requires a target runtime that supports CollectTracing5 (.NET 10+).
+    /// </summary>
+    public sealed class EventPipeProviderEventFilter
+    {
+        /// <param name="enable">
+        /// When true, <paramref name="eventIds"/> is an allow-list: only those Event IDs are enabled.
+        /// When false, it is a deny-list: every Event ID except those is enabled (so an empty list with
+        /// enable=false enables all events).
+        /// </param>
+        /// <param name="eventIds">The Event IDs to enable or disable, per <paramref name="enable"/>.</param>
+        public EventPipeProviderEventFilter(bool enable, IReadOnlyList<uint> eventIds)
+        {
+            Enable = enable;
+            EventIds = eventIds ?? (IReadOnlyList<uint>)System.Array.Empty<uint>();
+        }
+
+        public bool Enable { get; }
+
+        public IReadOnlyList<uint> EventIds { get; }
+    }
+
     public sealed class EventPipeProvider
     {
         public EventPipeProvider(string name, EventLevel eventLevel, long keywords = 0xF00000000000, IDictionary<string, string> arguments = null)
+            : this(name, eventLevel, keywords, arguments, eventFilter: null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a provider that additionally filters which Event IDs are enabled. Using this overload
+        /// starts the session with CollectTracing5 (requires a .NET 10+ target runtime).
+        /// </summary>
+        /// <param name="name">The provider name.</param>
+        /// <param name="eventLevel">The verbosity level to enable.</param>
+        /// <param name="keywords">A bitmask of keywords to enable.</param>
+        /// <param name="arguments">Optional provider arguments, or null.</param>
+        /// <param name="eventFilter">The per-provider Event ID filter applied after the keyword/level filter.</param>
+        public EventPipeProvider(string name, EventLevel eventLevel, long keywords, IDictionary<string, string> arguments, EventPipeProviderEventFilter eventFilter)
         {
             Name = name;
             EventLevel = eventLevel;
             Keywords = keywords;
             Arguments = arguments;
+            EventFilter = eventFilter;
         }
 
         public long Keywords { get; }
@@ -24,6 +62,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public string Name { get; }
 
         public IDictionary<string, string> Arguments { get; }
+
+        /// <summary>
+        /// An optional filter on this provider's Event IDs, applied after the keyword/level filter.
+        /// Setting it causes the session to be started with CollectTracing5 (requires a .NET 10+ target).
+        /// </summary>
+        public EventPipeProviderEventFilter EventFilter { get; }
 
         public override string ToString()
         {

@@ -41,4 +41,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
     {
         public ProfilerAlreadyActiveException(string msg) : base(msg) { }
     }
+
+    // When the runtime cannot decode the command payload (DiagnosticsIpcError.BadEncoding). From a well-formed
+    // client this usually means the target runtime is too old to understand a configured option value (e.g. a
+    // newer buffering mode) and rejects it while parsing.
+    public class BadEncodingException : ServerErrorException
+    {
+        public BadEncodingException(string msg) : base(msg) { }
+    }
 }

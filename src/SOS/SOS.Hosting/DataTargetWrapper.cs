@@ -79,6 +79,7 @@ namespace SOS.Hosting {
             builder = AddInterface(IID_ICLRSymbolProvider, false);
             builder.AddMethod(new TryGetSymbolNameDelegate(TryGetSymbolName));
             builder.AddMethod(new TryGetSymbolAddressDelegate(TryGetSymbolAddress));
+            builder.AddMethod(new TryGetFieldOffsetDelegate(TryGetFieldOffset));
             builder.Complete();
 
             AddRef();
@@ -491,6 +492,46 @@ namespace SOS.Hosting {
             }
         }
 
+        private int TryGetFieldOffset(
+            IntPtr self,
+            ulong moduleBase,
+            string typeName,
+            string fieldName,
+            uint* pOffset)
+        {
+            if (pOffset == null)
+            {
+                return HResult.E_INVALIDARG;
+            }
+            *pOffset = 0;
+
+            moduleBase &= _ignoreAddressBitsMask;
+
+            try
+            {
+                if (_symbolProvider is null)
+                {
+                    return HResult.E_NOTIMPL;
+                }
+
+                if (string.IsNullOrEmpty(typeName) || string.IsNullOrEmpty(fieldName))
+                {
+                    return HResult.E_INVALIDARG;
+                }
+
+                if (_symbolProvider.TryGetFieldOffset(moduleBase, typeName, fieldName, out uint offset))
+                {
+                    *pOffset = offset;
+                    return HResult.S_OK;
+                }
+                return HResult.E_FAIL;
+            }
+            catch
+            {
+                return HResult.E_FAIL;
+            }
+        }
+
         #endregion
 
         #region ICLRDataTarget delegates
@@ -655,6 +696,14 @@ namespace SOS.Hosting {
             [In] ulong moduleBase,
             [In][MarshalAs(UnmanagedType.LPWStr)] string name,
             [Out] ulong* pAddress);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int TryGetFieldOffsetDelegate(
+            [In] IntPtr self,
+            [In] ulong moduleBase,
+            [In][MarshalAs(UnmanagedType.LPWStr)] string typeName,
+            [In][MarshalAs(UnmanagedType.LPWStr)] string fieldName,
+            [Out] uint* pOffset);
 
         #endregion
     }
