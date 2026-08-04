@@ -577,7 +577,6 @@ namespace Microsoft.Diagnostics
             bool successExpected = bool.Parse(cfg.AllSettings[LoadPolicySuccessExpectedKey]);
             int providerCallsExpected = int.Parse(cfg.AllSettings[LoadPolicyProviderCallsExpectedKey]);
 
-            DbgShimAPI.Initialize(cfg.DbgShimPath());
             TestDump testDump = new(cfg);
             ITarget target = testDump.Target;
             IRuntimeService runtimeService = target.Services.GetService<IRuntimeService>();
@@ -605,6 +604,7 @@ namespace Microsoft.Diagnostics
                 Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.dll"));
             try
             {
+                DbgShimAPI.Initialize(cfg.DbgShimPath());
                 AssertResult(DbgShimAPI.CLRCreateInstance(out ICLRDebugging clrDebugging));
                 Assert.NotNull(clrDebugging);
                 AssertResult(COMHelper.QueryInterface(
