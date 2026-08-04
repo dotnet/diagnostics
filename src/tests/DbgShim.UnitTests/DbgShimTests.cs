@@ -562,7 +562,7 @@ namespace Microsoft.Diagnostics
                 [LoadPolicyProviderCallsExpectedKey] = providerCallsExpected.ToString(),
             };
             TestConfiguration remoteConfig = new(settings);
-            await RemoteInvokeWithUnavailableCDac(
+            await RemoteInvoke(
                 remoteConfig,
                 $"{nameof(OpenVirtualProcessLoadPolicy)}.{route}.{policy}",
                 static configXml => RunOpenVirtualProcessLoadPolicy(configXml));
@@ -599,48 +599,59 @@ namespace Microsoft.Diagnostics
                 Revision = 0,
             };
 
-            AssertResult(DbgShimAPI.CLRCreateInstance(out ICLRDebugging clrDebugging));
-            Assert.NotNull(clrDebugging);
-            AssertResult(COMHelper.QueryInterface(
-                clrDebugging.InterfacePointer,
-                ICLRDebuggingPolicy.IID_ICLRDebuggingPolicy,
-                out IntPtr debuggingPolicyPointer));
-            ICLRDebuggingPolicy debuggingPolicy = ICLRDebuggingPolicy.Create(debuggingPolicyPointer);
-            Assert.NotNull(debuggingPolicy);
-            AssertResult(debuggingPolicy.SetCDacLoadPolicy(policy));
-            AssertResult(debuggingPolicy.GetCDacLoadPolicy(out DbgShimCDacLoadPolicy actualPolicy));
-            Assert.Equal(policy, actualPolicy);
-
-            LibraryProviderWrapper libraryProvider = new(
-                target.OperatingSystem,
-                runtime.RuntimeModule.BuildId,
-                runtime.GetDbiFilePath(),
-                runtime.GetDacFilePath(out _));
-            HResult hr = clrDebugging.OpenVirtualProcess(
-                runtime.RuntimeModule.ImageBase,
-                dataTarget,
-                libraryProvider.ILibraryProvider,
-                maxDebuggerSupportedVersion,
-                in requestedInterface,
-                out IntPtr process,
-                out _,
-                out _);
-
-            if (successExpected)
+            string originalCDacPath = Environment.GetEnvironmentVariable("DOTNET_CDAC_PATH");
+            Environment.SetEnvironmentVariable(
+                "DOTNET_CDAC_PATH",
+                Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.dll"));
+            try
             {
-                AssertResult(hr);
-                Assert.NotEqual(IntPtr.Zero, process);
-                COMHelper.Release(process);
-            }
-            else
-            {
-                Assert.True(hr != HResult.S_OK);
-                Assert.Equal(IntPtr.Zero, process);
-            }
+                AssertResult(DbgShimAPI.CLRCreateInstance(out ICLRDebugging clrDebugging));
+                Assert.NotNull(clrDebugging);
+                AssertResult(COMHelper.QueryInterface(
+                    clrDebugging.InterfacePointer,
+                    ICLRDebuggingPolicy.IID_ICLRDebuggingPolicy,
+                    out IntPtr debuggingPolicyPointer));
+                ICLRDebuggingPolicy debuggingPolicy = ICLRDebuggingPolicy.Create(debuggingPolicyPointer);
+                Assert.NotNull(debuggingPolicy);
+                AssertResult(debuggingPolicy.SetCDacLoadPolicy(policy));
+                AssertResult(debuggingPolicy.GetCDacLoadPolicy(out DbgShimCDacLoadPolicy actualPolicy));
+                Assert.Equal(policy, actualPolicy);
 
-            Assert.Equal(providerCallsExpected, libraryProvider.CallCount);
-            Assert.Equal(1, debuggingPolicy.Release());
-            Assert.Equal(0, clrDebugging.Release());
+                LibraryProviderWrapper libraryProvider = new(
+                    target.OperatingSystem,
+                    runtime.RuntimeModule.BuildId,
+                    runtime.GetDbiFilePath(),
+                    runtime.GetDacFilePath(out _));
+                HResult hr = clrDebugging.OpenVirtualProcess(
+                    runtime.RuntimeModule.ImageBase,
+                    dataTarget,
+                    libraryProvider.ILibraryProvider,
+                    maxDebuggerSupportedVersion,
+                    in requestedInterface,
+                    out IntPtr process,
+                    out _,
+                    out _);
+
+                if (successExpected)
+                {
+                    AssertResult(hr);
+                    Assert.NotEqual(IntPtr.Zero, process);
+                    COMHelper.Release(process);
+                }
+                else
+                {
+                    Assert.True(hr != HResult.S_OK);
+                    Assert.Equal(IntPtr.Zero, process);
+                }
+
+                Assert.Equal(providerCallsExpected, libraryProvider.CallCount);
+                Assert.Equal(1, debuggingPolicy.Release());
+                Assert.Equal(0, clrDebugging.Release());
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("DOTNET_CDAC_PATH", originalCDacPath);
+            }
             return Task.FromResult(0);
         }
 
@@ -800,45 +811,56 @@ namespace Microsoft.Diagnostics
 
             Trace.TraceInformation("TestRegisterForRuntimeStartup3LoadPolicy pid {0} policy {1} START", debuggeeInfo.ProcessId, policy);
 
-            AssertResult(DbgShimAPI.SetCDacLoadPolicy(policy));
+            string originalCDacPath = Environment.GetEnvironmentVariable("DOTNET_CDAC_PATH");
+            Environment.SetEnvironmentVariable(
+                "DOTNET_CDAC_PATH",
+                Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.dll"));
+            try
+            {
+                AssertResult(DbgShimAPI.SetCDacLoadPolicy(policy));
 
-            DbgShimAPI.RuntimeStartupCallbackDelegate callback = (ICorDebug cordbg, object parameter, HResult hr) => {
-                corDebug = cordbg;
-                callbackResult = hr;
-                try
-                {
-                    if (hr)
+                DbgShimAPI.RuntimeStartupCallbackDelegate callback = (ICorDebug cordbg, object parameter, HResult hr) => {
+                    corDebug = cordbg;
+                    callbackResult = hr;
+                    try
                     {
-                        TestICorDebug(debuggeeInfo, cordbg);
+                        if (hr)
+                        {
+                            TestICorDebug(debuggeeInfo, cordbg);
+                        }
                     }
-                }
-                catch (Exception ex)
+                    catch (Exception ex)
+                    {
+                        Trace.TraceError(ex.ToString());
+                        callbackException = ex;
+                    }
+                    wait.Set();
+                };
+
+                LibraryProviderWrapper libraryProvider = new(config.RuntimeModulePath(), config.DbiModulePath(), config.DacModulePath());
+                AssertResult(DbgShimAPI.RegisterForRuntimeStartup3(debuggeeInfo.ProcessId, applicationGroupId: null, parameter: IntPtr.Zero, libraryProvider.ILibraryProvider, out unregister, callback));
+
+                Assert.True(wait.WaitOne(TimeSpan.FromMinutes(5)), "Timed out waiting for the RegisterForRuntimeStartup3 callback.");
+                AssertResult(DbgShimAPI.UnregisterForRuntimeStartup(unregister));
+                Assert.Null(callbackException);
+
+                Assert.Equal(successExpected, callbackResult == HResult.S_OK);
+                Assert.Equal(providerCallExpected, libraryProvider.CallCount > 0);
+
+                if (successExpected)
                 {
-                    Trace.TraceError(ex.ToString());
-                    callbackException = ex;
+                    AssertResult(debuggeeInfo.WaitForCreateProcess());
+                    Assert.Equal(0, corDebug.Release());
                 }
-                wait.Set();
-            };
-
-            LibraryProviderWrapper libraryProvider = new(config.RuntimeModulePath(), config.DbiModulePath(), config.DacModulePath());
-            AssertResult(DbgShimAPI.RegisterForRuntimeStartup3(debuggeeInfo.ProcessId, applicationGroupId: null, parameter: IntPtr.Zero, libraryProvider.ILibraryProvider, out unregister, callback));
-
-            Assert.True(wait.WaitOne(TimeSpan.FromMinutes(5)), "Timed out waiting for the RegisterForRuntimeStartup3 callback.");
-            AssertResult(DbgShimAPI.UnregisterForRuntimeStartup(unregister));
-            Assert.Null(callbackException);
-
-            Assert.Equal(successExpected, callbackResult == HResult.S_OK);
-            Assert.Equal(providerCallExpected, libraryProvider.CallCount > 0);
-
-            if (successExpected)
-            {
-                AssertResult(debuggeeInfo.WaitForCreateProcess());
-                Assert.Equal(0, corDebug.Release());
+                else
+                {
+                    Assert.Null(corDebug);
+                    debuggeeInfo.Kill();
+                }
             }
-            else
+            finally
             {
-                Assert.Null(corDebug);
-                debuggeeInfo.Kill();
+                Environment.SetEnvironmentVariable("DOTNET_CDAC_PATH", originalCDacPath);
             }
 
             Trace.TraceInformation("TestRegisterForRuntimeStartup3LoadPolicy pid {0} DONE", debuggeeInfo.ProcessId);
@@ -922,36 +944,47 @@ namespace Microsoft.Diagnostics
         {
             Trace.TraceInformation("TestCreateDebuggingInterfaceLoadPolicy pid {0} policy {1} START", debuggeeInfo.ProcessId, policy);
 
-            AssertResult(DbgShimAPI.SetCDacLoadPolicy(policy));
+            string originalCDacPath = Environment.GetEnvironmentVariable("DOTNET_CDAC_PATH");
+            Environment.SetEnvironmentVariable(
+                "DOTNET_CDAC_PATH",
+                Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.dll"));
+            try
+            {
+                AssertResult(DbgShimAPI.SetCDacLoadPolicy(policy));
 
-            HResult hr = DbgShimAPI.EnumerateCLRs(debuggeeInfo.ProcessId, (IntPtr[] continueEventHandles, string[] moduleNames) => {
-                TestConfiguration config = debuggeeInfo.TestConfiguration;
-                Assert.Single(continueEventHandles);
-                Assert.Single(moduleNames);
-                for (int i = 0; i < continueEventHandles.Length; i++)
-                {
-                    AssertResult(DbgShimAPI.CreateVersionStringFromModule(debuggeeInfo.ProcessId, moduleNames[i], out string versionString));
-                    Assert.False(string.IsNullOrWhiteSpace(versionString));
-
-                    LibraryProviderWrapper libraryProvider = new(config.RuntimeModulePath(), config.DbiModulePath(), config.DacModulePath());
-                    HResult result = DbgShimAPI.CreateDebuggingInterfaceFromVersion3(DbgShimAPI.CorDebugVersion_4_0, versionString, applicationGroupId: null, libraryProvider.ILibraryProvider, out ICorDebug corDebug);
-
-                    Assert.Equal(successExpected, result == HResult.S_OK);
-                    Assert.Equal(providerCallExpected, libraryProvider.CallCount > 0);
-
-                    if (successExpected)
+                HResult hr = DbgShimAPI.EnumerateCLRs(debuggeeInfo.ProcessId, (IntPtr[] continueEventHandles, string[] moduleNames) => {
+                    TestConfiguration config = debuggeeInfo.TestConfiguration;
+                    Assert.Single(continueEventHandles);
+                    Assert.Single(moduleNames);
+                    for (int i = 0; i < continueEventHandles.Length; i++)
                     {
-                        TestICorDebug(debuggeeInfo, corDebug);
-                        AssertResult(debuggeeInfo.WaitForCreateProcess());
-                        Assert.Equal(0, corDebug.Release());
+                        AssertResult(DbgShimAPI.CreateVersionStringFromModule(debuggeeInfo.ProcessId, moduleNames[i], out string versionString));
+                        Assert.False(string.IsNullOrWhiteSpace(versionString));
+
+                        LibraryProviderWrapper libraryProvider = new(config.RuntimeModulePath(), config.DbiModulePath(), config.DacModulePath());
+                        HResult result = DbgShimAPI.CreateDebuggingInterfaceFromVersion3(DbgShimAPI.CorDebugVersion_4_0, versionString, applicationGroupId: null, libraryProvider.ILibraryProvider, out ICorDebug corDebug);
+
+                        Assert.Equal(successExpected, result == HResult.S_OK);
+                        Assert.Equal(providerCallExpected, libraryProvider.CallCount > 0);
+
+                        if (successExpected)
+                        {
+                            TestICorDebug(debuggeeInfo, corDebug);
+                            AssertResult(debuggeeInfo.WaitForCreateProcess());
+                            Assert.Equal(0, corDebug.Release());
+                        }
+                        else
+                        {
+                            Assert.Null(corDebug);
+                        }
                     }
-                    else
-                    {
-                        Assert.Null(corDebug);
-                    }
-                }
-            });
-            AssertResult(hr);
+                });
+                AssertResult(hr);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("DOTNET_CDAC_PATH", originalCDacPath);
+            }
 
             Trace.TraceInformation("TestCreateDebuggingInterfaceLoadPolicy pid {0} DONE", debuggeeInfo.ProcessId);
         }
@@ -964,42 +997,53 @@ namespace Microsoft.Diagnostics
             TestConfiguration config = debuggeeInfo.TestConfiguration;
             Trace.TraceInformation("TestCreateDebuggingInterfaceSideBySide pid {0} policy {1} START", debuggeeInfo.ProcessId, policy);
 
-            AssertResult(DbgShimAPI.SetCDacLoadPolicy(policy));
+            string originalCDacPath = Environment.GetEnvironmentVariable("DOTNET_CDAC_PATH");
+            Environment.SetEnvironmentVariable(
+                "DOTNET_CDAC_PATH",
+                Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.dll"));
+            try
+            {
+                AssertResult(DbgShimAPI.SetCDacLoadPolicy(policy));
 
-            HResult hr = DbgShimAPI.EnumerateCLRs(debuggeeInfo.ProcessId, (IntPtr[] continueEventHandles, string[] moduleNames) => {
-                Assert.Single(continueEventHandles);
-                Assert.Single(moduleNames);
-                for (int i = 0; i < continueEventHandles.Length; i++)
-                {
-                    AssertResult(DbgShimAPI.CreateVersionStringFromModule(debuggeeInfo.ProcessId, moduleNames[i], out string versionString));
-                    Assert.False(string.IsNullOrWhiteSpace(versionString));
-
-                    // With no library provider the shim derives the DBI from the runtime module
-                    // EnumerateCLRs reported, so the DBI it loads is the one next to that module.
-                    // Confirm that collocated DBI is present exactly when the runtime is not a
-                    // single-file app (whose runtime module has no adjacent DBI).
-                    string collocatedDbi = Path.Combine(Path.GetDirectoryName(moduleNames[i]), Path.GetFileName(config.DbiModulePath()));
-                    bool collocatedDbiExists = !config.PublishSingleFile;
-                    Assert.Equal(collocatedDbiExists, File.Exists(collocatedDbi));
-
-                    bool successExpected = sideBySideAllowed && collocatedDbiExists;
-                    HResult result = DbgShimAPI.CreateDebuggingInterfaceFromVersion3(DbgShimAPI.CorDebugVersion_4_0, versionString, applicationGroupId: null, libraryProvider: IntPtr.Zero, out ICorDebug corDebug);
-
-                    Assert.Equal(successExpected, result == HResult.S_OK);
-
-                    if (successExpected)
+                HResult hr = DbgShimAPI.EnumerateCLRs(debuggeeInfo.ProcessId, (IntPtr[] continueEventHandles, string[] moduleNames) => {
+                    Assert.Single(continueEventHandles);
+                    Assert.Single(moduleNames);
+                    for (int i = 0; i < continueEventHandles.Length; i++)
                     {
-                        TestICorDebug(debuggeeInfo, corDebug);
-                        AssertResult(debuggeeInfo.WaitForCreateProcess());
-                        Assert.Equal(0, corDebug.Release());
+                        AssertResult(DbgShimAPI.CreateVersionStringFromModule(debuggeeInfo.ProcessId, moduleNames[i], out string versionString));
+                        Assert.False(string.IsNullOrWhiteSpace(versionString));
+
+                        // With no library provider the shim derives the DBI from the runtime module
+                        // EnumerateCLRs reported, so the DBI it loads is the one next to that module.
+                        // Confirm that collocated DBI is present exactly when the runtime is not a
+                        // single-file app (whose runtime module has no adjacent DBI).
+                        string collocatedDbi = Path.Combine(Path.GetDirectoryName(moduleNames[i]), Path.GetFileName(config.DbiModulePath()));
+                        bool collocatedDbiExists = !config.PublishSingleFile;
+                        Assert.Equal(collocatedDbiExists, File.Exists(collocatedDbi));
+
+                        bool successExpected = sideBySideAllowed && collocatedDbiExists;
+                        HResult result = DbgShimAPI.CreateDebuggingInterfaceFromVersion3(DbgShimAPI.CorDebugVersion_4_0, versionString, applicationGroupId: null, libraryProvider: IntPtr.Zero, out ICorDebug corDebug);
+
+                        Assert.Equal(successExpected, result == HResult.S_OK);
+
+                        if (successExpected)
+                        {
+                            TestICorDebug(debuggeeInfo, corDebug);
+                            AssertResult(debuggeeInfo.WaitForCreateProcess());
+                            Assert.Equal(0, corDebug.Release());
+                        }
+                        else
+                        {
+                            Assert.Null(corDebug);
+                        }
                     }
-                    else
-                    {
-                        Assert.Null(corDebug);
-                    }
-                }
-            });
-            AssertResult(hr);
+                });
+                AssertResult(hr);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("DOTNET_CDAC_PATH", originalCDacPath);
+            }
 
             Trace.TraceInformation("TestCreateDebuggingInterfaceSideBySide pid {0} DONE", debuggeeInfo.ProcessId);
         }
@@ -1037,25 +1081,6 @@ namespace Microsoft.Diagnostics
             using TestRunner.OutputHelper output = TestRunner.ConfigureLogging(config, Output, testName);
             int exitCode = await RemoteExecutorHelper.RemoteInvoke(output, config, TimeSpan.FromMinutes(5), dumpPath, method);
             Assert.Equal(0, exitCode);
-        }
-
-        private async Task RemoteInvokeWithUnavailableCDac(
-            TestConfiguration config,
-            string testName,
-            Func<string, Task<int>> method)
-        {
-            string originalCDacPath = Environment.GetEnvironmentVariable("DOTNET_CDAC_PATH");
-            Environment.SetEnvironmentVariable(
-                "DOTNET_CDAC_PATH",
-                Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.dll"));
-            try
-            {
-                await RemoteInvoke(config, testName, method);
-            }
-            finally
-            {
-                Environment.SetEnvironmentVariable("DOTNET_CDAC_PATH", originalCDacPath);
-            }
         }
 
         /// <summary>
