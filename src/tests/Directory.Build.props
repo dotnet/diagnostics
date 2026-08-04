@@ -17,5 +17,19 @@
   <PropertyGroup Condition="'$(IsTestProject)' == 'true' and '$(EnableXUnitV3)' != 'false'">
     <TestRunnerName>XUnitV3</TestRunnerName>
     <OutputType>Exe</OutputType>
+
+    <!--
+      Point the test host at the test .NET install (artifacts/dotnet-test) instead of the
+      Arcade toolset SDK (.dotnet). Arcade's XUnitV3 RunTests target launches each MTP test
+      executable with DOTNET_ROOT=$(TestDotNetRoot) (and DOTNET_ROOT_X86=$(TestDotNetRoot)x86),
+      defaulting TestDotNetRoot to $(DotNetRoot) == the repo .dotnet directory. That directory
+      only carries a matching runtime because global.json installs one there via
+      tools.runtimes (notably the x86 runtime used to host the Windows x86 test leg).
+
+      artifacts/dotnet-test already receives the SDK and shared frameworks at the target
+      architecture (see eng/InstallRuntimes.proj), so resolving the test host from there lets
+      us drop the global.json tools.runtimes entry. Honor an explicit override if one is set.
+    -->
+    <TestDotNetRoot Condition="'$(TestDotNetRoot)' == ''">$(ArtifactsDotnetTestDir)</TestDotNetRoot>
   </PropertyGroup>
 </Project>
