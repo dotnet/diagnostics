@@ -101,6 +101,12 @@ VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 27\s+
 
 # Verify GCInfo (uses MethodDesc from IP2MD)
 SOSCOMMAND:GCInfo <POUT>\s+MethodDesc:\s+(<HEXVAL>)\s+<POUT>
+IFDEF:X86
+VERIFY:.*Method info block:\s*
+ENDIF:X86
+!IFDEF:X86
+VERIFY:.*Code size:\s+[0-9a-fA-F]+\s*
+ENDIF:X86
 
 # Verify DumpMD
 SOSCOMMAND:DumpMD <PREVPOUT>
