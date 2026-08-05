@@ -6822,12 +6822,15 @@ DECLARE_API(GCInfo)
     }
 
     memset(table, 0, tableSize);
+    // We avoid using move here, because we do not want to return
     if (!SafeReadMemory(taGCInfoAddr, table, tableSize, NULL))
     {
         ExtOut("Could not read memory %p\n", SOS_PTR(taGCInfoAddr));
         return Status;
     }
 
+    // Mutable table pointer since we need to pass the appropriate
+    // offset into the table to DumpGCTable.
     GCInfoToken gcInfoToken = { table, GCInfoVersion() };
     unsigned int methodSize = (unsigned int)codeHeaderData.MethodSize;
 
