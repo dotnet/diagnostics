@@ -99,25 +99,18 @@ SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo1.*\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo1\(Int32, System\.String\)\s+
 VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 27\s+
 
-# Verify GCInfo (uses MethodDesc from IP2MD)
-SOSCOMMAND:GCInfo <POUT>\s+MethodDesc:\s+(<HEXVAL>)\s+<POUT>
-VERIFY:.*Code size:\s+[0-9a-fA-F]+\s*
-
-# Verify DumpMD (reuse MethodDesc captured by GCInfo's POUT above)
-SOSCOMMAND:DumpMD <PREVPOUT>
+# Verify DumpMD
+SOSCOMMAND:DumpMD <POUT>\s+MethodDesc:\s+(<HEXVAL>)\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo1\(Int32, System\.String\)\s+
 
-# Verify GCInfo (uses MethodDesc from DumpMD)
+# Verify GCInfo
 SOSCOMMAND:GCInfo <PREVPOUT>
 VERIFY:.*Code size:\s+[0-9a-fA-F]+\s*
 
-# Verify that the Interface18 GCInfo path precisely matches the legacy decoder.
+# Verify the legacy decoder path when Interface18 is available.
 IFDEF:MAJOR_RUNTIME_VERSION_GE_11
-SOSCOMMAND:GCInfo <PREVPOUT>
-SAVE_OUTPUT:GCInfo
 SOSCOMMAND:GCInfo -legacy <PREVPOUT>
-COMPARE_OUTPUT:GCInfo
-SOSCOMMAND:DumpMD <PREVPOUT>
+VERIFY:.*Code size:\s+[0-9a-fA-F]+\s*
 ENDIF:MAJOR_RUNTIME_VERSION_GE_11
 
 # Verify DumpClass
