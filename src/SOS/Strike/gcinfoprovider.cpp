@@ -98,6 +98,12 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
         };
         if (regNum < ARRAY_SIZE(s_regNames))
             return s_regNames[regNum];
+#elif defined(SOS_TARGET_X86)
+        static const char* s_regNames[] = {
+            "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"
+        };
+        if (regNum < ARRAY_SIZE(s_regNames))
+            return s_regNames[regNum];
 #elif defined(SOS_TARGET_ARM64)
         if (regNum <= 28)
         {
