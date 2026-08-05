@@ -27,12 +27,14 @@ namespace SymbolTestApp
             return Foo2(x, dllPath);
         }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         private static int Foo2(int x, string dllPath)
         {
             Foo4(dllPath);
             return x;
         }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         private static void Foo4(string dllPath)
         {
 #if FULL_CLR
