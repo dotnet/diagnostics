@@ -1,7 +1,3 @@
-# Due to how we build the libraries native build as part of the CoreCLR build as well as standalone,
-# we can end up coming to this file twice. Only run it once to simplify our build.
-include_guard()
-
 include(${CMAKE_CURRENT_LIST_DIR}/configuretools.cmake)
 
 # Set initial flags for each configuration
@@ -24,6 +20,21 @@ include(CheckLinkerFlag)
 # "configureoptimization.cmake" must be included after CLR_CMAKE_HOST_UNIX has been set.
 include(${CMAKE_CURRENT_LIST_DIR}/configureoptimization.cmake)
 
+# Validate tryrun cache version matches current Emscripten version (browser-wasm only)
+if(CLR_CMAKE_TARGET_BROWSER AND DEFINED TRYRUN_BROWSER_EMSCRIPTEN_VERSION)
+    file(READ "${CMAKE_CURRENT_LIST_DIR}/../../src/mono/browser/emscripten-version.txt" CURRENT_EMSCRIPTEN_VERSION)
+    string(STRIP "${CURRENT_EMSCRIPTEN_VERSION}" CURRENT_EMSCRIPTEN_VERSION)
+    
+    if(NOT TRYRUN_BROWSER_EMSCRIPTEN_VERSION STREQUAL CURRENT_EMSCRIPTEN_VERSION)
+        message(WARNING 
+            "Emscripten version mismatch detected!\n"
+            "  Current Emscripten: ${CURRENT_EMSCRIPTEN_VERSION}\n"
+            "  Cached features for: ${TRYRUN_BROWSER_EMSCRIPTEN_VERSION}\n"
+            "  The CMake feature cache (eng/native/tryrun.browser.cmake) may be outdated.\n"
+            "  Consider regenerating the cache - see instructions in eng/native/tryrun.browser.cmake")
+    endif()
+endif()
+
 #-----------------------------------------------------
 # Initialize Cmake compiler flags and other variables
 #-----------------------------------------------------
@@ -35,6 +46,17 @@ if (CLR_CMAKE_HOST_UNIX)
         add_compile_options(-glldb)
     else()
         add_compile_options(-g)
+    endif()
+endif()
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    # enable $<LINK_GROUP:RESCAN> on AppleClang as a no-op
+    set(CMAKE_LINK_GROUP_USING_RESCAN "" "")
+    set(CMAKE_LINK_GROUP_USING_RESCAN_SUPPORTED ON)
+    # Force usage of classic linker on Xcode 15
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15 AND
+        CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
+        add_link_options(LINKER:-ld_classic)
     endif()
 endif()
 
@@ -73,6 +95,12 @@ if (MSVC)
 
   add_compile_options($<$<COMPILE_LANGUAGE:CXX>:$<TARGET_PROPERTY:CLR_EH_OPTION>>)
   add_link_options($<$<BOOL:$<TARGET_PROPERTY:CLR_CONTROL_FLOW_GUARD>>:/guard:cf>)
+
+  if (NOT CLR_CMAKE_PGO_INSTRUMENT)
+    # Load all imported DLLs from the System32 directory.
+    # Don't do this when instrumenting for PGO as a local DLL dependency is introduced by the instrumentation
+    add_linker_flag(/DEPENDENTLOADFLAG:0x800)
+  endif()
 
   # Linker flags
   #
@@ -116,6 +144,10 @@ if (MSVC)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /sourcelink:${CLR_SOURCELINK_FILE_PATH}")
   endif(EXISTS ${CLR_SOURCELINK_FILE_PATH})
 
+  # enable $<LINK_GROUP:RESCAN> on MSVC as a no-op
+  set(CMAKE_LINK_GROUP_USING_RESCAN "" "")
+  set(CMAKE_LINK_GROUP_USING_RESCAN_SUPPORTED ON)
+
   if (CMAKE_GENERATOR MATCHES "^Visual Studio.*$")
     # Debug build specific flags
     # The Ninja generator doesn't appear to have the default `/INCREMENTAL:ON` that
@@ -131,17 +163,13 @@ if (MSVC)
   add_linker_flag(/OPT:NOICF CHECKED)
 
   # Release build specific flags
-  add_linker_flag(/LTCG RELEASE)
   add_linker_flag(/OPT:REF RELEASE)
   add_linker_flag(/OPT:ICF RELEASE)
   add_linker_flag(/INCREMENTAL:NO RELEASE)
-  set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
 
   # ReleaseWithDebugInfo build specific flags
-  add_linker_flag(/LTCG RELWITHDEBINFO)
   add_linker_flag(/OPT:REF RELWITHDEBINFO)
   add_linker_flag(/OPT:ICF RELWITHDEBINFO)
-  set(CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO} /LTCG")
 
 elseif (CLR_CMAKE_HOST_UNIX)
   # Set the values to display when interactively configuring CMAKE_BUILD_TYPE
@@ -300,23 +328,74 @@ if(CLR_CMAKE_HOST_LINUX)
 elseif(CLR_CMAKE_HOST_FREEBSD)
   add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-Wa,--noexecstack>)
   add_linker_flag("-Wl,--build-id=sha1")
-elseif(CLR_CMAKE_HOST_SUNOS)
+elseif(CLR_CMAKE_HOST_OPENBSD)
   add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-Wa,--noexecstack>)
+  add_linker_flag("-Wl,--build-id=sha1")
+  # OpenBSD's ld.so can't resolve native TLS relocs in a .so; rely on clang's default
+  # emulated TLS (don't pass -fno-emulated-tls).
+  # The PAL's hand-written asm lacks endbr64 landing pads, so disable branch-target CFI.
+  add_linker_flag("-Wl,-z,nobtcfi")
+elseif(CLR_CMAKE_HOST_SUNOS)
+  # llvm's assembler crashes with noexecstack with solaris triplet;
+  # bug report with minimal repro at: https://github.com/llvm/llvm-project/issues/202953
+  if (CMAKE_C_COMPILER_ID MATCHES "GNU")
+    add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-Wa,--noexecstack>)
+  endif()
+
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
-  add_definitions(-D__EXTENSIONS__ -D_XPG4_2 -D_POSIX_PTHREAD_SEMANTICS)
-elseif(CLR_CMAKE_HOST_OSX AND NOT CLR_CMAKE_HOST_MACCATALYST AND NOT CLR_CMAKE_HOST_IOS AND NOT CLR_CMAKE_HOST_TVOS)
+  add_definitions(-D__EXTENSIONS__ -D_XPG4_2 -D_POSIX_PTHREAD_SEMANTICS -D_REENTRANT)
+elseif(CLR_CMAKE_HOST_APPLE)
+  # enable support for X/Open and POSIX APIs, like the <ucontext.h> header file
   add_definitions(-D_XOPEN_SOURCE)
+  # enable support for Darwin extension APIs, like pthread_getthreadid_np
+  add_definitions(-D_DARWIN_C_SOURCE)
+  # enable the non-cancellable versions of APIs with $NOCANCEL variants, like close(2)
+  add_definitions(-D__DARWIN_NON_CANCELABLE=1)
 
-  # the new linker in Xcode 15 (ld_new/ld_prime) deprecated the -bind_at_load flag for macOS which causes a warning
-  # that fails the build since we build with -Werror. Only pass the flag if we need it, i.e. older linkers.
-  check_linker_flag(C "-Wl,-bind_at_load,-fatal_warnings" LINKER_SUPPORTS_BIND_AT_LOAD_FLAG)
-  if(LINKER_SUPPORTS_BIND_AT_LOAD_FLAG)
-    add_linker_flag("-Wl,-bind_at_load")
+  if(CLR_CMAKE_HOST_OSX)
+    # the new linker in Xcode 15 (ld_new/ld_prime) deprecated the -bind_at_load flag for macOS which causes a warning
+    # that fails the build since we build with -Werror. Only pass the flag if we need it, i.e. older linkers.
+    check_linker_flag(C "-Wl,-bind_at_load,-fatal_warnings" LINKER_SUPPORTS_BIND_AT_LOAD_FLAG)
+    if(LINKER_SUPPORTS_BIND_AT_LOAD_FLAG)
+      add_linker_flag("-Wl,-bind_at_load")
+    endif()
   endif()
 elseif(CLR_CMAKE_HOST_HAIKU)
+  # Haiku uses the GNU toolchain, which supports WHOLE_ARCHIVE, but only CMake 3.31.0+ recognizes this.
+  if(CMAKE_VERSION VERSION_LESS 3.31)
+    if(NOT DEFINED _CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED)
+      execute_process(COMMAND "${CMAKE_LINKER}" --help
+                      OUTPUT_VARIABLE __linker_help
+                      ERROR_VARIABLE __linker_help)
+      if(__linker_help MATCHES "--push-state" AND __linker_help MATCHES "--pop-state")
+        set(_CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED TRUE CACHE INTERNAL "linker supports push/pop state")
+      else()
+        set(_CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED FALSE CACHE INTERNAL "linker supports push/pop state")
+      endif()
+      unset(__linker_help)
+    endif()
+    if(_CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED)
+      set(CMAKE_LINK_LIBRARY_USING_WHOLE_ARCHIVE "LINKER:--push-state,--whole-archive"
+                                                 "<LINK_ITEM>"
+                                                 "LINKER:--pop-state")
+    else()
+      set(CMAKE_LINK_LIBRARY_USING_WHOLE_ARCHIVE "LINKER:--whole-archive"
+                                                 "<LINK_ITEM>"
+                                                 "LINKER:--no-whole-archive")
+    endif()
+    set(CMAKE_LINK_LIBRARY_USING_WHOLE_ARCHIVE_SUPPORTED TRUE)
+    set(CMAKE_LINK_LIBRARY_WHOLE_ARCHIVE_ATTRIBUTES LIBRARY_TYPE=STATIC DEDUPLICATION=YES OVERRIDE=DEFAULT)
+  endif()
+
   add_compile_options($<$<COMPILE_LANGUAGE:ASM>:-Wa,--noexecstack>)
-  add_linker_flag("-Wl,--no-undefined")
+  add_linker_flag("-Wl,--build-id=sha1")
+endif()
+
+if((CLR_CMAKE_HOST_HAIKU OR CLR_CMAKE_HOST_SUNOS) AND CMAKE_VERSION VERSION_LESS 4.4)
+  # Haiku and illumos uses the GNU toolchain, which supports RESCAN, but only CMake 4.4.0+ recognizes this.
+  set(CMAKE_LINK_GROUP_USING_RESCAN "LINKER:--start-group" "LINKER:--end-group")
+  set(CMAKE_LINK_GROUP_USING_RESCAN_SUPPORTED TRUE)
 endif()
 
 #------------------------------------
@@ -433,12 +512,22 @@ if (CLR_CMAKE_HOST_UNIX)
     endif()
   elseif(CLR_CMAKE_HOST_NETBSD)
     message("Detected NetBSD amd64")
+  elseif(CLR_CMAKE_HOST_OPENBSD)
+    if(CLR_CMAKE_HOST_UNIX_ARM64)
+      message("Detected OpenBSD aarch64")
+    elseif(CLR_CMAKE_HOST_UNIX_AMD64)
+      message("Detected OpenBSD amd64")
+    else()
+      message(FATAL_ERROR "Unsupported OpenBSD architecture")
+    endif()
   elseif(CLR_CMAKE_HOST_SUNOS)
     message("Detected SunOS amd64")
   elseif(CLR_CMAKE_HOST_HAIKU)
     message("Detected Haiku x86_64")
   elseif(CLR_CMAKE_HOST_BROWSER)
     add_definitions(-DHOST_BROWSER)
+  elseif(CLR_CMAKE_HOST_ANDROID)
+    add_definitions(-DHOST_ANDROID)
   endif()
 elseif(CLR_CMAKE_HOST_WASI)
   add_definitions(-DHOST_WASI)
@@ -509,6 +598,7 @@ elseif (CLR_CMAKE_TARGET_ARCH_WASM)
     set(ARCH_TARGET_NAME wasm)
     set(ARCH_SOURCES_DIR wasm)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_WASM>)
+    add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_WASM32>)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_ARCH>>>:TARGET_32BIT>)
 elseif (CLR_CMAKE_TARGET_ARCH_MIPS64)
     set(ARCH_TARGET_NAME mips64)
@@ -522,7 +612,7 @@ endif ()
 #--------------------------------------
 # Compile Options
 #--------------------------------------
-if (CLR_CMAKE_HOST_UNIX)
+if (CLR_CMAKE_HOST_UNIX OR CLR_CMAKE_HOST_WASI)
   # Disable frame pointer optimizations so profilers can get better call stacks
   add_compile_options(-fno-omit-frame-pointer)
 
@@ -547,19 +637,16 @@ if (CLR_CMAKE_HOST_UNIX)
   endif()
 
   if(CLR_CMAKE_HOST_OSX OR CLR_CMAKE_HOST_MACCATALYST)
-    # We cannot enable "stack-protector-strong" on OS X due to a bug in clang compiler (current version 7.0.2)
-    add_compile_options(-fstack-protector)
-    if(CLR_CMAKE_HOST_UNIX_ARM64)
+    if(CLR_CMAKE_HOST_ARCH_ARM64)
       # For OSX-Arm64, LSE instructions are enabled by default
       add_definitions(-DLSE_INSTRUCTIONS_ENABLED_BY_DEFAULT)
       add_compile_options(-mcpu=apple-m1)
-    endif(CLR_CMAKE_HOST_UNIX_ARM64)
-  elseif(NOT CLR_CMAKE_HOST_BROWSER AND NOT CLR_CMAKE_HOST_WASI)
-    check_c_compiler_flag(-fstack-protector-strong COMPILER_SUPPORTS_F_STACK_PROTECTOR_STRONG)
-    if (COMPILER_SUPPORTS_F_STACK_PROTECTOR_STRONG)
-      add_compile_options(-fstack-protector-strong)
     endif()
-  endif(CLR_CMAKE_HOST_OSX OR CLR_CMAKE_HOST_MACCATALYST)
+  endif()
+
+  if(NOT CLR_CMAKE_HOST_BROWSER AND NOT CLR_CMAKE_HOST_WASI)
+    add_compile_options(-fstack-protector-strong)
+  endif()
 
   # Suppress warnings-as-errors in release branches to reduce servicing churn
   if (PRERELEASE)
@@ -629,6 +716,9 @@ if (CLR_CMAKE_HOST_UNIX)
 
     # clang 18.1 supressions
     add_compile_options(-Wno-switch-default)
+
+    # clang 20 suppressions
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-nontrivial-memaccess>)
   else()
     add_compile_options(-Wno-uninitialized)
     add_compile_options(-Wno-strict-aliasing)
@@ -661,8 +751,15 @@ if (CLR_CMAKE_HOST_UNIX)
   # We mark the function which needs exporting with DLLEXPORT
   add_compile_options(-fvisibility=hidden)
 
-  # Separate functions so linker can remove them.
+  # Separate functions and data into their own sections so the linker can remove
+  # unreferenced ones.
   add_compile_options(-ffunction-sections)
+  add_compile_options(-fdata-sections)
+  if(LD_OSX)
+    add_linker_flag(-Wl,-dead_strip CHECKED RELEASE RELWITHDEBINFO)
+  elseif(NOT LD_SOLARIS)
+    add_linker_flag(-Wl,--gc-sections CHECKED RELEASE RELWITHDEBINFO)
+  endif()
 
   # Specify the minimum supported version of macOS
   # Mac Catalyst needs a special CFLAG, exclusive with mmacosx-version-min
@@ -671,28 +768,42 @@ if (CLR_CMAKE_HOST_UNIX)
     # a value for mmacosx-version-min (blank CMAKE_OSX_DEPLOYMENT_TARGET gets
     # replaced with a default value, and always gets expanded to an OS version.
     # https://gitlab.kitware.com/cmake/cmake/-/issues/20132
-    # We need to disable the warning that -tagret replaces -mmacosx-version-min
-    set(DISABLE_OVERRIDING_MIN_VERSION_ERROR -Wno-overriding-t-option)
-    add_link_options(-Wno-overriding-t-option)
+    # We need to disable the warning that -target replaces -mmacosx-version-min
+    #
+    # With https://github.com/llvm/llvm-project/commit/1c66d08b0137cef7761b8220d3b7cb7833f57cdb clang renamed the option so we need to check for both
+    check_c_compiler_flag("-Wno-overriding-option" COMPILER_SUPPORTS_W_NO_OVERRIDING_OPTION)
+    if (COMPILER_SUPPORTS_W_NO_OVERRIDING_OPTION)
+      set(DISABLE_OVERRIDING_MIN_VERSION_ERROR -Wno-overriding-option)
+    else()
+      check_c_compiler_flag("-Wno-overriding-t-option" COMPILER_SUPPORTS_W_NO_OVERRIDING_T_OPTION)
+      if (COMPILER_SUPPORTS_W_NO_OVERRIDING_T_OPTION)
+        set(DISABLE_OVERRIDING_MIN_VERSION_ERROR -Wno-overriding-t-option)
+      else()
+        message(FATAL_ERROR "Compiler does not support -Wno-overriding-option or -Wno-overriding-t-option, needed for Mac Catalyst builds.")
+      endif()
+    endif()
+    add_link_options(${DISABLE_OVERRIDING_MIN_VERSION_ERROR})
+    # Keep the Catalyst version in the -target triples below in sync
+    # with MacCatalystVersionMin in SetOSTargetMinVersions in Directory.Build.props.
     if(CLR_CMAKE_HOST_ARCH_ARM64)
-      set(MACOS_VERSION_MIN_FLAGS "-target arm64-apple-ios15.0-macabi")
-      add_link_options(-target arm64-apple-ios15.0-macabi)
+      set(CLR_CMAKE_MACCATALYST_COMPILER_TARGET "arm64-apple-ios17.0-macabi")
+      add_link_options(-target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET})
     elseif(CLR_CMAKE_HOST_ARCH_AMD64)
-      set(MACOS_VERSION_MIN_FLAGS "-target x86_64-apple-ios15.0-macabi")
-      add_link_options(-target x86_64-apple-ios15.0-macabi)
+      set(CLR_CMAKE_MACCATALYST_COMPILER_TARGET "x86_64-apple-ios17.0-macabi")
+      add_link_options(-target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET})
     else()
       clr_unknown_arch()
     endif()
     # These options are intentionally set using the CMAKE_XXX_FLAGS instead of
     # add_compile_options so that they take effect on the configuration functions
     # in various configure.cmake files.
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MACOS_VERSION_MIN_FLAGS} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MACOS_VERSION_MIN_FLAGS} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
-    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${MACOS_VERSION_MIN_FLAGS} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
-    set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS} ${MACOS_VERSION_MIN_FLAGS} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
-    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} ${MACOS_VERSION_MIN_FLAGS} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
+    set(CMAKE_OBJC_FLAGS "${CMAKE_OBJC_FLAGS}-target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
+    set(CMAKE_OBJCXX_FLAGS "${CMAKE_OBJCXX_FLAGS} -target ${CLR_CMAKE_MACCATALYST_COMPILER_TARGET} ${DISABLE_OVERRIDING_MIN_VERSION_ERROR}")
   elseif(CLR_CMAKE_HOST_OSX)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0")
     if(CLR_CMAKE_HOST_ARCH_ARM64)
       add_compile_options(-arch arm64)
     elseif(CLR_CMAKE_HOST_ARCH_AMD64)
@@ -702,7 +813,7 @@ if (CLR_CMAKE_HOST_UNIX)
     endif()
   endif(CLR_CMAKE_HOST_MACCATALYST)
 
-endif(CLR_CMAKE_HOST_UNIX)
+endif(CLR_CMAKE_HOST_UNIX OR CLR_CMAKE_HOST_WASI)
 
 if(CLR_CMAKE_TARGET_UNIX)
   add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_UNIX>)
@@ -721,15 +832,18 @@ if(CLR_CMAKE_TARGET_UNIX)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_TVOS>)
   elseif(CLR_CMAKE_TARGET_FREEBSD)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_FREEBSD>)
-  elseif(CLR_CMAKE_TARGET_ANDROID)
-    add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_ANDROID>)
   elseif(CLR_CMAKE_TARGET_LINUX)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_LINUX>)
     if(CLR_CMAKE_TARGET_LINUX_MUSL)
         add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_LINUX_MUSL>)
     endif()
+    if(CLR_CMAKE_TARGET_ANDROID)
+      add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_ANDROID>)
+    endif()
   elseif(CLR_CMAKE_TARGET_NETBSD)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_NETBSD>)
+  elseif(CLR_CMAKE_TARGET_OPENBSD)
+    add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_OPENBSD>)
   elseif(CLR_CMAKE_TARGET_SUNOS)
     add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_SUNOS>)
     if(CLR_CMAKE_TARGET_OS_ILLUMOS)
@@ -746,6 +860,20 @@ elseif(CLR_CMAKE_TARGET_WASI)
 else(CLR_CMAKE_TARGET_UNIX)
   add_compile_definitions($<$<NOT:$<BOOL:$<TARGET_PROPERTY:IGNORE_DEFAULT_TARGET_OS>>>:TARGET_WINDOWS>)
 endif(CLR_CMAKE_TARGET_UNIX)
+
+# OpenBSD only exposes its libunwind symbols through the LLVM C++ runtime
+# (libc++/libc++abi), so default to those there. An explicit selection via
+# CLR_CMAKE_CXX_STANDARD_LIBRARY/CLR_CMAKE_CXX_ABI_LIBRARY (applied by the cross
+# toolchain file) still takes precedence.
+if(CLR_CMAKE_TARGET_OPENBSD)
+  if(NOT CLR_CMAKE_CXX_STANDARD_LIBRARY)
+    add_compile_options($<$<COMPILE_LANG_AND_ID:CXX,Clang>:--stdlib=libc++>)
+    add_link_options($<$<LINK_LANG_AND_ID:CXX,Clang>:--stdlib=libc++>)
+  endif()
+  if(NOT CLR_CMAKE_CXX_ABI_LIBRARY)
+    add_link_options("LINKER:-lc++abi")
+  endif()
+endif()
 
 if(CLR_CMAKE_HOST_UNIX_ARM)
    if (NOT DEFINED CLR_ARM_FPU_TYPE)
@@ -798,17 +926,15 @@ if (MSVC)
   set_property(GLOBAL PROPERTY MSVC_WARNING_LEVEL 4)
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/W$<TARGET_PROPERTY:MSVC_WARNING_LEVEL>>)
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/WX>) # treat warnings as errors
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/sdl>) # enable additional security checks (such as /GS)
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Oi>) # enable intrinsics
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Oy->) # disable suppressing of the creation of frame pointers on the call stack for quicker function calls
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Gm->) # disable minimal rebuild
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Zp8>) # pack structs on 8-byte boundary
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Gy>) # separate functions for linker
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/GS>) # Explicitly enable the buffer security checks
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/fp:precise>) # Enable precise floating point
 
   # Disable C++ RTTI
-  # /GR is added by default by CMake, so remove it manually.
-  string(REPLACE "/GR " " " CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
 
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/FC>) # use full pathnames in diagnostics
@@ -859,28 +985,22 @@ if (MSVC)
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4640>) # 'instance' : construction of local static object is not thread-safe
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4806>) # Unsafe operation involving type 'bool'.
 
-  # SDL requires the below warnings to be treated as errors:
-  # More info: https://liquid.microsoft.com/Web/Object/Read/ms.security/Requirements/Microsoft.Security.SystemsADM.10086
+  # Microsoft's SDL requires certain compiler warnings to be enabled as error.
+  # Full list: https://liquid.microsoft.com/Web/Object/Read/ms.security/Requirements/Microsoft.Security.SystemsADM.10086
   # (Access to that URL restricted to Microsoft employees.)
+  # Some of these are implied by the /sdl switch set above (see https://learn.microsoft.com/cpp/build/reference/sdl-enable-additional-security-checks),
+  # so the list below is just the delta between Microsoft's own requirements and those implied by the /sdl switch.
+  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4018>) # 'token' : signed/unsigned mismatch
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4055>) # 'conversion' : from data pointer 'type1' to function pointer 'type2'
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4146>) # unary minus operator applied to unsigned type, result still unsigned
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4242>) # 'identifier' : conversion from 'type1' to 'type2', possible loss of data
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4244>) # 'conversion' conversion from 'type1' to 'type2', possible loss of data
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4267>) # 'var' : conversion from 'size_t' to 'type', possible loss of data
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4302>) # 'conversion' : truncation from 'type 1' to 'type 2'
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4308>) # negative integral constant converted to unsigned type
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4509>) # nonstandard extension used: 'function' uses SEH and 'object' has destructor
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4510>) # 'class' : default constructor could not be generated
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4532>) # 'continue' : jump out of __finally/finally block has undefined behavior during termination handling
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4533>) # initialization of 'variable' is skipped by 'instruction'
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4610>) # object 'class' can never be instantiated - user-defined constructor required
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4611>) # interaction between 'function' and C++ object destruction is non-portable
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4700>) # uninitialized local variable 'name' used
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4701>) # Potentially uninitialized local variable 'name' used
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4703>) # Potentially uninitialized local pointer variable 'name' used
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4789>) # destination of memory copy is too small
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4995>) # 'function': name was marked as #pragma deprecated
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/we4996>) # 'function': was declared deprecated
 
   # Set Warning Level 3:
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/w34092>) # Sizeof returns 'unsigned long'.
@@ -895,7 +1015,9 @@ if (MSVC)
   # Set Warning Level 4:
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/w44177>) # Pragma data_seg s/b at global scope.
 
-  add_compile_options($<$<COMPILE_LANGUAGE:C,CXX,ASM_MASM>:/Zi>) # enable debugging information
+  # enable debugging information.
+  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT ProgramDatabase)
+
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/ZH:SHA_256>) # use SHA256 for generating hashes of compiler processed source files.
   add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/source-charset:utf-8>) # Force MSVC to compile source as UTF-8.
 
@@ -989,30 +1111,20 @@ endif()
 # Ensure other tools are present
 if (CLR_CMAKE_HOST_WIN32)
     if(CLR_CMAKE_HOST_ARCH_ARM64)
-      # Explicitly specify the assembler to be used for Arm64 compile
-      if (CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64")
-        file(TO_CMAKE_PATH "$ENV{VCToolsInstallDir}\\bin\\Hostarm64\\arm64\\armasm64.exe" CMAKE_ASM_COMPILER)
-      else()
-        file(TO_CMAKE_PATH "$ENV{VCToolsInstallDir}\\bin\\HostX64\\arm64\\armasm64.exe" CMAKE_ASM_COMPILER)
+      enable_language(ASM_MARMASM)
+      if (CMAKE_VERSION VERSION_LESS 3.29)
+        # CMake before 3.29 passes defines down to the Microsoft ARMASM compiler, which is not supported.
+        # We need to remove the defines from the command line.
+        set(CMAKE_ASM_MARMASM_COMPILE_OBJECT "<CMAKE_ASM_MARMASM_COMPILER> <INCLUDES> <FLAGS> -o <OBJECT> <SOURCE>")
       endif()
-
-      set(CMAKE_ASM_MASM_COMPILER ${CMAKE_ASM_COMPILER})
-      message("CMAKE_ASM_MASM_COMPILER explicitly set to: ${CMAKE_ASM_MASM_COMPILER}")
-
-      # Enable generic assembly compilation to avoid CMake generate VS proj files that explicitly
-      # use ml[64].exe as the assembler.
-      enable_language(ASM)
-      set(CMAKE_ASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreaded         "")
-      set(CMAKE_ASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDLL      "")
-      set(CMAKE_ASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDebug    "")
-      set(CMAKE_ASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDebugDLL "")
-      set(CMAKE_ASM_COMPILE_OBJECT "<CMAKE_ASM_COMPILER> -g <INCLUDES> <FLAGS> -o <OBJECT> <SOURCE>")
+      # Add debug info options here as we can't specify separate debug info formats through the CMake abstraction
+      # and -g in MARMASM is technically Embedded mode (which we don't want for our C or C++ code)
+      add_compile_options($<$<COMPILE_LANGUAGE:ASM_MARMASM>:-g>)
     else()
       enable_language(ASM_MASM)
-      set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreaded         "")
-      set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDLL      "")
-      set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDebug    "")
-      set(CMAKE_ASM_MASM_COMPILE_OPTIONS_MSVC_RUNTIME_LIBRARY_MultiThreadedDebugDLL "")
+      # Add debug info options here as we can't specify separate debug info formats through the CMake abstraction
+      # and /Zi in MASM is technically Embedded mode (which we don't want for our C or C++ code)
+      add_compile_options($<$<COMPILE_LANGUAGE:ASM_MASM>:/Zi>)
     endif()
 
     # Ensure that MC is present

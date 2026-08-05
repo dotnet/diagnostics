@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <PackageRID>linux-musl-arm64</PackageRID>
+    <TargetRid>linux-musl-arm64</TargetRid>
     <PackageArch>arm64</PackageArch>
   </PropertyGroup>
   <Import Project="Microsoft.Diagnostics.DbgShim.props" />

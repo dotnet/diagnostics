@@ -17,6 +17,10 @@ project(diagnostics)
 include(eng/native/configurepaths.cmake)
 include(${CLR_ENG_NATIVE_DIR}/configurecompiler.cmake)
 
+# Platform specific compiler options
+set(CLR_SHARED_DIR ${CLR_REPO_ROOT_DIR}/src/shared)
+get_filename_component(CLR_SRC_NATIVE_DIR ${CLR_SHARED_DIR}/native ABSOLUTE)
+
 if(CLR_CMAKE_HOST_UNIX)
   # The -fms-extensions enable the stuff like __if_exists, __declspec(uuid()), etc.
   add_compile_options(-fms-extensions)
