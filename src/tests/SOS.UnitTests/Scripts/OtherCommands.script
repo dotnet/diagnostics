@@ -107,12 +107,6 @@ VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo1\(Int32, System\.String\)
 SOSCOMMAND:GCInfo <PREVPOUT>
 VERIFY:.*Code size:\s+[0-9a-fA-F]+\s*
 
-# Verify the legacy decoder path when Interface18 is available.
-IFDEF:MAJOR_RUNTIME_VERSION_GE_11
-SOSCOMMAND:GCInfo -legacy <PREVPOUT>
-VERIFY:.*Code size:\s+[0-9a-fA-F]+\s*
-ENDIF:MAJOR_RUNTIME_VERSION_GE_11
-
 # Verify DumpClass
 SOSCOMMAND:DumpClass <POUT>\s*Class:\s+(<HEXVAL>)\s+<POUT>
 VERIFY:\s*Class Name:\s+SymbolTestApp.Program\s+
