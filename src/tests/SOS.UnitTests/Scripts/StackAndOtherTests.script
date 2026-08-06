@@ -67,17 +67,7 @@ SOSCOMMAND:SOSStatus
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-IFDEF:LIVE
-IFDEF:DESKTOP
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 62\]\s*
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 64\]\s*
-ENDIF:DESKTOP
-ENDIF:LIVE
-IFDEF:DUMP
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 62\]\s*
-ENDIF:DUMP
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64)\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (33|34)\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (27|28)\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (22|23)\]\s*
@@ -99,17 +89,7 @@ VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
 SOSCOMMAND:ClrStack -f
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-IFDEF:LIVE
-IFDEF:DESKTOP
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 62\]\s*
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 64\]\s*
-ENDIF:DESKTOP
-ENDIF:LIVE
-IFDEF:DUMP
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 62\]\s*
-ENDIF:DUMP
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64)\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo2\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (33|34)\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo1\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (27|28)\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (22|23)\]\s*
@@ -118,17 +98,7 @@ VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\
 SOSCOMMAND:ClrStack -a
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-IFDEF:LIVE
-IFDEF:DESKTOP
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 62\]\s*
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 64\]\s*
-ENDIF:DESKTOP
-ENDIF:LIVE
-IFDEF:DUMP
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 62\]\s*
-ENDIF:DUMP
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64)\]\s*
 !IFDEF:DUMP
 VERIFY:\s+PARAMETERS:\s+
 VERIFY:\s+dllPath \(0x<HEXVAL>\) = 0x<HEXVAL>\s+
@@ -154,17 +124,7 @@ SOSCOMMAND:ClrStack -r
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
-IFDEF:LIVE
-IFDEF:DESKTOP
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 62\]\s*
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 64\]\s*
-ENDIF:DESKTOP
-ENDIF:LIVE
-IFDEF:DUMP
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 62\]\s*
-ENDIF:DUMP
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64)\]\s*
 IFDEF:ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
 ENDIF:ARM
@@ -285,17 +245,7 @@ ENDIF:DOTNETDUMP
 SOSCOMMAND:ClrStack
 SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo4.*\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
-IFDEF:LIVE
-IFDEF:DESKTOP
-VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 62\s+
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 64\s+
-ENDIF:DESKTOP
-ENDIF:LIVE
-IFDEF:DUMP
-VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 62\s+
-ENDIF:DUMP
+VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64)\s+
 
 # Verify that DumpIL works (depends on the IP2MD right above)
 SOSCOMMAND:DumpIL <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
@@ -315,12 +265,7 @@ SOSCOMMAND:clru <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
-IFDEF:DESKTOP
-VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 62:\s+
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 64:\s+
-ENDIF:DESKTOP
+VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64):\s+
 
 # Verify that "u" with no line info works
 SOSCOMMAND:clru -n <PREVPOUT>
@@ -333,12 +278,7 @@ SOSCOMMAND:clru -o <PREVPOUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
-IFDEF:DESKTOP
-VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 62:\s+
-ENDIF:DESKTOP
-!IFDEF:DESKTOP
-VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 64:\s+
-ENDIF:DESKTOP
+VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64):\s+
 
 ENDIF:DOTNETDUMP
 
