@@ -17,7 +17,7 @@
 // Apple Silicon (arm64) macOS user-space VM is 47 bits. lldb's core reader
 // rejects segments above 0x7FFF_FFFF_FFFF, so use a 47-bit-valid address.
 // The legacy address is still probed for dumps produced by older createdump binaries.
-const uint64_t SpecialThreadInfoAddress = 0x00007ffffff20000;
+const uint64_t SpecialThreadInfoAddress = 0x00007ffffff00000;
 const uint64_t SpecialThreadInfoLegacyAddress = 0x7fffffff00000000;
 #else
 const uint64_t SpecialThreadInfoAddress = 0x7fffffff00000000;
