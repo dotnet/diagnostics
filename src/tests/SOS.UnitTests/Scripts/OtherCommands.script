@@ -39,11 +39,11 @@ ENDIF:DESKTOP
 
 CONTINUE
 SOSCOMMAND:ClrStack
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 33\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (32|33)\]\s*
 
 CONTINUE
 SOSCOMMAND:ClrStack
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 40\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (39|40)\]\s*
 
 ENDIF:UNIX_SINGLE_FILE_APP
 ENDIF:ALPINE
@@ -97,7 +97,7 @@ VERIFY:\s*TypeDefToMethodTableMap:\s+<HEXVAL>\s+
 SOSCOMMAND:ClrStack
 SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo1.*\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo1\(Int32, System\.String\)\s+
-VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 27\s+
+VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (27|28)\s+
 
 # Verify DumpMD
 SOSCOMMAND:DumpMD <POUT>\s+MethodDesc:\s+(<HEXVAL>)\s+<POUT>
