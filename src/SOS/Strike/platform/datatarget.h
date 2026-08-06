@@ -7,10 +7,11 @@ private:
     LONG m_ref;                         // Reference count.
     ULONG64 m_baseAddress;              // Runtime base address
     ULONG64 m_contractDescriptorAddress; // cDAC contract descriptor address (0 if not applicable/resolved)
+    IDebuggerServices* m_debuggerServices;
 
 public:
     DataTarget(ULONG64 baseAddress, ULONG64 contractDescriptorAddress = 0);
-    virtual ~DataTarget() {}
+    virtual ~DataTarget();
     
     // IUnknown.
     STDMETHOD(QueryInterface)(

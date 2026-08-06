@@ -4,7 +4,6 @@
 #include "managedanalysis.h"
 #include "exts.h"
 
-extern bool IsWindowsTarget();
 extern "C" IXCLRDataProcess * GetClrDataFromDbgEng();
 
 _Use_decl_annotations_
@@ -109,14 +108,6 @@ ClrmaManagedAnalysis::QueryDebugClient(IUnknown* pUnknown)
 
         default:
             return E_INVALIDARG;
-    }
-    if (IsWindowsTarget())
-    {
-        m_fileSeparator = L'\\';
-    }
-    else
-    {
-        m_fileSeparator = L'/';
     }
     return S_OK;
 }
@@ -255,6 +246,10 @@ ClrmaManagedAnalysis::AssociateClient(
         ITarget* target = extensions->GetTarget();
         if (target != nullptr)
         {
+            // The DAC reports module names as full target-OS paths; the separator is OS-specific
+            // (backslash is a legal filename character on Unix, so both cannot be matched blindly).
+            m_fileSeparator = target->GetOperatingSystem() == ITarget::OperatingSystem::Windows ? L'\\' : L'/';
+
             //
             // First try getting the managed CLRMA service instance
             //
@@ -289,6 +284,11 @@ ClrmaManagedAnalysis::AssociateClient(
                 }
                 if (FAILED(hr = runtime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::UseCDac, &m_clrData)))
                 {
+                    if (Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseCDac)
+                    {
+                        TraceError("AssociateClient forced cDAC retrieval failed with code %08x\n", hr);
+                        return hr;
+                    }
                     TraceInformation("AssociateClient Runtime based DAC retrieval failed with code %08x, falling back to CLRMA\n", hr);
 
                     m_clrData = GetClrDataFromDbgEng();

@@ -415,8 +415,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
             List<string> result = new();
             foreach (string line in lines)
             {
-                // Filter out possible pid lines
-                if (Regex.IsMatch(line, @"^\d"))
+                if (// Filter out possible pid lines
+                    Regex.IsMatch(line, @"^\d") ||
+                    // Process enumeration and probing are not atomic, so this optional section can
+                    // appear whenever an enumerated process exits before its diagnostic port is probed.
+                    string.Equals(line, ".NET processes that could not be probed:", StringComparison.Ordinal))
                 {
                     continue;
                 }

@@ -124,7 +124,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 _module = module;
             }
 
-            public override long ImageSize => unchecked((long)_module.ImageSize);
+            protected override long ImageSizeCore => unchecked((long)_module.ImageSize);
 
             public override int IndexFileSize => unchecked((int)_module.IndexFileSize.GetValueOrDefault(0));
 

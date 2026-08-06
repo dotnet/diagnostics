@@ -43,7 +43,7 @@ private:
     uint32_t m_sectionCacheStopId;
 
     ULONG64 GetModuleBase(lldb::SBTarget& target, lldb::SBModule& module);
-    ULONG64 GetModuleSize(ULONG64 baseAddress, lldb::SBModule& module);
+    ULONG64 GetModuleSize(lldb::SBTarget& target, ULONG64 baseAddress, lldb::SBModule& module);
     ULONG64 GetExpression(lldb::SBFrame& frame, lldb::SBError& error, PCSTR exp);
     void GetContextFromFrame(lldb::SBFrame& frame, DT_CONTEXT *dtcontext);
     DWORD_PTR GetRegister(lldb::SBFrame& frame, const char *name);

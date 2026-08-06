@@ -13,14 +13,16 @@ Target* Target::s_target = nullptr;
 // Target
 //----------------------------------------------------------------------------
 
-Target::Target() :
+Target::Target(IDebuggerServices* debuggerServices) :
     m_ref(1),
+    m_debuggerServices(debuggerServices),
     m_tmpPath(nullptr),
 #ifndef FEATURE_PAL
     m_desktop(nullptr),
 #endif
     m_netcore(nullptr)
-{ 
+{
+    m_debuggerServices->AddRef();
 }
 
 Target::~Target()
@@ -69,17 +71,23 @@ Target::~Target()
     }
 #endif
     g_pRuntime = nullptr;
+    m_debuggerServices->Release();
     s_target = nullptr;
 }
 
 /**********************************************************************\
 * Creates a local target instance or returns the existing one
 \**********************************************************************/
-ITarget* Target::GetInstance()
+ITarget* Target::GetInstance(IDebuggerServices* debuggerServices)
 {
-    if (s_target == nullptr) 
+    if (s_target == nullptr)
     {
-        s_target = new Target();
+        _ASSERTE(debuggerServices != nullptr);
+        if (debuggerServices == nullptr)
+        {
+            return nullptr;
+        }
+        s_target = new Target(debuggerServices);
         OnUnloadTask::Register(CleanupTarget);
     }
     s_target->AddRef();
@@ -215,8 +223,6 @@ ULONG Target::Release()
 // ITarget
 //----------------------------------------------------------------------------
 
-#define VER_PLATFORM_UNIX 10 
-
 ITarget::OperatingSystem Target::GetOperatingSystem()
 {
 #ifdef FEATURE_PAL
@@ -228,15 +234,25 @@ ITarget::OperatingSystem Target::GetOperatingSystem()
     return OperatingSystem::Unknown;
 #endif
 #else
-    ULONG platformId, major, minor, servicePack;
-    if (SUCCEEDED(g_ExtControl->GetSystemVersion(&platformId, &major, &minor, nullptr, 0, nullptr, &servicePack, nullptr, 0, nullptr)))
+    if (m_debuggerServices != nullptr)
     {
-        if (platformId == VER_PLATFORM_UNIX)
+        IDebuggerServices::OperatingSystem operatingSystem;
+        if (SUCCEEDED(m_debuggerServices->GetOperatingSystem(&operatingSystem)))
         {
-            return OperatingSystem::Linux;
+            switch (operatingSystem)
+            {
+                case IDebuggerServices::OperatingSystem::Windows:
+                    return OperatingSystem::Windows;
+                case IDebuggerServices::OperatingSystem::Linux:
+                    return OperatingSystem::Linux;
+                case IDebuggerServices::OperatingSystem::OSX:
+                    return OperatingSystem::OSX;
+                default:
+                    return OperatingSystem::Unknown;
+            }
         }
     }
-    return OperatingSystem::Windows;
+    return OperatingSystem::Unknown;
 #endif
 }
 
@@ -257,7 +273,7 @@ LPCSTR Target::GetTempDirectory()
             strcat_s(tmpPath, MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_A);
         }
         ULONG pid = 0;
-        if (g_ExtSystem->GetCurrentProcessSystemId(&pid) != 0)
+        if (m_debuggerServices == nullptr || m_debuggerServices->GetCurrentProcessSystemId(&pid) != S_OK)
         {
             // Use the SOS process id if can't get target's
             pid = ::GetCurrentProcessId();

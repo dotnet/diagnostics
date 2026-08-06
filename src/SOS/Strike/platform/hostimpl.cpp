@@ -12,13 +12,16 @@ Host* Host::s_host = nullptr;
 // Host
 //----------------------------------------------------------------------------
 
-Host::Host() :
-    m_ref(1)
-{ 
+Host::Host(IDebuggerServices* debuggerServices) :
+    m_ref(1),
+    m_debuggerServices(debuggerServices)
+{
+    m_debuggerServices->AddRef();
 }
 
 Host::~Host()
 {
+    m_debuggerServices->Release();
     s_host = nullptr;
 }
 
@@ -26,11 +29,11 @@ Host::~Host()
 /// Creates a local service provider instance or returns the existing one 
 /// </summary>
 /// <returns></returns>
-IHost* Host::GetInstance()
+IHost* Host::GetInstance(IDebuggerServices* debuggerServices)
 {
-    if (s_host == nullptr) 
+    if (s_host == nullptr)
     {
-        s_host = new Host();
+        s_host = new Host(debuggerServices);
     }
     s_host->AddRef();
     return s_host;
@@ -99,6 +102,6 @@ HRESULT Host::GetCurrentTarget(ITarget** ppTarget)
     {
         return E_INVALIDARG;
     }
-    *ppTarget = Target::GetInstance();
+    *ppTarget = Target::GetInstance(m_debuggerServices);
     return S_OK;
 }

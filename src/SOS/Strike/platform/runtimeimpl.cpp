@@ -55,6 +55,8 @@ typedef HMODULE (STDAPICALLTYPE  *LoadLibraryWFnPtr)(LPCWSTR lpLibFileName);
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
 
+static CDacLoadPolicy s_cdacLoadPolicy = CDacLoadPolicy::Default;
+
 extern "C" bool TryGetSymbolWithCallback(
     bool (*readMemory)(void* address, void* buffer, size_t size),
     ULONG64 baseAddress,
@@ -63,8 +65,13 @@ extern "C" bool TryGetSymbolWithCallback(
 
 bool ReaderReadMemory(void* address, void* buffer, size_t size)
 {
+    IDebuggerServices* debuggerServices = GetDebuggerServices();
+    if (debuggerServices == nullptr)
+    {
+        return false;
+    }
     ULONG read = 0;
-    return SUCCEEDED(g_ExtData->ReadVirtual((ULONG64)address, buffer, (ULONG)size, &read));
+    return SUCCEEDED(debuggerServices->ReadVirtual((ULONG64)address, buffer, (ULONG)size, &read));
 }
 
 /**********************************************************************\
@@ -83,7 +90,7 @@ static HRESULT GetSingleFileInfo(ITarget* target, PULONG pModuleIndex, PULONG64 
     }
 
     ULONG loaded, unloaded;
-    HRESULT hr = g_ExtSymbols->GetNumberModules(&loaded, &unloaded);
+    HRESULT hr = debuggerServices->GetNumberModules(&loaded, &unloaded);
     if (FAILED(hr)) {
         return hr;
     }
@@ -92,7 +99,7 @@ static HRESULT GetSingleFileInfo(ITarget* target, PULONG pModuleIndex, PULONG64 
     for (ULONG index = 0; index < loaded; index++)
     {
         ULONG64 baseAddress;
-        hr = g_ExtSymbols->GetModuleByIndex(index, &baseAddress);
+        hr = debuggerServices->GetModuleByIndex(index, &baseAddress);
         if (FAILED(hr)) {
             return hr;
         }
@@ -113,7 +120,7 @@ static HRESULT GetSingleFileInfo(ITarget* target, PULONG pModuleIndex, PULONG64 
         }
         ULONG read = 0;
         ArrayHolder<BYTE> buffer = new BYTE[sizeof(RuntimeInfo)];
-        hr = g_ExtData->ReadVirtual(symbolAddress, buffer, sizeof(RuntimeInfo), &read);
+        hr = debuggerServices->ReadVirtual(symbolAddress, buffer, sizeof(RuntimeInfo), &read);
         if (FAILED(hr)) {
             return hr;
         }
@@ -146,8 +153,13 @@ HRESULT Runtime::CreateInstance(ITarget* target, RuntimeConfiguration configurat
 
     if (*ppRuntime == nullptr)
     {
+        IDebuggerServices* debuggerServices = GetDebuggerServices();
+        if (debuggerServices == nullptr)
+        {
+            return E_NOINTERFACE;
+        }
         // Check if the normal runtime module (coreclr.dll, libcoreclr.so, etc.) is loaded
-        hr = g_ExtSymbols->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
+        hr = debuggerServices->GetModuleByModuleName(runtimeModuleName, 0, &moduleIndex, &moduleAddress);
         if (FAILED(hr))
         {
             // If the standard runtime module isn't loaded, try looking for a single-file program
@@ -164,12 +176,7 @@ HRESULT Runtime::CreateInstance(ITarget* target, RuntimeConfiguration configurat
             hr = g_ExtServices2->GetModuleInfo(moduleIndex, nullptr, &moduleSize, nullptr, nullptr);
 #else
             _ASSERTE(moduleAddress != 0);
-            DEBUG_MODULE_PARAMETERS params;
-            hr = g_ExtSymbols->GetModuleParameters(1, &moduleAddress, 0, &params);
-            if (SUCCEEDED(hr))
-            {
-                moduleSize = params.Size;
-            }
+            hr = debuggerServices->GetModuleInfo(moduleIndex, nullptr, &moduleSize, nullptr, nullptr);
 #endif
         }
 
@@ -215,7 +222,10 @@ Runtime::Runtime(ITarget* target, RuntimeConfiguration configuration, ULONG inde
     _ASSERTE(size != 0);
 
     ArrayHolder<char> szModuleName = new char[MAX_LONGPATH + 1];
-    HRESULT hr = g_ExtSymbols->GetModuleNames(index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL);
+    IDebuggerServices* debuggerServices = GetDebuggerServices();
+    HRESULT hr = debuggerServices != nullptr
+        ? debuggerServices->GetModuleNames(index, 0, szModuleName, MAX_LONGPATH, NULL, NULL, 0, NULL, NULL, 0, NULL)
+        : E_NOINTERFACE;
     if (SUCCEEDED(hr))
     {
         m_name = szModuleName.Detach();
@@ -507,7 +517,15 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         if (m_cdacDataProcess == nullptr)
         {
             LPCSTR cdacFilePath = GetCDacFilePath();
-            if (cdacFilePath != nullptr)
+            if (cdacFilePath == nullptr)
+            {
+                if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
+                {
+                    *ppClrDataProcess = nullptr;
+                    return CORDBG_E_NO_IMAGE_AVAILABLE;
+                }
+            }
+            else
             {
                 m_cdacDataProcess = CreateClrDataProcessInstance(cdacFilePath, GetContractDescriptorAddress());
             }
@@ -516,6 +534,11 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         {
             *ppClrDataProcess = m_cdacDataProcess;
             return S_OK;
+        }
+        if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
+        {
+            *ppClrDataProcess = nullptr;
+            return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
         }
         // Fall through to the DAC.
     }
@@ -555,6 +578,15 @@ static bool IsEnvironmentVariableSetToOne(const char* name)
 \**********************************************************************/
 bool Runtime::ShouldUseCDac()
 {
+    if (s_cdacLoadPolicy == CDacLoadPolicy::UseLegacyDac)
+    {
+        return false;
+    }
+    if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
+    {
+        return true;
+    }
+
     // When DOTNET_ENABLE_CDAC is requested, the in-box (legacy) DAC loads and drives the cDAC
     // contract reader itself (including its own dac-vs-cdac fallback/comparison). Defer to that
     // mechanism rather than loading the cDAC directly so those scenarios keep working.
@@ -571,6 +603,16 @@ bool Runtime::ShouldUseCDac()
     }
     DWORD majorVersion = (fileInfo.dwFileVersionMS >> 16) & 0xFFFF;
     return majorVersion >= MinCDacRuntimeMajorVersion;
+}
+
+CDacLoadPolicy Runtime::GetCDacLoadPolicy()
+{
+    return s_cdacLoadPolicy;
+}
+
+void Runtime::SetCDacLoadPolicy(CDacLoadPolicy policy)
+{
+    s_cdacLoadPolicy = policy;
 }
 
 /**********************************************************************\
@@ -624,7 +666,7 @@ IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath, ULON
 \**********************************************************************/
 ULONG64 Runtime::GetContractDescriptorAddress()
 {
-    const char* symbolName = "DotNetRuntimeContractDescriptor";
+    const char* symbolName = CONTRACT_DESCRIPTOR_SYMBOL;
     ULONG64 symbolAddress = 0;
     if (m_target->GetOperatingSystem() == ITarget::OperatingSystem::Linux ||
         m_target->GetOperatingSystem() == ITarget::OperatingSystem::OSX)
@@ -802,9 +844,13 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 HRESULT Runtime::GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes)
 {
     _ASSERTE(pFileInfo);
-    _ASSERTE(g_ExtSymbols2 != nullptr);
+    IDebuggerServices* debuggerServices = GetDebuggerServices();
+    if (debuggerServices == nullptr)
+    {
+        return E_NOINTERFACE;
+    }
 
-    HRESULT hr = g_ExtSymbols2->GetModuleVersionInformation(
+    HRESULT hr = debuggerServices->GetModuleVersionInformation(
         m_index, 0, "\\", pFileInfo, sizeof(VS_FIXEDFILEINFO), NULL);
 
     // 0.0.0.0 is not a valid version. This is sometime returned by windbg for Linux core dumps
@@ -819,7 +865,7 @@ HRESULT Runtime::GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuff
             fileVersionBuffer[0] = '\0';
         }
         // We can assume the English/CP_UNICODE lang/code page for the runtime modules
-        g_ExtSymbols2->GetModuleVersionInformation(
+        debuggerServices->GetModuleVersionInformation(
             m_index, 0, "\\StringFileInfo\\040904B0\\FileVersion", fileVersionBuffer, fileVersionBufferSizeInBytes, NULL);
     }
 
