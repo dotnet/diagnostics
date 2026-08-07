@@ -1,8 +1,5 @@
-﻿using System;
+using System;
 using System.CommandLine;
-using System.CommandLine.Builder;
-using System.CommandLine.Invocation;
-using System.CommandLine.Parsing;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Threading;
@@ -44,11 +41,9 @@ namespace Stress
                 return () => { while (!finished) { burst(); } };
         }
 
-        private delegate Task<int> RootCommandHandler(IConsole console, CancellationToken ct, int eventSize, int eventRate, BurstPattern burstPattern, int threads, int duration, int eventCount);
-
-        private static CommandLineBuilder BuildCommandLine()
+        private static RootCommand BuildCommandLine()
         {
-            var rootCommand = new RootCommand("EventPipe Stress Tester - Stress")
+            RootCommand rootCommand = new("EventPipe Stress Tester - Stress")
             {
                 CommandLineOptions.EventSizeOption,
                 CommandLineOptions.EventRateOption,
@@ -59,19 +54,23 @@ namespace Stress
             };
 
 
-            rootCommand.Handler = CommandHandler.Create((RootCommandHandler)Run);
-            return new CommandLineBuilder(rootCommand);
+            rootCommand.SetAction((parseResult, ct) => Run(
+                ct,
+                parseResult.GetValue(CommandLineOptions.EventSizeOption),
+                parseResult.GetValue(CommandLineOptions.EventRateOption),
+                parseResult.GetValue(CommandLineOptions.BurstPatternOption),
+                parseResult.GetValue(CommandLineOptions.ThreadsOption),
+                parseResult.GetValue(CommandLineOptions.DurationOption),
+                parseResult.GetValue(CommandLineOptions.EventCountOption)));
+            return rootCommand;
         }
 
         static async Task<int> Main(string[] args)
         {
-            return await BuildCommandLine()
-                .UseDefaults()
-                .Build()
-                .InvokeAsync(args);
+            return await BuildCommandLine().Parse(args).InvokeAsync();
         }
 
-        private static async Task<int> Run(IConsole console, CancellationToken ct, int eventSize, int eventRate, BurstPattern burstPattern, int threads, int duration, int eventCount)
+        private static async Task<int> Run(CancellationToken ct, int eventSize, int eventRate, BurstPattern burstPattern, int threads, int duration, int eventCount)
         {
             TimeSpan durationTimeSpan = TimeSpan.FromSeconds(duration);
 

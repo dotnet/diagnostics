@@ -32,8 +32,8 @@ namespace Microsoft.Diagnostics.Tools.Dump
             };
 
             command.SetAction((parseResult) => new Dumper().Collect(
-                stdOutput: parseResult.Configuration.Output,
-                stdError: parseResult.Configuration.Error,
+                stdOutput: parseResult.InvocationConfiguration.Output,
+                stdError: parseResult.InvocationConfiguration.Error,
                 processId: parseResult.GetValue(ProcessIdOption),
                 output: parseResult.GetValue(OutputOption),
                 diag: parseResult.GetValue(DiagnosticLoggingOption),
