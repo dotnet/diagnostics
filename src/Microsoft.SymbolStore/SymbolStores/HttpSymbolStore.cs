@@ -124,6 +124,11 @@ namespace Microsoft.SymbolStore.SymbolStores
             _clientFailure = false;
         }
 
+        /// <summary>
+        /// An HTTP symbol server is a remote store.
+        /// </summary>
+        public override bool IsRemote => true;
+
         protected override async Task<SymbolStoreFile> GetFileInner(SymbolStoreKey key, CancellationToken token)
         {
             Uri uri = GetRequestUri(key.Index);

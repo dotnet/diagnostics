@@ -141,7 +141,12 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     /// Creates all the special CLR keys if the path is the coreclr module for this platform
                     if (fileName == CoreClrFileName)
                     {
-                        foreach (string specialFileName in (flags & KeyTypeFlags.ClrKeys) != 0 ? s_coreClrSpecialFiles : s_dacdbiSpecialFiles)
+                        IEnumerable<string> specialFiles = (flags & KeyTypeFlags.ClrKeys) != 0 ? s_coreClrSpecialFiles : s_dacdbiSpecialFiles;
+                        if ((flags & KeyTypeFlags.WindowsDebuggingLibrariesOnly) != 0)
+                        {
+                            specialFiles = specialFiles.Where(static specialFile => specialFile.EndsWith(".dll", StringComparison.OrdinalIgnoreCase));
+                        }
+                        foreach (string specialFileName in specialFiles)
                         {
                             yield return BuildKey(specialFileName, CoreClrPrefix, uuid);
                         }

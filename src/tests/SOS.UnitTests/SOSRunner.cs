@@ -1101,27 +1101,24 @@ public class SOSRunner : IDisposable
                 {
                     commands.Add($"sethostruntime {setHostRuntime}");
                 }
-                // Disabled until https://github.com/dotnet/diagnostics/issues/3265 is fixed.
-#if DISABLED
-                // If a single-file app, add the path to runtime so SOS can find DAC/DBI locally.
-                if (_config.PublishSingleFile)
+                // Single-file apps bundle the runtime, so the DAC/DBI are not next to the debuggee and,
+                // under the "never download unverified executable code" policy, are not downloaded from
+                // the symbol server on non-Windows. Add the runtime directory (which has the matching
+                // DAC/DBI) as a symbol-search directory so SOS resolves them locally. Unlike setclrpath
+                // (which sets the per-runtime module directory and is lost when the runtimes are flushed
+                // on process continue), a symbol-server directory is session-level, so it survives the
+                // flush and is cached on hit.
+                if (_config.PublishSingleFile && !string.IsNullOrEmpty(runtimeSymbolsPath))
                 {
-                    if (!string.IsNullOrEmpty(runtimeSymbolsPath))
-                    {
-                        commands.Add($"setclrpath {runtimeSymbolsPath}");
-                    }
+                    commands.Add($"setsymbolserver -directory {runtimeSymbolsPath}");
                 }
-#endif
                 if (!isHostRuntimeNone)
                 {
-                    // If single-file app, add the debuggee directory containing the PDBs and
-                    // add the symbol server so SOS can find DAC/DBI for single file apps which
-                    // may not have been built with the runtime pointed by RuntimeSymbolsPath
-                    // since we use the arcade provided SDK (in .dotnet) to build them.
+                    // If single-file app, add the debuggee directory containing the app PDBs.
                     if (_config.PublishSingleFile)
                     {
                         string appRootDir = ReplaceVariables(_variables, "%DEBUG_ROOT%");
-                        commands.Add($"setsymbolserver -ms -timeout 10 -directory {appRootDir}");
+                        commands.Add($"setsymbolserver -directory {appRootDir}");
                     }
                     if (!string.IsNullOrEmpty(setSymbolServer))
                     {
@@ -1133,13 +1130,13 @@ public class SOSRunner : IDisposable
             case NativeDebugger.Gdb:
                 break;
             case NativeDebugger.DotNetDump:
-                // If a single-file app, add the path to runtime so SOS can find DAC/DBI locally.
-                if (_config.PublishSingleFile)
+                // If a single-file app, add the runtime directory (which has the matching DAC/DBI) as a
+                // symbol-search directory so SOS resolves them locally. Unlike setclrpath (per-runtime,
+                // lost when the runtimes are flushed on process continue), a symbol-server directory is
+                // session-level, so it survives the flush and is cached on hit.
+                if (_config.PublishSingleFile && !string.IsNullOrEmpty(runtimeSymbolsPath))
                 {
-                    if (!string.IsNullOrEmpty(runtimeSymbolsPath))
-                    {
-                        commands.Add($"setclrpath {runtimeSymbolsPath}");
-                    }
+                    commands.Add($"setsymbolserver -directory {runtimeSymbolsPath}");
                 }
                 if (!string.IsNullOrEmpty(setSymbolServer))
                 {
