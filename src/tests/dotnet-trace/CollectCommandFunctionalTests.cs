@@ -30,7 +30,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         public sealed record CollectArgs(
             CancellationToken ct = default,
-            CommandLineConfiguration cliConfig = null,
+            InvocationConfiguration cliConfig = null,
             int processId = -1,
             uint buffersize = 1,
             string[] providers = null,
