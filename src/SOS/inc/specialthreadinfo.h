@@ -13,7 +13,7 @@
 
 #define SPECIAL_THREADINFO_SIGNATURE "THREADINFO"
 
-#if defined(__APPLE__) && (defined(HOST_ARM64) || defined(__arm64__) || defined(__aarch64__))
+#if defined(HOST_ARM64) || defined(__arm64__) || defined(__aarch64__)
 // Apple Silicon (arm64) macOS user-space VM is 47 bits. lldb's core reader
 // rejects segments above 0x7FFF_FFFF_FFFF, so use a 47-bit-valid address.
 // The legacy address is still probed for dumps produced by older createdump binaries.
