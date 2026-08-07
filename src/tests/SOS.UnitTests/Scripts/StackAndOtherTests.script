@@ -30,7 +30,7 @@ SOSCOMMAND:ClrStack
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (19|22)\]\s*
 SOSCOMMAND:bpmd -clearall
 
-SOSCOMMAND:bpmd SymbolTestApp.cs:32
+SOSCOMMAND:bpmd SymbolTestApp.cs:33
 IFDEF:DESKTOP
 SOSCOMMAND:bpmd SymbolTestApp.exe SymbolTestApp.Program.Foo4
 ENDIF:DESKTOP
@@ -40,11 +40,11 @@ ENDIF:DESKTOP
 
 CONTINUE
 SOSCOMMAND:ClrStack
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (31|32)\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (32|33)\]\s*
 
 CONTINUE
 SOSCOMMAND:ClrStack
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 37\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (39|40)\]\s*
 
 ENDIF:UNIX_SINGLE_FILE_APP
 ENDIF:ALPINE
@@ -67,10 +67,10 @@ SOSCOMMAND:SOSStatus
 SOSCOMMAND:ClrStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (53|57)\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 32\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 27\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 22\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>.*\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64)\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (33|34)\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (27|28)\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (22|23)\]\s*
 
 SOSCOMMAND:runtimes
 !IFDEF:DESKTOP
@@ -89,30 +89,42 @@ VERIFY:\s+<DECVAL>.<DECVAL>.<DECVAL>.<DECVAL>.*
 SOSCOMMAND:ClrStack -f
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (53|57)\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo2\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 32\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo1\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 27\]\s*
-VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 22\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64)\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo2\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (33|34)\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Foo1\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (27|28)\]\s*
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.(dll|exe)!SymbolTestApp\.Program\.Main\(.*\)\s+\+\s+<DECVAL>\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (22|23)\]\s*
 
 # Verify that ClrStack all option works (locals/params)
 SOSCOMMAND:ClrStack -a
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (53|57)\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64)\]\s*
+!IFDEF:DUMP
 VERIFY:\s+PARAMETERS:\s+
 VERIFY:\s+dllPath \(0x<HEXVAL>\) = 0x<HEXVAL>\s+
 VERIFY:.*\s+LOCALS:\s+
 VERIFY:\s+0x<HEXVAL> = 0x<HEXVAL>\s+
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 32\]\s*
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 27\]\s*
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 22\]\s*
+ENDIF:DUMP
+IFDEF:DUMP
+!IFDEF:MAJOR_RUNTIME_VERSION_9
+!IFDEF:MAJOR_RUNTIME_VERSION_10
+VERIFY:\s+PARAMETERS:\s+
+VERIFY:\s+dllPath \(0x<HEXVAL>\) = 0x<HEXVAL>\s+
+VERIFY:.*\s+LOCALS:\s+
+VERIFY:\s+0x<HEXVAL> = 0x<HEXVAL>\s+
+ENDIF:MAJOR_RUNTIME_VERSION_10
+ENDIF:MAJOR_RUNTIME_VERSION_9
+ENDIF:DUMP
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (33|34)\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (27|28)\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (22|23)\]\s*
 
 # Verify that ClrStack displays registers
 SOSCOMMAND:ClrStack -r
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>\s+.*
 VERIFY:\s+Child\s+SP\s+IP\s+Call Site\s+
 
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (53|57)\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64)\]\s*
 IFDEF:ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
 ENDIF:ARM
@@ -127,7 +139,7 @@ IFDEF:X86
 VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
 ENDIF:X86
 
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 32\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo2\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (33|34)\]\s*
 IFDEF:ARM
 VERIFY:\s+r0=<HEXVAL>\s+r1=<HEXVAL>\s+r2=<HEXVAL>\s+
 ENDIF:ARM
@@ -142,8 +154,8 @@ IFDEF:X86
 VERIFY:\s+eax=<HEXVAL>\s+ebx=<HEXVAL>\s+ecx=<HEXVAL>\s+
 ENDIF:X86
 
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 27\]\s*
-VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ 22\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Foo1\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (27|28)\]\s*
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+SymbolTestApp\.Program\.Main\(.*\)\s+\[(?i:.*[\\|/]SymbolTestApp\.cs) @ (22|23)\]\s*
 
 # There seems no way to get -i to work on desktop under cdb. It does work under dotnet-dump because of the module mapping.
 IFDEF:NETCORE_OR_DOTNETDUMP
@@ -206,27 +218,24 @@ ENDIF:NETCORE_OR_DOTNETDUMP
 !IFDEF:ARM
 
 # Verify DumpStack works
-# Issue: https://github.com/dotnet/diagnostics/issues/5839 - DumpStack on macOS missing ", calling" suffix on Foo4/Foo2 frames
-!IFDEF:OSX
 SOSCOMMAND:DumpStack
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
-VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
-ENDIF:OSX
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\)(,\s+calling.*)?\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\)(,\s+calling.*)?\s+
 
 # Verify DumpStack -EE works
 SOSCOMMAND:DumpStack -EE
 VERIFY:.*OS Thread Id:\s+0x<HEXVAL>.*\s+.*
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
-VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\)\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\)\s+)
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\)\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\)\s+
 
 # Verify EEStack works
-# Issue: https://github.com/dotnet/diagnostics/issues/5839 - EEStack on macOS missing ", calling" suffix on Foo4/Foo2 frames
-!IFDEF:OSX
 SOSCOMMAND:EEStack
 VERIFY:.*Child(-SP|EBP|FP)\s+RetAddr\s+Caller, Callee\s+
-VERIFY:(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\),\s+calling.*\s+)|(.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\),\s+calling.*\s+)
-ENDIF:OSX
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo4\(System\.String\)\)(,\s+calling.*)?\s+
+VERIFY:.*\s+<HEXVAL>\s+<HEXVAL>\s+\(MethodDesc\s+<HEXVAL>\s+(\+\s*0x<HEXVAL>\s+)?SymbolTestApp\.Program\.Foo2\(Int32, System\.String\)\)(,\s+calling.*)?\s+
 
 ENDIF:ARM
 ENDIF:ARM64
@@ -236,7 +245,7 @@ ENDIF:DOTNETDUMP
 SOSCOMMAND:ClrStack
 SOSCOMMAND:IP2MD <POUT>.*\s+(<HEXVAL>)\s+SymbolTestApp\.Program\.Foo4.*\s+<POUT>
 VERIFY:.*\s+Method Name:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
-VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 57\s+
+VERIFY:.*\s+Source file:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64)\s+
 
 # Verify that DumpIL works (depends on the IP2MD right above)
 SOSCOMMAND:DumpIL <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
@@ -256,7 +265,7 @@ SOSCOMMAND:clru <POUT>\s*MethodDesc:\s+(<HEXVAL>)\s*<POUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
-VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 57:\s+
+VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64):\s+
 
 # Verify that "u" with no line info works
 SOSCOMMAND:clru -n <PREVPOUT>
@@ -269,7 +278,7 @@ SOSCOMMAND:clru -o <PREVPOUT>
 VERIFY:\s*Normal JIT generated code\s+
 VERIFY:\s+SymbolTestApp\.Program\.Foo4\(System\.String\)\s+
 VERIFY:\s+Begin\s+<HEXVAL>,\s+size\s+<HEXVAL>\s+
-VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ 57:\s+
+VERIFY:\s+(?i:.*[\\|/]SymbolTestApp\.cs) @ (62|64):\s+
 
 ENDIF:DOTNETDUMP
 
