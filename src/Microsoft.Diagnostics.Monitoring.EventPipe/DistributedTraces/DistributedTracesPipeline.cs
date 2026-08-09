@@ -29,8 +29,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
-            await ExecuteActivityLoggerActionAsync((logger) => logger.PipelineStarted(token)).ConfigureAwait(false);
-
             eventSource.Dynamic.All += traceEvent => {
                 try
                 {
@@ -54,6 +52,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 {
                 }
             };
+
+            await ExecuteActivityLoggerActionAsync((logger) => logger.PipelineStarted(token)).ConfigureAwait(false);
 
             using EventTaskSource<Action> sourceCompletedTaskSource = new(
                 taskComplete => taskComplete,
