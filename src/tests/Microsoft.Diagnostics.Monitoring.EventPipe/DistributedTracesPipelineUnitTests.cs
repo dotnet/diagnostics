@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TaskCompletionSource<object?> activityLoggedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
             TestActivityLogger logger = new(pipelineStartedSource, activityLoggedSource);
 
-            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TracesRemoteTest UseActivitySource", _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TracesRemoteTest UseActivitySource WaitForActivitySourceListener", _output))
             {
                 DiagnosticsClient client = new(testRunner.Pid);
 
@@ -91,7 +91,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TaskCompletionSource<object?> activityLoggedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
             TestActivityLogger logger = new(pipelineStartedSource, activityLoggedSource);
 
-            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TracesRemoteTest UseActivitySource", _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TracesRemoteTest UseActivitySource WaitForActivitySourceListener", _output))
             {
                 DiagnosticsClient client = new(testRunner.Pid);
 
