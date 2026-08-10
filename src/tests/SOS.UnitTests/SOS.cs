@@ -887,6 +887,8 @@ public class SOSStackAndOtherTests
                     DumpNameSuffix = currentConfig.DebugType,
                     DebuggeeDumpOutputRootDir = debuggeeDumpOutputRootDir,
                     DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
+                    UsePipeSync = true,
+                    DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
                 },
                 Output);
 
@@ -908,6 +910,8 @@ public class SOSStackAndOtherTests
                         DumpNameSuffix = currentConfig.DebugType,
                         DebuggeeDumpOutputRootDir = debuggeeDumpOutputRootDir,
                         DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
+                        UsePipeSync = true,
+                        DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
                     },
                     Output);
             }

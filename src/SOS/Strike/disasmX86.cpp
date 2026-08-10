@@ -1087,11 +1087,9 @@ void
                 }
                 return;
             }
-            else
-                *whereCalled = 0;
         }
-        else
-            *whereCalled = 0;
+        *whereCalled = 0xFFFFFFFF;
+        return;
     }
 
     // call [REG+XX]
