@@ -2756,7 +2756,17 @@ LLDBServices::InitializeThreadInfo(lldb::SBProcess process)
     }
     SpecialThreadInfoHeader header;
     lldb::SBError error;
-    size_t read = process.ReadMemory(SpecialThreadInfoAddress, &header, sizeof(SpecialThreadInfoHeader), error);
+    uint64_t threadInfoAddress = SpecialThreadInfoAddress;
+    size_t read = process.ReadMemory(threadInfoAddress, &header, sizeof(SpecialThreadInfoHeader), error);
+    if ((error.Fail() || read != sizeof(header) ||
+         strncmp(header.signature, SPECIAL_THREADINFO_SIGNATURE, sizeof(SPECIAL_THREADINFO_SIGNATURE)) != 0)
+        && SpecialThreadInfoAddress != SpecialThreadInfoLegacyAddress)
+    {
+        // Fall back to the legacy address for dumps produced by older createdump binaries.
+        error.Clear();
+        threadInfoAddress = SpecialThreadInfoLegacyAddress;
+        read = process.ReadMemory(threadInfoAddress, &header, sizeof(SpecialThreadInfoHeader), error);
+    }
     if (error.Fail() || read != sizeof(header))
     {
         return;
@@ -2775,7 +2785,7 @@ LLDBServices::InitializeThreadInfo(lldb::SBProcess process)
     m_processId = header.pid;
     m_threadInfos.clear();
 
-    uint64_t address = SpecialThreadInfoAddress + sizeof(header);
+    uint64_t address = threadInfoAddress + sizeof(header);
     for (int index = 0; index < number; index++)
     {
         SpecialThreadInfoEntry entry;
