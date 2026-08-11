@@ -34,8 +34,9 @@ namespace EventPipeTracee
             bool diagMetrics = args.Any("DiagMetrics".Equals);
             bool duplicateNameMetrics = args.Any("DuplicateNameMetrics".Equals);
             bool useActivitySource = args.Any("UseActivitySource".Equals);
+            bool waitForActivitySourceListener = args.Any("WaitForActivitySourceListener".Equals);
 
-            Console.WriteLine($"{pid} EventPipeTracee: DiagMetrics {diagMetrics} UseActivitySource {useActivitySource}");
+            Console.WriteLine($"{pid} EventPipeTracee: DiagMetrics {diagMetrics} UseActivitySource {useActivitySource} WaitForActivitySourceListener {waitForActivitySourceListener}");
             Console.WriteLine($"{pid} EventPipeTracee: DuplicateNameMetrics {duplicateNameMetrics}");
 
             Console.WriteLine($"{pid} EventPipeTracee: start process");
@@ -75,6 +76,11 @@ namespace EventPipeTracee
 
             // Wait for server to send something
             int input = pipeStream.ReadByte();
+
+            if (waitForActivitySourceListener)
+            {
+                await WaitForActivitySourceListener(activitySource, pid).ConfigureAwait(false);
+            }
 
             Console.WriteLine($"{pid} {DateTime.UtcNow} Starting test body '{input}'");
             Console.Out.Flush();
@@ -139,6 +145,33 @@ namespace EventPipeTracee
 
             Console.WriteLine($"{pid} EventPipeTracee {DateTime.UtcNow} Ending remote test process '{input}'");
             return 0;
+        }
+
+        private static async Task WaitForActivitySourceListener(ActivitySource activitySource, int pid)
+        {
+            if (activitySource == null)
+            {
+                throw new InvalidOperationException("WaitForActivitySourceListener requires UseActivitySource.");
+            }
+
+            TimeSpan timeout = TimeSpan.FromSeconds(30);
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            Console.WriteLine($"{pid} EventPipeTracee: waiting for ActivitySource listener");
+            Console.Out.Flush();
+
+            while (!activitySource.HasListeners() && stopwatch.Elapsed < timeout)
+            {
+                await Task.Delay(10).ConfigureAwait(false);
+            }
+
+            if (!activitySource.HasListeners())
+            {
+                throw new TimeoutException($"ActivitySource listener was not installed within {timeout}.");
+            }
+
+            Console.WriteLine($"{pid} EventPipeTracee: ActivitySource listener ready after {stopwatch.Elapsed}");
+            Console.Out.Flush();
         }
 
         // TODO At some point we may want parameters to choose different test bodies.

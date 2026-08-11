@@ -37,7 +37,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         public static async Task ExecutePipelineWithTracee<T>(
             EventSourcePipeline<T> pipeline,
             TestRunner testRunner,
-            TaskCompletionSource<object> waitTaskSource = null)
+            TaskCompletionSource<object> waitTaskSource = null,
+            Task pipelineStartedTask = null)
             where T : EventSourcePipelineSettings
         {
             using CancellationTokenSource cancellation = new(DefaultPipelineRunTimeout);
@@ -47,7 +48,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 (p, t) => p.StartAsync(t),
                 testRunner,
                 cancellation.Token,
-                waitTaskSource);
+                waitTaskSource,
+                pipelineStartedTask);
         }
 
         public static Task ExecutePipelineWithTracee(
@@ -69,7 +71,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Func<TPipeline, CancellationToken, Task<Task>> startPipelineAsync,
             TestRunner testRunner,
             CancellationToken token,
-            TaskCompletionSource<object> waitTaskSource = null)
+            TaskCompletionSource<object> waitTaskSource = null,
+            Task pipelineStartedTask = null)
             where TPipeline : Pipeline
         {
             Task runTask;
@@ -81,6 +84,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             {
                 await TestRunnerUtilities.ExecuteCollection(Task.CompletedTask, testRunner, token);
                 throw;
+            }
+
+            if (pipelineStartedTask != null)
+            {
+                // The startup callback only completes on successful initialization, so also
+                // observe pipeline failure and the test timeout while waiting for readiness.
+                Task cancellationTask = Task.Delay(Timeout.InfiniteTimeSpan, token);
+                Task completedTask = await Task.WhenAny(pipelineStartedTask, runTask, cancellationTask).ConfigureAwait(false);
+                await completedTask.ConfigureAwait(false);
+
+                if (completedTask == runTask)
+                {
+                    throw new InvalidOperationException("Pipeline completed before signaling startup.");
+                }
             }
 
             Func<CancellationToken, Task> waitForPipeline = async (cancellationToken) => {
