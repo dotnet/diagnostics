@@ -29,6 +29,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
 
         protected override async Task OnEventSourceAvailable(EventPipeEventSource eventSource, Func<Task> stopSessionAsync, CancellationToken token)
         {
+            // Register callbacks before the first await because an incomplete asynchronous return allows event processing to begin.
             eventSource.Dynamic.All += traceEvent => {
                 try
                 {
