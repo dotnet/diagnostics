@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Diagnostics.DebugServices;
@@ -36,9 +37,15 @@ namespace Microsoft.Diagnostics.TestHelpers
             _dumpTargetFactory = new DumpTargetFactory(_host);
             serviceContainer.AddService<IDumpTargetFactory>(_dumpTargetFactory);
 
-            // Automatically enable symbol server support
-            _symbolService.AddSymbolServer(timeoutInMinutes: 6, retryCount: 5);
-            _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
+            // Remote symbol acquisition is opt-in so dump tests do not depend on network or machine cache state.
+            if (string.Equals(
+                Environment.GetEnvironmentVariable("DOTNET_DIAGNOSTICS_TEST_ENABLE_SYMBOL_SERVER"),
+                "true",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                _symbolService.AddSymbolServer(timeoutInMinutes: 6, retryCount: 5);
+                _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
+            }
         }
 
         public ServiceContainer ServiceContainer => _host.ServiceContainer;
