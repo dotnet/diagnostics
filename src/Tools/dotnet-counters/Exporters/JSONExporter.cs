@@ -76,10 +76,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("O")).Append("\", ")
                     .Append(" \"provider\": \"").Append(JsonEscape(payload.CounterMetadata.ProviderName)).Append("\", ")
                     .Append(" \"name\": \"").Append(JsonEscape(payload.GetDisplay())).Append("\", ")
-                    .Append(" \"tags\": \"").Append(JsonEscape(FormatTags(payload.ValueTags))).Append("\", ")
+                    .Append(" \"tags\": \"").Append(JsonEscape(FormatTags(payload.ValueTags, payload.IsMeter))).Append("\", ")
                     .Append(" \"counterType\": \"").Append(JsonEscape(payload.CounterType.ToString())).Append("\", ")
-                    .Append(" \"meterTags\": \"").Append(JsonEscape(FormatTags(payload.CounterMetadata.MeterTags))).Append("\", ")
-                    .Append(" \"instrumentTags\": \"").Append(JsonEscape(FormatTags(payload.CounterMetadata.InstrumentTags))).Append("\", ")
+                    .Append(" \"meterTags\": \"").Append(JsonEscape(FormatTags(payload.CounterMetadata.MeterTags, payload.IsMeter))).Append("\", ")
+                    .Append(" \"instrumentTags\": \"").Append(JsonEscape(FormatTags(payload.CounterMetadata.InstrumentTags, payload.IsMeter))).Append("\", ")
                     .Append(" \"value\": ").Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append(" },");
             }
         }
@@ -88,8 +88,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
 
         // Renders decoded tags as the flat "key=value,key=value" string this exporter emits. The values
         // are unescaped; JSON string quoting handles any ',' or '=' they contain.
-        private static string FormatTags(string tags)
+        private static string FormatTags(string tags, bool isMeter)
         {
+            if (!isMeter)
+            {
+                return tags;
+            }
+
             StringBuilder sb = new();
             foreach (KeyValuePair<string, string> tag in CounterTagFormatter.Decode(tags))
             {

@@ -74,7 +74,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 string tags = payload.CombineTags();
                 if (!string.IsNullOrEmpty(tags))
                 {
-                    counterName += "[" + FormatTags(tags) + "]";
+                    counterName += "[" + FormatTags(tags, payload.IsMeter) + "]";
                 }
 
                 AppendField(builder, payload.Timestamp.ToString());
@@ -96,8 +96,13 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         // Pairs are separated by ';'. A decoded key or value may still contain a real ',': it is kept
         // as-is here because AppendField quotes the whole field per RFC 4180, so the comma cannot spill
         // into the next column.
-        private static string FormatTags(string tags)
+        private static string FormatTags(string tags, bool isMeter)
         {
+            if (!isMeter)
+            {
+                return tags.Replace(',', ';');
+            }
+
             StringBuilder sb = new();
             foreach (KeyValuePair<string, string> tag in CounterTagFormatter.Decode(tags))
             {

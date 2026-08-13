@@ -308,6 +308,26 @@ namespace DotnetCounters.UnitTests
         }
 
         [Fact]
+        public void EventCounterMetadataIsNotDecodedAsMeterTags()
+        {
+            MockConsole console = new MockConsole(80, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(
+                CreateEventCounter(
+                    "Provider1",
+                    "Counter1",
+                    "{widget}",
+                    1,
+                    @"path:C:\temp,expression:x\=1"),
+                false);
+
+            Assert.Contains(console.Lines, line => line.Contains(@"C:\temp"));
+            Assert.Contains(console.Lines, line => line.Contains(@"x\=1"));
+        }
+
+        [Fact]
         public void CountersAreTruncatedBeyondScreenHeight()
         {
             MockConsole console = new MockConsole(50, 7, _outputHelper);
@@ -487,9 +507,9 @@ namespace DotnetCounters.UnitTests
         }
 
 
-        private static CounterPayload CreateEventCounter(string provider, string displayName, string unit, double value)
+        private static CounterPayload CreateEventCounter(string provider, string displayName, string unit, double value, string tags = "")
         {
-            return new EventCounterPayload(DateTime.MinValue, provider, displayName, displayName, unit, value, CounterType.Metric, 0, 0, "");
+            return new EventCounterPayload(DateTime.MinValue, provider, displayName, displayName, unit, value, CounterType.Metric, 0, 0, tags);
         }
 
         private static CounterPayload CreateIncrementingEventCounter(string provider, string displayName, string unit, double value)

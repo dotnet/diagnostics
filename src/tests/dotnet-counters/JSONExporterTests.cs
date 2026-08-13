@@ -196,6 +196,42 @@ namespace DotnetCounters.UnitTests
         }
 
         [Fact]
+        public void EventCounterMetadataIsNotDecodedAsMeterTags()
+        {
+            const string metadata = @"path:C:\temp,expression:x\=1";
+            string fileName = "EventCounterMetadataTest.json";
+            JSONExporter exporter = new(fileName, "myProcess.exe");
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(
+                new EventCounterPayload(
+                    DateTime.Now,
+                    "myProvider",
+                    "counterOne",
+                    "Counter One",
+                    string.Empty,
+                    1,
+                    CounterType.Metric,
+                    1,
+                    1,
+                    metadata),
+                false);
+            exporter.Stop();
+
+            try
+            {
+                string json = File.ReadAllText(fileName);
+                JSONCounterPayload payload = Assert.Single(JsonConvert.DeserializeObject<JSONCounterTrace>(json).events);
+
+                Assert.Equal(metadata, payload.tags);
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+        }
+
+        [Fact]
         public void DisplayUnitsTest()
         {
             string fileName = "displayUnitsTest.json";

@@ -239,6 +239,43 @@ namespace DotnetCounters.UnitTests
         }
 
         [Fact]
+        public void EventCounterMetadataIsNotDecodedAsMeterTags()
+        {
+            const string metadata = @"path:C:\temp,expression:x\=1";
+            string fileName = "EventCounterMetadataTest.csv";
+            CSVExporter exporter = new(fileName);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(
+                new EventCounterPayload(
+                    DateTime.Now,
+                    "myProvider",
+                    "counterOne",
+                    "Counter One",
+                    string.Empty,
+                    1,
+                    CounterType.Metric,
+                    1,
+                    1,
+                    metadata),
+                false);
+            exporter.Stop();
+
+            try
+            {
+                List<string> lines = File.ReadLines(fileName).ToList();
+                List<string> tokens = SplitCsvLine(Assert.Single(lines.Skip(1)));
+
+                Assert.Equal(5, tokens.Count);
+                Assert.Equal(@"Counter One[path:C:\temp;expression:x\=1]", tokens[2]);
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+        }
+
+        [Fact]
         public void SpecialCharactersAreCsvQuoted()
         {
             // A decoded tag value containing a ',' and a '"' forces RFC 4180 quoting of the field,
