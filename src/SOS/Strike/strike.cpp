@@ -5877,6 +5877,40 @@ BOOL CheckCLRNotificationEvent(DEBUG_LAST_EVENT_INFO_EXCEPTION* pdle)
 #endif
 }
 
+static bool ShouldReportCLRNotificationFailure()
+{
+#ifndef FEATURE_PAL
+    static ULONG s_processId = 0;
+    static ULONG64 s_processHandle = 0;
+    static bool s_reportedFailure = false;
+
+    ULONG processId = 0;
+    ULONG64 processHandle = 0;
+    if (g_ExtSystem->GetCurrentProcessSystemId(&processId) != S_OK ||
+        g_ExtSystem->GetCurrentProcessHandle(&processHandle) != S_OK)
+    {
+        return true;
+    }
+    if (processId != s_processId || processHandle != s_processHandle)
+    {
+        s_processId = processId;
+        s_processHandle = processHandle;
+        s_reportedFailure = false;
+    }
+    if (s_reportedFailure)
+    {
+        return false;
+    }
+    s_reportedFailure = true;
+#endif
+    return true;
+}
+
+static void ReportCLRNotificationFailure(HRESULT status)
+{
+    ExtErr("SOS CLR notification handler failed, 0x%08x; attempting to continue the target\n", status);
+}
+
 HRESULT HandleCLRNotificationEvent()
 {
     /*
@@ -5892,7 +5926,11 @@ HRESULT HandleCLRNotificationEvent()
     if (!CheckCLRNotificationEvent(&dle))
     {
 #ifndef FEATURE_PAL
-        ExtOut("Expecting first chance CLRN exception\n");
+        if (ShouldReportCLRNotificationFailure())
+        {
+            ReportCLRNotificationFailure(E_FAIL);
+            ExtOut("Expecting first chance CLRN exception\n");
+        }
         return E_FAIL;
 #else
         g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "process continue", 0);
@@ -5905,7 +5943,11 @@ HRESULT HandleCLRNotificationEvent()
     HRESULT Status = g_clrData->TranslateExceptionRecordToNotification(&dle.ExceptionRecord, &Notification);
     if (Status != S_OK)
     {
-        ExtErr("Error processing exception notification\n");
+        if (ShouldReportCLRNotificationFailure())
+        {
+            ReportCLRNotificationFailure(Status);
+            ExtErr("Error processing exception notification\n");
+        }
         return Status;
     }
     else
@@ -5916,11 +5958,10 @@ HRESULT HandleCLRNotificationEvent()
             case DEBUG_STATUS_GO_HANDLED:
             case DEBUG_STATUS_GO_NOT_HANDLED:
 #ifndef FEATURE_PAL
-                g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "g", 0);
+                return g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "g", 0);
 #else
-                g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "process continue", 0);
+                return g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "process continue", 0);
 #endif
-                break;
             default:
                 break;
         }
@@ -5941,11 +5982,89 @@ void EnableModuleLoadUnloadCallbacks()
 
 #ifndef FEATURE_PAL
 
+class CLRNotificationResumeGuard
+{
+    ToRelease<IDebugControl2> m_control;
+    bool m_resume;
+
+public:
+    CLRNotificationResumeGuard(IDebugClient* client)
+        : m_resume(false)
+    {
+        if (FAILED(client->QueryInterface(__uuidof(IDebugControl2), (void**)&m_control)))
+        {
+            return;
+        }
+
+        ULONG debugClass = DEBUG_CLASS_UNINITIALIZED;
+        ULONG qualifier = 0;
+        if (m_control->GetDebuggeeType(&debugClass, &qualifier) == S_OK &&
+            debugClass == DEBUG_CLASS_USER_WINDOWS &&
+            qualifier < DEBUG_DUMP_SMALL)
+        {
+            m_resume = true;
+        }
+    }
+
+    ~CLRNotificationResumeGuard()
+    {
+        if (m_resume)
+        {
+            // Execute can invoke this callback reentrantly while g waits for the next event.
+            m_resume = false;
+            m_control->Execute(DEBUG_OUTCTL_NOT_LOGGED, "g", 0);
+        }
+    }
+
+    void SuppressResume()
+    {
+        m_resume = false;
+    }
+};
+
 DECLARE_API(SOSHandleCLRN)
 {
-    INIT_API();
+    INIT_API_EXT();
+    CLRNotificationResumeGuard resumeGuard(client);
+    if ((Status = ArchQuery()) != S_OK)
+    {
+        if (ShouldReportCLRNotificationFailure())
+        {
+            ReportCLRNotificationFailure(Status);
+        }
+        return Status;
+    }
+    if ((Status = GetRuntime(&g_pRuntime)) != S_OK)
+    {
+        if (ShouldReportCLRNotificationFailure())
+        {
+            ReportCLRNotificationFailure(Status);
+            EENotLoadedMessage(Status);
+        }
+        return Status;
+    }
+    if ((Status = LoadClrDebugDll()) != S_OK)
+    {
+        if (ShouldReportCLRNotificationFailure())
+        {
+            ReportCLRNotificationFailure(Status);
+            DACMessage(Status);
+        }
+        return Status;
+    }
+    g_bDacBroken = FALSE;
+    ToRelease<IXCLRDataProcess> spIDP(g_clrData);
+    ToRelease<ISOSDacInterface> spISD(g_sos);
+    ToRelease<ISOSDacInterface15> spISD15(g_sos15);
+    ToRelease<ISOSDacInterface16> spISD16(g_sos16);
+    ResetGlobals();
     MINIDUMP_NOT_SUPPORTED();
-    return HandleCLRNotificationEvent();
+    Status = HandleCLRNotificationEvent();
+    if (SUCCEEDED(Status))
+    {
+        resumeGuard.SuppressResume();
+    }
+    return Status;
 }
 
 HRESULT HandleRuntimeLoadedNotification(IDebugClient* client)

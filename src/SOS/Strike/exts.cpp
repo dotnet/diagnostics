@@ -298,6 +298,11 @@ void
 DACMessage(HRESULT Status)
 {
     ExtOut("Failed to load data access module, 0x%08x\n", Status);
+    HRESULT fallbackFailure = GetDacFallbackFailure();
+    if (FAILED(fallbackFailure))
+    {
+        ExtOut("The dbgeng data access fallback also failed to provide ISOSDacInterface, 0x%08x\n", fallbackFailure);
+    }
     if (g_pRuntime->GetRuntimeConfiguration() >= IRuntime::ConfigurationEnd)
     {
         ExtOut("Unknown runtime type. Command not supported.\n");
