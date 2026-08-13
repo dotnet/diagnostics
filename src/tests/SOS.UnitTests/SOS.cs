@@ -704,6 +704,23 @@ public class SOSDumpTests
             throw new SkipTestException("CLR notification failure coverage requires Windows and a pre-.NET 11 runtime");
         }
 
+        string sourceSosPath = config.SOSPath();
+        string isolatedSosDirectory = Path.Combine(config.LogDirPath, "CLRNotificationHandlerFailure.SOS");
+        // Omitting the bundled cDAC makes the forced cDAC failure independent of the build layout.
+        Directory.CreateDirectory(isolatedSosDirectory);
+        foreach (string sourcePath in Directory.EnumerateFiles(Path.GetDirectoryName(sourceSosPath)))
+        {
+            if (!Path.GetFileName(sourcePath).Equals("mscordaccore_universal.dll", StringComparison.OrdinalIgnoreCase))
+            {
+                File.Copy(sourcePath, Path.Combine(isolatedSosDirectory, Path.GetFileName(sourcePath)), overwrite: true);
+            }
+        }
+        Dictionary<string, string> settings = new(config.AllSettings)
+        {
+            ["SOSPath"] = Path.Combine(isolatedSosDirectory, Path.GetFileName(sourceSosPath))
+        };
+        config = new TestConfiguration(settings);
+
         await SOSTestHelpers.RunTest(
             scriptName: "CLRNotificationHandlerFailure.script",
             new SOSRunner.TestInformation
