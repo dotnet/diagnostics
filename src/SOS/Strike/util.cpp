@@ -3810,10 +3810,14 @@ public:
 HRESULT LoadClrDebugDll(void)
 {
     _ASSERTE(g_pRuntime != nullptr);
-    HRESULT hr = g_pRuntime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::UseCDac, &g_clrData);
+    IRuntime::ClrDataProcessFlags flags =
+        Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseCDac ? IRuntime::ClrDataProcessFlags::CDacOnly :
+        Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseLegacyDac ? IRuntime::ClrDataProcessFlags::None :
+        IRuntime::ClrDataProcessFlags::UseCDac;
+    HRESULT hr = g_pRuntime->GetClrDataProcess(flags, &g_clrData);
     if (FAILED(hr))
     {
-        if (Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseCDac)
+        if (Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseCDac || hr == CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL)
         {
             return hr;
         }

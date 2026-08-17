@@ -54,59 +54,93 @@ namespace SOS.Hosting
             return new ClrDataProcessActivator(assetResolver);
         }
 
-        public IntPtr CreateClrDataProcess(IRuntime runtime)
+        public IntPtr CreateClrDataProcess(IRuntime runtime, CDacLoadPolicy policy)
         {
             if (runtime is null)
             {
                 throw new ArgumentNullException(nameof(runtime));
             }
 
-            ICLRDebugging clrDebugging = GetClrDebugging();
-            if (clrDebugging is null)
-            {
-                // dbgshim is not available in this host; the caller falls back to loading the DAC.
-                return IntPtr.Zero;
-            }
-
-            DataTargetWrapper dataTarget;
             lock (_lock)
             {
-                dataTarget = new DataTargetWrapper(runtime.Services, runtime);
-                _dataTargets.Add(dataTarget);
-            }
-
-            ClrDebuggingVersion maxDebuggerSupportedVersion = new()
-            {
-                StructVersion = 0,
-                Major = 4,
-                Minor = 0,
-                Build = 0,
-                Revision = 0,
-            };
-
-            Guid riidProcess = RuntimeWrapper.IID_IXCLRDataProcess;
-            HResult hr = clrDebugging.OpenVirtualProcess(
-                runtime.RuntimeModule.ImageBase,
-                dataTarget.IDataTarget,
-                libraryProvider: IntPtr.Zero,
-                maxDebuggerSupportedVersion,
-                in riidProcess,
-                out IntPtr clrDataProcess,
-                out _,
-                out _);
-
-            if (!hr || clrDataProcess == IntPtr.Zero)
-            {
-                Trace.TraceInformation($"ClrDataProcessActivator: dbgshim declined runtime #{runtime.Id} (hr={hr:x8}); falling back to DAC load.");
-                if (clrDataProcess != IntPtr.Zero)
+                ICLRDebugging clrDebugging = GetClrDebugging();
+                if (clrDebugging is null)
                 {
-                    COMHelper.Release(clrDataProcess);
+                    // dbgshim is not available in this host; the caller decides whether to fall back.
+                    return IntPtr.Zero;
                 }
-                return IntPtr.Zero;
+
+                DataTargetWrapper dataTarget = new(runtime.Services, runtime);
+                _dataTargets.Add(dataTarget);
+
+                DbgShimCDacLoadPolicy dbgShimPolicy = policy switch
+                {
+                    CDacLoadPolicy.UseCDac => DbgShimCDacLoadPolicy.CDacOnly,
+                    CDacLoadPolicy.UseLegacyDac => DbgShimCDacLoadPolicy.LegacyDacOnly,
+                    _ => DbgShimCDacLoadPolicy.PreferCDac,
+                };
+                if (!SetCDacLoadPolicy(clrDebugging, dbgShimPolicy))
+                {
+                    return IntPtr.Zero;
+                }
+
+                ClrDebuggingVersion maxDebuggerSupportedVersion = new()
+                {
+                    StructVersion = 0,
+                    Major = 4,
+                    Minor = 0,
+                    Build = 0,
+                    Revision = 0,
+                };
+
+                Guid riidProcess = RuntimeWrapper.IID_IXCLRDataProcess;
+                HResult hr = clrDebugging.OpenVirtualProcess(
+                    runtime.RuntimeModule.ImageBase,
+                    dataTarget.IDataTarget,
+                    libraryProvider: IntPtr.Zero,
+                    maxDebuggerSupportedVersion,
+                    in riidProcess,
+                    out IntPtr clrDataProcess,
+                    out _,
+                    out _);
+
+                if (!hr || clrDataProcess == IntPtr.Zero)
+                {
+                    Trace.TraceInformation($"ClrDataProcessActivator: dbgshim declined runtime #{runtime.Id} (hr={hr:x8}, policy={dbgShimPolicy}).");
+                    if (clrDataProcess != IntPtr.Zero)
+                    {
+                        COMHelper.Release(clrDataProcess);
+                    }
+                    return IntPtr.Zero;
+                }
+
+                Trace.TraceInformation($"ClrDataProcessActivator: activated IXCLRDataProcess for runtime #{runtime.Id} via dbgshim (policy={dbgShimPolicy}).");
+                return clrDataProcess;
+            }
+        }
+
+        private static bool SetCDacLoadPolicy(ICLRDebugging clrDebugging, DbgShimCDacLoadPolicy policy)
+        {
+            if (!COMHelper.QueryInterface(clrDebugging.InterfacePointer, ICLRDebuggingPolicy.IID_ICLRDebuggingPolicy, out IntPtr policyPtr))
+            {
+                Trace.TraceError($"ClrDataProcessActivator: dbgshim does not support ICLRDebuggingPolicy (requested policy={policy}).");
+                return false;
             }
 
-            Trace.TraceInformation($"ClrDataProcessActivator: activated IXCLRDataProcess for runtime #{runtime.Id} via dbgshim (cDAC preferred).");
-            return clrDataProcess;
+            try
+            {
+                HResult hr = ICLRDebuggingPolicy.Create(policyPtr).SetCDacLoadPolicy(policy);
+                if (!hr)
+                {
+                    Trace.TraceError($"ClrDataProcessActivator: SetCDacLoadPolicy({policy}) failed (hr={hr:x8}).");
+                    return false;
+                }
+                return true;
+            }
+            finally
+            {
+                COMHelper.Release(policyPtr);
+            }
         }
 
         private ICLRDebugging GetClrDebugging()
@@ -145,19 +179,7 @@ namespace SOS.Hosting
                         return null;
                     }
 
-                    ICLRDebugging clrDebugging = ICLRDebugging.Create(punk);
-
-                    // The prefer-cDAC policy is a stable per-instance choice: a serviceable target is
-                    // opened by the co-located cDAC, and an unserviceable one is declined so the caller
-                    // can fall back to the DAC.
-                    if (COMHelper.QueryInterface(clrDebugging.InterfacePointer, ICLRDebuggingPolicy.IID_ICLRDebuggingPolicy, out IntPtr policyPtr))
-                    {
-                        ICLRDebuggingPolicy policy = ICLRDebuggingPolicy.Create(policyPtr);
-                        policy.SetCDacLoadPolicy(DbgShimCDacLoadPolicy.PreferCDac);
-                        COMHelper.Release(policyPtr);
-                    }
-
-                    _clrDebugging = clrDebugging;
+                    _clrDebugging = ICLRDebugging.Create(punk);
                 }
                 catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
                 {

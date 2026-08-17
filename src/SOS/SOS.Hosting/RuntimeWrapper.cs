@@ -37,12 +37,17 @@ namespace SOS.Hosting
             /// <summary>
             /// No flags
             /// </summary>
-            None,
+            None = 0x0,
 
             /// <summary>
             /// Use the cdac if available and enabled by global setting
             /// </summary>
-            UseCDac
+            UseCDac = 0x1,
+
+            /// <summary>
+            /// Use the cDAC without falling back to the DAC
+            /// </summary>
+            CDacOnly = 0x3
         }
 
         public static Guid IID_IXCLRDataProcess = new("5c552ab6-fc09-4cb3-8e36-22fa03c798b7");
@@ -232,11 +237,19 @@ namespace SOS.Hosting
                 return HResult.E_INVALIDARG;
             }
             *ppClrDataProcess = IntPtr.Zero;
+            CDacLoadPolicy configuredPolicy = _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.Default;
+            bool cdacOnly =
+                configuredPolicy == CDacLoadPolicy.UseCDac ||
+                (flags & ClrDataProcessFlags.CDacOnly) == ClrDataProcessFlags.CDacOnly;
+            bool useCDac =
+                configuredPolicy != CDacLoadPolicy.UseLegacyDac &&
+                (flags & ClrDataProcessFlags.UseCDac) != 0;
+
             // Prefer the cDAC for the data-access (IXCLRDataProcess) path when the runtime policy
             // selects it (GetCDacFilePath returns non-null); fall back to the in-box DAC otherwise.
             // The ICorDebug/DBI path (CreateCorDebugProcess) always uses the in-box DAC. The flags
-            // parameter is retained for the native IRuntime contract but no longer consulted here.
-            if (_cdacDataProcess == IntPtr.Zero && _runtime.GetCDacFilePath() is not null)
+            // communicate whether the caller selected cDAC and whether fallback is allowed.
+            if (useCDac && _cdacDataProcess == IntPtr.Zero && _runtime.GetCDacFilePath() is not null)
             {
                 try
                 {
@@ -246,14 +259,17 @@ namespace SOS.Hosting
                     // through to the in-box DAC below.
                     Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: trying dbgshim seam (cDAC preferred)");
                     IClrDataProcessActivator activator = _services.GetService<IClrDataProcessActivator>();
-                    _cdacDataProcess = activator?.CreateClrDataProcess(_runtime) ?? IntPtr.Zero;
+                    CDacLoadPolicy policy = cdacOnly ? CDacLoadPolicy.UseCDac : CDacLoadPolicy.Default;
+                    _cdacDataProcess = activator?.CreateClrDataProcess(_runtime, policy) ?? IntPtr.Zero;
                     if (_cdacDataProcess != IntPtr.Zero)
                     {
                         Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: serviced by the cDAC via the dbgshim seam");
                     }
                     else
                     {
-                        Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: dbgshim seam declined; falling back to the in-box DAC");
+                        Trace.TraceInformation(cdacOnly
+                            ? $"Runtime #{_runtime.Id} native data-access: dbgshim seam declined under forced cDAC policy"
+                            : $"Runtime #{_runtime.Id} native data-access: dbgshim seam declined; falling back to the in-box DAC");
                     }
                 }
                 catch (Exception ex)
@@ -261,7 +277,15 @@ namespace SOS.Hosting
                     Trace.TraceError(ex.ToString());
                 }
             }
-            *ppClrDataProcess = _cdacDataProcess;
+            if (useCDac)
+            {
+                *ppClrDataProcess = _cdacDataProcess;
+            }
+            if (*ppClrDataProcess == IntPtr.Zero && cdacOnly)
+            {
+                Trace.TraceError($"Runtime #{_runtime.Id} native data-access: cDAC was forced but could not service this runtime; not falling back to the DAC");
+                return unchecked((int)0x80131c46); // CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL
+            }
             if (*ppClrDataProcess == IntPtr.Zero)
             {
                 if (_clrDataProcess == IntPtr.Zero)

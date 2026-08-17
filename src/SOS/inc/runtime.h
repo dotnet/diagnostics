@@ -46,12 +46,17 @@ public:
         /// <summary>
         /// No flags
         /// </summary>
-        None,
+        None = 0x0,
 
         /// <summary>
         /// Use the CDac if available and enabled by global setting
         /// </summary>
-        UseCDac
+        UseCDac = 0x1,
+
+        /// <summary>
+        /// Use the CDac without falling back to the DAC
+        /// </summary>
+        CDacOnly = 0x3
     };
 
     /// <summary>

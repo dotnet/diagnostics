@@ -207,7 +207,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     seamTriedCDac = true;
                     Trace.TraceInformation($"Runtime #{Id} data-access: trying dbgshim seam (cDAC preferred)");
-                    IntPtr clrDataProcess = activator.CreateClrDataProcess(this);
+                    IntPtr clrDataProcess = activator.CreateClrDataProcess(this, policy);
                     if (clrDataProcess != IntPtr.Zero)
                     {
                         Trace.TraceInformation($"Runtime #{Id} data-access: dbgshim seam activated an IXCLRDataProcess (cDAC)");

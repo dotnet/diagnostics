@@ -562,9 +562,6 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
     return S_OK;
 }
 
-// The minimum runtime major version that supports the cDAC.
-static const DWORD MinCDacRuntimeMajorVersion = 11;
-
 // Returns true if the named environment variable is set to "1".
 static bool IsEnvironmentVariableSetToOne(const char* name)
 {
@@ -595,14 +592,8 @@ bool Runtime::ShouldUseCDac()
         return false;
     }
 
-    // Use the cDAC only for runtimes that support it (.NET 11+).
-    VS_FIXEDFILEINFO fileInfo;
-    if (FAILED(GetEEVersion(&fileInfo, nullptr, 0)))
-    {
-        return false;
-    }
-    DWORD majorVersion = (fileInfo.dwFileVersionMS >> 16) & 0xFFFF;
-    return majorVersion >= MinCDacRuntimeMajorVersion;
+    // Let the cDAC validate whether it can service the target.
+    return true;
 }
 
 CDacLoadPolicy Runtime::GetCDacLoadPolicy()

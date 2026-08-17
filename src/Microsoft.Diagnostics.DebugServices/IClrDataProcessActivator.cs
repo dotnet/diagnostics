@@ -26,11 +26,12 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <c>DataTarget.AddLoadedRuntime</c>).
         /// </summary>
         /// <param name="runtime">The runtime to activate data access for.</param>
+        /// <param name="policy">The cDAC-versus-DAC activation policy.</param>
         /// <returns>
         /// An AddRef'd IUnknown for the runtime's IXCLRDataProcess, or <see cref="IntPtr.Zero"/> when
         /// activation is not available or the target is not serviceable through this path (the caller
         /// should then fall back to loading the DAC itself).
         /// </returns>
-        IntPtr CreateClrDataProcess(IRuntime runtime);
+        IntPtr CreateClrDataProcess(IRuntime runtime, CDacLoadPolicy policy);
     }
 }
