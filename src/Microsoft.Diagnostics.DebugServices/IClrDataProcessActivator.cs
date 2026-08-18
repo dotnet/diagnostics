@@ -6,31 +6,18 @@ using System;
 namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
-    /// Activates a data-access interface (IXCLRDataProcess) for a runtime through dbgshim instead
-    /// of having ClrMD locate and load the DAC/cDAC itself. The SOS hosting layer supplies the
-    /// implementation: it builds a runtime-bound data target, hands the runtime module base to
-    /// dbgshim, which prefers the co-located cDAC and falls back to the legacy DAC via the library
-    /// provider. The resulting interface is then handed to ClrMD through
-    /// <c>DataTarget.AddLoadedRuntime</c>.
-    ///
-    /// This service is optional. When it is not registered, or when activation is not viable for a
-    /// given runtime (for example, an older target for which the cDAC declines), the caller keeps
-    /// using the existing ClrMD load path, so behavior is unchanged for those targets.
+    /// Creates CLR data-access interfaces for runtimes.
     /// </summary>
     public interface IClrDataProcessActivator
     {
         /// <summary>
-        /// Attempts to activate an exclusive IXCLRDataProcess for <paramref name="runtime"/> through
-        /// dbgshim. Ownership of the returned interface transfers to the caller, which must release
-        /// the single reference when the runtime is disposed (this matches the ownership contract of
-        /// <c>DataTarget.AddLoadedRuntime</c>).
+        /// Creates an IXCLRDataProcess for <paramref name="runtime"/>.
         /// </summary>
         /// <param name="runtime">The runtime to activate data access for.</param>
         /// <param name="policy">The cDAC-versus-DAC activation policy.</param>
         /// <returns>
-        /// An AddRef'd IUnknown for the runtime's IXCLRDataProcess, or <see cref="IntPtr.Zero"/> when
-        /// activation is not available or the target is not serviceable through this path (the caller
-        /// should then fall back to loading the DAC itself).
+        /// An owned IXCLRDataProcess reference, or <see cref="IntPtr.Zero"/> if one could not be
+        /// created.
         /// </returns>
         IntPtr CreateClrDataProcess(IRuntime runtime, CDacLoadPolicy policy);
     }

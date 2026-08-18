@@ -14,18 +14,7 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 namespace SOS.Hosting
 {
     /// <summary>
-    /// The SOS-hosting implementation of <see cref="IClrDataProcessActivator"/>. It loads the
-    /// dbgshim that ships next to the native sos module, builds a runtime-bound
-    /// <see cref="DataTargetWrapper"/> (the ICLRDataTarget plus the contract/runtime/metadata
-    /// locators the cDAC needs), and asks dbgshim to open the runtime. dbgshim prefers the
-    /// co-located cDAC; the resulting IXCLRDataProcess is handed back so ClrMD can build a runtime
-    /// over it without loading a DAC itself.
-    ///
-    /// The library provider is intentionally not supplied here yet: under the prefer-cDAC policy a
-    /// serviceable target is opened by the co-located cDAC without consulting a provider, and when
-    /// the cDAC declines this returns <see cref="IntPtr.Zero"/> so the caller falls back to its
-    /// existing DAC load path. A production library provider for in-dbgshim DAC fallback is Phase 4
-    /// work.
+    /// Creates CLR data-access interfaces with ICLRDebugging.
     /// </summary>
     public sealed class ClrDataProcessActivator : IClrDataProcessActivator
     {
@@ -66,7 +55,6 @@ namespace SOS.Hosting
                 ICLRDebugging clrDebugging = GetClrDebugging();
                 if (clrDebugging is null)
                 {
-                    // dbgshim is not available in this host; the caller decides whether to fall back.
                     return IntPtr.Zero;
                 }
 

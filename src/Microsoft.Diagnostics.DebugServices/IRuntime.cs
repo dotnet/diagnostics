@@ -66,13 +66,6 @@ namespace Microsoft.Diagnostics.DebugServices
         string GetDacFilePath(out bool verifySignature);
 
         /// <summary>
-        /// Returns the cDAC (mscordaccore_universal) file path to use for this runtime, or null
-        /// when the cDAC should not be used (policy disabled or unsupported runtime) or isn't
-        /// available.
-        /// </summary>
-        string GetCDacFilePath();
-
-        /// <summary>
         /// Returns the DBI file path
         /// </summary>
         string GetDbiFilePath();

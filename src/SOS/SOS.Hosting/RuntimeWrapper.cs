@@ -245,31 +245,23 @@ namespace SOS.Hosting
                 configuredPolicy != CDacLoadPolicy.UseLegacyDac &&
                 (flags & ClrDataProcessFlags.UseCDac) != 0;
 
-            // Prefer the cDAC for the data-access (IXCLRDataProcess) path when the runtime policy
-            // selects it (GetCDacFilePath returns non-null); fall back to the in-box DAC otherwise.
-            // The ICorDebug/DBI path (CreateCorDebugProcess) always uses the in-box DAC. The flags
-            // communicate whether the caller selected cDAC and whether fallback is allowed.
-            if (useCDac && _cdacDataProcess == IntPtr.Zero && _runtime.GetCDacFilePath() is not null)
+            if (useCDac && _cdacDataProcess == IntPtr.Zero)
             {
                 try
                 {
-                    // Activate the cDAC through the dbgshim seam, shared with the managed ClrMD path:
-                    // dbgshim (co-located with native SOS) finds and validates the co-located cDAC and
-                    // returns the IXCLRDataProcess. If the cDAC declines this yields Zero and we fall
-                    // through to the in-box DAC below.
-                    Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: trying dbgshim seam (cDAC preferred)");
+                    Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: requesting an IXCLRDataProcess (cDAC preferred)");
                     IClrDataProcessActivator activator = _services.GetService<IClrDataProcessActivator>();
                     CDacLoadPolicy policy = cdacOnly ? CDacLoadPolicy.UseCDac : CDacLoadPolicy.Default;
                     _cdacDataProcess = activator?.CreateClrDataProcess(_runtime, policy) ?? IntPtr.Zero;
                     if (_cdacDataProcess != IntPtr.Zero)
                     {
-                        Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: serviced by the cDAC via the dbgshim seam");
+                        Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: received an IXCLRDataProcess");
                     }
                     else
                     {
                         Trace.TraceInformation(cdacOnly
-                            ? $"Runtime #{_runtime.Id} native data-access: dbgshim seam declined under forced cDAC policy"
-                            : $"Runtime #{_runtime.Id} native data-access: dbgshim seam declined; falling back to the in-box DAC");
+                            ? $"Runtime #{_runtime.Id} native data-access: no IXCLRDataProcess was created under forced cDAC policy"
+                            : $"Runtime #{_runtime.Id} native data-access: no IXCLRDataProcess was created; falling back to the in-box DAC");
                     }
                 }
                 catch (Exception ex)

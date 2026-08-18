@@ -20,14 +20,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     public class Runtime : IRuntime, IDisposable
     {
         private readonly ClrInfo _clrInfo;
-        private readonly IHostAssetResolver _hostAssetResolver;
         private readonly ISettingsService _settingsService;
         private readonly ISymbolService _symbolService;
         private Version _runtimeVersion;
         private ClrRuntime _clrRuntime;
         private string _dacFilePath;
-        private bool _verifySignature;      // This only applies to the regular DAC, not the CDAC
-        private string _cdacFilePath;
+        private bool _verifySignature;
         private string _dbiFilePath;
 
         protected readonly ServiceContainer _serviceContainer;
@@ -37,10 +35,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             Target = services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
             Id = id;
             _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
-            // IHostAssetResolver is optional: it is registered by the SOS hosting layer to locate
-            // the bundled cDAC. When absent (hosts without SOS.Hosting, e.g. some test hosts), cDAC
-            // resolution returns null and the in-box DAC is used.
-            _hostAssetResolver = services.GetService<IHostAssetResolver>();
             _settingsService = services.GetService<ISettingsService>() ?? throw new ArgumentException("ISettingsService required");
             _symbolService = services.GetService<ISymbolService>() ?? throw new ArgumentException("ISymbolService required");
 
@@ -111,26 +105,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return _dacFilePath;
         }
 
-        public string GetCDacFilePath()
-        {
-            // ShouldUseCDac() evaluates the cDAC loading policy. When it returns false the caller
-            // uses the in-box DAC from GetDacFilePath instead.
-            if (!ShouldUseCDac())
-            {
-                return null;
-            }
-
-            // The cDAC is bundled with the diagnostics tool and is never downloaded, so a missing
-            // path means it isn't available for this host.
-            _cdacFilePath ??= GetLibraryPath(DebugLibraryKind.CDac);
-            if (_cdacFilePath is null && _settingsService.CDacLoadPolicy == CDacLoadPolicy.UseCDac)
-            {
-                // The cDAC was explicitly forced but isn't bundled with this tool.
-                throw new DiagnosticsException($"The cDAC was explicitly requested but no matching cDAC is available for this runtime: {RuntimeModule.FileName}");
-            }
-            return _cdacFilePath;
-        }
-
         public string GetDbiFilePath()
         {
             _dbiFilePath ??= GetLibraryPath(DebugLibraryKind.Dbi);
@@ -140,12 +114,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         #endregion
 
         /// <summary>
-        /// Evaluates the cDAC loading policy for this runtime. This is the single place that
-        /// decides whether the diagnostics tool should load the cDAC itself in place of the
-        /// in-box DAC, based on the <see cref="ISettingsService.CDacLoadPolicy"/> setting. There is
-        /// no runtime-version gate: whether the cDAC can service a target is decided by the cDAC's
-        /// own contract-support validation (it declines targets it cannot service), after which the
-        /// caller falls back to the in-box DAC.
+        /// Returns whether cDAC activation is enabled for this runtime.
         /// </summary>
         private bool ShouldUseCDac()
         {
@@ -174,11 +143,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return false;
             }
 
-            // Attempt the cDAC for every runtime and let it decide by contract support. The cDAC
-            // (through the dbgshim seam or a direct ClrMD load) validates whether it can service the
-            // target and declines when it cannot, at which point the caller falls back to the in-box
-            // DAC. This replaces the earlier runtime-version gate, which was a placeholder from before
-            // the cDAC self-validated.
             return true;
         }
 
@@ -190,58 +154,26 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             CDacLoadPolicy policy = _settingsService.CDacLoadPolicy;
             Trace.TraceInformation($"Runtime #{Id} data-access: begin (cDAC policy={policy}, cDAC selected={ShouldUseCDac()})");
 
-            // 1. dbgshim activation seam. SOS already enumerated this runtime, so hand the runtime
-            // module base to dbgshim, let it prefer the co-located cDAC, and register the resulting
-            // IXCLRDataProcess with ClrMD so it builds a runtime WITHOUT loading a DAC itself. dbgshim
-            // only returns a live interface when the cDAC actually serviced the target; when it
-            // declines it returns a null interface and we fall through to the in-box DAC below.
-            //
-            // Activation is one-way: once dbgshim hands back a live IXCLRDataProcess we register it on
-            // the ClrInfo, and ClrMD builds every runtime for that ClrInfo over the registered
-            // interface. There is no un-register, so if activation succeeds we commit to the cDAC.
-            bool seamTriedCDac = false;
             if (ShouldUseCDac())
             {
                 IClrDataProcessActivator activator = Services.GetService<IClrDataProcessActivator>();
                 if (activator is not null)
                 {
-                    seamTriedCDac = true;
-                    Trace.TraceInformation($"Runtime #{Id} data-access: trying dbgshim seam (cDAC preferred)");
+                    Trace.TraceInformation($"Runtime #{Id} data-access: requesting an IXCLRDataProcess (cDAC preferred)");
                     IntPtr clrDataProcess = activator.CreateClrDataProcess(this, policy);
                     if (clrDataProcess != IntPtr.Zero)
                     {
-                        Trace.TraceInformation($"Runtime #{Id} data-access: dbgshim seam activated an IXCLRDataProcess (cDAC)");
+                        Trace.TraceInformation($"Runtime #{Id} data-access: received an IXCLRDataProcess");
                         return CreateRuntimeFromClrDataProcess(clrDataProcess);
                     }
-                    Trace.TraceInformation($"Runtime #{Id} data-access: dbgshim seam declined; the cDAC did not service this target");
+                    Trace.TraceInformation($"Runtime #{Id} data-access: no IXCLRDataProcess was created");
                 }
                 else
                 {
-                    Trace.TraceInformation($"Runtime #{Id} data-access: no dbgshim seam in this host (activator not registered)");
+                    Trace.TraceInformation($"Runtime #{Id} data-access: no IXCLRDataProcess activator is registered");
                 }
             }
 
-            // 2. Direct ClrMD cDAC load, for hosts without the dbgshim seam (the activator is absent).
-            // When the seam already tried the same co-located cDAC and it declined, skip this - the
-            // cDAC would decline here too - and go straight to the in-box DAC.
-            if (ShouldUseCDac() && !seamTriedCDac)
-            {
-                string cdacFilePath = GetCDacFilePath();
-                if (cdacFilePath is not null)
-                {
-                    Trace.TraceInformation($"Runtime #{Id} data-access: trying direct ClrMD cDAC load {cdacFilePath}");
-                    ClrRuntime cdacRuntime = TryCreateRuntimeFromLibrary(cdacFilePath);
-                    if (cdacRuntime is not null)
-                    {
-                        Trace.TraceInformation($"Runtime #{Id} data-access: serviced by direct cDAC load");
-                        return cdacRuntime;
-                    }
-                    Trace.TraceInformation($"Runtime #{Id} data-access: direct cDAC load declined this target");
-                }
-            }
-
-            // 3. In-box DAC fallback, unless the cDAC was explicitly forced - then a decline is a hard
-            // failure and we do not silently use the DAC.
             if (policy == CDacLoadPolicy.UseCDac)
             {
                 Trace.TraceError($"Runtime #{Id} data-access: cDAC was forced (UseCDac) but could not service this runtime; not falling back to the DAC: {RuntimeModule.FileName}");
@@ -254,7 +186,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (dacFilePath is not null)
             {
                 Trace.TraceInformation($"Runtime #{Id} data-access: falling back to the in-box DAC {dacFilePath}");
-                return TryCreateRuntimeFromLibrary(dacFilePath);
+                return TryCreateRuntimeFromDac(dacFilePath);
             }
 
             Trace.TraceError($"Runtime #{Id} data-access: could not find or download a matching DAC for this runtime: {RuntimeModule.FileName}");
@@ -262,18 +194,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Loads a data-access library (the cDAC or the in-box DAC) through ClrMD and builds the
-        /// ClrRuntime over it. Returns null when the library cannot service this runtime so the
-        /// caller can fall back to the next candidate.
+        /// Creates a ClrRuntime with the specified DAC.
         /// </summary>
-        private ClrRuntime TryCreateRuntimeFromLibrary(string dataAccessFilePath)
+        private ClrRuntime TryCreateRuntimeFromDac(string dacFilePath)
         {
-            Trace.TraceInformation($"Creating ClrRuntime #{Id} {dataAccessFilePath}");
+            Trace.TraceInformation($"Creating ClrRuntime #{Id} {dacFilePath}");
             try
             {
                 // Ignore the DAC version mismatch that can happen because the clrmd ELF dump reader
                 // returns 0.0.0.0 for the runtime module that the DAC is matched against.
-                return _clrRuntime = _clrInfo.CreateRuntime(dataAccessFilePath, ignoreMismatch: true);
+                return _clrRuntime = _clrInfo.CreateRuntime(dacFilePath, ignoreMismatch: true);
             }
             catch (Exception ex) when
                (ex is DllNotFoundException or
@@ -288,22 +218,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Builds the ClrRuntime over an IXCLRDataProcess that dbgshim activated (preferring the
-        /// co-located cDAC). Registers the interface on the ClrInfo so ClrMD builds DAC services over
-        /// it instead of loading a DAC, then creates the runtime. Returns null if building over the
-        /// interface fails; the caller does not retry the DAC load because the registration is one-way.
+        /// Creates a ClrRuntime with the supplied IXCLRDataProcess.
         /// </summary>
-        /// <remarks>
-        /// ClrMD adds and releases its own reference on the interface (see ClrMD CreateForeignProcess),
-        /// so this method releases the reference the activator handed us once the runtime is built. On
-        /// success ClrMD's reference keeps the interface alive for the lifetime of the ClrRuntime.
-        /// </remarks>
         private ClrRuntime CreateRuntimeFromClrDataProcess(IntPtr clrDataProcess)
         {
             try
             {
                 _clrInfo.DataTarget.AddLoadedRuntime(_clrInfo, clrDataProcess);
-                Trace.TraceInformation($"Creating ClrRuntime #{Id} from dbgshim-activated IXCLRDataProcess");
+                Trace.TraceInformation($"Creating ClrRuntime #{Id} from IXCLRDataProcess");
                 return _clrRuntime = _clrInfo.CreateRuntime();
             }
             catch (Exception ex) when
@@ -313,7 +235,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 InvalidDataException or
                 ClrDiagnosticsException)
             {
-                Trace.TraceError("CreateRuntime via dbgshim FAILED: {0}", ex.ToString());
+                Trace.TraceError("CreateRuntime from IXCLRDataProcess FAILED: {0}", ex.ToString());
                 return null;
             }
             finally
@@ -336,13 +258,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     {
                         break;
                     }
-                    // The cDAC is an analyzer-host artifact shipped inside the diagnostics tool
-                    // (next to sos.dll, matching the host's RID). It is not symbol-store indexed
-                    // by the target runtime, so never attempt to download it.
-                    if (libraryInfo.Kind == DebugLibraryKind.CDac)
-                    {
-                        continue;
-                    }
                     if (libraryInfo.ArchivedUnder != SymbolProperties.None)
                     {
                         libraryPath = DownloadFile(libraryInfo);
@@ -360,24 +275,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string GetLocalPath(DebugLibraryInfo libraryInfo)
         {
             string localFilePath;
-            if (libraryInfo.Kind == DebugLibraryKind.CDac)
+            if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
             {
-                // The cDAC ships next to the native sos module. Ask the host asset resolver where it
-                // is rather than reasoning about layouts here (ClrMD's DebuggingLibraries entry points
-                // at the managed-assembly base directory, so it is ignored). The shared existence
-                // check below verifies the path, so the in-box DAC is used when the cDAC isn't bundled.
-                localFilePath = _hostAssetResolver?.GetCDacPath();
+                localFilePath = Path.Combine(RuntimeModuleDirectory, Path.GetFileName(libraryInfo.FileName));
             }
             else
             {
-                if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
-                {
-                    localFilePath = Path.Combine(RuntimeModuleDirectory, Path.GetFileName(libraryInfo.FileName));
-                }
-                else
-                {
-                    localFilePath = Path.Combine(Path.GetDirectoryName(RuntimeModule.FileName), Path.GetFileName(libraryInfo.FileName));
-                }
+                localFilePath = Path.Combine(Path.GetDirectoryName(RuntimeModule.FileName), Path.GetFileName(libraryInfo.FileName));
             }
             if (localFilePath is null || !File.Exists(localFilePath))
             {
@@ -514,11 +418,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 sb.AppendLine();
                 string verify = _verifySignature ? "(verify)" : "(don't verify)";
                 sb.Append($"    DAC: {_dacFilePath} {verify}");
-            }
-            if (_cdacFilePath is not null)
-            {
-                sb.AppendLine();
-                sb.Append($"    CDAC: {_cdacFilePath}");
             }
             if (_dbiFilePath is not null)
             {
