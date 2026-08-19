@@ -6,10 +6,11 @@ class DataTarget : public ICLRDataTarget2, ICorDebugDataTarget4, ICLRMetadataLoc
 private:
     LONG m_ref;                         // Reference count.
     ULONG64 m_baseAddress;              // Runtime base address
+    IDebuggerServices* m_debuggerServices;
 
 public:
     DataTarget(ULONG64 baseAddress);
-    virtual ~DataTarget() {}
+    virtual ~DataTarget();
     
     // IUnknown.
     STDMETHOD(QueryInterface)(
