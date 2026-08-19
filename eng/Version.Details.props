@@ -29,9 +29,9 @@ This file should be imported by eng/Versions.props
     <runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.6.26305.101</runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.6.26305.101</runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion>
     <runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>11.0.0-preview.6.26305.101</runtimewinx64MicrosoftDotNetCdacTransportPackageVersion>
-    <!-- microsoft-clrmd dependencies -->
-    <MicrosoftDiagnosticsRuntimePackageVersion>4.0.727102</MicrosoftDiagnosticsRuntimePackageVersion>
-    <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.0.727102</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
+    <!-- Microsoft-clrmd dependencies -->
+    <MicrosoftDiagnosticsRuntimePackageVersion>4.0.741701</MicrosoftDiagnosticsRuntimePackageVersion>
+    <MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>4.0.741701</MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
@@ -59,7 +59,7 @@ This file should be imported by eng/Versions.props
     <runtimeosxx64MicrosoftDotNetCdacTransportVersion>$(runtimeosxx64MicrosoftDotNetCdacTransportPackageVersion)</runtimeosxx64MicrosoftDotNetCdacTransportVersion>
     <runtimewinarm64MicrosoftDotNetCdacTransportVersion>$(runtimewinarm64MicrosoftDotNetCdacTransportPackageVersion)</runtimewinarm64MicrosoftDotNetCdacTransportVersion>
     <runtimewinx64MicrosoftDotNetCdacTransportVersion>$(runtimewinx64MicrosoftDotNetCdacTransportPackageVersion)</runtimewinx64MicrosoftDotNetCdacTransportVersion>
-    <!-- microsoft-clrmd dependencies -->
+    <!-- Microsoft-clrmd dependencies -->
     <MicrosoftDiagnosticsRuntimeVersion>$(MicrosoftDiagnosticsRuntimePackageVersion)</MicrosoftDiagnosticsRuntimeVersion>
     <MicrosoftDiagnosticsRuntimeUtilitiesVersion>$(MicrosoftDiagnosticsRuntimeUtilitiesPackageVersion)</MicrosoftDiagnosticsRuntimeUtilitiesVersion>
   </PropertyGroup>
