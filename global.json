@@ -7,8 +7,11 @@
   "tools": {
     "dotnet": "10.0.108",
     "runtimes": {
+      "dotnet": [
+        "$(MicrosoftNETCoreApp80Version)"
+      ],
       "dotnet/x86": [
-        "$(MicrosoftNETCoreApp100Version)"
+        "$(MicrosoftNETCoreApp80Version)"
       ]
     }
   },

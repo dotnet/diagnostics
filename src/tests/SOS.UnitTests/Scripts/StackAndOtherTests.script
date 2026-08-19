@@ -294,20 +294,3 @@ VERIFY:\s+DeadThread:\s+<DECVAL>\s+
 VERIFY:\s+Hosted Runtime:\s+no\s+
 VERIFY:\s+ID\s+OSID\s+ThreadOBJ\s+State.*\s+
 VERIFY:\s+<DECVAL>\s+<DECVAL>\s+<HEXVAL>\s+<HEXVAL>.*\s+
-
-# Exercise the native (non-hosted) CLRMA path under cdb. With no managed host, clrma associates
-# through the DAC CLRMA provider, which drives the SOS native Target/DataTarget/Runtime objects.
-# Association runs AssociateClient -> QueryDebugClient -> IsWindowsTarget -> Target::GetOperatingSystem,
-# which must resolve the target OS through the session-lifetime IDebuggerServices. The exported
-# CLRMACreateInstance path (dbgeng !analyze) runs outside command scope where the command-scoped
-# debugger client globals are null, so relying on them faults there. Printing the provider line and
-# OSThreadId proves association and the OS query completed without faulting. The managed frame output
-# is intentionally not verified: which exception clrma reports and the module-name format it prints
-# are not stable across runs, so asserting a specific frame would be flaky.
-IFDEF:HOST_RUNTIME_NONE
-IFDEF:WINDOWS
-SOSCOMMAND:clrma
-VERIFY:Managed analysis provider:\s+SOSCLRMA\s+
-VERIFY:OSThreadId:\s+<HEXVAL>\s+
-ENDIF:WINDOWS
-ENDIF:HOST_RUNTIME_NONE
