@@ -38,10 +38,6 @@
 #define DESKTOP_DAC_DLL_NAME_W          MAKEDLLNAME_W(W("mscordacwks"))
 #define DESKTOP_DAC_DLL_NAME_A          MAKEDLLNAME_A("mscordacwks")
 
-// The cDAC (mscordaccore_universal) ships next to sos in the diagnostics tool package.
-// MAKEDLLNAME_A applies the platform-specific prefix/suffix (e.g. .dll, lib*.so, lib*.dylib).
-#define NETCORE_CDAC_DLL_NAME_A         MAKEDLLNAME_A("mscordaccore_universal")
-
 extern IRuntime* g_pRuntime;
 
 enum class CDacLoadPolicy
@@ -132,8 +128,9 @@ private:
     RuntimeInfo* m_runtimeInfo;
     LPCSTR m_runtimeDirectory;
     LPCSTR m_dacFilePath;
-    LPCSTR m_cdacFilePath;
+    LPCSTR m_dbgShimFilePath;
     LPCSTR m_dbiFilePath;
+    HMODULE m_dbgShimHandle;
     IXCLRDataProcess* m_clrDataProcess;
     IXCLRDataProcess* m_cdacDataProcess;
     ICorDebugProcess* m_pCorDebugProcess;
@@ -156,17 +153,14 @@ private:
         }
     }
 
-    // Loads the given DAC/cDAC module and creates an IXCLRDataProcess from it (nullptr on failure).
-    // contractDescriptorAddress is the cDAC contract descriptor address (0 for the in-box DAC, which
-    // does not use it).
-    IXCLRDataProcess* CreateClrDataProcessInstance(LPCSTR dacFilePath, ULONG64 contractDescriptorAddress);
+    IXCLRDataProcess* CreateClrDataProcessInstance(LPCSTR dacFilePath);
+
+    HRESULT CreateClrDataProcessWithDbgShim(IXCLRDataProcess** ppClrDataProcess);
 
     // Resolves the address of the cDAC contract descriptor export (DotNetRuntimeContractDescriptor)
     // in the runtime module, or 0 if it can't be found. The cDAC requires this via ICLRContractLocator.
     ULONG64 GetContractDescriptorAddress();
 
-    // Evaluates the cDAC loading policy: cDAC is used for supported runtimes (.NET 11+) unless
-    // DOTNET_ENABLE_CDAC requests that the in-box DAC drive the cDAC contract reader itself.
     bool ShouldUseCDac();
 
 public:
@@ -180,7 +174,7 @@ public:
 
     LPCSTR GetDacFilePath();
 
-    LPCSTR GetCDacFilePath();
+    LPCSTR GetDbgShimFilePath();
 
     LPCSTR GetDbiFilePath();
 

@@ -51,6 +51,22 @@ typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcess2FnPtr)(ULONG64 clrInstanceI
     CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
 
 typedef HMODULE (STDAPICALLTYPE  *LoadLibraryWFnPtr)(LPCWSTR lpLibFileName);
+typedef HRESULT (STDAPICALLTYPE *CLRCreateInstanceFnPtr)(REFCLSID clsid, REFIID riid, LPVOID *ppInterface);
+
+enum class DbgShimCDacLoadPolicy : DWORD
+{
+    PreferCDac = 0,
+    CDacOnly = 1,
+    LegacyDacOnly = 2
+};
+
+MIDL_INTERFACE("2D3B4F6A-1C7E-4B2A-9E5D-7F1A6C0B8D34")
+ICLRDebuggingPolicy : public IUnknown
+{
+public:
+    virtual HRESULT STDMETHODCALLTYPE SetCDacLoadPolicy(DbgShimCDacLoadPolicy policy) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetCDacLoadPolicy(DbgShimCDacLoadPolicy* policy) = 0;
+};
 
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
@@ -211,8 +227,9 @@ Runtime::Runtime(ITarget* target, RuntimeConfiguration configuration, ULONG inde
     m_runtimeInfo(runtimeInfo),
     m_runtimeDirectory(nullptr),
     m_dacFilePath(nullptr),
-    m_cdacFilePath(nullptr),
+    m_dbgShimFilePath(nullptr),
     m_dbiFilePath(nullptr),
+    m_dbgShimHandle(nullptr),
     m_clrDataProcess(nullptr),
     m_cdacDataProcess(nullptr),
     m_pCorDebugProcess(nullptr)
@@ -252,10 +269,10 @@ Runtime::~Runtime()
         free((void*)m_dacFilePath);
         m_dacFilePath = nullptr;
     }
-    if (m_cdacFilePath != nullptr)
+    if (m_dbgShimFilePath != nullptr)
     {
-        free((void*)m_cdacFilePath);
-        m_cdacFilePath = nullptr;
+        free((void*)m_dbgShimFilePath);
+        m_dbgShimFilePath = nullptr;
     }
     if (m_dbiFilePath != nullptr)
     {
@@ -277,6 +294,11 @@ Runtime::~Runtime()
     {
         m_cdacDataProcess->Release();
         m_cdacDataProcess = nullptr;
+    }
+    if (m_dbgShimHandle != nullptr)
+    {
+        FreeLibrary(m_dbgShimHandle);
+        m_dbgShimHandle = nullptr;
     }
 }
 
@@ -325,59 +347,60 @@ LPCSTR Runtime::GetDacFilePath()
 extern HMODULE g_hInstance;
 #else
 // A file-local anchor used to resolve the directory of the SOS module via dladdr.
-static void CDacModuleAnchor() {}
+static void DbgShimModuleAnchor() {}
 #endif
 
 /**********************************************************************\
- * Returns the cDAC (mscordaccore_universal) module path bundled next to
- * sos in the diagnostics tool package, or nullptr when it isn't present.
- * The cDAC is shipped with the tool and is never downloaded.
+ * Returns the dbgshim module path next to sos.
 \**********************************************************************/
-LPCSTR Runtime::GetCDacFilePath()
+LPCSTR Runtime::GetDbgShimFilePath()
 {
-    if (m_cdacFilePath == nullptr)
+    if (m_dbgShimFilePath == nullptr)
     {
-        // The cDAC lives in the same directory as the loaded sos module (the host's platform
-        // subfolder of the package), not in the target runtime directory.
         ArrayHolder<char> szSOSModulePath = new char[MAX_LONGPATH + 1];
 #ifdef FEATURE_PAL
         Dl_info info;
-        if (dladdr((void*)&CDacModuleAnchor, &info) == 0 || info.dli_fname == nullptr)
+        if (dladdr((void*)&DbgShimModuleAnchor, &info) == 0 || info.dli_fname == nullptr)
         {
-            ExtDbgOut("GetCDacFilePath: dladdr failed to locate the sos module\n");
+            ExtDbgOut("GetDbgShimFilePath: dladdr failed to locate the sos module\n");
             return nullptr;
         }
         strcpy_s(szSOSModulePath.GetPtr(), MAX_LONGPATH, info.dli_fname);
 #else
         if (GetModuleFileNameA(g_hInstance, szSOSModulePath, MAX_LONGPATH) == 0)
         {
-            ExtDbgOut("GetCDacFilePath: GetModuleFileNameA failed %08x\n", HRESULT_FROM_WIN32(GetLastError()));
+            ExtDbgOut("GetDbgShimFilePath: GetModuleFileNameA failed %08x\n", HRESULT_FROM_WIN32(GetLastError()));
             return nullptr;
         }
 #endif
-        std::string cdacModulePath(szSOSModulePath.GetPtr());
-        size_t lastSlash = cdacModulePath.rfind(DIRECTORY_SEPARATOR_CHAR_A);
+        std::string dbgShimModulePath(szSOSModulePath.GetPtr());
+        size_t lastSlash = dbgShimModulePath.rfind(DIRECTORY_SEPARATOR_CHAR_A);
         if (lastSlash == std::string::npos)
         {
-            ExtDbgOut("GetCDacFilePath: failed to parse sos module directory from %s\n", cdacModulePath.c_str());
+            ExtDbgOut("GetDbgShimFilePath: failed to parse sos module directory from %s\n", dbgShimModulePath.c_str());
             return nullptr;
         }
-        cdacModulePath.erase(lastSlash + 1);
-        cdacModulePath.append(NETCORE_CDAC_DLL_NAME_A);
-
-        // The cDAC must exist on disk next to sos; it is never downloaded. When it is not
-        // bundled (for example, RIDs without a cDAC), callers fall back to the in-box DAC.
+        dbgShimModulePath.erase(lastSlash + 1);
 #ifdef FEATURE_PAL
-        bool exists = access(cdacModulePath.c_str(), F_OK) == 0;
+#ifdef __APPLE__
+        dbgShimModulePath.append("libdbgshim.dylib");
 #else
-        bool exists = GetFileAttributesA(cdacModulePath.c_str()) != INVALID_FILE_ATTRIBUTES;
+        dbgShimModulePath.append("libdbgshim.so");
+#endif
+#else
+        dbgShimModulePath.append("dbgshim.dll");
+#endif
+#ifdef FEATURE_PAL
+        bool exists = access(dbgShimModulePath.c_str(), F_OK) == 0;
+#else
+        bool exists = GetFileAttributesA(dbgShimModulePath.c_str()) != INVALID_FILE_ATTRIBUTES;
 #endif
         if (exists)
         {
-            m_cdacFilePath = _strdup(cdacModulePath.c_str());
+            m_dbgShimFilePath = _strdup(dbgShimModulePath.c_str());
         }
     }
-    return m_cdacFilePath;
+    return m_dbgShimFilePath;
 }
 
 /**********************************************************************\
@@ -516,18 +539,11 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
     {
         if (m_cdacDataProcess == nullptr)
         {
-            LPCSTR cdacFilePath = GetCDacFilePath();
-            if (cdacFilePath == nullptr)
+            HRESULT hr = CreateClrDataProcessWithDbgShim(&m_cdacDataProcess);
+            if (FAILED(hr) && s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
             {
-                if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
-                {
-                    *ppClrDataProcess = nullptr;
-                    return CORDBG_E_NO_IMAGE_AVAILABLE;
-                }
-            }
-            else
-            {
-                m_cdacDataProcess = CreateClrDataProcessInstance(cdacFilePath, GetContractDescriptorAddress());
+                *ppClrDataProcess = nullptr;
+                return hr;
             }
         }
         if (m_cdacDataProcess != nullptr)
@@ -538,7 +554,7 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
         {
             *ppClrDataProcess = nullptr;
-            return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
+            return CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL;
         }
         // Fall through to the DAC.
     }
@@ -552,7 +568,7 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         {
             return CORDBG_E_NO_IMAGE_AVAILABLE;
         }
-        m_clrDataProcess = CreateClrDataProcessInstance(dacFilePath, 0);
+        m_clrDataProcess = CreateClrDataProcessInstance(dacFilePath);
         if (m_clrDataProcess == nullptr)
         {
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
@@ -607,10 +623,10 @@ void Runtime::SetCDacLoadPolicy(CDacLoadPolicy policy)
 }
 
 /**********************************************************************\
- * Loads the given DAC/cDAC module and creates an IXCLRDataProcess from it.
+ * Loads the given DAC module and creates an IXCLRDataProcess from it.
  * Returns nullptr on failure.
 \**********************************************************************/
-IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath, ULONG64 contractDescriptorAddress)
+IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath)
 {
     HMODULE hdac = LoadLibraryA(dacFilePath);
     if (hdac == NULL)
@@ -624,7 +640,7 @@ IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath, ULON
         FreeLibrary(hdac);
         return nullptr;
     }
-    ICLRDataTarget *target = new DataTarget(GetModuleAddress(), contractDescriptorAddress);
+    ICLRDataTarget *target = new DataTarget(GetModuleAddress(), 0);
     IXCLRDataProcess* clrDataProcess = nullptr;
     HRESULT hr = pfnCLRDataCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&clrDataProcess);
     if (FAILED(hr))
@@ -646,6 +662,89 @@ IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath, ULON
         clrDataProcess->SetOtherNotificationFlags(notificationFlags);
     }
     return clrDataProcess;
+}
+
+/**********************************************************************\
+ * Creates an IXCLRDataProcess through dbgshim.
+\**********************************************************************/
+HRESULT Runtime::CreateClrDataProcessWithDbgShim(IXCLRDataProcess** ppClrDataProcess)
+{
+    if (ppClrDataProcess == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    *ppClrDataProcess = nullptr;
+
+    if (m_dbgShimHandle == nullptr)
+    {
+        LPCSTR dbgShimFilePath = GetDbgShimFilePath();
+        if (dbgShimFilePath == nullptr)
+        {
+            return CORDBG_E_NO_IMAGE_AVAILABLE;
+        }
+        m_dbgShimHandle = LoadLibraryA(dbgShimFilePath);
+        if (m_dbgShimHandle == nullptr)
+        {
+            return HRESULT_FROM_WIN32(GetLastError());
+        }
+    }
+
+    CLRCreateInstanceFnPtr createInstance =
+        (CLRCreateInstanceFnPtr)GetProcAddress(m_dbgShimHandle, "CLRCreateInstance");
+    if (createInstance == nullptr)
+    {
+        return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
+    }
+
+    ToRelease<ICLRDebugging> debugging;
+    HRESULT hr = createInstance(CLSID_CLRDebugging, IID_ICLRDebugging, (void**)&debugging);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    ToRelease<ICLRDebuggingPolicy> policy;
+    hr = debugging->QueryInterface(__uuidof(ICLRDebuggingPolicy), (void**)&policy);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    hr = policy->SetCDacLoadPolicy(DbgShimCDacLoadPolicy::CDacOnly);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    ICLRDataTarget* target = new DataTarget(GetModuleAddress(), GetContractDescriptorAddress());
+    target->AddRef();
+
+    CLR_DEBUGGING_VERSION maxVersion = {};
+    maxVersion.wStructVersion = 0;
+    maxVersion.wMajor = 4;
+    CLR_DEBUGGING_VERSION version = {};
+    CLR_DEBUGGING_PROCESS_FLAGS processFlags = (CLR_DEBUGGING_PROCESS_FLAGS)0;
+    IUnknown* process = nullptr;
+    hr = debugging->OpenVirtualProcess(
+        GetModuleAddress(),
+        target,
+        nullptr,
+        &maxVersion,
+        __uuidof(IXCLRDataProcess),
+        &process,
+        &version,
+        &processFlags);
+    target->Release();
+    if (FAILED(hr))
+    {
+        if (process != nullptr)
+        {
+            process->Release();
+        }
+        return hr;
+    }
+
+    *ppClrDataProcess = (IXCLRDataProcess*)process;
+    return S_OK;
 }
 
 /**********************************************************************\
