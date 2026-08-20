@@ -24,6 +24,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly ISymbolService _symbolService;
         private Version _runtimeVersion;
         private ClrRuntime _clrRuntime;
+        // Host-owned reference retained for the registered ClrInfo lifetime.
+        private IntPtr _clrDataProcess;
         private string _dacFilePath;
         private bool _verifySignature;
         private string _dbiFilePath;
@@ -58,6 +60,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _clrRuntime = null;
             _serviceContainer.RemoveService(typeof(IRuntime));
             _serviceContainer.DisposeServices();
+            if (_clrDataProcess != IntPtr.Zero)
+            {
+                Marshal.Release(_clrDataProcess);
+                _clrDataProcess = IntPtr.Zero;
+            }
         }
 
         #region IRuntime
@@ -222,9 +229,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private ClrRuntime CreateRuntimeFromClrDataProcess(IntPtr clrDataProcess)
         {
+            bool registered = false;
             try
             {
+                _clrDataProcess = clrDataProcess;
                 _clrInfo.DataTarget.AddLoadedRuntime(_clrInfo, clrDataProcess);
+                registered = true;
                 Trace.TraceInformation($"Creating ClrRuntime #{Id} from IXCLRDataProcess");
                 return _clrRuntime = _clrInfo.CreateRuntime();
             }
@@ -240,7 +250,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
             finally
             {
-                Marshal.Release(clrDataProcess);
+                if (!registered)
+                {
+                    Marshal.Release(clrDataProcess);
+                    _clrDataProcess = IntPtr.Zero;
+                }
             }
         }
 

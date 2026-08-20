@@ -3817,7 +3817,10 @@ HRESULT LoadClrDebugDll(void)
     HRESULT hr = g_pRuntime->GetClrDataProcess(flags, &g_clrData);
     if (FAILED(hr))
     {
-        if (Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseCDac || hr == CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL)
+        bool cdacEnforced =
+            (flags & IRuntime::ClrDataProcessFlags::CDacOnly) == IRuntime::ClrDataProcessFlags::CDacOnly ||
+            hr == CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL;
+        if (cdacEnforced)
         {
             return hr;
         }
