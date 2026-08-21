@@ -729,10 +729,6 @@ public class SOSRunner : IDisposable
             //    it cannot be issued as a pre-SOS initial debugger command.
             switch (config.DacMode)
             {
-                case DacMode.CDacFallback:
-                    // cDAC hosted by the in-box DAC, with per-API fallback to the legacy DAC.
-                    processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
-                    break;
                 case DacMode.CDacVerify:
                     // cDAC hosted by the in-box DAC, with no fallback to the legacy DAC.
                     processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
@@ -1153,8 +1149,8 @@ public class SOSRunner : IDisposable
 
         // Apply the cDAC load policy selected by the test's DacMode now that SOS is loaded (the
         // "runtimes" command is unavailable before this) and before any runtime is accessed, so SOS
-        // uses the requested DAC/cDAC the first time it resolves the runtime. CDacFallback/CDacVerify
-        // instead rely on the in-box DAC via env vars set in StartDebugger and keep SOS's default
+        // uses the requested DAC/cDAC the first time it resolves the runtime. CDacVerify instead
+        // relies on the in-box DAC via env vars set in StartDebugger and keeps SOS's default
         // policy (which does not load the standalone cDAC when DOTNET_ENABLE_CDAC is set).
         string cdacPolicyCommand = _config.DacMode switch
         {

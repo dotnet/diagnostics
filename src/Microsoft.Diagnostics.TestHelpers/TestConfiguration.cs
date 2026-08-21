@@ -455,9 +455,6 @@ namespace Microsoft.Diagnostics.TestHelpers
             }
             switch (DacMode)
             {
-                case DacMode.CDacFallback:
-                    sb.Append(".cdacfallback");
-                    break;
                 case DacMode.CDacVerify:
                     sb.Append(".cdacverify");
                     break;
@@ -580,10 +577,9 @@ namespace Microsoft.Diagnostics.TestHelpers
                 {
                     "" => DacMode.Default,
                     "cdac" => DacMode.CDac,
-                    "cdacfallback" => DacMode.CDacFallback,
                     "cdacverify" => DacMode.CDacVerify,
                     "dac" => DacMode.Dac,
-                    _ => throw new NotSupportedException($"Unknown DacMode '{mode}'. Expected cdac, cdacfallback, cdacverify, dac, or empty."),
+                    _ => throw new NotSupportedException($"Unknown DacMode '{mode}'. Expected cdac, cdacverify, dac, or empty."),
                 };
             }
         }
@@ -974,11 +970,6 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// Unspecified: the harness applies no DAC/cDAC configuration (SOS uses its default load policy).
         /// </summary>
         Default,
-
-        /// <summary>
-        /// cDAC hosted by the in-box DAC, with per-API fallback to the legacy DAC.
-        /// </summary>
-        CDacFallback,
 
         /// <summary>
         /// cDAC hosted by the in-box DAC, with no fallback to the legacy DAC (still verifies against it).

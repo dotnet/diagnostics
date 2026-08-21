@@ -40,7 +40,7 @@ usage_list+=("-skipnative: do not build native components.")
 usage_list+=("-test: run xunit tests")
 usage_list+=("-methodfilter: pass method filter to xunit runner (Namespace.ClassName.MethodName)")
 usage_list+=("-classfilter: pass class filter to xunit runner (Namespace.ClassName)")
-usage_list+=("-dacmode: which DAC/cDAC the SOS tests load: cdac, cdacfallback, cdacverify, or dac.")
+usage_list+=("-dacmode: which DAC/cDAC the SOS tests load: cdac, cdacverify, or dac.")
 usage_list+=("-cdacpath: path to an mscordaccore_universal to overlay next to sos.dll (only with -dacmode cdac).")
 
 handle_arguments() {
@@ -145,8 +145,8 @@ handle_arguments() {
 source "$__RepoRootDir"/eng/native/build-commons.sh
 
 case "$__DacMode" in
-    ""|cdac|cdacfallback|cdacverify|dac) ;;
-    *) echo "Invalid -dacmode '$__DacMode'. Expected cdac, cdacfallback, cdacverify, or dac."; exit 1 ;;
+    ""|cdac|cdacverify|dac) ;;
+    *) echo "Invalid -dacmode '$__DacMode'. Expected cdac, cdacverify, or dac."; exit 1 ;;
 esac
 if [[ -n "$__CDacPath" && "$__DacMode" != "cdac" ]]; then
     echo "-cdacpath is only valid with -dacmode cdac."
