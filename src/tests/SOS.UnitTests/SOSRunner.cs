@@ -1636,10 +1636,6 @@ public class SOSRunner : IDisposable
         {
             defines.Add("HOST_RUNTIME_NONE");
         }
-        if (_config.DacMode == DacMode.CDacVerify)
-        {
-            defines.Add("CDAC_NO_FALLBACK_TESTING");
-        }
         return defines;
     }
 
