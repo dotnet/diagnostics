@@ -10,7 +10,7 @@ Param(
     [switch] $skipmanaged,
     [switch] $skipnative,
     [switch] $bundletools,
-    [ValidateSet("", "cdac", "cdacfallback", "cdacverify", "dac")][string] $dacMode = '',
+    [ValidateSet("", "cdac", "cdacverify", "dac")][string] $dacMode = '',
     [string] $cdacPath = '',
     [switch] $testInterpreter,
     [string] $methodfilter = '',
