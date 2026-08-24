@@ -61,12 +61,13 @@ extends:
         #                          #
         ############################
 
-      - template: ${{ variables.sourceBuildTemplate }}
-        parameters:
-          enableInternalSources: true
-          platform:
-            name: Complete
-            buildScript: ./eng/common/build.sh
+      - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+        - template: ${{ variables.sourceBuildTemplate }}
+          parameters:
+            enableInternalSources: true
+            platform:
+              name: Complete
+              buildScript: ./eng/common/build.sh
 
       ############################
       #                          #
@@ -74,45 +75,44 @@ extends:
       #                          #
       ############################
 
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          name: Windows
-          osGroup: Windows_NT
-          buildOnly: true
-          publishTestArtifacts: true
-          buildConfigs:
-          - configuration: Debug
-            architecture: x64
-            artifactUploadPath: bin/Windows_NT.x64.Debug
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin
-          - configuration: Release
-            architecture: x86
-            artifactUploadPath: bin/Windows_NT.x86.Release
-          - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-            - configuration: Release
-              architecture: arm64
-              runTests: false
-              artifactUploadPath: bin/Windows_NT.arm64.Release
-
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          osGroup: Linux
-          container: linux_x64
-          crossBuild: true
-          buildOnly: true
-          publishTestArtifacts: true
-          buildConfigs:
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin/linux.x64.Release
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+      # Keep only the build required by Alpine3_23_x64_Release in pull requests while
+      # validating Build Analysis.
+      - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            name: Windows
+            osGroup: Windows_NT
+            buildOnly: true
+            publishTestArtifacts: true
+            buildConfigs:
             - configuration: Debug
               architecture: x64
-              artifactUploadPath: bin/linux.x64.Debug
+              artifactUploadPath: bin/Windows_NT.x64.Debug
+            - configuration: Release
+              architecture: x64
+              artifactUploadPath: bin
+            - configuration: Release
+              architecture: x86
+              artifactUploadPath: bin/Windows_NT.x86.Release
+            - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+              - configuration: Release
+                architecture: arm64
+                runTests: false
+                artifactUploadPath: bin/Windows_NT.arm64.Release
+
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            osGroup: Linux
+            container: linux_x64
+            crossBuild: true
+            buildOnly: true
+            publishTestArtifacts: true
+            buildConfigs:
+            - configuration: Release
+              architecture: x64
+              artifactUploadPath: bin/linux.x64.Release
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -129,42 +129,32 @@ extends:
             architecture: x64
             artifactUploadPath: bin/linux.x64.Release
             artifactTargetPath: bin/linux-musl.x64.Release
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - configuration: Debug
-              architecture: x64
-              artifactUploadPath: bin/linux.x64.Debug
-              artifactTargetPath: bin/linux-musl.x64.Debug
 
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          osGroup: MacOS
-          buildOnly: true
-          publishTestArtifacts: true
-          buildConfigs:
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin/osx.x64.Release
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - configuration: Debug
+      # Temporarily skip the slower macOS legs while validating Build Analysis on this PR.
+      - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            osGroup: MacOS
+            buildOnly: true
+            publishTestArtifacts: true
+            buildConfigs:
+            - configuration: Release
               architecture: x64
-              artifactUploadPath: bin/osx.x64.Debug
+              artifactUploadPath: bin/osx.x64.Release
 
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          osGroup: MacOS
-          crossBuild: true
-          buildOnly: true
-          buildConfigs:
-          - configuration: Release
-            architecture: arm64
-            artifactUploadPath: bin/osx.arm64.Release
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - configuration: Debug
+        - template: /eng/pipelines/build.yml
+          parameters:
+            jobTemplate: ${{ variables.jobTemplate }}
+            osGroup: MacOS
+            crossBuild: true
+            buildOnly: true
+            buildConfigs:
+            - configuration: Release
               architecture: arm64
+              artifactUploadPath: bin/osx.arm64.Release
 
-      - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
@@ -231,48 +221,43 @@ extends:
         dependsOn: build
         jobs:
 
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Windows_Test
-            osGroup: Windows_NT
-            dependsOn: Windows
-            testOnly: true
-            buildConfigs:
-            - configuration: Debug
-              architecture: x64
-            - configuration: Release
-              architecture: x64
-            - configuration: Release
-              architecture: x86
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: MacOS_Test
-            osGroup: MacOS
-            dependsOn: MacOS
-            testOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+        - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: Windows_Test
+              osGroup: Windows_NT
+              dependsOn: Windows
+              testOnly: true
+              buildConfigs:
               - configuration: Debug
                 architecture: x64
+              - configuration: Release
+                architecture: x64
+              - configuration: Release
+                architecture: x86
 
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Ubuntu_22_04
-            osGroup: Linux
-            container: test_ubuntu_22_04
-            dependsOn: Linux
-            testOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: MacOS_Test
+              osGroup: MacOS
+              dependsOn: MacOS
+              testOnly: true
+              buildConfigs:
+              - configuration: Release
+                architecture: x64
+
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: Ubuntu_22_04
+              osGroup: Linux
+              container: test_ubuntu_22_04
+              dependsOn: Linux
+              testOnly: true
+              buildConfigs:
+              - configuration: Release
                 architecture: x64
 
         - template: /eng/pipelines/build.yml
@@ -288,9 +273,6 @@ extends:
             buildConfigs:
             - configuration: Release
               architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
 
         # - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         #   - template: /eng/pipelines/build.yml
@@ -398,13 +380,14 @@ extends:
           symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
           publishInstallersAndChecksums: true
 
-    # This sets up the bits to do a Release.
-    - template: /eng/pipelines/prepare-release.yml
-      parameters:
-        isOfficialBuild: ${{ variables['isOfficialBuild'] }}
-        repoAllowList: https://github.com/dotnet/diagnostics https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics
-        productAllowList: diagnostics dotnet-diagnostics
-        ${{ if eq(variables['isOfficialBuild'], 'true') }}:
-          dependsOn: [ publish_using_darc ]
-        ${{ else }}:
-          dependsOn: [ build ]
+    - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+      # This sets up the bits to do a Release.
+      - template: /eng/pipelines/prepare-release.yml
+        parameters:
+          isOfficialBuild: ${{ variables['isOfficialBuild'] }}
+          repoAllowList: https://github.com/dotnet/diagnostics https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics
+          productAllowList: diagnostics dotnet-diagnostics
+          ${{ if eq(variables['isOfficialBuild'], 'true') }}:
+            dependsOn: [ publish_using_darc ]
+          ${{ else }}:
+            dependsOn: [ build ]

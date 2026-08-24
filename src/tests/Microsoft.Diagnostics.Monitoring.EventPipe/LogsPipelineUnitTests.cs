@@ -35,6 +35,10 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsPipeline(TestConfiguration config)
         {
+            // Temporarily force the known failure from https://github.com/dotnet/diagnostics/issues/5659
+            // to validate that Build Analysis recognizes it without a generic build failure.
+            Assert.Equal(5, 2);
+
             // TODO: When distributed tracing support lands EventPipeTracee
             // gains the ability to start traces. When there is an active trace
             // on .NET9+ logs should automatically receive correlation
