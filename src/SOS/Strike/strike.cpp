@@ -2291,55 +2291,80 @@ DECLARE_API(DumpDelegate)
                     delegateObj = TO_TADDR(delegateAddr);
 
                     int offset;
-                    if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_target"))) != 0)
+
+                    // Read the field that (for a multicast delegate) holds the invocation list along
+                    // with the count of live entries in it. The runtime layout differs by version:
+                    //   * .NET 10 and earlier: MulticastDelegate._invocationList (Delegate[]) and
+                    //     _invocationCount (int).
+                    //   * .NET 11 and later:   Delegate._helperObject (Delegate.Wrapper[]) and
+                    //     _extraData (nint), where _extraData holds the multicast count when
+                    //     _helperObject is a Wrapper[] array.
+                    // In both layouts a Wrapper/element is a single delegate-sized reference, so the
+                    // array can be walked identically once we have the array object and the count.
+                    CLRDATA_ADDRESS invocationList = 0;
+                    int invocationCount = 0;
+                    if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationList"))) != 0)
                     {
-                        CLRDATA_ADDRESS target;
-                        MOVE(target, delegateObj.GetAddress() + offset);
-
-                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationList"))) != 0)
+                        MOVE(invocationList, delegateObj.GetAddress() + offset);
+                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationCount"))) != 0)
                         {
-                            CLRDATA_ADDRESS invocationList;
-                            MOVE(invocationList, delegateObj.GetAddress() + offset);
+                            MOVE(invocationCount, delegateObj.GetAddress() + offset);
+                        }
+                    }
+                    else if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_helperObject"))) != 0)
+                    {
+                        MOVE(invocationList, delegateObj.GetAddress() + offset);
+                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_extraData"))) != 0)
+                        {
+                            TADDR extraData = 0;
+                            MOVE(extraData, delegateObj.GetAddress() + offset);
+                            invocationCount = (int)extraData;
+                        }
+                    }
 
-                            if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationCount"))) != 0)
+                    // A true multicast delegate stores an array of delegates in the invocation list.
+                    // For single-target delegates the field is either null or (in the .NET 11 layout)
+                    // a non-array helper object (e.g. a cached MethodInfo or LoaderAllocator).
+                    DacpObjectData objData;
+                    bool isMulticast =
+                        invocationList != (TADDR)0 &&
+                        sos::IsObject(invocationList, false) &&
+                        objData.Request(g_sos, invocationList) == S_OK &&
+                        objData.ObjectType == OBJ_ARRAY &&
+                        invocationCount > 0 &&
+                        invocationCount <= objData.dwNumComponents;
+
+                    if (isMulticast)
+                    {
+                        for (int i = 0; i < invocationCount; i++)
+                        {
+                            CLRDATA_ADDRESS elementPtr;
+                            MOVE(elementPtr, TO_CDADDR(objData.ArrayDataPtr + (i * objData.dwComponentSize)));
+                            if (elementPtr != (TADDR)0 && sos::IsObject(elementPtr, false))
                             {
-                                int invocationCount;
-                                MOVE(invocationCount, delegateObj.GetAddress() + offset);
-
-                                if (invocationList == (TADDR)0)
-                                {
-                                    CLRDATA_ADDRESS md;
-                                    DMLOut("%s ", DMLObject(target));
-                                    if (TryGetMethodDescriptorForDelegate(delegateAddr, &md))
-                                    {
-                                        DMLOut("%s ", DMLMethodDesc(md));
-                                        NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
-                                        ExtOut("%S\n", g_mdName);
-                                    }
-                                    else
-                                    {
-                                        ExtOut("(unknown)\n");
-                                    }
-                                }
-                                else if (sos::IsObject(invocationList, false))
-                                {
-                                    DacpObjectData objData;
-                                    if (objData.Request(g_sos, invocationList) == S_OK &&
-                                        objData.ObjectType == OBJ_ARRAY &&
-                                        invocationCount <= objData.dwNumComponents)
-                                    {
-                                        for (int i = 0; i < invocationCount; i++)
-                                        {
-                                            CLRDATA_ADDRESS elementPtr;
-                                            MOVE(elementPtr, TO_CDADDR(objData.ArrayDataPtr + (i * objData.dwComponentSize)));
-                                            if (elementPtr != (TADDR)0 && sos::IsObject(elementPtr, false))
-                                            {
-                                                delegatesRemaining.push_back(elementPtr);
-                                            }
-                                        }
-                                    }
-                                }
+                                delegatesRemaining.push_back(elementPtr);
                             }
+                        }
+                    }
+                    else
+                    {
+                        CLRDATA_ADDRESS target = 0;
+                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_target"))) != 0)
+                        {
+                            MOVE(target, delegateObj.GetAddress() + offset);
+                        }
+
+                        CLRDATA_ADDRESS md;
+                        DMLOut("%s ", DMLObject(target));
+                        if (TryGetMethodDescriptorForDelegate(delegateAddr, &md))
+                        {
+                            DMLOut("%s ", DMLMethodDesc(md));
+                            NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
+                            ExtOut("%S\n", g_mdName);
+                        }
+                        else
+                        {
+                            ExtOut("(unknown)\n");
                         }
                     }
                 }
