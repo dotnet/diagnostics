@@ -25,8 +25,9 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <LiveRuntimeDir Condition="'$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizePath('$(LiveRuntimeDir)'))</LiveRuntimeDir>
     <DotNetInstallRoot>$(ArtifactsDotnetTestDir)</DotNetInstallRoot>
-    <!-- Detect host architecture for cross-arch build SDK installation -->
+    <!-- Detect whether a host SDK is needed for a cross-architecture or cross-libc build. -->
     <HostArch>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</HostArch>
+    <IsCrossTargetBuild Condition="'$(TargetRid)' != '$(NETCoreSdkRuntimeIdentifier)'">true</IsCrossTargetBuild>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetArch)' != 'x86'">
@@ -66,13 +67,13 @@
           DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
 
 <!--
-    When cross-building (host arch != target arch), install a host-architecture SDK
-    into a separate directory purely for building debuggees. Managed builds are
-    architecture-neutral but the dotnet host must match the machine running the build.
+    When cross-building, install a host-compatible SDK into a separate directory purely
+    for building debuggees. Managed builds are architecture-neutral, but the dotnet host
+    must match the machine running the build.
 -->
 
   <Target Name="InstallBuildSdk"
-          Condition="'$(HostArch)' != '' and '$(HostArch)' != '$(TargetArch)'">
+          Condition="'$(IsCrossTargetBuild)' == 'true' and '$(SkipBuildSdkInstall)' != 'true'">
     <PropertyGroup>
       <DotNetBuildDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-build'))</DotNetBuildDir>
       <BuildSdkInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(HostArch) -InstallDir $(DotNetBuildDir) -Version $(MicrosoftNETSdkVersion)</BuildSdkInstallArgs>

@@ -29,12 +29,10 @@
   -->
 
   <PropertyGroup>
-    <!-- Detect whether this is a cross-architecture build (host != target) -->
-    <HostArch>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</HostArch>
-    <IsCrossArchBuild Condition="'$(HostArch)' != '$(TargetArch)'">true</IsCrossArchBuild>
-    <!-- When cross-building, use a separate host-arch SDK dir for building debuggees -->
-    <DebuggeeBuildDotNetDir Condition="'$(IsCrossArchBuild)' == 'true'">$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-build'))</DebuggeeBuildDotNetDir>
-    <DebuggeeBuildDotNetDir Condition="'$(IsCrossArchBuild)' != 'true'">$(ArtifactsDotnetTestDir)</DebuggeeBuildDotNetDir>
+    <IsCrossTargetBuild Condition="'$(TargetRid)' != '$(NETCoreSdkRuntimeIdentifier)'">true</IsCrossTargetBuild>
+    <!-- When cross-building, use a separate host-compatible SDK directory for building debuggees. -->
+    <DebuggeeBuildDotNetDir Condition="'$(IsCrossTargetBuild)' == 'true'">$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-build'))</DebuggeeBuildDotNetDir>
+    <DebuggeeBuildDotNetDir Condition="'$(IsCrossTargetBuild)' != 'true'">$(ArtifactsDotnetTestDir)</DebuggeeBuildDotNetDir>
     <DebuggeeBuildDotNetPath>$([MSBuild]::NormalizePath('$(DebuggeeBuildDotNetDir)', 'dotnet'))</DebuggeeBuildDotNetPath>
     <TestDotNetPath>$([MSBuild]::NormalizePath('$(ArtifactsDotnetTestDir)', 'dotnet'))</TestDotNetPath>
   </PropertyGroup>

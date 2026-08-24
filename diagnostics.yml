@@ -91,10 +91,9 @@ extends:
           - configuration: Release
             architecture: x86
             artifactUploadPath: bin/Windows_NT.x86.Release
-          - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-            - configuration: Release
-              architecture: arm64
-              artifactUploadPath: bin/Windows_NT.arm64.Release
+          - configuration: Release
+            architecture: arm64
+            artifactUploadPath: bin/Windows_NT.arm64.Release
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -155,6 +154,7 @@ extends:
           osGroup: MacOS
           crossBuild: true
           buildOnly: true
+          publishTestArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: arm64
@@ -163,60 +163,63 @@ extends:
             - configuration: Debug
               architecture: arm64
 
-      - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Linux
-            container: linux_arm
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm
-              artifactUploadPath: bin/linux.arm.Release
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          osGroup: Linux
+          container: linux_arm
+          crossBuild: true
+          buildOnly: true
+          publishTestArtifacts: true
+          buildConfigs:
+          - configuration: Release
+            architecture: arm
+            artifactUploadPath: bin/linux.arm.Release
 
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Linux
-            container: linux_arm64
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm64
-              artifactUploadPath: bin/linux.arm64.Release
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          osGroup: Linux
+          container: linux_arm64
+          crossBuild: true
+          buildOnly: true
+          publishTestArtifacts: true
+          buildConfigs:
+          - configuration: Release
+            architecture: arm64
+            artifactUploadPath: bin/linux.arm64.Release
 
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Linux_musl
-            osGroup: Linux
-            osSuffix: -musl
-            container: linux_musl_arm
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm
-              artifactUploadPath: bin/linux.arm.Release
-              artifactTargetPath: bin/linux-musl.arm.Release
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          name: Linux_musl
+          osGroup: Linux
+          osSuffix: -musl
+          container: linux_musl_arm
+          crossBuild: true
+          buildOnly: true
+          publishTestArtifacts: true
+          buildConfigs:
+          - configuration: Release
+            architecture: arm
+            artifactUploadPath: bin/linux.arm.Release
+            artifactTargetPath: bin/linux-musl.arm.Release
 
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Linux_musl
-            osGroup: Linux
-            osSuffix: -musl
-            container: linux_musl_arm64
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm64
-              artifactUploadPath: bin/linux.arm64.Release
-              artifactTargetPath: bin/linux-musl.arm64.Release
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
+          name: Linux_musl
+          osGroup: Linux
+          osSuffix: -musl
+          container: linux_musl_arm64
+          crossBuild: true
+          buildOnly: true
+          publishTestArtifacts: true
+          buildConfigs:
+          - configuration: Release
+            architecture: arm64
+            artifactUploadPath: bin/linux.arm64.Release
+            artifactTargetPath: bin/linux-musl.arm64.Release
 
     ############################
     #                          #
@@ -230,82 +233,141 @@ extends:
         dependsOn: build
         jobs:
 
-        - template: /eng/pipelines/build.yml
+        - template: /eng/pipelines/helix-test.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
-            name: Windows_Test
-            osGroup: Windows_NT
-            dependsOn: Windows
-            testOnly: true
-            buildConfigs:
-            - configuration: Debug
+            testConfigs:
+            - name: Windows_x64_Debug
+              displayName: Windows x64 Debug
+              dependsOn: Windows
+              configuration: Debug
               architecture: x64
-            - configuration: Release
+              targetOS: Windows_NT
+              queue: Windows.11.Amd64.Client.Open
+              internalQueue: Windows.11.Amd64
+            - name: Windows_x64_Release
+              displayName: Windows x64 Release
+              dependsOn: Windows
+              configuration: Release
               architecture: x64
-            - configuration: Release
+              targetOS: Windows_NT
+              queue: Windows.11.Amd64.Client.Open
+              internalQueue: Windows.11.Amd64
+            - name: Windows_x86_Release
+              displayName: Windows x86 Release
+              dependsOn: Windows
+              configuration: Release
               architecture: x86
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: MacOS_Test
-            osGroup: MacOS
-            dependsOn: MacOS
-            testOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
+              targetOS: Windows_NT
+              queue: Windows.10.Amd64.Open
+              internalQueue: Windows.10.Amd64.X86.Rt
+            - name: Windows_arm64_Release
+              displayName: Windows arm64 Release
+              dependsOn: Windows
+              configuration: Release
+              architecture: arm64
+              targetOS: Windows_NT
+              queue: Windows.11.Arm64.Open
+              internalQueue: Windows.11.Arm64
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
+              - name: Linux_x64_Debug
+                displayName: Linux x64 Debug
+                dependsOn: Linux
+                configuration: Debug
                 architecture: x64
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Ubuntu_22_04
-            osGroup: Linux
-            container: test_ubuntu_22_04
-            dependsOn: Linux
-            testOnly: true
-            buildConfigs:
-            - configuration: Release
+                targetOS: linux
+                queue: AzureLinux.3.Amd64.Open
+                internalQueue: AzureLinux.3.Amd64
+            - name: Linux_x64_Release
+              displayName: Linux x64 Release
+              dependsOn: Linux
+              configuration: Release
               architecture: x64
+              targetOS: linux
+              queue: AzureLinux.3.Amd64.Open
+              internalQueue: AzureLinux.3.Amd64
+            - name: Linux_arm_Release
+              displayName: Linux arm Release
+              dependsOn: Linux
+              configuration: Release
+              architecture: arm
+              targetOS: linux
+              queue: (Debian.13.Arm32.Open)AzureLinux.3.Arm64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:debian-13-helix-arm32v7
+              internalQueue: (Debian.13.Arm32)AzureLinux.3.Arm64@mcr.microsoft.com/dotnet-buildtools/prereqs:debian-13-helix-arm32v7
+            - name: Linux_arm64_Release
+              displayName: Linux arm64 Release
+              dependsOn: Linux
+              configuration: Release
+              architecture: arm64
+              targetOS: linux
+              queue: AzureLinux.3.Arm64.Open
+              internalQueue: AzureLinux.3.Arm64
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
+              - name: Linux_musl_x64_Debug
+                displayName: Linux musl x64 Debug
+                dependsOn: Linux_musl
+                configuration: Debug
                 architecture: x64
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Alpine3_23
-            osGroup: Linux
-            osSuffix: -musl
-            container: test_linux_musl_x64
-            dependsOn: Linux_musl
-            testOnly: true
-            disableComponentGovernance: true
-            buildConfigs:
-            - configuration: Release
+                targetOS: linux
+                queue: (Alpine.324.Amd64.Open)AzureLinux.3.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.24-helix-amd64
+                internalQueue: (Alpine.324.Amd64)AzureLinux.3.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.24-helix-amd64
+            - name: Linux_musl_x64_Release
+              displayName: Linux musl x64 Release
+              dependsOn: Linux_musl
+              configuration: Release
               architecture: x64
+              targetOS: linux
+              queue: (Alpine.324.Amd64.Open)AzureLinux.3.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.24-helix-amd64
+              internalQueue: (Alpine.324.Amd64)AzureLinux.3.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.24-helix-amd64
+            - name: Linux_musl_arm_Release
+              displayName: Linux musl arm Release
+              dependsOn: Linux_musl
+              configuration: Release
+              architecture: arm
+              targetOS: linux
+              queue: (Alpine.324.Arm32.Open)AzureLinux.3.Arm64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.24-helix-arm32v7
+              internalQueue: (Alpine.324.Arm32)AzureLinux.3.Arm64@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.24-helix-arm32v7
+            - name: Linux_musl_arm64_Release
+              displayName: Linux musl arm64 Release
+              dependsOn: Linux_musl
+              configuration: Release
+              architecture: arm64
+              targetOS: linux
+              queue: (Alpine.324.Arm64.Open)AzureLinux.3.Arm64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.24-helix-arm64v8
+              internalQueue: (Alpine.324.Arm64)AzureLinux.3.Arm64@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.24-helix-arm64v8
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
+              - name: MacOS_x64_Debug
+                displayName: macOS x64 Debug
+                dependsOn: MacOS
+                configuration: Debug
                 architecture: x64
-
-        # - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-        #   - template: /eng/pipelines/build.yml
-        #     parameters:
-        #       jobTemplate: ${{ variables.jobTemplate }}
-        #       name: Fedora_43
-        #       osGroup: Linux
-        #       container: test_fedora
-        #       dependsOn: Linux
-        #       testOnly: true
-        #       buildConfigs:
-        #       - configuration: Release
-        #         architecture: x64
-        #       - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-        #         - configuration: Debug
-        #           architecture: x64
+                targetOS: osx
+                queue: OSX.15.Amd64.Open
+                internalQueue: OSX.15.Amd64
+              - name: MacOS_arm64_Debug
+                displayName: macOS arm64 Debug
+                dependsOn: MacOS
+                configuration: Debug
+                architecture: arm64
+                targetOS: osx
+                queue: OSX.26.Arm64.Open
+                internalQueue: OSX.26.Arm64
+            - name: MacOS_x64_Release
+              displayName: macOS x64 Release
+              dependsOn: MacOS
+              configuration: Release
+              architecture: x64
+              targetOS: osx
+              queue: OSX.15.Amd64.Open
+              internalQueue: OSX.15.Amd64
+            - name: MacOS_arm64_Release
+              displayName: macOS arm64 Release
+              dependsOn: MacOS
+              configuration: Release
+              architecture: arm64
+              targetOS: osx
+              queue: OSX.26.Arm64.Open
+              internalQueue: OSX.26.Arm64
 
     ############################
     #                          #

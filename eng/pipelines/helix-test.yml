@@ -1,0 +1,83 @@
+parameters:
+- name: jobTemplate
+  type: string
+  default: /eng/common/templates-official/job/job.yml@self
+  values:
+  - /eng/common/templates-official/job/job.yml@self
+  - /eng/common/templates/job/job.yml@self
+
+- name: testConfigs
+  type: object
+  default: {}
+
+jobs:
+- ${{ each config in parameters.testConfigs }}:
+  - template: ${{ parameters.jobTemplate }}
+    parameters:
+      name: ${{ config.name }}
+      displayName: ${{ config.displayName }}
+      timeoutInMinutes: 180
+      enableTelemetry: true
+
+      pool:
+        name: $(BuildPool)
+        demands: ImageOverride -equals $(LinuxImage)
+        os: linux
+
+      workspace:
+        clean: all
+
+      variables:
+      - _BuildConfig: ${{ config.configuration }}
+
+      steps:
+      - task: DownloadPipelineArtifact@2
+        displayName: Download build artifacts
+        inputs:
+          artifact: TestArtifacts_${{ config.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
+          targetPath: $(Build.SourcesDirectory)/artifacts
+          checkDownloadedFiles: true
+
+      - task: CopyFiles@2
+        displayName: Gather Helix source payload
+        inputs:
+          SourceFolder: $(Build.SourcesDirectory)
+          Contents: |
+            **
+            !.dotnet/**
+            !.git/**
+            !artifacts/**
+          TargetFolder: $(Build.StagingDirectory)/helix
+
+      - task: CopyFiles@2
+        displayName: Gather Helix artifact payload
+        inputs:
+          SourceFolder: $(Build.SourcesDirectory)/artifacts
+          Contents: |
+            bin/**
+            obj/**
+            test/**
+          TargetFolder: $(Build.StagingDirectory)/helix/artifacts
+
+      - template: /eng/common/templates/steps/send-to-helix.yml@self
+        parameters:
+          HelixBuild: $(Build.BuildNumber)
+          HelixType: tests/diagnostics/
+          HelixConfiguration: ${{ config.name }}
+          WorkItemDirectory: $(Build.StagingDirectory)/helix
+          WorkItemTimeout: 02:00:00
+          DisplayNamePrefix: ${{ config.displayName }}
+          ${{ if eq(config.targetOS, 'Windows_NT') }}:
+            WorkItemCommand: powershell -NoProfile -ExecutionPolicy ByPass -File .\eng\helix\run-tests.ps1 -Architecture ${{ config.architecture }} -Configuration ${{ config.configuration }} -TargetOS ${{ config.targetOS }}
+          ${{ else }}:
+            WorkItemCommand: bash ./eng/helix/run-tests.sh ${{ config.architecture }} ${{ config.configuration }} ${{ config.targetOS }}
+          ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+            HelixSource: official/dotnet/diagnostics/
+            HelixTargetQueues: ${{ config.internalQueue }}
+            HelixAccessToken: $(HelixApiAccessToken)
+            Creator: ''
+          ${{ else }}:
+            HelixSource: pr/dotnet/diagnostics/
+            HelixTargetQueues: ${{ config.queue }}
+            HelixAccessToken: ''
+            Creator: dotnet-diagnostics
