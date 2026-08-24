@@ -37,7 +37,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         {
             // Temporarily force the known failure from https://github.com/dotnet/diagnostics/issues/5659
             // to validate that Build Analysis recognizes it without a generic build failure.
-            Assert.Equal(5, 2);
+            Assert.Equal(6, 2);
 
             // TODO: When distributed tracing support lands EventPipeTracee
             // gains the ability to start traces. When there is an active trace
