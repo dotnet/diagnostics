@@ -2303,18 +2303,18 @@ DECLARE_API(DumpDelegate)
                     // array can be walked identically once we have the array object and the count.
                     CLRDATA_ADDRESS invocationList = 0;
                     int invocationCount = 0;
-                    if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationList"))) != 0)
+                    if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationList"))) > 0)
                     {
                         MOVE(invocationList, delegateObj.GetAddress() + offset);
-                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationCount"))) != 0)
+                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationCount"))) > 0)
                         {
                             MOVE(invocationCount, delegateObj.GetAddress() + offset);
                         }
                     }
-                    else if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_helperObject"))) != 0)
+                    else if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_helperObject"))) > 0)
                     {
                         MOVE(invocationList, delegateObj.GetAddress() + offset);
-                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_extraData"))) != 0)
+                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_extraData"))) > 0)
                         {
                             TADDR extraData = 0;
                             MOVE(extraData, delegateObj.GetAddress() + offset);
@@ -2349,7 +2349,7 @@ DECLARE_API(DumpDelegate)
                     else
                     {
                         CLRDATA_ADDRESS target = 0;
-                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_target"))) != 0)
+                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_target"))) > 0)
                         {
                             MOVE(target, delegateObj.GetAddress() + offset);
                         }
