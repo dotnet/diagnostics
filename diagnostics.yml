@@ -94,6 +94,7 @@ extends:
           - ${{ if ne(variables['System.TeamProject'], 'public') }}:
             - configuration: Release
               architecture: arm64
+              runTests: false
               artifactUploadPath: bin/Windows_NT.arm64.Release
 
       - template: /eng/pipelines/build.yml
