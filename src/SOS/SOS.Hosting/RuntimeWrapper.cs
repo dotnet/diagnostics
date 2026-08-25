@@ -29,27 +29,6 @@ namespace SOS.Hosting
             Unknown = 4
         }
 
-        /// <summary>
-        /// Flags to GetClrDataProcess when creating the DAC instance
-        /// </summary>
-        private enum ClrDataProcessFlags
-        {
-            /// <summary>
-            /// No flags
-            /// </summary>
-            None = 0x0,
-
-            /// <summary>
-            /// Use the cdac if available and enabled by global setting
-            /// </summary>
-            UseCDac = 0x1,
-
-            /// <summary>
-            /// Use the cDAC without falling back to the DAC
-            /// </summary>
-            CDacOnly = 0x3
-        }
-
         public static Guid IID_IXCLRDataProcess = new("5c552ab6-fc09-4cb3-8e36-22fa03c798b7");
         public static Guid IID_ICorDebugProcess = new("3d6f5f64-7538-11d3-8d5b-00104b35e7ef");
         private static readonly Guid IID_IRuntime = new("A5F152B9-BA78-4512-9228-5091A4CB7E35");
@@ -106,7 +85,6 @@ namespace SOS.Hosting
         private readonly IServiceProvider _services;
         private readonly IRuntime _runtime;
         private IntPtr _clrDataProcess = IntPtr.Zero;
-        private IntPtr _cdacDataProcess = IntPtr.Zero;
         private IntPtr _corDebugProcess = IntPtr.Zero;
         private IntPtr _dacHandle = IntPtr.Zero;
         private IntPtr _dbiHandle = IntPtr.Zero;
@@ -130,6 +108,7 @@ namespace SOS.Hosting
             builder.AddMethod(new GetClrDataProcessDelegate(GetClrDataProcess));
             builder.AddMethod(new GetCorDebugInterfaceDelegate(GetCorDebugInterface));
             builder.AddMethod(new GetEEVersionDelegate(GetEEVersion));
+            builder.AddMethod(new GetCDacLoadPolicyDelegate(GetCDacLoadPolicy));
 
             IRuntime = builder.Complete();
 
@@ -154,11 +133,6 @@ namespace SOS.Hosting
             {
                 ComWrapper.ReleaseWithCheck(_clrDataProcess);
                 _clrDataProcess = IntPtr.Zero;
-            }
-            if (_cdacDataProcess != IntPtr.Zero)
-            {
-                ComWrapper.ReleaseWithCheck(_cdacDataProcess);
-                _cdacDataProcess = IntPtr.Zero;
             }
             if (_dacHandle != IntPtr.Zero)
             {
@@ -229,7 +203,7 @@ namespace SOS.Hosting
 
         private int GetClrDataProcess(
             IntPtr self,
-            ClrDataProcessFlags flags,
+            CDacLoadPolicy policy,
             IntPtr* ppClrDataProcess)
         {
             if (ppClrDataProcess == null)
@@ -237,23 +211,18 @@ namespace SOS.Hosting
                 return HResult.E_INVALIDARG;
             }
             *ppClrDataProcess = IntPtr.Zero;
-            CDacLoadPolicy configuredPolicy = _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.Default;
-            bool cdacOnly =
-                configuredPolicy == CDacLoadPolicy.UseCDac ||
-                (flags & ClrDataProcessFlags.CDacOnly) == ClrDataProcessFlags.CDacOnly;
-            bool useCDac =
-                configuredPolicy != CDacLoadPolicy.UseLegacyDac &&
-                (flags & ClrDataProcessFlags.UseCDac) != 0;
+            bool cdacOnly = policy == CDacLoadPolicy.OnlyUseCDac;
+            bool useCDac = CDacPolicy.ShouldTryCDac(policy);
 
-            if (useCDac && _cdacDataProcess == IntPtr.Zero)
+            int cdacActivationResult = HResult.E_NOINTERFACE;
+            if (useCDac)
             {
                 try
                 {
                     Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: requesting an IXCLRDataProcess (cDAC preferred)");
-                    IClrDataProcessActivator activator = _services.GetService<IClrDataProcessActivator>();
-                    CDacLoadPolicy policy = cdacOnly ? CDacLoadPolicy.UseCDac : CDacLoadPolicy.Default;
-                    _cdacDataProcess = activator?.CreateClrDataProcess(_runtime, policy) ?? IntPtr.Zero;
-                    if (_cdacDataProcess != IntPtr.Zero)
+                    cdacActivationResult = _runtime.GetClrDataProcessFromCDac(out IntPtr cdacDataProcess);
+                    *ppClrDataProcess = cdacDataProcess;
+                    if (cdacActivationResult >= 0 && cdacDataProcess != IntPtr.Zero)
                     {
                         Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: received an IXCLRDataProcess");
                     }
@@ -267,16 +236,13 @@ namespace SOS.Hosting
                 catch (Exception ex)
                 {
                     Trace.TraceError(ex.ToString());
+                    cdacActivationResult = ex.HResult;
                 }
-            }
-            if (useCDac)
-            {
-                *ppClrDataProcess = _cdacDataProcess;
             }
             if (*ppClrDataProcess == IntPtr.Zero && cdacOnly)
             {
                 Trace.TraceError($"Runtime #{_runtime.Id} native data-access: cDAC was forced but could not service this runtime; not falling back to the DAC");
-                return unchecked((int)0x80131c46); // CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL
+                return cdacActivationResult;
             }
             if (*ppClrDataProcess == IntPtr.Zero)
             {
@@ -285,7 +251,7 @@ namespace SOS.Hosting
                     try
                     {
                         Trace.TraceInformation($"Runtime #{_runtime.Id} native data-access: creating IXCLRDataProcess from the in-box DAC");
-                        _clrDataProcess = CreateClrDataProcess(GetDacHandle());
+                        _clrDataProcess = CreateClrDataProcessFromDac(GetDacHandle());
                     }
                     catch (Exception ex)
                     {
@@ -299,6 +265,11 @@ namespace SOS.Hosting
                 return HResult.E_NOINTERFACE;
             }
             return HResult.S_OK;
+        }
+
+        private CDacLoadPolicy GetCDacLoadPolicy(IntPtr self)
+        {
+            return _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.Default;
         }
 
         private int GetCorDebugInterface(
@@ -377,7 +348,7 @@ namespace SOS.Hosting
 
         #endregion
 
-        private IntPtr CreateClrDataProcess(IntPtr dacHandle)
+        private IntPtr CreateClrDataProcessFromDac(IntPtr dacHandle)
         {
             if (dacHandle == IntPtr.Zero)
             {
@@ -625,7 +596,7 @@ namespace SOS.Hosting
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int GetClrDataProcessDelegate(
             [In] IntPtr self,
-            [In] ClrDataProcessFlags flags,
+            [In] CDacLoadPolicy policy,
             [Out] IntPtr* ppClrDataProcess);
 
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
@@ -639,6 +610,10 @@ namespace SOS.Hosting
             [Out] VS_FIXEDFILEINFO* pFileInfo,
             [Out] byte* fileVersionBuffer,
             [In] int fileVersionBufferSizeInBytes);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate CDacLoadPolicy GetCDacLoadPolicyDelegate(
+            [In] IntPtr self);
 
         #endregion
     }

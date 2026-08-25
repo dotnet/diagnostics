@@ -66,6 +66,13 @@ namespace Microsoft.Diagnostics.DebugServices
         string GetDacFilePath(out bool verifySignature);
 
         /// <summary>
+        /// Gets a cDAC-backed IXCLRDataProcess owned by this runtime.
+        /// </summary>
+        /// <param name="clrDataProcess">A borrowed IXCLRDataProcess pointer.</param>
+        /// <returns>The activation HRESULT.</returns>
+        int GetClrDataProcessFromCDac(out IntPtr clrDataProcess);
+
+        /// <summary>
         /// Returns the DBI file path
         /// </summary>
         string GetDbiFilePath();

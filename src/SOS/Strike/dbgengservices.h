@@ -237,6 +237,7 @@ public:
     HRESULT STDMETHODCALLTYPE GetDacSignatureVerificationSettings(
         BOOL* dacSignatureVerificationEnabled);
 
+
     //----------------------------------------------------------------------------
     // IRemoteMemoryService
     //----------------------------------------------------------------------------

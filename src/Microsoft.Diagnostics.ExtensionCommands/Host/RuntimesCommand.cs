@@ -36,7 +36,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Forces all runtimes to be enumerated.")]
         public bool All { get; set; }
 
-        [Option(Name = "--usecdac", Help = "Controls cDAC usage: true (always), false (never), or policy (default: use for supported runtimes when bundled).")]
+        [Option(Name = "--usecdac", Help = "Controls cDAC usage: true (required), false (disabled), prefer (allow DAC fallback), or policy (tool default).")]
         public string UseCDac { get; set; }
 
         [Option(Name = "--DacSignatureVerification", Aliases = new string[] { "-v" }, Help = "Enforce the proper DAC certificate signing when loaded (true/false).")]
@@ -54,10 +54,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 SettingsService.CDacLoadPolicy = UseCDac.ToLowerInvariant() switch
                 {
-                    "true" => CDacLoadPolicy.UseCDac,
+                    "true" => CDacLoadPolicy.OnlyUseCDac,
                     "false" => CDacLoadPolicy.UseLegacyDac,
+                    "prefer" => CDacLoadPolicy.PreferCDac,
                     "policy" or "default" => CDacLoadPolicy.Default,
-                    _ => throw new DiagnosticsException($"Invalid --usecdac value '{UseCDac}'. Expected true, false, or policy."),
+                    _ => throw new DiagnosticsException($"Invalid --usecdac value '{UseCDac}'. Expected true, false, prefer, or policy."),
                 };
                 flush = true;
             }

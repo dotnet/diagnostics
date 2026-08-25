@@ -9,6 +9,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
 
@@ -24,8 +25,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private readonly ISymbolService _symbolService;
         private Version _runtimeVersion;
         private ClrRuntime _clrRuntime;
-        // Host-owned reference retained for the registered ClrInfo lifetime.
-        private IntPtr _clrDataProcess;
+        private IClrDataProcess _clrDataProcess;
+        private int? _cdacActivationResult;
         private string _dacFilePath;
         private bool _verifySignature;
         private string _dbiFilePath;
@@ -60,11 +61,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _clrRuntime = null;
             _serviceContainer.RemoveService(typeof(IRuntime));
             _serviceContainer.DisposeServices();
-            if (_clrDataProcess != IntPtr.Zero)
-            {
-                Marshal.Release(_clrDataProcess);
-                _clrDataProcess = IntPtr.Zero;
-            }
+            _clrDataProcess?.Dispose();
+            _clrDataProcess = null;
+            _cdacActivationResult = null;
         }
 
         #region IRuntime
@@ -112,6 +111,24 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return _dacFilePath;
         }
 
+        public int GetClrDataProcessFromCDac(out IntPtr clrDataProcess)
+        {
+            if (!_cdacActivationResult.HasValue)
+            {
+                IClrDataProcessActivator activator = Services.GetService<IClrDataProcessActivator>();
+                _cdacActivationResult = activator?.CreateClrDataProcessFromCDac(this, out _clrDataProcess) ?? HResult.E_NOINTERFACE;
+            }
+
+            clrDataProcess = _clrDataProcess?.Interface ?? IntPtr.Zero;
+            int result = _cdacActivationResult ?? HResult.E_NOINTERFACE;
+            if (result >= 0 && clrDataProcess == IntPtr.Zero)
+            {
+                result = HResult.E_NOINTERFACE;
+                _cdacActivationResult = result;
+            }
+            return result;
+        }
+
         public string GetDbiFilePath()
         {
             _dbiFilePath ??= GetLibraryPath(DebugLibraryKind.Dbi);
@@ -121,73 +138,32 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         #endregion
 
         /// <summary>
-        /// Returns whether cDAC activation is enabled for this runtime.
-        /// </summary>
-        private bool ShouldUseCDac()
-        {
-            return _settingsService.CDacLoadPolicy switch
-            {
-                CDacLoadPolicy.UseLegacyDac => false,   // Never load the cDAC.
-                CDacLoadPolicy.UseCDac => true,         // Always use the cDAC. Availability is checked by the caller
-                                                        //  (a missing forced cDAC is a hard error).
-                _ => ShouldUseCDacByDefault(),          // No explicit setting: evaluate the default policy.
-            };
-        }
-
-        /// <summary>
-        /// The default cDAC policy used when <see cref="ISettingsService.CDacLoadPolicy"/> is not set.
-        /// </summary>
-        private static bool ShouldUseCDacByDefault()
-        {
-            // When DOTNET_ENABLE_CDAC is requested, the in-box (legacy) DAC loads and drives the
-            // cDAC contract reader itself, including its own dac-vs-cdac fallback/comparison
-            // (see CDAC_NO_FALLBACK). Defer to that mechanism rather than loading the cDAC
-            // directly so those scenarios (for example, the runtime's cDAC test pipeline that
-            // points at a freshly built cDAC via -liveruntimedir) keep working.
-            if (Environment.GetEnvironmentVariable("DOTNET_ENABLE_CDAC") == "1"
-               || Environment.GetEnvironmentVariable("COMPlus_ENABLE_CDAC") == "1")
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
         /// Create ClrRuntime instance
         /// </summary>
         private ClrRuntime CreateRuntime()
         {
             CDacLoadPolicy policy = _settingsService.CDacLoadPolicy;
-            Trace.TraceInformation($"Runtime #{Id} data-access: begin (cDAC policy={policy}, cDAC selected={ShouldUseCDac()})");
+            bool useCDac = CDacPolicy.ShouldTryCDac(policy);
+            Trace.TraceInformation($"Runtime #{Id} data-access: begin (cDAC policy={policy}, cDAC attempted={useCDac})");
 
-            if (ShouldUseCDac())
+            if (useCDac)
             {
-                IClrDataProcessActivator activator = Services.GetService<IClrDataProcessActivator>();
-                if (activator is not null)
+                int hr = GetClrDataProcessFromCDac(out IntPtr clrDataProcess);
+                if (hr >= 0 && clrDataProcess != IntPtr.Zero)
                 {
-                    Trace.TraceInformation($"Runtime #{Id} data-access: requesting an IXCLRDataProcess (cDAC preferred)");
-                    IntPtr clrDataProcess = activator.CreateClrDataProcess(this, policy);
-                    if (clrDataProcess != IntPtr.Zero)
-                    {
-                        Trace.TraceInformation($"Runtime #{Id} data-access: received an IXCLRDataProcess");
-                        return CreateRuntimeFromClrDataProcess(clrDataProcess);
-                    }
-                    Trace.TraceInformation($"Runtime #{Id} data-access: no IXCLRDataProcess was created");
+                    Trace.TraceInformation($"Runtime #{Id} data-access: received an IXCLRDataProcess");
+                    return CreateRuntimeFromClrDataProcess();
                 }
-                else
-                {
-                    Trace.TraceInformation($"Runtime #{Id} data-access: no IXCLRDataProcess activator is registered");
-                }
+                Trace.TraceInformation($"Runtime #{Id} data-access: IXCLRDataProcess activation failed {hr:X8}");
             }
 
-            if (policy == CDacLoadPolicy.UseCDac)
+            if (policy == CDacLoadPolicy.OnlyUseCDac)
             {
-                Trace.TraceError($"Runtime #{Id} data-access: cDAC was forced (UseCDac) but could not service this runtime; not falling back to the DAC: {RuntimeModule.FileName}");
+                Trace.TraceError($"Runtime #{Id} data-access: cDAC was required but could not service this runtime: {RuntimeModule.FileName}");
                 return null;
             }
 
-            // We ignore the dac verification param since it's already set as part of the CLRMD DataTarget creation
+            // We ignore the dac signature verification param since it's already set as part of the CLRMD DataTarget creation
             // now (it's a global setting to the session).
             string dacFilePath = GetDacFilePath(out _);
             if (dacFilePath is not null)
@@ -227,14 +203,28 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Creates a ClrRuntime with the supplied IXCLRDataProcess.
         /// </summary>
-        private ClrRuntime CreateRuntimeFromClrDataProcess(IntPtr clrDataProcess)
+        private ClrRuntime CreateRuntimeFromClrDataProcess()
         {
-            bool registered = false;
             try
             {
-                _clrDataProcess = clrDataProcess;
-                _clrInfo.DataTarget.AddLoadedRuntime(_clrInfo, clrDataProcess);
-                registered = true;
+                _clrInfo.DataTarget.AddLoadedRuntime(_clrInfo, _clrDataProcess.Interface);
+            }
+            catch (Exception ex) when
+               (ex is DllNotFoundException or
+                FileNotFoundException or
+                InvalidOperationException or
+                InvalidDataException or
+                ClrDiagnosticsException)
+            {
+                Trace.TraceError("Register IXCLRDataProcess FAILED: {0}", ex.ToString());
+                _clrDataProcess.Dispose();
+                _clrDataProcess = null;
+                _cdacActivationResult = null;
+                return null;
+            }
+
+            try
+            {
                 Trace.TraceInformation($"Creating ClrRuntime #{Id} from IXCLRDataProcess");
                 return _clrRuntime = _clrInfo.CreateRuntime();
             }
@@ -245,16 +235,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 InvalidDataException or
                 ClrDiagnosticsException)
             {
-                Trace.TraceError("CreateRuntime from IXCLRDataProcess FAILED: {0}", ex.ToString());
+                Trace.TraceError("CreateRuntime from registered IXCLRDataProcess FAILED: {0}", ex.ToString());
                 return null;
-            }
-            finally
-            {
-                if (!registered)
-                {
-                    Marshal.Release(clrDataProcess);
-                    _clrDataProcess = IntPtr.Zero;
-                }
             }
         }
 

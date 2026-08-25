@@ -232,6 +232,10 @@ Runtime::Runtime(ITarget* target, RuntimeConfiguration configuration, ULONG inde
     m_dbgShimHandle(nullptr),
     m_clrDataProcess(nullptr),
     m_cdacDataProcess(nullptr),
+    m_hasCDacActivationResult(false),
+    m_cdacActivationResult(E_UNEXPECTED),
+    m_contractDescriptorAddressResolved(false),
+    m_contractDescriptorAddress(0),
     m_pCorDebugProcess(nullptr)
 {
     _ASSERTE(index != -1);
@@ -441,6 +445,13 @@ void Runtime::Flush()
     {
         m_cdacDataProcess->Flush();
     }
+    else
+    {
+        m_hasCDacActivationResult = false;
+        m_cdacActivationResult = E_UNEXPECTED;
+        m_contractDescriptorAddressResolved = false;
+        m_contractDescriptorAddress = 0;
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -529,21 +540,20 @@ LPCSTR Runtime::GetRuntimeDirectory()
 /**********************************************************************\
  * Creates an instance of the DAC clr data process
 \**********************************************************************/
-HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess** ppClrDataProcess)
+HRESULT Runtime::GetClrDataProcess(CDacLoadPolicy policy, IXCLRDataProcess** ppClrDataProcess)
 {
-    // When the cDAC is requested (e.g. by CLRMA or the main SOS DAC-load path) and the policy
-    // selects it (supported runtime version, DOTNET_ENABLE_CDAC not deferring to the in-box DAC),
-    // prefer it for the data-access path and fall back to the in-box DAC if it isn't bundled or
-    // fails to initialize.
-    if ((flags & ClrDataProcessFlags::UseCDac) != 0 && ShouldUseCDac())
+    bool cdacOnly = policy == CDacLoadPolicy::OnlyUseCDac;
+
+    if (ShouldTryCDac(policy))
     {
-        if (m_cdacDataProcess == nullptr)
+        if (m_cdacDataProcess == nullptr && !m_hasCDacActivationResult)
         {
-            HRESULT hr = CreateClrDataProcessWithDbgShim(&m_cdacDataProcess);
-            if (FAILED(hr) && s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
+            m_cdacActivationResult = CreateClrDataProcessViaDbgShim(&m_cdacDataProcess);
+            m_hasCDacActivationResult = true;
+            if (FAILED(m_cdacActivationResult) && cdacOnly)
             {
                 *ppClrDataProcess = nullptr;
-                return hr;
+                return m_cdacActivationResult;
             }
         }
         if (m_cdacDataProcess != nullptr)
@@ -551,10 +561,10 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
             *ppClrDataProcess = m_cdacDataProcess;
             return S_OK;
         }
-        if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
+        if (cdacOnly)
         {
             *ppClrDataProcess = nullptr;
-            return CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL;
+            return m_cdacActivationResult;
         }
         // Fall through to the DAC.
     }
@@ -568,7 +578,7 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         {
             return CORDBG_E_NO_IMAGE_AVAILABLE;
         }
-        m_clrDataProcess = CreateClrDataProcessInstance(dacFilePath);
+        m_clrDataProcess = CreateClrDataProcessDirect(dacFilePath);
         if (m_clrDataProcess == nullptr)
         {
             return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
@@ -589,13 +599,13 @@ static bool IsEnvironmentVariableSetToOne(const char* name)
 /**********************************************************************\
  * Evaluates the cDAC loading policy for this runtime.
 \**********************************************************************/
-bool Runtime::ShouldUseCDac()
+bool Runtime::ShouldTryCDac(CDacLoadPolicy policy)
 {
-    if (s_cdacLoadPolicy == CDacLoadPolicy::UseLegacyDac)
+    if (policy == CDacLoadPolicy::UseLegacyDac)
     {
         return false;
     }
-    if (s_cdacLoadPolicy == CDacLoadPolicy::UseCDac)
+    if (policy == CDacLoadPolicy::OnlyUseCDac || policy == CDacLoadPolicy::PreferCDac)
     {
         return true;
     }
@@ -612,9 +622,14 @@ bool Runtime::ShouldUseCDac()
     return true;
 }
 
-CDacLoadPolicy Runtime::GetCDacLoadPolicy()
+CDacLoadPolicy Runtime::GetConfiguredCDacLoadPolicy()
 {
     return s_cdacLoadPolicy;
+}
+
+CDacLoadPolicy Runtime::GetCDacLoadPolicy() const
+{
+    return GetConfiguredCDacLoadPolicy();
 }
 
 void Runtime::SetCDacLoadPolicy(CDacLoadPolicy policy)
@@ -626,7 +641,7 @@ void Runtime::SetCDacLoadPolicy(CDacLoadPolicy policy)
  * Loads the given DAC module and creates an IXCLRDataProcess from it.
  * Returns nullptr on failure.
 \**********************************************************************/
-IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath)
+IXCLRDataProcess* Runtime::CreateClrDataProcessDirect(LPCSTR dacFilePath)
 {
     HMODULE hdac = LoadLibraryA(dacFilePath);
     if (hdac == NULL)
@@ -667,7 +682,7 @@ IXCLRDataProcess* Runtime::CreateClrDataProcessInstance(LPCSTR dacFilePath)
 /**********************************************************************\
  * Creates an IXCLRDataProcess through dbgshim.
 \**********************************************************************/
-HRESULT Runtime::CreateClrDataProcessWithDbgShim(IXCLRDataProcess** ppClrDataProcess)
+HRESULT Runtime::CreateClrDataProcessViaDbgShim(IXCLRDataProcess** ppClrDataProcess)
 {
     if (ppClrDataProcess == nullptr)
     {
@@ -742,40 +757,52 @@ HRESULT Runtime::CreateClrDataProcessWithDbgShim(IXCLRDataProcess** ppClrDataPro
         }
         return hr;
     }
+    if (process == nullptr)
+    {
+        return E_NOINTERFACE;
+    }
 
     *ppClrDataProcess = (IXCLRDataProcess*)process;
+    ULONG32 notificationFlags = 0;
+    if (SUCCEEDED((*ppClrDataProcess)->GetOtherNotificationFlags(&notificationFlags)))
+    {
+        notificationFlags |=
+            CLRDATA_NOTIFY_ON_MODULE_LOAD |
+            CLRDATA_NOTIFY_ON_MODULE_UNLOAD |
+            CLRDATA_NOTIFY_ON_EXCEPTION;
+        (*ppClrDataProcess)->SetOtherNotificationFlags(notificationFlags);
+    }
     return S_OK;
 }
 
-/**********************************************************************\
- * Resolves the address of the cDAC contract descriptor export
- * (DotNetRuntimeContractDescriptor) in the runtime module, or 0 if it
- * can't be located. Mirrors the export lookup in GetSingleFileInfo: the
- * cross-platform reader-based lookup for ELF/Mach-O targets and the
- * debugger's symbol resolution for Windows (PE) targets.
-\**********************************************************************/
 ULONG64 Runtime::GetContractDescriptorAddress()
 {
-    const char* symbolName = CONTRACT_DESCRIPTOR_SYMBOL;
-    ULONG64 symbolAddress = 0;
-    if (m_target->GetOperatingSystem() == ITarget::OperatingSystem::Linux ||
-        m_target->GetOperatingSystem() == ITarget::OperatingSystem::OSX)
+    if (!m_contractDescriptorAddressResolved)
     {
-        if (!::TryGetSymbolWithCallback(ReaderReadMemory, m_address, symbolName, &symbolAddress))
+        m_contractDescriptorAddressResolved = true;
+        const char* symbolName = CONTRACT_DESCRIPTOR_SYMBOL;
+        if (m_target->GetOperatingSystem() == ITarget::OperatingSystem::Linux ||
+            m_target->GetOperatingSystem() == ITarget::OperatingSystem::OSX)
         {
-            return 0;
+            ::TryGetSymbolWithCallback(
+                ReaderReadMemory,
+                m_address,
+                symbolName,
+                &m_contractDescriptorAddress);
+        }
+        else
+        {
+            IDebuggerServices* debuggerServices = GetDebuggerServices();
+            if (debuggerServices != nullptr)
+            {
+                debuggerServices->GetOffsetBySymbol(
+                    m_index,
+                    symbolName,
+                    &m_contractDescriptorAddress);
+            }
         }
     }
-    else
-    {
-        IDebuggerServices* debuggerServices = GetDebuggerServices();
-        if (debuggerServices == nullptr ||
-            FAILED(debuggerServices->GetOffsetBySymbol(m_index, symbolName, &symbolAddress)))
-        {
-            return 0;
-        }
-    }
-    return symbolAddress;
+    return m_contractDescriptorAddress;
 }
 
 /**********************************************************************\

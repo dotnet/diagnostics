@@ -282,16 +282,10 @@ ClrmaManagedAnalysis::AssociateClient(
                     TraceError("AssociateClient GetRuntime FAILED %08x\n", hr);
                     return hr;
                 }
-                IRuntime::ClrDataProcessFlags flags =
-                    Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseCDac ? IRuntime::ClrDataProcessFlags::CDacOnly :
-                    Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseLegacyDac ? IRuntime::ClrDataProcessFlags::None :
-                    IRuntime::ClrDataProcessFlags::UseCDac;
-                if (FAILED(hr = runtime->GetClrDataProcess(flags, &m_clrData)))
+                CDacLoadPolicy policy = runtime->GetCDacLoadPolicy();
+                if (FAILED(hr = runtime->GetClrDataProcess(policy, &m_clrData)))
                 {
-                    bool cdacEnforced =
-                        (flags & IRuntime::ClrDataProcessFlags::CDacOnly) == IRuntime::ClrDataProcessFlags::CDacOnly ||
-                        hr == CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL;
-                    if (cdacEnforced)
+                    if (policy == CDacLoadPolicy::OnlyUseCDac || hr == CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL)
                     {
                         TraceError("AssociateClient forced cDAC retrieval failed with code %08x\n", hr);
                         return hr;
