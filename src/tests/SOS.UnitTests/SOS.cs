@@ -60,6 +60,31 @@ public static class SOSTestHelpers
             .Select(c => new[] { c });
     }
 
+    public static IEnumerable<object[]> GetCLRNotificationFailureConfigurations()
+    {
+        if (OS.Kind != OSKind.Windows)
+        {
+            return new[] { new object[] { TestConfiguration.Empty } };
+        }
+
+        List<object[]> configurations = Configurations
+            .Select(args => (TestConfiguration)args[0])
+            .Where(c => c != TestConfiguration.Empty && c.IsNETCore && !c.PublishSingleFile && c.RuntimeFrameworkVersionMajor < 11)
+            .OrderByDescending(c => c.RuntimeFrameworkVersion)
+            .Take(1)
+            .Select(c =>
+            {
+                Dictionary<string, string> settings = new(c.AllSettings)
+                {
+                    ["HostArgs"] = "exec " + c.HostArgs
+                };
+                return new TestConfiguration(settings);
+            })
+            .Select(c => new object[] { c })
+            .ToList();
+        return configurations.Count == 0 ? new[] { new object[] { TestConfiguration.Empty } } : configurations;
+    }
+
     public static IEnumerable<object[]> GetGCConfigurations()
     {
         IEnumerable<TestConfiguration> inputConfigurations = TestRunConfiguration.Instance.Configurations
@@ -667,6 +692,46 @@ public class SOSDumpTests
                 EnableStressLog = true,
                 // Assumes that SymbolTestDll.dll that is dynamically loaded is the parent directory of the single file app
                 DebuggeeArguments = config.PublishSingleFile ? Path.Combine("%DEBUG_ROOT%", "..") : "%DEBUG_ROOT%"
+            },
+            Output);
+    }
+
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetCLRNotificationFailureConfigurations), MemberType = typeof(SOSTestHelpers))]
+    public async Task CLRNotificationHandlerFailure(TestConfiguration config)
+    {
+        if (config == TestConfiguration.Empty)
+        {
+            throw new SkipTestException("CLR notification failure coverage requires Windows and a pre-.NET 11 runtime");
+        }
+
+        string sourceSosPath = config.SOSPath();
+        string isolatedSosDirectory = Path.Combine(config.LogDirPath, "CLRNotificationHandlerFailure.SOS");
+        // Omitting the bundled cDAC makes the forced cDAC failure independent of the build layout.
+        Directory.CreateDirectory(isolatedSosDirectory);
+        foreach (string sourcePath in Directory.EnumerateFiles(Path.GetDirectoryName(sourceSosPath)))
+        {
+            if (!Path.GetFileName(sourcePath).Equals("mscordaccore_universal.dll", StringComparison.OrdinalIgnoreCase))
+            {
+                File.Copy(sourcePath, Path.Combine(isolatedSosDirectory, Path.GetFileName(sourcePath)), overwrite: true);
+            }
+        }
+        Dictionary<string, string> settings = new(config.AllSettings)
+        {
+            ["SOSPath"] = Path.Combine(isolatedSosDirectory, Path.GetFileName(sourceSosPath))
+        };
+        config = new TestConfiguration(settings);
+
+        await SOSTestHelpers.RunTest(
+            scriptName: "CLRNotificationHandlerFailure.script",
+            new SOSRunner.TestInformation
+            {
+                TestConfiguration = config,
+                TestName = "SOS.CLRNotificationHandlerFailure",
+                DebuggeeName = "CLRNotificationHandlerFailure",
+                TestDump = false,
+                ApplyDacModeOnDemand = true,
+                DacModeOverride = DacMode.CDac,
+                FailOnCLRNotificationStop = true,
             },
             Output);
     }

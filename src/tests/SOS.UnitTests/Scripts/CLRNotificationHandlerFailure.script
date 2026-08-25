@@ -1,0 +1,13 @@
+#
+# Forces the standalone cDAC to fail after bpmd has armed CLR notifications.
+#
+
+LOADSOS
+SOSCOMMAND:bpmd CLRNotificationHandlerFailure.dll CLRNotificationHandlerFailure.Program.TriggerNotification
+CONTINUE
+
+APPLYDACMODE
+SOSCOMMAND_FAIL:clrstack
+VERIFY:Failed to load data access module, 0x80131c(4f|64)
+CONTINUE
+VERIFY:Break instruction exception - code 80000003

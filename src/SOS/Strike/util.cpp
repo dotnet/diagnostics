@@ -3807,10 +3807,20 @@ public:
 // Return Value:
 //      HRESULT indicating success or failure
 //
+static HRESULT s_dacFallbackFailure = S_OK;
+
+HRESULT GetDacFallbackFailure(void)
+{
+    return s_dacFallbackFailure;
+}
+
 HRESULT LoadClrDebugDll(void)
 {
     _ASSERTE(g_pRuntime != nullptr);
+    s_dacFallbackFailure = S_OK;
     HRESULT hr = g_pRuntime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::UseCDac, &g_clrData);
+    HRESULT primaryFailure = hr;
+    bool usedDbgEngFallback = false;
     if (FAILED(hr))
     {
         if (Runtime::GetCDacLoadPolicy() == CDacLoadPolicy::UseCDac)
@@ -3822,6 +3832,7 @@ HRESULT LoadClrDebugDll(void)
         {
             return hr;
         }
+        usedDbgEngFallback = true;
     }
     else
     {
@@ -3832,6 +3843,13 @@ HRESULT LoadClrDebugDll(void)
     if (FAILED(hr))
     {
         g_sos = NULL;
+        g_clrData->Release();
+        g_clrData = NULL;
+        if (usedDbgEngFallback)
+        {
+            s_dacFallbackFailure = hr;
+            return primaryFailure;
+        }
         return hr;
     }
     // Always have an instance of the MethodTable enumerator

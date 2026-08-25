@@ -1683,6 +1683,7 @@ inline BOOL IsKernelDebugger ()
 
 void    ResetGlobals(void);
 HRESULT LoadClrDebugDll(void);
+HRESULT GetDacFallbackFailure(void);
 
 extern IMetaDataImport* MDImportForModule (DacpModuleData *pModule);
 extern IMetaDataImport* MDImportForModule (DWORD_PTR pModule);

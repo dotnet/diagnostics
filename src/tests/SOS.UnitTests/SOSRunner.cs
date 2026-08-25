@@ -149,6 +149,12 @@ public class SOSRunner : IDisposable
 
         public bool EnableStressLog { get; set; }
 
+        public bool ApplyDacModeOnDemand { get; set; }
+
+        public DacMode? DacModeOverride { get; set; }
+
+        public bool FailOnCLRNotificationStop { get; set; }
+
         public bool TestCrashReport
         {
             get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows; }
@@ -189,11 +195,14 @@ public class SOSRunner : IDisposable
     private readonly ScriptLogger _scriptLogger;
     private readonly ProcessRunner _processRunner;
     private readonly DumpType? _dumpType;
+    private readonly bool _applyDacModeOnDemand;
+    private readonly DacMode _dacMode;
+    private readonly bool _failOnCLRNotificationStop;
     private string _lastCommandOutput;
     private string _previousCommandCapture;
 
     private SOSRunner(NativeDebugger debugger, TestConfiguration config, TestRunner.OutputHelper outputHelper, Dictionary<string, string> variables,
-        ScriptLogger scriptLogger, ProcessRunner processRunner, DumpType? dumpType)
+        ScriptLogger scriptLogger, ProcessRunner processRunner, DumpType? dumpType, bool applyDacModeOnDemand, DacMode dacMode, bool failOnCLRNotificationStop)
     {
         Debugger = debugger;
         _config = config;
@@ -202,6 +211,9 @@ public class SOSRunner : IDisposable
         _scriptLogger = scriptLogger;
         _processRunner = processRunner;
         _dumpType = dumpType;
+        _applyDacModeOnDemand = applyDacModeOnDemand;
+        _dacMode = dacMode;
+        _failOnCLRNotificationStop = failOnCLRNotificationStop;
     }
 
     /// <summary>
@@ -480,6 +492,7 @@ public class SOSRunner : IDisposable
             throw new ArgumentException("Invalid TestInformation");
         }
         TestConfiguration config = information.TestConfiguration;
+        DacMode dacMode = information.DacModeOverride ?? config.DacMode;
         TestRunner.OutputHelper outputHelper = null;
         SOSRunner sosRunner = null;
 
@@ -727,7 +740,7 @@ public class SOSRunner : IDisposable
             //  * SOS's own cDAC load policy ("runtimes --usecdac"), applied in LoadSosExtension. That
             //    command is an SOS extension command and is not available until SOS has been loaded, so
             //    it cannot be issued as a pre-SOS initial debugger command.
-            switch (config.DacMode)
+            switch (dacMode)
             {
                 case DacMode.CDacVerify:
                     // cDAC hosted by the in-box DAC, with no fallback to the legacy DAC.
@@ -797,7 +810,17 @@ public class SOSRunner : IDisposable
             }
 
             // Create the sos runner instance
-            sosRunner = new SOSRunner(debugger, config, outputHelper, variables, scriptLogger, processRunner, dumpType);
+            sosRunner = new SOSRunner(
+                debugger,
+                config,
+                outputHelper,
+                variables,
+                scriptLogger,
+                processRunner,
+                dumpType,
+                information.ApplyDacModeOnDemand,
+                dacMode,
+                information.FailOnCLRNotificationStop);
 
             // Start the native debugger
             Stopwatch launchSw = Stopwatch.StartNew();
@@ -891,6 +914,10 @@ public class SOSRunner : IDisposable
                     else if (line.StartsWith("CONTINUE"))
                     {
                         await ContinueExecution();
+                    }
+                    else if (line.StartsWith("APPLYDACMODE"))
+                    {
+                        await ApplyDacMode();
                     }
                     // Adds the "!" prefix under dbgeng, nothing under lldb. Meant for SOS (native) commands.
                     else if (line.StartsWith("SOSCOMMAND:"))
@@ -1152,13 +1179,8 @@ public class SOSRunner : IDisposable
         // uses the requested DAC/cDAC the first time it resolves the runtime. CDacVerify instead
         // relies on the in-box DAC via env vars set in StartDebugger and keeps SOS's default
         // policy (which does not load the standalone cDAC when DOTNET_ENABLE_CDAC is set).
-        string cdacPolicyCommand = _config.DacMode switch
-        {
-            DacMode.CDac => "runtimes --usecdac true",    // Force the standalone cDAC next to sos.dll.
-            DacMode.Dac => "runtimes --usecdac false",     // Force the legacy in-box DAC.
-            _ => null,
-        };
-        if (cdacPolicyCommand is not null && Debugger != NativeDebugger.Gdb)
+        string cdacPolicyCommand = GetDacPolicyCommand();
+        if (!_applyDacModeOnDemand && cdacPolicyCommand is not null && Debugger != NativeDebugger.Gdb)
         {
             commands.Add((Debugger == NativeDebugger.Cdb ? "!" : "") + cdacPolicyCommand);
         }
@@ -1213,8 +1235,47 @@ public class SOSRunner : IDisposable
                 {
                     throw new Exception($"'{command}' FAILED");
                 }
+                if (Debugger == NativeDebugger.Cdb && _lastCommandOutput is not null)
+                {
+                    string continuationOutput = _lastCommandOutput;
+                    if (!await RunCommand(".lastevent"))
+                    {
+                        throw new Exception("'.lastevent' FAILED");
+                    }
+                    string lastEventOutput = _lastCommandOutput;
+                    _lastCommandOutput = continuationOutput;
+                    bool stoppedOnCLRNotification = Regex.IsMatch(lastEventOutput ?? string.Empty, @"\be0444143\b", RegexOptions.IgnoreCase);
+                    if (stoppedOnCLRNotification &&
+                        (_failOnCLRNotificationStop || continuationOutput.Contains("SOS CLR notification handler failed", StringComparison.Ordinal)))
+                    {
+                        throw new Exception("Continuation returned while the target was parked on an unhandled CLR notification");
+                    }
+                }
             }
         }
+    }
+
+    public async Task ApplyDacMode()
+    {
+        string command = GetDacPolicyCommand();
+        if (command is null)
+        {
+            throw new InvalidOperationException($"DacMode {_dacMode} does not have an SOS load policy command");
+        }
+        if (!await RunSosCommand(command))
+        {
+            throw new Exception($"SOS command FAILED: {command}");
+        }
+    }
+
+    private string GetDacPolicyCommand()
+    {
+        return _dacMode switch
+        {
+            DacMode.CDac => "runtimes --usecdac true",
+            DacMode.Dac => "runtimes --usecdac false",
+            _ => null,
+        };
     }
 
     public async Task SwitchThread(string threadId)
