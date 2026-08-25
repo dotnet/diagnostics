@@ -54,6 +54,11 @@ namespace SOS.Hosting
                 {
                     return HResult.E_NOINTERFACE;
                 }
+                HResult policyResult = SetCDacLoadPolicy(clrDebugging, DbgShimCDacLoadPolicy.CDacOnly);
+                if (!policyResult)
+                {
+                    return policyResult;
+                }
 
                 DataTargetWrapper dataTarget = new(runtime.Services, runtime);
 
@@ -93,6 +98,76 @@ namespace SOS.Hosting
                 Trace.TraceInformation($"ClrDataProcessActivator: activated IXCLRDataProcess for runtime #{runtime.Id} via dbgshim.");
                 clrDataProcess = new ClrDataProcess(clrDataProcessInterface, dataTarget);
                 return hr;
+            }
+        }
+
+        public int CreateCorDebugProcess(
+            IRuntime runtime,
+            IntPtr libraryProvider,
+            CDacLoadPolicy policy,
+            out IntPtr corDebugProcess)
+        {
+            corDebugProcess = IntPtr.Zero;
+            if (runtime is null)
+            {
+                throw new ArgumentNullException(nameof(runtime));
+            }
+
+            lock (_lock)
+            {
+                ICLRDebugging clrDebugging = GetOrCreateClrDebugging();
+                if (clrDebugging is null)
+                {
+                    return HResult.E_NOINTERFACE;
+                }
+
+                HResult policyResult = SetCDacLoadPolicy(clrDebugging, (DbgShimCDacLoadPolicy)policy);
+                if (!policyResult)
+                {
+                    return policyResult;
+                }
+
+                ClrDebuggingVersion maxDebuggerSupportedVersion = new()
+                {
+                    StructVersion = 0,
+                    Major = 4,
+                    Minor = 0,
+                    Build = 0,
+                    Revision = 0,
+                };
+
+                CorDebugDataTargetWrapper dataTarget = new(runtime.Services, runtime);
+                try
+                {
+                    Guid riidProcess = RuntimeWrapper.IID_ICorDebugProcess;
+                    HResult hr = clrDebugging.OpenVirtualProcess(
+                        runtime.RuntimeModule.ImageBase,
+                        dataTarget.ICorDebugDataTarget,
+                        libraryProvider,
+                        maxDebuggerSupportedVersion,
+                        in riidProcess,
+                        out corDebugProcess,
+                        out _,
+                        out _);
+                    if (!hr || corDebugProcess == IntPtr.Zero)
+                    {
+                        HResult result = hr ? HResult.E_NOINTERFACE : hr;
+                        if (corDebugProcess != IntPtr.Zero)
+                        {
+                            COMHelper.Release(corDebugProcess);
+                            corDebugProcess = IntPtr.Zero;
+                        }
+                        Trace.TraceInformation($"ClrDataProcessActivator: dbgshim declined DBI activation for runtime #{runtime.Id} (hr={result:x8}).");
+                        return result;
+                    }
+
+                    Trace.TraceInformation($"ClrDataProcessActivator: activated ICorDebugProcess for runtime #{runtime.Id} via dbgshim.");
+                    return hr;
+                }
+                finally
+                {
+                    dataTarget.ReleaseWithCheck();
+                }
             }
         }
 

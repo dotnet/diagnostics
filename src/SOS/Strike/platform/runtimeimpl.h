@@ -156,6 +156,8 @@ private:
 
     HRESULT CreateClrDataProcessViaDbgShim(IXCLRDataProcess** ppClrDataProcess);
 
+    HRESULT CreateDesktopCorDebugProcess(ICorDebugProcess** ppCorDebugProcess);
+
     ULONG64 GetContractDescriptorAddress();
 
     static bool ShouldTryCDac(CDacLoadPolicy policy);
