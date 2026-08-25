@@ -30,7 +30,7 @@
           BeforeTargets="RunTests"
           Condition="'$(OS)' != 'Windows_NT'">
     <!-- Pipeline artifact transfer does not preserve Unix executable permissions. -->
-    <Exec Command="chmod +x &quot;$(TargetDir)$(AssemblyName)&quot;" />
+    <Exec Command="chmod +x &quot;%(TestToRun.RunCommand)&quot;" />
   </Target>
 
 </Project>
