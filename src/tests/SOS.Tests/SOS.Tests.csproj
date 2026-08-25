@@ -26,4 +26,11 @@
     <AdditionalFiles Include="..\SOS.UnitTests\Debuggees\SosHarnessScenarios\SosHarnessScenarios.cs" />
   </ItemGroup>
 
+  <Target Name="EnsureUnixTestAppHostExecutable"
+          BeforeTargets="RunTests"
+          Condition="'$(OS)' != 'Windows_NT'">
+    <!-- Pipeline artifact transfer does not preserve Unix executable permissions. -->
+    <Exec Command="chmod +x &quot;$(TargetDir)$(AssemblyName)&quot;" />
+  </Target>
+
 </Project>

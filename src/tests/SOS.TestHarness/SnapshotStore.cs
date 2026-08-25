@@ -76,8 +76,29 @@ public static class SnapshotStore
     }
 
     /// <summary>Path to the runnable executable for a target in a flavor/version, producing it on first use.</summary>
-    public static string TargetExe(Flavor flavor, string targetName, CoreVersion coreVersion = CoreVersion.Net10) =>
-        s_targetExe.GetOrAdd((flavor, targetName, coreVersion), k => new Lazy<string>(() => AcquireTarget(k.Flavor, TargetCatalog.Get(k.Target), k.CoreVersion))).Value;
+    public static string TargetExe(Flavor flavor, string targetName, CoreVersion coreVersion = CoreVersion.Net10)
+    {
+        string exe = s_targetExe
+            .GetOrAdd((flavor, targetName, coreVersion), k => new Lazy<string>(() => AcquireTarget(k.Flavor, TargetCatalog.Get(k.Target), k.CoreVersion)))
+            .Value;
+        EnsureExecutable(exe);
+        return exe;
+    }
+
+    private static void EnsureExecutable(string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        UnixFileMode mode = File.GetUnixFileMode(path);
+        UnixFileMode execute = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
+        if ((mode & execute) != execute)
+        {
+            File.SetUnixFileMode(path, mode | execute);
+        }
+    }
 
     private static string DumpDir(Flavor flavor, string target, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion) =>
         Path.Combine(RepoLayout.Scratch, "dumps", flavor.ToString().ToLowerInvariant(),
