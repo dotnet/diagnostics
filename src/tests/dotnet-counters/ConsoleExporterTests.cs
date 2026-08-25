@@ -189,6 +189,7 @@ namespace DotnetCounters.UnitTests
             exporter.CounterPayloadReceived(CreateIncrementingEventCounter("System.Runtime", "Allocation Rate", "B", 1731), false);
             exporter.CounterPayloadReceived(CreateIncrementingEventCounter("System.Runtime", "Large Allocation Rate", "B", 573720000), false);
             exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "BigCounter", "nanoseconds", 602341234567890123.0), false);
+            exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Prefix Boundary", "B", 999999999), false);
             console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
                                      "    Status: Running",
                                      "",
@@ -197,7 +198,8 @@ namespace DotnetCounters.UnitTests
                                      "    % Time in GC since last GC (%)                     0.1",
                                      "    Allocation Rate (B / 1 sec)                    1,731",
                                      "    BigCounter (nanoseconds)                       602.3412P",
-                                     "    Large Allocation Rate (B / 1 sec)                573.72M");
+                                     "    Large Allocation Rate (B / 1 sec)                573.72M",
+                                     "    Prefix Boundary (B)                                   1G");
         }
 
         [Fact]

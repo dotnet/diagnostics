@@ -63,6 +63,18 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         private const int DefaultCounterValueLength = 15;
         private const int NoAbbreviateMinValueLength = 21; // Fits values up to ~10^15 with separators (e.g. unix ms timestamps).
         private const int MinimalColumnHeaderLength = 5;
+        private static readonly (double Divisor, string Suffix)[] s_numberScales =
+        {
+            (1e6, "M"),
+            (1e9, "G"),
+            (1e12, "T"),
+            (1e15, "P"),
+            (1e18, "E"),
+            (1e21, "Z"),
+            (1e24, "Y"),
+            (1e27, "R"),
+            (1e30, "Q")
+        };
 
         private int _nameColumnWidth; // fixed width of the name column. Names will be truncated if needed to fit in this space.
         private int _statusRow; // Row # of where we print the status of dotnet-counters
@@ -574,19 +586,23 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             double absoluteValue = Math.Abs(value);
             if (_abbreviateLargeNumbers && double.IsFinite(value) && absoluteValue >= 100_000_000)
             {
-                (double divisor, string suffix) = absoluteValue switch
+                int scaleIndex = 0;
+                while (scaleIndex < s_numberScales.Length - 1 && absoluteValue >= s_numberScales[scaleIndex + 1].Divisor)
                 {
-                    >= 1e30 => (1e30, "Q"),
-                    >= 1e27 => (1e27, "R"),
-                    >= 1e24 => (1e24, "Y"),
-                    >= 1e21 => (1e21, "Z"),
-                    >= 1e18 => (1e18, "E"),
-                    >= 1e15 => (1e15, "P"),
-                    >= 1e12 => (1e12, "T"),
-                    >= 1e9 => (1e9, "G"),
-                    _ => (1e6, "M")
-                };
-                string formattedVal = string.Format(CultureInfo.CurrentCulture, "{0:0.####}{1}", value / divisor, suffix);
+                    scaleIndex++;
+                }
+
+                double scaledValue = value / s_numberScales[scaleIndex].Divisor;
+                if (scaleIndex < s_numberScales.Length - 1 &&
+                    Math.Abs(Math.Round(scaledValue, 4, MidpointRounding.AwayFromZero)) >= 1000)
+                {
+                    scaleIndex++;
+                    scaledValue = value / s_numberScales[scaleIndex].Divisor;
+                }
+
+                string formattedVal = scaleIndex == s_numberScales.Length - 1 && Math.Abs(scaledValue) >= 1000
+                    ? value.ToString("0.####e+00")
+                    : string.Format(CultureInfo.CurrentCulture, "{0:0.####}{1}", scaledValue, s_numberScales[scaleIndex].Suffix);
                 valueText = formattedVal.PadLeft(_counterValueLength);
             }
             else
