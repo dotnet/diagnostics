@@ -161,6 +161,14 @@ namespace Microsoft.Diagnostics.Tools.Symbol
 
                     case "--debugging":
                         program.Debugging = true;
+                        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                        {
+                            // Native (ELF/Mach-O) DAC/DBI are never downloaded from the symbol server because they
+                            // are loaded unverified; only the Windows and Windows-hosted cross-OS (PE) debugging
+                            // libraries are. Warn so users on non-Windows know to obtain the matching native DAC/DBI
+                            // from the runtime install or via SOS 'setclrpath' when debugging on this platform.
+                            tracer.Warning("Native DAC/DBI debugging libraries are not downloaded on this platform; only the Windows cross-OS debugging libraries are. Obtain native DAC/DBI from the matching runtime or via 'setclrpath'.");
+                        }
                         break;
 
                     case "--windows-pdbs":
@@ -381,6 +389,15 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                     {
                         flags |= KeyTypeFlags.ForceWindowsPdbs;
                     }
+                    if ((flags & (KeyTypeFlags.ClrKeys | KeyTypeFlags.DacDbiKeys)) != 0)
+                    {
+                        // Only download DAC/DBI images that the loader (SOS/dotnet-dump) can authenticode-verify
+                        // before running them: the native Windows DAC/DBI and the Windows-hosted cross-OS DAC/DBI
+                        // (PE images). Native ELF/Mach-O DAC/DBI are never downloaded here because they are loaded
+                        // unverified; they must be provided locally from the matching (trusted) runtime. This holds
+                        // on every host because the file downloaded now may be loaded later by a tool on any OS.
+                        flags |= KeyTypeFlags.WindowsDebuggingLibrariesOnly;
+                    }
                     foreach (SymbolStoreKeyWrapper wrapper in generator.GetKeys(flags).Select((key) => new SymbolStoreKeyWrapper(key, inputFile)))
                     {
                         count++;
@@ -403,7 +420,6 @@ namespace Microsoft.Diagnostics.Tools.Symbol
             using (Stream inputStream = File.Open(inputFile, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 SymbolStoreFile file = new(inputStream, inputFile);
-                string extension = Path.GetExtension(inputFile);
                 yield return new FileKeyGenerator(Tracer, file);
             }
         }

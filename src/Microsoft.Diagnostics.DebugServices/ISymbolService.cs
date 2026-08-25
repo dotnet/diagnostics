@@ -123,11 +123,16 @@ namespace Microsoft.Diagnostics.DebugServices
         string DownloadSymbolFile(IModule module);
 
         /// <summary>
-        /// Download a file from the symbol stores/server.
+        /// Download a file from the symbol stores. Remote symbol servers are only consulted when
+        /// <paramref name="remoteAllowed"/> is true; otherwise only explicitly-configured local stores
+        /// (cache/directory) are used. Pass false to avoid remotely downloading a binary that cannot be
+        /// verified before it is loaded and run (for example a DAC/DBI); pass true for data files such as
+        /// PDBs, metadata, and module images.
         /// </summary>
         /// <param name="index">index to lookup on symbol server</param>
         /// <param name="file">the full path name of the file</param>
-        string DownloadFile(string index, string file);
+        /// <param name="remoteAllowed">if false, remote symbol servers are not consulted</param>
+        string DownloadFile(string index, string file, bool remoteAllowed);
 
         /// <summary>
         /// Returns the portable PDB reader for the assembly path

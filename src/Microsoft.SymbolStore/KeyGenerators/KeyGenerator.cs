@@ -65,7 +65,15 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// <summary>
         /// Generate the r2r perfmap key of the binary (if one exists).
         /// </summary>
-        PerfMapKeys = 0x80
+        PerfMapKeys = 0x80,
+
+        /// <summary>
+        /// When combined with <see cref="ClrKeys"/> or <see cref="DacDbiKeys"/>, restricts the
+        /// generated DAC/DBI/SOS special-file keys to Windows (PE) images only: the native Windows
+        /// DAC/DBI and the Windows-hosted cross-OS DAC/DBI. This is a defense in depth measure
+        /// to ensure we only enumerate files we can authenticate when that are intended to run.
+        /// </summary>
+        WindowsDebuggingLibrariesOnly = 0x100
     }
 
     /// <summary>
