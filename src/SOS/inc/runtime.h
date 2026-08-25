@@ -40,10 +40,9 @@ public:
 
     enum CDacLoadPolicy
     {
-        Default = 0,
+        PreferCDac = 0,
         OnlyUseCDac = 1,
         UseLegacyDac = 2,
-        PreferCDac = 3,
     };
 
     /// <summary>

@@ -11,9 +11,9 @@ namespace Microsoft.Diagnostics.DebugServices;
 public enum CDacLoadPolicy
 {
     /// <summary>
-    /// Use the tool's cDAC and DAC fallback policy.
+    /// Attempt cDAC activation and allow DAC fallback.
     /// </summary>
-    Default = 0,
+    PreferCDac = 0,
 
     /// <summary>
     /// Require cDAC activation without DAC fallback.
@@ -25,10 +25,6 @@ public enum CDacLoadPolicy
     /// </summary>
     UseLegacyDac = 2,
 
-    /// <summary>
-    /// Attempt cDAC activation and allow DAC fallback.
-    /// </summary>
-    PreferCDac = 3,
 }
 
 /// <summary>
@@ -43,7 +39,7 @@ public static class CDacPolicy
     /// <returns><see langword="true"/> if cDAC activation should be attempted.</returns>
     public static bool ShouldTryCDac(CDacLoadPolicy policy)
     {
-        if (policy == CDacLoadPolicy.OnlyUseCDac || policy == CDacLoadPolicy.PreferCDac)
+        if (policy == CDacLoadPolicy.OnlyUseCDac)
         {
             return true;
         }
@@ -52,8 +48,7 @@ public static class CDacPolicy
             return false;
         }
 
-        // These variables select the in-box DAC's cDAC integration, so SOS does not activate
-        // a separate cDAC when either one is enabled.
+        // These variables select the in-box DAC's cDAC integration.
         return Environment.GetEnvironmentVariable("DOTNET_ENABLE_CDAC") != "1"
             && Environment.GetEnvironmentVariable("COMPlus_ENABLE_CDAC") != "1";
     }

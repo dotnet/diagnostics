@@ -71,7 +71,7 @@ public:
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
 
-static CDacLoadPolicy s_cdacLoadPolicy = CDacLoadPolicy::Default;
+static CDacLoadPolicy s_cdacLoadPolicy = CDacLoadPolicy::PreferCDac;
 
 extern "C" bool TryGetSymbolWithCallback(
     bool (*readMemory)(void* address, void* buffer, size_t size),

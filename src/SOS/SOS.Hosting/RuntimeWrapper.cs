@@ -269,7 +269,7 @@ namespace SOS.Hosting
 
         private CDacLoadPolicy GetCDacLoadPolicy(IntPtr self)
         {
-            return _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.Default;
+            return _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.PreferCDac;
         }
 
         private int GetCorDebugInterface(

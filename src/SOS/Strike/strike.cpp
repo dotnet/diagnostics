@@ -13464,7 +13464,7 @@ DECLARE_API(SetClrPath)
 //
 static void DisplayCDacLoadPolicy()
 {
-    PCSTR cdacPolicy = "policy (default)";
+    PCSTR cdacPolicy = "prefer";
     switch (Runtime::GetConfiguredCDacLoadPolicy())
     {
         case CDacLoadPolicy::OnlyUseCDac:
@@ -13515,13 +13515,9 @@ DECLARE_API(runtimes)
         {
             policy = CDacLoadPolicy::PreferCDac;
         }
-        else if (_stricmp(useCDac.data, "policy") == 0 || _stricmp(useCDac.data, "default") == 0)
-        {
-            policy = CDacLoadPolicy::Default;
-        }
         else
         {
-            ExtErr("Invalid --usecdac value '%s'. Expected true, false, prefer, policy, or default.\n", useCDac.data);
+            ExtErr("Invalid --usecdac value '%s'. Expected true, false, or prefer.\n", useCDac.data);
             return E_INVALIDARG;
         }
         Runtime::SetCDacLoadPolicy(policy);
