@@ -65,6 +65,13 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
 
         psi.Environment["_NT_SYMBOL_PATH"] = symbolPath;
 
+        if (mode == "live")
+        {
+            // bpmd patches JIT code when binding managed breakpoints. Disable W^X for live
+            // debuggees so those writes do not trigger access violations and wedge the target.
+            psi.Environment["DOTNET_EnableWriteXorExecute"] = "0";
+        }
+
         // The live debuggee is launched by the EngineHost (via CreateProcessAndAttach) and inherits its
         // environment. For a framework-dependent (Core) live target, point the apphost at the multi-version
         // test runtime install so it binds the runtime matching its target framework (net8 -> 8.0.x,
