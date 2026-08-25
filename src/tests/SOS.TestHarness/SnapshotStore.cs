@@ -7,9 +7,9 @@ using System.Diagnostics;
 namespace SOS.TestHarness;
 
 /// <summary>
-/// Produces and memoizes the runnable debuggee and the dump for each <c>(flavor, target, coreVersion,
+/// Locates and memoizes the runnable debuggee and produces the dump for each <c>(flavor, target, coreVersion,
 /// stopPoint)</c>. Each <c>(flavor, target, coreVersion)</c> is acquired once and captured once into its
-/// own dump directory — so no two tests ever build or write the same artifact. The DAC axis is not a
+/// own dump directory — so no two tests ever write the same artifact. The DAC axis is not a
 /// capture dimension: legacy and cDAC reuse the same dump (only <c>runtimes --usecdac</c> differs at debug
 /// time), so it never appears in these keys.
 ///
@@ -17,11 +17,13 @@ namespace SOS.TestHarness;
 /// <list type="bullet">
 ///   <item><b>Core (net8.0–net11.0)</b> is the pre-built debuggee produced by the repo build
 ///   (<c>Debuggees.proj</c>) under <c>artifacts/bin/&lt;Name&gt;/&lt;Config&gt;/net{N}.0</c>; the harness
-///   consumes it directly (and builds the single project on demand if it isn't there yet), launching it
-///   against the multi-version test runtime install so its apphost binds the matching runtime.</item>
-///   <item><b>Framework (net462)</b> and <b>SingleFile</b> are produced on the fly by building/publishing
-///   the repo debuggee csproj (with <c>BuildProjectFramework</c>) into the harness scratch tree, the same
-///   way the legacy harness's <c>cli</c> build process does.</item>
+///   consumes it directly (and builds the single project on demand for local development if it isn't there
+///   yet), launching it against the multi-version test runtime install so its apphost binds the matching
+///   runtime.</item>
+///   <item><b>SingleFile</b> is pre-published by <c>Debuggees.proj</c> once per tested runtime, RID, and
+///   configuration. Tests only locate and consume that immutable output.</item>
+///   <item><b>Framework (net462)</b> is produced on the fly in the harness scratch tree, matching the
+///   legacy harness's <c>cli</c> build process.</item>
 /// </list>
 ///
 /// Capture mechanism depends on the flavor and stop kind:
@@ -35,7 +37,7 @@ namespace SOS.TestHarness;
 /// </summary>
 public static class SnapshotStore
 {
-    // One build/publish per (flavor, target, coreVersion) (distinct output dirs); thread-safe via Lazy.
+    // One acquisition per (flavor, target, coreVersion); thread-safe via Lazy.
     private static readonly ConcurrentDictionary<(Flavor Flavor, string Target, CoreVersion CoreVersion), Lazy<string>> s_targetExe = new();
 
     // One capture per (flavor, target, gcType, dumpKind, coreVersion) (distinct dump dirs); thread-safe via
@@ -332,14 +334,14 @@ public static class SnapshotStore
     }
 
     /// <summary>
-    /// Resolve the runnable debuggee for a flavor. Core is the repo's pre-built output; Framework and
-    /// SingleFile are built/published on demand from the repo debuggee csproj.
+    /// Resolve the runnable debuggee for a flavor. Core and SingleFile are repo build outputs; Framework
+    /// is built on demand from the repo debuggee csproj.
     /// </summary>
     private static string AcquireTarget(Flavor flavor, TargetDefinition target, CoreVersion coreVersion) => flavor switch
     {
         Flavor.Core => AcquireCore(target, coreVersion),
-        Flavor.Framework => BuildFlavor(flavor, target, coreVersion),
-        Flavor.SingleFile => BuildFlavor(flavor, target, coreVersion),
+        Flavor.Framework => BuildFramework(target),
+        Flavor.SingleFile => AcquireSingleFile(target, coreVersion),
         _ => throw new ArgumentOutOfRangeException(nameof(flavor)),
     };
 
@@ -375,83 +377,75 @@ public static class SnapshotStore
         return exe;
     }
 
-    /// <summary>Build (Framework) or publish (SingleFile) the repo debuggee csproj into the scratch tree,
-    /// reusing the cached exe when it's newer than the debuggee source.</summary>
-    private static string BuildFlavor(Flavor flavor, TargetDefinition target, CoreVersion coreVersion)
+    /// <summary>Consume the self-contained single-file debuggee published by the repo build.</summary>
+    private static string AcquireSingleFile(TargetDefinition target, CoreVersion coreVersion)
     {
         string tfm = CoreVersions.Tfm(coreVersion);
-        string project = RepoLayout.DebuggeeProject(target.Project);
-        // SingleFile is version-specific (the runtime is bundled), so key its scratch dir on the framework;
-        // Framework (net462) ignores coreVersion.
-        string flavorTag = flavor == Flavor.SingleFile ? $"{flavor}-{tfm}" : flavor.ToString();
-        string outDir = Path.Combine(RepoLayout.Scratch, "targets", flavorTag.ToLowerInvariant(), target.Name);
-        string exe = Path.Combine(outDir, target.Project + RepoLayout.ExeSuffix);
-        string runtimeVersionFile = Path.Combine(outDir, "runtime.version");
-        DateTime sourceWriteTime = NewestSourceWriteTime(project);
-
-        if (IsFlavorUpToDate(flavor, coreVersion, exe, runtimeVersionFile, sourceWriteTime))
-        {
-            return exe;
-        }
-
-        string config = RepoLayout.ArtifactsConfiguration;
-        string args = flavor switch
-        {
-            Flavor.Framework =>
-                // Desktop SOS resolves source lines from a classic Windows PDB (read via DIA), not a
-                // portable/embedded one — the repo's global props default DebugType to embedded, so force
-                // a full (Windows) PDB next to the exe for the source-line tests.
-                $"build \"{project}\" -p:BuildProjectFramework=net462 -p:DebugType=full -p:DebugSymbols=true -c {config} -o \"{outDir}\"",
-            Flavor.SingleFile =>
-                $"publish \"{project}\" -p:BuildProjectFramework={tfm} -r {RepoLayout.Rid} --self-contained true " +
-                $"-p:PublishSingleFile=true -c {config} -o \"{outDir}\"",
-            _ => throw new ArgumentOutOfRangeException(nameof(flavor)),
-        };
-
-        // Rebuild only when stale (above). Different flavors/frameworks of one csproj share its obj/ (and
-        // project.assets.json), so building two concurrently corrupts that shared restore — serialize builds
-        // per project.
-        lock (BuildLockFor(project))
-        {
-            if (!IsFlavorUpToDate(flavor, coreVersion, exe, runtimeVersionFile, sourceWriteTime))
-            {
-                RunToCompletion(RepoLayout.DotnetTestExe, args);
-                if (flavor == Flavor.SingleFile)
-                {
-                    File.WriteAllText(runtimeVersionFile, CoreVersions.RuntimeVersion(coreVersion) ?? string.Empty);
-                }
-            }
-        }
+        string outputDir = RepoLayout.SingleFileDebuggeeDir(target.Project, tfm);
+        string exe = Path.Combine(outputDir, target.Project + RepoLayout.ExeSuffix);
+        string runtimeVersionFile = Path.Combine(outputDir, "runtime.version");
+        string? expectedRuntimeVersion = CoreVersions.RuntimeVersion(coreVersion);
+        string? actualRuntimeVersion = File.Exists(runtimeVersionFile)
+            ? File.ReadAllText(runtimeVersionFile).Trim()
+            : null;
 
         if (!File.Exists(exe))
         {
-            throw new InvalidOperationException($"Build/publish of {target.Project} ({flavor}/{tfm}) did not produce '{exe}'.");
+            throw new FileNotFoundException(
+                $"Pre-published single-file debuggee '{target.Project}' ({tfm}/{RepoLayout.Rid}) was not found at '{exe}'. " +
+                "Build src/tests/Debuggees.proj before running SOS tests.",
+                exe);
+        }
+
+        if (expectedRuntimeVersion is null ||
+            !string.Equals(actualRuntimeVersion, expectedRuntimeVersion, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Pre-published single-file debuggee '{target.Project}' ({tfm}/{RepoLayout.Rid}) has runtime version " +
+                $"'{actualRuntimeVersion ?? "<missing>"}', but the installed test runtime manifest requires " +
+                $"'{expectedRuntimeVersion ?? "<missing>"}'.");
         }
 
         return exe;
     }
 
-    private static bool IsFlavorUpToDate(
-        Flavor flavor,
-        CoreVersion coreVersion,
-        string exe,
-        string runtimeVersionFile,
-        DateTime sourceWriteTime)
+    /// <summary>Build the Framework debuggee into the scratch tree, reusing the cached exe when it is newer
+    /// than the debuggee source.</summary>
+    private static string BuildFramework(TargetDefinition target)
     {
-        if (!IsUpToDate(exe, sourceWriteTime))
+        string project = RepoLayout.DebuggeeProject(target.Project);
+        string outDir = Path.Combine(RepoLayout.Scratch, "targets", "framework", target.Name);
+        string exe = Path.Combine(outDir, target.Project + RepoLayout.ExeSuffix);
+        DateTime sourceWriteTime = NewestSourceWriteTime(project);
+
+        if (IsUpToDate(exe, sourceWriteTime))
         {
-            return false;
+            return exe;
         }
 
-        if (flavor != Flavor.SingleFile)
+        string config = RepoLayout.ArtifactsConfiguration;
+        // Desktop SOS resolves source lines from a classic Windows PDB (read via DIA), not a
+        // portable/embedded one — the repo's global props default DebugType to embedded, so force
+        // a full (Windows) PDB next to the exe for the source-line tests.
+        string args =
+            $"build \"{project}\" -p:BuildProjectFramework=net462 -p:DebugType=full -p:DebugSymbols=true -c {config} -o \"{outDir}\"";
+
+        // Rebuild only when stale (above). Different frameworks of one csproj share its obj/ (and
+        // project.assets.json), so serialize fallback builds per project.
+        lock (BuildLockFor(project))
         {
-            return true;
+            if (!IsUpToDate(exe, sourceWriteTime))
+            {
+                RunToCompletion(RepoLayout.DotnetTestExe, args);
+            }
         }
 
-        string? expected = CoreVersions.RuntimeVersion(coreVersion);
-        return expected is not null &&
-            File.Exists(runtimeVersionFile) &&
-            string.Equals(File.ReadAllText(runtimeVersionFile).Trim(), expected, StringComparison.Ordinal);
+        if (!File.Exists(exe))
+        {
+            throw new InvalidOperationException($"Framework build of {target.Project} did not produce '{exe}'.");
+        }
+
+        return exe;
     }
 
     private static readonly ConcurrentDictionary<string, object> s_projectBuildLocks = new(StringComparer.OrdinalIgnoreCase);

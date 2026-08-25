@@ -39,6 +39,10 @@
       <_Parameter1>SOS.TestHarness.TargetFramework</_Parameter1>
       <_Parameter2>$(TargetFramework)</_Parameter2>
     </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SOS.TestHarness.TargetRid</_Parameter1>
+      <_Parameter2>$(TargetRid)</_Parameter2>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>

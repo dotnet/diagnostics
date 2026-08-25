@@ -59,9 +59,14 @@ public static class RepoLayout
         OperatingSystem.IsWindows() ? "Windows_NT" :
         OperatingSystem.IsMacOS() ? "osx" : "linux";
 
-    /// <summary>The runtime identifier the harness builds/publishes against (e.g. <c>win-x64</c>).</summary>
-    public static string Rid =>
-        (OperatingSystem.IsWindows() ? "win-" : OperatingSystem.IsMacOS() ? "osx-" : "linux-") + TargetArch;
+    /// <summary>The runtime identifier of the current test leg (e.g. <c>win-x64</c> or
+    /// <c>linux-musl-x64</c>), embedded by the build so artifact lookup preserves RID distinctions that
+    /// cannot be inferred from <see cref="OperatingSystem"/>.</summary>
+    public static string Rid { get; } =
+        typeof(RepoLayout).Assembly
+            .GetCustomAttributes<AssemblyMetadataAttribute>()
+            .Single(a => a.Key == "SOS.TestHarness.TargetRid")
+            .Value!;
 
     /// <summary>The repo's locally-acquired .NET host (<c>.dotnet/dotnet.exe</c>) used to shell out builds.</summary>
     public static string DotNetExe => Path.Combine(Root, ".dotnet", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
@@ -79,6 +84,10 @@ public static class RepoLayout
     public static string CoreDebuggeeDir(string name, string tfm) =>
         Path.Combine(ArtifactsBin, name, ArtifactsConfiguration, tfm);
 
+    /// <summary>The build-produced self-contained single-file publish directory for a debuggee.</summary>
+    public static string SingleFileDebuggeeDir(string name, string tfm) =>
+        Path.Combine(ArtifactsBin, name, ArtifactsConfiguration, tfm, Rid, "publish");
+
     /// <summary>
     /// The repo's locally-acquired multi-version test .NET install (<c>artifacts/dotnet-test</c>), which
     /// <c>eng/InstallRuntimes.proj</c> populates with every <c>RuntimeTestVersions</c> runtime (8/9/10/11).
@@ -88,9 +97,9 @@ public static class RepoLayout
     public static string DotnetTestRoot { get; } = Path.Combine(Root, "artifacts", "dotnet-test");
 
     /// <summary>The multi-version test .NET host (<c>artifacts/dotnet-test/dotnet[.exe]</c>). This is the
-    /// net11-capable SDK that <c>Debuggees.proj</c> uses to pre-build the debuggees, so on-demand debuggee
-    /// builds/publishes must use it too — the repo's <c>.dotnet</c> build SDK (e.g. 10.0.x) refuses to
-    /// target newer frameworks (<c>NETSDK1045</c>).</summary>
+    /// net11-capable SDK that <c>Debuggees.proj</c> uses to pre-build the debuggees, so local Core fallback
+    /// builds must use it too — the repo's <c>.dotnet</c> build SDK (e.g. 10.0.x) refuses to target newer
+    /// frameworks (<c>NETSDK1045</c>).</summary>
     public static string DotnetTestExe => Path.Combine(DotnetTestRoot, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
 
     /// <summary>Scratch directory for harness-produced artifacts (on-the-fly builds, captured dumps).</summary>
