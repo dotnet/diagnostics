@@ -216,7 +216,7 @@ namespace Microsoft.Diagnostics.Tools.Counters
             new("--abbreviateLargeNumbers")
             {
                 DefaultValueFactory = _ => true,
-                Description = @"When true (default), values >= 100,000,000 are displayed in scientific notation (e.g. 1.2345e+09)." +
+                Description = @"When true (default), values >= 100,000,000 are displayed with an SI prefix (e.g. 1.2345G)." +
                " Set to false to display the full numeric value instead."
             };
 

@@ -556,7 +556,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         {
             string valueText;
             // The value field is one of:
-            //  a) If abs(value) >= 10^9 then it is formatted as 0.####e+00
+            //  a) If abs(value) >= 10^8 then it is formatted with an SI prefix
             //     (unless _abbreviateLargeNumbers is false, in which case the full value is shown)
             //  b) otherwise leading - or space, 10 leading digits with separators (or spaces), decimal separator or space,
             //     3 decimal digits or spaces.
@@ -565,15 +565,29 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             //   1,421,893.21
             //           0.123
             //          -0.123
-            //  4.9012e+25
+            //       49.012Y
             //    -675,430.9
             // -12,675,430.9
             //           7
 
 
-            if (_abbreviateLargeNumbers && Math.Abs(value) >= 100_000_000)
+            double absoluteValue = Math.Abs(value);
+            if (_abbreviateLargeNumbers && double.IsFinite(value) && absoluteValue >= 100_000_000)
             {
-                valueText = string.Format(CultureInfo.CurrentCulture, "{0,15:0.####e+00}   ", value);
+                (double divisor, string suffix) = absoluteValue switch
+                {
+                    >= 1e30 => (1e30, "Q"),
+                    >= 1e27 => (1e27, "R"),
+                    >= 1e24 => (1e24, "Y"),
+                    >= 1e21 => (1e21, "Z"),
+                    >= 1e18 => (1e18, "E"),
+                    >= 1e15 => (1e15, "P"),
+                    >= 1e12 => (1e12, "T"),
+                    >= 1e9 => (1e9, "G"),
+                    _ => (1e6, "M")
+                };
+                string formattedVal = string.Format(CultureInfo.CurrentCulture, "{0:0.####}{1}", value / divisor, suffix);
+                valueText = formattedVal.PadLeft(_counterValueLength);
             }
             else
             {
