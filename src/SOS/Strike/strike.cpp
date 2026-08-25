@@ -13489,14 +13489,17 @@ DECLARE_API(SetClrPath)
 //
 static void DisplayCDacLoadPolicy()
 {
-    PCSTR cdacPolicy = "policy (default)";
-    switch (Runtime::GetCDacLoadPolicy())
+    PCSTR cdacPolicy = "prefer";
+    switch (Runtime::GetConfiguredCDacLoadPolicy())
     {
-        case CDacLoadPolicy::UseCDac:
+        case CDacLoadPolicy::OnlyUseCDac:
             cdacPolicy = "true";
             break;
         case CDacLoadPolicy::UseLegacyDac:
             cdacPolicy = "false";
+            break;
+        case CDacLoadPolicy::PreferCDac:
+            cdacPolicy = "prefer";
             break;
         default:
             break;
@@ -13527,19 +13530,19 @@ DECLARE_API(runtimes)
         CDacLoadPolicy policy;
         if (_stricmp(useCDac.data, "true") == 0)
         {
-            policy = CDacLoadPolicy::UseCDac;
+            policy = CDacLoadPolicy::OnlyUseCDac;
         }
         else if (_stricmp(useCDac.data, "false") == 0)
         {
             policy = CDacLoadPolicy::UseLegacyDac;
         }
-        else if (_stricmp(useCDac.data, "policy") == 0 || _stricmp(useCDac.data, "default") == 0)
+        else if (_stricmp(useCDac.data, "prefer") == 0)
         {
-            policy = CDacLoadPolicy::Default;
+            policy = CDacLoadPolicy::PreferCDac;
         }
         else
         {
-            ExtErr("Invalid --usecdac value '%s'. Expected true, false, policy, or default.\n", useCDac.data);
+            ExtErr("Invalid --usecdac value '%s'. Expected true, false, or prefer.\n", useCDac.data);
             return E_INVALIDARG;
         }
         Runtime::SetCDacLoadPolicy(policy);
