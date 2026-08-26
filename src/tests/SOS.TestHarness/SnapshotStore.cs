@@ -83,23 +83,72 @@ public static class SnapshotStore
         string exe = s_targetExe
             .GetOrAdd((flavor, targetName, coreVersion), k => new Lazy<string>(() => AcquireTarget(k.Flavor, TargetCatalog.Get(k.Target), k.CoreVersion)))
             .Value;
-        EnsureExecutable(exe);
-        return exe;
+        return EnsureExecutable(
+            exe,
+            Environment.GetEnvironmentVariable("SOSHARNESS_EXECUTABLE_ROOT"),
+            RepoLayout.Root);
     }
 
-    private static void EnsureExecutable(string path)
+    internal static string EnsureExecutable(string path, string? executableRoot, string repoRoot)
     {
         if (OperatingSystem.IsWindows())
         {
-            return;
+            return path;
         }
 
         UnixFileMode mode = File.GetUnixFileMode(path);
         UnixFileMode execute = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
         if ((mode & execute) != execute)
         {
-            File.SetUnixFileMode(path, mode | execute);
+            if (string.IsNullOrEmpty(executableRoot))
+            {
+                File.SetUnixFileMode(path, mode | execute);
+                return path;
+            }
+
+            string relative = Path.GetRelativePath(repoRoot, path);
+            if (Path.IsPathRooted(relative) ||
+                relative.Equals("..", StringComparison.Ordinal) ||
+                relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Executable '{path}' is outside the repo root '{repoRoot}' and cannot be copied to the writable executable overlay.");
+            }
+
+            string destination = Path.Combine(executableRoot, relative);
+            string sourceDirectory = Path.GetDirectoryName(path)!;
+            string destinationDirectory = Path.GetDirectoryName(destination)!;
+
+            lock (BuildLockFor(destination))
+            {
+                if (File.Exists(destination) &&
+                    (File.GetUnixFileMode(destination) & execute) == execute)
+                {
+                    return destination;
+                }
+
+                Directory.CreateDirectory(destinationDirectory);
+                foreach (string sibling in Directory.EnumerateFiles(sourceDirectory))
+                {
+                    string siblingDestination = Path.Combine(destinationDirectory, Path.GetFileName(sibling));
+                    if (string.Equals(sibling, path, StringComparison.Ordinal))
+                    {
+                        File.Copy(sibling, siblingDestination, overwrite: true);
+                    }
+                    else if (!File.Exists(siblingDestination))
+                    {
+                        File.CreateSymbolicLink(siblingDestination, sibling);
+                    }
+                }
+
+                UnixFileMode destinationMode = File.GetUnixFileMode(destination);
+                File.SetUnixFileMode(destination, destinationMode | execute);
+            }
+
+            return destination;
         }
+
+        return path;
     }
 
     private static string DumpDir(Flavor flavor, string target, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion) =>
