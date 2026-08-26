@@ -146,11 +146,12 @@ jobs:
       - ${{ insert }}: ${{ parameters.variables }}
 
       - _PhaseName: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
+      - _BuildConfig: ${{ config.configuration }}
       - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/${{ config.configuration }}/streams
 
       - _TestArgs: '-test'
       - _Cross: ''
-      - _SkipSOSHelixTestsArg: ''
+      - _SkipLocalSOSTests: 'false'
 
       - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
         'error, testOnly and buildOnly cannot be true at the same time': error
@@ -175,7 +176,7 @@ jobs:
         - _TestArgs: ''
 
       - ${{ if and(eq(parameters.testOnly, true), eq(parameters.runSOSHelix, true)) }}:
-        - _SkipSOSHelixTestsArg: '/p:SkipSOSHelixTests=true'
+        - _SkipLocalSOSTests: 'true'
 
       # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
       - _InternalInstallArgs: ''
@@ -213,7 +214,6 @@ jobs:
           $(_TestArgs)
           $(_Cross)
           $(_InternalInstallArgs)
-          $(_SkipSOSHelixTestsArg)
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         ${{ if eq(parameters.testOnly, 'true') }}:
           displayName: Test
@@ -222,6 +222,8 @@ jobs:
         ${{ else }}:
           displayName: Build / Test
         condition: succeeded()
+        env:
+          SOSHARNESS_SKIP_LOCAL_TESTS: $(_SkipLocalSOSTests)
       - ${{ if and(eq(parameters.testOnly, true), eq(parameters.runSOSHelix, true)) }}:
         - template: /eng/common/templates/steps/send-to-helix.yml@self
           parameters:

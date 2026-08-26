@@ -60,7 +60,8 @@
 
   <Target Name="PrepareSOSHelixPayload"
           DependsOnTargets="ValidateSOSHelixConfiguration"
-          BeforeTargets="CoreTest">
+          BeforeTargets="CoreTest"
+          Condition="'$(HelixTargetQueue)' == ''">
     <ItemGroup>
       <_PayloadRootFile Include="$(RepoRoot)global.json;$(RepoRoot)Build.cmd" />
       <_PayloadLauncherFile Include="$(RepoRoot)eng/helix/sos/**/*" />
