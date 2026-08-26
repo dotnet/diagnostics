@@ -213,7 +213,7 @@ public static class ToolPaths
         // SOS hosts its managed extension on a .NET runtime; point it at the repo's locally-acquired
         // .dotnet shared runtime so it's deterministic. Any recent runtime works as a host (it need not
         // match the target's runtime), so pick the highest net10 present.
-        string sharedRoot = Path.Combine(RepoLayout.Root, ".dotnet", "shared", "Microsoft.NETCore.App");
+        string sharedRoot = Path.Combine(RepoLayout.DotNetRoot, "shared", "Microsoft.NETCore.App");
         if (Directory.Exists(sharedRoot))
         {
             string? best = Directory.GetDirectories(sharedRoot)

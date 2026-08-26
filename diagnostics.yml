@@ -237,6 +237,10 @@ extends:
             osGroup: Windows_NT
             dependsOn: Windows
             testOnly: true
+            runSOSHelix: ${{ eq(variables['System.TeamProject'], 'public') }}
+            sosHelixTargetOS: Windows_NT
+            sosHelixRidPrefix: win
+            sosHelixQueue: Windows.Amd64.Server2022.Open
             buildConfigs:
             - configuration: Debug
               architecture: x64
@@ -252,6 +256,10 @@ extends:
             osGroup: MacOS
             dependsOn: MacOS
             testOnly: true
+            runSOSHelix: ${{ eq(variables['System.TeamProject'], 'public') }}
+            sosHelixTargetOS: osx
+            sosHelixRidPrefix: osx
+            sosHelixQueue: OSX.15.Amd64.Open
             buildConfigs:
             - configuration: Release
               architecture: x64
@@ -267,6 +275,10 @@ extends:
             container: test_ubuntu_22_04
             dependsOn: Linux
             testOnly: true
+            runSOSHelix: ${{ eq(variables['System.TeamProject'], 'public') }}
+            sosHelixTargetOS: linux
+            sosHelixRidPrefix: linux
+            sosHelixQueue: Ubuntu.2204.Amd64.Open
             buildConfigs:
             - configuration: Release
               architecture: x64
@@ -284,6 +296,10 @@ extends:
             dependsOn: Linux_musl
             testOnly: true
             disableComponentGovernance: true
+            runSOSHelix: ${{ eq(variables['System.TeamProject'], 'public') }}
+            sosHelixTargetOS: linux
+            sosHelixRidPrefix: linux-musl
+            sosHelixQueue: '(Alpine.323.Amd64.Open)azurelinux.3.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
             buildConfigs:
             - configuration: Release
               architecture: x64

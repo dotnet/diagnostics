@@ -33,7 +33,10 @@ public static class RepoLayout
             .Value!;
 
     /// <summary>The repo root (the directory containing <c>global.json</c> and <c>Build.cmd</c>).</summary>
-    public static string Root { get; } = FindRoot();
+    public static string Root { get; } =
+        Environment.GetEnvironmentVariable("SOSHARNESS_REPO_ROOT") is { Length: > 0 } root
+            ? Path.GetFullPath(root)
+            : FindRoot();
 
     /// <summary><c>artifacts/bin</c> under the repo root.</summary>
     public static string ArtifactsBin => Path.Combine(Root, "artifacts", "bin");
@@ -69,7 +72,12 @@ public static class RepoLayout
             .Value!;
 
     /// <summary>The repo's locally-acquired .NET host (<c>.dotnet/dotnet.exe</c>) used to shell out builds.</summary>
-    public static string DotNetExe => Path.Combine(Root, ".dotnet", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
+    public static string DotNetRoot { get; } =
+        Environment.GetEnvironmentVariable("SOSHARNESS_DOTNET_ROOT") is { Length: > 0 } root
+            ? Path.GetFullPath(root)
+            : Path.Combine(Root, ".dotnet");
+
+    public static string DotNetExe => Path.Combine(DotNetRoot, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
 
     /// <summary>The platform suffix for an apphost executable: <c>.exe</c> on Windows, none elsewhere
     /// (Linux/macOS apphosts have no extension).</summary>
@@ -87,6 +95,10 @@ public static class RepoLayout
     /// <summary>The build-produced self-contained single-file publish directory for a debuggee.</summary>
     public static string SingleFileDebuggeeDir(string name, string tfm) =>
         Path.Combine(ArtifactsBin, name, ArtifactsConfiguration, tfm, Rid, "publish");
+
+    /// <summary>The pre-built desktop .NET Framework output directory for a debuggee.</summary>
+    public static string FrameworkDebuggeeDir(string name) =>
+        Path.Combine(ArtifactsBin, name, ArtifactsConfiguration, "net462");
 
     /// <summary>
     /// The repo's locally-acquired multi-version test .NET install (<c>artifacts/dotnet-test</c>), which

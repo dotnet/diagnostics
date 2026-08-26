@@ -27,10 +27,9 @@ namespace SOS.Tests;
 public sealed class SosReplayAttribute : BeforeAfterTestAttribute
 {
     private static readonly string s_runDirectory = Path.Combine(
-        RepoLayout.Root,
-        "artifacts",
-        "TestResults",
-        "SOS.Tests",
+        Environment.GetEnvironmentVariable("HELIX_WORKITEM_UPLOAD_ROOT") is { Length: > 0 } uploadRoot
+            ? Path.Combine(uploadRoot, "SOS-replays")
+            : Path.Combine(RepoLayout.Root, "artifacts", "TestResults", "SOS.Tests"),
         $"{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Environment.ProcessId}");
 
     public override void After(MethodInfo methodUnderTest, IXunitTest test)

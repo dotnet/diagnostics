@@ -28,9 +28,18 @@
 
   <Target Name="EnsureUnixTestAppHostExecutable"
           BeforeTargets="RunTests"
-          Condition="'$(OS)' != 'Windows_NT'">
+          Condition="'$(OS)' != 'Windows_NT' and '$(SkipSOSHelixTests)' != 'true'">
     <!-- Pipeline artifact transfer does not preserve Unix executable permissions. -->
     <Exec Command="chmod +x &quot;%(TestToRun.RunCommand)&quot;" />
+  </Target>
+
+  <Target Name="SkipLocalSOSHelixTests"
+          BeforeTargets="RunTests"
+          Condition="'$(SkipSOSHelixTests)' == 'true'">
+    <ItemGroup>
+      <TestToRun Remove="@(TestToRun)" />
+    </ItemGroup>
+    <Message Importance="High" Text="SOS.Tests execution moved to Helix for this pipeline leg." />
   </Target>
 
 </Project>

@@ -1,0 +1,140 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project Sdk="Microsoft.DotNet.Helix.Sdk" DefaultTargets="Test">
+
+  <PropertyGroup>
+    <Language>msbuild</Language>
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' != ''">true</EnableAzurePipelinesReporter>
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' == ''">false</EnableAzurePipelinesReporter>
+    <EnableXUnitReporter>true</EnableXUnitReporter>
+    <WaitForWorkItemCompletion>true</WaitForWorkItemCompletion>
+    <FailOnTestFailure>true</FailOnTestFailure>
+    <WorkItemTimeout>02:00:00</WorkItemTimeout>
+    <CorrelationPayloadDirectory Condition="'$(CorrelationPayloadDirectory)' == ''">$(ArtifactsDir)helix/SOS.Tests/$(TargetRid)/$(Configuration)/payload</CorrelationPayloadDirectory>
+    <DotNetHostName Condition="'$(TargetOS)' == 'Windows_NT'">dotnet.exe</DotNetHostName>
+    <DotNetHostName Condition="'$(TargetOS)' != 'Windows_NT'">dotnet</DotNetHostName>
+    <PayloadNativeSourceDir>$(ArtifactsBinNativeDir)</PayloadNativeSourceDir>
+    <PayloadNativeSourceDir Condition="'$(TargetRid)' == 'linux-musl-$(TargetArch)'">$(ArtifactsBinDir)linux-musl.$(TargetArch).$(Configuration)/</PayloadNativeSourceDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageDownload Include="cdb-sos"
+                     Version="[$(cdbsosversion)]"
+                     Condition="'$(TargetOS)' == 'Windows_NT'" />
+
+    <HelixCorrelationPayload Include="$(CorrelationPayloadDirectory)">
+      <PayloadDirectory>%(Identity)</PayloadDirectory>
+    </HelixCorrelationPayload>
+
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_0_of_8" ShardIndex="0" ShardCount="8" Liveness="Dump" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_1_of_8" ShardIndex="1" ShardCount="8" Liveness="Dump" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_2_of_8" ShardIndex="2" ShardCount="8" Liveness="Dump" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_3_of_8" ShardIndex="3" ShardCount="8" Liveness="Dump" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_4_of_8" ShardIndex="4" ShardCount="8" Liveness="Dump" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_5_of_8" ShardIndex="5" ShardCount="8" Liveness="Dump" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_6_of_8" ShardIndex="6" ShardCount="8" Liveness="Dump" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_7_of_8" ShardIndex="7" ShardCount="8" Liveness="Dump" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_live_0_of_2" ShardIndex="0" ShardCount="2" Liveness="Live" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_live_1_of_2" ShardIndex="1" ShardCount="2" Liveness="Live" />
+  </ItemGroup>
+
+  <Target Name="ValidateSOSHelixConfiguration">
+    <Error Condition="'$(Configuration)' == ''" Text="Configuration is required." />
+    <Error Condition="'$(TargetArch)' == ''" Text="TargetArch is required." />
+    <Error Condition="'$(TargetOS)' == ''" Text="TargetOS is required." />
+    <Error Condition="'$(TargetRid)' == ''" Text="TargetRid is required." />
+  </Target>
+
+  <Target Name="CreateSOSHelixWorkItems"
+          DependsOnTargets="ValidateSOSHelixConfiguration"
+          BeforeTargets="CoreTest">
+    <ItemGroup>
+      <HelixWorkItem Include="@(_SOSShard)">
+        <Command Condition="'$(TargetOS)' == 'Windows_NT'">%25HELIX_CORRELATION_PAYLOAD%25\eng\helix\sos\run-sos-tests.cmd $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework)</Command>
+        <Command Condition="'$(TargetOS)' != 'Windows_NT'">bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework)</Command>
+        <Timeout>$(WorkItemTimeout)</Timeout>
+      </HelixWorkItem>
+    </ItemGroup>
+    <Error Condition="'@(HelixWorkItem->Count())' != '10'"
+           Text="SOS Helix graph must contain exactly 10 work items; found @(HelixWorkItem->Count())." />
+  </Target>
+
+  <Target Name="PrepareSOSHelixPayload"
+          DependsOnTargets="ValidateSOSHelixConfiguration"
+          BeforeTargets="CoreTest">
+    <ItemGroup>
+      <_PayloadRootFile Include="$(RepoRoot)global.json;$(RepoRoot)Build.cmd" />
+      <_PayloadLauncherFile Include="$(RepoRoot)eng/helix/sos/**/*" />
+
+      <_PayloadBinFile Include="$(ArtifactsBinDir)SOS.Tests/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)SOS.TestHarness.EngineHost/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)SOS.TestHarness.Capturer/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)dotnet-dump/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)NestedExceptionTest/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)DivZero/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)AsyncMain/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)DynamicMethod/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)Overflow/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)LineNums/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)SimpleThrow/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)ReflectionTest/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)SosHarnessScenarios/$(Configuration)/**/*" />
+      <_PayloadNativeFile Include="$(PayloadNativeSourceDir)**/*" />
+      <_PayloadDotNetTestFile Include="$(ArtifactsDotnetTestDir)**/*" />
+      <_PayloadCDacFile Include="$(ArtifactsDir)cdac-override/$(Configuration)/**/*"
+                        Condition="Exists('$(ArtifactsDir)cdac-override/$(Configuration)')" />
+
+      <_PayloadCdbFile Include="$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/**/*"
+                       Condition="'$(TargetOS)' == 'Windows_NT'" />
+
+      <_PayloadFile Include="@(_PayloadRootFile)">
+        <DestinationRelative>%(_PayloadRootFile.Filename)%(_PayloadRootFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadLauncherFile)">
+        <DestinationRelative>eng/helix/sos/%(_PayloadLauncherFile.RecursiveDir)%(_PayloadLauncherFile.Filename)%(_PayloadLauncherFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadBinFile)">
+        <DestinationRelative>artifacts/bin/$([MSBuild]::MakeRelative('$(ArtifactsBinDir)', '%(_PayloadBinFile.Identity)'))</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadNativeFile)">
+        <DestinationRelative>artifacts/bin/$(TargetOS).$(TargetArch).$(Configuration)/%(_PayloadNativeFile.RecursiveDir)%(_PayloadNativeFile.Filename)%(_PayloadNativeFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadDotNetTestFile)">
+        <DestinationRelative>artifacts/dotnet-test/%(_PayloadDotNetTestFile.RecursiveDir)%(_PayloadDotNetTestFile.Filename)%(_PayloadDotNetTestFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadCDacFile)">
+        <DestinationRelative>artifacts/cdac-override/$(Configuration)/%(_PayloadCDacFile.RecursiveDir)%(_PayloadCDacFile.Filename)%(_PayloadCDacFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadCdbFile)">
+        <DestinationRelative>.packages/cdb-sos/$(cdbsosversion)/%(_PayloadCdbFile.RecursiveDir)%(_PayloadCdbFile.Filename)%(_PayloadCdbFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+    </ItemGroup>
+
+    <Error Condition="'@(_PayloadFile)' == ''" Text="The SOS Helix correlation payload is empty." />
+    <Error Condition="!Exists('$(ArtifactsBinDir)SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/SOS.Tests.dll')"
+           Text="SOS.Tests was not found under '$(ArtifactsBinDir)SOS.Tests/$(Configuration)'." />
+    <Error Condition="!Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/dotnet-dump.dll') and !Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/publish/dotnet-dump.dll')"
+           Text="dotnet-dump was not found under '$(ArtifactsBinDir)dotnet-dump/$(Configuration)'." />
+    <Error Condition="!Exists('$(ArtifactsDotnetTestDir)$(DotNetHostName)')"
+           Text="The test runtime host was not found at '$(ArtifactsDotnetTestDir)$(DotNetHostName)'." />
+    <Error Condition="!Exists('$(PayloadNativeSourceDir)sos.dll') and '$(TargetOS)' == 'Windows_NT'"
+           Text="Native SOS was not found at '$(PayloadNativeSourceDir)sos.dll'." />
+    <Error Condition="!Exists('$(PayloadNativeSourceDir)libsosplugin.so') and '$(TargetOS)' == 'linux'"
+           Text="The SOS lldb plugin was not found at '$(PayloadNativeSourceDir)libsosplugin.so'." />
+    <Error Condition="!Exists('$(PayloadNativeSourceDir)libsosplugin.dylib') and '$(TargetOS)' == 'osx'"
+           Text="The SOS lldb plugin was not found at '$(PayloadNativeSourceDir)libsosplugin.dylib'." />
+
+    <RemoveDir Directories="$(CorrelationPayloadDirectory)" />
+    <MakeDir Directories="$(CorrelationPayloadDirectory)" />
+    <Copy SourceFiles="@(_PayloadFile)"
+          DestinationFiles="@(_PayloadFile->'$(CorrelationPayloadDirectory)/%(DestinationRelative)')"
+          SkipUnchangedFiles="true"
+          UseHardlinksIfPossible="true" />
+  </Target>
+
+  <Target Name="PrintSOSHelixWorkItems"
+          DependsOnTargets="CreateSOSHelixWorkItems">
+    <Message Importance="High"
+             Text="@(HelixWorkItem->'%(Identity)|%(Command)|%(Timeout)', '%0A')" />
+  </Target>
+
+</Project>

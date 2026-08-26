@@ -66,6 +66,23 @@ parameters:
   type: boolean
   default: false
 
+# Optional: move SOS.Tests from this test-only leg to a sharded Helix submission.
+- name: runSOSHelix
+  type: boolean
+  default: false
+
+- name: sosHelixTargetOS
+  type: string
+  default: ''
+
+- name: sosHelixRidPrefix
+  type: string
+  default: ''
+
+- name: sosHelixQueue
+  type: string
+  default: ''
+
 # Optional: architecture cross build if true
 - name: crossBuild
   type: boolean
@@ -133,6 +150,7 @@ jobs:
 
       - _TestArgs: '-test'
       - _Cross: ''
+      - _SkipSOSHelixTestsArg: ''
 
       - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
         'error, testOnly and buildOnly cannot be true at the same time': error
@@ -155,6 +173,9 @@ jobs:
 
       - ${{ if eq(parameters.buildOnly, 'true') }}:
         - _TestArgs: ''
+
+      - ${{ if and(eq(parameters.testOnly, true), eq(parameters.runSOSHelix, true)) }}:
+        - _SkipSOSHelixTestsArg: '/p:SkipSOSHelixTests=true'
 
       # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
       - _InternalInstallArgs: ''
@@ -192,6 +213,7 @@ jobs:
           $(_TestArgs)
           $(_Cross)
           $(_InternalInstallArgs)
+          $(_SkipSOSHelixTestsArg)
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         ${{ if eq(parameters.testOnly, 'true') }}:
           displayName: Test
@@ -200,6 +222,26 @@ jobs:
         ${{ else }}:
           displayName: Build / Test
         condition: succeeded()
+      - ${{ if and(eq(parameters.testOnly, true), eq(parameters.runSOSHelix, true)) }}:
+        - template: /eng/common/templates/steps/send-to-helix.yml@self
+          parameters:
+            DisplayNamePrefix: Run SOS.Tests on Helix
+            HelixProjectPath: eng/helix/SOS.Tests.Helix.proj
+            HelixProjectArguments: >-
+              /p:Configuration=${{ config.configuration }}
+              /p:TargetArch=${{ config.architecture }}
+              /p:TargetOS=${{ parameters.sosHelixTargetOS }}
+              /p:TargetRid=${{ parameters.sosHelixRidPrefix }}-${{ config.architecture }}
+            HelixSource: pr/dotnet/diagnostics/sos-tests
+            HelixType: tests/sos/harness/
+            HelixConfiguration: ${{ parameters.sosHelixRidPrefix }}-${{ config.architecture }}_${{ config.configuration }}
+            HelixTargetQueues: ${{ parameters.sosHelixQueue }}
+            ${{ if eq(variables['System.TeamProject'], 'public') }}:
+              Creator: dotnet-bot
+            ${{ else }}:
+              HelixAccessToken: $(HelixApiAccessToken)
+            condition: succeeded()
+
       - ${{ if ne(config.artifactUploadPath, '') }}:
         - task: CopyFiles@2
           displayName: Gather binaries for publish

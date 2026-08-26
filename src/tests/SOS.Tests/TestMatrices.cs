@@ -75,16 +75,16 @@ internal static class TestMatrices
         Dac dac = Dac.All)
     {
         TheoryData<TestConfig> data = new();
-        foreach (TestConfig config in TestConfig.Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac))
+        IEnumerable<TestConfig> configs = TestConfig.UnshardedPermutations(
+            targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac)
+            .Select(config =>
+                OperatingSystem.IsWindows() && !config.IsLive && (config.CoreVersion & fullDumpVersions) != 0
+                    ? config with { DumpKind = DumpKind.Full }
+                    : config);
+
+        foreach (TestConfig config in TestConfig.ApplyShardFilter(configs))
         {
-            if (OperatingSystem.IsWindows() && (config.CoreVersion & fullDumpVersions) != 0)
-            {
-                data.Add(config with { DumpKind = DumpKind.Full });
-            }
-            else
-            {
-                data.Add(config);
-            }
+            data.Add(config);
         }
 
         return data;
@@ -100,11 +100,17 @@ internal static class TestMatrices
         Dac dac = Dac.All)
     {
         TheoryData<TestConfig> data = new();
-        foreach (TestConfig config in StackWalkConfigs(targets, flavor, host, liveness, coreVersion: coreVersion, dac: dac))
+        IEnumerable<TestConfig> configs = TestConfig.UnshardedPermutations(
+                targets, flavor, host, liveness, coreVersion: coreVersion, dac: dac)
+            .Where(SupportsStackWalk)
+            .Select(config =>
+                OperatingSystem.IsWindows() && !config.IsLive && (config.CoreVersion & fullDumpVersions) != 0
+                    ? config with { DumpKind = DumpKind.Full }
+                    : config);
+
+        foreach (TestConfig config in TestConfig.ApplyShardFilter(configs))
         {
-            data.Add(OperatingSystem.IsWindows() && (config.CoreVersion & fullDumpVersions) != 0
-                ? config with { DumpKind = DumpKind.Full }
-                : config);
+            data.Add(config);
         }
 
         return data;
@@ -123,17 +129,18 @@ internal static class TestMatrices
 
     public static IEnumerable<TestConfig> CoreFrameworkConditionalFullDumpConfigs(string[] targets)
     {
-        foreach (TestConfig config in TestConfig.Permutations(targets, flavor: Flavor.Core | Flavor.Framework, dumpKind: DumpKind.Heap))
+        IEnumerable<TestConfig> configs = TestConfig.UnshardedPermutations(
+                targets, flavor: Flavor.Core | Flavor.Framework, dumpKind: DumpKind.Heap)
+            .Select(config =>
+                // The net10 legacy DAC can crash while servicing dumpobj's optional ComWrappers data query
+                // on reduced Heap dumps.
+                !OperatingSystem.IsWindows() && !config.IsLive && config.CoreVersion == CoreVersion.Net10
+                    ? config with { DumpKind = DumpKind.Full }
+                    : config);
+
+        foreach (TestConfig config in TestConfig.ApplyShardFilter(configs))
         {
-            if (!OperatingSystem.IsWindows() && config.CoreVersion == CoreVersion.Net10)
-            {
-                // The net10 legacy DAC can crash while servicing dumpobj's optional ComWrappers data query on reduced Heap dumps.
-                yield return config with { DumpKind = DumpKind.Full };
-            }
-            else
-            {
-                yield return config;
-            }
+            yield return config;
         }
     }
 }

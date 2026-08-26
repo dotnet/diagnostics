@@ -31,7 +31,9 @@ public sealed class HostDiagnostics
     private const int MaxStreamChars = 128 * 1024;
 
     private static readonly string s_crashRoot =
-        Path.Combine(RepoLayout.Root, "artifacts", "replays", "crashdumps");
+        Environment.GetEnvironmentVariable("HELIX_WORKITEM_UPLOAD_ROOT") is { Length: > 0 } uploadRoot
+            ? Path.Combine(uploadRoot, "failure-diagnostics", "crashdumps")
+            : Path.Combine(RepoLayout.Root, "artifacts", "replays", "crashdumps");
 
     private readonly object _gate = new();
     private readonly StringBuilder _stdout = new();

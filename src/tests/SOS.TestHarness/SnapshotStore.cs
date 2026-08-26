@@ -22,8 +22,8 @@ namespace SOS.TestHarness;
 ///   runtime.</item>
 ///   <item><b>SingleFile</b> is pre-published by <c>Debuggees.proj</c> once per tested runtime, RID, and
 ///   configuration. Tests only locate and consume that immutable output.</item>
-///   <item><b>Framework (net462)</b> is produced on the fly in the harness scratch tree, matching the
-///   legacy harness's <c>cli</c> build process.</item>
+///   <item><b>Framework (net462)</b> is pre-built on Windows by <c>Debuggees.proj</c>; local development
+///   falls back to an on-demand build when that output is absent.</item>
 /// </list>
 ///
 /// Capture mechanism depends on the flavor and stop kind:
@@ -334,8 +334,8 @@ public static class SnapshotStore
     }
 
     /// <summary>
-    /// Resolve the runnable debuggee for a flavor. Core and SingleFile are repo build outputs; Framework
-    /// is built on demand from the repo debuggee csproj.
+    /// Resolve the runnable debuggee for a flavor. All flavors prefer repo build outputs; Framework falls
+    /// back to an on-demand build from the repo debuggee csproj for local development.
     /// </summary>
     private static string AcquireTarget(Flavor flavor, TargetDefinition target, CoreVersion coreVersion) => flavor switch
     {
@@ -351,6 +351,18 @@ public static class SnapshotStore
     {
         string tfm = CoreVersions.Tfm(coreVersion);
         string exe = Path.Combine(RepoLayout.CoreDebuggeeDir(target.Project, tfm), target.Project + RepoLayout.ExeSuffix);
+        if (UsePrebuiltTargets)
+        {
+            if (File.Exists(exe))
+            {
+                return exe;
+            }
+
+            throw new FileNotFoundException(
+                $"Pre-built Core debuggee '{target.Project}' ({tfm}) was not found at '{exe}'.",
+                exe);
+        }
+
         string project = RepoLayout.DebuggeeProject(target.Project);
         if (IsUpToDate(exe, NewestSourceWriteTime(project)))
         {
@@ -413,6 +425,19 @@ public static class SnapshotStore
     /// than the debuggee source.</summary>
     private static string BuildFramework(TargetDefinition target)
     {
+        string prebuilt = Path.Combine(RepoLayout.FrameworkDebuggeeDir(target.Project), target.Project + RepoLayout.ExeSuffix);
+        if (File.Exists(prebuilt))
+        {
+            return prebuilt;
+        }
+
+        if (UsePrebuiltTargets)
+        {
+            throw new FileNotFoundException(
+                $"Pre-built Framework debuggee '{target.Project}' was not found at '{prebuilt}'.",
+                prebuilt);
+        }
+
         string project = RepoLayout.DebuggeeProject(target.Project);
         string outDir = Path.Combine(RepoLayout.Scratch, "targets", "framework", target.Name);
         string exe = Path.Combine(outDir, target.Project + RepoLayout.ExeSuffix);
@@ -447,6 +472,12 @@ public static class SnapshotStore
 
         return exe;
     }
+
+    private static bool UsePrebuiltTargets =>
+        string.Equals(
+            Environment.GetEnvironmentVariable("SOSHARNESS_USE_PREBUILT_TARGETS"),
+            "1",
+            StringComparison.Ordinal);
 
     private static readonly ConcurrentDictionary<string, object> s_projectBuildLocks = new(StringComparer.OrdinalIgnoreCase);
 
@@ -484,6 +515,11 @@ public static class SnapshotStore
     {
         string dll = Path.Combine(RepoLayout.ArtifactsBin, name, RepoLayout.ArtifactsConfiguration, RepoLayout.TestTargetFramework, RepoLayout.Rid, name + ".dll");
         string project = Path.Combine(RepoLayout.Root, "src", "tests", name, name + ".csproj");
+
+        if (UsePrebuiltTargets && !File.Exists(dll))
+        {
+            throw new FileNotFoundException($"Pre-built subprocess '{name}' was not found at '{dll}'.", dll);
+        }
 
         if (!File.Exists(dll))
         {
