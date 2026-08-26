@@ -273,6 +273,18 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
+        // A single-file snapshot requires a Full dump because createdump cannot enumerate reduced-dump
+        // regions for a statically linked runtime. On constrained test machines, marker targets produce
+        // several multi-gigabyte dumps and cannot complete reliably. Helix launchers can exclude only those
+        // snapshot rows while preserving single-file crash coverage.
+        if (!c.IsLive &&
+            c.Flavor == Flavor.SingleFile &&
+            TargetCatalog.NavigatesViaBpmd(c.Target) &&
+            ExcludeSingleFileSnapshots(Environment.GetEnvironmentVariable("SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS")))
+        {
+            return false;
+        }
+
         // The target must support the requested flavor (e.g. DynamicMethod can't build for Framework).
         if ((TargetCatalog.FlavorsFor(c.Target) & c.Flavor) == 0)
         {
@@ -328,6 +340,14 @@ public sealed record TestConfig : IXunitSerializable
 
         return true;
     }
+
+    internal static bool ExcludeSingleFileSnapshots(string? value) => value switch
+    {
+        null or "" or "0" => false,
+        "1" => true,
+        _ => throw new InvalidOperationException(
+            "SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS must be unset, 0, or 1."),
+    };
 
     private static IEnumerable<T> SingleFlags<T>(T value) where T : struct, Enum
     {

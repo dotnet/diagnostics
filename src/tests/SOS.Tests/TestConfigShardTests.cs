@@ -83,6 +83,28 @@ public sealed class TestConfigShardTests
         Assert.Equal(2, Config(Host.Cdb, Dac.Legacy).GetCaptureShard(8));
     }
 
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("0", false)]
+    [InlineData("1", true)]
+    public void SingleFileSnapshotExclusionIsStrict(string? value, bool expected)
+    {
+        Assert.Equal(expected, TestConfig.ExcludeSingleFileSnapshots(value));
+    }
+
+    [Theory]
+    [InlineData("true")]
+    [InlineData(" 1")]
+    [InlineData("yes")]
+    public void SingleFileSnapshotExclusionRejectsInvalidValues(string value)
+    {
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => TestConfig.ExcludeSingleFileSnapshots(value));
+
+        Assert.Contains("SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS", error.Message);
+    }
+
     private static ShardSelection? Parse(string? index, string? count) =>
         ShardSelection.FromEnvironment(name => name switch
         {

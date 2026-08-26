@@ -50,8 +50,8 @@ set "LOG=%UPLOAD%\SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.log"
 
 "%DOTNET_ROOT%\dotnet.exe" "%TEST_DLL%" ^
   --results-directory "%UPLOAD%" ^
-  --report-xunit-xml ^
-  --report-xunit-xml-filename "SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.xml" ^
+  --report-xunit ^
+  --report-xunit-filename "SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.xml" ^
   --report-xunit-html ^
   --report-xunit-html-filename "SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.html" ^
   --report-trx ^

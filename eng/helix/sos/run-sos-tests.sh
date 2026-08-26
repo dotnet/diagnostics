@@ -13,6 +13,7 @@ shard_index="$3"
 shard_count="$4"
 liveness="$5"
 test_tfm="$6"
+liveness_name="$(printf '%s' "$liveness" | tr '[:upper:]' '[:lower:]')"
 
 : "${HELIX_CORRELATION_PAYLOAD:?HELIX_CORRELATION_PAYLOAD is required}"
 : "${HELIX_WORKITEM_UPLOAD_ROOT:?HELIX_WORKITEM_UPLOAD_ROOT is required}"
@@ -21,7 +22,7 @@ root="$HELIX_CORRELATION_PAYLOAD"
 upload="$HELIX_WORKITEM_UPLOAD_ROOT"
 dotnet="$root/artifacts/dotnet-test/dotnet"
 test_dll="$root/artifacts/bin/SOS.Tests/$configuration/$test_tfm/SOS.Tests.dll"
-identity="${liveness,,}-${shard_index}-of-${shard_count}"
+identity="${liveness_name}-${shard_index}-of-${shard_count}"
 
 mkdir -p "$upload"
 
@@ -35,6 +36,15 @@ find "$root/artifacts/dotnet-test" -type f -name createdump -exec chmod +x {} +
 for debuggee in NestedExceptionTest DivZero AsyncMain DynamicMethod Overflow LineNums SimpleThrow ReflectionTest SosHarnessScenarios; do
   find "$root/artifacts/bin/$debuggee/$configuration" -type f -name "$debuggee" -exec chmod +x {} +
 done
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  entitlements="$root/eng/helix/sos/debuggee-entitlements.plist"
+  for debuggee in NestedExceptionTest DivZero AsyncMain DynamicMethod Overflow LineNums SimpleThrow ReflectionTest SosHarnessScenarios; do
+    find "$root/artifacts/bin/$debuggee/$configuration" -type f -name "$debuggee" \
+      -exec codesign --force --sign - --entitlements "$entitlements" {} \;
+  done
+  export SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS=1
+fi
 
 export DOTNET_ROOT="$root/artifacts/dotnet-test"
 export DOTNET_ROOT_X64="$DOTNET_ROOT"
@@ -53,8 +63,8 @@ log="$upload/SOS.Tests-${rid}-${configuration}-${identity}.log"
 set +e
 "$dotnet" "$test_dll" \
   --results-directory "$upload" \
-  --report-xunit-xml \
-  --report-xunit-xml-filename "SOS.Tests-${rid}-${configuration}-${identity}.xml" \
+  --report-xunit \
+  --report-xunit-filename "SOS.Tests-${rid}-${configuration}-${identity}.xml" \
   --report-xunit-html \
   --report-xunit-html-filename "SOS.Tests-${rid}-${configuration}-${identity}.html" \
   --report-trx \
