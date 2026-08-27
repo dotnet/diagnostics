@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-if [[ $# -ne 6 ]]; then
-  echo "usage: $0 <configuration> <rid> <shard-index> <shard-count> <Dump|Live> <test-tfm>" >&2
+if [[ $# -lt 6 || $# -gt 7 ]]; then
+  echo "usage: $0 <configuration> <rid> <shard-index> <shard-count> <Dump|Live> <test-tfm> [max-parallel-threads]" >&2
   exit 2
 fi
 
@@ -13,7 +13,13 @@ shard_index="$3"
 shard_count="$4"
 liveness="$5"
 test_tfm="$6"
+max_parallel_threads="${7:-}"
 liveness_name="$(printf '%s' "$liveness" | tr '[:upper:]' '[:lower:]')"
+
+if [[ -n "$max_parallel_threads" && (! "$max_parallel_threads" =~ ^[1-9][0-9]*$) ]]; then
+  echo "max-parallel-threads must be a positive integer; got '$max_parallel_threads'." >&2
+  exit 2
+fi
 
 : "${HELIX_CORRELATION_PAYLOAD:?HELIX_CORRELATION_PAYLOAD is required}"
 : "${HELIX_WORKITEM_UPLOAD_ROOT:?HELIX_WORKITEM_UPLOAD_ROOT is required}"
@@ -184,17 +190,27 @@ export SOSHARNESS_ONLY_LIVENESS="$liveness"
 export SOSHARNESS_LLDB_TRACE="$upload/SOS.Tests-${rid}-${configuration}-${identity}.lldb.log"
 
 log="$upload/SOS.Tests-${rid}-${configuration}-${identity}.log"
+run_tests()
+{
+  "$dotnet" "$test_dll" "$@" \
+    --results-directory "$upload" \
+    --report-xunit \
+    --report-xunit-filename "SOS.Tests-${rid}-${configuration}-${identity}.xml" \
+    --report-xunit-html \
+    --report-xunit-html-filename "SOS.Tests-${rid}-${configuration}-${identity}.html" \
+    --report-trx \
+    --report-trx-filename "SOS.Tests-${rid}-${configuration}-${identity}.trx" \
+    --auto-reporters off
+}
+
 set +e
-"$dotnet" "$test_dll" \
-  --results-directory "$upload" \
-  --report-xunit \
-  --report-xunit-filename "SOS.Tests-${rid}-${configuration}-${identity}.xml" \
-  --report-xunit-html \
-  --report-xunit-html-filename "SOS.Tests-${rid}-${configuration}-${identity}.html" \
-  --report-trx \
-  --report-trx-filename "SOS.Tests-${rid}-${configuration}-${identity}.trx" \
-  --auto-reporters off 2>&1 | tee "$log"
-exit_code=${PIPESTATUS[0]}
+if [[ -n "$max_parallel_threads" ]]; then
+  run_tests --max-threads "$max_parallel_threads" 2>&1 | tee "$log"
+  exit_code=${PIPESTATUS[0]}
+else
+  run_tests 2>&1 | tee "$log"
+  exit_code=${PIPESTATUS[0]}
+fi
 set -e
 
 exit "$exit_code"
