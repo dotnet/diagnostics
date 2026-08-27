@@ -266,10 +266,12 @@ public static class SnapshotStore
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
 
+        // Windows createdump can outlive the crashing target while retaining its redirected handles.
         BoundedProcessResult result = BoundedProcess.Run(
             psi,
             s_captureTimeout,
-            isolateLinuxProcessGroup: true);
+            isolateLinuxProcessGroup: true,
+            outputDrainTimeout: s_captureTimeout);
 
         if (!File.Exists(dumpPath))
         {

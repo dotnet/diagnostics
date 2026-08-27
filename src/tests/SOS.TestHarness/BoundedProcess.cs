@@ -20,7 +20,8 @@ internal static partial class BoundedProcess
     public static BoundedProcessResult Run(
         ProcessStartInfo startInfo,
         TimeSpan timeout,
-        bool isolateLinuxProcessGroup = false)
+        bool isolateLinuxProcessGroup = false,
+        TimeSpan? outputDrainTimeout = null)
     {
         if (!startInfo.RedirectStandardOutput || !startInfo.RedirectStandardError)
         {
@@ -45,7 +46,12 @@ internal static partial class BoundedProcess
         if (!process.WaitForExit(TimeoutMilliseconds(timeout)))
         {
             Terminate(process, hasLinuxProcessGroup, processGroupId);
-            BoundedProcessResult output = DrainOutput(process, stdoutTask, stderrTask, command);
+            BoundedProcessResult output = DrainOutput(
+                process,
+                stdoutTask,
+                stderrTask,
+                command,
+                s_terminationTimeout);
             throw new TimeoutException(
                 $"'{command}' did not exit within {timeout}.{Environment.NewLine}" +
                 $"stdout:{Environment.NewLine}{output.StandardOutput}{Environment.NewLine}" +
@@ -59,21 +65,27 @@ internal static partial class BoundedProcess
             KillProcessGroup(processGroupId);
         }
 
-        return DrainOutput(process, stdoutTask, stderrTask, command);
+        return DrainOutput(
+            process,
+            stdoutTask,
+            stderrTask,
+            command,
+            outputDrainTimeout ?? s_terminationTimeout);
     }
 
     private static BoundedProcessResult DrainOutput(
         Process process,
         Task<string> stdoutTask,
         Task<string> stderrTask,
-        string command)
+        string command,
+        TimeSpan timeout)
     {
         Task outputTask = Task.WhenAll(stdoutTask, stderrTask);
-        if (!outputTask.Wait(s_terminationTimeout))
+        if (!outputTask.Wait(timeout))
         {
             throw new TimeoutException(
                 $"'{command}' exited with code {process.ExitCode}, but its redirected output did not close " +
-                $"within {s_terminationTimeout}.");
+                $"within {timeout}.");
         }
 
         return new BoundedProcessResult(

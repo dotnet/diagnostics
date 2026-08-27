@@ -76,6 +76,29 @@ public sealed class BoundedProcessTests
         Assert.False(IsRunning(childPid));
     }
 
+    [Fact]
+    public void WaitsForInheritedOutputWithinConfiguredDeadline()
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return;
+        }
+
+        ProcessStartInfo startInfo = Shell("sleep 1 & echo inherited-output; exit 0");
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+        BoundedProcessResult result = BoundedProcess.Run(
+            startInfo,
+            TimeSpan.FromSeconds(2),
+            outputDrainTimeout: TimeSpan.FromSeconds(3));
+        stopwatch.Stop();
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("inherited-output", result.StandardOutput);
+        Assert.True(stopwatch.Elapsed >= TimeSpan.FromMilliseconds(500));
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(3));
+    }
+
     private static ProcessStartInfo Shell(string command)
     {
         ProcessStartInfo startInfo = new("/bin/sh")
