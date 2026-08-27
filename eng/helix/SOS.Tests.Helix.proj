@@ -15,6 +15,7 @@
     <DotNetHostName Condition="'$(TargetOS)' == 'Windows_NT'">dotnet.exe</DotNetHostName>
     <DotNetHostName Condition="'$(TargetOS)' != 'Windows_NT'">dotnet</DotNetHostName>
     <PayloadNativeSourceDir>$(ArtifactsBinNativeDir)</PayloadNativeSourceDir>
+    <SOSHelixTestEnvironment Condition="'$(TargetOS)' == 'osx'">SOSHARNESS_TEST_RUNTIME_MAJOR=11 SOSHARNESS_ONLY_COREVERSIONS=Net11 </SOSHelixTestEnvironment>
     <SOSExpectedWorkItemCount Condition="'$(TargetOS)' == 'osx'">34</SOSExpectedWorkItemCount>
     <SOSExpectedWorkItemCount Condition="'$(SOSExpectedWorkItemCount)' == ''">10</SOSExpectedWorkItemCount>
   </PropertyGroup>
@@ -92,8 +93,8 @@
       <HelixWorkItem Include="@(_SOSShard)"
                      Condition="'$(SOSHelixLiveness)' == '' or ('%(_SOSShard.Liveness)' == '$(SOSHelixLiveness)' and '%(_SOSShard.ShardIndex)' == '$(SOSHelixShardIndex)')">
         <Command Condition="'$(TargetOS)' == 'Windows_NT'">%25HELIX_CORRELATION_PAYLOAD%25\eng\helix\sos\run-sos-tests.cmd $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework)</Command>
-        <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' == ''">bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework)</Command>
-        <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' != ''">bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework) %(_SOSShard.MaxParallelThreads)</Command>
+        <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' == ''">$(SOSHelixTestEnvironment)bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework)</Command>
+        <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' != ''">$(SOSHelixTestEnvironment)bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework) %(_SOSShard.MaxParallelThreads)</Command>
         <Timeout>$(WorkItemTimeout)</Timeout>
       </HelixWorkItem>
     </ItemGroup>

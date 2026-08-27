@@ -14,10 +14,16 @@ shard_count="$4"
 liveness="$5"
 test_tfm="$6"
 max_parallel_threads="${7:-}"
+test_runtime_major="${SOSHARNESS_TEST_RUNTIME_MAJOR:-}"
 liveness_name="$(printf '%s' "$liveness" | tr '[:upper:]' '[:lower:]')"
 
 if [[ -n "$max_parallel_threads" && (! "$max_parallel_threads" =~ ^[1-9][0-9]*$) ]]; then
   echo "max-parallel-threads must be a positive integer; got '$max_parallel_threads'." >&2
+  exit 2
+fi
+
+if [[ -n "$test_runtime_major" && (! "$test_runtime_major" =~ ^[1-9][0-9]*$) ]]; then
+  echo "SOSHARNESS_TEST_RUNTIME_MAJOR must be a positive integer; got '$test_runtime_major'." >&2
   exit 2
 fi
 
@@ -149,6 +155,19 @@ configure_lldb()
 
 dotnet_root="$(prepare_dotnet_root)"
 dotnet="$dotnet_root/dotnet"
+dotnet_arguments=("$test_dll")
+
+if [[ -n "$test_runtime_major" ]]; then
+  test_runtime_version="$("$dotnet" --list-runtimes | awk -v prefix="$test_runtime_major." \
+    '$1 == "Microsoft.NETCore.App" && index($2, prefix) == 1 { version = $2 } END { print version }')"
+  if [[ -z "$test_runtime_version" ]]; then
+    echo "Microsoft.NETCore.App $test_runtime_major.x was not found under '$dotnet_root'." >&2
+    exit 3
+  fi
+
+  echo "Running SOS.Tests on Microsoft.NETCore.App $test_runtime_version."
+  dotnet_arguments=(--fx-version "$test_runtime_version" "$test_dll")
+fi
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
   entitlements="$root/eng/helix/sos/debuggee-entitlements.plist"
@@ -192,7 +211,7 @@ export SOSHARNESS_LLDB_TRACE="$upload/SOS.Tests-${rid}-${configuration}-${identi
 log="$upload/SOS.Tests-${rid}-${configuration}-${identity}.log"
 run_tests()
 {
-  "$dotnet" "$test_dll" "$@" \
+  "$dotnet" "${dotnet_arguments[@]}" "$@" \
     --results-directory "$upload" \
     --report-xunit \
     --report-xunit-filename "SOS.Tests-${rid}-${configuration}-${identity}.xml" \

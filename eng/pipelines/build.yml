@@ -136,7 +136,8 @@ jobs:
       ${{ if ne(parameters.strategy, '') }}:
         'error, we can no longer support the strategy feature in the new pipeline system. Please remove the strategy from the job template.': error
 
-      ${{ if and(ne(parameters.dependsOn, ''), ne(parameters.testOnly, true)) }}:
+      # Within a stage, test-only jobs can start as soon as their matching build job publishes its artifacts.
+      ${{ if ne(parameters.dependsOn, '') }}:
         dependsOn: ${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
 
       workspace:
@@ -238,6 +239,8 @@ jobs:
             HelixType: tests/sos/harness/
             HelixConfiguration: ${{ parameters.sosHelixRidPrefix }}-${{ config.architecture }}_${{ config.configuration }}
             HelixTargetQueues: ${{ parameters.sosHelixQueue }}
+            ${{ if eq(parameters.sosHelixRidPrefix, 'linux-musl') }}:
+              HelixPreCommands: sudo apk add --no-cache py3-lldb
             ${{ if eq(variables['System.TeamProject'], 'public') }}:
               Creator: dotnet-bot
             ${{ else }}:

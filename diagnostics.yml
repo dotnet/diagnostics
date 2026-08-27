@@ -52,7 +52,7 @@ extends:
   parameters:
     stages:
     - stage: build
-      displayName: Build Diagnostics
+      displayName: Build / Test Diagnostics
       jobs:
 
         ############################
@@ -218,18 +218,13 @@ extends:
               artifactUploadPath: bin/linux.arm64.Release
               artifactTargetPath: bin/linux-musl.arm64.Release
 
-    ############################
-    #                          #
-    #        Test stage        #
-    #                          #
-    ############################
+      ############################
+      #                          #
+      #        Test legs         #
+      #                          #
+      ############################
 
-    - ${{ if ne(parameters.buildOnly, true) }}:
-      - stage: test
-        displayName: Test Diagnostics
-        dependsOn: build
-        jobs:
-
+      - ${{ if ne(parameters.buildOnly, true) }}:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
