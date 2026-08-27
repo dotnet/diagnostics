@@ -98,7 +98,16 @@ public sealed class BoundedProcessTests
             return false;
         }
 
-        string stat = File.ReadAllText(statPath);
+        string stat;
+        try
+        {
+            stat = File.ReadAllText(statPath);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return false;
+        }
+
         int commandEnd = stat.LastIndexOf(')');
         return commandEnd < 0 || commandEnd + 2 >= stat.Length || stat[commandEnd + 2] != 'Z';
     }

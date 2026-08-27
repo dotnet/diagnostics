@@ -109,6 +109,7 @@
           Condition="'$(HelixTargetQueue)' == ''">
     <ItemGroup>
       <_PayloadRootFile Include="$(RepoRoot)global.json;$(RepoRoot)Build.cmd" />
+      <_PayloadEngineeringFile Include="$(RepoRoot)eng/DisableSignatureCheck.ps1" />
       <_PayloadLauncherFile Include="$(RepoRoot)eng/helix/sos/**/*" />
 
       <_PayloadBinFile Include="$(ArtifactsBinDir)SOS.Tests/$(Configuration)/**/*;
@@ -148,6 +149,9 @@
 
       <_PayloadFile Include="@(_PayloadRootFile)">
         <DestinationRelative>%(_PayloadRootFile.Filename)%(_PayloadRootFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadEngineeringFile)">
+        <DestinationRelative>eng/%(_PayloadEngineeringFile.Filename)%(_PayloadEngineeringFile.Extension)</DestinationRelative>
       </_PayloadFile>
       <_PayloadFile Include="@(_PayloadLauncherFile)">
         <DestinationRelative>eng/helix/sos/%(_PayloadLauncherFile.RecursiveDir)%(_PayloadLauncherFile.Filename)%(_PayloadLauncherFile.Extension)</DestinationRelative>

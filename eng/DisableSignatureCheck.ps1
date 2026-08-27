@@ -1,9 +1,15 @@
 Param(
   [switch] $Restore,
-  [string] $RepoRoot
+  [string] $RepoRoot,
+  [string] $StateDirectory,
+  [ValidateSet("x64", "x86")]
+  [string] $TargetArchitecture = "x64"
 )
 
-$windowsNode = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\"
+$ErrorActionPreference = "Stop"
+
+$softwareNode = if ($TargetArchitecture -eq "x86") { "HKLM:\SOFTWARE\WOW6432Node" } else { "HKLM:\SOFTWARE" }
+$windowsNode = "$softwareNode\Microsoft\Windows NT\CurrentVersion\"
 $relevantNodeName = "MiniDumpSettings"
 $relevantNode = "$windowsNode\$relevantNodeName"
 $propName = "DisableAuxProviderSignatureCheck"
@@ -13,8 +19,15 @@ $auxiliaryNode = "$windowsNode\$auxiliaryNodeName"
 $knownNodeName = "KnownManagedDebuggingDlls"
 $knownNode = "$windowsNode\$knownNodeName"
 
-$stateFileDirectory = "$RepoRoot\artifacts\tmp"
-$stateFileName = "$stateFileDirectory\SignatureCheck.state"
+$stateFileDirectory = if ($StateDirectory) { $StateDirectory } else { "$RepoRoot\artifacts\tmp" }
+$stateFileName = "$stateFileDirectory\SignatureCheck.$TargetArchitecture.state"
+
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+$principal = [Security.Principal.WindowsPrincipal]::new($identity)
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
+{
+    throw "Administrative privileges are required to configure DbgHelp dump settings."
+}
 
 if ($Restore)
 {
@@ -24,8 +37,20 @@ if ($Restore)
         $state = Get-Content -Path $stateFileName -Raw | ConvertFrom-Json
 
         # Restore DisableAuxProviderSignatureCheck
-        Write-Host "Restoring state: Set-ItemProperty $relevantNode -Name $propName -Value $($state.DisableCheckPrior)"
-        Set-ItemProperty $relevantNode -Name $propName -Value $state.DisableCheckPrior -Type "DWORD"
+        if ($state.DisableCheckExisted)
+        {
+            Write-Host "Restoring state: Set-ItemProperty $relevantNode -Name $propName -Value $($state.DisableCheckPrior)"
+            Set-ItemProperty $relevantNode -Name $propName -Value $state.DisableCheckPrior -Type "DWORD"
+            if ((Get-ItemPropertyValue -Path $relevantNode -Name $propName) -ne $state.DisableCheckPrior)
+            {
+                throw "Failed to restore $relevantNode\$propName"
+            }
+        }
+        else
+        {
+            Write-Host "Restoring state: Remove-ItemProperty $relevantNode -Name $propName"
+            Remove-ItemProperty -Path $relevantNode -Name $propName -ErrorAction SilentlyContinue
+        }
 
         # Remove added KnownManagedDebuggingDlls values
         if ($state.AddedKnownValues -and (Test-Path $knownNode))
@@ -59,19 +84,48 @@ else
 {
     # Save prior DisableAuxProviderSignatureCheck value
     $disableCheckPrior = 0
+    $disableCheckExisted = $false
     if (Test-Path $relevantNode)
     {
-        try
+        $existingSetting = Get-ItemProperty -Path $relevantNode -Name $propName -ErrorAction SilentlyContinue
+        if ($existingSetting -and $existingSetting.PSObject.Properties[$propName])
         {
-            Write-Host "Disabling state: Get-ItemPropertyValue -Path $relevantNode -Name $propName"
-            $disableCheckPrior = Get-ItemPropertyValue -Path $relevantNode -Name $propName
-        }
-        catch
-        {
-            Write-Host "Disabling state: property not found, defaulting to 0"
+            $disableCheckExisted = $true
+            $disableCheckPrior = $existingSetting.$propName
         }
     }
+
+    if ($disableCheckExisted)
+    {
+        Write-Host "Disabling state: captured prior $relevantNode\$propName value $disableCheckPrior"
+    }
     else
+    {
+        Write-Host "Disabling state: registry value not found"
+    }
+
+    $addedKnown = @()
+    $addedAux = @()
+    $state = @{
+        DisableCheckExisted = $disableCheckExisted
+        DisableCheckPrior = $disableCheckPrior
+        AddedKnownValues = $addedKnown
+        AddedAuxiliaryValues = $addedAux
+    }
+
+    function Save-State
+    {
+        New-Item -Path $stateFileDirectory -Force -ItemType "Directory" | Out-Null
+        $state.AddedKnownValues = $addedKnown
+        $state.AddedAuxiliaryValues = $addedAux
+        $state | ConvertTo-Json -Depth 3 | Out-File -Encoding ascii -FilePath $stateFileName
+    }
+
+    # Persist rollback state before the first registry mutation.
+    Save-State
+    Write-Host "Disabling state: Saved state to $stateFileName"
+
+    if (-not (Test-Path $relevantNode))
     {
         Write-Host "Disabling state: New-Item -Path $windowsNode -Name $relevantNodeName"
         New-Item -Path $windowsNode -Name $relevantNodeName | Out-Null
@@ -79,8 +133,6 @@ else
 
     # Find test runtime directories and register DACs
     $runtimeBasePath = "$RepoRoot\artifacts\dotnet-test\shared\Microsoft.NETCore.App"
-    $addedKnown = @()
-    $addedAux = @()
 
     if (Test-Path $runtimeBasePath)
     {
@@ -111,16 +163,18 @@ else
             if (-not ($existingKnown -and $existingKnown.PSObject.Properties[$dacPath]))
             {
                 Write-Host "Disabling state: Register KnownManagedDebuggingDlls '$dacPath'"
-                Set-ItemProperty -Path $knownNode -Name $dacPath -Value 0 -Type DWord
                 $addedKnown += $dacPath
+                Save-State
+                Set-ItemProperty -Path $knownNode -Name $dacPath -Value 0 -Type DWord
             }
 
             $existingAux = Get-ItemProperty -Path $auxiliaryNode -Name $runtimeDllPath -ErrorAction SilentlyContinue
             if (-not ($existingAux -and $existingAux.PSObject.Properties[$runtimeDllPath]))
             {
                 Write-Host "Disabling state: Register MiniDumpAuxiliaryDlls '$runtimeDllPath' -> '$dacPath'"
-                Set-ItemProperty -Path $auxiliaryNode -Name $runtimeDllPath -Value $dacPath -Type String
                 $addedAux += $runtimeDllPath
+                Save-State
+                Set-ItemProperty -Path $auxiliaryNode -Name $runtimeDllPath -Value $dacPath -Type String
             }
         }
     }
@@ -129,18 +183,12 @@ else
         Write-Host "Disabling state: Runtime path not found at $runtimeBasePath, skipping DAC registration"
     }
 
-    # Save state
-    New-Item -Path $stateFileDirectory -Force -ItemType 'Directory' | Out-Null
-    $state = @{
-        DisableCheckPrior = $disableCheckPrior
-        AddedKnownValues = $addedKnown
-        AddedAuxiliaryValues = $addedAux
-    }
-    $state | ConvertTo-Json -Depth 3 | Out-File -Encoding ascii -FilePath $stateFileName
-    Write-Host "Disabling state: Saved state to $stateFileName"
-
     # Set the disable flag
     Write-Host "Disabling state: Set-ItemProperty $relevantNode -Name $propName -Value 1"
     Set-ItemProperty $relevantNode -Name $propName -Value 1 -Type "DWORD"
+    if ((Get-ItemPropertyValue -Path $relevantNode -Name $propName) -ne 1)
+    {
+        throw "Failed to set $relevantNode\$propName"
+    }
     Write-Host "Disabling state: complete"
 }
