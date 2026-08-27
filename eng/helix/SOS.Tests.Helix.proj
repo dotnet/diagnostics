@@ -121,7 +121,7 @@
       <_PayloadCDacFile Include="$(ArtifactsDir)cdac-override/$(Configuration)/**/*"
                         Condition="Exists('$(ArtifactsDir)cdac-override/$(Configuration)')" />
 
-      <_PayloadCdbFile Include="$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/**/*"
+      <_PayloadCdbFile Include="$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/*"
                        Condition="'$(TargetOS)' == 'Windows_NT'" />
 
       <_PayloadFile Include="@(_PayloadRootFile)">
@@ -143,7 +143,7 @@
         <DestinationRelative>artifacts/cdac-override/$(Configuration)/%(_PayloadCDacFile.RecursiveDir)%(_PayloadCDacFile.Filename)%(_PayloadCDacFile.Extension)</DestinationRelative>
       </_PayloadFile>
       <_PayloadFile Include="@(_PayloadCdbFile)">
-        <DestinationRelative>.packages/cdb-sos/$(cdbsosversion)/%(_PayloadCdbFile.RecursiveDir)%(_PayloadCdbFile.Filename)%(_PayloadCdbFile.Extension)</DestinationRelative>
+        <DestinationRelative>artifacts/cdb-sos/%(_PayloadCdbFile.Filename)%(_PayloadCdbFile.Extension)</DestinationRelative>
       </_PayloadFile>
     </ItemGroup>
 
@@ -156,6 +156,8 @@
            Text="The test runtime host was not found at '$(ArtifactsDotnetTestDir)$(DotNetHostName)'." />
     <Error Condition="!Exists('$(PayloadNativeSourceDir)sos.dll') and '$(TargetOS)' == 'Windows_NT'"
            Text="Native SOS was not found at '$(PayloadNativeSourceDir)sos.dll'." />
+    <Error Condition="!Exists('$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/dbgeng.dll') and '$(TargetOS)' == 'Windows_NT'"
+           Text="DbgEng was not found in the cdb-sos package for '$(TargetRid)'." />
     <Error Condition="!Exists('$(PayloadNativeSourceDir)libsosplugin.so') and '$(TargetOS)' == 'linux'"
            Text="The SOS lldb plugin was not found at '$(PayloadNativeSourceDir)libsosplugin.so'." />
     <Error Condition="!Exists('$(PayloadNativeSourceDir)libsosplugin.dylib') and '$(TargetOS)' == 'osx'"
@@ -167,6 +169,8 @@
           DestinationFiles="@(_PayloadFile->'$(CorrelationPayloadDirectory)/%(DestinationRelative)')"
           SkipUnchangedFiles="true"
           UseHardlinksIfPossible="true" />
+    <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(CorrelationPayloadDirectory)/artifacts/cdb-sos/dbgeng.dll')"
+           Text="DbgEng was not staged in the SOS Helix correlation payload." />
   </Target>
 
   <Target Name="PrintSOSHelixWorkItems"

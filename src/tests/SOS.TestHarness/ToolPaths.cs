@@ -119,6 +119,21 @@ public static class ToolPaths
 
     private static string ResolveDbgEngDirectory()
     {
+        string? configuredDirectory = Environment.GetEnvironmentVariable("SOSHARNESS_DBGENG_ROOT");
+        if (!string.IsNullOrEmpty(configuredDirectory))
+        {
+            string directory = Path.GetFullPath(configuredDirectory);
+            string dbgEngPath = Path.Combine(directory, "dbgeng.dll");
+            if (File.Exists(dbgEngPath))
+            {
+                return directory;
+            }
+
+            throw new FileNotFoundException(
+                $"Could not locate dbgeng.dll in the configured SOS harness DbgEng directory '{directory}'.",
+                dbgEngPath);
+        }
+
         string relativeNative = Path.Combine("runtimes", $"win-{RepoLayout.TargetArch}", "native");
 
         foreach (string root in NuGetPackageRoots())
