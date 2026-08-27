@@ -3,6 +3,8 @@
 
   <PropertyGroup>
     <Language>msbuild</Language>
+    <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' != ''">true</EnableAzurePipelinesReporter>
     <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' == ''">false</EnableAzurePipelinesReporter>
     <EnableXUnitReporter>true</EnableXUnitReporter>

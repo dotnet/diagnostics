@@ -37,6 +37,8 @@ namespace SOS.TestHarness;
 /// </summary>
 public static class SnapshotStore
 {
+    private static readonly TimeSpan s_captureTimeout = TimeSpan.FromMinutes(5);
+
     // One acquisition per (flavor, target, coreVersion); thread-safe via Lazy.
     private static readonly ConcurrentDictionary<(Flavor Flavor, string Target, CoreVersion CoreVersion), Lazy<string>> s_targetExe = new();
 
@@ -264,15 +266,17 @@ public static class SnapshotStore
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
 
-        using Process p = Process.Start(psi) ?? throw new InvalidOperationException("Failed to launch target");
-        string stdout = p.StandardOutput.ReadToEnd();
-        string stderr = p.StandardError.ReadToEnd();
-        p.WaitForExit();
+        BoundedProcessResult result = BoundedProcess.Run(
+            psi,
+            s_captureTimeout,
+            isolateLinuxProcessGroup: true);
 
         if (!File.Exists(dumpPath))
         {
             throw new InvalidOperationException(
-                $"createdump did not produce '{dumpPath}' for {target.Project} ({flavor}); exit {p.ExitCode}.\n{stdout}\n{stderr}");
+                $"createdump did not produce '{dumpPath}' for {target.Project} ({flavor}); exit {result.ExitCode}.\n" +
+                $"stdout:\n{result.StandardOutput}\n" +
+                $"stderr:\n{result.StandardError}");
         }
     }
 
@@ -372,13 +376,17 @@ public static class SnapshotStore
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
 
-        using Process p = Process.Start(psi) ?? throw new InvalidOperationException("Failed to launch target");
-        string stderr = p.StandardError.ReadToEnd();
-        p.WaitForExit();
+        BoundedProcessResult result = BoundedProcess.Run(
+            psi,
+            s_captureTimeout,
+            isolateLinuxProcessGroup: true);
 
-        if (p.ExitCode != 0)
+        if (result.ExitCode != 0)
         {
-            throw new InvalidOperationException($"Target '{target.Project}' ({flavor}) failed ({p.ExitCode}):\n{stderr}");
+            throw new InvalidOperationException(
+                $"Target '{target.Project}' ({flavor}) failed ({result.ExitCode}):\n" +
+                $"stdout:\n{result.StandardOutput}\n" +
+                $"stderr:\n{result.StandardError}");
         }
     }
 

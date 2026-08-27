@@ -5,6 +5,9 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+#if !NETFRAMEWORK
+using SOS.TestHarness;
+#endif
 
 /// <summary>
 /// The one piece of shared machinery the marker debuggee uses. A call to <see cref="Stop"/> marks a
@@ -64,12 +67,16 @@ public static class TestHarness
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add(outPath);
 
-        using Process p = Process.Start(psi)!;
-        p.WaitForExit();
-        if (p.ExitCode != 0 || !File.Exists(outPath))
+        BoundedProcessResult result = BoundedProcess.Run(
+            psi,
+            TimeSpan.FromMinutes(2),
+            isolateLinuxProcessGroup: true);
+        if (result.ExitCode != 0 || !File.Exists(outPath))
         {
             throw new InvalidOperationException(
-                $"Snapshot '{name}' failed (exit {p.ExitCode}): {p.StandardError.ReadToEnd()}");
+                $"Snapshot '{name}' failed (exit {result.ExitCode}):\n" +
+                $"stdout:\n{result.StandardOutput}\n" +
+                $"stderr:\n{result.StandardError}");
         }
 #endif
     }
