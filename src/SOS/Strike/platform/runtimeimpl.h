@@ -16,8 +16,8 @@
 
 #define NET_DBI_MODULE_NAME_W           MAKEDLLNAME_W(W("mscordbi"))
 #define NET_DBI_MODULE_NAME_A           MAKEDLLNAME_A("mscordbi")
-#define NET_DBI_DLL_NAME_W              NET_DBI_MODULE_NAME_W       
-#define NET_DBI_DLL_NAME_A              NET_DBI_MODULE_NAME_A       
+#define NET_DBI_DLL_NAME_W              NET_DBI_MODULE_NAME_W
+#define NET_DBI_DLL_NAME_A              NET_DBI_MODULE_NAME_A
 
 #else
 
@@ -38,18 +38,9 @@
 #define DESKTOP_DAC_DLL_NAME_W          MAKEDLLNAME_W(W("mscordacwks"))
 #define DESKTOP_DAC_DLL_NAME_A          MAKEDLLNAME_A("mscordacwks")
 
-// The cDAC (mscordaccore_universal) ships next to sos in the diagnostics tool package.
-// MAKEDLLNAME_A applies the platform-specific prefix/suffix (e.g. .dll, lib*.so, lib*.dylib).
-#define NETCORE_CDAC_DLL_NAME_A         MAKEDLLNAME_A("mscordaccore_universal")
-
 extern IRuntime* g_pRuntime;
 
-enum class CDacLoadPolicy
-{
-    Default,
-    UseCDac,
-    UseLegacyDac,
-};
+using CDacLoadPolicy = IRuntime::CDacLoadPolicy;
 
 // Returns the runtime configuration as a string
 inline static const char* GetRuntimeConfigurationName(IRuntime::RuntimeConfiguration config)
@@ -104,13 +95,13 @@ inline const char* GetRuntimeDllName()
     return GetRuntimeDllName(g_pRuntime->GetRuntimeConfiguration());
 }
 
-// Returns the DAC module name (mscordacwks, mscordaccore, libmscordaccore.so, libmscordaccore.dylib) 
+// Returns the DAC module name (mscordacwks, mscordaccore, libmscordaccore.so, libmscordaccore.dylib)
 inline const char* GetDacModuleName()
 {
     return (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_MODULE_NAME_A : NETCORE_DAC_MODULE_NAME_A;
 }
 
-// Returns the DAC module name (mscordacwks.dll, mscordaccore.dll, libmscordaccore.so, libmscordaccore.dylib) 
+// Returns the DAC module name (mscordacwks.dll, mscordaccore.dll, libmscordaccore.so, libmscordaccore.dylib)
 inline const char* GetDacDllName()
 {
     return (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_DLL_NAME_A : NETCORE_DAC_DLL_NAME_A;
@@ -132,10 +123,15 @@ private:
     RuntimeInfo* m_runtimeInfo;
     LPCSTR m_runtimeDirectory;
     LPCSTR m_dacFilePath;
-    LPCSTR m_cdacFilePath;
+    LPCSTR m_dbgShimFilePath;
     LPCSTR m_dbiFilePath;
+    HMODULE m_dbgShimHandle;
     IXCLRDataProcess* m_clrDataProcess;
     IXCLRDataProcess* m_cdacDataProcess;
+    bool m_hasCDacActivationResult;
+    HRESULT m_cdacActivationResult;
+    bool m_contractDescriptorAddressResolved;
+    ULONG64 m_contractDescriptorAddress;
     ICorDebugProcess* m_pCorDebugProcess;
 
     Runtime(ITarget* target, RuntimeConfiguration configuration, ULONG index, ULONG64 address, ULONG64 size, RuntimeInfo* runtimeInfo);
@@ -143,36 +139,31 @@ private:
     virtual ~Runtime();
 
     void SetDacFilePath(LPCSTR dacFilePath)
-    { 
+    {
         if (m_dacFilePath == nullptr && dacFilePath != nullptr) {
             m_dacFilePath = _strdup(dacFilePath);
         }
     }
 
-    void SetDbiFilePath(LPCSTR dbiFilePath) 
-    { 
+    void SetDbiFilePath(LPCSTR dbiFilePath)
+    {
         if (m_dbiFilePath == nullptr && dbiFilePath != nullptr) {
             m_dbiFilePath = _strdup(dbiFilePath);
         }
     }
 
-    // Loads the given DAC/cDAC module and creates an IXCLRDataProcess from it (nullptr on failure).
-    // contractDescriptorAddress is the cDAC contract descriptor address (0 for the in-box DAC, which
-    // does not use it).
-    IXCLRDataProcess* CreateClrDataProcessInstance(LPCSTR dacFilePath, ULONG64 contractDescriptorAddress);
+    IXCLRDataProcess* CreateClrDataProcessDirect(LPCSTR dacFilePath);
 
-    // Resolves the address of the cDAC contract descriptor export (DotNetRuntimeContractDescriptor)
-    // in the runtime module, or 0 if it can't be found. The cDAC requires this via ICLRContractLocator.
+    HRESULT CreateClrDataProcessViaDbgShim(IXCLRDataProcess** ppClrDataProcess);
+
     ULONG64 GetContractDescriptorAddress();
 
-    // Evaluates the cDAC loading policy: cDAC is used for supported runtimes (.NET 11+) unless
-    // DOTNET_ENABLE_CDAC requests that the in-box DAC drive the cDAC contract reader itself.
-    bool ShouldUseCDac();
+    static bool ShouldTryCDac(CDacLoadPolicy policy);
 
 public:
     static HRESULT CreateInstance(ITarget* target, RuntimeConfiguration configuration, Runtime** ppRuntime);
 
-    static CDacLoadPolicy GetCDacLoadPolicy();
+    static CDacLoadPolicy GetConfiguredCDacLoadPolicy();
 
     static void SetCDacLoadPolicy(CDacLoadPolicy policy);
 
@@ -180,7 +171,7 @@ public:
 
     LPCSTR GetDacFilePath();
 
-    LPCSTR GetCDacFilePath();
+    LPCSTR GetDbgShimFilePath();
 
     LPCSTR GetDbiFilePath();
 
@@ -212,11 +203,13 @@ public:
 
     LPCSTR STDMETHODCALLTYPE GetRuntimeDirectory();
 
-    HRESULT STDMETHODCALLTYPE GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess** ppClrDataProcess);
+    HRESULT STDMETHODCALLTYPE GetClrDataProcess(CDacLoadPolicy policy, IXCLRDataProcess** ppClrDataProcess);
 
     HRESULT STDMETHODCALLTYPE GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess);
 
     HRESULT STDMETHODCALLTYPE GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes);
+
+    CDacLoadPolicy STDMETHODCALLTYPE GetCDacLoadPolicy() const;
 
 
     // Returns the runtime module DLL name (clr.dll, coreclr.dll, libcoreclr.so, libcoreclr.dylib)
@@ -225,19 +218,19 @@ public:
         return ::GetRuntimeDllName(GetRuntimeConfiguration());
     }
 
-    // Returns the DAC module name (mscordacwks.dll, mscordaccore.dll, libmscordaccore.so, libmscordaccore.dylib) 
+    // Returns the DAC module name (mscordacwks.dll, mscordaccore.dll, libmscordaccore.so, libmscordaccore.dylib)
     inline const char* GetDacDllName() const
     {
         return (GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_DLL_NAME_A : NETCORE_DAC_DLL_NAME_A;
     }
 
-    // Returns the DAC module name (mscordacwks, mscordaccore, libmscordaccore.so, libmscordaccore.dylib) 
+    // Returns the DAC module name (mscordacwks, mscordaccore, libmscordaccore.so, libmscordaccore.dylib)
     inline const WCHAR* GetDacModuleNameW() const
     {
         return (GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_MODULE_NAME_W : NETCORE_DAC_MODULE_NAME_W;
     }
 
-    // Returns the DAC module name (mscordacwks.dll, mscordaccore.dll, libmscordaccore.so, libmscordaccore.dylib) 
+    // Returns the DAC module name (mscordacwks.dll, mscordaccore.dll, libmscordaccore.so, libmscordaccore.dylib)
     inline const WCHAR* GetDacDllNameW() const
     {
         return (GetRuntimeConfiguration() == IRuntime::WindowsDesktop) ? DESKTOP_DAC_DLL_NAME_W : NETCORE_DAC_DLL_NAME_W;
