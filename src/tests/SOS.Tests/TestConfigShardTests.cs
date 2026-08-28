@@ -105,6 +105,23 @@ public sealed class TestConfigShardTests
         Assert.Contains("SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS", error.Message);
     }
 
+    [Fact]
+    public void SingleFileCDacIsValidOnNet11()
+    {
+        TestConfig config = new(
+            TargetCatalog.DivZero,
+            Host.DotnetDump,
+            Flavor.SingleFile,
+            Liveness.Dump,
+            GcType.Workstation,
+            DumpKind.Heap,
+            CoreVersion.Net11,
+            Dac.CDac);
+
+        Assert.True(TestConfig.IsValid(config));
+        Assert.False(TestConfig.IsValid(config with { CoreVersion = CoreVersion.Net10 }));
+    }
+
     private static ShardSelection? Parse(string? index, string? count) =>
         ShardSelection.FromEnvironment(name => name switch
         {

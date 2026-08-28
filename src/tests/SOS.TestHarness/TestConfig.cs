@@ -238,7 +238,7 @@ public sealed record TestConfig : IXunitSerializable
     /// Whether a configuration is valid on the current platform. Centralizes every constraint that the old
     /// nested-loop <c>BuildMatrix</c> scattered across per-axis <c>continue</c>s.
     /// </summary>
-    private static bool IsValid(TestConfig c)
+    internal static bool IsValid(TestConfig c)
     {
         // Host platform constraints: cdb is Windows-only, lldb is non-Windows-only.
         if (c.Host == Host.Cdb && !OperatingSystem.IsWindows())
@@ -325,15 +325,6 @@ public sealed record TestConfig : IXunitSerializable
         // (only `runtimes --usecdac` differs at debug time), so this just removes the invalid debug-time
         // variant, never a capture.
         if (c.Dac == Dac.CDac && (uint)c.CoreVersion < (uint)CoreVersion.Net11)
-        {
-            return false;
-        }
-
-        // The universal cDAC can identify a single-file runtime and inspect its GC heap, but it cannot
-        // currently expose the managed execution metadata that SOS commands require (AppDomain/module
-        // details, MethodDescs, exception stack traces, or stack walks). Keep cDAC coverage on Core,
-        // where the full command surface is supported, and test SingleFile with its matching legacy DAC.
-        if (c.Dac == Dac.CDac && c.Flavor == Flavor.SingleFile)
         {
             return false;
         }

@@ -20,10 +20,9 @@ The default matrix covers supported Core runtimes, the platform debugger (`cdb` 
 and both the legacy DAC and cDAC where supported. Live debugging, server GC, Mini dumps, and
 out-of-support runtimes are opt-in to keep normal runs bounded.
 
-The cDAC is excluded for single-file targets because its current single-file support does not expose
-the execution metadata required by the shared SOS command suite. Single-file coverage uses the matching
-legacy DAC. Live LLDB navigation is excluded for single-file snapshot targets because the statically
-linked, stripped runtime does not expose the symbol needed to arm `bpmd`.
+Single-file targets use both the matching legacy DAC and the universal cDAC on .NET 11; earlier runtimes
+use only the legacy DAC. Live LLDB navigation is excluded for single-file snapshot targets because the
+statically linked, stripped runtime does not expose the symbol needed to arm `bpmd`.
 
 On Windows, reduced dumps of unsigned test runtimes require the machine-wide
 `DisableAuxProviderSignatureCheck` setting. When it is absent, Heap requests use Full dumps instead.

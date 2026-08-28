@@ -8,11 +8,6 @@ namespace SOS.Tests;
 
 internal static class TestMatrices
 {
-    /// <summary>
-    /// Matrix for commands that use the managed stack walker. The universal cDAC can inspect a
-    /// single-file runtime, but it cannot currently start a stack walk for one (SOS reports
-    /// COR_E_INVALIDOPERATION), so that combination is not a supported stack-walk configuration.
-    /// </summary>
     public static TheoryData<TestConfig> StackWalk(
         string[] targets,
         Flavor flavor = Flavor.AllValid,
@@ -41,11 +36,7 @@ internal static class TestMatrices
         DumpKind dumpKind = DumpKind.Heap,
         CoreVersion coreVersion = CoreVersion.All,
         Dac dac = Dac.All) =>
-        TestConfig.Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion: coreVersion, dac: dac)
-            .Where(SupportsStackWalk);
-
-    public static bool SupportsStackWalk(TestConfig config) =>
-        config.Flavor != Flavor.SingleFile || config.Dac != Dac.CDac;
+        TestConfig.Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion: coreVersion, dac: dac);
 
     /// <summary>
     /// Wraps <see cref="TestConfig.BuildMatrix"/> for commands whose data is absent from a reduced Heap dump on
@@ -102,7 +93,6 @@ internal static class TestMatrices
         TheoryData<TestConfig> data = new();
         IEnumerable<TestConfig> configs = TestConfig.UnshardedPermutations(
                 targets, flavor, host, liveness, coreVersion: coreVersion, dac: dac)
-            .Where(SupportsStackWalk)
             .Select(config =>
                 OperatingSystem.IsWindows() && !config.IsLive && (config.CoreVersion & fullDumpVersions) != 0
                     ? config with { DumpKind = DumpKind.Full }
