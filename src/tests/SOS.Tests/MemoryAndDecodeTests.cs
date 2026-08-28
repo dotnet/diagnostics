@@ -29,10 +29,31 @@ public sealed class MemoryAndDecodeTests
         // The memory dumpers are dotnet-dump REPL commands (cdb uses the native d*/dp/db). FieldMarker's
         // LongField is a known 64-bit value, so it appears verbatim in the pointer/qword dumps.
         ulong marker = target.FindUniqueObject("FieldMarker");
-        string longHex = ((ulong)TestTargets.SosHarnessScenarios.FieldMarkerLong).ToString("x");
+        ulong longValue = (ulong)TestTargets.SosHarnessScenarios.FieldMarkerLong;
+        string longHex = longValue.ToString("x");
 
-        Assert.Contains(longHex, target.Sos($"dp {marker:x}").Text, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(longHex, target.Sos($"dq {marker:x}").Text, StringComparison.OrdinalIgnoreCase);
+        string pointerDump = target.Sos($"dp {marker:x}").Text;
+        if (IntPtr.Size == 4)
+        {
+            Assert.Contains(unchecked((uint)longValue).ToString("x8"), pointerDump, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(unchecked((uint)(longValue >> 32)).ToString("x8"), pointerDump, StringComparison.OrdinalIgnoreCase);
+        }
+        else
+        {
+            Assert.Contains(longHex, pointerDump, StringComparison.OrdinalIgnoreCase);
+        }
+
+        string qwordDump = target.Sos($"dq {marker:x}").Text;
+        if (IntPtr.Size == 4)
+        {
+            Assert.Contains(unchecked((uint)longValue).ToString("x8"), qwordDump, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(unchecked((uint)(longValue >> 32)).ToString("x8"), qwordDump, StringComparison.OrdinalIgnoreCase);
+        }
+        else
+        {
+            Assert.Contains(longHex, qwordDump, StringComparison.OrdinalIgnoreCase);
+        }
+
         target.Sos($"db {marker:x}").AssertContains(":"); // byte dump prints "<addr>: <bytes>"
     }
 

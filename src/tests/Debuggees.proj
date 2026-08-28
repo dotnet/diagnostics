@@ -47,10 +47,13 @@
   <Target Name="BuildSOSFrameworkDebuggees"
           AfterTargets="Build"
           Condition="'$(OS)' == 'Windows_NT' and '$(SkipSOSFrameworkDebuggees)' != 'true'">
+    <PropertyGroup>
+      <_SOSFrameworkPlatformProperty Condition="'$(TargetArch)' == 'x86'">PlatformTarget=x86;</_SOSFrameworkPlatformProperty>
+    </PropertyGroup>
     <MSBuild Projects="@(SOSFrameworkDebuggee)"
              Targets="Restore;Build"
              BuildInParallel="true"
-             Properties="Configuration=$(Configuration);BuildProjectFramework=net462;DebugType=full;DebugSymbols=true;ArtifactsObjDir=$(ArtifactsObjDir)SOSFramework/%(Filename)/" />
+             Properties="Configuration=$(Configuration);BuildProjectFramework=net462;$(_SOSFrameworkPlatformProperty)DebugType=full;DebugSymbols=true;ArtifactsObjDir=$(ArtifactsObjDir)SOSFramework/$(TargetArch)/%(Filename)/" />
   </Target>
 
 </Project>
