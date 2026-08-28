@@ -83,7 +83,7 @@ public static class Targets
         return session;
     }
 
-    /// <summary>Dispose every memoized dump session (kills dotnet-dump children, closes dbgeng hosts).</summary>
+    /// <summary>Dispose every memoized dump session and close pooled debugger children.</summary>
     public static void DisposeAll()
     {
         while (s_created.TryTake(out DumpSession? session))
@@ -98,8 +98,8 @@ public static class Targets
             }
         }
 
-        // Close any pooled (dotnet-dump) host still open. cdb children were disposed above via
-        // each SharedTarget.Dispose().
+        // Close any pooled host still open. cdb children were disposed with their sessions above.
+        HostSlot.Lldb.CloseCurrent();
         HostSlot.DotNetDump.CloseCurrent();
     }
 }

@@ -7,9 +7,9 @@
     <DebugType Condition="'$(TargetFramework)' == '$(DesktopTargetFramework)'">full</DebugType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>false</Optimize>
-    <!-- Framework-dependent apphosts default to the build SDK's host architecture. Keep their output
-         RID-neutral while selecting the apphost matching the test leg (notably win-x86 on an x64 agent). -->
-    <DefaultAppHostRuntimeIdentifier Condition="'$(TargetRid)' == 'win-x86'">$(TargetRid)</DefaultAppHostRuntimeIdentifier>
+    <!-- Framework-dependent apphosts default to the build SDK's host platform. Keep their output
+         RID-neutral while selecting an apphost that can execute on cross-target test legs. -->
+    <DefaultAppHostRuntimeIdentifier Condition="'$(TargetRid)' == 'win-x86' or $(TargetRid.StartsWith('linux-musl-'))">$(TargetRid)</DefaultAppHostRuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
