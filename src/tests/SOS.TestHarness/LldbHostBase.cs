@@ -110,6 +110,13 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         // that on-disk resolution working.
         psi.Environment.Remove("_NT_SYMBOL_PATH");
 
+        if (OperatingSystem.IsMacOS())
+        {
+            // Apple LLDB guards its Mach exception ports. The SOS hosting runtime must not replace them
+            // or macOS terminates LLDB with EXC_GUARD (dotnet/diagnostics#4551).
+            psi.Environment["PAL_MachExceptionMode"] = "7";
+        }
+
         // Run the host with the .NET crash-dump environment so a fatal fault in the SOS managed runtime
         // hosted inside lldb writes a full dump we can surface as an artifact. Do this before configure so
         // a derived host could still override it if needed.

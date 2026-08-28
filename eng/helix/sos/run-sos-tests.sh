@@ -108,7 +108,7 @@ configure_lldb()
   fi
 
   if [[ -z "${LLDB_PATH:-}" ]]; then
-    for candidate in lldb-16 lldb16 lldb-15 lldb15 lldb-14 lldb14 lldb; do
+    for candidate in lldb-16 lldb16 lldb-15 lldb15 lldb-14 lldb14 lldb-13 lldb13 lldb-12 lldb12 lldb; do
       if command -v "$candidate" > /dev/null 2>&1; then
         LLDB_PATH="$(command -v "$candidate")"
         break

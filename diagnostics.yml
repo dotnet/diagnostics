@@ -152,36 +152,31 @@ extends:
               architecture: arm64
               artifactUploadPath: bin/linux.arm64.Debug
 
+      # Reuse one macOS agent per configuration: build/test x64 first, then cross-build arm64.
+      # PRs submit only arm64 SOS.Tests; non-PR builds submit both architectures.
       - template: /eng/pipelines/build.yml
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
-          buildOnly: true
-          publishTestArtifacts: ${{ notin(variables['Build.Reason'], 'PullRequest') }}
+          timeoutInMinutes: 360
+          buildOnly: ${{ parameters.buildOnly }}
+          runSOSHelix: ${{ and(eq(parameters.buildOnly, false), eq(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}
+          sosHelixTargetOS: osx
+          sosHelixRidPrefix: osx
+          sosHelixQueue: OSX.15.Amd64.Open
+          additionalArchitecture: arm64
+          additionalCrossBuild: true
+          runAdditionalSOSHelix: ${{ and(eq(parameters.buildOnly, false), eq(variables['System.TeamProject'], 'public')) }}
+          additionalSOSHelixQueue: OSX.15.Arm64.Open
           buildConfigs:
           - configuration: Release
             architecture: x64
             artifactUploadPath: bin/osx.x64.Release
+            additionalArtifactUploadPath: bin/osx.arm64.Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
               architecture: x64
               artifactUploadPath: bin/osx.x64.Debug
-
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          osGroup: MacOS
-          crossBuild: true
-          buildOnly: true
-          publishTestArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
-          publishTestRuntimeArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
-          buildConfigs:
-          - configuration: Release
-            architecture: arm64
-            artifactUploadPath: bin/osx.arm64.Release
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - configuration: Debug
-              architecture: arm64
 
       - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         - template: /eng/pipelines/build.yml
@@ -251,45 +246,6 @@ extends:
               architecture: x64
             - configuration: Release
               architecture: x86
-
-        # Apple Silicon is the primary macOS PR coverage. Keep Intel validation on rolling builds.
-        - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-          - template: /eng/pipelines/build.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: MacOS_Test
-              osGroup: MacOS
-              dependsOn: MacOS
-              testOnly: true
-              runSOSHelix: ${{ eq(variables['System.TeamProject'], 'public') }}
-              sosHelixTargetOS: osx
-              sosHelixRidPrefix: osx
-              sosHelixQueue: OSX.15.Amd64.Open
-              buildConfigs:
-              - configuration: Release
-                architecture: x64
-
-        # The Azure Pipelines host is x64, so this job only packages the cross-built payload and
-        # submits it to native arm64 Helix machines.
-        - ${{ if eq(variables['System.TeamProject'], 'public') }}:
-          - template: /eng/pipelines/build.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: MacOS_Test
-              osGroup: MacOS
-              dependsOn: MacOS
-              testOnly: true
-              helixOnly: true
-              runSOSHelix: true
-              sosHelixTargetOS: osx
-              sosHelixRidPrefix: osx
-              sosHelixQueue: OSX.15.Arm64.Open
-              buildConfigs:
-              - configuration: Release
-                architecture: arm64
-              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                - configuration: Debug
-                  architecture: arm64
 
         - template: /eng/pipelines/build.yml
           parameters:

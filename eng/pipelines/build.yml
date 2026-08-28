@@ -40,7 +40,7 @@ parameters:
   default: {}
 
 # Build configs. An object with the following properties: configuration, architecture.
-# Optionally it can also contain artifactUploadPath, artifactTargetPath
+# Optionally it can also contain primary and additional architecture artifact upload/target paths.
 - name: buildConfigs
   type: object
   default: {}
@@ -72,7 +72,7 @@ parameters:
   type: boolean
   default: false
 
-# Optional: move SOS.Tests from this test-only leg to a sharded Helix submission.
+# Optional: move SOS.Tests from this leg to a sharded Helix submission.
 - name: runSOSHelix
   type: boolean
   default: false
@@ -92,6 +92,23 @@ parameters:
   default: ''
 
 - name: sosHelixQueue
+  type: string
+  default: ''
+
+# Optional: build a second architecture in the same job after the primary build/test.
+- name: additionalArchitecture
+  type: string
+  default: ''
+
+- name: additionalCrossBuild
+  type: boolean
+  default: false
+
+- name: runAdditionalSOSHelix
+  type: boolean
+  default: false
+
+- name: additionalSOSHelixQueue
   type: string
   default: ''
 
@@ -164,6 +181,7 @@ jobs:
 
       - _TestArgs: '-test'
       - _Cross: ''
+      - _AdditionalCross: ''
       - _SkipLocalSOSTests: 'false'
 
       - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
@@ -172,6 +190,12 @@ jobs:
         'error, helixOnly requires testOnly and runSOSHelix': error
       - ${{ if and(eq(parameters.publishTestRuntimeArtifacts, true), ne(parameters.publishTestArtifacts, true)) }}:
         'error, publishTestRuntimeArtifacts requires publishTestArtifacts': error
+      - ${{ if and(ne(parameters.additionalArchitecture, ''), or(eq(parameters.testOnly, true), ne(parameters.osGroup, 'MacOS'))) }}:
+        'error, additionalArchitecture is only supported by macOS build jobs': error
+      - ${{ if and(eq(parameters.additionalCrossBuild, true), eq(parameters.additionalArchitecture, '')) }}:
+        'error, additionalCrossBuild requires additionalArchitecture': error
+      - ${{ if and(eq(parameters.runAdditionalSOSHelix, true), or(eq(parameters.additionalArchitecture, ''), eq(parameters.additionalSOSHelixQueue, ''))) }}:
+        'error, runAdditionalSOSHelix requires additionalArchitecture and additionalSOSHelixQueue': error
 
       # Test-only legs invoke test.cmd/test.sh, which already encode
       # '-test -skipmanaged -skipnative' and do not prepend '-restore -build'. All other legs
@@ -192,7 +216,7 @@ jobs:
       - ${{ if eq(parameters.buildOnly, 'true') }}:
         - _TestArgs: ''
 
-      - ${{ if and(eq(parameters.testOnly, true), eq(parameters.runSOSHelix, true)) }}:
+      - ${{ if or(eq(parameters.runSOSHelix, true), eq(parameters.runAdditionalSOSHelix, true)) }}:
         - _SkipLocalSOSTests: 'true'
 
       # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
@@ -207,6 +231,9 @@ jobs:
       # This is only required for cross builds.
       - ${{ if eq(parameters.crossBuild, true) }}:
         - _Cross: -cross
+
+      - ${{ if eq(parameters.additionalCrossBuild, true) }}:
+        - _AdditionalCross: -cross
 
       steps:
       - ${{ if eq(parameters.testOnly, true) }}:
@@ -242,7 +269,7 @@ jobs:
           condition: succeeded()
           env:
             SOSHARNESS_SKIP_LOCAL_TESTS: $(_SkipLocalSOSTests)
-      - ${{ if and(eq(parameters.testOnly, true), eq(parameters.runSOSHelix, true)) }}:
+      - ${{ if eq(parameters.runSOSHelix, true) }}:
         - template: /eng/common/templates/steps/send-to-helix.yml@self
           parameters:
             DisplayNamePrefix: Run SOS.Tests on Helix
@@ -264,6 +291,54 @@ jobs:
               HelixAccessToken: $(HelixApiAccessToken)
             condition: succeeded()
 
+      - ${{ if ne(parameters.additionalArchitecture, '') }}:
+        # InstallRuntimes.proj uses one shared output directory whose incremental marker is not
+        # architecture-specific. Reset it before switching targets so the second build installs
+        # the correct runtime and apphost closure.
+        - pwsh: |
+            $runtimePaths = @(
+              "$(Build.SourcesDirectory)/artifacts/dotnet-test",
+              "$(Build.SourcesDirectory)/artifacts/dotnet-build"
+            )
+            foreach ($runtimePath in $runtimePaths) {
+              if (Test-Path $runtimePath) {
+                Remove-Item -Recurse -Force $runtimePath
+              }
+            }
+          displayName: Prepare ${{ parameters.additionalArchitecture }} runtime
+          condition: succeeded()
+
+        - script: $(_buildScript)
+            -ci
+            -binaryLog
+            -configuration ${{ config.configuration }}
+            -architecture ${{ parameters.additionalArchitecture }}
+            $(_AdditionalCross)
+            $(_InternalInstallArgs)
+            /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          displayName: Build ${{ parameters.additionalArchitecture }}
+          condition: succeeded()
+
+      - ${{ if eq(parameters.runAdditionalSOSHelix, true) }}:
+        - template: /eng/common/templates/steps/send-to-helix.yml@self
+          parameters:
+            DisplayNamePrefix: Run ${{ parameters.additionalArchitecture }} SOS.Tests on Helix
+            HelixProjectPath: eng/helix/SOS.Tests.Helix.proj
+            HelixProjectArguments: >-
+              /p:Configuration=${{ config.configuration }}
+              /p:TargetArch=${{ parameters.additionalArchitecture }}
+              /p:TargetOS=${{ parameters.sosHelixTargetOS }}
+              /p:TargetRid=${{ parameters.sosHelixRidPrefix }}-${{ parameters.additionalArchitecture }}
+            HelixSource: pr/dotnet/diagnostics/sos-tests
+            HelixType: tests/sos/harness/
+            HelixConfiguration: ${{ parameters.sosHelixRidPrefix }}-${{ parameters.additionalArchitecture }}_${{ config.configuration }}
+            HelixTargetQueues: ${{ parameters.additionalSOSHelixQueue }}
+            ${{ if eq(variables['System.TeamProject'], 'public') }}:
+              Creator: dotnet-bot
+            ${{ else }}:
+              HelixAccessToken: $(HelixApiAccessToken)
+            condition: succeeded()
+
       - ${{ if ne(config.artifactUploadPath, '') }}:
         - task: CopyFiles@2
           displayName: Gather binaries for publish
@@ -278,6 +353,21 @@ jobs:
             inputs:
               targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
               artifactName: Build_$(_PhaseName)
+
+      - ${{ if ne(config.additionalArtifactUploadPath, '') }}:
+        - task: CopyFiles@2
+          displayName: Gather ${{ parameters.additionalArchitecture }} binaries for publish
+          inputs:
+            SourceFolder: '$(Build.SourcesDirectory)/artifacts/${{ config.additionalArtifactUploadPath }}'
+            Contents: '**'
+            TargetFolder: $(Build.ArtifactStagingDirectory)/additional-artifacts/${{ coalesce(config.additionalArtifactTargetPath, config.additionalArtifactUploadPath) }}
+
+        - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+          parameters:
+            displayName: Publish ${{ parameters.additionalArchitecture }} Build Artifacts
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)/additional-artifacts'
+              artifactName: Build_${{ coalesce(parameters.name, parameters.osGroup) }}_${{ parameters.additionalArchitecture }}_${{ config.configuration }}
 
       # Publish the full build outputs for the matching test-only legs to consume. This lets the
       # test legs run with -skipnative -skipmanaged instead of rebuilding the product themselves.
