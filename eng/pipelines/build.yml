@@ -66,8 +66,20 @@ parameters:
   type: boolean
   default: false
 
+# Include the target-architecture test runtime in TestArtifacts for a Helix-only
+# test leg that cannot execute target binaries on its submission host.
+- name: publishTestRuntimeArtifacts
+  type: boolean
+  default: false
+
 # Optional: move SOS.Tests from this test-only leg to a sharded Helix submission.
 - name: runSOSHelix
+  type: boolean
+  default: false
+
+# Submit SOS.Tests to Helix without running the repository's local test suite.
+# Used when a cross-built target architecture cannot run on the pipeline agent.
+- name: helixOnly
   type: boolean
   default: false
 
@@ -156,6 +168,10 @@ jobs:
 
       - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
         'error, testOnly and buildOnly cannot be true at the same time': error
+      - ${{ if and(eq(parameters.helixOnly, true), or(ne(parameters.testOnly, true), ne(parameters.runSOSHelix, true))) }}:
+        'error, helixOnly requires testOnly and runSOSHelix': error
+      - ${{ if and(eq(parameters.publishTestRuntimeArtifacts, true), ne(parameters.publishTestArtifacts, true)) }}:
+        'error, publishTestRuntimeArtifacts requires publishTestArtifacts': error
 
       # Test-only legs invoke test.cmd/test.sh, which already encode
       # '-test -skipmanaged -skipnative' and do not prepend '-restore -build'. All other legs
@@ -207,24 +223,25 @@ jobs:
             targetPath: '$(Build.SourcesDirectory)/artifacts'
             checkDownloadedFiles: true
 
-      - script: $(_buildScript)
-          -ci
-          -binaryLog
-          -configuration ${{ config.configuration }}
-          -architecture ${{ config.architecture }}
-          $(_TestArgs)
-          $(_Cross)
-          $(_InternalInstallArgs)
-          /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-        ${{ if eq(parameters.testOnly, 'true') }}:
-          displayName: Test
-        ${{ elseif eq(parameters.buildOnly, 'true') }}:
-          displayName: Build
-        ${{ else }}:
-          displayName: Build / Test
-        condition: succeeded()
-        env:
-          SOSHARNESS_SKIP_LOCAL_TESTS: $(_SkipLocalSOSTests)
+      - ${{ if eq(parameters.helixOnly, false) }}:
+        - script: $(_buildScript)
+            -ci
+            -binaryLog
+            -configuration ${{ config.configuration }}
+            -architecture ${{ config.architecture }}
+            $(_TestArgs)
+            $(_Cross)
+            $(_InternalInstallArgs)
+            /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+          ${{ if eq(parameters.testOnly, 'true') }}:
+            displayName: Test
+          ${{ elseif eq(parameters.buildOnly, 'true') }}:
+            displayName: Build
+          ${{ else }}:
+            displayName: Build / Test
+          condition: succeeded()
+          env:
+            SOSHARNESS_SKIP_LOCAL_TESTS: $(_SkipLocalSOSTests)
       - ${{ if and(eq(parameters.testOnly, true), eq(parameters.runSOSHelix, true)) }}:
         - template: /eng/common/templates/steps/send-to-helix.yml@self
           parameters:
@@ -276,6 +293,20 @@ jobs:
               test/**
             TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
 
+        - ${{ if eq(parameters.publishTestRuntimeArtifacts, true) }}:
+          - task: CopyFiles@2
+            displayName: Gather target test runtime for publish
+            inputs:
+              SourceFolder: '$(Build.SourcesDirectory)/artifacts/dotnet-test'
+              Contents: |
+                dotnet
+                LICENSE.txt
+                ThirdPartyNotices.txt
+                Debugger.Tests.Versions.txt
+                host/fxr/**
+                shared/Microsoft.NETCore.App/**
+              TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts/dotnet-test
+
         - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
           parameters:
             displayName: Publish Test Artifacts
@@ -283,7 +314,7 @@ jobs:
               targetPath: '$(Build.ArtifactStagingDirectory)/testartifacts'
               artifactName: TestArtifacts_$(_PhaseName)
 
-      - ${{ if ne(parameters.buildOnly, 'true') }}:
+      - ${{ if and(ne(parameters.buildOnly, 'true'), eq(parameters.helixOnly, false)) }}:
         # Publish test results to Azure Pipelines
         - task: PublishTestResults@2
           inputs:

@@ -137,9 +137,27 @@ extends:
       - template: /eng/pipelines/build.yml
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
+          osGroup: Linux
+          container: linux_arm64
+          crossBuild: true
+          buildOnly: true
+          publishTestArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
+          publishTestRuntimeArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
+          buildConfigs:
+          - configuration: Release
+            architecture: arm64
+            artifactUploadPath: bin/linux.arm64.Release
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: arm64
+              artifactUploadPath: bin/linux.arm64.Debug
+
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
           buildOnly: true
-          publishTestArtifacts: true
+          publishTestArtifacts: ${{ notin(variables['Build.Reason'], 'PullRequest') }}
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -155,6 +173,8 @@ extends:
           osGroup: MacOS
           crossBuild: true
           buildOnly: true
+          publishTestArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
+          publishTestRuntimeArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
           buildConfigs:
           - configuration: Release
             architecture: arm64
@@ -175,18 +195,6 @@ extends:
             - configuration: Release
               architecture: arm
               artifactUploadPath: bin/linux.arm.Release
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Linux
-            container: linux_arm64
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm64
-              artifactUploadPath: bin/linux.arm64.Release
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -244,23 +252,44 @@ extends:
             - configuration: Release
               architecture: x86
 
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: MacOS_Test
-            osGroup: MacOS
-            dependsOn: MacOS
-            testOnly: true
-            runSOSHelix: ${{ eq(variables['System.TeamProject'], 'public') }}
-            sosHelixTargetOS: osx
-            sosHelixRidPrefix: osx
-            sosHelixQueue: OSX.15.Amd64.Open
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
+        # Apple Silicon is the primary macOS PR coverage. Keep Intel validation on rolling builds.
+        - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: MacOS_Test
+              osGroup: MacOS
+              dependsOn: MacOS
+              testOnly: true
+              runSOSHelix: ${{ eq(variables['System.TeamProject'], 'public') }}
+              sosHelixTargetOS: osx
+              sosHelixRidPrefix: osx
+              sosHelixQueue: OSX.15.Amd64.Open
+              buildConfigs:
+              - configuration: Release
                 architecture: x64
+
+        # The Azure Pipelines host is x64, so this job only packages the cross-built payload and
+        # submits it to native arm64 Helix machines.
+        - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: MacOS_Test
+              osGroup: MacOS
+              dependsOn: MacOS
+              testOnly: true
+              helixOnly: true
+              runSOSHelix: true
+              sosHelixTargetOS: osx
+              sosHelixRidPrefix: osx
+              sosHelixQueue: OSX.15.Arm64.Open
+              buildConfigs:
+              - configuration: Release
+                architecture: arm64
+              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                - configuration: Debug
+                  architecture: arm64
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -280,6 +309,28 @@ extends:
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               - configuration: Debug
                 architecture: x64
+
+        # Cross-built arm64 artifacts are submitted from an x64 Linux agent and execute only on Helix.
+        - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: Ubuntu_22_04
+              osGroup: Linux
+              container: test_ubuntu_22_04
+              dependsOn: Linux
+              testOnly: true
+              helixOnly: true
+              runSOSHelix: true
+              sosHelixTargetOS: linux
+              sosHelixRidPrefix: linux
+              sosHelixQueue: Ubuntu.2204.ArmArch.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-helix-arm64v8
+              buildConfigs:
+              - configuration: Release
+                architecture: arm64
+              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                - configuration: Debug
+                  architecture: arm64
 
         - template: /eng/pipelines/build.yml
           parameters:
