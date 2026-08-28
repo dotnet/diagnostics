@@ -53,3 +53,43 @@ The following environment variables narrow or extend a run:
 
 Failures write replay instructions under `artifacts/TestResults/SOS.Tests`. Harness-generated targets,
 dumps, and symbol caches are stored under `artifacts/tmp/sos-harness/<Configuration>`.
+
+## Legacy SOS.UnitTests migration
+
+Retirement is based on assertion and matrix equivalence, not command-name overlap. A legacy test remains
+when it carries a distinct debugger path, target topology, option, or state transition. The first retired
+group is covered by `PrintExceptionTests`, `ClrStackLinesTests`, `ClrThreadsTests`, and
+`DiagnosticCommandTests` across the harness host/flavor/runtime/DAC matrix and both live and dump targets.
+
+| Legacy test | Status | Modern coverage or remaining gap |
+| --- | --- | --- |
+| `StackTraceSoftwareExceptionFrame` | Retained | Requires an explicit `SoftwareExceptionFrame` assertion. |
+| `StackTraceFaultingExceptionFrame` | Retained | Requires an explicit `FaultingExceptionFrame` assertion. |
+| `StackTests` | Retained | Composite stack-command and exception-frame coverage is not fully mapped. |
+| `ClrStackWithNumberOfFrames` | Retained | Plain `clrstack -c` is covered; `clrstack -i -c` and triage-dump behavior remain. |
+| `DivZero` | Retired | Exact divide-by-zero `printexception`, `-nested`, `-lines`, source-stack, and live/dump coverage moved to `SOS.Tests`. |
+| `SimpleThrow` | Retired | Exact invalid-operation `printexception`, `-nested`, `-lines`, source-stack, and live/dump coverage moved to `SOS.Tests`. |
+| `NestedExceptionTest` | Retired | Outer/inner exception data, `-nested`, `-lines`, source-stack, `clrthreads`, and CLRMA exception-chain coverage moved to `SOS.Tests`; generic live `bpmd` is covered by `LiveBpmdTests`. |
+| `TaskNestedException` | Retained | Preserves the three-level `AggregateException`/task frame and source-line chain. |
+| `InterpreterStackTest` | Retained | Interpreter-only managed stack behavior. |
+| `InterpreterStackInterleavedTest` | Retained | Interpreter/native interleaved stack behavior. |
+| `Overflow` | Retained | Stack-overflow-specific unwind and exception behavior. |
+| `GCTests` | Retained | Modern tests cover the commands and generation transitions, but the legacy live multi-stop sequence needs final parity review. |
+| `GCPOHTests` | Retained | Requires direct `gcwhere` POH and pinned-root parity. |
+| `FindRootsOlderGeneration` | Retained | Older-generation root search remains unique. |
+| `DumpGCData` | Retained | Preserves the live zero-to-one pinned-object transition. |
+| `DumpGen` | Retained | Basic generation output is covered; argument errors, filters, empty results, and all generation cases remain. |
+| `MiniDumpLocalVarLookup` | Retained | Mini-dump local-variable lookup remains unique. |
+| `ConcurrentDictionaries` | Retained | Preserves multiple generic dictionary layouts. |
+| `OtherCommands` | Retained | Composite SymbolTestApp, stress-log history, and command-option coverage is not fully replaced. |
+| `DynamicMethod` | Retained | Dynamic-method `clrstack -i -a` locals remain unique. |
+| `Reflection` | Retired | Exact reflected outer/inner exceptions, HRESULTs, `-nested`, `-lines`, source-stack, and live/dump coverage moved to `SOS.Tests`. |
+| `VarargPInvokeInteropMD` | Retained | CDB-only `InlinedCallFrame`, IL stub, and disassembly behavior remains unique. |
+| `ThreadApartment` | Retained | Requires a target that guarantees both STA and MTA threads. |
+| `LineNums` | Retained | `clrstack` source lines are covered; `printexception -lines` and its thread context remain. |
+| `AsyncMain` | Retained | Preserves DML rendering of the escaped `<Main>` method name. |
+| `TestExtensions` | Retained | Extension load and command behavior remains unique. |
+| `WebApp3` | Retained | ASP.NET hosting topology remains unique. |
+| `DualRuntimes` | Retained | Dual-runtime selection remains unique. |
+| `StackAndOtherTests` | Retained | Multi-assembly SymbolTestApp and PDB-variant coverage is not fully replaced. |
+| `LLDBPluginTests` | Retained | Python LLDB integration remains a separate test surface. |

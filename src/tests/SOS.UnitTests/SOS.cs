@@ -370,34 +370,6 @@ public class SOSExceptionTests
     private ITestOutputHelper Output { get; set; }
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task DivZero(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "DivZero",
-            scriptName: "DivZero.script",
-            Output,
-            testTriage: true);
-    }
-
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task SimpleThrow(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(config, debuggeeName: "SimpleThrow", scriptName: "SimpleThrow.script", Output, testTriage: true);
-    }
-
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task NestedExceptionTest(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "NestedExceptionTest",
-            scriptName: "NestedExceptionTest.script",
-            Output,
-            testTriage: true);
-    }
-
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task TaskNestedException(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(
@@ -696,12 +668,6 @@ public class SOSMethodTests
         }
 
         await SOSTestHelpers.RunTest(config, debuggeeName: "DynamicMethod", scriptName: "DynamicMethod.script", Output);
-    }
-
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task Reflection(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(config, debuggeeName: "ReflectionTest", scriptName: "Reflection.script", Output, testTriage: true);
     }
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
