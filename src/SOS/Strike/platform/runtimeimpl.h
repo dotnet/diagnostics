@@ -158,6 +158,8 @@ private:
 
     HRESULT CreateDesktopCorDebugProcess(ICorDebugProcess** ppCorDebugProcess);
 
+    HRESULT CreateCorDebugProcessViaDbgShim(ICorDebugProcess** ppCorDebugProcess);
+
     ULONG64 GetContractDescriptorAddress();
 
     static bool ShouldTryCDac(CDacLoadPolicy policy);

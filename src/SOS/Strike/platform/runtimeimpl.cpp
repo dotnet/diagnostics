@@ -1020,44 +1020,13 @@ HRESULT Runtime::CreateDesktopCorDebugProcess(ICorDebugProcess** ppCorDebugProce
     return hr;
 }
 
-/**********************************************************************\
- * Loads and initializes the public ICorDebug interfaces. This should be
- * called at least once per debugger stop state to ensure that the
- * interface is available and that it doesn't hold stale data. Calling
- * it more than once isn't an error, but does have perf overhead from
- * needlessly flushing memory caches.
-\**********************************************************************/
-HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
+HRESULT Runtime::CreateCorDebugProcessViaDbgShim(ICorDebugProcess** ppCorDebugProcess)
 {
-    HRESULT hr;
-
-    // We may already have an ICorDebug instance we can use
-    if (m_pCorDebugProcess != nullptr)
+    if (ppCorDebugProcess == nullptr)
     {
-        // ICorDebugProcess4 is currently considered a private experimental interface on ICorDebug, it might go away so
-        // we need to be sure to handle its absence gracefully
-        ToRelease<ICorDebugProcess4> pProcess4 = NULL;
-        if (SUCCEEDED(m_pCorDebugProcess->QueryInterface(__uuidof(ICorDebugProcess4), (void**)&pProcess4)))
-        {
-            // FLUSH_ALL is more expensive than PROCESS_RUNNING, but this allows us to be safe even if things
-            // like IDNA are in use where we might be looking at non-sequential snapshots of process state
-            if (SUCCEEDED(pProcess4->ProcessStateChanged(FLUSH_ALL)))
-            {
-                // We already have an ICorDebug instance loaded and flushed, nothing more to do
-                *ppCorDebugProcess = m_pCorDebugProcess;
-                return S_OK;
-            }
-        }
-
-        // This is a very heavy handed way of reseting
-        m_pCorDebugProcess->Detach();
-        m_pCorDebugProcess->Release();
-        m_pCorDebugProcess = nullptr;
+        return E_INVALIDARG;
     }
-    if (GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
-    {
-        return CreateDesktopCorDebugProcess(ppCorDebugProcess);
-    }
+    *ppCorDebugProcess = nullptr;
 
     if (m_dbgShimHandle == nullptr)
     {
@@ -1081,7 +1050,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
     }
 
     ToRelease<ICLRDebugging> debugging;
-    hr = createInstance(CLSID_CLRDebugging, IID_ICLRDebugging, (void**)&debugging);
+    HRESULT hr = createInstance(CLSID_CLRDebugging, IID_ICLRDebugging, (void**)&debugging);
     if (FAILED(hr))
     {
         return hr;
@@ -1094,10 +1063,7 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         return hr;
     }
 
-    DbgShimCDacLoadPolicy loadPolicy = GetRuntimeConfiguration() == IRuntime::WindowsDesktop
-        ? DbgShimCDacLoadPolicy::LegacyDacOnly
-        : (DbgShimCDacLoadPolicy)GetCDacLoadPolicy();
-    hr = policy->SetCDacLoadPolicy(loadPolicy);
+    hr = policy->SetCDacLoadPolicy((DbgShimCDacLoadPolicy)GetCDacLoadPolicy());
     if (FAILED(hr))
     {
         return hr;
@@ -1129,13 +1095,52 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         return E_NOINTERFACE;
     }
 
-    _ASSERTE(pUnkProcess != nullptr);
     hr = pUnkProcess->QueryInterface(IID_ICorDebugProcess, (PVOID*)&m_pCorDebugProcess);
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         return hr;
     }
     *ppCorDebugProcess = m_pCorDebugProcess;
     return hr;
+}
+
+/**********************************************************************\
+ * Loads and initializes the public ICorDebug interfaces. This should be
+ * called at least once per debugger stop state to ensure that the
+ * interface is available and that it doesn't hold stale data. Calling
+ * it more than once isn't an error, but does have perf overhead from
+ * needlessly flushing memory caches.
+\**********************************************************************/
+HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
+{
+    // We may already have an ICorDebug instance we can use
+    if (m_pCorDebugProcess != nullptr)
+    {
+        // ICorDebugProcess4 is currently considered a private experimental interface on ICorDebug, it might go away so
+        // we need to be sure to handle its absence gracefully
+        ToRelease<ICorDebugProcess4> pProcess4 = NULL;
+        if (SUCCEEDED(m_pCorDebugProcess->QueryInterface(__uuidof(ICorDebugProcess4), (void**)&pProcess4)))
+        {
+            // FLUSH_ALL is more expensive than PROCESS_RUNNING, but this allows us to be safe even if things
+            // like IDNA are in use where we might be looking at non-sequential snapshots of process state
+            if (SUCCEEDED(pProcess4->ProcessStateChanged(FLUSH_ALL)))
+            {
+                // We already have an ICorDebug instance loaded and flushed, nothing more to do
+                *ppCorDebugProcess = m_pCorDebugProcess;
+                return S_OK;
+            }
+        }
+
+        // This is a very heavy handed way of reseting
+        m_pCorDebugProcess->Detach();
+        m_pCorDebugProcess->Release();
+        m_pCorDebugProcess = nullptr;
+    }
+    if (GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
+    {
+        return CreateDesktopCorDebugProcess(ppCorDebugProcess);
+    }
+    return CreateCorDebugProcessViaDbgShim(ppCorDebugProcess);
 }
 
 /**********************************************************************\
