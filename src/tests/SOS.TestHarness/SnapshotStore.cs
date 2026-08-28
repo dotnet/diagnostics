@@ -378,10 +378,12 @@ public static class SnapshotStore
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
 
+        // Windows dump helpers can outlive the target while retaining its redirected handles.
         BoundedProcessResult result = BoundedProcess.Run(
             psi,
             s_captureTimeout,
-            isolateLinuxProcessGroup: true);
+            isolateLinuxProcessGroup: true,
+            outputDrainTimeout: s_captureTimeout);
 
         if (result.ExitCode != 0)
         {
