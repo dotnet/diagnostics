@@ -21,11 +21,13 @@ public sealed class NativeAddressSpaceTests
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
-        // notreachableinrange treats [start,end) as an array of object pointers (it backs !finalizerqueue)
-        // and reports the dead ones. Point it at a known live object's span: the command computes the live
-        // set and emits the dumpheap-style listing, proving the scan path works.
-        ulong marker = target.FindUniqueObject("FieldMarker");
-        SosOutput scan = target.Sos($"notreachableinrange {marker:x} {marker + 0x200:x}");
+        // notreachableinrange treats [start,end) as an array of object pointers (it backs !finalizerqueue).
+        // ObjectReferences is an array of one-field value types, so dumparray reports the address of an
+        // actual object-reference slot rather than the referenced object or an object header.
+        DumpObjResult marker = target.DumpObj(target.FindUniqueObject("FieldMarker"));
+        ulong references = ObjectCommandParsing.Hex(marker.Field("ObjectReferences").Value);
+        ulong slot = target.DumpArray(references).Elements[0].Address;
+        SosOutput scan = target.Sos($"notreachableinrange {slot:x} {slot + (ulong)IntPtr.Size:x}");
         scan.AssertContains("Calculating live objects");
     }
 

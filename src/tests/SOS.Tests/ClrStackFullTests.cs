@@ -28,6 +28,8 @@ public sealed class ClrStackFullTests
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_Full(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
 

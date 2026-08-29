@@ -47,8 +47,9 @@ public static class ToolPaths
 
     /// <summary>
     /// The .NET runtime directory SOS hosts its managed extension on (the <c>sethostruntime</c> target).
-    /// Points at the repo's locally-acquired <c>.dotnet</c> shared runtime (highest net10 present), so the
-    /// host runtime is deterministic and hermetic rather than auto-detected from <c>PATH</c>.
+    /// Defaults to the repo's locally-acquired <c>.dotnet</c> shared runtime (highest net10 present), so the
+    /// host runtime is deterministic and hermetic rather than auto-detected from <c>PATH</c>. Set
+    /// <c>SOSHARNESS_HOST_RUNTIME_DIR</c> to validate SOS against another complete runtime layout.
     /// </summary>
     public static string HostRuntimeDirectory => s_hostRuntimeDirectory.Value;
 
@@ -259,6 +260,25 @@ public static class ToolPaths
 
     private static string ResolveHostRuntimeDirectory()
     {
+        string? configuredDirectory = Environment.GetEnvironmentVariable("SOSHARNESS_HOST_RUNTIME_DIR");
+        if (!string.IsNullOrEmpty(configuredDirectory))
+        {
+            string directory = Path.GetFullPath(configuredDirectory);
+            string coreClrName = OperatingSystem.IsWindows()
+                ? "coreclr.dll"
+                : OperatingSystem.IsMacOS() ? "libcoreclr.dylib" : "libcoreclr.so";
+            string coreClrPath = Path.Combine(directory, coreClrName);
+            string coreLibPath = Path.Combine(directory, "System.Private.CoreLib.dll");
+            if (File.Exists(coreClrPath) && File.Exists(coreLibPath))
+            {
+                return directory;
+            }
+
+            throw new DirectoryNotFoundException(
+                $"The configured SOS harness host runtime directory '{directory}' must contain " +
+                $"{coreClrName} and System.Private.CoreLib.dll.");
+        }
+
         // SOS hosts its managed extension on a .NET runtime; point it at the repo's locally-acquired
         // .dotnet shared runtime so it's deterministic. Any recent runtime works as a host (it need not
         // match the target's runtime), so pick the highest net10 present.

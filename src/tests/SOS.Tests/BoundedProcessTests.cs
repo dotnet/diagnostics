@@ -115,18 +115,14 @@ public sealed class BoundedProcessTests
 
     private static bool IsRunning(string processId)
     {
-        string statPath = $"/proc/{processId}/stat";
-        if (!File.Exists(statPath))
-        {
-            return false;
-        }
-
+        string processPath = $"/proc/{processId}";
+        string statPath = Path.Combine(processPath, "stat");
         string stat;
         try
         {
             stat = File.ReadAllText(statPath);
         }
-        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        catch (IOException) when (!Directory.Exists(processPath))
         {
             return false;
         }

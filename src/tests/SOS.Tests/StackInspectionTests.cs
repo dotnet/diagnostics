@@ -25,6 +25,8 @@ public sealed class StackInspectionTests
     [MemberData(nameof(Matrix))]
     public async Task DumpStackObjects_ListsStackRoots(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
 
@@ -46,6 +48,8 @@ public sealed class StackInspectionTests
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task ParallelStacks_GroupsThreadsByCallStack(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
 

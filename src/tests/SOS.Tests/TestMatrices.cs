@@ -8,6 +8,15 @@ namespace SOS.Tests;
 
 internal static class TestMatrices
 {
+    public static void SkipUnavailableMacOsDotnetDumpThreads(TestConfig config)
+    {
+        if (OperatingSystem.IsMacOS() && config.Host == Host.DotnetDump)
+        {
+            HarnessSkipException.Now(
+                "https://github.com/dotnet/diagnostics/issues/5987: dotnet-dump exposes synthetic thread IDs for macOS createdump ELF cores.");
+        }
+    }
+
     public static TheoryData<TestConfig> StackWalk(
         string[] targets,
         Flavor flavor = Flavor.AllValid,

@@ -54,14 +54,13 @@ public sealed class SpecializedInspectionTests
     public async Task SyncBlk_ReportsInflatedMonitor(TestConfig config)
     {
         if (OperatingSystem.IsMacOS() &&
-            RepoLayout.TargetArch == "x64" &&
             config.Host == Host.DotnetDump &&
             config.Dac == Dac.Legacy &&
             config.Flavor == Flavor.Core &&
             config.CoreVersion == CoreVersion.Net11)
         {
             HarnessSkipException.Now(
-                "https://github.com/dotnet/diagnostics/issues/5985: legacy DAC SyncBlock data is unavailable for macOS x64 .NET 11 dumps.");
+                "https://github.com/dotnet/diagnostics/issues/5985: legacy DAC SyncBlock data is unavailable for macOS .NET 11 dumps.");
         }
 
         using Target target = await Targets.GetTargetAsync(config);

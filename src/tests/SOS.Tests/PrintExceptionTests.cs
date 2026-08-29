@@ -35,6 +35,8 @@ public sealed class PrintExceptionTests
     [MemberData(nameof(NestedMatrix))]
     public async Task PrintException_Structure(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
 
@@ -70,6 +72,8 @@ public sealed class PrintExceptionTests
     [MemberData(nameof(NestedMatrix))]
     public async Task PrintException_Data(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
 
@@ -93,6 +97,8 @@ public sealed class PrintExceptionTests
     [MemberData(nameof(NoInnerMatrix))]
     public async Task PrintException_NoInnerException(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
 
@@ -137,6 +143,8 @@ public sealed class PrintExceptionTests
     [MemberData(nameof(ReflectionMatrix))]
     public async Task PrintException_ReflectionInnerException(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
 

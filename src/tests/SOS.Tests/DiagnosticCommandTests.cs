@@ -81,6 +81,8 @@ public sealed class DiagnosticCommandTests
     [MemberData(nameof(ClrmaMatrix))]
     public async Task Clrma_DrivesManagedAnalysis(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
@@ -94,6 +96,8 @@ public sealed class DiagnosticCommandTests
     [MemberData(nameof(ClrmaExceptionMatrix))]
     public async Task Clrma_ReportsCurrentExceptionChain(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
 

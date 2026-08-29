@@ -53,6 +53,8 @@ public sealed class ClrStackLinesTests
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_SourceLines(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         if (config.Target == TargetCatalog.Scenarios)
         {
