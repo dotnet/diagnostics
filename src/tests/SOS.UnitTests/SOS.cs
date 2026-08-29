@@ -16,11 +16,7 @@ using Xunit.Extensions;
 
 public static class SOSTestHelpers
 {
-    // Desktop CLR configurations are temporarily excluded because CDB SecureLoadDotNetExtensions
-    // and dotnet-dump DacSignatureVerification reject desktop CLR DAC DLLs.
-    // Tracking: https://github.com/dotnet/diagnostics/issues/5757
-    public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", value: null)
-        .Where(args => !((TestConfiguration)args[0]).IsDesktop);
+    public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", value: null);
 
     public static IEnumerable<object[]> InterpreterConfigurations
     {
@@ -819,13 +815,6 @@ public class SOSScenarioTests
         {
             throw new SkipTestException("Single file not supported");
         }
-        // Desktop CLR DAC signature verification fails with CDB SecureLoadDotNetExtensions
-        // and dotnet-dump DacSignatureVerification.
-        // Tracking: https://github.com/dotnet/diagnostics/issues/5757
-        if (OS.Kind == OSKind.Windows)
-        {
-            throw new SkipTestException("Desktop CLR DAC signature verification failure (https://github.com/dotnet/diagnostics/issues/5757)");
-        }
         // The assembly path, class and function name of the desktop test code to load/run
         string desktopTestParameters = TestConfiguration.MakeCanonicalPath(config.GetValue("DesktopTestParameters"));
         if (string.IsNullOrEmpty(desktopTestParameters))
@@ -842,6 +831,7 @@ public class SOSScenarioTests
                 DebuggeeName = "WebApp3",
                 DebuggeeArguments = desktopTestParameters,
                 UsePipeSync = true,
+                DisableDacSignatureVerification = true,
                 DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
             },
             Output);
@@ -860,12 +850,6 @@ public class SOSStackAndOtherTests
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.StackAndOtherTests", MemberType = typeof(SOSTestHelpers))]
     public async Task StackAndOtherTests(TestConfiguration config)
     {
-        // Single-file .NET 8 servicing DAC signature verification fails with CDB SecureLoadDotNetExtensions.
-        // Tracking: https://github.com/dotnet/diagnostics/issues/5757
-        if (OS.Kind == OSKind.Windows && config.PublishSingleFile)
-        {
-            throw new SkipTestException("Single-file DAC signature verification failure with CDB (https://github.com/dotnet/diagnostics/issues/5757)");
-        }
         // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)
         SOSTestHelpers.SkipIfWinX86(config);
 
@@ -889,6 +873,7 @@ public class SOSStackAndOtherTests
                     DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
                     UsePipeSync = true,
                     DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
+                    DisableDacSignatureVerification = currentConfig.PublishSingleFile,
                 },
                 Output);
 
@@ -912,6 +897,7 @@ public class SOSStackAndOtherTests
                         DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
                         UsePipeSync = true,
                         DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
+                        DisableDacSignatureVerification = currentConfig.PublishSingleFile,
                     },
                     Output);
             }

@@ -156,8 +156,6 @@ private:
 
     HRESULT CreateClrDataProcessViaDbgShim(IXCLRDataProcess** ppClrDataProcess);
 
-    HRESULT CreateDesktopCorDebugProcess(ICorDebugProcess** ppCorDebugProcess);
-
     HRESULT CreateCorDebugProcessViaDbgShim(ICorDebugProcess** ppCorDebugProcess);
 
     ULONG64 GetContractDescriptorAddress();

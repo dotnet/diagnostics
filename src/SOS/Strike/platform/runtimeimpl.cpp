@@ -27,30 +27,6 @@
 
 #define CORDBG_E_NO_IMAGE_AVAILABLE EMAKEHR(0x1c64)
 
-typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImpl2FnPtr)(ULONG64 clrInstanceId,
-    IUnknown * pDataTarget,
-    LPCWSTR pDacModulePath,
-    CLR_DEBUGGING_VERSION * pMaxDebuggerSupportedVersion,
-    REFIID riid,
-    IUnknown ** ppInstance,
-    CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
-
-typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImplFnPtr)(ULONG64 clrInstanceId,
-    IUnknown * pDataTarget,
-    HMODULE hDacDll,
-    CLR_DEBUGGING_VERSION * pMaxDebuggerSupportedVersion,
-    REFIID riid,
-    IUnknown ** ppInstance,
-    CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
-
-typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcess2FnPtr)(ULONG64 clrInstanceId,
-    IUnknown * pDataTarget,
-    HMODULE hDacDll,
-    REFIID riid,
-    IUnknown ** ppInstance,
-    CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
-
-typedef HMODULE (STDAPICALLTYPE  *LoadLibraryWFnPtr)(LPCWSTR lpLibFileName);
 typedef HRESULT (STDAPICALLTYPE *CLRCreateInstanceFnPtr)(REFCLSID clsid, REFIID riid, LPVOID *ppInterface);
 
 enum class DbgShimCDacLoadPolicy : DWORD
@@ -927,99 +903,6 @@ public:
     }
 };
 
-HRESULT Runtime::CreateDesktopCorDebugProcess(ICorDebugProcess** ppCorDebugProcess)
-{
-    LPCSTR dacFilePath = GetDacFilePath();
-    LPCSTR dbiFilePath = GetDbiFilePath();
-    if (dacFilePath == nullptr || dbiFilePath == nullptr)
-    {
-        return CORDBG_E_NO_IMAGE_AVAILABLE;
-    }
-
-    ArrayHolder<WCHAR> dacModulePath = new WCHAR[MAX_LONGPATH + 1];
-    if (MultiByteToWideChar(CP_ACP, 0, dacFilePath, -1, dacModulePath, MAX_LONGPATH) <= 0)
-    {
-        return HRESULT_FROM_WIN32(GetLastError());
-    }
-
-    HMODULE dbiHandle = LoadLibraryA(dbiFilePath);
-    if (dbiHandle == nullptr)
-    {
-        return HRESULT_FROM_WIN32(GetLastError());
-    }
-
-    CLR_DEBUGGING_VERSION maxVersion = {0, 4, 0, 0, 0};
-    CLR_DEBUGGING_PROCESS_FLAGS flags = (CLR_DEBUGGING_PROCESS_FLAGS)0;
-    ToRelease<ICorDebugMutableDataTarget> dataTarget = new CorDebugDataTarget;
-    ToRelease<IUnknown> process;
-
-    OpenVirtualProcessImpl2FnPtr openVirtualProcessImpl2 =
-        (OpenVirtualProcessImpl2FnPtr)GetProcAddress(dbiHandle, "OpenVirtualProcessImpl2");
-    HRESULT hr;
-    if (openVirtualProcessImpl2 != nullptr)
-    {
-        hr = openVirtualProcessImpl2(
-            GetModuleAddress(),
-            dataTarget,
-            dacModulePath,
-            &maxVersion,
-            IID_ICorDebugProcess,
-            &process,
-            &flags);
-    }
-    else
-    {
-        HMODULE dacHandle = LoadLibraryA(dacFilePath);
-        if (dacHandle == nullptr)
-        {
-            return HRESULT_FROM_WIN32(GetLastError());
-        }
-
-        OpenVirtualProcessImplFnPtr openVirtualProcessImpl =
-            (OpenVirtualProcessImplFnPtr)GetProcAddress(dbiHandle, "OpenVirtualProcessImpl");
-        if (openVirtualProcessImpl != nullptr)
-        {
-            hr = openVirtualProcessImpl(
-                GetModuleAddress(),
-                dataTarget,
-                dacHandle,
-                &maxVersion,
-                IID_ICorDebugProcess,
-                &process,
-                &flags);
-        }
-        else
-        {
-            OpenVirtualProcess2FnPtr openVirtualProcess2 =
-                (OpenVirtualProcess2FnPtr)GetProcAddress(dbiHandle, "OpenVirtualProcess2");
-            hr = openVirtualProcess2 != nullptr
-                ? openVirtualProcess2(
-                    GetModuleAddress(),
-                    dataTarget,
-                    dacHandle,
-                    IID_ICorDebugProcess,
-                    &process,
-                    &flags)
-                : CORDBG_E_LIBRARY_PROVIDER_ERROR;
-        }
-    }
-
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-    if (process == nullptr)
-    {
-        return E_NOINTERFACE;
-    }
-    hr = process->QueryInterface(IID_ICorDebugProcess, (void**)&m_pCorDebugProcess);
-    if (SUCCEEDED(hr))
-    {
-        *ppCorDebugProcess = m_pCorDebugProcess;
-    }
-    return hr;
-}
-
 HRESULT Runtime::CreateCorDebugProcessViaDbgShim(ICorDebugProcess** ppCorDebugProcess)
 {
     if (ppCorDebugProcess == nullptr)
@@ -1063,7 +946,10 @@ HRESULT Runtime::CreateCorDebugProcessViaDbgShim(ICorDebugProcess** ppCorDebugPr
         return hr;
     }
 
-    hr = policy->SetCDacLoadPolicy((DbgShimCDacLoadPolicy)GetCDacLoadPolicy());
+    DbgShimCDacLoadPolicy loadPolicy = GetRuntimeConfiguration() == IRuntime::WindowsDesktop
+        ? DbgShimCDacLoadPolicy::LegacyDacOnly
+        : (DbgShimCDacLoadPolicy)GetCDacLoadPolicy();
+    hr = policy->SetCDacLoadPolicy(loadPolicy);
     if (FAILED(hr))
     {
         return hr;
@@ -1135,10 +1021,6 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         m_pCorDebugProcess->Detach();
         m_pCorDebugProcess->Release();
         m_pCorDebugProcess = nullptr;
-    }
-    if (GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
-    {
-        return CreateDesktopCorDebugProcess(ppCorDebugProcess);
     }
     return CreateCorDebugProcessViaDbgShim(ppCorDebugProcess);
 }

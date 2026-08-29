@@ -47,39 +47,6 @@ namespace SOS.Hosting
             IntPtr dacDataInterface,
             out IntPtr ppObj);
 
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int OpenVirtualProcessImpl2Delegate(
-            ulong clrInstanceId,
-            IntPtr dataTarget,
-            [MarshalAs(UnmanagedType.LPWStr)] string dacModulePath,
-            ref ClrDebuggingVersion maxDebuggerSupportedVersion,
-            ref Guid riid,
-            out IntPtr instance,
-            out ClrDebuggingProcessFlags flags);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int OpenVirtualProcessImplDelegate(
-            ulong clrInstanceId,
-            IntPtr dataTarget,
-            IntPtr dacHandle,
-            ref ClrDebuggingVersion maxDebuggerSupportedVersion,
-            ref Guid riid,
-            out IntPtr instance,
-            out ClrDebuggingProcessFlags flags);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate int OpenVirtualProcessDelegate(
-            ulong clrInstanceId,
-            IntPtr dataTarget,
-            IntPtr dacHandle,
-            ref Guid riid,
-            out IntPtr instance,
-            out ClrDebuggingProcessFlags flags);
-
-        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
-        private delegate IntPtr LoadLibraryWDelegate(
-            [MarshalAs(UnmanagedType.LPWStr)] string modulePath);
-
         #endregion
 
         private readonly IServiceProvider _services;
@@ -87,7 +54,6 @@ namespace SOS.Hosting
         private IntPtr _clrDataProcess = IntPtr.Zero;
         private IntPtr _corDebugProcess = IntPtr.Zero;
         private IntPtr _dacHandle = IntPtr.Zero;
-        private IntPtr _dbiHandle = IntPtr.Zero;
         private RuntimeLibraryProvider _libraryProvider;
 
         public IntPtr IRuntime { get; }
@@ -140,11 +106,6 @@ namespace SOS.Hosting
                 // Previously, the DAC was freed here, but as we transition to the cDAC which uses NativeAOT,
                 // it is no longer possible to free the DAC library when it is using the shimmed cDAC.
                 _dacHandle = IntPtr.Zero;
-            }
-            if (_dbiHandle != IntPtr.Zero)
-            {
-                DataTarget.PlatformFunctions.FreeLibrary(_dbiHandle);
-                _dbiHandle = IntPtr.Zero;
             }
             (_libraryProvider as IDisposable)?.Dispose();
             _libraryProvider = null;
@@ -384,12 +345,6 @@ namespace SOS.Hosting
 
         private int CreateCorDebugProcess(out IntPtr corDebugProcess)
         {
-            if (_runtime.RuntimeType == RuntimeType.Desktop)
-            {
-                corDebugProcess = CreateDesktopCorDebugProcess();
-                return corDebugProcess != IntPtr.Zero ? HResult.S_OK : HResult.E_NOINTERFACE;
-            }
-
             corDebugProcess = IntPtr.Zero;
             _libraryProvider ??= new RuntimeLibraryProvider(
                 _runtime.GetDbiFilePath,
@@ -417,102 +372,6 @@ namespace SOS.Hosting
             return dacFilePath is not null && GetDacHandle() != IntPtr.Zero
                 ? dacFilePath
                 : null;
-        }
-
-        private IntPtr CreateDesktopCorDebugProcess()
-        {
-            string dbiFilePath = _runtime.GetDbiFilePath();
-            IntPtr dacHandle = GetDacHandle();
-            string dacFilePath = _runtime.GetDacFilePath(out _);
-            if (dbiFilePath is null || dacHandle == IntPtr.Zero || dacFilePath is null)
-            {
-                return IntPtr.Zero;
-            }
-
-            if (_dbiHandle == IntPtr.Zero)
-            {
-                try
-                {
-                    _dbiHandle = DataTarget.PlatformFunctions.LoadLibrary(dbiFilePath);
-                }
-                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
-                {
-                    Trace.TraceError($"LoadLibrary({dbiFilePath}) FAILED {ex}");
-                    return IntPtr.Zero;
-                }
-            }
-
-            ClrDebuggingVersion maxDebuggerSupportedVersion = new()
-            {
-                StructVersion = 0,
-                Major = 4,
-                Minor = 0,
-                Build = 0,
-                Revision = 0,
-            };
-            CorDebugDataTargetWrapper dataTarget = new(_services, _runtime);
-            try
-            {
-                OpenVirtualProcessImpl2Delegate openVirtualProcessImpl2 =
-                    SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
-                if (openVirtualProcessImpl2 is not null)
-                {
-                    int hr = openVirtualProcessImpl2(
-                        _runtime.RuntimeModule.ImageBase,
-                        dataTarget.ICorDebugDataTarget,
-                        dacFilePath,
-                        ref maxDebuggerSupportedVersion,
-                        ref IID_ICorDebugProcess,
-                        out IntPtr corDebugProcess,
-                        out _);
-                    return hr == HResult.S_OK ? corDebugProcess : IntPtr.Zero;
-                }
-
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                {
-                    LoadLibraryWDelegate loadLibrary =
-                        SOSHost.GetDelegateFunction<LoadLibraryWDelegate>(dacHandle, "LoadLibraryW");
-                    dacHandle = loadLibrary?.Invoke(dacFilePath) ?? IntPtr.Zero;
-                    if (dacHandle == IntPtr.Zero)
-                    {
-                        return IntPtr.Zero;
-                    }
-                }
-
-                OpenVirtualProcessImplDelegate openVirtualProcessImpl =
-                    SOSHost.GetDelegateFunction<OpenVirtualProcessImplDelegate>(_dbiHandle, "OpenVirtualProcessImpl");
-                if (openVirtualProcessImpl is not null)
-                {
-                    int hr = openVirtualProcessImpl(
-                        _runtime.RuntimeModule.ImageBase,
-                        dataTarget.ICorDebugDataTarget,
-                        dacHandle,
-                        ref maxDebuggerSupportedVersion,
-                        ref IID_ICorDebugProcess,
-                        out IntPtr corDebugProcess,
-                        out _);
-                    return hr == HResult.S_OK ? corDebugProcess : IntPtr.Zero;
-                }
-
-                OpenVirtualProcessDelegate openVirtualProcess =
-                    SOSHost.GetDelegateFunction<OpenVirtualProcessDelegate>(_dbiHandle, "OpenVirtualProcess");
-                if (openVirtualProcess is not null)
-                {
-                    int hr = openVirtualProcess(
-                        _runtime.RuntimeModule.ImageBase,
-                        dataTarget.ICorDebugDataTarget,
-                        dacHandle,
-                        ref IID_ICorDebugProcess,
-                        out IntPtr corDebugProcess,
-                        out _);
-                    return hr == HResult.S_OK ? corDebugProcess : IntPtr.Zero;
-                }
-                return IntPtr.Zero;
-            }
-            finally
-            {
-                dataTarget.ReleaseWithCheck();
-            }
         }
 
         private IntPtr GetDacHandle()

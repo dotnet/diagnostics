@@ -149,6 +149,8 @@ public class SOSRunner : IDisposable
 
         public bool EnableStressLog { get; set; }
 
+        public bool DisableDacSignatureVerification { get; set; }
+
         public bool TestCrashReport
         {
             get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows; }
@@ -587,6 +589,8 @@ public class SOSRunner : IDisposable
 
                     bool shouldVerifyDacSignature = !config.IsPrivateBuildTesting()
                                                     && !config.IsNightlyBuild()
+                                                    && !config.IsDesktop
+                                                    && !information.DisableDacSignatureVerification
                                                     && !"-none".Equals(config.SetHostRuntime(), StringComparison.OrdinalIgnoreCase);
                     initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(shouldVerifyDacSignature ? "true" : "false")}");
                     break;
@@ -704,7 +708,9 @@ public class SOSRunner : IDisposable
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
                     shouldVerifyDacSignature = OS.Kind == OSKind.Windows
                         && !config.IsPrivateBuildTesting()
-                        && !config.IsNightlyBuild();
+                        && !config.IsNightlyBuild()
+                        && !config.IsDesktop
+                        && !information.DisableDacSignatureVerification;
                     initialCommands.Add($"runtimes --DacSignatureVerification:{(shouldVerifyDacSignature ? "true" : "false")}");
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
