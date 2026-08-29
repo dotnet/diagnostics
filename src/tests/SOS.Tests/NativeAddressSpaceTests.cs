@@ -22,10 +22,9 @@ public sealed class NativeAddressSpaceTests
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // notreachableinrange treats [start,end) as an array of object pointers (it backs !finalizerqueue).
-        // ObjectReferences is an array of one-field value types, so dumparray reports the address of an
+        // ObjectReference[] contains one-field value types, so dumparray reports the address of an
         // actual object-reference slot rather than the referenced object or an object header.
-        DumpObjResult marker = target.DumpObj(target.FindUniqueObject("FieldMarker"));
-        ulong references = ObjectCommandParsing.Hex(marker.Field("ObjectReferences").Value);
+        ulong references = target.FindUniqueObject("ObjectReference[]");
         ulong slot = target.DumpArray(references).Elements[0].Address;
         SosOutput scan = target.Sos($"notreachableinrange {slot:x} {slot + (ulong)IntPtr.Size:x}");
         scan.AssertContains("Calculating live objects");
