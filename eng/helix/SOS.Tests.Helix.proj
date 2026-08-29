@@ -189,6 +189,8 @@
            Text="The SOS lldb plugin was not found at '$(PayloadNativeSourceDir)libsosplugin.so'." />
     <Error Condition="!Exists('$(PayloadNativeSourceDir)libsosplugin.dylib') and '$(TargetOS)' == 'osx'"
            Text="The SOS lldb plugin was not found at '$(PayloadNativeSourceDir)libsosplugin.dylib'." />
+    <Error Condition="!Exists('$(PayloadNativeSourceDir)sos-lldb') and '$(TargetOS)' == 'osx'"
+           Text="The SOS lldb driver was not found at '$(PayloadNativeSourceDir)sos-lldb'." />
 
     <RemoveDir Directories="$(CorrelationPayloadDirectory)" />
     <MakeDir Directories="$(CorrelationPayloadDirectory)" />

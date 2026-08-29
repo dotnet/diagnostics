@@ -47,6 +47,7 @@ The following environment variables narrow or extend a run:
 | `SOSHARNESS_LIVE_TIMEOUT` | Live LLDB command timeout in seconds. |
 | `SOSHARNESS_LLDB_LOAD_TIMEOUT` | LLDB target-load timeout in seconds. |
 | `SOSHARNESS_LLDB_TRACE` | Enable LLDB protocol tracing. |
+| `SOSHARNESS_LLDB_PATH` | Override the LLDB executable used by the harness. On macOS, the repo-built `sos-lldb` driver is preferred by default. |
 | `SOSHARNESS_CDAC_DIR` | Override the directory containing the cDAC. |
 | `SOSHARNESS_USECDAC` | Globally clamp cDAC selection for local investigation. |
 

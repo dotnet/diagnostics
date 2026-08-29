@@ -103,6 +103,42 @@ prepare_dotnet_root()
 
 configure_lldb()
 {
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    target_arch="${rid##*-}"
+    driver_source="$root/artifacts/bin/osx.$target_arch.$configuration/sos-lldb"
+    if [[ ! -f "$driver_source" ]]; then
+      echo "The SOS LLDB driver was not found at '$driver_source'." >&2
+      exit 4
+    fi
+
+    driver="$driver_source"
+    if [[ ! -x "$driver" ]]; then
+      driver="$work/sos-lldb"
+      cp "$driver_source" "$driver"
+      chmod +x "$driver"
+    fi
+
+    developer_dir="${DEVELOPER_DIR:-$(xcode-select -p)}"
+    shared_frameworks="$(cd "$developer_dir/../SharedFrameworks" && pwd)"
+    if [[ ! -d "$shared_frameworks/LLDB.framework" ]]; then
+      echo "LLDB.framework was not found under the selected Xcode at '$shared_frameworks'." >&2
+      exit 4
+    fi
+    export DYLD_FRAMEWORK_PATH="$shared_frameworks${DYLD_FRAMEWORK_PATH:+:$DYLD_FRAMEWORK_PATH}"
+
+    lldb_check="$("$driver" --no-lldbinit --batch \
+      -o 'script print("__SOSHARNESS_LLDB_READY__")' 2>&1 || true)"
+    if [[ "$lldb_check" != *"__SOSHARNESS_LLDB_READY__"* ]]; then
+      echo "The SOS LLDB driver failed its Python interpreter preflight at '$driver'." >&2
+      echo "$lldb_check" >&2
+      exit 4
+    fi
+
+    echo "Using SOS LLDB driver at '$driver'."
+    export SOSHARNESS_LLDB_PATH="$driver"
+    return
+  fi
+
   if [[ "$(uname -s)" != "Linux" ]]; then
     return
   fi
