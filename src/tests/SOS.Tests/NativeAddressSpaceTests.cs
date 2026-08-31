@@ -26,8 +26,12 @@ public sealed class NativeAddressSpaceTests
         // actual object-reference slot rather than the referenced object or an object header.
         ulong references = target.FindUniqueObject("ObjectReference[]");
         ulong slot = target.DumpArray(references).Elements[0].Address;
+
+        // Warm the shared liveness cache explicitly. notreachableinrange has no output when every
+        // pointer in the range is live, while a cold cache emits a non-contractual progress banner.
+        target.Sos("dumpheap -type LiveUniqueMarker -live").AssertContains("LiveUniqueMarker");
         SosOutput scan = target.Sos($"notreachableinrange {slot:x} {slot + (ulong)IntPtr.Size:x}");
-        scan.AssertContains("Calculating live objects");
+        Assert.True(string.IsNullOrWhiteSpace(scan.Text), $"expected no unreachable objects:\n{scan.Text}");
     }
 
 }

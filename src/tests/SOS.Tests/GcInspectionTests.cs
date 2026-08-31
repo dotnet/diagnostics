@@ -110,7 +110,7 @@ public sealed class GcInspectionTests
         }
 
         using Target target = await Targets.GetTargetAsync(config);
-        target.GoToStopPoint(TargetCatalog.StopHeap);
+        target.GoToStopPoint(TargetCatalog.StopGen1);
 
         SosOutput verify = target.Sos("verifyheap");
         Assert.Matches(@"\b0 errors\b", verify.Text);
