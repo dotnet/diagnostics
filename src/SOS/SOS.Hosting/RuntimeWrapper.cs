@@ -54,7 +54,6 @@ namespace SOS.Hosting
         private IntPtr _clrDataProcess = IntPtr.Zero;
         private IntPtr _corDebugProcess = IntPtr.Zero;
         private IntPtr _dacHandle = IntPtr.Zero;
-        private RuntimeLibraryProvider _libraryProvider;
 
         public IntPtr IRuntime { get; }
 
@@ -107,8 +106,6 @@ namespace SOS.Hosting
                 // it is no longer possible to free the DAC library when it is using the shimmed cDAC.
                 _dacHandle = IntPtr.Zero;
             }
-            (_libraryProvider as IDisposable)?.Dispose();
-            _libraryProvider = null;
         }
 
         #region IRuntime (native)
@@ -346,9 +343,10 @@ namespace SOS.Hosting
         private int CreateCorDebugProcess(out IntPtr corDebugProcess)
         {
             corDebugProcess = IntPtr.Zero;
-            _libraryProvider ??= new RuntimeLibraryProvider(
+            using RuntimeLibraryProvider libraryProvider = new(
                 _runtime.GetDbiFilePath,
-                GetVerifiedDacFilePath);
+                GetDacFilePathForProvider,
+                _services.GetService<ISettingsService>()?.DacSignatureVerificationEnabled ?? true);
 
             IClrDataProcessActivator activator = _services.GetService<IClrDataProcessActivator>();
             if (activator is null)
@@ -356,22 +354,22 @@ namespace SOS.Hosting
                 return HResult.E_NOINTERFACE;
             }
 
-            CDacLoadPolicy policy = _runtime.RuntimeType == RuntimeType.Desktop
-                ? CDacLoadPolicy.UseLegacyDac
-                : _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.PreferCDac;
+            CDacLoadPolicy policy =
+                _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.PreferCDac;
+            if (!CDacPolicy.ShouldTryCDac(policy))
+            {
+                policy = CDacLoadPolicy.UseLegacyDac;
+            }
             return activator.CreateCorDebugProcess(
                 _runtime,
-                _libraryProvider.ILibraryProvider,
+                libraryProvider.ILibraryProvider,
                 policy,
                 out corDebugProcess);
         }
 
-        private string GetVerifiedDacFilePath()
+        private string GetDacFilePathForProvider()
         {
-            string dacFilePath = _runtime.GetDacFilePath(out _);
-            return dacFilePath is not null && GetDacHandle() != IntPtr.Zero
-                ? dacFilePath
-                : null;
+            return _runtime.GetDacFilePath(out _);
         }
 
         private IntPtr GetDacHandle()

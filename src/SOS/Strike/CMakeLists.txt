@@ -128,6 +128,8 @@ if (CLR_CMAKE_HOST_WIN32)
     advapi32.lib
     psapi.lib
     ntdll.lib
+    crypt32.lib
+    wintrust.lib
   )
 
   if(NOT CLR_CMAKE_HOST_ARCH_ARM64 AND NOT CLR_CMAKE_HOST_ARCH_ARM)

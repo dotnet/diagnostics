@@ -8,6 +8,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,6 +44,115 @@ namespace Microsoft.Diagnostics
         }
 
         public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", null);
+
+        [SkippableFact]
+        public void VerifyCoreProviderLibrarySignature()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("Authenticode verification is Windows-only");
+            }
+
+            string dbiPath = Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "mscordbi.dll");
+            string dacPath = Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "mscordaccore.dll");
+            if (!File.Exists(dbiPath) || !File.Exists(dacPath))
+            {
+                throw new SkipTestException($"Runtime DAC/DBI not found: {dacPath}, {dbiPath}");
+            }
+            SkipIfUnsigned(dbiPath);
+            SkipIfUnsigned(dacPath);
+            Assert.True(RuntimeLibraryProvider.VerifySignature(
+                dbiPath,
+                ["1.3.6.1.4.1.311.84.4.1"],
+                out IDisposable fileLock));
+            fileLock.Dispose();
+            Assert.True(RuntimeLibraryProvider.VerifySignature(
+                dacPath,
+                ["1.3.6.1.4.1.311.84.4.1"],
+                out fileLock));
+            fileLock.Dispose();
+            Assert.False(RuntimeLibraryProvider.VerifySignature(
+                dbiPath,
+                ["1.3.6.1.4.1.311.10.3.6"],
+                out fileLock));
+            Assert.Null(fileLock);
+
+            Assert.False(RuntimeLibraryProvider.VerifySignature(
+                typeof(object).Assembly.Location,
+                ["1.3.6.1.4.1.311.84.4.1"],
+                out fileLock));
+            Assert.Null(fileLock);
+
+            Assert.False(RuntimeLibraryProvider.VerifySignature(
+                typeof(DbgShimTests).Assembly.Location,
+                ["1.3.6.1.4.1.311.84.4.1"],
+                out fileLock));
+            Assert.Null(fileLock);
+        }
+
+        [SkippableFact]
+        public void VerifyDesktopProviderLibrarySignature()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("Authenticode verification is Windows-only");
+            }
+            string frameworkDirectory = Environment.Is64BitProcess
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Microsoft.NET", "Framework64", "v4.0.30319")
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Microsoft.NET", "Framework", "v4.0.30319");
+            string desktopDbiPath = Path.Combine(frameworkDirectory, "mscordbi.dll");
+            string desktopDacPath = Path.Combine(frameworkDirectory, "mscordacwks.dll");
+            if (!File.Exists(desktopDbiPath) || !File.Exists(desktopDacPath))
+            {
+                throw new SkipTestException($"Desktop DAC/DBI not found: {desktopDacPath}, {desktopDbiPath}");
+            }
+            SkipIfUnsigned(desktopDbiPath);
+            SkipIfUnsigned(desktopDacPath);
+            Assert.True(RuntimeLibraryProvider.VerifySignature(
+                desktopDbiPath,
+                ["1.3.6.1.4.1.311.84.4.1"],
+                out IDisposable fileLock));
+            fileLock.Dispose();
+            Assert.True(RuntimeLibraryProvider.VerifySignature(
+                desktopDacPath,
+                ["1.3.6.1.4.1.311.84.4.1"],
+                out fileLock));
+            fileLock.Dispose();
+        }
+
+        private static void SkipIfUnsigned(string path)
+        {
+            try
+            {
+#pragma warning disable SYSLIB0057 // Test-only probe for an embedded Authenticode certificate.
+                using X509Certificate certificate = X509Certificate.CreateFromSignedFile(path);
+#pragma warning restore SYSLIB0057
+            }
+            catch (CryptographicException)
+            {
+                throw new SkipTestException($"Signed test binary not available: {path}");
+            }
+        }
+
+        [Fact]
+        public void CDacEnvironmentVariablesDisablePreferredCDac()
+        {
+            foreach (string variable in new[] { "DOTNET_ENABLE_CDAC", "COMPlus_ENABLE_CDAC" })
+            {
+                string originalValue = Environment.GetEnvironmentVariable(variable);
+                try
+                {
+                    Environment.SetEnvironmentVariable(variable, "1");
+                    Assert.False(CDacPolicy.ShouldTryCDac(CDacLoadPolicy.PreferCDac));
+                    Assert.True(CDacPolicy.ShouldTryCDac(CDacLoadPolicy.OnlyUseCDac));
+                    Assert.False(CDacPolicy.ShouldTryCDac(CDacLoadPolicy.UseLegacyDac));
+                }
+                finally
+                {
+                    Environment.SetEnvironmentVariable(variable, originalValue);
+                }
+            }
+        }
 
         public static IEnumerable<object[]> OpenVirtualProcessLoadPolicyConfigurations
         {

@@ -14,6 +14,7 @@
 #include <psapi.h>
 #include <clrinternal.h>
 #include <metahost.h>
+#include <vector>
 #include "runtimeimpl.h"
 #include "datatarget.h"
 #include "cordebugdatatarget.h"
@@ -23,6 +24,9 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#else
+#include <softpub.h>
+#include <wintrust.h>
 #endif // !FEATURE_PAL
 
 #define CORDBG_E_NO_IMAGE_AVAILABLE EMAKEHR(0x1c64)
@@ -287,24 +291,8 @@ Runtime::~Runtime()
 \**********************************************************************/
 LPCSTR Runtime::GetDacFilePath()
 {
-    // If the DAC path hasn't been set by the symbol download support, use the one in the runtime directory.
     if (m_dacFilePath == nullptr)
     {
-        // No debugger service instance means that SOS is hosted by dotnet-dump,
-        // which does runtime enumeration in CLRMD. We should never get here.
-        IDebuggerServices* debuggerServices = GetDebuggerServices();
-        if (debuggerServices == nullptr)
-        {
-            ExtDbgOut("GetDacFilePath: GetDebuggerServices returned nullptr\n");
-            return nullptr;
-        }
-        BOOL dacSignatureVerificationEnabled = FALSE;
-        HRESULT hr = debuggerServices->GetDacSignatureVerificationSettings(&dacSignatureVerificationEnabled);
-        if (FAILED(hr) || dacSignatureVerificationEnabled)
-        {
-            ExtDbgOut("GetDacFilePath: GetDacSignatureVerificationSettings FAILED %08x or returned TRUE\n", hr);
-            return nullptr;
-        }
         LPCSTR directory = GetRuntimeDirectory();
         if (directory != nullptr)
         {
@@ -549,6 +537,16 @@ HRESULT Runtime::GetClrDataProcess(CDacLoadPolicy policy, IXCLRDataProcess** ppC
     {
         *ppClrDataProcess = nullptr;
 
+        IDebuggerServices* debuggerServices = GetDebuggerServices();
+        BOOL signatureVerificationEnabled = FALSE;
+        HRESULT signatureResult = debuggerServices != nullptr
+            ? debuggerServices->GetDacSignatureVerificationSettings(&signatureVerificationEnabled)
+            : E_NOINTERFACE;
+        if (FAILED(signatureResult) || signatureVerificationEnabled)
+        {
+            return CORDBG_E_NO_IMAGE_AVAILABLE;
+        }
+
         LPCSTR dacFilePath = GetDacFilePath();
         if (dacFilePath == nullptr)
         {
@@ -581,7 +579,7 @@ bool Runtime::ShouldTryCDac(CDacLoadPolicy policy)
     {
         return false;
     }
-    if (policy == CDacLoadPolicy::OnlyUseCDac || policy == CDacLoadPolicy::PreferCDac)
+    if (policy == CDacLoadPolicy::OnlyUseCDac)
     {
         return true;
     }
@@ -788,12 +786,38 @@ class RuntimeLibraryProvider final :
 private:
     LONG m_ref;
     class Runtime* m_runtime;
+#ifndef FEATURE_PAL
+    bool m_verifySignature;
+    std::vector<HANDLE> m_verifiedFiles;
+#endif
 
 public:
     RuntimeLibraryProvider(class Runtime* runtime) :
         m_ref(1),
         m_runtime(runtime)
+#ifndef FEATURE_PAL
+        , m_verifySignature(true)
+#endif
     {
+#ifndef FEATURE_PAL
+        IDebuggerServices* debuggerServices = GetDebuggerServices();
+        BOOL enabled = TRUE;
+        if (debuggerServices != nullptr &&
+            SUCCEEDED(debuggerServices->GetDacSignatureVerificationSettings(&enabled)))
+        {
+            m_verifySignature = enabled != FALSE;
+        }
+#endif
+    }
+
+    ~RuntimeLibraryProvider()
+    {
+#ifndef FEATURE_PAL
+        for (HANDLE file : m_verifiedFiles)
+        {
+            CloseHandle(file);
+        }
+#endif
     }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, void** ppvObject) override
@@ -853,6 +877,10 @@ public:
         {
             return CORDBG_E_LIBRARY_PROVIDER_ERROR;
         }
+        if (!VerifyLibrary(path))
+        {
+            return CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        }
 
         *moduleHandle = LoadLibraryA(path);
         return *moduleHandle != nullptr
@@ -879,6 +907,10 @@ public:
         {
             return CORDBG_E_LIBRARY_PROVIDER_ERROR;
         }
+        if (!VerifyLibrary(path))
+        {
+            return CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        }
 
         int length = MultiByteToWideChar(CP_ACP, 0, path, -1, nullptr, 0);
         if (length <= 0)
@@ -900,6 +932,123 @@ public:
 
         *resolvedModulePath = result;
         return S_OK;
+    }
+
+private:
+    bool VerifyLibrary(LPCSTR path)
+    {
+#ifndef FEATURE_PAL
+        if (m_verifySignature)
+        {
+            HANDLE file = CreateFileA(
+                path,
+                GENERIC_READ,
+                FILE_SHARE_READ,
+                nullptr,
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL,
+                nullptr);
+            if (file == INVALID_HANDLE_VALUE)
+            {
+                ExtErr("RuntimeLibraryProvider: CreateFile(%s) FAILED %08x\n",
+                    path, HRESULT_FROM_WIN32(GetLastError()));
+                return false;
+            }
+
+            WINTRUST_FILE_INFO trustInfo = {};
+            trustInfo.cbStruct = sizeof(trustInfo);
+            trustInfo.hFile = file;
+
+            WINTRUST_DATA trustData = {};
+            trustData.cbStruct = sizeof(trustData);
+            trustData.dwUIChoice = WTD_UI_NONE;
+            trustData.fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN;
+            trustData.dwUnionChoice = WTD_CHOICE_FILE;
+            trustData.pFile = &trustInfo;
+            trustData.dwStateAction = WTD_STATEACTION_VERIFY;
+            trustData.dwProvFlags = WTD_REVOCATION_CHECK_CHAIN | WTD_CACHE_ONLY_URL_RETRIEVAL;
+
+            GUID action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+            LONG status = WinVerifyTrust(nullptr, &action, &trustData);
+            if (status != ERROR_SUCCESS)
+            {
+                ExtErr("RuntimeLibraryProvider: WinVerifyTrust(%s) FAILED %08x\n", path, status);
+                trustData.dwStateAction = WTD_STATEACTION_CLOSE;
+                WinVerifyTrust(nullptr, &action, &trustData);
+                CloseHandle(file);
+                return false;
+            }
+
+            CRYPT_PROVIDER_DATA* provider = WTHelperProvDataFromStateData(trustData.hWVTStateData);
+            CRYPT_PROVIDER_SGNR* signer = provider != nullptr
+                ? WTHelperGetProvSignerFromChain(provider, 0, FALSE, 0)
+                : nullptr;
+            CERT_CHAIN_POLICY_PARA policyParameters = {};
+            policyParameters.cbSize = sizeof(policyParameters);
+            CERT_CHAIN_POLICY_STATUS policyStatus = {};
+            policyStatus.cbSize = sizeof(policyStatus);
+            bool valid = signer != nullptr &&
+                CertVerifyCertificateChainPolicy(
+                    (LPCSTR)CERT_CHAIN_POLICY_MICROSOFT_ROOT,
+                    signer->pChainContext,
+                    &policyParameters,
+                    &policyStatus) &&
+                policyStatus.dwError == ERROR_SUCCESS;
+
+            CRYPT_PROVIDER_CERT* leafCertificate = valid
+                ? WTHelperGetProvCertFromChain(signer, 0)
+                : nullptr;
+            valid = leafCertificate != nullptr;
+            if (valid)
+            {
+                PCERT_EXTENSION usageExtension = CertFindExtension(
+                    szOID_ENHANCED_KEY_USAGE,
+                    leafCertificate->pCert->pCertInfo->cExtension,
+                    leafCertificate->pCert->pCertInfo->rgExtension);
+                CERT_ENHKEY_USAGE* usages = nullptr;
+                DWORD usageSize = 0;
+                if (usageExtension == nullptr ||
+                    !CryptDecodeObjectEx(
+                        X509_ASN_ENCODING,
+                        X509_ENHANCED_KEY_USAGE,
+                        usageExtension->Value.pbData,
+                        usageExtension->Value.cbData,
+                        CRYPT_DECODE_ALLOC_FLAG,
+                        nullptr,
+                        &usages,
+                        &usageSize))
+                {
+                    valid = false;
+                }
+                else
+                {
+                    valid = false;
+                    for (DWORD i = 0; i < usages->cUsageIdentifier; i++)
+                    {
+                        bool validDacOid =
+                            strcmp(usages->rgpszUsageIdentifier[i], "1.3.6.1.4.1.311.84.4.1") == 0;
+                        if (validDacOid)
+                        {
+                            valid = true;
+                            break;
+                        }
+                    }
+                    LocalFree(usages);
+                }
+            }
+
+            trustData.dwStateAction = WTD_STATEACTION_CLOSE;
+            WinVerifyTrust(nullptr, &action, &trustData);
+            if (!valid)
+            {
+                ExtErr("RuntimeLibraryProvider: certificate policy validation failed for %s\n", path);
+                CloseHandle(file);
+                return false;
+            }
+            m_verifiedFiles.push_back(file);
+        }
+#endif
+        return true;
     }
 };
 
@@ -946,9 +1095,10 @@ HRESULT Runtime::CreateCorDebugProcessViaDbgShim(ICorDebugProcess** ppCorDebugPr
         return hr;
     }
 
-    DbgShimCDacLoadPolicy loadPolicy = GetRuntimeConfiguration() == IRuntime::WindowsDesktop
-        ? DbgShimCDacLoadPolicy::LegacyDacOnly
-        : (DbgShimCDacLoadPolicy)GetCDacLoadPolicy();
+    CDacLoadPolicy configuredPolicy = GetCDacLoadPolicy();
+    DbgShimCDacLoadPolicy loadPolicy = ShouldTryCDac(configuredPolicy)
+        ? (DbgShimCDacLoadPolicy)configuredPolicy
+        : DbgShimCDacLoadPolicy::LegacyDacOnly;
     hr = policy->SetCDacLoadPolicy(loadPolicy);
     if (FAILED(hr))
     {
