@@ -16,7 +16,7 @@ namespace SOS.Tests;
 public sealed class MemoryAndDecodeTests
 {
     public static TheoryData<TestConfig> ScenariosMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
-    public static TheoryData<TestConfig> NestedExceptionMatrix => TestConfig.BuildMatrix([TargetCatalog.NestedException]);
+    public static TheoryData<TestConfig> NestedExceptionMatrix => TestMatrices.HeapEnumeration([TargetCatalog.NestedException]);
     public static TheoryData<TestConfig> DotnetDumpMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.DotnetDump);
 
     [SosTheory]

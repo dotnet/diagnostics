@@ -122,6 +122,47 @@ public sealed class TestConfigShardTests
         Assert.False(TestConfig.IsValid(config with { CoreVersion = CoreVersion.Net10 }));
     }
 
+    [Fact]
+    public void HeapEnumerationExcludesOnlyWindowsCdbSingleFileCDac()
+    {
+        TestConfig config = Config(Host.Cdb, Dac.CDac) with
+        {
+            Flavor = Flavor.SingleFile,
+            CoreVersion = CoreVersion.Net11,
+        };
+
+        Assert.False(TestMatrices.SupportsHeapEnumeration(config, isWindows: true));
+        Assert.True(TestMatrices.SupportsHeapEnumeration(config, isWindows: false));
+        Assert.True(TestMatrices.SupportsHeapEnumeration(config with { Host = Host.DotnetDump }, isWindows: true));
+        Assert.True(TestMatrices.SupportsHeapEnumeration(config with { Dac = Dac.Legacy }, isWindows: true));
+        Assert.True(TestMatrices.SupportsHeapEnumeration(config with { Flavor = Flavor.Core }, isWindows: true));
+    }
+
+    [Fact]
+    public void GcRootEnumerationExcludesOnlyFramework()
+    {
+        TestConfig config = Config(Host.Cdb, Dac.Legacy);
+
+        Assert.True(TestMatrices.SupportsGcRootEnumeration(config));
+        Assert.False(TestMatrices.SupportsGcRootEnumeration(config with { Flavor = Flavor.Framework }));
+    }
+
+    [Fact]
+    public void ICorDebugStackWalkExcludesOnlyX64CdbFrameworkDivZeroDumps()
+    {
+        TestConfig config = Config(Host.Cdb, Dac.Legacy) with
+        {
+            Target = TargetCatalog.DivZero,
+            Flavor = Flavor.Framework,
+        };
+
+        Assert.False(TestMatrices.SupportsICorDebugStackWalk(config, is64BitProcess: true));
+        Assert.True(TestMatrices.SupportsICorDebugStackWalk(config, is64BitProcess: false));
+        Assert.True(TestMatrices.SupportsICorDebugStackWalk(config with { Host = Host.DotnetDump }, is64BitProcess: true));
+        Assert.True(TestMatrices.SupportsICorDebugStackWalk(config with { Target = TargetCatalog.Scenarios }, is64BitProcess: true));
+        Assert.True(TestMatrices.SupportsICorDebugStackWalk(config with { Flavor = Flavor.Core }, is64BitProcess: true));
+    }
+
     private static ShardSelection? Parse(string? index, string? count) =>
         ShardSelection.FromEnvironment(name => name switch
         {

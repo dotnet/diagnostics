@@ -25,10 +25,11 @@ internal static class TestMatrices
         GcType gcType = GcType.Workstation,
         DumpKind dumpKind = DumpKind.Heap,
         CoreVersion coreVersion = CoreVersion.All,
-        Dac dac = Dac.All)
+        Dac dac = Dac.All,
+        Func<TestConfig, bool>? filter = null)
     {
         TheoryData<TestConfig> data = new();
-        foreach (TestConfig config in StackWalkConfigs(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac))
+        foreach (TestConfig config in StackWalkConfigs(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac, filter))
         {
             data.Add(config);
         }
@@ -44,8 +45,21 @@ internal static class TestMatrices
         GcType gcType = GcType.Workstation,
         DumpKind dumpKind = DumpKind.Heap,
         CoreVersion coreVersion = CoreVersion.All,
-        Dac dac = Dac.All) =>
-        TestConfig.Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion: coreVersion, dac: dac);
+        Dac dac = Dac.All,
+        Func<TestConfig, bool>? filter = null) =>
+        TestConfig.Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion: coreVersion, dac: dac)
+            .Where(config => filter is null || filter(config));
+
+    public static TheoryData<TestConfig> HeapEnumeration(string[] targets)
+    {
+        TheoryData<TestConfig> data = new();
+        foreach (TestConfig config in TestConfig.Permutations(targets).Where(SupportsHeapEnumeration))
+        {
+            data.Add(config);
+        }
+
+        return data;
+    }
 
     /// <summary>
     /// Wraps <see cref="TestConfig.BuildMatrix"/> for commands whose data is absent from a reduced Heap dump on
@@ -97,11 +111,13 @@ internal static class TestMatrices
         Host host = Host.AllValid,
         Liveness liveness = Liveness.Dump,
         CoreVersion coreVersion = CoreVersion.All,
-        Dac dac = Dac.All)
+        Dac dac = Dac.All,
+        Func<TestConfig, bool>? filter = null)
     {
         TheoryData<TestConfig> data = new();
         IEnumerable<TestConfig> configs = TestConfig.UnshardedPermutations(
                 targets, flavor, host, liveness, coreVersion: coreVersion, dac: dac)
+            .Where(config => filter is null || filter(config))
             .Select(config =>
                 OperatingSystem.IsWindows() && !config.IsLive && (config.CoreVersion & fullDumpVersions) != 0
                     ? config with { DumpKind = DumpKind.Full }
@@ -114,6 +130,31 @@ internal static class TestMatrices
 
         return data;
     }
+
+    internal static bool SupportsHeapEnumeration(TestConfig config) =>
+        SupportsHeapEnumeration(config, OperatingSystem.IsWindows());
+
+    internal static bool SupportsHeapEnumeration(TestConfig config, bool isWindows) =>
+        // https://github.com/dotnet/runtime/pull/132938: CDB /mw dumps omit the WKS card-table
+        // pointer slot, so cDAC cannot construct a heap until the runtime fix flows into this repo.
+        !isWindows
+        || config.Host != Host.Cdb
+        || config.Flavor != Flavor.SingleFile
+        || config.Dac != Dac.CDac;
+
+    internal static bool SupportsGcRootEnumeration(TestConfig config) =>
+        // Desktop SOS can fail GC-reference enumeration or corrupt the debugger host in clrstack -gc.
+        config.Flavor != Flavor.Framework;
+
+    internal static bool SupportsICorDebugStackWalk(TestConfig config) =>
+        SupportsICorDebugStackWalk(config, Environment.Is64BitProcess);
+
+    internal static bool SupportsICorDebugStackWalk(TestConfig config, bool is64BitProcess) =>
+        // Desktop x64 ICorDebug returns no frames for a dump captured at DivZero's second-chance crash.
+        !is64BitProcess
+        || config.Host != Host.Cdb
+        || config.Target != TargetCatalog.DivZero
+        || config.Flavor != Flavor.Framework;
 
     public static TheoryData<TestConfig> CoreFrameworkConditional(string[] targets)
     {

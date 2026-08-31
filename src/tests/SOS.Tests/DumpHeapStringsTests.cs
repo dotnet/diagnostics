@@ -15,7 +15,7 @@ namespace SOS.Tests;
 /// </summary>
 public sealed class DumpHeapStringsTests
 {
-    public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.NestedException]);
+    public static TheoryData<TestConfig> Matrix => TestMatrices.HeapEnumeration([TargetCatalog.NestedException]);
 
     [SosTheory]
     [MemberData(nameof(Matrix))]
