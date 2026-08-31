@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace SOS.TestHarness;
 
@@ -275,11 +276,40 @@ public static class SnapshotStore
 
         if (!File.Exists(dumpPath))
         {
+            if (IsKnownCreatedumpPermissionFailure(
+                coreVersion,
+                RuntimeInformation.ProcessArchitecture,
+                OperatingSystem.IsLinux(),
+                result.StandardOutput,
+                result.StandardError))
+            {
+                HarnessSkipException.Now(
+                    ".NET 8 createdump cannot read /proc/<pid>/mem on this Linux ARM64 host; " +
+                    "this runtime issue is fixed in later .NET versions.");
+            }
+
             throw new InvalidOperationException(
                 $"createdump did not produce '{dumpPath}' for {target.Project} ({flavor}); exit {result.ExitCode}.\n" +
                 $"stdout:\n{result.StandardOutput}\n" +
                 $"stderr:\n{result.StandardError}");
         }
+    }
+
+    internal static bool IsKnownCreatedumpPermissionFailure(
+        CoreVersion coreVersion,
+        Architecture architecture,
+        bool isLinux,
+        string stdout,
+        string stderr)
+    {
+        if (!isLinux || architecture != Architecture.Arm64 || coreVersion != CoreVersion.Net8)
+        {
+            return false;
+        }
+
+        string output = stdout + "\n" + stderr;
+        return output.Contains("open(/proc/", StringComparison.Ordinal) &&
+            output.Contains("/mem) FAILED Permission denied (13)", StringComparison.Ordinal);
     }
 
     /// <summary>Core/SingleFile snapshot capture: run the target once; its markers self-snapshot mid-run.</summary>

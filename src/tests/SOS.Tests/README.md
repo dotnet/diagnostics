@@ -23,6 +23,8 @@ out-of-support runtimes are opt-in to keep normal runs bounded.
 Single-file targets use both the matching legacy DAC and the universal cDAC on .NET 11; earlier runtimes
 use only the legacy DAC. Live LLDB navigation is excluded for single-file snapshot targets because the
 statically linked, stripped runtime does not expose the symbol needed to arm `bpmd`.
+Single-file rows are currently excluded on Alpine/musl because LLDB and dotnet-dump cannot discover the
+statically linked CoreCLR module there; Core rows continue to run.
 
 On Windows, reduced dumps of unsigned test runtimes require the machine-wide
 `DisableAuxProviderSignatureCheck` setting. When it is absent, Heap requests use Full dumps instead.

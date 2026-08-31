@@ -257,6 +257,13 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
+        // SOS hosts cannot discover the statically linked CoreCLR module in musl single-file processes
+        // or dumps. Keep Core coverage on Alpine while excluding unsupported single-file rows.
+        if (!IsFlavorSupportedOnRid(c.Flavor, RepoLayout.Rid))
+        {
+            return false;
+        }
+
         // dotnet-dump is post-mortem only; it has no live host.
         if (c.IsLive && c.Host == Host.DotnetDump)
         {
@@ -331,6 +338,9 @@ public sealed record TestConfig : IXunitSerializable
 
         return true;
     }
+
+    internal static bool IsFlavorSupportedOnRid(Flavor flavor, string rid) =>
+        flavor != Flavor.SingleFile || !rid.StartsWith("linux-musl-", StringComparison.Ordinal);
 
     internal static bool ExcludeSingleFileSnapshots(string? value) => value switch
     {

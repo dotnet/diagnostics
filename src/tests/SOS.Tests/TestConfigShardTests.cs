@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Runtime.InteropServices;
 using SOS.TestHarness;
 using Xunit;
 
@@ -161,6 +162,42 @@ public sealed class TestConfigShardTests
         Assert.True(TestMatrices.SupportsICorDebugStackWalk(config with { Host = Host.DotnetDump }, is64BitProcess: true));
         Assert.True(TestMatrices.SupportsICorDebugStackWalk(config with { Target = TargetCatalog.Scenarios }, is64BitProcess: true));
         Assert.True(TestMatrices.SupportsICorDebugStackWalk(config with { Flavor = Flavor.Core }, is64BitProcess: true));
+    }
+
+    [Theory]
+    [InlineData(Flavor.Core, "linux-musl-x64", true)]
+    [InlineData(Flavor.SingleFile, "linux-x64", true)]
+    [InlineData(Flavor.SingleFile, "linux-musl-x64", false)]
+    [InlineData(Flavor.SingleFile, "linux-musl-arm64", false)]
+    public void MuslExcludesOnlySingleFile(Flavor flavor, string rid, bool expected)
+    {
+        Assert.Equal(expected, TestConfig.IsFlavorSupportedOnRid(flavor, rid));
+    }
+
+    [Fact]
+    public void Net8LinuxArm64CreatedumpPermissionFailureIsKnown()
+    {
+        const string error = "open(/proc/123/mem) FAILED Permission denied (13)";
+
+        Assert.True(SnapshotStore.IsKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.Arm64, isLinux: true, error, string.Empty));
+        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
+            CoreVersion.Net11, Architecture.Arm64, isLinux: true, error, string.Empty));
+        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.X64, isLinux: true, error, string.Empty));
+        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.Arm64, isLinux: true, "unrelated failure", string.Empty));
+    }
+
+    [Theory]
+    [InlineData("Calculating live objects, this may take a while...", true)]
+    [InlineData("Calculating live objects complete: 42 objects from 3 roots", true)]
+    [InlineData("Caching GC roots, this may take a while.", true)]
+    [InlineData("Subsequent runs of this command will be faster.", true)]
+    [InlineData("0000000123456780", false)]
+    public void NotReachableInRangeIgnoresOnlyLivenessProgress(string line, bool expected)
+    {
+        Assert.Equal(expected, NativeAddressSpaceTests.IsLivenessProgress(line));
     }
 
     private static ShardSelection? Parse(string? index, string? count) =>
