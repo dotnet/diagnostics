@@ -61,33 +61,16 @@ namespace Microsoft.Diagnostics
             }
             SkipIfUnsigned(dbiPath);
             SkipIfUnsigned(dacPath);
-            Assert.True(RuntimeLibraryProvider.VerifySignature(
-                dbiPath,
-                ["1.3.6.1.4.1.311.84.4.1"],
-                out IDisposable fileLock));
+            Assert.True(AuthenticodeUtil.VerifyDacDll(dbiPath, out IDisposable fileLock));
             fileLock.Dispose();
-            Assert.True(RuntimeLibraryProvider.VerifySignature(
-                dacPath,
-                ["1.3.6.1.4.1.311.84.4.1"],
-                out fileLock));
+            Assert.True(AuthenticodeUtil.VerifyDacDll(dacPath, out fileLock));
             fileLock.Dispose();
-            Assert.False(RuntimeLibraryProvider.VerifySignature(
-                dbiPath,
-                ["1.3.6.1.4.1.311.10.3.6"],
-                out fileLock));
-            Assert.Null(fileLock);
 
-            Assert.False(RuntimeLibraryProvider.VerifySignature(
-                typeof(object).Assembly.Location,
-                ["1.3.6.1.4.1.311.84.4.1"],
-                out fileLock));
-            Assert.Null(fileLock);
+            Assert.False(AuthenticodeUtil.VerifyDacDll(typeof(object).Assembly.Location, out fileLock));
+            fileLock?.Dispose();
 
-            Assert.False(RuntimeLibraryProvider.VerifySignature(
-                typeof(DbgShimTests).Assembly.Location,
-                ["1.3.6.1.4.1.311.84.4.1"],
-                out fileLock));
-            Assert.Null(fileLock);
+            Assert.False(AuthenticodeUtil.VerifyDacDll(typeof(DbgShimTests).Assembly.Location, out fileLock));
+            fileLock?.Dispose();
         }
 
         [SkippableFact]
@@ -108,15 +91,9 @@ namespace Microsoft.Diagnostics
             }
             SkipIfUnsigned(desktopDbiPath);
             SkipIfUnsigned(desktopDacPath);
-            Assert.True(RuntimeLibraryProvider.VerifySignature(
-                desktopDbiPath,
-                ["1.3.6.1.4.1.311.84.4.1"],
-                out IDisposable fileLock));
+            Assert.True(AuthenticodeUtil.VerifyDacDll(desktopDbiPath, out IDisposable fileLock));
             fileLock.Dispose();
-            Assert.True(RuntimeLibraryProvider.VerifySignature(
-                desktopDacPath,
-                ["1.3.6.1.4.1.311.84.4.1"],
-                out fileLock));
+            Assert.True(AuthenticodeUtil.VerifyDacDll(desktopDacPath, out fileLock));
             fileLock.Dispose();
         }
 
