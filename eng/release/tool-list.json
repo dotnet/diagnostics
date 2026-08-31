@@ -1,4 +1,11 @@
 {
+  "ReleaseToolConstants": {
+    "PublicBundleToolsPathInDrop": "diagnostics/bundledtools",
+    "InternalBundleToolsPathInDrop": "diagnostics-internal/bundledtools",
+    "BundledToolsPrefix": "diagnostic-tools-",
+    "BundledToolsCategory": "ToolBundleAssets",
+    "PdbCategory": "PdbAssets"
+  },
   "ToolBundleAssets": {
     "AkaMsSchema": "https://aka.ms/<FileNameNoExt>/<Rid>",
     "AssetList": [

@@ -20,10 +20,12 @@ namespace DiagnosticsReleaseTool.Impl
         private readonly ReleaseMetadata _productReleaseMetadata;
         private readonly JsonDocument _assetManifestManifestDom;
         private readonly ILogger _logger;
+        private readonly string _bundledToolsCategory;
 
-        public DiagnosticsManifestGenerator(ReleaseMetadata productReleaseMetadata, FileInfo toolManifest, ILogger logger)
+        public DiagnosticsManifestGenerator(ReleaseMetadata productReleaseMetadata, FileInfo toolManifest, string bundledToolsCategory, ILogger logger)
         {
             _productReleaseMetadata = productReleaseMetadata;
+            _bundledToolsCategory = bundledToolsCategory;
             using Stream manifestStream = File.OpenRead(toolManifest.FullName);
             _assetManifestManifestDom = JsonDocument.Parse(manifestStream, new JsonDocumentOptions
             {
@@ -64,14 +66,14 @@ namespace DiagnosticsReleaseTool.Impl
             return stream;
         }
 
-        private static void WriteBundledTools(Utf8JsonWriter writer, IEnumerable<FileReleaseData> filesProcessed)
+        private void WriteBundledTools(Utf8JsonWriter writer, IEnumerable<FileReleaseData> filesProcessed)
         {
-            writer.WritePropertyName(DiagnosticsRepoHelpers.BundledToolsCategory);
+            writer.WritePropertyName(_bundledToolsCategory);
             writer.WriteStartArray();
 
             IEnumerable<FileReleaseData> bundledTools =
                 filesProcessed.Where(
-                    file => file.FileMetadata.AssetCategory == DiagnosticsRepoHelpers.BundledToolsCategory);
+                    file => file.FileMetadata.AssetCategory == _bundledToolsCategory);
 
             foreach (FileReleaseData fileToRelease in bundledTools)
             {
@@ -81,6 +83,7 @@ namespace DiagnosticsReleaseTool.Impl
                 writer.WriteString("PublishRelativePath", fileToRelease.FileMap.RelativeOutputPath);
                 writer.WriteString("PublishedPath", fileToRelease.PublishUri);
                 writer.WriteString("Sha512", fileToRelease.FileMetadata.Sha512);
+                writer.WriteBoolean("IsAssetForPublicRelease", fileToRelease.IsAssetForPublicRelease);
                 writer.WriteEndObject();
             }
 
@@ -102,6 +105,7 @@ namespace DiagnosticsReleaseTool.Impl
                 writer.WriteString("PublishRelativePath", fileToRelease.FileMap.RelativeOutputPath);
                 writer.WriteString("PublishedPath", fileToRelease.PublishUri);
                 writer.WriteString("Sha512", fileToRelease.FileMetadata.Sha512);
+                writer.WriteBoolean("IsAssetForPublicRelease", fileToRelease.IsAssetForPublicRelease);
                 writer.WriteEndObject();
             }
 

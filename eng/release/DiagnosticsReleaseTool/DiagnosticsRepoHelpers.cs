@@ -3,18 +3,42 @@
 
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using ReleaseTool.Core;
 
 namespace DiagnosticsReleaseTool.Util
 {
-    public static partial class DiagnosticsRepoHelpers
+    public sealed partial class DiagnosticsRepoHelpers
     {
-        public static readonly string PublicBundleToolsPathInDrop = System.IO.Path.Combine("diagnostics", "bundledtools");
-        public static readonly string InternalBundleToolsPathInDrop = System.IO.Path.Combine("diagnostics-internal", "bundledtools");
-        public const string BundledToolsPrefix = "diagnostic-tools-";
-        public const string BundledToolsCategory = "ToolBundleAssets";
-        public const string PdbCategory = "PdbAssets";
+        private readonly string _publicBundleToolsPathInDrop;
+        private readonly string _internalBundleToolsPathInDrop;
+        private readonly string _bundledToolsPrefix;
+        private readonly string _pdbCategory;
+
+        public string BundledToolsCategory { get; }
+
+        public DiagnosticsRepoHelpers(FileInfo toolManifest)
+        {
+            using FileStream manifestStream = File.OpenRead(toolManifest.FullName);
+            using JsonDocument manifest = JsonDocument.Parse(manifestStream, new JsonDocumentOptions
+            {
+                AllowTrailingCommas = true,
+                CommentHandling = JsonCommentHandling.Skip
+            });
+
+            JsonElement constants = manifest.RootElement.GetProperty("ReleaseToolConstants");
+            _publicBundleToolsPathInDrop = NormalizePath(constants.GetProperty("PublicBundleToolsPathInDrop").GetString());
+            _internalBundleToolsPathInDrop = NormalizePath(constants.GetProperty("InternalBundleToolsPathInDrop").GetString());
+            _bundledToolsPrefix = constants.GetProperty("BundledToolsPrefix").GetString();
+            BundledToolsCategory = constants.GetProperty("BundledToolsCategory").GetString();
+            _pdbCategory = constants.GetProperty("PdbCategory").GetString();
+        }
+
+        private static string NormalizePath(string path)
+        {
+            return path.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+        }
 
         private static string GetRidFromBundleZip(FileInfo zipFile)
         {
@@ -38,11 +62,11 @@ namespace DiagnosticsReleaseTool.Util
             throw new Exception($"Unexpected failure in RID extraction from {zipFile}.");
         }
 
-        public static FileMetadata GetMetadataForToolFile(FileInfo zipFile, FileInfo fileInZip)
+        public FileMetadata GetMetadataForToolFile(FileInfo zipFile, FileInfo fileInZip)
         {
             string category = fileInZip.Extension switch
             {
-                ".pdb" => PdbCategory,
+                ".pdb" => _pdbCategory,
                 ".exe" => BundledToolsCategory,
                 "" => BundledToolsCategory,
                 _ => "UnknownAssets"
@@ -59,16 +83,16 @@ namespace DiagnosticsReleaseTool.Util
                     sha512: sha512);
         }
 
-        public static string GetToolPublishRelativePath(FileInfo zipFile, FileInfo fileInZip)
+        public string GetToolPublishRelativePath(FileInfo zipFile, FileInfo fileInZip)
         {
             return FormattableString.Invariant($"{BundledToolsCategory}/{GetRidFromBundleZip(zipFile)}/{fileInZip.Name}");
         }
 
-        public static bool IsBundledToolArchive(FileInfo file)
+        public bool IsBundledToolArchive(FileInfo file)
         {
             return file.Exists && file.Extension == ".zip"
-                && (file.DirectoryName.Contains(InternalBundleToolsPathInDrop) || file.DirectoryName.Contains(PublicBundleToolsPathInDrop))
-                && file.Name.StartsWith(BundledToolsPrefix);
+                && (file.DirectoryName.Contains(_internalBundleToolsPathInDrop) || file.DirectoryName.Contains(_publicBundleToolsPathInDrop))
+                && file.Name.StartsWith(_bundledToolsPrefix);
         }
 
         public static string GetSha512(string filePath)

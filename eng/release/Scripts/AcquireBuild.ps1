@@ -4,6 +4,7 @@ param(
   [Parameter(Mandatory=$true)][string] $DownloadTargetPath,
   [Parameter(Mandatory=$true)][string] $AzdoToken,
   [Parameter(Mandatory=$false)][string] $DarcVersion = $null,
+  [switch] $IncludeNonShipping,
   [switch] $help,
   [Parameter(ValueFromRemainingArguments=$true)][String[]]$properties
 )
@@ -13,6 +14,7 @@ function Write-Help() {
     Write-Host "  -ReleaseVersion <value>           Name to give the diagnostics release."
     Write-Host "  -DownloadTargetPath <value>       Path to download the build to."
     Write-Host "  -AzdoToken <value>                Azure DevOps token to use for builds queries"
+    Write-Host "  -IncludeNonShipping               Include non-shipping assets in the download."
     Write-Host ""
 }
 
@@ -30,8 +32,6 @@ if ($null -ne $properties) {
 }
 
 try {
-    $ci = $true
-
     $darc = $null
     try {
         $darc = (Get-Command darc).Source
@@ -41,20 +41,27 @@ try {
         $darc = Get-Darc $DarcVersion
     }
 
-    & $darc gather-drop `
-        --id $BarBuildId `
-        --release-name $ReleaseVersion `
-        --output-dir $DownloadTargetPath `
-        --overwrite `
-        --use-azure-credential-for-blobs `
-        --azdev-pat $AzdoToken `
-        --separated `
-        --continue-on-error `
-        --ci
+    $darcArgs = @(
+        "gather-drop",
+        "--id", $BarBuildId,
+        "--release-name", $ReleaseVersion,
+        "--output-dir", $DownloadTargetPath,
+        "--overwrite",
+        "--use-azure-credential-for-blobs",
+        "--azdev-pat", $AzdoToken,
+        "--separated",
+        "--continue-on-error",
+        "--ci"
+    )
+
+    if ($IncludeNonShipping) {
+        $darcArgs += "--non-shipping"
+    }
+
+    & $darc @darcArgs
 
     if ($LastExitCode -ne 0) {
-        Write-Host "Error: unable to gather the assets from build $BarBuildId to $DownloadTargetPath using darc."
-        Write-Host $_
+        Write-Host "Error: unable to gather the assets from build $BarBuildId to $DownloadTargetPath using darc. Exit code: $LastExitCode"
         exit 1
     }
 

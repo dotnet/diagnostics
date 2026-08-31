@@ -13,24 +13,26 @@ namespace ReleaseTool.Core
 {
     public class Release : IDisposable
     {
-        // TODO: there might be a need to expose this for multiple product roots.
-        private readonly DirectoryInfo _productBuildPath;
+        private readonly DirectoryInfo _publicReleasePath;
+        private readonly DirectoryInfo _internalOnlyReleasePath;
         private readonly List<ILayoutWorker> _layoutWorkers;
         private readonly List<IReleaseVerifier> _verifiers;
         private readonly IPublisher _publisher;
         private readonly IManifestGenerator _manifestGenerator;
         private readonly string _manifestSavePath;
+        private readonly Func<FileInfo, bool> _shouldSkipFile;
 
         private readonly List<FileReleaseData> _filesToRelease;
         private ILogger _logger;
 
-        public Release(DirectoryInfo productBuildPath,
+        public Release(DirectoryInfo publicReleasePath, DirectoryInfo internalOnlyReleasePath,
             List<ILayoutWorker> layoutWorkers, List<IReleaseVerifier> verifiers,
-            IPublisher publisher, IManifestGenerator manifestGenerator, string manifestSavePath)
+            IPublisher publisher, IManifestGenerator manifestGenerator, string manifestSavePath,
+            Func<FileInfo, bool> shouldSkipFile = null)
         {
-            if (productBuildPath is null)
+            if (publicReleasePath is null)
             {
-                throw new ArgumentException("Product build path can't be empty or null.");
+                throw new ArgumentException("Public release path can't be empty or null.");
             }
 
             if (layoutWorkers is null)
@@ -48,12 +50,14 @@ namespace ReleaseTool.Core
                 throw new ArgumentException($"{nameof(manifestGenerator)} can't be null.");
             }
 
-            _productBuildPath = productBuildPath;
+            _publicReleasePath = publicReleasePath;
+            _internalOnlyReleasePath = internalOnlyReleasePath;
             _layoutWorkers = layoutWorkers;
             _verifiers = verifiers;
             _publisher = publisher;
             _manifestGenerator = manifestGenerator;
             _manifestSavePath = manifestSavePath ?? Path.Join(Path.GetTempPath(), Path.GetRandomFileName(), "releaseManifest");
+            _shouldSkipFile = shouldSkipFile ?? (_ => false);
             _filesToRelease = new List<FileReleaseData>();
             _logger = null;
             // TODO: Validate drop to publish exists.
@@ -71,13 +75,23 @@ namespace ReleaseTool.Core
             int unusedFiles;
             try
             {
-                unusedFiles = await LayoutFilesAsync(ct);
+                unusedFiles = await LayoutFilesAsync(_publicReleasePath, isAssetForPublicRelease: true, ct);
 
-                // TODO: Implement switch to ignore files that are not used as option.
                 if (unusedFiles != 0)
                 {
-                    _logger.LogError("{UnusedFiles} files were not handled for release.", unusedFiles);
+                    _logger.LogError("{UnusedFiles} public release files were not handled for release.", unusedFiles);
                     return unusedFiles;
+                }
+
+                if (_internalOnlyReleasePath is not null)
+                {
+                    unusedFiles = await LayoutFilesAsync(_internalOnlyReleasePath, isAssetForPublicRelease: false, ct);
+
+                    if (unusedFiles != 0)
+                    {
+                        _logger.LogError("{UnusedFiles} internal-only release files were not handled for release.", unusedFiles);
+                        return unusedFiles;
+                    }
                 }
 
                 // TODO: Verification
@@ -181,21 +195,29 @@ namespace ReleaseTool.Core
             return unpublishedFiles;
         }
 
-        private async Task<int> LayoutFilesAsync(CancellationToken ct)
+        private async Task<int> LayoutFilesAsync(DirectoryInfo buildPath, bool isAssetForPublicRelease, CancellationToken ct)
         {
             int unhandledFiles = 0;
             HashSet<string> relativePublishPathsUsed = new();
 
             using IDisposable scope = _logger.BeginScope("Laying out files");
 
-            _logger.LogInformation("Laying out files from {_productBuildPath}", _productBuildPath.FullName);
+            _logger.LogInformation("Laying out {ReleaseType} files from {BuildPath}",
+                isAssetForPublicRelease ? "public release" : "internal-only release",
+                buildPath.FullName);
 
             // TODO: Make this parallel using Task.Run + semaphore to batch process files. Need to make collections concurrent or have single
             //       queue to aggregate results.
             // TODO: The file enumeration should have the possibility to inject a custom enumerator. Useful in case there's only subsets of files.
             //       For example, shipping only files.
-            foreach (FileInfo file in _productBuildPath.EnumerateFiles("*", SearchOption.AllDirectories))
+            foreach (FileInfo file in buildPath.EnumerateFiles("*", SearchOption.AllDirectories))
             {
+                if (_shouldSkipFile(file))
+                {
+                    _logger.LogTrace("Skipping file {File}", file);
+                    continue;
+                }
+
                 bool isProcessed = false;
                 foreach (ILayoutWorker worker in _layoutWorkers)
                 {
@@ -236,8 +258,13 @@ namespace ReleaseTool.Core
                                 return -1;
                             }
                             relativePublishPathsUsed.Add(dstPath);
-                            _logger.LogTrace("{SrcPath} -> {DstPath} [{FileMetadata}]", srcPath, dstPath, fileMetadata);
-                            _filesToRelease.Add(new FileReleaseData(fileMap, fileMetadata));
+                            _logger.LogTrace(
+                                "{SrcPath} -> {DstPath} [{FileMetadata}] [IsAssetForPublicRelease: {IsAssetForPublicRelease}]",
+                                srcPath,
+                                dstPath,
+                                fileMetadata,
+                                isAssetForPublicRelease);
+                            _filesToRelease.Add(new FileReleaseData(fileMap, fileMetadata, isAssetForPublicRelease));
                         }
                     }
                 }

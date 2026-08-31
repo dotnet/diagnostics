@@ -30,6 +30,8 @@ namespace DiagnosticsReleaseTool.CommandLine
             {
                 // Inputs
                 InputDropPathOption, ToolManifestPathOption, ReleaseNameOption, ReleaseProductAllowListOption, ReleaseRepoAllowListOption,
+                // Filters
+                SkipFilesOption,
                 // Toggles
                 ToolManifestVerificationOption, DiagnosticLoggingOption,
                 // Outputs
@@ -49,7 +51,8 @@ namespace DiagnosticsReleaseTool.CommandLine
                     releaseRepoAllowList: parseResult.GetValue(ReleaseRepoAllowListOption),
                     accountName: parseResult.GetValue(AzureStorageAccountNameOption),
                     clientId: parseResult.GetValue(AzureStorageAccountKeyOption),
-                    containerName: parseResult.GetValue(AzureStorageContainerNameOption)
+                    containerName: parseResult.GetValue(AzureStorageContainerNameOption),
+                    skipFiles: parseResult.GetValue(SkipFilesOption)
                 );
 
                 bool isVerbose = parseResult.GetValue(DiagnosticLoggingOption);
@@ -108,6 +111,14 @@ namespace DiagnosticsReleaseTool.CommandLine
                 AllowMultipleArgumentsPerToken = true,
                 Description = "List of allowed repository urls for this release.",
                 Required = true
+            };
+
+        private static Option<string[]> SkipFilesOption =
+            new("--skip-files")
+            {
+                Arity = ArgumentArity.ZeroOrMore,
+                AllowMultipleArgumentsPerToken = true,
+                Description = "Comma-separated list of file names to skip during release processing."
             };
 
         private static readonly Option<DirectoryInfo> StagingPathOption = InitStagingPath();

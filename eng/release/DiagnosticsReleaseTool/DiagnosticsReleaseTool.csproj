@@ -3,12 +3,30 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <NoWarn>$(NoWarn);CA2007</NoWarn>
+    <IsPackable>true</IsPackable>
+    <IsShipping>true</IsShipping>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>diagnostics-release</ToolCommandName>
+    <PackageId>Microsoft.Diagnostics.ReleaseTool</PackageId>
+    <Description>Prepares .NET diagnostics assets and manifests for release.</Description>
+    <PackageTags>Diagnostics;Release</PackageTags>
+    <PackageReleaseNotes>$(Description)</PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackAsToolShimRuntimeIdentifiers>win-x64;win-x86;osx-x64</PackAsToolShimRuntimeIdentifiers>
+    <PackagedShimOutputRootDirectory>$(OutputPath)</PackagedShimOutputRootDirectory>
   </PropertyGroup>
 
   <ItemGroup>
     <Content Include="logging.json" CopyToPublishDirectory="PreserveNewest">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="$(RepoRoot)THIRD-PARTY-NOTICES.TXT"
+          Pack="true"
+          Visible="false"
+          PackagePath="THIRD-PARTY-NOTICES.txt" />
+    <None Include="README.md"
+          Pack="true"
+          PackagePath="/" />
   </ItemGroup>
 
   <ItemGroup>
