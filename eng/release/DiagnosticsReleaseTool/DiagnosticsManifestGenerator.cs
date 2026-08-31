@@ -20,12 +20,10 @@ namespace DiagnosticsReleaseTool.Impl
         private readonly ReleaseMetadata _productReleaseMetadata;
         private readonly JsonDocument _assetManifestManifestDom;
         private readonly ILogger _logger;
-        private readonly string _bundledToolsCategory;
 
-        public DiagnosticsManifestGenerator(ReleaseMetadata productReleaseMetadata, FileInfo toolManifest, string bundledToolsCategory, ILogger logger)
+        public DiagnosticsManifestGenerator(ReleaseMetadata productReleaseMetadata, FileInfo toolManifest, ILogger logger)
         {
             _productReleaseMetadata = productReleaseMetadata;
-            _bundledToolsCategory = bundledToolsCategory;
             using Stream manifestStream = File.OpenRead(toolManifest.FullName);
             _assetManifestManifestDom = JsonDocument.Parse(manifestStream, new JsonDocumentOptions
             {
@@ -66,14 +64,14 @@ namespace DiagnosticsReleaseTool.Impl
             return stream;
         }
 
-        private void WriteBundledTools(Utf8JsonWriter writer, IEnumerable<FileReleaseData> filesProcessed)
+        private static void WriteBundledTools(Utf8JsonWriter writer, IEnumerable<FileReleaseData> filesProcessed)
         {
-            writer.WritePropertyName(_bundledToolsCategory);
+            writer.WritePropertyName(DiagnosticsRepoHelpers.BundledToolsCategory);
             writer.WriteStartArray();
 
             IEnumerable<FileReleaseData> bundledTools =
                 filesProcessed.Where(
-                    file => file.FileMetadata.AssetCategory == _bundledToolsCategory);
+                    file => file.FileMetadata.AssetCategory == DiagnosticsRepoHelpers.BundledToolsCategory);
 
             foreach (FileReleaseData fileToRelease in bundledTools)
             {

@@ -22,7 +22,6 @@ namespace DiagnosticsReleaseTool.Impl
         {
             // TODO: This will throw if invalid drop path is given.
             DarcHelpers darcLayoutHelper = new(releaseConfig.DropPath);
-            DiagnosticsRepoHelpers repoHelpers = new(releaseConfig.ToolManifest);
 
             ILogger logger = GetDiagLogger(verbose);
 
@@ -32,9 +31,9 @@ namespace DiagnosticsReleaseTool.Impl
                 new NugetLayoutWorker(stagingPath: releaseConfig.StagingDirectory.FullName),
                 new SymbolPackageLayoutWorker(stagingPath: releaseConfig.StagingDirectory.FullName),
                 new ZipLayoutWorker(
-                    shouldHandleFileFunc: repoHelpers.IsBundledToolArchive,
-                    getRelativePathFromZipAndInnerFileFunc: repoHelpers.GetToolPublishRelativePath,
-                    getMetadataForInnerFileFunc: repoHelpers.GetMetadataForToolFile,
+                    shouldHandleFileFunc: DiagnosticsRepoHelpers.IsBundledToolArchive,
+                    getRelativePathFromZipAndInnerFileFunc: DiagnosticsRepoHelpers.GetToolPublishRelativePath,
+                    getMetadataForInnerFileFunc: DiagnosticsRepoHelpers.GetMetadataForToolFile,
                     stagingPath: releaseConfig.StagingDirectory.FullName
                 )
             };
@@ -53,11 +52,7 @@ namespace DiagnosticsReleaseTool.Impl
             string publishManifestPath = Path.Combine(releaseConfig.StagingDirectory.FullName, ManifestName);
 
             IPublisher releasePublisher = new AzureBlobBublisher(releaseConfig.AccountName, releaseConfig.ClientId, releaseConfig.ContainerName, releaseConfig.ReleaseName, logger);
-            IManifestGenerator manifestGenerator = new DiagnosticsManifestGenerator(
-                releaseMetadata,
-                releaseConfig.ToolManifest,
-                repoHelpers.BundledToolsCategory,
-                logger);
+            IManifestGenerator manifestGenerator = new DiagnosticsManifestGenerator(releaseMetadata, releaseConfig.ToolManifest, logger);
 
             using Release diagnosticsRelease = new(
                 publicReleasePath: shippingDirectory,

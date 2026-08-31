@@ -4,7 +4,7 @@
     <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
     <NoWarn>$(NoWarn);CA2007</NoWarn>
     <IsPackable>true</IsPackable>
-    <IsShipping>true</IsShipping>
+    <IsShipping>false</IsShipping>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>diagnostics-release</ToolCommandName>
     <PackageId>Microsoft.Diagnostics.ReleaseTool</PackageId>
