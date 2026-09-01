@@ -75,7 +75,12 @@ namespace ReleaseTool.Core
             int unusedFiles;
             try
             {
-                unusedFiles = await LayoutFilesAsync(_publicReleasePath, isAssetForPublicRelease: true, ct);
+                HashSet<string> relativePublishPathsUsed = new();
+                unusedFiles = await LayoutFilesAsync(
+                    _publicReleasePath,
+                    isAssetForPublicRelease: true,
+                    relativePublishPathsUsed,
+                    ct);
 
                 if (unusedFiles != 0)
                 {
@@ -85,7 +90,11 @@ namespace ReleaseTool.Core
 
                 if (_internalOnlyReleasePath is not null)
                 {
-                    unusedFiles = await LayoutFilesAsync(_internalOnlyReleasePath, isAssetForPublicRelease: false, ct);
+                    unusedFiles = await LayoutFilesAsync(
+                        _internalOnlyReleasePath,
+                        isAssetForPublicRelease: false,
+                        relativePublishPathsUsed,
+                        ct);
 
                     if (unusedFiles != 0)
                     {
@@ -195,10 +204,13 @@ namespace ReleaseTool.Core
             return unpublishedFiles;
         }
 
-        private async Task<int> LayoutFilesAsync(DirectoryInfo buildPath, bool isAssetForPublicRelease, CancellationToken ct)
+        private async Task<int> LayoutFilesAsync(
+            DirectoryInfo buildPath,
+            bool isAssetForPublicRelease,
+            HashSet<string> relativePublishPathsUsed,
+            CancellationToken ct)
         {
             int unhandledFiles = 0;
-            HashSet<string> relativePublishPathsUsed = new();
 
             using IDisposable scope = _logger.BeginScope("Laying out files");
 

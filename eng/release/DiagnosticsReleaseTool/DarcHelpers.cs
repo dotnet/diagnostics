@@ -97,7 +97,14 @@ namespace DiagnosticsReleaseTool.Util
 
                 DirectoryInfo shippingDirectory = new(matchingProducts.First().GetProperty("fileshare").GetString());
 
-                string nonShippingPath = shippingDirectory.FullName.Replace("shipping", "nonshipping");
+                if (!shippingDirectory.Name.Equals("shipping", StringComparison.OrdinalIgnoreCase) ||
+                    shippingDirectory.Parent is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Shipping directory '{shippingDirectory.FullName}' does not end in the expected 'shipping' directory.");
+                }
+
+                string nonShippingPath = Path.Combine(shippingDirectory.Parent.FullName, "nonshipping");
                 DirectoryInfo nonShippingDirectory = Directory.Exists(nonShippingPath) ? new(nonShippingPath) : null;
 
                 return (shippingDirectory, nonShippingDirectory);

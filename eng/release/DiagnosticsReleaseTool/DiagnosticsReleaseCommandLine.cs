@@ -118,7 +118,7 @@ namespace DiagnosticsReleaseTool.CommandLine
             {
                 Arity = ArgumentArity.ZeroOrMore,
                 AllowMultipleArgumentsPerToken = true,
-                Description = "Comma-separated list of file names to skip during release processing."
+                Description = "List of file names to skip during release processing."
             };
 
         private static readonly Option<DirectoryInfo> StagingPathOption = InitStagingPath();
