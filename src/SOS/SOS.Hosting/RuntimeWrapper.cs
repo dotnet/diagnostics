@@ -345,7 +345,7 @@ namespace SOS.Hosting
             corDebugProcess = IntPtr.Zero;
             using RuntimeLibraryProvider libraryProvider = new(
                 _runtime.GetDbiFilePath,
-                GetDacFilePathForProvider,
+                () => _runtime.GetDacFilePath(out _),
                 _services.GetService<ISettingsService>()?.DacSignatureVerificationEnabled ?? true);
 
             IClrDataProcessActivator activator = _services.GetService<IClrDataProcessActivator>();
@@ -365,11 +365,6 @@ namespace SOS.Hosting
                 libraryProvider.ILibraryProvider,
                 policy,
                 out corDebugProcess);
-        }
-
-        private string GetDacFilePathForProvider()
-        {
-            return _runtime.GetDacFilePath(out _);
         }
 
         private IntPtr GetDacHandle()
