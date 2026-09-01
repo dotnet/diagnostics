@@ -33,6 +33,7 @@ namespace SOS.Extensions
         private ref readonly IDebuggerServicesVTable VTable => ref Unsafe.AsRef<IDebuggerServicesVTable>(_vtable);
 
         private readonly HostType _hostType;
+        private readonly HResult _symbolOptionsResult = HResult.S_OK;
 
         /// <summary>
         /// A pointer to the underlying IDebugClient interface if the host is DbgEng.
@@ -51,6 +52,12 @@ namespace SOS.Extensions
                 if (obj is IDebugClient5 client)
                 {
                     DebugClient = client;
+                    if (client is IDebugSymbols5 symbols)
+                    {
+                        // Use stable public symbol names instead of CodeView display names.
+                        // See https://github.com/dotnet/runtime/pull/132735.
+                        _symbolOptionsResult = symbols.AddSymbolOptions(SYMOPT.PUBLICS_ONLY);
+                    }
                 }
             }
         }
@@ -330,6 +337,13 @@ namespace SOS.Extensions
 
         public HResult GetSymbolByOffset(int moduleIndex, ulong address, out string symbol, out ulong displacement)
         {
+            if (!_symbolOptionsResult.IsOK)
+            {
+                symbol = null;
+                displacement = 0;
+                return _symbolOptionsResult;
+            }
+
             symbol = null;
 
             // Get the symbol length first
