@@ -240,7 +240,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             // <summary>Render each stack of frames.</summary>
             void RenderStacks()
             {
-                Stack<(AsyncObject AsyncObject, int Depth)> stack = new();
+                Stack<(ClrObject Object, AsyncObject? AsyncObject, int Depth)> stack = new();
 
                 // Find every top-level object (ones that nothing else has as a continuation) and output
                 // a stack starting from each.
@@ -369,39 +369,40 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     // Push the root node onto the stack to start the iteration.  Then as long as there are nodes left
                     // on the stack, pop the next, render it, and push any continuations it may have back onto the stack.
                     Debug.Assert(stack.Count == 0);
-                    stack.Push((top, depth));
+                    stack.Push((top.Object, top, depth));
                     while (stack.Count > 0)
                     {
-                        (AsyncObject frame, depth) = stack.Pop();
-
-                        Write($"{Tabs(depth)}");
-                        WriteAddress(frame.Object.Address, asyncObject: true);
-                        Write(" ");
-                        WriteMethodTable(frame.Object.Type?.MethodTable ?? 0, asyncObject: true);
-                        Write($" {(frame.IsStateMachine ? $"({frame.AwaitState})" : $"({DescribeTaskFlags(frame.TaskStateFlags)})")} {Describe(frame.Object)}");
-                        WriteCodeLink(frame.NativeCode);
-                        WriteLine("");
-
-                        if (DisplayFields)
+                        (ClrObject frameObject, AsyncObject? frame, depth) = stack.Pop();
+                        if (frame is not null)
                         {
-                            RenderFields(frame.StateMachine ?? frame.Object, depth + 4); // +4 for extra indent for fields
+                            Write($"{Tabs(depth)}");
+                            WriteAddress(frameObject.Address, asyncObject: true);
+                            Write(" ");
+                            WriteMethodTable(frameObject.Type?.MethodTable ?? 0, asyncObject: true);
+                            Write($" {(frame.IsStateMachine ? $"({frame.AwaitState})" : $"({DescribeTaskFlags(frame.TaskStateFlags)})")} {Describe(frameObject)}");
+                            WriteCodeLink(frame.NativeCode);
+                            WriteLine("");
+
+                            if (DisplayFields)
+                            {
+                                RenderFields(frame.StateMachine ?? frameObject, depth + 4); // +4 for extra indent for fields
+                            }
+
+                            for (int i = frame.Continuations.Count - 1; i >= 0; i--)
+                            {
+                                ClrObject continuation = frame.Continuations[i];
+                                objects.TryGetValue(continuation, out AsyncObject? asyncContinuation);
+                                stack.Push((continuation, asyncContinuation, depth + 1));
+                            }
                         }
-
-                        foreach (ClrObject continuation in frame.Continuations)
+                        else
                         {
-                            if (objects.TryGetValue(continuation, out AsyncObject asyncContinuation))
-                            {
-                                stack.Push((asyncContinuation, depth + 1));
-                            }
-                            else
-                            {
-                                string state = TryGetTaskStateFlags(continuation, out int flags) ? DescribeTaskFlags(flags) : "";
-                                Write($"{Tabs(depth + 1)}");
-                                WriteAddress(continuation.Address, asyncObject: true);
-                                Write(" ");
-                                WriteMethodTable(continuation.Type?.MethodTable ?? 0, asyncObject: true);
-                                WriteLine($" ({state}) {Describe(continuation)}");
-                            }
+                            string state = TryGetTaskStateFlags(frameObject, out int flags) ? DescribeTaskFlags(flags) : "";
+                            Write($"{Tabs(depth)}");
+                            WriteAddress(frameObject.Address, asyncObject: true);
+                            Write(" ");
+                            WriteMethodTable(frameObject.Type?.MethodTable ?? 0, asyncObject: true);
+                            WriteLine($" ({state}) {Describe(frameObject)}");
                         }
                     }
 
