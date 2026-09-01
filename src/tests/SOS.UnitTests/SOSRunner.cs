@@ -1620,6 +1620,10 @@ public class SOSRunner : IDisposable
         {
             defines.Add("ALPINE");
         }
+        if (_config.IsDesktop)
+        {
+            defines.Add("DESKTOP");
+        }
         // This is a special "OR" of two conditions. Add this is easier than changing the parser to support "OR".
         if (_config.IsNETCore || Debugger == NativeDebugger.DotNetDump)
         {

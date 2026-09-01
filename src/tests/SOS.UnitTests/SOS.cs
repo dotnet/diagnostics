@@ -479,7 +479,9 @@ public class SOSOverflowTests
                 DumpDiagnostics = config.IsNETCore && config.RuntimeFrameworkVersionMajor >= 6,
                 // Single file dumps don't capture the overflow exception info so disable testing against a dump
                 // Issue: https://github.com/dotnet/diagnostics/issues/2515
-                TestDump = !config.PublishSingleFile,
+                // Desktop CLR heap dumps don't expose the stack overflow exception through the thread data.
+                // Issue: https://github.com/dotnet/diagnostics/issues/5757
+                TestDump = !config.PublishSingleFile && !config.IsDesktop,
                 // The .NET Core createdump facility may not catch stack overflow so use gdb to generate dump
                 DumpGenerator = config.StackOverflowCreatesDump ? SOSRunner.DumpGenerator.CreateDump : SOSRunner.DumpGenerator.NativeDebugger
             },

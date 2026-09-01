@@ -37,7 +37,12 @@ VERIFY:\[.*[\\|/]Debuggees[\\|/].*DivZero[\\|/]DivZero\.cs @ 24\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.F2(\(.*\))?\+0x<HEXVAL>\s+
 VERIFY:\[.*[\\|/]Debuggees[\\|/].*DivZero[\\|/]DivZero\.cs @ 36\s*\]\s*
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+[Dd]iv[Zz]ero.*!C\.Main(\(.*\))?\+0x<HEXVAL>\s+
+IFDEF:DESKTOP
+VERIFY:\[.*[\\|/]Debuggees[\\|/].*DivZero[\\|/]DivZero\.cs @ 56\s*\]\s*
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
 VERIFY:\[.*[\\|/]Debuggees[\\|/].*DivZero[\\|/]DivZero\.cs @ 57\s*\]\s*
+ENDIF:DESKTOP
 
 # Verify that Threads (clrthreads) works
 SOSCOMMAND:clrthreads
