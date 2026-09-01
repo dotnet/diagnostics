@@ -41,7 +41,7 @@ usage_list+=("-test: run xunit tests")
 usage_list+=("-methodfilter: pass method filter to xunit runner (Namespace.ClassName.MethodName)")
 usage_list+=("-classfilter: pass class filter to xunit runner (Namespace.ClassName)")
 usage_list+=("-dacmode: which DAC/cDAC the SOS tests load: cdac, cdacverify, or dac.")
-usage_list+=("-cdacpath: path to an mscordaccore_universal to overlay next to sos.dll (only with -dacmode cdac).")
+usage_list+=("-cdacpath: path to an mscordaccore_universal whose sibling universal DBI is overlaid next to SOS (only with -dacmode cdac).")
 
 handle_arguments() {
     lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
@@ -243,9 +243,9 @@ if [[ "$__NativeBuild" == 1 ]]; then
 fi
 
 #
-# Overlay an externally-provided cDAC (libmscordaccore_universal) next to the freshly built sos so
-# SOS resolves it from its own native binaries directory. Used by the cdac DacMode to exercise the
-# runtime-under-test's own cDAC instead of the copy restored from a referenced runtime package.
+# Overlay an externally-provided cDAC transport next to the freshly built sos. SOS resolves the cDAC
+# and universal DBI from its own native binaries directory, so both files must come from the runtime
+# under test instead of mixing one with the copy restored from a referenced runtime package.
 #
 if [[ -n "$__CDacPath" ]]; then
     if [[ ! -f "$__CDacPath" ]]; then
@@ -254,12 +254,21 @@ if [[ -n "$__CDacPath" ]]; then
     fi
     if [[ "$__TargetOS" == "osx" ]]; then
         __CDacDestName="libmscordaccore_universal.dylib"
+        __DbiName="libmscordbi_universal.dylib"
     else
         __CDacDestName="libmscordaccore_universal.so"
+        __DbiName="libmscordbi_universal.so"
+    fi
+    __DbiPath="$(dirname "$__CDacPath")/$__DbiName"
+    if [[ ! -f "$__DbiPath" ]]; then
+        echo "-cdacpath requires the matching universal DBI at '$__DbiPath'."
+        exit 1
     fi
     mkdir -p "$__BinDir"
     echo "Overlaying cDAC: $__CDacPath -> $__BinDir/$__CDacDestName"
     cp -f "$__CDacPath" "$__BinDir/$__CDacDestName"
+    echo "Overlaying universal DBI: $__DbiPath -> $__BinDir/$__DbiName"
+    cp -f "$__DbiPath" "$__BinDir/$__DbiName"
 fi
 
 #
