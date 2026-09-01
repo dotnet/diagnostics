@@ -107,7 +107,7 @@ public sealed class TestConfigShardTests
     }
 
     [Fact]
-    public void SingleFileCDacIsValidOnNet11()
+    public void SingleFileCDacIsSupportedOnNet11()
     {
         TestConfig config = new(
             TargetCatalog.DivZero,
@@ -119,8 +119,9 @@ public sealed class TestConfigShardTests
             CoreVersion.Net11,
             Dac.CDac);
 
-        Assert.True(TestConfig.IsValid(config));
-        Assert.False(TestConfig.IsValid(config with { CoreVersion = CoreVersion.Net10 }));
+        Assert.True(TestConfig.IsDacSupported(config));
+        Assert.False(TestConfig.IsDacSupported(config with { CoreVersion = CoreVersion.Net10 }));
+        Assert.False(TestConfig.IsDacSupported(config with { Flavor = Flavor.Framework }));
     }
 
     [Fact]
