@@ -506,9 +506,10 @@ LPCSTR Runtime::GetRuntimeDirectory()
 \**********************************************************************/
 HRESULT Runtime::GetClrDataProcess(CDacLoadPolicy policy, IXCLRDataProcess** ppClrDataProcess)
 {
+    policy = GetEffectiveCDacLoadPolicy(policy);
     bool cdacOnly = policy == CDacLoadPolicy::OnlyUseCDac;
 
-    if (ShouldTryCDac(policy))
+    if (policy != CDacLoadPolicy::UseLegacyDac)
     {
         if (m_cdacDataProcess == nullptr && !m_hasCDacActivationResult)
         {
@@ -571,29 +572,18 @@ static bool IsEnvironmentVariableSetToOne(const char* name)
 }
 
 /**********************************************************************\
- * Evaluates the cDAC loading policy for this runtime.
+ * Returns the effective cDAC loading policy for this runtime.
 \**********************************************************************/
-bool Runtime::ShouldTryCDac(CDacLoadPolicy policy)
+CDacLoadPolicy Runtime::GetEffectiveCDacLoadPolicy(CDacLoadPolicy policy)
 {
-    if (policy == CDacLoadPolicy::UseLegacyDac)
+    if (policy == CDacLoadPolicy::PreferCDac &&
+        (IsEnvironmentVariableSetToOne("DOTNET_ENABLE_CDAC") ||
+         IsEnvironmentVariableSetToOne("COMPlus_ENABLE_CDAC")))
     {
-        return false;
+        // Let the legacy DAC host cDAC instead of loading the standalone cDAC.
+        return CDacLoadPolicy::UseLegacyDac;
     }
-    if (policy == CDacLoadPolicy::OnlyUseCDac)
-    {
-        return true;
-    }
-
-    // When DOTNET_ENABLE_CDAC is requested, the in-box (legacy) DAC loads and drives the cDAC
-    // contract reader itself (including its own dac-vs-cdac fallback/comparison). Defer to that
-    // mechanism rather than loading the cDAC directly so those scenarios keep working.
-    if (IsEnvironmentVariableSetToOne("DOTNET_ENABLE_CDAC") || IsEnvironmentVariableSetToOne("COMPlus_ENABLE_CDAC"))
-    {
-        return false;
-    }
-
-    // Let the cDAC validate whether it can service the target.
-    return true;
+    return policy;
 }
 
 CDacLoadPolicy Runtime::GetConfiguredCDacLoadPolicy()
@@ -1096,9 +1086,7 @@ HRESULT Runtime::CreateCorDebugProcessViaDbgShim(ICorDebugProcess** ppCorDebugPr
     }
 
     CDacLoadPolicy configuredPolicy = GetCDacLoadPolicy();
-    DbgShimCDacLoadPolicy loadPolicy = ShouldTryCDac(configuredPolicy)
-        ? (DbgShimCDacLoadPolicy)configuredPolicy
-        : DbgShimCDacLoadPolicy::LegacyDacOnly;
+    DbgShimCDacLoadPolicy loadPolicy = (DbgShimCDacLoadPolicy)GetEffectiveCDacLoadPolicy(configuredPolicy);
     hr = policy->SetCDacLoadPolicy(loadPolicy);
     if (FAILED(hr))
     {

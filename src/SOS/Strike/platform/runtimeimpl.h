@@ -160,7 +160,7 @@ private:
 
     ULONG64 GetContractDescriptorAddress();
 
-    static bool ShouldTryCDac(CDacLoadPolicy policy);
+    static CDacLoadPolicy GetEffectiveCDacLoadPolicy(CDacLoadPolicy policy);
 
 public:
     static HRESULT CreateInstance(ITarget* target, RuntimeConfiguration configuration, Runtime** ppRuntime);

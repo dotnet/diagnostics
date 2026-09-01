@@ -172,8 +172,9 @@ namespace SOS.Hosting
                 return HResult.E_INVALIDARG;
             }
             *ppClrDataProcess = IntPtr.Zero;
+            policy = CDacPolicy.GetEffectiveLoadPolicy(policy);
             bool cdacOnly = policy == CDacLoadPolicy.OnlyUseCDac;
-            bool useCDac = CDacPolicy.ShouldTryCDac(policy);
+            bool useCDac = policy != CDacLoadPolicy.UseLegacyDac;
 
             int cdacActivationResult = HResult.E_NOINTERFACE;
             if (useCDac)
@@ -356,10 +357,7 @@ namespace SOS.Hosting
 
             CDacLoadPolicy policy =
                 _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.PreferCDac;
-            if (!CDacPolicy.ShouldTryCDac(policy))
-            {
-                policy = CDacLoadPolicy.UseLegacyDac;
-            }
+            policy = CDacPolicy.GetEffectiveLoadPolicy(policy);
             return activator.CreateCorDebugProcess(
                 _runtime,
                 libraryProvider.ILibraryProvider,

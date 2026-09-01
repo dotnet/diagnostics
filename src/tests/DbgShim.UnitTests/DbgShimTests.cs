@@ -112,7 +112,7 @@ namespace Microsoft.Diagnostics
         }
 
         [Fact]
-        public void CDacEnvironmentVariablesDisablePreferredCDac()
+        public void CDacEnvironmentVariablesSelectLegacyDacPolicy()
         {
             foreach (string variable in new[] { "DOTNET_ENABLE_CDAC", "COMPlus_ENABLE_CDAC" })
             {
@@ -120,9 +120,9 @@ namespace Microsoft.Diagnostics
                 try
                 {
                     Environment.SetEnvironmentVariable(variable, "1");
-                    Assert.False(CDacPolicy.ShouldTryCDac(CDacLoadPolicy.PreferCDac));
-                    Assert.True(CDacPolicy.ShouldTryCDac(CDacLoadPolicy.OnlyUseCDac));
-                    Assert.False(CDacPolicy.ShouldTryCDac(CDacLoadPolicy.UseLegacyDac));
+                    Assert.Equal(CDacLoadPolicy.UseLegacyDac, CDacPolicy.GetEffectiveLoadPolicy(CDacLoadPolicy.PreferCDac));
+                    Assert.Equal(CDacLoadPolicy.OnlyUseCDac, CDacPolicy.GetEffectiveLoadPolicy(CDacLoadPolicy.OnlyUseCDac));
+                    Assert.Equal(CDacLoadPolicy.UseLegacyDac, CDacPolicy.GetEffectiveLoadPolicy(CDacLoadPolicy.UseLegacyDac));
                 }
                 finally
                 {

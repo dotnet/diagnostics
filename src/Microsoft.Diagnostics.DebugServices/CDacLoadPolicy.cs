@@ -33,23 +33,19 @@ public enum CDacLoadPolicy
 public static class CDacPolicy
 {
     /// <summary>
-    /// Returns whether cDAC activation should be attempted.
+    /// Returns the effective cDAC activation policy.
     /// </summary>
-    /// <param name="policy">The requested activation policy.</param>
-    /// <returns><see langword="true"/> if cDAC activation should be attempted.</returns>
-    public static bool ShouldTryCDac(CDacLoadPolicy policy)
+    /// <param name="policy">The configured activation policy.</param>
+    /// <returns>The policy to use for activation.</returns>
+    public static CDacLoadPolicy GetEffectiveLoadPolicy(CDacLoadPolicy policy)
     {
-        if (policy == CDacLoadPolicy.OnlyUseCDac)
+        if (policy == CDacLoadPolicy.PreferCDac &&
+            (Environment.GetEnvironmentVariable("DOTNET_ENABLE_CDAC") == "1" ||
+             Environment.GetEnvironmentVariable("COMPlus_ENABLE_CDAC") == "1"))
         {
-            return true;
+            // Let the legacy DAC host cDAC instead of loading the standalone cDAC.
+            return CDacLoadPolicy.UseLegacyDac;
         }
-        if (policy == CDacLoadPolicy.UseLegacyDac)
-        {
-            return false;
-        }
-
-        // These variables select the in-box DAC's cDAC integration.
-        return Environment.GetEnvironmentVariable("DOTNET_ENABLE_CDAC") != "1"
-            && Environment.GetEnvironmentVariable("COMPlus_ENABLE_CDAC") != "1";
+        return policy;
     }
 }

@@ -142,9 +142,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         private ClrRuntime CreateRuntime()
         {
-            CDacLoadPolicy policy = _settingsService.CDacLoadPolicy;
-            bool useCDac = CDacPolicy.ShouldTryCDac(policy);
-            Trace.TraceInformation($"Runtime #{Id} data-access: begin (cDAC policy={policy}, cDAC attempted={useCDac})");
+            CDacLoadPolicy configuredPolicy = _settingsService.CDacLoadPolicy;
+            CDacLoadPolicy policy = CDacPolicy.GetEffectiveLoadPolicy(configuredPolicy);
+            bool useCDac = policy != CDacLoadPolicy.UseLegacyDac;
+            Trace.TraceInformation($"Runtime #{Id} data-access: begin (configured cDAC policy={configuredPolicy}, effective cDAC policy={policy})");
 
             if (useCDac)
             {
