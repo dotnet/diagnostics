@@ -262,8 +262,7 @@ private:
     HRESULT FormatLongDacModuleName(_Inout_updates_z_(cchBuffer) WCHAR * pBuffer,
                                     DWORD cchBuffer,
                                     DWORD targetImageFileMachine,
-                                    VS_FIXEDFILEINFO * pVersion,
-                                    REFGUID skuId);
+                                    VS_FIXEDFILEINFO * pVersion);
 
 	volatile LONG m_cRef;
     GUID m_skuId;

@@ -912,31 +912,21 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
             hr = CORDBG_E_NOT_CLR;
         }
 
-        // The OneCore CLR debugging object supports CoreCLR and Desktop CLR targets. Other debugging
-        // objects continue to require an exact SKU match, with the existing phone/OneCore compatibility.
-        bool compatibleSku =
-            debugResource.signature == m_skuId ||
-            (m_skuId == CLR_ID_ONECORE_CLR &&
-                (debugResource.signature == CLR_ID_PHONE_CLR ||
-                 debugResource.signature == CLR_ID_V4_DESKTOP));
-        if (SUCCEEDED(hr) && !compatibleSku)
+        // The signature needs to match m_skuId exactly, except for m_skuId=CLR_ID_ONECORE_CLR which is
+        // also compatible with the older CLR_ID_PHONE_CLR signature.
+        if (SUCCEEDED(hr) && (debugResource.signature != m_skuId) && !( (debugResource.signature == CLR_ID_PHONE_CLR) && (m_skuId == CLR_ID_ONECORE_CLR) ))
         {
             hr = CORDBG_E_NOT_CLR;
         }
 
         if (SUCCEEDED(hr) && (debugResource.signature != CLR_ID_ONECORE_CLR) && useCrossPlatformNaming)
         {
-            FormatLongDacModuleName(
-                clrInfo.DacName,
-                MAX_PATH_FNAME,
-                imageFileMachine,
-                &fixedFileInfo,
-                debugResource.signature);
+            FormatLongDacModuleName(clrInfo.DacName, MAX_PATH_FNAME, imageFileMachine, &fixedFileInfo);
             swprintf_s(clrInfo.DbiName, MAX_PATH_FNAME, W("%s_%s.dll"), MAIN_DBI_MODULE_NAME_W, W("x86"));
         }
         else
         {
-            if(debugResource.signature == CLR_ID_V4_DESKTOP)
+            if(m_skuId == CLR_ID_V4_DESKTOP)
                 swprintf_s(clrInfo.DacName, MAX_PATH_FNAME, W("%s.dll"), CLR_DAC_MODULE_NAME_W);
             else
                 swprintf_s(clrInfo.DacName, MAX_PATH_FNAME, W("%s.dll"), CORECLR_DAC_MODULE_NAME_W);
@@ -1012,8 +1002,7 @@ HRESULT CLRDebuggingImpl::GetCLRInfo(ICorDebugDataTarget * pDataTarget,
 HRESULT CLRDebuggingImpl::FormatLongDacModuleName(_Inout_updates_z_(cchBuffer) WCHAR * pBuffer,
                                                   DWORD cchBuffer,
                                                   DWORD targetImageFileMachine,
-                                                  VS_FIXEDFILEINFO * pVersion,
-                                                  REFGUID skuId)
+                                                  VS_FIXEDFILEINFO * pVersion)
 {
 
 #ifndef HOST_WINDOWS
@@ -1039,9 +1028,9 @@ HRESULT CLRDebuggingImpl::FormatLongDacModuleName(_Inout_updates_z_(cchBuffer) W
 #endif
 
     const WCHAR* pDacBaseName = NULL;
-    if (skuId == CLR_ID_V4_DESKTOP)
+    if (m_skuId == CLR_ID_V4_DESKTOP)
         pDacBaseName = CLR_DAC_MODULE_NAME_W;
-    else if (skuId == CLR_ID_CORECLR || skuId == CLR_ID_PHONE_CLR || skuId == CLR_ID_ONECORE_CLR)
+    else if (m_skuId == CLR_ID_CORECLR || m_skuId == CLR_ID_PHONE_CLR || m_skuId == CLR_ID_ONECORE_CLR)
         pDacBaseName = CORECLR_DAC_MODULE_NAME_W;
     else
     {

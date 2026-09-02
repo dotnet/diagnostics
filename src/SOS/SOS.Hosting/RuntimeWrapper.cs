@@ -47,6 +47,35 @@ namespace SOS.Hosting
             IntPtr dacDataInterface,
             out IntPtr ppObj);
 
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int OpenVirtualProcessImpl2Delegate(
+            ulong clrInstanceId,
+            IntPtr dataTarget,
+            [MarshalAs(UnmanagedType.LPWStr)] string dacModulePath,
+            ref ClrDebuggingVersion maxDebuggerSupportedVersion,
+            ref Guid riid,
+            out IntPtr instance,
+            out ClrDebuggingProcessFlags flags);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int OpenVirtualProcessImplDelegate(
+            ulong clrInstanceId,
+            IntPtr dataTarget,
+            IntPtr dacHandle,
+            ref ClrDebuggingVersion maxDebuggerSupportedVersion,
+            ref Guid riid,
+            out IntPtr instance,
+            out ClrDebuggingProcessFlags flags);
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int OpenVirtualProcessDelegate(
+            ulong clrInstanceId,
+            IntPtr dataTarget,
+            IntPtr dacHandle,
+            ref Guid riid,
+            out IntPtr instance,
+            out ClrDebuggingProcessFlags flags);
+
         #endregion
 
         private readonly IServiceProvider _services;
@@ -54,6 +83,7 @@ namespace SOS.Hosting
         private IntPtr _clrDataProcess = IntPtr.Zero;
         private IntPtr _corDebugProcess = IntPtr.Zero;
         private IntPtr _dacHandle = IntPtr.Zero;
+        private IntPtr _dbiHandle = IntPtr.Zero;
 
         public IntPtr IRuntime { get; }
 
@@ -105,6 +135,11 @@ namespace SOS.Hosting
                 // Previously, the DAC was freed here, but as we transition to the cDAC which uses NativeAOT,
                 // it is no longer possible to free the DAC library when it is using the shimmed cDAC.
                 _dacHandle = IntPtr.Zero;
+            }
+            if (_dbiHandle != IntPtr.Zero)
+            {
+                DataTarget.PlatformFunctions.FreeLibrary(_dbiHandle);
+                _dbiHandle = IntPtr.Zero;
             }
         }
 
@@ -172,7 +207,6 @@ namespace SOS.Hosting
                 return HResult.E_INVALIDARG;
             }
             *ppClrDataProcess = IntPtr.Zero;
-            policy = CDacPolicy.GetEffectiveLoadPolicy(policy);
             bool cdacOnly = policy == CDacLoadPolicy.OnlyUseCDac;
             bool useCDac = policy != CDacLoadPolicy.UseLegacyDac;
 
@@ -344,6 +378,15 @@ namespace SOS.Hosting
         private int CreateCorDebugProcess(out IntPtr corDebugProcess)
         {
             corDebugProcess = IntPtr.Zero;
+            CDacLoadPolicy policy =
+                _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.PreferCDac;
+            if (_runtime.RuntimeType == RuntimeType.Desktop)
+            {
+                return policy == CDacLoadPolicy.OnlyUseCDac
+                    ? HResult.E_NOINTERFACE
+                    : CreateDesktopCorDebugProcess(out corDebugProcess);
+            }
+
             using RuntimeLibraryProvider libraryProvider = new(
                 _runtime.GetDbiFilePath,
                 () => _runtime.GetDacFilePath(out _),
@@ -355,14 +398,119 @@ namespace SOS.Hosting
                 return HResult.E_NOINTERFACE;
             }
 
-            CDacLoadPolicy policy =
-                _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.PreferCDac;
-            policy = CDacPolicy.GetEffectiveLoadPolicy(policy);
             return activator.CreateCorDebugProcess(
                 _runtime,
                 libraryProvider.ILibraryProvider,
                 policy,
                 out corDebugProcess);
+        }
+
+        private int CreateDesktopCorDebugProcess(out IntPtr corDebugProcess)
+        {
+            corDebugProcess = IntPtr.Zero;
+            string dacFilePath = _runtime.GetDacFilePath(out bool verifySignature);
+            string dbiFilePath = _runtime.GetDbiFilePath();
+            if (string.IsNullOrEmpty(dacFilePath) || string.IsNullOrEmpty(dbiFilePath))
+            {
+                Trace.TraceError($"Could not find matching Desktop DAC or DBI for this runtime: {_runtime.RuntimeModule.FileName}");
+                return HResult.E_NOINTERFACE;
+            }
+
+            IntPtr dacHandle = GetDacHandle();
+            if (dacHandle == IntPtr.Zero)
+            {
+                return HResult.E_NOINTERFACE;
+            }
+            if (_dbiHandle == IntPtr.Zero)
+            {
+                _dbiHandle = LoadLibraryWithSignatureVerification(dbiFilePath, verifySignature);
+                if (_dbiHandle == IntPtr.Zero)
+                {
+                    return HResult.E_NOINTERFACE;
+                }
+            }
+
+            ClrDebuggingVersion maxDebuggerSupportedVersion = new()
+            {
+                StructVersion = 0,
+                Major = 4,
+                Minor = 0,
+                Build = 0,
+                Revision = 0,
+            };
+            CorDebugDataTargetWrapper dataTarget = new(_services, _runtime);
+            ulong clrInstanceId = _runtime.RuntimeModule.ImageBase;
+            Guid iid = IID_ICorDebugProcess;
+            try
+            {
+                OpenVirtualProcessImpl2Delegate openVirtualProcessImpl2 =
+                    SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
+                if (openVirtualProcessImpl2 is not null)
+                {
+                    int hr = openVirtualProcessImpl2(
+                        clrInstanceId,
+                        dataTarget.ICorDebugDataTarget,
+                        dacFilePath,
+                        ref maxDebuggerSupportedVersion,
+                        ref iid,
+                        out IntPtr process,
+                        out _);
+                    return CompleteDesktopCorDebugActivation(hr, process, out corDebugProcess);
+                }
+
+                OpenVirtualProcessImplDelegate openVirtualProcessImpl =
+                    SOSHost.GetDelegateFunction<OpenVirtualProcessImplDelegate>(_dbiHandle, "OpenVirtualProcessImpl");
+                if (openVirtualProcessImpl is not null)
+                {
+                    int hr = openVirtualProcessImpl(
+                        clrInstanceId,
+                        dataTarget.ICorDebugDataTarget,
+                        dacHandle,
+                        ref maxDebuggerSupportedVersion,
+                        ref iid,
+                        out IntPtr process,
+                        out _);
+                    return CompleteDesktopCorDebugActivation(hr, process, out corDebugProcess);
+                }
+
+                OpenVirtualProcessDelegate openVirtualProcess =
+                    SOSHost.GetDelegateFunction<OpenVirtualProcessDelegate>(_dbiHandle, "OpenVirtualProcess");
+                if (openVirtualProcess is not null)
+                {
+                    int hr = openVirtualProcess(
+                        clrInstanceId,
+                        dataTarget.ICorDebugDataTarget,
+                        dacHandle,
+                        ref iid,
+                        out IntPtr process,
+                        out _);
+                    return CompleteDesktopCorDebugActivation(hr, process, out corDebugProcess);
+                }
+                Trace.TraceError("Desktop DBI OpenVirtualProcess export not found");
+                return HResult.E_NOINTERFACE;
+            }
+            finally
+            {
+                dataTarget.ReleaseWithCheck();
+            }
+        }
+
+        private static int CompleteDesktopCorDebugActivation(
+            int hr,
+            IntPtr process,
+            out IntPtr corDebugProcess)
+        {
+            corDebugProcess = IntPtr.Zero;
+            if (hr < 0 || process == IntPtr.Zero)
+            {
+                if (process != IntPtr.Zero)
+                {
+                    ComWrapper.ReleaseWithCheck(process);
+                }
+                return hr < 0 ? hr : HResult.E_NOINTERFACE;
+            }
+            corDebugProcess = process;
+            return HResult.S_OK;
         }
 
         private IntPtr GetDacHandle()
@@ -382,42 +530,51 @@ namespace SOS.Hosting
 
         private static IntPtr LoadDacLibrary(string dacFilePath, bool verifySignature)
         {
-            IntPtr dacHandle = IntPtr.Zero;
-            IDisposable fileLock = null;
-            try
+            IntPtr dacHandle = LoadLibraryWithSignatureVerification(dacFilePath, verifySignature);
+            if (dacHandle == IntPtr.Zero)
             {
-                if (verifySignature)
-                {
-                    Trace.TraceInformation($"Verifying DAC signing and cert {dacFilePath}");
-
-                    // Check if the DAC cert is valid before loading
-                    if (!AuthenticodeUtil.VerifyDacDll(dacFilePath, out fileLock))
-                    {
-                        return IntPtr.Zero;
-                    }
-                }
-                try
-                {
-                    dacHandle = DataTarget.PlatformFunctions.LoadLibrary(dacFilePath);
-                }
-                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
-                {
-                    Trace.TraceError($"LoadLibrary({dacFilePath}) FAILED {ex}");
-                    return IntPtr.Zero;
-                }
+                return IntPtr.Zero;
             }
-            finally
-            {
-                // Keep DAC file locked until it loaded
-                fileLock?.Dispose();
-            }
-            Debug.Assert(dacHandle != IntPtr.Zero);
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 DllMainDelegate dllmain = SOSHost.GetDelegateFunction<DllMainDelegate>(dacHandle, "DllMain");
                 dllmain?.Invoke(dacHandle, 1, IntPtr.Zero);
             }
             return dacHandle;
+        }
+
+        internal static IntPtr LoadLibraryWithSignatureVerification(string libraryPath, bool verifySignature)
+        {
+            IntPtr libraryHandle = IntPtr.Zero;
+            IDisposable fileLock = null;
+            try
+            {
+                if (verifySignature)
+                {
+                    Trace.TraceInformation($"Verifying library signing and cert {libraryPath}");
+
+                    if (!AuthenticodeUtil.VerifyDacDll(libraryPath, out fileLock))
+                    {
+                        return IntPtr.Zero;
+                    }
+                }
+                try
+                {
+                    libraryHandle = DataTarget.PlatformFunctions.LoadLibrary(libraryPath);
+                }
+                catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
+                {
+                    Trace.TraceError($"LoadLibrary({libraryPath}) FAILED {ex}");
+                    return IntPtr.Zero;
+                }
+            }
+            finally
+            {
+                // Keep the verified file locked until it is loaded.
+                fileLock?.Dispose();
+            }
+            Debug.Assert(libraryHandle != IntPtr.Zero);
+            return libraryHandle;
         }
 
         #region IRuntime delegates

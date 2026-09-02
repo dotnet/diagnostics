@@ -95,6 +95,20 @@ namespace Microsoft.Diagnostics
             fileLock.Dispose();
             Assert.True(AuthenticodeUtil.VerifyDacDll(desktopDacPath, out fileLock));
             fileLock.Dispose();
+
+            IntPtr dbiHandle = RuntimeWrapper.LoadLibraryWithSignatureVerification(desktopDbiPath, verifySignature: true);
+            Assert.NotEqual(IntPtr.Zero, dbiHandle);
+            NativeLibrary.Free(dbiHandle);
+
+            IntPtr dacHandle = RuntimeWrapper.LoadLibraryWithSignatureVerification(desktopDacPath, verifySignature: true);
+            Assert.NotEqual(IntPtr.Zero, dacHandle);
+            NativeLibrary.Free(dacHandle);
+
+            Assert.Equal(
+                IntPtr.Zero,
+                RuntimeWrapper.LoadLibraryWithSignatureVerification(
+                    typeof(object).Assembly.Location,
+                    verifySignature: true));
         }
 
         private static void SkipIfUnsigned(string path)
@@ -108,26 +122,6 @@ namespace Microsoft.Diagnostics
             catch (CryptographicException)
             {
                 throw new SkipTestException($"Signed test binary not available: {path}");
-            }
-        }
-
-        [Fact]
-        public void CDacEnvironmentVariablesSelectLegacyDacPolicy()
-        {
-            foreach (string variable in new[] { "DOTNET_ENABLE_CDAC", "COMPlus_ENABLE_CDAC" })
-            {
-                string originalValue = Environment.GetEnvironmentVariable(variable);
-                try
-                {
-                    Environment.SetEnvironmentVariable(variable, "1");
-                    Assert.Equal(CDacLoadPolicy.UseLegacyDac, CDacPolicy.GetEffectiveLoadPolicy(CDacLoadPolicy.PreferCDac));
-                    Assert.Equal(CDacLoadPolicy.OnlyUseCDac, CDacPolicy.GetEffectiveLoadPolicy(CDacLoadPolicy.OnlyUseCDac));
-                    Assert.Equal(CDacLoadPolicy.UseLegacyDac, CDacPolicy.GetEffectiveLoadPolicy(CDacLoadPolicy.UseLegacyDac));
-                }
-                finally
-                {
-                    Environment.SetEnvironmentVariable(variable, originalValue);
-                }
             }
         }
 
