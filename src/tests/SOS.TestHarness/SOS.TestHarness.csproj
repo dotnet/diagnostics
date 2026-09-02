@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Test-support library (drives an in-process dbgeng + dotnet-dump to assert SOS output). Not a
+         shipping product and not a test project itself. net10.0 is required by
+         Microsoft.Diagnostics.Runtime.Utilities (ships net10.0 only). dbgeng is Windows-only but loaded
+         at runtime, so the library itself is RID-neutral. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SOS.TestHarness.EngineHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The lldb command-framing helper imported by LldbCliHost at runtime (resolved next to the
+         assembly via RepoLayout/AppContext.BaseDirectory). Copied to the output directory. -->
+    <None Include="lldbhelper.py" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- In-process dbgeng COM wrappers (IDebugClient/Control/...). Already a repo dependency. -->
+    <PackageReference Include="Microsoft.Diagnostics.Runtime.Utilities" Version="$(MicrosoftDiagnosticsRuntimeUtilitiesVersion)" />
+    <!-- xUnit v3 core (library variant, no executable enforcement) so the harness can expose
+         TheoryData-based matrices for the test project to consume. Version from the Arcade default. -->
+    <PackageReference Include="xunit.v3.extensibility.core" Version="$(XUnitV3Version)" />
+    <PackageDownload Include="cdb-sos" Version="[$(cdbsosversion)]" Condition="'$(OS)' == 'Windows_NT'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SOS.TestHarness.Configuration</_Parameter1>
+      <_Parameter2>$(Configuration)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SOS.TestHarness.TargetFramework</_Parameter1>
+      <_Parameter2>$(TargetFramework)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SOS.TestHarness.TargetRid</_Parameter1>
+      <_Parameter2>$(TargetRid)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>
