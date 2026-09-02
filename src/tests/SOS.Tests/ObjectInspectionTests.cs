@@ -58,7 +58,7 @@ public sealed class ObjectInspectionTests
         // dumpobj: identity of the object.
         DumpObjResult obj = target.DumpObj(marker);
         Assert.Equal("ThinLockMarker", obj.Name);
-        Assert.Equal(24, obj.Size);
+        Assert.Equal(3 * IntPtr.Size, obj.Size);
         ulong mt = obj.MethodTable;
         Assert.NotEqual(0ul, mt);
 

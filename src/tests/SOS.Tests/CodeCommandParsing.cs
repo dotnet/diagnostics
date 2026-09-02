@@ -25,7 +25,7 @@ internal static class CodeCommandParsing
         string flags = string.Concat(
             noLines ? "-n " : "", offsets ? "-o " : "", gcInfo ? "-gcinfo " : "",
             ehInfo ? "-ehinfo " : "", il ? "-il " : "", map ? "-map " : "");
-        return new ClrUResult(target.Sos($"clru {flags}{address:x}"));
+        return new ClrUResult(target.Sos($"clru {flags}{address:x}"), offsets);
     }
 
     public static EhInfoResult EhInfo(this Target target, ulong address) =>
@@ -52,12 +52,17 @@ public sealed class ClrUResult
         new(@"^Begin\s+([0-9a-fA-F`]+),\s+size\s+([0-9a-fA-F]+)\s*$", RegexOptions.Compiled);
     private static readonly Regex s_source = new(@"@\s+(\d+):\s*$", RegexOptions.Compiled);
     private static readonly Regex s_instruction = new(
-        @"^(?:(?<off>[0-9a-fA-F]{4,8})\s+)?(?<addr>[0-9a-fA-F]+`[0-9a-fA-F]+)\s+(?<bytes>[0-9a-fA-F]+)\s+(?<mn>\S+)(?:\s+(?<ops>.*\S))?\s*$",
+        @"^(?<addr>[0-9a-fA-F]+(?:`[0-9a-fA-F]+)?)\s+(?<bytes>[0-9a-fA-F]+)\s+(?<mn>\S+)(?:\s+(?<ops>.*\S))?\s*$",
         RegexOptions.Compiled);
+    private static readonly Regex s_instructionWithOffset = new(
+        @"^(?<off>[0-9a-fA-F]{4,8})\s+(?<addr>[0-9a-fA-F]+(?:`[0-9a-fA-F]+)?)\s+(?<bytes>[0-9a-fA-F]+)\s+(?<mn>\S+)(?:\s+(?<ops>.*\S))?\s*$",
+        RegexOptions.Compiled);
+    private readonly bool _hasOffsets;
 
-    public ClrUResult(SosOutput output)
+    public ClrUResult(SosOutput output, bool hasOffsets = false)
     {
         Output = output;
+        _hasOffsets = hasOffsets;
         HasNormalJitBanner = output.Contains("Normal JIT generated code");
 
         List<DisasmLine> instructions = new();
@@ -80,7 +85,7 @@ public sealed class ClrUResult
                 continue;
             }
 
-            Match m = s_instruction.Match(line);
+            Match m = (hasOffsets ? s_instructionWithOffset : s_instruction).Match(line);
             if (m.Success)
             {
                 int? off = m.Groups["off"].Success ? (int)CodeCommandParsing.Hex(m.Groups["off"].Value) : null;
@@ -115,7 +120,7 @@ public sealed class ClrUResult
     public int SourceLineCount { get; }
 
     /// <summary>True if the instruction lines carry the <c>-o</c> offset prefix.</summary>
-    public bool HasOffsets => Instructions.Count > 0 && Instructions.All(i => i.Offset is not null);
+    public bool HasOffsets => _hasOffsets && Instructions.Count > 0 && Instructions.All(i => i.Offset is not null);
 }
 
 /// <summary>One exception-handling clause from <c>!ehinfo</c>.</summary>
@@ -198,9 +203,11 @@ public sealed class GcInfoResult
 {
     private static readonly Regex s_entry = new(@"^entry point\s+([0-9a-fA-F`]+)", RegexOptions.Compiled);
     private static readonly Regex s_gcinfo = new(@"^GC info\s+([0-9a-fA-F`]+)", RegexOptions.Compiled);
-    private static readonly Regex s_codeSize = new(@"^Code size:\s+(\d+)", RegexOptions.Compiled);
+    private static readonly Regex s_codeSize = new(
+        @"^(?:Code size:\s+(?<decimal>\d+)|method\s+size\s*=\s*(?<hex>[0-9a-fA-F]+))",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex s_transition =
-        new(@"^[0-9a-fA-F]{4,}\s+(interruptible|not interruptible|[+\-].+)$", RegexOptions.Compiled);
+        new(@"^[0-9a-fA-F]{4,}\s+(interruptible|not interruptible|[+\-].+|reg .+ becoming (?:live|dead))$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public GcInfoResult(SosOutput output)
     {
@@ -208,7 +215,7 @@ public sealed class GcInfoResult
         List<string> transitions = new();
         foreach (string raw in output.Lines)
         {
-            string line = raw.TrimEnd();
+            string line = raw.Trim();
             Match e = s_entry.Match(line);
             if (e.Success)
             {
@@ -226,13 +233,17 @@ public sealed class GcInfoResult
             Match c = s_codeSize.Match(line);
             if (c.Success)
             {
-                CodeSize = int.Parse(c.Groups[1].Value, CultureInfo.InvariantCulture);
+                CodeSize = c.Groups["decimal"].Success
+                    ? int.Parse(c.Groups["decimal"].Value, CultureInfo.InvariantCulture)
+                    : int.Parse(c.Groups["hex"].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
                 continue;
             }
 
-            if (s_transition.IsMatch(line))
+            int encodedPrefix = line.LastIndexOf('|');
+            string transition = encodedPrefix >= 0 ? line[(encodedPrefix + 1)..].Trim() : line;
+            if (s_transition.IsMatch(transition))
             {
-                transitions.Add(line.Trim());
+                transitions.Add(transition);
             }
         }
 
