@@ -20,6 +20,8 @@ internal static class TestObjectHelpers
         SosRow row = target.DumpHeap($"-type {prefix}").Statistics
             .SingleRow(r => r["Class Name"].Value == typeName, $"a single {typeName} method table");
         ulong mt = row["MT"].AsUInt64(Sos.Addr);
-        return target.DumpHeap($"-mt {mt:x} -short").ShortAddresses[0];
+        IReadOnlyList<ulong> addresses = target.DumpHeap($"-mt {mt:x} -short").ShortAddresses;
+        Assert.NotEmpty(addresses);
+        return addresses[0];
     }
 }
