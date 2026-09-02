@@ -2,8 +2,9 @@
 
 This audit compares PR #5979 at `40ccc0262a199a1576ed3bec25d82152a32c1bc4`
 with the legacy `SOS.UnitTests` entry points and 29 scripts present at the same
-commit. The new project contains 89 command-focused test methods after the
-focused `dumpgen` addition described below.
+commit. At that baseline, the new project contained 89 command-focused test
+methods after the focused `dumpgen` addition described below; this layer adds
+the command and parser coverage used for the retirements recorded here.
 
 ## Result
 
@@ -19,15 +20,19 @@ Status meanings:
 - **Covered**: the same observable command behavior has a direct new test.
 - **Improved**: the new test adds a stronger oracle, more options, or broader
   host/flavor/runtime coverage.
+- **Retired**: every material legacy assertion and debugger path is covered by
+  focused tests, so the legacy script and registration have been removed.
 - **Retained**: the specialized scenario remains intentionally owned by the
   legacy suite; the command may also have generic new coverage.
 - **Gap**: `SOS.Tests` has no equivalent for a material legacy behavior. The
   legacy test is still active, so this is a migration gap rather than a
   regression in the PR baseline.
 
-No legacy script is retired by #5979. Rows that are fully covered or improved
-are candidates for later retirement only after CI proves the intended matrix
-replacement.
+No legacy script was retired by #5979. This layer retires `DivZero.script`,
+`NestedExceptionTest.script`, and `SimpleThrow.script` after moving their exact
+exception, source-line, stack, thread, live/dump, and CLRMA assertions into the
+command-focused suite. `Reflection.script` remains active because its reflected
+target-invocation boundary is still specialized legacy behavior.
 
 ## Legacy-to-new map
 
@@ -36,7 +41,7 @@ replacement.
 | `AsyncMain.script` | Gap | General stack shape is covered by `ClrStackLinesTests` and `ClrStackAllThreadsTests`; the async-`Main` frame identity has no new oracle. |
 | `ClrStackWithNumberOfFrames.script` | Improved | `ClrStackFrameCountTests.ClrStack_FrameCount` compares each `-c N` result with the exact prefix of an unlimited walk and checks an over-limit request across four crash targets. |
 | `ConcurrentDictionaries.script` | Improved | `SpecializedInspectionTests.Dcd_DumpsConcurrentDictionary`, `DumpArrayTests`, and `ObjectFieldsTests` provide typed data assertions. Legacy still covers dcd argument errors and its wider generic key/value set. |
-| `DivZero.script` | Improved | `PrintExceptionTests`, `ClrThreadsTests`, `ClrStackLinesTests`, `ClrStackICorDebugTests`, and frame-count tests split the monolithic script into data and structure oracles. |
+| `DivZero.script` | Retired | `PrintExceptionTests.PrintException_NoInnerException` verifies the exact exception type, message, HResult, no-inner state, generated frame, `-nested`, and `-lines` output across live and dump rows. `ClrThreadsTests`, `ClrStackLinesTests`, and `ClrStackICorDebugTests` cover the remaining thread and stack behavior. |
 | `DualRuntimes.script` | Retained | Generic stacks, threads, heaps, and runtime listing are covered; loading and switching between two runtimes in one process remains a specialized legacy scenario. |
 | `DumpGCData.script` | Covered | `DiagnosticCommandTests.DumpGcData_ReportsGcStatistics` directly exercises `dumpgcdata`. |
 | `DumpGen.script` | Improved | `GcInspectionTests.DumpGen_ListsGenerationObjects` asserts a known gen0 object. `DumpGen_ArgumentsAndFilters` adds missing/invalid generation and valid `-type`/`-mt` coverage. Exact legacy gen1/gen2/LOH/POH populations remain retained. |
@@ -48,11 +53,11 @@ replacement.
 | `InterpreterStackTest.script` | Retained | Interpreter-frame ordering remains specialized legacy coverage. |
 | `LineNums.script` | Improved | `ClrStackLinesTests` checks source file/line behavior and `PrintExceptionTests` checks exception structure/data across the matrix. |
 | `MiniDumpLocalVarLookup.script` | Gap | `ClrStackArgsLocalsTests` and `ClrStackICorDebugTests` improve variable data checks, but they use full/heap dumps rather than proving local recovery from a Mini dump. |
-| `NestedExceptionTest.script` | Improved | `PrintExceptionTests` verifies exact outer/inner types, messages, HResult, frame data, and inner-address round-trip; stack variants are independently covered. |
+| `NestedExceptionTest.script` | Retired | `PrintExceptionTests` verifies exact outer/inner types, messages, HResults, `-nested`, `-lines`, frame data, and inner-address round-trip across live and dump rows. `LiveBpmdTests`, `ClrThreadsTests`, the stack tests, and `DiagnosticCommandTests.Clrma_ReportsCurrentExceptionChain` cover the breakpoint, thread, stack, and CLRMA paths. |
 | `OtherCommands.script` | Improved | Its broad command set is split across object, module, domain, heap, runtime, memory, code-info, and diagnostic test classes with structured round-trips. |
 | `Overflow.script` | Retained | Stack-overflow exception behavior remains a specialized crash/live legacy target; ordinary exception output is covered by `PrintExceptionTests`. |
 | `Reflection.script` | Retained | Target-invocation exception and reflection boundary behavior remains legacy; generic nested exception and stack behavior is improved in the new project. |
-| `SimpleThrow.script` | Covered | Exception fields, HResult, source lines, threads, and managed stack shape are directly covered by the new exception and stack classes on deterministic crash targets. |
+| `SimpleThrow.script` | Retired | `PrintExceptionTests.PrintException_NoInnerException` verifies the exact exception type, message, HResult, no-inner state, generated frame, `-nested`, and `-lines` output across live and dump rows. `ClrThreadsTests` and the stack tests cover the remaining thread and managed-stack behavior. |
 | `StackAndOtherTests.script` | Improved | `RuntimeInfoTests` and the `ClrStack*Tests` classes separately cover runtime selection, plain/line/full/all/register/args/locals stack modes with stronger comparisons. |
 | `StackTests.script` | Improved | `ClrStackTests`, `ClrStackFullTests`, `ClrStackAllThreadsTests`, `ClrStackArgsLocalsTests`, `StackInspectionTests`, and `RuntimeInfoTests` replace shape-only checks with tables and address round-trips. |
 | `StackTraceFaultingExceptionFrame.script` | Gap | Exception and ordinary stack data are covered; no new assertion requires the synthetic `[FaultingExceptionFrame: ...]` row. |
@@ -65,7 +70,8 @@ replacement.
 
 The focused gap fixed in this review is `dumpgen` argument and filtering
 behavior. The new test uses the source-generated scenario marker, resolves its
-real MethodTable through `dumpobj`, and proves both `-type` and `-mt` select it.
+address and real MethodTable from `dumpheap`, and proves both `-type` and `-mt`
+select it.
 The remaining gaps require purpose-built targets, Mini-dump policy, or
 platform-specific debugger sequencing and are not appropriate baseline-harness
 refactors.

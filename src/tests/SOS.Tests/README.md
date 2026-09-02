@@ -72,7 +72,7 @@ Each theory receives one `TestConfig`, whose axes are:
 Notably, dotnet-dump is dump-only; cdb is Windows-only and LLDB is non-Windows;
 Framework is Windows-only; Server GC is Core/SingleFile dump-only; single-file
 Mini dumps and live LLDB navigation through stripped single-file images are
-excluded; cDAC is Core-only and requires .NET 11 or later.
+excluded; cDAC supports Core and SingleFile on .NET 11 or later.
 
 Tests opt into expensive axes. The default is dump, workstation GC, and Heap.
 Live, Server, Mini, and Full rows appear only where they exercise distinct
@@ -163,6 +163,16 @@ A canonical test defines the smallest valid matrix, acquires and disposes a
 `Target`, navigates to a named stop, runs the product command, and asserts
 structure plus product data. Keep host conditionals in the matrix or host
 abstraction rather than duplicating the assertion body.
+
+## Legacy coverage migration
+
+Legacy retirement requires assertion and matrix equivalence, not command-name
+overlap. This layer retires `DivZero.script`, `NestedExceptionTest.script`, and
+`SimpleThrow.script` after moving their exact exception, source-line, stack,
+thread, live/dump, and CLRMA behavior into focused tests. `Reflection.script`
+remains active because its reflected target-invocation boundary is still a
+specialized legacy scenario. [COVERAGE.md](COVERAGE.md) records the evidence and
+all remaining retained scenarios and gaps.
 
 ## Controls
 

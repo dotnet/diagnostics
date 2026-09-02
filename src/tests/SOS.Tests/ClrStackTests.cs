@@ -108,7 +108,10 @@ public sealed class ClrStackTests
         TheoryData<TestConfig, string> data = new();
         // Live opt-in: !clrstack -gcroots is fundamentally different from !clrstack (it scans the live
         // stack and registers for GC-reported roots), so it runs dump AND live.
-        foreach (TestConfig config in TestMatrices.StackWalkConfigs([TargetCatalog.Scenarios], liveness: Liveness.AllValid))
+        foreach (TestConfig config in TestMatrices.StackWalkConfigs(
+            [TargetCatalog.Scenarios],
+            liveness: Liveness.AllValid,
+            filter: TestMatrices.SupportsGcRootEnumeration))
         {
             data.Add(config, TargetCatalog.StopRoots);
             data.Add(config, TargetCatalog.StopArgsLocals);
@@ -158,7 +161,10 @@ public sealed class ClrStackTests
     // the marker, so the parser's handling of the optional (pinned)/(interior) flags and the
     // sometimes-absent type is actually exercised — and so we can assert the SosDataRow always
     // carries Pinned/Interior (defaulting to False when the flag isn't printed).
-    public static TheoryData<TestConfig> GcRootsFlagMatrix { get; } = TestMatrices.StackWalkFullDumpOnCoreVersions([TargetCatalog.Scenarios], CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10);
+    public static TheoryData<TestConfig> GcRootsFlagMatrix { get; } = TestMatrices.StackWalkFullDumpOnCoreVersions(
+        [TargetCatalog.Scenarios],
+        CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10,
+        filter: TestMatrices.SupportsGcRootEnumeration);
 
     [SosTheory]
     [MemberData(nameof(GcRootsFlagMatrix))]
