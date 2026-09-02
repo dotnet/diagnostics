@@ -64,7 +64,7 @@
       <DebuggeeBuildEnv Include="MSBuildSDKsPath=$(_BuildSdkVersionDir)$([System.IO.Path]::DirectorySeparatorChar)Sdks" />
       <DebuggeeBuildEnv Include="MSBuildExtensionsPath=$(_BuildSdkVersionDir)" />
     </ItemGroup>
-    <Exec Command="$(DebuggeeBuildDotNetPath) build $(MSBuildThisFileDirectory)Debuggees.proj -c $(Configuration) -bl:$(ArtifactsLogDir)Debuggees.binlog /p:TargetOS=$(TargetOS) /p:TargetArch=$(TargetArch) /p:RepoRoot=$(RepoRoot)"
+    <Exec Command="$(DebuggeeBuildDotNetPath) build $(MSBuildThisFileDirectory)Debuggees.proj -c $(Configuration) -bl:$(ArtifactsLogDir)Debuggees.binlog /p:TargetOS=$(TargetOS) /p:TargetArch=$(TargetArch) /p:TargetRid=$(TargetRid) /p:RepoRoot=$(RepoRoot)"
           WorkingDirectory="$(DebuggeeBuildDotNetDir)"
           EnvironmentVariables="@(DebuggeeBuildEnv)" />
   </Target>

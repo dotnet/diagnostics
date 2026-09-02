@@ -68,6 +68,13 @@ public sealed class LldbLiveHost : LldbHostBase, ILiveDebuggerHost
 
         Run($"target create \"{exePath}\"");
 
+        if (OperatingSystem.IsMacOS())
+        {
+            // Keep the debuggee at CoreCLR's normal native-debugger mode. Mode 7 is only for the separate
+            // runtime hosted inside Apple LLDB and must not change the target's managed exception behavior.
+            Run("settings set target.env-vars PAL_MachExceptionMode=2");
+        }
+
         // Stop at the program entry so we can load SOS and arm bpmd before the app runs.
         Run("process launch -s");
 

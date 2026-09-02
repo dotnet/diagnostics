@@ -110,6 +110,24 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         // that on-disk resolution working.
         psi.Environment.Remove("_NT_SYMBOL_PATH");
 
+        if (OperatingSystem.IsMacOS())
+        {
+            // Apple LLDB guards its Mach exception ports. The SOS hosting runtime must not replace them
+            // or macOS terminates LLDB with EXC_GUARD (dotnet/diagnostics#4551).
+            psi.Environment["PAL_MachExceptionMode"] = "7";
+
+            // sos-lldb links LLDB.framework through @rpath. Resolve it from the selected Xcode at launch
+            // rather than embedding the build machine's /Applications/Xcode*.app path in the driver.
+            string? sharedFrameworks = ToolPaths.ResolveXcodeSharedFrameworksDirectory();
+            if (sharedFrameworks is not null)
+            {
+                string? inherited = Environment.GetEnvironmentVariable("DYLD_FRAMEWORK_PATH");
+                psi.Environment["DYLD_FRAMEWORK_PATH"] = string.IsNullOrEmpty(inherited)
+                    ? sharedFrameworks
+                    : sharedFrameworks + Path.PathSeparator + inherited;
+            }
+        }
+
         // Run the host with the .NET crash-dump environment so a fatal fault in the SOS managed runtime
         // hosted inside lldb writes a full dump we can surface as an artifact. Do this before configure so
         // a derived host could still override it if needed.
@@ -124,7 +142,8 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         _stdin = _process.StandardInput;
         _diagnostics?.RecordProcess(_process);
 
-        _reader = new Thread(ReadLoop) { IsBackground = true, Name = "lldb-reader" };
+        StreamReader stdout = _process.StandardOutput;
+        _reader = new Thread(() => ReadLoop(stdout)) { IsBackground = true, Name = "lldb-reader" };
         _reader.Start();
 
         // Drain stderr on its own thread: lldb prints crash diagnostics, python errors, and unhandled
@@ -132,7 +151,8 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         // pipe could even block the host — and, more importantly, the evidence for a crash was discarded.
         if (_diagnostics is not null)
         {
-            _stderrReader = new Thread(StderrLoop) { IsBackground = true, Name = "lldb-stderr" };
+            StreamReader stderr = _process.StandardError;
+            _stderrReader = new Thread(() => StderrLoop(stderr)) { IsBackground = true, Name = "lldb-stderr" };
             _stderrReader.Start();
         }
 
@@ -216,16 +236,20 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         return sb.ToString();
     }
 
-    private void ReadLoop()
+    private void ReadLoop(StreamReader stdout)
     {
         try
         {
             string? line;
-            while ((line = _process.StandardOutput.ReadLine()) is not null)
+            while ((line = stdout.ReadLine()) is not null)
             {
                 _diagnostics?.AppendStdout(line);
                 _lines.Add(line);
             }
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            AppendTrace($"--- lldb stdout read failed ---{Environment.NewLine}{ex}{Environment.NewLine}");
         }
         finally
         {
@@ -234,12 +258,12 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         }
     }
 
-    private void StderrLoop()
+    private void StderrLoop(StreamReader stderr)
     {
         try
         {
             string? line;
-            while ((line = _process.StandardError.ReadLine()) is not null)
+            while ((line = stderr.ReadLine()) is not null)
             {
                 _diagnostics?.AppendStderr(line);
             }
@@ -392,6 +416,10 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
                 // best effort
             }
 
+            // The readers can still be inside StreamReader after the process exits. Join them before
+            // disposing Process so teardown cannot invalidate StandardOutput/StandardError mid-read.
+            _reader.Join(10000);
+            _stderrReader?.Join(10000);
             _process.Dispose();
         }
     }
