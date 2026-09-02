@@ -38,6 +38,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string clrEvents = "",
             string[] perfEvents = null,
             string[] profile = null,
+            uint? eventBufferSizeInMB = null,
             FileInfo output = null,
             TimeSpan duration = default,
             string name = "",
@@ -50,6 +51,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    clrEvents,
                                                                    perfEvents ?? Array.Empty<string>(),
                                                                    profile ?? Array.Empty<string>(),
+                                                                   eventBufferSizeInMB,
                                                                    output ?? new FileInfo("trace.nettrace"),
                                                                    duration,
                                                                    name,
@@ -357,6 +359,28 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
             // The important assertion is in the callback so make sure it was called.
             Assert.True(callbackInvoked);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_AddsEventBufferSizeInMBToScript()
+        {
+            string outputPath = Path.Combine(Path.GetTempPath(), $"collect-linux-{Guid.NewGuid():N}.nettrace");
+            string scriptPath = Path.ChangeExtension(outputPath, ".script");
+            MockConsole console = new(200, 30, _outputHelper);
+            var handler = new CollectLinuxCommandHandler(console);
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                Assert.Contains(
+                    "with_per_cpu_buffer_bytes(8388608);",
+                    File.ReadAllText(scriptPath));
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs(
+                eventBufferSizeInMB: 8,
+                output: new FileInfo(outputPath)));
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            Assert.False(File.Exists(scriptPath));
         }
 
         [ConditionalFact(nameof(IsCollectLinuxSupported))]

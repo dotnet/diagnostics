@@ -31,6 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string ClrEvents,
             string[] PerfEvents,
             string[] Profiles,
+            uint? EventBufferSizeInMB,
             FileInfo Output,
             TimeSpan Duration,
             string Name,
@@ -175,6 +176,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.CLREventLevelOption,
                 CommonOptions.CLREventsOption,
                 PerfEventsOption,
+                EventBufferSizeInMBOption,
                 ProbeOption,
                 CommonOptions.ProfileOption,
                 CommonOptions.OutputPathOption,
@@ -198,6 +200,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ClrEvents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
                     PerfEvents: perfEventsValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Profiles: profilesValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                    EventBufferSizeInMB: parseResult.GetValue(EventBufferSizeInMBOption),
                     Output: parseResult.GetValue(CommonOptions.OutputPathOption) ?? new FileInfo(CommonOptions.DefaultTraceName),
                     Duration: parseResult.GetValue(CommonOptions.DurationOption),
                     Name: parseResult.GetValue(CommonOptions.NameOption) ?? string.Empty,
@@ -435,6 +438,18 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             StringBuilder scriptBuilder = new();
+            if (args.EventBufferSizeInMB.HasValue)
+            {
+                if (args.EventBufferSizeInMB.Value == 0)
+                {
+                    throw new DiagnosticToolException("Event buffer size must be at least 1 MB.");
+                }
+
+                ulong eventBufferSizeBytes = args.EventBufferSizeInMB.Value * 1024UL * 1024UL;
+                scriptBuilder.AppendLine($"with_per_cpu_buffer_bytes({eventBufferSizeBytes});");
+                scriptBuilder.AppendLine();
+            }
+
             List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(args.Providers, args.ClrEvents, args.ClrEventLevel, profiles, true, "collect-linux", Console);
             foreach (EventPipeProvider provider in providerCollection)
             {
@@ -580,6 +595,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new("--perf-events")
             {
                 Description = @"Comma-separated list of perf events (e.g. syscalls:sys_enter_execve,sched:sched_switch)."
+            };
+
+        private static readonly Option<uint?> EventBufferSizeInMBOption =
+            new("--event-buffer-size-mb")
+            {
+                Description = "Size of each per-CPU event buffer, in megabytes. Larger buffers can accommodate event bursts but use more memory. When omitted, the recorder chooses a default based on the enabled features."
             };
 
         private static readonly Option<bool> ProbeOption =
