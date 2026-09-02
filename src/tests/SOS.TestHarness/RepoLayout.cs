@@ -88,6 +88,10 @@ public static class RepoLayout
     public static string SingleFileDebuggeeDir(string name, string tfm) =>
         Path.Combine(ArtifactsBin, name, ArtifactsConfiguration, tfm, Rid, "publish");
 
+    /// <summary>The pre-built desktop .NET Framework output directory for a debuggee.</summary>
+    public static string FrameworkDebuggeeDir(string name) =>
+        Path.Combine(ArtifactsBin, name, ArtifactsConfiguration, "net462");
+
     /// <summary>
     /// The repo's locally-acquired multi-version test .NET install (<c>artifacts/dotnet-test</c>), which
     /// <c>eng/InstallRuntimes.proj</c> populates with every <c>RuntimeTestVersions</c> runtime (8/9/10/11).

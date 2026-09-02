@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace SOS.TestHarness;
 
@@ -22,8 +23,8 @@ namespace SOS.TestHarness;
 ///   runtime.</item>
 ///   <item><b>SingleFile</b> is pre-published by <c>Debuggees.proj</c> once per tested runtime, RID, and
 ///   configuration. Tests only locate and consume that immutable output.</item>
-///   <item><b>Framework (net462)</b> is produced on the fly in the harness scratch tree, matching the
-///   legacy harness's <c>cli</c> build process.</item>
+///   <item><b>Framework (net462)</b> is pre-built on Windows by <c>Debuggees.proj</c>; local development
+///   falls back to an on-demand build when that output is absent.</item>
 /// </list>
 ///
 /// Capture mechanism depends on the flavor and stop kind:
@@ -37,6 +38,8 @@ namespace SOS.TestHarness;
 /// </summary>
 public static class SnapshotStore
 {
+    private static readonly TimeSpan s_captureTimeout = TimeSpan.FromMinutes(5);
+
     // One acquisition per (flavor, target, coreVersion); thread-safe via Lazy.
     private static readonly ConcurrentDictionary<(Flavor Flavor, string Target, CoreVersion CoreVersion), Lazy<string>> s_targetExe = new();
 
@@ -215,16 +218,49 @@ public static class SnapshotStore
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
 
-        using Process p = Process.Start(psi) ?? throw new InvalidOperationException("Failed to launch target");
-        string stdout = p.StandardOutput.ReadToEnd();
-        string stderr = p.StandardError.ReadToEnd();
-        p.WaitForExit();
+        // Windows createdump can outlive the crashing target while retaining its redirected handles.
+        BoundedProcessResult result = BoundedProcess.Run(
+            psi,
+            s_captureTimeout,
+            isolateLinuxProcessGroup: true,
+            outputDrainTimeout: s_captureTimeout);
 
         if (!File.Exists(dumpPath))
         {
+            if (IsKnownCreatedumpPermissionFailure(
+                coreVersion,
+                RuntimeInformation.ProcessArchitecture,
+                OperatingSystem.IsLinux(),
+                result.StandardOutput,
+                result.StandardError))
+            {
+                HarnessSkipException.Now(
+                    ".NET 8 createdump cannot read /proc/<pid>/mem on this Linux ARM64 host; " +
+                    "this runtime issue is fixed in later .NET versions.");
+            }
+
             throw new InvalidOperationException(
-                $"createdump did not produce '{dumpPath}' for {target.Project} ({flavor}); exit {p.ExitCode}.\n{stdout}\n{stderr}");
+                $"createdump did not produce '{dumpPath}' for {target.Project} ({flavor}); exit {result.ExitCode}.\n" +
+                $"stdout:\n{result.StandardOutput}\n" +
+                $"stderr:\n{result.StandardError}");
         }
+    }
+
+    internal static bool IsKnownCreatedumpPermissionFailure(
+        CoreVersion coreVersion,
+        Architecture architecture,
+        bool isLinux,
+        string stdout,
+        string stderr)
+    {
+        if (!isLinux || architecture != Architecture.Arm64 || coreVersion != CoreVersion.Net8)
+        {
+            return false;
+        }
+
+        string output = stdout + "\n" + stderr;
+        return output.Contains("open(/proc/", StringComparison.Ordinal) &&
+            output.Contains("/mem) FAILED Permission denied (13)", StringComparison.Ordinal);
     }
 
     /// <summary>Core/SingleFile snapshot capture: run the target once; its markers self-snapshot mid-run.</summary>
@@ -323,19 +359,25 @@ public static class SnapshotStore
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
 
-        using Process p = Process.Start(psi) ?? throw new InvalidOperationException("Failed to launch target");
-        string stderr = p.StandardError.ReadToEnd();
-        p.WaitForExit();
+        // Windows dump helpers can outlive the target while retaining its redirected handles.
+        BoundedProcessResult result = BoundedProcess.Run(
+            psi,
+            s_captureTimeout,
+            isolateLinuxProcessGroup: true,
+            outputDrainTimeout: s_captureTimeout);
 
-        if (p.ExitCode != 0)
+        if (result.ExitCode != 0)
         {
-            throw new InvalidOperationException($"Target '{target.Project}' ({flavor}) failed ({p.ExitCode}):\n{stderr}");
+            throw new InvalidOperationException(
+                $"Target '{target.Project}' ({flavor}) failed ({result.ExitCode}):\n" +
+                $"stdout:\n{result.StandardOutput}\n" +
+                $"stderr:\n{result.StandardError}");
         }
     }
 
     /// <summary>
-    /// Resolve the runnable debuggee for a flavor. Core and SingleFile are repo build outputs; Framework
-    /// is built on demand from the repo debuggee csproj.
+    /// Resolve the runnable debuggee for a flavor. All flavors prefer repo build outputs; Framework falls
+    /// back to an on-demand build from the repo debuggee csproj for local development.
     /// </summary>
     private static string AcquireTarget(Flavor flavor, TargetDefinition target, CoreVersion coreVersion) => flavor switch
     {
@@ -365,7 +407,8 @@ public static class SnapshotStore
             if (!IsUpToDate(exe, NewestSourceWriteTime(project)))
             {
                 RunToCompletion(RepoLayout.DotnetTestExe,
-                    $"build \"{project}\" -p:BuildProjectFramework={tfm} -c {RepoLayout.ArtifactsConfiguration}");
+                    $"build \"{project}\" -p:BuildProjectFramework={tfm} -p:TargetRid={RepoLayout.Rid} " +
+                    $"-p:TargetArch={RepoLayout.TargetArch} -c {RepoLayout.ArtifactsConfiguration}");
             }
         }
 
@@ -413,6 +456,12 @@ public static class SnapshotStore
     /// than the debuggee source.</summary>
     private static string BuildFramework(TargetDefinition target)
     {
+        string prebuilt = Path.Combine(RepoLayout.FrameworkDebuggeeDir(target.Project), target.Project + RepoLayout.ExeSuffix);
+        if (File.Exists(prebuilt))
+        {
+            return prebuilt;
+        }
+
         string project = RepoLayout.DebuggeeProject(target.Project);
         string outDir = Path.Combine(RepoLayout.Scratch, "targets", "framework", target.Name);
         string exe = Path.Combine(outDir, target.Project + RepoLayout.ExeSuffix);
@@ -424,11 +473,14 @@ public static class SnapshotStore
         }
 
         string config = RepoLayout.ArtifactsConfiguration;
+        string platform = RepoLayout.TargetArch == "x86" ? " -p:PlatformTarget=x86" : string.Empty;
         // Desktop SOS resolves source lines from a classic Windows PDB (read via DIA), not a
         // portable/embedded one — the repo's global props default DebugType to embedded, so force
         // a full (Windows) PDB next to the exe for the source-line tests.
         string args =
-            $"build \"{project}\" -p:BuildProjectFramework=net462 -p:DebugType=full -p:DebugSymbols=true -c {config} -o \"{outDir}\"";
+            $"build \"{project}\" -p:BuildProjectFramework=net462 -p:TargetRid={RepoLayout.Rid} " +
+            $"-p:TargetArch={RepoLayout.TargetArch}{platform} -p:DebugType=full -p:DebugSymbols=true " +
+            $"-c {config} -o \"{outDir}\"";
 
         // Rebuild only when stale (above). Different frameworks of one csproj share its obj/ (and
         // project.assets.json), so serialize fallback builds per project.
