@@ -119,6 +119,25 @@ public sealed class GcInspectionTests
         gen0.AssertContains("ThinLockMarker");
     }
 
+    [SosTheory]
+    [MemberData(nameof(Matrix))]
+    public async Task DumpGen_ArgumentsAndFilters(TestConfig config)
+    {
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        target.Sos("dumpgen").AssertContains("Generation argument is missing");
+        target.Sos("dumpgen invalid").AssertContains("invalid is not a supported generation");
+
+        ulong marker = target.FindUniqueObject("ThinLockMarker");
+        ulong methodTable = target.DumpObj(marker).MethodTable;
+
+        target.Sos("dumpgen gen0 -type ThinLockMarker")
+            .AssertContains("ThinLockMarker");
+        target.Sos($"dumpgen gen0 -mt {methodTable:x}")
+            .AssertContains(marker.ToString("x"));
+    }
+
     private static int UniqueRootCount(SosOutput output)
     {
         Match m = Regex.Match(output.Text, @"Found (\d+) unique roots");
