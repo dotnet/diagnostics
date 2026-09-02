@@ -38,17 +38,18 @@ public static class ToolPaths
     public static string LldbPluginPath => s_lldbPluginPath.Value;
 
     /// <summary>
-    /// The <c>lldb</c> executable the harness drives. Resolution mirrors <c>eng/build.sh</c>: the
-    /// <c>LLDB_PATH</c> env var first, then (on macOS) Xcode's lldb at
-    /// <c>$(xcode-select -p)/usr/bin/lldb</c> (it carries the debugging entitlements), then a plain
-    /// <c>lldb</c> on <c>PATH</c>. Non-Windows; resolved lazily.
+    /// The <c>lldb</c> executable the harness drives. On macOS the repo-built <c>sos-lldb</c> driver is
+    /// preferred because it embeds Xcode's LLDB framework without inheriting the system executable's
+    /// CoreCLR-hosting restriction. <c>SOSHARNESS_LLDB_PATH</c> is the explicit harness override;
+    /// <c>LLDB_PATH</c> and system LLDB remain fallbacks. Non-Windows; resolved lazily.
     /// </summary>
     public static string LldbExe => s_lldbExe.Value;
 
     /// <summary>
     /// The .NET runtime directory SOS hosts its managed extension on (the <c>sethostruntime</c> target).
-    /// Points at the repo's locally-acquired <c>.dotnet</c> shared runtime (highest net10 present), so the
-    /// host runtime is deterministic and hermetic rather than auto-detected from <c>PATH</c>.
+    /// Defaults to the repo's locally-acquired <c>.dotnet</c> shared runtime (highest net10 present), so the
+    /// host runtime is deterministic and hermetic rather than auto-detected from <c>PATH</c>. Set
+    /// <c>SOSHARNESS_HOST_RUNTIME_DIR</c> to validate SOS against another complete runtime layout.
     /// </summary>
     public static string HostRuntimeDirectory => s_hostRuntimeDirectory.Value;
 
@@ -174,15 +175,32 @@ public static class ToolPaths
 
     private static string ResolveLldbExe()
     {
-        // 1) Explicit override (what eng/build.sh exports), if it points at a real file.
-        string? env = Environment.GetEnvironmentVariable("LLDB_PATH");
+        // 1) Explicit harness override.
+        string? env = Environment.GetEnvironmentVariable("SOSHARNESS_LLDB_PATH");
         if (!string.IsNullOrEmpty(env) && File.Exists(env))
         {
             return env;
         }
 
-        // 2) macOS: Xcode's lldb is signed with the debugging entitlements needed to drive a process and
-        //    to load core dumps, so prefer it over anything else.
+        // 2) The repo-built macOS driver uses the selected Xcode's LLDB framework without running inside
+        //    Apple's restricted LLDB executable.
+        if (OperatingSystem.IsMacOS())
+        {
+            string driver = Path.Combine(RepoLayout.ArtifactsBinNative, "sos-lldb");
+            if (File.Exists(driver))
+            {
+                return driver;
+            }
+        }
+
+        // 3) Existing build-script override.
+        env = Environment.GetEnvironmentVariable("LLDB_PATH");
+        if (!string.IsNullOrEmpty(env) && File.Exists(env))
+        {
+            return env;
+        }
+
+        // 4) Xcode's LLDB.
         if (OperatingSystem.IsMacOS())
         {
             string? developerDir = TryRun("xcode-select", "-p");
@@ -196,7 +214,7 @@ public static class ToolPaths
             }
         }
 
-        // 3) A plain `lldb` on PATH.
+        // 5) A plain `lldb` on PATH.
         string? onPath = FindOnPath("lldb");
         if (onPath is not null)
         {
@@ -204,12 +222,48 @@ public static class ToolPaths
         }
 
         throw new FileNotFoundException(
-            "Could not locate an 'lldb' executable. Set LLDB_PATH, install lldb on PATH, or (on macOS) " +
-            "install Xcode.");
+            "Could not locate an 'lldb' executable. Set SOSHARNESS_LLDB_PATH or LLDB_PATH, install lldb " +
+            "on PATH, or (on macOS) install Xcode.");
+    }
+
+    internal static string? ResolveXcodeSharedFrameworksDirectory()
+    {
+        string? developerDir = Environment.GetEnvironmentVariable("DEVELOPER_DIR");
+        if (string.IsNullOrWhiteSpace(developerDir))
+        {
+            developerDir = TryRun("xcode-select", "-p");
+        }
+
+        if (string.IsNullOrWhiteSpace(developerDir))
+        {
+            return null;
+        }
+
+        string sharedFrameworks = Path.GetFullPath(Path.Combine(developerDir.Trim(), "..", "SharedFrameworks"));
+        return Directory.Exists(sharedFrameworks) ? sharedFrameworks : null;
     }
 
     private static string ResolveHostRuntimeDirectory()
     {
+        string? configuredDirectory = Environment.GetEnvironmentVariable("SOSHARNESS_HOST_RUNTIME_DIR");
+        if (!string.IsNullOrEmpty(configuredDirectory))
+        {
+            string directory = Path.GetFullPath(configuredDirectory);
+            string coreClrName = OperatingSystem.IsWindows()
+                ? "coreclr.dll"
+                : OperatingSystem.IsMacOS() ? "libcoreclr.dylib" : "libcoreclr.so";
+            string coreClrPath = Path.Combine(directory, coreClrName);
+            string coreLibPath = Path.Combine(directory, "System.Private.CoreLib.dll");
+            if (File.Exists(coreClrPath) && File.Exists(coreLibPath))
+            {
+                return directory;
+            }
+
+            throw new DirectoryNotFoundException(
+                $"The configured SOS harness host runtime directory '{directory}' must contain " +
+                $"{coreClrName} and System.Private.CoreLib.dll.");
+        }
+
         // SOS hosts its managed extension on a .NET runtime; point it at the repo's locally-acquired
         // .dotnet shared runtime so it's deterministic. Any recent runtime works as a host (it need not
         // match the target's runtime), so pick the highest net10 present.

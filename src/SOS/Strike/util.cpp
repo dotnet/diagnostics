@@ -3148,7 +3148,7 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
                 UINT uLen = 0;
                 if (VerQueryValueA(pVersionInfo, "\\", (LPVOID *) &pTmpFileInfo, &uLen))
                 {
-                    if (pFileInfo->dwFileVersionMS == (DWORD)-1) {
+                    if (pTmpFileInfo->dwFileVersionMS == (DWORD)-1) {
                         return FALSE;
                     }
                     *pFileInfo = *pTmpFileInfo; // Copy the info

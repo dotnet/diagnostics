@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="SOS.TestHarness.EngineHost" />
+    <InternalsVisibleTo Include="SOS.Tests" />
   </ItemGroup>
 
   <ItemGroup>
