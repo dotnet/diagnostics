@@ -208,10 +208,9 @@ namespace SOS.Hosting
             }
             *ppClrDataProcess = IntPtr.Zero;
             bool cdacOnly = policy == CDacLoadPolicy.OnlyUseCDac;
-            bool useCDac = policy != CDacLoadPolicy.UseLegacyDac;
 
             int cdacActivationResult = HResult.E_NOINTERFACE;
-            if (useCDac)
+            if (policy != CDacLoadPolicy.UseLegacyDac)
             {
                 try
                 {

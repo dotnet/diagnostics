@@ -143,10 +143,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private ClrRuntime CreateRuntime()
         {
             CDacLoadPolicy policy = _settingsService.CDacLoadPolicy;
-            bool useCDac = policy != CDacLoadPolicy.UseLegacyDac;
             Trace.TraceInformation($"Runtime #{Id} data-access: begin (cDAC policy={policy})");
 
-            if (useCDac)
+            if (policy != CDacLoadPolicy.UseLegacyDac)
             {
                 int hr = GetClrDataProcessFromCDac(out IntPtr clrDataProcess);
                 if (hr >= 0 && clrDataProcess != IntPtr.Zero)

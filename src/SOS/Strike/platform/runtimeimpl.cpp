@@ -1196,8 +1196,7 @@ HRESULT Runtime::CreateCorDebugProcessViaDbgShim(ICorDebugProcess** ppCorDebugPr
         return hr;
     }
 
-    DbgShimCDacLoadPolicy loadPolicy = (DbgShimCDacLoadPolicy)GetCDacLoadPolicy();
-    hr = policy->SetCDacLoadPolicy(loadPolicy);
+    hr = policy->SetCDacLoadPolicy((DbgShimCDacLoadPolicy)GetCDacLoadPolicy());
     if (FAILED(hr))
     {
         return hr;
