@@ -371,6 +371,8 @@ extends:
                 }
               displayName: 'Setup layout for packaging'
 
+            - template: /eng/common/core-templates/steps/enable-internal-sources.yml@self
+
             # Create nuget packages, sign binaries and publish to blob feed
             - script: $(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName) /p:DotNetPublishUsingPipelines=true /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
               displayName: Package, Sign, and Publish
