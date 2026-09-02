@@ -114,7 +114,9 @@ public sealed class DbgEngLiveHost : DbgEngHostBase
                 Control.WaitForEvent(TimeSpan.FromSeconds(60));
                 Control.GetExecutionStatus(out DEBUG_STATUS status);
 
-                if (status == DEBUG_STATUS.BREAK)
+                if (status == DEBUG_STATUS.BREAK
+                    && Control.GetLastEvent(out DEBUG_LAST_EVENT_INFO_EXCEPTION exception, out _, out _)
+                    && exception.FirstChance == 0)
                 {
                     return; // second-chance crash break
                 }
