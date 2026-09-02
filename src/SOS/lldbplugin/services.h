@@ -72,6 +72,28 @@ private:
     lldb::SBFrame GetCurrentFrame();
 
 public:
+    class CurrentResultScope
+    {
+        LLDBServices* m_services;
+        lldb::SBCommandReturnObject* m_previousResult;
+
+    public:
+        CurrentResultScope(LLDBServices* services, lldb::SBCommandReturnObject* result) :
+            m_services(services),
+            m_previousResult(services->m_currentResult)
+        {
+            m_services->m_currentResult = result;
+        }
+
+        ~CurrentResultScope()
+        {
+            m_services->m_currentResult = m_previousResult;
+        }
+
+        CurrentResultScope(const CurrentResultScope&) = delete;
+        CurrentResultScope& operator=(const CurrentResultScope&) = delete;
+    };
+
     LLDBServices(lldb::SBDebugger debugger);
     ~LLDBServices();
 
@@ -454,9 +476,6 @@ public:
     void AddManagedCommand(const char* name, const char* help);
 
     bool ExecuteCommand( const char* commandName, char** arguments, lldb::SBCommandReturnObject &result);
-
-    void SetCurrentResult(lldb::SBCommandReturnObject *result) { m_currentResult = result; }
-    void ClearCurrentResult() { m_currentResult = nullptr; }
 
     HRESULT InternalOutputVaList(ULONG mask, PCSTR format, va_list args);
 };

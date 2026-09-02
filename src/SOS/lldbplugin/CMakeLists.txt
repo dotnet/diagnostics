@@ -135,5 +135,13 @@ add_library_clr(sosplugin SHARED ${SOURCES})
 
 target_link_libraries(sosplugin ${LIBRARIES})
 
+if(CLR_CMAKE_HOST_OSX)
+    add_executable_clr(sos-lldb driver.cpp)
+    target_link_libraries(sos-lldb ${LLDB_LIB})
+endif()
+
 # add the install targets
 install_clr(TARGETS sosplugin DESTINATIONS .)
+if(CLR_CMAKE_HOST_OSX)
+    install_clr(TARGETS sos-lldb DESTINATIONS .)
+endif()
