@@ -23,6 +23,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private ProgressWriter progressWriter;
         private Version minRuntimeSupportingUserEventsIPCCommand = new(10, 0, 0);
         private readonly bool cancelOnEnter;
+        private const int ScNProcessorsOnln = 84;
+
+        [LibraryImport("libc", EntryPoint = "sysconf")]
+        private static partial long SysConf(int name);
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
@@ -31,7 +35,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string ClrEvents,
             string[] PerfEvents,
             string[] Profiles,
-            uint? EventBufferSizeInMB,
+            uint? BufferSizeInMB,
             FileInfo Output,
             TimeSpan Duration,
             string Name,
@@ -176,7 +180,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.CLREventLevelOption,
                 CommonOptions.CLREventsOption,
                 PerfEventsOption,
-                EventBufferSizeInMBOption,
+                BufferSizeInMBOption,
                 ProbeOption,
                 CommonOptions.ProfileOption,
                 CommonOptions.OutputPathOption,
@@ -200,7 +204,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ClrEvents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
                     PerfEvents: perfEventsValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Profiles: profilesValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-                    EventBufferSizeInMB: parseResult.GetValue(EventBufferSizeInMBOption),
+                    BufferSizeInMB: parseResult.GetValue(BufferSizeInMBOption),
                     Output: parseResult.GetValue(CommonOptions.OutputPathOption) ?? new FileInfo(CommonOptions.DefaultTraceName),
                     Duration: parseResult.GetValue(CommonOptions.DurationOption),
                     Name: parseResult.GetValue(CommonOptions.NameOption) ?? string.Empty,
@@ -430,6 +434,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             scriptPath = null;
             List<string> recordTraceArgs = new();
 
+            if (args.BufferSizeInMB.HasValue)
+            {
+                if (args.BufferSizeInMB.Value == 0)
+                {
+                    throw new DiagnosticToolException("Buffer size must be at least 1 MB.");
+                }
+            }
+
             string[] profiles = args.Profiles;
             if (args.Profiles.Length == 0 && args.Providers.Length == 0 && string.IsNullOrEmpty(args.ClrEvents) && args.PerfEvents.Length == 0)
             {
@@ -438,15 +450,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             StringBuilder scriptBuilder = new();
-            if (args.EventBufferSizeInMB.HasValue)
+            if (args.BufferSizeInMB.HasValue)
             {
-                if (args.EventBufferSizeInMB.Value == 0)
-                {
-                    throw new DiagnosticToolException("Event buffer size must be at least 1 MB.");
-                }
-
-                ulong eventBufferSizeBytes = args.EventBufferSizeInMB.Value * 1024UL * 1024UL;
-                scriptBuilder.AppendLine($"with_per_cpu_buffer_bytes({eventBufferSizeBytes});");
+                ulong cpuCount = GetOnlineProcessorCount();
+                ulong totalBufferSizeBytes = args.BufferSizeInMB.Value * 1024UL * 1024UL;
+                ulong perCpuBufferSizeBytes = (totalBufferSizeBytes + cpuCount - 1) / cpuCount;
+                scriptBuilder.AppendLine($"with_per_cpu_buffer_bytes({perCpuBufferSizeBytes});");
                 scriptBuilder.AppendLine();
             }
 
@@ -540,6 +549,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return Encoding.UTF8.GetBytes(options);
         }
 
+        internal static ulong GetOnlineProcessorCount()
+        {
+            long cpuCount = SysConf(ScNProcessorsOnln);
+            if (cpuCount <= 0)
+            {
+                throw new DiagnosticToolException("Unable to determine the number of online processors.");
+            }
+
+            return (ulong)cpuCount;
+        }
+
         private static FileInfo ResolveOutputPath(FileInfo output, string processName)
         {
             if (!string.Equals(output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
@@ -597,10 +617,10 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 Description = @"Comma-separated list of perf events (e.g. syscalls:sys_enter_execve,sched:sched_switch)."
             };
 
-        private static readonly Option<uint?> EventBufferSizeInMBOption =
-            new("--event-buffer-size-mb")
+        private static readonly Option<uint?> BufferSizeInMBOption =
+            new("--buffersize")
             {
-                Description = "Size of each per-CPU event buffer, in megabytes. Larger buffers can accommodate event bursts but use more memory. When omitted, the recorder chooses a default based on the enabled features."
+                Description = "Requested total size of the event buffers, in megabytes. The size is divided across the available CPUs. When omitted, the recorder chooses a default based on the enabled features."
             };
 
         private static readonly Option<bool> ProbeOption =
