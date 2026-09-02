@@ -41,7 +41,7 @@ usage_list+=("-test: run xunit tests")
 usage_list+=("-methodfilter: pass method filter to xunit runner (Namespace.ClassName.MethodName)")
 usage_list+=("-classfilter: pass class filter to xunit runner (Namespace.ClassName)")
 usage_list+=("-dacmode: which DAC/cDAC the SOS tests load: cdac, cdacverify, or dac.")
-usage_list+=("-cdacpath: path to an mscordaccore_universal whose sibling universal DBI is overlaid next to SOS (only with -dacmode cdac).")
+usage_list+=("-cdacpath: path to an mscordaccore_universal to overlay next to SOS. This option also copies the universal DBI found next to the cdac).")
 
 handle_arguments() {
     lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
