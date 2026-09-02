@@ -159,7 +159,7 @@ public sealed class EeHeap
     /// <summary>The raw command output, for custom assertions / failure messages.</summary>
     public SosOutput Output => _output;
 
-    /// <summary>True for the modern regions/DATAS layout; false for the segment/ephemeral layout.</summary>
+    /// <summary>True when generation-specific region headers are present; false for the segment/ephemeral layout.</summary>
     public bool IsRegions { get; private set; }
 
     /// <summary>The DATAS mode value (e.g. "0"/""), or null when there is no DATAS banner (segment layout).</summary>
@@ -198,7 +198,6 @@ public sealed class EeHeap
 
             if (line.StartsWith("DATAS", StringComparison.Ordinal))
             {
-                IsRegions = true;
                 int eq = line.IndexOf('=');
                 Datas = eq >= 0 ? line[(eq + 1)..].Trim() : string.Empty;
                 continue;
@@ -250,6 +249,7 @@ public sealed class EeHeap
             Match genHeader = s_genHeader.Match(line);
             if (genHeader.Success)
             {
+                IsRegions = true;
                 target = genHeader.Groups[1].Value switch
                 {
                     "0" => heap.Gen0,

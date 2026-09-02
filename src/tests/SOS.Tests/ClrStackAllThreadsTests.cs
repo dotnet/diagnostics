@@ -24,6 +24,8 @@ public sealed class ClrStackAllThreadsTests
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_AllThreads(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopAllThreads);
 

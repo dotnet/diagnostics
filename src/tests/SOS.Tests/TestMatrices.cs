@@ -8,11 +8,15 @@ namespace SOS.Tests;
 
 internal static class TestMatrices
 {
-    /// <summary>
-    /// Matrix for commands that use the managed stack walker. The universal cDAC can inspect a
-    /// single-file runtime, but it cannot currently start a stack walk for one (SOS reports
-    /// COR_E_INVALIDOPERATION), so that combination is not a supported stack-walk configuration.
-    /// </summary>
+    public static void SkipUnavailableMacOsDotnetDumpThreads(TestConfig config)
+    {
+        if (OperatingSystem.IsMacOS() && config.Host == Host.DotnetDump)
+        {
+            HarnessSkipException.Now(
+                "https://github.com/dotnet/diagnostics/issues/5987: dotnet-dump exposes synthetic thread IDs for macOS createdump ELF cores.");
+        }
+    }
+
     public static TheoryData<TestConfig> StackWalk(
         string[] targets,
         Flavor flavor = Flavor.AllValid,
@@ -21,10 +25,11 @@ internal static class TestMatrices
         GcType gcType = GcType.Workstation,
         DumpKind dumpKind = DumpKind.Heap,
         CoreVersion coreVersion = CoreVersion.All,
-        Dac dac = Dac.All)
+        Dac dac = Dac.All,
+        Func<TestConfig, bool>? filter = null)
     {
         TheoryData<TestConfig> data = new();
-        foreach (TestConfig config in StackWalkConfigs(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac))
+        foreach (TestConfig config in StackWalkConfigs(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac, filter))
         {
             data.Add(config);
         }
@@ -40,12 +45,40 @@ internal static class TestMatrices
         GcType gcType = GcType.Workstation,
         DumpKind dumpKind = DumpKind.Heap,
         CoreVersion coreVersion = CoreVersion.All,
-        Dac dac = Dac.All) =>
+        Dac dac = Dac.All,
+        Func<TestConfig, bool>? filter = null) =>
+        // .NET 11 cDAC supports SingleFile stack walks; TestConfig rejects cDAC on earlier runtimes.
         TestConfig.Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion: coreVersion, dac: dac)
-            .Where(SupportsStackWalk);
+            .Where(SupportsCurrentThread)
+            .Where(config => filter is null || filter(config));
 
-    public static bool SupportsStackWalk(TestConfig config) =>
-        config.Flavor != Flavor.SingleFile || config.Dac != Dac.CDac;
+    public static TheoryData<TestConfig> HeapEnumeration(string[] targets)
+    {
+        TheoryData<TestConfig> data = new();
+        foreach (TestConfig config in TestConfig.Permutations(targets).Where(SupportsHeapEnumeration))
+        {
+            data.Add(config);
+        }
+
+        return data;
+    }
+
+    public static TheoryData<TestConfig> CurrentThreadCommands(
+        string[] targets,
+        Liveness liveness = Liveness.Dump,
+        DumpKind dumpKind = DumpKind.Heap)
+    {
+        TheoryData<TestConfig> data = new();
+        foreach (TestConfig config in TestConfig.Permutations(
+            targets,
+            liveness: liveness,
+            dumpKind: dumpKind).Where(SupportsCurrentThread))
+        {
+            data.Add(config);
+        }
+
+        return data;
+    }
 
     /// <summary>
     /// Wraps <see cref="TestConfig.BuildMatrix"/> for commands whose data is absent from a reduced Heap dump on
@@ -97,10 +130,18 @@ internal static class TestMatrices
         Host host = Host.AllValid,
         Liveness liveness = Liveness.Dump,
         CoreVersion coreVersion = CoreVersion.All,
-        Dac dac = Dac.All)
+        Dac dac = Dac.All,
+        Func<TestConfig, bool>? filter = null)
     {
         TheoryData<TestConfig> data = new();
-        foreach (TestConfig config in StackWalkConfigs(targets, flavor, host, liveness, coreVersion: coreVersion, dac: dac))
+        foreach (TestConfig config in StackWalkConfigs(
+            targets,
+            flavor,
+            host,
+            liveness,
+            coreVersion: coreVersion,
+            dac: dac,
+            filter: filter))
         {
             data.Add(OperatingSystem.IsWindows() && (config.CoreVersion & fullDumpVersions) != 0
                 ? config with { DumpKind = DumpKind.Full }
@@ -109,6 +150,36 @@ internal static class TestMatrices
 
         return data;
     }
+
+    internal static bool SupportsHeapEnumeration(TestConfig config) =>
+        SupportsHeapEnumeration(config, OperatingSystem.IsWindows());
+
+    internal static bool SupportsHeapEnumeration(TestConfig config, bool isWindows) =>
+        // https://github.com/dotnet/runtime/pull/132938: dbgeng /mw dumps omit the WKS card-table
+        // pointer slot, so cDAC cannot construct a heap until the runtime fix flows into this repo.
+        // Windows SingleFile crash dumps use dbgeng capture regardless of the later analysis host.
+        !isWindows
+        || config.Flavor != Flavor.SingleFile
+        || config.Dac != Dac.CDac;
+
+    internal static bool SupportsGcRootEnumeration(TestConfig config) =>
+        // Desktop SOS can fail GC-reference enumeration or corrupt the debugger host in clrstack -gc.
+        config.Flavor != Flavor.Framework;
+
+    internal static bool SupportsCurrentThread(TestConfig config) =>
+        // createdump ELF cores expose synthetic runtime thread IDs that LLDB cannot select, so
+        // current-thread commands report "The current thread is unmanaged" even on the crash thread.
+        config.Host != Host.Lldb || config.Liveness != Liveness.Dump;
+
+    internal static bool SupportsICorDebugStackWalk(TestConfig config) =>
+        SupportsICorDebugStackWalk(config, Environment.Is64BitProcess);
+
+    internal static bool SupportsICorDebugStackWalk(TestConfig config, bool is64BitProcess) =>
+        // Desktop x64 ICorDebug returns no frames for a dump captured at DivZero's second-chance crash.
+        !is64BitProcess
+        || config.Host != Host.Cdb
+        || config.Target != TargetCatalog.DivZero
+        || config.Flavor != Flavor.Framework;
 
     public static TheoryData<TestConfig> CoreFrameworkConditional(string[] targets)
     {

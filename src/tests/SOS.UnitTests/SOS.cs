@@ -366,34 +366,6 @@ public class SOSExceptionTests
     private ITestOutputHelper Output { get; set; }
 
     [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task DivZero(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "DivZero",
-            scriptName: "DivZero.script",
-            Output,
-            testTriage: true);
-    }
-
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task SimpleThrow(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(config, debuggeeName: "SimpleThrow", scriptName: "SimpleThrow.script", Output, testTriage: true);
-    }
-
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task NestedExceptionTest(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "NestedExceptionTest",
-            scriptName: "NestedExceptionTest.script",
-            Output,
-            testTriage: true);
-    }
-
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task TaskNestedException(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(

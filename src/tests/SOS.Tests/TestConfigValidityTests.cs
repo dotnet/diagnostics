@@ -34,15 +34,14 @@ public sealed class TestConfigValidityTests
     }
 
     [Fact]
-    public void CDacRequiresSupportedCoreConfiguration()
+    public void CDacRequiresSupportedNet11Configuration()
     {
         TestConfig config = Config() with { Dac = Dac.CDac, CoreVersion = CoreVersion.Net11 };
 
         Assert.True(TestConfig.IsDacSupported(config));
         Assert.False(TestConfig.IsDacSupported(config with { CoreVersion = CoreVersion.Net10 }));
         Assert.False(TestConfig.IsDacSupported(config with { Flavor = Flavor.Framework }));
-        Assert.False(TestConfig.IsDacSupported(config with { Flavor = Flavor.SingleFile }));
-        Assert.False(TestConfig.IsValid(config with { Flavor = Flavor.SingleFile }));
+        Assert.True(TestConfig.IsDacSupported(config with { Flavor = Flavor.SingleFile }));
     }
 
     [Theory]

@@ -20,23 +20,28 @@ namespace SOS.Tests;
 /// </summary>
 public sealed class ClrStackLinesTests
 {
-    private sealed record Frame(string Function, string SourceFile);
+    private sealed record Frame(string Function, string SourceFile, params int[] SourceLines);
 
     // Hardcoded like the legacy scripts: distinctive method substrings expected on each target's stack
     // (in caller order) and the source file each resolves to.
-    private static IReadOnlyList<Frame> ExpectedFrames(string target) => target switch
+    private static IReadOnlyList<Frame> ExpectedFrames(TestConfig config) => config.Target switch
     {
         TargetCatalog.SimpleThrow =>
-            [new("UseObject", "UserObject.cs"), new("Simple.Main", "SimpleThrow.cs")],
+            [new("UseObject", "UserObject.cs", 19), new("Simple.Main", "SimpleThrow.cs", 12)],
         TargetCatalog.LineNums =>
             [new(".Bar(", "Program.cs"), new(".Foo(", "Program.cs"), new(".Main(", "Program.cs")],
         TargetCatalog.DivZero =>
-            [new(".DivideByZero(", "DivZero.cs"), new(".F3(", "DivZero.cs"), new(".F2(", "DivZero.cs")],
+            [
+                new(".DivideByZero(", "DivZero.cs", 15),
+                new(".F3(", "DivZero.cs", 24),
+                new(".F2(", "DivZero.cs", 36),
+                new(".Main(", "DivZero.cs", config.Flavor == Flavor.Framework ? 56 : 57),
+            ],
         TargetCatalog.NestedException =>
-            [new(".Main(", "NestedExceptionTest.cs")],
+            [new(".Main(", "NestedExceptionTest.cs", config.Flavor == Flavor.Framework ? [11, 20] : [20])],
         TargetCatalog.Scenarios =>
             [new(".ArgsLocalsMethod(", "SosHarnessScenarios.cs"), new(".Main(", "SosHarnessScenarios.cs")],
-        _ => throw new ArgumentOutOfRangeException(nameof(target), target, "no expected frames"),
+        _ => throw new ArgumentOutOfRangeException(nameof(config), config.Target, "no expected frames"),
     };
 
     public static TheoryData<TestConfig> Matrix { get; }
@@ -47,12 +52,15 @@ public sealed class ClrStackLinesTests
                 TargetCatalog.DivZero,
                 TargetCatalog.NestedException,
                 TargetCatalog.Scenarios,
-            ]);
+            ],
+            liveness: Liveness.AllValid);
 
     [SosTheory]
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_SourceLines(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         if (config.Target == TargetCatalog.Scenarios)
         {
@@ -68,14 +76,22 @@ public sealed class ClrStackLinesTests
         // The expected managed methods appear, in caller order, each resolving to its source file with
         // a real (positive) line number.
         int searchFrom = 0;
-        foreach (Frame expected in ExpectedFrames(config.Target))
+        foreach (Frame expected in ExpectedFrames(config))
         {
             int at = IndexOfFrame(plain, expected.Function, searchFrom);
             Assert.True(at >= 0, $"Expected frame '{expected.Function}' at/after row {searchFrom} in:\n{Dump(plain)}");
             SosRow row = plain.Row(at);
 
             Assert.Equal(expected.SourceFile, Path.GetFileName(row["SourceFile"].Value));
-            Assert.True(row["LineNumber"].AsInt32(Sos.Integer) > 0, $"Expected a positive line number for '{expected.Function}'.");
+            int lineNumber = row["LineNumber"].AsInt32(Sos.Integer);
+            if (expected.SourceLines.Length == 0)
+            {
+                Assert.True(lineNumber > 0, $"Expected a positive line number for '{expected.Function}'.");
+            }
+            else
+            {
+                Assert.Contains(lineNumber, expected.SourceLines);
+            }
             searchFrom = at + 1;
         }
 

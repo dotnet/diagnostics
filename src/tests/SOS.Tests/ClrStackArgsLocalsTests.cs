@@ -28,6 +28,8 @@ public sealed class ClrStackArgsLocalsTests
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_ArgsLocals(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         if (config.Target == TargetCatalog.Scenarios)
         {

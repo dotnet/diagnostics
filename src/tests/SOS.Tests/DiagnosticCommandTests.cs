@@ -21,6 +21,8 @@ public sealed class DiagnosticCommandTests
     // (dotnet-dump) hosts. The lldb SOS plugin never registered it (true of the legacy suite too — clrma
     // ran only under the dotnet-dump host there), so lldb is excluded from the matrix rather than skipped.
     public static TheoryData<TestConfig> ClrmaMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.Cdb | Host.DotnetDump);
+    public static TheoryData<TestConfig> ClrmaExceptionMatrix =>
+        TestConfig.BuildMatrix([TargetCatalog.NestedException], Flavor.AllValid, Host.DotnetDump, dumpKind: DumpKind.All);
 
     [SosTheory]
     [MemberData(nameof(Matrix))]
@@ -79,6 +81,8 @@ public sealed class DiagnosticCommandTests
     [MemberData(nameof(ClrmaMatrix))]
     public async Task Clrma_DrivesManagedAnalysis(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
@@ -86,5 +90,23 @@ public sealed class DiagnosticCommandTests
         SosOutput clrma = target.Sos("clrma");
         clrma.AssertContains("Managed analysis provider");
         clrma.AssertContains("OSThreadId:");
+    }
+
+    [SosTheory]
+    [MemberData(nameof(ClrmaExceptionMatrix))]
+    public async Task Clrma_ReportsCurrentExceptionChain(TestConfig config)
+    {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToFirstStop();
+
+        SosOutput clrma = target.Sos("clrma");
+        clrma.AssertContains("Current exception:");
+        Assert.Matches(@"Exception type:\s+System\.InvalidOperationException", clrma.Text);
+        Assert.Matches(@"HResult:\s+80131509", clrma.Text);
+        clrma.AssertContains("InnerException:");
+        Assert.Matches(@"Exception type:\s+System\.FormatException", clrma.Text);
+        Assert.Matches(@"HResult:\s+80131537", clrma.Text);
     }
 }

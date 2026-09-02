@@ -17,7 +17,8 @@ public sealed class StackInspectionTests
 {
     // Live opt-in: !dso (dumpstackobjects) scans a live thread's stack memory for object references, so
     // DumpStackObjects_ListsStackRoots runs dump AND live; the other stack commands here stay dump-only.
-    public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], liveness: Liveness.AllValid);
+    public static TheoryData<TestConfig> Matrix =>
+        TestMatrices.CurrentThreadCommands([TargetCatalog.Scenarios], Liveness.AllValid);
     public static TheoryData<TestConfig> CdbMatrix => TestMatrices.FullDumpOnCoreVersions([TargetCatalog.Scenarios], CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10, Flavor.AllValid, Host.Cdb);
     public static TheoryData<TestConfig> DotnetDumpMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.DotnetDump);
 
@@ -25,6 +26,8 @@ public sealed class StackInspectionTests
     [MemberData(nameof(Matrix))]
     public async Task DumpStackObjects_ListsStackRoots(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
 
@@ -46,6 +49,8 @@ public sealed class StackInspectionTests
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task ParallelStacks_GroupsThreadsByCallStack(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
 
