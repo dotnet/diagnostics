@@ -2293,6 +2293,7 @@ public:
                char** arguments,
                lldb::SBCommandReturnObject &result)
     {
+        LLDBServices::CurrentResultScope resultScope(g_services, &result);
         IHostServices* hostservices = GetHostServices();
         if (hostservices == nullptr)
         {
@@ -3154,6 +3155,8 @@ LLDBServices::ExecuteCommand(
     char** arguments,
     lldb::SBCommandReturnObject &result)
 {
+    CurrentResultScope resultScope(this, &result);
+
     // Build all the possible arguments into a string
     std::string commandArguments;
     for (const char* arg = *arguments; arg != nullptr; arg = *(++arguments))
