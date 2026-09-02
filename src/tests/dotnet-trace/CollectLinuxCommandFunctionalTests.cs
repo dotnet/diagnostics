@@ -402,6 +402,27 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 FormatException("Buffer size must be at least 1 MB."));
         }
 
+        [Theory]
+        [InlineData("0", 1)]
+        [InlineData("0-3", 4)]
+        [InlineData("0-3,8,10-11", 7)]
+        public void CollectLinuxCommand_ParsesOnlineProcessorRanges(string onlineCpus, ulong expectedCount)
+        {
+            Assert.Equal(
+                expectedCount,
+                CollectLinuxCommandHandler.ParseOnlineProcessorCount(onlineCpus));
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("3-1")]
+        [InlineData("invalid")]
+        public void CollectLinuxCommand_RejectsInvalidOnlineProcessorRanges(string onlineCpus)
+        {
+            Assert.Throws<DiagnosticToolException>(
+                () => CollectLinuxCommandHandler.ParseOnlineProcessorCount(onlineCpus));
+        }
+
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
         public void CollectLinuxCommand_PrintsStatusOnce_WhenCursorRepositioningUnsupported()
         {

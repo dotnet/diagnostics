@@ -23,10 +23,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private ProgressWriter progressWriter;
         private Version minRuntimeSupportingUserEventsIPCCommand = new(10, 0, 0);
         private readonly bool cancelOnEnter;
-        private const int ScNProcessorsOnln = 84;
-
-        [LibraryImport("libc", EntryPoint = "sysconf")]
-        private static partial long SysConf(int name);
 
         internal sealed record CollectLinuxArgs(
             CancellationToken Ct,
@@ -551,13 +547,55 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
         internal static ulong GetOnlineProcessorCount()
         {
-            long cpuCount = SysConf(ScNProcessorsOnln);
-            if (cpuCount <= 0)
+            const string OnlineCpusPath = "/sys/devices/system/cpu/online";
+            string onlineCpus;
+            try
             {
-                throw new DiagnosticToolException("Unable to determine the number of online processors.");
+                onlineCpus = File.ReadAllText(OnlineCpusPath);
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException or UnauthorizedAccessException)
+            {
+                throw new DiagnosticToolException($"Unable to read online processors from '{OnlineCpusPath}': {ex.Message}");
             }
 
-            return (ulong)cpuCount;
+            return ParseOnlineProcessorCount(onlineCpus);
+        }
+
+        internal static ulong ParseOnlineProcessorCount(string onlineCpus)
+        {
+            ulong cpuCount = 0;
+
+            foreach (string range in onlineCpus.Trim().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                string[] bounds = range.Split('-', 2, StringSplitOptions.TrimEntries);
+                if (!ulong.TryParse(bounds[0], out ulong first))
+                {
+                    throw new DiagnosticToolException($"Invalid online processor range '{range}'.");
+                }
+
+                ulong last = first;
+                if (bounds.Length == 2 &&
+                    (!ulong.TryParse(bounds[1], out last) || last < first))
+                {
+                    throw new DiagnosticToolException($"Invalid online processor range '{range}'.");
+                }
+
+                try
+                {
+                    cpuCount = checked(cpuCount + checked(last - first + 1));
+                }
+                catch (OverflowException)
+                {
+                    throw new DiagnosticToolException("Online processor count is too large.");
+                }
+            }
+
+            if (cpuCount == 0)
+            {
+                throw new DiagnosticToolException("No online processors were reported.");
+            }
+
+            return cpuCount;
         }
 
         private static FileInfo ResolveOutputPath(FileInfo output, string processName)
