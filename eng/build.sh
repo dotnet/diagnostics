@@ -243,7 +243,7 @@ if [[ "$__NativeBuild" == 1 ]]; then
 fi
 
 #
-# Overlay an externally-provided cDAC transport next to the freshly built sos. SOS resolves the cDAC
+# Overlay an externally-provided cDAC next to the freshly built sos. SOS resolves the cDAC
 # and universal DBI from its own native binaries directory, so both files must come from the runtime
 # under test instead of mixing one with the copy restored from a referenced runtime package.
 #

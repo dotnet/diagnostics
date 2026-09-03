@@ -74,7 +74,7 @@ if (-not $skipnative) {
     }
 }
 
-# Overlay an externally-provided cDAC transport next to the freshly built sos.dll. SOS resolves the
+# Overlay externally-provided cDAC/dbi binaries next to the freshly built sos.dll. SOS resolves the
 # cDAC and universal DBI from its own native binaries directory, so both files must come from the
 # runtime under test instead of mixing one with the copy restored from a referenced runtime package.
 if ($cdacPath -ne '') {
