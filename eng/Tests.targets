@@ -1,0 +1,28 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+
+  <Target Name="ValidateSuppressedTestFailures"
+          AfterTargets="RunTests"
+          Condition="'$(_ErrorOnTestFailure)' == 'false'">
+    <!-- A missing result means the runner failed rather than merely reporting failed tests. -->
+    <Error Condition="!Exists('%(TestToRun.ResultsXmlPath)')"
+           Text="The test runner failed to produce results for %(TestToRun.Identity)." />
+
+    <XmlPeek XmlInputPath="%(TestToRun.ResultsXmlPath)"
+             Query="/assemblies/assembly[not(@errors)]"
+             Condition="Exists('%(TestToRun.ResultsXmlPath)')">
+      <Output TaskParameter="Result" ItemName="_TestAssembliesWithoutErrorCounts" />
+    </XmlPeek>
+    <Error Condition="'@(_TestAssembliesWithoutErrorCounts)' != ''"
+           Text="The test runner produced a result with missing assembly error counts in @(TestToRun->'%(ResultsXmlPath)', ', ')." />
+
+    <XmlPeek XmlInputPath="%(TestToRun.ResultsXmlPath)"
+             Query="/assemblies/assembly/@errors"
+             Condition="Exists('%(TestToRun.ResultsXmlPath)')">
+      <Output TaskParameter="Result" ItemName="_TestAssemblyErrors" />
+    </XmlPeek>
+    <Error Condition="'%(_TestAssemblyErrors.Identity)' != '0'"
+           Text="The test runner reported %(_TestAssemblyErrors.Identity) assembly-level error(s) in @(TestToRun->'%(ResultsXmlPath)', ', ')." />
+  </Target>
+
+</Project>

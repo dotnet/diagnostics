@@ -40,7 +40,7 @@ parameters:
   default: {}
 
 # Build configs. An object with the following properties: configuration, architecture.
-# Optionally it can also contain artifactUploadPath, artifactTargetPath
+# Optionally it can also contain artifactUploadPath, artifactTargetPath, runTests
 - name: buildConfigs
   type: object
   default: {}
@@ -156,6 +156,9 @@ jobs:
       - ${{ if eq(parameters.buildOnly, 'true') }}:
         - _TestArgs: ''
 
+      - ${{ if eq(config.runTests, false) }}:
+        - _TestArgs: ''
+
       # For testing msrc's and service releases. The RuntimeSourceVersion is either "default" or the service release version to test
       - _InternalInstallArgs: ''
       - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -200,6 +203,11 @@ jobs:
         ${{ else }}:
           displayName: Build / Test
         condition: succeeded()
+        ${{ if and(ne(parameters.buildOnly, 'true'), ne(config.runTests, false)) }}:
+          # PublishTestResults reports individual failures to Build Analysis. Do not also fail
+          # MSBuild for an xUnit failure, which would add a generic build/script failure.
+          env:
+            _ErrorOnTestFailure: 'false'
       - ${{ if ne(config.artifactUploadPath, '') }}:
         - task: CopyFiles@2
           displayName: Gather binaries for publish
@@ -236,20 +244,35 @@ jobs:
               targetPath: '$(Build.ArtifactStagingDirectory)/testartifacts'
               artifactName: TestArtifacts_$(_PhaseName)
 
-      - ${{ if ne(parameters.buildOnly, 'true') }}:
+      - ${{ if and(ne(parameters.buildOnly, 'true'), ne(config.runTests, false)) }}:
         # Publish test results to Azure Pipelines
+        - task: PublishTestResults@2
+          displayName: Publish partial test results
+          inputs:
+            testResultsFormat: xUnit
+            testResultsFiles: '**/*.xml'
+            searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
+            testRunTitle: 'Tests $(_PhaseName)'
+            failTaskOnFailedTests: false
+            publishRunAttachments: true
+            mergeTestResults: true
+            buildConfiguration: ${{ config.configuration }}
+          continueOnError: true
+          condition: failed()
+
         - task: PublishTestResults@2
           inputs:
             testResultsFormat: xUnit
             testResultsFiles: '**/*.xml'
             searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
             testRunTitle: 'Tests $(_PhaseName)'
-            failTaskOnFailedTests: true
+            # Build Analysis evaluates the published test failures separately.
+            failTaskOnFailedTests: false
+            failTaskOnMissingResultsFile: true
             publishRunAttachments: true
             mergeTestResults: true
             buildConfiguration: ${{ config.configuration }}
-          continueOnError: true
-          condition: always()
+          condition: succeeded()
 
       - task: CopyFiles@2
         displayName: Gather Logs
