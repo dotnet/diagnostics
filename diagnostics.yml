@@ -50,7 +50,7 @@ extends:
   parameters:
     stages:
     - stage: build
-      displayName: Build Diagnostics
+      displayName: Build / Test Diagnostics
       jobs:
 
         ############################
@@ -135,31 +135,46 @@ extends:
       - template: /eng/pipelines/build.yml
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
-          osGroup: MacOS
+          osGroup: Linux
+          container: linux_arm64
+          crossBuild: true
           buildOnly: true
-          publishTestArtifacts: true
+          publishTestArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
+          publishTestRuntimeArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
           buildConfigs:
           - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin/osx.x64.Release
+            architecture: arm64
+            artifactUploadPath: bin/linux.arm64.Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
-              architecture: x64
-              artifactUploadPath: bin/osx.x64.Debug
+              architecture: arm64
+              artifactUploadPath: bin/linux.arm64.Debug
 
+      # Reuse one macOS agent per configuration: build/test x64 first, then cross-build arm64.
+      # PRs submit only arm64 SOS.Tests; non-PR builds submit both architectures.
       - template: /eng/pipelines/build.yml
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
-          crossBuild: true
-          buildOnly: true
+          timeoutInMinutes: 360
+          buildOnly: ${{ parameters.buildOnly }}
+          runSOSHelix: ${{ and(eq(parameters.buildOnly, false), eq(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}
+          sosHelixTargetOS: osx
+          sosHelixRidPrefix: osx
+          sosHelixQueue: OSX.15.Amd64.Open
+          additionalArchitecture: arm64
+          additionalCrossBuild: true
+          runAdditionalSOSHelix: ${{ and(eq(parameters.buildOnly, false), eq(variables['System.TeamProject'], 'public')) }}
+          additionalSOSHelixQueue: OSX.15.Arm64.Open
           buildConfigs:
           - configuration: Release
-            architecture: arm64
-            artifactUploadPath: bin/osx.arm64.Release
+            architecture: x64
+            artifactUploadPath: bin/osx.x64.Release
+            additionalArtifactUploadPath: bin/osx.arm64.Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
-              architecture: arm64
+              architecture: x64
+              artifactUploadPath: bin/osx.x64.Debug
 
       - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         - template: /eng/pipelines/build.yml
@@ -173,18 +188,6 @@ extends:
             - configuration: Release
               architecture: arm
               artifactUploadPath: bin/linux.arm.Release
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Linux
-            container: linux_arm64
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm64
-              artifactUploadPath: bin/linux.arm64.Release
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -216,18 +219,13 @@ extends:
               artifactUploadPath: bin/linux.arm64.Release
               artifactTargetPath: bin/linux-musl.arm64.Release
 
-    ############################
-    #                          #
-    #        Test stage        #
-    #                          #
-    ############################
+      ############################
+      #                          #
+      #        Test legs         #
+      #                          #
+      ############################
 
-    - ${{ if ne(parameters.buildOnly, true) }}:
-      - stage: test
-        displayName: Test Diagnostics
-        dependsOn: build
-        jobs:
-
+      - ${{ if ne(parameters.buildOnly, true) }}:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
@@ -235,6 +233,10 @@ extends:
             osGroup: Windows_NT
             dependsOn: Windows
             testOnly: true
+            runSOSHelix: ${{ eq(variables['System.TeamProject'], 'public') }}
+            sosHelixTargetOS: Windows_NT
+            sosHelixRidPrefix: win
+            sosHelixQueue: Windows.Amd64.Server2022.Open
             buildConfigs:
             - configuration: Debug
               architecture: x64
@@ -246,10 +248,15 @@ extends:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
-            name: MacOS_Test
-            osGroup: MacOS
-            dependsOn: MacOS
+            name: Ubuntu_22_04
+            osGroup: Linux
+            container: test_ubuntu_22_04
+            dependsOn: Linux
             testOnly: true
+            runSOSHelix: ${{ eq(variables['System.TeamProject'], 'public') }}
+            sosHelixTargetOS: linux
+            sosHelixRidPrefix: linux
+            sosHelixQueue: Ubuntu.2204.Amd64.Open
             buildConfigs:
             - configuration: Release
               architecture: x64
@@ -257,20 +264,27 @@ extends:
               - configuration: Debug
                 architecture: x64
 
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Ubuntu_22_04
-            osGroup: Linux
-            container: test_ubuntu_22_04
-            dependsOn: Linux
-            testOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
+        # Cross-built arm64 artifacts are submitted from an x64 Linux agent and execute only on Helix.
+        - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+          - template: /eng/pipelines/build.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: Ubuntu_22_04
+              osGroup: Linux
+              container: test_ubuntu_22_04
+              dependsOn: Linux
+              testOnly: true
+              helixOnly: true
+              runSOSHelix: true
+              sosHelixTargetOS: linux
+              sosHelixRidPrefix: linux
+              sosHelixQueue: Ubuntu.2204.ArmArch.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-helix-arm64v8
+              buildConfigs:
+              - configuration: Release
+                architecture: arm64
+              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                - configuration: Debug
+                  architecture: arm64
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -282,6 +296,10 @@ extends:
             dependsOn: Linux_musl
             testOnly: true
             disableComponentGovernance: true
+            runSOSHelix: ${{ eq(variables['System.TeamProject'], 'public') }}
+            sosHelixTargetOS: linux
+            sosHelixRidPrefix: linux-musl
+            sosHelixQueue: '(Alpine.323.Amd64.Open)azurelinux.3.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
             buildConfigs:
             - configuration: Release
               architecture: x64

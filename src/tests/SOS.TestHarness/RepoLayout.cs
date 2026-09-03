@@ -33,14 +33,20 @@ public static class RepoLayout
             .Value!;
 
     /// <summary>The repo root (the directory containing <c>global.json</c> and <c>Build.cmd</c>).</summary>
-    public static string Root { get; } = FindRoot();
+    public static string Root { get; } =
+        Environment.GetEnvironmentVariable("SOSHARNESS_REPO_ROOT") is { Length: > 0 } root
+            ? Path.GetFullPath(root)
+            : FindRoot();
 
     /// <summary><c>artifacts/bin</c> under the repo root.</summary>
     public static string ArtifactsBin => Path.Combine(Root, "artifacts", "bin");
 
-    /// <summary>The native build output directory, e.g. <c>artifacts/bin/Windows_NT.x64.Debug</c>.</summary>
+    /// <summary>The native build output directory, e.g. <c>artifacts/bin/Windows_NT.x64.Debug</c>.
+    /// <c>SOSHARNESS_NATIVE_ROOT</c> redirects it to a writable Helix overlay when necessary.</summary>
     public static string ArtifactsBinNative =>
-        Path.Combine(ArtifactsBin, $"{TargetOS}.{TargetArch}.{ArtifactsConfiguration}");
+        ResolveDirectory(
+            Environment.GetEnvironmentVariable("SOSHARNESS_NATIVE_ROOT"),
+            Path.Combine(ArtifactsBin, $"{TargetOS}.{TargetArch}.{ArtifactsConfiguration}"));
 
     /// <summary>The processor architecture token used in repo artifact paths (<c>x64</c>/<c>x86</c>/<c>arm64</c>).</summary>
     public static string TargetArch { get; } = RuntimeInformation.ProcessArchitecture switch
@@ -69,7 +75,12 @@ public static class RepoLayout
             .Value!;
 
     /// <summary>The repo's locally-acquired .NET host (<c>.dotnet/dotnet.exe</c>) used to shell out builds.</summary>
-    public static string DotNetExe => Path.Combine(Root, ".dotnet", OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
+    public static string DotNetRoot { get; } =
+        Environment.GetEnvironmentVariable("SOSHARNESS_DOTNET_ROOT") is { Length: > 0 } root
+            ? Path.GetFullPath(root)
+            : Path.Combine(Root, ".dotnet");
+
+    public static string DotNetExe => Path.Combine(DotNetRoot, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
 
     /// <summary>The platform suffix for an apphost executable: <c>.exe</c> on Windows, none elsewhere
     /// (Linux/macOS apphosts have no extension).</summary>
@@ -98,7 +109,12 @@ public static class RepoLayout
     /// Used as <c>DOTNET_ROOT</c> when launching a debuggee so its apphost resolves the matching runtime
     /// version (the repo's <c>.dotnet</c> only carries the build SDK's runtime).
     /// </summary>
-    public static string DotnetTestRoot { get; } = Path.Combine(Root, "artifacts", "dotnet-test");
+    /// <summary>The multi-version test runtime root. <c>SOSHARNESS_DOTNET_TEST_ROOT</c> redirects it to
+    /// a writable executable overlay for read-only Helix payloads.</summary>
+    public static string DotnetTestRoot =>
+        ResolveDirectory(
+            Environment.GetEnvironmentVariable("SOSHARNESS_DOTNET_TEST_ROOT"),
+            Path.Combine(Root, "artifacts", "dotnet-test"));
 
     /// <summary>The multi-version test .NET host (<c>artifacts/dotnet-test/dotnet[.exe]</c>). This is the
     /// net11-capable SDK that <c>Debuggees.proj</c> uses to pre-build the debuggees, so local Core fallback
@@ -106,9 +122,12 @@ public static class RepoLayout
     /// frameworks (<c>NETSDK1045</c>).</summary>
     public static string DotnetTestExe => Path.Combine(DotnetTestRoot, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
 
-    /// <summary>Scratch directory for harness-produced artifacts (on-the-fly builds, captured dumps).</summary>
-    public static string Scratch { get; } =
-        Path.Combine(Root, "artifacts", "tmp", "sos-harness", ArtifactsConfiguration);
+    /// <summary>Scratch directory for harness-produced artifacts (on-the-fly builds, captured dumps).
+    /// <c>SOSHARNESS_SCRATCH_ROOT</c> redirects writes outside a read-only Helix payload.</summary>
+    public static string Scratch =>
+        ResolveDirectory(
+            Environment.GetEnvironmentVariable("SOSHARNESS_SCRATCH_ROOT"),
+            Path.Combine(Root, "artifacts", "tmp", "sos-harness", ArtifactsConfiguration));
 
     /// <summary>
     /// A hermetic, local-only symbol path for the SOS host child processes. The dev machine's
@@ -118,6 +137,9 @@ public static class RepoLayout
     /// module, so managed source/line resolution still works.
     /// </summary>
     public static string SymbolCache { get; } = Path.Combine(Scratch, "symcache");
+
+    internal static string ResolveDirectory(string? overridePath, string defaultPath) =>
+        Path.GetFullPath(string.IsNullOrEmpty(overridePath) ? defaultPath : overridePath);
 
     private static string FindRoot()
     {
