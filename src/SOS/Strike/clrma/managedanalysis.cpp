@@ -416,7 +416,7 @@ ClrmaManagedAnalysis::GetThread(
     if (osThreadId == 0 || osThreadId == (ULONG)-1)
     {
         TraceError("GetThread resolved an invalid OS thread ID %08x\n", osThreadId);
-        return E_INVALIDARG;
+        return E_UNEXPECTED;
     }
 
     if (m_clrmaService != nullptr)

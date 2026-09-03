@@ -10,12 +10,18 @@
 
 namespace
 {
+    struct CommandOutcome
+    {
+        bool shouldContinue;
+        bool succeeded;
+    };
+
     void PrintUsage(const char* program)
     {
         std::fprintf(stderr, "Usage: %s [--no-lldbinit] [--batch] [-o command]...\n", program);
     }
 
-    bool ExecuteCommand(lldb::SBCommandInterpreter& interpreter, const std::string& command)
+    CommandOutcome ExecuteCommand(lldb::SBCommandInterpreter& interpreter, const std::string& command)
     {
         lldb::SBCommandReturnObject result;
         result.SetImmediateOutputFile(stdout, false);
@@ -24,7 +30,7 @@ namespace
         std::fflush(stdout);
         std::fflush(stderr);
 
-        return result.GetStatus() != lldb::eReturnStatusQuit;
+        return { result.GetStatus() != lldb::eReturnStatusQuit, result.Succeeded() };
     }
 }
 
@@ -78,10 +84,18 @@ int main(int argc, char** argv)
 
     lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
     bool keepRunning = true;
+    int exitCode = 0;
     for (const std::string& command : startupCommands)
     {
-        if (!ExecuteCommand(interpreter, command))
+        CommandOutcome outcome = ExecuteCommand(interpreter, command);
+        if (!outcome.shouldContinue)
         {
+            keepRunning = false;
+            break;
+        }
+        if (batch && !outcome.succeeded)
+        {
+            exitCode = 1;
             keepRunning = false;
             break;
         }
@@ -92,11 +106,11 @@ int main(int argc, char** argv)
         std::string command;
         while (keepRunning && std::getline(std::cin, command))
         {
-            keepRunning = ExecuteCommand(interpreter, command);
+            keepRunning = ExecuteCommand(interpreter, command).shouldContinue;
         }
     }
 
     lldb::SBDebugger::Destroy(debugger);
     lldb::SBDebugger::Terminate();
-    return 0;
+    return exitCode;
 }

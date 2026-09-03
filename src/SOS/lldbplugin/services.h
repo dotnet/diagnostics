@@ -65,7 +65,7 @@ private:
 
     void InitializeThreadInfo(lldb::SBProcess process);
     uint32_t GetProcessId(lldb::SBProcess process);
-    uint32_t GetThreadId(lldb::SBThread thread);
+    HRESULT GetThreadId(lldb::SBThread thread, PULONG threadId);
     lldb::SBThread GetThreadBySystemId(ULONG sysId);
     lldb::SBProcess GetCurrentProcess();
     lldb::SBThread GetCurrentThread();
