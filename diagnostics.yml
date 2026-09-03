@@ -403,6 +403,7 @@ extends:
         isOfficialBuild: ${{ variables['isOfficialBuild'] }}
         repoAllowList: https://github.com/dotnet/diagnostics https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics
         productAllowList: diagnostics dotnet-diagnostics
+        skipFileList: MergedManifest.xml
         ${{ if eq(variables['isOfficialBuild'], 'true') }}:
           dependsOn: [ publish_using_darc ]
         ${{ else }}:

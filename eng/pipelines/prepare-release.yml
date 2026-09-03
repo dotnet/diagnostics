@@ -8,6 +8,9 @@ parameters:
 - name: productAllowList
   type: string
   default: ''
+- name: skipFileList
+  type: string
+  default: ''
 - name: dependsOn
   type: object
   default: [ publish_using_darc ]
@@ -60,7 +63,8 @@ stages:
               -BarBuildId "$(BARBuildId)" `
               -ReleaseVersion "$(Build.Repository.Name)_$(Build.BuildNumber)" `
               -DownloadTargetPath "$(System.ArtifactsDirectory)\ReleaseTarget" `
-              -AzdoToken $azdoToken
+              -AzdoToken $azdoToken `
+              -IncludeNonShipping
           workingDirectory: '$(Build.Repository.LocalPath)'
       - task: AzureCLI@2
         displayName: 'Manifest generation and asset publishing'
@@ -84,4 +88,5 @@ stages:
                 --account-name "$(dotnet-diagnostics-storage-accountname)" `
                 --client-id "$env:servicePrincipalId" `
                 --container-name "$(dotnet-diagnostics-container-name)" `
+                --skip-files ${{ parameters.skipFileList }} `
                 -v True
