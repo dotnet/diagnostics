@@ -30,8 +30,11 @@ public sealed class HostDiagnostics
     // on a long-lived shared host would grow without limit across the many tests that reuse it.
     private const int MaxStreamChars = 128 * 1024;
 
-    private static readonly string s_crashRoot =
-        Path.Combine(RepoLayout.Root, "artifacts", "replays", "crashdumps");
+    internal const string UploadRootVariable = "SOSHARNESS_UPLOAD_ROOT";
+
+    private static readonly string s_crashRoot = ResolveCrashDumpDirectory(
+        Environment.GetEnvironmentVariable(UploadRootVariable),
+        RepoLayout.Root);
 
     private readonly object _gate = new();
     private readonly StringBuilder _stdout = new();
@@ -48,6 +51,11 @@ public sealed class HostDiagnostics
 
     /// <summary>The shared directory crash dumps are written to (created on demand).</summary>
     public static string CrashDumpDirectory => s_crashRoot;
+
+    internal static string ResolveCrashDumpDirectory(string? uploadRoot, string repoRoot) =>
+        string.IsNullOrEmpty(uploadRoot)
+            ? Path.Combine(repoRoot, "artifacts", "replays", "crashdumps")
+            : Path.Combine(uploadRoot, "failure-diagnostics", "crashdumps");
 
     /// <summary>The launched command line (exe + args), captured for the replay.</summary>
     public string CommandLine
