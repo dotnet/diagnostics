@@ -146,8 +146,18 @@ SOSCOMMAND:DumpGCData
 
 SOSCOMMAND:DumpRuntimeTypes
 
+IFDEF:DESKTOP
+IFDEF:LIVE
 SOSCOMMAND:DumpLog
 VERIFY:SUCCESS: Stress log dumped
+ENDIF:LIVE
+# Desktop CLR DumpLog fails to read the stress log header from a heap dump.
+# Issue: https://github.com/dotnet/diagnostics/issues/5757
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
+SOSCOMMAND:DumpLog
+VERIFY:SUCCESS: Stress log dumped
+ENDIF:DESKTOP
 
 EXTCOMMAND:logclose
 EXTCOMMAND:logging --disable

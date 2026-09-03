@@ -28,5 +28,19 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <param name="clrDataProcess">The owned IXCLRDataProcess instance, if created.</param>
         /// <returns>The activation HRESULT.</returns>
         int CreateClrDataProcessFromCDac(IRuntime runtime, out IClrDataProcess clrDataProcess);
+
+        /// <summary>
+        /// Creates an ICorDebugProcess for <paramref name="runtime"/>.
+        /// </summary>
+        /// <param name="runtime">The runtime to activate debugging for.</param>
+        /// <param name="libraryProvider">The ICLRDebuggingLibraryProvider interface pointer.</param>
+        /// <param name="policy">The cDAC loading policy.</param>
+        /// <param name="corDebugProcess">The ICorDebugProcess interface pointer, if created.</param>
+        /// <returns>The activation HRESULT.</returns>
+        int CreateCorDebugProcess(
+            IRuntime runtime,
+            IntPtr libraryProvider,
+            CDacLoadPolicy policy,
+            out IntPtr corDebugProcess);
     }
 }

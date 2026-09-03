@@ -8,6 +8,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,6 +44,86 @@ namespace Microsoft.Diagnostics
         }
 
         public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", null);
+
+        [SkippableFact]
+        public void VerifyCoreProviderLibrarySignature()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("Authenticode verification is Windows-only");
+            }
+
+            string dbiPath = Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "mscordbi.dll");
+            string dacPath = Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "mscordaccore.dll");
+            if (!File.Exists(dbiPath) || !File.Exists(dacPath))
+            {
+                throw new SkipTestException($"Runtime DAC/DBI not found: {dacPath}, {dbiPath}");
+            }
+            SkipIfUnsigned(dbiPath);
+            SkipIfUnsigned(dacPath);
+            Assert.True(AuthenticodeUtil.VerifyDacDll(dbiPath, out IDisposable fileLock));
+            fileLock.Dispose();
+            Assert.True(AuthenticodeUtil.VerifyDacDll(dacPath, out fileLock));
+            fileLock.Dispose();
+
+            Assert.False(AuthenticodeUtil.VerifyDacDll(typeof(object).Assembly.Location, out fileLock));
+            fileLock?.Dispose();
+
+            Assert.False(AuthenticodeUtil.VerifyDacDll(typeof(DbgShimTests).Assembly.Location, out fileLock));
+            fileLock?.Dispose();
+        }
+
+        [SkippableFact]
+        public void VerifyDesktopProviderLibrarySignature()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                throw new SkipTestException("Authenticode verification is Windows-only");
+            }
+            string frameworkDirectory = Environment.Is64BitProcess
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Microsoft.NET", "Framework64", "v4.0.30319")
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Microsoft.NET", "Framework", "v4.0.30319");
+            string desktopDbiPath = Path.Combine(frameworkDirectory, "mscordbi.dll");
+            string desktopDacPath = Path.Combine(frameworkDirectory, "mscordacwks.dll");
+            if (!File.Exists(desktopDbiPath) || !File.Exists(desktopDacPath))
+            {
+                throw new SkipTestException($"Desktop DAC/DBI not found: {desktopDacPath}, {desktopDbiPath}");
+            }
+            SkipIfUnsigned(desktopDbiPath);
+            SkipIfUnsigned(desktopDacPath);
+            Assert.True(AuthenticodeUtil.VerifyDacDll(desktopDbiPath, out IDisposable fileLock));
+            fileLock.Dispose();
+            Assert.True(AuthenticodeUtil.VerifyDacDll(desktopDacPath, out fileLock));
+            fileLock.Dispose();
+
+            IntPtr dbiHandle = RuntimeWrapper.LoadLibraryWithSignatureVerification(desktopDbiPath, verifySignature: true);
+            Assert.NotEqual(IntPtr.Zero, dbiHandle);
+            NativeLibrary.Free(dbiHandle);
+
+            IntPtr dacHandle = RuntimeWrapper.LoadLibraryWithSignatureVerification(desktopDacPath, verifySignature: true);
+            Assert.NotEqual(IntPtr.Zero, dacHandle);
+            NativeLibrary.Free(dacHandle);
+
+            Assert.Equal(
+                IntPtr.Zero,
+                RuntimeWrapper.LoadLibraryWithSignatureVerification(
+                    typeof(object).Assembly.Location,
+                    verifySignature: true));
+        }
+
+        private static void SkipIfUnsigned(string path)
+        {
+            try
+            {
+#pragma warning disable SYSLIB0057 // Test-only probe for an embedded Authenticode certificate.
+                using X509Certificate certificate = X509Certificate.CreateFromSignedFile(path);
+#pragma warning restore SYSLIB0057
+            }
+            catch (CryptographicException)
+            {
+                throw new SkipTestException($"Signed test binary not available: {path}");
+            }
+        }
 
         public static IEnumerable<object[]> OpenVirtualProcessLoadPolicyConfigurations
         {
