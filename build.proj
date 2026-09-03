@@ -2,6 +2,7 @@
 
   <ItemGroup >
     <ProjectReference Include="src/dirs.proj" />
+    <ProjectReference Include="eng/release/DiagnosticsReleaseTool/DiagnosticsReleaseTool.csproj" />
     <ProjectReference Include="src/tests/dirs.proj" Condition="'$(SkipTests)' != 'true'" />
   </ItemGroup>
 
