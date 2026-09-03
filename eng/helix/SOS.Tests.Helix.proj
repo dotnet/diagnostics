@@ -1,0 +1,215 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project Sdk="Microsoft.DotNet.Helix.Sdk" DefaultTargets="Test">
+
+  <PropertyGroup>
+    <Language>msbuild</Language>
+    <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' != ''">true</EnableAzurePipelinesReporter>
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' == ''">false</EnableAzurePipelinesReporter>
+    <EnableXUnitReporter>true</EnableXUnitReporter>
+    <WaitForWorkItemCompletion>true</WaitForWorkItemCompletion>
+    <FailOnTestFailure>true</FailOnTestFailure>
+    <WorkItemTimeout>02:00:00</WorkItemTimeout>
+    <CorrelationPayloadDirectory Condition="'$(CorrelationPayloadDirectory)' == ''">$(ArtifactsDir)helix/SOS.Tests/$(TargetRid)/$(Configuration)/payload</CorrelationPayloadDirectory>
+    <DotNetHostName Condition="'$(TargetOS)' == 'Windows_NT'">dotnet.exe</DotNetHostName>
+    <DotNetHostName Condition="'$(TargetOS)' != 'Windows_NT'">dotnet</DotNetHostName>
+    <PayloadNativeSourceDir>$(ArtifactsBinNativeDir)</PayloadNativeSourceDir>
+    <SOSHelixTestEnvironment Condition="'$(TargetOS)' == 'osx'">SOSHARNESS_TEST_RUNTIME_MAJOR=11 SOSHARNESS_ONLY_COREVERSIONS=Net11 </SOSHelixTestEnvironment>
+    <SOSExpectedWorkItemCount Condition="'$(TargetOS)' == 'osx'">34</SOSExpectedWorkItemCount>
+    <SOSExpectedWorkItemCount Condition="'$(SOSExpectedWorkItemCount)' == ''">10</SOSExpectedWorkItemCount>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageDownload Include="cdb-sos"
+                     Version="[$(cdbsosversion)]"
+                     Condition="'$(TargetOS)' == 'Windows_NT'" />
+
+    <HelixCorrelationPayload Include="$(CorrelationPayloadDirectory)">
+      <PayloadDirectory>%(Identity)</PayloadDirectory>
+    </HelixCorrelationPayload>
+
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_0_of_8" ShardIndex="0" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_1_of_8" ShardIndex="1" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_2_of_8" ShardIndex="2" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_3_of_8" ShardIndex="3" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_4_of_8" ShardIndex="4" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_5_of_8" ShardIndex="5" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_6_of_8" ShardIndex="6" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_7_of_8" ShardIndex="7" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_0_of_32" ShardIndex="0" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_1_of_32" ShardIndex="1" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_2_of_32" ShardIndex="2" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_3_of_32" ShardIndex="3" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_4_of_32" ShardIndex="4" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_5_of_32" ShardIndex="5" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_6_of_32" ShardIndex="6" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_7_of_32" ShardIndex="7" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_8_of_32" ShardIndex="8" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_9_of_32" ShardIndex="9" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_10_of_32" ShardIndex="10" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_11_of_32" ShardIndex="11" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_12_of_32" ShardIndex="12" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_13_of_32" ShardIndex="13" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_14_of_32" ShardIndex="14" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_15_of_32" ShardIndex="15" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_16_of_32" ShardIndex="16" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_17_of_32" ShardIndex="17" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_18_of_32" ShardIndex="18" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_19_of_32" ShardIndex="19" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_20_of_32" ShardIndex="20" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_21_of_32" ShardIndex="21" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_22_of_32" ShardIndex="22" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_23_of_32" ShardIndex="23" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_24_of_32" ShardIndex="24" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_25_of_32" ShardIndex="25" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_26_of_32" ShardIndex="26" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_27_of_32" ShardIndex="27" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_28_of_32" ShardIndex="28" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_29_of_32" ShardIndex="29" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_30_of_32" ShardIndex="30" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_31_of_32" ShardIndex="31" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_live_0_of_2" ShardIndex="0" ShardCount="2" Liveness="Live" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_live_1_of_2" ShardIndex="1" ShardCount="2" Liveness="Live" />
+  </ItemGroup>
+
+  <Target Name="ValidateSOSHelixConfiguration">
+    <Error Condition="'$(Configuration)' == ''" Text="Configuration is required." />
+    <Error Condition="'$(TargetArch)' == ''" Text="TargetArch is required." />
+    <Error Condition="'$(TargetOS)' == ''" Text="TargetOS is required." />
+    <Error Condition="'$(TargetRid)' == ''" Text="TargetRid is required." />
+    <Error Condition="'$(SOSHelixLiveness)' == '' and '$(SOSHelixShardIndex)' != ''"
+           Text="SOSHelixLiveness and SOSHelixShardIndex must either both be set or both be unset." />
+    <Error Condition="'$(SOSHelixLiveness)' != '' and '$(SOSHelixShardIndex)' == ''"
+           Text="SOSHelixLiveness and SOSHelixShardIndex must either both be set or both be unset." />
+    <Error Condition="'$(SOSHelixLiveness)' != '' and '$(SOSHelixLiveness)' != 'Dump' and '$(SOSHelixLiveness)' != 'Live'"
+           Text="SOSHelixLiveness must be Dump or Live." />
+  </Target>
+
+  <Target Name="CreateSOSHelixWorkItems"
+          DependsOnTargets="ValidateSOSHelixConfiguration"
+          BeforeTargets="CoreTest">
+    <ItemGroup>
+      <HelixWorkItem Include="@(_SOSShard)"
+                     Condition="'$(SOSHelixLiveness)' == '' or ('%(_SOSShard.Liveness)' == '$(SOSHelixLiveness)' and '%(_SOSShard.ShardIndex)' == '$(SOSHelixShardIndex)')">
+        <Command Condition="'$(TargetOS)' == 'Windows_NT'">%25HELIX_CORRELATION_PAYLOAD%25\eng\helix\sos\run-sos-tests.cmd $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework)</Command>
+        <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' == ''">$(SOSHelixTestEnvironment)bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework)</Command>
+        <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' != ''">$(SOSHelixTestEnvironment)bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework) %(_SOSShard.MaxParallelThreads)</Command>
+        <Timeout>$(WorkItemTimeout)</Timeout>
+      </HelixWorkItem>
+    </ItemGroup>
+    <Error Condition="'$(SOSHelixLiveness)' == '' and '@(HelixWorkItem->Count())' != '$(SOSExpectedWorkItemCount)'"
+           Text="SOS Helix graph must contain exactly $(SOSExpectedWorkItemCount) work items; found @(HelixWorkItem->Count())." />
+    <Error Condition="'$(SOSHelixLiveness)' != '' and '@(HelixWorkItem->Count())' != '1'"
+           Text="SOS Helix smoke selection must match exactly one work item; found @(HelixWorkItem->Count())." />
+    <Error Condition="'@(HelixCorrelationPayload->Count())' != '1'"
+           Text="SOS Helix must use exactly one shared correlation payload; found @(HelixCorrelationPayload->Count())." />
+  </Target>
+
+  <Target Name="PrepareSOSHelixPayload"
+          DependsOnTargets="ValidateSOSHelixConfiguration"
+          BeforeTargets="CoreTest"
+          Condition="'$(HelixTargetQueue)' == ''">
+    <ItemGroup>
+      <_PayloadRootFile Include="$(RepoRoot)global.json;$(RepoRoot)Build.cmd" />
+      <_PayloadEngineeringFile Include="$(RepoRoot)eng/DisableSignatureCheck.ps1" />
+      <_PayloadLauncherFile Include="$(RepoRoot)eng/helix/sos/**/*" />
+
+      <_PayloadBinFile Include="$(ArtifactsBinDir)SOS.Tests/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)SOS.TestHarness.EngineHost/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)SOS.TestHarness.Capturer/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)dotnet-dump/$(Configuration)/**/*;
+                                $(ArtifactsBinDir)NestedExceptionTest/$(Configuration)/*/*;
+                                $(ArtifactsBinDir)NestedExceptionTest/$(Configuration)/*/$(TargetRid)/publish/*;
+                                $(ArtifactsBinDir)DivZero/$(Configuration)/*/*;
+                                $(ArtifactsBinDir)DivZero/$(Configuration)/*/$(TargetRid)/publish/*;
+                                $(ArtifactsBinDir)AsyncMain/$(Configuration)/*/*;
+                                $(ArtifactsBinDir)AsyncMain/$(Configuration)/*/$(TargetRid)/publish/*;
+                                $(ArtifactsBinDir)DynamicMethod/$(Configuration)/*/*;
+                                $(ArtifactsBinDir)DynamicMethod/$(Configuration)/*/$(TargetRid)/publish/*;
+                                $(ArtifactsBinDir)Overflow/$(Configuration)/*/*;
+                                $(ArtifactsBinDir)Overflow/$(Configuration)/*/$(TargetRid)/publish/*;
+                                $(ArtifactsBinDir)LineNums/$(Configuration)/*/*;
+                                $(ArtifactsBinDir)LineNums/$(Configuration)/*/$(TargetRid)/publish/*;
+                                $(ArtifactsBinDir)SimpleThrow/$(Configuration)/*/*;
+                                $(ArtifactsBinDir)SimpleThrow/$(Configuration)/*/$(TargetRid)/publish/*;
+                                $(ArtifactsBinDir)ReflectionTest/$(Configuration)/*/*;
+                                $(ArtifactsBinDir)ReflectionTest/$(Configuration)/*/$(TargetRid)/publish/*;
+                                $(ArtifactsBinDir)SosHarnessScenarios/$(Configuration)/*/*;
+                                $(ArtifactsBinDir)SosHarnessScenarios/$(Configuration)/*/$(TargetRid)/publish/*" />
+      <_PayloadNativeFile Include="$(PayloadNativeSourceDir)**/*" />
+      <_PayloadDotNetTestFile Include="$(ArtifactsDotnetTestDir)$(DotNetHostName);
+                                          $(ArtifactsDotnetTestDir)LICENSE.txt;
+                                          $(ArtifactsDotnetTestDir)ThirdPartyNotices.txt;
+                                          $(ArtifactsDotnetTestDir)Debugger.Tests.Versions.txt;
+                                          $(ArtifactsDotnetTestDir)host/fxr/**/*;
+                                          $(ArtifactsDotnetTestDir)shared/Microsoft.NETCore.App/**/*" />
+      <_PayloadCDacFile Include="$(ArtifactsDir)cdac-override/$(Configuration)/**/*"
+                        Condition="Exists('$(ArtifactsDir)cdac-override/$(Configuration)')" />
+
+      <_PayloadCdbFile Include="$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/*"
+                       Condition="'$(TargetOS)' == 'Windows_NT'" />
+
+      <_PayloadFile Include="@(_PayloadRootFile)">
+        <DestinationRelative>%(_PayloadRootFile.Filename)%(_PayloadRootFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadEngineeringFile)">
+        <DestinationRelative>eng/%(_PayloadEngineeringFile.Filename)%(_PayloadEngineeringFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadLauncherFile)">
+        <DestinationRelative>eng/helix/sos/%(_PayloadLauncherFile.RecursiveDir)%(_PayloadLauncherFile.Filename)%(_PayloadLauncherFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadBinFile)">
+        <DestinationRelative>artifacts/bin/$([MSBuild]::MakeRelative('$(ArtifactsBinDir)', '%(_PayloadBinFile.Identity)'))</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadNativeFile)">
+        <DestinationRelative>artifacts/bin/$(TargetOS).$(TargetArch).$(Configuration)/%(_PayloadNativeFile.RecursiveDir)%(_PayloadNativeFile.Filename)%(_PayloadNativeFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadDotNetTestFile)">
+        <DestinationRelative>artifacts/dotnet-test/$([MSBuild]::MakeRelative('$(ArtifactsDotnetTestDir)', '%(_PayloadDotNetTestFile.Identity)'))</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadCDacFile)">
+        <DestinationRelative>artifacts/cdac-override/$(Configuration)/%(_PayloadCDacFile.RecursiveDir)%(_PayloadCDacFile.Filename)%(_PayloadCDacFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+      <_PayloadFile Include="@(_PayloadCdbFile)">
+        <DestinationRelative>artifacts/cdb-sos/%(_PayloadCdbFile.Filename)%(_PayloadCdbFile.Extension)</DestinationRelative>
+      </_PayloadFile>
+    </ItemGroup>
+
+    <Error Condition="'@(_PayloadFile)' == ''" Text="The SOS Helix correlation payload is empty." />
+    <Error Condition="!Exists('$(ArtifactsBinDir)SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/SOS.Tests.dll')"
+           Text="SOS.Tests was not found under '$(ArtifactsBinDir)SOS.Tests/$(Configuration)'." />
+    <Error Condition="!Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/dotnet-dump.dll') and !Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/publish/dotnet-dump.dll')"
+           Text="dotnet-dump was not found under '$(ArtifactsBinDir)dotnet-dump/$(Configuration)'." />
+    <Error Condition="!Exists('$(ArtifactsDotnetTestDir)$(DotNetHostName)')"
+           Text="The test runtime host was not found at '$(ArtifactsDotnetTestDir)$(DotNetHostName)'." />
+    <Error Condition="!Exists('$(PayloadNativeSourceDir)sos.dll') and '$(TargetOS)' == 'Windows_NT'"
+           Text="Native SOS was not found at '$(PayloadNativeSourceDir)sos.dll'." />
+    <Error Condition="!Exists('$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/dbgeng.dll') and '$(TargetOS)' == 'Windows_NT'"
+           Text="DbgEng was not found in the cdb-sos package for '$(TargetRid)'." />
+    <Error Condition="!Exists('$(PayloadNativeSourceDir)libsosplugin.so') and '$(TargetOS)' == 'linux'"
+           Text="The SOS lldb plugin was not found at '$(PayloadNativeSourceDir)libsosplugin.so'." />
+    <Error Condition="!Exists('$(PayloadNativeSourceDir)libsosplugin.dylib') and '$(TargetOS)' == 'osx'"
+           Text="The SOS lldb plugin was not found at '$(PayloadNativeSourceDir)libsosplugin.dylib'." />
+    <Error Condition="!Exists('$(PayloadNativeSourceDir)sos-lldb') and '$(TargetOS)' == 'osx'"
+           Text="The SOS lldb driver was not found at '$(PayloadNativeSourceDir)sos-lldb'." />
+
+    <RemoveDir Directories="$(CorrelationPayloadDirectory)" />
+    <MakeDir Directories="$(CorrelationPayloadDirectory)" />
+    <Copy SourceFiles="@(_PayloadFile)"
+          DestinationFiles="@(_PayloadFile->'$(CorrelationPayloadDirectory)/%(DestinationRelative)')"
+          SkipUnchangedFiles="true"
+          UseHardlinksIfPossible="true" />
+    <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(CorrelationPayloadDirectory)/artifacts/cdb-sos/dbgeng.dll')"
+           Text="DbgEng was not staged in the SOS Helix correlation payload." />
+  </Target>
+
+  <Target Name="PrintSOSHelixWorkItems"
+          DependsOnTargets="CreateSOSHelixWorkItems">
+    <Message Importance="High"
+             Text="CorrelationPayload|@(HelixCorrelationPayload->'%(Identity)|%(PayloadDirectory)')" />
+    <Message Importance="High"
+             Text="@(HelixWorkItem->'%(Identity)|%(Command)|%(Timeout)', '%0A')" />
+  </Target>
+
+</Project>

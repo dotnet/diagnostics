@@ -27,11 +27,15 @@ namespace SOS.Tests;
 public sealed class SosReplayAttribute : BeforeAfterTestAttribute
 {
     private static readonly string s_runDirectory = Path.Combine(
-        RepoLayout.Root,
-        "artifacts",
-        "TestResults",
-        "SOS.Tests",
+        ResolveReplayDirectory(
+            Environment.GetEnvironmentVariable(HostDiagnostics.UploadRootVariable),
+            RepoLayout.Root),
         $"{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Environment.ProcessId}");
+
+    internal static string ResolveReplayDirectory(string? uploadRoot, string repoRoot) =>
+        string.IsNullOrEmpty(uploadRoot)
+            ? Path.Combine(repoRoot, "artifacts", "TestResults", "SOS.Tests")
+            : Path.Combine(uploadRoot, "SOS-replays");
 
     public override void After(MethodInfo methodUnderTest, IXunitTest test)
     {

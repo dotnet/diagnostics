@@ -120,6 +120,21 @@ public static class ToolPaths
 
     private static string ResolveDbgEngDirectory()
     {
+        string? configuredDirectory = Environment.GetEnvironmentVariable("SOSHARNESS_DBGENG_ROOT");
+        if (!string.IsNullOrEmpty(configuredDirectory))
+        {
+            string directory = Path.GetFullPath(configuredDirectory);
+            string dbgEngPath = Path.Combine(directory, "dbgeng.dll");
+            if (File.Exists(dbgEngPath))
+            {
+                return directory;
+            }
+
+            throw new FileNotFoundException(
+                $"Could not locate dbgeng.dll in the configured SOS harness DbgEng directory '{directory}'.",
+                dbgEngPath);
+        }
+
         string relativeNative = Path.Combine("runtimes", $"win-{RepoLayout.TargetArch}", "native");
 
         foreach (string root in NuGetPackageRoots())
@@ -267,7 +282,7 @@ public static class ToolPaths
         // SOS hosts its managed extension on a .NET runtime; point it at the repo's locally-acquired
         // .dotnet shared runtime so it's deterministic. Any recent runtime works as a host (it need not
         // match the target's runtime), so pick the highest net10 present.
-        string sharedRoot = Path.Combine(RepoLayout.Root, ".dotnet", "shared", "Microsoft.NETCore.App");
+        string sharedRoot = Path.Combine(RepoLayout.DotNetRoot, "shared", "Microsoft.NETCore.App");
         if (Directory.Exists(sharedRoot))
         {
             string? best = Directory.GetDirectories(sharedRoot)
