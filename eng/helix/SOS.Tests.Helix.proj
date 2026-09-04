@@ -25,9 +25,10 @@
                      Version="[$(cdbsosversion)]"
                      Condition="'$(TargetOS)' == 'Windows_NT'" />
 
-    <HelixCorrelationPayload Include="$(CorrelationPayloadDirectory)">
+    <_SOSHelixCorrelationPayload Include="$(CorrelationPayloadDirectory)">
       <PayloadDirectory>%(Identity)</PayloadDirectory>
-    </HelixCorrelationPayload>
+    </_SOSHelixCorrelationPayload>
+    <HelixCorrelationPayload Include="@(_SOSHelixCorrelationPayload)" />
 
     <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_0_of_8" ShardIndex="0" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
     <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_1_of_8" ShardIndex="1" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
@@ -97,13 +98,17 @@
         <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' != ''">$(SOSHelixTestEnvironment)bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework) %(_SOSShard.MaxParallelThreads)</Command>
         <Timeout>$(WorkItemTimeout)</Timeout>
       </HelixWorkItem>
+      <_AzurePipelinesReporterPayload Include="@(HelixCorrelationPayload)"
+                                      Condition="'$(HelixTargetQueue)' != '' and '%(HelixCorrelationPayload.IncludeDirectoryName)' == 'true'" />
     </ItemGroup>
     <Error Condition="'$(SOSHelixLiveness)' == '' and '@(HelixWorkItem->Count())' != '$(SOSExpectedWorkItemCount)'"
            Text="SOS Helix graph must contain exactly $(SOSExpectedWorkItemCount) work items; found @(HelixWorkItem->Count())." />
     <Error Condition="'$(SOSHelixLiveness)' != '' and '@(HelixWorkItem->Count())' != '1'"
            Text="SOS Helix smoke selection must match exactly one work item; found @(HelixWorkItem->Count())." />
-    <Error Condition="'@(HelixCorrelationPayload->Count())' != '1'"
-           Text="SOS Helix must use exactly one shared correlation payload; found @(HelixCorrelationPayload->Count())." />
+    <Error Condition="'@(_SOSHelixCorrelationPayload->Count())' != '1'"
+           Text="SOS Helix must define exactly one shared SOS correlation payload; found @(_SOSHelixCorrelationPayload->Count())." />
+    <Error Condition="'$(EnableAzurePipelinesReporter)' == 'true' and '$(HelixTargetQueue)' != '' and '@(_AzurePipelinesReporterPayload)' == ''"
+           Text="The Azure Pipelines reporter is enabled, but its correlation payload was not retained." />
   </Target>
 
   <Target Name="PrepareSOSHelixPayload"
@@ -206,6 +211,8 @@
 
   <Target Name="PrintSOSHelixWorkItems"
           DependsOnTargets="CreateSOSHelixWorkItems">
+    <Message Importance="High"
+             Text="SOSCorrelationPayload|@(_SOSHelixCorrelationPayload->'%(Identity)|%(PayloadDirectory)')" />
     <Message Importance="High"
              Text="CorrelationPayload|@(HelixCorrelationPayload->'%(Identity)|%(PayloadDirectory)')" />
     <Message Importance="High"
