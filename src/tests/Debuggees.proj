@@ -19,6 +19,8 @@
     <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/SimpleThrow/SimpleThrow.csproj" />
     <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/ReflectionTest/ReflectionTest.csproj" />
     <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/SosHarnessScenarios/SosHarnessScenarios.csproj" />
+    <SOSFrameworkDebuggee Include="@(SOSSingleFileDebuggee)" />
+    <SOSFrameworkDebuggee Remove="SOS.UnitTests/Debuggees/DynamicMethod/DynamicMethod.csproj" />
   </ItemGroup>
 
   <Target Name="PublishSOSSingleFileDebuggees"
@@ -40,6 +42,18 @@
              Targets="Restore;Publish"
              BuildInParallel="true"
              Properties="Configuration=$(Configuration);BuildProjectFramework=%(_SOSSingleFileRuntime.TargetFramework);RuntimeIdentifier=$(TargetRid);RuntimeFrameworkVersion=%(_SOSSingleFileRuntime.Runtime);SelfContained=true;PublishSingleFile=true;SOSSingleFileRuntimeVersion=%(_SOSSingleFileRuntime.Runtime);ArtifactsObjDir=$(ArtifactsObjDir)SOSSingleFile/%(_SOSSingleFileRuntime.TargetFramework)/$(TargetRid)/" />
+  </Target>
+
+  <Target Name="BuildSOSFrameworkDebuggees"
+          AfterTargets="Build"
+          Condition="'$(OS)' == 'Windows_NT' and '$(SkipSOSFrameworkDebuggees)' != 'true'">
+    <PropertyGroup>
+      <_SOSFrameworkPlatformProperty Condition="'$(TargetArch)' == 'x86'">PlatformTarget=x86;</_SOSFrameworkPlatformProperty>
+    </PropertyGroup>
+    <MSBuild Projects="@(SOSFrameworkDebuggee)"
+             Targets="Restore;Build"
+             BuildInParallel="true"
+             Properties="Configuration=$(Configuration);BuildProjectFramework=net462;$(_SOSFrameworkPlatformProperty)DebugType=full;DebugSymbols=true;ArtifactsObjDir=$(ArtifactsObjDir)SOSFramework/$(TargetArch)/%(Filename)/" />
   </Target>
 
 </Project>
