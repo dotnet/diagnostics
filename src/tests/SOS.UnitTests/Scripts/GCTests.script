@@ -27,7 +27,12 @@ SOSCOMMAND:DumpStackObjects
 VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+System.IO.StringWriter\s+
 
 SOSCOMMAND:DumpObj <POUT>\w+\s+(<HEXVAL>)\s+(System.IO.StringWriter!\$0_)*System.IO.StringWriter\s+<POUT>
+IFDEF:DESKTOP
+VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+No\s+shared\s+static\s+Null\s+
+ENDIF:DESKTOP
+!IFDEF:DESKTOP
 VERIFY:\s+<HEXVAL>\s+<HEXVAL>\s+<HEXVAL>\s+System\.IO.TextWriter\s+No\s+static\s+<HEXVAL>\s+Null\s+
+ENDIF:DESKTOP
 
 SOSCOMMAND:DumpStackObjects
 VERIFY:\s*<HEXVAL>\s+<HEXVAL>\s+([Gg][Cc]where!\$0_)*GCWhere\s+

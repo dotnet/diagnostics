@@ -149,6 +149,8 @@ public class SOSRunner : IDisposable
 
         public bool EnableStressLog { get; set; }
 
+        public bool DisableDacSignatureVerification { get; set; }
+
         public bool TestCrashReport
         {
             get { return _testCrashReport && DumpGenerator == DumpGenerator.CreateDump && OS.Kind != OSKind.Windows; }
@@ -587,6 +589,8 @@ public class SOSRunner : IDisposable
 
                     bool shouldVerifyDacSignature = !config.IsPrivateBuildTesting()
                                                     && !config.IsNightlyBuild()
+                                                    && !config.IsDesktop
+                                                    && !information.DisableDacSignatureVerification
                                                     && !"-none".Equals(config.SetHostRuntime(), StringComparison.OrdinalIgnoreCase);
                     initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(shouldVerifyDacSignature ? "true" : "false")}");
                     break;
@@ -704,7 +708,9 @@ public class SOSRunner : IDisposable
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
                     shouldVerifyDacSignature = OS.Kind == OSKind.Windows
                         && !config.IsPrivateBuildTesting()
-                        && !config.IsNightlyBuild();
+                        && !config.IsNightlyBuild()
+                        && !config.IsDesktop
+                        && !information.DisableDacSignatureVerification;
                     initialCommands.Add($"runtimes --DacSignatureVerification:{(shouldVerifyDacSignature ? "true" : "false")}");
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
@@ -1149,13 +1155,12 @@ public class SOSRunner : IDisposable
 
         // Apply the cDAC load policy selected by the test's DacMode now that SOS is loaded (the
         // "runtimes" command is unavailable before this) and before any runtime is accessed, so SOS
-        // uses the requested DAC/cDAC the first time it resolves the runtime. CDacVerify instead
-        // relies on the in-box DAC via env vars set in StartDebugger and keeps SOS's default
-        // policy (which does not load the standalone cDAC when DOTNET_ENABLE_CDAC is set).
+        // uses the requested DAC/cDAC the first time it resolves the runtime. CDacVerify explicitly
+        // selects the legacy DAC so DOTNET_ENABLE_CDAC affects only the DAC-hosted contract reader.
         string cdacPolicyCommand = _config.DacMode switch
         {
             DacMode.CDac => "runtimes --usecdac true",    // Force the standalone cDAC next to sos.dll.
-            DacMode.Dac => "runtimes --usecdac false",     // Force the legacy in-box DAC.
+            DacMode.CDacVerify or DacMode.Dac => "runtimes --usecdac false", // Force the legacy in-box DAC.
             _ => null,
         };
         if (cdacPolicyCommand is not null && Debugger != NativeDebugger.Gdb)
@@ -1613,6 +1618,10 @@ public class SOSRunner : IDisposable
         if (OS.IsAlpine)
         {
             defines.Add("ALPINE");
+        }
+        if (_config.IsDesktop)
+        {
+            defines.Add("DESKTOP");
         }
         // This is a special "OR" of two conditions. Add this is easier than changing the parser to support "OR".
         if (_config.IsNETCore || Debugger == NativeDebugger.DotNetDump)

@@ -52,8 +52,10 @@ VERIFY: ^<HEXVAL>\s+5\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass
 EXTCOMMAND: dumpgen loh
 VERIFY: ^<HEXVAL>\s+1\s+<DECVAL>\s+DotnetDumpCommands\.Program\+DumpSampleClass\[\]
 
+!IFDEF:DESKTOP
 EXTCOMMAND: dumpgen poh
 VERIFY: ^<HEXVAL>\s+1\s+100<DECVAL>\s+System.Byte\[\]
+ENDIF:DESKTOP
 
 SOSCOMMAND: dumpheap -stat
 

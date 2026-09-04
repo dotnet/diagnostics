@@ -28,6 +28,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\Microsoft.DiaSymReader.Native.amd64.dll" TargetRid="win-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\dbgshim.dll" TargetRid="win-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x64" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\mscordbi_universal.dll" TargetRid="win-x64" Condition="'$(PackageWithCDac)' == 'true'" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'win-x86'">
@@ -35,6 +36,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\Microsoft.DiaSymReader.Native.x86.dll" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\dbgshim.dll" TargetRid="win-x86" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-x86" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.x86.$(Configuration)\mscordbi_universal.dll" TargetRid="win-x86" Condition="'$(PackageWithCDac)' == 'true'" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'win-arm64'">
@@ -42,6 +44,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\Microsoft.DiaSymReader.Native.arm64.dll" TargetRid="win-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\dbgshim.dll" TargetRid="win-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\mscordaccore_universal.dll" TargetRid="win-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\Windows_NT.arm64.$(Configuration)\mscordbi_universal.dll" TargetRid="win-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-x64'">
@@ -49,6 +52,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libsos.so" TargetRid="linux-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libdbgshim.so" TargetRid="linux-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-x64" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\libmscordbi_universal.so" TargetRid="linux-x64" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.x64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-x64" />
   </ItemGroup>
 
@@ -57,6 +61,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libsos.so" TargetRid="linux-musl-x64" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libdbgshim.so" TargetRid="linux-musl-x64" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-musl-x64" TargetsMusl="true" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\libmscordbi_universal.so" TargetRid="linux-musl-x64" TargetsMusl="true" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-x64" TargetsMusl="true" />
   </ItemGroup>
 
@@ -65,6 +70,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libsos.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libdbgshim.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-arm" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libmscordbi_universal.so" TargetRid="linux-arm" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\sosdocsunix.txt" TargetRid="linux-arm" />
   </ItemGroup>
 
@@ -73,6 +79,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libsos.so" TargetRid="linux-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libdbgshim.so" TargetRid="linux-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\libmscordbi_universal.so" TargetRid="linux-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-arm64" />
   </ItemGroup>
 
@@ -81,6 +88,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libsos.so" TargetRid="linux-musl-arm64" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libdbgshim.so" TargetRid="linux-musl-arm64" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-musl-arm64" TargetsMusl="true" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\libmscordbi_universal.so" TargetRid="linux-musl-arm64" TargetsMusl="true" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm64" TargetsMusl="true" />
   </ItemGroup>
 
@@ -89,6 +97,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libsos.so" TargetRid="linux-musl-arm" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libdbgshim.so" TargetRid="linux-musl-arm" TargetsMusl="true" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libmscordaccore_universal.so" TargetRid="linux-musl-arm" TargetsMusl="true" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\libmscordbi_universal.so" TargetRid="linux-musl-arm" TargetsMusl="true" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.arm.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-arm" TargetsMusl="true" />
   </ItemGroup>
 
@@ -97,6 +106,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libsos.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libdbgshim.dylib" TargetRid="osx-x64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-x64" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\libmscordbi_universal.dylib" TargetRid="osx-x64" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.x64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-x64" />
   </ItemGroup>
 
@@ -105,6 +115,7 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libsos.dylib" TargetRid="osx-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libdbgshim.dylib" TargetRid="osx-arm64" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libmscordaccore_universal.dylib" TargetRid="osx-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
+    <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\libmscordbi_universal.dylib" TargetRid="osx-arm64" Condition="'$(PackageWithCDac)' == 'true'" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\osx.arm64.$(Configuration)\sosdocsunix.txt" TargetRid="osx-arm64" />
   </ItemGroup>
 

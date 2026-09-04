@@ -14,6 +14,7 @@
 #include <psapi.h>
 #include <clrinternal.h>
 #include <metahost.h>
+#include <vector>
 #include "runtimeimpl.h"
 #include "datatarget.h"
 #include "cordebugdatatarget.h"
@@ -23,35 +24,40 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#else
+#include <softpub.h>
+#include <wintrust.h>
 #endif // !FEATURE_PAL
 
 #define CORDBG_E_NO_IMAGE_AVAILABLE EMAKEHR(0x1c64)
 
-typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImpl2FnPtr)(ULONG64 clrInstanceId,
-    IUnknown * pDataTarget,
-    LPCWSTR pDacModulePath,
-    CLR_DEBUGGING_VERSION * pMaxDebuggerSupportedVersion,
-    REFIID riid,
-    IUnknown ** ppInstance,
-    CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
-
-typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcessImplFnPtr)(ULONG64 clrInstanceId,
-    IUnknown * pDataTarget,
-    HMODULE hDacDll,
-    CLR_DEBUGGING_VERSION * pMaxDebuggerSupportedVersion,
-    REFIID riid,
-    IUnknown ** ppInstance,
-    CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
-
-typedef HRESULT (STDAPICALLTYPE  *OpenVirtualProcess2FnPtr)(ULONG64 clrInstanceId,
-    IUnknown * pDataTarget,
-    HMODULE hDacDll,
-    REFIID riid,
-    IUnknown ** ppInstance,
-    CLR_DEBUGGING_PROCESS_FLAGS * pdwFlags);
-
-typedef HMODULE (STDAPICALLTYPE  *LoadLibraryWFnPtr)(LPCWSTR lpLibFileName);
 typedef HRESULT (STDAPICALLTYPE *CLRCreateInstanceFnPtr)(REFCLSID clsid, REFIID riid, LPVOID *ppInterface);
+
+typedef HRESULT (STDAPICALLTYPE *OpenVirtualProcessImpl2FnPtr)(
+    ULONG64 clrInstanceId,
+    IUnknown* dataTarget,
+    LPCWSTR dacModulePath,
+    CLR_DEBUGGING_VERSION* maxDebuggerSupportedVersion,
+    REFIID riid,
+    IUnknown** instance,
+    CLR_DEBUGGING_PROCESS_FLAGS* flags);
+
+typedef HRESULT (STDAPICALLTYPE *OpenVirtualProcessImplFnPtr)(
+    ULONG64 clrInstanceId,
+    IUnknown* dataTarget,
+    HMODULE dacHandle,
+    CLR_DEBUGGING_VERSION* maxDebuggerSupportedVersion,
+    REFIID riid,
+    IUnknown** instance,
+    CLR_DEBUGGING_PROCESS_FLAGS* flags);
+
+typedef HRESULT (STDAPICALLTYPE *OpenVirtualProcess2FnPtr)(
+    ULONG64 clrInstanceId,
+    IUnknown* dataTarget,
+    HMODULE dacHandle,
+    REFIID riid,
+    IUnknown** instance,
+    CLR_DEBUGGING_PROCESS_FLAGS* flags);
 
 enum class DbgShimCDacLoadPolicy : DWORD
 {
@@ -311,24 +317,8 @@ Runtime::~Runtime()
 \**********************************************************************/
 LPCSTR Runtime::GetDacFilePath()
 {
-    // If the DAC path hasn't been set by the symbol download support, use the one in the runtime directory.
     if (m_dacFilePath == nullptr)
     {
-        // No debugger service instance means that SOS is hosted by dotnet-dump,
-        // which does runtime enumeration in CLRMD. We should never get here.
-        IDebuggerServices* debuggerServices = GetDebuggerServices();
-        if (debuggerServices == nullptr)
-        {
-            ExtDbgOut("GetDacFilePath: GetDebuggerServices returned nullptr\n");
-            return nullptr;
-        }
-        BOOL dacSignatureVerificationEnabled = FALSE;
-        HRESULT hr = debuggerServices->GetDacSignatureVerificationSettings(&dacSignatureVerificationEnabled);
-        if (FAILED(hr) || dacSignatureVerificationEnabled)
-        {
-            ExtDbgOut("GetDacFilePath: GetDacSignatureVerificationSettings FAILED %08x or returned TRUE\n", hr);
-            return nullptr;
-        }
         LPCSTR directory = GetRuntimeDirectory();
         if (directory != nullptr)
         {
@@ -544,7 +534,7 @@ HRESULT Runtime::GetClrDataProcess(CDacLoadPolicy policy, IXCLRDataProcess** ppC
 {
     bool cdacOnly = policy == CDacLoadPolicy::OnlyUseCDac;
 
-    if (ShouldTryCDac(policy))
+    if (policy != CDacLoadPolicy::UseLegacyDac)
     {
         if (m_cdacDataProcess == nullptr && !m_hasCDacActivationResult)
         {
@@ -573,6 +563,16 @@ HRESULT Runtime::GetClrDataProcess(CDacLoadPolicy policy, IXCLRDataProcess** ppC
     {
         *ppClrDataProcess = nullptr;
 
+        IDebuggerServices* debuggerServices = GetDebuggerServices();
+        BOOL signatureVerificationEnabled = FALSE;
+        HRESULT signatureResult = debuggerServices != nullptr
+            ? debuggerServices->GetDacSignatureVerificationSettings(&signatureVerificationEnabled)
+            : E_NOINTERFACE;
+        if (FAILED(signatureResult) || signatureVerificationEnabled)
+        {
+            return CORDBG_E_NO_IMAGE_AVAILABLE;
+        }
+
         LPCSTR dacFilePath = GetDacFilePath();
         if (dacFilePath == nullptr)
         {
@@ -586,40 +586,6 @@ HRESULT Runtime::GetClrDataProcess(CDacLoadPolicy policy, IXCLRDataProcess** ppC
     }
     *ppClrDataProcess = m_clrDataProcess;
     return S_OK;
-}
-
-// Returns true if the named environment variable is set to "1".
-static bool IsEnvironmentVariableSetToOne(const char* name)
-{
-    char buffer[16];
-    DWORD length = GetEnvironmentVariableA(name, buffer, ARRAY_SIZE(buffer));
-    return length > 0 && length < ARRAY_SIZE(buffer) && strcmp(buffer, "1") == 0;
-}
-
-/**********************************************************************\
- * Evaluates the cDAC loading policy for this runtime.
-\**********************************************************************/
-bool Runtime::ShouldTryCDac(CDacLoadPolicy policy)
-{
-    if (policy == CDacLoadPolicy::UseLegacyDac)
-    {
-        return false;
-    }
-    if (policy == CDacLoadPolicy::OnlyUseCDac || policy == CDacLoadPolicy::PreferCDac)
-    {
-        return true;
-    }
-
-    // When DOTNET_ENABLE_CDAC is requested, the in-box (legacy) DAC loads and drives the cDAC
-    // contract reader itself (including its own dac-vs-cdac fallback/comparison). Defer to that
-    // mechanism rather than loading the cDAC directly so those scenarios keep working.
-    if (IsEnvironmentVariableSetToOne("DOTNET_ENABLE_CDAC") || IsEnvironmentVariableSetToOne("COMPlus_ENABLE_CDAC"))
-    {
-        return false;
-    }
-
-    // Let the cDAC validate whether it can service the target.
-    return true;
 }
 
 CDacLoadPolicy Runtime::GetConfiguredCDacLoadPolicy()
@@ -805,6 +771,472 @@ ULONG64 Runtime::GetContractDescriptorAddress()
     return m_contractDescriptorAddress;
 }
 
+class RuntimeLibraryProvider final :
+    public ICLRDebuggingLibraryProvider,
+    public ICLRDebuggingLibraryProvider2
+{
+private:
+    LONG m_ref;
+    class Runtime* m_runtime;
+#ifndef FEATURE_PAL
+    bool m_verifySignature;
+    std::vector<HANDLE> m_verifiedFiles;
+#endif
+
+public:
+    RuntimeLibraryProvider(class Runtime* runtime) :
+        m_ref(1),
+        m_runtime(runtime)
+#ifndef FEATURE_PAL
+        , m_verifySignature(true)
+#endif
+    {
+#ifndef FEATURE_PAL
+        IDebuggerServices* debuggerServices = GetDebuggerServices();
+        BOOL enabled = TRUE;
+        if (debuggerServices != nullptr &&
+            SUCCEEDED(debuggerServices->GetDacSignatureVerificationSettings(&enabled)))
+        {
+            m_verifySignature = enabled != FALSE;
+        }
+#endif
+    }
+
+    ~RuntimeLibraryProvider()
+    {
+#ifndef FEATURE_PAL
+        for (HANDLE file : m_verifiedFiles)
+        {
+            CloseHandle(file);
+        }
+#endif
+    }
+
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, void** ppvObject) override
+    {
+        if (ppvObject == nullptr)
+        {
+            return E_INVALIDARG;
+        }
+        *ppvObject = nullptr;
+
+        if (iid == IID_IUnknown || iid == IID_ICLRDebuggingLibraryProvider)
+        {
+            *ppvObject = static_cast<ICLRDebuggingLibraryProvider*>(this);
+            AddRef();
+            return S_OK;
+        }
+        if (iid == IID_ICLRDebuggingLibraryProvider2)
+        {
+            *ppvObject = static_cast<ICLRDebuggingLibraryProvider2*>(this);
+            AddRef();
+            return S_OK;
+        }
+        return E_NOINTERFACE;
+    }
+
+    ULONG STDMETHODCALLTYPE AddRef() override
+    {
+        return InterlockedIncrement(&m_ref);
+    }
+
+    ULONG STDMETHODCALLTYPE Release() override
+    {
+        LONG ref = InterlockedDecrement(&m_ref);
+        if (ref == 0)
+        {
+            delete this;
+        }
+        return ref;
+    }
+
+    HRESULT STDMETHODCALLTYPE ProvideLibrary(
+        const WCHAR* fileName,
+        DWORD timestamp,
+        DWORD sizeOfImage,
+        HMODULE* moduleHandle) override
+    {
+        if (fileName == nullptr || moduleHandle == nullptr)
+        {
+            return E_INVALIDARG;
+        }
+        *moduleHandle = nullptr;
+
+        LPCSTR path = _wcsstr(fileName, W("mscordbi")) != nullptr
+            ? m_runtime->GetDbiFilePath()
+            : m_runtime->GetDacFilePath();
+        if (path == nullptr)
+        {
+            return CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        }
+        if (!VerifyLibrary(path))
+        {
+            return CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        }
+
+        *moduleHandle = LoadLibraryA(path);
+        return *moduleHandle != nullptr
+            ? S_OK
+            : HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    HRESULT STDMETHODCALLTYPE ProvideLibrary2(
+        const WCHAR* fileName,
+        DWORD timestamp,
+        DWORD sizeOfImage,
+        LPWSTR* resolvedModulePath) override
+    {
+        if (fileName == nullptr || resolvedModulePath == nullptr)
+        {
+            return E_INVALIDARG;
+        }
+        *resolvedModulePath = nullptr;
+
+        LPCSTR path = _wcsstr(fileName, W("mscordbi")) != nullptr
+            ? m_runtime->GetDbiFilePath()
+            : m_runtime->GetDacFilePath();
+        if (path == nullptr)
+        {
+            return CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        }
+        if (!VerifyLibrary(path))
+        {
+            return CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        }
+
+        int length = MultiByteToWideChar(CP_ACP, 0, path, -1, nullptr, 0);
+        if (length <= 0)
+        {
+            return HRESULT_FROM_WIN32(GetLastError());
+        }
+
+        LPWSTR result = (LPWSTR)CoTaskMemAlloc(length * sizeof(WCHAR));
+        if (result == nullptr)
+        {
+            return E_OUTOFMEMORY;
+        }
+        if (MultiByteToWideChar(CP_ACP, 0, path, -1, result, length) <= 0)
+        {
+            HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+            CoTaskMemFree(result);
+            return hr;
+        }
+
+        *resolvedModulePath = result;
+        return S_OK;
+    }
+
+private:
+    bool VerifyLibrary(LPCSTR path)
+    {
+#ifndef FEATURE_PAL
+        if (m_verifySignature)
+        {
+            HANDLE file = CreateFileA(
+                path,
+                GENERIC_READ,
+                FILE_SHARE_READ,
+                nullptr,
+                OPEN_EXISTING,
+                FILE_ATTRIBUTE_NORMAL,
+                nullptr);
+            if (file == INVALID_HANDLE_VALUE)
+            {
+                ExtErr("RuntimeLibraryProvider: CreateFile(%s) FAILED %08x\n",
+                    path, HRESULT_FROM_WIN32(GetLastError()));
+                return false;
+            }
+
+            WINTRUST_FILE_INFO trustInfo = {};
+            trustInfo.cbStruct = sizeof(trustInfo);
+            trustInfo.hFile = file;
+
+            WINTRUST_DATA trustData = {};
+            trustData.cbStruct = sizeof(trustData);
+            trustData.dwUIChoice = WTD_UI_NONE;
+            trustData.fdwRevocationChecks = WTD_REVOKE_WHOLECHAIN;
+            trustData.dwUnionChoice = WTD_CHOICE_FILE;
+            trustData.pFile = &trustInfo;
+            trustData.dwStateAction = WTD_STATEACTION_VERIFY;
+            trustData.dwProvFlags = WTD_REVOCATION_CHECK_CHAIN | WTD_CACHE_ONLY_URL_RETRIEVAL;
+
+            GUID action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+            LONG status = WinVerifyTrust(nullptr, &action, &trustData);
+            if (status != ERROR_SUCCESS)
+            {
+                ExtErr("RuntimeLibraryProvider: WinVerifyTrust(%s) FAILED %08x\n", path, status);
+                trustData.dwStateAction = WTD_STATEACTION_CLOSE;
+                WinVerifyTrust(nullptr, &action, &trustData);
+                CloseHandle(file);
+                return false;
+            }
+
+            CRYPT_PROVIDER_DATA* provider = WTHelperProvDataFromStateData(trustData.hWVTStateData);
+            CRYPT_PROVIDER_SGNR* signer = provider != nullptr
+                ? WTHelperGetProvSignerFromChain(provider, 0, FALSE, 0)
+                : nullptr;
+            CERT_CHAIN_POLICY_PARA policyParameters = {};
+            policyParameters.cbSize = sizeof(policyParameters);
+            CERT_CHAIN_POLICY_STATUS policyStatus = {};
+            policyStatus.cbSize = sizeof(policyStatus);
+            bool valid = signer != nullptr &&
+                CertVerifyCertificateChainPolicy(
+                    (LPCSTR)CERT_CHAIN_POLICY_MICROSOFT_ROOT,
+                    signer->pChainContext,
+                    &policyParameters,
+                    &policyStatus) &&
+                policyStatus.dwError == ERROR_SUCCESS;
+
+            CRYPT_PROVIDER_CERT* leafCertificate = valid
+                ? WTHelperGetProvCertFromChain(signer, 0)
+                : nullptr;
+            valid = leafCertificate != nullptr;
+            if (valid)
+            {
+                PCERT_EXTENSION usageExtension = CertFindExtension(
+                    szOID_ENHANCED_KEY_USAGE,
+                    leafCertificate->pCert->pCertInfo->cExtension,
+                    leafCertificate->pCert->pCertInfo->rgExtension);
+                CERT_ENHKEY_USAGE* usages = nullptr;
+                DWORD usageSize = 0;
+                if (usageExtension == nullptr ||
+                    !CryptDecodeObjectEx(
+                        X509_ASN_ENCODING,
+                        X509_ENHANCED_KEY_USAGE,
+                        usageExtension->Value.pbData,
+                        usageExtension->Value.cbData,
+                        CRYPT_DECODE_ALLOC_FLAG,
+                        nullptr,
+                        &usages,
+                        &usageSize))
+                {
+                    valid = false;
+                }
+                else
+                {
+                    valid = false;
+                    for (DWORD i = 0; i < usages->cUsageIdentifier; i++)
+                    {
+                        bool validDacOid =
+                            strcmp(usages->rgpszUsageIdentifier[i], "1.3.6.1.4.1.311.84.4.1") == 0;
+                        if (validDacOid)
+                        {
+                            valid = true;
+                            break;
+                        }
+                    }
+                    LocalFree(usages);
+                }
+            }
+
+            trustData.dwStateAction = WTD_STATEACTION_CLOSE;
+            WinVerifyTrust(nullptr, &action, &trustData);
+            if (!valid)
+            {
+                ExtErr("RuntimeLibraryProvider: certificate policy validation failed for %s\n", path);
+                CloseHandle(file);
+                return false;
+            }
+            m_verifiedFiles.push_back(file);
+        }
+#endif
+        return true;
+    }
+};
+
+HRESULT Runtime::CreateDesktopCorDebugProcess(ICorDebugProcess** ppCorDebugProcess)
+{
+    if (ppCorDebugProcess == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    *ppCorDebugProcess = nullptr;
+
+#ifdef FEATURE_PAL
+    return E_NOTIMPL;
+#else
+    LPCSTR dacFilePath = GetDacFilePath();
+    LPCSTR dbiFilePath = GetDbiFilePath();
+    if (dacFilePath == nullptr || dbiFilePath == nullptr)
+    {
+        return CORDBG_E_NO_IMAGE_AVAILABLE;
+    }
+
+    RuntimeLibraryProvider libraryProvider(this);
+    HMODULE dacHandle = nullptr;
+    HRESULT hr = libraryProvider.ProvideLibrary(W("mscordacwks.dll"), 0, 0, &dacHandle);
+    if (FAILED(hr))
+    {
+        ExtErr("Desktop DAC load FAILED %08x\n", hr);
+        return hr;
+    }
+
+    HMODULE dbiHandle = nullptr;
+    hr = libraryProvider.ProvideLibrary(W("mscordbi.dll"), 0, 0, &dbiHandle);
+    if (FAILED(hr))
+    {
+        ExtErr("Desktop DBI load FAILED %08x\n", hr);
+        return hr;
+    }
+
+    ArrayHolder<WCHAR> dacModulePath = new WCHAR[MAX_LONGPATH + 1];
+    if (MultiByteToWideChar(CP_ACP, 0, dacFilePath, -1, dacModulePath, MAX_LONGPATH) <= 0)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    CLR_DEBUGGING_VERSION maxVersion = {0, 4, 0, 0, 0};
+    CLR_DEBUGGING_PROCESS_FLAGS flags = (CLR_DEBUGGING_PROCESS_FLAGS)0;
+    ToRelease<ICorDebugMutableDataTarget> dataTarget = new CorDebugDataTarget;
+    ToRelease<IUnknown> process;
+
+    OpenVirtualProcessImpl2FnPtr openVirtualProcessImpl2 =
+        (OpenVirtualProcessImpl2FnPtr)GetProcAddress(dbiHandle, "OpenVirtualProcessImpl2");
+    if (openVirtualProcessImpl2 != nullptr)
+    {
+        hr = openVirtualProcessImpl2(
+            GetModuleAddress(),
+            dataTarget,
+            dacModulePath,
+            &maxVersion,
+            IID_ICorDebugProcess,
+            &process,
+            &flags);
+    }
+    else
+    {
+        OpenVirtualProcessImplFnPtr openVirtualProcessImpl =
+            (OpenVirtualProcessImplFnPtr)GetProcAddress(dbiHandle, "OpenVirtualProcessImpl");
+        if (openVirtualProcessImpl != nullptr)
+        {
+            hr = openVirtualProcessImpl(
+                GetModuleAddress(),
+                dataTarget,
+                dacHandle,
+                &maxVersion,
+                IID_ICorDebugProcess,
+                &process,
+                &flags);
+        }
+        else
+        {
+            OpenVirtualProcess2FnPtr openVirtualProcess2 =
+                (OpenVirtualProcess2FnPtr)GetProcAddress(dbiHandle, "OpenVirtualProcess2");
+            hr = openVirtualProcess2 != nullptr
+                ? openVirtualProcess2(
+                    GetModuleAddress(),
+                    dataTarget,
+                    dacHandle,
+                    IID_ICorDebugProcess,
+                    &process,
+                    &flags)
+                : CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        }
+    }
+    if (FAILED(hr))
+    {
+        ExtErr("Desktop DBI OpenVirtualProcess FAILED %08x\n", hr);
+        return hr;
+    }
+    if (process == nullptr)
+    {
+        return E_NOINTERFACE;
+    }
+
+    hr = process->QueryInterface(IID_ICorDebugProcess, (void**)&m_pCorDebugProcess);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    *ppCorDebugProcess = m_pCorDebugProcess;
+    return S_OK;
+#endif
+}
+
+HRESULT Runtime::CreateCorDebugProcessViaDbgShim(ICorDebugProcess** ppCorDebugProcess)
+{
+    if (ppCorDebugProcess == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    *ppCorDebugProcess = nullptr;
+
+    if (m_dbgShimHandle == nullptr)
+    {
+        LPCSTR dbgShimFilePath = GetDbgShimFilePath();
+        if (dbgShimFilePath == nullptr)
+        {
+            return CORDBG_E_NO_IMAGE_AVAILABLE;
+        }
+        m_dbgShimHandle = LoadLibraryA(dbgShimFilePath);
+        if (m_dbgShimHandle == nullptr)
+        {
+            return HRESULT_FROM_WIN32(GetLastError());
+        }
+    }
+
+    CLRCreateInstanceFnPtr createInstance =
+        (CLRCreateInstanceFnPtr)GetProcAddress(m_dbgShimHandle, "CLRCreateInstance");
+    if (createInstance == nullptr)
+    {
+        return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
+    }
+
+    ToRelease<ICLRDebugging> debugging;
+    HRESULT hr = createInstance(CLSID_CLRDebugging, IID_ICLRDebugging, (void**)&debugging);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    ToRelease<ICLRDebuggingPolicy> policy;
+    hr = debugging->QueryInterface(__uuidof(ICLRDebuggingPolicy), (void**)&policy);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    hr = policy->SetCDacLoadPolicy((DbgShimCDacLoadPolicy)GetCDacLoadPolicy());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    CLR_DEBUGGING_VERSION clrDebuggingVersionRequested = {0, 4, 0, 0, 0};
+    CLR_DEBUGGING_PROCESS_FLAGS clrDebuggingFlags = (CLR_DEBUGGING_PROCESS_FLAGS)0;
+    ToRelease<ICorDebugMutableDataTarget> pDataTarget = new CorDebugDataTarget;
+    ToRelease<ICLRDebuggingLibraryProvider> libraryProvider =
+        static_cast<ICLRDebuggingLibraryProvider*>(new RuntimeLibraryProvider(this));
+    ToRelease<IUnknown> pUnkProcess = nullptr;
+    CLR_DEBUGGING_VERSION version = {};
+    hr = debugging->OpenVirtualProcess(
+        GetModuleAddress(),
+        pDataTarget,
+        libraryProvider,
+        &clrDebuggingVersionRequested,
+        IID_ICorDebugProcess,
+        &pUnkProcess,
+        &version,
+        &clrDebuggingFlags);
+    if (FAILED(hr))
+    {
+        ExtErr("DbgShim OpenVirtualProcess DBI activation FAILED %08x\n", hr);
+        return hr;
+    }
+    if (pUnkProcess == nullptr)
+    {
+        return E_NOINTERFACE;
+    }
+
+    hr = pUnkProcess->QueryInterface(IID_ICorDebugProcess, (PVOID*)&m_pCorDebugProcess);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    *ppCorDebugProcess = m_pCorDebugProcess;
+    return hr;
+}
+
 /**********************************************************************\
  * Loads and initializes the public ICorDebug interfaces. This should be
  * called at least once per debugger stop state to ensure that the
@@ -814,7 +1246,11 @@ ULONG64 Runtime::GetContractDescriptorAddress()
 \**********************************************************************/
 HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
 {
-    HRESULT hr;
+    if (ppCorDebugProcess == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    *ppCorDebugProcess = nullptr;
 
     // We may already have an ICorDebug instance we can use
     if (m_pCorDebugProcess != nullptr)
@@ -839,120 +1275,15 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         m_pCorDebugProcess->Release();
         m_pCorDebugProcess = nullptr;
     }
-    GUID skuId = CLR_ID_ONECORE_CLR;
-#ifndef FEATURE_PAL
     if (GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
     {
-        skuId = CLR_ID_V4_DESKTOP;
-    }
-#endif
-    const char* dacFilePath = GetDacFilePath();
-    if (dacFilePath == nullptr)
-    {
-        ExtErr("Could not find matching DAC\n");
-        return CORDBG_E_NO_IMAGE_AVAILABLE;
-    }
-    ArrayHolder<WCHAR> pDacModulePath = new WCHAR[MAX_LONGPATH + 1];
-    int length = MultiByteToWideChar(CP_ACP, 0, dacFilePath, -1, pDacModulePath, MAX_LONGPATH);
-    if (0 >= length)
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        ExtErr("MultiByteToWideChar() DAC FAILED %08x\n", hr);
-        return hr;
-    }
-    const char* dbiFilePath = GetDbiFilePath();
-    if (dbiFilePath == nullptr)
-    {
-        ExtErr("Could not find matching DBI\n");
-        return CORDBG_E_NO_IMAGE_AVAILABLE;
-    }
-    HMODULE hDbi = LoadLibraryA(dbiFilePath);
-    if (hDbi == NULL)
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        ExtErr("LoadLibraryA(%s) FAILED %08x\n", dbiFilePath, hr);
-        return hr;
-    }
-    CLR_DEBUGGING_VERSION clrDebuggingVersionRequested = {0, 4, 0, 0, 0};
-    CLR_DEBUGGING_PROCESS_FLAGS clrDebuggingFlags = (CLR_DEBUGGING_PROCESS_FLAGS)0;
-    ToRelease<ICorDebugMutableDataTarget> pDataTarget = new CorDebugDataTarget;
-    ToRelease<IUnknown> pUnkProcess = nullptr;
-
-    // Get access to the latest OVP implementation and call it
-    OpenVirtualProcessImpl2FnPtr ovpFn = (OpenVirtualProcessImpl2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl2");
-    if (ovpFn != nullptr)
-    {
-        hr = ovpFn(GetModuleAddress(), pDataTarget, pDacModulePath, &clrDebuggingVersionRequested, IID_ICorDebugProcess, &pUnkProcess, &clrDebuggingFlags);
-        if (FAILED(hr)) {
-	        ExtErr("DBI OpenVirtualProcessImpl2 FAILED %08x\n", hr);
-            return hr;
-        }
-    }
-    else
-    {
-        HMODULE hDac = LoadLibraryA(dacFilePath);
-        if (hDac == NULL)
+        if (GetCDacLoadPolicy() == CDacLoadPolicy::OnlyUseCDac)
         {
-            ExtErr("LoadLibraryA(%s) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
-            return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
+            return CORDBG_E_NO_IMAGE_AVAILABLE;
         }
-#ifdef FEATURE_PAL
-        // On Linux/MacOS the DAC module handle needs to be re-created using the DAC PAL instance
-        // before being passed to DBI's OpenVirtualProcess* implementation. The DBI and DAC share
-        // the same PAL where dbgshim has it's own.
-        LoadLibraryWFnPtr loadLibraryWFn = (LoadLibraryWFnPtr)GetProcAddress(hDac, "LoadLibraryW");
-        if (loadLibraryWFn != nullptr)
-        {
-            hDac = loadLibraryWFn(pDacModulePath);
-            if (hDac == NULL)
-            {
-		        ExtErr("DBI LoadLibraryW(%S) FAILED\n", pDacModulePath.GetPtr());
-	            return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
-            }
-        }
-        else
-        {
-	        ExtErr("DBI GetProcAddress(LoadLibraryW) FAILED\n");
-            return CORDBG_E_MISSING_DEBUGGER_EXPORTS;
-	    }
-#endif // FEATURE_PAL
-
-        // Get access to OVP and call it
-        OpenVirtualProcessImplFnPtr ovpFn = (OpenVirtualProcessImplFnPtr)GetProcAddress(hDbi, "OpenVirtualProcessImpl");
-        if (ovpFn != nullptr)
-        {
-            // Have a CLR v4 Beta2+ DBI, call it and let it do the version check
-            hr = ovpFn(GetModuleAddress(), pDataTarget, hDac, &clrDebuggingVersionRequested, IID_ICorDebugProcess, &pUnkProcess, &clrDebuggingFlags);
-            if (FAILED(hr)) {
-		        ExtErr("DBI OpenVirtualProcessImpl FAILED %08x\n", hr);
-                return hr;
-            }
-        }
-        else
-        {
-            // Fallback to CLR v4 Beta1 path, but skip some of the checking we'd normally do (maxSupportedVersion, etc.)
-            OpenVirtualProcess2FnPtr ovp2Fn = (OpenVirtualProcess2FnPtr)GetProcAddress(hDbi, "OpenVirtualProcess2");
-            if (ovp2Fn != nullptr)
-            {
-	            hr = ovp2Fn(GetModuleAddress(), pDataTarget, hDac, IID_ICorDebugProcess, &pUnkProcess, &clrDebuggingFlags);
-            }
-            else
-            {
-                hr = CORDBG_E_LIBRARY_PROVIDER_ERROR;
-            }
-		    if (FAILED(hr)) {
-		        ExtErr("DBI OpenVirtualProcess2 FAILED %08x\n", hr);
-		        return hr;
-		    }
-        }
+        return CreateDesktopCorDebugProcess(ppCorDebugProcess);
     }
-    _ASSERTE(pUnkProcess != nullptr);
-    hr = pUnkProcess->QueryInterface(IID_ICorDebugProcess, (PVOID*)&m_pCorDebugProcess);
-    if (FAILED(hr)) {
-        return hr;
-    }
-    *ppCorDebugProcess = m_pCorDebugProcess;
-    return hr;
+    return CreateCorDebugProcessViaDbgShim(ppCorDebugProcess);
 }
 
 /**********************************************************************\
