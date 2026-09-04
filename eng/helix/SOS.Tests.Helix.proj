@@ -16,6 +16,8 @@
     <DotNetHostName Condition="'$(TargetOS)' != 'Windows_NT'">dotnet</DotNetHostName>
     <PayloadNativeSourceDir>$(ArtifactsBinNativeDir)</PayloadNativeSourceDir>
     <SOSHelixTestEnvironment Condition="'$(TargetOS)' == 'osx'">SOSHARNESS_TEST_RUNTIME_MAJOR=11 SOSHARNESS_ONLY_COREVERSIONS=Net11 </SOSHelixTestEnvironment>
+    <!-- ARM64 native dump hosts are unstable under concurrent SOS commands. -->
+    <SOSHelixDumpMaxParallelThreads Condition="'$(TargetOS)' == 'linux' and '$(TargetArch)' == 'arm64'">1</SOSHelixDumpMaxParallelThreads>
     <SOSExpectedWorkItemCount Condition="'$(TargetOS)' == 'osx'">34</SOSExpectedWorkItemCount>
     <SOSExpectedWorkItemCount Condition="'$(SOSExpectedWorkItemCount)' == ''">10</SOSExpectedWorkItemCount>
   </PropertyGroup>
@@ -30,14 +32,14 @@
     </_SOSHelixCorrelationPayload>
     <HelixCorrelationPayload Include="@(_SOSHelixCorrelationPayload)" />
 
-    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_0_of_8" ShardIndex="0" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
-    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_1_of_8" ShardIndex="1" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
-    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_2_of_8" ShardIndex="2" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
-    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_3_of_8" ShardIndex="3" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
-    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_4_of_8" ShardIndex="4" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
-    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_5_of_8" ShardIndex="5" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
-    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_6_of_8" ShardIndex="6" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
-    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_7_of_8" ShardIndex="7" ShardCount="8" Liveness="Dump" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_0_of_8" ShardIndex="0" ShardCount="8" Liveness="Dump" MaxParallelThreads="$(SOSHelixDumpMaxParallelThreads)" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_1_of_8" ShardIndex="1" ShardCount="8" Liveness="Dump" MaxParallelThreads="$(SOSHelixDumpMaxParallelThreads)" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_2_of_8" ShardIndex="2" ShardCount="8" Liveness="Dump" MaxParallelThreads="$(SOSHelixDumpMaxParallelThreads)" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_3_of_8" ShardIndex="3" ShardCount="8" Liveness="Dump" MaxParallelThreads="$(SOSHelixDumpMaxParallelThreads)" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_4_of_8" ShardIndex="4" ShardCount="8" Liveness="Dump" MaxParallelThreads="$(SOSHelixDumpMaxParallelThreads)" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_5_of_8" ShardIndex="5" ShardCount="8" Liveness="Dump" MaxParallelThreads="$(SOSHelixDumpMaxParallelThreads)" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_6_of_8" ShardIndex="6" ShardCount="8" Liveness="Dump" MaxParallelThreads="$(SOSHelixDumpMaxParallelThreads)" Condition="'$(TargetOS)' != 'osx'" />
+    <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_7_of_8" ShardIndex="7" ShardCount="8" Liveness="Dump" MaxParallelThreads="$(SOSHelixDumpMaxParallelThreads)" Condition="'$(TargetOS)' != 'osx'" />
     <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_0_of_32" ShardIndex="0" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
     <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_1_of_32" ShardIndex="1" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
     <_SOSShard Include="SOS_$(TargetRid)_$(Configuration)_dump_2_of_32" ShardIndex="2" ShardCount="32" Liveness="Dump" MaxParallelThreads="4" Condition="'$(TargetOS)' == 'osx'" />
