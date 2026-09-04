@@ -1,5 +1,5 @@
 <Dependencies>
-  <Source Uri="https://github.com/dotnet/dotnet" Mapping="diagnostics" Sha="ba5fefc87000195d9618a554794c7b0f283290c7" BarId="330022" />
+  <Source Uri="https://github.com/dotnet/dotnet" Mapping="diagnostics" Sha="a12253cf4283fcf4a54a7d2732aae2e8821f833a" BarId="330381" />
   <ProductDependencies>
     <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.1.741901">
       <Uri>https://github.com/microsoft/clrmd</Uri>
@@ -32,75 +32,75 @@
       <Sha>c642c365e52bd6c5bd979f759963260fb79d710a</Sha>
     </Dependency>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <Dependency Name="Microsoft.NET.Sdk" Version="11.0.100-rc.2.26452.102">
+    <Dependency Name="Microsoft.NET.Sdk" Version="11.0.100-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="11.0.0-rc.2.26452.102">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="11.0.0-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="11.0.0-rc.2.26452.102">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="11.0.0-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
     <!-- Latest shared runtime version updated by darc -->
     <!-- We use platforms for the unstable package version and
       the ref pack as the stable version. We need them as download links
       use the unstable version, but the installed assets are all stable.  -->
-    <Dependency Name="Microsoft.NETCore.App.Ref" Version="11.0.0-rc.2.26452.102">
+    <Dependency Name="Microsoft.NETCore.App.Ref" Version="11.0.0-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.Platforms" Version="11.0.0-rc.2.26452.102">
+    <Dependency Name="Microsoft.NETCore.Platforms" Version="11.0.0-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="runtime.win-x64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26452.102">
+    <Dependency Name="runtime.win-x64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="runtime.win-arm64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26452.102">
+    <Dependency Name="runtime.win-arm64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="runtime.linux-x64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26452.102">
+    <Dependency Name="runtime.linux-x64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="runtime.linux-arm64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26452.102">
+    <Dependency Name="runtime.linux-arm64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="runtime.osx-x64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26452.102">
+    <Dependency Name="runtime.osx-x64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="runtime.osx-arm64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26452.102">
+    <Dependency Name="runtime.osx-arm64.Microsoft.DotNet.Cdac.Transport" Version="11.0.0-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
     <!--
       These versions should not be used by any project that contributes to the design-time experience in VS, such as an analyzer, code-fix, or generator assembly.
       Any tools that contribute to the design-time experience should use the MicrosoftCodeAnalysisVersion_LatestVS property above to ensure
       they do not break the local dev experience.
     -->
-    <Dependency Name="Microsoft.CodeAnalysis" Version="5.12.0-1.26452.102">
+    <Dependency Name="Microsoft.CodeAnalysis" Version="5.12.0-1.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.CodeAnalysis.CSharp" Version="5.12.0-1.26452.102">
+    <Dependency Name="Microsoft.CodeAnalysis.CSharp" Version="5.12.0-1.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.CodeAnalysis.Analyzers" Version="5.12.0-1.26452.102">
+    <Dependency Name="Microsoft.CodeAnalysis.Analyzers" Version="5.12.0-1.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.CodeAnalysis.NetAnalyzers" Version="11.0.100-rc.2.26452.102">
+    <Dependency Name="Microsoft.CodeAnalysis.NetAnalyzers" Version="11.0.100-rc.2.26453.107">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>ba5fefc87000195d9618a554794c7b0f283290c7</Sha>
+      <Sha>a12253cf4283fcf4a54a7d2732aae2e8821f833a</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
