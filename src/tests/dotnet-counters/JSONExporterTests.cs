@@ -165,6 +165,73 @@ namespace DotnetCounters.UnitTests
         }
 
         [Fact]
+        public void EscapedTagsAreDecoded()
+        {
+            // Tags arrive already escaped (as normalized from the runtime payload). The exporter
+            // must surface the DECODED (unescaped) values, never the transport escaping.
+            string meterTags = @"env=prod\=1";              // decodes to env=prod=1
+            string instrumentTags = @"path=C:\\logs";        // decodes to path=C:\logs
+            string valueTags = @"status=ok\,done,region=us\,west"; // decodes to status=ok,done and region=us,west
+
+            string fileName = "EscapedTagsTest.json";
+            JSONExporter exporter = new(fileName, "myProcess.exe");
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+
+            exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterOne", meterTags, instrumentTags), "Counter One", string.Empty, valueTags, 1, start + TimeSpan.FromSeconds(1)), false);
+
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+            using (StreamReader r = new(fileName))
+            {
+                string json = r.ReadToEnd();
+                JSONCounterTrace counterTrace = JsonConvert.DeserializeObject<JSONCounterTrace>(json);
+
+                JSONCounterPayload payload = Assert.Single(counterTrace.events);
+                Assert.Equal("status=ok,done,region=us,west", payload.tags);
+                Assert.Equal("env=prod=1", payload.meterTags);
+                Assert.Equal(@"path=C:\logs", payload.instrumentTags);
+            }
+        }
+
+        [Fact]
+        public void EventCounterMetadataIsNotDecodedAsMeterTags()
+        {
+            const string metadata = @"path:C:\temp,expression:x\=1";
+            string fileName = "EventCounterMetadataTest.json";
+            JSONExporter exporter = new(fileName, "myProcess.exe");
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(
+                new EventCounterPayload(
+                    DateTime.Now,
+                    "myProvider",
+                    "counterOne",
+                    "Counter One",
+                    string.Empty,
+                    1,
+                    CounterType.Metric,
+                    1,
+                    1,
+                    metadata),
+                false);
+            exporter.Stop();
+
+            try
+            {
+                string json = File.ReadAllText(fileName);
+                JSONCounterPayload payload = Assert.Single(JsonConvert.DeserializeObject<JSONCounterTrace>(json).events);
+
+                Assert.Equal(metadata, payload.tags);
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+        }
+
+        [Fact]
         public void DisplayUnitsTest()
         {
             string fileName = "displayUnitsTest.json";
@@ -281,8 +348,44 @@ namespace DotnetCounters.UnitTests
                     Assert.Equal("CounterOne\f", payload.name);
                     Assert.Equal("Metric", payload.counterType);
                     Assert.Equal(1.0, payload.value);
-                    Assert.Equal("f\b\"\n=abc\r\\,\ttwo=9", payload.tags);
+                    // Tags are decoded at the output boundary: the '\,' in the input is an escaped
+                    // comma and decodes to a literal ',', so the backslash is consumed. All other
+                    // characters (including control characters) are passed through and JSON-escaped.
+                    Assert.Equal("f\b\"\n=abc\r,\ttwo=9", payload.tags);
                 }
+            }
+        }
+
+        [Fact]
+        public void ControlCharactersAreEscapedForValidJson()
+        {
+            // A tag value with a control character other than the named short escapes (here U+0001)
+            // must be emitted as \u0001; a raw control character makes the document invalid under a
+            // strict JSON parser (RFC 8259).
+            string valueTags = "note=a" + (char)0x01 + "b"; // decodes to note=a<U+0001>b
+
+            string fileName = "ControlCharTest.json";
+            JSONExporter exporter = new(fileName, "myProcess.exe");
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+            exporter.CounterPayloadReceived(new GaugePayload(new CounterMetadata("myProvider", "counterOne", counterUnit: ""), "CounterOne", string.Empty, valueTags, 1, start), false);
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+            try
+            {
+                string json = File.ReadAllText(fileName);
+                Assert.Contains(@"\u0001", json);            // escaped form is present
+                Assert.False(json.Contains((char)0x01));     // the raw control char never leaks (ordinal check)
+
+                // A strict parser accepts the document and round-trips the value.
+                using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(json);
+                System.Text.Json.JsonElement firstEvent = doc.RootElement.GetProperty("Events")[0];
+                Assert.Equal("note=a\u0001b", firstEvent.GetProperty("tags").GetString());
+            }
+            finally
+            {
+                File.Delete(fileName);
             }
         }
 

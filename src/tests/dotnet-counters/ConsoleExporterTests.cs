@@ -289,6 +289,45 @@ namespace DotnetCounters.UnitTests
         }
 
         [Fact]
+        public void EscapedTagsAreDecodedInColumnMode()
+        {
+            MockConsole console = new MockConsole(80, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console);
+            exporter.Initialize();
+
+            // Tags arrive already escaped (as normalized from the runtime payload). Values contain
+            // the structural characters ',' and '=', so they must be decoded rather than split:
+            // a naive Split(',')/Split('=') would crash or mangle these values.
+            exporter.CounterPayloadReceived(CreateMeterCounterPostNet8("Provider1", "Counter1", "{widget}", @"region=us\,west", 87), false);
+            exporter.CounterPayloadReceived(CreateMeterCounterPostNet8("Provider1", "Counter1", "{widget}", @"filter=x\=1", 5), false);
+
+            string[] lines = console.Lines;
+            Assert.Contains(lines, line => line.Contains("us,west")); // comma inside a value decoded intact
+            Assert.Contains(lines, line => line.Contains("x=1"));     // equals inside a value decoded intact
+            Assert.DoesNotContain(lines, line => line.Contains(@"\")); // no stray escape characters leak to the display
+        }
+
+        [Fact]
+        public void EventCounterMetadataIsNotDecodedAsMeterTags()
+        {
+            MockConsole console = new MockConsole(80, 40, _outputHelper);
+            ConsoleWriter exporter = new ConsoleWriter(console);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(
+                CreateEventCounter(
+                    "Provider1",
+                    "Counter1",
+                    "{widget}",
+                    1,
+                    @"path:C:\temp,expression:x\=1"),
+                false);
+
+            Assert.Contains(console.Lines, line => line.Contains(@"C:\temp"));
+            Assert.Contains(console.Lines, line => line.Contains(@"x\=1"));
+        }
+
+        [Fact]
         public void CountersAreTruncatedBeyondScreenHeight()
         {
             MockConsole console = new MockConsole(50, 7, _outputHelper);
@@ -468,9 +507,9 @@ namespace DotnetCounters.UnitTests
         }
 
 
-        private static CounterPayload CreateEventCounter(string provider, string displayName, string unit, double value)
+        private static CounterPayload CreateEventCounter(string provider, string displayName, string unit, double value, string tags = "")
         {
-            return new EventCounterPayload(DateTime.MinValue, provider, displayName, displayName, unit, value, CounterType.Metric, 0, 0, "");
+            return new EventCounterPayload(DateTime.MinValue, provider, displayName, displayName, unit, value, CounterType.Metric, 0, 0, tags);
         }
 
         private static CounterPayload CreateIncrementingEventCounter(string provider, string displayName, string unit, double value)
@@ -573,7 +612,7 @@ namespace DotnetCounters.UnitTests
                                      "    Offset (ms)                                       42");
 
             // Second payload: same counter, unix ms timestamp. Incremental update only.
-            // Fits within the 21-char minimum column — no spill.
+            // Fits within the 21-char minimum column - no spill.
             exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 1701200000000.0), false);
             console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
                                      "    Status: Running",
@@ -604,7 +643,7 @@ namespace DotnetCounters.UnitTests
                                      "    Offset (ms)                                       42");
 
             // Second payload: same counter, value exceeds 21-char column (26 chars formatted).
-            // Incremental path detects overflow → full redraw with _counterValueLength=26.
+            // Incremental path detects overflow -> full redraw with _counterValueLength=26.
             exporter.CounterPayloadReceived(CreateEventCounter("System.Runtime", "Offset", "ms", 17012000000000000.0), false);
             console.AssertLinesEqual("Press p to pause, r to resume, q to quit.",
                                      "    Status: Running",
