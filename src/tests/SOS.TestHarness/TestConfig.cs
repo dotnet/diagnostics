@@ -277,13 +277,12 @@ public sealed record TestConfig : IXunitSerializable
     }
 
     /// <summary>
-    /// The cDAC is available only for .NET Core 11+; desktop Framework and single-file command coverage
-    /// continue to use the legacy DAC.
+    /// The cDAC is available only for .NET Core 11+; desktop Framework and earlier Core versions use the
+    /// legacy DAC. This is independent of host-platform constraints such as musl SingleFile support.
     /// </summary>
     internal static bool IsDacSupported(TestConfig config) =>
         config.Dac != Dac.CDac ||
-        (config.Flavor is not Flavor.Framework and not Flavor.SingleFile &&
-            (uint)config.CoreVersion >= (uint)CoreVersion.Net11);
+        (config.Flavor != Flavor.Framework && (uint)config.CoreVersion >= (uint)CoreVersion.Net11);
 
     internal static bool IsFlavorSupportedOnRid(Flavor flavor, string rid) =>
         flavor != Flavor.SingleFile || !rid.StartsWith("linux-musl-", StringComparison.Ordinal);

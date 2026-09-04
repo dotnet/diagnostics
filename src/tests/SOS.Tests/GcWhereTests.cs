@@ -17,8 +17,9 @@ public sealed class GcWhereTests
     // gcwhere's structure check is dump-only (the generation layout is identical in a dump). The
     // generation-promotion check (GcWhere_Moves) is the live-worthy one: it drives bpmd through the
     // gen0->gen1->gen2 promotion (GC.Collect(2) between markers) on a live process, so it opts into live.
-    public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
-    public static TheoryData<TestConfig> LiveMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], liveness: Liveness.AllValid);
+    public static TheoryData<TestConfig> Matrix => TestMatrices.CurrentThreadCommands([TargetCatalog.Scenarios]);
+    public static TheoryData<TestConfig> LiveMatrix =>
+        TestMatrices.CurrentThreadCommands([TargetCatalog.Scenarios], Liveness.AllValid);
 
     [SosTheory]
     [MemberData(nameof(Matrix))]

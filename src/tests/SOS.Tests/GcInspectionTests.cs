@@ -99,8 +99,24 @@ public sealed class GcInspectionTests
     [MemberData(nameof(Matrix))]
     public async Task VerifyHeap_ReportsNoCorruption(TestConfig config)
     {
+        if (RepoLayout.Rid.StartsWith("linux-musl-", StringComparison.Ordinal))
+        {
+            HarnessSkipException.Now(
+                "The DAC reports incorrect sync-block-related verifyheap failures on Linux musl.");
+        }
+
+        if (OperatingSystem.IsMacOS() &&
+            config.Host == Host.DotnetDump &&
+            config.Dac == Dac.Legacy &&
+            config.Flavor == Flavor.Core &&
+            config.CoreVersion == CoreVersion.Net11)
+        {
+            HarnessSkipException.Now(
+                "https://github.com/dotnet/diagnostics/issues/5985: legacy DAC SyncBlock data is unavailable for macOS .NET 11 dumps.");
+        }
+
         using Target target = await Targets.GetTargetAsync(config);
-        target.GoToStopPoint(TargetCatalog.StopHeap);
+        target.GoToStopPoint(TargetCatalog.StopGen1);
 
         SosOutput verify = target.Sos("verifyheap");
         Assert.Matches(@"\b0 errors\b", verify.Text);
@@ -129,8 +145,14 @@ public sealed class GcInspectionTests
         target.Sos("dumpgen").AssertContains("Generation argument is missing");
         target.Sos("dumpgen invalid").AssertContains("invalid is not a supported generation");
 
-        ulong marker = target.FindUniqueObject("ThinLockMarker");
-        ulong methodTable = target.DumpObj(marker).MethodTable;
+        DumpHeapResult markerDump = target.DumpHeap("-type ThinLockMarker");
+        SosRow markerStat = markerDump.Statistics
+            .SingleRow(r => r["Class Name"].Value == "ThinLockMarker", "the ThinLockMarker method table");
+        Assert.Equal(1, markerStat["Count"].AsInt32(Sos.Integer));
+        ulong methodTable = markerStat["MT"].AsUInt64(Sos.Addr);
+        SosRow markerRow = markerDump.Objects
+            .SingleRow(r => r["MT"].AsUInt64(Sos.Addr) == methodTable, "the ThinLockMarker object");
+        ulong marker = markerRow["Address"].AsUInt64(Sos.Addr);
 
         target.Sos("dumpgen gen0 -type ThinLockMarker")
             .AssertContains("ThinLockMarker");

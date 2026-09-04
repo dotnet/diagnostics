@@ -38,7 +38,11 @@ public sealed class ClrUTests
         Assert.NotEqual(0ul, plain.Begin);
         Assert.True(plain.Size > 0);
         Assert.NotEmpty(plain.Instructions);
-        Assert.True(plain.SourceLineCount > 0, "expected source-line annotations by default");
+        // The x86 desktop DAC does not surface managed source annotations through clru even with full PDBs.
+        if (IntPtr.Size != 4 || config.Flavor != Flavor.Framework)
+        {
+            Assert.True(plain.SourceLineCount > 0, "expected source-line annotations by default");
+        }
         Assert.False(plain.HasOffsets);
 
         // -n suppresses the source annotations but still disassembles.
@@ -66,7 +70,8 @@ public sealed class ClrUTests
 
         // -gcinfo interleaves the same interruptibility info that standalone gcinfo prints.
         ClrUResult withGc = target.ClrU(atHeap.MethodDesc.Value, gcInfo: true);
-        Assert.Contains("interruptible", withGc.Output.Text, StringComparison.Ordinal);
+        string transitionMarker = IntPtr.Size == 4 ? "becoming live" : "interruptible";
+        Assert.Contains(transitionMarker, withGc.Output.Text, StringComparison.OrdinalIgnoreCase);
         Assert.NotEmpty(withGc.Instructions); // still a real disassembly, not just the gc dump
         Assert.NotEmpty(target.GcInfo(atHeap.MethodDesc.Value).Transitions);
 

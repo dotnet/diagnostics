@@ -22,6 +22,12 @@ public sealed class DumpHeapThinLockTests
     [MemberData(nameof(Matrix))]
     public async Task DumpHeap_ThinLock(TestConfig config)
     {
+        if (RepoLayout.Rid.StartsWith("linux-musl-", StringComparison.Ordinal))
+        {
+            HarnessSkipException.Now(
+                "Thin-lock data is unavailable from the DAC on Linux musl, so dumpheap -thinlock omits the table.");
+        }
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopThinLock);
 

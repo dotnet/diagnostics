@@ -20,12 +20,17 @@ namespace SOS.Tests;
 public sealed class ClrStackICorDebugTests
 {
     public static TheoryData<TestConfig> Matrix { get; }
-        = TestConfig.BuildMatrix([TargetCatalog.DivZero, TargetCatalog.Scenarios], Flavor.Core | Flavor.Framework);
+        = TestMatrices.StackWalk(
+            [TargetCatalog.DivZero, TargetCatalog.Scenarios],
+            Flavor.Core | Flavor.Framework,
+            filter: TestMatrices.SupportsICorDebugStackWalk);
 
     [SosTheory]
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_ICorDebug(TestConfig config)
     {
+        TestMatrices.SkipUnavailableMacOsDotnetDumpThreads(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         if (config.Target == TargetCatalog.Scenarios)
         {

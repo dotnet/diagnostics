@@ -26,30 +26,37 @@ public sealed class MiscCommandTests
         // dbgout toggles internal debug logging and reports the new state.
         target.Sos("dbgout").AssertContains("Debug output logging");
 
-        // sosflush resets SOS's cached state; it produces no output but must run cleanly. The cDAC
-        // implements IXCLRDataProcess::Flush (dotnet/runtime Legacy/SOSDacImpl.IXCLRDataProcess.cs), so this
-        // works on every host/DAC including net11 + cDAC.
-        AssertRuns(target.Sos("sosflush"));
-
-        // enummem is not surfaced by the lldb SOS plugin; return early rather
-        // than skipping — sosflush above has already been verified on this config.
-        if (config.Host == Host.Lldb)
+        try
         {
-            return;
-        }
+            // sosflush resets SOS's cached state; it produces no output but must run cleanly. The cDAC
+            // implements IXCLRDataProcess::Flush (dotnet/runtime Legacy/SOSDacImpl.IXCLRDataProcess.cs), so this
+            // works on every host/DAC including net11 + cDAC.
+            AssertRuns(target.Sos("sosflush"));
 
-        // enummem (EnumMemoryRegions) is E_NOTIMPL under the cDAC on the dotnet-dump host — by design, the
-        // cDAC doesn't implement the memory-region enumeration contract, surfaced as "Unrecognized SOS
-        // command". The native (cdb) host services enummem itself, so
-        // it's only unavailable on dotnet-dump. Return early rather than skipping — sosflush above has
-        // already been verified on this config. cDAC only exists on net11+, so no version check is needed.
-        if (config.Dac == Dac.CDac && config.Host == Host.DotnetDump)
+            // enummem is not surfaced by the lldb SOS plugin; return early rather
+            // than skipping — sosflush above has already been verified on this config.
+            if (config.Host == Host.Lldb)
+            {
+                return;
+            }
+
+            // enummem (EnumMemoryRegions) is E_NOTIMPL under the cDAC on the dotnet-dump host — by design, the
+            // cDAC doesn't implement the memory-region enumeration contract, surfaced as "Unrecognized SOS
+            // command". The native (cdb) host services enummem itself, so
+            // it's only unavailable on dotnet-dump. Return early rather than skipping — sosflush above has
+            // already been verified on this config. cDAC only exists on net11+, so no version check is needed.
+            if (config.Dac == Dac.CDac && config.Host == Host.DotnetDump)
+            {
+                return;
+            }
+
+            // enummem produces no output but must be a recognised command that runs cleanly.
+            AssertRuns(target.Sos("enummem"));
+        }
+        finally
         {
-            return;
+            target.Sos("dbgout -off").AssertContains("Debug output logging");
         }
-
-        // enummem produces no output but must be a recognised command that runs cleanly.
-        AssertRuns(target.Sos("enummem"));
     }
 
     private static void AssertRuns(SosOutput output)
