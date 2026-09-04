@@ -55,6 +55,16 @@ public sealed class TestConfigValidityTests
     }
 
     [Fact]
+    public void MuslHelixDumpKindFilterPreservesHeapAndFull()
+    {
+        DumpKind[] dumpKinds = TestConfig.ApplyAllowList(
+            DumpKind.Heap | DumpKind.Mini | DumpKind.Full,
+            "Heap,Full").ToArray();
+
+        Assert.Equal([DumpKind.Heap, DumpKind.Full], dumpKinds);
+    }
+
+    [Fact]
     public void Net8LinuxArm64CreatedumpPermissionFailureIsKnown()
     {
         const string error = "open(/proc/123/mem) FAILED Permission denied (13)";
