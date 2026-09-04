@@ -14,6 +14,11 @@
     <TestRunnerName>XUnitV3</TestRunnerName>
   </PropertyGroup>
 
+  <!-- Temporary until SOS.Tests moves to Helix in https://github.com/dotnet/diagnostics/pull/6002. -->
+  <PropertyGroup Condition="'$(ContinuousIntegrationBuild)' == 'true'">
+    <SkipTests>true</SkipTests>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\SOS.TestHarness\SOS.TestHarness.csproj" />
     <ProjectReference Include="..\SOS.TestHarness.SourceGen\SOS.TestHarness.SourceGen.csproj"
