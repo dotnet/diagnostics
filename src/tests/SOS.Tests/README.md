@@ -220,6 +220,11 @@ Comma-separated matrix allow-lists are case-insensitive enum names:
 | `LLDB_PATH` | Override LLDB discovery. Otherwise Xcode and then `PATH` are searched. |
 | `NUGET_PACKAGES` | Override the NuGet package root used to locate runtime packs and cDAC assets. |
 
+The unprivileged Azure Linux Helix Alpine container sets
+`SOSHARNESS_ONLY_DUMPKIND=Heap,Full` to avoid an intermittent .NET 8 createdump
+`PR_SET_PTRACER` race during Mini snapshot capture. This retains Heap, Full, and
+live coverage; local Alpine test containers continue to run Mini rows.
+
 The harness sets the following implementation-owned values for child
 processes; they are not supported user controls:
 

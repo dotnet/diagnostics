@@ -16,6 +16,8 @@
     <DotNetHostName Condition="'$(TargetOS)' != 'Windows_NT'">dotnet</DotNetHostName>
     <PayloadNativeSourceDir>$(ArtifactsBinNativeDir)</PayloadNativeSourceDir>
     <SOSHelixTestEnvironment Condition="'$(TargetOS)' == 'osx'">SOSHARNESS_TEST_RUNTIME_MAJOR=11 SOSHARNESS_ONLY_COREVERSIONS=Net11 </SOSHelixTestEnvironment>
+    <!-- The unprivileged Helix Alpine container exposes a .NET 8 createdump PR_SET_PTRACER race for Mini captures. -->
+    <SOSHelixPlatformTestEnvironment Condition="$([System.String]::Copy('$(TargetRid)').StartsWith('linux-musl-'))">SOSHARNESS_ONLY_DUMPKIND=Heap,Full </SOSHelixPlatformTestEnvironment>
     <!-- ARM64 native dump hosts are unstable under concurrent SOS commands. -->
     <SOSHelixDumpMaxParallelThreads Condition="'$(TargetOS)' == 'linux' and '$(TargetArch)' == 'arm64'">1</SOSHelixDumpMaxParallelThreads>
     <SOSExpectedWorkItemCount Condition="'$(TargetOS)' == 'osx'">34</SOSExpectedWorkItemCount>
@@ -87,6 +89,10 @@
            Text="SOSHelixLiveness and SOSHelixShardIndex must either both be set or both be unset." />
     <Error Condition="'$(SOSHelixLiveness)' != '' and '$(SOSHelixLiveness)' != 'Dump' and '$(SOSHelixLiveness)' != 'Live'"
            Text="SOSHelixLiveness must be Dump or Live." />
+    <Error Condition="$([System.String]::Copy('$(TargetRid)').StartsWith('linux-musl-')) and '$(SOSHelixPlatformTestEnvironment)' != 'SOSHARNESS_ONLY_DUMPKIND=Heap,Full '"
+           Text="Linux musl Helix work items must select exactly the Heap and Full dump kinds." />
+    <Error Condition="!$([System.String]::Copy('$(TargetRid)').StartsWith('linux-musl-')) and '$(SOSHelixPlatformTestEnvironment)' != ''"
+           Text="Non-musl Helix work items must not inherit Linux musl platform restrictions." />
   </Target>
 
   <Target Name="CreateSOSHelixWorkItems"
@@ -96,8 +102,8 @@
       <HelixWorkItem Include="@(_SOSShard)"
                      Condition="'$(SOSHelixLiveness)' == '' or ('%(_SOSShard.Liveness)' == '$(SOSHelixLiveness)' and '%(_SOSShard.ShardIndex)' == '$(SOSHelixShardIndex)')">
         <Command Condition="'$(TargetOS)' == 'Windows_NT'">%25HELIX_CORRELATION_PAYLOAD%25\eng\helix\sos\run-sos-tests.cmd $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework)</Command>
-        <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' == ''">$(SOSHelixTestEnvironment)bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework)</Command>
-        <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' != ''">$(SOSHelixTestEnvironment)bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework) %(_SOSShard.MaxParallelThreads)</Command>
+        <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' == ''">$(SOSHelixPlatformTestEnvironment)$(SOSHelixTestEnvironment)bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework)</Command>
+        <Command Condition="'$(TargetOS)' != 'Windows_NT' and '%(_SOSShard.MaxParallelThreads)' != ''">$(SOSHelixPlatformTestEnvironment)$(SOSHelixTestEnvironment)bash $HELIX_CORRELATION_PAYLOAD/eng/helix/sos/run-sos-tests.sh $(Configuration) $(TargetRid) %(_SOSShard.ShardIndex) %(_SOSShard.ShardCount) %(_SOSShard.Liveness) $(NetCoreAppTestTargetFramework) %(_SOSShard.MaxParallelThreads)</Command>
         <Timeout>$(WorkItemTimeout)</Timeout>
       </HelixWorkItem>
       <_AzurePipelinesReporterPayload Include="@(HelixCorrelationPayload)"

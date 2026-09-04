@@ -388,7 +388,11 @@ public sealed record TestConfig : IXunitSerializable
     /// </summary>
     private static IEnumerable<T> SingleFlags<T>(T value, string envVar) where T : struct, Enum
     {
-        string? only = Environment.GetEnvironmentVariable(envVar);
+        return ApplyAllowList(value, Environment.GetEnvironmentVariable(envVar));
+    }
+
+    internal static IEnumerable<T> ApplyAllowList<T>(T value, string? only) where T : struct, Enum
+    {
         HashSet<string>? allowed = string.IsNullOrEmpty(only)
             ? null
             : new HashSet<string>(only.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), StringComparer.OrdinalIgnoreCase);
