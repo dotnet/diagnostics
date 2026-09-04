@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -19,6 +20,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private const string RuntimeInfoExport = "DotNetRuntimeInfo";
         private const string ContractDescriptorExport = "DotNetRuntimeContractDescriptor";
         private const string RuntimeDebugHeaderExport = "DotNetRuntimeDebugHeader";
+        private const string CoreClrMarkerExport = "g_dacTable";
 
         private readonly IServiceProvider _services;
 
@@ -87,7 +89,29 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     skipRuntimeEnumeration: false,
                     forceCompleteRuntimeEnumeration: true)))
             {
-                runtimes = discoveryTarget.ClrVersions
+                List<ClrInfo> discoveredRuntimes = discoveryTarget.ClrVersions.ToList();
+                HashSet<ulong> discoveredModules = new(
+                    discoveredRuntimes.Select(clrInfo => clrInfo.ModuleInfo.ImageBase));
+                foreach (ModuleInfo module in runtimeModules)
+                {
+                    ulong contractDescriptor = GetExportAddress(module, ContractDescriptorExport);
+                    if (!discoveredModules.Contains(module.ImageBase) &&
+                        contractDescriptor != 0 &&
+                        GetExportAddress(module, CoreClrMarkerExport) == 0)
+                    {
+                        discoveredRuntimes.Add(new ClrInfo(discoveryTarget, module, module.Version)
+                        {
+                            BuildId = module.BuildId,
+                            ContractDescriptorAddress = contractDescriptor,
+                            DebuggingLibraries = ImmutableArray<DebugLibraryInfo>.Empty,
+                            Flavor = ClrFlavor.NativeAOT,
+                            IndexFileSize = module.IndexFileSize,
+                            IndexTimeStamp = module.IndexTimeStamp,
+                        });
+                    }
+                }
+
+                runtimes = discoveredRuntimes
                     .Select(clrInfo => CloneClrInfo(
                         clrInfo,
                         // ClrMD's legacy DAC loader currently requires DataTarget.ClrVersions to be
@@ -165,11 +189,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private static bool HasRuntimeExport(ModuleInfo module)
         {
+            return GetExportAddress(module, RuntimeInfoExport) != 0
+                || GetExportAddress(module, ContractDescriptorExport) != 0
+                || GetExportAddress(module, RuntimeDebugHeaderExport) != 0;
+        }
+
+        private static ulong GetExportAddress(ModuleInfo module, string export)
+        {
             try
             {
-                return module.GetExportSymbolAddress(RuntimeInfoExport) != 0
-                    || module.GetExportSymbolAddress(ContractDescriptorExport) != 0
-                    || module.GetExportSymbolAddress(RuntimeDebugHeaderExport) != 0;
+                return module.GetExportSymbolAddress(export);
             }
             catch (Exception ex) when
                 (ex is IOException or
@@ -178,7 +207,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                  OverflowException or
                  DiagnosticsException)
             {
-                return false;
+                return 0;
             }
         }
 
