@@ -204,9 +204,27 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <param name="instance">object to compare</param>
         public void CompareMembers(ImmutableDictionary<string, Value> values, object instance)
         {
+            CompareMembers(values, instance, excludedMemberNames: null);
+        }
+
+        /// <summary>
+        /// Compares the test data values with the properties in the instance with the same name.
+        /// </summary>
+        /// <param name="values">test data for the item</param>
+        /// <param name="instance">object to compare</param>
+        /// <param name="excludedMemberNames">member names to exclude from comparison</param>
+        public void CompareMembers(
+            ImmutableDictionary<string, Value> values,
+            object instance,
+            ISet<string> excludedMemberNames)
+        {
             foreach (KeyValuePair<string, Value> testData in values)
             {
                 string testDataKey = testData.Key;
+                if (excludedMemberNames?.Contains(testDataKey) == true)
+                {
+                    continue;
+                }
                 if (Version <= Version100 && testDataKey == "VersionData")
                 {
                     testDataKey = "GetVersionData";
@@ -245,7 +263,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                         if (testData.Value.IsSubValue)
                         {
                             Trace.TraceInformation($"CompareMembers {testDataKey} sub value:");
-                            CompareMembers(testData.Value.Values.Single(), memberValue);
+                            CompareMembers(testData.Value.Values.Single(), memberValue, excludedMemberNames);
                         }
                         else
                         {
