@@ -34,8 +34,7 @@ namespace SOS.TestHarness;
 /// </summary>
 internal static class DumpGenerationRequirements
 {
-    private static readonly string s_root = RuntimeInformation.ProcessArchitecture == Architecture.X86 ? @"SOFTWARE\WOW6432Node\" : @"SOFTWARE\";
-    private static readonly string s_settingsNode = s_root + @"Microsoft\Windows NT\CurrentVersion\MiniDumpSettings";
+    private const string SettingsNode = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\MiniDumpSettings";
     private const string DisableCheckValue = "DisableAuxProviderSignatureCheck";
 
     // Read the registry value at most once per process (cheap, read-only; reading HKLM needs no elevation).
@@ -68,7 +67,7 @@ internal static class DumpGenerationRequirements
         if (dumpKind == DumpKind.Mini)
         {
             HarnessSkipException.Now(
-                $@"Mini dump capture requires HKLM\{s_settingsNode}\{DisableCheckValue}=1 so dbghelp can " +
+                $@"Mini dump capture requires HKLM\{SettingsNode}\{DisableCheckValue}=1 so dbghelp can " +
                 "load the unsigned test DAC");
         }
 
@@ -90,7 +89,10 @@ internal static class DumpGenerationRequirements
     {
         try
         {
-            using RegistryKey? key = Registry.LocalMachine.OpenSubKey(s_settingsNode);
+            using RegistryKey localMachine = RegistryKey.OpenBaseKey(
+                RegistryHive.LocalMachine,
+                RegistryViewForProcess(Environment.Is64BitProcess));
+            using RegistryKey? key = localMachine.OpenSubKey(SettingsNode);
             return key?.GetValue(DisableCheckValue) is int value && value == 1;
         }
         catch (Exception ex) when (ex is SecurityException or UnauthorizedAccessException or IOException)
@@ -98,4 +100,8 @@ internal static class DumpGenerationRequirements
             return false;
         }
     }
+
+    [SupportedOSPlatform("windows")]
+    internal static RegistryView RegistryViewForProcess(bool is64BitProcess) =>
+        is64BitProcess ? RegistryView.Registry64 : RegistryView.Registry32;
 }
