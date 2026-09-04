@@ -31,6 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string ClrEvents,
             string[] PerfEvents,
             string[] Profiles,
+            uint? BufferSizeInMB,
             FileInfo Output,
             TimeSpan Duration,
             string Name,
@@ -168,6 +169,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.CLREventLevelOption,
                 CommonOptions.CLREventsOption,
                 PerfEventsOption,
+                BufferSizeInMBOption,
                 ProbeOption,
                 CommonOptions.ProfileOption,
                 CommonOptions.OutputPathOption,
@@ -191,6 +193,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ClrEvents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
                     PerfEvents: perfEventsValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Profiles: profilesValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                    BufferSizeInMB: parseResult.GetValue(BufferSizeInMBOption),
                     Output: parseResult.GetValue(CommonOptions.OutputPathOption) ?? new FileInfo(CommonOptions.DefaultTraceName),
                     Duration: parseResult.GetValue(CommonOptions.DurationOption),
                     Name: parseResult.GetValue(CommonOptions.NameOption) ?? string.Empty,
@@ -420,6 +423,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             scriptPath = null;
             List<string> recordTraceArgs = new();
 
+            if (args.BufferSizeInMB.HasValue)
+            {
+                if (args.BufferSizeInMB.Value == 0)
+                {
+                    throw new DiagnosticToolException("Buffer size must be at least 1 MB.");
+                }
+            }
+
             string[] profiles = args.Profiles;
             if (args.Profiles.Length == 0 && args.Providers.Length == 0 && string.IsNullOrEmpty(args.ClrEvents) && args.PerfEvents.Length == 0)
             {
@@ -428,6 +439,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             StringBuilder scriptBuilder = new();
+            if (args.BufferSizeInMB.HasValue)
+            {
+                ulong cpuCount = GetOnlineProcessorCount();
+                ulong totalBufferSizeBytes = args.BufferSizeInMB.Value * 1024UL * 1024UL;
+                ulong perCpuBufferSizeBytes = (totalBufferSizeBytes + cpuCount - 1) / cpuCount;
+                scriptBuilder.AppendLine($"with_per_cpu_buffer_bytes({perCpuBufferSizeBytes});");
+                scriptBuilder.AppendLine();
+            }
+
             List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(args.Providers, args.ClrEvents, args.ClrEventLevel, profiles, true, "collect-linux", Console);
             foreach (EventPipeProvider provider in providerCollection)
             {
@@ -518,6 +538,59 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return Encoding.UTF8.GetBytes(options);
         }
 
+        internal static ulong GetOnlineProcessorCount()
+        {
+            const string OnlineCpusPath = "/sys/devices/system/cpu/online";
+            string onlineCpus;
+            try
+            {
+                onlineCpus = File.ReadAllText(OnlineCpusPath);
+            }
+            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException or UnauthorizedAccessException)
+            {
+                throw new DiagnosticToolException($"Unable to read online processors from '{OnlineCpusPath}': {ex.Message}");
+            }
+
+            return ParseOnlineProcessorCount(onlineCpus);
+        }
+
+        internal static ulong ParseOnlineProcessorCount(string onlineCpus)
+        {
+            ulong cpuCount = 0;
+
+            foreach (string range in onlineCpus.Trim().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                string[] bounds = range.Split('-', 2, StringSplitOptions.TrimEntries);
+                if (!ulong.TryParse(bounds[0], out ulong first))
+                {
+                    throw new DiagnosticToolException($"Invalid online processor range '{range}'.");
+                }
+
+                ulong last = first;
+                if (bounds.Length == 2 &&
+                    (!ulong.TryParse(bounds[1], out last) || last < first))
+                {
+                    throw new DiagnosticToolException($"Invalid online processor range '{range}'.");
+                }
+
+                try
+                {
+                    cpuCount = checked(cpuCount + checked(last - first + 1));
+                }
+                catch (OverflowException)
+                {
+                    throw new DiagnosticToolException("Online processor count is too large.");
+                }
+            }
+
+            if (cpuCount == 0)
+            {
+                throw new DiagnosticToolException("No online processors were reported.");
+            }
+
+            return cpuCount;
+        }
+
         private static FileInfo ResolveOutputPath(FileInfo output, string processName)
         {
             if (!string.Equals(output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
@@ -573,6 +646,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new("--perf-events")
             {
                 Description = @"Comma-separated list of perf events (e.g. syscalls:sys_enter_execve,sched:sched_switch)."
+            };
+
+        private static readonly Option<uint?> BufferSizeInMBOption =
+            new("--buffersize")
+            {
+                Description = "Requested total size of the event buffers, in megabytes. The size is divided across the available CPUs. When omitted, the recorder chooses a default based on the enabled features."
             };
 
         private static readonly Option<bool> ProbeOption =
