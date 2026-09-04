@@ -55,6 +55,21 @@ typedef HMODULE (STDAPICALLTYPE  *LoadLibraryWFnPtr)(LPCWSTR lpLibFileName);
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
 
+static bool IsLoadableModulePath(const char* modulePath, const char* moduleName)
+{
+    if (modulePath == nullptr || modulePath[0] == '\0')
+    {
+        ExtErr("Could not find matching %s\n", moduleName);
+        return false;
+    }
+    if (!IsSafeAbsoluteLocalPath(modulePath))
+    {
+        ExtErr("Can't load %s from path '%s' because it is not local\n", moduleName, modulePath);
+        return false;
+    }
+    return true;
+}
+
 extern "C" bool TryGetSymbolWithCallback(
     bool (*readMemory)(void* address, void* buffer, size_t size),
     ULONG64 baseAddress,
@@ -391,12 +406,17 @@ ULONG Runtime::Release()
 \**********************************************************************/
 void Runtime::SetRuntimeDirectory(LPCSTR runtimeModuleDirectory)
 {
+    if (runtimeModuleDirectory != nullptr && !IsSafeAbsoluteLocalPath(runtimeModuleDirectory))
+    {
+        ExtDbgOut("Ignoring non-local runtime module directory: %s\n", runtimeModuleDirectory);
+        return;
+    }
     if (m_runtimeDirectory != nullptr)
     {
         free((void*)m_runtimeDirectory);
         m_runtimeDirectory = nullptr;
     }
-    if (runtimeModuleDirectory != nullptr)
+    if (IsSafeAbsoluteLocalPath(runtimeModuleDirectory))
     {
         m_runtimeDirectory = _strdup(runtimeModuleDirectory);
     }
@@ -409,6 +429,11 @@ LPCSTR Runtime::GetRuntimeDirectory()
 {
     if (m_runtimeDirectory == nullptr)
     {
+        if (!IsSafeAbsoluteLocalPath(m_name))
+        {
+            ExtDbgOut("Error: Runtime module path is not a local absolute path: %s\n", m_name != nullptr ? m_name : "<null>");
+            return nullptr;
+        }
         if (GetFileAttributesA(m_name) == INVALID_FILE_ATTRIBUTES)
         {
             ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", m_name, HRESULT_FROM_WIN32(GetLastError()));
@@ -416,7 +441,7 @@ LPCSTR Runtime::GetRuntimeDirectory()
         }
         // Parse off the file name
         char* runtimeDirectory = _strdup(m_name);
-        char* lastSlash = strrchr(runtimeDirectory, GetTargetDirectorySeparatorW());
+        char* lastSlash = GetLastDirectorySeparator(runtimeDirectory);
         if (lastSlash != nullptr)
         {
             *lastSlash = '\0';
@@ -436,7 +461,11 @@ HRESULT Runtime::GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess**
         *ppClrDataProcess = nullptr;
 
         LPCSTR dacFilePath = GetDacFilePath();
-        if (dacFilePath == nullptr)
+        if (dacFilePath == nullptr || dacFilePath[0] == '\0')
+        {
+            return CORDBG_E_NO_IMAGE_AVAILABLE;
+        }
+        if (!IsLoadableModulePath(dacFilePath, "DAC"))
         {
             return CORDBG_E_NO_IMAGE_AVAILABLE;
         }
@@ -510,9 +539,8 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
     }
 #endif
     const char* dacFilePath = GetDacFilePath();
-    if (dacFilePath == nullptr)
+    if (!IsLoadableModulePath(dacFilePath, "DAC"))
     {
-        ExtErr("Could not find matching DAC\n");
         return CORDBG_E_NO_IMAGE_AVAILABLE;
     }
     ArrayHolder<WCHAR> pDacModulePath = new WCHAR[MAX_LONGPATH + 1];
@@ -524,9 +552,8 @@ HRESULT Runtime::GetCorDebugInterface(ICorDebugProcess** ppCorDebugProcess)
         return hr;
     }
     const char* dbiFilePath = GetDbiFilePath();
-    if (dbiFilePath == nullptr) 
+    if (!IsLoadableModulePath(dbiFilePath, "DBI"))
     {
-        ExtErr("Could not find matching DBI\n");
         return CORDBG_E_NO_IMAGE_AVAILABLE;
     }
     HMODULE hDbi = LoadLibraryA(dbiFilePath);

@@ -20,5 +20,6 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\SOS.InstallHelper\SOS.InstallHelper.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\PathUtilities.cs" Link="Shared\PathUtilities.cs" />
   </ItemGroup>
 </Project>

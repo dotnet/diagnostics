@@ -215,17 +215,26 @@ namespace SOS.Hosting
             IntPtr self,
             string runtimeModuleDirectory)
         {
+            if (runtimeModuleDirectory is not null && !PathUtilities.IsSafeAbsoluteLocalPath(runtimeModuleDirectory))
+            {
+                Trace.TraceError($"Ignoring non-local runtime module directory: {runtimeModuleDirectory}");
+                return;
+            }
             _runtime.RuntimeModuleDirectory = runtimeModuleDirectory;
         }
 
         private string GetRuntimeDirectory(
             IntPtr self)
         {
-            if (_runtime.RuntimeModuleDirectory is not null)
+            if (PathUtilities.IsSafeAbsoluteLocalPath(_runtime.RuntimeModuleDirectory))
             {
                 return _runtime.RuntimeModuleDirectory;
             }
-            return Path.GetDirectoryName(_runtime.RuntimeModule.FileName);
+            if (PathUtilities.IsSafeAbsoluteLocalPath(_runtime.RuntimeModule.FileName))
+            {
+                return Path.GetDirectoryName(_runtime.RuntimeModule.FileName);
+            }
+            return null;
         }
 
         private int GetClrDataProcess(
@@ -384,9 +393,8 @@ namespace SOS.Hosting
         private IntPtr CreateCorDebugProcess()
         {
             string dbiFilePath = _runtime.GetDbiFilePath();
-            if (dbiFilePath == null)
+            if (!IsLoadableModulePath(dbiFilePath, "DBI"))
             {
-                Trace.TraceError($"Could not find matching DBI {dbiFilePath ?? ""} for this runtime: {_runtime.RuntimeModule.FileName}");
                 return IntPtr.Zero;
             }
             if (_dbiHandle == IntPtr.Zero)
@@ -424,6 +432,10 @@ namespace SOS.Hosting
 
                 // The DAC was verified in the GetDacHandle call above. Ignore the verifySignature parameter here.
                 string dacFilePath = _runtime.GetDacFilePath(out bool _);
+                if (!IsLoadableModulePath(dacFilePath, "DAC"))
+                {
+                    return IntPtr.Zero;
+                }
 
                 OpenVirtualProcessImpl2Delegate openVirtualProcessImpl2 = SOSHost.GetDelegateFunction<OpenVirtualProcessImpl2Delegate>(_dbiHandle, "OpenVirtualProcessImpl2");
                 if (openVirtualProcessImpl2 != null)
@@ -536,9 +548,10 @@ namespace SOS.Hosting
         {
             bool verifySignature = false;
             string dacFilePath = useCDac ? _runtime.GetCDacFilePath() : _runtime.GetDacFilePath(out verifySignature);
-            if (dacFilePath == null)
+            bool forceUseContractReader = _services.GetService<ISettingsService>()?.ForceUseContractReader ?? false;
+            string moduleName = useCDac || forceUseContractReader ? "cDAC" : "DAC";
+            if (!IsLoadableModulePath(dacFilePath, moduleName))
             {
-                Trace.TraceError($"Could not find matching DAC {dacFilePath ?? ""} {useCDac} for this runtime: {_runtime.RuntimeModule.FileName}");
                 return IntPtr.Zero;
             }
             IntPtr dacHandle = IntPtr.Zero;
@@ -577,6 +590,21 @@ namespace SOS.Hosting
                 dllmain?.Invoke(dacHandle, 1, IntPtr.Zero);
             }
             return dacHandle;
+        }
+
+        private bool IsLoadableModulePath(string modulePath, string moduleName)
+        {
+            if (string.IsNullOrEmpty(modulePath))
+            {
+                Trace.TraceError($"Could not find matching {moduleName} for this runtime: {_runtime.RuntimeModule.FileName}");
+                return false;
+            }
+            if (!PathUtilities.IsSafeAbsoluteLocalPath(modulePath))
+            {
+                Trace.TraceError($"Can't load {moduleName} from path '{modulePath}' because it is not local for this runtime: {_runtime.RuntimeModule.FileName}");
+                return false;
+            }
+            return true;
         }
 
         #region IRuntime delegates
