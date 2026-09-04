@@ -86,23 +86,71 @@ public static class SnapshotStore
         string exe = s_targetExe
             .GetOrAdd((flavor, targetName, coreVersion), k => new Lazy<string>(() => AcquireTarget(k.Flavor, TargetCatalog.Get(k.Target), k.CoreVersion)))
             .Value;
-        EnsureExecutable(exe);
-        return exe;
+        return EnsureExecutable(
+            exe,
+            Environment.GetEnvironmentVariable("SOSHARNESS_EXECUTABLE_ROOT"),
+            RepoLayout.Root);
     }
 
-    private static void EnsureExecutable(string path)
+    internal static string EnsureExecutable(string path, string? executableRoot, string repoRoot)
     {
         if (OperatingSystem.IsWindows())
         {
-            return;
+            return path;
         }
 
         UnixFileMode mode = File.GetUnixFileMode(path);
         UnixFileMode execute = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
-        if ((mode & execute) != execute)
+        if (string.IsNullOrEmpty(executableRoot))
         {
-            File.SetUnixFileMode(path, mode | execute);
+            if ((mode & execute) != execute)
+            {
+                File.SetUnixFileMode(path, mode | execute);
+            }
+
+            return path;
         }
+
+        string relative = Path.GetRelativePath(repoRoot, path);
+        if (Path.IsPathRooted(relative) ||
+            relative.Equals("..", StringComparison.Ordinal) ||
+            relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Executable '{path}' is outside the repo root '{repoRoot}' and cannot be copied to the writable executable overlay.");
+        }
+
+        string destination = Path.Combine(executableRoot, relative);
+        string sourceDirectory = Path.GetDirectoryName(path)!;
+        string destinationDirectory = Path.GetDirectoryName(destination)!;
+
+        lock (BuildLockFor(destination))
+        {
+            Directory.CreateDirectory(destinationDirectory);
+            foreach (string sibling in Directory.EnumerateFiles(sourceDirectory))
+            {
+                string siblingDestination = Path.Combine(destinationDirectory, Path.GetFileName(sibling));
+                if (string.Equals(sibling, path, StringComparison.Ordinal))
+                {
+                    if (!File.Exists(siblingDestination))
+                    {
+                        File.Copy(sibling, siblingDestination);
+                    }
+                }
+                else if (!File.Exists(siblingDestination))
+                {
+                    File.CreateSymbolicLink(siblingDestination, sibling);
+                }
+            }
+
+            UnixFileMode destinationMode = File.GetUnixFileMode(destination);
+            if ((destinationMode & execute) != execute)
+            {
+                File.SetUnixFileMode(destination, destinationMode | execute);
+            }
+        }
+
+        return destination;
     }
 
     private static string DumpDir(Flavor flavor, string target, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion) =>
@@ -393,6 +441,18 @@ public static class SnapshotStore
     {
         string tfm = CoreVersions.Tfm(coreVersion);
         string exe = Path.Combine(RepoLayout.CoreDebuggeeDir(target.Project, tfm), target.Project + RepoLayout.ExeSuffix);
+        if (UsePrebuiltTargets)
+        {
+            if (File.Exists(exe))
+            {
+                return exe;
+            }
+
+            throw new FileNotFoundException(
+                $"Pre-built Core debuggee '{target.Project}' ({tfm}) was not found at '{exe}'.",
+                exe);
+        }
+
         string project = RepoLayout.DebuggeeProject(target.Project);
         if (IsUpToDate(exe, NewestSourceWriteTime(project)))
         {
@@ -462,6 +522,13 @@ public static class SnapshotStore
             return prebuilt;
         }
 
+        if (UsePrebuiltTargets)
+        {
+            throw new FileNotFoundException(
+                $"Pre-built Framework debuggee '{target.Project}' was not found at '{prebuilt}'.",
+                prebuilt);
+        }
+
         string project = RepoLayout.DebuggeeProject(target.Project);
         string outDir = Path.Combine(RepoLayout.Scratch, "targets", "framework", target.Name);
         string exe = Path.Combine(outDir, target.Project + RepoLayout.ExeSuffix);
@@ -500,6 +567,12 @@ public static class SnapshotStore
         return exe;
     }
 
+    private static bool UsePrebuiltTargets =>
+        string.Equals(
+            Environment.GetEnvironmentVariable("SOSHARNESS_USE_PREBUILT_TARGETS"),
+            "1",
+            StringComparison.Ordinal);
+
     private static readonly ConcurrentDictionary<string, object> s_projectBuildLocks = new(StringComparer.OrdinalIgnoreCase);
 
     private static object BuildLockFor(string projectPath) =>
@@ -536,6 +609,11 @@ public static class SnapshotStore
     {
         string dll = Path.Combine(RepoLayout.ArtifactsBin, name, RepoLayout.ArtifactsConfiguration, RepoLayout.TestTargetFramework, RepoLayout.Rid, name + ".dll");
         string project = Path.Combine(RepoLayout.Root, "src", "tests", name, name + ".csproj");
+
+        if (UsePrebuiltTargets && !File.Exists(dll))
+        {
+            throw new FileNotFoundException($"Pre-built subprocess '{name}' was not found at '{dll}'.", dll);
+        }
 
         if (!File.Exists(dll))
         {

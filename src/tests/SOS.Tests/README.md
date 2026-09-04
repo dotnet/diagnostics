@@ -91,6 +91,12 @@ The DAC is deliberately not a capture dimension: legacy DAC and cDAC analyze
 the same dump, with DAC selection happening when the host opens it. Cached
 dumps are reused only while newer than their debuggee.
 
+Helix splits the matrix by the same capture-family key, including target,
+flavor, runtime version, GC type, dump kind, and liveness. Host and DAC are
+excluded from the key so every analysis of one dump stays in the same work
+item. `SOSHARNESS_SHARD_INDEX` and `SOSHARNESS_SHARD_COUNT` must be set
+together; hashing is stable across processes and runtimes.
+
 `Targets.GetTargetAsync` returns a cheap cursor over shared, read-only dump
 sessions. A session is memoized by host, target, stop, flavor, GC type, dump
 kind, runtime, and DAC. Live targets are never shared because command execution
@@ -188,16 +194,36 @@ Comma-separated matrix allow-lists are case-insensitive enum names:
 | `SOSHARNESS_ONLY_COREVERSIONS` | Select versions such as `Net8,Net11`; explicit selection also permits an out-of-support version. |
 | `SOSHARNESS_ONLY_DAC` | Select `Legacy` and/or `CDac`. |
 | `SOSHARNESS_TEST_OUT_OF_SUPPORT_CORE` | Set to `1` to include every installed out-of-support runtime. |
+| `SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS` | Set to `1` to omit constrained single-file snapshot rows while retaining single-file crash coverage. |
 | `SOSHARNESS_ARTIFACTS_CONFIG` | Override the build configuration embedded in the harness assembly. |
+| `SOSHARNESS_REPO_ROOT` | Override repository-root discovery, primarily for a staged correlation payload. |
+| `SOSHARNESS_DOTNET_ROOT` | Override the repository-local .NET root used for harness subprocesses. |
+| `SOSHARNESS_DOTNET_TEST_ROOT` | Override the multi-runtime test installation, including a writable executable overlay. |
+| `SOSHARNESS_NATIVE_ROOT` | Override the native SOS output directory, including a writable musl overlay. |
+| `SOSHARNESS_EXECUTABLE_ROOT` | Copy non-executable debuggee apphosts and symlink their sidecars into this writable overlay. |
+| `SOSHARNESS_SCRATCH_ROOT` | Redirect dump, target, and symbol-cache writes outside a staged payload. |
+| `SOSHARNESS_DBGENG_ROOT` | Override the directory containing the Helix payload's `dbgeng.dll`. |
+| `SOSHARNESS_HOST_RUNTIME_DIR` | Override the complete runtime layout used to host SOS's managed extension. |
+| `SOSHARNESS_USE_PREBUILT_TARGETS` | Set to `1` to require prebuilt debuggees and subprocess hosts instead of building in place. |
+| `SOSHARNESS_SHARD_INDEX` | Zero-based capture-family shard index; must be paired with `SOSHARNESS_SHARD_COUNT`. |
+| `SOSHARNESS_SHARD_COUNT` | Positive capture-family shard count; must be paired with `SOSHARNESS_SHARD_INDEX`. |
+| `SOSHARNESS_UPLOAD_ROOT` | Route replay files and debugger-host crash diagnostics to an upload directory. Helix launchers translate `HELIX_WORKITEM_UPLOAD_ROOT` to this harness-owned control. |
+| `SOSHARNESS_TEST_RUNTIME_MAJOR` | Unix launcher override selecting the installed runtime major used to run `SOS.Tests.dll`. |
 | `SOSHARNESS_MAX_LIVE` | Set the positive maximum number of concurrent live sessions. |
 | `SOSHARNESS_LIVE_TIMEOUT` | Set the positive live LLDB command timeout in seconds. |
 | `SOSHARNESS_LLDB_LOAD_TIMEOUT` | Set the positive LLDB target-load timeout in seconds. |
 | `SOSHARNESS_LLDB_TRACE` | Enable LLDB protocol tracing and record its value in replay files. |
+| `SOSHARNESS_LLDB_PATH` | Override the LLDB executable or the macOS `sos-lldb` driver. |
 | `SOSHARNESS_DAC_DIR` | Override the legacy DAC directory used by the dbgeng engine host. |
 | `SOSHARNESS_CDAC_DIR` | Override cDAC discovery with a directory containing the cDAC. |
 | `SOSHARNESS_USECDAC` | Local global DAC clamp; overrides the matrix DAC selection and is not set in CI. |
 | `LLDB_PATH` | Override LLDB discovery. Otherwise Xcode and then `PATH` are searched. |
 | `NUGET_PACKAGES` | Override the NuGet package root used to locate runtime packs and cDAC assets. |
+
+The unprivileged Azure Linux Helix Alpine container sets
+`SOSHARNESS_ONLY_DUMPKIND=Heap,Full` to avoid an intermittent .NET 8 createdump
+`PR_SET_PTRACER` race during Mini snapshot capture. This retains Heap, Full, and
+live coverage; local Alpine test containers continue to run Mini rows.
 
 The harness sets the following implementation-owned values for child
 processes; they are not supported user controls:
@@ -229,3 +255,19 @@ original test failure even if replay writing also fails.
 Reusable targets, dumps, symbols, and host crash artifacts live under
 `artifacts/tmp/sos-harness/<Configuration>`. Dumps can be large; remove that
 scratch subtree when a clean recapture is required.
+
+## Helix execution
+
+`eng/helix/SOS.Tests.Helix.proj` stages one immutable correlation payload per
+OS, RID, and configuration, then points every named shard work item at it. The
+payload contains `SOS.Tests`, its harness subprocesses, native SOS, the
+repository-built dotnet-dump, the test runtime and DAC closure, DbgEng on
+Windows, and all prebuilt Core, SingleFile, and Framework debuggees needed by
+that platform. Per-work-item writable overlays hold executable copies, dumps,
+logs, replays, and host crash diagnostics.
+
+The standard layout is eight dump shards and two live shards. macOS uses 32
+dump shards and two live shards, with bounded in-process parallelism, to stay
+within observed runtime and machine limits. Work-item names and commands carry
+the RID, configuration, liveness, shard index, and shard count for direct
+diagnosis and replay.

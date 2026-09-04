@@ -47,8 +47,21 @@ internal static class TestMatrices
         CoreVersion coreVersion = CoreVersion.All,
         Dac dac = Dac.All,
         Func<TestConfig, bool>? filter = null) =>
+        TestConfig.ApplyShardFilter(
+            UnshardedStackWalkConfigs(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac, filter));
+
+    private static IEnumerable<TestConfig> UnshardedStackWalkConfigs(
+        string[] targets,
+        Flavor flavor,
+        Host host,
+        Liveness liveness,
+        GcType gcType,
+        DumpKind dumpKind,
+        CoreVersion coreVersion,
+        Dac dac,
+        Func<TestConfig, bool>? filter) =>
         // .NET 11 cDAC supports SingleFile stack walks; TestConfig rejects cDAC on earlier runtimes.
-        TestConfig.Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion: coreVersion, dac: dac)
+        TestConfig.UnshardedPermutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion: coreVersion, dac: dac)
             .Where(SupportsCurrentThread)
             .Where(config => filter is null || filter(config));
 
@@ -108,16 +121,16 @@ internal static class TestMatrices
         Dac dac = Dac.All)
     {
         TheoryData<TestConfig> data = new();
-        foreach (TestConfig config in TestConfig.Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac))
+        IEnumerable<TestConfig> configs =
+            TestConfig.UnshardedPermutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac)
+                .Select(config =>
+                    OperatingSystem.IsWindows() && (config.CoreVersion & fullDumpVersions) != 0
+                        ? config with { DumpKind = DumpKind.Full }
+                        : config);
+
+        foreach (TestConfig config in TestConfig.ApplyShardFilter(configs))
         {
-            if (OperatingSystem.IsWindows() && (config.CoreVersion & fullDumpVersions) != 0)
-            {
-                data.Add(config with { DumpKind = DumpKind.Full });
-            }
-            else
-            {
-                data.Add(config);
-            }
+            data.Add(config);
         }
 
         return data;
@@ -134,18 +147,24 @@ internal static class TestMatrices
         Func<TestConfig, bool>? filter = null)
     {
         TheoryData<TestConfig> data = new();
-        foreach (TestConfig config in StackWalkConfigs(
-            targets,
-            flavor,
-            host,
-            liveness,
-            coreVersion: coreVersion,
-            dac: dac,
-            filter: filter))
+        IEnumerable<TestConfig> configs = UnshardedStackWalkConfigs(
+                targets,
+                flavor,
+                host,
+                liveness,
+                GcType.Workstation,
+                DumpKind.Heap,
+                coreVersion,
+                dac,
+                filter)
+            .Select(config =>
+                OperatingSystem.IsWindows() && (config.CoreVersion & fullDumpVersions) != 0
+                    ? config with { DumpKind = DumpKind.Full }
+                    : config);
+
+        foreach (TestConfig config in TestConfig.ApplyShardFilter(configs))
         {
-            data.Add(OperatingSystem.IsWindows() && (config.CoreVersion & fullDumpVersions) != 0
-                ? config with { DumpKind = DumpKind.Full }
-                : config);
+            data.Add(config);
         }
 
         return data;
@@ -192,9 +211,15 @@ internal static class TestMatrices
         return data;
     }
 
-    public static IEnumerable<TestConfig> CoreFrameworkConditionalFullDumpConfigs(string[] targets)
+    public static IEnumerable<TestConfig> CoreFrameworkConditionalFullDumpConfigs(string[] targets) =>
+        TestConfig.ApplyShardFilter(UnshardedCoreFrameworkConditionalFullDumpConfigs(targets));
+
+    private static IEnumerable<TestConfig> UnshardedCoreFrameworkConditionalFullDumpConfigs(string[] targets)
     {
-        foreach (TestConfig config in TestConfig.Permutations(targets, flavor: Flavor.Core | Flavor.Framework, dumpKind: DumpKind.Heap))
+        foreach (TestConfig config in TestConfig.UnshardedPermutations(
+            targets,
+            flavor: Flavor.Core | Flavor.Framework,
+            dumpKind: DumpKind.Heap))
         {
             if (!OperatingSystem.IsWindows() && config.CoreVersion == CoreVersion.Net10)
             {
