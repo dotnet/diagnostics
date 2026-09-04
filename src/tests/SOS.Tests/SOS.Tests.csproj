@@ -33,7 +33,7 @@
 
   <Target Name="EnsureUnixTestAppHostExecutable"
           BeforeTargets="RunTests"
-          Condition="'$(OS)' != 'Windows_NT'">
+          Condition="'$(OS)' != 'Windows_NT' and '$(SkipTests)' != 'true'">
     <!-- Pipeline artifact transfer does not preserve Unix executable permissions. -->
     <Exec Command="chmod +x &quot;%(TestToRun.RunCommand)&quot;" />
   </Target>
