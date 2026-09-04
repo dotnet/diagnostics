@@ -7,39 +7,4 @@
     <ProjectReference Include="DbgShim.UnitTests/Debuggees/**/*.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- The SOS harness consumes these as self-contained single-file apps. Publish them during the
-         build so test legs only read immutable artifacts and never invoke an SDK concurrently. -->
-    <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/NestedExceptionTest/NestedExceptionTest.csproj" />
-    <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/DivZero/DivZero.csproj" />
-    <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/AsyncMain/AsyncMain.csproj" />
-    <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/DynamicMethod/DynamicMethod.csproj" />
-    <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/Overflow/Overflow.csproj" />
-    <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/LineNums/LineNums.csproj" />
-    <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/SimpleThrow/SimpleThrow.csproj" />
-    <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/ReflectionTest/ReflectionTest.csproj" />
-    <SOSSingleFileDebuggee Include="SOS.UnitTests/Debuggees/SosHarnessScenarios/SosHarnessScenarios.csproj" />
-  </ItemGroup>
-
-  <Target Name="PublishSOSSingleFileDebuggees"
-          AfterTargets="Build"
-          Condition="'$(SkipSOSSingleFileDebuggees)' != 'true'">
-    <ItemGroup>
-      <_SOSSingleFileRuntime Include="@(RuntimeTestVersions)"
-                            Condition="'%(RuntimeTestVersions.TargetFramework)' != ''" />
-    </ItemGroup>
-
-    <Error Condition="'@(_SOSSingleFileRuntime)' == ''"
-           Text="RuntimeTestVersions must contain target-framework metadata before publishing SOS single-file debuggees." />
-
-    <!-- Batch once per tested runtime. RuntimeFrameworkVersion pins the bundle to the same runtime
-         patch recorded in Debugger.Tests.Versions.txt and later used for DAC resolution. Give each
-         project/TFM/RID publish a private intermediate directory so its restore cannot race the ordinary
-         multi-target Debuggees.proj build or another publish's project.assets.json. -->
-    <MSBuild Projects="@(SOSSingleFileDebuggee)"
-             Targets="Restore;Publish"
-             BuildInParallel="true"
-             Properties="Configuration=$(Configuration);BuildProjectFramework=%(_SOSSingleFileRuntime.TargetFramework);RuntimeIdentifier=$(TargetRid);RuntimeFrameworkVersion=%(_SOSSingleFileRuntime.Runtime);SelfContained=true;PublishSingleFile=true;SOSSingleFileRuntimeVersion=%(_SOSSingleFileRuntime.Runtime);ArtifactsObjDir=$(ArtifactsObjDir)SOSSingleFile/%(_SOSSingleFileRuntime.TargetFramework)/$(TargetRid)/" />
-  </Target>
-
 </Project>

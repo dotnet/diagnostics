@@ -13,13 +13,4 @@
     <EditorConfigFiles Remove="@(EditorConfigFiles)" />
     <EditorConfigFiles Include="$(RepositoryEngineeringDir)CodeAnalysis.test.globalconfig" />
   </ItemGroup>
-
-  <Target Name="WriteSOSSingleFileRuntimeVersion"
-          AfterTargets="Publish"
-          Condition="'$(SOSSingleFileRuntimeVersion)' != ''">
-    <WriteLinesToFile File="$(PublishDir)runtime.version"
-                      Lines="$(SOSSingleFileRuntimeVersion)"
-                      Overwrite="true"
-                      WriteOnlyWhenDifferent="true" />
-  </Target>
 </Project>
