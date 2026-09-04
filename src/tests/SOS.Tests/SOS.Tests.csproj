@@ -15,7 +15,7 @@
   </PropertyGroup>
 
   <!-- Temporary until SOS.Tests moves to Helix in https://github.com/dotnet/diagnostics/pull/6002. -->
-  <PropertyGroup Condition="'$(ContinuousIntegrationBuild)' == 'true'">
+  <PropertyGroup Condition="'$(OfficialBuildId)' != ''">
     <SkipTests>true</SkipTests>
   </PropertyGroup>
 
