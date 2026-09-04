@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using Microsoft.Win32;
 using SOS.TestHarness;
 using Xunit;
 
@@ -66,6 +68,15 @@ public sealed class TestConfigValidityTests
             CoreVersion.Net8, Architecture.X64, isLinux: true, error, string.Empty));
         Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
             CoreVersion.Net8, Architecture.Arm64, isLinux: true, "unrelated failure", string.Empty));
+    }
+
+    [Theory]
+    [InlineData(false, RegistryView.Registry32)]
+    [InlineData(true, RegistryView.Registry64)]
+    [SupportedOSPlatform("windows")]
+    public void DumpGenerationRegistryViewMatchesProcessBitness(bool is64BitProcess, RegistryView expected)
+    {
+        Assert.Equal(expected, DumpGenerationRequirements.RegistryViewForProcess(is64BitProcess));
     }
 
     private static TestConfig Config() =>
