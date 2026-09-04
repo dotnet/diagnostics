@@ -21,9 +21,6 @@ namespace SOS.Hosting
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         private unsafe delegate int CLRCreateInstanceDelegate(in Guid clsid, in Guid riid, out IntPtr pInterface);
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        private unsafe delegate int CLRDataCreateInstanceDelegate(in Guid riid, IntPtr dataTarget, out IntPtr pInterface);
-
         private readonly IHostAssetResolver _assetResolver;
         // Serializes initialization and use of the shared ICLRDebugging instance.
         private readonly object _lock = new();
@@ -31,8 +28,6 @@ namespace SOS.Hosting
         private bool _initialized;
         private CLRCreateInstanceDelegate _clrCreateInstance;
         private ICLRDebugging _dataAccessClrDebugging;
-        private bool _cdacInitialized;
-        private CLRDataCreateInstanceDelegate _cdacCreateInstance;
 
         private ClrDataProcessActivator(IHostAssetResolver assetResolver)
         {
@@ -51,11 +46,6 @@ namespace SOS.Hosting
             if (runtime is null)
             {
                 throw new ArgumentNullException(nameof(runtime));
-            }
-
-            if (runtime.RuntimeType == RuntimeType.NativeAOT)
-            {
-                return CreateClrDataProcessFromCDacLibrary(runtime, out clrDataProcess);
             }
 
             ICLRDebugging clrDebugging = GetOrCreateDataAccessClrDebugging();
@@ -100,37 +90,6 @@ namespace SOS.Hosting
             }
 
             Trace.TraceInformation($"ClrDataProcessActivator: activated IXCLRDataProcess for runtime #{runtime.Id} via dbgshim.");
-            clrDataProcess = new ClrDataProcess(clrDataProcessInterface, dataTarget);
-            return hr;
-        }
-
-        private int CreateClrDataProcessFromCDacLibrary(
-            IRuntime runtime,
-            out IClrDataProcess clrDataProcess)
-        {
-            clrDataProcess = null;
-            CLRDataCreateInstanceDelegate createInstance = GetOrCreateCDacCreateInstance();
-            if (createInstance is null)
-            {
-                return HResult.E_NOINTERFACE;
-            }
-
-            DataTargetWrapper dataTarget = new(runtime.Services, runtime);
-            Guid iid = RuntimeWrapper.IID_IXCLRDataProcess;
-            HResult hr = createInstance(iid, dataTarget.IDataTarget, out IntPtr clrDataProcessInterface);
-            if (!hr || clrDataProcessInterface == IntPtr.Zero)
-            {
-                HResult result = hr ? HResult.E_NOINTERFACE : hr;
-                if (clrDataProcessInterface != IntPtr.Zero)
-                {
-                    COMHelper.Release(clrDataProcessInterface);
-                }
-                dataTarget.ReleaseWithCheck();
-                Trace.TraceInformation($"ClrDataProcessActivator: cDAC declined NativeAOT runtime #{runtime.Id} (hr={result:x8}).");
-                return result;
-            }
-
-            Trace.TraceInformation($"ClrDataProcessActivator: activated NativeAOT runtime #{runtime.Id} directly through the cDAC.");
             clrDataProcess = new ClrDataProcess(clrDataProcessInterface, dataTarget);
             return hr;
         }
@@ -328,46 +287,6 @@ namespace SOS.Hosting
                     return null;
                 }
                 return ICLRDebugging.Create(punk);
-            }
-        }
-
-        private CLRDataCreateInstanceDelegate GetOrCreateCDacCreateInstance()
-        {
-            lock (_lock)
-            {
-                if (_cdacInitialized)
-                {
-                    return _cdacCreateInstance;
-                }
-                _cdacInitialized = true;
-
-                string cdacPath = _assetResolver?.GetCDacPath();
-                if (string.IsNullOrEmpty(cdacPath) || !File.Exists(cdacPath))
-                {
-                    Trace.TraceInformation($"ClrDataProcessActivator: cDAC not found at '{cdacPath}'.");
-                    return null;
-                }
-
-                try
-                {
-                    // The cDAC is a co-located tool asset and remains loaded for the host lifetime.
-                    IntPtr cdacHandle = DataTarget.PlatformFunctions.LoadLibrary(cdacPath);
-                    IntPtr createInstance = DataTarget.PlatformFunctions.GetLibraryExport(cdacHandle, "CLRDataCreateInstance");
-                    if (createInstance == IntPtr.Zero)
-                    {
-                        Trace.TraceError("ClrDataProcessActivator: cDAC!CLRDataCreateInstance export not found.");
-                        return null;
-                    }
-                    _cdacCreateInstance =
-                        (CLRDataCreateInstanceDelegate)Marshal.GetDelegateForFunctionPointer(
-                            createInstance,
-                            typeof(CLRDataCreateInstanceDelegate));
-                }
-                catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
-                {
-                    Trace.TraceError($"ClrDataProcessActivator: failed to load cDAC: {ex.Message}");
-                }
-                return _cdacCreateInstance;
             }
         }
 
