@@ -53,6 +53,7 @@ $logdir = Join-Path $artifactsdir "log"
 $logdir = Join-Path $logdir Windows_NT.$architecture.$configuration
 
 $bl = if ($binaryLog) { '-binaryLog' } else { '' }
+$unprocessedBuildArgs = @($remainingargs)
 
 if ($ci) {
     $remainingargs = "-ci " + $remainingargs
@@ -170,7 +171,8 @@ if ($test) {
           /p:RuntimeSourceFeed="$runtimesourcefeed" `
           /p:RuntimeSourceFeedKey="$runtimesourcefeedkey" `
           /p:LiveRuntimeDir="$liveRuntimeDir" `
-          $testFilterArg
+          $testFilterArg `
+          @unprocessedBuildArgs
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
