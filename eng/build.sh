@@ -401,7 +401,8 @@ if [[ "$__Test" == 1 ]]; then
         /p:RuntimeSourceFeedKey="$__RuntimeSourceFeedKey" \
         /p:LiveRuntimeDir="$__LiveRuntimeDir" \
         "$__TestFilterArg" \
-        $__CommonMSBuildArgs
+        $__CommonMSBuildArgs \
+        $__UnprocessedBuildArgs
 
       if [ $? != 0 ]; then
           exit 1
