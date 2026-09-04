@@ -7,3 +7,7 @@ if(CLR_CMAKE_HOST_WIN32)
     add_subdirectory(DesktopClrHost)
   endif(NOT CLR_CMAKE_TARGET_ARCH_ARM)
 endif(CLR_CMAKE_HOST_WIN32)
+
+if(CLR_CMAKE_HOST_OSX AND TARGET sos_lldb_dependencies)
+  add_subdirectory(sos-lldb)
+endif()

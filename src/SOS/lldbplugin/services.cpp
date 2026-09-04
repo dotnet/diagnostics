@@ -535,7 +535,11 @@ LLDBServices::GetLastEventInformation(
     InitializeThreadInfo(process);
 
     *processId = GetProcessId(process);
-    *threadId = GetThreadId(thread);
+    HRESULT hr = GetThreadId(thread, threadId);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
     SpecialDiagInfoHeader header;
     size_t read = process.ReadMemory(SpecialDiagInfoAddress, &header, sizeof(header), error);
@@ -1656,8 +1660,7 @@ LLDBServices::GetCurrentThreadSystemId(
         return E_FAIL;
     }
 
-    *sysId = GetThreadId(thread);
-    return S_OK;
+    return GetThreadId(thread, sysId);
 }
 
 HRESULT
@@ -2293,6 +2296,7 @@ public:
                char** arguments,
                lldb::SBCommandReturnObject &result)
     {
+        LLDBServices::CurrentResultScope resultScope(g_services, &result);
         IHostServices* hostservices = GetHostServices();
         if (hostservices == nullptr)
         {
@@ -2442,7 +2446,11 @@ LLDBServices::GetThreadIdsByIndex(
         }
         if (sysIds != nullptr)
         {
-            sysIds[index] = GetThreadId(thread);
+            HRESULT hr = GetThreadId(thread, &sysIds[index]);
+            if (FAILED(hr))
+            {
+                return hr;
+            }
         }
     }
     return S_OK;
@@ -2878,18 +2886,37 @@ LLDBServices::GetProcessId(lldb::SBProcess process)
     return m_processId != 0 ? m_processId : process.GetProcessID();
 }
 
-uint32_t
-LLDBServices::GetThreadId(lldb::SBThread thread)
+HRESULT
+LLDBServices::GetThreadId(lldb::SBThread thread, PULONG threadId)
 {
+    if (threadId == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
     uint32_t index = thread.GetIndexID() - 1;
+    ULONG id;
     if (m_threadInfos.size() > index && m_threadInfos[index].tid != 0)
     {
-        return m_threadInfos[index].tid;
+        id = m_threadInfos[index].tid;
     }
     else
     {
-        return thread.GetThreadID();
+        lldb::tid_t lldbId = thread.GetThreadID();
+        if (lldbId == LLDB_INVALID_THREAD_ID || lldbId > UINT32_MAX)
+        {
+            *threadId = 0;
+            return E_UNEXPECTED;
+        }
+        id = static_cast<ULONG>(lldbId);
     }
+    if (id == 0 || id == UINT32_MAX)
+    {
+        *threadId = 0;
+        return E_UNEXPECTED;
+    }
+    *threadId = id;
+    return S_OK;
 }
 
 lldb::SBProcess
@@ -3154,6 +3181,8 @@ LLDBServices::ExecuteCommand(
     char** arguments,
     lldb::SBCommandReturnObject &result)
 {
+    CurrentResultScope resultScope(this, &result);
+
     // Build all the possible arguments into a string
     std::string commandArguments;
     for (const char* arg = *arguments; arg != nullptr; arg = *(++arguments))
