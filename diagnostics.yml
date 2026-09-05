@@ -26,9 +26,7 @@ pr:
   autoCancel: true
   branches:
     include:
-    - main
-    - release/*
-    - internal/*
+    - '*'
   paths:
     exclude:
     - documentation/*
