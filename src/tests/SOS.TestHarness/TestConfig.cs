@@ -187,7 +187,7 @@ public sealed record TestConfig : IXunitSerializable
     /// Whether a configuration is valid on the current platform. Centralizes every constraint that the old
     /// nested-loop <c>BuildMatrix</c> scattered across per-axis <c>continue</c>s.
     /// </summary>
-    private static bool IsValid(TestConfig c)
+    internal static bool IsValid(TestConfig c)
     {
         // Host platform constraints: cdb is Windows-only, lldb is non-Windows-only.
         if (c.Host == Host.Cdb && !OperatingSystem.IsWindows())
@@ -206,6 +206,13 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
+        // SOS hosts cannot discover the statically linked CoreCLR module in musl single-file processes
+        // or dumps. Keep Core coverage on Alpine while excluding unsupported single-file rows.
+        if (!IsFlavorSupportedOnRid(c.Flavor, RepoLayout.Rid))
+        {
+            return false;
+        }
+
         // dotnet-dump is post-mortem only; it has no live host.
         if (c.IsLive && c.Host == Host.DotnetDump)
         {
@@ -218,6 +225,18 @@ public sealed record TestConfig : IXunitSerializable
         // works there). Prune the (lldb, single-file, live) row for targets navigated via a managed stop
         // point; crash targets, which just run to the fault, keep their live single-file coverage.
         if (c.IsLive && c.Host == Host.Lldb && c.Flavor == Flavor.SingleFile && TargetCatalog.NavigatesViaBpmd(c.Target))
+        {
+            return false;
+        }
+
+        // A single-file snapshot requires a Full dump because createdump cannot enumerate reduced-dump
+        // regions for a statically linked runtime. On constrained test machines, marker targets produce
+        // several multi-gigabyte dumps and cannot complete reliably. Callers can exclude only those
+        // snapshot rows while preserving single-file crash coverage.
+        if (!c.IsLive &&
+            c.Flavor == Flavor.SingleFile &&
+            TargetCatalog.NavigatesViaBpmd(c.Target) &&
+            ExcludeSingleFileSnapshots(Environment.GetEnvironmentVariable("SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS")))
         {
             return false;
         }
@@ -249,34 +268,33 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
-        // The cDAC (managed contract DAC) is a .NET Core concept; desktop .NET Framework has no cDAC, so
-        // `runtimes --usecdac true` fails on clr.dll ("no matching cDAC is available for this runtime").
-        // Prune the CDac axis for the Framework flavor (its CoreVersion label is meaningless anyway).
-        if (c.Dac == Dac.CDac && c.Flavor == Flavor.Framework)
-        {
-            return false;
-        }
-
-        // The cDAC (managed contract DAC) only exists on .NET 11+; on earlier runtimes only the legacy
-        // native DAC is available, so prune the CDac axis there. The same dump is reused across DAC values
-        // (only `runtimes --usecdac` differs at debug time), so this just removes the invalid debug-time
-        // variant, never a capture.
-        if (c.Dac == Dac.CDac && (uint)c.CoreVersion < (uint)CoreVersion.Net11)
-        {
-            return false;
-        }
-
-        // The universal cDAC can identify a single-file runtime and inspect its GC heap, but it cannot
-        // currently expose the managed execution metadata that SOS commands require (AppDomain/module
-        // details, MethodDescs, exception stack traces, or stack walks). Keep cDAC coverage on Core,
-        // where the full command surface is supported, and test SingleFile with its matching legacy DAC.
-        if (c.Dac == Dac.CDac && c.Flavor == Flavor.SingleFile)
+        if (!IsDacSupported(c))
         {
             return false;
         }
 
         return true;
     }
+
+    /// <summary>
+    /// The cDAC is available only for .NET Core 11+; desktop Framework and single-file command coverage
+    /// continue to use the legacy DAC.
+    /// </summary>
+    internal static bool IsDacSupported(TestConfig config) =>
+        config.Dac != Dac.CDac ||
+        (config.Flavor is not Flavor.Framework and not Flavor.SingleFile &&
+            (uint)config.CoreVersion >= (uint)CoreVersion.Net11);
+
+    internal static bool IsFlavorSupportedOnRid(Flavor flavor, string rid) =>
+        flavor != Flavor.SingleFile || !rid.StartsWith("linux-musl-", StringComparison.Ordinal);
+
+    internal static bool ExcludeSingleFileSnapshots(string? value) => value switch
+    {
+        null or "" or "0" => false,
+        "1" => true,
+        _ => throw new InvalidOperationException(
+            "SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS must be unset, 0, or 1."),
+    };
 
     private static IEnumerable<T> SingleFlags<T>(T value) where T : struct, Enum
     {

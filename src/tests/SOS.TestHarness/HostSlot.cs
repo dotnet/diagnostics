@@ -18,12 +18,14 @@ internal interface IPooledHost
 /// <summary>
 /// Governs how many live host instances of one kind may exist at once — here, exactly one.
 ///
-/// Two kinds need this for different reasons:
+/// Debugger backends need this for different reasons:
 /// <list type="bullet">
 ///   <item><b>cdb (in-process dbgeng)</b> is genuinely one-instance-per-process (a second client
 ///   throws).</item>
 ///   <item><b>dotnet-dump</b> children each busy-wait on stdin at ~100% CPU; keeping many alive
 ///   saturates the machine, so we keep at most one.</item>
+///   <item><b>lldb</b> children retain every loaded core and hosted SOS runtime. Keeping one per
+///   memoized dump session can exhaust memory during a large run, so dump sessions share one.</item>
 /// </list>
 /// The most-recently-used host stays open and is evicted (disposed) only when a different target
 /// of the same kind is needed — so a run of assertions against one dump reuses the open host, and
@@ -38,6 +40,9 @@ internal sealed class HostSlot
 
     /// <summary>The dotnet-dump slot (one analyze child alive at a time).</summary>
     public static readonly HostSlot DotNetDump = new();
+
+    /// <summary>The LLDB dump slot (one core-loaded child alive at a time).</summary>
+    public static readonly HostSlot Lldb = new();
 
     private readonly object _lock = new();
     private IPooledHost? _open;
@@ -58,8 +63,30 @@ internal sealed class HostSlot
 
             if (!ReferenceEquals(_open, owner))
             {
-                _open?.CloseHost();
-                owner.OpenHost();
+                IPooledHost? previous = _open;
+                _open = null;
+                previous?.CloseHost();
+                try
+                {
+                    owner.OpenHost();
+                }
+                catch (Exception openException)
+                {
+                    try
+                    {
+                        owner.CloseHost();
+                    }
+                    catch (Exception closeException)
+                    {
+                        throw new AggregateException(
+                            "Opening the pooled host failed, and cleaning up the partial host also failed.",
+                            openException,
+                            closeException);
+                    }
+
+                    throw;
+                }
+
                 _open = owner;
             }
 
@@ -80,8 +107,9 @@ internal sealed class HostSlot
                 System.Threading.Monitor.Wait(_lock);
             }
 
-            _open?.CloseHost();
+            IPooledHost? open = _open;
             _open = null;
+            open?.CloseHost();
             _exclusiveHeld = true;
         }
 
@@ -93,8 +121,9 @@ internal sealed class HostSlot
     {
         lock (_lock)
         {
-            _open?.CloseHost();
+            IPooledHost? open = _open;
             _open = null;
+            open?.CloseHost();
         }
     }
 
