@@ -1,0 +1,6 @@
+# Verify that dumpasync preserves the order of continuations in a task's continuation array.
+
+LOADSOS
+
+SOSCOMMAND:DumpAsync --tasks
+VERIFY:(?s)System\.Threading\.Tasks\.Task<System\.Int32>.*\r?\n\s+.*ContinuationOrderFirstAsync.*\r?\n\s+.*ContinuationOrderSecondAsync.*\r?\n\s+.*ContinuationOrderThirdAsync

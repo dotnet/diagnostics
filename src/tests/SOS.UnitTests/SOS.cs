@@ -768,6 +768,25 @@ public class SOSAsyncTests
     {
         await SOSTestHelpers.RunTest(config, debuggeeName: "AsyncMain", scriptName: "AsyncMain.script", Output, testTriage: true);
     }
+
+    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    public async Task DumpAsyncContinuationOrder(TestConfiguration config)
+    {
+        await SOSTestHelpers.RunTest(
+            scriptName: "DumpAsyncContinuationOrder.script",
+            new SOSRunner.TestInformation
+            {
+                TestConfiguration = config,
+                TestLive = false,
+                TestName = "SOS.DumpAsyncContinuationOrder",
+                DebuggeeName = "DotnetDumpCommands",
+                DebuggeeArguments = "dumpasyncorder",
+                DumpNameSuffix = "dumpasyncorder",
+                UsePipeSync = true,
+                DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
+            },
+            Output);
+    }
 }
 
 public class SOSScenarioTests
