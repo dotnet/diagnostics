@@ -131,6 +131,10 @@ namespace RuntimeHostingConstants
         "/rh-dotnet60/root/usr/bin/dotnet",
         "/rh-dotnet100/root/usr/bin/dotnet",
         "/usr/share/dotnet",
+        "/usr/lib/dotnet",
+#if defined(HOST_AMD64)
+        "/usr/lib64/dotnet",
+#endif
 #endif
     };
 #endif
