@@ -67,7 +67,15 @@ namespace Microsoft.SymbolStore.SymbolStores
             _authenticationFunc = authenticationFunc;
 
             // Create client
-            _client = new HttpClient
+#if NETSTANDARD2_0
+            _client = new HttpClient(new HttpClientHandler()
+            {
+                UseProxy = true,
+                DefaultProxyCredentials = CredentialCache.DefaultNetworkCredentials,
+            })
+#else
+            _client = new HttpClient()
+#endif
             {
                 Timeout = TimeSpan.FromMinutes(4)
             };
