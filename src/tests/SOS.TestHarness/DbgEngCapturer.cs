@@ -71,7 +71,7 @@ public static class DbgEngCapturer
                 }
                 else // Crash
                 {
-                    RunToBreak(control, "second-chance crash");
+                    RunToBreak(control, "second-chance crash", requireSecondChanceException: true);
                 }
 
                 Run($".dump /o {DbgEngDumpOption(dumpKind)} \"{dumpPath}\"");
@@ -102,7 +102,7 @@ public static class DbgEngCapturer
         _ => throw new ArgumentOutOfRangeException(nameof(dumpKind), dumpKind, "Unsupported dump kind"),
     };
 
-    private static void RunToBreak(IDebugControl control, string what)
+    private static void RunToBreak(IDebugControl control, string what, bool requireSecondChanceException = false)
     {
         const int MaxResumes = 40;
         for (int i = 0; i < MaxResumes; i++)
@@ -111,7 +111,10 @@ public static class DbgEngCapturer
             control.WaitForEvent(TimeSpan.FromSeconds(60));
             control.GetExecutionStatus(out DEBUG_STATUS status);
 
-            if (status == DEBUG_STATUS.BREAK)
+            if (status == DEBUG_STATUS.BREAK
+                && (!requireSecondChanceException
+                    || (control.GetLastEvent(out DEBUG_LAST_EVENT_INFO_EXCEPTION exception, out _, out _)
+                        && exception.FirstChance == 0)))
             {
                 return;
             }

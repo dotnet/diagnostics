@@ -23,6 +23,7 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
     private readonly StreamWriter _stdin;
     private readonly BlockingCollection<string> _lines = new();
     private readonly Thread _reader;
+    private readonly Task<string> _stderr;
 
     public string Name { get; }
 
@@ -92,6 +93,7 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
 
         _process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start EngineHost");
         _stdin = _process.StandardInput;
+        _stderr = _process.StandardError.ReadToEndAsync();
 
         _reader = new Thread(ReadLoop) { IsBackground = true, Name = $"enginehost-reader-{name}" };
         _reader.Start();
@@ -144,10 +146,10 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
     {
         while (true)
         {
-            if (!_lines.TryTake(out string? line, (int)timeout.TotalMilliseconds, HarnessCancellation.Token))
-            {
-                throw new TimeoutException("EngineHost did not become ready in time.");
-            }
+            string line = ReadLine(
+                timeout,
+                "EngineHost did not become ready in time.",
+                "before becoming ready");
 
             if (line == EngineProtocol.Ready)
             {
@@ -161,10 +163,10 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         StringBuilder sb = new();
         while (true)
         {
-            if (!_lines.TryTake(out string? line, (int)timeout.TotalMilliseconds, HarnessCancellation.Token))
-            {
-                throw new TimeoutException($"EngineHost did not return output for '{command}' within {timeout}.");
-            }
+            string line = ReadLine(
+                timeout,
+                $"EngineHost did not return output for '{command}' within {timeout}.",
+                $"while running '{command}'");
 
             if (line == EngineProtocol.End)
             {
@@ -186,12 +188,48 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         return sb.ToString();
     }
 
+    private string ReadLine(TimeSpan timeout, string timeoutMessage, string exitContext)
+    {
+        if (_lines.TryTake(out string? line, (int)timeout.TotalMilliseconds, HarnessCancellation.Token))
+        {
+            return line;
+        }
+
+        if (_lines.IsCompleted || _process.HasExited)
+        {
+            throw CreateEngineHostExitException(exitContext);
+        }
+
+        throw new TimeoutException(timeoutMessage);
+    }
+
+    private InvalidOperationException CreateEngineHostExitException(string context)
+    {
+        bool exited = _process.HasExited || _process.WaitForExit(1000);
+        string exitDescription = exited
+            ? $"exited with code {_process.ExitCode}"
+            : "closed its standard output";
+        string stderr = exited && _stderr.Wait(TimeSpan.FromSeconds(2))
+            ? _stderr.GetAwaiter().GetResult().Trim()
+            : string.Empty;
+        string details = stderr.Length == 0 ? string.Empty : $"{Environment.NewLine}{stderr}";
+
+        return new InvalidOperationException($"EngineHost {exitDescription} {context}.{details}");
+    }
+
     private void ReadLoop()
     {
-        string? line;
-        while ((line = _process.StandardOutput.ReadLine()) is not null)
+        try
         {
-            _lines.Add(line);
+            string? line;
+            while ((line = _process.StandardOutput.ReadLine()) is not null)
+            {
+                _lines.Add(line);
+            }
+        }
+        finally
+        {
+            _lines.CompleteAdding();
         }
     }
 
