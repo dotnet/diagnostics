@@ -16,10 +16,10 @@
     <DotNetHostName Condition="'$(TargetOS)' != 'Windows_NT'">dotnet</DotNetHostName>
     <PayloadNativeSourceDir>$(ArtifactsBinNativeDir)</PayloadNativeSourceDir>
     <SOSHelixTestEnvironment Condition="'$(TargetOS)' == 'osx'">SOSHARNESS_TEST_RUNTIME_MAJOR=11 SOSHARNESS_ONLY_COREVERSIONS=Net11 </SOSHelixTestEnvironment>
-    <!-- The unprivileged Helix Alpine container exposes a .NET 8 createdump PR_SET_PTRACER race for Mini captures. -->
+    <!-- The unprivileged Helix Alpine container exposes a .NET 8 createdump PR_SET_PTRACER race during snapshot capture. -->
     <SOSHelixPlatformTestEnvironment Condition="$([System.String]::Copy('$(TargetRid)').StartsWith('linux-musl-'))">SOSHARNESS_ONLY_DUMPKIND=Heap,Full </SOSHelixPlatformTestEnvironment>
-    <!-- ARM64 native dump hosts are unstable under concurrent SOS commands. -->
-    <SOSHelixDumpMaxParallelThreads Condition="'$(TargetOS)' == 'linux' and '$(TargetArch)' == 'arm64'">1</SOSHelixDumpMaxParallelThreads>
+    <!-- ARM64 native dump hosts and unprivileged Alpine snapshot capture are unstable under concurrent tests. -->
+    <SOSHelixDumpMaxParallelThreads Condition="('$(TargetOS)' == 'linux' and '$(TargetArch)' == 'arm64') or $([System.String]::Copy('$(TargetRid)').StartsWith('linux-musl-'))">1</SOSHelixDumpMaxParallelThreads>
     <SOSExpectedWorkItemCount Condition="'$(TargetOS)' == 'osx'">34</SOSExpectedWorkItemCount>
     <SOSExpectedWorkItemCount Condition="'$(SOSExpectedWorkItemCount)' == ''">10</SOSExpectedWorkItemCount>
   </PropertyGroup>
@@ -91,6 +91,8 @@
            Text="SOSHelixLiveness must be Dump or Live." />
     <Error Condition="$([System.String]::Copy('$(TargetRid)').StartsWith('linux-musl-')) and '$(SOSHelixPlatformTestEnvironment)' != 'SOSHARNESS_ONLY_DUMPKIND=Heap,Full '"
            Text="Linux musl Helix work items must select exactly the Heap and Full dump kinds." />
+    <Error Condition="$([System.String]::Copy('$(TargetRid)').StartsWith('linux-musl-')) and '$(SOSHelixDumpMaxParallelThreads)' != '1'"
+           Text="Linux musl Helix dump work items must run one test at a time." />
     <Error Condition="!$([System.String]::Copy('$(TargetRid)').StartsWith('linux-musl-')) and '$(SOSHelixPlatformTestEnvironment)' != ''"
            Text="Non-musl Helix work items must not inherit Linux musl platform restrictions." />
   </Target>
