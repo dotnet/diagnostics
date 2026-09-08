@@ -127,10 +127,10 @@ if ($test) {
         # Use backslash-escaped quotes so they survive the additional quoting in tools.ps1
         $testFilterArg = ''
         if ($methodfilter -ne '') {
-            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"-method $methodfilter\`""
+            $testFilterArg = "/p:DiagnosticsTestMethodFilter=\`"$methodfilter\`""
         }
         elseif ($classfilter -ne '') {
-            $testFilterArg = "/p:TestRunnerAdditionalArguments=\`"-class $classfilter\`""
+            $testFilterArg = "/p:DiagnosticsTestClassFilter=\`"$classfilter\`""
         }
 
         # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt
