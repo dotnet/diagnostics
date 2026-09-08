@@ -111,7 +111,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                             // Also, don't report fragmentation for Large/Pinned/Frozen segments.  This check
                             // is a little slow, so we do this last.
                             ClrSegment seg = obj.Type.Heap.GetSegmentByAddress(obj);
-                            if (seg is not null && seg.Kind is not GCSegmentKind.Large or GCSegmentKind.Pinned or GCSegmentKind.Frozen)
+                            if (seg is not null && seg.Kind is not (GCSegmentKind.Large or GCSegmentKind.Pinned or GCSegmentKind.Frozen))
                             {
                                 fragmentation ??= new();
                                 fragmentation.Add((lastFreeObject, obj));
