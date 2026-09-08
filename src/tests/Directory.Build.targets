@@ -1,6 +1,17 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets"/>
 
+  <!-- xUnit v3 uses Microsoft Testing Platform filter options while legacy xUnit uses console-runner options. -->
+  <PropertyGroup Condition="'$(DiagnosticsTestMethodFilter)' != ''">
+    <TestRunnerAdditionalArguments Condition="'$(TestRunnerName)' == 'XUnitV3' and '$(UseMicrosoftTestingPlatformRunner)' == 'true'">$(TestRunnerAdditionalArguments) --filter-method $(DiagnosticsTestMethodFilter)</TestRunnerAdditionalArguments>
+    <TestRunnerAdditionalArguments Condition="'$(TestRunnerName)' != 'XUnitV3' or '$(UseMicrosoftTestingPlatformRunner)' != 'true'">$(TestRunnerAdditionalArguments) -method $(DiagnosticsTestMethodFilter)</TestRunnerAdditionalArguments>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(DiagnosticsTestClassFilter)' != ''">
+    <TestRunnerAdditionalArguments Condition="'$(TestRunnerName)' == 'XUnitV3' and '$(UseMicrosoftTestingPlatformRunner)' == 'true'">$(TestRunnerAdditionalArguments) --filter-class $(DiagnosticsTestClassFilter)</TestRunnerAdditionalArguments>
+    <TestRunnerAdditionalArguments Condition="'$(TestRunnerName)' != 'XUnitV3' or '$(UseMicrosoftTestingPlatformRunner)' != 'true'">$(TestRunnerAdditionalArguments) -class $(DiagnosticsTestClassFilter)</TestRunnerAdditionalArguments>
+  </PropertyGroup>
+
   <!-- Projects that use debuggees/tracees depend on the test runtime installation.
        Using ProjectReference ensures the install runs exactly once via MSBuild's
        result cache, even when multiple test projects reference it in parallel. -->
