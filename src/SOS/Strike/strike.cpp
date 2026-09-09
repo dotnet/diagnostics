@@ -13501,6 +13501,9 @@ static void DisplayCDacLoadPolicy()
         case CDacLoadPolicy::PreferCDac:
             cdacPolicy = "prefer";
             break;
+        case CDacLoadPolicy::OnlyUseCDacForCoreClr:
+            cdacPolicy = "coreclr";
+            break;
         default:
             break;
     }
@@ -13540,9 +13543,13 @@ DECLARE_API(runtimes)
         {
             policy = CDacLoadPolicy::PreferCDac;
         }
+        else if (_stricmp(useCDac.data, "coreclr") == 0)
+        {
+            policy = CDacLoadPolicy::OnlyUseCDacForCoreClr;
+        }
         else
         {
-            ExtErr("Invalid --usecdac value '%s'. Expected true, false, or prefer.\n", useCDac.data);
+            ExtErr("Invalid --usecdac value '%s'. Expected true, false, prefer, or coreclr.\n", useCDac.data);
             return E_INVALIDARG;
         }
         Runtime::SetCDacLoadPolicy(policy);

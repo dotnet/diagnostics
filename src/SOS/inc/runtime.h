@@ -43,6 +43,7 @@ public:
         PreferCDac = 0,
         OnlyUseCDac = 1,
         UseLegacyDac = 2,
+        OnlyUseCDacForCoreClr = 3,
     };
 
     /// <summary>

@@ -264,7 +264,7 @@ namespace SOS.Hosting
 
         private CDacLoadPolicy GetCDacLoadPolicy(IntPtr self)
         {
-            return _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.PreferCDac;
+            return EffectiveCDacLoadPolicy;
         }
 
         private int GetCorDebugInterface(
@@ -377,8 +377,7 @@ namespace SOS.Hosting
         private int CreateCorDebugProcess(out IntPtr corDebugProcess)
         {
             corDebugProcess = IntPtr.Zero;
-            CDacLoadPolicy policy =
-                _services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.PreferCDac;
+            CDacLoadPolicy policy = EffectiveCDacLoadPolicy;
             if (_runtime.RuntimeType == RuntimeType.Desktop)
             {
                 return policy == CDacLoadPolicy.OnlyUseCDac
@@ -403,6 +402,14 @@ namespace SOS.Hosting
                 policy,
                 out corDebugProcess);
         }
+
+        private CDacLoadPolicy EffectiveCDacLoadPolicy =>
+            (_services.GetService<ISettingsService>()?.CDacLoadPolicy ?? CDacLoadPolicy.PreferCDac) switch
+            {
+                CDacLoadPolicy.OnlyUseCDacForCoreClr when _runtime.RuntimeType is RuntimeType.NetCore or RuntimeType.SingleFile => CDacLoadPolicy.OnlyUseCDac,
+                CDacLoadPolicy.OnlyUseCDacForCoreClr => CDacLoadPolicy.PreferCDac,
+                CDacLoadPolicy policy => policy,
+            };
 
         private int CreateDesktopCorDebugProcess(out IntPtr corDebugProcess)
         {
