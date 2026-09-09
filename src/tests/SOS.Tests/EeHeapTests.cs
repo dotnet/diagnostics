@@ -47,7 +47,9 @@ public sealed class EeHeapTests
         // Each heap is independently well-formed with its own gen0/1/2 segments.
         Assert.All(ee.Heaps, h =>
         {
-            Assert.NotEmpty(h.Gen0.Concat(h.Gen1).Concat(h.Gen2));
+            Assert.NotEmpty(h.Ranges(GcGeneration.Gen0));
+            Assert.NotEmpty(h.Ranges(GcGeneration.Gen1));
+            Assert.NotEmpty(h.Ranges(GcGeneration.Gen2));
             Assert.NotNull(h.Address);
         });
     }

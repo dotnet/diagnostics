@@ -125,6 +125,7 @@ public static class SosHarnessScenarios
             TextField = FieldMarkerText,
             Value = new ValueMarker { First = ValueMarkerFirst, Second = ValueMarkerSecond },
             Numbers = known,
+            ObjectReferences = new[] { new ObjectReference { Value = live } },
             MethodSignature = new byte[] { 0x00, 0x00, 0x01 }, // [DEFAULT] Void ()
             SignatureElement = new byte[] { 0x08 },            // ELEMENT_TYPE_I4
         };
@@ -373,6 +374,13 @@ public struct ValueMarker
     public long Second;
 }
 
+// A value-type array element containing exactly one object-reference slot. !dumparray reports the element's
+// address, giving notreachableinrange a real pointer range to scan without relying on object layout.
+public struct ObjectReference
+{
+    public object? Value;
+}
+
 // A reference type with known instance fields of several shapes (primitive, wide primitive, reference,
 // and an embedded value type), so dumpobj prints a non-trivial Fields table to assert against.
 public sealed class FieldMarker
@@ -382,6 +390,7 @@ public sealed class FieldMarker
     public string? TextField;
     public ValueMarker Value;
     public int[]? Numbers;
+    public ObjectReference[]? ObjectReferences;
 
     // Raw COR_SIGNATURE blobs so dumpsig/dumpsigelem can decode a real signature: a method signature
     // [DEFAULT] Void () = { CALLCONV_DEFAULT(0x00), argCount 0, ELEMENT_TYPE_VOID(0x01) }, and a single

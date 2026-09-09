@@ -64,7 +64,8 @@ public sealed class CodeInfoTests
         Assert.NotEqual(0ul, gc.GcInfoAddress);
         Assert.True(gc.CodeSize > 0, "expected a positive code size");
         Assert.NotEmpty(gc.Transitions);
-        Assert.Contains(gc.Transitions, t => t.Contains("interruptible", StringComparison.Ordinal));
+        string transitionMarker = IntPtr.Size == 4 ? "becoming live" : "interruptible";
+        Assert.Contains(gc.Transitions, t => t.Contains(transitionMarker, StringComparison.OrdinalIgnoreCase));
 
         // gcinfo accepts an IP and reports the same entry point.
         GcInfoResult byIp = target.GcInfo(atHeap.JittedCodeAddress!.Value);

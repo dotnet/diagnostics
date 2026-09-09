@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using SOS.TestHarness;
 using Xunit;
@@ -53,7 +54,14 @@ public sealed class RuntimeInfoTests
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("modules").AssertContains("SosHarnessScenarios");
-        target.Sos("registers").AssertContains("rsp");
+        string stackPointerRegister = RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X86 => "esp",
+            Architecture.X64 => "rsp",
+            Architecture.Arm or Architecture.Arm64 => "sp",
+            _ => throw new PlatformNotSupportedException(),
+        };
+        target.Sos("registers").AssertContains(stackPointerRegister);
 
         // The debuggee parks several worker threads, so the thread list has multiple entries.
         SosOutput threads = target.Sos("threads");

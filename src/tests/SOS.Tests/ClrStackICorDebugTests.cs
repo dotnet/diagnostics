@@ -20,7 +20,10 @@ namespace SOS.Tests;
 public sealed class ClrStackICorDebugTests
 {
     public static TheoryData<TestConfig> Matrix { get; }
-        = TestConfig.BuildMatrix([TargetCatalog.DivZero, TargetCatalog.Scenarios], Flavor.Core | Flavor.Framework);
+        = TestMatrices.StackWalk(
+            [TargetCatalog.DivZero, TargetCatalog.Scenarios],
+            Flavor.Core | Flavor.Framework,
+            filter: TestMatrices.SupportsICorDebugStackWalk);
 
     [SosTheory]
     [MemberData(nameof(Matrix))]

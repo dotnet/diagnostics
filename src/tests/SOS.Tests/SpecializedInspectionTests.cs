@@ -53,6 +53,22 @@ public sealed class SpecializedInspectionTests
     [MemberData(nameof(Matrix))]
     public async Task SyncBlk_ReportsInflatedMonitor(TestConfig config)
     {
+        if (RepoLayout.Rid.StartsWith("linux-musl-", StringComparison.Ordinal))
+        {
+            HarnessSkipException.Now(
+                "SyncBlock data is unavailable from the DAC on Linux musl, so syncblk cannot report inflated monitors.");
+        }
+
+        if (OperatingSystem.IsMacOS() &&
+            config.Host == Host.DotnetDump &&
+            config.Dac == Dac.Legacy &&
+            config.Flavor == Flavor.Core &&
+            config.CoreVersion == CoreVersion.Net11)
+        {
+            HarnessSkipException.Now(
+                "https://github.com/dotnet/diagnostics/issues/5985: legacy DAC SyncBlock data is unavailable for macOS .NET 11 dumps.");
+        }
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
