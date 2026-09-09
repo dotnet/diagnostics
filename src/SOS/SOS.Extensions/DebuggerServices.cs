@@ -54,7 +54,8 @@ namespace SOS.Extensions
                     DebugClient = client;
                     if (client is IDebugSymbols5 symbols)
                     {
-                        // Use stable public symbol names instead of CodeView display names.
+                        // NativeAOT emits debugger-friendly CodeView display names while retaining stable, reversible
+                        // COFF public names used by diagnostic tooling. Prefer the public names for SOS lookups.
                         // See https://github.com/dotnet/runtime/pull/132735.
                         _symbolOptionsResult = symbols.AddSymbolOptions(SYMOPT.PUBLICS_ONLY);
                     }
