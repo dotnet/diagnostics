@@ -448,10 +448,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             StringBuilder scriptBuilder = new();
             if (args.BufferSizeInMB.HasValue)
             {
-                ulong cpuCount = GetOnlineProcessorCount();
                 ulong totalBufferSizeBytes = args.BufferSizeInMB.Value * 1024UL * 1024UL;
-                ulong perCpuBufferSizeBytes = (totalBufferSizeBytes + cpuCount - 1) / cpuCount;
-                scriptBuilder.AppendLine($"with_per_cpu_buffer_bytes({perCpuBufferSizeBytes});");
+                scriptBuilder.AppendLine($"with_buffer_size_bytes({totalBufferSizeBytes});");
                 scriptBuilder.AppendLine();
             }
 
@@ -545,59 +543,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             return Encoding.UTF8.GetBytes(options);
         }
 
-        internal static ulong GetOnlineProcessorCount()
-        {
-            const string OnlineCpusPath = "/sys/devices/system/cpu/online";
-            string onlineCpus;
-            try
-            {
-                onlineCpus = File.ReadAllText(OnlineCpusPath);
-            }
-            catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException or UnauthorizedAccessException)
-            {
-                throw new DiagnosticToolException($"Unable to read online processors from '{OnlineCpusPath}': {ex.Message}");
-            }
-
-            return ParseOnlineProcessorCount(onlineCpus);
-        }
-
-        internal static ulong ParseOnlineProcessorCount(string onlineCpus)
-        {
-            ulong cpuCount = 0;
-
-            foreach (string range in onlineCpus.Trim().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                string[] bounds = range.Split('-', 2, StringSplitOptions.TrimEntries);
-                if (!ulong.TryParse(bounds[0], out ulong first))
-                {
-                    throw new DiagnosticToolException($"Invalid online processor range '{range}'.");
-                }
-
-                ulong last = first;
-                if (bounds.Length == 2 &&
-                    (!ulong.TryParse(bounds[1], out last) || last < first))
-                {
-                    throw new DiagnosticToolException($"Invalid online processor range '{range}'.");
-                }
-
-                try
-                {
-                    cpuCount = checked(cpuCount + checked(last - first + 1));
-                }
-                catch (OverflowException)
-                {
-                    throw new DiagnosticToolException("Online processor count is too large.");
-                }
-            }
-
-            if (cpuCount == 0)
-            {
-                throw new DiagnosticToolException("No online processors were reported.");
-            }
-
-            return cpuCount;
-        }
-
         private static FileInfo ResolveOutputPath(FileInfo output, string processName)
         {
             if (!string.Equals(output.Name, CommonOptions.DefaultTraceName, StringComparison.OrdinalIgnoreCase))
@@ -658,7 +603,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static readonly Option<uint?> BufferSizeInMBOption =
             new("--buffersize")
             {
-                Description = "Requested total size of the event buffers, in megabytes. The size is divided across the available CPUs. When omitted, the recorder chooses a default based on the enabled features."
+                Description = "Requested total size of the event buffers, in megabytes. When omitted, the recorder chooses a default based on the enabled features."
             };
 
         private static readonly Option<bool> ProbeOption =

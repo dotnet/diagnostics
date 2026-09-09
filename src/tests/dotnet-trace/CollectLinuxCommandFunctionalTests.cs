@@ -362,17 +362,15 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
 
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
-        public void CollectLinuxCommand_AddsPerCpuBufferSizeToScript()
+        public void CollectLinuxCommand_AddsBufferSizeToScript()
         {
             string outputPath = Path.Combine(Path.GetTempPath(), $"collect-linux-{Guid.NewGuid():N}.nettrace");
             string scriptPath = Path.ChangeExtension(outputPath, ".script");
-            ulong cpuCount = CollectLinuxCommandHandler.GetOnlineProcessorCount();
-            ulong expectedPerCpuBufferSize = (256UL * 1024UL * 1024UL + cpuCount - 1) / cpuCount;
             MockConsole console = new(200, 30, _outputHelper);
             var handler = new CollectLinuxCommandHandler(console);
             handler.RecordTraceInvoker = (cmd, len, cb) => {
                 Assert.Contains(
-                    $"with_per_cpu_buffer_bytes({expectedPerCpuBufferSize});",
+                    "with_buffer_size_bytes(268435456);",
                     File.ReadAllText(scriptPath));
                 return 0;
             };
@@ -400,27 +398,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
             console.AssertSanitizedLinesEqual(
                 null,
                 FormatException("Buffer size must be at least 1 MB."));
-        }
-
-        [Theory]
-        [InlineData("0", 1)]
-        [InlineData("0-3", 4)]
-        [InlineData("0-3,8,10-11", 7)]
-        public void CollectLinuxCommand_ParsesOnlineProcessorRanges(string onlineCpus, ulong expectedCount)
-        {
-            Assert.Equal(
-                expectedCount,
-                CollectLinuxCommandHandler.ParseOnlineProcessorCount(onlineCpus));
-        }
-
-        [Theory]
-        [InlineData("")]
-        [InlineData("3-1")]
-        [InlineData("invalid")]
-        public void CollectLinuxCommand_RejectsInvalidOnlineProcessorRanges(string onlineCpus)
-        {
-            Assert.Throws<DiagnosticToolException>(
-                () => CollectLinuxCommandHandler.ParseOnlineProcessorCount(onlineCpus));
         }
 
         [ConditionalFact(nameof(IsCollectLinuxSupported))]
