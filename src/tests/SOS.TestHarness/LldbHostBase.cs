@@ -22,7 +22,7 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
     private const string EndMarker = "<END_COMMAND_OUTPUT>";
     private const string ErrorMarker = "<END_COMMAND_ERROR>";
 
-    private static readonly string? s_trace = Environment.GetEnvironmentVariable("SOSHARNESS_LLDB_TRACE");
+    private static readonly string? s_trace = RepoLayout.LldbTraceFile;
     private static readonly object s_traceLock = new();
 
     private Process _process = null!;
@@ -285,7 +285,7 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         sb.AppendLine($"ToolPaths.LldbPluginPath={ToolPaths.LldbPluginPath}");
         sb.AppendLine($"ToolPaths.HostRuntimeDirectory={ToolPaths.HostRuntimeDirectory}");
         sb.AppendLine($"crashDumpDirectory={HostDiagnostics.CrashDumpDirectory}");
-        sb.AppendLine($"SOSHARNESS_LLDB_TRACE={s_trace ?? "<unset>"}");
+        sb.AppendLine($"LLDB trace={s_trace ?? "<unset>"}");
 
         if (_diagnostics is not null)
         {

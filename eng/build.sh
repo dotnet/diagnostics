@@ -153,10 +153,6 @@ if [[ -n "$__CDacPath" && "$__DacMode" != "cdac" ]]; then
     exit 1
 fi
 
-if [[ "$__TestInterpreter" == 1 ]]; then
-    export SOS_TEST_INTERPRETER="true"
-fi
-
 __LogsDir="$__RootBinDir/log/$__BuildType"
 __ConfigTriplet="$__TargetOS.$__TargetArch.$__BuildType"
 __BinDir="$__RootBinDir/bin/$__ConfigTriplet"
@@ -354,6 +350,10 @@ if [[ "$__Test" == 1 ]]; then
 
       if [[ -n "$__DacMode" ]]; then
           export SOS_TEST_DAC_MODE="$__DacMode"
+      fi
+
+      if [[ "$__TestInterpreter" == 1 ]]; then
+          export SOS_TEST_INTERPRETER="true"
       fi
 
       # Build the test filter argument if provided

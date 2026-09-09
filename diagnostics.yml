@@ -44,13 +44,14 @@ variables:
   parameters:
     runtimeFeed: ${{ parameters.runtimeFeed }}
     runtimeFeedToken: ${{ parameters.runtimeFeedToken }}
+- template: /eng/pipelines/helix-platforms.yml
 
 extends:
   template: /eng/pipelines/pipeline-resources.yml
   parameters:
     stages:
     - stage: build
-      displayName: Build Diagnostics
+      displayName: Build / Test Diagnostics
       jobs:
 
         ############################
@@ -79,6 +80,7 @@ extends:
           osGroup: Windows_NT
           buildOnly: true
           publishTestArtifacts: true
+          publishTestRuntimeArtifacts: true
           buildConfigs:
           - configuration: Debug
             architecture: x64
@@ -102,6 +104,7 @@ extends:
           crossBuild: true
           buildOnly: true
           publishTestArtifacts: true
+          publishTestRuntimeArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -121,6 +124,7 @@ extends:
           crossBuild: true
           buildOnly: true
           publishTestArtifacts: true
+          publishTestRuntimeArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -135,9 +139,28 @@ extends:
       - template: /eng/pipelines/build.yml
         parameters:
           jobTemplate: ${{ variables.jobTemplate }}
+          osGroup: Linux
+          container: linux_arm64
+          crossBuild: true
+          buildOnly: true
+          publishTestArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
+          publishTestRuntimeArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
+          buildConfigs:
+          - configuration: Release
+            architecture: arm64
+            artifactUploadPath: bin/linux.arm64.Release
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: arm64
+              artifactUploadPath: bin/linux.arm64.Debug
+
+      - template: /eng/pipelines/build.yml
+        parameters:
+          jobTemplate: ${{ variables.jobTemplate }}
           osGroup: MacOS
           buildOnly: true
           publishTestArtifacts: true
+          publishTestRuntimeArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: x64
@@ -153,6 +176,8 @@ extends:
           osGroup: MacOS
           crossBuild: true
           buildOnly: true
+          publishTestArtifacts: true
+          publishTestRuntimeArtifacts: true
           buildConfigs:
           - configuration: Release
             architecture: arm64
@@ -160,6 +185,7 @@ extends:
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
               architecture: arm64
+              artifactUploadPath: bin/osx.arm64.Debug
 
       - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         - template: /eng/pipelines/build.yml
@@ -173,18 +199,6 @@ extends:
             - configuration: Release
               architecture: arm
               artifactUploadPath: bin/linux.arm.Release
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Linux
-            container: linux_arm64
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm64
-              artifactUploadPath: bin/linux.arm64.Release
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -216,18 +230,13 @@ extends:
               artifactUploadPath: bin/linux.arm64.Release
               artifactTargetPath: bin/linux-musl.arm64.Release
 
-    ############################
-    #                          #
-    #        Test stage        #
-    #                          #
-    ############################
+      ############################
+      #                          #
+      #        Test legs         #
+      #                          #
+      ############################
 
-    - ${{ if ne(parameters.buildOnly, true) }}:
-      - stage: test
-        displayName: Test Diagnostics
-        dependsOn: build
-        jobs:
-
+      - ${{ if ne(parameters.buildOnly, true) }}:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
@@ -235,6 +244,7 @@ extends:
             osGroup: Windows_NT
             dependsOn: Windows
             testOnly: true
+            buildArguments: /p:SkipSOSTests=${{ eq(variables['System.TeamProject'], 'public') }}
             buildConfigs:
             - configuration: Debug
               architecture: x64
@@ -250,6 +260,7 @@ extends:
             osGroup: MacOS
             dependsOn: MacOS
             testOnly: true
+            buildArguments: /p:SkipSOSTests=${{ eq(variables['System.TeamProject'], 'public') }}
             buildConfigs:
             - configuration: Release
               architecture: x64
@@ -265,6 +276,7 @@ extends:
             container: test_ubuntu_22_04
             dependsOn: Linux
             testOnly: true
+            buildArguments: /p:SkipSOSTests=${{ eq(variables['System.TeamProject'], 'public') }}
             buildConfigs:
             - configuration: Release
               architecture: x64
@@ -282,12 +294,195 @@ extends:
             dependsOn: Linux_musl
             testOnly: true
             disableComponentGovernance: true
+            buildArguments: /p:SkipSOSTests=${{ eq(variables['System.TeamProject'], 'public') }}
             buildConfigs:
             - configuration: Release
               architecture: x64
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               - configuration: Debug
                 architecture: x64
+
+        - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+          - template: /eng/pipelines/sos-helix.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: SOS_Helix_Windows_x64_Debug
+              displayName: SOS.Tests Windows x64 Debug
+              osGroup: Windows_NT
+              dependsOn: Windows_x64_Debug
+              artifactPhase: Windows_x64_Debug
+              configuration: Debug
+              architecture: x64
+              targetOS: Windows_NT
+              targetRid: win-x64
+              queue: $(helix_windows_x64)
+
+          - template: /eng/pipelines/sos-helix.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: SOS_Helix_Windows_x64_Release
+              displayName: SOS.Tests Windows x64 Release
+              osGroup: Windows_NT
+              dependsOn: Windows_x64_Release
+              artifactPhase: Windows_x64_Release
+              configuration: Release
+              architecture: x64
+              targetOS: Windows_NT
+              targetRid: win-x64
+              queue: $(helix_windows_x64)
+
+          - template: /eng/pipelines/sos-helix.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: SOS_Helix_Windows_x86_Release
+              displayName: SOS.Tests Windows x86 Release
+              osGroup: Windows_NT
+              dependsOn: Windows_x86_Release
+              artifactPhase: Windows_x86_Release
+              configuration: Release
+              architecture: x86
+              targetOS: Windows_NT
+              targetRid: win-x86
+              queue: $(helix_windows_x64)
+
+          - template: /eng/pipelines/sos-helix.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: SOS_Helix_Linux_x64_Release
+              displayName: SOS.Tests Linux x64 Release
+              osGroup: Linux
+              container: test_ubuntu_22_04
+              dependsOn: Linux_x64_Release
+              artifactPhase: Linux_x64_Release
+              configuration: Release
+              architecture: x64
+              targetOS: linux
+              targetRid: linux-x64
+              queue: $(helix_linux_x64)
+
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_Linux_x64_Debug
+                displayName: SOS.Tests Linux x64 Debug
+                osGroup: Linux
+                container: test_ubuntu_22_04
+                dependsOn: Linux_x64_Debug
+                artifactPhase: Linux_x64_Debug
+                configuration: Debug
+                architecture: x64
+                targetOS: linux
+                targetRid: linux-x64
+                queue: $(helix_linux_x64)
+
+          - template: /eng/pipelines/sos-helix.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: SOS_Helix_Linux_arm64_Release
+              displayName: SOS.Tests Linux arm64 Release
+              osGroup: Linux
+              container: test_ubuntu_22_04
+              dependsOn: Linux_arm64_Release
+              artifactPhase: Linux_arm64_Release
+              configuration: Release
+              architecture: arm64
+              targetOS: linux
+              targetRid: linux-arm64
+              queue: $(helix_linux_arm64)
+
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_Linux_arm64_Debug
+                displayName: SOS.Tests Linux arm64 Debug
+                osGroup: Linux
+                container: test_ubuntu_22_04
+                dependsOn: Linux_arm64_Debug
+                artifactPhase: Linux_arm64_Debug
+                configuration: Debug
+                architecture: arm64
+                targetOS: linux
+                targetRid: linux-arm64
+                queue: $(helix_linux_arm64)
+
+          - template: /eng/pipelines/sos-helix.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: SOS_Helix_Alpine_x64_Release
+              displayName: SOS.Tests Alpine x64 Release
+              osGroup: Linux
+              container: test_linux_musl_x64
+              dependsOn: Linux_musl_x64_Release
+              artifactPhase: Linux_musl_x64_Release
+              configuration: Release
+              architecture: x64
+              targetOS: linux
+              targetRid: linux-musl-x64
+              queue: $(helix_linux_musl_x64)
+              helixPreCommands: sudo apk add --no-cache py3-lldb
+
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_Alpine_x64_Debug
+                displayName: SOS.Tests Alpine x64 Debug
+                osGroup: Linux
+                container: test_linux_musl_x64
+                dependsOn: Linux_musl_x64_Debug
+                artifactPhase: Linux_musl_x64_Debug
+                configuration: Debug
+                architecture: x64
+                targetOS: linux
+                targetRid: linux-musl-x64
+                queue: $(helix_linux_musl_x64)
+                helixPreCommands: sudo apk add --no-cache py3-lldb
+
+          - template: /eng/pipelines/sos-helix.yml
+            parameters:
+              jobTemplate: ${{ variables.jobTemplate }}
+              name: SOS_Helix_MacOS_arm64_Release
+              displayName: SOS.Tests macOS arm64 Release
+              osGroup: MacOS
+              dependsOn: MacOS_arm64_Release
+              artifactPhase: MacOS_arm64_Release
+              configuration: Release
+              architecture: arm64
+              targetOS: osx
+              targetRid: osx-arm64
+              queue: $(helix_osx_arm64)
+
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_MacOS_arm64_Debug
+                displayName: SOS.Tests macOS arm64 Debug
+                osGroup: MacOS
+                dependsOn: MacOS_arm64_Debug
+                artifactPhase: MacOS_arm64_Debug
+                configuration: Debug
+                architecture: arm64
+                targetOS: osx
+                targetRid: osx-arm64
+                queue: $(helix_osx_arm64)
+
+          - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_MacOS_x64_Release
+                displayName: SOS.Tests macOS x64 Release
+                osGroup: MacOS
+                dependsOn: MacOS_x64_Release
+                artifactPhase: MacOS_x64_Release
+                configuration: Release
+                architecture: x64
+                targetOS: osx
+                targetRid: osx-x64
+                queue: $(helix_osx_x64)
 
         # - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         #   - template: /eng/pipelines/build.yml

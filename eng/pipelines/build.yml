@@ -29,6 +29,10 @@ parameters:
   type: object
   default: {}
 
+- name: buildArguments
+  type: string
+  default: ''
+
   # Optional: Job timeout
 - name: timeoutInMinutes
   type: number
@@ -63,6 +67,12 @@ parameters:
   # Optional: publish the full build outputs (managed + native + debuggees) as a
   # 'TestArtifacts_<phase>' artifact so the matching test-only legs can run without rebuilding.
 - name: publishTestArtifacts
+  type: boolean
+  default: false
+
+# Include the target-architecture test runtime in TestArtifacts for a Helix-only
+# test leg that cannot execute target binaries on its submission host.
+- name: publishTestRuntimeArtifacts
   type: boolean
   default: false
 
@@ -119,7 +129,7 @@ jobs:
       ${{ if ne(parameters.strategy, '') }}:
         'error, we can no longer support the strategy feature in the new pipeline system. Please remove the strategy from the job template.': error
 
-      ${{ if and(ne(parameters.dependsOn, ''), ne(parameters.testOnly, true)) }}:
+      ${{ if ne(parameters.dependsOn, '') }}:
         dependsOn: ${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
 
       workspace:
@@ -136,6 +146,8 @@ jobs:
 
       - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
         'error, testOnly and buildOnly cannot be true at the same time': error
+      - ${{ if and(eq(parameters.publishTestRuntimeArtifacts, true), ne(parameters.publishTestArtifacts, true)) }}:
+        'error, publishTestRuntimeArtifacts requires publishTestArtifacts': error
 
       # Test-only legs invoke test.cmd/test.sh, which already encode
       # '-test -skipmanaged -skipnative' and do not prepend '-restore -build'. All other legs
@@ -192,6 +204,7 @@ jobs:
           $(_TestArgs)
           $(_Cross)
           $(_InternalInstallArgs)
+          ${{ parameters.buildArguments }}
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         ${{ if eq(parameters.testOnly, 'true') }}:
           displayName: Test
@@ -200,6 +213,7 @@ jobs:
         ${{ else }}:
           displayName: Build / Test
         condition: succeeded()
+
       - ${{ if ne(config.artifactUploadPath, '') }}:
         - task: CopyFiles@2
           displayName: Gather binaries for publish
@@ -228,6 +242,20 @@ jobs:
               obj/**
               test/**
             TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
+
+        - ${{ if eq(parameters.publishTestRuntimeArtifacts, true) }}:
+          - task: CopyFiles@2
+            displayName: Gather target test runtime for publish
+            inputs:
+              SourceFolder: '$(Build.SourcesDirectory)/artifacts/dotnet-test'
+              Contents: |
+                dotnet*
+                LICENSE.txt
+                ThirdPartyNotices.txt
+                Debugger.Tests.Versions.txt
+                host/fxr/**
+                shared/Microsoft.NETCore.App/**
+              TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts/dotnet-test
 
         - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
           parameters:

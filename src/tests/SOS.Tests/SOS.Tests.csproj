@@ -12,11 +12,7 @@
          implicitly references xunit.v3 and the test runner; no explicit PackageReference needed.
          xunit v3 runs as an MTP executable, so OutputType must be Exe. -->
     <TestRunnerName>XUnitV3</TestRunnerName>
-  </PropertyGroup>
-
-  <!-- Temporary until SOS.Tests moves to Helix in https://github.com/dotnet/diagnostics/pull/6002. -->
-  <PropertyGroup Condition="'$(OfficialBuildId)' != ''">
-    <SkipTests>true</SkipTests>
+    <SkipTests Condition="'$(SkipSOSTests)' == 'true'">true</SkipTests>
   </PropertyGroup>
 
   <ItemGroup>
@@ -37,5 +33,7 @@
     <!-- Pipeline artifact transfer does not preserve Unix executable permissions. -->
     <Exec Command="chmod +x &quot;%(TestToRun.RunCommand)&quot;" />
   </Target>
+
+  <Import Project="HelixPayload.targets" />
 
 </Project>

@@ -30,8 +30,7 @@ public sealed class HostDiagnostics
     // on a long-lived shared host would grow without limit across the many tests that reuse it.
     private const int MaxStreamChars = 128 * 1024;
 
-    private static readonly string s_crashRoot =
-        Path.Combine(RepoLayout.Root, "artifacts", "replays", "crashdumps");
+    private static readonly string s_crashRoot = RepoLayout.CrashDumpDirectory;
 
     private readonly object _gate = new();
     private readonly StringBuilder _stdout = new();

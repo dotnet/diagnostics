@@ -11,28 +11,6 @@ namespace SOS.Tests;
 
 public sealed class TestConfigValidityTests
 {
-    [Theory]
-    [InlineData(null, false)]
-    [InlineData("", false)]
-    [InlineData("0", false)]
-    [InlineData("1", true)]
-    public void SingleFileSnapshotExclusionIsStrict(string? value, bool expected)
-    {
-        Assert.Equal(expected, TestConfig.ExcludeSingleFileSnapshots(value));
-    }
-
-    [Theory]
-    [InlineData("true")]
-    [InlineData(" 1")]
-    [InlineData("yes")]
-    public void SingleFileSnapshotExclusionRejectsInvalidValues(string value)
-    {
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
-            () => TestConfig.ExcludeSingleFileSnapshots(value));
-
-        Assert.Contains("SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS", error.Message);
-    }
-
     [Fact]
     public void CDacRequiresSupportedNet11Configuration()
     {
@@ -52,6 +30,23 @@ public sealed class TestConfigValidityTests
     public void MuslExcludesOnlySingleFile(Flavor flavor, string rid, bool expected)
     {
         Assert.Equal(expected, TestConfig.IsFlavorSupportedOnRid(flavor, rid));
+    }
+
+    [Theory]
+    [InlineData(DumpKind.Heap, false, "linux-musl-x64", true, true)]
+    [InlineData(DumpKind.Full, false, "linux-musl-x64", true, true)]
+    [InlineData(DumpKind.Mini, false, "linux-musl-x64", true, false)]
+    [InlineData(DumpKind.Mini, true, "linux-musl-x64", true, true)]
+    [InlineData(DumpKind.Mini, false, "linux-x64", true, true)]
+    [InlineData(DumpKind.Mini, false, "linux-musl-x64", false, true)]
+    public void HelixDumpKindCapabilities(
+        DumpKind dumpKind,
+        bool isLive,
+        string rid,
+        bool isHelix,
+        bool expected)
+    {
+        Assert.Equal(expected, TestConfig.IsDumpKindSupportedOnHelix(dumpKind, isLive, rid, isHelix));
     }
 
     [Fact]

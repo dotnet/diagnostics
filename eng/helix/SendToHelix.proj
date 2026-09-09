@@ -1,0 +1,34 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project Sdk="Microsoft.DotNet.Helix.Sdk" DefaultTargets="Test">
+
+  <PropertyGroup>
+    <Language>msbuild</Language>
+    <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' != ''">true</EnableAzurePipelinesReporter>
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' == ''">false</EnableAzurePipelinesReporter>
+    <EnableXUnitReporter>true</EnableXUnitReporter>
+    <WaitForWorkItemCompletion>true</WaitForWorkItemCompletion>
+    <FailOnWorkItemFailure>true</FailOnWorkItemFailure>
+    <FailOnTestFailure>true</FailOnTestFailure>
+    <WorkItemTimeout Condition="'$(WorkItemTimeout)' == ''">06:00:00</WorkItemTimeout>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <HelixWorkItem Include="$(HelixWorkItemName)">
+      <PayloadDirectory>$(TestDir)</PayloadDirectory>
+      <Command>$(HelixWorkItemCommand)</Command>
+      <Timeout>$(WorkItemTimeout)</Timeout>
+    </HelixWorkItem>
+  </ItemGroup>
+
+  <Target Name="ValidateHelixConfiguration" BeforeTargets="CoreTest">
+    <Error Condition="'$(TestDir)' == ''" Text="TestDir is required." />
+    <Error Condition="!Exists('$(TestDir)')" Text="The Helix payload directory '$(TestDir)' does not exist." />
+    <Error Condition="'$(HelixWorkItemName)' == ''" Text="HelixWorkItemName is required." />
+    <Error Condition="'$(HelixWorkItemCommand)' == ''" Text="HelixWorkItemCommand is required." />
+    <Error Condition="'@(HelixWorkItem->Count())' != '1'"
+           Text="The generic Helix dispatcher requires exactly one work item; found @(HelixWorkItem->Count())." />
+  </Target>
+
+</Project>

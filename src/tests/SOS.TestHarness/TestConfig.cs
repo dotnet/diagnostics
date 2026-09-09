@@ -105,7 +105,8 @@ public sealed record TestConfig : IXunitSerializable
         Dac dac = Dac.All)
     {
         TheoryData<TestConfig> data = new();
-        foreach (TestConfig cfg in Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac))
+        foreach (TestConfig cfg in ValidPermutations(
+            targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac))
         {
             data.Add(cfg);
         }
@@ -119,6 +120,17 @@ public sealed record TestConfig : IXunitSerializable
     /// e.g. a stop-point name — into their own <c>TheoryData&lt;TestConfig, ...&gt;</c>.
     /// </summary>
     public static IEnumerable<TestConfig> Permutations(
+        string[] targets,
+        Flavor flavor = Flavor.AllValid,
+        Host host = Host.AllValid,
+        Liveness liveness = Liveness.Dump,
+        GcType gcType = GcType.Workstation,
+        DumpKind dumpKind = DumpKind.Heap,
+        CoreVersion coreVersion = CoreVersion.All,
+        Dac dac = Dac.All) =>
+        ValidPermutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac);
+
+    internal static IEnumerable<TestConfig> ValidPermutations(
         string[] targets,
         Flavor flavor = Flavor.AllValid,
         Host host = Host.AllValid,
@@ -213,6 +225,12 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
+        // The unprivileged Alpine Helix environment cannot reliably capture .NET 8 Mini dumps.
+        if (!IsDumpKindSupportedOnHelix(c.DumpKind, c.IsLive, RepoLayout.Rid, RepoLayout.IsHelix))
+        {
+            return false;
+        }
+
         // dotnet-dump is post-mortem only; it has no live host.
         if (c.IsLive && c.Host == Host.DotnetDump)
         {
@@ -231,12 +249,12 @@ public sealed record TestConfig : IXunitSerializable
 
         // A single-file snapshot requires a Full dump because createdump cannot enumerate reduced-dump
         // regions for a statically linked runtime. On constrained test machines, marker targets produce
-        // several multi-gigabyte dumps and cannot complete reliably. Callers can exclude only those
+        // several multi-gigabyte dumps and cannot complete reliably. Helix launchers can exclude only those
         // snapshot rows while preserving single-file crash coverage.
-        if (!c.IsLive &&
-            c.Flavor == Flavor.SingleFile &&
-            TargetCatalog.NavigatesViaBpmd(c.Target) &&
-            ExcludeSingleFileSnapshots(Environment.GetEnvironmentVariable("SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS")))
+        if (ShouldExcludeSingleFileSnapshot(
+            c,
+            OperatingSystem.IsMacOS(),
+            RepoLayout.IsHelix))
         {
             return false;
         }
@@ -287,13 +305,18 @@ public sealed record TestConfig : IXunitSerializable
     internal static bool IsFlavorSupportedOnRid(Flavor flavor, string rid) =>
         flavor != Flavor.SingleFile || !rid.StartsWith("linux-musl-", StringComparison.Ordinal);
 
-    internal static bool ExcludeSingleFileSnapshots(string? value) => value switch
-    {
-        null or "" or "0" => false,
-        "1" => true,
-        _ => throw new InvalidOperationException(
-            "SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS must be unset, 0, or 1."),
-    };
+    internal static bool IsDumpKindSupportedOnHelix(DumpKind dumpKind, bool isLive, string rid, bool isHelix) =>
+        !isHelix ||
+        isLive ||
+        dumpKind != DumpKind.Mini ||
+        !rid.StartsWith("linux-musl-", StringComparison.Ordinal);
+
+    internal static bool ShouldExcludeSingleFileSnapshot(TestConfig config, bool isMacOS, bool isHelix) =>
+        isHelix &&
+        isMacOS &&
+        !config.IsLive &&
+        config.Flavor == Flavor.SingleFile &&
+        TargetCatalog.NavigatesViaBpmd(config.Target);
 
     private static IEnumerable<T> SingleFlags<T>(T value) where T : struct, Enum
     {
@@ -315,7 +338,11 @@ public sealed record TestConfig : IXunitSerializable
     /// </summary>
     private static IEnumerable<T> SingleFlags<T>(T value, string envVar) where T : struct, Enum
     {
-        string? only = Environment.GetEnvironmentVariable(envVar);
+        return ApplyAllowList(value, Environment.GetEnvironmentVariable(envVar));
+    }
+
+    internal static IEnumerable<T> ApplyAllowList<T>(T value, string? only) where T : struct, Enum
+    {
         HashSet<string>? allowed = string.IsNullOrEmpty(only)
             ? null
             : new HashSet<string>(only.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), StringComparer.OrdinalIgnoreCase);
@@ -366,5 +393,4 @@ public sealed record TestConfig : IXunitSerializable
         string dac = Dac == Dac.CDac ? "/cdac" : string.Empty;
         return $"{Target}/{Host}/{Flavor}{version}/{Liveness}/{GcType}{dump}{dac}";
     }
-
 }

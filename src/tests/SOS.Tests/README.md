@@ -91,6 +91,11 @@ The DAC is deliberately not a capture dimension: legacy DAC and cDAC analyze
 the same dump, with DAC selection happening when the host opens it. Cached
 dumps are reused only while newer than their debuggee.
 
+Helix runs the complete platform matrix in one work item. Dump reuse remains
+inside `SnapshotStore`, so hosts and DAC implementations that analyze the same
+target share the captured dump without requiring an external partitioning
+protocol.
+
 `Targets.GetTargetAsync` returns a cheap cursor over shared, read-only dump
 sessions. A session is memoized by host, target, stop, flavor, GC type, dump
 kind, runtime, and DAC. Live targets are never shared because command execution
@@ -188,16 +193,21 @@ Comma-separated matrix allow-lists are case-insensitive enum names:
 | `SOSHARNESS_ONLY_COREVERSIONS` | Select versions such as `Net8,Net11`; explicit selection also permits an out-of-support version. |
 | `SOSHARNESS_ONLY_DAC` | Select `Legacy` and/or `CDac`. |
 | `SOSHARNESS_TEST_OUT_OF_SUPPORT_CORE` | Set to `1` to include every installed out-of-support runtime. |
-| `SOSHARNESS_ARTIFACTS_CONFIG` | Override the build configuration embedded in the harness assembly. |
+| `SOSHARNESS_HOST_RUNTIME_DIR` | Override the complete runtime layout used to host SOS's managed extension. |
 | `SOSHARNESS_MAX_LIVE` | Set the positive maximum number of concurrent live sessions. |
 | `SOSHARNESS_LIVE_TIMEOUT` | Set the positive live LLDB command timeout in seconds. |
 | `SOSHARNESS_LLDB_LOAD_TIMEOUT` | Set the positive LLDB target-load timeout in seconds. |
-| `SOSHARNESS_LLDB_TRACE` | Enable LLDB protocol tracing and record its value in replay files. |
+| `SOSHARNESS_LLDB_PATH` | Override the LLDB executable or the macOS `sos-lldb` driver. |
 | `SOSHARNESS_DAC_DIR` | Override the legacy DAC directory used by the dbgeng engine host. |
 | `SOSHARNESS_CDAC_DIR` | Override cDAC discovery with a directory containing the cDAC. |
 | `SOSHARNESS_USECDAC` | Local global DAC clamp; overrides the matrix DAC selection and is not set in CI. |
 | `LLDB_PATH` | Override LLDB discovery. Otherwise Xcode and then `PATH` are searched. |
 | `NUGET_PACKAGES` | Override the NuGet package root used to locate runtime packs and cDAC assets. |
+
+The unprivileged Azure Linux Helix Alpine container excludes Mini dump rows and
+runs the work item one test at a time to avoid an intermittent .NET 8
+createdump `PR_SET_PTRACER` race. These are platform capabilities derived from
+the staged payload and RID rather than launcher-provided matrix variables.
 
 The harness sets the following implementation-owned values for child
 processes; they are not supported user controls:
@@ -229,3 +239,18 @@ original test failure even if replay writing also fails.
 Reusable targets, dumps, symbols, and host crash artifacts live under
 `artifacts/tmp/sos-harness/<Configuration>`. Dumps can be large; remove that
 scratch subtree when a clean recapture is required.
+
+## Helix execution
+
+`HelixPayload.targets` stages one self-contained payload per OS, RID, and
+configuration and invokes the generic `eng/helix/SendToHelix.proj` dispatcher.
+The payload contains `SOS.Tests`, its harness subprocesses, native SOS, the
+repository-built dotnet-dump, the test runtime and DAC closure, DbgEng on
+Windows, and all prebuilt Core, SingleFile, and Framework debuggees needed by
+that platform.
+
+The payload includes a `.sos-test-payload` marker and preserves the repository
+artifact layout. `RepoLayout` discovers that root and derives all tool,
+debuggee, writable-overlay, scratch, and upload paths. The platform launcher
+only performs required machine preparation such as restoring executable bits,
+macOS codesigning, LLDB discovery, and Windows signature-check setup.
