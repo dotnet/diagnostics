@@ -4,6 +4,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace SOS.TestHarness;
 
@@ -132,25 +133,58 @@ public static class SnapshotStore
                 string siblingDestination = Path.Combine(destinationDirectory, Path.GetFileName(sibling));
                 if (string.Equals(sibling, path, StringComparison.Ordinal))
                 {
-                    if (!File.Exists(siblingDestination))
-                    {
-                        File.Copy(sibling, siblingDestination);
-                    }
+                    StageExecutable(sibling, siblingDestination, execute);
                 }
                 else if (!File.Exists(siblingDestination))
                 {
-                    File.CreateSymbolicLink(siblingDestination, sibling);
+                    try
+                    {
+                        File.CreateSymbolicLink(siblingDestination, sibling);
+                    }
+                    catch (IOException) when (File.Exists(siblingDestination))
+                    {
+                        // Another harness process published the same sibling.
+                    }
                 }
-            }
-
-            UnixFileMode destinationMode = File.GetUnixFileMode(destination);
-            if ((destinationMode & execute) != execute)
-            {
-                File.SetUnixFileMode(destination, destinationMode | execute);
             }
         }
 
         return destination;
+    }
+
+    [UnsupportedOSPlatform("windows")]
+    private static void StageExecutable(string source, string destination, UnixFileMode execute)
+    {
+        if (File.Exists(destination) && (File.GetUnixFileMode(destination) & execute) == execute)
+        {
+            return;
+        }
+
+        // Stage beside the destination so the no-overwrite rename publishes a complete executable atomically.
+        string temporary = Path.Combine(
+            Path.GetDirectoryName(destination)!,
+            $".{Path.GetFileName(destination)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            File.Copy(source, temporary);
+            UnixFileMode temporaryMode = File.GetUnixFileMode(temporary);
+            File.SetUnixFileMode(temporary, temporaryMode | execute);
+
+            try
+            {
+                File.Move(temporary, destination);
+            }
+            catch (IOException) when (
+                File.Exists(destination) &&
+                (File.GetUnixFileMode(destination) & execute) == execute)
+            {
+                // Another harness process atomically published a complete executable first.
+            }
+        }
+        finally
+        {
+            File.Delete(temporary);
+        }
     }
 
     private static string DumpDir(Flavor flavor, string target, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion) =>
