@@ -3,9 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.SymbolStore;
+using Microsoft.SymbolStore.SymbolStores;
 using Xunit;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
@@ -13,10 +18,20 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     /// <summary>
     /// Test the service event implementation
     /// </summary>
-    public class SymbolServiceTests : IHost
+    public class SymbolServiceTests : IHost, IDisposable
     {
+        private readonly string _tempDirectory = Path.Combine(Path.GetTempPath(), "SymbolServiceTests-" + Guid.NewGuid().ToString("N"));
+
         public SymbolServiceTests()
         {
+        }
+
+        public void Dispose()
+        {
+            if (Directory.Exists(_tempDirectory))
+            {
+                Directory.Delete(_tempDirectory, recursive: true);
+            }
         }
 
         [Fact]
@@ -120,6 +135,20 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Null(result);
         }
 
+        [Fact]
+        public void DownloadFileStagesRemoteStoreFileLocally()
+        {
+            byte[] contents = new byte[] { 1, 2, 3, 4 };
+            SymbolService symbolService = new(this);
+            symbolService.SetSymbolStore(new TestSymbolStore(contents, @"\\server\share\mscordaccore.dll"));
+
+            string filePath = symbolService.DownloadFile("mscordaccore.dll/test", "mscordaccore.dll");
+
+            Assert.True(PathUtilities.IsSafeAbsoluteLocalPath(filePath));
+            Assert.StartsWith(_tempDirectory, filePath, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(contents, File.ReadAllBytes(filePath));
+        }
+
         #region IHost
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
@@ -134,9 +163,32 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public int AddTarget(ITarget target) => throw new NotImplementedException();
 
-        public string GetTempDirectory() => throw new NotImplementedException();
+        public string GetTempDirectory()
+        {
+            Directory.CreateDirectory(_tempDirectory);
+            return _tempDirectory;
+        }
 
         #endregion
+
+        private sealed class TestSymbolStore : Microsoft.SymbolStore.SymbolStores.SymbolStore
+        {
+            private readonly byte[] _contents;
+            private readonly string _fileName;
+
+            public TestSymbolStore(byte[] contents, string fileName)
+                : base(Microsoft.Diagnostics.DebugServices.Implementation.Tracer.Instance)
+            {
+                _contents = contents;
+                _fileName = fileName;
+            }
+
+            protected override Task<SymbolStoreFile> GetFileInner(SymbolStoreKey key, CancellationToken token)
+            {
+                Stream stream = new MemoryStream(_contents, writable: false);
+                return Task.FromResult(new SymbolStoreFile(stream, _fileName));
+            }
+        }
     }
 
     public static class SymbolServiceExtensions

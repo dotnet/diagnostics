@@ -5,18 +5,20 @@ namespace ReleaseTool.Core
 {
     public class FileReleaseData
     {
-        public FileReleaseData(FileMapping fileMap, FileMetadata fileMetadata)
-            : this(fileMap, fileMetadata, null) { }
+        public FileReleaseData(FileMapping fileMap, FileMetadata fileMetadata, bool isAssetForPublicRelease = true)
+            : this(fileMap, fileMetadata, isAssetForPublicRelease, null) { }
 
-        private FileReleaseData(FileMapping fileMap, FileMetadata fileMetadata, string publishUri)
+        private FileReleaseData(FileMapping fileMap, FileMetadata fileMetadata, bool isAssetForPublicRelease, string publishUri)
         {
             FileMap = fileMap;
             FileMetadata = fileMetadata;
+            IsAssetForPublicRelease = isAssetForPublicRelease;
             PublishUri = publishUri;
         }
 
         public FileMapping FileMap { get; }
         public FileMetadata FileMetadata { get; }
+        public bool IsAssetForPublicRelease { get; }
         public string PublishUri { get; internal set; }
     }
 }

@@ -238,6 +238,83 @@ const WCHAR GetTargetDirectorySeparatorW()
     }
 }
 
+template <typename T>
+static bool IsSafeAbsoluteLocalPathImpl(const T* path)
+{
+    if (path == nullptr || path[0] == '\0')
+    {
+        return false;
+    }
+
+    auto isDirectorySeparator = [](T character) { return character == '\\' || character == '/'; };
+    if (path[1] != '\0' && isDirectorySeparator(path[0]) && isDirectorySeparator(path[1]))
+    {
+        return false;
+    }
+
+#ifdef FEATURE_PAL
+    return path[0] == '/';
+#else
+    return path[1] != '\0' &&
+        path[2] != '\0' &&
+        ((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) &&
+        path[1] == ':' &&
+        isDirectorySeparator(path[2]);
+#endif
+}
+
+template <typename T>
+static const T* GetLastDirectorySeparatorImpl(const T* path)
+{
+    const T* lastSeparator = nullptr;
+    if (path != nullptr)
+    {
+        for (const T* current = path; *current != '\0'; current++)
+        {
+            if (*current == '\\' || *current == '/')
+            {
+                lastSeparator = current;
+            }
+        }
+    }
+    return lastSeparator;
+}
+
+bool IsRemoteOrDevicePath(const char* path)
+{
+    return path != nullptr &&
+        path[0] != '\0' &&
+        path[1] != '\0' &&
+        (path[0] == '\\' || path[0] == '/') &&
+        (path[1] == '\\' || path[1] == '/');
+}
+
+bool IsSafeAbsoluteLocalPath(const char* path)
+{
+    return IsSafeAbsoluteLocalPathImpl(path);
+}
+
+bool IsSafeAbsoluteLocalPath(const WCHAR* path)
+{
+    return IsSafeAbsoluteLocalPathImpl(path);
+}
+
+char* GetLastDirectorySeparator(char* path)
+{
+    return const_cast<char*>(GetLastDirectorySeparatorImpl(path));
+}
+
+const WCHAR* GetLastDirectorySeparator(const WCHAR* path)
+{
+    return GetLastDirectorySeparatorImpl(path);
+}
+
+const WCHAR* GetFileName(const WCHAR* path)
+{
+    const WCHAR* lastSeparator = GetLastDirectorySeparator(path);
+    return lastSeparator != nullptr ? lastSeparator + 1 : path;
+}
+
 #ifndef FEATURE_PAL
 
 // Check if a file exist

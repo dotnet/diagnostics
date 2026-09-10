@@ -81,6 +81,7 @@ namespace DiagnosticsReleaseTool.Impl
                 writer.WriteString("PublishRelativePath", fileToRelease.FileMap.RelativeOutputPath);
                 writer.WriteString("PublishedPath", fileToRelease.PublishUri);
                 writer.WriteString("Sha512", fileToRelease.FileMetadata.Sha512);
+                writer.WriteBoolean("IsAssetForPublicRelease", fileToRelease.IsAssetForPublicRelease);
                 writer.WriteEndObject();
             }
 
@@ -102,6 +103,7 @@ namespace DiagnosticsReleaseTool.Impl
                 writer.WriteString("PublishRelativePath", fileToRelease.FileMap.RelativeOutputPath);
                 writer.WriteString("PublishedPath", fileToRelease.PublishUri);
                 writer.WriteString("Sha512", fileToRelease.FileMetadata.Sha512);
+                writer.WriteBoolean("IsAssetForPublicRelease", fileToRelease.IsAssetForPublicRelease);
                 writer.WriteEndObject();
             }
 
