@@ -4,8 +4,6 @@ parameters:
   default: /eng/common/templates-official/job/job.yml@self
 - name: name
   type: string
-- name: displayName
-  type: string
 - name: osGroup
   type: string
 - name: container
@@ -32,7 +30,7 @@ jobs:
 - template: ${{ parameters.jobTemplate }}
   parameters:
     name: ${{ parameters.name }}
-    displayName: ${{ parameters.displayName }}
+    displayName: SOS Helix ${{ replace(replace(replace(replace(parameters.targetRid, 'linux-musl-', 'Alpine '), 'linux-', 'Linux '), 'win-', 'Windows '), 'osx-', 'macOS ') }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
     enableMicrobuild: true
 

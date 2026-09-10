@@ -84,6 +84,12 @@ jobs:
   - template: ${{ parameters.jobTemplate }}
     parameters:
       name: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
+      ${{ if eq(parameters.testOnly, true) }}:
+        displayName: Test ${{ replace(parameters.osGroup, '_NT', '') }}${{ parameters.osSuffix }} ${{ config.architecture }} ${{ config.configuration }}
+      ${{ elseif eq(parameters.buildOnly, true) }}:
+        displayName: Build ${{ replace(parameters.osGroup, '_NT', '') }}${{ parameters.osSuffix }} ${{ config.architecture }} ${{ config.configuration }}
+      ${{ else }}:
+        displayName: Build / Test ${{ replace(parameters.osGroup, '_NT', '') }}${{ parameters.osSuffix }} ${{ config.architecture }} ${{ config.configuration }}
       timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
       enableMicrobuild: true
       disableComponentGovernance: ${{ parameters.disableComponentGovernance }}

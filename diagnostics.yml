@@ -51,7 +51,7 @@ extends:
   parameters:
     stages:
     - stage: build
-      displayName: Build / Test Diagnostics
+      displayName: Diagnostics
       jobs:
 
         ############################
@@ -299,7 +299,6 @@ extends:
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
               name: SOS_Helix_Windows_x64_Release
-              displayName: SOS.Tests Windows x64 Release
               osGroup: Windows_NT
               dependsOn: Windows_x64_Release
               artifactPhase: Windows_x64_Release
@@ -313,7 +312,6 @@ extends:
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
               name: SOS_Helix_Windows_x86_Release
-              displayName: SOS.Tests Windows x86 Release
               osGroup: Windows_NT
               dependsOn: Windows_x86_Release
               artifactPhase: Windows_x86_Release
@@ -327,7 +325,6 @@ extends:
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
               name: SOS_Helix_Linux_x64_Release
-              displayName: SOS.Tests Linux x64 Release
               osGroup: Linux
               container: test_ubuntu_22_04
               dependsOn: Linux_x64_Release
@@ -342,7 +339,6 @@ extends:
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
               name: SOS_Helix_Linux_arm64_Release
-              displayName: SOS.Tests Linux arm64 Release
               osGroup: Linux
               container: test_ubuntu_22_04
               dependsOn: Linux_arm64_Release
@@ -357,7 +353,6 @@ extends:
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
               name: SOS_Helix_Alpine_x64_Release
-              displayName: SOS.Tests Alpine x64 Release
               osGroup: Linux
               container: test_linux_musl_x64
               dependsOn: Linux_musl_x64_Release
@@ -373,7 +368,6 @@ extends:
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
               name: SOS_Helix_MacOS_arm64_Release
-              displayName: SOS.Tests macOS arm64 Release
               osGroup: MacOS
               dependsOn: MacOS_arm64_Release
               artifactPhase: MacOS_arm64_Release
@@ -388,7 +382,6 @@ extends:
               parameters:
                 jobTemplate: ${{ variables.jobTemplate }}
                 name: SOS_Helix_MacOS_x64_Release
-                displayName: SOS.Tests macOS x64 Release
                 osGroup: MacOS
                 dependsOn: MacOS_x64_Release
                 artifactPhase: MacOS_x64_Release
