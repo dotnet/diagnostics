@@ -1,17 +1,14 @@
 <!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
 <Project>
 
+  <Import Project="$(MSBuildThisFileDirectory)..\SOSHarnessDebuggees.props" />
+
   <PropertyGroup>
     <SOSHelixPayloadDir Condition="'$(SOSHelixPayloadDir)' == ''">$(ArtifactsDir)helix/SOS.Tests/$(TargetRid)/$(Configuration)/payload</SOSHelixPayloadDir>
     <SOSHelixWorkItemName Condition="'$(SOSHelixWorkItemName)' == ''">SOS_$(TargetRid)_$(Configuration)</SOSHelixWorkItemName>
-    <SOSHelixMaxParallelThreads Condition="('$(TargetOS)' == 'linux' and '$(TargetArch)' == 'arm64') or $([System.String]::Copy('$(TargetRid)').StartsWith('linux-musl-'))">1</SOSHelixMaxParallelThreads>
-    <SOSHelixMaxParallelThreads Condition="'$(TargetOS)' == 'osx'">4</SOSHelixMaxParallelThreads>
-    <SOSHelixTestRuntimeMajor Condition="'$(TargetOS)' == 'osx'">11</SOSHelixTestRuntimeMajor>
-    <WorkItemTimeout Condition="'$(WorkItemTimeout)' == ''">06:00:00</WorkItemTimeout>
-    <_SOSDotNetHostName Condition="'$(TargetOS)' == 'Windows_NT'">dotnet.exe</_SOSDotNetHostName>
-    <_SOSDotNetHostName Condition="'$(TargetOS)' != 'Windows_NT'">dotnet</_SOSDotNetHostName>
-    <_SOSHelixWorkItemCommand Condition="'$(TargetOS)' == 'Windows_NT'">call .\runtests.cmd $(Configuration) $(TargetRid) $(NetCoreAppTestTargetFramework)</_SOSHelixWorkItemCommand>
-    <_SOSHelixWorkItemCommand Condition="'$(TargetOS)' != 'Windows_NT'">bash ./runtests.sh $(Configuration) $(TargetRid) $(NetCoreAppTestTargetFramework) $(SOSHelixMaxParallelThreads) $(SOSHelixTestRuntimeMajor)</_SOSHelixWorkItemCommand>
+    <WorkItemTimeout Condition="'$(WorkItemTimeout)' == ''">02:00:00</WorkItemTimeout>
+    <_SOSHelixWorkItemCommand Condition="'$(TargetOS)' == 'Windows_NT'">call .\runtests.cmd</_SOSHelixWorkItemCommand>
+    <_SOSHelixWorkItemCommand Condition="'$(TargetOS)' != 'Windows_NT'">bash ./runtests.sh</_SOSHelixWorkItemCommand>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,37 +31,26 @@
       <_SOSPayloadBinFile Include="$(ArtifactsBinDir)SOS.Tests/$(Configuration)/**/*;
                                   $(ArtifactsBinDir)SOS.TestHarness.EngineHost/$(Configuration)/**/*;
                                   $(ArtifactsBinDir)SOS.TestHarness.Capturer/$(Configuration)/**/*;
-                                  $(ArtifactsBinDir)dotnet-dump/$(Configuration)/**/*;
-                                  $(ArtifactsBinDir)NestedExceptionTest/$(Configuration)/*/*;
-                                  $(ArtifactsBinDir)NestedExceptionTest/$(Configuration)/*/$(TargetRid)/publish/*;
-                                  $(ArtifactsBinDir)DivZero/$(Configuration)/*/*;
-                                  $(ArtifactsBinDir)DivZero/$(Configuration)/*/$(TargetRid)/publish/*;
-                                  $(ArtifactsBinDir)AsyncMain/$(Configuration)/*/*;
-                                  $(ArtifactsBinDir)AsyncMain/$(Configuration)/*/$(TargetRid)/publish/*;
-                                  $(ArtifactsBinDir)DynamicMethod/$(Configuration)/*/*;
-                                  $(ArtifactsBinDir)DynamicMethod/$(Configuration)/*/$(TargetRid)/publish/*;
-                                  $(ArtifactsBinDir)Overflow/$(Configuration)/*/*;
-                                  $(ArtifactsBinDir)Overflow/$(Configuration)/*/$(TargetRid)/publish/*;
-                                  $(ArtifactsBinDir)LineNums/$(Configuration)/*/*;
-                                  $(ArtifactsBinDir)LineNums/$(Configuration)/*/$(TargetRid)/publish/*;
-                                  $(ArtifactsBinDir)SimpleThrow/$(Configuration)/*/*;
-                                  $(ArtifactsBinDir)SimpleThrow/$(Configuration)/*/$(TargetRid)/publish/*;
-                                  $(ArtifactsBinDir)ReflectionTest/$(Configuration)/*/*;
-                                  $(ArtifactsBinDir)ReflectionTest/$(Configuration)/*/$(TargetRid)/publish/*;
-                                  $(ArtifactsBinDir)SosHarnessScenarios/$(Configuration)/*/*;
-                                  $(ArtifactsBinDir)SosHarnessScenarios/$(Configuration)/*/$(TargetRid)/publish/*" />
+                                  $(ArtifactsBinDir)dotnet-dump/$(Configuration)/**/*" />
       <_SOSPayloadNativeFile Include="$(ArtifactsBinNativeDir)**/*" />
-      <_SOSPayloadDotNetTestFile Include="$(ArtifactsDotnetTestDir)$(_SOSDotNetHostName);
-                                          $(ArtifactsDotnetTestDir)LICENSE.txt;
-                                          $(ArtifactsDotnetTestDir)ThirdPartyNotices.txt;
-                                          $(ArtifactsDotnetTestDir)Debugger.Tests.Versions.txt;
-                                          $(ArtifactsDotnetTestDir)host/fxr/**/*;
-                                          $(ArtifactsDotnetTestDir)shared/Microsoft.NETCore.App/**/*" />
       <_SOSPayloadCDacFile Include="$(ArtifactsDir)cdac-override/$(Configuration)/**/*"
                            Condition="Exists('$(ArtifactsDir)cdac-override/$(Configuration)')" />
       <_SOSPayloadCdbFile Include="$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/*"
                           Condition="'$(TargetOS)' == 'Windows_NT'" />
+      <_SOSPayloadDebuggerFile Include="@(_SOSPayloadCdbFile)"
+                               Condition="'$(TargetOS)' == 'Windows_NT'" />
+      <_SOSPayloadDebuggerFile Include="$(ArtifactsBinNativeDir)sos-lldb"
+                               Condition="'$(TargetOS)' == 'osx'" />
+    </ItemGroup>
 
+    <!-- The RID directory beside publish is the loose self-contained publish intermediate and duplicates
+         the runtime already embedded in the final single-file bundle. -->
+    <CreateItem Include="@(SOSHarnessDebuggee->'$(ArtifactsBinDir)%(Filename)/$(Configuration)/net*/*');
+                         @(SOSHarnessDebuggee->'$(ArtifactsBinDir)%(Filename)/$(Configuration)/net*/$(TargetRid)/publish/**/*')">
+      <Output TaskParameter="Include" ItemName="_SOSPayloadBinFile" />
+    </CreateItem>
+
+    <ItemGroup>
       <_SOSPayloadFile Include="@(_SOSPayloadEngineeringFile)">
         <DestinationRelative>eng/%(_SOSPayloadEngineeringFile.Filename)%(_SOSPayloadEngineeringFile.Extension)</DestinationRelative>
       </_SOSPayloadFile>
@@ -80,14 +66,11 @@
       <_SOSPayloadFile Include="@(_SOSPayloadNativeFile)">
         <DestinationRelative>artifacts/bin/$(TargetOS).$(TargetArch).$(Configuration)/%(_SOSPayloadNativeFile.RecursiveDir)%(_SOSPayloadNativeFile.Filename)%(_SOSPayloadNativeFile.Extension)</DestinationRelative>
       </_SOSPayloadFile>
-      <_SOSPayloadFile Include="@(_SOSPayloadDotNetTestFile)">
-        <DestinationRelative>artifacts/dotnet-test/$([MSBuild]::MakeRelative('$(ArtifactsDotnetTestDir)', '%(_SOSPayloadDotNetTestFile.Identity)'))</DestinationRelative>
-      </_SOSPayloadFile>
       <_SOSPayloadFile Include="@(_SOSPayloadCDacFile)">
         <DestinationRelative>artifacts/cdac-override/$(Configuration)/%(_SOSPayloadCDacFile.RecursiveDir)%(_SOSPayloadCDacFile.Filename)%(_SOSPayloadCDacFile.Extension)</DestinationRelative>
       </_SOSPayloadFile>
-      <_SOSPayloadFile Include="@(_SOSPayloadCdbFile)">
-        <DestinationRelative>artifacts/cdb-sos/%(_SOSPayloadCdbFile.Filename)%(_SOSPayloadCdbFile.Extension)</DestinationRelative>
+      <_SOSPayloadFile Include="@(_SOSPayloadDebuggerFile)">
+        <DestinationRelative>debugger/%(_SOSPayloadDebuggerFile.Filename)%(_SOSPayloadDebuggerFile.Extension)</DestinationRelative>
       </_SOSPayloadFile>
     </ItemGroup>
 
@@ -96,8 +79,6 @@
            Text="SOS.Tests was not found under '$(ArtifactsBinDir)SOS.Tests/$(Configuration)'." />
     <Error Condition="!Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/dotnet-dump.dll') and !Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/publish/dotnet-dump.dll')"
            Text="dotnet-dump was not found under '$(ArtifactsBinDir)dotnet-dump/$(Configuration)'." />
-    <Error Condition="!Exists('$(ArtifactsDotnetTestDir)$(_SOSDotNetHostName)')"
-           Text="The test runtime host was not found at '$(ArtifactsDotnetTestDir)$(_SOSDotNetHostName)'." />
     <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(ArtifactsBinNativeDir)sos.dll')"
            Text="Native SOS was not found at '$(ArtifactsBinNativeDir)sos.dll'." />
     <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/dbgeng.dll')"
@@ -122,11 +103,18 @@
            Text="The SOS Helix payload marker was not staged." />
     <Error Condition="!Exists('$(SOSHelixPayloadDir)/artifacts/bin/SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/SOS.Tests.dll')"
            Text="SOS.Tests was not staged in the Helix payload." />
-    <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(SOSHelixPayloadDir)/artifacts/cdb-sos/dbgeng.dll')"
+    <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(SOSHelixPayloadDir)/debugger/cdb.exe')"
+           Text="CDB was not staged in the SOS Helix payload." />
+    <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(SOSHelixPayloadDir)/debugger/dbgeng.dll')"
            Text="DbgEng was not staged in the SOS Helix payload." />
+    <Error Condition="'$(TargetOS)' == 'osx' and !Exists('$(SOSHelixPayloadDir)/debugger/sos-lldb')"
+           Text="The SOS LLDB driver was not staged in the SOS Helix payload." />
   </Target>
 
   <Target Name="SendToHelix" DependsOnTargets="StageSOSHelixPayload">
+    <PropertyGroup>
+      <_SOSTestRuntimeVersions>@(RuntimeTestVersions->'%(RuntimeDownload)', '|')</_SOSTestRuntimeVersions>
+    </PropertyGroup>
     <MSBuild Projects="$(RepoRoot)eng/helix/SendToHelix.proj"
              Targets="Restore;Test"
              Properties="Configuration=$(Configuration);
@@ -137,6 +125,7 @@
                          TargetOS=$(TargetOS);
                          TargetArch=$(TargetArch);
                          TargetRid=$(TargetRid);
+                         DotNetRuntimeVersions=$(_SOSTestRuntimeVersions);
                          WorkItemTimeout=$(WorkItemTimeout);
                          OfficialBuildId=$(OfficialBuildId)" />
   </Target>

@@ -3,7 +3,6 @@
 
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using SOS.TestHarness;
 using Xunit.Sdk;
 using Xunit.v3;
 using Xunit;

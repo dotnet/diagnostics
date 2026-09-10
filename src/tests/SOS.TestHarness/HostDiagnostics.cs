@@ -30,8 +30,6 @@ public sealed class HostDiagnostics
     // on a long-lived shared host would grow without limit across the many tests that reuse it.
     private const int MaxStreamChars = 128 * 1024;
 
-    private static readonly string s_crashRoot = RepoLayout.CrashDumpDirectory;
-
     private readonly object _gate = new();
     private readonly StringBuilder _stdout = new();
     private readonly StringBuilder _stderr = new();
@@ -46,7 +44,7 @@ public sealed class HostDiagnostics
     public string Name { get; }
 
     /// <summary>The shared directory crash dumps are written to (created on demand).</summary>
-    public static string CrashDumpDirectory => s_crashRoot;
+    public static string CrashDumpDirectory => RepoLayout.CrashDumpDirectory;
 
     /// <summary>The launched command line (exe + args), captured for the replay.</summary>
     public string CommandLine
@@ -62,15 +60,15 @@ public sealed class HostDiagnostics
     /// </summary>
     public void ConfigureCrashDumps(ProcessStartInfo psi)
     {
-        Directory.CreateDirectory(s_crashRoot);
+        Directory.CreateDirectory(CrashDumpDirectory);
         psi.Environment["DOTNET_DbgEnableMiniDump"] = "1";
         psi.Environment["DOTNET_DbgMiniDumpType"] = "4"; // Full — required for ClrMD/SOS analysis
-        psi.Environment["DOTNET_DbgMiniDumpName"] = Path.Combine(s_crashRoot, "%e.%p.%t.dmp");
+        psi.Environment["DOTNET_DbgMiniDumpName"] = Path.Combine(CrashDumpDirectory, "%e.%p.%t.dmp");
         psi.Environment["DOTNET_EnableCrashReport"] = "1";
         psi.Environment["DOTNET_CreateDumpDiagnostics"] = "1";
         // Send createdump's own diagnostics to a file rather than the host's stderr, so it neither floods
         // the transcript nor gets tangled with the SOS output we scrape for command framing.
-        psi.Environment["DOTNET_CreateDumpLogToFile"] = Path.Combine(s_crashRoot, "createdump.%p.log");
+        psi.Environment["DOTNET_CreateDumpLogToFile"] = Path.Combine(CrashDumpDirectory, "createdump.%p.log");
         psi.Environment["DOTNET_DbgCreateDumpToolPath"] = ToolPaths.CreateDumpPath;
     }
 
@@ -144,13 +142,13 @@ public sealed class HostDiagnostics
             pids = _pids.ToArray();
         }
 
-        if (!Directory.Exists(s_crashRoot))
+        if (!Directory.Exists(CrashDumpDirectory))
         {
             return Array.Empty<string>();
         }
 
         List<string> hits = new();
-        foreach (string file in Directory.EnumerateFiles(s_crashRoot))
+        foreach (string file in Directory.EnumerateFiles(CrashDumpDirectory))
         {
             string name = Path.GetFileName(file);
             // Dump/report names embed the crashing pid as ".<pid>." (%e.%p.%t.dmp); the createdump log is

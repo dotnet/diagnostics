@@ -86,71 +86,23 @@ public static class SnapshotStore
         string exe = s_targetExe
             .GetOrAdd((flavor, targetName, coreVersion), k => new Lazy<string>(() => AcquireTarget(k.Flavor, TargetCatalog.Get(k.Target), k.CoreVersion)))
             .Value;
-        return EnsureExecutable(
-            exe,
-            RepoLayout.ExecutableRoot,
-            RepoLayout.Root);
+        EnsureExecutable(exe);
+        return exe;
     }
 
-    internal static string EnsureExecutable(string path, string? executableRoot, string repoRoot)
+    private static void EnsureExecutable(string path)
     {
         if (OperatingSystem.IsWindows())
         {
-            return path;
+            return;
         }
 
         UnixFileMode mode = File.GetUnixFileMode(path);
         UnixFileMode execute = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
-        if (string.IsNullOrEmpty(executableRoot))
+        if ((mode & execute) != execute)
         {
-            if ((mode & execute) != execute)
-            {
-                File.SetUnixFileMode(path, mode | execute);
-            }
-
-            return path;
+            File.SetUnixFileMode(path, mode | execute);
         }
-
-        string relative = Path.GetRelativePath(repoRoot, path);
-        if (Path.IsPathRooted(relative) ||
-            relative.Equals("..", StringComparison.Ordinal) ||
-            relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                $"Executable '{path}' is outside the repo root '{repoRoot}' and cannot be copied to the writable executable overlay.");
-        }
-
-        string destination = Path.Combine(executableRoot, relative);
-        string sourceDirectory = Path.GetDirectoryName(path)!;
-        string destinationDirectory = Path.GetDirectoryName(destination)!;
-
-        lock (BuildLockFor(destination))
-        {
-            Directory.CreateDirectory(destinationDirectory);
-            foreach (string sibling in Directory.EnumerateFiles(sourceDirectory))
-            {
-                string siblingDestination = Path.Combine(destinationDirectory, Path.GetFileName(sibling));
-                if (string.Equals(sibling, path, StringComparison.Ordinal))
-                {
-                    if (!File.Exists(siblingDestination))
-                    {
-                        File.Copy(sibling, siblingDestination);
-                    }
-                }
-                else if (!File.Exists(siblingDestination))
-                {
-                    File.CreateSymbolicLink(siblingDestination, sibling);
-                }
-            }
-
-            UnixFileMode destinationMode = File.GetUnixFileMode(destination);
-            if ((destinationMode & execute) != execute)
-            {
-                File.SetUnixFileMode(destination, destinationMode | execute);
-            }
-        }
-
-        return destination;
     }
 
     private static string DumpDir(Flavor flavor, string target, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion) =>
@@ -441,16 +393,9 @@ public static class SnapshotStore
     {
         string tfm = CoreVersions.Tfm(coreVersion);
         string exe = Path.Combine(RepoLayout.CoreDebuggeeDir(target.Project, tfm), target.Project + RepoLayout.ExeSuffix);
-        if (RepoLayout.IsPayload)
+        if (UsePrebuiltOnHelix(exe, $"Core debuggee '{target.Project}' ({tfm})"))
         {
-            if (File.Exists(exe))
-            {
-                return exe;
-            }
-
-            throw new FileNotFoundException(
-                $"Pre-built Core debuggee '{target.Project}' ({tfm}) was not found at '{exe}'.",
-                exe);
+            return exe;
         }
 
         string project = RepoLayout.DebuggeeProject(target.Project);
@@ -505,7 +450,7 @@ public static class SnapshotStore
         {
             throw new InvalidOperationException(
                 $"Pre-published single-file debuggee '{target.Project}' ({tfm}/{RepoLayout.Rid}) has runtime version " +
-                $"'{actualRuntimeVersion ?? "<missing>"}', but the installed test runtime manifest requires " +
+                $"'{actualRuntimeVersion ?? "<missing>"}', but the configured test runtime requires " +
                 $"'{expectedRuntimeVersion ?? "<missing>"}'.");
         }
 
@@ -522,11 +467,9 @@ public static class SnapshotStore
             return prebuilt;
         }
 
-        if (RepoLayout.IsPayload)
+        if (UsePrebuiltOnHelix(prebuilt, $"Framework debuggee '{target.Project}'"))
         {
-            throw new FileNotFoundException(
-                $"Pre-built Framework debuggee '{target.Project}' was not found at '{prebuilt}'.",
-                prebuilt);
+            return prebuilt;
         }
 
         string project = RepoLayout.DebuggeeProject(target.Project);
@@ -604,9 +547,9 @@ public static class SnapshotStore
         string dll = Path.Combine(RepoLayout.ArtifactsBin, name, RepoLayout.ArtifactsConfiguration, RepoLayout.TestTargetFramework, RepoLayout.Rid, name + ".dll");
         string project = Path.Combine(RepoLayout.Root, "src", "tests", name, name + ".csproj");
 
-        if (RepoLayout.IsPayload && !File.Exists(dll))
+        if (UsePrebuiltOnHelix(dll, $"subprocess '{name}'"))
         {
-            throw new FileNotFoundException($"Pre-built subprocess '{name}' was not found at '{dll}'.", dll);
+            return dll;
         }
 
         if (!File.Exists(dll))
@@ -631,6 +574,21 @@ public static class SnapshotStore
         }
 
         return dll;
+    }
+
+    private static bool UsePrebuiltOnHelix(string path, string description)
+    {
+        if (!RepoLayout.IsHelix)
+        {
+            return false;
+        }
+
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException($"Pre-built {description} was not found at '{path}'.", path);
+        }
+
+        return true;
     }
 
     private static void RunToCompletion(string fileName, string arguments)

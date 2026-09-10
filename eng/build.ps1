@@ -67,6 +67,10 @@ if ($bundletools) {
     $test = $False
 }
 
+if ($testInterpreter) {
+    $env:SOS_TEST_INTERPRETER="true"
+}
+
 # Build native components
 if (-not $skipnative) {
     Invoke-Expression "& `"$engroot\Build-Native.cmd`" -architecture $architecture -configuration $configuration -verbosity $verbosity $remainingargs"
@@ -117,10 +121,6 @@ if ($test) {
     if (-not $crossbuild) {
         if ($dacMode -ne '') {
             $env:SOS_TEST_DAC_MODE=$dacMode
-        }
-
-        if ($testInterpreter) {
-            $env:SOS_TEST_INTERPRETER="true"
         }
 
         # Build the test filter argument if provided

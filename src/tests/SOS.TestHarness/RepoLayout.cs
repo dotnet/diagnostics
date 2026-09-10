@@ -35,27 +35,15 @@ public static class RepoLayout
     /// <summary>The repository or staged payload root.</summary>
     public static string Root { get; } = FindRoot();
 
-    /// <summary>Whether the harness is running from a self-contained staged payload.</summary>
-    public static bool IsPayload { get; } = File.Exists(Path.Combine(Root, PayloadMarker));
-
-    /// <summary>Whether the harness is executing as a Helix work item.</summary>
-    public static bool IsHelix { get; } =
-        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HELIX_WORKITEM_ROOT"));
-
-    /// <summary>Writable root for payload overlays and transient harness state.</summary>
-    public static string WorkRoot { get; } =
-        Environment.GetEnvironmentVariable("HELIX_WORKITEM_ROOT") is { Length: > 0 } root
-            ? Path.GetFullPath(root)
-            : Path.Combine(Root, "artifacts", "tmp", "sos-harness", ArtifactsConfiguration);
+    /// <summary>Whether the harness is running from the self-contained Helix payload.</summary>
+    public static bool IsHelix { get; } = File.Exists(Path.Combine(Root, PayloadMarker));
 
     /// <summary><c>artifacts/bin</c> under the repo root.</summary>
     public static string ArtifactsBin => Path.Combine(Root, "artifacts", "bin");
 
-    /// <summary>The native build output directory, using a prepared writable payload overlay when present.</summary>
+    /// <summary>The native build output directory.</summary>
     public static string ArtifactsBinNative =>
-        PreferPreparedDirectory(
-            Path.Combine(WorkRoot, ".sos-harness", "native"),
-            Path.Combine(ArtifactsBin, $"{TargetOS}.{TargetArch}.{ArtifactsConfiguration}"));
+        Path.Combine(ArtifactsBin, $"{TargetOS}.{TargetArch}.{ArtifactsConfiguration}");
 
     /// <summary>The processor architecture token used in repo artifact paths (<c>x64</c>/<c>x86</c>/<c>arm64</c>).</summary>
     public static string TargetArch { get; } = RuntimeInformation.ProcessArchitecture switch
@@ -83,10 +71,10 @@ public static class RepoLayout
             .Single(a => a.Key == "SOS.TestHarness.TargetRid")
             .Value!;
 
-    /// <summary>The .NET root used by harness subprocesses. Staged payloads use their multi-runtime install;
+    /// <summary>The .NET root used by harness subprocesses. Helix uses its multi-runtime install;
     /// repository runs use the locally acquired build SDK.</summary>
     public static string DotNetRoot =>
-        IsPayload ? DotnetTestRoot : Path.Combine(Root, ".dotnet");
+        IsHelix ? DotnetTestRoot : Path.Combine(Root, ".dotnet");
 
     public static string DotNetExe => Path.Combine(DotNetRoot, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
 
@@ -111,12 +99,10 @@ public static class RepoLayout
     public static string FrameworkDebuggeeDir(string name) =>
         Path.Combine(ArtifactsBin, name, ArtifactsConfiguration, "net462");
 
-    /// <summary>The multi-version test runtime root, using a prepared executable overlay when present.
-    /// <c>eng/InstallRuntimes.proj</c> populates it with every tested runtime.</summary>
+    /// <summary>The multi-version test runtime root. <c>eng/InstallRuntimes.proj</c> populates it with
+    /// every tested runtime.</summary>
     public static string DotnetTestRoot =>
-        PreferPreparedDirectory(
-            Path.Combine(WorkRoot, ".sos-harness", "dotnet-test"),
-            Path.Combine(Root, "artifacts", "dotnet-test"));
+        IsHelix ? HelixDotnetRoot() : Path.Combine(Root, "artifacts", "dotnet-test");
 
     /// <summary>The multi-version test .NET host (<c>artifacts/dotnet-test/dotnet[.exe]</c>). This is the
     /// net11-capable SDK that <c>Debuggees.proj</c> uses to pre-build the debuggees, so local Core fallback
@@ -124,16 +110,12 @@ public static class RepoLayout
     /// frameworks (<c>NETSDK1045</c>).</summary>
     public static string DotnetTestExe => Path.Combine(DotnetTestRoot, OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
 
-    /// <summary>Scratch directory for harness-produced artifacts.</summary>
+    /// <summary>Scratch directory for harness-produced artifacts (on-the-fly builds, captured dumps).</summary>
     public static string Scratch { get; } =
-        IsHelix ? Path.Combine(WorkRoot, ".sos-harness", "scratch") : WorkRoot;
+        Path.Combine(Root, "artifacts", "tmp", "sos-harness", ArtifactsConfiguration);
 
-    /// <summary>Writable executable overlay used by staged payloads.</summary>
-    public static string? ExecutableRoot { get; } =
-        IsPayload ? Path.Combine(WorkRoot, ".sos-harness", "executables") : null;
-
-    /// <summary>Directory containing the cdb-sos payload.</summary>
-    public static string CdbRoot { get; } = Path.Combine(Root, "artifacts", "cdb-sos");
+    /// <summary>Directory containing the debugger host selected for the current platform.</summary>
+    public static string DebuggerRoot { get; } = Path.Combine(Root, "debugger");
 
     /// <summary>Root where Helix result artifacts should be written, with a repository fallback.</summary>
     public static string UploadRoot { get; } =
@@ -142,15 +124,15 @@ public static class RepoLayout
             : Path.Combine(Root, "artifacts", "TestResults", "SOS.Tests");
 
     public static string CrashDumpDirectory { get; } =
-        IsHelix
-            ? Path.Combine(UploadRoot, "failure-diagnostics", "crashdumps")
-            : Path.Combine(Root, "artifacts", "replays", "crashdumps");
+        Path.Combine(UploadRoot, "failure-diagnostics", "crashdumps");
 
     public static string ReplayDirectory { get; } =
-        IsHelix ? Path.Combine(UploadRoot, "SOS-replays") : UploadRoot;
+        Path.Combine(UploadRoot, "SOS-replays");
 
     public static string? LldbTraceFile { get; } =
-        IsHelix ? Path.Combine(UploadRoot, $"SOS.Tests-{Rid}-{ArtifactsConfiguration}.lldb.log") : null;
+        Environment.GetEnvironmentVariable("SOSHARNESS_LLDB_TRACE") is { Length: > 0 } trace
+            ? Path.GetFullPath(trace)
+            : null;
 
     /// <summary>
     /// A hermetic, local-only symbol path for the SOS host child processes. The dev machine's
@@ -161,11 +143,17 @@ public static class RepoLayout
     /// </summary>
     public static string SymbolCache { get; } = Path.Combine(Scratch, "symcache");
 
-    private static string PreferPreparedDirectory(string preparedPath, string defaultPath) =>
-        Directory.Exists(preparedPath) ? preparedPath : defaultPath;
-
     private static string FindRoot()
     {
+        if (Environment.GetEnvironmentVariable("HELIX_WORKITEM_ROOT") is { Length: > 0 } helixRoot)
+        {
+            string candidate = Path.GetFullPath(helixRoot);
+            if (File.Exists(Path.Combine(candidate, PayloadMarker)))
+            {
+                return candidate;
+            }
+        }
+
         string? dir = AppContext.BaseDirectory;
         while (dir is not null)
         {
@@ -182,5 +170,17 @@ public static class RepoLayout
         throw new DirectoryNotFoundException(
             $"Could not locate the diagnostics repo root or {PayloadMarker} by walking up from " +
             AppContext.BaseDirectory);
+    }
+
+    private static string HelixDotnetRoot()
+    {
+        string? correlationPayload = Environment.GetEnvironmentVariable("HELIX_CORRELATION_PAYLOAD");
+        if (string.IsNullOrEmpty(correlationPayload))
+        {
+            throw new DirectoryNotFoundException(
+                "HELIX_CORRELATION_PAYLOAD is required when running from a Helix payload.");
+        }
+
+        return Path.Combine(Path.GetFullPath(correlationPayload), "dotnet-cli");
     }
 }

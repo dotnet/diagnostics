@@ -197,17 +197,15 @@ Comma-separated matrix allow-lists are case-insensitive enum names:
 | `SOSHARNESS_MAX_LIVE` | Set the positive maximum number of concurrent live sessions. |
 | `SOSHARNESS_LIVE_TIMEOUT` | Set the positive live LLDB command timeout in seconds. |
 | `SOSHARNESS_LLDB_LOAD_TIMEOUT` | Set the positive LLDB target-load timeout in seconds. |
-| `SOSHARNESS_LLDB_PATH` | Override the LLDB executable or the macOS `sos-lldb` driver. |
+| `SOSHARNESS_LLDB_TRACE` | Write the LLDB command trace to the specified file. |
 | `SOSHARNESS_DAC_DIR` | Override the legacy DAC directory used by the dbgeng engine host. |
 | `SOSHARNESS_CDAC_DIR` | Override cDAC discovery with a directory containing the cDAC. |
 | `SOSHARNESS_USECDAC` | Local global DAC clamp; overrides the matrix DAC selection and is not set in CI. |
 | `LLDB_PATH` | Override LLDB discovery. Otherwise Xcode and then `PATH` are searched. |
 | `NUGET_PACKAGES` | Override the NuGet package root used to locate runtime packs and cDAC assets. |
 
-The unprivileged Azure Linux Helix Alpine container excludes Mini dump rows and
-runs the work item one test at a time to avoid an intermittent .NET 8
-createdump `PR_SET_PTRACER` race. These are platform capabilities derived from
-the staged payload and RID rather than launcher-provided matrix variables.
+The Azure Linux Helix Alpine container runs the work item one test at a time to
+avoid an intermittent .NET 8 createdump `PR_SET_PTRACER` race.
 
 The harness sets the following implementation-owned values for child
 processes; they are not supported user controls:
@@ -217,7 +215,7 @@ processes; they are not supported user controls:
 | `SOSHARNESS_CAPTURE_DIR`, `SOSHARNESS_DOTNET`, `SOSHARNESS_DOTNETDUMP_DLL`, `SOSHARNESS_DUMP_TYPE` | Tell a snapshot debuggee where and how to self-collect. |
 | `SOSHARNESS_STATE` | LLDB stop-point protocol emitted by a live debuggee. |
 | `_NT_SYMBOL_PATH` | Constrains child engines to the harness symbol cache. |
-| `DOTNET_ROOT`, `DOTNET_ROOT(x86)`, `DOTNET_MULTILEVEL_LOOKUP` | Bind Core debuggees to the repository test-runtime installation. |
+| `DOTNET_ROOT`, `DOTNET_ROOT(x86)`, `DOTNET_MULTILEVEL_LOOKUP` | Bind Core debuggees to the selected test-runtime installation. |
 | `DOTNET_DbgEnableMiniDump`, `DOTNET_DbgMiniDumpType`, `DOTNET_DbgMiniDumpName`, `DOTNET_CreateDumpDiagnostics` | Configure createdump crash capture. |
 | `DOTNET_DbgEnableElfDumpOnMacOS`, `TMPDIR` | Produce readable ELF dumps and a short diagnostics socket path on macOS. |
 | `DOTNET_gcServer`, `DOTNET_GCHeapCount`, `DOTNET_GCDynamicAdaptationMode` | Create deterministic four-heap Server GC targets. |
@@ -228,7 +226,7 @@ Passing tests print the normal Microsoft.Testing.Platform summary. A failing
 test that acquired a target writes:
 
 ```text
-SOS replay written to: artifacts/TestResults/SOS.Tests/<run>/<test>.replay.txt
+SOS replay written to: artifacts/TestResults/SOS.Tests/SOS-replays/<run>/<test>.replay.txt
 ```
 
 The replay records the test and `TestConfig`, failure and stack, every dump and
@@ -236,21 +234,26 @@ ordered command, copy/paste host replay instructions, host stdout/stderr, LLDB
 trace setting, and debugger-host crash dumps. Capture failures remain the
 original test failure even if replay writing also fails.
 
-Reusable targets, dumps, symbols, and host crash artifacts live under
-`artifacts/tmp/sos-harness/<Configuration>`. Dumps can be large; remove that
-scratch subtree when a clean recapture is required.
+Reusable targets, dumps, and symbols live under
+`artifacts/tmp/sos-harness/<Configuration>`. Replays and debugger-host crash
+artifacts live under `artifacts/TestResults/SOS.Tests`. Dumps can be large;
+remove the scratch subtree when a clean recapture is required.
 
 ## Helix execution
 
 `HelixPayload.targets` stages one self-contained payload per OS, RID, and
 configuration and invokes the generic `eng/helix/SendToHelix.proj` dispatcher.
 The payload contains `SOS.Tests`, its harness subprocesses, native SOS, the
-repository-built dotnet-dump, the test runtime and DAC closure, DbgEng on
-Windows, and all prebuilt Core, SingleFile, and Framework debuggees needed by
-that platform.
+repository-built dotnet-dump, DbgEng on Windows, and all prebuilt Core,
+SingleFile, and Framework debuggees needed by that platform. The exact runtime
+versions are defined by `RuntimeTestVersions` in `eng/Versions.props`. The same
+catalog drives debuggee publishing, harness metadata, and Helix installation.
+Helix provisions the pinned .NET 10 SDK and overlays every test runtime into the
+same correlation payload rather than copying a .NET installation into each
+work-item payload.
 
 The payload includes a `.sos-test-payload` marker and preserves the repository
 artifact layout. `RepoLayout` discovers that root and derives all tool,
-debuggee, writable-overlay, scratch, and upload paths. The platform launcher
+debuggee, scratch, and upload paths. The platform launcher
 only performs required machine preparation such as restoring executable bits,
 macOS codesigning, LLDB discovery, and Windows signature-check setup.

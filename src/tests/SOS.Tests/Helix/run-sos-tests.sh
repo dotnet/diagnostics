@@ -2,116 +2,55 @@
 
 set -euo pipefail
 
-if [[ $# -lt 3 || $# -gt 5 ]]; then
-  echo "usage: $0 <configuration> <rid> <test-tfm> [max-parallel-threads] [test-runtime-major]" >&2
-  exit 2
-fi
-
-configuration="$1"
-rid="$2"
-test_tfm="$3"
-max_parallel_threads="${4:-}"
-test_runtime_major="${5:-}"
-
-if [[ -n "$max_parallel_threads" && (! "$max_parallel_threads" =~ ^[1-9][0-9]*$) ]]; then
-  echo "max-parallel-threads must be a positive integer; got '$max_parallel_threads'." >&2
-  exit 2
-fi
-
-if [[ -n "$test_runtime_major" && (! "$test_runtime_major" =~ ^[1-9][0-9]*$) ]]; then
-  echo "test-runtime-major must be a positive integer; got '$test_runtime_major'." >&2
-  exit 2
-fi
-
 : "${HELIX_WORKITEM_UPLOAD_ROOT:?HELIX_WORKITEM_UPLOAD_ROOT is required}"
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 upload="$HELIX_WORKITEM_UPLOAD_ROOT"
-test_dll="$root/artifacts/bin/SOS.Tests/$configuration/$test_tfm/SOS.Tests.dll"
 identity="all"
-work="${HELIX_WORKITEM_ROOT:-$root}/.sos-harness"
 
-mkdir -p "$upload" "$work"
+mkdir -p "$upload"
 
-if [[ ! -f "$test_dll" ]]; then
-  echo "SOS.Tests.dll was not found at '$test_dll'." >&2
+rid="$(sed -n '1p' "$root/.sos-test-payload")"
+configuration="$(sed -n '2p' "$root/.sos-test-payload")"
+extra_metadata="$(sed -n '3p' "$root/.sos-test-payload")"
+if [[ -z "$rid" || -z "$configuration" || -n "$extra_metadata" ]]; then
+  echo "The payload marker must contain the RID and configuration." >&2
   exit 3
 fi
 
-mirror_tree()
-{
-  source_root="$1"
-  destination_root="$2"
+test_dlls=("$root/artifacts/bin/SOS.Tests/$configuration/"*/SOS.Tests.dll)
+if [[ ${#test_dlls[@]} -ne 1 || ! -f "${test_dlls[0]}" ]]; then
+  echo "Expected exactly one staged SOS.Tests.dll for $configuration." >&2
+  exit 3
+fi
+test_dll="${test_dlls[0]}"
 
-  rm -rf "$destination_root"
-  mkdir -p "$destination_root"
-
-  while IFS= read -r source_dir; do
-    relative_dir="${source_dir#"$source_root"}"
-    mkdir -p "$destination_root$relative_dir"
-  done < <(find "$source_root" -type d)
-
-  while IFS= read -r source_file; do
-    relative_file="${source_file#"$source_root"/}"
-    ln -s "$source_file" "$destination_root/$relative_file"
-  done < <(find "$source_root" ! -type d)
-}
+max_parallel_threads=""
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  max_parallel_threads=4
+elif [[ "$rid" == linux-musl-* || "$rid" == linux-arm64 ]]; then
+  max_parallel_threads=1
+fi
 
 prepare_dotnet_root()
 {
-  source_root="$root/artifacts/dotnet-test"
-  needs_overlay=0
-
-  if [[ ! -x "$source_root/dotnet" ]]; then
-    needs_overlay=1
+  dotnet_root="${HELIX_CORRELATION_PAYLOAD:?HELIX_CORRELATION_PAYLOAD is required}/dotnet-cli"
+  if [[ ! -x "$dotnet_root/dotnet" ]]; then
+    echo "The Helix-provisioned dotnet host was not found at '$dotnet_root/dotnet'." >&2
+    exit 3
   fi
-
-  while IFS= read -r createdump; do
-    if [[ ! -x "$createdump" ]]; then
-      needs_overlay=1
-      break
-    fi
-  done < <(find "$source_root" -type f -name createdump)
-
-  if [[ "$needs_overlay" == "0" ]]; then
-    printf '%s\n' "$source_root"
-    return
-  fi
-
-  destination_root="$work/dotnet-test"
-  echo "Creating writable executable overlay for dotnet-test." >&2
-  mirror_tree "$source_root" "$destination_root"
-
-  rm "$destination_root/dotnet"
-  cp "$source_root/dotnet" "$destination_root/dotnet"
-  chmod +x "$destination_root/dotnet"
-
-  while IFS= read -r createdump; do
-    relative_createdump="${createdump#"$source_root"/}"
-    rm "$destination_root/$relative_createdump"
-    cp "$createdump" "$destination_root/$relative_createdump"
-    chmod +x "$destination_root/$relative_createdump"
-  done < <(find "$source_root" -type f -name createdump)
-
-  printf '%s\n' "$destination_root"
 }
 
 configure_lldb()
 {
   if [[ "$(uname -s)" == "Darwin" ]]; then
-    target_arch="${rid##*-}"
-    driver_source="$root/artifacts/bin/osx.$target_arch.$configuration/sos-lldb"
-    if [[ ! -f "$driver_source" ]]; then
-      echo "The SOS LLDB driver was not found at '$driver_source'." >&2
+    driver="$root/debugger/sos-lldb"
+    if [[ ! -f "$driver" ]]; then
+      echo "The SOS LLDB driver was not found at '$driver'." >&2
       exit 4
     fi
 
-    driver="$driver_source"
-    if [[ ! -x "$driver" ]]; then
-      driver="$work/sos-lldb"
-      cp "$driver_source" "$driver"
-      chmod +x "$driver"
-    fi
+    chmod +x "$driver"
 
     developer_dir="${DEVELOPER_DIR:-$(xcode-select -p)}"
     shared_frameworks="$(cd "$developer_dir/../SharedFrameworks" && pwd)"
@@ -128,7 +67,6 @@ configure_lldb()
       echo "$lldb_check" >&2
       exit 4
     fi
-
     echo "Using SOS LLDB driver at '$driver'."
     return
   fi
@@ -170,6 +108,10 @@ configure_lldb()
     export PYTHONPATH="$lldb_python_root${PYTHONPATH:+:$PYTHONPATH}"
   fi
 
+  mkdir -p "$root/debugger"
+  ln -sf "$resolved_lldb" "$root/debugger/lldb"
+  LLDB_PATH="$root/debugger/lldb"
+
   lldb_check="$("$LLDB_PATH" --no-lldbinit --batch \
     -o 'script print("__SOSHARNESS_LLDB_READY__")' \
     -o quit 2>&1 || true)"
@@ -178,20 +120,19 @@ configure_lldb()
     echo "$lldb_check" >&2
     exit 4
   fi
-
   echo "Using LLDB at '$LLDB_PATH'."
   export LLDB_PATH
 }
 
-dotnet_root="$(prepare_dotnet_root)"
+prepare_dotnet_root
 dotnet="$dotnet_root/dotnet"
 dotnet_arguments=("$test_dll")
 
-if [[ -n "$test_runtime_major" ]]; then
-  test_runtime_version="$("$dotnet" --list-runtimes | awk -v prefix="$test_runtime_major." \
-    '$1 == "Microsoft.NETCore.App" && index($2, prefix) == 1 { version = $2 } END { print version }')"
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  test_runtime_version="$("$dotnet" --list-runtimes | awk \
+    '$1 == "Microsoft.NETCore.App" && index($2, "11.") == 1 { version = $2 } END { print version }')"
   if [[ -z "$test_runtime_version" ]]; then
-    echo "Microsoft.NETCore.App $test_runtime_major.x was not found under '$dotnet_root'." >&2
+    echo "Microsoft.NETCore.App 11.x was not found under '$dotnet_root'." >&2
     exit 3
   fi
 
@@ -201,26 +142,20 @@ fi
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
   entitlements="$root/eng/helix/sos/debuggee-entitlements.plist"
-  for debuggee in NestedExceptionTest DivZero AsyncMain DynamicMethod Overflow LineNums SimpleThrow ReflectionTest SosHarnessScenarios; do
+  while IFS= read -r publish_directory; do
+    debuggee="$(basename "$(dirname "$(dirname "$(dirname "$(dirname "$publish_directory")")")")")"
     while IFS= read -r source_executable; do
-      relative_executable="${source_executable#"$root"/}"
-      overlay_executable="$work/executables/$relative_executable"
-      mkdir -p "$(dirname "$overlay_executable")"
-      cp "$source_executable" "$overlay_executable"
-      chmod +x "$overlay_executable"
-      codesign --force --sign - --entitlements "$entitlements" "$overlay_executable"
+      chmod +x "$source_executable"
+      codesign --force --sign - --entitlements "$entitlements" "$source_executable"
     done < <(find "$root/artifacts/bin/$debuggee/$configuration" -type f -name "$debuggee")
-  done
+  done < <(find "$root/artifacts/bin" -type d -path "*/$configuration/*/$rid/publish")
 fi
 
 if [[ "$rid" == linux-musl-* ]]; then
   target_arch="${rid##*-}"
-  native_source="$root/artifacts/bin/linux.$target_arch.$configuration"
-  native_overlay="$work/native"
-  mirror_tree "$native_source" "$native_overlay"
-  if [[ -e "$native_source/libmscordaccore_universal.so" ]]; then
-    rm "$native_overlay/libmscordaccore_universal.so"
-    cp "$native_source/libmscordaccore_universal.so" "$native_overlay/libmscordaccore_universal.so"
+  native_root="$root/artifacts/bin/linux.$target_arch.$configuration"
+  if [[ -e "$native_root/libmscordaccore_universal.so" ]]; then
+    chmod u+w "$native_root/libmscordaccore_universal.so"
   fi
 fi
 

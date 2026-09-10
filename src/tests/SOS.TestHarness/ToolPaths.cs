@@ -40,8 +40,8 @@ public static class ToolPaths
     /// <summary>
     /// The <c>lldb</c> executable the harness drives. On macOS the repo-built <c>sos-lldb</c> driver is
     /// preferred because it embeds Xcode's LLDB framework without inheriting the system executable's
-    /// CoreCLR-hosting restriction. <c>SOSHARNESS_LLDB_PATH</c> is the explicit harness override;
-    /// <c>LLDB_PATH</c> and system LLDB remain fallbacks. Non-Windows; resolved lazily.
+    /// CoreCLR-hosting restriction. The staged debugger layout, <c>LLDB_PATH</c>, and system LLDB are
+    /// checked in that order. Non-Windows; resolved lazily.
     /// </summary>
     public static string LldbExe => s_lldbExe.Value;
 
@@ -67,7 +67,7 @@ public static class ToolPaths
     /// inside the exe, so a native debugger can't find the DAC next to a runtime on disk and (hermetically)
     /// can't download it. The cdb host loads it explicitly via <c>.cordll -lp</c>; the lldb host adds it as a
     /// local symbol-store directory via <c>setsymbolserver -directory</c>. The version is the runtime patch
-    /// the single-file publish resolved against (from the install manifest and test runtime installation,
+    /// the single-file publish resolved against (from the configured test runtime version,
     /// or the matching runtime pack cache). Returns <c>null</c> if it can't be located.
     /// </summary>
     public static string? SingleFileDacDirectory(CoreVersion coreVersion) =>
@@ -120,10 +120,18 @@ public static class ToolPaths
 
     private static string ResolveDbgEngDirectory()
     {
-        string payloadPath = Path.Combine(RepoLayout.CdbRoot, "dbgeng.dll");
-        if (File.Exists(payloadPath))
+        string debuggerPath = Path.Combine(RepoLayout.DebuggerRoot, "cdb.exe");
+        if (File.Exists(debuggerPath))
         {
-            return RepoLayout.CdbRoot;
+            string dbgEngPath = Path.Combine(RepoLayout.DebuggerRoot, "dbgeng.dll");
+            if (File.Exists(dbgEngPath))
+            {
+                return RepoLayout.DebuggerRoot;
+            }
+
+            throw new FileNotFoundException(
+                $"The staged debugger '{debuggerPath}' does not have dbgeng.dll beside it.",
+                dbgEngPath);
         }
 
         string relativeNative = Path.Combine("runtimes", $"win-{RepoLayout.TargetArch}", "native");
@@ -181,21 +189,16 @@ public static class ToolPaths
 
     private static string ResolveLldbExe()
     {
-        // 1) A prepared payload copy of the macOS driver.
-        string payloadDriver = Path.Combine(RepoLayout.WorkRoot, ".sos-harness", "sos-lldb");
-        if (File.Exists(payloadDriver))
+        // 1) Debugger selected by the payload launcher.
+        string debuggerPath = Path.Combine(
+            RepoLayout.DebuggerRoot,
+            OperatingSystem.IsMacOS() ? "sos-lldb" : "lldb");
+        if (File.Exists(debuggerPath))
         {
-            return payloadDriver;
+            return debuggerPath;
         }
 
-        // 2) Explicit harness override.
-        string? env = Environment.GetEnvironmentVariable("SOSHARNESS_LLDB_PATH");
-        if (!string.IsNullOrEmpty(env) && File.Exists(env))
-        {
-            return env;
-        }
-
-        // 3) The repo-built macOS driver uses the selected Xcode's LLDB framework without running inside
+        // 2) The repo-built macOS driver uses the selected Xcode's LLDB framework without running inside
         //    Apple's restricted LLDB executable.
         if (OperatingSystem.IsMacOS())
         {
@@ -206,14 +209,14 @@ public static class ToolPaths
             }
         }
 
-        // 4) Existing build-script override.
-        env = Environment.GetEnvironmentVariable("LLDB_PATH");
+        // 3) Existing build-script override.
+        string? env = Environment.GetEnvironmentVariable("LLDB_PATH");
         if (!string.IsNullOrEmpty(env) && File.Exists(env))
         {
             return env;
         }
 
-        // 5) Xcode's LLDB.
+        // 4) Xcode's LLDB.
         if (OperatingSystem.IsMacOS())
         {
             string? developerDir = TryRun("xcode-select", "-p");
@@ -227,7 +230,7 @@ public static class ToolPaths
             }
         }
 
-        // 6) A plain `lldb` on PATH.
+        // 5) A plain `lldb` on PATH.
         string? onPath = FindOnPath("lldb");
         if (onPath is not null)
         {
@@ -235,7 +238,7 @@ public static class ToolPaths
         }
 
         throw new FileNotFoundException(
-            "Could not locate an 'lldb' executable. Set SOSHARNESS_LLDB_PATH or LLDB_PATH, install lldb " +
+            "Could not locate an 'lldb' executable. Set LLDB_PATH, install lldb " +
             "on PATH, or (on macOS) install Xcode.");
     }
 
@@ -278,9 +281,9 @@ public static class ToolPaths
         }
 
         // SOS hosts its managed extension on a deterministic runtime from the selected layout. The macOS
-        // payload uses the runtime containing the CoreCLR hosting fix; other layouts use net10.
+        // Helix payload uses the net11 runtime containing the required CoreCLR hosting fix.
         string sharedRoot = Path.Combine(RepoLayout.DotNetRoot, "shared", "Microsoft.NETCore.App");
-        string majorPrefix = OperatingSystem.IsMacOS() && RepoLayout.IsPayload ? "11.0." : "10.0.";
+        string majorPrefix = OperatingSystem.IsMacOS() && RepoLayout.IsHelix ? "11.0." : "10.0.";
         if (Directory.Exists(sharedRoot))
         {
             string? best = Directory.GetDirectories(sharedRoot)
@@ -389,8 +392,8 @@ public static class ToolPaths
         string dacFileName = DacFileName; // mscordaccore.dll / libmscordaccore.so / libmscordaccore.dylib
         int major = CoreVersions.Major(coreVersion);
 
-        // Preferred: the exact runtime version the single-file publish resolved against (what the install
-        // manifest recorded for this framework), read straight from the test runtime installation. The
+        // Preferred: the exact runtime version configured for the single-file publish, read straight
+        // from the test runtime installation. The
         // corresponding runtime pack is not necessarily restored into the user's NuGet cache.
         string? pinned = CoreVersions.RuntimeVersion(coreVersion);
         if (!string.IsNullOrEmpty(pinned))

@@ -12,7 +12,6 @@
          implicitly references xunit.v3 and the test runner; no explicit PackageReference needed.
          xunit v3 runs as an MTP executable, so OutputType must be Exe. -->
     <TestRunnerName>XUnitV3</TestRunnerName>
-    <SkipTests Condition="'$(SkipSOSTests)' == 'true'">true</SkipTests>
   </PropertyGroup>
 
   <ItemGroup>
