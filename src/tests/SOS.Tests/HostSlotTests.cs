@@ -11,9 +11,26 @@ public sealed class HostSlotTests
     [Fact]
     public void DumpSessionsUseSeparateBoundedSlots()
     {
-        Assert.Same(HostSlot.Lldb, DumpSession.HostSlotFor(Host.Lldb));
-        Assert.Same(HostSlot.DotNetDump, DumpSession.HostSlotFor(Host.DotnetDump));
-        Assert.Null(DumpSession.HostSlotFor(Host.Cdb));
+        AssertTwoSlotPool(new HostSlotPool(capacity: 2));
+        Assert.Equal(2, HostSlot.CdbDump.Capacity);
+        Assert.Equal(2, HostSlot.LldbDump.Capacity);
+        Assert.Equal(1, HostSlot.DotNetDump.Capacity);
+        Assert.NotNull(DumpSession.HostSlotFor(Host.Cdb));
+        Assert.NotNull(DumpSession.HostSlotFor(Host.Lldb));
+        HostSlot dotNetDumpFirst = DumpSession.HostSlotFor(Host.DotnetDump)!;
+        HostSlot dotNetDumpSecond = DumpSession.HostSlotFor(Host.DotnetDump)!;
+        Assert.Same(dotNetDumpFirst, dotNetDumpSecond);
+    }
+
+    private static void AssertTwoSlotPool(HostSlotPool pool)
+    {
+        HostSlot first = pool.Select();
+        HostSlot second = pool.Select();
+        HostSlot third = pool.Select();
+
+        Assert.Equal(2, pool.Capacity);
+        Assert.NotSame(first, second);
+        Assert.Same(first, third);
     }
 
     [Fact]

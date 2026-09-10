@@ -16,16 +16,55 @@ internal interface IPooledHost
 }
 
 /// <summary>
+/// Distributes memoized dump sessions across a fixed number of independent <see cref="HostSlot"/>
+/// instances. Each session remains assigned to one slot, preserving that slot's most-recently-used
+/// host reuse while allowing sessions assigned to different slots to execute concurrently.
+/// </summary>
+internal sealed class HostSlotPool
+{
+    private readonly HostSlot[] _slots;
+    private int _next = -1;
+
+    public int Capacity => _slots.Length;
+
+    public HostSlotPool(int capacity)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 1);
+
+        _slots = new HostSlot[capacity];
+        for (int i = 0; i < capacity; i++)
+        {
+            _slots[i] = new HostSlot();
+        }
+    }
+
+    /// <summary>Assign the next session to a slot, distributing sessions round-robin.</summary>
+    public HostSlot Select()
+    {
+        int index = (int)((uint)Interlocked.Increment(ref _next) % (uint)_slots.Length);
+        return _slots[index];
+    }
+
+    /// <summary>Close the currently-open host in every slot.</summary>
+    public void CloseAll()
+    {
+        foreach (HostSlot slot in _slots)
+        {
+            slot.CloseCurrent();
+        }
+    }
+}
+
+/// <summary>
 /// Governs how many live host instances of one kind may exist at once — here, exactly one.
 ///
-/// Debugger backends need this for different reasons:
+/// Debugger operations need this for different reasons:
 /// <list type="bullet">
-///   <item><b>cdb (in-process dbgeng)</b> is genuinely one-instance-per-process (a second client
-///   throws).</item>
+///   <item><b>DbgEng capture</b> runs in-process and is genuinely one-instance-per-process.</item>
 ///   <item><b>dotnet-dump</b> children each busy-wait on stdin at ~100% CPU; keeping many alive
 ///   saturates the machine, so we keep at most one.</item>
-///   <item><b>lldb</b> children retain every loaded core and hosted SOS runtime. Keeping one per
-///   memoized dump session can exhaust memory during a large run, so dump sessions share one.</item>
+///   <item><b>cdb</b> and <b>lldb</b> retain loaded dump state, so a small fixed number of slots
+///   preserves limited concurrency without unbounded memory growth.</item>
 /// </list>
 /// The most-recently-used host stays open and is evicted (disposed) only when a different target
 /// of the same kind is needed — so a run of assertions against one dump reuses the open host, and
@@ -35,14 +74,17 @@ internal interface IPooledHost
 /// </summary>
 internal sealed class HostSlot
 {
-    /// <summary>The in-process dbgeng slot (cdb dump hosts and live hosts).</summary>
-    public static readonly HostSlot DbgEng = new();
+    /// <summary>The in-process dbgeng dump-capture slot.</summary>
+    public static readonly HostSlot DbgEngCapture = new();
+
+    /// <summary>Two independent out-of-process cdb dump slots.</summary>
+    public static readonly HostSlotPool CdbDump = new(capacity: 2);
 
     /// <summary>The dotnet-dump slot (one analyze child alive at a time).</summary>
-    public static readonly HostSlot DotNetDump = new();
+    public static readonly HostSlotPool DotNetDump = new(capacity: 1);
 
-    /// <summary>The LLDB dump slot (one core-loaded child alive at a time).</summary>
-    public static readonly HostSlot Lldb = new();
+    /// <summary>Two independent LLDB dump slots.</summary>
+    public static readonly HostSlotPool LldbDump = new(capacity: 2);
 
     private readonly object _lock = new();
     private IPooledHost? _open;
