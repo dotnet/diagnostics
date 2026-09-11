@@ -55,18 +55,24 @@ public sealed class TestConfigValidityTests
     }
 
     [Fact]
-    public void Net8LinuxArm64CreatedumpPermissionFailureIsKnown()
+    public void PreNet10LinuxCreatedumpPermissionFailureIsKnown()
     {
         const string error = "open(/proc/123/mem) FAILED Permission denied (13)";
 
         Assert.True(SnapshotStore.IsKnownCreatedumpPermissionFailure(
             CoreVersion.Net8, Architecture.Arm64, isLinux: true, error, string.Empty));
-        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
-            CoreVersion.Net11, Architecture.Arm64, isLinux: true, error, string.Empty));
-        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
+        Assert.True(SnapshotStore.IsKnownCreatedumpPermissionFailure(
             CoreVersion.Net8, Architecture.X64, isLinux: true, error, string.Empty));
+        Assert.True(SnapshotStore.IsKnownCreatedumpPermissionFailure(
+            CoreVersion.Net9, Architecture.X64, isLinux: true, error, string.Empty));
         Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
-            CoreVersion.Net8, Architecture.Arm64, isLinux: true, "unrelated failure", string.Empty));
+            CoreVersion.Net10, Architecture.X64, isLinux: true, error, string.Empty));
+        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.X86, isLinux: true, error, string.Empty));
+        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.X64, isLinux: false, error, string.Empty));
+        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.X64, isLinux: true, "unrelated failure", string.Empty));
     }
 
     [Theory]

@@ -235,8 +235,8 @@ public static class SnapshotStore
                 result.StandardError))
             {
                 HarnessSkipException.Now(
-                    ".NET 8 createdump cannot read /proc/<pid>/mem on this Linux ARM64 host; " +
-                    "this runtime issue is fixed in later .NET versions.");
+                    ".NET 8 and 9 createdump can race while granting access to /proc/<pid>/mem on Linux. " +
+                    "See https://github.com/dotnet/runtime/pull/120000.");
             }
 
             throw new InvalidOperationException(
@@ -253,7 +253,9 @@ public static class SnapshotStore
         string stdout,
         string stderr)
     {
-        if (!isLinux || architecture != Architecture.Arm64 || coreVersion != CoreVersion.Net8)
+        if (!isLinux ||
+            (coreVersion != CoreVersion.Net8 && coreVersion != CoreVersion.Net9) ||
+            (architecture != Architecture.Arm64 && architecture != Architecture.X64))
         {
             return false;
         }
