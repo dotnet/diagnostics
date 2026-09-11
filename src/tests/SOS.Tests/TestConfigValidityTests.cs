@@ -76,6 +76,29 @@ public sealed class TestConfigValidityTests
     }
 
     [Theory]
+    [InlineData(DumpKind.Heap, "2")]
+    [InlineData(DumpKind.Mini, "1")]
+    [InlineData(DumpKind.Full, "4")]
+    public void CreatedumpTypePreservesRequestedKind(DumpKind dumpKind, string expected)
+    {
+        Assert.Equal(expected, SnapshotStore.CreatedumpType(dumpKind));
+    }
+
+    [Theory]
+    [InlineData(Flavor.Core, DumpKind.Heap, false, "Heap")]
+    [InlineData(Flavor.SingleFile, DumpKind.Heap, false, "Heap")]
+    [InlineData(Flavor.SingleFile, DumpKind.Full, false, "Full")]
+    [InlineData(Flavor.SingleFile, DumpKind.Heap, true, "Full")]
+    public void CollectTypeUsesReducedSingleFileDumpsOnUnix(
+        Flavor flavor,
+        DumpKind dumpKind,
+        bool isWindows,
+        string expected)
+    {
+        Assert.Equal(expected, SnapshotStore.CollectType(flavor, dumpKind, isWindows));
+    }
+
+    [Theory]
     [InlineData(false, RegistryView.Registry32)]
     [InlineData(true, RegistryView.Registry64)]
     [SupportedOSPlatform("windows")]

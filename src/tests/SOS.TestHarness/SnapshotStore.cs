@@ -22,7 +22,8 @@ namespace SOS.TestHarness;
 ///   yet), launching it against the multi-version test runtime install so its apphost binds the matching
 ///   runtime.</item>
 ///   <item><b>SingleFile</b> is pre-published by <c>Debuggees.proj</c> once per tested runtime, RID, and
-///   configuration. Tests only locate and consume that immutable output.</item>
+///   configuration. Tests stage the matching DAC beside that output before launching it so Unix
+///   createdump can produce reduced dumps.</item>
 ///   <item><b>Framework (net462)</b> is pre-built on Windows by <c>Debuggees.proj</c>; local development
 ///   falls back to an on-demand build when that output is absent.</item>
 /// </list>
@@ -211,7 +212,7 @@ public static class SnapshotStore
             CreateNoWindow = true,
         };
         psi.Environment["DOTNET_DbgEnableMiniDump"] = "1";
-        psi.Environment["DOTNET_DbgMiniDumpType"] = CreatedumpType(flavor, dumpKind);
+        psi.Environment["DOTNET_DbgMiniDumpType"] = CreatedumpType(dumpKind);
         psi.Environment["DOTNET_DbgMiniDumpName"] = dumpPath;
         psi.Environment["DOTNET_CreateDumpDiagnostics"] = "1";
         ApplyRuntimeRoot(psi, flavor);
@@ -318,28 +319,20 @@ public static class SnapshotStore
     }
 
     /// <summary>
-    /// The <c>createdump</c>/<c>DOTNET_DbgMiniDumpType</c> value for a dump kind: Full=4, Heap=2, Mini=1,
-    /// except single-file crash dumps which must use Full=4.
+    /// The <c>createdump</c>/<c>DOTNET_DbgMiniDumpType</c> value for a dump kind: Full=4, Heap=2, Mini=1.
     /// </summary>
-    private static string CreatedumpType(Flavor flavor, DumpKind dumpKind)
-    {
-        if (dumpKind == DumpKind.Full || flavor == Flavor.SingleFile)
-        {
-            // Single-file crash dumps cannot use createdump's reduced dump modes: Heap/Mini require DAC
-            // region enumeration, but the single-file app does not have a loadable DAC beside it. Keep the
-            // test matrix's Heap row, but capture it with the only supported createdump mode.
-            return "4";
-        }
-
-        return dumpKind == DumpKind.Mini ? "1" : "2";
-    }
+    internal static string CreatedumpType(DumpKind dumpKind) =>
+        dumpKind == DumpKind.Full ? "4" :
+        dumpKind == DumpKind.Mini ? "1" : "2";
 
     /// <summary>
-    /// The <c>dotnet-dump collect --type</c> value for a dump kind. Single-file self-snapshots use Full
-    /// because reduced dumps require the same unsupported DAC region enumeration as single-file crashes.
+    /// The <c>dotnet-dump collect --type</c> value for a dump kind. On Unix, the matching DAC staged beside
+    /// a single-file executable enables reduced dumps. Windows collection still requires Full for that flavor.
     /// </summary>
-    private static string CollectType(Flavor flavor, DumpKind dumpKind) =>
-        dumpKind == DumpKind.Full || flavor == Flavor.SingleFile ? "Full" : dumpKind.ToString();
+    internal static string CollectType(Flavor flavor, DumpKind dumpKind, bool isWindows) =>
+        dumpKind == DumpKind.Full || (isWindows && flavor == Flavor.SingleFile)
+            ? "Full"
+            : dumpKind.ToString();
 
     private static void SelfCollectCapture(Flavor flavor, TargetDefinition target, string dumpDir, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion)
     {
@@ -356,7 +349,7 @@ public static class SnapshotStore
         // Tell the debuggee's stop-point helper which dotnet-dump to self-collect with (the repo-built one).
         psi.Environment["SOSHARNESS_DOTNET"] = RepoLayout.DotNetExe;
         psi.Environment["SOSHARNESS_DOTNETDUMP_DLL"] = ToolPaths.DotNetDumpDll;
-        psi.Environment["SOSHARNESS_DUMP_TYPE"] = CollectType(flavor, dumpKind);
+        psi.Environment["SOSHARNESS_DUMP_TYPE"] = CollectType(flavor, dumpKind, OperatingSystem.IsWindows());
         ApplyRuntimeRoot(psi, flavor);
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
@@ -456,7 +449,27 @@ public static class SnapshotStore
                 $"'{expectedRuntimeVersion ?? "<missing>"}'.");
         }
 
+        StageSingleFileDac(exe, coreVersion);
         return exe;
+    }
+
+    private static void StageSingleFileDac(string exe, CoreVersion coreVersion)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string? dacDirectory = ToolPaths.SingleFileDacDirectory(coreVersion);
+        if (dacDirectory is null)
+        {
+            throw new FileNotFoundException(
+                $"The matching DAC for the {CoreVersions.Tfm(coreVersion)} single-file debuggee was not found.");
+        }
+
+        string source = Path.Combine(dacDirectory, ToolPaths.DacFileName);
+        string destination = Path.Combine(Path.GetDirectoryName(exe)!, ToolPaths.DacFileName);
+        File.Copy(source, destination, overwrite: true);
     }
 
     /// <summary>Build the Framework debuggee into the scratch tree, reusing the cached exe when it is newer

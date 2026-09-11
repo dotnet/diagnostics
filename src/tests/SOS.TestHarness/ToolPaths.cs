@@ -481,7 +481,7 @@ public static class ToolPaths
 
     /// <summary>The platform-specific DAC module file name: <c>mscordaccore.dll</c> on Windows,
     /// <c>libmscordaccore.dylib</c> on macOS, <c>libmscordaccore.so</c> elsewhere.</summary>
-    private static string DacFileName =>
+    internal static string DacFileName =>
         OperatingSystem.IsWindows() ? "mscordaccore.dll" :
         OperatingSystem.IsMacOS() ? "libmscordaccore.dylib" : "libmscordaccore.so";
 

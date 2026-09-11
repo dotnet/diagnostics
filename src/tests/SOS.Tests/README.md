@@ -84,7 +84,9 @@ behavior.
 single-file targets consume repository build outputs; desktop Framework targets
 are built in the scratch tree. Snapshot stops self-collect through the
 repository-built dotnet-dump, Core crash targets use createdump, and desktop
-capture is delegated to the dbgeng capturer child.
+capture is delegated to the dbgeng capturer child. On Linux and macOS, the
+matching runtime DAC is staged beside each single-file executable before launch
+so createdump can honor Heap dump requests instead of falling back to Full.
 
 Dumps are cached by `(flavor, target, GC type, dump kind, core version)`.
 The DAC is deliberately not a capture dimension: legacy DAC and cDAC analyze

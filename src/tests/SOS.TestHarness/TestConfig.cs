@@ -229,10 +229,10 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
-        // A single-file snapshot requires a Full dump because createdump cannot enumerate reduced-dump
-        // regions for a statically linked runtime. On constrained test machines, marker targets produce
-        // several multi-gigabyte dumps and cannot complete reliably. Callers can exclude only those
-        // snapshot rows while preserving single-file crash coverage.
+        // Single-file snapshots need the matching DAC staged beside the executable so createdump can
+        // enumerate reduced-dump regions. SnapshotStore stages it during target acquisition. Callers can
+        // still exclude these relatively expensive rows on constrained test machines while preserving
+        // single-file crash coverage.
         if (!c.IsLive &&
             c.Flavor == Flavor.SingleFile &&
             TargetCatalog.NavigatesViaBpmd(c.Target) &&
@@ -261,8 +261,7 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
-        // Runtime createdump only supports full dumps for single-file apps when it needs the DAC to
-        // enumerate reduced-dump regions. Don't generate Mini rows for single-file targets.
+        // Keep single-file reduced-dump coverage focused on Heap until Mini has been validated across hosts.
         if (c.DumpKind == DumpKind.Mini && c.Flavor == Flavor.SingleFile)
         {
             return false;
