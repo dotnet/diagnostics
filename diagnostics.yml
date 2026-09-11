@@ -241,10 +241,11 @@ extends:
             buildConfigs:
             - configuration: Debug
               architecture: x64
-            - configuration: Release
-              architecture: x64
-            - configuration: Release
-              architecture: x86
+            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+              - configuration: Release
+                architecture: x64
+              - configuration: Release
+                architecture: x86
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -254,8 +255,9 @@ extends:
             dependsOn: MacOS
             testOnly: true
             buildConfigs:
-            - configuration: Release
-              architecture: x64
+            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+              - configuration: Release
+                architecture: x64
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               - configuration: Debug
                 architecture: x64
@@ -269,8 +271,9 @@ extends:
             dependsOn: Linux
             testOnly: true
             buildConfigs:
-            - configuration: Release
-              architecture: x64
+            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+              - configuration: Release
+                architecture: x64
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               - configuration: Debug
                 architecture: x64
@@ -286,8 +289,9 @@ extends:
             testOnly: true
             disableComponentGovernance: true
             buildConfigs:
-            - configuration: Release
-              architecture: x64
+            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+              - configuration: Release
+                architecture: x64
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               - configuration: Debug
                 architecture: x64
