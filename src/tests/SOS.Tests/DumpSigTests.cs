@@ -21,6 +21,7 @@ public sealed class DumpSigTests
     [MemberData(nameof(Matrix))]
     public async Task DumpSig_And_DumpSigElem(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 

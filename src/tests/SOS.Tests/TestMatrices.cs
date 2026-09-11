@@ -157,6 +157,24 @@ internal static class TestMatrices
         // Desktop SOS can fail GC-reference enumeration or corrupt the debugger host in clrstack -gc.
         config.Flavor != Flavor.Framework;
 
+    internal static void SkipUnsupportedDumpObj(TestConfig config)
+    {
+        if (!SupportsDumpObj(config, OperatingSystem.IsWindows()))
+        {
+            HarnessSkipException.Now(
+                "https://github.com/dotnet/runtime/issues/124640: the .NET 10 legacy DAC crashes while " +
+                "dumpobj probes ComWrappers metadata that is absent from a reduced Unix Heap dump.");
+        }
+    }
+
+    internal static bool SupportsDumpObj(TestConfig config, bool isWindows) =>
+        isWindows
+        || config.Flavor != Flavor.Core
+        || config.Liveness != Liveness.Dump
+        || config.DumpKind != DumpKind.Heap
+        || config.CoreVersion != CoreVersion.Net10
+        || config.Dac != Dac.Legacy;
+
     internal static bool SupportsCurrentThread(TestConfig config) =>
         // createdump ELF cores expose synthetic runtime thread IDs that LLDB cannot select, so
         // current-thread commands report "The current thread is unmanaged" even on the crash thread.

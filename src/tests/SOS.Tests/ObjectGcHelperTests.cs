@@ -84,6 +84,7 @@ public sealed class ObjectGcHelperTests
     [MemberData(nameof(ObjectDataMatrix))]
     public async Task PathTo_TracesReferencePath(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 

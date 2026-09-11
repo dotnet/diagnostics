@@ -22,6 +22,7 @@ public sealed class ObjectFieldsTests
     [MemberData(nameof(Matrix))]
     public async Task DumpObj_Fields_ReportKnownValues(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
@@ -49,6 +50,7 @@ public sealed class ObjectFieldsTests
     [MemberData(nameof(Matrix))]
     public async Task DumpVc_ReadsEmbeddedStructFields(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 

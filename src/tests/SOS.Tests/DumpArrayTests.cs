@@ -25,6 +25,7 @@ public sealed class DumpArrayTests
     [MemberData(nameof(Matrix))]
     public async Task DumpArray_StructureStartLengthDetails(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
@@ -54,6 +55,7 @@ public sealed class DumpArrayTests
     [MemberData(nameof(Matrix))]
     public async Task DumpArray_ParameterEdgeCases(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 

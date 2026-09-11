@@ -47,6 +47,7 @@ public sealed class ObjectInspectionTests
     [MemberData(nameof(DumpObjChainMatrix))]
     public async Task DumpObj_Mt_Class_Md_Chain(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
@@ -97,6 +98,7 @@ public sealed class ObjectInspectionTests
     [MemberData(nameof(DumpObjNoFieldsMatrix))]
     public async Task DumpObj_NoFields_OmitsFieldTable(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
