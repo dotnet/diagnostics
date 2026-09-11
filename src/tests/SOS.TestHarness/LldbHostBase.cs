@@ -95,11 +95,16 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         // disable-aslr false: toggling ASLR needs ptrace perms we may not have; keep it off so target
         //   creation/launch never fails on that.
         // prompt-on-quit false: never block waiting for a y/n on shutdown.
+        // symbols.enable-external-lookup false: keep target creation hermetic. LLDB's default external
+        // lookup can spend many minutes probing debuginfod servers even when the dump, executable, and
+        // matching DAC are all local.
         psi.ArgumentList.Add("--no-lldbinit");
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add("settings set target.disable-aslr false");
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add("settings set interpreter.prompt-on-quit false");
+        psi.ArgumentList.Add("-o");
+        psi.ArgumentList.Add("settings set symbols.enable-external-lookup false");
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add($"command script import {helper}");
 

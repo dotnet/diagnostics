@@ -98,6 +98,15 @@ public sealed class TestConfigValidityTests
         Assert.Equal(expected, SnapshotStore.CollectType(flavor, dumpKind, isWindows));
     }
 
+    [Fact]
+    public void CoreFrameworkConfigsUseHeapDumps()
+    {
+        TestConfig[] configs = TestMatrices.CoreFrameworkConfigs([TargetCatalog.Scenarios]).ToArray();
+
+        Assert.NotEmpty(configs);
+        Assert.All(configs, config => Assert.Equal(DumpKind.Heap, config.DumpKind));
+    }
+
     [Theory]
     [InlineData(false, RegistryView.Registry32)]
     [InlineData(true, RegistryView.Registry64)]

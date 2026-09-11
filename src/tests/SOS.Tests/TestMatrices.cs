@@ -172,10 +172,10 @@ internal static class TestMatrices
         || config.Target != TargetCatalog.DivZero
         || config.Flavor != Flavor.Framework;
 
-    public static TheoryData<TestConfig> CoreFrameworkConditional(string[] targets)
+    public static TheoryData<TestConfig> CoreFramework(string[] targets)
     {
         TheoryData<TestConfig> data = new();
-        foreach (TestConfig config in CoreFrameworkConditionalFullDumpConfigs(targets))
+        foreach (TestConfig config in CoreFrameworkConfigs(targets))
         {
             data.Add(config);
         }
@@ -183,19 +183,6 @@ internal static class TestMatrices
         return data;
     }
 
-    public static IEnumerable<TestConfig> CoreFrameworkConditionalFullDumpConfigs(string[] targets)
-    {
-        foreach (TestConfig config in TestConfig.Permutations(targets, flavor: Flavor.Core | Flavor.Framework, dumpKind: DumpKind.Heap))
-        {
-            if (!OperatingSystem.IsWindows() && config.CoreVersion == CoreVersion.Net10)
-            {
-                // The net10 legacy DAC can crash while servicing dumpobj's optional ComWrappers data query on reduced Heap dumps.
-                yield return config with { DumpKind = DumpKind.Full };
-            }
-            else
-            {
-                yield return config;
-            }
-        }
-    }
+    public static IEnumerable<TestConfig> CoreFrameworkConfigs(string[] targets) =>
+        TestConfig.Permutations(targets, flavor: Flavor.Core | Flavor.Framework, dumpKind: DumpKind.Heap);
 }

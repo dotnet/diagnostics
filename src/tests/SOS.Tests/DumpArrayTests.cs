@@ -17,7 +17,7 @@ namespace SOS.Tests;
 /// </summary>
 public sealed class DumpArrayTests
 {
-    public static TheoryData<TestConfig> Matrix => TestMatrices.CoreFrameworkConditional([TargetCatalog.Scenarios]);
+    public static TheoryData<TestConfig> Matrix => TestMatrices.CoreFramework([TargetCatalog.Scenarios]);
 
     private static readonly Regex s_elementValue = new(@"(\d+)\s+m_value", RegexOptions.Compiled);
 

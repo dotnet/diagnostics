@@ -113,6 +113,10 @@ Tests issue the same `target.Sos("command")` call through `IDebuggerHost`.
 - `LldbCliHost` or `LldbLiveHost` for LLDB;
 - `DotNetDumpHost` for the repository-built dotnet-dump.
 
+LLDB runs with external symbol lookup disabled before loading a target. Dumps,
+executables, SOS, and matching DACs come from local build artifacts, so network
+symbol probing would only add nondeterministic startup delays.
+
 Debugger stdout, stderr, command lines, and host crash dumps are retained by
 `HostDiagnostics`. Dotnet-dump sessions use a single process slot because idle
 REPL children busy-wait; dump sessions are otherwise safe to share. Live
