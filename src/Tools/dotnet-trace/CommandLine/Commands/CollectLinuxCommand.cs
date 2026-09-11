@@ -31,6 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string ClrEvents,
             string[] PerfEvents,
             string[] Profiles,
+            uint? BufferSizeInMB,
             FileInfo Output,
             TimeSpan Duration,
             string Name,
@@ -168,6 +169,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.CLREventLevelOption,
                 CommonOptions.CLREventsOption,
                 PerfEventsOption,
+                BufferSizeInMBOption,
                 ProbeOption,
                 CommonOptions.ProfileOption,
                 CommonOptions.OutputPathOption,
@@ -191,6 +193,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     ClrEvents: parseResult.GetValue(CommonOptions.CLREventsOption) ?? string.Empty,
                     PerfEvents: perfEventsValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Profiles: profilesValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                    BufferSizeInMB: parseResult.GetValue(BufferSizeInMBOption),
                     Output: parseResult.GetValue(CommonOptions.OutputPathOption) ?? new FileInfo(CommonOptions.DefaultTraceName),
                     Duration: parseResult.GetValue(CommonOptions.DurationOption),
                     Name: parseResult.GetValue(CommonOptions.NameOption) ?? string.Empty,
@@ -420,6 +423,14 @@ namespace Microsoft.Diagnostics.Tools.Trace
             scriptPath = null;
             List<string> recordTraceArgs = new();
 
+            if (args.BufferSizeInMB.HasValue)
+            {
+                if (args.BufferSizeInMB.Value == 0)
+                {
+                    throw new DiagnosticToolException("Buffer size must be at least 1 MB.");
+                }
+            }
+
             string[] profiles = args.Profiles;
             if (args.Profiles.Length == 0 && args.Providers.Length == 0 && string.IsNullOrEmpty(args.ClrEvents) && args.PerfEvents.Length == 0)
             {
@@ -428,6 +439,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
             }
 
             StringBuilder scriptBuilder = new();
+            if (args.BufferSizeInMB.HasValue)
+            {
+                ulong totalBufferSizeBytes = args.BufferSizeInMB.Value * 1024UL * 1024UL;
+                scriptBuilder.AppendLine($"with_buffer_size_bytes({totalBufferSizeBytes});");
+                scriptBuilder.AppendLine();
+            }
+
             List<EventPipeProvider> providerCollection = ProviderUtils.ComputeProviderConfig(args.Providers, args.ClrEvents, args.ClrEventLevel, profiles, true, "collect-linux", Console);
             foreach (EventPipeProvider provider in providerCollection)
             {
@@ -573,6 +591,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new("--perf-events")
             {
                 Description = @"Comma-separated list of perf events (e.g. syscalls:sys_enter_execve,sched:sched_switch)."
+            };
+
+        private static readonly Option<uint?> BufferSizeInMBOption =
+            new("--buffersize")
+            {
+                Description = "Requested total size of the event buffers, in megabytes. When omitted, the recorder chooses a default based on the enabled features."
             };
 
         private static readonly Option<bool> ProbeOption =
