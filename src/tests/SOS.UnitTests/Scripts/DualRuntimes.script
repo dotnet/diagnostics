@@ -71,6 +71,13 @@ ENDIF:TRIAGE_DUMP
 SOSCOMMAND:runtimes -netfx
 VERIFY:\s*Switched to desktop .NET Framework runtime successfully\s+
 
+IFDEF:CDAC_ONLY
+# Desktop .NET Framework does not support cDAC. Selecting the runtime succeeds, but data access must fail.
+SOSCOMMAND_FAIL:ClrStack -all
+VERIFY:Failed to load data access module
+ENDIF:CDAC_ONLY
+
+!IFDEF:CDAC_ONLY
 SOSCOMMAND:runtimes
 
 # Currently not on a desktop CLR thread so using the -all option to dump it.
@@ -98,3 +105,4 @@ VERIFY:\s+MT\s+Count\s+TotalSize\s+Class Name\s+
 VERIFY:\s*<HEXVAL>\s+<DECVAL>\s+<DECVAL>\s+.*
 VERIFY:\s*Total\s+<DECVAL>\s+objects.*<DECVAL>\s+bytes\s*
 !VERIFY:.*UNKNOWN.*
+ENDIF:CDAC_ONLY
