@@ -56,21 +56,18 @@ internal sealed class HostSlotPool
 }
 
 /// <summary>
-/// Governs how many live host instances of one kind may exist at once — here, exactly one.
+/// Governs one live host instance within an individual slot. Pools provide bounded concurrency.
 ///
 /// Debugger operations need this for different reasons:
 /// <list type="bullet">
 ///   <item><b>DbgEng capture</b> runs in-process and is genuinely one-instance-per-process.</item>
-///   <item><b>dotnet-dump</b> children each busy-wait on stdin at ~100% CPU; keeping many alive
-///   saturates the machine, so we keep at most one.</item>
-///   <item><b>cdb</b> and <b>lldb</b> retain loaded dump state, so a small fixed number of slots
-///   preserves limited concurrency without unbounded memory growth.</item>
+///   <item><b>dotnet-dump</b>, <b>cdb</b>, and <b>lldb</b> retain loaded dump state, so small fixed
+///   pools preserve limited concurrency without unbounded memory growth.</item>
 /// </list>
 /// The most-recently-used host stays open and is evicted (disposed) only when a different target
 /// of the same kind is needed — so a run of assertions against one dump reuses the open host, and
 /// switching dumps reopens (cheap relative to the work). Live targets take an exclusive lease for
-/// their lifetime. This single-slot constraint is exactly what a subprocess-per-target backend
-/// would lift, without changing the test-facing API.
+/// their lifetime.
 /// </summary>
 internal sealed class HostSlot
 {
@@ -80,8 +77,8 @@ internal sealed class HostSlot
     /// <summary>Two independent out-of-process cdb dump slots.</summary>
     public static readonly HostSlotPool CdbDump = new(capacity: 2);
 
-    /// <summary>The dotnet-dump slot (one analyze child alive at a time).</summary>
-    public static readonly HostSlotPool DotNetDump = new(capacity: 1);
+    /// <summary>Two independent dotnet-dump analyze slots.</summary>
+    public static readonly HostSlotPool DotNetDump = new(capacity: 2);
 
     /// <summary>Two independent LLDB dump slots.</summary>
     public static readonly HostSlotPool LldbDump = new(capacity: 2);

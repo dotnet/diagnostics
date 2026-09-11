@@ -16,9 +16,8 @@ namespace SOS.TestHarness;
 ///   <item><b>cdb</b> runs dbgeng in a <see cref="ChildEngineClient"/> child process. Dump sessions
 ///   are distributed across two capacity-1 slots, bounding retained dump mappings while allowing
 ///   two independent sessions to execute concurrently.</item>
-///   <item><b>dotnet-dump</b> children busy-wait on stdin at ~100% CPU, so keeping many alive would
-///   saturate the machine. They route through a capacity-1 <see cref="HostSlot"/> (most-recently-used
-///   stays open, reopened on demand).</item>
+///   <item><b>dotnet-dump</b> sessions are distributed across two capacity-1 slots. This materially
+///   reduces analyzer queueing and host churn while keeping retained dump mappings bounded.</item>
 ///   <item><b>lldb</b> children retain their loaded core and hosted SOS runtime. Like cdb, they are
 ///   distributed across two capacity-1 slots to preserve limited concurrency while bounding memory.</item>
 /// </list>
