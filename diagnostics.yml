@@ -40,6 +40,12 @@ variables:
 - ${{ else }}:
   - name: isOfficialBuild
     value: false
+- ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+  - name: validationConfiguration
+    value: Debug
+- ${{ else }}:
+  - name: validationConfiguration
+    value: Release
 - template : /eng/pipelines/global-variables.yml
   parameters:
     runtimeFeed: ${{ parameters.runtimeFeed }}
@@ -81,19 +87,28 @@ extends:
           buildOnly: true
           publishTestArtifacts: true
           buildConfigs:
-          - configuration: Debug
-            architecture: x64
-            artifactUploadPath: bin/Windows_NT.x64.Debug
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin
-          - configuration: Release
-            architecture: x86
-            artifactUploadPath: bin/Windows_NT.x86.Release
-          - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - configuration: Debug
+              architecture: x64
+              artifactUploadPath: bin/Windows_NT.x64.Debug
+            - configuration: Debug
+              architecture: x86
+              artifactUploadPath: bin/Windows_NT.x86.Debug
+            - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+              - configuration: Debug
+                architecture: arm64
+                artifactUploadPath: bin/Windows_NT.arm64.Debug
+          - ${{ else }}:
             - configuration: Release
-              architecture: arm64
-              artifactUploadPath: bin/Windows_NT.arm64.Release
+              architecture: x64
+              artifactUploadPath: bin
+            - configuration: Release
+              architecture: x86
+              artifactUploadPath: bin/Windows_NT.x86.Release
+            - ${{ if ne(variables['System.TeamProject'], 'public') }}:
+              - configuration: Release
+                architecture: arm64
+                artifactUploadPath: bin/Windows_NT.arm64.Release
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -104,13 +119,14 @@ extends:
           buildOnly: true
           publishTestArtifacts: true
           buildConfigs:
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin/linux.x64.Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
               architecture: x64
               artifactUploadPath: bin/linux.x64.Debug
+          - ${{ else }}:
+            - configuration: Release
+              architecture: x64
+              artifactUploadPath: bin/linux.x64.Release
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -123,15 +139,16 @@ extends:
           buildOnly: true
           publishTestArtifacts: true
           buildConfigs:
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin/linux.x64.Release
-            artifactTargetPath: bin/linux-musl.x64.Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
               architecture: x64
               artifactUploadPath: bin/linux.x64.Debug
               artifactTargetPath: bin/linux-musl.x64.Debug
+          - ${{ else }}:
+            - configuration: Release
+              architecture: x64
+              artifactUploadPath: bin/linux.x64.Release
+              artifactTargetPath: bin/linux-musl.x64.Release
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -142,13 +159,14 @@ extends:
           buildOnly: true
           publishTestArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
           buildConfigs:
-          - configuration: Release
-            architecture: arm64
-            artifactUploadPath: bin/linux.arm64.Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
               architecture: arm64
               artifactUploadPath: bin/linux.arm64.Debug
+          - ${{ else }}:
+            - configuration: Release
+              architecture: arm64
+              artifactUploadPath: bin/linux.arm64.Release
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -157,13 +175,14 @@ extends:
           buildOnly: true
           publishTestArtifacts: true
           buildConfigs:
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin/osx.x64.Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
               architecture: x64
               artifactUploadPath: bin/osx.x64.Debug
+          - ${{ else }}:
+            - configuration: Release
+              architecture: x64
+              artifactUploadPath: bin/osx.x64.Release
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -173,13 +192,14 @@ extends:
           buildOnly: true
           publishTestArtifacts: ${{ eq(variables['System.TeamProject'], 'public') }}
           buildConfigs:
-          - configuration: Release
-            architecture: arm64
-            artifactUploadPath: bin/osx.arm64.Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - configuration: Debug
               architecture: arm64
               artifactUploadPath: bin/osx.arm64.Debug
+          - ${{ else }}:
+            - configuration: Release
+              architecture: arm64
+              artifactUploadPath: bin/osx.arm64.Release
 
       - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         - template: /eng/pipelines/build.yml
@@ -190,9 +210,9 @@ extends:
             crossBuild: true
             buildOnly: true
             buildConfigs:
-            - configuration: Release
+            - configuration: ${{ variables.validationConfiguration }}
               architecture: arm
-              artifactUploadPath: bin/linux.arm.Release
+              artifactUploadPath: ${{ format('bin/linux.arm.{0}', variables.validationConfiguration) }}
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -204,10 +224,10 @@ extends:
             crossBuild: true
             buildOnly: true
             buildConfigs:
-            - configuration: Release
+            - configuration: ${{ variables.validationConfiguration }}
               architecture: arm
-              artifactUploadPath: bin/linux.arm.Release
-              artifactTargetPath: bin/linux-musl.arm.Release
+              artifactUploadPath: ${{ format('bin/linux.arm.{0}', variables.validationConfiguration) }}
+              artifactTargetPath: ${{ format('bin/linux-musl.arm.{0}', variables.validationConfiguration) }}
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -219,10 +239,10 @@ extends:
             crossBuild: true
             buildOnly: true
             buildConfigs:
-            - configuration: Release
+            - configuration: ${{ variables.validationConfiguration }}
               architecture: arm64
-              artifactUploadPath: bin/linux.arm64.Release
-              artifactTargetPath: bin/linux-musl.arm64.Release
+              artifactUploadPath: ${{ format('bin/linux.arm64.{0}', variables.validationConfiguration) }}
+              artifactTargetPath: ${{ format('bin/linux-musl.arm64.{0}', variables.validationConfiguration) }}
 
       ############################
       #                          #
@@ -239,12 +259,10 @@ extends:
             dependsOn: Windows
             testOnly: true
             buildConfigs:
-            - configuration: Debug
+            - configuration: ${{ variables.validationConfiguration }}
               architecture: x64
             - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Release
-                architecture: x64
-              - configuration: Release
+              - configuration: ${{ variables.validationConfiguration }}
                 architecture: x86
 
         - template: /eng/pipelines/build.yml
@@ -255,12 +273,8 @@ extends:
             dependsOn: MacOS
             testOnly: true
             buildConfigs:
-            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Release
-                architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
+            - configuration: ${{ variables.validationConfiguration }}
+              architecture: x64
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -271,12 +285,8 @@ extends:
             dependsOn: Linux
             testOnly: true
             buildConfigs:
-            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Release
-                architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
+            - configuration: ${{ variables.validationConfiguration }}
+              architecture: x64
 
         - template: /eng/pipelines/build.yml
           parameters:
@@ -289,12 +299,8 @@ extends:
             testOnly: true
             disableComponentGovernance: true
             buildConfigs:
-            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Release
-                architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
+            - configuration: ${{ variables.validationConfiguration }}
+              architecture: x64
 
         - ${{ if eq(variables['System.TeamProject'], 'public') }}:
           # TODO: Adopt the runtime pipeline's platform matrix pattern so SOS Helix coverage can be
@@ -302,11 +308,11 @@ extends:
           - template: /eng/pipelines/sos-helix.yml
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
-              name: SOS_Helix_Windows_x64_Release
+              name: ${{ format('SOS_Helix_Windows_x64_{0}', variables.validationConfiguration) }}
               osGroup: Windows_NT
-              dependsOn: Windows_x64_Release
-              artifactPhase: Windows_x64_Release
-              configuration: Release
+              dependsOn: ${{ format('Windows_x64_{0}', variables.validationConfiguration) }}
+              artifactPhase: ${{ format('Windows_x64_{0}', variables.validationConfiguration) }}
+              configuration: ${{ variables.validationConfiguration }}
               architecture: x64
               targetOS: Windows_NT
               targetRid: win-x64
@@ -315,11 +321,11 @@ extends:
           - template: /eng/pipelines/sos-helix.yml
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
-              name: SOS_Helix_Windows_x86_Release
+              name: ${{ format('SOS_Helix_Windows_x86_{0}', variables.validationConfiguration) }}
               osGroup: Windows_NT
-              dependsOn: Windows_x86_Release
-              artifactPhase: Windows_x86_Release
-              configuration: Release
+              dependsOn: ${{ format('Windows_x86_{0}', variables.validationConfiguration) }}
+              artifactPhase: ${{ format('Windows_x86_{0}', variables.validationConfiguration) }}
+              configuration: ${{ variables.validationConfiguration }}
               architecture: x86
               targetOS: Windows_NT
               targetRid: win-x86
@@ -328,12 +334,12 @@ extends:
           - template: /eng/pipelines/sos-helix.yml
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
-              name: SOS_Helix_Linux_x64_Release
+              name: ${{ format('SOS_Helix_Linux_x64_{0}', variables.validationConfiguration) }}
               osGroup: Linux
               container: test_ubuntu_22_04
-              dependsOn: Linux_x64_Release
-              artifactPhase: Linux_x64_Release
-              configuration: Release
+              dependsOn: ${{ format('Linux_x64_{0}', variables.validationConfiguration) }}
+              artifactPhase: ${{ format('Linux_x64_{0}', variables.validationConfiguration) }}
+              configuration: ${{ variables.validationConfiguration }}
               architecture: x64
               targetOS: linux
               targetRid: linux-x64
@@ -342,12 +348,12 @@ extends:
           - template: /eng/pipelines/sos-helix.yml
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
-              name: SOS_Helix_Linux_arm64_Release
+              name: ${{ format('SOS_Helix_Linux_arm64_{0}', variables.validationConfiguration) }}
               osGroup: Linux
               container: test_ubuntu_22_04
-              dependsOn: Linux_arm64_Release
-              artifactPhase: Linux_arm64_Release
-              configuration: Release
+              dependsOn: ${{ format('Linux_arm64_{0}', variables.validationConfiguration) }}
+              artifactPhase: ${{ format('Linux_arm64_{0}', variables.validationConfiguration) }}
+              configuration: ${{ variables.validationConfiguration }}
               architecture: arm64
               targetOS: linux
               targetRid: linux-arm64
@@ -356,12 +362,12 @@ extends:
           - template: /eng/pipelines/sos-helix.yml
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
-              name: SOS_Helix_Alpine_x64_Release
+              name: ${{ format('SOS_Helix_Alpine_x64_{0}', variables.validationConfiguration) }}
               osGroup: Linux
               container: test_linux_musl_x64
-              dependsOn: Linux_musl_x64_Release
-              artifactPhase: Linux_musl_x64_Release
-              configuration: Release
+              dependsOn: ${{ format('Linux_musl_x64_{0}', variables.validationConfiguration) }}
+              artifactPhase: ${{ format('Linux_musl_x64_{0}', variables.validationConfiguration) }}
+              configuration: ${{ variables.validationConfiguration }}
               architecture: x64
               targetOS: linux
               targetRid: linux-musl-x64
@@ -371,11 +377,11 @@ extends:
           - template: /eng/pipelines/sos-helix.yml
             parameters:
               jobTemplate: ${{ variables.jobTemplate }}
-              name: SOS_Helix_MacOS_arm64_Release
+              name: ${{ format('SOS_Helix_MacOS_arm64_{0}', variables.validationConfiguration) }}
               osGroup: MacOS
-              dependsOn: MacOS_arm64_Release
-              artifactPhase: MacOS_arm64_Release
-              configuration: Release
+              dependsOn: ${{ format('MacOS_arm64_{0}', variables.validationConfiguration) }}
+              artifactPhase: ${{ format('MacOS_arm64_{0}', variables.validationConfiguration) }}
+              configuration: ${{ variables.validationConfiguration }}
               architecture: arm64
               targetOS: osx
               targetRid: osx-arm64
