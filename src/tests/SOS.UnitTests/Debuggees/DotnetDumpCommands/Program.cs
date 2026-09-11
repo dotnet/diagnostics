@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO.Pipes;
+using System.Threading.Tasks;
 
 namespace DotnetDumpCommands
 {
@@ -45,6 +46,10 @@ namespace DotnetDumpCommands
             else if ("dumpgen".Equals(args[1]))
             {
                 _objectsToKeepInMemory.AddRange(CreateObjectsInDifferentGenerations());
+            }
+            else if ("dumpasyncorder".Equals(args[1]))
+            {
+                _objectsToKeepInMemory.AddRange(CreateDumpAsyncContinuationOrder());
             }
             else
             {
@@ -151,6 +156,37 @@ namespace DotnetDumpCommands
             {
                 yield return new DumpSampleClass();
             }
+        }
+
+        private static IEnumerable<object> CreateDumpAsyncContinuationOrder()
+        {
+            TaskCompletionSource<int> source = new TaskCompletionSource<int>();
+            Task whenAll = AwaitContinuationsInOrderAsync(source.Task);
+
+            return new object[] { source, source.Task, whenAll };
+        }
+
+        private static async Task AwaitContinuationsInOrderAsync(Task<int> task)
+        {
+            await Task.WhenAll(
+                ContinuationOrderFirstAsync(task),
+                ContinuationOrderSecondAsync(task),
+                ContinuationOrderThirdAsync(task));
+        }
+
+        private static async Task<int> ContinuationOrderFirstAsync(Task<int> task)
+        {
+            return await task + 1;
+        }
+
+        private static async Task<int> ContinuationOrderSecondAsync(Task<int> task)
+        {
+            return await task + 2;
+        }
+
+        private static async Task<int> ContinuationOrderThirdAsync(Task<int> task)
+        {
+            return await task + 3;
         }
 
         public class DumpSampleClass
