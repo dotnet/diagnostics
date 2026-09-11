@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+# Disable system core dumps for test debuggees that intentionally crash.
+# The .NET createdump facility writes dumps directly and is not affected by ulimit.
+ulimit -c 0
+
 : "${HELIX_WORKITEM_UPLOAD_ROOT:?HELIX_WORKITEM_UPLOAD_ROOT is required}"
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,7 +31,7 @@ test_dll="${test_dlls[0]}"
 
 max_parallel_threads=""
 if [[ "$(uname -s)" == "Darwin" ]]; then
-  max_parallel_threads=4
+  max_parallel_threads=2
 elif [[ "$rid" == linux-musl-* || "$rid" == linux-arm64 ]]; then
   max_parallel_threads=1
 fi
