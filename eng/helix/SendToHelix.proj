@@ -1,0 +1,59 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project Sdk="Microsoft.DotNet.Helix.Sdk" DefaultTargets="Test">
+
+  <PropertyGroup>
+    <Language>msbuild</Language>
+    <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' != ''">true</EnableAzurePipelinesReporter>
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' == ''">false</EnableAzurePipelinesReporter>
+    <EnableXUnitReporter>true</EnableXUnitReporter>
+    <WaitForWorkItemCompletion>true</WaitForWorkItemCompletion>
+    <FailOnWorkItemFailure>true</FailOnWorkItemFailure>
+    <FailOnTestFailure>true</FailOnTestFailure>
+    <WorkItemTimeout Condition="'$(WorkItemTimeout)' == ''">03:00:00</WorkItemTimeout>
+
+    <!-- The work item runs the test assembly with the dotnet host Helix
+         provisions for us as a correlation payload (see IncludeDotNetCli). -->
+    <IncludeDotNetCli>true</IncludeDotNetCli>
+    <DotNetCliPackageType>sdk</DotNetCliPackageType>
+    <DotNetCliVersion Condition="'$(DotNetCliVersion)' == ''">10.0.110</DotNetCliVersion>
+    <!-- The Helix SDK infers all Windows non-ARM queues as win-x64. Override
+         the x86 leg so the test process reports and selects x86 scenarios. -->
+    <DotNetCliRuntime Condition="'$(TargetOS)' == 'Windows_NT' and '$(TargetArch)' == 'x86'">win-x86</DotNetCliRuntime>
+  </PropertyGroup>
+
+  <!-- Overlay every exact CoreCLR runtime into the same dotnet-cli correlation
+       payload. Helix downloads and extracts these before the work item starts,
+       so all scenarios share one runtime installation without machine fallback. -->
+  <ItemGroup>
+    <AdditionalDotNetPackage Include="$(DotNetRuntimeVersions.Split('|'))">
+      <PackageType>runtime</PackageType>
+      <Channel>Current</Channel>
+    </AdditionalDotNetPackage>
+  </ItemGroup>
+
+  <ItemGroup>
+    <HelixWorkItem Include="$(HelixWorkItemName)">
+      <PayloadArchive>$(TestDir).zip</PayloadArchive>
+      <Command>$(HelixWorkItemCommand)</Command>
+      <Timeout>$(WorkItemTimeout)</Timeout>
+    </HelixWorkItem>
+  </ItemGroup>
+
+  <Target Name="PrepareHelixPayload" BeforeTargets="CoreTest">
+    <Error Condition="'$(TestDir)' == ''" Text="TestDir is required." />
+    <Error Condition="!Exists('$(TestDir)')" Text="The Helix payload directory '$(TestDir)' does not exist." />
+    <Error Condition="'$(HelixWorkItemName)' == ''" Text="HelixWorkItemName is required." />
+    <Error Condition="'$(HelixWorkItemCommand)' == ''" Text="HelixWorkItemCommand is required." />
+    <Error Condition="'$(DotNetRuntimeVersions)' == ''" Text="DotNetRuntimeVersions is required." />
+    <Error Condition="'@(HelixWorkItem->Count())' != '1'"
+           Text="The generic Helix dispatcher requires exactly one work item; found @(HelixWorkItem->Count())." />
+    <!-- PayloadDirectory creates its ZIP in a MemoryStream. Write this large payload to disk instead
+         to avoid requiring more than a gigabyte of contiguous managed memory during submission. -->
+    <ZipDirectory SourceDirectory="$(TestDir)"
+                  DestinationFile="$(TestDir).zip"
+                  Overwrite="true" />
+  </Target>
+
+</Project>

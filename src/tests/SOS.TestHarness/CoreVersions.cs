@@ -1,23 +1,24 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Reflection;
+
 namespace SOS.TestHarness;
 
 /// <summary>
-/// Maps the <see cref="CoreVersion"/> matrix axis onto the concrete runtimes the repo build installed:
-/// the set actually present (<see cref="Available"/>), each version's target framework moniker
+/// Maps the <see cref="CoreVersion"/> matrix axis onto the runtimes defined by the repo build:
+/// the configured set (<see cref="Available"/>), each version's target framework moniker
 /// (<see cref="Tfm"/>), and — for the self-contained single-file DAC lookup — its exact runtime patch
 /// version (<see cref="RuntimeVersion"/>).
 ///
-/// <para>The source of truth is <c>artifacts/dotnet-test/Debugger.Tests.Versions.txt</c>, the manifest
-/// <c>eng/InstallRuntimes.proj</c> writes when it acquires the <c>RuntimeTestVersions</c> (8/9/10/11). If
-/// the manifest isn't present (runtimes not yet installed), <see cref="Available"/> falls back to the
-/// versions in <c>Directory.Build.props</c>'s <c>SupportedSubProcessTargetFrameworks</c>.</para>
+/// <para>The source of truth is <c>RuntimeTestVersions</c> from <c>eng/Versions.props</c>, embedded in
+/// this assembly as exact runtime versions. Target frameworks are derived from each version's major
+/// number.</para>
 /// </summary>
 public static class CoreVersions
 {
-    // tfm major -> exact runtime version, parsed once from the install manifest.
-    private static readonly IReadOnlyDictionary<int, string> s_runtimeVersions = ReadManifest();
+    // tfm major -> exact runtime version, parsed once from the build-defined version metadata.
+    private static readonly IReadOnlyDictionary<int, string> s_runtimeVersions = ReadConfiguredVersions();
 
     /// <summary>
     /// The versions the harness actually builds debuggees for and has runtimes installed for. The matrix
@@ -61,116 +62,47 @@ public static class CoreVersions
     }
 
     /// <summary>
-    /// The exact runtime patch version (e.g. <c>8.0.25</c>, <c>11.0.0-preview.6.26318.108</c>) for a
-    /// version, from the install manifest. Returns <c>null</c> if that version wasn't installed.
+    /// The exact configured runtime patch version (e.g. <c>8.0.25</c> or
+    /// <c>11.0.0-preview.6.26318.108</c>). Returns <c>null</c> if that version wasn't defined.
     /// </summary>
     public static string? RuntimeVersion(CoreVersion version) =>
         s_runtimeVersions.TryGetValue(Major(version), out string? v) ? v : null;
 
     private static CoreVersion ComputeAvailable()
     {
-        // Prefer what's actually installed (the manifest); fall back to the props-declared set.
-        CoreVersion fromManifest = 0;
+        CoreVersion configured = 0;
         foreach (int major in s_runtimeVersions.Keys)
         {
-            fromManifest |= (CoreVersion)(1u << major);
+            configured |= (CoreVersion)(1u << major);
         }
 
-        return fromManifest != 0 ? fromManifest : ReadSupportedFrameworksFromProps();
+        return configured != 0
+            ? configured
+            : throw new InvalidOperationException("No SOS test runtime versions were embedded by the build.");
     }
 
-    private static IReadOnlyDictionary<int, string> ReadManifest()
+    private static IReadOnlyDictionary<int, string> ReadConfiguredVersions()
     {
         Dictionary<int, string> map = new();
-        string manifest = Path.Combine(RepoLayout.Root, "artifacts", "dotnet-test", "Debugger.Tests.Versions.txt");
-        if (!File.Exists(manifest))
+        string configuredVersions = typeof(CoreVersions).Assembly
+            .GetCustomAttributes<AssemblyMetadataAttribute>()
+            .Single(a => a.Key == "SOS.TestHarness.RuntimeVersions")
+            .Value ?? string.Empty;
+        foreach (string entry in configuredVersions.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            return map;
-        }
-
-        // The manifest pairs <TargetFramework{Slot}>net{N}.0</> with <RuntimeVersion{Slot}>{version}</> for
-        // each slot (Latest, Servicing1, ...). Collect both, then join on slot.
-        Dictionary<string, string> tfms = new(StringComparer.OrdinalIgnoreCase);    // slot -> netN.0
-        Dictionary<string, string> versions = new(StringComparer.OrdinalIgnoreCase); // slot -> version
-        foreach (string line in File.ReadLines(manifest))
-        {
-            CollectTagged(line, "TargetFramework", tfms);
-            CollectTagged(line, "RuntimeVersion", versions);
-        }
-
-        foreach ((string slot, string tfm) in tfms)
-        {
-            if (versions.TryGetValue(slot, out string? version) &&
-                tfm.StartsWith("net", StringComparison.OrdinalIgnoreCase) &&
-                tfm.EndsWith(".0", StringComparison.Ordinal) &&
-                int.TryParse(tfm.AsSpan(3, tfm.Length - 5), out int major))
+            int separator = entry.IndexOf('.');
+            if (separator <= 0 ||
+                !int.TryParse(entry.AsSpan(0, separator), out int major))
             {
-                map[major] = version;
+                throw new InvalidOperationException($"Invalid embedded SOS test runtime version '{entry}'.");
+            }
+
+            if (!map.TryAdd(major, entry))
+            {
+                throw new InvalidOperationException($"Multiple SOS test runtime versions were configured for .NET {major}.");
             }
         }
 
         return map;
-    }
-
-    /// <summary>If <paramref name="line"/> is <c>&lt;{prefix}{slot}&gt;value&lt;/...&gt;</c>, record slot-&gt;value.</summary>
-    private static void CollectTagged(string line, string prefix, Dictionary<string, string> into)
-    {
-        string open = $"<{prefix}";
-        int start = line.IndexOf(open, StringComparison.Ordinal);
-        if (start < 0)
-        {
-            return;
-        }
-
-        int slotStart = start + open.Length;
-        int slotEnd = line.IndexOf('>', slotStart);
-        if (slotEnd < 0)
-        {
-            return;
-        }
-
-        string slot = line.Substring(slotStart, slotEnd - slotStart);
-        int valEnd = line.IndexOf("</", slotEnd, StringComparison.Ordinal);
-        if (valEnd < 0)
-        {
-            return;
-        }
-
-        into[slot] = line.Substring(slotEnd + 1, valEnd - slotEnd - 1).Trim();
-    }
-
-    private static CoreVersion ReadSupportedFrameworksFromProps()
-    {
-        CoreVersion result = 0;
-        string props = Path.Combine(RepoLayout.Root, "Directory.Build.props");
-        if (File.Exists(props))
-        {
-            foreach (string line in File.ReadLines(props))
-            {
-                const string tag = "<SupportedSubProcessTargetFrameworks>";
-                int open = line.IndexOf(tag, StringComparison.Ordinal);
-                if (open < 0)
-                {
-                    continue;
-                }
-
-                int close = line.IndexOf("</", open, StringComparison.Ordinal);
-                string value = line.Substring(open + tag.Length, close - open - tag.Length);
-                foreach (string tfm in value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                {
-                    if (tfm.StartsWith("net", StringComparison.OrdinalIgnoreCase) &&
-                        tfm.EndsWith(".0", StringComparison.Ordinal) &&
-                        int.TryParse(tfm.AsSpan(3, tfm.Length - 5), out int major))
-                    {
-                        result |= (CoreVersion)(1u << major);
-                    }
-                }
-
-                break;
-            }
-        }
-
-        // Last-ditch default matching the current servicing+preview set.
-        return result != 0 ? result : CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10 | CoreVersion.Net11;
     }
 }

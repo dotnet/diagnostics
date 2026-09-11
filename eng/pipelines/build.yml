@@ -84,6 +84,12 @@ jobs:
   - template: ${{ parameters.jobTemplate }}
     parameters:
       name: ${{ coalesce(parameters.name, parameters.osGroup) }}_${{ config.architecture }}_${{ config.configuration }}
+      ${{ if eq(parameters.testOnly, true) }}:
+        displayName: Test ${{ replace(parameters.osGroup, '_NT', '') }}${{ parameters.osSuffix }} ${{ config.architecture }} ${{ config.configuration }}
+      ${{ elseif eq(parameters.buildOnly, true) }}:
+        displayName: Build ${{ replace(parameters.osGroup, '_NT', '') }}${{ parameters.osSuffix }} ${{ config.architecture }} ${{ config.configuration }}
+      ${{ else }}:
+        displayName: Build / Test ${{ replace(parameters.osGroup, '_NT', '') }}${{ parameters.osSuffix }} ${{ config.architecture }} ${{ config.configuration }}
       timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
       enableMicrobuild: true
       disableComponentGovernance: ${{ parameters.disableComponentGovernance }}
@@ -119,7 +125,7 @@ jobs:
       ${{ if ne(parameters.strategy, '') }}:
         'error, we can no longer support the strategy feature in the new pipeline system. Please remove the strategy from the job template.': error
 
-      ${{ if and(ne(parameters.dependsOn, ''), ne(parameters.testOnly, true)) }}:
+      ${{ if ne(parameters.dependsOn, '') }}:
         dependsOn: ${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
 
       workspace:
@@ -136,7 +142,6 @@ jobs:
 
       - ${{ if and(eq(parameters.testOnly, 'true'), eq(parameters.buildOnly, 'true')) }}:
         'error, testOnly and buildOnly cannot be true at the same time': error
-
       # Test-only legs invoke test.cmd/test.sh, which already encode
       # '-test -skipmanaged -skipnative' and do not prepend '-restore -build'. All other legs
       # (build-only and build+test) use build.cmd/build.sh, which prepend '-restore -build'.
@@ -200,6 +205,7 @@ jobs:
         ${{ else }}:
           displayName: Build / Test
         condition: succeeded()
+
       - ${{ if ne(config.artifactUploadPath, '') }}:
         - task: CopyFiles@2
           displayName: Gather binaries for publish

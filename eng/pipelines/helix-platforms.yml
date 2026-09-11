@@ -1,0 +1,13 @@
+variables:
+- name: helix_windows_x64
+  value: Windows.Amd64.Server2022.Open
+- name: helix_linux_x64
+  value: Ubuntu.2204.Amd64.Open
+- name: helix_linux_arm64
+  value: Ubuntu.2204.ArmArch.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-helix-arm64v8
+- name: helix_linux_musl_x64
+  value: '(Alpine.323.Amd64.Open)azurelinux.3.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
+- name: helix_osx_x64
+  value: OSX.15.Amd64.Open
+- name: helix_osx_arm64
+  value: OSX.15.Arm64.Open

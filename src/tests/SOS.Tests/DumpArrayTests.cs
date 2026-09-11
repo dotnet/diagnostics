@@ -17,7 +17,7 @@ namespace SOS.Tests;
 /// </summary>
 public sealed class DumpArrayTests
 {
-    public static TheoryData<TestConfig> Matrix => TestMatrices.CoreFrameworkConditional([TargetCatalog.Scenarios]);
+    public static TheoryData<TestConfig> Matrix => TestMatrices.CoreFramework([TargetCatalog.Scenarios]);
 
     private static readonly Regex s_elementValue = new(@"(\d+)\s+m_value", RegexOptions.Compiled);
 
@@ -25,6 +25,7 @@ public sealed class DumpArrayTests
     [MemberData(nameof(Matrix))]
     public async Task DumpArray_StructureStartLengthDetails(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
@@ -54,6 +55,7 @@ public sealed class DumpArrayTests
     [MemberData(nameof(Matrix))]
     public async Task DumpArray_ParameterEdgeCases(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
