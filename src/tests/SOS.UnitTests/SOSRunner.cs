@@ -1636,6 +1636,10 @@ public class SOSRunner : IDisposable
                 defines.Add("UNIX_SINGLE_FILE_APP");
             }
         }
+        if (_config.DacMode == DacMode.CDac)
+        {
+            defines.Add("CDAC_ONLY");
+        }
         string setHostRuntime = _config.SetHostRuntime();
         if (!string.IsNullOrEmpty(setHostRuntime) && setHostRuntime == "-none")
         {
