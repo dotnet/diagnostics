@@ -595,7 +595,14 @@ CDacLoadPolicy Runtime::GetConfiguredCDacLoadPolicy()
 
 CDacLoadPolicy Runtime::GetCDacLoadPolicy() const
 {
-    return GetConfiguredCDacLoadPolicy();
+    CDacLoadPolicy policy = GetConfiguredCDacLoadPolicy();
+    if (policy == CDacLoadPolicy::OnlyUseCDacForCoreClr)
+    {
+        return GetRuntimeConfiguration() == IRuntime::WindowsDesktop
+            ? CDacLoadPolicy::PreferCDac
+            : CDacLoadPolicy::OnlyUseCDac;
+    }
+    return policy;
 }
 
 void Runtime::SetCDacLoadPolicy(CDacLoadPolicy policy)

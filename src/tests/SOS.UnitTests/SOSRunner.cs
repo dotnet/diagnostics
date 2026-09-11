@@ -1159,7 +1159,7 @@ public class SOSRunner : IDisposable
         // selects the legacy DAC so DOTNET_ENABLE_CDAC affects only the DAC-hosted contract reader.
         string cdacPolicyCommand = _config.DacMode switch
         {
-            DacMode.CDac => "runtimes --usecdac true",    // Force the standalone cDAC next to sos.dll.
+            DacMode.CDac => "runtimes --usecdac coreclr", // Require the standalone cDAC for CoreCLR and allow DAC fallback for other runtimes.
             DacMode.CDacVerify or DacMode.Dac => "runtimes --usecdac false", // Force the legacy in-box DAC.
             _ => null,
         };

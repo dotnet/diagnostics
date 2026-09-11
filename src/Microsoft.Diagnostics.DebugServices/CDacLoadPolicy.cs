@@ -23,4 +23,9 @@ public enum CDacLoadPolicy
     /// </summary>
     UseLegacyDac = 2,
 
+    /// <summary>
+    /// Require cDAC activation for CoreCLR runtimes and allow DAC fallback for other runtimes.
+    /// </summary>
+    OnlyUseCDacForCoreClr = 3,
+
 }
