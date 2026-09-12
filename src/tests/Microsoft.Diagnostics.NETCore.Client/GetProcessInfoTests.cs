@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.CommonTestRunner;
@@ -51,6 +52,124 @@ namespace Microsoft.Diagnostics.NETCore.Client
         public Task BasicProcessInfoSuspendTestAsync(TestConfiguration config)
         {
             return BasicProcessInfoTestCore(config, useAsync: true, suspend: true);
+        }
+
+        [SkippableTheory, MemberData(nameof(Configurations))]
+        public Task OversizeProcessInfoPayloadIsRejectedTest(TestConfiguration config)
+        {
+            return OversizeProcessInfoPayloadIsRejectedTestCore(config, useAsync: true);
+        }
+
+        // Constants describing the ProcessInfo3 serialization format (see ds-process-protocol.c).
+        // The runtime stores the total IPC message size (header + payload) in a uint16_t, so the
+        // payload must leave room for the header; the test below targets a command line whose
+        // serialized payload sits at the top of that range.
+        private const int IpcHeaderSize = 20;
+        // version (4) + ProcessId (8) + RuntimeCookie (16) + six 4-byte string-length prefixes.
+        private const int ProcessInfo3FixedPayloadBytes = 4 + 8 + 16 + (6 * 4);
+        // The five non-command-line strings each contribute a 2-byte UTF-16 NUL terminator.
+        private const int ProcessInfo3FixedStringCount = 5;
+
+        /// <summary>
+        /// Negative test for very large ProcessInfo3 payloads. The runtime echoes the process
+        /// command line back in the ProcessInfo3 response, and the total IPC message size (header +
+        /// payload) is stored in a uint16_t. This test drives the command line long enough that the
+        /// serialized payload reaches the top of the representable range and verifies the runtime
+        /// responds with a well-formed server error while staying alive, rather than returning a
+        /// malformed response or terminating.
+        /// </summary>
+        private async Task OversizeProcessInfoPayloadIsRejectedTestCore(TestConfiguration config, bool useAsync)
+        {
+            // The behavior under test was added in the .NET 11 runtime.
+            if (config.RuntimeFrameworkVersionMajor < 11)
+            {
+                throw new SkipTestException("Requires the .NET 11 (or newer) runtime.");
+            }
+
+            // The exact command-line length that hits the overflow window depends on the lengths of
+            // the other serialized strings (OS, arch, entrypoint, runtime version, RID), which vary
+            // by platform and runtime build. Launch once with a known argument to measure those, then
+            // compute the precise argument length that lands the payload in the danger window.
+            const int CalibrationArgLength = 2000;
+            string calibrationArgument = new('a', CalibrationArgLength);
+
+            int commandLineOffset;
+            int fixedStringChars;
+            await using (TestRunner calibration = await TestRunner.Create(config, _output, "Tracee", calibrationArgument))
+            {
+                await calibration.Start(testProcessTimeout: 60_000, waitForTracee: true);
+                try
+                {
+                    DiagnosticsClientApiShim calibrationShim = new(new DiagnosticsClient(calibration.Pid), useAsync);
+                    ProcessInfo info = await GetProcessInfoWithEntrypointAsync(calibrationShim);
+
+                    // The runtime echoes back its full OS command line, so the difference from our
+                    // argument length is the constant prefix (host + managed dll + 36-char pipe GUID).
+                    commandLineOffset = info.CommandLine.Length - CalibrationArgLength;
+                    fixedStringChars =
+                        info.OperatingSystem.Length +
+                        info.ProcessArchitecture.Length +
+                        (info.ManagedEntrypointAssemblyName?.Length ?? 0) +
+                        (info.ClrProductVersionString?.Length ?? 0) +
+                        (info.PortableRuntimeIdentifier?.Length ?? 0);
+                }
+                finally
+                {
+                    calibration.WakeupTracee();
+                    calibration.PrintStatus();
+                }
+            }
+
+            // payload(cmdLen) = fixed bytes + 2*(cmdLen + 1) for the command line
+            //                 + 2*fixedStringChars + 2*fixedStringCount for the other strings.
+            int fixedPayloadBytes = ProcessInfo3FixedPayloadBytes + (2 * fixedStringChars) + (2 * ProcessInfo3FixedStringCount);
+            int ArgumentLengthForPayload(int payloadBytes) => ((payloadBytes - fixedPayloadBytes) / 2) - 1 - commandLineOffset;
+
+            // The danger window is payload in [UINT16_MAX - header + 1, UINT16_MAX]. Sweep argument
+            // lengths whose payloads cover that window (and just past it, where the size field itself
+            // truncates) so the test reliably exercises the guard regardless of small modeling drift.
+            const int PayloadWindowFloor = ushort.MaxValue - IpcHeaderSize + 1; // 65516
+            int firstArgLength = ArgumentLengthForPayload(PayloadWindowFloor);
+            const int SweepCount = 16;
+
+            bool observedGracefulRejection = false;
+            for (int i = 0; i < SweepCount; i++)
+            {
+                int argLength = firstArgLength + i;
+                string oversizeArgument = new('a', argLength);
+
+                await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee", oversizeArgument);
+                await runner.Start(testProcessTimeout: 60_000, waitForTracee: true);
+                try
+                {
+                    DiagnosticsClientApiShim clientShim = new(new DiagnosticsClient(runner.Pid), useAsync);
+
+                    try
+                    {
+                        // A well-formed server error (rather than a crashed/closed connection or a
+                        // corrupt response that throws while parsing) is proof the runtime safely
+                        // rejected the oversized response. A success here means this particular length
+                        // still fit; that is fine - other lengths in the sweep cover the window.
+                        await clientShim.GetProcessInfo();
+                    }
+                    catch (ServerErrorException)
+                    {
+                        observedGracefulRejection = true;
+                    }
+
+                    // The regression: the target must never crash, whatever the command-line length.
+                    Assert.False(Process.GetProcessById(runner.Pid).HasExited, $"Target process crashed for argument length {argLength}.");
+                }
+                finally
+                {
+                    runner.WakeupTracee();
+                    runner.PrintStatus();
+                }
+            }
+
+            // Guard against the sweep silently missing the window (e.g. if the serialization format
+            // changes); the test is only meaningful if it actually drove the runtime into rejection.
+            Assert.True(observedGracefulRejection, "Sweep did not reach the payload-size overflow window; adjust the argument-length range.");
         }
 
         private async Task BasicProcessInfoTestCore(TestConfiguration config, bool useAsync, bool suspend)
