@@ -9,8 +9,7 @@ namespace Microsoft.Diagnostics.Shared;
 
 /// <summary>
 /// Describes the on-disk layout of the diagnostics tool packages (dotnet-dump,
-/// dotnet-sos, SOS.Package, dbgshim) relative to the assembly this type is compiled
-/// into.
+/// dotnet-sos, SOS.Package, dbgshim) relative to <see cref="AppContext.BaseDirectory"/>.
 ///
 /// A package contains two kinds of binaries that are loaded by the analyzer host:
 /// <list type="bullet">
@@ -30,16 +29,18 @@ namespace Microsoft.Diagnostics.Shared;
 /// </list>
 ///
 /// This file is compile-included by <c>SOS.Hosting</c> and <c>SOS.InstallHelper</c>
-/// so they agree on the layout. Because it is compiled into each consumer, the
-/// package base directory is the directory of the consuming assembly.
+/// so they agree on the managed tool package layout. Native debugger hosts such as
+/// CDB and LLDB provide the directory of the loaded SOS module through
+/// <c>SOSLibrary.ISOSModule</c> and do not use this fallback.
 /// </summary>
 internal static class SOSPackageLayout
 {
     /// <summary>
-    /// The directory of the package this type is compiled into. All package-relative
-    /// paths are rooted here.
+    /// The package root for managed tools that load SOS themselves. This remains
+    /// available when the consuming assembly is bundled into a single-file
+    /// application and has no on-disk location.
     /// </summary>
-    private static string s_packageBaseDirectory = ComputePackageBaseDirectory();
+    private static readonly string s_packageBaseDirectory = AppContext.BaseDirectory;
 
     /// <summary>
     /// Returns the directory containing the native binaries for this package,
@@ -57,13 +58,6 @@ internal static class SOSPackageLayout
     /// </summary>
     public static string GetManagedBinariesDirectory()
         => Path.Combine(s_packageBaseDirectory, "lib");
-
-    private static string ComputePackageBaseDirectory()
-    {
-        string location = typeof(SOSPackageLayout).Assembly.Location;
-        return Path.GetDirectoryName(location)
-            ?? throw new InvalidOperationException($"Cannot resolve package base directory: {typeof(SOSPackageLayout).Assembly.GetName().Name} has no on-disk location.");
-    }
 
     /// <summary>
     /// The package-relative subfolder for native binaries targeting the current host
