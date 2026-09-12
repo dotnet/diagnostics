@@ -32,12 +32,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         // MachO writable segment attribute
         private const uint VmProtWrite = 0x02;
+        private const ushort ImageDosSignature = 0x5A4D;
 
         private IMemoryService _memoryService;
         private ISymbolService _symbolService;
         private ReadVirtualCache _versionCache;
         private Dictionary<ulong, IModule> _modules;
         private IModule[] _sortedByBaseAddress;
+        private bool _reportedImageInfoUnavailable;
 
         private static readonly byte[] s_versionString = Encoding.ASCII.GetBytes("@(#)Version ");
         private static readonly int s_versionLength = s_versionString.Length;
@@ -57,6 +59,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private void Flush()
         {
             _versionCache?.Clear();
+            _reportedImageInfoUnavailable = false;
             if (_modules is not null)
             {
                 foreach (IModule module in _modules.Values)
@@ -240,21 +243,39 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
         /// <param name="pdbFileInfos">the pdb records or null</param>
+        /// <param name="imageInfoAvailable">whether the module image was read sufficiently to determine its type</param>
         /// <param name="moduleFlags">module flags</param>
         /// <returns>PEImage instance or null</returns>
-        internal PEFile GetPEInfo(ulong address, ulong size, out IEnumerable<PdbFileInfo> pdbFileInfos, ref Module.Flags moduleFlags)
+        internal PEFile GetPEInfo(
+            ulong address,
+            ulong size,
+            out IEnumerable<PdbFileInfo> pdbFileInfos,
+            out bool imageInfoAvailable,
+            ref Module.Flags moduleFlags)
         {
             PEFile peFile = null;
+            imageInfoAvailable = false;
 
             // Start off with no pdb infos and as a native non-PE non-managed module
             pdbFileInfos = Array.Empty<PdbFileInfo>();
             moduleFlags &= ~(Module.Flags.IsPEImage | Module.Flags.IsManaged | Module.Flags.IsLoadedLayout | Module.Flags.IsFileLayout);
 
             // None of the modules that lldb (on either Linux/MacOS) provides are PEs
-            if (size > 0 && Target.Host.HostType != HostType.Lldb)
+            if (Target.Host.HostType == HostType.Lldb)
+            {
+                imageInfoAvailable = true;
+            }
+            else if (size > 0)
             {
                 // First try getting the PE info as loaded layout (native Windows DLLs and most managed PEs).
-                peFile = GetPEInfo(isVirtual: true, address, size, out List<PdbFileInfo> pdbs, out Module.Flags flags);
+                peFile = GetPEInfo(
+                    isVirtual: true,
+                    address,
+                    size,
+                    out List<PdbFileInfo> pdbs,
+                    out bool loadedImageInfoAvailable,
+                    out Module.Flags flags);
+                imageInfoAvailable = loadedImageInfoAvailable;
 
                 // Continue only if marked as a PE. This bit is set regardless of the layout if the module has a PE header/signature.
                 if ((flags & Module.Flags.IsPEImage) != 0)
@@ -264,7 +285,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         // If PE file is invalid or there are no PDB records, try getting the PE info as file layout. No PDB records can mean
                         // that either the layout is wrong or that there really no PDB records. If file layout doesn't have any pdb records
                         // either default to loaded layout PEFile.
-                        PEFile peFileLayout = GetPEInfo(isVirtual: false, address, size, out List<PdbFileInfo> pdbsFileLayout, out Module.Flags flagsFileLayout);
+                        PEFile peFileLayout = GetPEInfo(
+                            isVirtual: false,
+                            address,
+                            size,
+                            out List<PdbFileInfo> pdbsFileLayout,
+                            out bool fileImageInfoAvailable,
+                            out Module.Flags flagsFileLayout);
+                        imageInfoAvailable |= fileImageInfoAvailable;
                         Debug.Assert((flagsFileLayout & Module.Flags.IsPEImage) != 0);
                         if (peFileLayout is not null && (peFile is null || pdbsFileLayout.Count > 0))
                         {
@@ -284,6 +312,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return peFile;
         }
 
+        internal void ReportImageInfoUnavailable(int moduleIndex, ulong imageBase)
+        {
+            if (!_reportedImageInfoUnavailable)
+            {
+                _reportedImageInfoUnavailable = true;
+                Trace.TraceWarning(
+                    "Module image information is unavailable for module index {0} at {1:X16}; the image could not be read from target memory or acquired from configured symbol sources. Additional failures for this target are suppressed.",
+                    moduleIndex,
+                    imageBase);
+            }
+        }
+
         /// <summary>
         /// Returns information about the PE file for a specific layout.
         /// </summary>
@@ -291,18 +331,32 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="address">module base address</param>
         /// <param name="size">module size</param>
         /// <param name="pdbs">pdb infos</param>
+        /// <param name="imageInfoAvailable">whether the image was read sufficiently to determine its type</param>
         /// <param name="flags">module flags</param>
         /// <returns>PEFile instance or null</returns>
-        private PEFile GetPEInfo(bool isVirtual, ulong address, ulong size, out List<PdbFileInfo> pdbs, out Module.Flags flags)
+        private PEFile GetPEInfo(
+            bool isVirtual,
+            ulong address,
+            ulong size,
+            out List<PdbFileInfo> pdbs,
+            out bool imageInfoAvailable,
+            out Module.Flags flags)
         {
-            pdbs = null;
+            PEFile peFile = null;
+            pdbs = new List<PdbFileInfo>();
+            imageInfoAvailable = false;
             flags = 0;
             try
             {
                 Stream stream = MemoryService.CreateMemoryStream(address, size);
-                PEFile peFile = new(new StreamAddressSpace(stream), isVirtual);
+                peFile = new PEFile(new StreamAddressSpace(stream), isVirtual);
+                if (peFile.DosHeaderMagic != ImageDosSignature)
+                {
+                    imageInfoAvailable = true;
+                }
                 if (peFile.IsValid())
                 {
+                    imageInfoAvailable = true;
                     flags |= Module.Flags.IsPEImage;
                     flags |= peFile.IsILImage ? Module.Flags.IsManaged : Module.Flags.None;
                     pdbs = peFile.Pdbs.Select((pdb) => pdb.ToPdbFileInfo()).ToList();
@@ -314,6 +368,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 Trace.TraceError($"GetPEInfo: {address:X16} isVirtual {isVirtual} exception {ex.Message}");
             }
+            peFile?.Dispose();
             return null;
         }
 

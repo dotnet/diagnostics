@@ -25,6 +25,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         private const string ListenerName = "DebugServicesTests";
 
         private static readonly string[] s_excludedModules = new string[] { "MpClient.dll", "MpOAV.dll" };
+        private static readonly ISet<string> s_imageInfoMembers = new HashSet<string>(StringComparer.Ordinal)
+        {
+            nameof(IModule.IsManaged),
+            nameof(IModule.IsFileLayout)
+        };
 
         private static IEnumerable<object[]> _configurations;
 
@@ -78,6 +83,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             IModuleService moduleService = host.Target.Services.GetService<IModuleService>();
             Assert.NotNull(moduleService);
+            int modulesWithAvailableImageInfo = 0;
 
             foreach (ImmutableDictionary<string, TestDataReader.Value> moduleData in host.TestData.Modules)
             {
@@ -122,10 +128,22 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     }
                 }
 
+                IModuleImageInfo moduleImageInfo = module.Services.GetService<IModuleImageInfo>();
+                Assert.NotNull(moduleImageInfo);
+                ISet<string> excludedMemberNames = null;
+                if (moduleImageInfo.IsImageInfoAvailable)
+                {
+                    modulesWithAvailableImageInfo++;
+                }
+                else
+                {
+                    excludedMemberNames = s_imageInfoMembers;
+                }
+
                 if (host.Target.Host.HostType != HostType.Lldb)
                 {
                     // Check that the resulting module matches the test data
-                    host.TestData.CompareMembers(moduleData, module);
+                    host.TestData.CompareMembers(moduleData, module, excludedMemberNames);
                 }
 
                 IModule module1 = moduleService.GetModuleFromIndex(module.ModuleIndex);
@@ -167,7 +185,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                             if (mod.ImageBase == imageBase)
                             {
                                 // Check that the resulting module matches the test data
-                                host.TestData.CompareMembers(moduleData, mod);
+                                host.TestData.CompareMembers(moduleData, mod, excludedMemberNames);
                             }
                         }
                     }
@@ -216,6 +234,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                         }
                     }
                 }
+            }
+            if (host.Target.Host.HostType != HostType.Lldb)
+            {
+                Assert.True(modulesWithAvailableImageInfo > 0, "No module image information was available.");
             }
         }
 
