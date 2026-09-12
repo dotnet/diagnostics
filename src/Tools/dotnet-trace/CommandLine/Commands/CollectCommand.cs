@@ -65,7 +65,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         /// <param name="rundown">Collect rundown events.</param>
         /// <param name="bufferingMode">The session buffering mode; Block requests non-lossy collection (requires a .NET 11+ target).</param>
         /// <returns></returns>
-        internal async Task<int> Collect(CancellationToken ct, CommandLineConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string[] providers, string[] profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter, EventPipeBufferingMode bufferingMode)
+        internal async Task<int> Collect(CancellationToken ct, InvocationConfiguration cliConfig, int processId, FileInfo output, uint buffersize, string[] providers, string[] profile, TraceFileFormat format, TimeSpan duration, string clrevents, string clreventlevel, string name, string diagnosticPort, bool showchildio, bool resumeRuntime, string stoppingEventProviderName, string stoppingEventEventName, string stoppingEventPayloadFilter, bool? rundown, string dsrouter, EventPipeBufferingMode bufferingMode)
         {
             bool collectionStopped = false;
             bool cancelOnEnter = true;
@@ -572,7 +572,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 string profileValue = parseResult.GetValue(CommonOptions.ProfileOption) ?? string.Empty;
 
                 return handler.Collect(ct,
-                                       cliConfig: parseResult.Configuration,
+                                       cliConfig: parseResult.InvocationConfiguration,
                                        processId: parseResult.GetValue(CommonOptions.ProcessIdOption),
                                        output: parseResult.GetValue(CommonOptions.OutputPathOption),
                                        buffersize: parseResult.GetValue(CircularBufferOption),

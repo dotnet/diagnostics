@@ -7,9 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.CommandLine;
-using System.CommandLine.Invocation;
-using System.CommandLine.Builder;
-using System.CommandLine.Parsing;
 
 using Common;
 using Microsoft.Diagnostics.NETCore.Client;
@@ -28,24 +25,6 @@ namespace Orchestrator
 
     class Program
     {
-        delegate Task<int> RootCommandHandler(
-            IConsole console,
-            CancellationToken ct,
-            FileInfo stressPath,
-            int eventSize,
-            int eventRate,
-            BurstPattern burstPattern,
-            ReaderType readerType,
-            int slowReader,
-            int duration,
-            int cores,
-            int threads,
-            int eventCount,
-            bool rundown,
-            int bufferSize,
-            int iterations,
-            bool pause);
-
         // TODO: Collect CPU % of reader and writer while running test and add to stats
         // TODO: Standardize and clean up logging from orchestrator and corescaletest
         // TODO: Improve error handling
@@ -69,20 +48,18 @@ namespace Orchestrator
                 } 
             }
 
-            return await BuildCommandLine()
-                            .UseDefaults()
-                            .Build()
-                            .InvokeAsync(args);
+            return await BuildCommandLine().Parse(args).InvokeAsync();
         }
 
-        static CommandLineBuilder BuildCommandLine()
+        static RootCommand BuildCommandLine()
         {
-            var rootCommand = new RootCommand("EventPipe Stress Tester - Orchestrator")
+            Argument<FileInfo> stressPathArgument = new("stress-path")
             {
-                new Argument<FileInfo>(
-                    name: "stress-path",
-                    description: "The location of the Stress executable."
-                ),
+                Description = "The location of the Stress executable."
+            };
+            RootCommand rootCommand = new("EventPipe Stress Tester - Orchestrator")
+            {
+                stressPathArgument,
                 CommandLineOptions.EventSizeOption,
                 CommandLineOptions.EventRateOption,
                 CommandLineOptions.BurstPatternOption,
@@ -99,8 +76,23 @@ namespace Orchestrator
             };
 
 
-            rootCommand.Handler = CommandHandler.Create((RootCommandHandler)Orchestrate);
-            return new CommandLineBuilder(rootCommand);
+            rootCommand.SetAction((parseResult, ct) => Orchestrate(
+                ct,
+                parseResult.GetValue(stressPathArgument),
+                parseResult.GetValue(CommandLineOptions.EventSizeOption),
+                parseResult.GetValue(CommandLineOptions.EventRateOption),
+                parseResult.GetValue(CommandLineOptions.BurstPatternOption),
+                parseResult.GetValue(OrchestrateCommandLine.ReaderTypeOption),
+                parseResult.GetValue(OrchestrateCommandLine.SlowReaderOption),
+                parseResult.GetValue(CommandLineOptions.DurationOption),
+                parseResult.GetValue(OrchestrateCommandLine.CoresOption),
+                parseResult.GetValue(CommandLineOptions.ThreadsOption),
+                parseResult.GetValue(CommandLineOptions.EventCountOption),
+                parseResult.GetValue(OrchestrateCommandLine.RundownOption),
+                parseResult.GetValue(OrchestrateCommandLine.BufferSizeOption),
+                parseResult.GetValue(OrchestrateCommandLine.IterationsOption),
+                parseResult.GetValue(OrchestrateCommandLine.PauseOption)));
+            return rootCommand;
         }
 
         private static EventPipeSession GetSession(int pid, bool rundown, int bufferSize)
@@ -197,7 +189,6 @@ namespace Orchestrator
         static bool IsWindowsOrLinux => OperatingSystem.IsLinux() || OperatingSystem.IsWindows();
 
         static async Task<int> Orchestrate(
-            IConsole console,
             CancellationToken ct,
             FileInfo stressPath,
             int eventSize,
