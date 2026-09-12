@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Microsoft.Diagnostics.Tools.Counters;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Microsoft.Diagnostics.Monitoring.EventPipe;
@@ -199,6 +200,120 @@ namespace DotnetCounters.UnitTests
         }
 
         [Fact]
+        public void EscapedTagsAreDecoded()
+        {
+            // Tags arrive already escaped. The exporter decodes them to their real values ('\=' -> '='
+            // and '\\' -> '\'). A decoded ',' is preserved and the whole Counter Name field is RFC 4180
+            // quoted so the comma cannot spill into the next column.
+            string valueTags = @"filter=x\=1,region=us\,west,path=C:\\logs"; // filter=x=1, region=us,west, path=C:\logs
+
+            string fileName = "EscapedTagsTest.csv";
+            CSVExporter exporter = new(fileName);
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+
+            exporter.CounterPayloadReceived(new GaugePayload(
+                new CounterMetadata("myProvider", "counterOne", string.Empty, string.Empty), "Counter One", string.Empty, valueTags, 0, start + TimeSpan.FromSeconds(0)), false);
+
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+
+            try
+            {
+                List<string> lines = File.ReadLines(fileName).ToList();
+                Assert.Equal(2, lines.Count); // header + one row
+
+                ValidateHeaderTokens(lines[0]);
+
+                List<string> tokens = SplitCsvLine(lines[1]);
+                Assert.Equal(5, tokens.Count); // the decoded ',' must not create an extra column
+                Assert.Equal("myProvider", tokens[1]);
+                Assert.Equal(@"Counter One[filter=x=1;region=us,west;path=C:\logs]", tokens[2]);
+                Assert.Equal("Metric", tokens[3]);
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+        }
+
+        [Fact]
+        public void EventCounterMetadataIsNotDecodedAsMeterTags()
+        {
+            const string metadata = @"path:C:\temp,expression:x\=1";
+            string fileName = "EventCounterMetadataTest.csv";
+            CSVExporter exporter = new(fileName);
+            exporter.Initialize();
+
+            exporter.CounterPayloadReceived(
+                new EventCounterPayload(
+                    DateTime.Now,
+                    "myProvider",
+                    "counterOne",
+                    "Counter One",
+                    string.Empty,
+                    1,
+                    CounterType.Metric,
+                    1,
+                    1,
+                    metadata),
+                false);
+            exporter.Stop();
+
+            try
+            {
+                List<string> lines = File.ReadLines(fileName).ToList();
+                List<string> tokens = SplitCsvLine(Assert.Single(lines.Skip(1)));
+
+                Assert.Equal(5, tokens.Count);
+                Assert.Equal(@"Counter One[path:C:\temp;expression:x\=1]", tokens[2]);
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+        }
+
+        [Fact]
+        public void SpecialCharactersAreCsvQuoted()
+        {
+            // A decoded tag value containing a ',' and a '"' forces RFC 4180 quoting of the field,
+            // with the embedded '"' doubled. The row must still parse back to exactly 5 fields.
+            string valueTags = @"note=a\,b" + "\"" + "c"; // decodes to note=a,b"c
+
+            string fileName = "CsvQuotingTest.csv";
+            CSVExporter exporter = new(fileName);
+            exporter.Initialize();
+            DateTime start = DateTime.Now;
+
+            exporter.CounterPayloadReceived(new GaugePayload(
+                new CounterMetadata("myProvider", "counterOne", string.Empty, string.Empty), "Counter One", string.Empty, valueTags, 0, start + TimeSpan.FromSeconds(0)), false);
+
+            exporter.Stop();
+
+            Assert.True(File.Exists(fileName));
+
+            try
+            {
+                List<string> lines = File.ReadLines(fileName).ToList();
+                Assert.Equal(2, lines.Count);
+
+                Assert.Contains("\"\"", lines[1]); // the embedded quote is doubled in the raw output
+
+                List<string> tokens = SplitCsvLine(lines[1]);
+                Assert.Equal(5, tokens.Count);
+                Assert.Equal("myProvider", tokens[1]);
+                Assert.Equal("Counter One[note=a,b\"c]", tokens[2]);
+                Assert.Equal("Metric", tokens[3]);
+            }
+            finally
+            {
+                File.Delete(fileName);
+            }
+        }
+
+        [Fact]
         public void DifferentDisplayRateTest()
         {
             string fileName = "displayRateTest.csv";
@@ -357,6 +472,51 @@ namespace DotnetCounters.UnitTests
             Assert.Equal("Counter Name", headerTokens[TestConstants.CounterNameIndex]);
             Assert.Equal("Counter Type", headerTokens[TestConstants.CounterTypeIndex]);
             Assert.Equal("Mean/Increment", headerTokens[TestConstants.ValueIndex]);
+        }
+
+        // Splits one RFC 4180 CSV line, honoring double-quoted fields (embedded '""' is an escaped quote).
+        private static List<string> SplitCsvLine(string line)
+        {
+            List<string> fields = new();
+            StringBuilder field = new();
+            bool inQuotes = false;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+                if (inQuotes)
+                {
+                    if (c == '"' && i + 1 < line.Length && line[i + 1] == '"')
+                    {
+                        field.Append('"');
+                        i++;
+                    }
+                    else if (c == '"')
+                    {
+                        inQuotes = false;
+                    }
+                    else
+                    {
+                        field.Append(c);
+                    }
+                }
+                else if (c == '"')
+                {
+                    inQuotes = true;
+                }
+                else if (c == ',')
+                {
+                    fields.Add(field.ToString());
+                    field.Clear();
+                }
+                else
+                {
+                    field.Append(c);
+                }
+            }
+
+            fields.Add(field.ToString());
+            return fields;
         }
     }
 }

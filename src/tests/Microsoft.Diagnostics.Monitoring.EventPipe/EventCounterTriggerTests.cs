@@ -508,6 +508,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal(value2, metadataDict[key2]);
         }
 
+        [Fact]
+        public void ValidateEventCounterMetadataParsing_PreservesBackslashesAndEquals()
+        {
+            IDictionary<string, string> metadataDict = CounterUtilities.GetMetadata(@"path:C:\temp,expression:x\=1");
+
+            Assert.Equal(2, metadataDict.Count);
+            Assert.Equal(@"C:\temp", metadataDict["path"]);
+            Assert.Equal(@"x\=1", metadataDict["expression"]);
+        }
+
         /// <summary>
         /// Validates that metadata with an invalid format from TraceEvent payloads is handled correctly.
         /// </summary>
