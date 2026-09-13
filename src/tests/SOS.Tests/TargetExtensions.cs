@@ -40,25 +40,50 @@ internal static partial class TargetExtensions
         }
     }
 
-    public static SosTable ClrstackRegisters(this Target self)
+    public static IReadOnlyList<SosTable> ClrstackRegistersAllThreads(this Target self)
     {
-        SosOutput clrstack = self.Sos("clrstack -r");
+        SosOutput clrstack = self.Sos("clrstack -all -r");
+        string[] lines = clrstack.Text.Replace("\r", string.Empty).Split('\n');
 
-        // Structural shape the legacy scripts checked: the thread banner is present and the table
-        // parses with the Child SP / IP / Call Site header (Table throws if the header is missing).
-        Assert.True(clrstack.Contains("OS Thread Id:"), "clrstack -r output had no 'OS Thread Id:' banner.");
+        List<int> banners = new();
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].TrimStart().StartsWith("OS Thread Id:", StringComparison.Ordinal))
+                banners.Add(i);
+        }
 
-        SosTable table = clrstack.Table([ColumnAlignment.Right("Child SP"), ColumnAlignment.Right("IP"), "Call Site"], dataExtractor: ExtractData);
+        Assert.NotEmpty(banners);
 
-        // Child SP and IP are addresses; every frame has a (non-empty) Call Site.
-        table.AssertValid(Sos.Addr, Sos.Addr, new SosToken("not-empty", @".+"));
-        Assert.NotEmpty(table);
+        List<SosTable> tables = new();
+        for (int b = 0; b < banners.Count; b++)
+        {
+            int start = banners[b];
+            int end = b + 1 < banners.Count ? banners[b + 1] : lines.Length;
+            string[] threadLines = lines[start..end];
+            if (!threadLines.Any(line => line.Contains("Child SP") && line.Contains("IP") && line.Contains("Call Site")))
+                continue;
 
-        // -r registers are promoted onto the row as extra columns; every frame prints a block, so
-        // every row must carry at least the instruction-pointer register column.
-        Assert.All(table, r => Assert.Contains(r.Columns, c => s_ipRegisters.Contains(c, StringComparer.OrdinalIgnoreCase)));
+            SosOutput threadOutput = new(clrstack.Host, clrstack.Command, string.Join('\n', threadLines));
+            SosTable table = threadOutput.Table(
+                [ColumnAlignment.Right("Child SP"), ColumnAlignment.Right("IP"), "Call Site"],
+                dataExtractor: ExtractData);
 
-        return table;
+            // A managed thread can have no unwindable frames. Other threads still provide the
+            // register coverage this test requires.
+            if (table.Length == 0)
+                continue;
+
+            // Child SP and IP are addresses; every frame has a (non-empty) Call Site.
+            table.AssertValid(Sos.Addr, Sos.Addr, new SosToken("not-empty", @".+"));
+
+            // -r registers are promoted onto the row as extra columns; every frame prints a block, so
+            // every row must carry at least the instruction-pointer register column.
+            Assert.All(table, r => Assert.Contains(r.Columns, c => s_ipRegisters.Contains(c, StringComparer.OrdinalIgnoreCase)));
+            tables.Add(table);
+        }
+
+        Assert.NotEmpty(tables);
+        return tables;
 
         static bool ExtractData(string line, SosRow row)
         {

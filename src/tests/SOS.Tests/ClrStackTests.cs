@@ -7,10 +7,10 @@ using Xunit;
 namespace SOS.Tests;
 
 /// <summary>
-/// Coverage for <c>!clrstack -r</c> (register display). The legacy SOS scripts only verified the
+/// Coverage for <c>!clrstack -all -r</c> (register display). The legacy SOS scripts only verified the
 /// <em>shape</em> of the output (the "OS Thread Id" banner, the "Child SP / IP / Call Site" header,
 /// and that each frame prints a register block). We assert the shape too (see
-/// <see cref="TargetExtensions.ClrstackRegisters"/>), then go further and check <em>values</em>:
+/// <see cref="TargetExtensions.ClrstackRegistersAllThreads"/>), then go further and check <em>values</em>:
 /// SOS fills the table's Child SP / IP columns from the same per-frame register context it dumps
 /// (strike.cpp <c>GetFrameLocation</c> / <c>PrintManagedFrameContext</c> read one context with
 /// <c>GetFullContextFlags</c>). So for every frame the IP column must equal the instruction-pointer
@@ -56,10 +56,10 @@ public sealed class ClrStackTests
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
 
-        SosTable table = target.ClrstackRegisters();
+        IReadOnlyList<SosTable> tables = target.ClrstackRegistersAllThreads();
 
         bool sawManagedFrame = false;
-        foreach (SosRow row in table)
+        foreach (SosRow row in tables.SelectMany(table => table))
         {
             // The IP column is filled from the frame context's instruction pointer, which -r also
             // dumps as a register column, so they must agree for every frame (internal frames included).
@@ -79,7 +79,7 @@ public sealed class ClrStackTests
             }
         }
 
-        Assert.True(sawManagedFrame, "clrstack -r produced no non-internal managed frame to match Child SP against.");
+        Assert.True(sawManagedFrame, "clrstack -all -r produced no non-internal managed frame to match Child SP against.");
     }
 
     // The value of the row's register column whose name is one of <paramref name="names"/>.
