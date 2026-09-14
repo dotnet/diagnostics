@@ -12,6 +12,12 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 upload="$HELIX_WORKITEM_UPLOAD_ROOT"
 identity="all"
 
+helix_work_item=""
+if [[ "${1:-}" == "--helix-work-item" ]]; then
+  helix_work_item="${2:-}"
+  shift 2
+fi
+
 mkdir -p "$upload"
 
 rid="$(sed -n '1p' "$root/.sos-test-payload")"
@@ -20,6 +26,24 @@ extra_metadata="$(sed -n '3p' "$root/.sos-test-payload")"
 if [[ -z "$rid" || -z "$configuration" || -n "$extra_metadata" ]]; then
   echo "The payload marker must contain the RID and configuration." >&2
   exit 3
+fi
+
+if [[ -n "$helix_work_item" ]]; then
+  identity="${helix_work_item##*-}"
+  case "$identity" in
+    Net[0-9]*)
+      export SOSHARNESS_ONLY_COREVERSIONS="$identity"
+      export SOSHARNESS_ONLY_FLAVORS="Core,SingleFile"
+      ;;
+    Framework)
+      export SOSHARNESS_ONLY_FLAVORS="Framework"
+      ;;
+    *)
+      echo "The Helix work item '$helix_work_item' does not identify a runtime or Framework shard." >&2
+      exit 3
+      ;;
+  esac
+  echo "Running SOS shard $identity."
 fi
 
 test_dlls=("$root/artifacts/bin/SOS.Tests/$configuration/"*/SOS.Tests.dll)

@@ -111,15 +111,32 @@
            Text="The SOS LLDB driver was not staged in the SOS Helix payload." />
   </Target>
 
-  <Target Name="SendToHelix" DependsOnTargets="StageSOSHelixPayload">
+  <Target Name="PrepareSOSHelixWorkItems">
     <PropertyGroup>
       <_SOSTestRuntimeVersions>@(RuntimeTestVersions->'%(RuntimeDownload)', '|')</_SOSTestRuntimeVersions>
+      <_SOSHelixWorkItemBase>$(SOSHelixWorkItemName)</_SOSHelixWorkItemBase>
     </PropertyGroup>
+    <ItemGroup>
+      <_SOSRuntimeShard Include="@(RuntimeTestVersions)">
+        <CoreVersion>$([System.String]::Copy('%(TargetFramework)').Replace('net', 'Net').Replace('.0', ''))</CoreVersion>
+      </_SOSRuntimeShard>
+      <_SOSHelixWorkItem Include="@(_SOSRuntimeShard->'$(_SOSHelixWorkItemBase)-%(CoreVersion)')" />
+      <_SOSHelixWorkItem Include="$(_SOSHelixWorkItemBase)-Framework"
+                         Condition="'$(TargetOS)' == 'Windows_NT'" />
+    </ItemGroup>
+    <Error Condition="'@(_SOSRuntimeShard)' == ''"
+           Text="RuntimeTestVersions must contain at least one runtime for SOS Helix sharding." />
+    <Error Condition="'%(_SOSRuntimeShard.TargetFramework)' == ''"
+           Text="RuntimeTestVersions must contain TargetFramework metadata for SOS Helix sharding." />
+    <Message Importance="High" Text="SOS Helix work items: @(_SOSHelixWorkItem, ', ')" />
+  </Target>
+
+  <Target Name="SendToHelix" DependsOnTargets="StageSOSHelixPayload;PrepareSOSHelixWorkItems">
     <MSBuild Projects="$(RepoRoot)eng/helix/SendToHelix.proj"
              Targets="Restore;Test"
              Properties="Configuration=$(Configuration);
                          TestDir=$(SOSHelixPayloadDir);
-                         HelixWorkItemName=$(SOSHelixWorkItemName);
+                         HelixWorkItems=@(_SOSHelixWorkItem, '|');
                          HelixWorkItemCommand=$(_SOSHelixWorkItemCommand);
                          HelixTargetQueues=$(HelixTargetQueues);
                          TargetOS=$(TargetOS);
