@@ -5,9 +5,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-#if !NETFRAMEWORK
-using SOS.TestHarness;
-#endif
+using System.Threading.Tasks;
 
 /// <summary>
 /// The one piece of shared machinery the marker debuggee uses. A call to <see cref="Stop"/> marks a
@@ -67,16 +65,17 @@ public static class TestHarness
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add(outPath);
 
-        BoundedProcessResult result = BoundedProcess.Run(
-            psi,
-            TimeSpan.FromMinutes(2),
-            isolateLinuxProcessGroup: true);
-        if (result.ExitCode != 0 || !File.Exists(outPath))
+        using Process process = Process.Start(psi)
+            ?? throw new InvalidOperationException("Failed to start dotnet-dump.");
+        Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+        process.WaitForExit();
+        string stdout = stdoutTask.GetAwaiter().GetResult();
+        string stderr = stderrTask.GetAwaiter().GetResult();
+        if (process.ExitCode != 0 || !File.Exists(outPath))
         {
             throw new InvalidOperationException(
-                $"Snapshot '{name}' failed (exit {result.ExitCode}):\n" +
-                $"stdout:\n{result.StandardOutput}\n" +
-                $"stderr:\n{result.StandardError}");
+                $"Snapshot '{name}' failed (exit {process.ExitCode}):\n{stdout}\n{stderr}");
         }
 #endif
     }

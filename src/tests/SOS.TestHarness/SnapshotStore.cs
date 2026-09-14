@@ -39,8 +39,6 @@ namespace SOS.TestHarness;
 /// </summary>
 public static class SnapshotStore
 {
-    private static readonly TimeSpan s_captureTimeout = TimeSpan.FromMinutes(5);
-
     // One acquisition per (flavor, target, coreVersion); thread-safe via Lazy.
     private static readonly ConcurrentDictionary<(Flavor Flavor, string Target, CoreVersion CoreVersion), Lazy<string>> s_targetExe = new();
 
@@ -113,6 +111,15 @@ public static class SnapshotStore
 
     private static string CaptureTarget(Flavor flavor, TargetDefinition target, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion)
     {
+        if (!OperatingSystem.IsWindows() &&
+            flavor == Flavor.SingleFile &&
+            (coreVersion == CoreVersion.Net8 || coreVersion == CoreVersion.Net9))
+        {
+            HarnessSkipException.Now(
+                ".NET 8 and 9 single-file runtimes leave forked createdump callback processes running on Unix. " +
+                "Fixed by https://github.com/dotnet/runtime/pull/117286.");
+        }
+
         string dumpDir = DumpDir(flavor, target.Name, gcType, dumpKind, coreVersion);
         Directory.CreateDirectory(dumpDir);
 
@@ -219,12 +226,11 @@ public static class SnapshotStore
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
 
-        // Windows createdump can outlive the crashing target while retaining its redirected handles.
-        BoundedProcessResult result = BoundedProcess.Run(
-            psi,
-            s_captureTimeout,
-            isolateLinuxProcessGroup: true,
-            outputDrainTimeout: s_captureTimeout);
+        using Process process = Process.Start(psi)
+            ?? throw new InvalidOperationException("Failed to launch target");
+        string stdout = process.StandardOutput.ReadToEnd();
+        string stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
 
         if (!File.Exists(dumpPath))
         {
@@ -232,8 +238,8 @@ public static class SnapshotStore
                 coreVersion,
                 RuntimeInformation.ProcessArchitecture,
                 OperatingSystem.IsLinux(),
-                result.StandardOutput,
-                result.StandardError))
+                stdout,
+                stderr))
             {
                 HarnessSkipException.Now(
                     ".NET 8 and 9 createdump can race while granting access to /proc/<pid>/mem on Linux. " +
@@ -241,9 +247,9 @@ public static class SnapshotStore
             }
 
             throw new InvalidOperationException(
-                $"createdump did not produce '{dumpPath}' for {target.Project} ({flavor}); exit {result.ExitCode}.\n" +
-                $"stdout:\n{result.StandardOutput}\n" +
-                $"stderr:\n{result.StandardError}");
+                $"createdump did not produce '{dumpPath}' for {target.Project} ({flavor}); exit {process.ExitCode}.\n" +
+                $"stdout:\n{stdout}\n" +
+                $"stderr:\n{stderr}");
         }
     }
 
@@ -354,19 +360,15 @@ public static class SnapshotStore
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
 
-        // Windows dump helpers can outlive the target while retaining its redirected handles.
-        BoundedProcessResult result = BoundedProcess.Run(
-            psi,
-            s_captureTimeout,
-            isolateLinuxProcessGroup: true,
-            outputDrainTimeout: s_captureTimeout);
+        using Process process = Process.Start(psi)
+            ?? throw new InvalidOperationException("Failed to launch target");
+        string stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
 
-        if (result.ExitCode != 0)
+        if (process.ExitCode != 0)
         {
             throw new InvalidOperationException(
-                $"Target '{target.Project}' ({flavor}) failed ({result.ExitCode}):\n" +
-                $"stdout:\n{result.StandardOutput}\n" +
-                $"stderr:\n{result.StandardError}");
+                $"Target '{target.Project}' ({flavor}) failed ({process.ExitCode}):\n{stderr}");
         }
     }
 

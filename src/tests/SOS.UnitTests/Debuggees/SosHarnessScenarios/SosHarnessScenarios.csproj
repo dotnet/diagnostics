@@ -9,8 +9,4 @@
     <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' != '$(DesktopTargetFramework)'">
-    <Compile Include="..\..\..\SOS.TestHarness\BoundedProcess.cs" Link="BoundedProcess.cs" />
-  </ItemGroup>
-
 </Project>
