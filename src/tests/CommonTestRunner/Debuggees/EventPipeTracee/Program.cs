@@ -42,11 +42,13 @@ namespace EventPipeTracee
             Console.WriteLine($"{pid} EventPipeTracee: start process");
             Console.Out.Flush();
 
-            // Workaround for  https://github.com/dotnet/runtime/issues/127681
-            // LoggingEventSource has a static initialization order bug fields are declared after the singleton instance.
+            // Workaround for https://github.com/dotnet/runtime/issues/127681.
+            // LoggingEventSource has a static initialization order bug: fields are declared after the singleton instance.
             // If EventPipe enables the source during or before the LoggingEventSource.Instance constructor, ParseFilterSpec
-            // produces wrong rules. Force the type initializer to complete before connecting to the pipe (which signals
-            // the test harness that EventPipe can be enabled).
+            // produces wrong rules. The pipe connection signals that the test harness can enable EventPipe, so fully
+            // construct the logger factory and loggers first. This also ensures its filter options monitor is subscribed
+            // before EventPipe updates the filter specification; otherwise that update can be missed and the application
+            // filters remain active, dropping the LoggerRemoteTest records.
             ServiceCollection serviceCollection = new();
             serviceCollection.AddLogging(builder => {
                 builder.AddEventSourceLogger();
@@ -55,17 +57,16 @@ namespace EventPipeTracee
                 builder.AddFilter(AppLoggerCategoryName, LogLevel.Warning);
             });
 
+            using ILoggerFactory loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
+            ILogger customCategoryLogger = loggerFactory.CreateLogger(loggerCategory);
+            ILogger appCategoryLogger = loggerFactory.CreateLogger(AppLoggerCategoryName);
+
             // Signal that the tracee has started
             Console.WriteLine($"{pid} EventPipeTracee: connecting to pipe");
             Console.Out.Flush();
             pipeStream.Connect(5 * 60 * 1000);
             Console.WriteLine($"{pid} EventPipeTracee: connected to pipe");
             Console.Out.Flush();
-
-
-            using ILoggerFactory loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
-            ILogger customCategoryLogger = loggerFactory.CreateLogger(loggerCategory);
-            ILogger appCategoryLogger = loggerFactory.CreateLogger(AppLoggerCategoryName);
 
             using ActivitySource activitySource = useActivitySource
                 ? new ActivitySource("EventPipeTracee.ActivitySource", version: "1.0.0")
