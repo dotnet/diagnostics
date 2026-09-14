@@ -69,11 +69,25 @@ namespace RuntimeHostingConstants
 {
     // This list is in probing order.
     constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
-        {9, 0},
-        {8, 0},
         {10, 0},
         {11, 0},
+        {9, 0},
+        {8, 0},
+        {12, 0},
     };
+
+    struct RuntimeAssemblyOverride
+    {
+        const char* FileName;
+        uint32_t FirstRuntimeMajor;
+        uint32_t CompatibleRuntimeMajor;
+    };
+
+#define HOST_RUNTIME_ASSEMBLY(fileName, firstRuntimeMajor, compatibleRuntimeMajor) { fileName, firstRuntimeMajor, compatibleRuntimeMajor },
+    constexpr RuntimeAssemblyOverride RuntimeAssemblyOverrides[] = {
+#include "hostruntimeassemblylist.inc"
+    };
+#undef HOST_RUNTIME_ASSEMBLY
 
     constexpr char DotnetRootEnvVar[] = "DOTNET_ROOT";
 
@@ -322,18 +336,13 @@ static std::string GetTpaListForRuntimeVersion(
     std::string tpaList;
     const char* directory = sosModuleDirectory.c_str();
 
-    // TODO: This is a little brittle. At the very least we should make sure that versions
-    //       of managed assemblies used by SOS other than the framework ones aren't of a greater
-    //       assembly version than the ones in the ones in the framework. The test could just
-    //       have a list of assemblies we pack with the versions, and if we end up using a newer assembly
-    //       fail the test and point to update this list.
-    //       This is also not fully correct as it doesn't consider the patch version (i.e. a 10.0.3 host doesn't
-    //       satisfy a 10.0.7 requirement). The only correct fix is to look at the two lists and choose the highest version of each assembly.
-    if (hostRuntimeVersion.Major > 0 && hostRuntimeVersion.Major < 10)
+    for (const RuntimeHostingConstants::RuntimeAssemblyOverride& assembly : RuntimeHostingConstants::RuntimeAssemblyOverrides)
     {
-        AddFileToTpaList(directory, "System.Collections.Immutable.dll", tpaList);
-        AddFileToTpaList(directory, "System.Text.Json.dll", tpaList);
-        AddFileToTpaList(directory, "System.Text.Encodings.Web.dll", tpaList);
+        if (hostRuntimeVersion.Major >= assembly.FirstRuntimeMajor &&
+            hostRuntimeVersion.Major < assembly.CompatibleRuntimeMajor)
+        {
+            AddFileToTpaList(directory, assembly.FileName, tpaList);
+        }
     }
 
     // Trust the runtime assemblies that are newer than the ones needed and provided by SOS's managed
