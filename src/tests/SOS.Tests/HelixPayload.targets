@@ -124,6 +124,9 @@
       <_SOSHelixWorkItem Include="$(_SOSHelixWorkItemBase)-Framework"
                          Condition="'$(TargetOS)' == 'Windows_NT'" />
     </ItemGroup>
+    <PropertyGroup>
+      <_SOSHelixWorkItems>@(_SOSHelixWorkItem, '|')</_SOSHelixWorkItems>
+    </PropertyGroup>
     <Error Condition="'@(_SOSRuntimeShard)' == ''"
            Text="RuntimeTestVersions must contain at least one runtime for SOS Helix sharding." />
     <Error Condition="'%(_SOSRuntimeShard.TargetFramework)' == ''"
@@ -136,7 +139,7 @@
              Targets="Restore;Test"
              Properties="Configuration=$(Configuration);
                          TestDir=$(SOSHelixPayloadDir);
-                         HelixWorkItems=@(_SOSHelixWorkItem, '|');
+                         HelixWorkItems=$(_SOSHelixWorkItems);
                          HelixWorkItemCommand=$(_SOSHelixWorkItemCommand);
                          HelixTargetQueues=$(HelixTargetQueues);
                          TargetOS=$(TargetOS);
