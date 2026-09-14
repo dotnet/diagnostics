@@ -83,15 +83,79 @@ internal static partial class BoundedProcess
         Task outputTask = Task.WhenAll(stdoutTask, stderrTask);
         if (!outputTask.Wait(timeout))
         {
+            string diagnostics = OperatingSystem.IsMacOS()
+                ? CaptureMacOsProcessDiagnostics(process.Id)
+                : string.Empty;
             throw new TimeoutException(
                 $"'{command}' exited with code {process.ExitCode}, but its redirected output did not close " +
-                $"within {timeout}.");
+                $"within {timeout}.{diagnostics}");
         }
 
         return new BoundedProcessResult(
             process.ExitCode,
             stdoutTask.GetAwaiter().GetResult(),
             stderrTask.GetAwaiter().GetResult());
+    }
+
+    private static string CaptureMacOsProcessDiagnostics(int childProcessId)
+    {
+        int harnessProcessId = Environment.ProcessId;
+        return
+            $"{Environment.NewLine}TEMP macOS redirected-output diagnostics " +
+            $"(harness PID {harnessProcessId}, exited child PID {childProcessId}):{Environment.NewLine}" +
+            $"Processes:{Environment.NewLine}" +
+            RunDiagnosticCommand(
+                "/bin/ps",
+                "-U", Environment.UserName,
+                "-o", "pid=,ppid=,pgid=,state=,etime=,command=") +
+            $"{Environment.NewLine}Harness file descriptors:{Environment.NewLine}" +
+            RunDiagnosticCommand(
+                "/usr/sbin/lsof",
+                "-nP", "-a", "-p", harnessProcessId.ToString()) +
+            $"{Environment.NewLine}Same-user standard descriptors:{Environment.NewLine}" +
+            RunDiagnosticCommand(
+                "/usr/sbin/lsof",
+                "-nP", "-a", "-u", Environment.UserName, "-d", "0,1,2");
+    }
+
+    private static string RunDiagnosticCommand(string fileName, params string[] arguments)
+    {
+        try
+        {
+            ProcessStartInfo startInfo = new(fileName)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+            foreach (string argument in arguments)
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
+
+            using Process process = Process.Start(startInfo)
+                ?? throw new InvalidOperationException($"Failed to start diagnostic command '{fileName}'.");
+            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+            Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(TimeoutMilliseconds(s_terminationTimeout)))
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit(TimeoutMilliseconds(s_terminationTimeout));
+                return $"'{fileName}' timed out.";
+            }
+
+            if (!Task.WhenAll(stdoutTask, stderrTask).Wait(s_terminationTimeout))
+            {
+                return $"'{fileName}' output did not close.";
+            }
+
+            return stdoutTask.GetAwaiter().GetResult() + stderrTask.GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            return $"'{fileName}' failed: {ex}";
+        }
     }
 
     private static void Terminate(Process process, bool hasLinuxProcessGroup, int processGroupId)
