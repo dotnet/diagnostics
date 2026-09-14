@@ -15,13 +15,29 @@ public class SOSHostRuntimeTests
 {
     private const string HostRuntimeAssemblyResourceName = "SOS.HostRuntimeAssemblyList";
     private const string HostRuntimeAssemblyPrefix = "HOST_RUNTIME_ASSEMBLY(\"";
+    private const string HostRuntimeVersionResourceName = "SOS.HostRuntimeVersionList";
+    private const string HostRuntimeVersionPrefix = "HOST_RUNTIME_VERSION(";
 
     public static IEnumerable<object[]> HostRuntimeConfigurations =>
         SOSTestHelpers.GetNetCoreConfigurations()
             .Select(arguments => (TestConfiguration)arguments[0])
             .Where(config => !config.PublishSingleFile)
-            .GroupBy(config => config.RuntimeFrameworkVersionMajor)
-            .Select(group => new object[] { group.First() });
+            .Select(config => new object[] { config });
+
+    [Fact]
+    public void HostRuntimeVersionsAreInExpectedProbingOrder()
+    {
+        (int Major, int Minor)[] expectedVersions =
+        {
+            (10, 0),
+            (11, 0),
+            (9, 0),
+            (8, 0),
+            (12, 0),
+        };
+
+        Assert.Equal(expectedVersions, ReadHostRuntimeVersions());
+    }
 
     [Theory]
     [MemberData(nameof(HostRuntimeConfigurations))]
@@ -130,5 +146,41 @@ public class SOSHostRuntimeTests
         }
 
         return overrides;
+    }
+
+    private static IReadOnlyList<(int Major, int Minor)> ReadHostRuntimeVersions()
+    {
+        List<(int Major, int Minor)> versions = new();
+        Assembly assembly = typeof(SOSHostRuntimeTests).Assembly;
+        using Stream stream = assembly.GetManifestResourceStream(HostRuntimeVersionResourceName);
+        Assert.NotNull(stream);
+        using StreamReader reader = new(stream);
+
+        while (reader.ReadLine() is string line)
+        {
+            string trimmedLine = line.Trim();
+            if (!trimmedLine.StartsWith(HostRuntimeVersionPrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int majorStart = HostRuntimeVersionPrefix.Length;
+            int majorEnd = trimmedLine.IndexOf(',', majorStart);
+            int minorStart = majorEnd + 1;
+            int minorEnd = trimmedLine.IndexOf(')', minorStart);
+
+            Assert.True(
+                majorEnd > majorStart && minorEnd > minorStart,
+                $"Invalid host runtime version entry: {line}");
+            Assert.True(
+                int.TryParse(trimmedLine[majorStart..majorEnd], out int major),
+                $"Invalid host runtime major version: {line}");
+            Assert.True(
+                int.TryParse(trimmedLine[minorStart..minorEnd], out int minor),
+                $"Invalid host runtime minor version: {line}");
+            versions.Add((major, minor));
+        }
+
+        return versions;
     }
 }
