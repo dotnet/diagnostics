@@ -68,11 +68,13 @@ static ExtensionsInitializeDelegate g_extensionsInitializeFunc = nullptr;
 namespace RuntimeHostingConstants
 {
     // This list is in probing order.
-#define HOST_RUNTIME_VERSION(major, minor) { major, minor },
     constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
-#include "hostruntimeversionlist.inc"
+        {10, 0},
+        {11, 0},
+        {9, 0},
+        {8, 0},
+        {12, 0},
     };
-#undef HOST_RUNTIME_VERSION
 
     struct RuntimeAssemblyOverride
     {
