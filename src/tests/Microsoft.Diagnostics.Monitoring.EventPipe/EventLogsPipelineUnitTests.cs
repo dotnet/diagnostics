@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,32 +43,26 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesAllLevels(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
             });
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using StreamReader reader = new(outputStream);
+            IReadOnlyList<LoggerTestResult> results = ReadResults(outputStream);
 
-            ValidateLoggerRemoteCategoryInformationMessage(reader);
-            ValidateLoggerRemoteCategoryWarningMessage(reader);
-            ValidateAppLoggerCategoryInformationMessage(reader);
-            ValidateAppLoggerCategoryWarningMessage(reader);
-            ValidateAppLoggerCategoryErrorMessage(reader);
-
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.Equal(6, results.Count);
+            ValidateLoggerRemoteCategoryInformationMessage(results);
+            ValidateLoggerRemoteCategoryWarningMessage(results);
+            ValidateAppLoggerCategoryInformationMessage(results);
+            ValidateAppLoggerCategoryWarningMessage(results);
+            ValidateAppLoggerCategoryErrorMessage(results);
         }
 
         /// <summary>
         /// Test that log events at or above the default level are collected.
         /// </summary>
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/2541"), MemberData(nameof(Configurations))]
+        [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevel(TestConfiguration config)
         {
             using Stream outputStream = await GetLogsAsync(config, settings => {
@@ -78,26 +72,20 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using StreamReader reader = new(outputStream);
+            IReadOnlyList<LoggerTestResult> results = ReadResults(outputStream);
 
-            ValidateLoggerRemoteCategoryWarningMessage(reader);
-            ValidateAppLoggerCategoryWarningMessage(reader);
-            ValidateAppLoggerCategoryErrorMessage(reader);
-
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.Equal(3, results.Count);
+            ValidateLoggerRemoteCategoryWarningMessage(results);
+            ValidateAppLoggerCategoryWarningMessage(results);
+            ValidateAppLoggerCategoryErrorMessage(results);
         }
 
         /// <summary>
         /// Test that log events at the default level are collected for categories without a specified level.
         /// </summary>
-        [SkippableTheory(Skip = "Unreliable test https://github.com/dotnet/diagnostics/issues/3143"), MemberData(nameof(Configurations))]
+        [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevelFallback(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Error;
@@ -110,13 +98,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using StreamReader reader = new(outputStream);
+            IReadOnlyList<LoggerTestResult> results = ReadResults(outputStream);
 
-            ValidateLoggerRemoteCategoryInformationMessage(reader);
-            ValidateLoggerRemoteCategoryWarningMessage(reader);
-            ValidateAppLoggerCategoryErrorMessage(reader);
-
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.Equal(4, results.Count);
+            ValidateLoggerRemoteCategoryInformationMessage(results);
+            ValidateLoggerRemoteCategoryWarningMessage(results);
+            ValidateAppLoggerCategoryErrorMessage(results);
         }
 
         /// <summary>
@@ -143,28 +130,22 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsUseAppFilters(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config);
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using StreamReader reader = new(outputStream);
+            IReadOnlyList<LoggerTestResult> results = ReadResults(outputStream);
 
-            ValidateAppLoggerCategoryWarningMessage(reader);
-            ValidateAppLoggerCategoryErrorMessage(reader);
-
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.Equal(2, results.Count);
+            ValidateAppLoggerCategoryWarningMessage(results);
+            ValidateAppLoggerCategoryErrorMessage(results);
         }
 
         /// <summary>
         /// Test that log events are collected for the categories and levels specified by the application
         /// and for the categories and levels specified in the filter specs.
         /// </summary>
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/2541"), MemberData(nameof(Configurations))]
+        [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsUseAppFiltersAndFilterSpecs(TestConfiguration config)
         {
             using Stream outputStream = await GetLogsAsync(config, settings => {
@@ -176,13 +157,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using StreamReader reader = new(outputStream);
+            IReadOnlyList<LoggerTestResult> results = ReadResults(outputStream);
 
-            ValidateLoggerRemoteCategoryWarningMessage(reader);
-            ValidateAppLoggerCategoryWarningMessage(reader);
-            ValidateAppLoggerCategoryErrorMessage(reader);
-
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.Equal(3, results.Count);
+            ValidateLoggerRemoteCategoryWarningMessage(results);
+            ValidateAppLoggerCategoryWarningMessage(results);
+            ValidateAppLoggerCategoryErrorMessage(results);
         }
 
         /// <summary>
@@ -191,11 +171,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsWildcardCategory(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Critical;
@@ -208,12 +183,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
 
-            using StreamReader reader = new(outputStream);
+            IReadOnlyList<LoggerTestResult> results = ReadResults(outputStream);
 
-            ValidateAppLoggerCategoryWarningMessage(reader);
-            ValidateAppLoggerCategoryErrorMessage(reader);
-
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.Equal(2, results.Count);
+            ValidateAppLoggerCategoryWarningMessage(results);
+            ValidateAppLoggerCategoryErrorMessage(results);
         }
 
         private async Task<Stream> GetLogsAsync(TestConfiguration config, Action<EventLogsPipelineSettings> settingsCallback = null)
@@ -240,12 +214,24 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             return outputStream;
         }
 
-        private static void ValidateLoggerRemoteCategoryInformationMessage(StreamReader reader)
+        private static IReadOnlyList<LoggerTestResult> ReadResults(Stream stream)
         {
-            string message = reader.ReadLine();
-            Assert.NotNull(message);
+            // The tracee emits from multiple threads, so EventPipe delivery order is not deterministic.
+            using StreamReader reader = new(stream);
+            List<LoggerTestResult> results = new();
+            string message;
+            while ((message = reader.ReadLine()) != null)
+            {
+                LoggerTestResult result = JsonSerializer.Deserialize<LoggerTestResult>(message);
+                Assert.NotNull(result);
+                results.Add(result);
+            }
+            return results;
+        }
 
-            LoggerTestResult result = JsonSerializer.Deserialize<LoggerTestResult>(message);
+        private static void ValidateLoggerRemoteCategoryInformationMessage(IReadOnlyList<LoggerTestResult> results)
+        {
+            LoggerTestResult result = GetResult(results, "Some warning message with 6");
             Assert.Equal("Some warning message with 6", result.Message);
             Assert.Equal(LoggerRemoteTestName, result.Category);
             Assert.Equal("Information", result.LogLevel);
@@ -254,10 +240,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Validate(result.Scopes, ("BoolValue", "true"), ("StringValue", "test"), ("IntValue", "5"));
             Validate(result.Arguments, ("Arg", "6"));
 
-            message = reader.ReadLine();
-            Assert.NotNull(message);
-
-            result = JsonSerializer.Deserialize<LoggerTestResult>(message);
+            result = GetResult(results, "Some other message with 7");
             Assert.Equal("Some other message with 7", result.Message);
             Assert.Equal(LoggerRemoteTestName, result.Category);
             Assert.Equal("Information", result.LogLevel);
@@ -267,12 +250,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Validate(result.Arguments, ("Arg", "7"));
         }
 
-        private static void ValidateLoggerRemoteCategoryWarningMessage(StreamReader reader)
+        private static void ValidateLoggerRemoteCategoryWarningMessage(IReadOnlyList<LoggerTestResult> results)
         {
-            string message = reader.ReadLine();
-            Assert.NotNull(message);
-
-            LoggerTestResult result = JsonSerializer.Deserialize<LoggerTestResult>(message);
+            LoggerTestResult result = GetResult(results, "Another message");
             Assert.Equal("Another message", result.Message);
             Assert.Equal(LoggerRemoteTestName, result.Category);
             Assert.Equal("Warning", result.LogLevel);
@@ -283,12 +263,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal(1, result.Arguments.Count);
         }
 
-        private static void ValidateAppLoggerCategoryInformationMessage(StreamReader reader)
+        private static void ValidateAppLoggerCategoryInformationMessage(IReadOnlyList<LoggerTestResult> results)
         {
-            string message = reader.ReadLine();
-            Assert.NotNull(message);
-
-            LoggerTestResult result = JsonSerializer.Deserialize<LoggerTestResult>(message);
+            LoggerTestResult result = GetResult(results, "Information message.");
             Assert.Equal("Information message.", result.Message);
             Assert.Equal(AppLoggerCategoryName, result.Category);
             Assert.Equal("Information", result.LogLevel);
@@ -299,12 +276,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal(1, result.Arguments.Count);
         }
 
-        private static void ValidateAppLoggerCategoryWarningMessage(StreamReader reader)
+        private static void ValidateAppLoggerCategoryWarningMessage(IReadOnlyList<LoggerTestResult> results)
         {
-            string message = reader.ReadLine();
-            Assert.NotNull(message);
-
-            LoggerTestResult result = JsonSerializer.Deserialize<LoggerTestResult>(message);
+            LoggerTestResult result = GetResult(results, "Warning message.");
             Assert.Equal("Warning message.", result.Message);
             Assert.Equal(AppLoggerCategoryName, result.Category);
             Assert.Equal("Warning", result.LogLevel);
@@ -315,12 +289,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal(1, result.Arguments.Count);
         }
 
-        private static void ValidateAppLoggerCategoryErrorMessage(StreamReader reader)
+        private static void ValidateAppLoggerCategoryErrorMessage(IReadOnlyList<LoggerTestResult> results)
         {
-            string message = reader.ReadLine();
-            Assert.NotNull(message);
-
-            LoggerTestResult result = JsonSerializer.Deserialize<LoggerTestResult>(message);
+            LoggerTestResult result = GetResult(results, "Error message.");
             Assert.Equal("Error message.", result.Message);
             Assert.Equal(AppLoggerCategoryName, result.Category);
             Assert.Equal("Error", result.LogLevel);
@@ -330,6 +301,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             //We are expecting only the original format
             Assert.Equal(1, result.Arguments.Count);
         }
+
+        private static LoggerTestResult GetResult(IReadOnlyList<LoggerTestResult> results, string message) =>
+            Assert.Single(results, result => result.Message == message);
 
         private static void Validate(IDictionary<string, JsonElement> values, params (string key, object value)[] expectedValues)
         {
