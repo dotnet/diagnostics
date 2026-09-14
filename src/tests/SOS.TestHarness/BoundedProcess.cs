@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SOS.TestHarness;
@@ -16,6 +17,7 @@ internal static partial class BoundedProcess
 {
     private const int KillSignal = 9;
     private static readonly TimeSpan s_terminationTimeout = TimeSpan.FromSeconds(5);
+    private static int s_linuxDiagnosticsCaptured;
 
     public static BoundedProcessResult Run(
         ProcessStartInfo startInfo,
@@ -62,6 +64,12 @@ internal static partial class BoundedProcess
         // End the isolated group before waiting for stream EOF so those descendants cannot wedge drainage.
         if (hasLinuxProcessGroup)
         {
+            Task outputTask = Task.WhenAll(stdoutTask, stderrTask);
+            if (Task.WhenAny(outputTask, Task.Delay(TimeSpan.FromMilliseconds(250))).GetAwaiter().GetResult() != outputTask)
+            {
+                RecordLinuxPreKillDiagnostics(processGroupId, command);
+            }
+
             KillProcessGroup(processGroupId);
         }
 
@@ -84,7 +92,7 @@ internal static partial class BoundedProcess
         if (!outputTask.Wait(timeout))
         {
             string diagnostics = OperatingSystem.IsMacOS()
-                ? CaptureMacOsProcessDiagnostics(process.Id)
+                ? CaptureUnixProcessDiagnostics("macOS drain timeout", process.Id, command)
                 : string.Empty;
             throw new TimeoutException(
                 $"'{command}' exited with code {process.ExitCode}, but its redirected output did not close " +
@@ -97,12 +105,48 @@ internal static partial class BoundedProcess
             stderrTask.GetAwaiter().GetResult());
     }
 
-    private static string CaptureMacOsProcessDiagnostics(int childProcessId)
+    private static void RecordLinuxPreKillDiagnostics(int processGroupId, string command)
+    {
+        if (Interlocked.Exchange(ref s_linuxDiagnosticsCaptured, 1) != 0)
+        {
+            return;
+        }
+
+        string diagnostics = CaptureUnixProcessDiagnostics(
+            "Linux pre-process-group-kill",
+            processGroupId,
+            command);
+        Console.Error.WriteLine(diagnostics);
+
+        string? uploadRoot = Environment.GetEnvironmentVariable("HELIX_WORKITEM_UPLOAD_ROOT");
+        if (string.IsNullOrEmpty(uploadRoot))
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(uploadRoot);
+            File.WriteAllText(
+                Path.Combine(
+                    uploadRoot,
+                    $"TEMP-linux-pipe-holder-{Environment.ProcessId}-{processGroupId}.log"),
+                diagnostics);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to persist TEMP Linux redirected-output diagnostics: {ex}");
+        }
+    }
+
+    private static string CaptureUnixProcessDiagnostics(string reason, int childProcessId, string command)
     {
         int harnessProcessId = Environment.ProcessId;
+        string lsof = File.Exists("/usr/bin/lsof") ? "/usr/bin/lsof" : "/usr/sbin/lsof";
         return
-            $"{Environment.NewLine}TEMP macOS redirected-output diagnostics " +
-            $"(harness PID {harnessProcessId}, exited child PID {childProcessId}):{Environment.NewLine}" +
+            $"{Environment.NewLine}TEMP Unix redirected-output diagnostics ({reason}; " +
+            $"harness PID {harnessProcessId}, child/process-group ID {childProcessId}):{Environment.NewLine}" +
+            $"Command: {command}{Environment.NewLine}" +
             $"Processes:{Environment.NewLine}" +
             RunDiagnosticCommand(
                 "/bin/ps",
@@ -110,11 +154,11 @@ internal static partial class BoundedProcess
                 "-o", "pid=,ppid=,pgid=,state=,etime=,command=") +
             $"{Environment.NewLine}Harness file descriptors:{Environment.NewLine}" +
             RunDiagnosticCommand(
-                "/usr/sbin/lsof",
+                lsof,
                 "-nP", "-a", "-p", harnessProcessId.ToString()) +
             $"{Environment.NewLine}Same-user standard descriptors:{Environment.NewLine}" +
             RunDiagnosticCommand(
-                "/usr/sbin/lsof",
+                lsof,
                 "-nP", "-a", "-u", Environment.UserName, "-d", "0,1,2");
     }
 
