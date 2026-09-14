@@ -3,6 +3,8 @@ Param(
     [ValidateSet("x86","x64","arm","arm64")][string][Alias('a', "platform")]$architecture = [System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant(),
     [ValidateSet("Debug","Release")][string][Alias('c')] $configuration = "Debug",
     [string][Alias('v')] $verbosity = "minimal",
+    [switch][Alias('r')] $restore,
+    [switch][Alias('b')] $build,
     [switch][Alias('t')] $test,
     [switch] $privatebuild,
     [switch] $ci,
@@ -109,7 +111,7 @@ if (-not $skipmanaged) {
     if ($privatebuild) {
         $privatebuildtesting = "true"
     }
-    Invoke-Expression "& `"$engroot\common\build.ps1`" -configuration $configuration -verbosity $verbosity $bl /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture /p:PrivateBuildTesting=$privatebuildtesting /p:LiveRuntimeDir=`"$liveRuntimeDir`" $remainingargs"
+    Invoke-Expression "& `"$engroot\common\build.ps1`" -restore:`$restore -build:`$build -configuration $configuration -verbosity $verbosity $bl /p:TargetOS=$os /p:TargetArch=$architecture /p:TestArchitectures=$architecture /p:PrivateBuildTesting=$privatebuildtesting /p:LiveRuntimeDir=`"$liveRuntimeDir`" $remainingargs"
 
     if ($lastExitCode -ne 0) {
         exit $lastExitCode
