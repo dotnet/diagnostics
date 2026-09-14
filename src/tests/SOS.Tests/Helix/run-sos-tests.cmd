@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 if "%HELIX_WORKITEM_UPLOAD_ROOT%"=="" (
   echo HELIX_WORKITEM_UPLOAD_ROOT is required.
@@ -33,7 +33,8 @@ if "%CONFIGURATION%"=="" (
 set "IDENTITY=all"
 if defined HELIX_WORK_ITEM (
   set "IDENTITY="
-  for %%S in (!HELIX_WORK_ITEM:-= !) do set "IDENTITY=%%S"
+  set "SHARD_TOKENS=!HELIX_WORK_ITEM:-= !"
+  for %%S in (!SHARD_TOKENS!) do set "IDENTITY=%%S"
   if /I "!IDENTITY!"=="Framework" (
     set "SOSHARNESS_ONLY_FLAVORS=Framework"
   ) else if /I "!IDENTITY:~0,3!"=="Net" (
