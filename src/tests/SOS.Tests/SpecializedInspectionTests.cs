@@ -62,7 +62,6 @@ public sealed class SpecializedInspectionTests
         if (OperatingSystem.IsMacOS() &&
             config.Host == Host.DotnetDump &&
             config.Dac == Dac.Legacy &&
-            config.Flavor == Flavor.Core &&
             config.CoreVersion == CoreVersion.Net11)
         {
             HarnessSkipException.Now(

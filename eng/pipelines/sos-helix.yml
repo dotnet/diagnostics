@@ -1,0 +1,123 @@
+parameters:
+- name: jobTemplate
+  type: string
+  default: /eng/common/templates-official/job/job.yml@self
+- name: name
+  type: string
+- name: osGroup
+  type: string
+- name: container
+  type: string
+  default: ''
+- name: dependsOn
+  type: string
+- name: artifactPhase
+  type: string
+- name: configuration
+  type: string
+- name: architecture
+  type: string
+- name: targetOS
+  type: string
+- name: targetRid
+  type: string
+- name: queue
+  type: string
+- name: helixPreCommands
+  type: string
+  default: ''
+jobs:
+- template: ${{ parameters.jobTemplate }}
+  parameters:
+    name: ${{ parameters.name }}
+    displayName: SOS Helix ${{ replace(replace(replace(replace(parameters.targetRid, 'linux-musl-', 'Alpine '), 'linux-', 'Linux '), 'win-', 'Windows '), 'osx-', 'macOS ') }} ${{ parameters.configuration }}
+    timeoutInMinutes: 420
+    enableMicrobuild: true
+
+    pool:
+      ${{ if eq(parameters.osGroup, 'Linux') }}:
+        name: $(BuildPool)
+        demands: ImageOverride -equals $(LinuxImage)
+        os: linux
+      ${{ elseif eq(parameters.osGroup, 'Windows_NT') }}:
+        name: $(BuildPool)
+        demands: ImageOverride -equals $(WindowsImage)
+        os: windows
+      ${{ elseif eq(parameters.osGroup, 'MacOS') }}:
+        name: Azure Pipelines
+        vmImage: $(macOSImage)
+        os: macOS
+
+    ${{ if ne(parameters.container, '') }}:
+      container: ${{ parameters.container }}
+
+    dependsOn: ${{ parameters.dependsOn }}
+
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: Download SOS test payload inputs
+      inputs:
+        artifact: TestArtifacts_${{ parameters.artifactPhase }}
+        targetPath: '$(Build.SourcesDirectory)/artifacts'
+        checkDownloadedFiles: true
+
+    - powershell: >
+        powershell "$env:BUILD_SOURCESDIRECTORY\eng\common\msbuild.ps1
+        $env:BUILD_SOURCESDIRECTORY\src\tests\SOS.Tests\SOS.Tests.csproj
+        /restore /p:TreatWarningsAsErrors=false /t:SendToHelix
+        /p:Configuration=${{ parameters.configuration }}
+        /p:TargetArch=${{ parameters.architecture }}
+        /p:TargetOS=${{ parameters.targetOS }}
+        /p:TargetRid=${{ parameters.targetRid }}
+        /p:OfficialBuildId=$env:BUILD_BUILDNUMBER
+        /bl:$env:BUILD_SOURCESDIRECTORY\artifacts\log\${{ parameters.configuration }}\SendToHelix.binlog"
+      displayName: Run SOS.Tests on Helix
+      env:
+        HelixSource: pr/dotnet/diagnostics/sos-tests
+        HelixType: tests/sos/harness/
+        HelixConfiguration: ${{ parameters.targetRid }}_${{ parameters.configuration }}
+        HelixTargetQueues: ${{ parameters.queue }}
+        HelixPreCommands: ${{ parameters.helixPreCommands }}
+        Creator: dotnet-bot
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      condition: eq(variables['Agent.Os'], 'Windows_NT')
+
+    - script: >
+        $BUILD_SOURCESDIRECTORY/eng/common/msbuild.sh
+        $BUILD_SOURCESDIRECTORY/src/tests/SOS.Tests/SOS.Tests.csproj
+        /restore /p:TreatWarningsAsErrors=false /t:SendToHelix
+        /p:Configuration=${{ parameters.configuration }}
+        /p:TargetArch=${{ parameters.architecture }}
+        /p:TargetOS=${{ parameters.targetOS }}
+        /p:TargetRid=${{ parameters.targetRid }}
+        /p:OfficialBuildId=$BUILD_BUILDNUMBER
+        /bl:$BUILD_SOURCESDIRECTORY/artifacts/log/${{ parameters.configuration }}/SendToHelix.binlog
+      displayName: Run SOS.Tests on Helix
+      env:
+        HelixSource: pr/dotnet/diagnostics/sos-tests
+        HelixType: tests/sos/harness/
+        HelixConfiguration: ${{ parameters.targetRid }}_${{ parameters.configuration }}
+        HelixTargetQueues: ${{ parameters.queue }}
+        HelixPreCommands: ${{ parameters.helixPreCommands }}
+        Creator: dotnet-bot
+        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+      condition: ne(variables['Agent.Os'], 'Windows_NT')
+
+    - task: CopyFiles@2
+      displayName: Gather Helix logs
+      inputs:
+        sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+        contents: '?(log|TestResults)/**'
+        targetFolder: '$(Build.StagingDirectory)/HelixLogs'
+      continueOnError: true
+      condition: always()
+
+    - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+      parameters:
+        displayName: Publish Helix logs
+        inputs:
+          targetPath: '$(Build.StagingDirectory)/HelixLogs'
+          artifactName: Logs_${{ parameters.name }}_$(System.JobAttempt)
+          sbomEnabled: false
+        continueOnError: true
+        condition: always()

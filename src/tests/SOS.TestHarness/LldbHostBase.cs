@@ -22,7 +22,7 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
     private const string EndMarker = "<END_COMMAND_OUTPUT>";
     private const string ErrorMarker = "<END_COMMAND_ERROR>";
 
-    private static readonly string? s_trace = Environment.GetEnvironmentVariable("SOSHARNESS_LLDB_TRACE");
+    private static readonly string? s_trace = RepoLayout.LldbTraceFile;
     private static readonly object s_traceLock = new();
 
     private Process _process = null!;
@@ -95,11 +95,16 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         // disable-aslr false: toggling ASLR needs ptrace perms we may not have; keep it off so target
         //   creation/launch never fails on that.
         // prompt-on-quit false: never block waiting for a y/n on shutdown.
+        // symbols.enable-external-lookup false: keep target creation hermetic. LLDB's default external
+        // lookup can spend many minutes probing debuginfod servers even when the dump, executable, and
+        // matching DAC are all local.
         psi.ArgumentList.Add("--no-lldbinit");
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add("settings set target.disable-aslr false");
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add("settings set interpreter.prompt-on-quit false");
+        psi.ArgumentList.Add("-o");
+        psi.ArgumentList.Add("settings set symbols.enable-external-lookup false");
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add($"command script import {helper}");
 
@@ -285,7 +290,7 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
         sb.AppendLine($"ToolPaths.LldbPluginPath={ToolPaths.LldbPluginPath}");
         sb.AppendLine($"ToolPaths.HostRuntimeDirectory={ToolPaths.HostRuntimeDirectory}");
         sb.AppendLine($"crashDumpDirectory={HostDiagnostics.CrashDumpDirectory}");
-        sb.AppendLine($"SOSHARNESS_LLDB_TRACE={s_trace ?? "<unset>"}");
+        sb.AppendLine($"LLDB trace={s_trace ?? "<unset>"}");
 
         if (_diagnostics is not null)
         {

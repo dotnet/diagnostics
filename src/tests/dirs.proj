@@ -2,6 +2,8 @@
   <ItemGroup>
     <!-- Tests and Helpers -->
     <ProjectReference Include="*/*.csproj" />
+    <!-- SOS.Tests is built here for payload staging, but executes only as dedicated Helix work items. -->
+    <ProjectReference Update="SOS.Tests/SOS.Tests.csproj" Test="false" />
 
     <!-- Tests are broken as it hasn't been run on main in a while. Relies on older System.CommandLine API's that are no longer public -->
     <ProjectReference Remove="dotnet-stack/DotnetStack.UnitTests.csproj" />

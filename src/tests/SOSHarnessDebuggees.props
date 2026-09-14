@@ -1,0 +1,45 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+
+  <!-- TODO: Move this metadata into the debuggee projects and discover the catalog by globbing
+       SOS.UnitTests/Debuggees once the additional MSBuild project evaluation is justified. -->
+  <ItemGroup>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/AsyncMain/AsyncMain.csproj">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/DivZero/DivZero.csproj">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/DynamicMethod/DynamicMethod.csproj">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>false</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/LineNums/LineNums.csproj">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/NestedExceptionTest/NestedExceptionTest.csproj">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/Overflow/Overflow.csproj">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/ReflectionTest/ReflectionTest.csproj">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/SimpleThrow/SimpleThrow.csproj">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/SosHarnessScenarios/SosHarnessScenarios.csproj">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
+  </ItemGroup>
+
+</Project>

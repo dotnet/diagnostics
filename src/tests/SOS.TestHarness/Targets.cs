@@ -98,8 +98,9 @@ public static class Targets
             }
         }
 
-        // Close any pooled host still open. cdb children were disposed with their sessions above.
-        HostSlot.Lldb.CloseCurrent();
-        HostSlot.DotNetDump.CloseCurrent();
+        // Close any pooled host still open.
+        HostSlot.CdbDump.CloseAll();
+        HostSlot.LldbDump.CloseAll();
+        HostSlot.DotNetDump.CloseAll();
     }
 }

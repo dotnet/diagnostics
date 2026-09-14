@@ -21,7 +21,7 @@ public static class DbgEngCapturer
 {
     public static void Capture(string exePath, TargetDefinition target, string dumpDir, DumpKind dumpKind)
     {
-        using IDisposable lease = HostSlot.DbgEng.AcquireExclusive();
+        using IDisposable lease = HostSlot.DbgEngCapture.AcquireExclusive();
 
         using IDisposable clientDisposable = IDebugClient.Create(ToolPaths.DbgEngDirectory);
         IDebugClient client = (IDebugClient)clientDisposable;
