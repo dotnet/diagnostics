@@ -19,6 +19,7 @@
   <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
     <EmbeddedResource Include="$(SrcDir)SOS\extensions\hostruntimeassemblylist.inc" LogicalName="SOS.HostRuntimeAssemblyList" />
+    <EmbeddedResource Include="$(SrcDir)SOS\extensions\hostruntimeversionlist.inc" LogicalName="SOS.HostRuntimeVersionList" />
   </ItemGroup>
 
   <ItemGroup>
