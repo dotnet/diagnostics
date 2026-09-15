@@ -105,6 +105,13 @@ extends:
             - configuration: Release
               architecture: x86
               artifactUploadPath: bin/Windows_NT.x86.Release
+            - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+              - configuration: Debug
+                architecture: x64
+                artifactUploadPath: bin/Windows_NT.x64.Debug
+              - configuration: Debug
+                architecture: x86
+                artifactUploadPath: bin/Windows_NT.x86.Debug
             - ${{ if ne(variables['System.TeamProject'], 'public') }}:
               - configuration: Release
                 architecture: arm64
@@ -127,6 +134,10 @@ extends:
             - configuration: Release
               architecture: x64
               artifactUploadPath: bin/linux.x64.Release
+            - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+              - configuration: Debug
+                architecture: x64
+                artifactUploadPath: bin/linux.x64.Debug
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -149,6 +160,11 @@ extends:
               architecture: x64
               artifactUploadPath: bin/linux.x64.Release
               artifactTargetPath: bin/linux-musl.x64.Release
+            - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+              - configuration: Debug
+                architecture: x64
+                artifactUploadPath: bin/linux.x64.Debug
+                artifactTargetPath: bin/linux-musl.x64.Debug
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -167,6 +183,10 @@ extends:
             - configuration: Release
               architecture: arm64
               artifactUploadPath: bin/linux.arm64.Release
+            - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+              - configuration: Debug
+                architecture: arm64
+                artifactUploadPath: bin/linux.arm64.Debug
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -183,6 +203,10 @@ extends:
             - configuration: Release
               architecture: x64
               artifactUploadPath: bin/osx.x64.Release
+            - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+              - configuration: Debug
+                architecture: x64
+                artifactUploadPath: bin/osx.x64.Debug
 
       - template: /eng/pipelines/build.yml
         parameters:
@@ -200,6 +224,10 @@ extends:
             - configuration: Release
               architecture: arm64
               artifactUploadPath: bin/osx.arm64.Release
+            - ${{ if eq(variables['System.TeamProject'], 'public') }}:
+              - configuration: Debug
+                architecture: arm64
+                artifactUploadPath: bin/osx.arm64.Debug
 
       - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         - template: /eng/pipelines/build.yml
@@ -388,6 +416,101 @@ extends:
               queue: $(helix_osx_arm64)
 
           - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_Windows_x64_Debug
+                osGroup: Windows_NT
+                dependsOn: Windows_x64_Debug
+                artifactPhase: Windows_x64_Debug
+                configuration: Debug
+                architecture: x64
+                targetOS: Windows_NT
+                targetRid: win-x64
+                queue: $(helix_windows_x64)
+
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_Windows_x86_Debug
+                osGroup: Windows_NT
+                dependsOn: Windows_x86_Debug
+                artifactPhase: Windows_x86_Debug
+                configuration: Debug
+                architecture: x86
+                targetOS: Windows_NT
+                targetRid: win-x86
+                queue: $(helix_windows_x64)
+
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_Linux_x64_Debug
+                osGroup: Linux
+                container: test_ubuntu_22_04
+                dependsOn: Linux_x64_Debug
+                artifactPhase: Linux_x64_Debug
+                configuration: Debug
+                architecture: x64
+                targetOS: linux
+                targetRid: linux-x64
+                queue: $(helix_linux_x64)
+
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_Linux_arm64_Debug
+                osGroup: Linux
+                container: test_ubuntu_22_04
+                dependsOn: Linux_arm64_Debug
+                artifactPhase: Linux_arm64_Debug
+                configuration: Debug
+                architecture: arm64
+                targetOS: linux
+                targetRid: linux-arm64
+                queue: $(helix_linux_arm64)
+
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_Alpine_x64_Debug
+                osGroup: Linux
+                container: test_linux_musl_x64
+                dependsOn: Linux_musl_x64_Debug
+                artifactPhase: Linux_musl_x64_Debug
+                configuration: Debug
+                architecture: x64
+                targetOS: linux
+                targetRid: linux-musl-x64
+                queue: $(helix_linux_musl_x64)
+                helixPreCommands: sudo apk add --no-cache py3-lldb
+
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_MacOS_arm64_Debug
+                osGroup: MacOS
+                dependsOn: MacOS_arm64_Debug
+                artifactPhase: MacOS_arm64_Debug
+                configuration: Debug
+                architecture: arm64
+                targetOS: osx
+                targetRid: osx-arm64
+                queue: $(helix_osx_arm64)
+
+            - template: /eng/pipelines/sos-helix.yml
+              parameters:
+                jobTemplate: ${{ variables.jobTemplate }}
+                name: SOS_Helix_MacOS_x64_Debug
+                osGroup: MacOS
+                dependsOn: MacOS_x64_Debug
+                artifactPhase: MacOS_x64_Debug
+                configuration: Debug
+                architecture: x64
+                targetOS: osx
+                targetRid: osx-x64
+                queue: $(helix_osx_x64)
+
             - template: /eng/pipelines/sos-helix.yml
               parameters:
                 jobTemplate: ${{ variables.jobTemplate }}

@@ -93,10 +93,12 @@ The DAC is deliberately not a capture dimension: legacy DAC and cDAC analyze
 the same dump, with DAC selection happening when the host opens it. Cached
 dumps are reused only while newer than their debuggee.
 
-Helix runs the complete platform matrix in one work item. Dump reuse remains
-inside `SnapshotStore`, so hosts and DAC implementations that analyze the same
-target share the captured dump without requiring an external partitioning
-protocol.
+Helix submits one work item per installed .NET runtime. Each runtime shard sets
+`SOSHARNESS_ONLY_COREVERSIONS` and runs the Core and SingleFile flavors.
+Windows submits one additional Framework work item so desktop Framework
+coverage runs once rather than being repeated in every runtime shard. Dump
+reuse remains inside each work item's `SnapshotStore`, so hosts and DAC
+implementations that analyze the same target share the captured dump.
 
 `Targets.GetTargetAsync` returns a cheap cursor over shared, read-only dump
 sessions. A session is memoized by host, target, stop, flavor, GC type, dump
@@ -248,7 +250,8 @@ remove the scratch subtree when a clean recapture is required.
 ## Helix execution
 
 `HelixPayload.targets` stages one self-contained payload per OS, RID, and
-configuration and invokes the generic `eng/helix/SendToHelix.proj` dispatcher.
+configuration and invokes the generic `eng/helix/SendToHelix.proj` dispatcher
+with one work item per runtime, plus the Windows Framework work item.
 The payload contains `SOS.Tests`, its harness subprocesses, native SOS, the
 repository-built dotnet-dump, DbgEng on Windows, and all prebuilt Core,
 SingleFile, and Framework debuggees needed by that platform. The exact runtime
