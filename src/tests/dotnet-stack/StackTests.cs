@@ -4,8 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.IO;
-using System.CommandLine.Parsing;
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
@@ -61,8 +60,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
         {
             Command reportCommand = ReportCommandHandler.ReportCommand();
 
-            TestConsole console = new();
-            Parser parser = new(reportCommand);
+            StringWriter stdOut = new();
 
             await using TestRunner runner = await TestRunner.Create(config, _output, "StackTracee", usePipe: false);
             await runner.Start();
@@ -70,9 +68,12 @@ namespace Microsoft.Diagnostics.Tools.Stack
             // Wait for tracee to get to readkey call
             await Task.Delay(TimeSpan.FromSeconds(1));
 
-            await parser.InvokeAsync($"report -p {runner.Pid}", console);
+            await reportCommand.Parse(["-p", runner.Pid.ToString()]).InvokeAsync(new InvocationConfiguration
+            {
+                Output = stdOut
+            });
 
-            string report = console.Out.ToString();
+            string report = stdOut.ToString();
 
             runner.WriteLine($"REPORT_START\n{report}REPORT_END");
             Assert.True(!string.IsNullOrEmpty(report));
