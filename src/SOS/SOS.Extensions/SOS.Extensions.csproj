@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>$(DesktopTargetFramework);$(NetCoreAppMinTargetFramework)</TargetFrameworks>
     <AssemblyName>SOS.Extensions</AssemblyName>
     <NeedsPublishing>true</NeedsPublishing>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -31,6 +31,6 @@
       <ProjectBinaries Include="$(OutputPath)\publish\*.dll" />
       <ProjectBinaries Include="$(OutputPath)\publish\*.pdb" />
     </ItemGroup>
-    <Copy SourceFiles="@(ProjectBinaries)" DestinationFolder="$(ArtifactsBinNativeDir)" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="@(ProjectBinaries)" DestinationFolder="$(ArtifactsBinNativeDir)\$(TargetFramework)" SkipUnchangedFiles="false" />
   </Target>
 </Project>

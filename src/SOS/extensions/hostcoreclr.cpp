@@ -611,11 +611,15 @@ static HRESULT InitializeNetCoreHost()
         }
         sosModuleDirectory.erase(lastSlash);
 
-        // Trust The SOS managed and dependent assemblies from the sos directory
-        std::string tpaList = GetTpaListForRuntimeVersion(sosModuleDirectory, hostRuntimeDirectory, hostRuntimeVersion);
+        std::string managedModuleDirectory = sosModuleDirectory;
+        managedModuleDirectory.append(DIRECTORY_SEPARATOR_STR_A);
+        managedModuleDirectory.append(ExtensionsNetCoreSubdirectory);
+
+        // Trust the SOS managed and dependent assemblies from the CoreCLR payload directory.
+        std::string tpaList = GetTpaListForRuntimeVersion(managedModuleDirectory, hostRuntimeDirectory, hostRuntimeVersion);
 
         std::string appPaths;
-        appPaths.append(sosModuleDirectory);
+        appPaths.append(managedModuleDirectory);
 
         const char* propertyKeys[] = {
             "TRUSTED_PLATFORM_ASSEMBLIES",
@@ -633,7 +637,7 @@ static HRESULT InitializeNetCoreHost()
             // APP_NI_PATHS
             hostRuntimeDirectory.c_str(),
             // NATIVE_DLL_SEARCH_DIRECTORIES
-            appPaths.c_str(),
+            sosModuleDirectory.c_str(),
             // AppDomainCompatSwitch
             "UseLatestBehaviorWhenTFMNotSpecified"
         };

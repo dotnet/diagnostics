@@ -9,6 +9,8 @@
 
 static const char*  ExtensionsDllName = "SOS.Extensions";
 static const WCHAR* ExtensionsDllNameW = W("SOS.Extensions.dll");
+static const char*  ExtensionsNetCoreSubdirectory = "net8.0";
+static const WCHAR* ExtensionsDesktopSubdirectoryW = W("net462");
 static const char*  ExtensionsClassName = "SOS.Extensions.HostServices";
 static const WCHAR* ExtensionsClassNameW = W("SOS.Extensions.HostServices");
 static const char*  ExtensionsInitializeFunctionName = "Initialize";
