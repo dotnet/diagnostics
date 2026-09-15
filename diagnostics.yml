@@ -272,13 +272,11 @@ extends:
               artifactUploadPath: ${{ format('bin/linux.arm64.{0}', variables.validationConfiguration) }}
               artifactTargetPath: ${{ format('bin/linux-musl.arm64.{0}', variables.validationConfiguration) }}
 
-      ############################
-      #                          #
-      #        Test legs         #
-      #                          #
-      ############################
-
-      - ${{ if ne(parameters.buildOnly, true) }}:
+    - ${{ if ne(parameters.buildOnly, true) }}:
+      - stage: test
+        displayName: Test Diagnostics
+        dependsOn: build
+        jobs:
         - template: /eng/pipelines/build.yml
           parameters:
             jobTemplate: ${{ variables.jobTemplate }}
@@ -338,7 +336,6 @@ extends:
               jobTemplate: ${{ variables.jobTemplate }}
               name: ${{ format('SOS_Helix_Windows_x64_{0}', variables.validationConfiguration) }}
               osGroup: Windows_NT
-              dependsOn: ${{ format('Windows_x64_{0}', variables.validationConfiguration) }}
               artifactPhase: ${{ format('Windows_x64_{0}', variables.validationConfiguration) }}
               configuration: ${{ variables.validationConfiguration }}
               architecture: x64
@@ -351,7 +348,6 @@ extends:
               jobTemplate: ${{ variables.jobTemplate }}
               name: ${{ format('SOS_Helix_Windows_x86_{0}', variables.validationConfiguration) }}
               osGroup: Windows_NT
-              dependsOn: ${{ format('Windows_x86_{0}', variables.validationConfiguration) }}
               artifactPhase: ${{ format('Windows_x86_{0}', variables.validationConfiguration) }}
               configuration: ${{ variables.validationConfiguration }}
               architecture: x86
@@ -365,7 +361,6 @@ extends:
               name: ${{ format('SOS_Helix_Linux_x64_{0}', variables.validationConfiguration) }}
               osGroup: Linux
               container: test_ubuntu_22_04
-              dependsOn: ${{ format('Linux_x64_{0}', variables.validationConfiguration) }}
               artifactPhase: ${{ format('Linux_x64_{0}', variables.validationConfiguration) }}
               configuration: ${{ variables.validationConfiguration }}
               architecture: x64
@@ -379,7 +374,6 @@ extends:
               name: ${{ format('SOS_Helix_Linux_arm64_{0}', variables.validationConfiguration) }}
               osGroup: Linux
               container: test_ubuntu_22_04
-              dependsOn: ${{ format('Linux_arm64_{0}', variables.validationConfiguration) }}
               artifactPhase: ${{ format('Linux_arm64_{0}', variables.validationConfiguration) }}
               configuration: ${{ variables.validationConfiguration }}
               architecture: arm64
@@ -393,7 +387,6 @@ extends:
               name: ${{ format('SOS_Helix_Alpine_x64_{0}', variables.validationConfiguration) }}
               osGroup: Linux
               container: test_linux_musl_x64
-              dependsOn: ${{ format('Linux_musl_x64_{0}', variables.validationConfiguration) }}
               artifactPhase: ${{ format('Linux_musl_x64_{0}', variables.validationConfiguration) }}
               configuration: ${{ variables.validationConfiguration }}
               architecture: x64
@@ -407,7 +400,6 @@ extends:
               jobTemplate: ${{ variables.jobTemplate }}
               name: ${{ format('SOS_Helix_MacOS_arm64_{0}', variables.validationConfiguration) }}
               osGroup: MacOS
-              dependsOn: ${{ format('MacOS_arm64_{0}', variables.validationConfiguration) }}
               artifactPhase: ${{ format('MacOS_arm64_{0}', variables.validationConfiguration) }}
               configuration: ${{ variables.validationConfiguration }}
               architecture: arm64
@@ -421,7 +413,6 @@ extends:
                 jobTemplate: ${{ variables.jobTemplate }}
                 name: SOS_Helix_Windows_x64_Debug
                 osGroup: Windows_NT
-                dependsOn: Windows_x64_Debug
                 artifactPhase: Windows_x64_Debug
                 configuration: Debug
                 architecture: x64
@@ -434,7 +425,6 @@ extends:
                 jobTemplate: ${{ variables.jobTemplate }}
                 name: SOS_Helix_Windows_x86_Debug
                 osGroup: Windows_NT
-                dependsOn: Windows_x86_Debug
                 artifactPhase: Windows_x86_Debug
                 configuration: Debug
                 architecture: x86
@@ -448,7 +438,6 @@ extends:
                 name: SOS_Helix_Linux_x64_Debug
                 osGroup: Linux
                 container: test_ubuntu_22_04
-                dependsOn: Linux_x64_Debug
                 artifactPhase: Linux_x64_Debug
                 configuration: Debug
                 architecture: x64
@@ -462,7 +451,6 @@ extends:
                 name: SOS_Helix_Linux_arm64_Debug
                 osGroup: Linux
                 container: test_ubuntu_22_04
-                dependsOn: Linux_arm64_Debug
                 artifactPhase: Linux_arm64_Debug
                 configuration: Debug
                 architecture: arm64
@@ -476,7 +464,6 @@ extends:
                 name: SOS_Helix_Alpine_x64_Debug
                 osGroup: Linux
                 container: test_linux_musl_x64
-                dependsOn: Linux_musl_x64_Debug
                 artifactPhase: Linux_musl_x64_Debug
                 configuration: Debug
                 architecture: x64
@@ -490,7 +477,6 @@ extends:
                 jobTemplate: ${{ variables.jobTemplate }}
                 name: SOS_Helix_MacOS_arm64_Debug
                 osGroup: MacOS
-                dependsOn: MacOS_arm64_Debug
                 artifactPhase: MacOS_arm64_Debug
                 configuration: Debug
                 architecture: arm64
@@ -503,7 +489,6 @@ extends:
                 jobTemplate: ${{ variables.jobTemplate }}
                 name: SOS_Helix_MacOS_x64_Debug
                 osGroup: MacOS
-                dependsOn: MacOS_x64_Debug
                 artifactPhase: MacOS_x64_Debug
                 configuration: Debug
                 architecture: x64
@@ -516,7 +501,6 @@ extends:
                 jobTemplate: ${{ variables.jobTemplate }}
                 name: SOS_Helix_MacOS_x64_Release
                 osGroup: MacOS
-                dependsOn: MacOS_x64_Release
                 artifactPhase: MacOS_x64_Release
                 configuration: Release
                 architecture: x64
