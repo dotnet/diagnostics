@@ -24,7 +24,7 @@ public class SOSHostRuntimeTests
 
     [Theory]
     [MemberData(nameof(HostRuntimeConfigurations))]
-    public void LayoutAssembliesNewerThanHostRuntimeAreTpaOverrides(TestConfiguration config)
+    public void LayoutAssembliesAndTpaOverridesMatchHostRuntime(TestConfiguration config)
     {
         string sosPath = config.SOSPath();
         string layoutDirectory = Path.Combine(
@@ -42,6 +42,42 @@ public class SOSHostRuntimeTests
         IReadOnlyDictionary<string, Version> layoutAssemblies = ReadAssemblies(layoutDirectory);
         IReadOnlyDictionary<string, Version> runtimeAssemblies = ReadAssemblies(runtimeDirectory);
         IReadOnlyDictionary<string, (int FirstRuntimeMajor, int CompatibleRuntimeMajor)> tpaOverrides = ReadTpaOverrides();
+        List<string> missingLayoutAssemblies = new();
+        List<string> olderLayoutAssemblies = new();
+
+        foreach ((string assemblyName, (int FirstRuntimeMajor, int CompatibleRuntimeMajor) runtimeRange) in tpaOverrides)
+        {
+            if (config.RuntimeFrameworkVersionMajor < runtimeRange.FirstRuntimeMajor ||
+                config.RuntimeFrameworkVersionMajor >= runtimeRange.CompatibleRuntimeMajor)
+            {
+                continue;
+            }
+
+            if (!layoutAssemblies.TryGetValue(assemblyName, out Version layoutVersion))
+            {
+                missingLayoutAssemblies.Add(assemblyName);
+                continue;
+            }
+
+            if (runtimeAssemblies.TryGetValue(assemblyName, out Version runtimeVersion) &&
+                layoutVersion < runtimeVersion)
+            {
+                olderLayoutAssemblies.Add($"{assemblyName}: layout {layoutVersion}, runtime {runtimeVersion}");
+            }
+        }
+
+        Assert.True(
+            missingLayoutAssemblies.Count == 0,
+            $"{HostRuntimeAssemblyResourceName} selects assemblies for the .NET {config.RuntimeFrameworkVersionMajor} host runtime " +
+            $"that are missing from the SOS layout:{Environment.NewLine}" +
+            string.Join(Environment.NewLine, missingLayoutAssemblies));
+
+        Assert.True(
+            olderLayoutAssemblies.Count == 0,
+            $"{HostRuntimeAssemblyResourceName} selects assemblies for the .NET {config.RuntimeFrameworkVersionMajor} host runtime " +
+            $"that are older than the runtime assemblies they shadow:{Environment.NewLine}" +
+            string.Join(Environment.NewLine, olderLayoutAssemblies));
+
         List<string> missingOverrides = new();
 
         foreach ((string assemblyName, Version layoutVersion) in layoutAssemblies)
