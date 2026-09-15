@@ -15,9 +15,22 @@
 -->
 <Project>
   <PropertyGroup>
-    <SOSExtensionsBinaries>$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\netstandard2.0\publish\*.dll</SOSExtensionsBinaries>
     <IsMuslBuild Condition="$(TargetRid.StartsWith('linux-musl-'))">true</IsMuslBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <SOSExtensionsBinaries Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(DesktopTargetFramework)\publish\*.dll"
+                           TargetFramework="$(DesktopTargetFramework)" />
+    <SOSExtensionsBinaries Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(NetCoreAppMinTargetFramework)\publish\*.dll"
+                           TargetFramework="$(NetCoreAppMinTargetFramework)" />
+  </ItemGroup>
+
+  <Target Name="ValidateSOSExtensionsBinaries" BeforeTargets="GenerateNuspec">
+    <Error Condition="'@(SOSExtensionsBinaries->WithMetadataValue('TargetFramework', '$(DesktopTargetFramework)'))' == ''"
+           Text="The $(DesktopTargetFramework) SOS managed payload was not found. Build SOS.Extensions for $(Configuration) before packing." />
+    <Error Condition="'@(SOSExtensionsBinaries->WithMetadataValue('TargetFramework', '$(NetCoreAppMinTargetFramework)'))' == ''"
+           Text="The $(NetCoreAppMinTargetFramework) SOS managed payload was not found. Build SOS.Extensions for $(Configuration) before packing." />
+  </Target>
 
   <!-- Each RID's required binaries are grouped in an ItemGroup guarded by SingleTargetRidPackage:
        when 'true' only the current $(TargetRid) is packed (a locally buildable single-rid package),
