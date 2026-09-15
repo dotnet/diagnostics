@@ -27,7 +27,9 @@ public class SOSHostRuntimeTests
     public void LayoutAssembliesNewerThanHostRuntimeAreTpaOverrides(TestConfiguration config)
     {
         string sosPath = config.SOSPath();
-        string layoutDirectory = Path.GetDirectoryName(sosPath);
+        string layoutDirectory = Path.Combine(
+            Path.GetDirectoryName(sosPath),
+            config.GetValue("NetCoreAppMinTargetFramework"));
         Assert.True(Directory.Exists(layoutDirectory), $"SOS layout directory does not exist: {layoutDirectory}");
 
         string runtimeDirectory = Path.Combine(
