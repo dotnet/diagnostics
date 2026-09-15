@@ -334,8 +334,10 @@ extends:
             parameters:
               jobTemplate: /eng/pipelines/sos-helix.yml
               configurations:
-              - Release
-              - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                - Debug
+              - ${{ else }}:
+                - Release
                 - Debug
               platforms:
               - windows_x64
