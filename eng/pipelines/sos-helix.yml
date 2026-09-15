@@ -1,63 +1,50 @@
 parameters:
-- name: jobTemplate
+- name: pipelineJobTemplate
   type: string
   default: /eng/common/templates-official/job/job.yml@self
-- name: name
-  type: string
-- name: osGroup
-  type: string
-- name: container
-  type: string
-  default: ''
-- name: dependsOn
-  type: string
-- name: artifactPhase
-  type: string
 - name: configuration
   type: string
-- name: architecture
+- name: platform
+  type: string
+- name: buildPrefix
+  type: string
+- name: archType
   type: string
 - name: targetOS
   type: string
 - name: targetRid
   type: string
-- name: queue
+- name: pool
+  type: object
+- name: container
+  type: string
+  default: ''
+- name: helixQueue
   type: string
 - name: helixPreCommands
   type: string
   default: ''
+
 jobs:
-- template: ${{ parameters.jobTemplate }}
+- template: ${{ parameters.pipelineJobTemplate }}
   parameters:
-    name: ${{ parameters.name }}
-    displayName: SOS Helix ${{ replace(replace(replace(replace(parameters.targetRid, 'linux-musl-', 'Alpine '), 'linux-', 'Linux '), 'win-', 'Windows '), 'osx-', 'macOS ') }} ${{ parameters.configuration }}
+    name: SOS_Helix_${{ parameters.platform }}_${{ parameters.configuration }}
+    displayName: SOS Helix ${{ parameters.targetRid }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
     enableMicrobuild: true
 
-    pool:
-      ${{ if eq(parameters.osGroup, 'Linux') }}:
-        name: $(BuildPool)
-        demands: ImageOverride -equals $(LinuxImage)
-        os: linux
-      ${{ elseif eq(parameters.osGroup, 'Windows_NT') }}:
-        name: $(BuildPool)
-        demands: ImageOverride -equals $(WindowsImage)
-        os: windows
-      ${{ elseif eq(parameters.osGroup, 'MacOS') }}:
-        name: Azure Pipelines
-        vmImage: $(macOSImage)
-        os: macOS
+    pool: ${{ parameters.pool }}
 
     ${{ if ne(parameters.container, '') }}:
       container: ${{ parameters.container }}
 
-    dependsOn: ${{ parameters.dependsOn }}
+    dependsOn: ${{ parameters.buildPrefix }}_${{ parameters.archType }}_${{ parameters.configuration }}
 
     steps:
     - task: DownloadPipelineArtifact@2
       displayName: Download SOS test payload inputs
       inputs:
-        artifact: TestArtifacts_${{ parameters.artifactPhase }}
+        artifact: TestArtifacts_${{ parameters.buildPrefix }}_${{ parameters.archType }}_${{ parameters.configuration }}
         targetPath: '$(Build.SourcesDirectory)/artifacts'
         checkDownloadedFiles: true
 
@@ -66,7 +53,7 @@ jobs:
         $env:BUILD_SOURCESDIRECTORY\src\tests\SOS.Tests\SOS.Tests.csproj
         /restore /p:TreatWarningsAsErrors=false /t:SendToHelix
         /p:Configuration=${{ parameters.configuration }}
-        /p:TargetArch=${{ parameters.architecture }}
+        /p:TargetArch=${{ parameters.archType }}
         /p:TargetOS=${{ parameters.targetOS }}
         /p:TargetRid=${{ parameters.targetRid }}
         /p:OfficialBuildId=$env:BUILD_BUILDNUMBER
@@ -76,7 +63,7 @@ jobs:
         HelixSource: pr/dotnet/diagnostics/sos-tests
         HelixType: tests/sos/harness/
         HelixConfiguration: ${{ parameters.targetRid }}_${{ parameters.configuration }}
-        HelixTargetQueues: ${{ parameters.queue }}
+        HelixTargetQueues: ${{ parameters.helixQueue }}
         HelixPreCommands: ${{ parameters.helixPreCommands }}
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
@@ -87,7 +74,7 @@ jobs:
         $BUILD_SOURCESDIRECTORY/src/tests/SOS.Tests/SOS.Tests.csproj
         /restore /p:TreatWarningsAsErrors=false /t:SendToHelix
         /p:Configuration=${{ parameters.configuration }}
-        /p:TargetArch=${{ parameters.architecture }}
+        /p:TargetArch=${{ parameters.archType }}
         /p:TargetOS=${{ parameters.targetOS }}
         /p:TargetRid=${{ parameters.targetRid }}
         /p:OfficialBuildId=$BUILD_BUILDNUMBER
@@ -97,7 +84,7 @@ jobs:
         HelixSource: pr/dotnet/diagnostics/sos-tests
         HelixType: tests/sos/harness/
         HelixConfiguration: ${{ parameters.targetRid }}_${{ parameters.configuration }}
-        HelixTargetQueues: ${{ parameters.queue }}
+        HelixTargetQueues: ${{ parameters.helixQueue }}
         HelixPreCommands: ${{ parameters.helixPreCommands }}
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
@@ -117,7 +104,7 @@ jobs:
         displayName: Publish Helix logs
         inputs:
           targetPath: '$(Build.StagingDirectory)/HelixLogs'
-          artifactName: Logs_${{ parameters.name }}_$(System.JobAttempt)
+          artifactName: Logs_SOS_Helix_${{ parameters.platform }}_${{ parameters.configuration }}_$(System.JobAttempt)
           sbomEnabled: false
         continueOnError: true
         condition: always()

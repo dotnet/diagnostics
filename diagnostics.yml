@@ -50,7 +50,6 @@ variables:
   parameters:
     runtimeFeed: ${{ parameters.runtimeFeed }}
     runtimeFeedToken: ${{ parameters.runtimeFeedToken }}
-- template: /eng/pipelines/helix-platforms.yml
 
 extends:
   template: /eng/pipelines/pipeline-resources.yml
@@ -331,198 +330,26 @@ extends:
               architecture: x64
 
         - ${{ if eq(variables['System.TeamProject'], 'public') }}:
-          # TODO: Adopt the runtime pipeline's platform matrix pattern so SOS Helix coverage can be
-          # enabled for new platforms without duplicating the full job definition.
-          - template: /eng/pipelines/sos-helix.yml
+          - template: /eng/pipelines/platform-matrix.yml
             parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: ${{ format('SOS_Helix_Windows_x64_{0}', variables.validationConfiguration) }}
-              osGroup: Windows_NT
-              dependsOn: ${{ format('Windows_x64_{0}', variables.validationConfiguration) }}
-              artifactPhase: ${{ format('Windows_x64_{0}', variables.validationConfiguration) }}
-              configuration: ${{ variables.validationConfiguration }}
-              architecture: x64
-              targetOS: Windows_NT
-              targetRid: win-x64
-              queue: $(helix_windows_x64)
-
-          - template: /eng/pipelines/sos-helix.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: ${{ format('SOS_Helix_Windows_x86_{0}', variables.validationConfiguration) }}
-              osGroup: Windows_NT
-              dependsOn: ${{ format('Windows_x86_{0}', variables.validationConfiguration) }}
-              artifactPhase: ${{ format('Windows_x86_{0}', variables.validationConfiguration) }}
-              configuration: ${{ variables.validationConfiguration }}
-              architecture: x86
-              targetOS: Windows_NT
-              targetRid: win-x86
-              queue: $(helix_windows_x64)
-
-          - template: /eng/pipelines/sos-helix.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: ${{ format('SOS_Helix_Linux_x64_{0}', variables.validationConfiguration) }}
-              osGroup: Linux
-              container: test_ubuntu_22_04
-              dependsOn: ${{ format('Linux_x64_{0}', variables.validationConfiguration) }}
-              artifactPhase: ${{ format('Linux_x64_{0}', variables.validationConfiguration) }}
-              configuration: ${{ variables.validationConfiguration }}
-              architecture: x64
-              targetOS: linux
-              targetRid: linux-x64
-              queue: $(helix_linux_x64)
-
-          - template: /eng/pipelines/sos-helix.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: ${{ format('SOS_Helix_Linux_arm64_{0}', variables.validationConfiguration) }}
-              osGroup: Linux
-              container: test_ubuntu_22_04
-              dependsOn: ${{ format('Linux_arm64_{0}', variables.validationConfiguration) }}
-              artifactPhase: ${{ format('Linux_arm64_{0}', variables.validationConfiguration) }}
-              configuration: ${{ variables.validationConfiguration }}
-              architecture: arm64
-              targetOS: linux
-              targetRid: linux-arm64
-              queue: $(helix_linux_arm64)
-
-          - template: /eng/pipelines/sos-helix.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: ${{ format('SOS_Helix_Alpine_x64_{0}', variables.validationConfiguration) }}
-              osGroup: Linux
-              container: test_linux_musl_x64
-              dependsOn: ${{ format('Linux_musl_x64_{0}', variables.validationConfiguration) }}
-              artifactPhase: ${{ format('Linux_musl_x64_{0}', variables.validationConfiguration) }}
-              configuration: ${{ variables.validationConfiguration }}
-              architecture: x64
-              targetOS: linux
-              targetRid: linux-musl-x64
-              queue: $(helix_linux_musl_x64)
-              helixPreCommands: sudo apk add --no-cache py3-lldb
-
-          - template: /eng/pipelines/sos-helix.yml
-            parameters:
-              jobTemplate: ${{ variables.jobTemplate }}
-              name: ${{ format('SOS_Helix_MacOS_arm64_{0}', variables.validationConfiguration) }}
-              osGroup: MacOS
-              dependsOn: ${{ format('MacOS_arm64_{0}', variables.validationConfiguration) }}
-              artifactPhase: ${{ format('MacOS_arm64_{0}', variables.validationConfiguration) }}
-              configuration: ${{ variables.validationConfiguration }}
-              architecture: arm64
-              targetOS: osx
-              targetRid: osx-arm64
-              queue: $(helix_osx_arm64)
-
-          - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-            - template: /eng/pipelines/sos-helix.yml
-              parameters:
-                jobTemplate: ${{ variables.jobTemplate }}
-                name: SOS_Helix_Windows_x64_Debug
-                osGroup: Windows_NT
-                dependsOn: Windows_x64_Debug
-                artifactPhase: Windows_x64_Debug
-                configuration: Debug
-                architecture: x64
-                targetOS: Windows_NT
-                targetRid: win-x64
-                queue: $(helix_windows_x64)
-
-            - template: /eng/pipelines/sos-helix.yml
-              parameters:
-                jobTemplate: ${{ variables.jobTemplate }}
-                name: SOS_Helix_Windows_x86_Debug
-                osGroup: Windows_NT
-                dependsOn: Windows_x86_Debug
-                artifactPhase: Windows_x86_Debug
-                configuration: Debug
-                architecture: x86
-                targetOS: Windows_NT
-                targetRid: win-x86
-                queue: $(helix_windows_x64)
-
-            - template: /eng/pipelines/sos-helix.yml
-              parameters:
-                jobTemplate: ${{ variables.jobTemplate }}
-                name: SOS_Helix_Linux_x64_Debug
-                osGroup: Linux
-                container: test_ubuntu_22_04
-                dependsOn: Linux_x64_Debug
-                artifactPhase: Linux_x64_Debug
-                configuration: Debug
-                architecture: x64
-                targetOS: linux
-                targetRid: linux-x64
-                queue: $(helix_linux_x64)
-
-            - template: /eng/pipelines/sos-helix.yml
-              parameters:
-                jobTemplate: ${{ variables.jobTemplate }}
-                name: SOS_Helix_Linux_arm64_Debug
-                osGroup: Linux
-                container: test_ubuntu_22_04
-                dependsOn: Linux_arm64_Debug
-                artifactPhase: Linux_arm64_Debug
-                configuration: Debug
-                architecture: arm64
-                targetOS: linux
-                targetRid: linux-arm64
-                queue: $(helix_linux_arm64)
-
-            - template: /eng/pipelines/sos-helix.yml
-              parameters:
-                jobTemplate: ${{ variables.jobTemplate }}
-                name: SOS_Helix_Alpine_x64_Debug
-                osGroup: Linux
-                container: test_linux_musl_x64
-                dependsOn: Linux_musl_x64_Debug
-                artifactPhase: Linux_musl_x64_Debug
-                configuration: Debug
-                architecture: x64
-                targetOS: linux
-                targetRid: linux-musl-x64
-                queue: $(helix_linux_musl_x64)
-                helixPreCommands: sudo apk add --no-cache py3-lldb
-
-            - template: /eng/pipelines/sos-helix.yml
-              parameters:
-                jobTemplate: ${{ variables.jobTemplate }}
-                name: SOS_Helix_MacOS_arm64_Debug
-                osGroup: MacOS
-                dependsOn: MacOS_arm64_Debug
-                artifactPhase: MacOS_arm64_Debug
-                configuration: Debug
-                architecture: arm64
-                targetOS: osx
-                targetRid: osx-arm64
-                queue: $(helix_osx_arm64)
-
-            - template: /eng/pipelines/sos-helix.yml
-              parameters:
-                jobTemplate: ${{ variables.jobTemplate }}
-                name: SOS_Helix_MacOS_x64_Debug
-                osGroup: MacOS
-                dependsOn: MacOS_x64_Debug
-                artifactPhase: MacOS_x64_Debug
-                configuration: Debug
-                architecture: x64
-                targetOS: osx
-                targetRid: osx-x64
-                queue: $(helix_osx_x64)
-
-            - template: /eng/pipelines/sos-helix.yml
-              parameters:
-                jobTemplate: ${{ variables.jobTemplate }}
-                name: SOS_Helix_MacOS_x64_Release
-                osGroup: MacOS
-                dependsOn: MacOS_x64_Release
-                artifactPhase: MacOS_x64_Release
-                configuration: Release
-                architecture: x64
-                targetOS: osx
-                targetRid: osx-x64
-                queue: $(helix_osx_x64)
+              jobTemplate: /eng/pipelines/sos-helix.yml
+              configurations:
+              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+                - Debug
+              - ${{ else }}:
+                - Release
+                - Debug
+              platforms:
+              - windows_x64
+              - windows_x86
+              - linux_x64
+              - linux_arm64
+              - linux_musl_x64
+              - osx_arm64
+              - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+                - osx_x64
+              jobParameters:
+                pipelineJobTemplate: ${{ variables.jobTemplate }}
 
         # - ${{ if ne(variables['System.TeamProject'], 'public') }}:
         #   - template: /eng/pipelines/build.yml
