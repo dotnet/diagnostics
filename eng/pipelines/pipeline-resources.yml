@@ -68,7 +68,8 @@ extends:
           ROOTFS_DIR: /crossrootfs/riscv64
 
       test_linux_x64:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:centos-stream-9
+        image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04
+        options: '--env PYTHONPATH=/usr/bin/python3.10'
 
       test_linux_musl_x64:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-amd64
@@ -83,7 +84,3 @@ extends:
 
       test_opensuse_16_0:
         image: mcr.microsoft.com/dotnet-buildtools/prereqs:opensuse-16.0-helix-amd64
-
-      test_ubuntu_22_04:
-        image: mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04
-        options: '--env PYTHONPATH=/usr/bin/python3.10'
