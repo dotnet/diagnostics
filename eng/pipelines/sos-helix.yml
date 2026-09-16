@@ -34,6 +34,7 @@ jobs:
     displayName: SOS Helix ${{ replace(replace(replace(replace(parameters.targetRid, 'linux-musl-', 'Alpine '), 'linux-', 'Linux '), 'win-', 'Windows '), 'osx-', 'macOS ') }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
     enableMicrobuild: true
+    continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
 
     pool:
       ${{ if eq(parameters.osGroup, 'Linux') }}:
