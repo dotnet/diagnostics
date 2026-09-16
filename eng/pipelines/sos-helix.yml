@@ -11,6 +11,7 @@ parameters:
   default: ''
 - name: dependsOn
   type: string
+  default: ''
 - name: artifactPhase
   type: string
 - name: configuration
@@ -51,7 +52,8 @@ jobs:
     ${{ if ne(parameters.container, '') }}:
       container: ${{ parameters.container }}
 
-    dependsOn: ${{ parameters.dependsOn }}
+    ${{ if ne(parameters.dependsOn, '') }}:
+      dependsOn: ${{ parameters.dependsOn }}
 
     steps:
     - task: DownloadPipelineArtifact@2
