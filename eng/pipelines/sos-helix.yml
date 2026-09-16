@@ -55,7 +55,7 @@ jobs:
         HelixSource: pr/dotnet/diagnostics/sos-tests
         HelixType: tests/sos/harness/
         HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
-        HelixTargetQueues: ${{ parameters.platform.helixQueue }}
+        HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }})
         HelixPreCommands: ${{ coalesce(parameters.platform.helixPreCommands, '') }}
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
@@ -77,7 +77,7 @@ jobs:
         HelixSource: pr/dotnet/diagnostics/sos-tests
         HelixType: tests/sos/harness/
         HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
-        HelixTargetQueues: ${{ parameters.platform.helixQueue }}
+        HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }})
         HelixPreCommands: ${{ coalesce(parameters.platform.helixPreCommands, '') }}
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)

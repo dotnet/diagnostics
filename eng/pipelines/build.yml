@@ -44,10 +44,10 @@ jobs:
       ${{ else }}:
         'error, unsupported OS': ${{ parameters.platform.os }}
 
-    ${{ if and(eq(parameters.testOnly, true), ne(coalesce(parameters.platform.testContainer, ''), '')) }}:
-      container: ${{ parameters.platform.testContainer }}
-    ${{ elseif and(eq(parameters.testOnly, false), ne(coalesce(parameters.platform.buildContainer, ''), '')) }}:
-      container: ${{ parameters.platform.buildContainer }}
+    ${{ if and(eq(parameters.testOnly, true), eq(parameters.platform.os, 'linux')) }}:
+      container: test_${{ parameters.platform.queueKey }}
+    ${{ elseif and(eq(parameters.testOnly, false), eq(parameters.platform.os, 'linux')) }}:
+      container: ${{ parameters.platform.queueKey }}
 
     ${{ if eq(parameters.testOnly, true) }}:
       dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
