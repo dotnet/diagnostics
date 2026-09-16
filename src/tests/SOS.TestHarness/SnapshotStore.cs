@@ -234,17 +234,12 @@ public static class SnapshotStore
 
         if (!File.Exists(dumpPath))
         {
-            if (IsKnownCreatedumpPermissionFailure(
+            SkipKnownCreatedumpPermissionFailure(
                 coreVersion,
                 RuntimeInformation.ProcessArchitecture,
                 OperatingSystem.IsLinux(),
                 stdout,
-                stderr))
-            {
-                HarnessSkipException.Now(
-                    ".NET 8 and 9 createdump can race while granting access to /proc/<pid>/mem on Linux. " +
-                    "See https://github.com/dotnet/runtime/pull/120000.");
-            }
+                stderr);
 
             throw new InvalidOperationException(
                 $"createdump did not produce '{dumpPath}' for {target.Project} ({flavor}); exit {process.ExitCode}.\n" +
@@ -253,7 +248,7 @@ public static class SnapshotStore
         }
     }
 
-    internal static bool IsKnownCreatedumpPermissionFailure(
+    internal static void SkipKnownCreatedumpPermissionFailure(
         CoreVersion coreVersion,
         Architecture architecture,
         bool isLinux,
@@ -264,12 +259,17 @@ public static class SnapshotStore
             (coreVersion != CoreVersion.Net8 && coreVersion != CoreVersion.Net9) ||
             (architecture != Architecture.Arm64 && architecture != Architecture.X64))
         {
-            return false;
+            return;
         }
 
         string output = stdout + "\n" + stderr;
-        return output.Contains("open(/proc/", StringComparison.Ordinal) &&
-            output.Contains("/mem) FAILED Permission denied (13)", StringComparison.Ordinal);
+        if (output.Contains("open(/proc/", StringComparison.Ordinal) &&
+            output.Contains("/mem) FAILED Permission denied (13)", StringComparison.Ordinal))
+        {
+            HarnessSkipException.Now(
+                ".NET 8 and 9 createdump can race while granting access to /proc/<pid>/mem on Linux. " +
+                "See https://github.com/dotnet/runtime/pull/120000.");
+        }
     }
 
     /// <summary>Core/SingleFile snapshot capture: run the target once; its markers self-snapshot mid-run.</summary>
@@ -362,13 +362,25 @@ public static class SnapshotStore
 
         using Process process = Process.Start(psi)
             ?? throw new InvalidOperationException("Failed to launch target");
-        string stderr = process.StandardError.ReadToEnd();
+        Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync();
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
+        string stdout = stdoutTask.GetAwaiter().GetResult();
+        string stderr = stderrTask.GetAwaiter().GetResult();
 
         if (process.ExitCode != 0)
         {
+            SkipKnownCreatedumpPermissionFailure(
+                coreVersion,
+                RuntimeInformation.ProcessArchitecture,
+                OperatingSystem.IsLinux(),
+                stdout,
+                stderr);
+
             throw new InvalidOperationException(
-                $"Target '{target.Project}' ({flavor}) failed ({process.ExitCode}):\n{stderr}");
+                $"Target '{target.Project}' ({flavor}) failed ({process.ExitCode}):\n" +
+                $"stdout:\n{stdout}\n" +
+                $"stderr:\n{stderr}");
         }
     }
 
