@@ -1,0 +1,32 @@
+# Azure Pipelines Platform Definitions
+# This template maps target RIDs to build and test job containers.
+
+variables:
+
+  # Build containers
+
+  - name: azdo_build_linux_x64
+    value: linux_x64
+
+  - name: azdo_build_linux_arm
+    value: linux_arm
+
+  - name: azdo_build_linux_arm64
+    value: linux_arm64
+
+  - name: azdo_build_linux_musl_x64
+    value: linux_musl_x64
+
+  - name: azdo_build_linux_musl_arm
+    value: linux_musl_arm
+
+  - name: azdo_build_linux_musl_arm64
+    value: linux_musl_arm64
+
+  # Test containers
+
+  - name: azdo_test_linux_x64
+    value: test_ubuntu_22_04
+
+  - name: azdo_test_linux_musl_x64
+    value: test_linux_musl_x64
