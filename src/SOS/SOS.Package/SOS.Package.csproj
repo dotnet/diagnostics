@@ -31,8 +31,8 @@
     <None Include="$(UncompressedGalleryManifestOutputFile)" Pack="true" Visible="false">
       <PackagePath>$(SOSPackagePathPrefix)</PackagePath>
     </None>
-    <None Include="$(SOSExtensionsBinaries)" Pack="true" Visible="false">
-      <PackagePath>$(SOSPackagePathPrefix)/lib</PackagePath>
+    <None Include="@(SOSExtensionsBinaries)" Pack="true" Visible="false">
+      <PackagePath>$(SOSPackagePathPrefix)/lib/%(TargetFramework)</PackagePath>
     </None>
   </ItemGroup>
 
