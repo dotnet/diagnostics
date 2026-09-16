@@ -34,7 +34,6 @@ jobs:
     displayName: SOS Helix ${{ replace(replace(replace(replace(parameters.targetRid, 'linux-musl-', 'Alpine '), 'linux-', 'Linux '), 'win-', 'Windows '), 'osx-', 'macOS ') }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
     enableMicrobuild: true
-    continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
 
     pool:
       ${{ if eq(parameters.osGroup, 'Linux') }}:
@@ -84,6 +83,7 @@ jobs:
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
       condition: eq(variables['Agent.Os'], 'Windows_NT')
+      continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
 
     - script: >
         $BUILD_SOURCESDIRECTORY/eng/common/msbuild.sh
@@ -105,6 +105,7 @@ jobs:
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
       condition: ne(variables['Agent.Os'], 'Windows_NT')
+      continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
 
     - task: CopyFiles@2
       displayName: Gather Helix logs
