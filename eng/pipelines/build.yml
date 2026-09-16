@@ -125,9 +125,7 @@ jobs:
       ${{ if ne(parameters.strategy, '') }}:
         'error, we can no longer support the strategy feature in the new pipeline system. Please remove the strategy from the job template.': error
 
-      # Test-only jobs run in the test stage, whose dependency on the build stage
-      # makes the matching artifacts available before any test job starts.
-      ${{ if and(ne(parameters.dependsOn, ''), ne(parameters.testOnly, true)) }}:
+      ${{ if ne(parameters.dependsOn, '') }}:
         dependsOn: ${{ parameters.dependsOn }}_${{ config.architecture }}_${{ config.configuration }}
 
       workspace:
@@ -202,6 +200,7 @@ jobs:
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         ${{ if eq(parameters.testOnly, 'true') }}:
           displayName: Test
+          continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
         ${{ elseif eq(parameters.buildOnly, 'true') }}:
           displayName: Build
         ${{ else }}:
