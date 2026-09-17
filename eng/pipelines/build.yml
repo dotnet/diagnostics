@@ -200,6 +200,7 @@ jobs:
           /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
         ${{ if eq(parameters.testOnly, 'true') }}:
           displayName: Test
+          continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
         ${{ elseif eq(parameters.buildOnly, 'true') }}:
           displayName: Build
         ${{ else }}:

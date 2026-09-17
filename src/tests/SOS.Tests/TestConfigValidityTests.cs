@@ -55,24 +55,31 @@ public sealed class TestConfigValidityTests
     }
 
     [Fact]
-    public void PreNet10LinuxCreatedumpPermissionFailureIsKnown()
+    public void PreNet10LinuxCreatedumpPermissionFailureSkips()
     {
         const string error = "open(/proc/123/mem) FAILED Permission denied (13)";
 
-        Assert.True(SnapshotStore.IsKnownCreatedumpPermissionFailure(
-            CoreVersion.Net8, Architecture.Arm64, isLinux: true, error, string.Empty));
-        Assert.True(SnapshotStore.IsKnownCreatedumpPermissionFailure(
-            CoreVersion.Net8, Architecture.X64, isLinux: true, error, string.Empty));
-        Assert.True(SnapshotStore.IsKnownCreatedumpPermissionFailure(
-            CoreVersion.Net9, Architecture.X64, isLinux: true, error, string.Empty));
-        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
-            CoreVersion.Net10, Architecture.X64, isLinux: true, error, string.Empty));
-        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
-            CoreVersion.Net8, Architecture.X86, isLinux: true, error, string.Empty));
-        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
-            CoreVersion.Net8, Architecture.X64, isLinux: false, error, string.Empty));
-        Assert.False(SnapshotStore.IsKnownCreatedumpPermissionFailure(
-            CoreVersion.Net8, Architecture.X64, isLinux: true, "unrelated failure", string.Empty));
+        HarnessSkipException exception = Assert.Throws<HarnessSkipException>(
+            () => SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+                CoreVersion.Net8, Architecture.X64, isLinux: true, string.Empty, error));
+
+        Assert.Contains("github.com/dotnet/runtime/pull/120000", exception.Message);
+
+        Assert.Throws<HarnessSkipException>(
+            () => SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+                CoreVersion.Net8, Architecture.Arm64, isLinux: true, error, string.Empty));
+        Assert.Throws<HarnessSkipException>(
+            () => SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+                CoreVersion.Net9, Architecture.X64, isLinux: true, error, string.Empty));
+
+        SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+            CoreVersion.Net10, Architecture.X64, isLinux: true, error, string.Empty);
+        SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.X86, isLinux: true, error, string.Empty);
+        SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.X64, isLinux: false, error, string.Empty);
+        SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.X64, isLinux: true, "unrelated failure", string.Empty);
     }
 
     [Theory]

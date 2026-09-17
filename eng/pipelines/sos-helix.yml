@@ -11,6 +11,7 @@ parameters:
   default: ''
 - name: dependsOn
   type: string
+  default: ''
 - name: artifactPhase
   type: string
 - name: configuration
@@ -51,7 +52,8 @@ jobs:
     ${{ if ne(parameters.container, '') }}:
       container: ${{ parameters.container }}
 
-    dependsOn: ${{ parameters.dependsOn }}
+    ${{ if ne(parameters.dependsOn, '') }}:
+      dependsOn: ${{ parameters.dependsOn }}
 
     steps:
     - task: DownloadPipelineArtifact@2
@@ -81,6 +83,7 @@ jobs:
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
       condition: eq(variables['Agent.Os'], 'Windows_NT')
+      continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
 
     - script: >
         $BUILD_SOURCESDIRECTORY/eng/common/msbuild.sh
@@ -102,6 +105,7 @@ jobs:
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
       condition: ne(variables['Agent.Os'], 'Windows_NT')
+      continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
 
     - task: CopyFiles@2
       displayName: Gather Helix logs

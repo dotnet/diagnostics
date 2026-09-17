@@ -65,13 +65,15 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <!-- When bumping this, update ExtensionsDesktopSubdirectoryW in src/SOS/inc/hostservices.h. -->
     <DesktopTargetFramework>net462</DesktopTargetFramework>
     <!--
         This represents the minimum supported .NET Version, so the min version that the tools must
         be able to run against for a simple customer experience.
 
-        When bumping this, bump __targetFramework in build.sh/build-native.cmd and modify the
-        Debugger.Tests.Configs to reflect the new TFMs
+        When bumping this, update ExtensionsNetCoreSubdirectory in src/SOS/inc/hostservices.h,
+        bump __targetFramework in build.sh/build-native.cmd, and modify the Debugger.Tests.Configs
+        to reflect the new TFMs.
      -->
     <NetCoreAppMinVersion>8.0</NetCoreAppMinVersion>
     <NetCoreAppMinTargetFramework>net$(NetCoreAppMinVersion)</NetCoreAppMinTargetFramework>
