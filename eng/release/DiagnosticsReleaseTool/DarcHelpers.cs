@@ -77,7 +77,7 @@ namespace DiagnosticsReleaseTool.Util
             }
         }
 
-        internal DirectoryInfo GetShippingDirectoryForSingleProjectVariants(IEnumerable<string> projectNames)
+        internal (DirectoryInfo ShippingDirectory, DirectoryInfo NonShippingDirectory) GetShippingDirectoryForSingleProjectVariants(IEnumerable<string> projectNames)
         {
             using (Stream darcManifest = File.OpenRead(ReleaseFilePath))
             using (JsonDocument jsonDoc = JsonDocument.Parse(darcManifest))
@@ -95,7 +95,19 @@ namespace DiagnosticsReleaseTool.Util
                         $"There's {matchingProducts.Count()} products that could be released in the release manifest. Expected 1");
                 }
 
-                return new DirectoryInfo(matchingProducts.First().GetProperty("fileshare").GetString());
+                DirectoryInfo shippingDirectory = new(matchingProducts.First().GetProperty("fileshare").GetString());
+
+                if (!shippingDirectory.Name.Equals("shipping", StringComparison.OrdinalIgnoreCase) ||
+                    shippingDirectory.Parent is null)
+                {
+                    throw new InvalidOperationException(
+                        $"Shipping directory '{shippingDirectory.FullName}' does not end in the expected 'shipping' directory.");
+                }
+
+                string nonShippingPath = Path.Combine(shippingDirectory.Parent.FullName, "nonshipping");
+                DirectoryInfo nonShippingDirectory = Directory.Exists(nonShippingPath) ? new(nonShippingPath) : null;
+
+                return (shippingDirectory, nonShippingDirectory);
             }
         }
     }

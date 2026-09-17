@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Frozen;
 using System.IO;
 
 namespace DiagnosticsReleaseTool.Impl
@@ -17,6 +19,7 @@ namespace DiagnosticsReleaseTool.Impl
         public string ContainerName { get; }
         public string[] ReleaseProductAllowList { get; }
         public string[] ReleaseRepoAllowList { get; }
+        public FrozenSet<string> SkipFiles { get; }
 
         public Config(
             FileInfo toolManifest,
@@ -28,7 +31,8 @@ namespace DiagnosticsReleaseTool.Impl
             string[] releaseRepoAllowList,
             string accountName,
             string clientId,
-            string containerName)
+            string containerName,
+            string[] skipFiles)
         {
             ToolManifest = toolManifest;
             ShouldVerifyManifest = verifyToolManifest;
@@ -40,6 +44,7 @@ namespace DiagnosticsReleaseTool.Impl
             ContainerName = containerName;
             ReleaseProductAllowList = releaseProductAllowList;
             ReleaseRepoAllowList = releaseRepoAllowList;
+            SkipFiles = (skipFiles ?? []).ToFrozenSet(StringComparer.OrdinalIgnoreCase);
         }
     }
 }

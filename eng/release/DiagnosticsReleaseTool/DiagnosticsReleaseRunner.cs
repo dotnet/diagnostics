@@ -48,19 +48,21 @@ namespace DiagnosticsReleaseTool.Impl
 
             // TODO: Probably should use BAR ID instead as an identifier for the metadata to gather.
             ReleaseMetadata releaseMetadata = darcLayoutHelper.GetDropMetadataForSingleRepoVariants(releaseConfig.ReleaseRepoAllowList);
-            DirectoryInfo basePublishDirectory = darcLayoutHelper.GetShippingDirectoryForSingleProjectVariants(releaseConfig.ReleaseProductAllowList);
+            (DirectoryInfo shippingDirectory, DirectoryInfo nonShippingDirectory) = darcLayoutHelper.GetShippingDirectoryForSingleProjectVariants(releaseConfig.ReleaseProductAllowList);
             string publishManifestPath = Path.Combine(releaseConfig.StagingDirectory.FullName, ManifestName);
 
             IPublisher releasePublisher = new AzureBlobBublisher(releaseConfig.AccountName, releaseConfig.ClientId, releaseConfig.ContainerName, releaseConfig.ReleaseName, logger);
             IManifestGenerator manifestGenerator = new DiagnosticsManifestGenerator(releaseMetadata, releaseConfig.ToolManifest, logger);
 
             using Release diagnosticsRelease = new(
-                productBuildPath: basePublishDirectory,
+                publicReleasePath: shippingDirectory,
+                internalOnlyReleasePath: nonShippingDirectory,
                 layoutWorkers: layoutWorkerList,
                 verifiers: verifierList,
                 publisher: releasePublisher,
                 manifestGenerator: manifestGenerator,
-                manifestSavePath: publishManifestPath
+                manifestSavePath: publishManifestPath,
+                shouldSkipFile: file => releaseConfig.SkipFiles.Contains(file.Name)
             );
 
             diagnosticsRelease.UseLogger(logger);
@@ -71,6 +73,7 @@ namespace DiagnosticsReleaseTool.Impl
         private static ILogger GetDiagLogger(bool verbose)
         {
             IConfigurationRoot loggingConfiguration = new ConfigurationBuilder()
+                .SetBasePath(System.AppContext.BaseDirectory)
                 .AddJsonFile("logging.json", optional: false, reloadOnChange: false)
                 .Build();
 

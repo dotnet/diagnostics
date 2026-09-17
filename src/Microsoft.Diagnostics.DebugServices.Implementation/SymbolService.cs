@@ -609,8 +609,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 {
                     return null;
                 }
-                fileName = module.FileName;
-                fileKey = PEFileKeyGenerator.GetKey(Path.GetFileName(fileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
+                fileName = GetFilePathForLookup(module.FileName);
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    return null;
+                }
+                fileKey = PEFileKeyGenerator.GetKey(PathUtilities.GetFileName(fileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
                 if (fileKey is null)
                 {
                     Trace.TraceWarning($"DownLoadPE: no key generated for module {fileName} ");
@@ -622,9 +626,14 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 IEnumerable<PdbFileInfo> pdbInfos = module.GetPdbFileInfos();
                 foreach (PdbFileInfo pdbInfo in pdbInfos)
                 {
+                    string pdbPath = GetFilePathForLookup(pdbInfo.Path);
+                    if (string.IsNullOrEmpty(pdbPath))
+                    {
+                        continue;
+                    }
                     if (pdbInfo.IsPortable)
                     {
-                        fileKey = PortablePDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid);
+                        fileKey = PortablePDBFileKeyGenerator.GetKey(pdbPath, pdbInfo.Guid);
                         if (fileKey is not null)
                         {
                             break;
@@ -632,7 +641,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     }
                     else
                     {
-                        tempFileKey ??= PDBFileKeyGenerator.GetKey(pdbInfo.Path, pdbInfo.Guid, pdbInfo.Revision);
+                        tempFileKey ??= PDBFileKeyGenerator.GetKey(pdbPath, pdbInfo.Guid, pdbInfo.Revision);
                     }
                 }
 
@@ -653,7 +662,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             // Check if the file is local and the key matches the module
-            if (File.Exists(fileName))
+            if (PathUtilities.IsSafeAbsoluteLocalPath(fileName) && File.Exists(fileName))
             {
                 using Stream stream = Utilities.TryOpenFile(fileName);
                 if (stream is not null)
@@ -726,8 +735,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return null;
             }
 
-            string symbolFileName = (flags & KeyTypeFlags.SymbolKey) != 0 ? module.GetSymbolFileName() : null;
-            SymbolStoreKey fileKey = ELFFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName).SingleOrDefault();
+            string moduleFileName = GetFilePathForLookup(module.FileName);
+            if (string.IsNullOrEmpty(moduleFileName))
+            {
+                return null;
+            }
+            string symbolFileName = (flags & KeyTypeFlags.SymbolKey) != 0 ? GetFilePathForLookup(module.GetSymbolFileName()) : null;
+            SymbolStoreKey fileKey = ELFFileKeyGenerator.GetKeys(flags, moduleFileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName).SingleOrDefault();
             if (fileKey is null)
             {
                 Trace.TraceWarning($"DownloadELF: no index generated for module {module.FileName} ");
@@ -736,7 +750,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // Check if the file is local and the key matches the module
             string fileName = fileKey.FullPathName;
-            if (File.Exists(fileName))
+            if (PathUtilities.IsSafeAbsoluteLocalPath(fileName) && File.Exists(fileName))
             {
                 using ELFFile elfFile = Utilities.OpenELFFile(fileName);
                 if (elfFile is not null)
@@ -783,7 +797,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return null;
             }
 
-            SymbolStoreKey fileKey = MachOFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(), symbolFile: false, module.GetSymbolFileName()).SingleOrDefault();
+            string moduleFileName = GetFilePathForLookup(module.FileName);
+            if (string.IsNullOrEmpty(moduleFileName))
+            {
+                return null;
+            }
+            string symbolFileName = GetFilePathForLookup(module.GetSymbolFileName());
+            SymbolStoreKey fileKey = MachOFileKeyGenerator.GetKeys(flags, moduleFileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName).SingleOrDefault();
             if (fileKey is null)
             {
                 Trace.TraceWarning($"DownloadMachO: no index generated for module {module.FileName} ");
@@ -792,7 +812,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // Check if the file is local and the key matches the module
             string fileName = fileKey.FullPathName;
-            if (File.Exists(fileName))
+            if (PathUtilities.IsSafeAbsoluteLocalPath(fileName) && File.Exists(fileName))
             {
                 using MachOFile machOFile = Utilities.OpenMachOFile(fileName);
                 if (machOFile is not null)
@@ -843,9 +863,16 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         file.Stream.Position = 0;
 
                         // If the downloaded doesn't already exists on disk in the cache, then write it to a temporary location.
-                        if (!File.Exists(downloadFilePath))
+                        if (!PathUtilities.IsSafeAbsoluteLocalPath(downloadFilePath) || !File.Exists(downloadFilePath))
                         {
-                            downloadFilePath = Path.Combine(_host.GetTempDirectory(), Path.GetRandomFileName() + "-" + Path.GetFileName(key.FullPathName));
+                            string fileName = PathUtilities.GetFileName(key.FullPathName);
+                            string tempDirectory = _host.GetTempDirectory();
+                            if (!PathUtilities.IsSafeAbsoluteLocalPath(tempDirectory))
+                            {
+                                Trace.TraceError($"Symbol staging directory is not a local absolute path: {tempDirectory ?? "<null>"}");
+                                return null;
+                            }
+                            downloadFilePath = Path.Combine(tempDirectory, Path.GetRandomFileName() + "-" + fileName);
                             using (Stream destinationStream = File.OpenWrite(downloadFilePath))
                             {
                                 file.Stream.CopyTo(destinationStream);
@@ -861,6 +888,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
             return downloadFilePath;
+        }
+
+        private static string GetFilePathForLookup(string filePath)
+        {
+            return PathUtilities.IsSafeAbsoluteLocalPath(filePath) ? filePath : PathUtilities.GetFileName(filePath);
         }
 
         private static void ReadPortableDebugTableEntries(PEReader peReader, out DebugDirectoryEntry codeViewEntry, out DebugDirectoryEntry embeddedPdbEntry)
@@ -894,21 +926,17 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             try
             {
                 CodeViewDebugDirectoryData data = peReader.ReadCodeViewDebugDirectoryData(codeViewEntry);
-                string pdbPath = data.Path;
+                string pdbPath = PathUtilities.GetFileName(data.Path);
+                if (string.IsNullOrEmpty(pdbPath))
+                {
+                    return null;
+                }
                 Stream pdbStream = null;
 
-                if (assemblyPath != null)
+                string localPdbPath = GetLocalPdbPath(assemblyPath, pdbPath);
+                if (localPdbPath is not null)
                 {
-                    try
-                    {
-                        pdbPath = Path.Combine(Path.GetDirectoryName(assemblyPath), GetFileName(pdbPath));
-                    }
-                    catch
-                    {
-                        // invalid characters in CodeView path
-                        return null;
-                    }
-                    pdbStream = Utilities.TryOpenFile(pdbPath);
+                    pdbStream = Utilities.TryOpenFile(localPdbPath);
                 }
 
                 if (pdbStream == null)
@@ -949,6 +977,35 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             return result;
+        }
+
+        internal static string GetLocalPdbPath(string assemblyPath, string pdbPath)
+        {
+            if (!PathUtilities.IsSafeAbsoluteLocalPath(assemblyPath))
+            {
+                return null;
+            }
+
+            string fileName = PathUtilities.GetFileName(pdbPath);
+            if (string.IsNullOrEmpty(fileName))
+            {
+                return null;
+            }
+
+            try
+            {
+                string assemblyDirectory = Path.GetDirectoryName(assemblyPath);
+                if (string.IsNullOrEmpty(assemblyDirectory))
+                {
+                    return null;
+                }
+                string localPdbPath = Path.Combine(assemblyDirectory, fileName);
+                return PathUtilities.IsSafeAbsoluteLocalPath(localPdbPath) ? localPdbPath : null;
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
         }
 
         private static SymbolFile TryOpenReaderFromEmbeddedPdb(PEReader peReader, DebugDirectoryEntry embeddedPdbEntry)
@@ -1040,7 +1097,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// Sets a new store store head.
         /// </summary>
         /// <param name="store">symbol store (server, cache, directory, etc.)</param>
-        private void SetSymbolStore(SymbolStore.SymbolStores.SymbolStore store)
+        internal void SetSymbolStore(SymbolStore.SymbolStores.SymbolStore store)
         {
             if (store != _symbolStore)
             {

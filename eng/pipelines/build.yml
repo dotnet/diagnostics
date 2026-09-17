@@ -184,6 +184,8 @@ jobs:
             targetPath: '$(Build.SourcesDirectory)/artifacts'
             checkDownloadedFiles: true
 
+      - template: /eng/common/core-templates/steps/enable-internal-sources.yml@self
+
       - script: $(_buildScript)
           -ci
           -binaryLog

@@ -18,7 +18,7 @@ This can be shared by anyone who needs to release files to CDN and generate rele
 ## The Diagnostics Specifics.
 
 1. The diagnostics repo uses only the publishers and layout workers that are included in the core.
-2. The repository uses a `darc` generated drop to collect the assets to release. It's important to note only assets marked as shipping will be considered.
+2. The repository uses a `darc` generated drop to collect the assets to release. Assets from the shipping and non-shipping portions of the drop are processed, with `IsAssetForPublicRelease` identifying which assets can be published publicly.
   - Anything that's a NuGet package will get stored in the `NugetAssets` folder of the release.
   - Anything that's a symbol package will get stored in the `SymbolNugetAssets` folder of the release.
   - Single file global tools will get stored in the `ToolBundleAssets` directory under the specific tool's RID.
@@ -27,8 +27,8 @@ This can be shared by anyone who needs to release files to CDN and generate rele
    The manifest in the diagnostics repo consists of a JSON file with four sections:
     - A generic metadata section consisting of key value pairs of useful build data (commit, branch, version, date, etc).
     - A `PublishInstructions` section - A list containing each file to be published to our CDN. Each file has the path where it got published, its content's SHA512, the relative path to be stored in the CDN, and if needed the AKA.ms link to use. We specify the schema for our the download links in the `tool-list.json`, which we pass in to the manifest generator constructor.
-    - A `ToolBundleAssets` section - A list containing each single file tool published. Each item containing the name of the tool, its RID, the path relative to publish root, and the URI where it got published.
-    - A `NugetAssets` section - A list of all the packages to publish, with each having the relative publishing path and the URI where it got published.
+    - A `ToolBundleAssets` section - A list containing each single file tool published. Each item contains the name of the tool, its RID, the path relative to publish root, the URI where it was published, and whether it is intended for public release.
+    - A `NugetAssets` section - A list of all the packages to publish, with each having the relative publishing path, the URI where it was published, and whether it is intended for public release.
 
     A sample miniature manifest would be:
 
