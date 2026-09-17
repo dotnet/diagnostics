@@ -116,7 +116,7 @@ jobs:
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
       ${{ if eq(parameters.testOnly, true) }}:
         displayName: Test
-        continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
+        continueOnError: ${{ variables.isOfficialBuild }}
       ${{ else }}:
         displayName: Build
       condition: succeeded()
@@ -175,7 +175,7 @@ jobs:
           publishRunAttachments: true
           mergeTestResults: true
           buildConfiguration: ${{ parameters.configuration }}
-        continueOnError: true
+        continueOnError: ${{ variables.isOfficialBuild }}
         condition: always()
 
     - task: CopyFiles@2
