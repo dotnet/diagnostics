@@ -7,6 +7,9 @@
                                   or a linux-x64-only one on Linux) so packing is testable
                                   on any host without requiring a full cross-rid build.
         PackageWithCDac         - when 'true', include the cDAC native binary alongside SOS.
+        RequireSOSExtensionsBinaries
+                                - when 'true', require the managed SOS.Extensions payloads
+                                  needed by debugger-hosted SOS packages.
 
     Every `SosRequiredBinaries Include="..."` entry refers to a build output that is
     expected to exist for the rids in scope: missing native artifacts are intentionally a
@@ -25,7 +28,9 @@
                            TargetFramework="$(NetCoreAppMinTargetFramework)" />
   </ItemGroup>
 
-  <Target Name="ValidateSOSExtensionsBinaries" BeforeTargets="GenerateNuspec">
+  <Target Name="ValidateSOSExtensionsBinaries"
+          BeforeTargets="GenerateNuspec"
+          Condition="'$(RequireSOSExtensionsBinaries)' == 'true'">
     <Error Condition="'@(SOSExtensionsBinaries->WithMetadataValue('TargetFramework', '$(DesktopTargetFramework)'))' == ''"
            Text="The $(DesktopTargetFramework) SOS managed payload was not found. Build SOS.Extensions for $(Configuration) before packing." />
     <Error Condition="'@(SOSExtensionsBinaries->WithMetadataValue('TargetFramework', '$(NetCoreAppMinTargetFramework)'))' == ''"

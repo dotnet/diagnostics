@@ -21,13 +21,6 @@
 
   <ItemGroup>
     <Compile Remove="**/*.cs" />
-    <None Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(DesktopTargetFramework)\publish\*.pdb" Pack="true" Visible="false">
-      <PackagePath>$(SOSPackagePathPrefix)/lib/$(DesktopTargetFramework)</PackagePath>
-    </None>
-    <None Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(NetCoreAppMinTargetFramework)\publish\*.pdb" Pack="true" Visible="false">
-      <PackagePath>$(SOSPackagePathPrefix)/lib/$(NetCoreAppMinTargetFramework)</PackagePath>
-    </None>
-
     <None Include="$(ArtifactsBinDir)\Windows_NT.x64.$(Configuration)\PDB\sos.pdb" Pack="true" Visible="false"
           Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'win-x64'">
       <PackagePath>$(SOSPackagePathPrefix)/win-x64</PackagePath>

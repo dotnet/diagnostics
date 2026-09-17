@@ -9,6 +9,7 @@
     <IsPackable>true</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SOSPackagePathPrefix>tools</SOSPackagePathPrefix>
+    <RequireSOSExtensionsBinaries>true</RequireSOSExtensionsBinaries>
     <GalleryManifestBase>$(MSBuildThisFileDirectory)ManifestBase.xml</GalleryManifestBase>
     <ExtensionGalleryManifestOutputFile>$(IntermediateOutputPath)GalleryManifest.xml</ExtensionGalleryManifestOutputFile>
     <UncompressedGalleryManifestOutputFile>$(IntermediateOutputPath)sos_GalleryManifest.xml</UncompressedGalleryManifestOutputFile>

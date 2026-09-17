@@ -65,15 +65,20 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- When bumping this, update ExtensionsDesktopSubdirectoryW in src/SOS/inc/hostservices.h. -->
+    <!--
+        DesktopTargetFramework and ExtensionsDesktopSubdirectoryW in src/SOS/inc/hostservices.h
+        must identify the same package directory; otherwise the native desktop host probes a path
+        that packaging does not produce.
+    -->
     <DesktopTargetFramework>net462</DesktopTargetFramework>
     <!--
         This represents the minimum supported .NET Version, so the min version that the tools must
         be able to run against for a simple customer experience.
 
-        When bumping this, update ExtensionsNetCoreSubdirectory in src/SOS/inc/hostservices.h,
-        bump __targetFramework in build.sh/build-native.cmd, and modify the Debugger.Tests.Configs
-        to reflect the new TFMs.
+        NetCoreAppMinTargetFramework, ExtensionsNetCoreSubdirectory in src/SOS/inc/hostservices.h,
+        __targetFramework in build.sh/build-native.cmd, and the Debugger.Tests.Configs must remain
+        aligned. Otherwise the native CoreCLR host probes a package directory that the build does
+        not produce.
      -->
     <NetCoreAppMinVersion>8.0</NetCoreAppMinVersion>
     <NetCoreAppMinTargetFramework>net$(NetCoreAppMinVersion)</NetCoreAppMinTargetFramework>
