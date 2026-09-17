@@ -12,6 +12,9 @@ parameters:
 - name: testOnly
   type: boolean
   default: false
+- name: isOfficialBuild
+  type: boolean
+  default: false
 
 jobs:
 - template: ${{ parameters.pipelineJobTemplate }}
@@ -116,7 +119,7 @@ jobs:
         /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
       ${{ if eq(parameters.testOnly, true) }}:
         displayName: Test
-        continueOnError: ${{ variables.isOfficialBuild }}
+        continueOnError: ${{ parameters.isOfficialBuild }}
       ${{ else }}:
         displayName: Build
       condition: succeeded()
@@ -175,7 +178,7 @@ jobs:
           publishRunAttachments: true
           mergeTestResults: true
           buildConfiguration: ${{ parameters.configuration }}
-        continueOnError: ${{ variables.isOfficialBuild }}
+        continueOnError: ${{ parameters.isOfficialBuild }}
         condition: always()
 
     - task: CopyFiles@2

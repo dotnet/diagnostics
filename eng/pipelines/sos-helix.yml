@@ -5,6 +5,9 @@ parameters:
   type: string
 - name: platform
   type: object
+- name: isOfficialBuild
+  type: boolean
+  default: false
 
 jobs:
 - template: ${{ parameters.pipelineJobTemplate }}
@@ -60,7 +63,7 @@ jobs:
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
       condition: eq(variables['Agent.Os'], 'Windows_NT')
-      continueOnError: ${{ variables.isOfficialBuild }}
+      continueOnError: ${{ parameters.isOfficialBuild }}
 
     - script: >
         $BUILD_SOURCESDIRECTORY/eng/common/msbuild.sh
@@ -82,7 +85,7 @@ jobs:
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
       condition: ne(variables['Agent.Os'], 'Windows_NT')
-      continueOnError: ${{ variables.isOfficialBuild }}
+      continueOnError: ${{ parameters.isOfficialBuild }}
 
     - task: CopyFiles@2
       displayName: Gather Helix logs

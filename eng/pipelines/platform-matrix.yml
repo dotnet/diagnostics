@@ -8,6 +8,9 @@ parameters:
 - name: jobParameters
   type: object
   default: {}
+- name: isOfficialBuild
+  type: boolean
+  default: false
 
 jobs:
 - ${{ each configuration in parameters.configurations }}:
@@ -15,6 +18,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: win-x64
           name: Windows
@@ -27,6 +31,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: win-x86
           name: Windows
@@ -39,6 +44,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: win-arm64
           name: Windows
@@ -51,6 +57,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: linux-x64
           name: Linux
@@ -63,6 +70,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: linux-arm
           name: Linux
@@ -75,6 +83,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: linux-arm64
           name: Linux
@@ -87,6 +96,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: linux-musl-x64
           name: Linux_musl
@@ -101,6 +111,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: linux-musl-arm
           name: Linux_musl
@@ -114,6 +125,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: linux-musl-arm64
           name: Linux_musl
@@ -127,6 +139,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: osx-x64
           name: MacOS
@@ -139,6 +152,7 @@ jobs:
     - template: ${{ parameters.jobTemplate }}
       parameters:
         configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
         platform:
           rid: osx-arm64
           name: MacOS
