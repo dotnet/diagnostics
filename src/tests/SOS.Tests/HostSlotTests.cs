@@ -12,16 +12,17 @@ public sealed class HostSlotTests
     public void DumpSessionsUseSeparateBoundedSlots()
     {
         AssertTwoSlotPool(new HostSlotPool(capacity: 2));
-        Assert.Equal(2, HostSlot.CdbDump.Capacity);
-        Assert.Equal(2, HostSlot.LldbDump.Capacity);
-        Assert.Equal(2, HostSlot.DotNetDump.Capacity);
-        Assert.NotNull(DumpSession.HostSlotFor(Host.Cdb));
-        Assert.NotNull(DumpSession.HostSlotFor(Host.Lldb));
-        HostSlot dotNetDumpFirst = DumpSession.HostSlotFor(Host.DotnetDump)!;
-        HostSlot dotNetDumpSecond = DumpSession.HostSlotFor(Host.DotnetDump)!;
-        HostSlot dotNetDumpThird = DumpSession.HostSlotFor(Host.DotnetDump)!;
+        Assert.Equal(2, HostSlotPool.Cdb.Capacity);
+        Assert.Equal(2, HostSlotPool.Lldb.Capacity);
+        Assert.Equal(2, HostSlotPool.DotNetDump.Capacity);
+        Assert.NotNull(HostSlotPool.HostSlotFor(Host.Cdb));
+        Assert.NotNull(HostSlotPool.HostSlotFor(Host.Lldb));
+        HostSlot dotNetDumpFirst = HostSlotPool.HostSlotFor(Host.DotnetDump);
+        HostSlot dotNetDumpSecond = HostSlotPool.HostSlotFor(Host.DotnetDump);
+        HostSlot dotNetDumpThird = HostSlotPool.HostSlotFor(Host.DotnetDump);
         Assert.NotSame(dotNetDumpFirst, dotNetDumpSecond);
         Assert.Same(dotNetDumpFirst, dotNetDumpThird);
+        Assert.Throws<ArgumentOutOfRangeException>(() => HostSlotPool.HostSlotFor(Host.AllValid));
     }
 
     private static void AssertTwoSlotPool(HostSlotPool pool)
@@ -42,13 +43,22 @@ public sealed class HostSlotTests
         FakePooledHost first = new();
         FakePooledHost second = new();
 
-        slot.Run(first, host => host.Sos("first"));
-        slot.Run(first, host => host.Sos("again"));
+        using (slot.Acquire(first))
+        {
+            first.Host.Sos("first");
+        }
+        using (slot.Acquire(first))
+        {
+            first.Host.Sos("again");
+        }
 
         Assert.Equal(1, first.OpenCount);
         Assert.Equal(0, first.CloseCount);
 
-        slot.Run(second, host => host.Sos("second"));
+        using (slot.Acquire(second))
+        {
+            second.Host.Sos("second");
+        }
 
         Assert.Equal(1, first.CloseCount);
         Assert.Equal(1, second.OpenCount);
@@ -65,16 +75,59 @@ public sealed class HostSlotTests
         FakePooledHost first = new();
         FakePooledHost failing = new() { ThrowOnOpen = true };
 
-        slot.Run(first, host => host.Sos("first"));
+        using (slot.Acquire(first))
+        {
+            first.Host.Sos("first");
+        }
 
         Assert.Throws<InvalidOperationException>(
-            () => slot.Run(failing, host => host.Sos("unreachable")));
+            () =>
+            {
+                using (slot.Acquire(failing))
+                {
+                    failing.Host.Sos("unreachable");
+                }
+            });
         Assert.Equal(1, first.CloseCount);
         Assert.Equal(1, failing.CloseCount);
 
-        slot.Run(first, host => host.Sos("reopened"));
+        using (slot.Acquire(first))
+        {
+            first.Host.Sos("reopened");
+        }
 
         Assert.Equal(2, first.OpenCount);
+    }
+
+    [Fact]
+    public void LeaseKeepsTheOwnerOpenAcrossCommands()
+    {
+        HostSlot slot = new();
+        FakePooledHost owner = new();
+        FakePooledHost next = new();
+
+        using (slot.Acquire(owner))
+        {
+            using (slot.Acquire(owner))
+            {
+                owner.Host.Sos("first");
+            }
+            using (slot.Acquire(owner))
+            {
+                owner.Host.Sos("second");
+            }
+
+            Assert.Equal(1, owner.OpenCount);
+            Assert.Equal(0, owner.CloseCount);
+        }
+
+        using (slot.Acquire(next))
+        {
+            next.Host.Sos("next");
+        }
+
+        Assert.Equal(1, owner.CloseCount);
+        Assert.Equal(1, next.OpenCount);
     }
 
     private sealed class FakePooledHost : IPooledHost

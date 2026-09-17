@@ -15,14 +15,28 @@ namespace SOS.TestHarness;
 /// marker method and dumped with dbgeng's <c>.dump</c> command; the <see cref="StopKind.Crash"/> stop is
 /// reached by running to the second-chance exception.
 ///
-/// Holds the dbgeng exclusive lease for the duration so it never collides with a shared cdb host.
+/// Serializes capture because dbgeng runs in-process and supports only one active instance.
 /// </summary>
 public static class DbgEngCapturer
 {
+    private const int MaxConcurrentCaptures = 1;
+    private static readonly SemaphoreSlim s_captureGate = new(MaxConcurrentCaptures);
+
     public static void Capture(string exePath, TargetDefinition target, string dumpDir, DumpKind dumpKind)
     {
-        using IDisposable lease = HostSlot.DbgEngCapture.AcquireExclusive();
+        s_captureGate.Wait(HarnessCancellation.Token);
+        try
+        {
+            CaptureCore(exePath, target, dumpDir, dumpKind);
+        }
+        finally
+        {
+            s_captureGate.Release();
+        }
+    }
 
+    private static void CaptureCore(string exePath, TargetDefinition target, string dumpDir, DumpKind dumpKind)
+    {
         using IDisposable clientDisposable = IDebugClient.Create(ToolPaths.DbgEngDirectory);
         IDebugClient client = (IDebugClient)clientDisposable;
         IDebugControl control = (IDebugControl)clientDisposable;
