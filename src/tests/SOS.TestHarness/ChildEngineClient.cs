@@ -121,7 +121,7 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
 
     public SosOutput Execute(string command) => new(Name, command, Send(command));
 
-    public SosOutput Sos(string command) => new(Name, command, Send("!" + command));
+    public SosOutput Sos(string command) => new(Name, command, Send("!sos " + command));
 
     /// <summary>Live only: set a managed breakpoint and run to it (handled inside the child).</summary>
     public SosOutput RunToBpmd(string module, string method) =>

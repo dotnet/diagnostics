@@ -40,7 +40,7 @@ public sealed class RuntimeInfoTests
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // The CLR module list and the assembly list both include the debuggee, on every host.
-        target.Sos("clrmodules").AssertContains("SosHarnessScenarios");
+        target.ClrModules().SingleByName(TargetCatalog.Get(TargetCatalog.Scenarios).ModuleFor(config.Flavor));
         target.Sos("assemblies").AssertContains("SosHarnessScenarios");
     }
 

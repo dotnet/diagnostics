@@ -28,9 +28,8 @@ public interface IDebuggerHost : IDisposable
     SosOutput Execute(string command);
 
     /// <summary>
-    /// Run a SOS command. The host applies whatever prefixing it needs (dbgeng wants a
-    /// leading <c>!</c>; dotnet-dump takes the bare command), so the test author writes
-    /// <c>Sos("clrstack")</c> once and it works everywhere.
+    /// Run a SOS command. The host applies whatever prefixing it needs, so the test author
+    /// writes <c>Sos("clrstack")</c> once and it works everywhere.
     /// </summary>
     SosOutput Sos(string command);
 }
