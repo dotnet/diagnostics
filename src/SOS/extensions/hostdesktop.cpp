@@ -45,9 +45,17 @@ HRESULT InitializeDesktopClrHost()
         return E_FAIL;
     }
     WCHAR* lastSlash = wcsrchr(wszManagedModulePath.GetPtr(), DIRECTORY_SEPARATOR_CHAR_W);
-    if (lastSlash != nullptr)
+    if (lastSlash == nullptr)
     {
-        *++lastSlash = L'\0';
+        TraceHostingError("Failed to parse SOS module name\n");
+        return E_FAIL;
+    }
+    *++lastSlash = L'\0';
+    if (wcscat_s(wszManagedModulePath.GetPtr(), MAX_LONGPATH, ExtensionsDesktopSubdirectoryW) != 0 ||
+        wcscat_s(wszManagedModulePath.GetPtr(), MAX_LONGPATH, DIRECTORY_SEPARATOR_STR_W) != 0)
+    {
+        TraceHostingError("Failed to append managed module directory\n");
+        return E_FAIL;
     }
     if (wcscat_s(wszManagedModulePath.GetPtr(), MAX_LONGPATH, ExtensionsDllNameW) != 0)
     {
@@ -110,4 +118,3 @@ HRESULT InitializeDesktopClrHost()
     }
     return S_OK;
 }
-
