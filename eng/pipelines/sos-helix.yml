@@ -1,65 +1,45 @@
 parameters:
-- name: jobTemplate
-  type: string
-  default: /eng/common/templates-official/job/job.yml@self
-- name: name
-  type: string
-- name: osGroup
-  type: string
-- name: container
-  type: string
-  default: ''
-- name: dependsOn
-  type: string
-  default: ''
-- name: artifactPhase
+- name: pipelineJobTemplate
   type: string
 - name: configuration
   type: string
-- name: architecture
-  type: string
-- name: targetOS
-  type: string
-- name: targetRid
-  type: string
-- name: queue
-  type: string
-- name: helixPreCommands
-  type: string
-  default: ''
+- name: platform
+  type: object
+- name: isOfficialBuild
+  type: boolean
+  default: false
+
 jobs:
-- template: ${{ parameters.jobTemplate }}
+- template: ${{ parameters.pipelineJobTemplate }}
   parameters:
-    name: ${{ parameters.name }}
-    displayName: SOS Helix ${{ replace(replace(replace(replace(parameters.targetRid, 'linux-musl-', 'Alpine '), 'linux-', 'Linux '), 'win-', 'Windows '), 'osx-', 'macOS ') }} ${{ parameters.configuration }}
+    name: SOS_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
+    displayName: SOS Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
     enableMicrobuild: true
 
     pool:
-      ${{ if eq(parameters.osGroup, 'Linux') }}:
-        name: $(BuildPool)
-        demands: ImageOverride -equals $(LinuxImage)
-        os: linux
-      ${{ elseif eq(parameters.osGroup, 'Windows_NT') }}:
+      ${{ if eq(parameters.platform.os, 'windows') }}:
         name: $(BuildPool)
         demands: ImageOverride -equals $(WindowsImage)
         os: windows
-      ${{ elseif eq(parameters.osGroup, 'MacOS') }}:
+      ${{ elseif eq(parameters.platform.os, 'linux') }}:
+        name: $(BuildPool)
+        demands: ImageOverride -equals $(LinuxImage)
+        os: linux
+      ${{ elseif eq(parameters.platform.os, 'osx') }}:
         name: Azure Pipelines
         vmImage: $(macOSImage)
         os: macOS
+      ${{ else }}:
+        'error, unsupported OS': ${{ parameters.platform.os }}
 
-    ${{ if ne(parameters.container, '') }}:
-      container: ${{ parameters.container }}
-
-    ${{ if ne(parameters.dependsOn, '') }}:
-      dependsOn: ${{ parameters.dependsOn }}
+    dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
 
     steps:
     - task: DownloadPipelineArtifact@2
       displayName: Download SOS test payload inputs
       inputs:
-        artifact: TestArtifacts_${{ parameters.artifactPhase }}
+        artifact: TestArtifacts_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
         targetPath: '$(Build.SourcesDirectory)/artifacts'
         checkDownloadedFiles: true
 
@@ -68,44 +48,44 @@ jobs:
         $env:BUILD_SOURCESDIRECTORY\src\tests\SOS.Tests\SOS.Tests.csproj
         /restore /p:TreatWarningsAsErrors=false /t:SendToHelix
         /p:Configuration=${{ parameters.configuration }}
-        /p:TargetArch=${{ parameters.architecture }}
-        /p:TargetOS=${{ parameters.targetOS }}
-        /p:TargetRid=${{ parameters.targetRid }}
+        /p:TargetArch=${{ parameters.platform.arch }}
+        /p:TargetOS=${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}
+        /p:TargetRid=${{ parameters.platform.rid }}
         /p:OfficialBuildId=$env:BUILD_BUILDNUMBER
         /bl:$env:BUILD_SOURCESDIRECTORY\artifacts\log\${{ parameters.configuration }}\SendToHelix.binlog"
       displayName: Run SOS.Tests on Helix
       env:
         HelixSource: pr/dotnet/diagnostics/sos-tests
         HelixType: tests/sos/harness/
-        HelixConfiguration: ${{ parameters.targetRid }}_${{ parameters.configuration }}
-        HelixTargetQueues: ${{ parameters.queue }}
-        HelixPreCommands: ${{ parameters.helixPreCommands }}
+        HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
+        HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }})
+        HelixPreCommands: ${{ coalesce(parameters.platform.helixPreCommands, '') }}
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
       condition: eq(variables['Agent.Os'], 'Windows_NT')
-      continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
+      continueOnError: ${{ parameters.isOfficialBuild }}
 
     - script: >
         $BUILD_SOURCESDIRECTORY/eng/common/msbuild.sh
         $BUILD_SOURCESDIRECTORY/src/tests/SOS.Tests/SOS.Tests.csproj
         /restore /p:TreatWarningsAsErrors=false /t:SendToHelix
         /p:Configuration=${{ parameters.configuration }}
-        /p:TargetArch=${{ parameters.architecture }}
-        /p:TargetOS=${{ parameters.targetOS }}
-        /p:TargetRid=${{ parameters.targetRid }}
+        /p:TargetArch=${{ parameters.platform.arch }}
+        /p:TargetOS=${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}
+        /p:TargetRid=${{ parameters.platform.rid }}
         /p:OfficialBuildId=$BUILD_BUILDNUMBER
         /bl:$BUILD_SOURCESDIRECTORY/artifacts/log/${{ parameters.configuration }}/SendToHelix.binlog
       displayName: Run SOS.Tests on Helix
       env:
         HelixSource: pr/dotnet/diagnostics/sos-tests
         HelixType: tests/sos/harness/
-        HelixConfiguration: ${{ parameters.targetRid }}_${{ parameters.configuration }}
-        HelixTargetQueues: ${{ parameters.queue }}
-        HelixPreCommands: ${{ parameters.helixPreCommands }}
+        HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
+        HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }})
+        HelixPreCommands: ${{ coalesce(parameters.platform.helixPreCommands, '') }}
         Creator: dotnet-bot
         SYSTEM_ACCESSTOKEN: $(System.AccessToken)
       condition: ne(variables['Agent.Os'], 'Windows_NT')
-      continueOnError: ${{ eq(variables.isOfficialBuild, 'true') }}
+      continueOnError: ${{ parameters.isOfficialBuild }}
 
     - task: CopyFiles@2
       displayName: Gather Helix logs
@@ -121,7 +101,7 @@ jobs:
         displayName: Publish Helix logs
         inputs:
           targetPath: '$(Build.StagingDirectory)/HelixLogs'
-          artifactName: Logs_${{ parameters.name }}_$(System.JobAttempt)
+          artifactName: Logs_SOS_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}_$(System.JobAttempt)
           sbomEnabled: false
         continueOnError: true
         condition: always()
