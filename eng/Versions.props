@@ -47,7 +47,7 @@
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>9.0.8</MicrosoftBclAsyncInterfacesVersion>
     <MicrosoftDiaSymReaderNativeVersion>18.9.0-beta1.26405.2</MicrosoftDiaSymReaderNativeVersion>
-    <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.23</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <MicrosoftDiagnosticsTracingTraceEventVersion>3.2.6</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftDotNetXUnitExtensionsVersion>11.0.0-beta.25528.108</MicrosoftDotNetXUnitExtensionsVersion>
     <MicrosoftExtensionsLoggingVersion>8.0.1</MicrosoftExtensionsLoggingVersion>
     <MicrosoftExtensionsLoggingAbstractionsVersion>8.0.3</MicrosoftExtensionsLoggingAbstractionsVersion>
