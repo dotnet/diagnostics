@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 if "%HELIX_WORKITEM_UPLOAD_ROOT%"=="" (
   echo HELIX_WORKITEM_UPLOAD_ROOT is required.
@@ -13,6 +13,12 @@ if "%HELIX_WORKITEM_ROOT%"=="" (
 
 set "ROOT=%~dp0"
 set "UPLOAD=%HELIX_WORKITEM_UPLOAD_ROOT%"
+set "HELIX_WORK_ITEM="
+if /I "%~1"=="--helix-work-item" (
+  set "HELIX_WORK_ITEM=%~2"
+  shift
+  shift
+)
 set /p RID=<"%ROOT%\.sos-test-payload"
 for /f "usebackq skip=1 delims=" %%M in ("%ROOT%\.sos-test-payload") do if not defined CONFIGURATION set "CONFIGURATION=%%M"
 if "%RID%"=="" (
@@ -22,6 +28,23 @@ if "%RID%"=="" (
 if "%CONFIGURATION%"=="" (
   echo The payload marker does not contain a configuration.
   exit /b 3
+)
+
+set "IDENTITY=all"
+if defined HELIX_WORK_ITEM (
+  set "IDENTITY="
+  set "SHARD_TOKENS=!HELIX_WORK_ITEM:-= !"
+  for %%S in (!SHARD_TOKENS!) do set "IDENTITY=%%S"
+  if /I "!IDENTITY!"=="Framework" (
+    set "SOSHARNESS_ONLY_FLAVORS=Framework"
+  ) else if /I "!IDENTITY:~0,3!"=="Net" (
+    set "SOSHARNESS_ONLY_COREVERSIONS=!IDENTITY!"
+    set "SOSHARNESS_ONLY_FLAVORS=Core,SingleFile"
+  ) else (
+    echo The Helix work item "!HELIX_WORK_ITEM!" does not identify a runtime or Framework shard.
+    exit /b 3
+  )
+  echo Running SOS shard !IDENTITY!.
 )
 
 set "TARGET_ARCH=%RID:win-=%"
@@ -80,7 +103,6 @@ if not exist "%SIGNATURE_RUNTIME%\." (
 set "DOTNET_ROOT=%SIGNATURE_RUNTIME%"
 set "DOTNET_ROOT_X86=%DOTNET_ROOT%"
 
-set "IDENTITY=all"
 set "LOG=%UPLOAD%\SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.log"
 
 "%POWERSHELL_EXE%" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass ^

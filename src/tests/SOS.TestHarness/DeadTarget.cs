@@ -39,6 +39,8 @@ public sealed class DeadTarget : Target
 
     protected override SosOutput ExecuteCore(string command) => Current.Execute(command);
 
+    public override IDisposable AcquireDebuggerSession() => Current.AcquireDebuggerSession();
+
     internal override HostDiagnostics? CurrentDiagnostics => _current?.Diagnostics;
 
     private DumpSession Current =>

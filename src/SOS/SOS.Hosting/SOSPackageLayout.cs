@@ -25,7 +25,8 @@ namespace Microsoft.Diagnostics.Shared;
 /// <item><description>
 /// SOS managed extension assemblies that <c>dotnet-sos install</c> copies into the
 /// SOS install directory (Microsoft.Diagnostics.ExtensionCommands.dll, etc.). They
-/// live in the <c>lib/</c> sibling subfolder and are not OS/arch specific.
+/// live in target-framework subfolders under the <c>lib/</c> sibling directory and
+/// are not OS/arch specific.
 /// </description></item>
 /// </list>
 ///
@@ -52,8 +53,8 @@ internal static class SOSPackageLayout
         => Path.Combine(s_packageBaseDirectory, GetHostNativeBinariesFolderName(architecture));
 
     /// <summary>
-    /// Returns the directory containing the SOS managed extension assemblies for this
-    /// package.
+    /// Returns the directory containing the target-framework-specific SOS managed
+    /// extension assembly directories for this package.
     /// </summary>
     public static string GetManagedBinariesDirectory()
         => Path.Combine(s_packageBaseDirectory, "lib");

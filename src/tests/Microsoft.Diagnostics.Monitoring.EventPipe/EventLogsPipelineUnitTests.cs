@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,11 +42,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesAllLevels(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
             });
@@ -68,7 +62,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events at or above the default level are collected.
         /// </summary>
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/2541"), MemberData(nameof(Configurations))]
+        [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevel(TestConfiguration config)
         {
             using Stream outputStream = await GetLogsAsync(config, settings => {
@@ -90,14 +84,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events at the default level are collected for categories without a specified level.
         /// </summary>
-        [SkippableTheory(Skip = "Unreliable test https://github.com/dotnet/diagnostics/issues/3143"), MemberData(nameof(Configurations))]
+        [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevelFallback(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Error;
@@ -143,11 +132,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsUseAppFilters(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config);
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
@@ -164,7 +148,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// Test that log events are collected for the categories and levels specified by the application
         /// and for the categories and levels specified in the filter specs.
         /// </summary>
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/2541"), MemberData(nameof(Configurations))]
+        [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsUseAppFiltersAndFilterSpecs(TestConfiguration config)
         {
             using Stream outputStream = await GetLogsAsync(config, settings => {
@@ -191,11 +175,6 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         [SkippableTheory, MemberData(nameof(Configurations))]
         public async Task TestLogsWildcardCategory(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Critical;
