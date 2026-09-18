@@ -247,6 +247,10 @@ Reusable targets, dumps, and symbols live under
 artifacts live under `artifacts/TestResults/SOS.Tests`. Dumps can be large;
 remove the scratch subtree when a clean recapture is required.
 
+When a Helix work item fails, its complete SOS harness dump directory is
+compressed into the work-item upload root. This retains every dump from the
+failed runtime/configuration leg without increasing artifacts for passing legs.
+
 ## Helix execution
 
 `HelixPayload.targets` stages one self-contained payload per OS, RID, and

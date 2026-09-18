@@ -130,5 +130,16 @@ set "EXIT_CODE=%ERRORLEVEL%"
 set "RESTORE_EXIT_CODE=%ERRORLEVEL%"
 
 type "%LOG%"
+
+if not "%EXIT_CODE%"=="0" (
+  set "DUMP_ROOT=%ROOT%\artifacts\tmp\sos-harness\%CONFIGURATION%"
+  if exist "!DUMP_ROOT!\dumps\." (
+    set "DUMP_ARCHIVE=%UPLOAD%\SOS.Tests-dumps-%RID%-%CONFIGURATION%-%IDENTITY%.tar.gz"
+    echo Archiving SOS dumps to "!DUMP_ARCHIVE!".
+    tar.exe -czf "!DUMP_ARCHIVE!" -C "!DUMP_ROOT!" dumps
+    if errorlevel 1 echo Failed to archive SOS dumps. 1>&2
+  )
+)
+
 if not "%RESTORE_EXIT_CODE%"=="0" exit /b %RESTORE_EXIT_CODE%
 exit /b %EXIT_CODE%
