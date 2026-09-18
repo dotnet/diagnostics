@@ -76,12 +76,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             if (Verbose)
             {
+                IModuleImageInfo imageInfo = module.Services.GetService<IModuleImageInfo>();
+                bool imageInfoAvailable = imageInfo?.IsImageInfoAvailable ?? true;
                 WriteLine("{0} {1}", module.ModuleIndex, module.FileName);
                 WriteLine("    Address:         {0:X16}", module.ImageBase);
                 WriteLine("    ImageSize:       {0:X8}", module.ImageSize);
                 WriteLine("    IsPEImage:       {0}", module.IsPEImage);
-                WriteLine("    IsManaged:       {0}", module.IsManaged);
-                WriteLine("    IsFileLayout:    {0}", module.IsFileLayout?.ToString() ?? "<unknown>");
+                WriteLine("    IsManaged:       {0}", imageInfoAvailable ? module.IsManaged.ToString() : "<unknown>");
+                WriteLine("    IsFileLayout:    {0}", imageInfoAvailable ? module.IsFileLayout?.ToString() ?? "<unknown>" : "<unknown>");
                 WriteLine("    IndexFileSize:   {0}", module.IndexFileSize?.ToString("X8") ?? "<none>");
                 WriteLine("    IndexTimeStamp:  {0}", module.IndexTimeStamp?.ToString("X8") ?? "<none>");
                 WriteLine("    Version:         {0}", module.GetVersionData()?.ToString() ?? "<none>");
