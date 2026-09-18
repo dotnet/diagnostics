@@ -36,6 +36,67 @@ namespace DotnetGCDump.UnitTests
                 $"Detected {writer.ConcurrentWriteCount} concurrent writes to the supplied TextWriter.{Environment.NewLine}{writer.Output}");
         }
 
+        [Fact]
+        public void DumpFromEventPipeReturnsFalseWhenShutdownLoggingFails()
+        {
+            using ThrowingTextWriter writer = new();
+            DotNetHeapInfo heapInfo = new();
+            MemoryGraph memoryGraph = new(50_000);
+
+            bool success = EventPipeDotNetHeapDumper.DumpFromEventPipe(
+                CancellationToken.None,
+                Environment.ProcessId,
+                diagnosticPort: null,
+                memoryGraph,
+                TextWriter.Synchronized(writer),
+                timeout: 30,
+                heapInfo);
+
+            Assert.False(success);
+            Assert.Contains("[Error] Exception during gcdump:", writer.ToString());
+        }
+
+        [Fact]
+        public void DumpFromEventPipeFileDoesNotReuseLiveCollectionState()
+        {
+            using StringWriter liveWriter = new(CultureInfo.InvariantCulture);
+            DotNetHeapInfo liveHeapInfo = new();
+            MemoryGraph liveMemoryGraph = new(50_000);
+
+            bool liveSuccess = EventPipeDotNetHeapDumper.DumpFromEventPipe(
+                CancellationToken.None,
+                Environment.ProcessId,
+                diagnosticPort: null,
+                liveMemoryGraph,
+                TextWriter.Synchronized(liveWriter),
+                timeout: 30,
+                liveHeapInfo);
+
+            Assert.True(liveSuccess, liveWriter.ToString());
+
+            string tracePath = Path.GetTempFileName();
+            try
+            {
+                File.WriteAllText(tracePath, "not a nettrace file");
+                using StringWriter fileWriter = new(CultureInfo.InvariantCulture);
+                DotNetHeapInfo fileHeapInfo = new();
+                MemoryGraph fileMemoryGraph = new(50_000);
+
+                bool fileSuccess = EventPipeDotNetHeapDumper.DumpFromEventPipeFile(
+                    tracePath,
+                    fileMemoryGraph,
+                    TextWriter.Synchronized(fileWriter),
+                    fileHeapInfo);
+
+                Assert.False(fileSuccess);
+                Assert.Contains("[Error] Exception processing events:", fileWriter.ToString());
+            }
+            finally
+            {
+                File.Delete(tracePath);
+            }
+        }
+
         private sealed class ConcurrentWriteDetector : TextWriter
         {
             private readonly StringBuilder _output = new();
@@ -97,6 +158,27 @@ namespace DotnetGCDump.UnitTests
                 {
                     Volatile.Write(ref _activeWriter, 0);
                 }
+            }
+        }
+
+        private sealed class ThrowingTextWriter : StringWriter
+        {
+            private int _throwOnShutdown = 1;
+
+            public ThrowingTextWriter()
+                : base(CultureInfo.InvariantCulture)
+            {
+            }
+
+            public override void WriteLine(string format, object arg0)
+            {
+                if (format.Contains("gcdump EventPipe session shut down", StringComparison.Ordinal) &&
+                    Interlocked.Exchange(ref _throwOnShutdown, 0) != 0)
+                {
+                    throw new IOException("Simulated shutdown logging failure.");
+                }
+
+                base.WriteLine(format, arg0);
             }
         }
     }
