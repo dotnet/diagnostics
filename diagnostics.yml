@@ -127,30 +127,27 @@ extends:
               pipelineJobTemplate: ${{ variables.jobTemplate }}
               testOnly: true
 
-        # TODO: Enable dedicated SOS Helix jobs for internal builds after selecting internal queues
-        # and aligning Debug artifact publishing. Internal builds currently run SOS in the normal test legs.
-        - ${{ if eq(variables['System.TeamProject'], 'public') }}:
-          - template: /eng/pipelines/platform-matrix.yml
-            parameters:
-              jobTemplate: /eng/pipelines/sos-helix.yml
-              isOfficialBuild: ${{ variables.isOfficialBuild }}
-              configurations:
-              - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-                - Debug
-              - ${{ else }}:
-                - Release
-                - Debug
-              platforms:
-              - win-x64
-              - win-x86
-              - linux-x64
-              - linux-arm64
-              - linux-musl-x64
-              - osx-arm64
-              - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-                - osx-x64
-              jobParameters:
-                pipelineJobTemplate: ${{ variables.jobTemplate }}
+        - template: /eng/pipelines/platform-matrix.yml
+          parameters:
+            jobTemplate: /eng/pipelines/sos-helix.yml
+            isOfficialBuild: ${{ variables.isOfficialBuild }}
+            configurations:
+            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+              - Debug
+            - ${{ else }}:
+              - Release
+              - Debug
+            platforms:
+            - win-x64
+            - win-x86
+            - linux-x64
+            - linux-arm64
+            - linux-musl-x64
+            - osx-arm64
+            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+              - osx-x64
+            jobParameters:
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
 
     ############################
     #                          #
