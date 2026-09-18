@@ -16,6 +16,7 @@ jobs:
     displayName: SOS Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
     enableMicrobuild: true
+    enableTelemetry: true
 
     pool:
       ${{ if eq(parameters.platform.os, 'windows') }}:
