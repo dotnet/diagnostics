@@ -22,6 +22,7 @@ public sealed class MiscCommandTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
+        using IDisposable debuggerSession = target.AcquireDebuggerSession();
 
         // dbgout toggles internal debug logging and reports the new state.
         target.Sos("dbgout").AssertContains("Debug output logging");

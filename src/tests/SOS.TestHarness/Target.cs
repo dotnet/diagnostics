@@ -68,6 +68,13 @@ public abstract class Target : IDisposable
         return ExecuteCore(command);
     }
 
+    /// <summary>
+    /// Hold exclusive use of the current debugger until the returned lease is disposed. Use this when a
+    /// sequence temporarily changes debugger-global state. The target must remain at its current point,
+    /// and the lease must be disposed on the acquiring thread; do not await while holding it.
+    /// </summary>
+    public virtual IDisposable AcquireDebuggerSession() => EmptyDisposable.Instance;
+
     /// <summary>Navigate to the named stop point (subclass mechanics; <see cref="GoToStopPoint"/> records it).</summary>
     protected abstract void GoToStopPointCore(string stopName);
 
@@ -99,6 +106,15 @@ public abstract class Target : IDisposable
     /// show what the underlying debugger process did.
     /// </summary>
     internal virtual HostDiagnostics? CurrentDiagnostics => null;
+
+    private sealed class EmptyDisposable : IDisposable
+    {
+        public static IDisposable Instance { get; } = new EmptyDisposable();
+
+        public void Dispose()
+        {
+        }
+    }
 
     public virtual void Dispose()
     {
