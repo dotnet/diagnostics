@@ -2,6 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text.RegularExpressions;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
+using Microsoft.FileFormats.Minidump;
 using SOS.TestHarness;
 using Xunit;
 
@@ -18,6 +22,12 @@ public sealed class MemoryAndDecodeTests
     public static TheoryData<TestConfig> ScenariosMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
     public static TheoryData<TestConfig> NestedExceptionMatrix => TestMatrices.HeapEnumeration([TargetCatalog.NestedException]);
     public static TheoryData<TestConfig> DotnetDumpMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.DotnetDump);
+    public static TheoryData<TestConfig> MiniDumpMatrix => TestConfig.BuildMatrix(
+        [TargetCatalog.Scenarios],
+        Flavor.Core,
+        Host.AllValid,
+        Liveness.Dump,
+        dumpKind: DumpKind.Mini);
 
     [SosTheory]
     [MemberData(nameof(DotnetDumpMatrix))]
@@ -55,6 +65,88 @@ public sealed class MemoryAndDecodeTests
         }
 
         target.Sos($"db {marker:x}").AssertContains(":"); // byte dump prints "<addr>: <bytes>"
+    }
+
+    [SosTheory]
+    [MemberData(nameof(MiniDumpMatrix))]
+    public async Task MemoryDumper_MapsOmittedManagedModuleData(TestConfig config)
+    {
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        ClrModuleInfo coreLib = target.ClrModules().SingleByName("System.Private.CoreLib.dll");
+        ulong imageAddress = FindOmittedImageAddress(target.DumpPath, coreLib.ImageBase, coreLib.ImageSize);
+
+        if (config.Host == Host.Lldb)
+        {
+            SosOutput nativeRead = target.Execute($"memory read --size 1 --count 16 0x{imageAddress:x}");
+            Assert.Contains("core file does not contain", nativeRead.Text, StringComparison.OrdinalIgnoreCase);
+        }
+
+        SosOutput mappedRead = target.Sos($"db {imageAddress:x}");
+        Assert.Matches(
+            $@"(?im)^{imageAddress:x16}:(?: [0-9a-f]{{2}}){{16}}",
+            mappedRead.Text);
+    }
+
+    private static ulong FindOmittedImageAddress(string dumpPath, ulong imageBase, ulong imageSize)
+    {
+        const ulong ReadSize = 16;
+
+        using StreamAddressSpace dataSource = new(File.OpenRead(dumpPath));
+        (ulong Start, ulong End)[] savedRanges;
+
+        if (OperatingSystem.IsWindows())
+        {
+            Minidump dump = new(dataSource);
+            savedRanges = dump.Segments
+                .Select(segment => (segment.VirtualAddress, segment.VirtualAddress + segment.Size))
+                .ToArray();
+        }
+        else if (!OperatingSystem.IsMacOS())
+        {
+            ELFCoreFile dump = new(dataSource);
+            Assert.True(dump.IsValid(), $"'{dumpPath}' is not an ELF core dump");
+            savedRanges = dump.Segments
+                .Where(segment => segment.Header.Type == ELFProgramHeaderType.Load && segment.Header.FileSize > 0)
+                .Select(segment => (segment.Header.VirtualAddress.Value, segment.Header.VirtualAddress + segment.Header.FileSize))
+                .ToArray();
+        }
+        else
+        {
+            MachOFile dump = new(dataSource);
+            Assert.True(dump.IsValid() && dump.Header.FileType == MachHeaderFileType.Core, $"'{dumpPath}' is not a Mach-O core dump");
+            savedRanges = dump.Segments
+                .Where(segment => segment.LoadCommand.FileSize > 0)
+                .Select(segment => ((ulong)segment.LoadCommand.VMAddress, segment.LoadCommand.VMAddress + segment.LoadCommand.FileSize))
+                .ToArray();
+        }
+
+        ulong imageEnd = imageBase + imageSize;
+        ulong address = imageBase;
+        foreach ((ulong start, ulong end) in savedRanges.OrderBy(range => range.Start))
+        {
+            if (end <= address)
+            {
+                continue;
+            }
+            if (start >= imageEnd)
+            {
+                break;
+            }
+            if (address + ReadSize <= start)
+            {
+                return address;
+            }
+            address = Math.Max(address, end);
+        }
+        if (address + ReadSize <= imageEnd)
+        {
+            return address;
+        }
+
+        throw new InvalidOperationException(
+            $"No omitted {ReadSize}-byte range was found in the CoreLib image.");
     }
 
     [SosTheory]

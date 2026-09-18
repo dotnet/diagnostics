@@ -250,8 +250,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             pdbFileInfos = Array.Empty<PdbFileInfo>();
             moduleFlags &= ~(Module.Flags.IsPEImage | Module.Flags.IsManaged | Module.Flags.IsLoadedLayout | Module.Flags.IsFileLayout);
 
-            // None of the modules that lldb (on either Linux/MacOS) provides are PEs
-            if (size > 0 && Target.Host.HostType != HostType.Lldb)
+            if (size > 0)
             {
                 // First try getting the PE info as loaded layout (native Windows DLLs and most managed PEs).
                 peFile = GetPEInfo(isVirtual: true, address, size, out List<PdbFileInfo> pdbs, out Module.Flags flags);

@@ -81,7 +81,7 @@ namespace SOS.Extensions
                 ulong imageSize,
                 uint indexFileSize,
                 uint indexTimeStamp)
-                : base(moduleService.Services)
+                : base(moduleService.Services, moduleService.Target.Host.HostType != HostType.Lldb)
             {
                 _moduleService = moduleService;
                 ModuleIndex = moduleIndex;

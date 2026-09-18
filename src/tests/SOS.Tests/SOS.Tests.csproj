@@ -15,6 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
     <ProjectReference Include="..\SOS.TestHarness\SOS.TestHarness.csproj" />
     <ProjectReference Include="..\SOS.TestHarness.SourceGen\SOS.TestHarness.SourceGen.csproj"
                       OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
