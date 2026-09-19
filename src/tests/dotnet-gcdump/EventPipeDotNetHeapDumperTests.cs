@@ -21,7 +21,7 @@ namespace DotnetGCDump.UnitTests
             DotNetHeapInfo heapInfo = new();
             MemoryGraph memoryGraph = new(50_000);
 
-            bool success = EventPipeDotNetHeapDumper.DumpFromEventPipe(
+            EventPipeDotNetHeapDumper.DumpFromEventPipe(
                 CancellationToken.None,
                 Environment.ProcessId,
                 diagnosticPort: null,
@@ -30,10 +30,12 @@ namespace DotnetGCDump.UnitTests
                 timeout: 30,
                 heapInfo);
 
-            Assert.True(success, writer.Output);
+            string output = writer.Output;
             Assert.True(
                 writer.ConcurrentWriteCount == 0,
-                $"Detected {writer.ConcurrentWriteCount} concurrent writes to the supplied TextWriter.{Environment.NewLine}{writer.Output}");
+                $"Detected {writer.ConcurrentWriteCount} concurrent writes to the supplied TextWriter.{Environment.NewLine}{output}");
+            Assert.Contains("gcdump EventPipe session shut down", output);
+            Assert.Contains("Found Module ", output);
         }
 
         [Fact]
@@ -170,15 +172,25 @@ namespace DotnetGCDump.UnitTests
             {
             }
 
+            public override void WriteLine(string value)
+            {
+                ThrowIfShutdownMessage(value);
+                base.WriteLine(value);
+            }
+
             public override void WriteLine(string format, object arg0)
             {
-                if (format.Contains("gcdump EventPipe session shut down", StringComparison.Ordinal) &&
+                ThrowIfShutdownMessage(format);
+                base.WriteLine(format, arg0);
+            }
+
+            private void ThrowIfShutdownMessage(string value)
+            {
+                if (value.Contains("gcdump EventPipe session shut down", StringComparison.Ordinal) &&
                     Interlocked.Exchange(ref _throwOnShutdown, 0) != 0)
                 {
                     throw new IOException("Simulated shutdown logging failure.");
                 }
-
-                base.WriteLine(format, arg0);
             }
         }
     }
