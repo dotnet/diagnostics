@@ -77,6 +77,21 @@ public:
 // Current runtime instance
 IRuntime* g_pRuntime = nullptr;
 
+static bool IsLoadableModulePath(const char* modulePath, const char* moduleName)
+{
+    if (modulePath == nullptr || modulePath[0] == '\0')
+    {
+        ExtErr("Could not find matching %s\n", moduleName);
+        return false;
+    }
+    if (!IsSafeAbsoluteLocalPath(modulePath))
+    {
+        ExtErr("Can't load %s from path '%s' because it is not local\n", moduleName, modulePath);
+        return false;
+    }
+    return true;
+}
+
 static CDacLoadPolicy s_cdacLoadPolicy = CDacLoadPolicy::PreferCDac;
 
 extern "C" bool TryGetSymbolWithCallback(
@@ -492,12 +507,17 @@ ULONG Runtime::Release()
 \**********************************************************************/
 void Runtime::SetRuntimeDirectory(LPCSTR runtimeModuleDirectory)
 {
+    if (runtimeModuleDirectory != nullptr && !IsSafeAbsoluteLocalPath(runtimeModuleDirectory))
+    {
+        ExtDbgOut("Ignoring non-local runtime module directory: %s\n", runtimeModuleDirectory);
+        return;
+    }
     if (m_runtimeDirectory != nullptr)
     {
         free((void*)m_runtimeDirectory);
         m_runtimeDirectory = nullptr;
     }
-    if (runtimeModuleDirectory != nullptr)
+    if (IsSafeAbsoluteLocalPath(runtimeModuleDirectory))
     {
         m_runtimeDirectory = _strdup(runtimeModuleDirectory);
     }
@@ -510,6 +530,11 @@ LPCSTR Runtime::GetRuntimeDirectory()
 {
     if (m_runtimeDirectory == nullptr)
     {
+        if (!IsSafeAbsoluteLocalPath(m_name))
+        {
+            ExtDbgOut("Error: Runtime module path is not a local absolute path: %s\n", m_name != nullptr ? m_name : "<null>");
+            return nullptr;
+        }
         if (GetFileAttributesA(m_name) == INVALID_FILE_ATTRIBUTES)
         {
             ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", m_name, HRESULT_FROM_WIN32(GetLastError()));
@@ -517,7 +542,7 @@ LPCSTR Runtime::GetRuntimeDirectory()
         }
         // Parse off the file name
         char* runtimeDirectory = _strdup(m_name);
-        char* lastSlash = strrchr(runtimeDirectory, GetTargetDirectorySeparatorW());
+        char* lastSlash = GetLastDirectorySeparator(runtimeDirectory);
         if (lastSlash != nullptr)
         {
             *lastSlash = '\0';
@@ -574,7 +599,11 @@ HRESULT Runtime::GetClrDataProcess(CDacLoadPolicy policy, IXCLRDataProcess** ppC
         }
 
         LPCSTR dacFilePath = GetDacFilePath();
-        if (dacFilePath == nullptr)
+        if (dacFilePath == nullptr || dacFilePath[0] == '\0')
+        {
+            return CORDBG_E_NO_IMAGE_AVAILABLE;
+        }
+        if (!IsLoadableModulePath(dacFilePath, "DAC"))
         {
             return CORDBG_E_NO_IMAGE_AVAILABLE;
         }
@@ -609,6 +638,10 @@ void Runtime::SetCDacLoadPolicy(CDacLoadPolicy policy)
 \**********************************************************************/
 IXCLRDataProcess* Runtime::CreateClrDataProcessDirect(LPCSTR dacFilePath)
 {
+    if (!IsLoadableModulePath(dacFilePath, "DAC"))
+    {
+        return nullptr;
+    }
     HMODULE hdac = LoadLibraryA(dacFilePath);
     if (hdac == NULL)
     {
@@ -869,6 +902,11 @@ public:
         {
             return CORDBG_E_LIBRARY_PROVIDER_ERROR;
         }
+        const char* moduleName = _wcsstr(fileName, W("mscordbi")) != nullptr ? "DBI" : "DAC";
+        if (!IsLoadableModulePath(path, moduleName))
+        {
+            return CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        }
         if (!VerifyLibrary(path))
         {
             return CORDBG_E_LIBRARY_PROVIDER_ERROR;
@@ -896,6 +934,11 @@ public:
             ? m_runtime->GetDbiFilePath()
             : m_runtime->GetDacFilePath();
         if (path == nullptr)
+        {
+            return CORDBG_E_LIBRARY_PROVIDER_ERROR;
+        }
+        const char* moduleName = _wcsstr(fileName, W("mscordbi")) != nullptr ? "DBI" : "DAC";
+        if (!IsLoadableModulePath(path, moduleName))
         {
             return CORDBG_E_LIBRARY_PROVIDER_ERROR;
         }

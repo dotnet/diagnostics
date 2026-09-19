@@ -247,7 +247,7 @@ namespace SOS.Hosting
                 {
                     _initialized = true;
                     string dbgshimPath = GetDbgShimPath();
-                    if (dbgshimPath is null || !File.Exists(dbgshimPath))
+                    if (string.IsNullOrEmpty(dbgshimPath) || !File.Exists(dbgshimPath))
                     {
                         Trace.TraceInformation($"ClrDataProcessActivator: dbgshim not found at '{dbgshimPath}'.");
                         return null;
