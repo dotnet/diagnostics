@@ -100,5 +100,26 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 Assert.True(correctStackParts[j] == stackParts[i], $"{correctStackParts[j]} != {stackParts[i]}");
             }
         }
+
+        [Fact]
+        public void DiagnosticPortOptionIsRegistered()
+        {
+            Command reportCommand = ReportCommandHandler.ReportCommand();
+            
+            // Verify the diagnostic port option is registered
+            bool hasDiagnosticPortOption = false;
+            foreach (var option in reportCommand.Options)
+            {
+                if (option.Name == "diagnostic-port")
+                {
+                    hasDiagnosticPortOption = true;
+                    // Verify it has the short alias --dport
+                    Assert.Contains("--dport", option.Aliases);
+                    break;
+                }
+            }
+            
+            Assert.True(hasDiagnosticPortOption, "The --diagnostic-port option should be registered in the report command");
+        }
     }
 }
