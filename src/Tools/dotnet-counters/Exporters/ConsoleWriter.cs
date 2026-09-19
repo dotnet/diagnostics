@@ -222,17 +222,33 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 for (int i = 0; i < tags.Length; i++)
                 {
                     string tag = tags[i];
-                    string[] keyValue = tag.Split("=");
-                    int posTag = observedTags.FindIndex (tag => tag.header == keyValue[0]);
+                    string[] keyValue = tag.Split(new char[] { '=' }, 2); // Split into at most 2 parts to handle values with '='
+
+                    // Skip malformed tags that don't have both key and value
+                    if (keyValue.Length != 2)
+                    {
+                        continue;
+                    }
+
+                    string key = keyValue[0].Trim();
+                    string value = keyValue[1];
+
+                    // Skip empty keys
+                    if (string.IsNullOrEmpty(key))
+                    {
+                        continue;
+                    }
+
+                    int posTag = observedTags.FindIndex (tag => tag.header == key);
                     if (posTag == -1)
                     {
-                        observedTags.Add((keyValue[0], new string[counter.TagSets.Count]));
-                        columnHeaderLen.Add(keyValue[0].Length);
+                        observedTags.Add((key, new string[counter.TagSets.Count]));
+                        columnHeaderLen.Add(key.Length);
                         maxValueColumnLen.Add(default(int));
                         posTag = observedTags.Count - 1;
                     }
-                    observedTags[posTag].values[tagsCount] = keyValue[1];
-                    maxValueColumnLen[posTag] = Math.Max(keyValue[1].Length, maxValueColumnLen[posTag]);
+                    observedTags[posTag].values[tagsCount] = value;
+                    maxValueColumnLen[posTag] = Math.Max(value.Length, maxValueColumnLen[posTag]);
                 }
                 tagsCount++;
             }
