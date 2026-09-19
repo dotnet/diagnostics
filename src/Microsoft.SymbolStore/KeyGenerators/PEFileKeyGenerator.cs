@@ -51,7 +51,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 {
                     yield return GetKey(_path, _peFile.Timestamp, _peFile.SizeOfImage);
                 }
-                if ((flags & KeyTypeFlags.RuntimeKeys) != 0 && (GetFileName(_path) == CoreClrFileName || GetFileName(_path) == ClrFileName))
+                string runtimeFileName = GetFileName(_path);
+                if ((flags & KeyTypeFlags.RuntimeKeys) != 0 &&
+                    (runtimeFileName.Equals(CoreClrFileName, StringComparison.OrdinalIgnoreCase) ||
+                     runtimeFileName.Equals(ClrFileName, StringComparison.OrdinalIgnoreCase)))
                 {
                     yield return GetKey(_path, _peFile.Timestamp, _peFile.SizeOfImage);
                 }
@@ -107,10 +110,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 if ((flags & KeyTypeFlags.ClrKeys) != 0)
                 {
                     string coreclrId = BuildId(_peFile.Timestamp, _peFile.SizeOfImage);
-                    string[] sosFiles = GetSOSFiles(GetFileName(_path)).ToArray();
+                    string[] sosFiles = GetSOSFiles(runtimeFileName).ToArray();
                     if (sosFiles.Length == 0)
                     {
-                        Tracer.Verbose("PEFile `{0}`: no SOS special files generated for runtime file {1}. No SOS keys will be produced.", _path, GetFileName(_path));
+                        Tracer.Verbose("PEFile `{0}`: no SOS special files generated for runtime file {1}. No SOS keys will be produced.", _path, runtimeFileName);
                     }
                     foreach (string specialFileName in sosFiles)
                     {
@@ -122,10 +125,10 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 if ((flags & (KeyTypeFlags.ClrKeys | KeyTypeFlags.DacDbiKeys)) != 0)
                 {
                     string coreclrId = BuildId(_peFile.Timestamp, _peFile.SizeOfImage);
-                    string[] dacFiles = GetDACFiles(GetFileName(_path)).ToArray();
+                    string[] dacFiles = GetDACFiles(runtimeFileName).ToArray();
                     if (dacFiles.Length == 0)
                     {
-                        Tracer.Verbose("PEFile `{0}`: no DAC/DBI special files generated for runtime file {1}. No DAC/DBI keys will be produced.", _path, GetFileName(_path));
+                        Tracer.Verbose("PEFile `{0}`: no DAC/DBI special files generated for runtime file {1}. No DAC/DBI keys will be produced.", _path, runtimeFileName);
                     }
                     foreach (string specialFileName in dacFiles)
                     {
@@ -155,7 +158,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
         private IEnumerable<string> GetSOSFiles(string runtimeFileName)
         {
-            if (runtimeFileName == ClrFileName)
+            if (runtimeFileName.Equals(ClrFileName, StringComparison.OrdinalIgnoreCase))
             {
                 return GetFilesLongNameVariants(SosFileName);
             }
@@ -165,14 +168,14 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
         private IEnumerable<string> GetDACFiles(string runtimeFileName)
         {
-            if (runtimeFileName == CoreClrFileName)
+            if (runtimeFileName.Equals(CoreClrFileName, StringComparison.OrdinalIgnoreCase))
             {
                 string[] coreClrDACFiles = new string[] { CoreClrDACFileName, DbiFileName };
                 IEnumerable<string> longNameDACFiles = GetFilesLongNameVariants(CoreClrDACFileName);
                 return coreClrDACFiles.Concat(longNameDACFiles);
             }
 
-            if (runtimeFileName == ClrFileName)
+            if (runtimeFileName.Equals(ClrFileName, StringComparison.OrdinalIgnoreCase))
             {
                 string[] clrDACFiles = new string[] { ClrDACFileName, DbiFileName };
                 IEnumerable<string> longNameDACFiles = GetFilesLongNameVariants(ClrDACFileName);
@@ -184,7 +187,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
 
         private IEnumerable<string> GetFilesLongNameVariants(string fileWithLongNameVariant)
         {
-            if (!s_knownFilesWithLongNameVariant.Contains(fileWithLongNameVariant))
+            if (!s_knownFilesWithLongNameVariant.Contains(fileWithLongNameVariant, StringComparer.OrdinalIgnoreCase))
             {
                 Tracer.Warning("{0} is not a recognized file with a long name variant", fileWithLongNameVariant);
                 return Enumerable.Empty<string>();
@@ -251,8 +254,9 @@ namespace Microsoft.SymbolStore.KeyGenerators
             // The clr special file flag can not be based on the GetSpecialFiles() list because
             // that is only valid when "path" is the coreclr.dll.
             string fileName = GetFileName(path);
-            bool clrSpecialFile = s_knownRuntimeSpecialFiles.Contains(fileName) ||
-                                  (s_knownFilesWithLongNameVariant.Any((file) => fileName.StartsWith(Path.GetFileNameWithoutExtension(file).ToLowerInvariant() + "_")) && Path.GetExtension(fileName) == ".dll");
+            bool clrSpecialFile = s_knownRuntimeSpecialFiles.Contains(fileName, StringComparer.OrdinalIgnoreCase) ||
+                                  (s_knownFilesWithLongNameVariant.Any((file) => fileName.StartsWith(Path.GetFileNameWithoutExtension(file) + "_", StringComparison.OrdinalIgnoreCase))
+                                      && Path.GetExtension(fileName).Equals(".dll", StringComparison.OrdinalIgnoreCase));
 
             string id = BuildId(timestamp, sizeOfImage);
             return BuildKey(path, id, clrSpecialFile);
