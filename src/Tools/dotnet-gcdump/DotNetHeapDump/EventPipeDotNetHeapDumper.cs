@@ -17,9 +17,6 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 {
     public static class EventPipeDotNetHeapDumper
     {
-        internal static volatile bool eventPipeDataPresent;
-        internal static volatile bool dumpComplete;
-
         /// <summary>
         /// Given a nettrace file from a EventPipe session with the appropriate provider and keywords turned on,
         /// generate a GCHeapDump using the resulting events.
@@ -33,6 +30,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         {
             DateTime start = DateTime.Now;
             Func<TimeSpan> getElapsed = () => DateTime.Now - start;
+            DumpState dumpState = new();
+            bool success = false;
+            log = TextWriter.Synchronized(log);
 
             DotNetHeapDumpGraphReader dumper = new(log)
             {
@@ -49,7 +49,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
 
                 source.Clr.GCStart += delegate (GCStartTraceData data)
                 {
-                    eventPipeDataPresent = true;
+                    dumpState.EventPipeDataPresent = true;
 
                     if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
                     {
@@ -63,13 +63,13 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     if (data.Count == gcNum)
                     {
                         log.WriteLine("{0,5:n1}s: .NET GC Complete.", getElapsed().TotalSeconds);
-                        dumpComplete = true;
+                        dumpState.DumpComplete = true;
                     }
                 };
 
                 source.Clr.GCBulkNode += delegate (GCBulkNodeTraceData data)
                 {
-                    eventPipeDataPresent = true;
+                    dumpState.EventPipeDataPresent = true;
 
                     if ((getElapsed() - lastEventPipeUpdate).TotalMilliseconds > 500)
                     {
@@ -88,9 +88,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 source.Process();
                 log.WriteLine("{0,5:n1}s: Finished processing events", getElapsed().TotalSeconds);
 
-                if (eventPipeDataPresent)
+                if (dumpState.EventPipeDataPresent)
                 {
                     dumper.ConvertHeapDataToGraph();
+                    success = dumpState.DumpComplete;
                 }
             }
             catch (Exception e)
@@ -98,9 +99,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception processing events: {e}");
             }
 
-            log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", getElapsed().TotalSeconds, dumpComplete);
+            log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", getElapsed().TotalSeconds, success);
 
-            return dumpComplete;
+            return success;
         }
 
         /// <summary>
@@ -119,6 +120,9 @@ namespace Microsoft.Diagnostics.Tools.GCDump
         {
             DateTime start = DateTime.Now;
             Func<TimeSpan> getElapsed = () => DateTime.Now - start;
+            DumpState dumpState = new();
+            bool success = false;
+            log = TextWriter.Synchronized(log);
 
             DotNetHeapDumpGraphReader dumper = new(log)
             {
@@ -174,7 +178,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         return;
                     }
 
-                    eventPipeDataPresent = true;
+                    dumpState.EventPipeDataPresent = true;
 
                     if (gcNum < 0 && data.Depth == 2 && data.Type != GCType.BackgroundGC)
                     {
@@ -193,7 +197,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     if (data.Count == gcNum)
                     {
                         log.WriteLine("{0,5:n1}s: .NET GC Complete.", getElapsed().TotalSeconds);
-                        dumpComplete = true;
+                        dumpState.DumpComplete = true;
                     }
                 };
 
@@ -204,7 +208,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         return;
                     }
 
-                    eventPipeDataPresent = true;
+                    dumpState.EventPipeDataPresent = true;
 
                     if ((getElapsed() - lastEventPipeUpdate).TotalMilliseconds > 500)
                     {
@@ -245,7 +249,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         break;
                     }
 
-                    if (!eventPipeDataPresent && getElapsed().TotalSeconds > 5)      // Assume it started within 5 seconds.
+                    if (!dumpState.EventPipeDataPresent && getElapsed().TotalSeconds > 5)      // Assume it started within 5 seconds.
                     {
                         log.WriteLine("{0,5:n1}s: Assume no .NET Heap", getElapsed().TotalSeconds);
                         break;
@@ -257,7 +261,7 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                         break;
                     }
 
-                    if (dumpComplete)
+                    if (dumpState.DumpComplete)
                     {
                         break;
                     }
@@ -294,9 +298,10 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                     return false;
                 }
 
-                if (eventPipeDataPresent)
+                if (dumpState.EventPipeDataPresent)
                 {
                     dumper.ConvertHeapDataToGraph();        // Finish the conversion.
+                    success = dumpState.DumpComplete;
                 }
             }
             catch (Exception e)
@@ -304,9 +309,15 @@ namespace Microsoft.Diagnostics.Tools.GCDump
                 log.WriteLine($"{getElapsed().TotalSeconds,5:n1}s: [Error] Exception during gcdump: {e}");
             }
 
-            log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", getElapsed().TotalSeconds, dumpComplete);
+            log.WriteLine("[{0,5:n1}s: Done Dumping .NET heap success={1}]", getElapsed().TotalSeconds, success);
 
-            return dumpComplete;
+            return success;
+        }
+
+        private sealed class DumpState
+        {
+            public volatile bool EventPipeDataPresent;
+            public volatile bool DumpComplete;
         }
     }
 
