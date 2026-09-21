@@ -2,20 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Text;
 using Xunit;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
     public class ConsoleTestOutputHelper : ITestOutputHelper
     {
-        private readonly StringBuilder _output = new();
-
-        public string Output => _output.ToString();
+        public string Output => string.Empty;
 
         public void Write(string message)
         {
-            _output.Append(message);
             Console.Write(message);
             Console.Out.Flush();
         }
@@ -27,7 +23,6 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public void WriteLine(string message)
         {
-            _output.AppendLine(message);
             Console.WriteLine(message);
             Console.Out.Flush();
         }

@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
-    <OutputType>Exe</OutputType>
-    <TestRunnerName>XUnitV3</TestRunnerName>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DbgShimConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</DbgShimConfigFileName>
     <TestAssetsVersion>1.0.736301</TestAssetsVersion>

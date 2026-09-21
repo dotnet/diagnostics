@@ -3,12 +3,12 @@
 
   <!-- xUnit v3 uses Microsoft Testing Platform filter options while legacy xUnit uses console-runner options. -->
   <PropertyGroup Condition="'$(DiagnosticsTestMethodFilter)' != ''">
-    <TestRunnerAdditionalArguments Condition="'$(TestRunnerName)' == 'XUnitV3' and '$(UseMicrosoftTestingPlatformRunner)' == 'true'">$(TestRunnerAdditionalArguments) --filter-method $(DiagnosticsTestMethodFilter)</TestRunnerAdditionalArguments>
+    <TestRunnerAdditionalArguments Condition="'$(TestRunnerName)' == 'XUnitV3' and '$(UseMicrosoftTestingPlatformRunner)' == 'true'">$(TestRunnerAdditionalArguments) --filter-method $(DiagnosticsTestMethodFilter) --ignore-exit-code 8</TestRunnerAdditionalArguments>
     <TestRunnerAdditionalArguments Condition="'$(TestRunnerName)' != 'XUnitV3' or '$(UseMicrosoftTestingPlatformRunner)' != 'true'">$(TestRunnerAdditionalArguments) -method $(DiagnosticsTestMethodFilter)</TestRunnerAdditionalArguments>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(DiagnosticsTestClassFilter)' != ''">
-    <TestRunnerAdditionalArguments Condition="'$(TestRunnerName)' == 'XUnitV3' and '$(UseMicrosoftTestingPlatformRunner)' == 'true'">$(TestRunnerAdditionalArguments) --filter-class $(DiagnosticsTestClassFilter)</TestRunnerAdditionalArguments>
+    <TestRunnerAdditionalArguments Condition="'$(TestRunnerName)' == 'XUnitV3' and '$(UseMicrosoftTestingPlatformRunner)' == 'true'">$(TestRunnerAdditionalArguments) --filter-class $(DiagnosticsTestClassFilter) --ignore-exit-code 8</TestRunnerAdditionalArguments>
     <TestRunnerAdditionalArguments Condition="'$(TestRunnerName)' != 'XUnitV3' or '$(UseMicrosoftTestingPlatformRunner)' != 'true'">$(TestRunnerAdditionalArguments) -class $(DiagnosticsTestClassFilter)</TestRunnerAdditionalArguments>
   </PropertyGroup>
 

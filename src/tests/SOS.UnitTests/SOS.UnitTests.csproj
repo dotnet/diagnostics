@@ -1,8 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
-    <OutputType>Exe</OutputType>
-    <TestRunnerName>XUnitV3</TestRunnerName>
     <IsPackable>false</IsPackable>
     <NoWarn>;1591;1701</NoWarn>
     <DefineConstants>$(DefineConstants);CORE_CLR</DefineConstants>

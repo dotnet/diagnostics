@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
-    <OutputType>Exe</OutputType>
-    <TestRunnerName>XUnitV3</TestRunnerName>
     <DebugServicesConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</DebugServicesConfigFileName>
     <TestAssetsVersion>1.0.736301</TestAssetsVersion>
     <!-- Controls the test asset package restore and the tests that use them -->

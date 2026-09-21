@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(SupportedXUnitTestTargetFrameworks)</TargetFrameworks>
-    <OutputType>Exe</OutputType>
-    <TestRunnerName>XUnitV3</TestRunnerName>
   </PropertyGroup>
 
   <ItemGroup>

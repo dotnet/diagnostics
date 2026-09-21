@@ -63,7 +63,7 @@
 
   <Target Name="InstallTestRuntimes"
           AfterTargets="Build"
-          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
+          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
 
 <!--
     When cross-building (host arch != target arch), install a host-architecture SDK
@@ -82,6 +82,18 @@
           IgnoreStandardErrorWarningFormat="true" />
     <Exec Command="bash $(DotnetInstallScriptCmd) $(BuildSdkInstallArgs)"
           Condition="!$([MSBuild]::IsOsPlatform(Windows))"
+          IgnoreStandardErrorWarningFormat="true" />
+  </Target>
+
+<!--
+    Stage the x86 shared framework where the xUnit v3 test apphost expects it when
+    DOTNET_ROOT_X86 is set to $(DotNetInstallRoot)x86.
+-->
+
+  <Target Name="InstallHostRuntimeX86"
+          Condition="'$(TargetArch)' == 'x86' and $([MSBuild]::IsOsPlatform(Windows)) and !Exists('$(DotNetInstallRoot)x86\shared\Microsoft.NETCore.App\$(MicrosoftNETCoreApp100Version)')">
+
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) -NoPath -SkipNonVersionedFiles -Architecture x86 -Runtime dotnet -Version $(MicrosoftNETCoreApp100Version) -InstallDir $(DotNetInstallRoot)x86 }&quot;"
           IgnoreStandardErrorWarningFormat="true" />
   </Target>
 
