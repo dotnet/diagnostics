@@ -158,7 +158,7 @@ public abstract class DbgEngHostBase : IDebuggerHost
 
     public SosOutput Execute(string command) => new(Name, command, Invoke(() => RunCore(command)));
 
-    public SosOutput Sos(string command) => new(Name, command, Invoke(() => RunCore("!" + command)));
+    public SosOutput Sos(string command) => new(Name, command, Invoke(() => RunCore("!sos " + command)));
 
     /// <summary>Worker-thread command execution returning captured output.</summary>
     protected string RunCore(string command)

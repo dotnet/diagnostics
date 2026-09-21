@@ -8,16 +8,20 @@ using SOS.TestHarness;
 namespace SOS.Tests;
 
 /// <summary>
-/// Structured parsers for the module-keyed SOS commands: <c>!dumpdomain</c>, <c>!dumpassembly</c>,
-/// <c>!dumpmodule</c> (with and without <c>-mt</c>), <c>!name2ee</c> and <c>!token2ee</c>. Each builds a
-/// typed model (domains → assemblies → modules; module fields + type tables; EE name/token resolutions)
-/// instead of matching raw lines, and the structural parsers fail loudly on a line they don't recognize so
-/// a layout change can never be silently dropped. The models let the tests round-trip addresses across
-/// commands (a dumpdomain assembly address into dumpassembly, a dumpmodule type-table token into token2ee,
-/// etc.) and assert exact equality rather than the legacy scripts' "is it a hex value".
+/// Structured parsers for the module-keyed SOS commands: <c>!clrmodules</c>, <c>!dumpdomain</c>,
+/// <c>!dumpassembly</c>, <c>!dumpmodule</c> (with and without <c>-mt</c>), <c>!name2ee</c> and
+/// <c>!token2ee</c>. Each builds a typed model (domains → assemblies → modules; module fields + type tables;
+/// EE name/token resolutions) instead of matching raw lines, and the structural parsers fail loudly on a
+/// line they don't recognize so a layout change can never be silently dropped. The models let the tests
+/// round-trip addresses across commands (a dumpdomain assembly address into dumpassembly, a dumpmodule
+/// type-table token into token2ee, etc.) and assert exact equality rather than the legacy scripts'
+/// "is it a hex value".
 /// </summary>
 internal static class ModuleCommandParsing
 {
+    /// <summary>Run <c>!clrmodules</c> and parse the managed module list.</summary>
+    public static ClrModulesResult ClrModules(this Target target) => new(target.Sos("clrmodules"));
+
     /// <summary>Run <c>!dumpdomain</c> and parse the full domain/assembly/module tree.</summary>
     public static DumpDomainResult DumpDomain(this Target target) => new(target.Sos("dumpdomain"));
 
@@ -37,6 +41,64 @@ internal static class ModuleCommandParsing
     /// <summary>Run <c>!token2ee &lt;module&gt; &lt;metadata-token&gt;</c> for one metadata token.</summary>
     public static EEResult Token2EE(this Target target, string module, uint token) =>
         new(target.Sos($"token2ee {module} 0x{token:x}"));
+}
+
+/// <summary>One managed module row from <c>!clrmodules</c>.</summary>
+public sealed record ClrModuleInfo(ulong ImageBase, ulong ImageSize, string Name);
+
+/// <summary>The parsed <c>!clrmodules</c> output.</summary>
+public sealed class ClrModulesResult
+{
+    private static readonly Regex s_moduleRow =
+        new(@"^\s*([0-9a-fA-F`]+)\s+([0-9a-fA-F]+)(?:\s+(.*?))?\s*$", RegexOptions.Compiled);
+
+    public ClrModulesResult(SosOutput output)
+    {
+        Output = output;
+
+        List<ClrModuleInfo> modules = new();
+        foreach (string raw in output.Lines)
+        {
+            string line = raw.TrimEnd();
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            Match row = s_moduleRow.Match(line);
+            if (!row.Success)
+            {
+                throw output.Fail($"clrmodules row to be recognized (was \"{line}\")");
+            }
+
+            modules.Add(new ClrModuleInfo(
+                DumpDomainResult.ParseHex(row.Groups[1].Value),
+                DumpDomainResult.ParseHex(row.Groups[2].Value),
+                row.Groups[3].Value.Trim()));
+        }
+
+        Modules = modules;
+    }
+
+    public SosOutput Output { get; }
+    public IReadOnlyList<ClrModuleInfo> Modules { get; }
+
+    public ClrModuleInfo SingleByName(string name)
+    {
+        List<ClrModuleInfo> matches = Modules
+            .Where(module => module.Name.EndsWith(name, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (matches.Count != 1)
+        {
+            string matchList = matches.Count == 0
+                ? "<none>"
+                : string.Join(", ", matches.Select(module =>
+                    $"{module.ImageBase:X16} {module.ImageSize:X8} {module.Name}"));
+            throw Output.Fail(
+                $"exactly one module named \"{name}\" (got {matches.Count}: {matchList})");
+        }
+        return matches[0];
+    }
 }
 
 /// <summary>Which kind of domain a <c>!dumpdomain</c> block describes.</summary>
