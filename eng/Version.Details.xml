@@ -57,29 +57,29 @@
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>3d2a4811a58d8ba08bc2162cced36034f98c6b5d</Sha>
     </Dependency>
-    <Dependency Name="runtime.win-x64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26469.103">
+    <Dependency Name="runtime.win-x64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26470.102">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>45ef1b6146342457a0067f531861d52ad67ee6c9</Sha>
+      <Sha>66551619c00bee615342142059fbd8b9cad2e1af</Sha>
     </Dependency>
-    <Dependency Name="runtime.win-arm64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26469.103">
+    <Dependency Name="runtime.win-arm64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26470.102">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>45ef1b6146342457a0067f531861d52ad67ee6c9</Sha>
+      <Sha>66551619c00bee615342142059fbd8b9cad2e1af</Sha>
     </Dependency>
-    <Dependency Name="runtime.linux-x64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26469.103">
+    <Dependency Name="runtime.linux-x64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26470.102">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>45ef1b6146342457a0067f531861d52ad67ee6c9</Sha>
+      <Sha>66551619c00bee615342142059fbd8b9cad2e1af</Sha>
     </Dependency>
-    <Dependency Name="runtime.linux-arm64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26469.103">
+    <Dependency Name="runtime.linux-arm64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26470.102">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>45ef1b6146342457a0067f531861d52ad67ee6c9</Sha>
+      <Sha>66551619c00bee615342142059fbd8b9cad2e1af</Sha>
     </Dependency>
-    <Dependency Name="runtime.osx-x64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26469.103">
+    <Dependency Name="runtime.osx-x64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26470.102">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>45ef1b6146342457a0067f531861d52ad67ee6c9</Sha>
+      <Sha>66551619c00bee615342142059fbd8b9cad2e1af</Sha>
     </Dependency>
-    <Dependency Name="runtime.osx-arm64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26469.103">
+    <Dependency Name="runtime.osx-arm64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26470.102">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>45ef1b6146342457a0067f531861d52ad67ee6c9</Sha>
+      <Sha>66551619c00bee615342142059fbd8b9cad2e1af</Sha>
     </Dependency>
     <!--
       These versions should not be used by any project that contributes to the design-time experience in VS, such as an analyzer, code-fix, or generator assembly.
