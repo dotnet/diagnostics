@@ -13,8 +13,6 @@ using CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.Tools.Counters;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 using Constants = DotnetCounters.UnitTests.TestConstants;
 
@@ -42,7 +40,7 @@ namespace DotnetCounters.UnitTests
             _outputHelper = outputHelper;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorCustomMetricsJSON(TestConfiguration configuration)
         {
             CheckRuntimeOS();
@@ -53,7 +51,7 @@ namespace DotnetCounters.UnitTests
             ValidateCustomMetrics(metricComponents, CountersExportFormat.json);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorCustomMetricsCSV(TestConfiguration configuration)
         {
             CheckRuntimeOS();
@@ -64,7 +62,7 @@ namespace DotnetCounters.UnitTests
             ValidateCustomMetrics(metricComponents, CountersExportFormat.csv);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorEventCounterSystemRuntimeMetricsJSON(TestConfiguration configuration)
         {
             CheckRuntimeOS();
@@ -74,7 +72,7 @@ namespace DotnetCounters.UnitTests
             ValidateEventCounterSystemRuntimeMetrics(metricComponents);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestCounterMonitorEventCounterSystemRuntimeMetricsCSV(TestConfiguration configuration)
         {
             CheckRuntimeOS();
@@ -286,7 +284,7 @@ namespace DotnetCounters.UnitTests
         {
             if (configuration.RuntimeFrameworkVersionMajor < 8)
             {
-                throw new SkipTestException("Not supported on < .NET 8.0");
+                Assert.Skip("Not supported on < .NET 8.0");
             }
         }
 
@@ -294,7 +292,7 @@ namespace DotnetCounters.UnitTests
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                throw new SkipTestException("Test instability on OSX");
+                Assert.Skip("Test instability on OSX");
             }
         }
 

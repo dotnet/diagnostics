@@ -8,8 +8,6 @@ using System.IO;
 using System.Linq;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
@@ -51,7 +49,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             ( "Unable to load image ", 1 ),
         ];
 
-        [SkippableTheory, MemberData(nameof(GetConfigurations))]
+        [Theory, MemberData(nameof(GetConfigurations))]
         public void BangClrmaTests(TestHost host)
         {
             ITarget target = host.Target;
@@ -59,7 +57,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
             if (target.Host.HostType != HostType.DbgEng)
             {
-                throw new SkipTestException("Test only supported on dbgeng");
+                Assert.Skip("Test only supported on dbgeng");
             }
             IDiagnosticLoggingService logging = target.Services.GetService<IDiagnosticLoggingService>();
             bool enabled = logging.IsEnabled;
@@ -137,7 +135,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             ( "Unable to load image ", 1 ),
         ];
 
-        [SkippableTheory, MemberData(nameof(GetConfigurations))]
+        [Theory, MemberData(nameof(GetConfigurations))]
         public void BangAnalyzeTests(TestHost host)
         {
             ITarget target = host.Target;
@@ -145,7 +143,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
             if (target.Host.HostType != HostType.DbgEng)
             {
-                throw new SkipTestException("Test only supported on dbgeng");
+                Assert.Skip("Test only supported on dbgeng");
             }
             IDiagnosticLoggingService logging = target.Services.GetService<IDiagnosticLoggingService>();
             bool enabled = logging.IsEnabled;

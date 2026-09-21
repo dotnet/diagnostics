@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
@@ -29,25 +27,25 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _output = outputHelper;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task BasicProcessInfoNoSuspendTest(TestConfiguration config)
         {
             return BasicProcessInfoTestCore(config, useAsync: false, suspend: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task BasicProcessInfoNoSuspendTestAsync(TestConfiguration config)
         {
             return BasicProcessInfoTestCore(config, useAsync: true, suspend: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task BasicProcessInfoSuspendTest(TestConfiguration config)
         {
             return BasicProcessInfoTestCore(config, useAsync: false, suspend: true);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task BasicProcessInfoSuspendTestAsync(TestConfiguration config)
         {
             return BasicProcessInfoTestCore(config, useAsync: true, suspend: true);
@@ -57,7 +55,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (config.RuntimeFrameworkVersionMajor < 5)
             {
-                throw new SkipTestException("Not supported on < .NET 5.0");
+                Assert.Skip("Not supported on < .NET 5.0");
             }
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
             if (suspend)

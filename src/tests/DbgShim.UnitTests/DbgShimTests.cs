@@ -18,8 +18,6 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.Diagnostics.TestHelpers;
 using SOS.Hosting;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
 // Avoid unnecessary zero-length array allocations.  Use Array.Empty<object>() instead.
@@ -45,19 +43,19 @@ namespace Microsoft.Diagnostics
 
         public static IEnumerable<object[]> Configurations => GetConfigurations("TestName", null);
 
-        [SkippableFact]
+        [Fact]
         public void VerifyCoreProviderLibrarySignature()
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new SkipTestException("Authenticode verification is Windows-only");
+                Assert.Skip("Authenticode verification is Windows-only");
             }
 
             string dbiPath = Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "mscordbi.dll");
             string dacPath = Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "mscordaccore.dll");
             if (!File.Exists(dbiPath) || !File.Exists(dacPath))
             {
-                throw new SkipTestException($"Runtime DAC/DBI not found: {dacPath}, {dbiPath}");
+                Assert.Skip($"Runtime DAC/DBI not found: {dacPath}, {dbiPath}");
             }
             SkipIfUnsigned(dbiPath);
             SkipIfUnsigned(dacPath);
@@ -73,12 +71,12 @@ namespace Microsoft.Diagnostics
             fileLock?.Dispose();
         }
 
-        [SkippableFact]
+        [Fact]
         public void VerifyDesktopProviderLibrarySignature()
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new SkipTestException("Authenticode verification is Windows-only");
+                Assert.Skip("Authenticode verification is Windows-only");
             }
             string frameworkDirectory = Environment.Is64BitProcess
                 ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Microsoft.NET", "Framework64", "v4.0.30319")
@@ -87,7 +85,7 @@ namespace Microsoft.Diagnostics
             string desktopDacPath = Path.Combine(frameworkDirectory, "mscordacwks.dll");
             if (!File.Exists(desktopDbiPath) || !File.Exists(desktopDacPath))
             {
-                throw new SkipTestException($"Desktop DAC/DBI not found: {desktopDacPath}, {desktopDbiPath}");
+                Assert.Skip($"Desktop DAC/DBI not found: {desktopDacPath}, {desktopDbiPath}");
             }
             SkipIfUnsigned(desktopDbiPath);
             SkipIfUnsigned(desktopDacPath);
@@ -121,7 +119,7 @@ namespace Microsoft.Diagnostics
             }
             catch (CryptographicException)
             {
-                throw new SkipTestException($"Signed test binary not available: {path}");
+                Assert.Skip($"Signed test binary not available: {path}");
             }
         }
 
@@ -195,7 +193,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartup for launch
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Launch1(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(Launch1), static async (string configXml) => {
@@ -211,7 +209,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartupEx for launch
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Launch2(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(Launch2), static async (string configXml) => {
@@ -227,17 +225,17 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartup3 for launch
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Launch3(TestConfiguration config)
         {
             if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
             {
-                throw new SkipTestException("Launch3 single-file on MacOS");
+                Assert.Skip("Launch3 single-file on MacOS");
             }
             DbgShimAPI.Initialize(config.DbgShimPath());
             if (!DbgShimAPI.IsRegisterForRuntimeStartup3Supported)
             {
-                throw new SkipTestException("IsRegisterForRuntimeStartup3 not supported");
+                Assert.Skip("IsRegisterForRuntimeStartup3 not supported");
             }
             await RemoteInvoke(config, nameof(Launch3), static async (string configXml) => {
                 using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: true);
@@ -252,7 +250,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartup for attach
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Attach1(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(Attach1), static async (string configXml) => {
@@ -265,7 +263,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartupEx for attach
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Attach2(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(Attach2), static async (string configXml) => {
@@ -278,17 +276,17 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test RegisterForRuntimeStartup3 for attach
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task Attach3(TestConfiguration config)
         {
             if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
             {
-                throw new SkipTestException("Attach3 single-file on MacOS");
+                Assert.Skip("Attach3 single-file on MacOS");
             }
             DbgShimAPI.Initialize(config.DbgShimPath());
             if (!DbgShimAPI.IsRegisterForRuntimeStartup3Supported)
             {
-                throw new SkipTestException("IsRegisterForRuntimeStartup3 not supported");
+                Assert.Skip("IsRegisterForRuntimeStartup3 not supported");
             }
             await RemoteInvoke(config, nameof(Attach3), static async (string configXml) => {
                 using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
@@ -300,7 +298,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test EnumerateCLRs/CloseCLREnumeration
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task EnumerateCLRs(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(EnumerateCLRs), static async (string configXml) => {
@@ -324,7 +322,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test CreateVersionStringFromModule/CreateDebuggingInterfaceFromVersion
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersion(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion), static async (string configXml) => {
@@ -337,7 +335,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test CreateVersionStringFromModule/CreateDebuggingInterfaceFromVersionEx
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersionEx(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersionEx), static async (string configXml) => {
@@ -350,7 +348,7 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test CreateVersionStringFromModule/CreateDebuggingInterfaceFromVersion2
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersion2(TestConfiguration config)
         {
             await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion2), static async (string configXml) => {
@@ -363,17 +361,17 @@ namespace Microsoft.Diagnostics
         /// <summary>
         /// Test CreateVersionStringFromModule/CreateDebuggingInterfaceFromVersion3
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task CreateDebuggingInterfaceFromVersion3(TestConfiguration config)
         {
             if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
             {
-                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 single-file on MacOS");
+                Assert.Skip("CreateDebuggingInterfaceFromVersion3 single-file on MacOS");
             }
             DbgShimAPI.Initialize(config.DbgShimPath());
             if (!DbgShimAPI.IsCreateDebuggingInterfaceFromVersion3Supported)
             {
-                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 not supported");
+                Assert.Skip("CreateDebuggingInterfaceFromVersion3 not supported");
             }
             await RemoteInvoke(config, nameof(CreateDebuggingInterfaceFromVersion3), static async (string configXml) => {
                 using DebuggeeInfo debuggeeInfo = await StartDebuggee(configXml, launch: false);
@@ -386,7 +384,7 @@ namespace Microsoft.Diagnostics
         /// Test that the SetCDacLoadPolicy export gates the cDAC/legacy fallback for the
         /// CreateDebuggingInterfaceFromVersion3 live path.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(LiveLoadPolicyConfigurations))]
+        [Theory, MemberData(nameof(LiveLoadPolicyConfigurations))]
         public async Task CreateDebuggingInterfaceFromVersion3LoadPolicy(
             TestConfiguration config,
             DbgShimCDacLoadPolicy policy,
@@ -395,16 +393,16 @@ namespace Microsoft.Diagnostics
         {
             if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
             {
-                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 single-file on MacOS");
+                Assert.Skip("CreateDebuggingInterfaceFromVersion3 single-file on MacOS");
             }
             DbgShimAPI.Initialize(config.DbgShimPath());
             if (!DbgShimAPI.IsCreateDebuggingInterfaceFromVersion3Supported)
             {
-                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 not supported");
+                Assert.Skip("CreateDebuggingInterfaceFromVersion3 not supported");
             }
             if (!DbgShimAPI.IsSetCDacLoadPolicySupported)
             {
-                throw new SkipTestException("SetCDacLoadPolicy not supported");
+                Assert.Skip("SetCDacLoadPolicy not supported");
             }
             TestConfiguration policyConfig = new(new Dictionary<string, string>(config.AllSettings)
             {
@@ -430,7 +428,7 @@ namespace Microsoft.Diagnostics
         /// Test that the SetCDacLoadPolicy export gates the cDAC/legacy fallback for the
         /// RegisterForRuntimeStartup3 live path.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(LiveLoadPolicyConfigurations))]
+        [Theory, MemberData(nameof(LiveLoadPolicyConfigurations))]
         public async Task RegisterForRuntimeStartup3LoadPolicy(
             TestConfiguration config,
             DbgShimCDacLoadPolicy policy,
@@ -439,16 +437,16 @@ namespace Microsoft.Diagnostics
         {
             if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
             {
-                throw new SkipTestException("RegisterForRuntimeStartup3 single-file on MacOS");
+                Assert.Skip("RegisterForRuntimeStartup3 single-file on MacOS");
             }
             DbgShimAPI.Initialize(config.DbgShimPath());
             if (!DbgShimAPI.IsRegisterForRuntimeStartup3Supported)
             {
-                throw new SkipTestException("RegisterForRuntimeStartup3 not supported");
+                Assert.Skip("RegisterForRuntimeStartup3 not supported");
             }
             if (!DbgShimAPI.IsSetCDacLoadPolicySupported)
             {
-                throw new SkipTestException("SetCDacLoadPolicy not supported");
+                Assert.Skip("SetCDacLoadPolicy not supported");
             }
             TestConfiguration policyConfig = new(new Dictionary<string, string>(config.AllSettings)
             {
@@ -475,7 +473,7 @@ namespace Microsoft.Diagnostics
         /// with the runtime module reported by EnumerateCLRs, and that SetCDacLoadPolicy still gates
         /// the cDAC/legacy fallback when no library provider is supplied.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(LiveSideBySideConfigurations))]
+        [Theory, MemberData(nameof(LiveSideBySideConfigurations))]
         public async Task CreateDebuggingInterfaceFromVersion3SideBySide(
             TestConfiguration config,
             DbgShimCDacLoadPolicy policy,
@@ -483,16 +481,16 @@ namespace Microsoft.Diagnostics
         {
             if (OS.Kind == OSKind.OSX && config.PublishSingleFile)
             {
-                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 single-file on MacOS");
+                Assert.Skip("CreateDebuggingInterfaceFromVersion3 single-file on MacOS");
             }
             DbgShimAPI.Initialize(config.DbgShimPath());
             if (!DbgShimAPI.IsCreateDebuggingInterfaceFromVersion3Supported)
             {
-                throw new SkipTestException("CreateDebuggingInterfaceFromVersion3 not supported");
+                Assert.Skip("CreateDebuggingInterfaceFromVersion3 not supported");
             }
             if (!DbgShimAPI.IsSetCDacLoadPolicySupported)
             {
-                throw new SkipTestException("SetCDacLoadPolicy not supported");
+                Assert.Skip("SetCDacLoadPolicy not supported");
             }
             TestConfiguration policyConfig = new(new Dictionary<string, string>(config.AllSettings)
             {
@@ -512,17 +510,17 @@ namespace Microsoft.Diagnostics
                 });
         }
 
-        [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "OpenVirtualProcess")]
+        [Theory, MemberData(nameof(GetConfigurations), "TestName", "OpenVirtualProcess")]
         public async Task OpenVirtualProcess(TestConfiguration config)
         {
             // The current Linux test assets are not alpine/musl
             if (OS.IsAlpine)
             {
-                throw new SkipTestException("Not supported on Alpine Linux (musl)");
+                Assert.Skip("Not supported on Alpine Linux (musl)");
             }
             if (!config.AllSettings.ContainsKey("DumpFile"))
             {
-                throw new SkipTestException("OpenVirtualProcessTest: No dump file");
+                Assert.Skip("OpenVirtualProcessTest: No dump file");
             }
             await RemoteInvoke(config, nameof(OpenVirtualProcess), static (string configXml) => {
                 AfterInvoke(configXml, out TestConfiguration cfg, out ITestOutputHelper output);
@@ -565,16 +563,16 @@ namespace Microsoft.Diagnostics
             });
         }
 
-        [SkippableTheory, MemberData(nameof(GetConfigurations), "TestName", "OpenVirtualProcess")]
+        [Theory, MemberData(nameof(GetConfigurations), "TestName", "OpenVirtualProcess")]
         public async Task OpenVirtualProcessWithClrDataTarget(TestConfiguration config)
         {
             if (OS.IsAlpine)
             {
-                throw new SkipTestException("Not supported on Alpine Linux (musl)");
+                Assert.Skip("Not supported on Alpine Linux (musl)");
             }
             if (!config.AllSettings.ContainsKey("DumpFile"))
             {
-                throw new SkipTestException("OpenVirtualProcessTest: No dump file");
+                Assert.Skip("OpenVirtualProcessTest: No dump file");
             }
             await RemoteInvoke(config, nameof(OpenVirtualProcessWithClrDataTarget), static (string configXml) => {
                 AfterInvoke(configXml, out TestConfiguration cfg, out ITestOutputHelper output);
@@ -620,7 +618,7 @@ namespace Microsoft.Diagnostics
             });
         }
 
-        [SkippableTheory, MemberData(nameof(OpenVirtualProcessLoadPolicyConfigurations))]
+        [Theory, MemberData(nameof(OpenVirtualProcessLoadPolicyConfigurations))]
         public async Task OpenVirtualProcessLoadPolicy(
             TestConfiguration config,
             string route,
@@ -630,11 +628,11 @@ namespace Microsoft.Diagnostics
         {
             if (OS.IsAlpine)
             {
-                throw new SkipTestException("Not supported on Alpine Linux (musl)");
+                Assert.Skip("Not supported on Alpine Linux (musl)");
             }
             if (!config.AllSettings.ContainsKey("DumpFile"))
             {
-                throw new SkipTestException("OpenVirtualProcessTest: No dump file");
+                Assert.Skip("OpenVirtualProcessTest: No dump file");
             }
             Dictionary<string, string> settings = new(config.AllSettings)
             {

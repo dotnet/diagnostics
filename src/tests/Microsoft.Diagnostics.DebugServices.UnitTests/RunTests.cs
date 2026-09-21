@@ -9,17 +9,20 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.TestHelpers;
 using SOS.Extensions;
-using Xunit.Abstractions;
-using Xunit.Extensions;
+using Xunit;
+using Xunit.Sdk;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
 {
     [Command(Name = "runtests", Help = "Runs the debug services xunit tests.")]
     public class RunTestsCommand : CommandBase, ITestOutputHelper
     {
+        private readonly StringBuilder _output = new();
+
         [Argument(Help = "Test name: debugservices, clrma or analyze.")]
         public string[] TestNames { get; set; } = Array.Empty<string>();
 
@@ -104,7 +107,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     }
                     catch (Exception ex)
                     {
-                        if (ex is SkipTestException)
+                        if (ex is SkipException)
                         {
                             WriteLineWarning($"Test {testName} SKIPPED - {ex.Message}");
                         }
@@ -126,9 +129,29 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         #region ITestOutputHelper
 
-        void ITestOutputHelper.WriteLine(string message) => WriteLine(message);
+        string ITestOutputHelper.Output => _output.ToString();
 
-        void ITestOutputHelper.WriteLine(string format, params object[] args) => WriteLine(format, args);
+        void ITestOutputHelper.Write(string message)
+        {
+            _output.Append(message);
+            Write(message);
+        }
+
+        void ITestOutputHelper.Write(string format, params object[] args)
+        {
+            ((ITestOutputHelper)this).Write(string.Format(format, args));
+        }
+
+        void ITestOutputHelper.WriteLine(string message)
+        {
+            _output.AppendLine(message);
+            WriteLine(message);
+        }
+
+        void ITestOutputHelper.WriteLine(string format, params object[] args)
+        {
+            ((ITestOutputHelper)this).WriteLine(string.Format(format, args));
+        }
 
         #endregion
     }

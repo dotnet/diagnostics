@@ -13,8 +13,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
-using Xunit.Abstractions;
-using Xunit.Extensions;
+using Xunit;
+using Xunit.Sdk;
 
 public class SOSRunner : IDisposable
 {
@@ -399,7 +399,7 @@ public class SOSRunner : IDisposable
                     {
                         if (string.IsNullOrWhiteSpace(config.DotNetDumpHost()) || string.IsNullOrWhiteSpace(config.DotNetDumpPath()))
                         {
-                            throw new SkipTestException("dotnet-dump collect needs DotNetDumpHost and DotNetDumpPath config variables");
+                            Assert.Skip("dotnet-dump collect needs DotNetDumpHost and DotNetDumpPath config variables");
                         }
 
                         // Wait until the debuggee gets started. It needs time to spin up before generating the core dump.
@@ -1577,7 +1577,7 @@ public class SOSRunner : IDisposable
                 defines.Add($"MAJOR_RUNTIME_VERSION_GE_{v}");
             }
         }
-        catch (SkipTestException)
+        catch (SkipException)
         {
         }
         if (_dumpType.HasValue)
