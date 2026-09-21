@@ -5943,12 +5943,12 @@ HRESULT HandleCLRNotificationEvent()
             case DEBUG_STATUS_GO_NOT_HANDLED:
 #ifndef FEATURE_PAL
                 g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "g", 0);
+                break;
 #else
                 // The LLDB breakpoint callback interprets S_FALSE as continue. Returning here lets
                 // LLDB resume after the callback unwinds instead of re-entering it with "process continue".
                 return S_FALSE;
 #endif
-                break;
             default:
                 break;
         }
