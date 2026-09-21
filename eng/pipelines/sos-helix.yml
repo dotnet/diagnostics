@@ -15,6 +15,7 @@ jobs:
     name: SOS_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
     displayName: SOS Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
+    continueOnError: ${{ parameters.isOfficialBuild }}
     enableMicrobuild: true
     enableTelemetry: true
 
