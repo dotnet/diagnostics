@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.DotNet.RemoteExecutor;
-using Xunit.Abstractions;
+using Xunit;
 using Xunit.Sdk;
 
 namespace Microsoft.Diagnostics.TestHelpers

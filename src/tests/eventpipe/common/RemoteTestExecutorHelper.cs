@@ -5,7 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.DotNet.RemoteExecutor;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace EventPipe.UnitTests.Common
 {

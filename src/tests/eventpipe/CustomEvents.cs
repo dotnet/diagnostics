@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using EventPipe.UnitTests.Common;
 using Microsoft.Diagnostics.NETCore.Client;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace EventPipe.UnitTests.CustomEventsValidation
 {
