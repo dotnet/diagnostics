@@ -292,7 +292,11 @@ ExceptionBreakpointCallback(
     lldb::SBThread* savedThread = g_services->SetCurrentThread(&thread);
     g_services->FlushCheck();
 
-    bool result = ((PFN_EXCEPTION_CALLBACK)baton)(g_services) == S_OK;
+    HRESULT status = ((PFN_EXCEPTION_CALLBACK)baton)(g_services);
+
+    // S_OK requests a stop and S_FALSE requests continuation. Stop on errors so
+    // notification-processing failures remain visible to the debugger.
+    bool result = status != S_FALSE;
 
     g_services->SetCurrentProcess(savedProcess);
     g_services->SetCurrentThread(savedThread);

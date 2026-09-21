@@ -5920,8 +5920,9 @@ HRESULT HandleCLRNotificationEvent()
         ExtOut("Expecting first chance CLRN exception\n");
         return E_FAIL;
 #else
-        g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "process continue", 0);
-        return S_OK;
+        // The LLDB exception breakpoint can observe non-CLR exceptions. Return S_FALSE so
+        // LLDB continues after the callback unwinds.
+        return S_FALSE;
 #endif
     }
 
@@ -5943,7 +5944,9 @@ HRESULT HandleCLRNotificationEvent()
 #ifndef FEATURE_PAL
                 g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "g", 0);
 #else
-                g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "process continue", 0);
+                // The LLDB breakpoint callback interprets S_FALSE as continue. Returning here lets
+                // LLDB resume after the callback unwinds instead of re-entering it with "process continue".
+                return S_FALSE;
 #endif
                 break;
             default:
