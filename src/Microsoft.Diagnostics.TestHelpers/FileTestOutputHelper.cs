@@ -3,7 +3,8 @@
 
 using System;
 using System.IO;
-using Xunit.Abstractions;
+using System.Text;
+using Xunit;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
@@ -14,6 +15,18 @@ namespace Microsoft.Diagnostics.TestHelpers
     {
         private readonly StreamWriter _logWriter;
         private readonly object _lock;
+        private readonly StringBuilder _output = new();
+
+        public string Output
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _output.ToString();
+                }
+            }
+        }
 
         public FileTestOutputHelper(string logFilePath, FileMode fileMode = FileMode.Create)
         {
@@ -24,20 +37,32 @@ namespace Microsoft.Diagnostics.TestHelpers
             _lock = new object();
         }
 
+        public void Write(string message)
+        {
+            lock (_lock)
+            {
+                _output.Append(message);
+                _logWriter.Write(message);
+            }
+        }
+
+        public void Write(string format, params object[] args)
+        {
+            Write(string.Format(format, args));
+        }
+
         public void WriteLine(string message)
         {
             lock (_lock)
             {
+                _output.AppendLine(message);
                 _logWriter.WriteLine(message);
             }
         }
 
         public void WriteLine(string format, params object[] args)
         {
-            lock (_lock)
-            {
-                _logWriter.WriteLine(format, args);
-            }
+            WriteLine(string.Format(format, args));
         }
 
         public void Dispose()

@@ -1,7 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
@@ -18,6 +18,18 @@ namespace Microsoft.Diagnostics.TestHelpers
         {
             _output = innerOutput;
             _indentText = indentText;
+        }
+
+        public string Output => _output.Output;
+
+        public void Write(string message)
+        {
+            _output.Write(_indentText + message);
+        }
+
+        public void Write(string format, params object[] args)
+        {
+            _output.Write(_indentText + format, args);
         }
 
         public void WriteLine(string message)
