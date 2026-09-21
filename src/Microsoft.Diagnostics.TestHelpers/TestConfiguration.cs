@@ -375,7 +375,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static TestConfiguration Empty { get; } = new TestConfiguration();
 
-        public static string BaseDir { get; set; } = Path.GetFullPath(".");
+        public static string BaseDir { get; set; } = AppContext.BaseDirectory;
 
         private static readonly Regex versionRegex = GetVersionRegex();
 
