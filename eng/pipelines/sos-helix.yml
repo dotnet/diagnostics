@@ -15,7 +15,9 @@ jobs:
     name: SOS_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
     displayName: SOS Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
+    continueOnError: ${{ parameters.isOfficialBuild }}
     enableMicrobuild: true
+    enableTelemetry: true
 
     pool:
       ${{ if eq(parameters.platform.os, 'windows') }}:
@@ -43,49 +45,32 @@ jobs:
         targetPath: '$(Build.SourcesDirectory)/artifacts'
         checkDownloadedFiles: true
 
-    - powershell: >
-        powershell "$env:BUILD_SOURCESDIRECTORY\eng\common\msbuild.ps1
-        $env:BUILD_SOURCESDIRECTORY\src\tests\SOS.Tests\SOS.Tests.csproj
-        /restore /p:TreatWarningsAsErrors=false /t:SendToHelix
-        /p:Configuration=${{ parameters.configuration }}
-        /p:TargetArch=${{ parameters.platform.arch }}
-        /p:TargetOS=${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}
-        /p:TargetRid=${{ parameters.platform.rid }}
-        /p:OfficialBuildId=$env:BUILD_BUILDNUMBER
-        /bl:$env:BUILD_SOURCESDIRECTORY\artifacts\log\${{ parameters.configuration }}\SendToHelix.binlog"
-      displayName: Run SOS.Tests on Helix
-      env:
-        HelixSource: pr/dotnet/diagnostics/sos-tests
-        HelixType: tests/sos/harness/
-        HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
-        HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }})
-        HelixPreCommands: ${{ coalesce(parameters.platform.helixPreCommands, '') }}
-        Creator: dotnet-bot
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-      condition: eq(variables['Agent.Os'], 'Windows_NT')
-      continueOnError: ${{ parameters.isOfficialBuild }}
-
-    - script: >
-        $BUILD_SOURCESDIRECTORY/eng/common/msbuild.sh
-        $BUILD_SOURCESDIRECTORY/src/tests/SOS.Tests/SOS.Tests.csproj
-        /restore /p:TreatWarningsAsErrors=false /t:SendToHelix
-        /p:Configuration=${{ parameters.configuration }}
-        /p:TargetArch=${{ parameters.platform.arch }}
-        /p:TargetOS=${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}
-        /p:TargetRid=${{ parameters.platform.rid }}
-        /p:OfficialBuildId=$BUILD_BUILDNUMBER
-        /bl:$BUILD_SOURCESDIRECTORY/artifacts/log/${{ parameters.configuration }}/SendToHelix.binlog
-      displayName: Run SOS.Tests on Helix
-      env:
-        HelixSource: pr/dotnet/diagnostics/sos-tests
-        HelixType: tests/sos/harness/
-        HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
-        HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }})
-        HelixPreCommands: ${{ coalesce(parameters.platform.helixPreCommands, '') }}
-        Creator: dotnet-bot
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-      condition: ne(variables['Agent.Os'], 'Windows_NT')
-      continueOnError: ${{ parameters.isOfficialBuild }}
+    - template: /eng/pipelines/send-to-helix-step.yml
+      parameters:
+        displayName: Run SOS.Tests on Helix
+        osGroup: ${{ parameters.platform.os }}
+        sendParams: >
+          $(Build.SourcesDirectory)/src/tests/SOS.Tests/SOS.Tests.csproj
+          /restore /p:TreatWarningsAsErrors=false /t:SendToHelix
+          /p:Configuration=${{ parameters.configuration }}
+          /p:TargetArch=${{ parameters.platform.arch }}
+          /p:TargetOS=${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}
+          /p:TargetRid=${{ parameters.platform.rid }}
+          /p:OfficialBuildId=$(Build.BuildNumber)
+          /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/SendToHelix.binlog
+        env:
+          HelixSource: pr/dotnet/diagnostics/sos-tests
+          HelixType: tests/sos/harness/
+          HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
+          ${{ if eq(variables['System.TeamProject'], 'public') }}:
+            HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }})
+            Creator: dotnet-bot
+          ${{ else }}:
+            HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }}_internal)
+            HelixAccessToken: $(HelixApiAccessToken)
+          HelixPreCommands: ${{ coalesce(parameters.platform.helixPreCommands, '') }}
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        continueOnError: ${{ parameters.isOfficialBuild }}
 
     - task: CopyFiles@2
       displayName: Gather Helix logs
