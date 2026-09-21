@@ -81,7 +81,10 @@ namespace SOS.Extensions
                 ulong imageSize,
                 uint indexFileSize,
                 uint indexTimeStamp)
-                : base(moduleService.Services, moduleService.Target.Host.HostType != HostType.Lldb)
+                : base(
+                    moduleService.Services,
+                    // None of the modules that LLDB provides on Linux or macOS are PEs.
+                    isPEModuleProbeSupported: moduleService.Target.Host.HostType != HostType.Lldb)
             {
                 _moduleService = moduleService;
                 ModuleIndex = moduleIndex;
