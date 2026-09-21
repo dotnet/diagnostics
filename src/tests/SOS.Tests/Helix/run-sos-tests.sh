@@ -216,4 +216,15 @@ else
 fi
 set -e
 
+if [[ "$exit_code" -ne 0 ]]; then
+  dump_root="$root/artifacts/tmp/sos-harness/$configuration"
+  if [[ -d "$dump_root/dumps" ]]; then
+    dump_archive="$upload/SOS.Tests-dumps-$rid-$configuration-$identity.tar.gz"
+    echo "Archiving SOS dumps to '$dump_archive'."
+    if ! tar -czf "$dump_archive" -C "$dump_root" dumps; then
+      echo "Failed to archive SOS dumps." >&2
+    fi
+  fi
+fi
+
 exit "$exit_code"
