@@ -1,0 +1,5 @@
+{
+  "xUnit": {
+    "preEnumerateTheories": false
+  }
+}

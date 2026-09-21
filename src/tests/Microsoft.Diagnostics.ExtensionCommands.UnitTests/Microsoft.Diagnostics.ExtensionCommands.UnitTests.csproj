@@ -2,12 +2,10 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(SupportedXUnitTestTargetFrameworks)</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <TestRunnerName>XUnitV3</TestRunnerName>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="xunit" Version="$(XUnitVersion)" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.ExtensionCommands\Microsoft.Diagnostics.ExtensionCommands.csproj" />

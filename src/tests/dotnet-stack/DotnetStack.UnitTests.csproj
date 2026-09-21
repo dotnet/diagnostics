@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <TestRunnerName>XUnitV3</TestRunnerName>
   </PropertyGroup>
 
   <ItemGroup>
