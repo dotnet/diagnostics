@@ -31,6 +31,7 @@ namespace DotnetGCDump.UnitTests
 
             Assert.False(success);
             Assert.Contains("[Error] Exception during gcdump:", writer.ToString());
+            Assert.Contains("Simulated shutdown logging failure.", writer.ToString());
         }
 
         [Fact]
