@@ -15,4 +15,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <Import Project="$(RepositoryEngineeringDir)TestBinaries.targets" />
 </Project>

@@ -25,6 +25,26 @@ x64/
 .vscode/
 build/
 
+# Compiled binaries, symbols, dumps, and archives
+*.dll
+*.exe
+*.so
+*.so.*
+*.dylib
+*.a
+*.lib
+*.wasm
+*.dbg
+*.pdz
+*.dmp
+*.nupkg
+*.tar
+*.gz
+*.bz2
+*.xz
+*.zip
+*.7z
+
 # Per-user project properties
 launchSettings.json
 

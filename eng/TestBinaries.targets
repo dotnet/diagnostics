@@ -1,0 +1,80 @@
+<Project>
+  <PropertyGroup>
+    <TestBinariesRevision>43c8fd9c01e6859258b852f80dd8bb016ff618e3</TestBinariesRevision>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <_FileFormatsTestBinary Include="HelloWorld.exe" Sha256="48e986d604fba50439b85436555d740f4efd7898c0ad9311169889dceb276f5c" />
+    <_FileFormatsTestBinary Include="HelloWorld.pdb" Sha256="03633d8c88a5ebbf3c4d17eec3e6026fec56090d0cfbddae3ac1d1c0879ee7fb" />
+    <_FileFormatsTestBinary Include="HelloWorld.pdz" Sha256="29bce85d288b5e4038920e656d05f1358a41407e41561645c8e14544b1f336ea" />
+    <_FileFormatsTestBinary Include="PerfMapEnabled/System.ComponentModel.EventBasedAsync.dll" Sha256="2a8177b2f570ae27ff300ba600cc24dda345ace97596822cd010822e086ab578" />
+    <_FileFormatsTestBinary Include="System.Diagnostics.StackTrace.dll" Sha256="8d05dc2ec9725e27f31887a66a270ab22549c73e9016a43476b7624cb7500399" />
+    <_FileFormatsTestBinary Include="apphost.gz" Sha256="d8f2d9e6994a45e73d2dd469dc715d6c90098d00798744cf1e3d1d5cc58eb248" />
+    <_FileFormatsTestBinary Include="core.gz" Sha256="2e78559e3888f7890e647db65d2971359be8f7d723d071509af3512fa8acaedf" />
+    <_FileFormatsTestBinary Include="ilasm.dbg" Sha256="ea622be196480b230e4b42da6306d37ffbf034e2d7a81b66d608ce3dbc5cf813" />
+    <_FileFormatsTestBinary Include="libclrjit.dylib.dwarf.gz" Sha256="9c2483e7ae4fca18c802c043ac42999a14b4cd0ca5c183448fe3c32e4e275d55" />
+    <_FileFormatsTestBinary Include="libcoreclr.dylib.gz" Sha256="b372033882980126a90c4c73a866a9f882d3771c1f95c35c7f2555e40645d2cb" />
+    <_FileFormatsTestBinary Include="libcoreclr.so.gz" Sha256="037d07e0871f844fee14f14971653dab85d446c280bb3aee28d2748558a9fb01" />
+    <_FileFormatsTestBinary Include="libcoreclrtraceptprovider.so.dbg.gz" Sha256="e36dbfbc675f5d7571c44bbe7090da5a70a95149ca68c269b09048448a9c7d1e" />
+    <_FileFormatsTestBinary Include="minidump_x64.dmp.gz" Sha256="738036a005760813cfbe42928d2ca31c096fa8fe8b1822d6e4b77d8f12c030fe" />
+    <_FileFormatsTestBinary Include="minidump_x86.dmp.gz" Sha256="6370702e576f312ce05c91ec579113c87ce14686913410a78f93e5b273c6b28e" />
+    <_FileFormatsTestBinary Include="renamed_build_id_section" Sha256="04e528da8d0d880b77fe409ae831e2bcbb9f3d816c093e8ff6d42bf645e7a10b" />
+    <_FileFormatsTestBinary Include="triagedump.gz" Sha256="d3101f7af8d8cf495febc6beb2c8a535bb65fb46b40555ecf83dcf5160904819" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'Microsoft.SymbolStore.UnitTests'">
+    <_SymbolStoreTestBinary Include="StackTraceSymbols.CoreCLR.cs.gz" Sha256="b9fe8aa770847f6d2334fd283c228a6e19739dcbd55810523de0ac712b045f97" />
+    <_SymbolStoreTestBinary Include="coreclr.dll.gz" Sha256="6cc813ab7075296dd6f176f8be12f4a57bf3d9c393e98b6848e3a99e3adff537" />
+    <_SymbolStoreTestBinary Include="dir1/System.Threading.Thread.dll" Sha256="8f8b33a90e4377f5ea610c22c2bdae2dbc2cf045168d1f635f9e00ea0eaedafd" />
+    <_SymbolStoreTestBinary Include="dir1/System.Threading.Thread.pdb" Sha256="2d2ada2b496f2d20c241379fd4060c06b51801756c073748d65ba1e1a827979d" />
+    <_SymbolStoreTestBinary Include="dir2/System.Threading.Thread.dll" Sha256="8573d2b7755476985a73a4ad7c30ca2ad6dd1e703dcf55212707c08279abcadf" />
+    <_SymbolStoreTestBinary Include="dir2/System.Threading.Thread.pdb" Sha256="2b2aef44283483edca0f31d8c02a703c6d1ad90d33671b1e819d2900ade5d60f" />
+    <_SymbolStoreTestBinary Include="libSystem.Security.Cryptography.Native.Apple.dylib.gz" Sha256="eb05cea1850fd240989dbff5735a0212ce7c370dadaa1bcc2084c16491dca5fe" />
+    <_SymbolStoreTestBinary Include="md5_build_id" Sha256="3f374b459ead82ede7c330e9b3b33dcce952f1b5bbb6c93922c95c8ca371e170" />
+    <_SymbolStoreTestBinary Include="mockclr_amd64.dll" Sha256="07c0ee43297edec958cb071ca3e6335d89a6cfc0f20588ade3afb57b172cba30" />
+    <_SymbolStoreTestBinary Include="mockclr_arm64.dll" Sha256="a06a172791c984d2bab8899c7c22faf4f180c796526e5639f09aeb195fb15f39" />
+    <_SymbolStoreTestBinary Include="mockclr_i386.dll" Sha256="633bc13fd6de05f25eb3365ce183db645cce422775b90719e5fbcc4e7f3e85f4" />
+    <_SymbolStoreTestBinary Include="mockdac.dll" Sha256="15565b33856ec5f616d217ed1dad7c022101a85ef23cc6cb1abbd4c4a2599269" />
+    <_SymbolStoreTestBinary Include="mockdbi.dll" Sha256="8124ec0ff6ff10b24120213248904180281a90efba98145a4efd3d48bf28d948" />
+    <_SymbolStoreTestBinary Include="mocksos.dll" Sha256="52955928845b9ee233354bf3eb507541a48c297d01226677ba46d67cf858b707" />
+    <_SymbolStoreTestBinary Include="stripped_executable" Sha256="c74086d9dd763c4de4f7647921c4d53a7904bffbef88e1d829f3579a38b57aaa" />
+    <_SymbolStoreTestBinary Include="symbolized_executable" Sha256="f699fc1c7b0e5ca647eeb1533a8637b48d778c6f67cda20c87125777b5937089" />
+    <_SymbolStoreTestBinary Include="test_module.wasm" Sha256="c8038d4cb9e80750f80859b78068277e3ebdd76ed9e311f711c8326bf94fa2b2" />
+    <_SymbolStoreTestBinary Include="test_module_long_section_name.wasm" Sha256="b24160bbe2e7cb45d0b09f6333334ea6378ea3fdf2be88fe8048a7dd567330e4" />
+    <_SymbolStoreTestBinary Include="test_module_no_buildid.wasm" Sha256="377aeb85968dc022ffda528949c6b179e9afcc2d145207cb59914112ccceb0d0" />
+    <_SymbolStoreTestBinary Include="test_module_symbols.wasm" Sha256="ad01f91f16aa7df7f417e27ba712c3b9b1029c974c9feb9460ee818e328b04a0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_TestBinary Include="@(_FileFormatsTestBinary)">
+      <SourceProject>Microsoft.FileFormats.UnitTests</SourceProject>
+    </_TestBinary>
+    <_TestBinary Include="@(_SymbolStoreTestBinary)">
+      <SourceProject>Microsoft.SymbolStore.UnitTests</SourceProject>
+    </_TestBinary>
+    <_TestBinary Update="@(_TestBinary)">
+      <Link>TestBinaries/%(Identity)</Link>
+    </_TestBinary>
+  </ItemGroup>
+
+  <Target Name="DownloadTestBinaries" BeforeTargets="AssignTargetPaths" Condition="'$(DesignTimeBuild)' != 'true'">
+    <PropertyGroup>
+      <TestBinariesCacheDir>$(IntermediateOutputPath)test-binaries/$(TestBinariesRevision)/</TestBinariesCacheDir>
+    </PropertyGroup>
+
+    <!-- Project-specific caches avoid concurrent downloads to the same file in parallel builds. -->
+    <DownloadFile
+      SourceUrl="https://raw.githubusercontent.com/dotnet/diagnostics/$(TestBinariesRevision)/src/tests/%(_TestBinary.SourceProject)/TestBinaries/%(_TestBinary.Identity)"
+      DestinationFolder="$(TestBinariesCacheDir)%(_TestBinary.RelativeDir)"
+      DestinationFileName="%(_TestBinary.Filename)%(_TestBinary.Extension)"
+      Retries="3"
+      Condition="!Exists('$(TestBinariesCacheDir)%(_TestBinary.Identity)')" />
+    <VerifyFileHash File="$(TestBinariesCacheDir)%(_TestBinary.Identity)" Hash="%(_TestBinary.Sha256)" Algorithm="SHA256" />
+
+    <ItemGroup>
+      <Content Include="@(_TestBinary->'$(TestBinariesCacheDir)%(Identity)')">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+  </Target>
+</Project>

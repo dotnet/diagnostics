@@ -11,7 +11,7 @@ Apart from the EventCounters that are already provided by the .NET runtime or th
 
 EventCounters live as a part of an [EventSource](https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventsource?view=netcore-3.0) and are automatically pushed to listener tools on a regular basis. Like any other events on an `EventSource`, they can be consumed both in-proc and out-of-proc via [EventListener](https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.tracing.eventlistener?view=netcore-3.0) and EventPipe/ETW.
 
-![EventCounter](EventCounters.jpg)
+![EventCounter](https://raw.githubusercontent.com/dotnet/diagnostics/43c8fd9c01e6859258b852f80dd8bb016ff618e3/documentation/design-docs/EventCounters.jpg)
 
 ## Runtime Counters
 The .NET runtime (CoreCLR) publishes the following list of counters:

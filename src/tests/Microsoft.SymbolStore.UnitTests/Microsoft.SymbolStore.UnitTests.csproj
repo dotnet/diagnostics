@@ -5,14 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="TestBinaries\coreclr.dll.gz" />
-    <None Remove="TestBinaries\md5_build_id" />
-    <None Remove="TestBinaries\StackTraceSymbols.CoreCLR.cs.gz" />
-    <None Remove="TestBinaries\stripped_executable" />
-    <None Remove="TestBinaries\symbolized_executable" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="$(SrcDir)Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
     <ProjectReference Include="$(TestDir)TestHelpers/TestHelpers.csproj" />
   </ItemGroup>
@@ -26,9 +18,7 @@
       <Link>TestBinaries\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="$(MSBuildThisFileDirectory)TestBinaries\**">
-      <Link>TestBinaries\%(RecursiveDir)%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
+
+  <Import Project="$(RepositoryEngineeringDir)TestBinaries.targets" />
 </Project>

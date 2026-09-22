@@ -29,6 +29,14 @@ To install the platform's prerequisites and build:
  * [NetBSD Instructions](documentation/building/netbsd-instructions.md)
  * [Testing on private runtime builds](documentation/privatebuildtesting.md)
 
+The FileFormats and SymbolStore unit tests download their binary fixtures during the first build
+from a pinned commit of this repository on `raw.githubusercontent.com`. The manifest and SHA-256
+checksums are in [eng/TestBinaries.targets](eng/TestBinaries.targets). Downloads are cached under
+each project's `artifacts/obj` directory and verified on every build; subsequent builds can reuse
+the cached fixtures without network access. If verification fails, delete the affected cache file
+and rebuild to download it again. Keep new binary fixtures out of Git and update the manifest
+with their immutable source revision and checksum instead.
+
 ## SOS and Other Diagnostic Tools
 
 * [SOS](documentation/sos.md) - About the SOS debugger extension.
