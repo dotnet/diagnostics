@@ -34,39 +34,49 @@ namespace DotnetGCDump.UnitTests
         }
 
         [Fact]
-        public void DumpFromEventPipeFileDoesNotReuseLiveCollectionState()
+        public void DumpFromEventPipeResetsCollectionStateWhenCancelled()
         {
-            using StringWriter liveWriter = new(CultureInfo.InvariantCulture);
-            DotNetHeapInfo liveHeapInfo = new();
-            MemoryGraph liveMemoryGraph = new(50_000);
+            EventPipeDotNetHeapDumper.eventPipeDataPresent = true;
+            EventPipeDotNetHeapDumper.dumpComplete = true;
+            using CancellationTokenSource cancellation = new();
+            cancellation.Cancel();
+            using StringWriter writer = new(CultureInfo.InvariantCulture);
 
-            bool liveSuccess = EventPipeDotNetHeapDumper.DumpFromEventPipe(
-                CancellationToken.None,
+            bool success = EventPipeDotNetHeapDumper.DumpFromEventPipe(
+                cancellation.Token,
                 Environment.ProcessId,
                 diagnosticPort: null,
-                liveMemoryGraph,
-                TextWriter.Synchronized(liveWriter),
+                new MemoryGraph(50_000),
+                TextWriter.Synchronized(writer),
                 timeout: 30,
-                liveHeapInfo);
+                new DotNetHeapInfo());
 
-            Assert.True(liveSuccess, liveWriter.ToString());
+            Assert.False(success);
+            Assert.False(EventPipeDotNetHeapDumper.eventPipeDataPresent);
+            Assert.False(EventPipeDotNetHeapDumper.dumpComplete);
+        }
 
+        [Fact]
+        public void DumpFromEventPipeFileResetsCollectionStateBeforeFailure()
+        {
+            EventPipeDotNetHeapDumper.eventPipeDataPresent = true;
+            EventPipeDotNetHeapDumper.dumpComplete = true;
             string tracePath = Path.GetTempFileName();
             try
             {
                 File.WriteAllText(tracePath, "not a nettrace file");
-                using StringWriter fileWriter = new(CultureInfo.InvariantCulture);
-                DotNetHeapInfo fileHeapInfo = new();
-                MemoryGraph fileMemoryGraph = new(50_000);
+                using StringWriter writer = new(CultureInfo.InvariantCulture);
 
-                bool fileSuccess = EventPipeDotNetHeapDumper.DumpFromEventPipeFile(
+                bool success = EventPipeDotNetHeapDumper.DumpFromEventPipeFile(
                     tracePath,
-                    fileMemoryGraph,
-                    TextWriter.Synchronized(fileWriter),
-                    fileHeapInfo);
+                    new MemoryGraph(50_000),
+                    writer,
+                    new DotNetHeapInfo());
 
-                Assert.False(fileSuccess);
-                Assert.Contains("[Error] Exception processing events:", fileWriter.ToString());
+                Assert.False(success);
+                Assert.False(EventPipeDotNetHeapDumper.eventPipeDataPresent);
+                Assert.False(EventPipeDotNetHeapDumper.dumpComplete);
+                Assert.Contains("[Error] Exception processing events:", writer.ToString());
             }
             finally
             {

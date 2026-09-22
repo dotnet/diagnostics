@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="DotnetGCDump.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="..\Common\Commands\ProcessStatus.cs" Link="ProcessStatus.cs" />
     <Compile Include="..\Common\CommandUtils.cs" Link="CommandUtils.cs" />
     <Compile Include="..\Common\ProcessNativeMethods\ProcessNativeMethods.cs" Link="ProcessNativeMethods.cs" />
