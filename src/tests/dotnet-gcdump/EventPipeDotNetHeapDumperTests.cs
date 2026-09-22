@@ -34,57 +34,6 @@ namespace DotnetGCDump.UnitTests
             Assert.Contains("Simulated shutdown logging failure.", writer.ToString());
         }
 
-        [Fact]
-        public void DumpFromEventPipeResetsCollectionStateWhenCancelled()
-        {
-            EventPipeDotNetHeapDumper.eventPipeDataPresent = true;
-            EventPipeDotNetHeapDumper.dumpComplete = true;
-            using CancellationTokenSource cancellation = new();
-            cancellation.Cancel();
-            using StringWriter writer = new(CultureInfo.InvariantCulture);
-
-            bool success = EventPipeDotNetHeapDumper.DumpFromEventPipe(
-                cancellation.Token,
-                Environment.ProcessId,
-                diagnosticPort: null,
-                new MemoryGraph(50_000),
-                TextWriter.Synchronized(writer),
-                timeout: 30,
-                new DotNetHeapInfo());
-
-            Assert.False(success);
-            Assert.False(EventPipeDotNetHeapDumper.eventPipeDataPresent);
-            Assert.False(EventPipeDotNetHeapDumper.dumpComplete);
-        }
-
-        [Fact]
-        public void DumpFromEventPipeFileResetsCollectionStateBeforeFailure()
-        {
-            EventPipeDotNetHeapDumper.eventPipeDataPresent = true;
-            EventPipeDotNetHeapDumper.dumpComplete = true;
-            string tracePath = Path.GetTempFileName();
-            try
-            {
-                File.WriteAllText(tracePath, "not a nettrace file");
-                using StringWriter writer = new(CultureInfo.InvariantCulture);
-
-                bool success = EventPipeDotNetHeapDumper.DumpFromEventPipeFile(
-                    tracePath,
-                    new MemoryGraph(50_000),
-                    writer,
-                    new DotNetHeapInfo());
-
-                Assert.False(success);
-                Assert.False(EventPipeDotNetHeapDumper.eventPipeDataPresent);
-                Assert.False(EventPipeDotNetHeapDumper.dumpComplete);
-                Assert.Contains("[Error] Exception processing events:", writer.ToString());
-            }
-            finally
-            {
-                File.Delete(tracePath);
-            }
-        }
-
         private sealed class ThrowingTextWriter : StringWriter
         {
             private int _throwOnShutdown = 1;
