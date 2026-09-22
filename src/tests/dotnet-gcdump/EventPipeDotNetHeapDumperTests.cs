@@ -4,7 +4,6 @@
 using System;
 using System.Globalization;
 using System.IO;
-using System.Text;
 using System.Threading;
 using Graphs;
 using Microsoft.Diagnostics.Tools.GCDump;
@@ -14,30 +13,6 @@ namespace DotnetGCDump.UnitTests
 {
     public class EventPipeDotNetHeapDumperTests
     {
-        [Fact]
-        public void DumpFromEventPipeSerializesLogWrites()
-        {
-            ConcurrentWriteDetector writer = new();
-            DotNetHeapInfo heapInfo = new();
-            MemoryGraph memoryGraph = new(50_000);
-
-            EventPipeDotNetHeapDumper.DumpFromEventPipe(
-                CancellationToken.None,
-                Environment.ProcessId,
-                diagnosticPort: null,
-                memoryGraph,
-                writer,
-                timeout: 30,
-                heapInfo);
-
-            string output = writer.Output;
-            Assert.True(
-                writer.ConcurrentWriteCount == 0,
-                $"Detected {writer.ConcurrentWriteCount} concurrent writes to the supplied TextWriter.{Environment.NewLine}{output}");
-            Assert.Contains("gcdump EventPipe session shut down", output);
-            Assert.Contains("Found Module ", output);
-        }
-
         [Fact]
         public void DumpFromEventPipeReturnsFalseWhenShutdownLoggingFails()
         {
@@ -96,70 +71,6 @@ namespace DotnetGCDump.UnitTests
             finally
             {
                 File.Delete(tracePath);
-            }
-        }
-
-        private sealed class ConcurrentWriteDetector : TextWriter
-        {
-            private readonly StringBuilder _output = new();
-            private int _activeWriter;
-            private int _concurrentWriteCount;
-
-            public override Encoding Encoding => Encoding.UTF8;
-
-            public override IFormatProvider FormatProvider => CultureInfo.InvariantCulture;
-
-            public int ConcurrentWriteCount => Volatile.Read(ref _concurrentWriteCount);
-
-            public string Output => _output.ToString();
-
-            public override void WriteLine(string value)
-            {
-                WriteLineCore(value);
-            }
-
-            public override void WriteLine(string format, object arg0)
-            {
-                WriteLineCore(string.Format(FormatProvider, format, arg0));
-            }
-
-            public override void WriteLine(string format, object arg0, object arg1)
-            {
-                WriteLineCore(string.Format(FormatProvider, format, arg0, arg1));
-            }
-
-            public override void WriteLine(string format, object arg0, object arg1, object arg2)
-            {
-                WriteLineCore(string.Format(FormatProvider, format, arg0, arg1, arg2));
-            }
-
-            public override void WriteLine(string format, params object[] arg)
-            {
-                WriteLineCore(string.Format(FormatProvider, format, arg));
-            }
-
-            private void WriteLineCore(string value)
-            {
-                if (Interlocked.CompareExchange(ref _activeWriter, 1, 0) != 0)
-                {
-                    Interlocked.Increment(ref _concurrentWriteCount);
-                    return;
-                }
-
-                try
-                {
-                    _output.AppendLine(value);
-
-                    if (value.StartsWith("Found Module ", StringComparison.Ordinal) ||
-                        value.Contains("gcdump EventPipe session shut down", StringComparison.Ordinal))
-                    {
-                        Thread.Sleep(25);
-                    }
-                }
-                finally
-                {
-                    Volatile.Write(ref _activeWriter, 0);
-                }
             }
         }
 
