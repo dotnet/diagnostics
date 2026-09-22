@@ -24,6 +24,9 @@ namespace Microsoft.SymbolStore.Tests
 
         public class MockPEFile
         {
+            private const uint DefaultTimestamp = 0x4D4F434B;
+            private static readonly Version s_defaultVersion = new(1, 2, 3, 45);
+
             public ImageFileMachine Machine { get; }
             public uint SizeOfImage { get; }
             public string FileName { get; }
@@ -47,7 +50,7 @@ namespace Microsoft.SymbolStore.Tests
 
             public MemoryStream CreateStream()
             {
-                return PEImageBuilder.Create(Machine, 0x4D4F434B, SizeOfImage, new Version(1, 2, 3, 45));
+                return PEImageBuilder.Create(Machine, DefaultTimestamp, SizeOfImage, s_defaultVersion);
             }
         }
 
