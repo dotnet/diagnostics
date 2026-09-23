@@ -18,6 +18,7 @@ namespace Microsoft.SymbolStore.Tests
             const int FileAlignment = 0x200;
             const int ResourceOffset = FileAlignment;
             const uint ResourceRva = 0x1000;
+            const uint ResourceSectionCharacteristics = 0x40000040; // Initialized data | Read
             const uint VersionOffset = 88;
             const ushort VersionLength = 92;
             const uint ResourceLength = VersionOffset + VersionLength;
@@ -39,28 +40,55 @@ namespace Microsoft.SymbolStore.Tests
             writer.Write(timestamp);
             stream.Position = OptionalHeaderOffset - 4;
             writer.Write((ushort)optionalHeaderSize);
-            writer.Write((ushort)ImageFile.Dll);
+            ushort characteristics = (ushort)(ImageFile.RelocsStripped | ImageFile.ExecutableImage | ImageFile.Dll);
+            writer.Write(characteristics);
 
             writer.Write((ushort)(is64Bit ? ImageMagic.Magic64 : ImageMagic.Magic32));
+            stream.Position = OptionalHeaderOffset + 8;
+            writer.Write((uint)FileAlignment); // SizeOfInitializedData
+            if (!is64Bit)
+            {
+                stream.Position = OptionalHeaderOffset + 24;
+                writer.Write(ResourceRva); // BaseOfData
+            }
+            stream.Position = OptionalHeaderOffset + 32;
+            writer.Write(ResourceRva); // SectionAlignment
+            writer.Write((uint)FileAlignment);
             stream.Position = OptionalHeaderOffset + 56;
             writer.Write(sizeOfImage);
+            writer.Write((uint)FileAlignment); // SizeOfHeaders
+            stream.Position = OptionalHeaderOffset + (is64Bit ? 108 : 92);
+            writer.Write(16U); // NumberOfRvaAndSizes
             stream.Position = dataDirectoriesOffset + 8 * (int)ImageDirectoryEntry.Resource;
             writer.Write(ResourceRva);
+            writer.Write(ResourceLength);
 
-            stream.Position = sectionHeaderOffset + 8;
+            stream.Position = sectionHeaderOffset;
+            writer.Write(Encoding.UTF8.GetBytes(".rsrc\0\0\0"));
             writer.Write(ResourceLength);
             writer.Write(ResourceRva);
-            stream.Position = sectionHeaderOffset + 20;
+            writer.Write((uint)FileAlignment); // SizeOfRawData
             writer.Write(ResourceOffset);
+            stream.Position = sectionHeaderOffset + 36;
+            writer.Write(ResourceSectionCharacteristics);
 
             // Directory offsets are relative to the resource section; leaf data uses an image RVA.
             stream.Position = ResourceOffset;
-            WriteResourceDirectory(writer, 16, 24); // RT_VERSION
-            WriteResourceDirectory(writer, 1, 48); // Resource name
-            WriteResourceDirectory(writer, 0x409, 72); // en-US
+            WriteResourceDirectory(writer, 16, 24, true); // RT_VERSION
+            WriteResourceDirectory(writer, 1, 48, true); // Resource name
+            WriteResourceDirectory(writer, 0x409, 72, false); // en-US
             writer.Write(ResourceRva + VersionOffset);
+            writer.Write((uint)VersionLength);
+            writer.Write(0U); // CodePage
+            writer.Write(0U); // Reserved
 
-            stream.Position = ResourceOffset + VersionOffset + 40; // VS_FIXEDFILEINFO follows the version header
+            stream.Position = ResourceOffset + VersionOffset;
+            writer.Write(VersionLength);
+            writer.Write((ushort)52); // VS_FIXEDFILEINFO size
+            writer.Write((ushort)0); // Binary data
+            writer.Write(Encoding.Unicode.GetBytes("VS_VERSION_INFO\0"));
+            writer.Write((ushort)0); // Align VS_FIXEDFILEINFO to a 32-bit boundary
+
             writer.Write(VsFixedFileInfo.FixedFileInfoSignature);
             stream.Position += 4; // Structure version is unused
             writer.Write(checked((ushort)version.Minor));
@@ -74,7 +102,7 @@ namespace Microsoft.SymbolStore.Tests
             return stream;
         }
 
-        private static void WriteResourceDirectory(BinaryWriter writer, uint id, uint offset)
+        private static void WriteResourceDirectory(BinaryWriter writer, uint id, uint offset, bool isSubdirectory)
         {
             writer.Write(0U); // Characteristics
             writer.Write(0U); // TimeDateStamp
@@ -82,7 +110,7 @@ namespace Microsoft.SymbolStore.Tests
             writer.Write((ushort)0); // NumberOfNamedEntries
             writer.Write((ushort)1); // NumberOfIdEntries
             writer.Write(id);
-            writer.Write(offset);
+            writer.Write(isSubdirectory ? offset | 0x80000000 : offset);
         }
     }
 }
