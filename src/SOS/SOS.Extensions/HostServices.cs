@@ -250,6 +250,16 @@ namespace SOS.Extensions
                 ThreadUnwindServiceFromDebuggerServices threadUnwindService = new(DebuggerServices);
                 serviceContainer.AddService<IThreadUnwindService>(threadUnwindService);
 
+                try
+                {
+                    ThreadStackServiceFromDebuggerServices threadStackService = new(iunk);
+                    serviceContainer.AddService<IThreadStackService>(threadStackService);
+                }
+                catch (InvalidCastException)
+                {
+                    Trace.TraceInformation("Native debugger stack service is not available.");
+                }
+
                 // Used to invoke only managed commands
                 _servicesWithManagedOnlyFilter = new(_contextServiceFromDebuggerServices.Services);
                 _servicesWithManagedOnlyFilter.AddService(new SOSCommandBase.ManagedOnlyCommandFilter());
