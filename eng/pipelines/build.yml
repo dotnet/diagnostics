@@ -74,7 +74,7 @@ jobs:
         - _buildScript: $(Build.SourcesDirectory)\test.cmd
       - ${{ else }}:
         - _buildScript: $(Build.SourcesDirectory)/test.sh
-      - _TestArgs: ''
+      - _TestArgs: '/p:SkipHelixTests=true'
     - ${{ else }}:
       - ${{ if eq(parameters.platform.os, 'windows') }}:
         - _buildScript: $(Build.SourcesDirectory)\build.cmd

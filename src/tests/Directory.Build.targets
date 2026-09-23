@@ -1,5 +1,6 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets"/>
+  <Import Project="HelixPayload.targets" />
 
   <!-- xUnit v3 uses Microsoft Testing Platform filter options while legacy xUnit uses console-runner options. -->
   <PropertyGroup Condition="'$(DiagnosticsTestMethodFilter)' != ''">

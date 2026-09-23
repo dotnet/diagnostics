@@ -5,6 +5,11 @@ parameters:
   type: string
 - name: platform
   type: object
+- name: testExecutionMode
+  type: string
+  values:
+  - SingleHelixLeg
+  - Helix
 - name: isOfficialBuild
   type: boolean
   default: false
@@ -12,8 +17,12 @@ parameters:
 jobs:
 - template: ${{ parameters.pipelineJobTemplate }}
   parameters:
-    name: SOS_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
-    displayName: SOS Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
+    ${{ if eq(parameters.testExecutionMode, 'SingleHelixLeg') }}:
+      name: ManagedOnly_Helix
+      displayName: Managed-only tests on Helix
+    ${{ else }}:
+      name: Tests_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
+      displayName: Tests Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
     continueOnError: ${{ parameters.isOfficialBuild }}
     enableMicrobuild: true
@@ -39,7 +48,7 @@ jobs:
 
     steps:
     - task: DownloadPipelineArtifact@2
-      displayName: Download SOS test payload inputs
+      displayName: Download test payload inputs
       inputs:
         artifact: TestArtifacts_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
         targetPath: '$(Build.SourcesDirectory)/artifacts'
@@ -47,21 +56,22 @@ jobs:
 
     - template: /eng/pipelines/send-to-helix-step.yml
       parameters:
-        displayName: Run SOS.Tests on Helix
+        displayName: Run tests on Helix
         osGroup: ${{ parameters.platform.os }}
         sendParams: >
-          $(Build.SourcesDirectory)/src/tests/SOS.Tests/SOS.Tests.csproj
-          /restore /p:TreatWarningsAsErrors=false /t:SendToHelix
+          $(Build.SourcesDirectory)/src/tests/dirs.proj
+          /restore /p:TreatWarningsAsErrors=false /t:SendTestsToHelix
+          /p:HelixTestExecutionMode=${{ parameters.testExecutionMode }}
           /p:Configuration=${{ parameters.configuration }}
           /p:TargetArch=${{ parameters.platform.arch }}
           /p:TargetOS=${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}
           /p:TargetRid=${{ parameters.platform.rid }}
           /p:OfficialBuildId=$(Build.BuildNumber)
-          /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/SendToHelix.binlog
+          /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/SendTestsToHelix.binlog
         env:
-          HelixSource: pr/dotnet/diagnostics/sos-tests
-          HelixType: tests/sos/harness/
-          HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
+          HelixSource: pr/dotnet/diagnostics/tests
+          HelixType: tests/${{ parameters.testExecutionMode }}/
+          HelixConfiguration: ${{ parameters.testExecutionMode }}_${{ parameters.platform.rid }}_${{ parameters.configuration }}
           ${{ if eq(variables['System.TeamProject'], 'public') }}:
             HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }})
             Creator: dotnet-bot
@@ -86,7 +96,7 @@ jobs:
         displayName: Publish Helix logs
         inputs:
           targetPath: '$(Build.StagingDirectory)/HelixLogs'
-          artifactName: Logs_SOS_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}_$(System.JobAttempt)
+          artifactName: Logs_Tests_Helix_${{ parameters.testExecutionMode }}_${{ parameters.platform.rid }}_${{ parameters.configuration }}_$(System.JobAttempt)
           sbomEnabled: false
         continueOnError: true
         condition: always()

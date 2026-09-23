@@ -1,0 +1,85 @@
+<Project>
+  <!-- Default submission: one assembly work item using the shared launcher and test-framework runtime.
+       Suites such as SOS select a different HelixSubmissionTarget to bypass this target chain. -->
+
+  <!-- Overridable settings: TestsHelixPayloadDir and WorkItemTimeout (defaulted during preparation).
+       Projects can also add HelixPayloadFile items with payload-relative DestinationRelative metadata. -->
+  <PropertyGroup>
+    <TestsHelixPayloadDir Condition="'$(TestsHelixPayloadDir)' == ''">$(ArtifactsDir)helix/$(MSBuildProjectName)/$(TargetRid)/$(Configuration)/payload</TestsHelixPayloadDir>
+  </PropertyGroup>
+
+  <!-- Internal commands match the launcher names staged below; these are not override points. -->
+  <PropertyGroup>
+    <_TestsHelixWorkItemCommand Condition="'$(TargetOS)' == 'Windows_NT'">call .\runtests.cmd</_TestsHelixWorkItemCommand>
+    <_TestsHelixWorkItemCommand Condition="'$(TargetOS)' != 'Windows_NT'">bash ./runtests.sh</_TestsHelixWorkItemCommand>
+  </PropertyGroup>
+
+  <!-- Requires prebuilt test outputs; collection and staging never build the project. -->
+  <Target Name="GetTestHelixPayload" Returns="@(HelixPayloadFile)">
+    <PropertyGroup>
+      <_HelixTestOutputDir>$(ArtifactsBinDir)$(MSBuildProjectName)/$(Configuration)/$(NetCoreAppTestTargetFramework)/</_HelixTestOutputDir>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_HelixTestOutputDir)$(AssemblyName).dll')"
+           Text="The test assembly '$(_HelixTestOutputDir)$(AssemblyName).dll' was not found in the build artifacts." />
+    <ItemGroup>
+      <_HelixTestOutputFile Include="$(_HelixTestOutputDir)**/*" />
+      <_HelixTestOutputFile>
+        <DestinationRelative>tests/$(AssemblyName)/%(RecursiveDir)%(Filename)%(Extension)</DestinationRelative>
+      </_HelixTestOutputFile>
+      <HelixPayloadFile Include="@(_HelixTestOutputFile)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="StageTestsHelixPayload" DependsOnTargets="GetTestHelixPayload">
+    <ItemGroup>
+      <_TestsHelixPayloadFile Include="@(HelixPayloadFile)" />
+      <_TestsHelixPayloadFile Include="$(MSBuildThisFileDirectory)Helix/run-tests.cmd"
+                             Condition="'$(TargetOS)' == 'Windows_NT'">
+        <DestinationRelative>runtests.cmd</DestinationRelative>
+      </_TestsHelixPayloadFile>
+      <_TestsHelixPayloadFile Include="$(MSBuildThisFileDirectory)Helix/run-tests.sh"
+                             Condition="'$(TargetOS)' != 'Windows_NT'">
+        <DestinationRelative>runtests.sh</DestinationRelative>
+      </_TestsHelixPayloadFile>
+    </ItemGroup>
+    <RemoveDir Directories="$(TestsHelixPayloadDir)" />
+    <MakeDir Directories="$(TestsHelixPayloadDir)" />
+    <Copy SourceFiles="@(_TestsHelixPayloadFile)"
+          DestinationFiles="@(_TestsHelixPayloadFile->'$(TestsHelixPayloadDir)/%(DestinationRelative)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="PrepareTestsHelixWorkItems">
+    <!-- Apply this default only when preparing the default submission, not custom suites such as SOS. -->
+    <PropertyGroup>
+      <WorkItemTimeout Condition="'$(WorkItemTimeout)' == ''">00:30:00</WorkItemTimeout>
+    </PropertyGroup>
+    <ItemGroup>
+      <_TestRuntime Include="@(RuntimeTestVersions)"
+                    Condition="'%(RuntimeTestVersions.TargetFramework)' == '$(NetCoreAppTestTargetFramework)'" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_TestsHelixWorkItems>$(AssemblyName)</_TestsHelixWorkItems>
+      <_TestsRuntimeVersions>@(_TestRuntime->'%(RuntimeDownload)', '|')</_TestsRuntimeVersions>
+    </PropertyGroup>
+    <Error Condition="'$(_TestsRuntimeVersions)' == ''"
+           Text="RuntimeTestVersions must contain the $(NetCoreAppTestTargetFramework) runtime for Helix testing." />
+    <Message Importance="High" Text="Test Helix work item: $(_TestsHelixWorkItems)" />
+  </Target>
+
+  <Target Name="DefaultSendToHelix" DependsOnTargets="StageTestsHelixPayload;PrepareTestsHelixWorkItems">
+    <MSBuild Projects="$(RepoRoot)eng/helix/SendToHelix.proj"
+             Targets="Restore;Test"
+             Properties="Configuration=$(Configuration);
+                         TestDir=$(TestsHelixPayloadDir);
+                         HelixWorkItems=$(_TestsHelixWorkItems);
+                         HelixWorkItemCommand=$(_TestsHelixWorkItemCommand);
+                         HelixTargetQueues=$(HelixTargetQueues);
+                         TargetOS=$(TargetOS);
+                         TargetArch=$(TargetArch);
+                         TargetRid=$(TargetRid);
+                         DotNetRuntimeVersions=$(_TestsRuntimeVersions);
+                         WorkItemTimeout=$(WorkItemTimeout);
+                         OfficialBuildId=$(OfficialBuildId)" />
+  </Target>
+</Project>

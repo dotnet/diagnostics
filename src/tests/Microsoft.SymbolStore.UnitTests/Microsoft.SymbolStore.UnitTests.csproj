@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TestExecutionMode>SingleHelixLeg</TestExecutionMode>
     <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
   </PropertyGroup>

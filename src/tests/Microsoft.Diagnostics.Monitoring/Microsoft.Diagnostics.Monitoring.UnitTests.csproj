@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TestExecutionMode>SingleHelixLeg</TestExecutionMode>
     <TargetFrameworks>$(SupportedXUnitTestTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 

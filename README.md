@@ -29,6 +29,51 @@ To install the platform's prerequisites and build:
  * [NetBSD Instructions](documentation/building/netbsd-instructions.md)
  * [Testing on private runtime builds](documentation/privatebuildtesting.md)
 
+## Test execution
+
+Test projects choose their CI execution mode in their `.csproj`:
+
+```xml
+<TestExecutionMode>SingleHelixLeg</TestExecutionMode>
+```
+
+| Mode | CI execution |
+|------|--------------|
+| `AzDO` (default) | Existing platform-specific Azure Pipelines test jobs |
+| `SingleHelixLeg` | Once per pipeline, on the Linux x64 Debug Helix leg |
+| `Helix` | Platform-specific Helix jobs, such as the SOS test matrix |
+
+During the migration, normal CI test jobs pass `/p:SkipHelixTests=true` to skip
+both Helix modes. Local test runs do not set this flag and remain enabled.
+`src/tests/dirs.proj` discovers project modes through shared MSBuild targets;
+there is no separate project list to maintain.
+
+`src/tests/HelixPayload.targets` contains common execution-mode validation, CI skip
+logic, and project discovery metadata. It imports `src/tests/DefaultSendToHelix.targets`,
+which provides the default payload collection, staging, work-item preparation, and
+`DefaultSendToHelix` target to submit one work item for the assembly.
+Invoke `StageTestsHelixPayload` on a test project to stage without building or
+submitting. Projects can add `HelixPayloadFile` items with `DestinationRelative`
+metadata for additional payload files.
+
+On `src/tests/dirs.proj`, select projects with
+`/p:HelixTestExecutionMode=SingleHelixLeg` (or `Helix`) and invoke
+`SendTestsToHelix`. The dispatcher calls each project's `HelixSubmissionTarget`,
+which defaults to `DefaultSendToHelix`. Specialized suites set that property to
+their own target name. SOS.Tests sets it to `SendToHelix` to preserve its existing
+staging, runtime work items, and launchers without changing SDK import order.
+Each project owns its payload and submission; the single-leg group
+still runs in one pipeline job. Both Helix modes use the shared
+`eng/pipelines/tests-helix.yml` template.
+
+The shared `src/tests/Helix/run-tests.cmd` and `run-tests.sh` launchers accept
+`--helix-work-item <assembly>` for the default layout, or `--test-dll <path>`
+and `--report-name <name>` for specialized payloads. Optional `--dotnet-root`
+and `--runtime-version` select the host and runtime. Arguments after `--` are
+forwarded to the test runner. SOS uses its dedicated
+`src/tests/SOS.Tests/Helix/run-sos-tests.cmd` and `run-sos-tests.sh` launchers
+for debugger preparation, runtime shard selection, and platform-specific cleanup.
+
 ## SOS and Other Diagnostic Tools
 
 * [SOS](documentation/sos.md) - About the SOS debugger extension.

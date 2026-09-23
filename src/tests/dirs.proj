@@ -2,8 +2,6 @@
   <ItemGroup>
     <!-- Tests and Helpers -->
     <ProjectReference Include="*/*.csproj" />
-    <!-- SOS.Tests is built here for payload staging, but executes only as dedicated Helix work items. -->
-    <ProjectReference Update="SOS.Tests/SOS.Tests.csproj" Test="false" />
 
     <!-- Tests are broken as it hasn't been run on main in a while. Relies on older System.CommandLine API's that are no longer public -->
     <ProjectReference Remove="dotnet-stack/DotnetStack.UnitTests.csproj" />
@@ -69,5 +67,25 @@
     <Exec Command="$(DebuggeeBuildDotNetPath) build $(MSBuildThisFileDirectory)Debuggees.proj -c $(Configuration) -bl:$(ArtifactsLogDir)Debuggees.binlog /p:TargetOS=$(TargetOS) /p:TargetArch=$(TargetArch) /p:TargetRid=$(TargetRid) /p:RepoRoot=$(RepoRoot)"
           WorkingDirectory="$(DebuggeeBuildDotNetDir)"
           EnvironmentVariables="@(DebuggeeBuildEnv)" />
+  </Target>
+
+  <Target Name="DiscoverHelixTestProjects">
+    <Error Condition="'$(HelixTestExecutionMode)' != 'SingleHelixLeg' and '$(HelixTestExecutionMode)' != 'Helix'"
+           Text="HelixTestExecutionMode must be SingleHelixLeg or Helix." />
+    <ItemGroup>
+      <_TestProject Include="@(ProjectReference)" Condition="'%(Extension)' == '.csproj'" />
+    </ItemGroup>
+    <MSBuild Projects="@(_TestProject)" Targets="GetHelixTestProject" BuildInParallel="true">
+      <Output TaskParameter="TargetOutputs" ItemName="_DiscoveredHelixTestProject" />
+    </MSBuild>
+    <ItemGroup>
+      <HelixTestProject Include="@(_DiscoveredHelixTestProject)"
+                        Condition="'%(_DiscoveredHelixTestProject.TestExecutionMode)' == '$(HelixTestExecutionMode)'" />
+    </ItemGroup>
+    <Error Condition="'@(HelixTestProject)' == ''" Text="No projects use TestExecutionMode=$(HelixTestExecutionMode)." />
+  </Target>
+
+  <Target Name="SendTestsToHelix" DependsOnTargets="DiscoverHelixTestProjects">
+    <MSBuild Projects="@(HelixTestProject)" Targets="%(HelixTestProject.HelixSubmissionTarget)" BuildInParallel="true" />
   </Target>
 </Project>

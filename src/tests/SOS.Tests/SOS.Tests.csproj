@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TestExecutionMode>Helix</TestExecutionMode>
+    <HelixSubmissionTarget>SendToHelix</HelixSubmissionTarget>
     <!-- net10.0 only: the harness depends on Microsoft.Diagnostics.Runtime.Utilities, which ships
          net10.0-only, so the test project must target net10.0 (overriding the repo's net8.0 default). -->
     <TargetFrameworks>$(NetCoreAppTestTargetFramework)</TargetFrameworks>
