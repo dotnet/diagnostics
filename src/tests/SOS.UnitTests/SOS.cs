@@ -11,8 +11,6 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
 using System.Text.Json;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 
 public static class SOSTestHelpers
 {
@@ -83,7 +81,7 @@ public static class SOSTestHelpers
     {
         if (config.TargetArchitecture is "arm" or "arm64")
         {
-            throw new SkipTestException("SOS does not support ARM architectures");
+            Assert.Skip("SOS does not support ARM architectures");
         }
     }
 
@@ -91,7 +89,7 @@ public static class SOSTestHelpers
     {
         if (config.TargetArchitecture == "x86" && OS.Kind == OSKind.Windows)
         {
-            throw new SkipTestException("Test does not support x86 on Windows");
+            Assert.Skip("Test does not support x86 on Windows");
         }
     }
 
@@ -292,12 +290,12 @@ public class SOSStackTraceTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task StackTraceSoftwareExceptionFrame(TestConfiguration config)
     {
         if (config.RuntimeFrameworkVersionMajor < 10)
         {
-            throw new SkipTestException("This test validates SoftwareExceptionFrame handling, before .NET10, these aren't used in this debuggee scenario.");
+            Assert.Skip("This test validates SoftwareExceptionFrame handling, before .NET10, these aren't used in this debuggee scenario.");
         }
 
         SOSTestHelpers.SkipIfWinX86(config);
@@ -311,7 +309,7 @@ public class SOSStackTraceTests
             testTriage: true);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task StackTraceFaultingExceptionFrame(TestConfiguration config)
     {
         SOSTestHelpers.SkipIfWinX86(config);
@@ -325,7 +323,7 @@ public class SOSStackTraceTests
             testTriage: true);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task StackTests(TestConfiguration config)
     {
         // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)
@@ -339,12 +337,12 @@ public class SOSStackTraceTests
             testName: "SOS.StackTests");
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task ClrStackWithNumberOfFrames(TestConfiguration config)
     {
         if (config.IsDesktop)
         {
-            throw new SkipTestException("The behavior of ClrStack -i is not the same on Desktop");
+            Assert.Skip("The behavior of ClrStack -i is not the same on Desktop");
         }
         await SOSTestHelpers.RunTest(
             config,
@@ -365,7 +363,7 @@ public class SOSExceptionTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task TaskNestedException(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(
@@ -386,12 +384,12 @@ public class SOSInterpreterTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.InterpreterConfigurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.InterpreterConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task InterpreterStackTest(TestConfiguration config)
     {
         if (!config.UseInterpreter)
         {
-            throw new SkipTestException("Interpreter SOS tests are off by default. Set SOS_TEST_INTERPRETER=true and overlay a Debug/Checked CoreCLR drop with FEATURE_INTERPRETER to run them.");
+            Assert.Skip("Interpreter SOS tests are off by default. Set SOS_TEST_INTERPRETER=true and overlay a Debug/Checked CoreCLR drop with FEATURE_INTERPRETER to run them.");
         }
 
         await SOSTestHelpers.RunTest(
@@ -407,12 +405,12 @@ public class SOSInterpreterTests
             Output);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.InterpreterConfigurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.InterpreterConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task InterpreterStackInterleavedTest(TestConfiguration config)
     {
         if (!config.UseInterpreter)
         {
-            throw new SkipTestException("Interpreter SOS tests are off by default. Set SOS_TEST_INTERPRETER=true and overlay a Debug/Checked CoreCLR drop with FEATURE_INTERPRETER to run them.");
+            Assert.Skip("Interpreter SOS tests are off by default. Set SOS_TEST_INTERPRETER=true and overlay a Debug/Checked CoreCLR drop with FEATURE_INTERPRETER to run them.");
         }
 
         await SOSTestHelpers.RunTest(
@@ -438,7 +436,7 @@ public class SOSOverflowTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task Overflow(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(
@@ -470,7 +468,7 @@ public class SOSGCTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task GCTests(TestConfiguration config)
     {
         SOSTestHelpers.SkipIfArm(config);
@@ -487,12 +485,12 @@ public class SOSGCTests
             testDump: false);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task GCPOHTests(TestConfiguration config)
     {
         if (config.IsDesktop || config.RuntimeFrameworkVersionMajor < 5)
         {
-            throw new SkipTestException("This test validates POH behavior, which was introduced in .net 5");
+            Assert.Skip("This test validates POH behavior, which was introduced in .net 5");
         }
         // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)
         SOSTestHelpers.SkipIfWinX86(config);
@@ -505,17 +503,17 @@ public class SOSGCTests
             testDump: false);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task FindRootsOlderGeneration(TestConfiguration config)
     {
         if (OS.Kind != OSKind.Windows)
         {
-            throw new SkipTestException("Test only supports CDB and therefore only runs on Windows");
+            Assert.Skip("Test only supports CDB and therefore only runs on Windows");
         }
 
         if (config.RuntimeFrameworkVersionMajor < 10)
         {
-            throw new SkipTestException("This test validates a bug which was fixed in .NET 10");
+            Assert.Skip("This test validates a bug which was fixed in .NET 10");
         }
 
         await SOSTestHelpers.RunTest(
@@ -527,12 +525,12 @@ public class SOSGCTests
             testDump: false);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task DumpGCData(TestConfiguration config)
     {
         if (config.RuntimeFrameworkVersionMajor < 10)
         {
-            throw new SkipTestException("This test validates a bug which was fixed in .NET 10");
+            Assert.Skip("This test validates a bug which was fixed in .NET 10");
         }
 
         await SOSTestHelpers.RunTest(
@@ -544,7 +542,7 @@ public class SOSGCTests
             testDump: false);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task DumpGen(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(
@@ -573,17 +571,17 @@ public class SOSDumpTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task MiniDumpLocalVarLookup(TestConfiguration config)
     {
         if (OS.Kind != OSKind.Windows)
         {
-            throw new SkipTestException("Test only supports CDB and therefore only runs on Windows");
+            Assert.Skip("Test only supports CDB and therefore only runs on Windows");
         }
 
         if (config.PublishSingleFile)
         {
-            throw new SkipTestException("Single file does not support mini dumps");
+            Assert.Skip("Single file does not support mini dumps");
         }
 
         // The default dumpGenerator, CreateDump, only supports taking dumps at exceptions.
@@ -599,12 +597,12 @@ public class SOSDumpTests
             dumpGenerator: SOSRunner.DumpGenerator.NativeDebugger);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task ConcurrentDictionaries(TestConfiguration config)
     {
         if (OS.Kind != OSKind.Windows && config.RuntimeFrameworkVersionMajor == 10)
         {
-            throw new SkipTestException("Dumping concurrent dict objects in dumps hits unavailable memory on linux dumps. Tracking: dotnet/diagnostics#5491");
+            Assert.Skip("Dumping concurrent dict objects in dumps hits unavailable memory on linux dumps. Tracking: dotnet/diagnostics#5491");
         }
 
         await SOSTestHelpers.RunTest(
@@ -623,7 +621,7 @@ public class SOSDumpTests
             Output);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task OtherCommands(TestConfiguration config)
     {
         // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
@@ -651,12 +649,12 @@ public class SOSMethodTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task DynamicMethod(TestConfiguration config)
     {
         if (config.PublishSingleFile || config.IsDesktop)
         {
-            throw new SkipTestException("Single file and desktop framework not supported");
+            Assert.Skip("Single file and desktop framework not supported");
         }
 
         if (config.RuntimeFrameworkVersionMajor == 10)
@@ -668,18 +666,18 @@ public class SOSMethodTests
         await SOSTestHelpers.RunTest(config, debuggeeName: "DynamicMethod", scriptName: "DynamicMethod.script", Output);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task Reflection(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(config, debuggeeName: "ReflectionTest", scriptName: "Reflection.script", Output, testTriage: true);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task VarargPInvokeInteropMD(TestConfiguration config)
     {
         if (OS.Kind != OSKind.Windows)
         {
-            throw new SkipTestException("Test only supports CDB and therefore only runs on Windows");
+            Assert.Skip("Test only supports CDB and therefore only runs on Windows");
         }
         // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)
         SOSTestHelpers.SkipIfWinX86(config);
@@ -703,18 +701,18 @@ public class SOSThreadingTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task ThreadApartment(TestConfiguration config)
     {
         if (OS.Kind != OSKind.Windows)
         {
-            throw new SkipTestException("Apartment state is a Windows COM concept");
+            Assert.Skip("Apartment state is a Windows COM concept");
         }
 
         await SOSTestHelpers.RunTest(config, debuggeeName: "ThreadApartment", scriptName: "ThreadApartment.script", Output);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task LineNums(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(
@@ -735,7 +733,7 @@ public class SOSAsyncTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task AsyncMain(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(config, debuggeeName: "AsyncMain", scriptName: "AsyncMain.script", Output, testTriage: true);
@@ -751,7 +749,7 @@ public class SOSScenarioTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.TestExtensions", MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.TestExtensions", MemberType = typeof(SOSTestHelpers))]
     public async Task TestExtensions(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest(
@@ -762,7 +760,7 @@ public class SOSScenarioTests
             testName: "SOS.TestExtensions");
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.WebApp3", MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.WebApp3", MemberType = typeof(SOSTestHelpers))]
     public async Task WebApp3(TestConfiguration config)
     {
         await SOSTestHelpers.RunTest("WebApp.script", new SOSRunner.TestInformation
@@ -776,24 +774,24 @@ public class SOSScenarioTests
         Output);
     }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.DualRuntimes", MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.DualRuntimes", MemberType = typeof(SOSTestHelpers))]
     public async Task DualRuntimes(TestConfiguration config)
     {
         // This test on linux/macOS can be called with an empty config because vstest and dotnet test fail/complain about no test parameters. The
         // linux/macOS config file doesn't contain a SOS.DualRuntimes TestName because this is Windows only.
         if (config.IsEmpty)
         {
-            throw new SkipTestException("Skipping DualRuntimes test");
+            Assert.Skip("Skipping DualRuntimes test");
         }
         if (config.PublishSingleFile)
         {
-            throw new SkipTestException("Single file not supported");
+            Assert.Skip("Single file not supported");
         }
         // The assembly path, class and function name of the desktop test code to load/run
         string desktopTestParameters = TestConfiguration.MakeCanonicalPath(config.GetValue("DesktopTestParameters"));
         if (string.IsNullOrEmpty(desktopTestParameters))
         {
-            throw new SkipTestException("DesktopTestParameters config value does not exists");
+            Assert.Skip("DesktopTestParameters config value does not exists");
         }
         await SOSTestHelpers.RunTest(
             scriptName: "DualRuntimes.script",
@@ -821,7 +819,7 @@ public class SOSStackAndOtherTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.StackAndOtherTests", MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.StackAndOtherTests", MemberType = typeof(SOSTestHelpers))]
     public async Task StackAndOtherTests(TestConfiguration config)
     {
         // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)
@@ -888,14 +886,14 @@ public class SOSPluginTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [SkippableTheory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
+    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task LLDBPluginTests(TestConfiguration config)
     {
         SOSTestHelpers.SkipIfArm(config);
 
         if (OS.Kind == OSKind.Windows || config.IsDesktop || config.RuntimeFrameworkVersionMajor == 1 || OS.IsAlpine)
         {
-            throw new SkipTestException("lldb plugin tests not supported on Windows, Alpine Linux or .NET Core 1.1");
+            Assert.Skip("lldb plugin tests not supported on Windows, Alpine Linux or .NET Core 1.1");
         }
 
         string testName = "SOS." + nameof(LLDBPluginTests);

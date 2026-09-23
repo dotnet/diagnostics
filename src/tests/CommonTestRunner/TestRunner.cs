@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Microsoft.Diagnostics.CommonTestRunner
 {

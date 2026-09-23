@@ -7,7 +7,7 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
@@ -163,6 +163,22 @@ namespace Microsoft.Diagnostics.TestHelpers
                 _fileLogger = fileLogger;
                 _consoleLogger = consoleLogger;
                 IndentedOutput = new IndentedTestOutputHelper(this);
+            }
+
+            public string Output => _output.Output;
+
+            public void Write(string message)
+            {
+                _output.Write(message);
+                _fileLogger?.Write(message);
+                _consoleLogger?.Write(message);
+            }
+
+            public void Write(string format, params object[] args)
+            {
+                _output.Write(format, args);
+                _fileLogger?.Write(format, args);
+                _consoleLogger?.Write(format, args);
             }
 
             public void WriteLine(string message)

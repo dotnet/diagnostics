@@ -12,7 +12,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
@@ -376,7 +375,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static TestConfiguration Empty { get; } = new TestConfiguration();
 
-        public static string BaseDir { get; set; } = Path.GetFullPath(".");
+        public static string BaseDir { get; set; } = AppContext.BaseDirectory;
 
         private static readonly Regex versionRegex = GetVersionRegex();
 
@@ -751,7 +750,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <summary>
         /// The major portion of the runtime framework version
         /// </summary>
-        /// <exception cref="SkipTestException">the RuntimeFrameworkVersion property doesn't exist</exception>
+        /// <exception cref="Xunit.Sdk.SkipException">the RuntimeFrameworkVersion property doesn't exist</exception>
         public int RuntimeFrameworkVersionMajor
         {
             get
@@ -768,7 +767,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                         }
                     }
                 }
-                throw new SkipTestException("RuntimeFrameworkVersion (major) is not valid");
+                Assert.Skip("RuntimeFrameworkVersion (major) is not valid");
+                return default;
             }
         }
 

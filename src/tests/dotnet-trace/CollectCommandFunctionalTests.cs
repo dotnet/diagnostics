@@ -13,7 +13,6 @@ using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Trace;
 using Microsoft.Internal.Common.Utils;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {

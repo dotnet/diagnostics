@@ -171,8 +171,8 @@ jobs:
       - task: PublishTestResults@2
         inputs:
           testResultsFormat: xUnit
-          testResultsFiles: '**/*.xml'
-          searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults'
+          testResultsFiles: '*.xml'
+          searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/${{ parameters.configuration }}'
           testRunTitle: 'Tests $(_PhaseName)'
           failTaskOnFailedTests: true
           publishRunAttachments: true

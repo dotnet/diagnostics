@@ -11,12 +11,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Trace;
-using Microsoft.DotNet.XUnitExtensions;
 using Microsoft.Internal.Common.Utils;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -32,7 +31,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             _outputHelper = outputHelper;
         }
         private static CollectLinuxCommandHandler.CollectLinuxArgs TestArgs(
-            CancellationToken ct = default,
+            CancellationToken? ct = null,
             string[] providers = null,
             string clrEventLevel = "",
             string clrEvents = "",
@@ -44,7 +43,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int processId = 0,
             bool probe = false)
         {
-            return new CollectLinuxCommandHandler.CollectLinuxArgs(ct,
+            return new CollectLinuxCommandHandler.CollectLinuxArgs(ct ?? TestContext.Current.CancellationToken,
                                                                    providers ?? Array.Empty<string>(),
                                                                    clrEventLevel,
                                                                    clrEvents,

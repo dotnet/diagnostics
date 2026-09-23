@@ -3,7 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {

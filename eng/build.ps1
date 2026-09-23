@@ -125,13 +125,16 @@ if ($test) {
             $env:SOS_TEST_DAC_MODE=$dacMode
         }
 
-        # Build the test filter argument if provided
+        # Build the test filter argument if provided.
         # Use backslash-escaped quotes so they survive the additional quoting in tools.ps1
+        $testFilterActive = $false
         $testFilterArg = ''
         if ($methodfilter -ne '') {
+            $testFilterActive = $true
             $testFilterArg = "/p:DiagnosticsTestMethodFilter=\`"$methodfilter\`""
         }
         elseif ($classfilter -ne '') {
+            $testFilterActive = $true
             $testFilterArg = "/p:DiagnosticsTestClassFilter=\`"$classfilter\`""
         }
 
@@ -157,6 +160,14 @@ if ($test) {
             }
         }
 
+        # A filter is applied to every test project. xUnit v3 projects ignore the zero-tests exit
+        # code for individual projects, so clear prior results and verify that at least one test
+        # matched across the full traversal.
+        $resultsDir = Join-Path (Join-Path $artifactsdir "TestResults") $configuration
+        if ($testFilterActive -and (Test-Path $resultsDir)) {
+            Remove-Item (Join-Path $resultsDir "*.xml") -Force -ErrorAction SilentlyContinue
+        }
+
         & "$engroot\common\build.ps1" `
           -test `
           -restore:$skipmanaged `
@@ -178,6 +189,29 @@ if ($test) {
 
         if ($lastExitCode -ne 0) {
             exit $lastExitCode
+        }
+
+        if ($testFilterActive) {
+            $testsRan = 0
+            if (Test-Path $resultsDir) {
+                foreach ($xml in Get-ChildItem $resultsDir -Filter *.xml -File -ErrorAction SilentlyContinue) {
+                    try {
+                        [xml]$doc = Get-Content -LiteralPath $xml.FullName -Raw
+                        foreach ($assembly in @($doc.assemblies.assembly)) {
+                            if ($assembly -and $assembly.total) {
+                                $testsRan += [int]$assembly.total
+                            }
+                        }
+                    }
+                    catch {
+                    }
+                }
+            }
+            if ($testsRan -eq 0) {
+                Write-Host "ERROR: The test filter matched zero tests across all projects. Check the -methodfilter/-classfilter value." -ForegroundColor Red
+                exit 1
+            }
+            Write-Host "Test filter matched $testsRan test(s) across the run." -ForegroundColor Green
         }
     }
 }

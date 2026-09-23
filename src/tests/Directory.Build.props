@@ -1,3 +1,10 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
+
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true' and '$(EnableXUnitV3)' != 'false'">
+    <TestRunnerName>XUnitV3</TestRunnerName>
+    <OutputType>Exe</OutputType>
+    <TestDotNetRoot Condition="'$(TestDotNetRoot)' == ''">$(ArtifactsDotnetTestDir)</TestDotNetRoot>
+    <DefaultAppHostRuntimeIdentifier Condition="'$(TargetRid)' != ''">$(TargetRid)</DefaultAppHostRuntimeIdentifier>
+  </PropertyGroup>
 </Project>

@@ -108,12 +108,14 @@ handle_arguments() {
             ;;
 
         methodfilter|-methodfilter)
-            __TestFilter="-method $2"
+            __TestFilterProperty="DiagnosticsTestMethodFilter"
+            __TestFilter="$2"
             __ShiftArgs=1
             ;;
         
         classfilter|-classfilter)
-            __TestFilter="-class $2"
+            __TestFilterProperty="DiagnosticsTestClassFilter"
+            __TestFilter="$2"
             __ShiftArgs=1
             ;;
 
@@ -359,7 +361,7 @@ if [[ "$__Test" == 1 ]]; then
       # Build the test filter argument if provided
       __TestFilterArg=
       if [[ -n "$__TestFilter" ]]; then
-          __TestFilterArg="/p:TestRunnerAdditionalArguments=\"$__TestFilter\""
+          __TestFilterArg="/p:$__TestFilterProperty=\"$__TestFilter\""
       fi
 
       # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt
@@ -386,6 +388,14 @@ if [[ "$__Test" == 1 ]]; then
           fi
       fi
 
+      # A filter is applied to every test project. xUnit v3 projects ignore the zero-tests exit
+      # code for individual projects, so clear prior results and verify that at least one test
+      # matched across the full traversal.
+      __ResultsDir="$__RootBinDir/TestResults/$__BuildType"
+      if [[ -n "$__TestFilter" && -d "$__ResultsDir" ]]; then
+          rm -f "$__ResultsDir"/*.xml
+      fi
+
       # __CommonMSBuildArgs contains TargetOS property
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
@@ -406,6 +416,21 @@ if [[ "$__Test" == 1 ]]; then
 
       if [ $? != 0 ]; then
           exit 1
+      fi
+
+      if [[ -n "$__TestFilter" ]]; then
+          __TestsRan=0
+          if [[ -d "$__ResultsDir" ]]; then
+              __TestsRan=$(cat "$__ResultsDir"/*.xml 2>/dev/null | grep -oE '<assembly [^>]*total="[0-9]+"' | grep -oE 'total="[0-9]+"' | grep -oE '[0-9]+' | awk '{s+=$1} END {print s+0}')
+          fi
+          if [[ -z "$__TestsRan" ]]; then
+              __TestsRan=0
+          fi
+          if [[ "$__TestsRan" == 0 ]]; then
+              echo "ERROR: The test filter matched zero tests across all projects. Check the -methodfilter/-classfilter value."
+              exit 1
+          fi
+          echo "Test filter matched $__TestsRan test(s) across the run."
       fi
    fi
 fi

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {

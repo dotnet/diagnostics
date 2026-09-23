@@ -11,7 +11,6 @@ using Microsoft.SymbolStore.KeyGenerators;
 using Microsoft.SymbolStore.SymbolStores;
 using SOS;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.SymbolStore.Tests
 {

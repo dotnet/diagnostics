@@ -5,10 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.DotNet.XUnitExtensions" Version="$(MicrosoftDotNetXUnitExtensionsVersion)" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="$(SrcDir)Tools/dotnet-trace/dotnet-trace.csproj" />
     <ProjectReference Include="$(TestDir)CommonTestRunner/CommonTestRunner.csproj" />
   </ItemGroup>

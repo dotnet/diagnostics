@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
@@ -119,7 +117,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             public Task PipelineStopped(CancellationToken token) => Task.CompletedTask;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestCounterEventPipeline(TestConfiguration config)
         {
             string[] expectedCounters = new[] { "cpu-usage", "working-set" };
@@ -162,16 +160,16 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.True(logger.Metrics.All(m => string.Equals(m.CounterMetadata.ProviderName, expectedProvider)));
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestDuplicateNameMetrics(TestConfiguration config)
         {
             if (config.RuntimeFrameworkVersionMajor < 9)
             {
-                throw new SkipTestException("MetricsEventSource only supports instrument IDs starting in .NET 9.0.");
+                Assert.Skip("MetricsEventSource only supports instrument IDs starting in .NET 9.0.");
             }
             if (OS.Kind == OSKind.OSX || OS.Kind == OSKind.Windows)
             {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/5375");
+                Assert.Skip("https://github.com/dotnet/diagnostics/issues/5375");
             }
             string providerName = "AmbiguousNameMeter";
             string counterName = "AmbiguousNameCounter";

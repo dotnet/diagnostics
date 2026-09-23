@@ -9,7 +9,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
@@ -487,6 +487,20 @@ namespace Microsoft.Diagnostics.TestHelpers
             public ConsoleTestOutputHelper(ITestOutputHelper output)
             {
                 _output = output;
+            }
+
+            public string Output => _output?.Output ?? string.Empty;
+
+            public void Write(string message)
+            {
+                Console.Write(message);
+                _output?.Write(message);
+            }
+
+            public void Write(string format, params object[] args)
+            {
+                Console.Write(format, args);
+                _output?.Write(format, args);
             }
 
             public void WriteLine(string message)
