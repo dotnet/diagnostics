@@ -1095,6 +1095,32 @@ LLDBServices::GetNameByOffset(
     }
 
     symbol = address.GetSymbol();
+    if (!symbol.IsValid())
+    {
+        // Local Mach-O symbols in a separate dSYM are not exposed through the loaded module.
+        lldb::SBAddress moduleHeaderAddress = module.GetObjectFileHeaderAddress();
+        lldb::addr_t moduleFileAddress = moduleHeaderAddress.GetFileAddress();
+        lldb::addr_t moduleLoadAddress = moduleHeaderAddress.GetLoadAddress(target);
+        if (moduleHeaderAddress.IsValid() &&
+            moduleFileAddress != LLDB_INVALID_ADDRESS &&
+            moduleLoadAddress != LLDB_INVALID_ADDRESS &&
+            offset >= moduleLoadAddress)
+        {
+            lldb::SBModuleSpec moduleSpec;
+            moduleSpec.SetFileSpec(module.GetSymbolFileSpec());
+            lldb::SBModule symbolModule(moduleSpec);
+            if (symbolModule.IsValid())
+            {
+                lldb::addr_t symbolFileAddress = moduleFileAddress + offset - moduleLoadAddress;
+                lldb::SBAddress symbolAddress = symbolModule.ResolveFileAddress(symbolFileAddress);
+                if (symbolAddress.IsValid())
+                {
+                    address = symbolAddress;
+                    symbol = address.GetSymbol();
+                }
+            }
+        }
+    }
     if (symbol.IsValid())
     {
         lldb::SBAddress startAddress = symbol.GetStartAddress();
@@ -2517,6 +2543,7 @@ LLDBServices::GetOffsetBySymbol(
     lldb::SBModule module;
     lldb::SBSymbol symbol;
     lldb::SBAddress startAddress;
+    bool symbolFromSeparateFile = false;
 
     if (offset == nullptr)
     {
@@ -2538,8 +2565,20 @@ LLDBServices::GetOffsetBySymbol(
     symbol = module.FindSymbol(name);
     if (!symbol.IsValid())
     {
-        hr = E_INVALIDARG;
-        goto exit;
+        // Local Mach-O symbols in a separate dSYM are not exposed through the loaded module.
+        lldb::SBModuleSpec moduleSpec;
+        moduleSpec.SetFileSpec(module.GetSymbolFileSpec());
+        lldb::SBModule symbolModule(moduleSpec);
+        if (symbolModule.IsValid())
+        {
+            symbol = symbolModule.FindSymbol(name);
+            symbolFromSeparateFile = symbol.IsValid();
+        }
+        if (!symbol.IsValid())
+        {
+            hr = E_INVALIDARG;
+            goto exit;
+        }
     }
     startAddress = symbol.GetStartAddress();
     if (!startAddress.IsValid())
@@ -2547,7 +2586,27 @@ LLDBServices::GetOffsetBySymbol(
         hr = E_INVALIDARG;
         goto exit;
     }
-    *offset = startAddress.GetLoadAddress(target);
+    if (symbolFromSeparateFile)
+    {
+        lldb::SBAddress moduleHeaderAddress = module.GetObjectFileHeaderAddress();
+        lldb::addr_t symbolFileAddress = startAddress.GetFileAddress();
+        lldb::addr_t moduleFileAddress = moduleHeaderAddress.GetFileAddress();
+        lldb::addr_t moduleLoadAddress = moduleHeaderAddress.GetLoadAddress(target);
+        if (!moduleHeaderAddress.IsValid() ||
+            symbolFileAddress == LLDB_INVALID_ADDRESS ||
+            moduleFileAddress == LLDB_INVALID_ADDRESS ||
+            moduleLoadAddress == LLDB_INVALID_ADDRESS ||
+            symbolFileAddress < moduleFileAddress)
+        {
+            hr = E_INVALIDARG;
+            goto exit;
+        }
+        *offset = moduleLoadAddress + symbolFileAddress - moduleFileAddress;
+    }
+    else
+    {
+        *offset = startAddress.GetLoadAddress(target);
+    }
 exit:
     return hr;
 }
