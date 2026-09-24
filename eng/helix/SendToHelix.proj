@@ -39,7 +39,8 @@
           BeforeTargets="Restore"
           DependsOnTargets="DiscoverHelixTestProjects"
           Condition="'$(HelixTargetQueue)' != ''">
-    <MSBuild Projects="@(HelixTestProject)" Targets="Restore" BuildInParallel="true" />
+    <!-- Independent restores can write the same shared dependency's assets concurrently. -->
+    <MSBuild Projects="@(HelixTestProject)" Targets="Restore" BuildInParallel="false" />
   </Target>
 
   <!-- The SDK invokes Build for each queue. Each project stages into its queue-specific directory.
