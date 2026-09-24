@@ -9,20 +9,20 @@
 extern "C" {
 #endif
 
-typedef struct _DEBUGGER_STACK_FRAME
+typedef struct _DEBUGGER_NATIVE_STACK_FRAME
 {
     ULONG64 InstructionPointer;
     ULONG64 StackPointer;
     BOOL StackPointerValid;
-} DEBUGGER_STACK_FRAME, *PDEBUGGER_STACK_FRAME;
+} DEBUGGER_NATIVE_STACK_FRAME, *PDEBUGGER_NATIVE_STACK_FRAME;
 
 MIDL_INTERFACE("AB73D0E6-A5E0-4B5C-B9C1-B312C73C39EE")
-IDebuggerThreadStackService : public IUnknown
+IDebuggerNativeThreadStackService : public IUnknown
 {
 public:
-    virtual HRESULT STDMETHODCALLTYPE GetThreadStackTrace(
+    virtual HRESULT STDMETHODCALLTYPE GetNativeThreadStackTrace(
         ULONG32 sysId,
-        PDEBUGGER_STACK_FRAME frames,
+        PDEBUGGER_NATIVE_STACK_FRAME frames,
         ULONG framesSize,
         PULONG framesFilled) = 0;
 };

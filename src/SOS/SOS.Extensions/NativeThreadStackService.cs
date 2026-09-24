@@ -3,20 +3,21 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Extensions
 {
-    internal sealed unsafe class ThreadStackServiceFromDebuggerServices : CallableCOMWrapper, IThreadStackService
+    internal sealed unsafe class NativeThreadStackService : CallableCOMWrapper, INativeThreadStackService
     {
-        private static readonly Guid IID_IDebuggerThreadStackService = new("AB73D0E6-A5E0-4B5C-B9C1-B312C73C39EE");
+        private static readonly Guid IID_IDebuggerNativeThreadStackService = new("AB73D0E6-A5E0-4B5C-B9C1-B312C73C39EE");
 
-        private ref readonly IDebuggerThreadStackServiceVTable VTable =>
-            ref System.Runtime.CompilerServices.Unsafe.AsRef<IDebuggerThreadStackServiceVTable>(_vtable);
+        private ref readonly IDebuggerNativeThreadStackServiceVTable VTable => ref Unsafe.AsRef<IDebuggerNativeThreadStackServiceVTable>(_vtable);
 
-        public ThreadStackServiceFromDebuggerServices(IntPtr punk)
-            : base(IID_IDebuggerThreadStackService, punk)
+        internal NativeThreadStackService(IntPtr punk)
+            : base(IID_IDebuggerNativeThreadStackService, punk)
         {
         }
 
@@ -35,12 +36,12 @@ namespace SOS.Extensions
                 return Array.Empty<NativeStackFrame>();
             }
 
-            DebuggerStackFrame[] debuggerFrames = new DebuggerStackFrame[maxFrames];
+            DebuggerNativeStackFrame[] debuggerFrames = new DebuggerNativeStackFrame[maxFrames];
             HResult result;
             uint framesFilled;
-            fixed (DebuggerStackFrame* framesPtr = debuggerFrames)
+            fixed (DebuggerNativeStackFrame* framesPtr = debuggerFrames)
             {
-                result = VTable.GetThreadStackTrace(Self, threadId, framesPtr, debuggerFrames.Length, out framesFilled);
+                result = VTable.GetNativeThreadStackTrace(Self, threadId, framesPtr, debuggerFrames.Length, out framesFilled);
             }
             if (!result.IsOK)
             {
@@ -55,7 +56,7 @@ namespace SOS.Extensions
             NativeStackFrame[] frames = new NativeStackFrame[framesFilled];
             for (int index = 0; index < frames.Length; index++)
             {
-                DebuggerStackFrame frame = debuggerFrames[index];
+                DebuggerNativeStackFrame frame = debuggerFrames[index];
                 frames[index] = new NativeStackFrame(
                     frame.InstructionPointer,
                     frame.StackPointerValid != 0 ? frame.StackPointer : null);
@@ -63,18 +64,18 @@ namespace SOS.Extensions
             return frames;
         }
 
-        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-        private readonly struct DebuggerStackFrame
+        [StructLayout(LayoutKind.Sequential)]
+        private readonly struct DebuggerNativeStackFrame
         {
             public readonly ulong InstructionPointer;
             public readonly ulong StackPointer;
             public readonly int StackPointerValid;
         }
 
-        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
-        private readonly struct IDebuggerThreadStackServiceVTable
+        [StructLayout(LayoutKind.Sequential)]
+        private readonly struct IDebuggerNativeThreadStackServiceVTable
         {
-            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, DebuggerStackFrame*, int, out uint, int> GetThreadStackTrace;
+            public readonly delegate* unmanaged[Stdcall]<IntPtr, uint, DebuggerNativeStackFrame*, int, out uint, int> GetNativeThreadStackTrace;
         }
     }
 }

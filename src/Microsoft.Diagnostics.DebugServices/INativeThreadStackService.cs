@@ -8,7 +8,7 @@ namespace Microsoft.Diagnostics.DebugServices
     /// <summary>
     /// Provides native stack frames reported by the debugger.
     /// </summary>
-    public interface IThreadStackService
+    public interface INativeThreadStackService
     {
         /// <summary>
         /// Gets the native stack frames for the specified operating system thread.

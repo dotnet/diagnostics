@@ -83,9 +83,9 @@ LLDBServices::QueryInterface(
         AddRef();
         return S_OK;
     }
-    else if (InterfaceId == __uuidof(IDebuggerThreadStackService))
+    else if (InterfaceId == __uuidof(IDebuggerNativeThreadStackService))
     {
-        *Interface = static_cast<IDebuggerThreadStackService*>(this);
+        *Interface = static_cast<IDebuggerNativeThreadStackService*>(this);
         AddRef();
         return S_OK;
     }
@@ -288,9 +288,9 @@ LLDBServices::VirtualUnwind(
 }
 
 HRESULT
-LLDBServices::GetThreadStackTrace(
+LLDBServices::GetNativeThreadStackTrace(
     ULONG32 sysId,
-    PDEBUGGER_STACK_FRAME frames,
+    PDEBUGGER_NATIVE_STACK_FRAME frames,
     ULONG framesSize,
     PULONG framesFilled)
 {

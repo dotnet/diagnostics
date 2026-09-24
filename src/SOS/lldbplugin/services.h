@@ -5,7 +5,7 @@
 #include <string>
 #include <set>
 #include <vector>
-#include "debuggerthreadstackservice.h"
+#include "debuggernativethreadstackservice.h"
 
 #define CACHE_SIZE  4096
 
@@ -19,7 +19,7 @@ struct SectionRange
     lldb::SBSection section;
 };
 
-class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices, public IDebuggerThreadStackService
+class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices, public IDebuggerNativeThreadStackService
 {
 private:
     LONG m_ref;
@@ -138,9 +138,9 @@ public:
         ULONG32 contextSize,
         PBYTE context);
 
-    HRESULT STDMETHODCALLTYPE GetThreadStackTrace(
+    HRESULT STDMETHODCALLTYPE GetNativeThreadStackTrace(
         ULONG32 sysId,
-        PDEBUGGER_STACK_FRAME frames,
+        PDEBUGGER_NATIVE_STACK_FRAME frames,
         ULONG framesSize,
         PULONG framesFilled);
 
