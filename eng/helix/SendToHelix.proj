@@ -11,7 +11,6 @@
     <WaitForWorkItemCompletion>true</WaitForWorkItemCompletion>
     <FailOnWorkItemFailure>true</FailOnWorkItemFailure>
     <FailOnTestFailure>true</FailOnTestFailure>
-    <WorkItemTimeout Condition="'$(WorkItemTimeout)' == ''">03:00:00</WorkItemTimeout>
 
     <!-- The work item runs the test assembly with the dotnet host Helix
          provisions for us as a correlation payload (see IncludeDotNetCli). -->
@@ -23,38 +22,49 @@
     <DotNetCliRuntime Condition="'$(TargetOS)' == 'Windows_NT' and '$(TargetArch)' == 'x86'">win-x86</DotNetCliRuntime>
   </PropertyGroup>
 
-  <!-- Overlay every exact CoreCLR runtime into the same dotnet-cli correlation
-       payload. Helix downloads and extracts these before the work item starts,
-       so all scenarios share one runtime installation without machine fallback. -->
-  <ItemGroup>
-    <AdditionalDotNetPackage Include="$(DotNetRuntimeVersions.Split('|'))">
-      <PackageType>runtime</PackageType>
-      <Channel>Current</Channel>
-    </AdditionalDotNetPackage>
-  </ItemGroup>
+  <Target Name="DiscoverHelixTestProjects">
+    <ItemGroup Condition="'$(HelixTestProject)' != ''">
+      <HelixTestProject Include="$(HelixTestProject)" />
+    </ItemGroup>
+    <MSBuild Projects="$(RepoRoot)src/tests/dirs.proj"
+             Targets="DiscoverHelixTestProjects"
+             Condition="'@(HelixTestProject)' == ''">
+      <Output TaskParameter="TargetOutputs" ItemName="HelixTestProject" />
+    </MSBuild>
+    <Error Condition="'@(HelixTestProject)' == ''" Text="At least one Helix test project is required." />
+  </Target>
 
-  <ItemGroup>
-    <_RequestedHelixWorkItem Include="$(HelixWorkItems.Split('|'))" />
+  <!-- Restore candidate projects' package inputs (not binaries), including SOS's Windows debugger package. -->
+  <Target Name="RestoreHelixTestProjects"
+          BeforeTargets="Restore"
+          DependsOnTargets="DiscoverHelixTestProjects"
+          Condition="'$(HelixTargetQueue)' != ''">
+    <MSBuild Projects="@(HelixTestProject)" Targets="Restore" BuildInParallel="true" />
+  </Target>
 
-    <HelixWorkItem Include="@(_RequestedHelixWorkItem)">
-      <PayloadArchive>$(TestDir).zip</PayloadArchive>
-      <Command>$(HelixWorkItemCommand) --helix-work-item &quot;%(Identity)&quot;</Command>
-      <Timeout>$(WorkItemTimeout)</Timeout>
-    </HelixWorkItem>
-  </ItemGroup>
-
-  <Target Name="PrepareHelixPayload" BeforeTargets="CoreTest">
-    <Error Condition="'$(TestDir)' == ''" Text="TestDir is required." />
-    <Error Condition="!Exists('$(TestDir)')" Text="The Helix payload directory '$(TestDir)' does not exist." />
-    <Error Condition="'$(HelixWorkItems)' == ''" Text="HelixWorkItems is required." />
-    <Error Condition="'$(HelixWorkItemCommand)' == ''" Text="HelixWorkItemCommand is required." />
-    <Error Condition="'$(DotNetRuntimeVersions)' == ''" Text="DotNetRuntimeVersions is required." />
+  <!-- The SDK invokes Build for each queue. Each project stages into its queue-specific directory.
+       Gather before the SDK's AfterTargets=Build runtime provisioning, not during submission. -->
+  <Target Name="GatherHelixWorkItems" DependsOnTargets="DiscoverHelixTestProjects" Returns="@(HelixWorkItem)">
+    <Error Condition="'$(HelixTargetQueue)' == ''" Text="GatherHelixWorkItems requires a single HelixTargetQueue." />
+    <MSBuild Projects="@(HelixTestProject)" Targets="CreateHelixPayload" SkipNonexistentTargets="true" BuildInParallel="true">
+      <Output TaskParameter="TargetOutputs" ItemName="HelixWorkItem" />
+    </MSBuild>
     <Error Condition="'@(HelixWorkItem)' == ''" Text="At least one Helix work item is required." />
-    <!-- PayloadDirectory creates its ZIP in a MemoryStream. Write this large payload to disk instead
-         to avoid requiring more than a gigabyte of contiguous managed memory during submission. -->
-    <ZipDirectory SourceDirectory="$(TestDir)"
-                  DestinationFile="$(TestDir).zip"
-                  Overwrite="true" />
+    <Error Condition="'@(HelixWorkItem->Count())' != '@(HelixWorkItem->Distinct()->Count())'"
+           Text="Helix work-item identities must be unique across the selected test projects." />
+  </Target>
+
+  <Target Name="PrepareHelixRuntimePackages"
+          BeforeTargets="Build"
+          DependsOnTargets="GatherHelixWorkItems"
+          Condition="'$(HelixTargetQueue)' != ''"
+          Returns="@(AdditionalDotNetPackage)">
+    <ItemGroup>
+      <_HelixRuntimeVersion Include="%(HelixWorkItem.RequiredRuntimeVersions)" />
+      <AdditionalDotNetPackage Include="@(_HelixRuntimeVersion->Distinct())">
+        <PackageType>runtime</PackageType>
+      </AdditionalDotNetPackage>
+    </ItemGroup>
   </Target>
 
 </Project>

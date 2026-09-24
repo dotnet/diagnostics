@@ -253,9 +253,11 @@ failed runtime/configuration leg without increasing artifacts for passing legs.
 
 ## Helix execution
 
-`HelixPayload.targets` stages one self-contained payload per OS, RID, and
-configuration and invokes the generic `eng/helix/SendToHelix.proj` dispatcher
-with one work item per runtime, plus the Windows Framework work item.
+`HelixPayload.targets` implements SOS's own `CreateHelixPayload` target.
+`SOS.Tests.csproj` imports that implementation directly. Like every other Helix
+test project, SOS owns file collection, staging, validation, and work-item metadata.
+It creates one self-contained payload per OS, RID, configuration, and queue;
+submission uses one work item per runtime, plus the Windows Framework work item.
 The payload contains `SOS.Tests`, its harness subprocesses, native SOS, the
 repository-built dotnet-dump, DbgEng on Windows, and all prebuilt Core,
 SingleFile, and Framework debuggees needed by that platform. The exact runtime
@@ -263,7 +265,18 @@ versions are defined by `RuntimeTestVersions` in `eng/Versions.props`. The same
 catalog drives debuggee publishing, harness metadata, and Helix installation.
 Helix provisions the pinned .NET 10 SDK and overlays every test runtime into the
 same correlation payload rather than copying a .NET installation into each
-work-item payload.
+work-item payload. Each shard includes its host and debuggee runtime versions in
+`RequiredRuntimeVersions` metadata returned by `CreateHelixPayload`.
+The shared sender gathers all work items and deduplicates
+their runtime requirements into the SDK's `AdditionalDotNetPackage` items.
+This also ensures the test-host runtime is
+available independently of the debuggee matrix. SOS retains its existing
+platform-specific host selection, including .NET 11 on macOS.
+
+`StageSOSHelixPayload` performs SOS staging without submitting; `CreateHelixPayload`
+also prepares the runtime shards, creates the on-disk ZIP, and returns complete
+work items. To submit SOS alone, invoke `eng/helix/SendToHelix.proj` with
+`HelixTestProject` set to the absolute path of `SOS.Tests.csproj`.
 
 The payload includes a `.sos-test-payload` marker and preserves the repository
 artifact layout. `RepoLayout` discovers that root and derives all tool,

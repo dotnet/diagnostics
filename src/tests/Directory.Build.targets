@@ -1,6 +1,10 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.targets"/>
-  <Import Project="HelixPayload.targets" />
+
+  <!-- CI exclusion is independent of whether the project contributes to the current queue. -->
+  <PropertyGroup>
+    <SkipTests Condition="'$(SkipHelixTests)' == 'true' and '$(IsHelixTestProject)' == 'true'">true</SkipTests>
+  </PropertyGroup>
 
   <!-- xUnit v3 uses Microsoft Testing Platform filter options while legacy xUnit uses console-runner options. -->
   <PropertyGroup Condition="'$(DiagnosticsTestMethodFilter)' != ''">

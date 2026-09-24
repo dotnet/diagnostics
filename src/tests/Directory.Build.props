@@ -2,8 +2,8 @@
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
 
   <PropertyGroup>
-    <TestExecutionMode Condition="'$(TestExecutionMode)' == ''">AzDO</TestExecutionMode>
-    <HelixSubmissionTarget Condition="'$(HelixSubmissionTarget)' == ''">DefaultSendToHelix</HelixSubmissionTarget>
+    <IsHelixTestProject Condition="'$(IsHelixTestProject)' == ''">false</IsHelixTestProject>
+    <TestHostRuntimeVersion Condition="'$(TestHostRuntimeVersion)' == ''">$(MicrosoftNETCoreApp100Version)</TestHostRuntimeVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(IsTestProject)' == 'true' and '$(EnableXUnitV3)' != 'false'">

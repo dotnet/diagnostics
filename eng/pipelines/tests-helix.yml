@@ -5,11 +5,6 @@ parameters:
   type: string
 - name: platform
   type: object
-- name: testExecutionMode
-  type: string
-  values:
-  - SingleHelixLeg
-  - Helix
 - name: isOfficialBuild
   type: boolean
   default: false
@@ -17,12 +12,8 @@ parameters:
 jobs:
 - template: ${{ parameters.pipelineJobTemplate }}
   parameters:
-    ${{ if eq(parameters.testExecutionMode, 'SingleHelixLeg') }}:
-      name: ManagedOnly_Helix
-      displayName: Managed-only tests on Helix
-    ${{ else }}:
-      name: Tests_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
-      displayName: Tests Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
+    name: Tests_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
+    displayName: Tests Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
     continueOnError: ${{ parameters.isOfficialBuild }}
     enableMicrobuild: true
@@ -59,9 +50,8 @@ jobs:
         displayName: Run tests on Helix
         osGroup: ${{ parameters.platform.os }}
         sendParams: >
-          $(Build.SourcesDirectory)/src/tests/dirs.proj
-          /restore /p:TreatWarningsAsErrors=false /t:SendTestsToHelix
-          /p:HelixTestExecutionMode=${{ parameters.testExecutionMode }}
+          $(Build.SourcesDirectory)/eng/helix/SendToHelix.proj
+          /restore /p:TreatWarningsAsErrors=false /t:Test
           /p:Configuration=${{ parameters.configuration }}
           /p:TargetArch=${{ parameters.platform.arch }}
           /p:TargetOS=${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}
@@ -70,8 +60,8 @@ jobs:
           /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/SendTestsToHelix.binlog
         env:
           HelixSource: pr/dotnet/diagnostics/tests
-          HelixType: tests/${{ parameters.testExecutionMode }}/
-          HelixConfiguration: ${{ parameters.testExecutionMode }}_${{ parameters.platform.rid }}_${{ parameters.configuration }}
+          HelixType: tests/
+          HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
           ${{ if eq(variables['System.TeamProject'], 'public') }}:
             HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }})
             Creator: dotnet-bot
@@ -96,7 +86,7 @@ jobs:
         displayName: Publish Helix logs
         inputs:
           targetPath: '$(Build.StagingDirectory)/HelixLogs'
-          artifactName: Logs_Tests_Helix_${{ parameters.testExecutionMode }}_${{ parameters.platform.rid }}_${{ parameters.configuration }}_$(System.JobAttempt)
+          artifactName: Logs_Tests_Helix_${{ parameters.platform.rid }}_${{ parameters.configuration }}_$(System.JobAttempt)
           sbomEnabled: false
         continueOnError: true
         condition: always()

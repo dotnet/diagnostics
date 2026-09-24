@@ -132,18 +132,6 @@ extends:
             jobTemplate: /eng/pipelines/tests-helix.yml
             isOfficialBuild: ${{ variables.isOfficialBuild }}
             configurations:
-            - Debug
-            platforms:
-            - linux-x64
-            jobParameters:
-              pipelineJobTemplate: ${{ variables.jobTemplate }}
-              testExecutionMode: SingleHelixLeg
-
-        - template: /eng/pipelines/platform-matrix.yml
-          parameters:
-            jobTemplate: /eng/pipelines/tests-helix.yml
-            isOfficialBuild: ${{ variables.isOfficialBuild }}
-            configurations:
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               - Debug
             - ${{ else }}:
@@ -160,7 +148,6 @@ extends:
               - osx-x64
             jobParameters:
               pipelineJobTemplate: ${{ variables.jobTemplate }}
-              testExecutionMode: Helix
 
     ############################
     #                          #

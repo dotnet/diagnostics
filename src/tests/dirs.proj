@@ -69,23 +69,10 @@
           EnvironmentVariables="@(DebuggeeBuildEnv)" />
   </Target>
 
-  <Target Name="DiscoverHelixTestProjects">
-    <Error Condition="'$(HelixTestExecutionMode)' != 'SingleHelixLeg' and '$(HelixTestExecutionMode)' != 'Helix'"
-           Text="HelixTestExecutionMode must be SingleHelixLeg or Helix." />
+  <Target Name="DiscoverHelixTestProjects" Returns="@(HelixTestProject->'%(FullPath)')">
     <ItemGroup>
-      <_TestProject Include="@(ProjectReference)" Condition="'%(Extension)' == '.csproj'" />
+      <HelixTestProject Include="@(ProjectReference)" Condition="'%(ProjectReference.Extension)' == '.csproj'" />
     </ItemGroup>
-    <MSBuild Projects="@(_TestProject)" Targets="GetHelixTestProject" BuildInParallel="true">
-      <Output TaskParameter="TargetOutputs" ItemName="_DiscoveredHelixTestProject" />
-    </MSBuild>
-    <ItemGroup>
-      <HelixTestProject Include="@(_DiscoveredHelixTestProject)"
-                        Condition="'%(_DiscoveredHelixTestProject.TestExecutionMode)' == '$(HelixTestExecutionMode)'" />
-    </ItemGroup>
-    <Error Condition="'@(HelixTestProject)' == ''" Text="No projects use TestExecutionMode=$(HelixTestExecutionMode)." />
   </Target>
 
-  <Target Name="SendTestsToHelix" DependsOnTargets="DiscoverHelixTestProjects">
-    <MSBuild Projects="@(HelixTestProject)" Targets="%(HelixTestProject.HelixSubmissionTarget)" BuildInParallel="true" />
-  </Target>
 </Project>

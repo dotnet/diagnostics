@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TestExecutionMode>SingleHelixLeg</TestExecutionMode>
+    <IsHelixTestProject>true</IsHelixTestProject>
     <TargetFrameworks>$(SupportedXUnitTestTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
@@ -10,5 +10,7 @@
     <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.Monitoring.EventPipe/Microsoft.Diagnostics.Monitoring.EventPipe.csproj" />
     <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
   </ItemGroup>
+
+  <Import Project="..\Helix\Managed\HelixPayload.targets" Condition="'$(TargetRid)' == 'linux-x64'" />
 
 </Project>
