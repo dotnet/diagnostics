@@ -253,6 +253,10 @@ failed runtime/configuration leg without increasing artifacts for passing legs.
 
 ## Helix execution
 
+Public pull requests run SOS Helix tests on both macOS x64 and ARM64 in Debug.
+Non-PR builds run both architectures in Debug and Release; internal pull
+requests retain ARM64-only macOS coverage.
+
 `HelixPayload.targets` stages one self-contained payload per OS, RID, and
 configuration and invokes the generic `eng/helix/SendToHelix.proj` dispatcher
 with one work item per runtime, plus the Windows Framework work item.

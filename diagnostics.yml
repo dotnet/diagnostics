@@ -144,7 +144,7 @@ extends:
             - linux-arm64
             - linux-musl-x64
             - osx-arm64
-            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+            - ${{ if or(eq(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
               - osx-x64
             jobParameters:
               pipelineJobTemplate: ${{ variables.jobTemplate }}
