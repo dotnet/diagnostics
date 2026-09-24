@@ -40,6 +40,19 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 ./artifacts/bin/SOS.Tests/Debug/net10.0/SOS.Tests
 ```
 
+On macOS, the repository-built `sos-lldb` driver loads `LLDB.framework` from
+the developer tools selected by `DEVELOPER_DIR`, or by `xcode-select` when that
+variable is unset. Both full Xcode and Command Line Tools are supported. Use
+tools compatible with the installed macOS version. To select Command Line
+Tools for builds and tests without changing the machine-wide selection:
+
+```sh
+export DEVELOPER_DIR=/Library/Developer/CommandLineTools
+```
+
+The build and harness discover its framework automatically; no
+`DYLD_FRAMEWORK_PATH` override is needed.
+
 ## Architecture
 
 The harness is split into four parts:
@@ -209,7 +222,8 @@ Comma-separated matrix allow-lists are case-insensitive enum names:
 | `SOSHARNESS_DAC_DIR` | Override the legacy DAC directory used by the dbgeng engine host. |
 | `SOSHARNESS_CDAC_DIR` | Override cDAC discovery with a directory containing the cDAC. |
 | `SOSHARNESS_USECDAC` | Local global DAC clamp; overrides the matrix DAC selection and is not set in CI. |
-| `LLDB_PATH` | Override LLDB discovery. Otherwise Xcode and then `PATH` are searched. |
+| `DEVELOPER_DIR` | Select the macOS Xcode or Command Line Tools installation used by the SOS LLDB driver. Defaults to `xcode-select -p`. |
+| `LLDB_PATH` | Fallback LLDB executable when no staged or repository-built debugger is available. Otherwise Xcode and then `PATH` are searched. |
 | `NUGET_PACKAGES` | Override the NuGet package root used to locate runtime packs and cDAC assets. |
 
 The Azure Linux Helix Alpine container runs the work item one test at a time to

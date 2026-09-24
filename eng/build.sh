@@ -190,14 +190,19 @@ fi
 #
 
 if [ "$__HostOS" == "osx" ]; then
+    __DeveloperDir="${DEVELOPER_DIR:-$(xcode-select -p)}"
+    __LldbFrameworkDir="$__DeveloperDir/../SharedFrameworks"
+    if [ ! -f "$__LldbFrameworkDir/LLDB.framework/LLDB" ]; then
+        __LldbFrameworkDir="$__DeveloperDir/Library/PrivateFrameworks"
+    fi
     export LLDB_H="$__RepoRootDir"/src/SOS/lldbplugin/swift-4.0
-    export LLDB_LIB=$(xcode-select -p)/../SharedFrameworks/LLDB.framework/LLDB
-    export LLDB_PATH=$(xcode-select -p)/usr/bin/lldb
+    export LLDB_LIB="$__LldbFrameworkDir/LLDB.framework/LLDB"
+    export LLDB_PATH="$__DeveloperDir/usr/bin/lldb"
 
     export MACOSX_DEPLOYMENT_TARGET=10.12
 
-    if [ ! -f $LLDB_LIB ]; then
-        echo "Cannot find the lldb library. Try installing Xcode."
+    if [ ! -f "$LLDB_LIB" ]; then
+        echo "Cannot find LLDB.framework in the selected developer tools at '$__DeveloperDir'. Install Xcode or Command Line Tools, or set DEVELOPER_DIR." >&2
         exit 1
     fi
 
