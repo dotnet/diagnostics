@@ -41,6 +41,7 @@
     <CommonInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(TargetArch) -InstallDir $(DotNetInstallRoot)</CommonInstallArgs>
     <DotNetInstallDir>$([MSBuild]::NormalizeDirectory('$(DotNetInstallRoot)', 'shared', 'Microsoft.NETCore.App', '$(MicrosoftNETCoreAppRefVersion)'))</DotNetInstallDir>
     <TestConfigFileName>$(DotNetInstallRoot)Debugger.Tests.Versions.txt</TestConfigFileName>
+    <TestHostRuntimeVersion Condition="'$(TestHostRuntimeVersion)' == ''">$(MicrosoftNETCoreApp100Version)</TestHostRuntimeVersion>
   </PropertyGroup>
 
   <Choose>
@@ -63,7 +64,7 @@
 
   <Target Name="InstallTestRuntimes"
           AfterTargets="Build"
-          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
+          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallTestHostRuntimeWindows;InstallTestHostRuntimeUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
 
 <!--
     When cross-building (host arch != target arch), install a host-architecture SDK
@@ -82,6 +83,26 @@
           IgnoreStandardErrorWarningFormat="true" />
     <Exec Command="bash $(DotnetInstallScriptCmd) $(BuildSdkInstallArgs)"
           Condition="!$([MSBuild]::IsOsPlatform(Windows))"
+          IgnoreStandardErrorWarningFormat="true" />
+  </Target>
+
+  <!--
+    Private runtime testing narrows @(RuntimeTestVersions) to the runtime under test, but the
+    xUnit test hosts still target $(NetCoreAppTestTargetFramework). Install that host runtime
+    separately so private builds don't expand the SOS debuggee matrix just to run the tests.
+  -->
+
+  <Target Name="InstallTestHostRuntimeWindows"
+          Condition="$([MSBuild]::IsOsPlatform(Windows)) and '$(TestHostRuntimeVersion)' != '' and !Exists('$(DotNetInstallRoot)shared\Microsoft.NETCore.App\$(TestHostRuntimeVersion)')">
+
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(TestHostRuntimeVersion) -Runtime dotnet }&quot;"
+          IgnoreStandardErrorWarningFormat="true" />
+  </Target>
+
+  <Target Name="InstallTestHostRuntimeUnix"
+          Condition="!$([MSBuild]::IsOsPlatform(Windows)) and '$(TestHostRuntimeVersion)' != '' and !Exists('$(DotNetInstallRoot)shared/Microsoft.NETCore.App/$(TestHostRuntimeVersion)')">
+
+    <Exec Command="bash $(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(TestHostRuntimeVersion) -Runtime dotnet"
           IgnoreStandardErrorWarningFormat="true" />
   </Target>
 
