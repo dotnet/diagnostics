@@ -278,6 +278,13 @@ also prepares the runtime shards, creates the on-disk ZIP, and returns complete
 work items. To submit SOS alone, invoke `eng/helix/SendToHelix.proj` with
 `HelixTestProject` set to the absolute path of `SOS.Tests.csproj`.
 
+Private runtime validation passes `PrivateBuildTesting=true` and
+`LiveRuntimeDir` to the sender. The payload includes that complete runtime
+layout and overlays it onto the matching Helix-provisioned runtime before the
+test starts. Private runs submit only the configured runtime shard and select
+the `Core` flavor; self-contained and Framework targets continue to use product
+runtime packages and are therefore excluded.
+
 The payload includes a `.sos-test-payload` marker and preserves the repository
 artifact layout. `RepoLayout` discovers that root and derives all tool,
 debuggee, scratch, and upload paths. The platform launcher
