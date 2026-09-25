@@ -9,7 +9,8 @@
   <PropertyGroup Condition="'$(IsTestProject)' == 'true' and '$(EnableXUnitV3)' != 'false'">
     <TestRunnerName>XUnitV3</TestRunnerName>
     <OutputType>Exe</OutputType>
-    <TestDotNetRoot Condition="'$(TestDotNetRoot)' == ''">$(ArtifactsDotnetTestDir)</TestDotNetRoot>
+    <!-- The build SDK supplies the net10 test-host runtime; x86 uses its separately provisioned host. -->
+    <TestDotNetRoot Condition="'$(TestDotNetRoot)' == '' and '$(TargetArch)' == 'x86'">$(ArtifactsDotnetTestDir)</TestDotNetRoot>
     <DefaultAppHostRuntimeIdentifier Condition="'$(TargetRid)' != ''">$(TargetRid)</DefaultAppHostRuntimeIdentifier>
   </PropertyGroup>
 </Project>
