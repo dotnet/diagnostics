@@ -22,6 +22,10 @@
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.SymbolStore.UnitTests" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(TargetFramework)' == '$(DesktopTargetFramework)'">
     <Reference Include="System.Net.Http" />
   </ItemGroup>
