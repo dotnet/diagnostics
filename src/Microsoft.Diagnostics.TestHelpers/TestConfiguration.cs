@@ -58,9 +58,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                     nugetPackages = Path.Combine(basePath, ".nuget", "packages");
                 }
             }
-            // The TargetArchitecture and NuGetPackageCacheDir can still be overridden
-            // in a config file. This is just setting the default. The other values can
-            // also // be overridden but it is not recommended.
+            // TargetArchitecture, NuGetPackageCacheDir, and DotNetRoot can be overridden
+            // in a config file. These are defaults. Overriding the other values is not recommended.
             Dictionary<string, string> initialConfig = new()
             {
                 ["Timestamp"] = GetTimeStampText(),
@@ -71,6 +70,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TargetRid"] = GetRid(),
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages,
+                ["DotNetRoot"] = Environment.GetEnvironmentVariable("DOTNET_ROOT"),
             };
             if (OS.Kind == OSKind.Windows)
             {

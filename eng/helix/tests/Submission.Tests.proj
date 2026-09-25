@@ -1,0 +1,301 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project DefaultTargets="Test">
+  <PropertyGroup>
+    <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../'))</RepoRoot>
+    <_TestRoot>$(RepoRoot)artifacts/tmp/helix-submission-tests/$([System.Guid]::NewGuid())/</_TestRoot>
+    <_Sender>$(RepoRoot)eng/helix/SendToHelix.proj</_Sender>
+    <_Fixture>$(MSBuildThisFileDirectory)PayloadFixture.proj</_Fixture>
+    <_CommonProperties>HelixTestProject=$(_Fixture);SubmissionTestRoot=$(_TestRoot);TargetOS=Windows_NT;TargetArch=x64;Configuration=Debug</_CommonProperties>
+    <_QueueA>Windows.Amd64.Server2022.Open</_QueueA>
+    <_QueueB>Windows.Amd64.Server2025.Open</_QueueB>
+    <_DotNetHost>$([MSBuild]::NormalizePath('$(MSBuildToolsPath)', '..', '..', 'dotnet'))</_DotNetHost>
+    <_DotNetHost Condition="'$(OS)' == 'Windows_NT'">$(_DotNetHost).exe</_DotNetHost>
+    <_FailureCommand>&quot;$(_DotNetHost)&quot; msbuild &quot;$(_Sender)&quot; -nologo -v:quiet</_FailureCommand>
+  </PropertyGroup>
+
+  <Target Name="Initialize">
+    <MakeDir Directories="$(_TestRoot)" />
+    <WriteLinesToFile File="$(_TestRoot)fixture.txt" Lines="prebuilt fixture" Overwrite="true" />
+  </Target>
+
+  <Target Name="TestProjectRidSelection" DependsOnTargets="Initialize">
+    <MSBuild Projects="$(RepoRoot)src/tests/dirs.proj" Targets="DiscoverHelixTestProjects">
+      <Output TaskParameter="TargetOutputs" ItemName="_DiscoveredProject" />
+    </MSBuild>
+    <ItemGroup>
+      <_CandidateProject Include="@(_DiscoveredProject)" Condition="'%(_DiscoveredProject.Filename)' != 'SOS.Tests' and '%(_DiscoveredProject.Filename)' != 'EventPipe.UnitTests' and '%(_DiscoveredProject.Filename)' != 'DotnetGCDump.UnitTests'" />
+      <_CommonTestRunnerProject Include="@(_DiscoveredProject)"
+                               Condition="'%(_DiscoveredProject.Filename)' == 'Microsoft.Diagnostics.NETCore.Client.UnitTests' or '%(_DiscoveredProject.Filename)' == 'Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests' or '%(_DiscoveredProject.Filename)' == 'DotnetCounters.UnitTests' or '%(_DiscoveredProject.Filename)' == 'DotnetTrace.UnitTests'" />
+      <_CandidateProject Remove="@(_CommonTestRunnerProject)" />
+      <_SOSProject Include="@(_DiscoveredProject)" Condition="'%(_DiscoveredProject.Filename)' == 'SOS.Tests'" />
+      <_ManagedSuite Include="Microsoft.Diagnostics.ExtensionCommands.UnitTests" />
+      <_ManagedSuite Include="Microsoft.Diagnostics.Monitoring.UnitTests" />
+      <_ManagedSuite Include="Microsoft.FileFormats.UnitTests" />
+      <_ManagedSuite Include="Microsoft.SymbolStore.UnitTests" />
+      <_RoutingInput Include="@(_ManagedSuite->'$(_TestRoot)routing/bin/%(Identity)/Debug/net10.0/%(Identity).dll')" />
+      <_RoutingInput Include="@(_ManagedSuite->'$(_TestRoot)routing/bin/%(Identity)/Release/net10.0/%(Identity).dll')" />
+      <_SelectedLeg Include="PublicDebug" Queue="Ubuntu.2204.Amd64.Open" Configuration="Debug" />
+      <_SelectedLeg Include="InternalDebug" Queue="Ubuntu.2204.Amd64" Configuration="Debug" />
+      <_SelectedLeg Include="OtherQueueDebug" Queue="Ubuntu.2404.Amd64.Open" Configuration="Debug" />
+      <_SelectedLeg Include="NoQueueDebug" Queue="" Configuration="Debug" />
+      <_SelectedLeg Include="PublicRelease" Queue="Ubuntu.2204.Amd64.Open" Configuration="Release" />
+      <_SelectedLeg Include="InternalRelease" Queue="Ubuntu.2204.Amd64" Configuration="Release" />
+      <_SelectedLeg Include="OtherQueueRelease" Queue="Ubuntu.2404.Amd64.Open" Configuration="Release" />
+      <_SkippedLeg Include="Windows" Queue="Windows.Amd64.Server2022.Open" Configuration="Debug" Rid="win-x64" />
+      <_SkippedLeg Include="WindowsRelease" Queue="Windows.Amd64.Server2022.Open" Configuration="Release" Rid="win-x64" />
+      <_SkippedLeg Include="OtherRid" Queue="Ubuntu.2204.Amd64.Open" Configuration="Debug" Rid="linux-arm64" />
+      <_SkippedLeg Include="MacOS" Queue="OSX.15.Amd64.Open" Configuration="Release" Rid="osx-x64" />
+      <_SkippedLeg Include="Musl" Queue="Alpine.319.Amd64.Open" Configuration="Debug" Rid="linux-musl-x64" />
+      <_SkippedLeg Include="NoRid" Queue="Ubuntu.2204.Amd64.Open" Configuration="Debug" Rid="" />
+    </ItemGroup>
+    <Error Condition="'@(_SOSProject->Count())' != '1' or '@(_CandidateProject->Count())' &lt;= '4'"
+           Text="Candidates must include SOS, the managed suites, and projects without Helix targets." />
+    <Error Condition="!$([System.IO.Path]::IsPathRooted('%(_DiscoveredProject.Identity)'))"
+           Text="Candidate paths must be absolute so they can be consumed by the sender." />
+    <Error Condition="'%(_DiscoveredProject.Extension)' != '.csproj' or !Exists('%(_DiscoveredProject.Identity)')"
+           Text="Candidates must be existing C# projects, not infrastructure projects." />
+    <PropertyGroup>
+      <_RoutingProperties>ArtifactsDir=$(_TestRoot)routing/;NetCoreAppTestTargetFramework=net10.0;TargetOS=linux;TargetArch=x64;SkipHelixTests=true</_RoutingProperties>
+    </PropertyGroup>
+    <MakeDir Directories="@(_RoutingInput->'%(RootDir)%(Directory)')" />
+    <WriteLinesToFile File="%(_RoutingInput.Identity)" Lines="prebuilt routing fixture" Overwrite="true" />
+    <MSBuild Projects="@(_CandidateProject)" Targets="CreateHelixPayload" SkipNonexistentTargets="true"
+             Properties="$(_RoutingProperties);ArtifactsBinDir=$(_TestRoot)routing/bin/;Configuration=%(_SelectedLeg.Configuration);TargetRid=linux-x64;HelixTargetQueue=%(_SelectedLeg.Queue)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RoutedWorkItem" />
+    </MSBuild>
+    <Error Condition="'@(_RoutedWorkItem->Count())' != '28'" Text="Each managed project must contribute on linux-x64 regardless of queue or configuration." />
+    <Error Condition="!Exists('%(_RoutedWorkItem.PayloadDirectory)/runtests.sh')"
+           Text="Selected projects must stage their launcher even when legacy CI execution is disabled." />
+    <MSBuild Projects="@(_CandidateProject)" Targets="CreateHelixPayload" SkipNonexistentTargets="true"
+             Properties="$(_RoutingProperties);ArtifactsBinDir=$(_TestRoot)missing/;Configuration=%(_SkippedLeg.Configuration);TargetRid=%(_SkippedLeg.Rid);HelixTargetQueue=%(_SkippedLeg.Queue)">
+      <Output TaskParameter="TargetOutputs" ItemName="_SkippedWorkItem" />
+    </MSBuild>
+    <Error Condition="'@(_SkippedWorkItem)' != ''" Text="RIDs other than linux-x64 must not contribute managed work items." />
+  </Target>
+
+  <Target Name="TestManagedPayloadPlatforms" DependsOnTargets="Initialize">
+    <PropertyGroup>
+      <_ManagedFixture>$(MSBuildThisFileDirectory)ManagedPayloadFixture.proj</_ManagedFixture>
+      <_ManagedRoot>$(_TestRoot)managed helpers/</_ManagedRoot>
+      <_ManagedInput>$(_ManagedRoot)bin/ManagedPayloadFixture/Debug/net10.0/</_ManagedInput>
+      <_ManagedProperties>ArtifactsDir=$(_ManagedRoot);ArtifactsBinDir=$(_ManagedRoot)bin/;Configuration=Debug;HelixTargetQueue=FixtureQueue</_ManagedProperties>
+    </PropertyGroup>
+    <MakeDir Directories="$(_ManagedInput)" />
+    <WriteLinesToFile File="$(_ManagedInput)ManagedFixture.dll" Lines="prebuilt managed fixture" Overwrite="true" />
+    <ItemGroup>
+      <_WindowsRid Include="win-x64;win-x86;win-arm64" />
+      <_UnixRid Include="linux-x64" TargetOS="linux" />
+      <_UnixRid Include="osx-arm64" TargetOS="osx" />
+    </ItemGroup>
+    <MSBuild Projects="$(_ManagedFixture)" Targets="CreateHelixPayload"
+             Properties="$(_ManagedProperties);TargetOS=Windows_NT;TargetRid=%(_WindowsRid.Identity)">
+      <Output TaskParameter="TargetOutputs" ItemName="_WindowsWorkItem" />
+    </MSBuild>
+    <MSBuild Projects="$(_ManagedFixture)" Targets="CreateHelixPayload"
+             Properties="$(_ManagedProperties);TargetOS=%(_UnixRid.TargetOS);TargetRid=%(_UnixRid.Identity)">
+      <Output TaskParameter="TargetOutputs" ItemName="_UnixWorkItem" />
+    </MSBuild>
+    <Error Condition="'@(_WindowsWorkItem->Count())' != '3' or '@(_UnixWorkItem->Count())' != '2'"
+           Text="The managed helper must produce one work item per target platform." />
+    <Error Condition="!Exists('%(_WindowsWorkItem.PayloadDirectory)/runtests.cmd') or Exists('%(_WindowsWorkItem.PayloadDirectory)/runtests.sh')"
+           Text="Windows payloads must stage only the batch launcher." />
+    <Error Condition="!Exists('%(_UnixWorkItem.PayloadDirectory)/runtests.sh') or Exists('%(_UnixWorkItem.PayloadDirectory)/runtests.cmd')"
+           Text="Unix payloads must stage only the shell launcher, regardless of the build host OS." />
+    <Error Condition="'%(_WindowsWorkItem.Command)' != 'call .\runtests.cmd --runtime-version &quot;1.2.3&quot; --test-dll &quot;tests/ManagedFixture/ManagedFixture.dll&quot; --helix-work-item &quot;ManagedFixture&quot;'"
+           Text="Windows work items must call the batch launcher with the expected arguments." />
+    <Error Condition="'%(_UnixWorkItem.Command)' != 'bash ./runtests.sh --runtime-version &quot;1.2.3&quot; --test-dll &quot;tests/ManagedFixture/ManagedFixture.dll&quot; --helix-work-item &quot;ManagedFixture&quot;'"
+           Text="Unix work-item commands must remain unchanged." />
+    <ItemGroup>
+      <_ManagedWorkItem Include="@(_WindowsWorkItem);@(_UnixWorkItem)" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(_ManagedWorkItem.PayloadDirectory)/tests/ManagedFixture/ManagedFixture.dll') or '%(_ManagedWorkItem.RequiredRuntimeVersions)' != '1.2.3' or '%(_ManagedWorkItem.Timeout)' != '00:30:00'"
+           Text="Managed payload contents, runtime requirements, and timeouts must be preserved." />
+  </Target>
+
+  <Target Name="TestCrossPlatformSuites" DependsOnTargets="TestProjectRidSelection">
+    <PropertyGroup>
+      <_CrossPlatformRoot>$(_TestRoot)cross-platform/</_CrossPlatformRoot>
+    </PropertyGroup>
+    <ItemGroup>
+      <_CrossPlatformProject Include="@(_DiscoveredProject)" Condition="'%(_DiscoveredProject.Filename)' == 'EventPipe.UnitTests' or '%(_DiscoveredProject.Filename)' == 'DotnetGCDump.UnitTests'" />
+      <_CrossPlatformProject Include="@(_CommonTestRunnerProject)" />
+      <_CrossPlatformSuite Include="@(_CrossPlatformProject->'%(Filename)')" />
+      <_CrossPlatformInput Include="@(_CrossPlatformSuite->'$(_CrossPlatformRoot)bin/%(Identity)/Debug/net10.0/%(Identity).dll');
+                                    @(_CrossPlatformSuite->'$(_CrossPlatformRoot)bin/%(Identity)/Debug/net10.0/%(Identity).deps.json');
+                                    @(_CrossPlatformSuite->'$(_CrossPlatformRoot)bin/%(Identity)/Debug/net10.0/%(Identity).runtimeconfig.json');
+                                    @(_CrossPlatformSuite->'$(_CrossPlatformRoot)bin/%(Identity)/Release/net10.0/%(Identity).dll');
+                                    @(_CrossPlatformSuite->'$(_CrossPlatformRoot)bin/%(Identity)/Release/net10.0/%(Identity).deps.json');
+                                    @(_CrossPlatformSuite->'$(_CrossPlatformRoot)bin/%(Identity)/Release/net10.0/%(Identity).runtimeconfig.json');
+                                    $(_CrossPlatformRoot)bin/EventPipe.UnitTests/Debug/net10.0/Microsoft.DotNet.RemoteExecutor.dll;
+                                    $(_CrossPlatformRoot)bin/EventPipe.UnitTests/Release/net10.0/Microsoft.DotNet.RemoteExecutor.dll" />
+      <_CrossPlatformLeg Include="win-x64-Debug" Rid="win-x64" TargetOS="Windows_NT" Configuration="Debug" />
+      <_CrossPlatformLeg Include="win-x86-Debug" Rid="win-x86" TargetOS="Windows_NT" Configuration="Debug" />
+      <_CrossPlatformLeg Include="linux-x64-Debug" Rid="linux-x64" TargetOS="linux" Configuration="Debug" />
+      <_CrossPlatformLeg Include="linux-arm64-Debug" Rid="linux-arm64" TargetOS="linux" Configuration="Debug" />
+      <_CrossPlatformLeg Include="linux-musl-x64-Debug" Rid="linux-musl-x64" TargetOS="linux" Configuration="Debug" />
+      <_CrossPlatformLeg Include="osx-x64-Debug" Rid="osx-x64" TargetOS="osx" Configuration="Debug" />
+      <_CrossPlatformLeg Include="osx-arm64-Debug" Rid="osx-arm64" TargetOS="osx" Configuration="Debug" />
+      <_CrossPlatformLeg Include="win-x64-Release" Rid="win-x64" TargetOS="Windows_NT" Configuration="Release" />
+      <_CrossPlatformLeg Include="win-x86-Release" Rid="win-x86" TargetOS="Windows_NT" Configuration="Release" />
+      <_CrossPlatformLeg Include="linux-x64-Release" Rid="linux-x64" TargetOS="linux" Configuration="Release" />
+      <_CrossPlatformLeg Include="linux-arm64-Release" Rid="linux-arm64" TargetOS="linux" Configuration="Release" />
+      <_CrossPlatformLeg Include="linux-musl-x64-Release" Rid="linux-musl-x64" TargetOS="linux" Configuration="Release" />
+      <_CrossPlatformLeg Include="osx-x64-Release" Rid="osx-x64" TargetOS="osx" Configuration="Release" />
+      <_CrossPlatformLeg Include="osx-arm64-Release" Rid="osx-arm64" TargetOS="osx" Configuration="Release" />
+      <_CrossPlatformTraceeFramework Include="net8.0;net9.0;net10.0;net11.0" />
+      <_CrossPlatformDependency Include="$(_CrossPlatformRoot)bin/dotnet-trace/Debug/net8.0/dotnet-trace;
+                                        $(_CrossPlatformRoot)bin/dotnet-trace/Release/net8.0/dotnet-trace" />
+    </ItemGroup>
+    <CreateItem Include="$(_CrossPlatformRoot)bin/Tracee/Debug/%(_CrossPlatformTraceeFramework.Identity)/Tracee;
+                         $(_CrossPlatformRoot)bin/Tracee/Release/%(_CrossPlatformTraceeFramework.Identity)/Tracee;
+                         $(_CrossPlatformRoot)bin/EventPipeTracee/Debug/%(_CrossPlatformTraceeFramework.Identity)/EventPipeTracee;
+                         $(_CrossPlatformRoot)bin/EventPipeTracee/Release/%(_CrossPlatformTraceeFramework.Identity)/EventPipeTracee;
+                         $(_CrossPlatformRoot)bin/ExitCodeTracee/Debug/%(_CrossPlatformTraceeFramework.Identity)/ExitCodeTracee;
+                         $(_CrossPlatformRoot)bin/ExitCodeTracee/Release/%(_CrossPlatformTraceeFramework.Identity)/ExitCodeTracee;
+                         $(_CrossPlatformRoot)bin/StackTracee/Debug/%(_CrossPlatformTraceeFramework.Identity)/StackTracee;
+                         $(_CrossPlatformRoot)bin/StackTracee/Release/%(_CrossPlatformTraceeFramework.Identity)/StackTracee">
+      <Output TaskParameter="Include" ItemName="_CrossPlatformDependency" />
+    </CreateItem>
+    <ItemGroup>
+      <_CrossPlatformInput Include="@(_CrossPlatformDependency->'%(Identity).dll');
+                                    @(_CrossPlatformDependency->'%(Identity).deps.json');
+                                    @(_CrossPlatformDependency->'%(Identity).runtimeconfig.json')" />
+    </ItemGroup>
+    <Error Condition="'@(_CrossPlatformProject->Count())' != '6'" Text="All six cross-platform suites must be discovered." />
+    <MakeDir Directories="@(_CrossPlatformInput->'%(RootDir)%(Directory)')" />
+    <WriteLinesToFile File="%(_CrossPlatformInput.Identity)" Lines="prebuilt cross-platform fixture" Overwrite="true" />
+    <MSBuild Projects="@(_CrossPlatformProject)" Targets="CreateHelixPayload"
+             Properties="ArtifactsDir=$(_CrossPlatformRoot);ArtifactsBinDir=$(_CrossPlatformRoot)bin/;NetCoreAppTestTargetFramework=net10.0;SkipHelixTests=true;HelixTargetQueue=FixtureQueue;Configuration=%(_CrossPlatformLeg.Configuration);TargetOS=%(_CrossPlatformLeg.TargetOS);TargetRid=%(_CrossPlatformLeg.Rid)">
+      <Output TaskParameter="TargetOutputs" ItemName="_CrossPlatformWorkItem" />
+    </MSBuild>
+    <Error Condition="'@(_CrossPlatformWorkItem->Count())' != '84'" Text="All six suites must stage on all seven Helix platforms in Debug and Release." />
+    <Error Condition="!Exists('%(_CrossPlatformWorkItem.PayloadDirectory)/tests/%(_CrossPlatformWorkItem.Identity)/%(_CrossPlatformWorkItem.Identity).deps.json') or !Exists('%(_CrossPlatformWorkItem.PayloadDirectory)/tests/%(_CrossPlatformWorkItem.Identity)/%(_CrossPlatformWorkItem.Identity).runtimeconfig.json')"
+           Text="Cross-platform payloads must retain their dependency and runtime configuration files." />
+    <Error Condition="'%(_CrossPlatformWorkItem.Identity)' == 'EventPipe.UnitTests' and !Exists('%(_CrossPlatformWorkItem.PayloadDirectory)/tests/EventPipe.UnitTests/Microsoft.DotNet.RemoteExecutor.dll')"
+           Text="EventPipe payloads must retain the RemoteExecutor child-process assembly." />
+    <ItemGroup>
+      <_CommonWorkItem Include="@(_CrossPlatformWorkItem)" Condition="'%(_CrossPlatformWorkItem.Identity)' != 'EventPipe.UnitTests' and '%(_CrossPlatformWorkItem.Identity)' != 'DotnetGCDump.UnitTests'" />
+    </ItemGroup>
+    <XmlPeek XmlInputPath="%(_CommonWorkItem.PayloadDirectory)/tests/%(_CommonWorkItem.Identity)/Debugger.Tests.Common.txt"
+             Query="/Configuration/Options[count(Option) != 4] | /Configuration[not(Options)]">
+      <Output TaskParameter="Result" ItemName="_InvalidCommonRuntimeMatrix" />
+    </XmlPeek>
+    <Error Condition="'@(_InvalidCommonRuntimeMatrix)' != ''" Text="Every common-runner suite must retain all four tracee runtimes." />
+    <Error Condition="!Exists('%(_CommonWorkItem.PayloadDirectory)/tests/%(_CommonWorkItem.Identity)/Debugger.Tests.Config.txt')"
+           Text="Common-runner payloads must stage relocatable configuration." />
+    <CreateItem Include="%(_CommonWorkItem.PayloadDirectory)/artifacts/bin/*/*/net*/*.runtimeconfig.json"
+                Exclude="%(_CommonWorkItem.PayloadDirectory)/artifacts/bin/dotnet-trace/**/*">
+      <Output TaskParameter="Include" ItemName="_StagedCommonTraceeConfig" />
+    </CreateItem>
+    <Error Condition="'@(_StagedCommonTraceeConfig->Count())' != '896'"
+           Text="Every common-runner payload must include all four debuggees for all four runtimes (56 payloads x 16 configurations)." />
+    <PropertyGroup>
+      <_CommonMissingInput>$(_CrossPlatformRoot)bin/StackTracee/Debug/net8.0/StackTracee.runtimeconfig.json</_CommonMissingInput>
+    </PropertyGroup>
+    <Delete Files="$(_CommonMissingInput)" />
+    <Exec Command="&quot;$(_DotNetHost)&quot; msbuild &quot;$(RepoRoot)src/tests/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.UnitTests.csproj&quot; -t:CreateHelixPayload -p:ArtifactsDir=&quot;$(_CrossPlatformRoot)&quot; -p:ArtifactsBinDir=&quot;$(_CrossPlatformRoot)bin/&quot; -p:Configuration=Debug -p:TargetOS=linux -p:TargetRid=linux-x64 -p:HelixTargetQueue=MissingInput -nologo -v:quiet &gt; &quot;$(_TestRoot)missing-tracee.log&quot; 2&gt;&amp;1"
+          IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="_MissingTraceeExitCode" />
+    </Exec>
+    <ReadLinesFromFile File="$(_TestRoot)missing-tracee.log">
+      <Output TaskParameter="Lines" ItemName="_MissingTraceeError" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <_MissingTraceeOutput>@(_MissingTraceeError)</_MissingTraceeOutput>
+    </PropertyGroup>
+    <Error Condition="'$(_MissingTraceeExitCode)' == '0' or !$([System.String]::Copy('$(_MissingTraceeOutput)').Contains('was not found in the prebuilt artifacts'))"
+           Text="Missing tracees must fail payload creation explicitly, without building or restoring." />
+  </Target>
+
+  <Target Name="TestRestoreRouting" DependsOnTargets="Initialize">
+    <MSBuild Projects="$(_Sender)" Targets="RestoreHelixTestProjects"
+             Properties="$(_CommonProperties);HelixTargetQueue=$(_QueueA)" />
+    <Error Condition="!Exists('$(_TestRoot)restored.txt')" Text="The sender must restore the selected projects' package inputs." />
+  </Target>
+
+  <Target Name="TestWorkItems" DependsOnTargets="Initialize">
+    <MSBuild Projects="$(_Sender)" Targets="GatherHelixWorkItems"
+             Properties="$(_CommonProperties);HelixTargetQueue=$(_QueueA)">
+      <Output TaskParameter="TargetOutputs" ItemName="_WorkItem" />
+    </MSBuild>
+    <Error Condition="'@(_WorkItem->Count())' != '2'" Text="The sender must use exactly the work items returned by the project." />
+    <ItemGroup>
+      <_ArchiveItem Include="@(_WorkItem)" Condition="'%(_WorkItem.Identity)' == 'Archive shard'" />
+      <_DirectoryItem Include="@(_WorkItem)" Condition="'%(_WorkItem.Identity)' == 'Directory shard'" />
+    </ItemGroup>
+    <Error Condition="'@(_ArchiveItem)' == '' or '@(_DirectoryItem)' == ''" Text="Work-item identities were not preserved." />
+    <Error Condition="'%(_ArchiveItem.Command)' != 'echo &quot;a;b &amp; c&quot;' or '%(_ArchiveItem.Timeout)' != '00:42:00'"
+           Text="Command and timeout metadata must be preserved." />
+    <Error Condition="'%(_ArchiveItem.PreCommands)' != 'echo before;echo again' or '%(_ArchiveItem.PostCommands)' != 'echo after'"
+           Text="SDK pre/post command metadata must survive the cross-project call." />
+    <Error Condition="'%(_ArchiveItem.PayloadArchive)' != '$(_TestRoot)payloads/$(_QueueA).zip' or !Exists('%(_ArchiveItem.PayloadArchive)')"
+           Text="The project's archive must be preserved." />
+    <Error Condition="'%(_DirectoryItem.PayloadDirectory)' != '$(_TestRoot)payloads/$(_QueueA)' or '%(_DirectoryItem.PayloadArchive)' != ''"
+           Text="The project's directory payload must be preserved." />
+    <Error Condition="'%(_DirectoryItem.Command)' != 'echo directory' or '%(_DirectoryItem.Timeout)' != '00:30:00'"
+           Text="The sender must not change the project's command or timeout." />
+    <Error Condition="'%(_WorkItem.RequiredRuntimeVersions)' != '1.2.3;3.4.5;1.2.3'"
+           Text="Runtime version lists must survive the cross-project call." />
+    <ReadLinesFromFile File="$(_TestRoot)payloads/$(_QueueA)/fixture.txt">
+      <Output TaskParameter="Lines" ItemName="_StagedContent" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_StagedContent)' != 'prebuilt fixture'" Text="The project must stage its prebuilt input without compiling." />
+    <MSBuild Projects="$(_Sender)" Targets="PrepareHelixRuntimePackages"
+             Properties="$(_CommonProperties);HelixTargetQueue=$(_QueueA)">
+      <Output TaskParameter="TargetOutputs" ItemName="_RuntimePackage" />
+    </MSBuild>
+    <Error Condition="'@(_RuntimePackage->Count())' != '2' or '@(_RuntimePackage)' != '1.2.3;3.4.5'"
+           Text="Deduplicate runtime versions both within and across work items." />
+    <Error Condition="'%(_RuntimePackage.PackageType)' != 'runtime'" Text="Use native SDK runtime packages." />
+    <MSBuild Projects="$(_Sender)" Targets="PrepareHelixRuntimePackages"
+             Properties="$(_CommonProperties);HelixTargetQueue=$(_QueueA);FixtureMode=NoRuntimes">
+      <Output TaskParameter="TargetOutputs" ItemName="_NoRuntimePackage" />
+    </MSBuild>
+    <Error Condition="'@(_NoRuntimePackage)' != ''" Text="Work items without runtime requirements must not add packages." />
+    <MSBuild Projects="$(_Sender)" Targets="GatherHelixWorkItems"
+             Properties="$(_CommonProperties);HelixTargetQueue=$(_QueueB)">
+      <Output TaskParameter="TargetOutputs" ItemName="_OtherQueueWorkItem" />
+    </MSBuild>
+    <Error Condition="'@(_OtherQueueWorkItem->Count())' != '2' or !Exists('$(_TestRoot)payloads/$(_QueueA)/fixture.txt') or !Exists('$(_TestRoot)payloads/$(_QueueB)/fixture.txt')"
+           Text="Each queue must receive the project's work items and its own staged payload." />
+  </Target>
+
+  <Target Name="TestInvalidPayloads" DependsOnTargets="Initialize">
+    <!-- Isolate expected errors so they do not mark the parent MSBuild invocation as failed. -->
+    <Exec Command="$(_FailureCommand) -t:GatherHelixWorkItems -p:&quot;$(_CommonProperties);HelixTargetQueue=$(_QueueA);FixtureMode=Missing&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true" StandardOutputImportance="Low" StandardErrorImportance="Low">
+      <Output TaskParameter="ExitCode" PropertyName="_MissingExitCode" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_MissingOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_MissingText>@(_MissingOutput)</_MissingText>
+    </PropertyGroup>
+    <Error Condition="'$(_MissingExitCode)' == '0' or !$(_MissingText.Contains('The prebuilt fixture'))"
+           Text="Missing artifacts did not produce the expected failure: $(_MissingText)" />
+    <Exec Command="$(_FailureCommand) -t:GatherHelixWorkItems -p:&quot;$(_CommonProperties);HelixTargetQueue=$(_QueueA);FixtureMode=Duplicate&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true" StandardOutputImportance="Low" StandardErrorImportance="Low">
+      <Output TaskParameter="ExitCode" PropertyName="_DuplicateExitCode" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_DuplicateOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_DuplicateText>@(_DuplicateOutput)</_DuplicateText>
+    </PropertyGroup>
+    <Error Condition="'$(_DuplicateExitCode)' == '0' or !$(_DuplicateText.Contains('Helix work-item identities must be unique'))"
+           Text="Duplicate identities did not produce the expected failure: $(_DuplicateText)" />
+    <Exec Command="$(_FailureCommand) -t:GatherHelixWorkItems -p:&quot;HelixTestProject=$(MSBuildProjectFullPath);HelixTargetQueue=$(_QueueA)&quot;"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" ConsoleToMSBuild="true" StandardOutputImportance="Low" StandardErrorImportance="Low">
+      <Output TaskParameter="ExitCode" PropertyName="_EmptyJobExitCode" />
+      <Output TaskParameter="ConsoleOutput" ItemName="_EmptyJobOutput" />
+    </Exec>
+    <PropertyGroup>
+      <_EmptyJobText>@(_EmptyJobOutput)</_EmptyJobText>
+    </PropertyGroup>
+    <Error Condition="'$(_EmptyJobExitCode)' == '0' or !$(_EmptyJobText.Contains('At least one Helix work item is required'))"
+           Text="A project without CreateHelixPayload must be skipped, then the empty job rejected: $(_EmptyJobText)" />
+  </Target>
+
+  <Target Name="Test" DependsOnTargets="TestRestoreRouting;TestWorkItems;TestProjectRidSelection;TestManagedPayloadPlatforms;TestCrossPlatformSuites;TestInvalidPayloads">
+    <RemoveDir Directories="$(_TestRoot)" />
+    <Message Importance="High" Text="Helix project gathering, metadata transfer, runtime selection, and queue isolation tests passed." />
+  </Target>
+</Project>

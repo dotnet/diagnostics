@@ -1,0 +1,9 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+  <PropertyGroup>
+    <AssemblyName>ManagedFixture</AssemblyName>
+    <NetCoreAppTestTargetFramework>net10.0</NetCoreAppTestTargetFramework>
+    <TestHostRuntimeVersion>1.2.3</TestHostRuntimeVersion>
+  </PropertyGroup>
+  <Import Project="..\..\..\src\tests\Helix\Managed\HelixPayload.targets" />
+</Project>
