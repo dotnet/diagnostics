@@ -92,7 +92,7 @@ static bool LOADConvertLibraryPathWideStringToMultibyteString(
     INT *multibyteLibraryPathLengthRef);
 static BOOL LOADValidateModule(MODSTRUCT *module);
 static LPWSTR LOADGetModuleFileName(MODSTRUCT *module);
-static MODSTRUCT *LOADAddModule(NATIVE_LIBRARY_HANDLE dl_handle, LPCSTR libraryNameOrPath);
+static MODSTRUCT *LOADAddModule(NATIVE_LIBRARY_HANDLE dl_handle, LPCSTR libraryNameOrPath, /*OUT*/ BOOL* pIsAlreadyLoaded);
 static NATIVE_LIBRARY_HANDLE LOADLoadLibraryDirect(LPCSTR libraryNameOrPath);
 static BOOL LOADFreeLibrary(MODSTRUCT *module, BOOL fCallDllMain);
 static HMODULE LOADRegisterLibraryDirect(NATIVE_LIBRARY_HANDLE dl_handle, LPCSTR libraryNameOrPath, BOOL fDynamic);
@@ -591,7 +591,8 @@ PAL_RegisterModule(
         if (dl_handle)
         {
             // This only creates/adds the module handle and doesn't call DllMain
-            hinstance = LOADAddModule(dl_handle, lpLibFileName);
+            BOOL unused;
+            hinstance = LOADAddModule(dl_handle, lpLibFileName, &unused);
         }
 
         UnlockModuleList();
@@ -1287,10 +1288,11 @@ Parameters:
 Return value:
     PAL handle to the loaded library, or nullptr upon failure (error is set via SetLastError()).
 */
-static MODSTRUCT *LOADAddModule(NATIVE_LIBRARY_HANDLE dl_handle, LPCSTR libraryNameOrPath)
+static MODSTRUCT *LOADAddModule(NATIVE_LIBRARY_HANDLE dl_handle, LPCSTR libraryNameOrPath, /*OUT*/ BOOL* pIsAlreadyLoaded)
 {
     _ASSERTE(dl_handle != nullptr);
     _ASSERTE(g_running_in_exe || (libraryNameOrPath != nullptr && libraryNameOrPath[0] != '\0'));
+    *pIsAlreadyLoaded = FALSE;
 
 #if !RETURNS_NEW_HANDLES_ON_REPEAT_DLOPEN
     /* search module list for a match. */
@@ -1309,6 +1311,7 @@ static MODSTRUCT *LOADAddModule(NATIVE_LIBRARY_HANDLE dl_handle, LPCSTR libraryN
                 module->refcount++;
             }
             dlclose(dl_handle);
+            *pIsAlreadyLoaded = TRUE;
             return module;
         }
         module = module->next;
@@ -1360,10 +1363,11 @@ Return value:
 */
 static HMODULE LOADRegisterLibraryDirect(NATIVE_LIBRARY_HANDLE dl_handle, LPCSTR libraryNameOrPath, BOOL fDynamic)
 {
-    MODSTRUCT *module = LOADAddModule(dl_handle, libraryNameOrPath);
-    if (module == nullptr)
+    BOOL isAlreadyLoaded;
+    MODSTRUCT *module = LOADAddModule(dl_handle, libraryNameOrPath, &isAlreadyLoaded);
+    if (module == nullptr || isAlreadyLoaded)
     {
-        return nullptr;
+        return module;
     }
 
     /* If the module contains a DllMain, call it. */
