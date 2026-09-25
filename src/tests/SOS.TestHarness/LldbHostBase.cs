@@ -121,15 +121,15 @@ public abstract class LldbHostBase : IDebuggerHost, IDiagnosticHost
             // or macOS terminates LLDB with EXC_GUARD (dotnet/diagnostics#4551).
             psi.Environment["PAL_MachExceptionMode"] = "7";
 
-            // sos-lldb links LLDB.framework through @rpath. Resolve it from the selected Xcode at launch
+            // sos-lldb links LLDB.framework through @rpath. Resolve it from the selected developer tools at launch
             // rather than embedding the build machine's /Applications/Xcode*.app path in the driver.
-            string? sharedFrameworks = ToolPaths.ResolveXcodeSharedFrameworksDirectory();
-            if (sharedFrameworks is not null)
+            string? frameworkDirectory = ToolPaths.ResolveLldbFrameworkDirectory();
+            if (frameworkDirectory is not null)
             {
                 string? inherited = Environment.GetEnvironmentVariable("DYLD_FRAMEWORK_PATH");
                 psi.Environment["DYLD_FRAMEWORK_PATH"] = string.IsNullOrEmpty(inherited)
-                    ? sharedFrameworks
-                    : sharedFrameworks + Path.PathSeparator + inherited;
+                    ? frameworkDirectory
+                    : frameworkDirectory + Path.PathSeparator + inherited;
             }
         }
 

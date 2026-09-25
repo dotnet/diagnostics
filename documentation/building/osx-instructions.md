@@ -6,7 +6,7 @@ These instructions will lead you through preparing to build the diagnostics repo
 Environment
 ===========
 
-These instructions were validated on macOS 10.12.6 (Sierra) and Xcode 9.2.
+Install full Xcode or Apple's Command Line Tools compatible with your macOS version.
 
 Git Setup
 ---------
@@ -38,9 +38,16 @@ In the root of the diagnostics repo run:
 ./build.sh
 ```
 
-This will build SOS, the tests and the SOS plugin (libsosplugin.dylib) for the Xcode (9.2) version of lldb (swift 4.0) on the device.
+This builds SOS, the tests, and the SOS plugin (`libsosplugin.dylib`) using the
+selected developer tools' LLDB framework. The build and SOS test harness honor
+`DEVELOPER_DIR`, falling back to `xcode-select -p`.
 
-For later versions of macOS/Xcode/lldb is TBD.
+To use Command Line Tools without changing the machine-wide Xcode selection:
+
+```sh
+export DEVELOPER_DIR=/Library/Developer/CommandLineTools
+./build.sh
+```
 
 Loading solution file
 ---------------------

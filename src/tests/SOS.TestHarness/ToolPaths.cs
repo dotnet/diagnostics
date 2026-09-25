@@ -39,7 +39,7 @@ public static class ToolPaths
 
     /// <summary>
     /// The <c>lldb</c> executable the harness drives. On macOS the repo-built <c>sos-lldb</c> driver is
-    /// preferred because it embeds Xcode's LLDB framework without inheriting the system executable's
+    /// preferred because it embeds Apple's LLDB framework without inheriting the system executable's
     /// CoreCLR-hosting restriction. The staged debugger layout, <c>LLDB_PATH</c>, and system LLDB are
     /// checked in that order. Non-Windows; resolved lazily.
     /// </summary>
@@ -198,7 +198,7 @@ public static class ToolPaths
             return debuggerPath;
         }
 
-        // 2) The repo-built macOS driver uses the selected Xcode's LLDB framework without running inside
+        // 2) The repo-built macOS driver uses the selected developer tools' LLDB framework without running inside
         //    Apple's restricted LLDB executable.
         if (OperatingSystem.IsMacOS())
         {
@@ -242,7 +242,7 @@ public static class ToolPaths
             "on PATH, or (on macOS) install Xcode.");
     }
 
-    internal static string? ResolveXcodeSharedFrameworksDirectory()
+    internal static string? ResolveLldbFrameworkDirectory()
     {
         string? developerDir = Environment.GetEnvironmentVariable("DEVELOPER_DIR");
         if (string.IsNullOrWhiteSpace(developerDir))
@@ -255,8 +255,27 @@ public static class ToolPaths
             return null;
         }
 
-        string sharedFrameworks = Path.GetFullPath(Path.Combine(developerDir.Trim(), "..", "SharedFrameworks"));
-        return Directory.Exists(sharedFrameworks) ? sharedFrameworks : null;
+        return ResolveLldbFrameworkDirectory(developerDir.Trim());
+    }
+
+    internal static string ResolveLldbFrameworkDirectory(string developerDir)
+    {
+        string[] candidates =
+        [
+            Path.GetFullPath(Path.Combine(developerDir, "..", "SharedFrameworks")),
+            Path.GetFullPath(Path.Combine(developerDir, "Library", "PrivateFrameworks")),
+        ];
+        foreach (string directory in candidates)
+        {
+            if (File.Exists(Path.Combine(directory, "LLDB.framework", "LLDB")))
+            {
+                return directory;
+            }
+        }
+
+        throw new DirectoryNotFoundException(
+            $"Could not locate LLDB.framework in the selected developer tools at '{developerDir}'. " +
+            "Install Xcode or Command Line Tools, or set DEVELOPER_DIR.");
     }
 
     private static string ResolveHostRuntimeDirectory()

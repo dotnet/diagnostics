@@ -81,12 +81,16 @@ configure_lldb()
     chmod +x "$driver"
 
     developer_dir="${DEVELOPER_DIR:-$(xcode-select -p)}"
-    shared_frameworks="$(cd "$developer_dir/../SharedFrameworks" && pwd)"
-    if [[ ! -d "$shared_frameworks/LLDB.framework" ]]; then
-      echo "LLDB.framework was not found under the selected Xcode at '$shared_frameworks'." >&2
+    framework_directory="$developer_dir/../SharedFrameworks"
+    if [[ ! -f "$framework_directory/LLDB.framework/LLDB" ]]; then
+      framework_directory="$developer_dir/Library/PrivateFrameworks"
+    fi
+    if [[ ! -f "$framework_directory/LLDB.framework/LLDB" ]]; then
+      echo "LLDB.framework was not found in the selected developer tools at '$developer_dir'. Install Xcode or Command Line Tools, or set DEVELOPER_DIR." >&2
       exit 4
     fi
-    export DYLD_FRAMEWORK_PATH="$shared_frameworks${DYLD_FRAMEWORK_PATH:+:$DYLD_FRAMEWORK_PATH}"
+    framework_directory="$(cd "$framework_directory" && pwd)"
+    export DYLD_FRAMEWORK_PATH="$framework_directory${DYLD_FRAMEWORK_PATH:+:$DYLD_FRAMEWORK_PATH}"
 
     lldb_check="$("$driver" --no-lldbinit --batch \
       -o 'script print("__SOSHARNESS_LLDB_READY__")' 2>&1 || true)"
