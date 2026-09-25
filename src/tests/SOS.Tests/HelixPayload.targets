@@ -13,6 +13,7 @@
     <_SOSHelixWorkItemCommand Condition="'$(TargetOS)' != 'Windows_NT'">bash ./runtests.sh</_SOSHelixWorkItemCommand>
     <_SOSTestOutputDir>$(ArtifactsBinDir)SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/</_SOSTestOutputDir>
     <_SOSCdbDir>$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/</_SOSCdbDir>
+    <_SOSLiveRuntimeDir Condition="'$(PrivateBuildTesting)' == 'true' and '$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizeDirectory('$(LiveRuntimeDir)'))</_SOSLiveRuntimeDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +23,14 @@
   </ItemGroup>
 
   <Target Name="StageSOSHelixPayload">
+    <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '@(RuntimeTestVersions->Count())' != '1'"
+           Text="A private runtime override requires exactly one RuntimeTestVersions entry." />
+    <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '%(RuntimeTestVersions.TargetFramework)' == ''"
+           Text="RuntimeTestVersions must contain TargetFramework metadata for private runtime testing." />
+    <PropertyGroup>
+      <_SOSPrivateTargetFramework Condition="'$(_SOSLiveRuntimeDir)' != ''">@(RuntimeTestVersions->'%(TargetFramework)')</_SOSPrivateTargetFramework>
+    </PropertyGroup>
+
     <!-- Scripts use fixed payload paths; binaries and debuggees retain their artifact layout. -->
     <ItemGroup>
       <_SOSPayloadFile Include="$(_SOSHelixLauncherPath)"
@@ -40,6 +49,8 @@
       <_SOSPayloadNativeFile Include="$(ArtifactsBinNativeDir)**/*" />
       <_SOSPayloadCDacFile Include="$(ArtifactsDir)cdac-override/$(Configuration)/**/*"
                            Condition="Exists('$(ArtifactsDir)cdac-override/$(Configuration)')" />
+      <_SOSPayloadRuntimeFile Include="$(_SOSLiveRuntimeDir)**/*"
+                              Condition="'$(_SOSLiveRuntimeDir)' != ''" />
       <_SOSPayloadDebuggerFile Include="$(_SOSCdbDir)*"
                                Condition="'$(TargetOS)' == 'Windows_NT'" />
       <_SOSPayloadDebuggerFile Include="$(ArtifactsBinNativeDir)sos-lldb"
@@ -49,7 +60,12 @@
     <!-- The RID directory beside publish is the loose self-contained publish intermediate and duplicates
          the runtime already embedded in the final single-file bundle. -->
     <CreateItem Include="@(SOSHarnessDebuggee->'$(ArtifactsBinDir)%(Filename)/$(Configuration)/net*/*');
-                         @(SOSHarnessDebuggee->'$(ArtifactsBinDir)%(Filename)/$(Configuration)/net*/$(TargetRid)/publish/**/*')">
+                         @(SOSHarnessDebuggee->'$(ArtifactsBinDir)%(Filename)/$(Configuration)/net*/$(TargetRid)/publish/**/*')"
+                Condition="'$(_SOSLiveRuntimeDir)' == ''">
+      <Output TaskParameter="Include" ItemName="_SOSPayloadBinFile" />
+    </CreateItem>
+    <CreateItem Include="@(SOSHarnessDebuggee->'$(ArtifactsBinDir)%(Filename)/$(Configuration)/$(_SOSPrivateTargetFramework)/*')"
+                Condition="'$(_SOSLiveRuntimeDir)' != ''">
       <Output TaskParameter="Include" ItemName="_SOSPayloadBinFile" />
     </CreateItem>
 
@@ -63,6 +79,9 @@
       <_SOSPayloadFile Include="@(_SOSPayloadCDacFile)">
         <DestinationRelative>artifacts/cdac-override/$(Configuration)/%(_SOSPayloadCDacFile.RecursiveDir)%(_SOSPayloadCDacFile.Filename)%(_SOSPayloadCDacFile.Extension)</DestinationRelative>
       </_SOSPayloadFile>
+      <_SOSPayloadFile Include="@(_SOSPayloadRuntimeFile)">
+        <DestinationRelative>runtime-override/%(_SOSPayloadRuntimeFile.RecursiveDir)%(_SOSPayloadRuntimeFile.Filename)%(_SOSPayloadRuntimeFile.Extension)</DestinationRelative>
+      </_SOSPayloadFile>
       <_SOSPayloadFile Include="@(_SOSPayloadDebuggerFile)">
         <DestinationRelative>debugger/%(_SOSPayloadDebuggerFile.Filename)%(_SOSPayloadDebuggerFile.Extension)</DestinationRelative>
       </_SOSPayloadFile>
@@ -74,6 +93,8 @@
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)sos.dll;$(_SOSCdbDir)dbgeng.dll" Condition="'$(TargetOS)' == 'Windows_NT'" />
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.so" Condition="'$(TargetOS)' == 'linux'" />
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.dylib;$(ArtifactsBinNativeDir)sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
+      <_SOSRequiredInput Include="$(_SOSLiveRuntimeDir)System.Private.CoreLib.dll"
+                         Condition="'$(_SOSLiveRuntimeDir)' != ''" />
     </ItemGroup>
     <Error Condition="!Exists('%(_SOSRequiredInput.Identity)')"
            Text="Required SOS Helix input '%(_SOSRequiredInput.Identity)' was not found in the prebuilt artifacts." />
@@ -113,10 +134,11 @@
       </_SOSRuntimeShard>
       <HelixWorkItem Include="@(_SOSRuntimeShard->'$(SOSHelixWorkItemName)-%(CoreVersion)')" />
       <HelixWorkItem Include="$(SOSHelixWorkItemName)-Framework"
-                    Condition="'$(TargetOS)' == 'Windows_NT'" />
+                    Condition="'$(TargetOS)' == 'Windows_NT' and '$(_SOSLiveRuntimeDir)' == ''" />
       <HelixWorkItem>
         <PayloadArchive>$(SOSHelixPayloadDir).zip</PayloadArchive>
-        <Command>$(_SOSHelixWorkItemCommand) --helix-work-item &quot;%(Identity)&quot;</Command>
+        <Command Condition="'$(_SOSLiveRuntimeDir)' == ''">$(_SOSHelixWorkItemCommand) --helix-work-item &quot;%(Identity)&quot;</Command>
+        <Command Condition="'$(_SOSLiveRuntimeDir)' != ''">$(_SOSHelixWorkItemCommand) --helix-work-item &quot;%(Identity)&quot; --runtime-override &quot;runtime-override&quot; --runtime-version &quot;%(HelixWorkItem.RuntimeDownload)&quot;</Command>
         <Timeout>$(WorkItemTimeout)</Timeout>
         <RequiredRuntimeVersions>$(TestHostRuntimeVersion);%(HelixWorkItem.RuntimeDownload)</RequiredRuntimeVersions>
       </HelixWorkItem>

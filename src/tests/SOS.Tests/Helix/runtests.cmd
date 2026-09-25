@@ -14,10 +14,46 @@ if "%HELIX_WORKITEM_ROOT%"=="" (
 set "ROOT=%~dp0"
 set "UPLOAD=%HELIX_WORKITEM_UPLOAD_ROOT%"
 set "HELIX_WORK_ITEM="
-if /I "%~1"=="--helix-work-item" (
-  set "HELIX_WORK_ITEM=%~2"
-  shift
-  shift
+set "RUNTIME_OVERRIDE="
+set "RUNTIME_VERSION="
+
+:parse_args
+if "%~1"=="" goto args_parsed
+if /I "%~1"=="--helix-work-item" goto parse_helix_work_item
+if /I "%~1"=="--runtime-override" goto parse_runtime_override
+if /I "%~1"=="--runtime-version" goto parse_runtime_version
+echo Unknown argument "%~1".
+exit /b 3
+
+:parse_helix_work_item
+if "%~2"=="" goto missing_arg_value
+set "HELIX_WORK_ITEM=%~2"
+shift
+shift
+goto parse_args
+
+:parse_runtime_override
+if "%~2"=="" goto missing_arg_value
+set "RUNTIME_OVERRIDE=%~2"
+shift
+shift
+goto parse_args
+
+:parse_runtime_version
+if "%~2"=="" goto missing_arg_value
+set "RUNTIME_VERSION=%~2"
+shift
+shift
+goto parse_args
+
+:missing_arg_value
+echo Argument "%~1" requires a value.
+exit /b 3
+
+:args_parsed
+if defined RUNTIME_OVERRIDE if not defined RUNTIME_VERSION (
+  echo --runtime-version is required with --runtime-override.
+  exit /b 3
 )
 set /p RID=<"%ROOT%\.sos-test-payload"
 for /f "usebackq skip=1 delims=" %%M in ("%ROOT%\.sos-test-payload") do if not defined CONFIGURATION set "CONFIGURATION=%%M"
@@ -39,7 +75,11 @@ if defined HELIX_WORK_ITEM (
     set "SOSHARNESS_ONLY_FLAVORS=Framework"
   ) else if /I "!IDENTITY:~0,3!"=="Net" (
     set "SOSHARNESS_ONLY_COREVERSIONS=!IDENTITY!"
-    set "SOSHARNESS_ONLY_FLAVORS=Core,SingleFile"
+    if defined RUNTIME_OVERRIDE (
+      set "SOSHARNESS_ONLY_FLAVORS=Core"
+    ) else (
+      set "SOSHARNESS_ONLY_FLAVORS=Core,SingleFile"
+    )
   ) else (
     echo The Helix work item "!HELIX_WORK_ITEM!" does not identify a runtime or Framework shard.
     exit /b 3
@@ -61,6 +101,22 @@ if "%HELIX_CORRELATION_PAYLOAD%"=="" (
 if not exist "%PAYLOAD_DOTNET_ROOT%\dotnet.exe" (
   echo The Helix-provisioned dotnet host was not found at "%PAYLOAD_DOTNET_ROOT%\dotnet.exe".
   exit /b 3
+)
+if defined RUNTIME_OVERRIDE (
+  set "RUNTIME_OVERRIDE_ROOT=%ROOT%\%RUNTIME_OVERRIDE%"
+  set "TARGET_RUNTIME_ROOT=%PAYLOAD_DOTNET_ROOT%\shared\Microsoft.NETCore.App\%RUNTIME_VERSION%"
+  if not exist "!RUNTIME_OVERRIDE_ROOT!\System.Private.CoreLib.dll" (
+    echo The private runtime override was not found at "!RUNTIME_OVERRIDE_ROOT!".
+    exit /b 3
+  )
+  if not exist "!TARGET_RUNTIME_ROOT!\System.Private.CoreLib.dll" (
+    echo The Helix-provisioned runtime was not found at "!TARGET_RUNTIME_ROOT!".
+    exit /b 3
+  )
+  echo Overlaying private runtime from "!RUNTIME_OVERRIDE_ROOT!" onto "!TARGET_RUNTIME_ROOT!".
+  powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass ^
+    -Command "Copy-Item -Path '!RUNTIME_OVERRIDE_ROOT!\*' -Destination '!TARGET_RUNTIME_ROOT!' -Recurse -Force"
+  if errorlevel 1 exit /b 3
 )
 
 set "TEST_DLL="

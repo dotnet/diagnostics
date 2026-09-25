@@ -13,9 +13,44 @@ upload="$HELIX_WORKITEM_UPLOAD_ROOT"
 identity="all"
 
 helix_work_item=""
-if [[ "${1:-}" == "--helix-work-item" ]]; then
-  helix_work_item="${2:-}"
-  shift 2
+runtime_override=""
+runtime_version=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --helix-work-item)
+      if [[ $# -lt 2 ]]; then
+        echo "Argument '$1' requires a value." >&2
+        exit 3
+      fi
+      helix_work_item="$2"
+      shift 2
+      ;;
+    --runtime-override)
+      if [[ $# -lt 2 ]]; then
+        echo "Argument '$1' requires a value." >&2
+        exit 3
+      fi
+      runtime_override="$2"
+      shift 2
+      ;;
+    --runtime-version)
+      if [[ $# -lt 2 ]]; then
+        echo "Argument '$1' requires a value." >&2
+        exit 3
+      fi
+      runtime_version="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown argument '$1'." >&2
+      exit 3
+      ;;
+  esac
+done
+
+if [[ -n "$runtime_override" && -z "$runtime_version" ]]; then
+  echo "--runtime-version is required with --runtime-override." >&2
+  exit 3
 fi
 
 mkdir -p "$upload"
@@ -33,7 +68,11 @@ if [[ -n "$helix_work_item" ]]; then
   case "$identity" in
     Net[0-9]*)
       export SOSHARNESS_ONLY_COREVERSIONS="$identity"
-      export SOSHARNESS_ONLY_FLAVORS="Core,SingleFile"
+      if [[ -n "$runtime_override" ]]; then
+        export SOSHARNESS_ONLY_FLAVORS="Core"
+      else
+        export SOSHARNESS_ONLY_FLAVORS="Core,SingleFile"
+      fi
       ;;
     Framework)
       export SOSHARNESS_ONLY_FLAVORS="Framework"
@@ -66,6 +105,21 @@ prepare_dotnet_root()
   if [[ ! -x "$dotnet_root/dotnet" ]]; then
     echo "The Helix-provisioned dotnet host was not found at '$dotnet_root/dotnet'." >&2
     exit 3
+  fi
+
+  if [[ -n "$runtime_override" ]]; then
+    runtime_override_root="$root/$runtime_override"
+    target_runtime_root="$dotnet_root/shared/Microsoft.NETCore.App/$runtime_version"
+    if [[ ! -f "$runtime_override_root/System.Private.CoreLib.dll" ]]; then
+      echo "The private runtime override was not found at '$runtime_override_root'." >&2
+      exit 3
+    fi
+    if [[ ! -f "$target_runtime_root/System.Private.CoreLib.dll" ]]; then
+      echo "The Helix-provisioned runtime was not found at '$target_runtime_root'." >&2
+      exit 3
+    fi
+    echo "Overlaying private runtime from '$runtime_override_root' onto '$target_runtime_root'."
+    cp -a "$runtime_override_root/." "$target_runtime_root/"
   fi
 }
 
