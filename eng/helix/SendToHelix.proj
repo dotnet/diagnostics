@@ -17,6 +17,10 @@
     <IncludeDotNetCli>true</IncludeDotNetCli>
     <DotNetCliPackageType>sdk</DotNetCliPackageType>
     <DotNetCliVersion Condition="'$(DotNetCliVersion)' == ''">10.0.110</DotNetCliVersion>
+    <!-- The .NET SDK is not distributed for Linux ARM32. SOS Helix work items
+         only require a dotnet host and shared framework to run the test DLL. -->
+    <DotNetCliPackageType Condition="'$(TargetOS)' == 'linux' and '$(TargetArch)' == 'arm'">runtime</DotNetCliPackageType>
+    <DotNetCliVersion Condition="'$(TargetOS)' == 'linux' and '$(TargetArch)' == 'arm'">$(MicrosoftNETCoreApp100Version)</DotNetCliVersion>
     <!-- The Helix SDK infers all Windows non-ARM queues as win-x64. Override
          the x86 leg so the test process reports and selects x86 scenarios. -->
     <DotNetCliRuntime Condition="'$(TargetOS)' == 'Windows_NT' and '$(TargetArch)' == 'x86'">win-x86</DotNetCliRuntime>
