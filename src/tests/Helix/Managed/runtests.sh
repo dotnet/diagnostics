@@ -73,7 +73,7 @@ set +e
 "$dotnet" "${dotnet_arguments[@]}" "$test_dll" \
   --results-directory "$HELIX_WORKITEM_UPLOAD_ROOT" \
   --report-xunit \
-  --report-xunit-filename "$report_name.xml" \
+  --report-xunit-filename "$report_name.testResults.xml" \
   --auto-reporters off "$@" 2>&1 | tee "$log"
 exit_codes=("${PIPESTATUS[@]}")
 set -e

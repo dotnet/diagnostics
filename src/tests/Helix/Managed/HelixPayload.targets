@@ -19,7 +19,7 @@
     <MakeDir Directories="$(_HelixPayloadDir)" />
     <Copy SourceFiles="@(_HelixTestOutputFile)"
           DestinationFiles="@(_HelixTestOutputFile->'$(_HelixPayloadDir)/tests/$(AssemblyName)/%(RecursiveDir)%(Filename)%(Extension)')" />
-    <Copy SourceFiles="$(MSBuildThisFileDirectory)run-tests$(_HelixLauncherExtension)"
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)runtests$(_HelixLauncherExtension)"
           DestinationFiles="$(_HelixPayloadDir)/runtests$(_HelixLauncherExtension)" />
     <ItemGroup>
       <HelixWorkItem Include="$(AssemblyName)">

@@ -117,11 +117,9 @@ if not "%SIGNATURE_EXIT_CODE%"=="0" (
 "%DOTNET_ROOT%\dotnet.exe" "%TEST_DLL%" ^
   --results-directory "%UPLOAD%" ^
   --report-xunit ^
-  --report-xunit-filename "SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.xml" ^
+  --report-xunit-filename "SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.testResults.xml" ^
   --report-xunit-html ^
   --report-xunit-html-filename "SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.html" ^
-  --report-trx ^
-  --report-trx-filename "SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.trx" ^
   --auto-reporters off > "%LOG%" 2>&1
 set "EXIT_CODE=%ERRORLEVEL%"
 

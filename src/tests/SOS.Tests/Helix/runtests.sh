@@ -198,11 +198,9 @@ run_tests()
   "$dotnet" "${dotnet_arguments[@]}" "$@" \
     --results-directory "$upload" \
     --report-xunit \
-    --report-xunit-filename "SOS.Tests-${rid}-${configuration}-${identity}.xml" \
+    --report-xunit-filename "SOS.Tests-${rid}-${configuration}-${identity}.testResults.xml" \
     --report-xunit-html \
     --report-xunit-html-filename "SOS.Tests-${rid}-${configuration}-${identity}.html" \
-    --report-trx \
-    --report-trx-filename "SOS.Tests-${rid}-${configuration}-${identity}.trx" \
     --auto-reporters off
 }
 

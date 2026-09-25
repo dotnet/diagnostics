@@ -84,7 +84,7 @@ if defined RUNTIME_VERSION set DOTNET_ARGUMENTS=--fx-version "%RUNTIME_VERSION%"
 "%DOTNET_ROOT%\dotnet.exe" %DOTNET_ARGUMENTS% "%TEST_DLL%" ^
   --results-directory "%HELIX_WORKITEM_UPLOAD_ROOT%" ^
   --report-xunit ^
-  --report-xunit-filename "%REPORT_NAME%.xml" ^
+  --report-xunit-filename "%REPORT_NAME%.testResults.xml" ^
   --auto-reporters off %TEST_ARGUMENTS% > "%LOG%" 2>&1
 set "TEST_EXIT_CODE=%ERRORLEVEL%"
 
