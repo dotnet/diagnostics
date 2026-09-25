@@ -1,6 +1,11 @@
 <Project>
   <Import Project="$(MSBuildThisFileDirectory)..\Directory.Build.props"/>
 
+  <PropertyGroup>
+    <IsHelixTestProject Condition="'$(IsHelixTestProject)' == ''">false</IsHelixTestProject>
+    <TestHostRuntimeVersion Condition="'$(TestHostRuntimeVersion)' == ''">$(MicrosoftNETCoreApp100Version)</TestHostRuntimeVersion>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(IsTestProject)' == 'true' and '$(EnableXUnitV3)' != 'false'">
     <TestRunnerName>XUnitV3</TestRunnerName>
     <OutputType>Exe</OutputType>

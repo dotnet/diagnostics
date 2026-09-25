@@ -4,11 +4,15 @@
   <Import Project="$(MSBuildThisFileDirectory)..\SOSHarnessDebuggees.props" />
 
   <PropertyGroup>
-    <SOSHelixPayloadDir Condition="'$(SOSHelixPayloadDir)' == ''">$(ArtifactsDir)helix/SOS.Tests/$(TargetRid)/$(Configuration)/payload</SOSHelixPayloadDir>
+    <SOSHelixPayloadDir Condition="'$(SOSHelixPayloadDir)' == ''">$(ArtifactsDir)helix/SOS.Tests/$(TargetRid)/$(Configuration)/$(HelixTargetQueue)/payload</SOSHelixPayloadDir>
     <SOSHelixWorkItemName Condition="'$(SOSHelixWorkItemName)' == ''">SOS_$(TargetRid)_$(Configuration)</SOSHelixWorkItemName>
     <WorkItemTimeout Condition="'$(WorkItemTimeout)' == ''">02:00:00</WorkItemTimeout>
+    <_SOSHelixLauncherPath Condition="'$(TargetOS)' == 'Windows_NT'">$(MSBuildThisFileDirectory)Helix/runtests.cmd</_SOSHelixLauncherPath>
+    <_SOSHelixLauncherPath Condition="'$(TargetOS)' != 'Windows_NT'">$(MSBuildThisFileDirectory)Helix/runtests.sh</_SOSHelixLauncherPath>
     <_SOSHelixWorkItemCommand Condition="'$(TargetOS)' == 'Windows_NT'">call .\runtests.cmd</_SOSHelixWorkItemCommand>
     <_SOSHelixWorkItemCommand Condition="'$(TargetOS)' != 'Windows_NT'">bash ./runtests.sh</_SOSHelixWorkItemCommand>
+    <_SOSTestOutputDir>$(ArtifactsBinDir)SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/</_SOSTestOutputDir>
+    <_SOSCdbDir>$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/</_SOSCdbDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,26 +22,25 @@
   </ItemGroup>
 
   <Target Name="StageSOSHelixPayload">
+    <!-- Scripts use fixed payload paths; binaries and debuggees retain their artifact layout. -->
     <ItemGroup>
-      <_SOSPayloadEngineeringFile Include="$(RepoRoot)eng/DisableSignatureCheck.ps1"
-                                  Condition="'$(TargetOS)' == 'Windows_NT'" />
-      <_SOSPayloadLauncherFile Include="$(MSBuildThisFileDirectory)Helix/run-sos-tests.cmd"
-                               Condition="'$(TargetOS)' == 'Windows_NT'" />
-      <_SOSPayloadLauncherFile Include="$(MSBuildThisFileDirectory)Helix/run-sos-tests.sh"
-                               Condition="'$(TargetOS)' != 'Windows_NT'" />
-      <_SOSPayloadEntitlementsFile Include="$(MSBuildThisFileDirectory)Helix/debuggee-entitlements.plist"
-                                   Condition="'$(TargetOS)' == 'osx'" />
+      <_SOSPayloadFile Include="$(_SOSHelixLauncherPath)"
+                       DestinationRelative="runtests$([System.IO.Path]::GetExtension('$(_SOSHelixLauncherPath)'))" />
+      <_SOSPayloadFile Include="$(RepoRoot)eng/DisableSignatureCheck.ps1"
+                       DestinationRelative="eng/DisableSignatureCheck.ps1"
+                       Condition="'$(TargetOS)' == 'Windows_NT'" />
+      <_SOSPayloadFile Include="$(MSBuildThisFileDirectory)Helix/debuggee-entitlements.plist"
+                       DestinationRelative="eng/helix/sos/debuggee-entitlements.plist"
+                       Condition="'$(TargetOS)' == 'osx'" />
 
-      <_SOSPayloadBinFile Include="$(ArtifactsBinDir)SOS.Tests/$(Configuration)/**/*;
+      <_SOSPayloadBinFile Include="$(_SOSTestOutputDir)**/*;
                                   $(ArtifactsBinDir)SOS.TestHarness.EngineHost/$(Configuration)/**/*;
                                   $(ArtifactsBinDir)SOS.TestHarness.Capturer/$(Configuration)/**/*;
                                   $(ArtifactsBinDir)dotnet-dump/$(Configuration)/**/*" />
       <_SOSPayloadNativeFile Include="$(ArtifactsBinNativeDir)**/*" />
       <_SOSPayloadCDacFile Include="$(ArtifactsDir)cdac-override/$(Configuration)/**/*"
                            Condition="Exists('$(ArtifactsDir)cdac-override/$(Configuration)')" />
-      <_SOSPayloadCdbFile Include="$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/*"
-                          Condition="'$(TargetOS)' == 'Windows_NT'" />
-      <_SOSPayloadDebuggerFile Include="@(_SOSPayloadCdbFile)"
+      <_SOSPayloadDebuggerFile Include="$(_SOSCdbDir)*"
                                Condition="'$(TargetOS)' == 'Windows_NT'" />
       <_SOSPayloadDebuggerFile Include="$(ArtifactsBinNativeDir)sos-lldb"
                                Condition="'$(TargetOS)' == 'osx'" />
@@ -51,15 +54,6 @@
     </CreateItem>
 
     <ItemGroup>
-      <_SOSPayloadFile Include="@(_SOSPayloadEngineeringFile)">
-        <DestinationRelative>eng/%(_SOSPayloadEngineeringFile.Filename)%(_SOSPayloadEngineeringFile.Extension)</DestinationRelative>
-      </_SOSPayloadFile>
-      <_SOSPayloadFile Include="@(_SOSPayloadLauncherFile)">
-        <DestinationRelative>runtests%(_SOSPayloadLauncherFile.Extension)</DestinationRelative>
-      </_SOSPayloadFile>
-      <_SOSPayloadFile Include="@(_SOSPayloadEntitlementsFile)">
-        <DestinationRelative>eng/helix/sos/%(_SOSPayloadEntitlementsFile.Filename)%(_SOSPayloadEntitlementsFile.Extension)</DestinationRelative>
-      </_SOSPayloadFile>
       <_SOSPayloadFile Include="@(_SOSPayloadBinFile)">
         <DestinationRelative>artifacts/bin/$([MSBuild]::MakeRelative('$(ArtifactsBinDir)', '%(_SOSPayloadBinFile.Identity)'))</DestinationRelative>
       </_SOSPayloadFile>
@@ -74,80 +68,63 @@
       </_SOSPayloadFile>
     </ItemGroup>
 
-    <Error Condition="'@(_SOSPayloadFile)' == ''" Text="The SOS Helix payload is empty." />
-    <Error Condition="!Exists('$(ArtifactsBinDir)SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/SOS.Tests.dll')"
-           Text="SOS.Tests was not found under '$(ArtifactsBinDir)SOS.Tests/$(Configuration)'." />
+    <!-- Required inputs are explicit because a missing file would disappear from the globs above. -->
+    <ItemGroup>
+      <_SOSRequiredInput Include="$(_SOSTestOutputDir)SOS.Tests.dll" />
+      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)sos.dll;$(_SOSCdbDir)dbgeng.dll" Condition="'$(TargetOS)' == 'Windows_NT'" />
+      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.so" Condition="'$(TargetOS)' == 'linux'" />
+      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.dylib;$(ArtifactsBinNativeDir)sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(_SOSRequiredInput.Identity)')"
+           Text="Required SOS Helix input '%(_SOSRequiredInput.Identity)' was not found in the prebuilt artifacts." />
     <Error Condition="!Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/dotnet-dump.dll') and !Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/publish/dotnet-dump.dll')"
            Text="dotnet-dump was not found under '$(ArtifactsBinDir)dotnet-dump/$(Configuration)'." />
-    <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(ArtifactsBinNativeDir)sos.dll')"
-           Text="Native SOS was not found at '$(ArtifactsBinNativeDir)sos.dll'." />
-    <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/dbgeng.dll')"
-           Text="DbgEng was not found in the cdb-sos package for '$(TargetRid)'." />
-    <Error Condition="'$(TargetOS)' == 'linux' and !Exists('$(ArtifactsBinNativeDir)libsosplugin.so')"
-           Text="The SOS lldb plugin was not found at '$(ArtifactsBinNativeDir)libsosplugin.so'." />
-    <Error Condition="'$(TargetOS)' == 'osx' and !Exists('$(ArtifactsBinNativeDir)libsosplugin.dylib')"
-           Text="The SOS lldb plugin was not found at '$(ArtifactsBinNativeDir)libsosplugin.dylib'." />
-    <Error Condition="'$(TargetOS)' == 'osx' and !Exists('$(ArtifactsBinNativeDir)sos-lldb')"
-           Text="The SOS lldb driver was not found at '$(ArtifactsBinNativeDir)sos-lldb'." />
 
     <RemoveDir Directories="$(SOSHelixPayloadDir)" />
     <MakeDir Directories="$(SOSHelixPayloadDir)" />
+    <Copy SourceFiles="@(_SOSPayloadFile)"
+          DestinationFiles="@(_SOSPayloadFile->'$(SOSHelixPayloadDir)/%(DestinationRelative)')"
+          SkipUnchangedFiles="true" />
     <WriteLinesToFile File="$(SOSHelixPayloadDir)/.sos-test-payload"
                       Lines="$(TargetRid);$(Configuration)"
                       Overwrite="true"
                       Encoding="ASCII" />
-    <Copy SourceFiles="@(_SOSPayloadFile)"
-          DestinationFiles="@(_SOSPayloadFile->'$(SOSHelixPayloadDir)/%(DestinationRelative)')"
-          SkipUnchangedFiles="true" />
-    <Error Condition="!Exists('$(SOSHelixPayloadDir)/.sos-test-payload')"
-           Text="The SOS Helix payload marker was not staged." />
-    <Error Condition="!Exists('$(SOSHelixPayloadDir)/artifacts/bin/SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/SOS.Tests.dll')"
-           Text="SOS.Tests was not staged in the Helix payload." />
-    <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(SOSHelixPayloadDir)/debugger/cdb.exe')"
-           Text="CDB was not staged in the SOS Helix payload." />
-    <Error Condition="'$(TargetOS)' == 'Windows_NT' and !Exists('$(SOSHelixPayloadDir)/debugger/dbgeng.dll')"
-           Text="DbgEng was not staged in the SOS Helix payload." />
-    <Error Condition="'$(TargetOS)' == 'osx' and !Exists('$(SOSHelixPayloadDir)/debugger/sos-lldb')"
-           Text="The SOS LLDB driver was not staged in the SOS Helix payload." />
+    <ItemGroup>
+      <_SOSRequiredPayloadFile Include=".sos-test-payload;artifacts/bin/SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/SOS.Tests.dll" />
+      <_SOSRequiredPayloadFile Include="debugger/cdb.exe;debugger/dbgeng.dll" Condition="'$(TargetOS)' == 'Windows_NT'" />
+      <_SOSRequiredPayloadFile Include="debugger/sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
+    </ItemGroup>
+    <Error Condition="!Exists('$(SOSHelixPayloadDir)/%(_SOSRequiredPayloadFile.Identity)')"
+           Text="Required SOS Helix payload file '%(_SOSRequiredPayloadFile.Identity)' was not staged." />
   </Target>
 
-  <Target Name="PrepareSOSHelixWorkItems">
-    <PropertyGroup>
-      <_SOSTestRuntimeVersions>@(RuntimeTestVersions->'%(RuntimeDownload)', '|')</_SOSTestRuntimeVersions>
-      <_SOSHelixWorkItemBase>$(SOSHelixWorkItemName)</_SOSHelixWorkItemBase>
-    </PropertyGroup>
+  <Target Name="CreateHelixPayload" DependsOnTargets="StageSOSHelixPayload" Returns="@(HelixWorkItem)">
+    <Error Condition="'$(TestHostRuntimeVersion)' == ''"
+           Text="TestHostRuntimeVersion must specify the runtime version for SOS Helix testing." />
+    <Error Condition="'@(RuntimeTestVersions)' == ''"
+           Text="RuntimeTestVersions must contain at least one runtime for SOS Helix sharding." />
+    <Error Condition="'%(RuntimeTestVersions.TargetFramework)' == ''"
+           Text="RuntimeTestVersions must contain TargetFramework metadata for SOS Helix sharding." />
+    <Error Condition="'%(RuntimeTestVersions.RuntimeDownload)' == ''"
+           Text="RuntimeTestVersions must contain RuntimeDownload metadata for SOS Helix provisioning." />
     <ItemGroup>
       <_SOSRuntimeShard Include="@(RuntimeTestVersions)">
-        <CoreVersion>$([System.String]::Copy('%(TargetFramework)').Replace('net', 'Net').Replace('.0', ''))</CoreVersion>
+        <CoreVersion>$([System.String]::Copy('%(RuntimeTestVersions.TargetFramework)').Replace('net', 'Net').Replace('.0', ''))</CoreVersion>
       </_SOSRuntimeShard>
-      <_SOSHelixWorkItem Include="@(_SOSRuntimeShard->'$(_SOSHelixWorkItemBase)-%(CoreVersion)')" />
-      <_SOSHelixWorkItem Include="$(_SOSHelixWorkItemBase)-Framework"
-                         Condition="'$(TargetOS)' == 'Windows_NT'" />
+      <HelixWorkItem Include="@(_SOSRuntimeShard->'$(SOSHelixWorkItemName)-%(CoreVersion)')" />
+      <HelixWorkItem Include="$(SOSHelixWorkItemName)-Framework"
+                    Condition="'$(TargetOS)' == 'Windows_NT'" />
+      <HelixWorkItem>
+        <PayloadArchive>$(SOSHelixPayloadDir).zip</PayloadArchive>
+        <Command>$(_SOSHelixWorkItemCommand) --helix-work-item &quot;%(Identity)&quot;</Command>
+        <Timeout>$(WorkItemTimeout)</Timeout>
+        <RequiredRuntimeVersions>$(TestHostRuntimeVersion);%(HelixWorkItem.RuntimeDownload)</RequiredRuntimeVersions>
+      </HelixWorkItem>
     </ItemGroup>
-    <PropertyGroup>
-      <_SOSHelixWorkItems>@(_SOSHelixWorkItem, '|')</_SOSHelixWorkItems>
-    </PropertyGroup>
-    <Error Condition="'@(_SOSRuntimeShard)' == ''"
-           Text="RuntimeTestVersions must contain at least one runtime for SOS Helix sharding." />
-    <Error Condition="'%(_SOSRuntimeShard.TargetFramework)' == ''"
-           Text="RuntimeTestVersions must contain TargetFramework metadata for SOS Helix sharding." />
-    <Message Importance="High" Text="SOS Helix work items: @(_SOSHelixWorkItem, ', ')" />
-  </Target>
-
-  <Target Name="SendToHelix" DependsOnTargets="StageSOSHelixPayload;PrepareSOSHelixWorkItems">
-    <MSBuild Projects="$(RepoRoot)eng/helix/SendToHelix.proj"
-             Targets="Restore;Test"
-             Properties="Configuration=$(Configuration);
-                         TestDir=$(SOSHelixPayloadDir);
-                         HelixWorkItems=$(_SOSHelixWorkItems);
-                         HelixWorkItemCommand=$(_SOSHelixWorkItemCommand);
-                         HelixTargetQueues=$(HelixTargetQueues);
-                         TargetOS=$(TargetOS);
-                         TargetArch=$(TargetArch);
-                         TargetRid=$(TargetRid);
-                         DotNetRuntimeVersions=$(_SOSTestRuntimeVersions);
-                         WorkItemTimeout=$(WorkItemTimeout);
-                         OfficialBuildId=$(OfficialBuildId)" />
+    <!-- The SDK's PayloadDirectory path creates its ZIP in memory. Keep the large SOS archive on disk. -->
+    <ZipDirectory SourceDirectory="$(SOSHelixPayloadDir)"
+                  DestinationFile="$(SOSHelixPayloadDir).zip"
+                  Overwrite="true" />
   </Target>
 
 </Project>

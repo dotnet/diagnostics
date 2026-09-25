@@ -1,0 +1,33 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+  <Target Name="CreateHelixPayload" Returns="@(HelixWorkItem)">
+    <PropertyGroup>
+      <_HelixTestOutputDir>$(ArtifactsBinDir)$(MSBuildProjectName)/$(Configuration)/$(NetCoreAppTestTargetFramework)/</_HelixTestOutputDir>
+      <_HelixPayloadDir>$(ArtifactsDir)helix/$(MSBuildProjectName)/$(TargetRid)/$(Configuration)/$(HelixTargetQueue)/payload</_HelixPayloadDir>
+      <_HelixLauncherExtension Condition="'$(TargetOS)' == 'Windows_NT'">.cmd</_HelixLauncherExtension>
+      <_HelixLauncherExtension Condition="'$(TargetOS)' != 'Windows_NT'">.sh</_HelixLauncherExtension>
+      <_HelixWorkItemCommand Condition="'$(TargetOS)' == 'Windows_NT'">call .\runtests.cmd</_HelixWorkItemCommand>
+      <_HelixWorkItemCommand Condition="'$(TargetOS)' != 'Windows_NT'">bash ./runtests.sh</_HelixWorkItemCommand>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_HelixTestOutputDir)$(AssemblyName).dll')"
+           Text="The prebuilt test assembly '$(_HelixTestOutputDir)$(AssemblyName).dll' was not found." />
+    <Error Condition="'$(TestHostRuntimeVersion)' == ''" Text="TestHostRuntimeVersion must specify the test-host runtime." />
+    <ItemGroup>
+      <_HelixTestOutputFile Include="$(_HelixTestOutputDir)**/*" />
+    </ItemGroup>
+    <RemoveDir Directories="$(_HelixPayloadDir)" />
+    <MakeDir Directories="$(_HelixPayloadDir)" />
+    <Copy SourceFiles="@(_HelixTestOutputFile)"
+          DestinationFiles="@(_HelixTestOutputFile->'$(_HelixPayloadDir)/tests/$(AssemblyName)/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)runtests$(_HelixLauncherExtension)"
+          DestinationFiles="$(_HelixPayloadDir)/runtests$(_HelixLauncherExtension)" />
+    <ItemGroup>
+      <HelixWorkItem Include="$(AssemblyName)">
+        <PayloadDirectory>$(_HelixPayloadDir)</PayloadDirectory>
+        <Command>$(_HelixWorkItemCommand) --runtime-version &quot;$(TestHostRuntimeVersion)&quot; --test-dll &quot;tests/$(AssemblyName)/$(AssemblyName).dll&quot; --helix-work-item &quot;$(AssemblyName)&quot;</Command>
+        <Timeout>00:30:00</Timeout>
+        <RequiredRuntimeVersions>$(TestHostRuntimeVersion)</RequiredRuntimeVersions>
+      </HelixWorkItem>
+    </ItemGroup>
+  </Target>
+</Project>
