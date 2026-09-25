@@ -280,6 +280,18 @@ namespace SOS.Extensions
             catch (InvalidCastException)
             {
             }
+            try
+            {
+                NativeThreadStackService nativeThreadStackService = new(iunk);
+                // This service needs another reference since it is implemented as part of IDebuggerServices and gets
+                // disposed in Uninitialize() below by the DisposeServices call.
+                nativeThreadStackService.AddRef();
+                _host.ServiceContainer.AddService<INativeThreadStackService>(nativeThreadStackService);
+            }
+            catch (InvalidCastException)
+            {
+                Trace.TraceInformation("Native debugger stack service is not available.");
+            }
             hr = DebuggerServices.GetSymbolPath(out string symbolPath);
             if (hr == HResult.S_OK)
             {

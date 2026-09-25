@@ -5,6 +5,7 @@
 #include <string>
 #include <set>
 #include <vector>
+#include "debuggernativethreadstackservice.h"
 
 #define CACHE_SIZE  4096
 
@@ -18,7 +19,7 @@ struct SectionRange
     lldb::SBSection section;
 };
 
-class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices
+class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices, public IDebuggerNativeThreadStackService
 {
 private:
     LONG m_ref;
@@ -136,6 +137,12 @@ public:
         DWORD threadId,
         ULONG32 contextSize,
         PBYTE context);
+
+    HRESULT STDMETHODCALLTYPE GetNativeThreadStackTrace(
+        ULONG32 sysId,
+        PDEBUGGER_NATIVE_STACK_FRAME frames,
+        ULONG framesSize,
+        PULONG framesFilled);
 
     HRESULT STDMETHODCALLTYPE SetExceptionCallback(
         PFN_EXCEPTION_CALLBACK callback);

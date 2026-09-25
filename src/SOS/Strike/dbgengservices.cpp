@@ -150,6 +150,12 @@ DbgEngServices::QueryInterface(
         AddRef();
         return S_OK;
     }
+    else if (InterfaceId == __uuidof(IDebuggerNativeThreadStackService))
+    {
+        *Interface = static_cast<IDebuggerNativeThreadStackService*>(this);
+        AddRef();
+        return S_OK;
+    }
     else if (InterfaceId == __uuidof(IRemoteMemoryService))
     {
         *Interface = static_cast<IRemoteMemoryService*>(this);
@@ -463,6 +469,59 @@ DbgEngServices::VirtualUnwind(
     PBYTE context)
 {
     return E_NOTIMPL;
+}
+
+HRESULT
+DbgEngServices::GetNativeThreadStackTrace(
+    ULONG32 sysId,
+    PDEBUGGER_NATIVE_STACK_FRAME frames,
+    ULONG framesSize,
+    PULONG framesFilled)
+{
+    if (framesFilled == nullptr || (frames == nullptr && framesSize > 0))
+    {
+        return E_INVALIDARG;
+    }
+
+    *framesFilled = 0;
+    if (framesSize == 0)
+    {
+        return S_OK;
+    }
+
+    ArrayHolder<DEBUG_STACK_FRAME> debugFrames = new DEBUG_STACK_FRAME[framesSize];
+    if (debugFrames.GetPtr() == nullptr)
+    {
+        return E_OUTOFMEMORY;
+    }
+
+    ULONG originalThreadId;
+    HRESULT hr = SetCurrentThreadIdFromSystemId(sysId, &originalThreadId);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    ULONG count = 0;
+    hr = m_control->GetStackTrace(0, 0, 0, debugFrames, framesSize, &count);
+    m_system->SetCurrentThreadId(originalThreadId);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (count > framesSize)
+    {
+        count = framesSize;
+    }
+    for (ULONG index = 0; index < count; index++)
+    {
+        frames[index].InstructionPointer = debugFrames[index].InstructionOffset;
+        frames[index].StackPointer = debugFrames[index].StackOffset;
+        frames[index].StackPointerValid = debugFrames[index].StackOffset != 0;
+    }
+    *framesFilled = count;
+    return S_OK;
 }
 
 HRESULT 

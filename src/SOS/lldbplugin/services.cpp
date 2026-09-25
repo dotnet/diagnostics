@@ -83,6 +83,12 @@ LLDBServices::QueryInterface(
         AddRef();
         return S_OK;
     }
+    else if (InterfaceId == __uuidof(IDebuggerNativeThreadStackService))
+    {
+        *Interface = static_cast<IDebuggerNativeThreadStackService*>(this);
+        AddRef();
+        return S_OK;
+    }
     else
     {
         *Interface = NULL;
@@ -278,6 +284,43 @@ LLDBServices::VirtualUnwind(
 
     GetContextFromFrame(frameFound, dtcontext);
 
+    return S_OK;
+}
+
+HRESULT
+LLDBServices::GetNativeThreadStackTrace(
+    ULONG32 sysId,
+    PDEBUGGER_NATIVE_STACK_FRAME frames,
+    ULONG framesSize,
+    PULONG framesFilled)
+{
+    if (framesFilled == nullptr || (frames == nullptr && framesSize > 0))
+    {
+        return E_INVALIDARG;
+    }
+
+    *framesFilled = 0;
+    lldb::SBThread thread = GetThreadBySystemId(sysId);
+    if (!thread.IsValid())
+    {
+        return E_FAIL;
+    }
+
+    ULONG count = std::min<ULONG>(thread.GetNumFrames(), framesSize);
+    for (ULONG index = 0; index < count; index++)
+    {
+        lldb::SBFrame frame = thread.GetFrameAtIndex(index);
+        if (!frame.IsValid())
+        {
+            break;
+        }
+
+        lldb::addr_t stackPointer = frame.GetSP();
+        frames[index].InstructionPointer = frame.GetPC();
+        frames[index].StackPointer = stackPointer;
+        frames[index].StackPointerValid = stackPointer != LLDB_INVALID_ADDRESS;
+        (*framesFilled)++;
+    }
     return S_OK;
 }
 

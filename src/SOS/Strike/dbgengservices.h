@@ -8,6 +8,7 @@
 #include <dbgeng.h>
 #include <dbgmodel.h>
 #include "debuggerservices.h"
+#include "debuggernativethreadstackservice.h"
 #include "remotememoryservice.h"
 #include "extensions.h"
 
@@ -19,7 +20,7 @@ class IMachine;
 extern "C" {
 #endif
 
-class DbgEngServices : public IDebuggerServices, public IRemoteMemoryService, public IDebugEventCallbacks
+class DbgEngServices : public IDebuggerServices, public IDebuggerNativeThreadStackService, public IRemoteMemoryService, public IDebugEventCallbacks
 {
 private:
     LONG m_ref;
@@ -173,6 +174,12 @@ public:
         DWORD threadId,
         ULONG32 contextSize,
         PBYTE context);
+
+    HRESULT STDMETHODCALLTYPE GetNativeThreadStackTrace(
+        ULONG32 sysId,
+        PDEBUGGER_NATIVE_STACK_FRAME frames,
+        ULONG framesSize,
+        PULONG framesFilled);
 
     HRESULT STDMETHODCALLTYPE GetSymbolPath(
         PSTR buffer,
