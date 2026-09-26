@@ -905,6 +905,14 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static string MakeCanonicalExePath(string maybeRelativePath)
         {
+            return MakeCanonicalExePath(maybeRelativePath, followSymlinks: false);
+        }
+
+        /// <summary>
+        /// Normalizes an executable path, optionally resolving symbolic links in the existing path.
+        /// </summary>
+        public static string MakeCanonicalExePath(string maybeRelativePath, bool followSymlinks)
+        {
             if (string.IsNullOrWhiteSpace(maybeRelativePath))
             {
                 return null;
@@ -914,7 +922,26 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 maybeRelativePathWithExtension = maybeRelativePath + ".exe";
             }
-            return MakeCanonicalPath(maybeRelativePathWithExtension);
+            string path = MakeCanonicalPath(maybeRelativePathWithExtension);
+            if (!followSymlinks)
+            {
+                return path;
+            }
+
+            FileInfo file = new(path);
+            FileInfo resolved = new(Path.Combine(ResolveDirectoryPath(file.Directory), file.Name));
+            return resolved.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? resolved.FullName;
+        }
+
+        private static string ResolveDirectoryPath(DirectoryInfo directory)
+        {
+            if (directory.Parent is not DirectoryInfo parent)
+            {
+                return directory.FullName;
+            }
+
+            DirectoryInfo resolved = new(Path.Combine(ResolveDirectoryPath(parent), directory.Name));
+            return resolved.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? resolved.FullName;
         }
 
         public static string MakeCanonicalPath(string maybeRelativePath)
