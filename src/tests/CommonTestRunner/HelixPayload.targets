@@ -1,0 +1,72 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+  <Import Project="..\Helix\Managed\HelixPayload.targets" />
+
+  <Target Name="StageCommonTestRunnerHelixPayload" AfterTargets="StageManagedHelixPayload">
+    <Error Condition="'@(RuntimeTestVersions)' == ''" Text="RuntimeTestVersions must contain at least one runtime for CommonTestRunner Helix testing." />
+    <Error Condition="'%(RuntimeTestVersions.TargetFramework)' == '' or '%(RuntimeTestVersions.Runtime)' == '' or '%(RuntimeTestVersions.RuntimeDownload)' == ''"
+           Text="RuntimeTestVersions must contain TargetFramework, Runtime, and RuntimeDownload metadata for CommonTestRunner Helix testing." />
+    <ItemGroup>
+      <_CommonHelixDebuggeeProject Include="$(MSBuildThisFileDirectory)Debuggees/**/*.csproj" />
+      <_CommonHelixDebuggee Include="@(_CommonHelixDebuggeeProject)">
+        <TargetFramework>%(RuntimeTestVersions.TargetFramework)</TargetFramework>
+      </_CommonHelixDebuggee>
+      <_CommonHelixDebuggeeOutput Include="@(_CommonHelixDebuggee->'$(ArtifactsBinDir)%(Filename)/$(Configuration)/%(TargetFramework)/%(Filename)')" />
+      <_CommonHelixRequiredInput Include="@(_CommonHelixDebuggeeOutput->'%(Identity).dll');
+                                         @(_CommonHelixDebuggeeOutput->'%(Identity).deps.json');
+                                         @(_CommonHelixDebuggeeOutput->'%(Identity).runtimeconfig.json')" />
+      <_CommonHelixToolDir Include="$(ArtifactsBinDir)dotnet-trace/$(Configuration)/$(NetCoreAppMinTargetFramework)/"
+                          Condition="'$(HelixIncludeDotNetTrace)' == 'true'" />
+      <_CommonHelixRequiredInput Include="@(_CommonHelixToolDir->'%(Identity)dotnet-trace.dll');
+                                         @(_CommonHelixToolDir->'%(Identity)dotnet-trace.deps.json');
+                                         @(_CommonHelixToolDir->'%(Identity)dotnet-trace.runtimeconfig.json')" />
+      <HelixAdditionalRuntimeVersions Include="@(RuntimeTestVersions->'%(RuntimeDownload)')" />
+      <HelixAdditionalRuntimeVersions Include="$(MicrosoftNETCoreApp80Version)" Condition="'$(HelixIncludeDotNetTrace)' == 'true'" />
+    </ItemGroup>
+    <Error Condition="'@(_CommonHelixDebuggeeProject)' == ''" Text="No CommonTestRunner debuggee projects were found." />
+    <Error Condition="!Exists('%(_CommonHelixRequiredInput.Identity)')"
+           Text="Required CommonTestRunner Helix input '%(_CommonHelixRequiredInput.Identity)' was not found in the prebuilt artifacts." />
+    <CreateItem Include="@(_CommonHelixDebuggeeOutput->'%(RootDir)%(Directory)**/*');@(_CommonHelixToolDir->'%(Identity)**/*')">
+      <Output TaskParameter="Include" ItemName="_CommonHelixBinFile" />
+    </CreateItem>
+    <ItemGroup>
+      <_CommonHelixBinFile>
+        <DestinationRelative>$([MSBuild]::MakeRelative('$(ArtifactsBinDir)', '%(Identity)'))</DestinationRelative>
+      </_CommonHelixBinFile>
+      <_CommonHelixConfig Include="Header">
+        <Content>
+<![CDATA[
+<Configuration>
+  <TargetConfiguration>$(Configuration)</TargetConfiguration>
+  <NetCoreAppMinTargetFramework>$(NetCoreAppMinTargetFramework)</NetCoreAppMinTargetFramework>
+  <Options>
+]]>
+        </Content>
+      </_CommonHelixConfig>
+      <_CommonHelixConfig Include="@(RuntimeTestVersions)">
+        <Content>
+<![CDATA[
+    <Option>
+      <RuntimeFrameworkVersion>%(RuntimeTestVersions.Runtime)</RuntimeFrameworkVersion>
+      <BuildProjectFramework>%(RuntimeTestVersions.TargetFramework)</BuildProjectFramework>
+    </Option>
+]]>
+        </Content>
+      </_CommonHelixConfig>
+      <_CommonHelixConfig Include="Footer">
+        <Content>
+<![CDATA[
+  </Options>
+</Configuration>
+]]>
+        </Content>
+      </_CommonHelixConfig>
+    </ItemGroup>
+    <Copy SourceFiles="@(_CommonHelixBinFile)"
+          DestinationFiles="@(_CommonHelixBinFile->'$(_HelixPayloadDir)/artifacts/bin/%(DestinationRelative)')" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ConfigFiles/Helix/Debugger.Tests.Config.txt"
+          DestinationFiles="$(_HelixPayloadDir)/tests/$(AssemblyName)/Debugger.Tests.Config.txt" />
+    <WriteLinesToFile File="$(_HelixPayloadDir)/tests/$(AssemblyName)/Debugger.Tests.Common.txt"
+                      Lines="@(_CommonHelixConfig->'%(Content)')" Overwrite="true" />
+  </Target>
+</Project>

@@ -58,9 +58,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                     nugetPackages = Path.Combine(basePath, ".nuget", "packages");
                 }
             }
-            // The TargetArchitecture and NuGetPackageCacheDir can still be overridden
-            // in a config file. This is just setting the default. The other values can
-            // also // be overridden but it is not recommended.
+            // TargetArchitecture, NuGetPackageCacheDir, and DotNetRoot can be overridden
+            // in a config file. These are defaults. Overriding the other values is not recommended.
             Dictionary<string, string> initialConfig = new()
             {
                 ["Timestamp"] = GetTimeStampText(),
@@ -71,6 +70,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TargetRid"] = GetRid(),
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages,
+                ["DotNetRoot"] = Environment.GetEnvironmentVariable("DOTNET_ROOT"),
             };
             if (OS.Kind == OSKind.Windows)
             {
@@ -905,6 +905,14 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static string MakeCanonicalExePath(string maybeRelativePath)
         {
+            return MakeCanonicalExePath(maybeRelativePath, followSymlinks: false);
+        }
+
+        /// <summary>
+        /// Normalizes an executable path, optionally resolving symbolic links in the existing path.
+        /// </summary>
+        public static string MakeCanonicalExePath(string maybeRelativePath, bool followSymlinks)
+        {
             if (string.IsNullOrWhiteSpace(maybeRelativePath))
             {
                 return null;
@@ -914,7 +922,26 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 maybeRelativePathWithExtension = maybeRelativePath + ".exe";
             }
-            return MakeCanonicalPath(maybeRelativePathWithExtension);
+            string path = MakeCanonicalPath(maybeRelativePathWithExtension);
+            if (!followSymlinks)
+            {
+                return path;
+            }
+
+            FileInfo file = new(path);
+            FileInfo resolved = new(Path.Combine(ResolveDirectoryPath(file.Directory), file.Name));
+            return resolved.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? resolved.FullName;
+        }
+
+        private static string ResolveDirectoryPath(DirectoryInfo directory)
+        {
+            if (directory.Parent is not DirectoryInfo parent)
+            {
+                return directory.FullName;
+            }
+
+            DirectoryInfo resolved = new(Path.Combine(ResolveDirectoryPath(parent), directory.Name));
+            return resolved.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? resolved.FullName;
         }
 
         public static string MakeCanonicalPath(string maybeRelativePath)
