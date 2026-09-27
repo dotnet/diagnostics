@@ -119,8 +119,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                     else
                     {
-                        Assert.Equal($"{runner.ExePath}", processInfoBeforeResume.CommandLine);
-                        Assert.Equal($"{runner.ExePath} {runner.ManagedArguments}", processInfo.CommandLine);
+                        string expectedExePath = runner.ExePath;
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                        {
+                            // macOS reports the resolved executable path, even when launched through /tmp.
+                            expectedExePath = TestConfiguration.MakeCanonicalExePath(expectedExePath, followSymlinks: true);
+                        }
+                        Assert.Equal(expectedExePath, processInfoBeforeResume.CommandLine);
+                        Assert.Equal($"{expectedExePath} {runner.ManagedArguments}", processInfo.CommandLine);
                     }
                 }
             }

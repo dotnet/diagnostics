@@ -1,0 +1,15 @@
+<Configuration>
+  <Import ConfigFile="Debugger.Tests.Common.txt" />
+  <ArtifactsDir>../../artifacts</ArtifactsDir>
+  <TestProduct>ProjectK</TestProduct>
+  <DebuggeeSourceRoot>$(ArtifactsDir)/test/DebuggeeSources/CommonTestRunner/Debuggees</DebuggeeSourceRoot>
+  <DebuggeeBuildRoot>$(ArtifactsDir)</DebuggeeBuildRoot>
+  <DebuggeeBuildProcess>sdk.prebuilt</DebuggeeBuildProcess>
+  <!-- DotNetRoot comes from DOTNET_ROOT, set by the Helix launcher. -->
+  <HostExe>$(DotNetRoot)/dotnet</HostExe>
+  <HostExe Condition="'$(OS)' == 'windows'">$(DotNetRoot)/dotnet.exe</HostExe>
+  <HostArgs>--fx-version $(RuntimeFrameworkVersion)</HostArgs>
+  <CliPath>$(HostExe)</CliPath>
+  <DotNetTraceHost>$(HostExe)</DotNetTraceHost>
+  <DotNetTracePath>$(ArtifactsDir)/bin/dotnet-trace/$(TargetConfiguration)/$(NetCoreAppMinTargetFramework)/dotnet-trace.dll</DotNetTracePath>
+</Configuration>

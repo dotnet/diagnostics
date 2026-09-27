@@ -1,6 +1,6 @@
 <!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
 <Project>
-  <Target Name="CreateHelixPayload" Returns="@(HelixWorkItem)">
+  <Target Name="StageManagedHelixPayload">
     <PropertyGroup>
       <_HelixTestOutputDir>$(ArtifactsBinDir)$(MSBuildProjectName)/$(Configuration)/$(NetCoreAppTestTargetFramework)/</_HelixTestOutputDir>
       <_HelixPayloadDir>$(ArtifactsDir)helix/$(MSBuildProjectName)/$(TargetRid)/$(Configuration)/$(HelixTargetQueue)/payload</_HelixPayloadDir>
@@ -21,12 +21,16 @@
           DestinationFiles="@(_HelixTestOutputFile->'$(_HelixPayloadDir)/tests/$(AssemblyName)/%(RecursiveDir)%(Filename)%(Extension)')" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)runtests$(_HelixLauncherExtension)"
           DestinationFiles="$(_HelixPayloadDir)/runtests$(_HelixLauncherExtension)" />
+  </Target>
+
+  <Target Name="CreateHelixPayload" DependsOnTargets="StageManagedHelixPayload" Returns="@(HelixWorkItem)">
     <ItemGroup>
+      <_ManagedHelixRuntime Include="$(TestHostRuntimeVersion);@(HelixAdditionalRuntimeVersions)" />
       <HelixWorkItem Include="$(AssemblyName)">
         <PayloadDirectory>$(_HelixPayloadDir)</PayloadDirectory>
         <Command>$(_HelixWorkItemCommand) --runtime-version &quot;$(TestHostRuntimeVersion)&quot; --test-dll &quot;tests/$(AssemblyName)/$(AssemblyName).dll&quot; --helix-work-item &quot;$(AssemblyName)&quot;</Command>
         <Timeout>00:30:00</Timeout>
-        <RequiredRuntimeVersions>$(TestHostRuntimeVersion)</RequiredRuntimeVersions>
+        <RequiredRuntimeVersions>@(_ManagedHelixRuntime)</RequiredRuntimeVersions>
       </HelixWorkItem>
     </ItemGroup>
   </Target>

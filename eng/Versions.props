@@ -167,11 +167,13 @@
     <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' != 'default'">
       <RuntimeDownload>$(DotnetRuntimeDownloadVersion)</RuntimeDownload>
       <Runtime>$(DotnetRuntimeDownloadVersion)</Runtime>
+      <TargetFramework>net$([System.Text.RegularExpressions.Regex]::Match('$(DotnetRuntimeDownloadVersion)', '^\d+\.\d+').Value)</TargetFramework>
       <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
     </RuntimeTestVersions>
     <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' == 'default'">
       <RuntimeDownload>$(DotnetRuntimeVersion)</RuntimeDownload>
       <Runtime>$(DotnetRuntimeVersion)</Runtime>
+      <TargetFramework>net$([System.Text.RegularExpressions.Regex]::Match('$(DotnetRuntimeVersion)', '^\d+\.\d+').Value)</TargetFramework>
       <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
     </RuntimeTestVersions>
   </ItemGroup>

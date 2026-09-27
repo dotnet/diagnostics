@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <IsHelixTestProject>true</IsHelixTestProject>
     <TargetFrameworks>$(SupportedXUnitTestTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
@@ -9,5 +10,7 @@
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="$(MicrosoftDiagnosticsTracingTraceEventVersion)" />
     <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
   </ItemGroup>
+
+  <Import Project="..\Helix\Managed\HelixPayload.targets" />
 
 </Project>

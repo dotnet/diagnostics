@@ -186,6 +186,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }
 
             await using TestRunner runner = await TestRunner.Create(config, _output, "Tracee");
+            // CoreCLR defaults to /tmp without honoring TMPDIR, which Helix can redirect.
+            // Keep the child's output directory consistent with where this test looks for files.
+            runner.AddEnvVar("DOTNET_PerfMapJitDumpPath", GetTmpDir());
             await runner.Start(testProcessTimeout: 60_000);
 
             try
