@@ -47,8 +47,8 @@ target-invocation boundary is still specialized legacy behavior.
 | `DumpGen.script` | Improved | `GcInspectionTests.DumpGen_ListsGenerationObjects` asserts a known gen0 object. `DumpGen_ArgumentsAndFilters` adds missing/invalid generation and valid `-type`/`-mt` coverage. Exact legacy gen1/gen2/LOH/POH populations remain retained. |
 | `DynamicMethod.script` | Retained | `DumpIlTests` validates IL addresses and instructions and ICorDebug is covered elsewhere; the emitted dynamic-method target remains a legacy scenario. |
 | `FindRootsOlderGeneration.script` | Gap | `GcRoot_FindsRootsForLive_NoneForDead` improves ordinary root correctness, but the live `findroots -gen any` notification/continue sequence and older-generation result are not represented. |
-| `GCPOH.script` | Improved | `DumpHeapGenerationsTests`, `DumpArrayTests`, `GcHandles`, `VerifyHeap`, `EeHeapTests`, and stack-root tests use deterministic objects and structured assertions; the original POH script remains active. |
-| `GCTests.script` | Improved | Object fields, `gcwhere`, stack objects, heap statistics, roots, handles, finalization, and verification are split into focused tests with exact object oracles. |
+| `GCPOH.script` | Retired | `DumpHeapGenerationsTests`, `DumpArrayTests`, `GcHandles`, `VerifyHeap`, `EeHeapTests`, and stack-root tests use deterministic objects and structured assertions; the original POH script remains active. |
+| `GCTests.script` | Retired | Object fields, `gcwhere`, stack objects, heap statistics, roots, handles, finalization, and verification are split into focused tests with exact object oracles. |
 | `InterpreterStackInterleavedTest.script` | Retained | No generic target can replace the interleaved interpreter/JIT frame sequence; legacy ownership is intentional. |
 | `InterpreterStackTest.script` | Retained | Interpreter-frame ordering remains specialized legacy coverage. |
 | `LineNums.script` | Retired | `ClrStackLinesTests` checks source file/line behavior and `PrintExceptionTests` checks exception structure/data across the matrix. |
