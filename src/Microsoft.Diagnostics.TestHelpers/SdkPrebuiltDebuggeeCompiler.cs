@@ -28,13 +28,23 @@ namespace Microsoft.Diagnostics.TestHelpers
             // Source Path:     <DebuggeeSourceRoot>/<DebuggeeName>/[<DebuggeeName>]
             // Binary Path:     <DebuggeeBuildRoot>/bin/<DebuggeeName>/<TargetConfiguration>/<BuildProjectFramework>
             // Binary Exe Path: <DebuggeeBuildRoot>/bin/<DebuggeeName>/<TargetConfiguration>/<BuildProjectFramework>/<DebuggeeName>.dll
+            // Single-file apps use the RID-specific publish directory and launch the apphost directly.
             _sourcePath = Path.Combine(config.DebuggeeSourceRoot, debuggeeName);
             if (Directory.Exists(Path.Combine(_sourcePath, debuggeeName)))
             {
                 _sourcePath = Path.Combine(_sourcePath, debuggeeName);
             }
             _binaryPath = Path.Combine(config.DebuggeeBuildRoot, "bin", debuggeeName, config.TargetConfiguration, config.BuildProjectFramework);
-            _binaryExePath = Path.Combine(_binaryPath, debuggeeName) + (config.IsDesktop ? ".exe" : ".dll");
+            if (config.PublishSingleFile)
+            {
+                if (string.IsNullOrEmpty(config.BuildProjectRuntime))
+                {
+                    throw new System.ArgumentException("BuildProjectRuntime must be set for a prebuilt single-file debuggee");
+                }
+                _binaryPath = Path.Combine(_binaryPath, config.BuildProjectRuntime, "publish");
+            }
+            string extension = config.PublishSingleFile ? (OS.Kind == OSKind.Windows ? ".exe" : "") : (config.IsDesktop ? ".exe" : ".dll");
+            _binaryExePath = Path.Combine(_binaryPath, debuggeeName) + extension;
         }
 
         public Task<DebuggeeConfiguration> Execute(ITestOutputHelper output)

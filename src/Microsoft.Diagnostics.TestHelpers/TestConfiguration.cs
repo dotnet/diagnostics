@@ -71,6 +71,7 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages,
                 ["DotNetRoot"] = Environment.GetEnvironmentVariable("DOTNET_ROOT"),
+                ["HelixWorkItemUploadRoot"] = Environment.GetEnvironmentVariable("HELIX_WORKITEM_UPLOAD_ROOT"),
             };
             if (OS.Kind == OSKind.Windows)
             {

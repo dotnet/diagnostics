@@ -4,4 +4,12 @@
     <TargetFramework Condition="'$(BuildProjectFramework)' != ''">$(BuildProjectFramework)</TargetFramework>
     <TargetFrameworks Condition="'$(BuildProjectFramework)' == ''">$(SupportedSubProcessTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
+  <Target Name="WriteDbgShimSingleFileRuntimeVersion"
+          AfterTargets="Publish"
+          Condition="'$(DbgShimSingleFileRuntimeVersion)' != ''">
+    <WriteLinesToFile File="$(PublishDir)runtime.version"
+                      Lines="$(DbgShimSingleFileRuntimeVersion)"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+  </Target>
 </Project>

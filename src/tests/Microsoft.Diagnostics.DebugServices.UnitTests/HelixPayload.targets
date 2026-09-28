@@ -1,0 +1,79 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+  <Import Project="..\Helix\Managed\HelixPayload.targets" />
+
+  <Target Name="StageDebugServicesHelixPayload" AfterTargets="StageManagedHelixPayload">
+    <PropertyGroup>
+      <_DebugServicesHelixConfigOS Condition="'$(TargetOS)' == 'Windows_NT'">Windows</_DebugServicesHelixConfigOS>
+      <_DebugServicesHelixConfigOS Condition="'$(TargetOS)' != 'Windows_NT'">Unix</_DebugServicesHelixConfigOS>
+      <_DebugServicesHelixDebuggerDir>$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/</_DebugServicesHelixDebuggerDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <!-- Windows x64 also exercises Linux x64 and arm64 dumps. macOS has no dump cases. -->
+      <_DebugServicesHelixAssetPackage Include="testassets.windows.$(TargetArch).6.0"
+                                      Condition="'$(RunTests)' == 'true' and '$(TargetOS)' == 'Windows_NT' and ('$(TargetArch)' == 'x64' or '$(TargetArch)' == 'x86')" />
+      <_DebugServicesHelixAssetPackage Include="testassets.linux.x64.6.0;testassets.linux.arm64.6.0"
+                                      Condition="'$(RunTests)' == 'true' and '$(TargetOS)' == 'Windows_NT' and '$(TargetArch)' == 'x64'" />
+      <_DebugServicesHelixAssetPackage Include="testassets.linux.$(TargetArch).6.0"
+                                      Condition="'$(RunTests)' == 'true' and '$(TargetOS)' == 'linux' and ('$(TargetArch)' == 'x64' or '$(TargetArch)' == 'arm64')" />
+      <_DebugServicesHelixAssetRoot Include="@(_DebugServicesHelixAssetPackage->'$(NuGetPackageRoot)%(Identity)/$(TestAssetsVersion)/content/')" />
+      <_DebugServicesHelixRequiredInput Include="@(_DebugServicesHelixAssetRoot->'%(Identity)DivZero/SOS.DivZero.Heap.dmp');
+                                               @(_DebugServicesHelixAssetRoot->'%(Identity)DivZero/SOS.DivZero.Heap.dmp.xml');
+                                               @(_DebugServicesHelixAssetRoot->'%(Identity)DivZero/SOS.DivZero.Triage.dmp');
+                                               @(_DebugServicesHelixAssetRoot->'%(Identity)DivZero/SOS.DivZero.Triage.dmp.xml');
+                                               @(_DebugServicesHelixAssetRoot->'%(Identity)DivZero/DivZero.dll');
+                                               @(_DebugServicesHelixAssetRoot->'%(Identity)DivZero/DivZero.pdb');
+                                               @(_DebugServicesHelixAssetRoot->'%(Identity)WebApp3/SOS.WebApp3.Heap.dmp');
+                                               @(_DebugServicesHelixAssetRoot->'%(Identity)WebApp3/SOS.WebApp3.Heap.dmp.xml');
+                                               @(_DebugServicesHelixAssetRoot->'%(Identity)WebApp3/WebApp3.dll');
+                                               @(_DebugServicesHelixAssetRoot->'%(Identity)WebApp3/WebApp3.pdb')" />
+      <_DebugServicesHelixRequiredInput Include="$(_DebugServicesHelixDebuggerDir)dbgeng.dll;
+                                               $(_DebugServicesHelixDebuggerDir)dbghelp.dll;
+                                               $(_DebugServicesHelixDebuggerDir)dbgcore.dll;
+                                               $(_DebugServicesHelixDebuggerDir)DbgModel.dll;
+                                               $(_DebugServicesHelixDebuggerDir)symsrv.dll"
+                                      Condition="'$(TargetOS)' == 'Windows_NT'" />
+      <_DebugServicesHelixRequiredInput Include="$(_HelixTestOutputDir)$(AssemblyName).deps.json;
+                                               $(_HelixTestOutputDir)$(AssemblyName).runtimeconfig.json" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(_DebugServicesHelixRequiredInput.Identity)')"
+           Text="Required DebugServices Helix input '%(_DebugServicesHelixRequiredInput.Identity)' was not found in the prebuilt artifacts or restored packages." />
+    <!-- Keep adjacent managed images, PDBs and crash reports used by dump and symbol services.
+         Runtime images and symbols still use TestDump's public symbol server and writable default cache. -->
+    <CreateItem Include="@(_DebugServicesHelixAssetRoot->'%(Identity)**/*')">
+      <Output TaskParameter="Include" ItemName="_DebugServicesHelixAssetFile" />
+    </CreateItem>
+    <ItemGroup>
+      <_DebugServicesHelixAssetFile>
+        <DestinationRelative>$([MSBuild]::MakeRelative('$(NuGetPackageRoot)', '%(Identity)'))</DestinationRelative>
+      </_DebugServicesHelixAssetFile>
+      <_DebugServicesHelixDebuggerFile Include="$(_DebugServicesHelixDebuggerDir)*.dll"
+                                       Condition="'$(TargetOS)' == 'Windows_NT'" />
+      <_DebugServicesHelixConfig Include="Common">
+        <Content>
+<![CDATA[
+<Configuration>
+  <TargetConfiguration>$(Configuration)</TargetConfiguration>
+  <RepoRootDir>../..</RepoRootDir>
+  <RunTests>$(RunTests)</RunTests>
+  <DbgEngPath>dbgeng.dll</DbgEngPath>
+  <Package_TestAssets_Windows_x64_6_0>../../packages/testassets.windows.x64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Windows_x64_6_0>
+  <Package_TestAssets_Windows_x86_6_0>../../packages/testassets.windows.x86.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Windows_x86_6_0>
+  <Package_TestAssets_Linux_x64_6_0>../../packages/testassets.linux.x64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_x64_6_0>
+  <Package_TestAssets_Linux_arm64_6_0>../../packages/testassets.linux.arm64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_arm64_6_0>
+</Configuration>
+]]>
+        </Content>
+      </_DebugServicesHelixConfig>
+    </ItemGroup>
+    <Copy SourceFiles="@(_DebugServicesHelixAssetFile)"
+          DestinationFiles="@(_DebugServicesHelixAssetFile->'$(_HelixPayloadDir)/packages/%(DestinationRelative)')" />
+    <!-- CLRMD loads dbgeng by name; place its dependencies beside the test assembly. -->
+    <Copy SourceFiles="@(_DebugServicesHelixDebuggerFile)"
+          DestinationFolder="$(_HelixPayloadDir)/tests/$(AssemblyName)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ConfigFiles/$(_DebugServicesHelixConfigOS)/Debugger.Tests.Config.txt"
+          DestinationFiles="$(_HelixPayloadDir)/tests/$(AssemblyName)/Debugger.Tests.Config.txt" />
+    <WriteLinesToFile File="$(_HelixPayloadDir)/tests/$(AssemblyName)/Debugger.Tests.Common.txt"
+                      Lines="@(_DebugServicesHelixConfig->'%(Content)')" Overwrite="true" />
+  </Target>
+</Project>
