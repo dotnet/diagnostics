@@ -15,14 +15,18 @@ namespace SOS.Tests;
 /// </summary>
 public sealed class ClrStackFrameCountTests
 {
-    public static TheoryData<TestConfig> Matrix { get; }
-        = TestMatrices.StackWalk(
-            [
-                TargetCatalog.DivZero,
-                TargetCatalog.NestedException,
-                TargetCatalog.LineNums,
-                TargetCatalog.DynamicMethod,
-            ]);
+    private static readonly string[] s_targets =
+    [
+        TargetCatalog.DivZero,
+        TargetCatalog.NestedException,
+        TargetCatalog.LineNums,
+        TargetCatalog.DynamicMethod,
+    ];
+
+    public static TheoryData<TestConfig> Matrix { get; } = TestMatrices.StackWalk(s_targets);
+
+    public static TheoryData<TestConfig> ICorDebugMatrix { get; } =
+        TestMatrices.StackWalk(s_targets, filter: TestMatrices.SupportsICorDebugStackWalk);
 
     [SosTheory]
     [MemberData(nameof(Matrix))]
@@ -44,6 +48,29 @@ public sealed class ClrStackFrameCountTests
         // ...and N past the end prints the whole stack, no truncation, no padding.
         SosTable over = target.ClrstackFrames(full.Length + 5);
         AssertSameFrames(full, over, full.Length);
+    }
+
+    [SosTheory]
+    [MemberData(nameof(ICorDebugMatrix))]
+    public async Task ClrStack_ICorDebugFrameCount(TestConfig config)
+    {
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToFirstStop();
+
+        IReadOnlyList<TargetExtensions.IcorFrame> full = target.ClrstackICorDebug(variables: false);
+        Assert.True(full.Count >= 2, "expected a deep enough stack to exercise -i -c");
+        Assert.Contains(full, frame => frame.IsManaged);
+
+        for (int n = 1; n <= full.Count; n++)
+        {
+            IReadOnlyList<TargetExtensions.IcorFrame> limited = target.ClrstackICorDebug(variables: false, count: n);
+            Assert.Equal(n, limited.Count);
+            Assert.Equal(full.Take(n).Select(frame => frame.CallSite), limited.Select(frame => frame.CallSite));
+        }
+
+        IReadOnlyList<TargetExtensions.IcorFrame> over = target.ClrstackICorDebug(variables: false, count: full.Count + 5);
+        Assert.Equal(full.Count, over.Count);
+        Assert.Equal(full.Select(frame => frame.CallSite), over.Select(frame => frame.CallSite));
     }
 
     private static void AssertSameFrames(SosTable full, SosTable limited, int expectedCount)

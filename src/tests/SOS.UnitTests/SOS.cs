@@ -336,22 +336,6 @@ public class SOSStackTraceTests
             Output,
             testName: "SOS.StackTests");
     }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task ClrStackWithNumberOfFrames(TestConfiguration config)
-    {
-        if (config.IsDesktop)
-        {
-            Assert.Skip("The behavior of ClrStack -i is not the same on Desktop");
-        }
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "DivZero",
-            scriptName: "ClrStackWithNumberOfFrames.script",
-            Output,
-            testName: "SOS.ClrStackWithNumberOfFrames",
-            testTriage: true);
-    }
 }
 
 public class SOSExceptionTests
@@ -710,17 +694,6 @@ public class SOSThreadingTests
         }
 
         await SOSTestHelpers.RunTest(config, debuggeeName: "ThreadApartment", scriptName: "ThreadApartment.script", Output);
-    }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task LineNums(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "LineNums",
-            scriptName: "LineNums.script",
-            Output,
-            testTriage: true);
     }
 }
 

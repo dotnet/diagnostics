@@ -40,6 +40,10 @@ public sealed class ClrThreadsTests
 
         clrthreads["ThreadCount"].AssertValid(Sos.Dec);
         Assert.NotEqual(0u, clrthreads["ThreadCount"].AsUInt32(Sos.Dec));
+        clrthreads["UnstartedThread"].AssertValid(Sos.Dec);
+        clrthreads["BackgroundThread"].AssertValid(Sos.Dec);
+        clrthreads["PendingThread"].AssertValid(Sos.Dec);
+        clrthreads["DeadThread"].AssertValid(Sos.Dec);
 
         SosTable table = clrthreads.AsThreadsTable();
         Assert.NotEmpty(table);
@@ -52,6 +56,9 @@ public sealed class ClrThreadsTests
         // the column alignment were handled. A misaligned column would put a non-address in ThreadOBJ,
         // or something other than the two GC modes / known apartment states in their columns.
         table.AssertAll(row => Sos.Addr.Matches(row["ThreadOBJ"]), "ThreadOBJ is an address");
+        table.AssertAll(row => Sos.Dec.Matches(row["ID"]), "ID is decimal");
+        table.AssertAll(row => Sos.Hex.Matches(row["OSID"]), "OSID is hexadecimal");
+        table.AssertAll(row => Sos.Hex.Matches(row["State"]), "State is hexadecimal");
         table.AssertAll(row => row["GC Mode"] == "Preemptive" || row["GC Mode"] == "Cooperative", "GC Mode is Preemptive or Cooperative");
         table.AssertAll(row => row["Apt"].Value is "MTA" or "STA" or "NTA" or "Ukn", "Apt is a known apartment state");
 
