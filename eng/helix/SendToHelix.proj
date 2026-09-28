@@ -17,9 +17,8 @@
     <IncludeDotNetCli>true</IncludeDotNetCli>
     <DotNetCliPackageType>sdk</DotNetCliPackageType>
     <DotNetCliVersion Condition="'$(DotNetCliVersion)' == ''">10.0.110</DotNetCliVersion>
-    <!-- The Helix SDK infers all Windows non-ARM queues as win-x64. Override
-         the x86 leg so the test process reports and selects x86 scenarios. -->
-    <DotNetCliRuntime Condition="'$(TargetOS)' == 'Windows_NT' and '$(TargetArch)' == 'x86'">win-x86</DotNetCliRuntime>
+    <!-- Queue names do not always identify the target architecture, so use the explicit test RID. -->
+    <DotNetCliRuntime>$(TargetRid)</DotNetCliRuntime>
   </PropertyGroup>
 
   <Target Name="DiscoverHelixTestProjects">
