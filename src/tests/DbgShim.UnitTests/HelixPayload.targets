@@ -64,11 +64,7 @@
 <Configuration>
   <TargetConfiguration>$(Configuration)</TargetConfiguration>
   <ArtifactsDir>../../artifacts</ArtifactsDir>
-  <DotNetHostName>dotnet$(_DbgShimExeExtension)</DotNetHostName>
-  <DbgShimLibraryName>$(_DbgShimLibraryPrefix)dbgshim$(_DbgShimLibraryExtension)</DbgShimLibraryName>
-  <RuntimeLibraryName>$(_DbgShimLibraryPrefix)coreclr$(_DbgShimLibraryExtension)</RuntimeLibraryName>
-  <DbiLibraryName>$(_DbgShimLibraryPrefix)mscordbi$(_DbgShimLibraryExtension)</DbiLibraryName>
-  <DacLibraryName>$(_DbgShimLibraryPrefix)mscordaccore$(_DbgShimLibraryExtension)</DacLibraryName>
+  <InstallDir>../../native</InstallDir>
   <Package_TestAssets_Windows_x64_6_0>../../packages/testassets.windows.x64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Windows_x64_6_0>
   <Package_TestAssets_Windows_x86_6_0>../../packages/testassets.windows.x86.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Windows_x86_6_0>
   <Package_TestAssets_Linux_x64_6_0>../../packages/testassets.linux.x64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_x64_6_0>
@@ -103,8 +99,8 @@
     <Copy SourceFiles="@(_DbgShimAssetFile->'$(NuGetPackageRoot)%(Identity)')"
           DestinationFiles="@(_DbgShimAssetFile->'$(_HelixPayloadDir)/packages/%(Identity)')" />
     <Copy SourceFiles="$(_DbgShimNativePath)" DestinationFolder="$(_HelixPayloadDir)/native" />
-    <Copy SourceFiles="$(MSBuildThisFileDirectory)ConfigFiles/$(_DbgShimConfigPlatform)/Debugger.Tests.Config.txt;$(MSBuildThisFileDirectory)ConfigFiles/Helix/Debugger.Tests.Config.txt"
-          DestinationFiles="$(_HelixPayloadDir)/tests/$(AssemblyName)/Debugger.Tests.Platform.txt;$(_HelixPayloadDir)/tests/$(AssemblyName)/Debugger.Tests.Config.txt" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ConfigFiles/$(_DbgShimConfigPlatform)/Debugger.Tests.Config.txt"
+          DestinationFiles="$(_HelixPayloadDir)/tests/$(AssemblyName)/Debugger.Tests.Config.txt" />
     <WriteLinesToFile File="$(_HelixPayloadDir)/tests/$(AssemblyName)/Debugger.Tests.Common.txt"
                       Lines="@(_DbgShimCommonConfig->'%(Content)')" Overwrite="true" />
     <WriteLinesToFile File="$(_HelixPayloadDir)/artifacts/dotnet-test/Debugger.Tests.Versions.txt"

@@ -79,6 +79,10 @@ with payload-relative configuration. DbgShim stages the native shim and
 `SimpleDebuggee` for every configured runtime, including self-contained
 single-file publishes produced by `Debuggees.proj`. Payload creation rejects
 missing inputs and single-file bundles published for different runtime versions.
+DbgShim uses these prebuilt debuggees for local runs too; build the debuggees
+before running the tests. Tests do not build or publish debuggees on demand.
+Local and Helix runs use the same platform configuration files; Helix supplies
+payload-relative paths and its provisioned runtime through `DOTNET_ROOT`.
 DebugServices stages its Windows debugger dependencies alongside its dump fixtures.
 Existing symbol-server lookups remain unchanged.
 
