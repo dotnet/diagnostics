@@ -1,0 +1,110 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project>
+  <Import Project="..\Helix\Managed\HelixPayload.targets" />
+
+  <ItemDefinitionGroup Condition="'$(TargetOS)' != 'Windows_NT'">
+    <HelixWorkItem>
+      <PreCommands>find ./artifacts/bin/SimpleDebuggee -type f -name SimpleDebuggee -exec chmod +x {} +</PreCommands>
+    </HelixWorkItem>
+  </ItemDefinitionGroup>
+
+  <Target Name="StageDbgShimHelixPayload" AfterTargets="StageManagedHelixPayload">
+    <PropertyGroup>
+      <_DbgShimConfigPlatform Condition="'$(TargetOS)' == 'Windows_NT'">Windows</_DbgShimConfigPlatform>
+      <_DbgShimConfigPlatform Condition="'$(TargetOS)' != 'Windows_NT'">Unix</_DbgShimConfigPlatform>
+      <_DbgShimLibraryPrefix Condition="'$(TargetOS)' != 'Windows_NT'">lib</_DbgShimLibraryPrefix>
+      <_DbgShimLibraryExtension Condition="'$(TargetOS)' == 'Windows_NT'">.dll</_DbgShimLibraryExtension>
+      <_DbgShimLibraryExtension Condition="'$(TargetOS)' == 'linux'">.so</_DbgShimLibraryExtension>
+      <_DbgShimLibraryExtension Condition="'$(TargetOS)' == 'osx'">.dylib</_DbgShimLibraryExtension>
+      <_DbgShimExeExtension Condition="'$(TargetOS)' == 'Windows_NT'">.exe</_DbgShimExeExtension>
+      <_DbgShimNativePath>$(ArtifactsBinNativeDir)$(_DbgShimLibraryPrefix)dbgshim$(_DbgShimLibraryExtension)</_DbgShimNativePath>
+    </PropertyGroup>
+    <Error Condition="'@(RuntimeTestVersions)' == '' or '%(RuntimeTestVersions.TargetFramework)' == '' or '%(RuntimeTestVersions.Runtime)' == '' or '%(RuntimeTestVersions.RuntimeDownload)' == ''"
+           Text="RuntimeTestVersions must contain target-framework and runtime metadata for DbgShim Helix testing." />
+    <ItemGroup>
+      <_DbgShimRuntime Include="@(RuntimeTestVersions)" />
+      <_DbgShimSingleFileRuntime Include="@(RuntimeTestVersions)" Condition="'$(PrivateBuildTesting)' != 'true'" />
+      <_DbgShimRequiredInput Include="$(_DbgShimNativePath)" />
+      <_DbgShimRequiredInput Include="@(_DbgShimRuntime->'$(ArtifactsBinDir)SimpleDebuggee/$(Configuration)/%(TargetFramework)/SimpleDebuggee.dll');
+                                     @(_DbgShimRuntime->'$(ArtifactsBinDir)SimpleDebuggee/$(Configuration)/%(TargetFramework)/SimpleDebuggee.deps.json');
+                                     @(_DbgShimRuntime->'$(ArtifactsBinDir)SimpleDebuggee/$(Configuration)/%(TargetFramework)/SimpleDebuggee.runtimeconfig.json');
+                                     @(_DbgShimSingleFileRuntime->'$(ArtifactsBinDir)SimpleDebuggee/$(Configuration)/%(TargetFramework)/$(TargetRid)/publish/SimpleDebuggee$(_DbgShimExeExtension)');
+                                     @(_DbgShimSingleFileRuntime->'$(ArtifactsBinDir)SimpleDebuggee/$(Configuration)/%(TargetFramework)/$(TargetRid)/publish/runtime.version')" />
+      <_DbgShimAsset Include="testassets.windows.x64.6.0/$(TestAssetsVersion)/content/DivZero/SOS.DivZero.Heap.dmp"
+                     Condition="'$(TargetRid)' == 'win-x64'" />
+      <_DbgShimAsset Include="testassets.windows.x86.6.0/$(TestAssetsVersion)/content/DivZero/SOS.DivZero.Heap.dmp"
+                     Condition="'$(TargetRid)' == 'win-x86'" />
+      <_DbgShimAsset Include="testassets.linux.x64.6.0/$(TestAssetsVersion)/content/WebApp3/SOS.WebApp3.Heap.dmp"
+                     Condition="'$(TargetRid)' == 'win-x64' or ('$(TargetOS)' == 'linux' and '$(TargetArch)' == 'x64')" />
+      <_DbgShimAsset Include="testassets.linux.arm64.6.0/$(TestAssetsVersion)/content/WebApp3/SOS.WebApp3.Heap.dmp"
+                     Condition="'$(TargetOS)' == 'linux' and '$(TargetArch)' == 'arm64'" />
+      <_DbgShimAssetFile Include="@(_DbgShimAsset);@(_DbgShimAsset->'%(Identity).xml')" />
+      <_DbgShimRequiredInput Include="@(_DbgShimAssetFile->'$(NuGetPackageRoot)%(Identity)')" />
+      <HelixAdditionalRuntimeVersions Include="@(RuntimeTestVersions->'%(RuntimeDownload)')" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(_DbgShimRequiredInput.Identity)')"
+           Text="Required DbgShim Helix input '%(_DbgShimRequiredInput.Identity)' was not found in the prebuilt artifacts." />
+    <ReadLinesFromFile File="$(ArtifactsBinDir)SimpleDebuggee/$(Configuration)/%(_DbgShimSingleFileRuntime.TargetFramework)/$(TargetRid)/publish/runtime.version"
+                       Condition="'@(_DbgShimSingleFileRuntime)' != ''">
+      <Output TaskParameter="Lines" ItemName="_DbgShimPublishedRuntime" />
+    </ReadLinesFromFile>
+    <Error Condition="'@(_DbgShimPublishedRuntime)' != '@(_DbgShimSingleFileRuntime->'%(Runtime)')'"
+           Text="The prebuilt DbgShim single-file runtimes do not match RuntimeTestVersions. Publish the configured debuggees before staging." />
+    <CreateItem Include="@(_DbgShimRuntime->'$(ArtifactsBinDir)SimpleDebuggee/$(Configuration)/%(TargetFramework)/*');
+                         @(_DbgShimSingleFileRuntime->'$(ArtifactsBinDir)SimpleDebuggee/$(Configuration)/%(TargetFramework)/$(TargetRid)/publish/**/*')">
+      <Output TaskParameter="Include" ItemName="_DbgShimBinFile" />
+    </CreateItem>
+    <ItemGroup>
+      <_DbgShimBinFile>
+        <DestinationRelative>$([MSBuild]::MakeRelative('$(ArtifactsBinDir)', '%(Identity)'))</DestinationRelative>
+      </_DbgShimBinFile>
+      <_DbgShimCommonConfig Include="Common">
+        <Content>
+<![CDATA[
+<Configuration>
+  <TargetConfiguration>$(Configuration)</TargetConfiguration>
+  <ArtifactsDir>../../artifacts</ArtifactsDir>
+  <InstallDir>../../native</InstallDir>
+  <Package_TestAssets_Windows_x64_6_0>../../packages/testassets.windows.x64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Windows_x64_6_0>
+  <Package_TestAssets_Windows_x86_6_0>../../packages/testassets.windows.x86.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Windows_x86_6_0>
+  <Package_TestAssets_Linux_x64_6_0>../../packages/testassets.linux.x64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_x64_6_0>
+  <Package_TestAssets_Linux_arm64_6_0>../../packages/testassets.linux.arm64.6.0/$(TestAssetsVersion)/content</Package_TestAssets_Linux_arm64_6_0>
+</Configuration>
+]]>
+        </Content>
+      </_DbgShimCommonConfig>
+      <_DbgShimVersions Include="Header">
+        <Content>
+<![CDATA[
+<Configuration>
+  <PrivateBuildTesting>$(PrivateBuildTesting)</PrivateBuildTesting>
+  <InternalReleaseTesting>$(InternalReleaseTesting)</InternalReleaseTesting>
+]]>
+        </Content>
+      </_DbgShimVersions>
+      <_DbgShimVersions Include="@(RuntimeTestVersions)">
+        <Content>
+<![CDATA[
+  <RuntimeVersion%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.Runtime)</RuntimeVersion%(RuntimeTestVersions.Identity)>
+  <TargetFramework%(RuntimeTestVersions.Identity)>%(RuntimeTestVersions.TargetFramework)</TargetFramework%(RuntimeTestVersions.Identity)>
+]]>
+        </Content>
+      </_DbgShimVersions>
+      <_DbgShimVersions Include="Footer">
+        <Content><![CDATA[</Configuration>]]></Content>
+      </_DbgShimVersions>
+    </ItemGroup>
+    <Copy SourceFiles="@(_DbgShimBinFile)"
+          DestinationFiles="@(_DbgShimBinFile->'$(_HelixPayloadDir)/artifacts/bin/%(DestinationRelative)')" />
+    <Copy SourceFiles="@(_DbgShimAssetFile->'$(NuGetPackageRoot)%(Identity)')"
+          DestinationFiles="@(_DbgShimAssetFile->'$(_HelixPayloadDir)/packages/%(Identity)')" />
+    <Copy SourceFiles="$(_DbgShimNativePath)" DestinationFolder="$(_HelixPayloadDir)/native" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)ConfigFiles/$(_DbgShimConfigPlatform)/Debugger.Tests.Config.txt"
+          DestinationFiles="$(_HelixPayloadDir)/tests/$(AssemblyName)/Debugger.Tests.Config.txt" />
+    <WriteLinesToFile File="$(_HelixPayloadDir)/tests/$(AssemblyName)/Debugger.Tests.Common.txt"
+                      Lines="@(_DbgShimCommonConfig->'%(Content)')" Overwrite="true" />
+    <WriteLinesToFile File="$(_HelixPayloadDir)/artifacts/dotnet-test/Debugger.Tests.Versions.txt"
+                      Lines="@(_DbgShimVersions->'%(Content)')" Overwrite="true" />
+  </Target>
+
+</Project>

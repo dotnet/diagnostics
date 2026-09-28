@@ -6,6 +6,7 @@
     <DbgShimConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</DbgShimConfigFileName>
     <TestAssetsVersion>1.0.736301</TestAssetsVersion>
     <CopyDebuggeeSourcesToArtifacts>true</CopyDebuggeeSourcesToArtifacts>
+    <IsHelixTestProject>true</IsHelixTestProject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -89,5 +90,7 @@
       <FileWrites Include="$(DbgShimConfigFileName)" />
     </ItemGroup>
   </Target>
+
+  <Import Project="HelixPayload.targets" />
 
 </Project>

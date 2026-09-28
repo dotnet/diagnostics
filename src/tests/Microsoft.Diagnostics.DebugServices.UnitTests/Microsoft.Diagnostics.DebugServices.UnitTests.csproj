@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
+    <IsHelixTestProject>true</IsHelixTestProject>
     <DebugServicesConfigFileName>$(OutputPath)$(TargetFramework)\Debugger.Tests.Common.txt</DebugServicesConfigFileName>
     <TestAssetsVersion>1.0.736301</TestAssetsVersion>
     <!-- Controls the test asset package restore and the tests that use them -->
@@ -92,4 +93,6 @@
       <FileWrites Include="$(DebugServicesConfigFileName)" />
     </ItemGroup>
   </Target>
+
+  <Import Project="HelixPayload.targets" />
 </Project>

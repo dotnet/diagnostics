@@ -72,6 +72,23 @@ is provisioned through work-item metadata, preserving the tracee runtime matrix.
 Tracees use `sdk.prebuilt` exclusively; missing inputs fail payload creation
 rather than triggering a build or restore on the worker.
 
+`DbgShim.UnitTests` and `Microsoft.Diagnostics.DebugServices.UnitTests` also
+participate on every configured Helix platform. Their payloads include the
+packaged dump fixtures needed by each platform and replace build-machine paths
+with payload-relative configuration. DbgShim stages the native shim and
+`SimpleDebuggee` for every configured runtime, including self-contained
+single-file publishes produced by `Debuggees.proj`. Payload creation rejects
+missing inputs and single-file bundles published for different runtime versions.
+DbgShim uses these prebuilt debuggees for local runs too; build the debuggees
+before running the tests. Tests do not build or publish debuggees on demand.
+Local and Helix runs use the same platform configuration files; Helix supplies
+payload-relative paths and its provisioned runtime through `DOTNET_ROOT`.
+DebugServices stages its Windows debugger dependencies alongside its dump fixtures.
+Existing symbol-server lookups remain unchanged.
+
+`SOS.UnitTests` remains on the legacy CI test jobs. `DotnetStack.UnitTests` remains
+disabled in the project catalog; the Helix migration does not re-enable it.
+
 `src/tests/Directory.Build.targets` applies the legacy-CI skip flag.
 Every project participating in Helix defines or imports a `CreateHelixPayload`
 target, which stages prebuilt artifacts and returns ready-to-run

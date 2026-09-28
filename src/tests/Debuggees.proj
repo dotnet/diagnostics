@@ -49,4 +49,14 @@
              Properties="Configuration=$(Configuration);BuildProjectFramework=net462;$(_SOSFrameworkPlatformProperty)DebugType=full;DebugSymbols=true;ArtifactsObjDir=$(ArtifactsObjDir)SOSFramework/$(TargetArch)/%(Filename)/" />
   </Target>
 
+  <Target Name="PublishDbgShimSingleFileDebuggees"
+          AfterTargets="Build"
+          Condition="'$(PrivateBuildTesting)' != 'true'">
+    <Error Condition="'@(RuntimeTestVersions)' == '' or '%(RuntimeTestVersions.TargetFramework)' == ''"
+           Text="RuntimeTestVersions must contain target-framework metadata before publishing DbgShim single-file debuggees." />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)DbgShim.UnitTests/Debuggees/SimpleDebuggee/SimpleDebuggee.csproj"
+             Targets="Restore;Publish"
+             Properties="Configuration=$(Configuration);BuildProjectFramework=%(RuntimeTestVersions.TargetFramework);RuntimeIdentifier=$(TargetRid);RuntimeFrameworkVersion=%(RuntimeTestVersions.Runtime);SelfContained=true;PublishSingleFile=true;DbgShimSingleFileRuntimeVersion=%(RuntimeTestVersions.Runtime);ArtifactsObjDir=$(ArtifactsObjDir)DbgShimSingleFile/%(RuntimeTestVersions.TargetFramework)/$(TargetRid)/" />
+  </Target>
+
 </Project>
