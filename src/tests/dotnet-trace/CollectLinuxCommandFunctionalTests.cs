@@ -41,7 +41,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             TimeSpan duration = default,
             string name = "",
             int processId = 0,
-            bool probe = false)
+            bool probe = false,
+            int maxMemoryInMB = 0)
         {
             return new CollectLinuxCommandHandler.CollectLinuxArgs(ct ?? TestContext.Current.CancellationToken,
                                                                    providers ?? Array.Empty<string>(),
@@ -53,7 +54,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    duration,
                                                                    name,
                                                                    processId,
-                                                                   probe);
+                                                                   probe,
+                                                                   maxMemoryInMB);
         }
 
         [ConditionalTheory(nameof(IsCollectLinuxSupported))]
@@ -380,6 +382,24 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string[] lines = console.Lines;
             int statusLineCount = lines.Count(l => l.Contains("Recording trace", StringComparison.OrdinalIgnoreCase));
             Assert.Equal(1, statusLineCount);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_SetsMaxMemory_WhenPositive()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+
+            CollectLinuxCommandHandler handler = new(console);
+            string command = null;
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                command = Encoding.UTF8.GetString(cmd, 0, (int)len);
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs(maxMemoryInMB: 1024));
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            Assert.Contains("--max-memory 1024", command);
         }
 
         private static int Run(object args, MockConsole console)
