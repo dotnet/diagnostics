@@ -207,7 +207,7 @@ Comma-separated matrix allow-lists are case-insensitive enum names:
 | `SOSHARNESS_LLDB_LOAD_TIMEOUT` | Set the positive LLDB target-load timeout in seconds. |
 | `SOSHARNESS_LLDB_TRACE` | Write the LLDB command trace to the specified file. |
 | `SOSHARNESS_DAC_DIR` | Override the legacy DAC directory used by the dbgeng engine host. |
-| `SOSHARNESS_CDAC_DIR` | Override cDAC discovery with a directory containing the cDAC. |
+| `SOSHARNESS_CDAC_DIR` | Override cDAC discovery with a directory containing the matched universal cDAC and DBI binaries. |
 | `SOSHARNESS_USECDAC` | Local global DAC clamp; overrides the matrix DAC selection and is not set in CI. |
 | `LLDB_PATH` | Override LLDB discovery. Otherwise Xcode and then `PATH` are searched. |
 | `NUGET_PACKAGES` | Override the NuGet package root used to locate runtime packs and cDAC assets. |
@@ -277,6 +277,19 @@ platform-specific host selection, including .NET 11 on macOS.
 also prepares the runtime shards, creates the on-disk ZIP, and returns complete
 work items. To submit SOS alone, invoke `eng/helix/SendToHelix.proj` with
 `HelixTestProject` set to the absolute path of `SOS.Tests.csproj`.
+
+Private runtime validation passes `PrivateBuildTesting=true` and
+`LiveRuntimeDir` to the sender. The payload includes that complete runtime
+layout and overlays it onto the matching Helix-provisioned runtime before the
+test starts. Private runs submit only the configured runtime shard and select
+the `Core` flavor; self-contained and Framework targets continue to use product
+runtime packages and are therefore excluded.
+
+Private universal cDAC and DBI binaries are staged as a matched pair under
+`artifacts/cdac-override/<Configuration>`. Before creating a host, the harness
+installs that pair beside native SOS for CDB and LLDB or in dotnet-dump's
+`publish/<TargetRid>` native directory. The same path is used in Helix and local
+runs, with `SOSHARNESS_CDAC_DIR` available to select a different source locally.
 
 The payload includes a `.sos-test-payload` marker and preserves the repository
 artifact layout. `RepoLayout` discovers that root and derives all tool,

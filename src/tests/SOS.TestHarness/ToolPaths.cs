@@ -74,34 +74,26 @@ public static class ToolPaths
         s_singleFileDacDirectory.GetOrAdd(coreVersion, ResolveSingleFileDacDirectory);
 
     /// <summary>
-    /// Optional local directory containing an override universal cDAC
-    /// (<c>libmscordaccore_universal.so</c> / platform equivalent) for cDAC test rows. Defaults to
-    /// <c>artifacts/cdac-override/&lt;Configuration&gt;</c> and can be overridden with
-    /// <c>SOSHARNESS_CDAC_DIR</c>.
+    /// Optional local directory containing override universal cDAC and DBI binaries
+    /// (<c>libmscordaccore_universal.so</c> and <c>libmscordbi_universal.so</c>, or platform
+    /// equivalents) for cDAC test rows. Defaults to <c>artifacts/cdac-override/&lt;Configuration&gt;</c>
+    /// and can be overridden with <c>SOSHARNESS_CDAC_DIR</c>.
     /// </summary>
     public static string? CDacOverrideDirectory => s_cdacOverrideDirectory.Value;
 
     /// <summary>
-    /// Native SOS resolves the universal cDAC from the SOS module directory. Keep the lldb plugin output
-    /// directory aligned with the configured override before cDAC rows load SOS.
+    /// Installs the universal cDAC and DBI override in the selected host's native lookup directory.
     /// </summary>
-    public static void EnsureLldbPluginCDacOverride()
+    internal static void PrepareCDacOverride(Host host)
     {
-        string? overrideDirectory = CDacOverrideDirectory;
-        if (overrideDirectory is null)
+        string destinationDirectory = host switch
         {
-            return;
-        }
+            Host.Cdb or Host.Lldb => RepoLayout.ArtifactsBinNative,
+            Host.DotnetDump => Path.Combine(Path.GetDirectoryName(DotNetDumpDll)!, RepoLayout.Rid),
+            _ => throw new ArgumentException($"Unknown host '{host}'.", nameof(host)),
+        };
 
-        string source = Path.Combine(overrideDirectory, CDacFileName);
-        string destination = Path.Combine(Path.GetDirectoryName(LldbPluginPath)!, CDacFileName);
-        lock (s_cdacCopyLock)
-        {
-            if (!File.Exists(destination) || !FilesEqual(source, destination))
-            {
-                File.Copy(source, destination, overwrite: true);
-            }
-        }
+        EnsureCDacOverride(destinationDirectory);
     }
 
     // Lazy so each host only resolves the tools it actually needs: the non-Windows lldb/dotnet-dump hosts
@@ -117,6 +109,7 @@ public static class ToolPaths
     private static readonly Lazy<string?> s_cdacOverrideDirectory = new(ResolveCDacOverrideDirectory);
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<CoreVersion, string?> s_singleFileDacDirectory = new();
     private static readonly object s_cdacCopyLock = new();
+    private static readonly HashSet<string> s_cdacOverrideDestinations = new(StringComparer.OrdinalIgnoreCase);
 
     private static string ResolveDbgEngDirectory()
     {
@@ -456,6 +449,37 @@ public static class ToolPaths
         return File.Exists(Path.Combine(directory, CDacFileName)) ? directory : null;
     }
 
+    private static void EnsureCDacOverride(string destinationDirectory)
+    {
+        string? overrideDirectory = CDacOverrideDirectory;
+        if (overrideDirectory is null)
+        {
+            return;
+        }
+
+        lock (s_cdacCopyLock)
+        {
+            if (s_cdacOverrideDestinations.Contains(destinationDirectory))
+            {
+                return;
+            }
+
+            CopyOverrideFile(CDacFileName);
+            CopyOverrideFile(CDbiFileName);
+            s_cdacOverrideDestinations.Add(destinationDirectory);
+
+            void CopyOverrideFile(string fileName)
+            {
+                string source = Path.Combine(overrideDirectory, fileName);
+                string destination = Path.Combine(destinationDirectory, fileName);
+                if (!File.Exists(destination) || !FilesEqual(source, destination))
+                {
+                    File.Copy(source, destination, overwrite: true);
+                }
+            }
+        }
+    }
+
     private static bool FilesEqual(string leftPath, string rightPath)
     {
         FileInfo leftInfo = new(leftPath);
@@ -488,6 +512,10 @@ public static class ToolPaths
     private static string CDacFileName =>
         OperatingSystem.IsWindows() ? "mscordaccore_universal.dll" :
         OperatingSystem.IsMacOS() ? "libmscordaccore_universal.dylib" : "libmscordaccore_universal.so";
+
+    private static string CDbiFileName =>
+        OperatingSystem.IsWindows() ? "mscordbi_universal.dll" :
+        OperatingSystem.IsMacOS() ? "libmscordbi_universal.dylib" : "libmscordbi_universal.so";
 
     private static IEnumerable<string> NuGetPackageRoots()
     {
