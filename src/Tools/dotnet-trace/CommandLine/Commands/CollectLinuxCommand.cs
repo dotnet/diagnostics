@@ -74,13 +74,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return (int)ReturnCode.PlatformNotSupportedError;
             }
 
-            Console.WriteLine("==========================================================================================");
-            Console.WriteLine("The collect-linux verb is a new preview feature and relies on an updated version of the");
-            Console.WriteLine(".nettrace file format. The latest PerfView release supports these trace files but other");
-            Console.WriteLine("ways of using the trace file may not work yet. For more details, see the docs at");
-            Console.WriteLine("https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-trace.");
-            Console.WriteLine("==========================================================================================");
-
             int ret = (int)ReturnCode.TracingError;
             string scriptPath = null;
             try
