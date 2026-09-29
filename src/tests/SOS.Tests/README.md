@@ -199,6 +199,9 @@ and .NET 11 macOS ARM64 SingleFile/cDAC are defined in
 `ClrStackRuntimeFramesTests` adds dump-only checks for `FaultingExceptionFrame`
 on DivZero and `SoftwareExceptionFrame` on SimpleThrow. The latter runs on .NET 10+
 Core/SingleFile; both preserve the legacy Windows x86 exclusion.
+The DivZero faulting-frame check also skips ARM/ARM64 via `SOSTestSkips`: division by
+zero uses a software throw there, and the legacy test did not run on those platforms.
+The software-frame check remains enabled on ARM/ARM64.
 `StackTraceFaultingExceptionFrame.script` and `StackTraceSoftwareExceptionFrame.script`
 are retired; their shared debuggees remain.
 `GCTests.script` and `GCPOH.script` are retired using existing heap coverage plus

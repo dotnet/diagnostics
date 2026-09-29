@@ -17,8 +17,11 @@ public sealed class ClrStackRuntimeFramesTests
 
     [SosTheory]
     [MemberData(nameof(FaultingMatrix))]
-    public Task ClrStack_ReportsFaultingExceptionFrame(TestConfig config) =>
-        AssertExceptionFrame(config, "FaultingExceptionFrame");
+    public Task ClrStack_ReportsFaultingExceptionFrame(TestConfig config)
+    {
+        SOSTestSkips.SkipFaultingExceptionFrame();
+        return AssertExceptionFrame(config, "FaultingExceptionFrame");
+    }
 
     [SosTheory]
     [MemberData(nameof(SoftwareMatrix))]
