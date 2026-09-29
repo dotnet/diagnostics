@@ -26,7 +26,7 @@ public sealed class ClrStackFrameCountTests
     public static TheoryData<TestConfig> Matrix { get; } = TestMatrices.StackWalk(s_targets);
 
     public static TheoryData<TestConfig> ICorDebugMatrix { get; } =
-        TestMatrices.StackWalk(s_targets, filter: TestMatrices.SupportsICorDebugStackWalk);
+        TestMatrices.StackWalk(s_targets, flavor: Flavor.Core | Flavor.SingleFile);
 
     [SosTheory]
     [MemberData(nameof(Matrix))]
