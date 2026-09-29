@@ -196,6 +196,11 @@ The ICorDebug frame-limit test excludes Framework, as the legacy test did.
 Temporary, narrowly scoped ICorDebug skips for .NET 10 Windows x86 NestedException
 and .NET 11 macOS ARM64 SingleFile/cDAC are defined in
 [SOSTestSkips.cs](SOSTestSkips.cs), with inline investigation notes and removal criteria.
+`ClrStackRuntimeFramesTests` adds dump-only checks for `FaultingExceptionFrame`
+on DivZero and `SoftwareExceptionFrame` on SimpleThrow. The latter runs on .NET 10+
+Core/SingleFile; both preserve the legacy Windows x86 exclusion.
+`StackTraceFaultingExceptionFrame.script` and `StackTraceSoftwareExceptionFrame.script`
+are retired; their shared debuggees remain.
 `GCTests.script` and `GCPOH.script` are retired using existing heap coverage plus
 known POH object location and roots, Core static reference fields, and native
 `dumpobj -refs` coverage using the existing Scenarios target. These additions use dump-only
