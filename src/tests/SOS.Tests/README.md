@@ -193,6 +193,9 @@ thread checks use existing targets. Frame-limit tests
 retain the original Heap-dump matrix; live and additional dump-kind coverage
 are deferred. Their shared debuggees remain.
 The ICorDebug frame-limit test excludes Framework, as the legacy test did.
+Temporary, narrowly scoped ICorDebug skips for .NET 10 Windows x86 NestedException
+and .NET 11 macOS ARM64 SingleFile/cDAC are defined in
+[SOSTestSkips.cs](SOSTestSkips.cs), with inline investigation notes and removal criteria.
 `GCTests.script` and `GCPOH.script` are retired using existing heap coverage plus
 known POH object location and roots, Core static reference fields, and native
 `dumpobj -refs` coverage using the existing Scenarios target. These additions use dump-only

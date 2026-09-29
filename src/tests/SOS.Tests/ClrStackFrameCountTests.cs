@@ -54,6 +54,8 @@ public sealed class ClrStackFrameCountTests
     [MemberData(nameof(ICorDebugMatrix))]
     public async Task ClrStack_ICorDebugFrameCount(TestConfig config)
     {
+        SOSTestSkips.SkipICorDebugFrameCount(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
 
