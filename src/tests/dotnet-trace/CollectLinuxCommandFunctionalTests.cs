@@ -42,7 +42,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string name = "",
             int processId = 0,
             bool probe = false,
-            int maxMemoryInMB = 0)
+            int maxMemory = 0)
         {
             return new CollectLinuxCommandHandler.CollectLinuxArgs(ct ?? TestContext.Current.CancellationToken,
                                                                    providers ?? Array.Empty<string>(),
@@ -55,7 +55,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    name,
                                                                    processId,
                                                                    probe,
-                                                                   maxMemoryInMB);
+                                                                   maxMemory);
         }
 
         [ConditionalTheory(nameof(IsCollectLinuxSupported))]
@@ -396,7 +396,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 return 0;
             };
 
-            int exitCode = handler.CollectLinux(TestArgs(maxMemoryInMB: 1024));
+            int exitCode = handler.CollectLinux(TestArgs(maxMemory: 1024));
 
             Assert.Equal((int)ReturnCode.Ok, exitCode);
             Assert.Contains("--max-memory 1024", command);
