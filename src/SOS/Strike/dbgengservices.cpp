@@ -150,9 +150,9 @@ DbgEngServices::QueryInterface(
         AddRef();
         return S_OK;
     }
-    else if (InterfaceId == __uuidof(IDebuggerNativeThreadStackService))
+    else if (InterfaceId == __uuidof(IDebuggerThreadStackTraceService))
     {
-        *Interface = static_cast<IDebuggerNativeThreadStackService*>(this);
+        *Interface = static_cast<IDebuggerThreadStackTraceService*>(this);
         AddRef();
         return S_OK;
     }
@@ -472,9 +472,9 @@ DbgEngServices::VirtualUnwind(
 }
 
 HRESULT
-DbgEngServices::GetNativeThreadStackTrace(
+DbgEngServices::GetDebuggerStackTrace(
     ULONG32 sysId,
-    PDEBUGGER_NATIVE_STACK_FRAME frames,
+    PDEBUGGER_STACK_FRAME frames,
     ULONG framesSize,
     PULONG framesFilled)
 {
@@ -518,7 +518,6 @@ DbgEngServices::GetNativeThreadStackTrace(
     {
         frames[index].InstructionPointer = debugFrames[index].InstructionOffset;
         frames[index].StackPointer = debugFrames[index].StackOffset;
-        frames[index].StackPointerValid = debugFrames[index].StackOffset != 0;
     }
     *framesFilled = count;
     return S_OK;

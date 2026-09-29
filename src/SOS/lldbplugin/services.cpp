@@ -83,9 +83,9 @@ LLDBServices::QueryInterface(
         AddRef();
         return S_OK;
     }
-    else if (InterfaceId == __uuidof(IDebuggerNativeThreadStackService))
+    else if (InterfaceId == __uuidof(IDebuggerThreadStackTraceService))
     {
-        *Interface = static_cast<IDebuggerNativeThreadStackService*>(this);
+        *Interface = static_cast<IDebuggerThreadStackTraceService*>(this);
         AddRef();
         return S_OK;
     }
@@ -288,9 +288,9 @@ LLDBServices::VirtualUnwind(
 }
 
 HRESULT
-LLDBServices::GetNativeThreadStackTrace(
+LLDBServices::GetDebuggerStackTrace(
     ULONG32 sysId,
-    PDEBUGGER_NATIVE_STACK_FRAME frames,
+    PDEBUGGER_STACK_FRAME frames,
     ULONG framesSize,
     PULONG framesFilled)
 {
@@ -306,8 +306,7 @@ LLDBServices::GetNativeThreadStackTrace(
         return E_FAIL;
     }
 
-    ULONG count = std::min<ULONG>(thread.GetNumFrames(), framesSize);
-    for (ULONG index = 0; index < count; index++)
+    for (ULONG index = 0; index < framesSize; index++)
     {
         lldb::SBFrame frame = thread.GetFrameAtIndex(index);
         if (!frame.IsValid())
@@ -317,8 +316,7 @@ LLDBServices::GetNativeThreadStackTrace(
 
         lldb::addr_t stackPointer = frame.GetSP();
         frames[index].InstructionPointer = frame.GetPC();
-        frames[index].StackPointer = stackPointer;
-        frames[index].StackPointerValid = stackPointer != LLDB_INVALID_ADDRESS;
+        frames[index].StackPointer = stackPointer != LLDB_INVALID_ADDRESS ? stackPointer : 0;
         (*framesFilled)++;
     }
     return S_OK;
