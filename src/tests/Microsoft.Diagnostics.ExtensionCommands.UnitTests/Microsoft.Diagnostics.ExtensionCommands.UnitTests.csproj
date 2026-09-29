@@ -10,6 +10,6 @@
     <ProjectReference Include="$(SrcDir)Microsoft.Diagnostics.ExtensionCommands\Microsoft.Diagnostics.ExtensionCommands.csproj" />
   </ItemGroup>
 
-  <Import Project="..\Helix\Managed\HelixPayload.targets" Condition="'$(TargetRid)' == 'linux-x64'" />
+  <Import Project="..\Helix\Managed\HelixPayload.targets" Condition="'$(TargetRid)' == 'linux-x64' or '$(TargetRid)' == 'win-arm64'" />
 
 </Project>

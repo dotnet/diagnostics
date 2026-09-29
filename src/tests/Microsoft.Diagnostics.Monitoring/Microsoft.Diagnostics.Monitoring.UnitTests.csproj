@@ -11,6 +11,6 @@
     <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.NETCore.Client/Microsoft.Diagnostics.NETCore.Client.csproj" />
   </ItemGroup>
 
-  <Import Project="..\Helix\Managed\HelixPayload.targets" Condition="'$(TargetRid)' == 'linux-x64'" />
+  <Import Project="..\Helix\Managed\HelixPayload.targets" Condition="'$(TargetRid)' == 'linux-x64' or '$(TargetRid)' == 'win-arm64'" />
 
 </Project>
