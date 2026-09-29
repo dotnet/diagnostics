@@ -35,7 +35,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             TimeSpan Duration,
             string Name,
             int ProcessId,
-            bool Probe);
+            bool Probe,
+            int MaxMemory);
 
         public CollectLinuxCommandHandler(IConsole console = null)
         {
@@ -174,6 +175,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 CommonOptions.DurationOption,
                 CommonOptions.NameOption,
                 CommonOptions.ProcessIdOption,
+                MaxMemoryOption,
             };
             collectLinuxCommand.TreatUnmatchedTokensAsErrors = true; // collect-linux currently does not support child process tracing.
             collectLinuxCommand.Description = "Collects diagnostic traces using perf_events, a Linux OS technology. collect-linux requires admin privileges to capture kernel- and user-mode events, and by default, captures events from all processes. This Linux-only command includes the same .NET events as dotnet-trace collect, and it uses the kernel’s user_events mechanism to emit .NET events as perf events, enabling unification of user-space .NET events with kernel-space system events. Use --probe (optionally with -p|--process-id or -n|--name) to only check which processes can be traced by collect-linux without collecting a trace.";
@@ -195,7 +197,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     Duration: parseResult.GetValue(CommonOptions.DurationOption),
                     Name: parseResult.GetValue(CommonOptions.NameOption) ?? string.Empty,
                     ProcessId: parseResult.GetValue(CommonOptions.ProcessIdOption),
-                    Probe: parseResult.GetValue(ProbeOption)));
+                    Probe: parseResult.GetValue(ProbeOption),
+                    MaxMemory: parseResult.GetValue(MaxMemoryOption)));
                 return Task.FromResult(rc);
             });
 
@@ -514,6 +517,13 @@ namespace Microsoft.Diagnostics.Tools.Trace
             recordTraceArgs.Add("--script-file");
             recordTraceArgs.Add(scriptPath);
 
+            int maxMemory = args.MaxMemory;
+            if (maxMemory > 0)
+            {
+                recordTraceArgs.Add($"--max-memory");
+                recordTraceArgs.Add($"{maxMemory}");
+            }
+
             string options = string.Join(' ', recordTraceArgs);
             return Encoding.UTF8.GetBytes(options);
         }
@@ -579,6 +589,12 @@ namespace Microsoft.Diagnostics.Tools.Trace
             new("--probe")
             {
                 Description = "Probe .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux, without collecting a trace. Results are categorized as supported, not supported, or unknown (when the process doesn't have an accessible .NET diagnostic port). Use '-o stdout' to print CSV (pid,processName,supportsCollectLinux) to the console, or '-o <file>' to write the CSV. Probe a single process with -n|--name or -p|--process-id.",
+            };
+
+        private static readonly Option<int> MaxMemoryOption =
+            new("--max-memory")
+            {
+                Description = "Memory limit in megabytes for dotnet-trace. Collection stops when the limit is reached.",
             };
 
         private enum ProbeOutputMode
