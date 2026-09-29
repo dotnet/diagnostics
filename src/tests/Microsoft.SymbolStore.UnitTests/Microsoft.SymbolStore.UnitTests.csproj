@@ -33,5 +33,5 @@
     </Content>
   </ItemGroup>
 
-  <Import Project="..\Helix\Managed\HelixPayload.targets" Condition="'$(TargetRid)' == 'linux-x64' or '$(TargetRid)' == 'win-arm64'" />
+  <Import Project="..\Helix\Managed\HelixPayload.targets" Condition="'$(TargetRid)' == 'linux-x64'" />
 </Project>
