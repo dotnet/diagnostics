@@ -612,12 +612,13 @@ IXCLRDataProcess* Runtime::CreateClrDataProcessDirect(LPCSTR dacFilePath)
     HMODULE hdac = LoadLibraryA(dacFilePath);
     if (hdac == NULL)
     {
-        ExtDbgOut("LoadLibraryA(%s) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
+        ExtErr("LoadLibraryA(%s) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
         return nullptr;
     }
     PFN_CLRDataCreateInstance pfnCLRDataCreateInstance = (PFN_CLRDataCreateInstance)GetProcAddress(hdac, "CLRDataCreateInstance");
     if (pfnCLRDataCreateInstance == nullptr)
     {
+        ExtErr("GetProcAddress(%s, CLRDataCreateInstance) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
         FreeLibrary(hdac);
         return nullptr;
     }
@@ -626,6 +627,7 @@ IXCLRDataProcess* Runtime::CreateClrDataProcessDirect(LPCSTR dacFilePath)
     HRESULT hr = pfnCLRDataCreateInstance(__uuidof(IXCLRDataProcess), target, (void**)&clrDataProcess);
     if (FAILED(hr))
     {
+        ExtErr("CLRDataCreateInstance(%s) FAILED %08x\n", dacFilePath, hr);
         // CLRDataCreateInstance only AddRefs the data target on success; release our reference
         // (created at ref count 0) to delete it, and unload the module.
         target->AddRef();

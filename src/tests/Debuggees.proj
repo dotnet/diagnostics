@@ -41,7 +41,7 @@
           AfterTargets="Build"
           Condition="'$(OS)' == 'Windows_NT' and '$(SkipSOSFrameworkDebuggees)' != 'true'">
     <PropertyGroup>
-      <_SOSFrameworkPlatformProperty Condition="'$(TargetArch)' == 'x86'">PlatformTarget=x86;</_SOSFrameworkPlatformProperty>
+      <_SOSFrameworkPlatformProperty Condition="'$(TargetArch)' == 'x86' or '$(TargetArch)' == 'arm64'">PlatformTarget=$(TargetArch);</_SOSFrameworkPlatformProperty>
     </PropertyGroup>
     <MSBuild Projects="@(SOSFrameworkDebuggee)"
              Targets="Restore;Build"
