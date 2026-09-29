@@ -111,6 +111,10 @@ internal static partial class TargetExtensions
     public static SosTable Clrstack(this Target self, bool suppressLines = false) =>
         ParseFrameTable(self.Sos(suppressLines ? "clrstack -n" : "clrstack"));
 
+    /// <summary>Run <c>!clrstack /d</c> and parse the debugger-rendered frame table.</summary>
+    public static SosTable ClrstackDml(this Target self) =>
+        ParseFrameTable(self.Sos("clrstack /d"));
+
     /// <summary>
     /// Run <c>!clrstack -c &lt;count&gt;</c> (limit the number of printed frames) and parse the frame
     /// table. SOS counts every printed row toward the limit, internal frames included.

@@ -20,6 +20,22 @@ namespace SOS.Tests;
 /// </summary>
 public sealed class ClrStackTests
 {
+    public static TheoryData<TestConfig> AsyncMainMatrix { get; } =
+        TestMatrices.StackWalk([TargetCatalog.AsyncMain]);
+
+    [SosTheory]
+    [MemberData(nameof(AsyncMainMatrix))]
+    public async Task ClrStack_DmlPreservesAsyncMainName(TestConfig config)
+    {
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToFirstStop();
+
+        SosTable stack = target.ClrstackDml();
+        stack.AssertContainsRow(
+            row => row["Function"].Value.StartsWith("AsyncMainTest.<Main>(", StringComparison.Ordinal),
+            "the async Main entry point with literal angle brackets");
+    }
+
     // Instruction-pointer / stack-pointer register names across the platforms SOS prints in
     // strike.cpp PrintManagedFrameContext: amd64 rip/rsp, x86 eip/esp, arm & arm64 pc/sp.
     private static readonly string[] s_ipRegisters = ["rip", "eip", "pc"];

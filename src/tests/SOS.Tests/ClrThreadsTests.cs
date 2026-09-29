@@ -15,6 +15,21 @@ namespace SOS.Tests;
 /// </summary>
 public sealed class ClrThreadsTests
 {
+    public static TheoryData<TestConfig> ApartmentMatrix { get; } =
+        TestConfig.BuildMatrix([TargetCatalog.ThreadApartment]);
+
+    [WindowsTheory]
+    [MemberData(nameof(ApartmentMatrix))]
+    public async Task ClrThreads_ReportsApartmentStates(TestConfig config)
+    {
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToFirstStop();
+
+        SosTable threads = target.Sos("clrthreads").AsThreadsTable();
+        threads.AssertContainsRow(row => row["Apt"] == "STA", "an STA thread");
+        threads.AssertContainsRow(row => row["Apt"] == "MTA", "an MTA thread");
+    }
+
     /// <summary>
     /// A matrix of all combinations of hosts, targets, and flavors.
     /// Hosts.DumpHosts = [cdb, dotnet-dump] || [lldb, dotnet-dump]

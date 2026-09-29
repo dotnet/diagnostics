@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Diagnostics;
 using System.Threading;
 
 internal sealed class ThreadApartment
@@ -35,8 +34,6 @@ internal sealed class ThreadApartment
 
         s_staReady.Wait();
         s_mtaReady.Wait();
-
-        Debugger.Break();
 
         throw new Exception("ThreadApartment test complete");
     }

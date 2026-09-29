@@ -40,6 +40,10 @@
       <SupportsSingleFile>true</SupportsSingleFile>
       <SupportsFramework>true</SupportsFramework>
     </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/ThreadApartment/ThreadApartment.csproj" Condition="'$(OS)' == 'Windows_NT'">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
   </ItemGroup>
 
 </Project>
