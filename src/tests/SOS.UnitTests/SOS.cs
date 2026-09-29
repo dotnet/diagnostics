@@ -336,22 +336,6 @@ public class SOSStackTraceTests
             Output,
             testName: "SOS.StackTests");
     }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task ClrStackWithNumberOfFrames(TestConfiguration config)
-    {
-        if (config.IsDesktop)
-        {
-            Assert.Skip("The behavior of ClrStack -i is not the same on Desktop");
-        }
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "DivZero",
-            scriptName: "ClrStackWithNumberOfFrames.script",
-            Output,
-            testName: "SOS.ClrStackWithNumberOfFrames",
-            testTriage: true);
-    }
 }
 
 public class SOSExceptionTests
@@ -467,41 +451,6 @@ public class SOSGCTests
     }
 
     private ITestOutputHelper Output { get; set; }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task GCTests(TestConfiguration config)
-    {
-        SOSTestHelpers.SkipIfArm(config);
-        // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)
-        SOSTestHelpers.SkipIfWinX86(config);
-
-        // Live only
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "GCWhere",
-            scriptName: "GCTests.script",
-            Output,
-            testName: "SOS.GCTests",
-            testDump: false);
-    }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task GCPOHTests(TestConfiguration config)
-    {
-        if (config.IsDesktop || config.RuntimeFrameworkVersionMajor < 5)
-        {
-            Assert.Skip("This test validates POH behavior, which was introduced in .net 5");
-        }
-        // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)
-        SOSTestHelpers.SkipIfWinX86(config);
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "GCPOH",
-            scriptName: "GCPOH.script",
-            Output,
-            testName: "SOS.GCPOHTests",
-            testDump: false);
-    }
 
     [Theory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task FindRootsOlderGeneration(TestConfiguration config)
@@ -710,17 +659,6 @@ public class SOSThreadingTests
         }
 
         await SOSTestHelpers.RunTest(config, debuggeeName: "ThreadApartment", scriptName: "ThreadApartment.script", Output);
-    }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task LineNums(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "LineNums",
-            scriptName: "LineNums.script",
-            Output,
-            testTriage: true);
     }
 }
 

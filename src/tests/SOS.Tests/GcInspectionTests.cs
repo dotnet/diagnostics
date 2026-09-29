@@ -17,6 +17,39 @@ namespace SOS.Tests;
 public sealed class GcInspectionTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
+    public static TheoryData<TestConfig> PohMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.Core | Flavor.SingleFile);
+
+    [SosTheory]
+    [MemberData(nameof(PohMatrix))]
+    public async Task GcRoot_FindsRootsForPohObject(TestConfig config)
+    {
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        string module = TargetCatalog.Get(config.Target).ModuleFor(config.Flavor);
+        EEMatch type = Assert.Single(target.Name2EE($"{module}!SosHarnessScenarios").Matches, match => match.Name == "SosHarnessScenarios");
+        Assert.NotNull(type.MethodTable);
+        DumpMtResult methodTable = target.DumpMt(type.MethodTable.Value);
+        SosTable fields = target.DumpClass(methodTable.EEClass ?? type.MethodTable.Value).Output.Table(
+            ColumnAlignment.Right("MT"), ColumnAlignment.Right("Field"), ColumnAlignment.Right("Offset"),
+            ColumnAlignment.Right("Type"), ColumnAlignment.Right("VT"), ColumnAlignment.Right("Attr"), ColumnAlignment.Right("Value"), "Name");
+        ulong poh = fields.SingleRow(row => row["Name"] == "s_poh", "the rooted POH array")["Value"].AsUInt64(Sos.Addr);
+        Assert.NotEqual(0ul, poh);
+
+        DumpArrayResult array = target.DumpArray(poh, length: 0);
+        Assert.Equal("System.Byte[]", array.Name);
+        Assert.Equal(TestTargets.SosHarnessScenarios.PohArraySize, array.NumberOfElements);
+
+        SosTable locations = target.Sos($"gcwhere {poh:x}").Table(
+            "Address", "Heap", "Segment", "Generation", "Allocated", "Committed", "Reserved");
+        SosRow location = locations.SingleRow(row => row["Address"].AsUInt64(Sos.Addr) == poh, $"the POH array at {poh:x}");
+        Assert.Equal("pinned", location["Generation"]);
+
+        SosOutput roots = target.Sos($"gcroot {poh:x}");
+        Assert.True(UniqueRootCount(roots) > 0, $"expected roots for the POH array:\n{roots.Text}");
+        roots.AssertContains(poh.ToString("x"));
+        roots.AssertContains("System.Byte[]");
+    }
 
     [SosTheory]
     [MemberData(nameof(Matrix))]

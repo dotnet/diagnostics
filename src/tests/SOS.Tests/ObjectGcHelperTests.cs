@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.RegularExpressions;
 using SOS.TestHarness;
 using Xunit;
 
@@ -16,7 +17,6 @@ public sealed class ObjectGcHelperTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
     public static TheoryData<TestConfig> CoreRuntimeMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.Core | Flavor.SingleFile);
-    public static TheoryData<TestConfig> DotnetDumpMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.DotnetDump);
     public static TheoryData<TestConfig> ObjectDataMatrix => TestMatrices.CoreFramework([TargetCatalog.Scenarios]);
 
     // gchandleleaks is a Windows-only SOS command (gated #ifndef FEATURE_PAL); pair the Windows-only cdb
@@ -31,18 +31,37 @@ public sealed class ObjectGcHelperTests
     public static TheoryData<TestConfig> CdbMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.Core | Flavor.SingleFile, Host.Cdb);
 
     [SosTheory]
-    [MemberData(nameof(DotnetDumpMatrix))]
-    public async Task DumpObjGcRefs_ListsReferences(TestConfig config)
+    [MemberData(nameof(Matrix))]
+    public async Task DumpObj_Refs_ListsReferences(TestConfig config)
     {
+        TestMatrices.SkipUnsupportedDumpObj(config);
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
-        // dumpobjgcrefs (the engine behind dumpobj -refs) is a managed extension command (dotnet-dump only).
-        SosOutput refs = target.Sos($"dumpobjgcrefs {target.FindUniqueObject("FieldMarker"):x}");
-        refs.AssertContains("TextField");
-        refs.AssertContains("System.String");
-        refs.AssertContains("Numbers");
-        refs.AssertContains("System.Int32[]");
+        ulong marker = target.FindUniqueObject("FieldMarker");
+        DumpObjResult obj;
+        SosOutput output;
+        if (config.Host == Host.DotnetDump)
+        {
+            // dotnet-dump lacks the native-to-managed callback used by dumpobj -refs.
+            obj = target.DumpObj(marker);
+            output = target.Sos($"dumpobjgcrefs {marker:x}");
+        }
+        else
+        {
+            output = target.Sos($"dumpobj -refs {marker:x}");
+            obj = new DumpObjResult(output);
+        }
+
+        Assert.Equal("FieldMarker", obj.Name);
+        output.AssertContains("GC Refs:");
+        foreach ((string name, string type) in new[] { ("TextField", "System.String"), ("Numbers", "System.Int32[]") })
+        {
+            ObjFieldRow field = obj.Field(name);
+            ulong address = ObjectCommandParsing.Hex(field.Value);
+            Assert.NotEqual(0ul, address);
+            Assert.Matches($@"(?m)^{name}\s+0x[0-9a-fA-F]+\s+0*{address:x}\s+{Regex.Escape(type)}\s*$", output.Text);
+        }
     }
 
     [SosTheory]

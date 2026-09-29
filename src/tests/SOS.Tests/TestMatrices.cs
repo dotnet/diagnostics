@@ -169,7 +169,7 @@ internal static class TestMatrices
 
     internal static bool SupportsDumpObj(TestConfig config, bool isWindows) =>
         isWindows
-        || config.Flavor != Flavor.Core
+        || (config.Flavor != Flavor.Core && config.Flavor != Flavor.SingleFile)
         || config.Liveness != Liveness.Dump
         || config.DumpKind != DumpKind.Heap
         || config.CoreVersion != CoreVersion.Net10

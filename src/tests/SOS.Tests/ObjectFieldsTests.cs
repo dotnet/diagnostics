@@ -17,6 +17,7 @@ namespace SOS.Tests;
 public sealed class ObjectFieldsTests
 {
     public static TheoryData<TestConfig> Matrix => TestMatrices.CoreFramework([TargetCatalog.Scenarios]);
+    public static TheoryData<TestConfig> CoreMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.Core);
 
     [SosTheory]
     [MemberData(nameof(Matrix))]
@@ -44,6 +45,23 @@ public sealed class ObjectFieldsTests
         Assert.Equal("System.String", textField.Type);
         Assert.False(textField.IsValueType);                  // a reference field
         Assert.NotEqual(0ul, ObjectCommandParsing.Hex(textField.Value)); // its value is the string's address
+    }
+
+    [SosTheory]
+    [MemberData(nameof(CoreMatrix))]
+    public async Task DumpObj_StaticReferenceField(TestConfig config)
+    {
+        TestMatrices.SkipUnsupportedDumpObj(config);
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        DumpObjResult marker = target.DumpObj(target.FindUniqueObject("FieldMarker"));
+        DumpObjResult text = target.DumpObj(ObjectCommandParsing.Hex(marker.Field("TextField").Value));
+        ObjFieldRow empty = text.Field("Empty");
+        Assert.Equal("System.String", empty.Type);
+        Assert.False(empty.IsValueType);
+        Assert.Equal("static", empty.Attr);
+        Assert.NotEqual(0ul, ObjectCommandParsing.Hex(empty.Value));
     }
 
     [SosTheory]

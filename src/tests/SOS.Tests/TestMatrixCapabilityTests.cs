@@ -33,17 +33,19 @@ public sealed class TestMatrixCapabilityTests
         Assert.False(TestMatrices.SupportsGcRootEnumeration(config with { Flavor = Flavor.Framework }));
     }
 
-    [Fact]
-    public void DumpObjExcludesOnlyUnixNet10LegacyHeapDumps()
+    [Theory]
+    [InlineData(Flavor.Core)]
+    [InlineData(Flavor.SingleFile)]
+    public void DumpObjExcludesOnlyUnixNet10LegacyHeapDumps(Flavor flavor)
     {
-        TestConfig config = Config(Host.Lldb, Dac.Legacy);
+        TestConfig config = Config(Host.Lldb, Dac.Legacy) with { Flavor = flavor };
 
         Assert.False(TestMatrices.SupportsDumpObj(config, isWindows: false));
         Assert.True(TestMatrices.SupportsDumpObj(config, isWindows: true));
         Assert.True(TestMatrices.SupportsDumpObj(config with { CoreVersion = CoreVersion.Net8 }, isWindows: false));
         Assert.True(TestMatrices.SupportsDumpObj(config with { DumpKind = DumpKind.Full }, isWindows: false));
         Assert.True(TestMatrices.SupportsDumpObj(config with { Liveness = Liveness.Live }, isWindows: false));
-        Assert.True(TestMatrices.SupportsDumpObj(config with { Flavor = Flavor.SingleFile }, isWindows: false));
+        Assert.True(TestMatrices.SupportsDumpObj(config with { Flavor = Flavor.Framework }, isWindows: false));
         Assert.True(TestMatrices.SupportsDumpObj(config with { Dac = Dac.CDac }, isWindows: false));
     }
 
