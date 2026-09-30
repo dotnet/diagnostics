@@ -42,7 +42,7 @@ public static class DbgEngCapturer
         IDebugControl control = (IDebugControl)clientDisposable;
 
         StringBuilder buffer = new();
-        using DbgEngOutputHolder output = new(client);
+        using DbgEngOutputHolder output = new(client, DEBUG_OUTPUT.NORMAL | DEBUG_OUTPUT.ERROR | DEBUG_OUTPUT.WARNING);
         output.OutputReceived += (text, _) => buffer.Append(text);
 
         string Run(string command)
@@ -65,6 +65,7 @@ public static class DbgEngCapturer
 
             control.WaitForEvent(TimeSpan.FromSeconds(60)); // initial loader break
             Run($".load {ToolPaths.SosPath}");
+            DbgEngSosHost.Initialize();
 
             // For desktop, the managed module is the EXE itself (e.g. GcPromotion.exe), not the .dll.
             string bpmdModule = Path.GetFileName(exePath);

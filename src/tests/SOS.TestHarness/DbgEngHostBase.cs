@@ -51,7 +51,7 @@ public abstract class DbgEngHostBase : IDebuggerHost
                 Client = (IDebugClient)_clientDisposable;
                 Control = (IDebugControl)_clientDisposable;
 
-                _output = new DbgEngOutputHolder(Client);
+                _output = new DbgEngOutputHolder(Client, DEBUG_OUTPUT.NORMAL | DEBUG_OUTPUT.ERROR | DEBUG_OUTPUT.WARNING);
                 _output.OutputReceived += (text, _) => _buffer.Append(text);
 
                 // Raw dbgeng leaves SYMOPT_LOAD_LINES off by default, so SOS suppresses the
@@ -109,6 +109,7 @@ public abstract class DbgEngHostBase : IDebuggerHost
 
         RunCore($".load {ToolPaths.SosPath}");
         VerifyOurSosLoaded();
+        DbgEngSosHost.Initialize();
 
         _sosLoaded = true;
     }
