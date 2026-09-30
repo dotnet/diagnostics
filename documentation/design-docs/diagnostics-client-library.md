@@ -327,6 +327,15 @@ namespace Microsoft.Diagnostics.Client
             long keywords = 0,
             IDictionary<string, string> arguments = null)
 
+        // Adds a per-provider Event ID filter. Using this overload starts the session with
+        // CollectTracing5 (requires a .NET 10+ target runtime).
+        public EventPipeProvider(
+            string name,
+            EventLevel eventLevel,
+            long keywords,
+            IDictionary<string, string> arguments,
+            EventPipeProviderEventFilter eventFilter)
+
         public long Keywords { get; }
 
         public EventLevel EventLevel { get; }
@@ -334,6 +343,8 @@ namespace Microsoft.Diagnostics.Client
         public string Name { get; }
 
         public IDictionary<string, string> Arguments { get; }
+
+        public EventPipeProviderEventFilter EventFilter { get; }
 
         public override string ToString();
         
@@ -344,6 +355,20 @@ namespace Microsoft.Diagnostics.Client
         public static bool operator ==(Provider left, Provider right);
 
         public static bool operator !=(Provider left, Provider right);
+    }
+
+    // An optional per-provider filter on Event IDs, applied by the runtime after the keyword/level
+    // filter. Available on runtimes that support CollectTracing5 (.NET 10+).
+    public class EventPipeProviderEventFilter
+    {
+        // enable=true: eventIds is an allow-list (only those IDs are enabled).
+        // enable=false: eventIds is a deny-list (every ID except those is enabled; an empty
+        // deny-list therefore enables all events).
+        public EventPipeProviderEventFilter(bool enable, IReadOnlyList<uint> eventIds)
+
+        public bool Enable { get; }
+
+        public IReadOnlyList<uint> EventIds { get; }
     }
 }
 ```

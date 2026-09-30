@@ -42,7 +42,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
             TimeSpan duration = default,
             string name = "",
             int processId = 0,
-            bool probe = false)
+            bool probe = false,
+            int maxMemory = 0)
         {
             return new CollectLinuxCommandHandler.CollectLinuxArgs(ct,
                                                                    providers ?? Array.Empty<string>(),
@@ -54,7 +55,8 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    duration,
                                                                    name,
                                                                    processId,
-                                                                   probe);
+                                                                   probe,
+                                                                   maxMemory);
         }
 
         [ConditionalTheory(nameof(IsCollectLinuxSupported))]
@@ -119,7 +121,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int exitCode = Run(args, console);
 
             Assert.Equal((int)ReturnCode.Ok, exitCode);
-            string[] expected = ExpectPreviewWithMessages(
+            string[] expected = ExpectMessages(
                 new[] {
                     "Probing .NET processes for support of the EventPipe UserEvents IPC command used by collect-linux. Requires runtime '10.0.0' or later.",
                     ".NET processes that support the command:",
@@ -139,7 +141,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int exitCode = Run(args, console);
 
             Assert.Equal((int)ReturnCode.Ok, exitCode);
-            string[] expected = ExpectPreviewWithMessages(
+            string[] expected = ExpectMessages(
                 new[] {
                     "pid,processName,supportsCollectLinux",
                     ""
@@ -157,7 +159,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int exitCode = Run(args, console);
 
             Assert.Equal((int)ReturnCode.Ok, exitCode);
-            string[] expected = ExpectPreviewWithMessages(
+            string[] expected = ExpectMessages(
                 new[] {
                     "Successfully wrote EventPipe UserEvents IPC command support results to '" + tempFilePath + "'.",
                 }
@@ -235,7 +237,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             int exitCode = Run(args, console);
 
             Assert.Equal((int)ReturnCode.Ok, exitCode);
-            string[] expected = ExpectPreviewWithMessages(
+            string[] expected = ExpectMessages(
                 new[] {
                     $"Could not probe process '{pid1Name} (1)'. The process may have exited, or it doesn't have an accessible .NET diagnostic port.",
                 }
@@ -381,6 +383,24 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string[] lines = console.Lines;
             int statusLineCount = lines.Count(l => l.Contains("Recording trace", StringComparison.OrdinalIgnoreCase));
             Assert.Equal(1, statusLineCount);
+        }
+
+        [ConditionalFact(nameof(IsCollectLinuxSupported))]
+        public void CollectLinuxCommand_SetsMaxMemory_WhenPositive()
+        {
+            MockConsole console = new(200, 30, _outputHelper);
+
+            CollectLinuxCommandHandler handler = new(console);
+            string command = null;
+            handler.RecordTraceInvoker = (cmd, len, cb) => {
+                command = Encoding.UTF8.GetString(cmd, 0, (int)len);
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs(maxMemory: 1024));
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            Assert.Contains("--max-memory 1024", command);
         }
 
         private static int Run(object args, MockConsole console)
@@ -579,10 +599,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
         }
         private static string[] FormatException(string message)
         {
-            List<string> result = new();
-            result.AddRange(PreviewMessages);
-            result.Add($"[ERROR] {message}");
-            return result.ToArray();
+            return [$"[ERROR] {message}"];
         }
         private static string DefaultOutputFile => $"Output File    : {Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar}trace.nettrace";
         private static readonly string[] CommonTail = [
@@ -591,19 +608,9 @@ namespace Microsoft.Diagnostics.Tools.Trace
             "[dd:hh:mm:ss]\tRecording trace.",
             "Press <Enter> or <Ctrl+C> to exit...",
         ];
-        private static string[] PreviewMessages = [
-            "==========================================================================================",
-            "The collect-linux verb is a new preview feature and relies on an updated version of the",
-            ".nettrace file format. The latest PerfView release supports these trace files but other",
-            "ways of using the trace file may not work yet. For more details, see the docs at",
-            "https://learn.microsoft.com/dotnet/core/diagnostics/dotnet-trace.",
-            "=========================================================================================="
-            ];
-
-        private static string[] ExpectPreviewWithMessages(string[] messages)
+        private static string[] ExpectMessages(string[] messages)
         {
             List<string> result = new();
-            result.AddRange(PreviewMessages);
             if (messages.Length > 0)
             {
                 result.AddRange(messages);
@@ -617,8 +624,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
         private static string[] ExpectProvidersAndPerfEventsWithMessages(string[] messages, string[] dotnetProviders, string[] linuxPerfEvents)
         {
             List<string> result = new();
-
-            result.AddRange(PreviewMessages);
 
             if (messages.Length > 0)
             {
