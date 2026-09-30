@@ -256,6 +256,7 @@ processes; they are not supported user controls:
 | `DOTNET_DbgEnableMiniDump`, `DOTNET_DbgMiniDumpType`, `DOTNET_DbgMiniDumpName`, `DOTNET_CreateDumpDiagnostics` | Configure createdump crash capture. |
 | `DOTNET_DbgEnableElfDumpOnMacOS`, `TMPDIR` | Produce readable ELF dumps and a short diagnostics socket path on macOS. |
 | `DOTNET_gcServer`, `DOTNET_GCHeapCount`, `DOTNET_GCDynamicAdaptationMode` | Create deterministic four-heap Server GC targets. |
+| `SOS_LLDB_HARDWARE_JIT_BREAKPOINTS` | Set to `1` for live LLDB hosts on macOS arm64 so SOS plants `bpmd` breakpoints as hardware breakpoints. Debugserver writes a software breakpoint by copy-on-writing the `MAP_JIT` page, and running threads can then intermittently take a spurious `EXC_BAD_ACCESS` (`KERN_PROTECTION_FAILURE`) instruction fault. Hardware breakpoints are limited to a few per process (6 on Apple M-series), and setting more fails. |
 
 ## Output and artifacts
 
