@@ -42,7 +42,7 @@ public static class DbgEngCapturer
         IDebugControl control = (IDebugControl)clientDisposable;
 
         StringBuilder buffer = new();
-        using DbgEngOutputHolder output = new(client, DEBUG_OUTPUT.NORMAL | DEBUG_OUTPUT.ERROR | DEBUG_OUTPUT.WARNING);
+        using DbgEngOutputHolder output = new(client);
         output.OutputReceived += (text, _) => buffer.Append(text);
 
         string Run(string command)

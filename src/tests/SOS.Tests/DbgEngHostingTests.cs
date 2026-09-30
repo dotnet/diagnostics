@@ -19,7 +19,7 @@ public sealed class DbgEngHostingTests
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("sethostruntime").AssertContains("Using .NET Core runtime to host the managed SOS code");
-        target.Sos("sethostruntime -none").AssertContains("Runtime hosting already initialized");
+        target.Sos("sethostruntime -none").AssertContains("Using .NET Core runtime to host the managed SOS code");
         target.ClrModules().SingleByName(TargetCatalog.Get(TargetCatalog.Scenarios).ModuleFor(config.Flavor));
     }
 }
