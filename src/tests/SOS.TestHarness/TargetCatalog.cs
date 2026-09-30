@@ -71,6 +71,7 @@ public static class TargetCatalog
     public const string LineNums = "linenums";
     public const string SimpleThrow = "simplethrow";
     public const string Reflection = "reflection";
+    public const string ThreadApartment = "threadapartment";
 
     // --- The one consolidated marker debuggee the harness adds (Phase 4). Every snapshot/oracle/live
     //     scenario is a named stop point on this single program (see SosHarnessScenarios). ---
@@ -147,6 +148,11 @@ public static class TargetCatalog
         new TargetDefinition(
             Reflection,
             Project: "ReflectionTest",
+            StopPoints: new[] { new StopPoint("crash", StopKind.Crash, null) }),
+
+        new TargetDefinition(
+            ThreadApartment,
+            Project: "ThreadApartment",
             StopPoints: new[] { new StopPoint("crash", StopKind.Crash, null) }),
 
         // The consolidated marker debuggee: each scenario is a NoInlining marker method that calls
