@@ -280,6 +280,18 @@ namespace SOS.Extensions
             catch (InvalidCastException)
             {
             }
+            try
+            {
+                ThreadStackTraceService threadStackTraceService = new(iunk);
+                // This service needs another reference since it is implemented as part of IDebuggerServices and gets
+                // disposed in Uninitialize() below by the DisposeServices call.
+                threadStackTraceService.AddRef();
+                _host.ServiceContainer.AddService<IThreadStackTraceService>(threadStackTraceService);
+            }
+            catch (InvalidCastException)
+            {
+                Trace.TraceInformation("Debugger stack trace service is not available.");
+            }
             hr = DebuggerServices.GetSymbolPath(out string symbolPath);
             if (hr == HResult.S_OK)
             {
