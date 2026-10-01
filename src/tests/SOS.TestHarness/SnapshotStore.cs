@@ -512,7 +512,7 @@ public static class SnapshotStore
         }
 
         string config = RepoLayout.ArtifactsConfiguration;
-        string platform = RepoLayout.TargetArch == "x86" ? " -p:PlatformTarget=x86" : string.Empty;
+        string platform = $" -p:PlatformTarget={RepoLayout.TargetArch}";
         // Desktop SOS resolves source lines from a classic Windows PDB (read via DIA), not a
         // portable/embedded one — the repo's global props default DebugType to embedded, so force
         // a full (Windows) PDB next to the exe for the source-line tests.

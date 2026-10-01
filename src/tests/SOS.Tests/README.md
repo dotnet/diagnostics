@@ -287,6 +287,13 @@ failed runtime/configuration leg without increasing artifacts for passing legs.
 test project, SOS owns file collection, staging, validation, and work-item metadata.
 It creates one self-contained payload per OS, RID, configuration, and queue;
 submission uses one work item per runtime, plus the Windows Framework work item.
+Windows ARM64 runs on the Windows 11 ARM64 Helix queue with an ARM64 SDK,
+runtime, DbgEng, native SOS, and debuggee payload.
+
+The managed DbgEng engine and capture processes initialize SOS through
+`HostServices.Initialize` after loading the native extension. This shares their
+existing CoreCLR instead of starting another runtime or falling back to Desktop CLR.
+
 The payload contains `SOS.Tests`, its harness subprocesses, native SOS, the
 repository-built dotnet-dump, DbgEng on Windows, and all prebuilt Core,
 SingleFile, and Framework debuggees needed by that platform. The exact runtime
