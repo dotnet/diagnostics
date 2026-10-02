@@ -9,35 +9,73 @@ namespace SOS.Tests;
 
 internal static class SOSTestSkips
 {
+    internal static void SkipICorDebugStackWalk(TestConfig config)
+    {
+        Skip(GetX86DebugInfoSkipReason(config, OperatingSystem.IsWindows(), RuntimeInformation.ProcessArchitecture));
+    }
+
     internal static void SkipICorDebugFrameCount(TestConfig config)
     {
-        string? reason = GetICorDebugFrameCountSkipReason(config, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS(), RuntimeInformation.ProcessArchitecture);
+        Skip(GetICorDebugFrameCountSkipReason(config, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS(), RuntimeInformation.ProcessArchitecture));
+    }
+
+    private static void Skip(string? reason)
+    {
         if (reason is not null)
             Assert.Skip(reason);
     }
 
-    internal static string? GetICorDebugFrameCountSkipReason(TestConfig config, bool isWindows, bool isMacOS, Architecture architecture)
+    /// <summary>
+    /// Every ICorDebug stack walk decodes each frame's compressed debug info, so all of these tests share
+    /// the same .NET 10 Windows x86 DAC defect.
+    /// </summary>
+    internal static string? GetX86DebugInfoSkipReason(TestConfig config, bool isWindows, Architecture architecture)
     {
-        if (config.Liveness != Liveness.Dump || config.DumpKind != DumpKind.Heap || config.GcType != GcType.Workstation)
-            return null;
-
-        // https://dev.azure.com/dnceng-public/public/_build/results?buildId=1616319
-        // Four .NET 10 x86 NestedException failures: Core/SingleFile under CDB/dotnet-dump, legacy DAC.
-        // Core returns two native frames; SingleFile returns too few frames. Both fail before any -c call.
-        // Reproduced locally on .NET 10.0.12 (CI: 10.0.10): a Core Heap dump fails ReadVirtual for 28 bytes;
-        // a Full dump recovers the managed frames. The missing structure and SingleFile cause remain unknown.
-        // Equivalent Heap cases pass on .NET 8, 9, and 11 (including both DACs on 11).
-        // Remove when the .NET 10 Heap cases pass; do not substitute Full dumps to hide the failure.
+        // https://dev.azure.com/dnceng-public/public/_build/results?buildId=1617003 (ClrStack_ICorDebug)
+        // https://dev.azure.com/dnceng-public/public/_build/results?buildId=1616319 (ClrStack_ICorDebugFrameCount)
+        //
+        // The x86 DAC over-reads the compressed debug info, so the read fails against a reduced dump and
+        // the ICorDebug stack walk truncates. In coreclr's debuginfostore.cpp, EnumMemoryRegions pads the
+        // enumerated blob to sizeof(NibbleReader::NibbleChunkType) - 4 bytes on a 32-bit target - but
+        // DoBounds reads the packed bounds array through ReadFromBitOffsets, which issues 8-byte aligned
+        // loads off AlignDown(addrBoundsArray, sizeof(uint64_t)). The last load can therefore reach up to
+        // 4 bytes past the enumerated range. 64-bit targets are unaffected because NibbleChunkType is
+        // already 8 bytes there, and the cDAC is unaffected because it reads the bounds byte by byte
+        // through a stream bounded by cbBounds.
+        //
+        // This is intermittent: the dump is only unwalkable when an affected blob belongs to a method on
+        // the walked stack, which is why reruns can pass. Confirmed by decoding the blob headers in a
+        // failing CI dump (20 blobs whose 8-byte read lands outside the dump) and by reading the exact
+        // bytes in cdb, where the blob is present but its aligned 8-byte load returns "????????".
+        //
+        // .NET 11 Heap dumps happen to pass because their memory enumeration is coarser and incidentally
+        // covers the over-read; the defect is still present there and still reproduces in Mini dumps.
+        // Remove once a DAC carrying the coreclr fix flows into this repo. That fix also repairs dumps
+        // captured before it, so these cases recover without recapturing. Do not substitute Full dumps to
+        // hide the failure.
         if (isWindows
             && architecture == Architecture.X86
-            && config.Target == TargetCatalog.NestedException
+            && config.Liveness == Liveness.Dump
+            && config.DumpKind != DumpKind.Full
             && config.CoreVersion == CoreVersion.Net10
             && config.Flavor is Flavor.Core or Flavor.SingleFile
-            && config.Host is Host.Cdb or Host.DotnetDump
             && config.Dac == Dac.Legacy)
         {
-            return ".NET 10 Windows x86 ICorDebug cannot recover managed frames from NestedException Heap dumps.";
+            return ".NET 10 Windows x86 ICorDebug stack walks truncate because the legacy DAC over-reads " +
+                "compressed debug info past the region enumerated into a reduced dump.";
         }
+
+        return null;
+    }
+
+    internal static string? GetICorDebugFrameCountSkipReason(TestConfig config, bool isWindows, bool isMacOS, Architecture architecture)
+    {
+        string? x86Reason = GetX86DebugInfoSkipReason(config, isWindows, architecture);
+        if (x86Reason is not null)
+            return x86Reason;
+
+        if (config.Liveness != Liveness.Dump || config.DumpKind != DumpKind.Heap || config.GcType != GcType.Workstation)
+            return null;
 
         // https://dev.azure.com/dnceng-public/public/_build/results?buildId=1615278&view=ms.vss-test-web.build-test-results-tab&runId=44719894&resultId=100677
         // Helix job 957ba6e6-3fa2-4b1d-ab8c-1db7f5fd7a26, work item SOS_osx-arm64_Debug-Net11:

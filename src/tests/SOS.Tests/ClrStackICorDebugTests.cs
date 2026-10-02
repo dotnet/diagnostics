@@ -29,6 +29,8 @@ public sealed class ClrStackICorDebugTests
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_ICorDebug(TestConfig config)
     {
+        SOSTestSkips.SkipICorDebugStackWalk(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         if (config.Target == TargetCatalog.Scenarios)
         {
