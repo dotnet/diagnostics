@@ -51,11 +51,10 @@ namespace Microsoft.SymbolStore
             {
                 tracer.Information($"Testing checksum: {checksum}");
 
-                HashAlgorithm algorithm = HashAlgorithm.Create(checksum.AlgorithmName);
-                if (algorithm != null)
+                byte[] hash = ComputeHash(tracer, checksum.AlgorithmName, bytes);
+                if (hash != null)
                 {
                     algorithmNameKnown = true;
-                    byte[] hash = algorithm.ComputeHash(bytes);
                     if (hash.SequenceEqual(checksum.Checksum))
                     {
                         // If any of the checksums are OK, we're good
@@ -77,6 +76,41 @@ namespace Microsoft.SymbolStore
             }
 
             throw new InvalidChecksumException("PDB checksum mismatch");
+        }
+
+        private static byte[] ComputeHash(ITracer tracer, string algorithmName, byte[] bytes)
+        {
+#if NETFRAMEWORK
+            // IncrementalHash is not available on .NET Framework 4.6.2.
+            using (HashAlgorithm algorithm = HashAlgorithm.Create(algorithmName))
+            {
+                if (algorithm == null)
+                {
+                    tracer.Warning("Unknown hash algorithm: {0}", algorithmName);
+                    return null;
+                }
+
+                return algorithm.ComputeHash(bytes);
+            }
+#else
+            IncrementalHash algorithm;
+            try
+            {
+                algorithm = IncrementalHash.CreateHash(new HashAlgorithmName(algorithmName));
+            }
+            catch (Exception ex) when (ex is CryptographicException || ex is PlatformNotSupportedException)
+            {
+                // IncrementalHash throws for unsupported algorithms where HashAlgorithm.Create returned null.
+                tracer.Warning("Unable to create hash algorithm '{0}': {1}", algorithmName, ex.Message);
+                return null;
+            }
+
+            using (algorithm)
+            {
+                algorithm.AppendData(bytes);
+                return algorithm.GetHashAndReset();
+            }
+#endif
         }
 
         private static uint GetPdbStreamOffset(Stream pdbStream)
