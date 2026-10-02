@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Runtime.InteropServices;
+
 namespace SOS.TestHarness;
 
 /// <summary>
@@ -58,6 +60,12 @@ public sealed class LldbLiveHost : LldbHostBase, ILiveDebuggerHost
         StartLldb(psi =>
         {
             psi.Environment["DOTNET_EnableWriteXorExecute"] = "0";
+            if (OperatingSystem.IsMacOS() && RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+            {
+                // Software breakpoints in JIT code can cause intermittent spurious instruction faults on
+                // macOS arm64, so SOS plants bpmd breakpoints as hardware breakpoints (see strike.cpp).
+                psi.Environment["SOS_LLDB_HARDWARE_JIT_BREAKPOINTS"] = "1";
+            }
             if (_flavor == Flavor.Core)
             {
                 psi.Environment["DOTNET_ROOT"] = RepoLayout.DotnetTestRoot;
