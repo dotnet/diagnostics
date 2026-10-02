@@ -17,6 +17,11 @@ namespace Microsoft.Diagnostics.TestHelpers
         private readonly DumpTargetFactory _dumpTargetFactory;
 
         public TestDump(TestConfiguration config)
+            : this(config, enableSymbolServer: true)
+        {
+        }
+
+        public TestDump(TestConfiguration config, bool enableSymbolServer)
             : base(config)
         {
             _host = new Host(HostType.DotnetDump);
@@ -36,9 +41,11 @@ namespace Microsoft.Diagnostics.TestHelpers
             _dumpTargetFactory = new DumpTargetFactory(_host);
             serviceContainer.AddService<IDumpTargetFactory>(_dumpTargetFactory);
 
-            // Automatically enable symbol server support
-            _symbolService.AddSymbolServer(timeoutInMinutes: 6, retryCount: 5);
-            _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
+            if (enableSymbolServer)
+            {
+                _symbolService.AddSymbolServer(timeoutInMinutes: 6, retryCount: 5);
+                _symbolService.AddCachePath(_symbolService.DefaultSymbolCache);
+            }
         }
 
         public ServiceContainer ServiceContainer => _host.ServiceContainer;

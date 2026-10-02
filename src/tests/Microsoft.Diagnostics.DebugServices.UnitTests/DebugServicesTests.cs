@@ -23,19 +23,35 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         private const string ListenerName = "DebugServicesTests";
 
         private static readonly string[] s_excludedModules = new string[] { "MpClient.dll", "MpOAV.dll" };
+        private static readonly ISet<string> s_imageInfoMembers = new HashSet<string>(StringComparer.Ordinal)
+        {
+            nameof(IModule.IsManaged),
+            nameof(IModule.IsFileLayout)
+        };
 
         private static IEnumerable<object[]> _configurations;
+        private static IEnumerable<object[]> s_moduleConfigurations;
 
         public static IEnumerable<object[]> GetConfigurations()
         {
             return _configurations ??= TestRunConfiguration.Instance.Configurations
                 .Where((config) => config.AllSettings.ContainsKey("DumpFile"))
-                .Select(CreateHost)
+                .Select((config) => CreateHost(config, enableSymbolServer: true))
                 .Select((host) => new[] { host })
                 .ToImmutableArray();
         }
 
-        private static TestHost CreateHost(TestConfiguration config)
+        public static IEnumerable<object[]> GetModuleConfigurations()
+        {
+            // Separate hosts prevent runtime tests' downloads and caches from affecting module comparisons.
+            return s_moduleConfigurations ??= TestRunConfiguration.Instance.Configurations
+                .Where((config) => config.AllSettings.ContainsKey("DumpFile"))
+                .Select((config) => CreateHost(config, enableSymbolServer: false))
+                .Select((host) => new[] { host })
+                .ToImmutableArray();
+        }
+
+        private static TestHost CreateHost(TestConfiguration config, bool enableSymbolServer)
         {
             if (config.IsTestDbgEng())
             {
@@ -43,7 +59,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
             else
             {
-                return new TestDump(config);
+                return new TestDump(config, enableSymbolServer);
             }
         }
 
@@ -71,11 +87,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             host.TestData.CompareMembers(host.TestData.Target, target);
         }
 
-        [Theory, MemberData(nameof(GetConfigurations))]
+        [Theory, MemberData(nameof(GetModuleConfigurations))]
         public void ModuleTests(TestHost host)
         {
             IModuleService moduleService = host.Target.Services.GetService<IModuleService>();
             Assert.NotNull(moduleService);
+            int modulesWithAvailableImageInfo = 0;
 
             foreach (ImmutableDictionary<string, TestDataReader.Value> moduleData in host.TestData.Modules)
             {
@@ -120,10 +137,27 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     }
                 }
 
+                IModuleImageInfo moduleImageInfo = module.Services.GetService<IModuleImageInfo>();
+                Assert.NotNull(moduleImageInfo);
+                if (host is TestDump && File.Exists(Path.Combine(Path.GetDirectoryName(host.DumpFile), Path.GetFileName(module.FileName))))
+                {
+                    Assert.True(moduleImageInfo.IsImageInfoAvailable, $"Image metadata unavailable for local fixture {module.FileName}");
+                }
+                ISet<string> excludedMemberNames = null;
+                if (moduleImageInfo.IsImageInfoAvailable)
+                {
+                    modulesWithAvailableImageInfo++;
+                }
+                else
+                {
+                    excludedMemberNames = s_imageInfoMembers;
+                    Output.WriteLine($"Image metadata unavailable for {module.FileName} at {module.ImageBase:X16}; skipping IsManaged and IsFileLayout comparisons.");
+                }
+
                 if (host.Target.Host.HostType != HostType.Lldb)
                 {
                     // Check that the resulting module matches the test data
-                    host.TestData.CompareMembers(moduleData, module);
+                    host.TestData.CompareMembers(moduleData, module, excludedMemberNames);
                 }
 
                 IModule module1 = moduleService.GetModuleFromIndex(module.ModuleIndex);
@@ -165,7 +199,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                             if (mod.ImageBase == imageBase)
                             {
                                 // Check that the resulting module matches the test data
-                                host.TestData.CompareMembers(moduleData, mod);
+                                host.TestData.CompareMembers(moduleData, mod, excludedMemberNames);
                             }
                         }
                     }
@@ -214,6 +248,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                         }
                     }
                 }
+            }
+            if (host.Target.Host.HostType != HostType.Lldb)
+            {
+                Assert.True(modulesWithAvailableImageInfo > 0, "No module image information was available.");
             }
         }
 
