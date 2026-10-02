@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Module base implementation
     /// </summary>
-    public abstract class Module : IModule, IExportSymbols, IDisposable
+    public abstract class Module : IModule, IModuleImageInfo, IExportSymbols, IDisposable
     {
         [Flags]
         public enum Flags : byte
@@ -34,6 +34,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         private Flags _flags;
+        private bool _isImageInfoAvailable;
         private IEnumerable<PdbFileInfo> _pdbFileInfos = [];
         private string _symbolFileName;
 
@@ -48,18 +49,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         protected Module(IServiceProvider services, bool isPEModuleProbeSupported)
         {
             ServiceContainerFactory containerFactory = services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Module, services);
+            _isImageInfoAvailable = !isPEModuleProbeSupported;
             if (isPEModuleProbeSupported)
             {
-                containerFactory.AddServiceFactory<PEFile>((services) => ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, ref _flags));
+                containerFactory.AddServiceFactory<PEFile>((services) => GetPEInfo());
             }
             _serviceContainer = containerFactory.Build();
             _serviceContainer.AddService<IModule>(this);
+            _serviceContainer.AddService<IModuleImageInfo>(this);
             _serviceContainer.AddService<IExportSymbols>(this);
         }
 
         public virtual void Dispose()
         {
             _serviceContainer.RemoveService(typeof(IModule));
+            _serviceContainer.RemoveService(typeof(IModuleImageInfo));
             _serviceContainer.RemoveService(typeof(IExportSymbols));
             _serviceContainer.DisposeServices();
         }
@@ -220,6 +224,19 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #endregion
 
+        #region IModuleImageInfo
+
+        bool IModuleImageInfo.IsImageInfoAvailable
+        {
+            get
+            {
+                Services.GetService<PEFile>();
+                return _isImageInfoAvailable;
+            }
+        }
+
+        #endregion
+
         #region IExportSymbols
 
         bool IExportSymbols.TryGetSymbolAddress(string name, out ulong address)
@@ -307,6 +324,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return true;
             }
             return false;
+        }
+
+        private PEFile GetPEInfo()
+        {
+            PEFile peFile = ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, out bool imageInfoAvailable, ref _flags);
+            _isImageInfoAvailable = imageInfoAvailable &&
+                (peFile is not null || Target.OperatingSystem != OSPlatform.Windows);
+            if (!_isImageInfoAvailable && ImageSize > 0)
+            {
+                ModuleService.ReportImageInfoUnavailable(ModuleIndex, ImageBase);
+            }
+            return peFile;
         }
 
         protected abstract ModuleService ModuleService { get; }

@@ -84,7 +84,11 @@ before running the tests. Tests do not build or publish debuggees on demand.
 Local and Helix runs use the same platform configuration files; Helix supplies
 payload-relative paths and its provisioned runtime through `DOTNET_ROOT`.
 DebugServices stages its Windows debugger dependencies alongside its dump fixtures.
-Existing symbol-server lookups remain unchanged.
+`ModuleTests` uses separate dump hosts without remote symbol servers or the shared
+symbol cache, while retaining adjacent-image lookup. When an image is unavailable,
+it logs the module and omits only the `IsManaged` and `IsFileLayout` comparisons;
+available images still receive those checks. Other dump tests retain symbol-server
+access, including the matching DAC downloads required by `RuntimeTests`.
 
 `SOS.UnitTests` remains on the legacy CI test jobs. `DotnetStack.UnitTests` remains
 disabled in the project catalog; the Helix migration does not re-enable it.
