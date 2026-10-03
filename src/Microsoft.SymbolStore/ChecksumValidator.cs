@@ -7,6 +7,9 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Web;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.PDB;
 using Microsoft.FileFormats.PE;
 
 namespace Microsoft.SymbolStore
@@ -18,8 +21,73 @@ namespace Microsoft.SymbolStore
 
         internal static void Validate(ITracer tracer, Stream pdbStream, IEnumerable<PdbChecksum> pdbChecksums)
         {
+            // A portable PDB checksum is computed over the metadata image with the embedded
+            // PDB id zeroed out, so it can be fully recomputed and validated here.
+            //
+            // Windows PDBs (MSF container) and PDZ files (MSFZ container) use a completely
+            // different on-disk format that this code cannot recompute. So for those, we
+            // check with PDBFile class and accept it.
+            //
+            // This happens for ngen or ReadyToRun images.
+            if (IsPortablePdb(pdbStream))
+            {
+                ValidatePortablePdb(tracer, pdbStream, pdbChecksums);
+            }
+            else
+            {
+                ValidateWindowsPdb(tracer, pdbStream);
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the stream is a portable PDB (an ECMA-335 metadata image, which
+        /// starts with the "BSJB" signature).
+        /// </summary>
+        private static bool IsPortablePdb(Stream pdbStream)
+        {
+            pdbStream.Position = 0;
+            byte[] signature = new byte[4];
+            int read = pdbStream.Read(signature, 0, signature.Length);
+            pdbStream.Position = 0;
+            return read == signature.Length &&
+                   signature[0] == 0x42 && // 'B'
+                   signature[1] == 0x53 && // 'S'
+                   signature[2] == 0x4A && // 'J'
+                   signature[3] == 0x42;   // 'B'
+        }
+
+        /// <summary>
+        /// Structurally validates a Windows PDB (MSF) or PDZ (MSFZ) download and accepts it.
+        /// A byte-level re-validation is not performed.
+        /// </summary>
+        private static void ValidateWindowsPdb(ITracer tracer, Stream pdbStream)
+        {
+            const string checksumExceptionMessage = "The downloaded file is neither a portable PDB nor a valid Windows PDB (MSF/MSFZ) container";
+            pdbStream.Position = 0;
+            try
+            {
+                using (PDBFile pdbFile = new(new StreamAddressSpace(pdbStream)))
+                {
+                    if (!pdbFile.IsValid())
+                    {
+                        throw new InvalidChecksumException(checksumExceptionMessage);
+                    }
+                    tracer.Information($"Accepting Windows PDB ({pdbFile.ContainerKind}); No checksum validation is available for this file format");
+                }
+            }
+            catch (Exception)  // The PDBFile constructor or IsValid method can throw an Exception exception
+            {
+                // Note: the InvalidChecksumException constructor does not accept an inner exception
+                throw new InvalidChecksumException(checksumExceptionMessage);
+            }
+            pdbStream.Position = 0;
+        }
+
+        private static void ValidatePortablePdb(ITracer tracer, Stream pdbStream, IEnumerable<PdbChecksum> pdbChecksums)
+        {
             uint offset = 0;
 
+            pdbStream.Position = 0;
             byte[] bytes = new byte[pdbStream.Length];
             byte[] pdbId = new byte[pdbIdSize];
             if (pdbStream.Read(bytes, offset: 0, count: bytes.Length) != bytes.Length)
