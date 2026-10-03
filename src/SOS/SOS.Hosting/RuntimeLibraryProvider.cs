@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 
@@ -47,7 +48,7 @@ namespace SOS.Hosting
             this.ReleaseWithCheck();
         }
 
-        private int ProvideLibrary2(
+        internal int ProvideLibrary2(
             IntPtr self,
             string fileName,
             uint timeStamp,
@@ -64,6 +65,11 @@ namespace SOS.Hosting
                 if (string.IsNullOrEmpty(path))
                 {
                     Trace.TraceError($"RuntimeLibraryProvider: could not resolve {fileName}");
+                    return HResult.E_NOINTERFACE;
+                }
+                if (!PathUtilities.IsSafeAbsoluteLocalPath(path))
+                {
+                    Trace.TraceError($"RuntimeLibraryProvider: can't load {fileName} from path '{path}' because it is not local");
                     return HResult.E_NOINTERFACE;
                 }
 
