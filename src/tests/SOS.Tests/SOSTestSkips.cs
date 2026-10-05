@@ -14,6 +14,17 @@ internal static class SOSTestSkips
         Skip(GetX86DebugInfoSkipReason(config, OperatingSystem.IsWindows(), RuntimeInformation.ProcessArchitecture));
     }
 
+    internal static void SkipFaultingExceptionFrame()
+    {
+        // The legacy exception-frame script did not run on ARM/ARM64 in CI.
+        // Integer division by zero uses a software throw on these architectures, not a hardware fault.
+        // ARM64 stacks show HelperMethodFrame on .NET 8/9 and SoftwareExceptionFrame on .NET 10/11.
+        // https://dev.azure.com/dnceng-public/public/_build/results?buildId=1616829
+        Assert.SkipWhen(
+            RuntimeInformation.ProcessArchitecture is Architecture.Arm or Architecture.Arm64,
+            "DivZero does not produce a FaultingExceptionFrame on ARM/ARM64; the legacy test did not run on these platforms.");
+    }
+
     internal static void SkipICorDebugFrameCount(TestConfig config)
     {
         Skip(GetICorDebugFrameCountSkipReason(config, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS(), RuntimeInformation.ProcessArchitecture));

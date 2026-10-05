@@ -729,6 +729,12 @@ particular loaded module. If the pending breakpoint has a zero module id, then
 the breakpoint applies to modules that have not yet been loaded. Use 
 bpmd -clear or bpmd -clearall to remove pending breakpoints from the list.
 
+On macOS arm64, setting SOS_LLDB_HARDWARE_JIT_BREAKPOINTS=1 in lldb's
+environment makes bpmd plant hardware breakpoints ("breakpoint set --hardware").
+A software breakpoint written into JIT code can intermittently make the target
+take a spurious EXC_BAD_ACCESS. Only a few hardware breakpoints are available
+(e.g. 6 on Apple M-series CPUs), and setting more than that fails.
+
 The bpmd command can now be used before the runtime is loaded. You can execute
 bpmd right after the SOS plug-in is loaded. Always add the module extension for
 the module name parameter.

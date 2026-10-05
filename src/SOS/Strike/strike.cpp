@@ -5013,6 +5013,21 @@ struct PendingBreakpoint
     }
 };
 
+#ifdef FEATURE_PAL
+// Setting SOS_LLDB_HARDWARE_JIT_BREAKPOINTS=1 makes SOS plant its JIT-code breakpoints as LLDB hardware
+// breakpoints. On macOS arm64, a software breakpoint makes debugserver copy-on-write the MAP_JIT page
+// (mach_vm_protect with VM_PROT_COPY) and patch in a BRK. Threads that then run code on the new page can
+// intermittently take a spurious EXC_BAD_ACCESS/KERN_PROTECTION_FAILURE instruction abort. A hardware
+// breakpoint uses a per-thread debug register instead and never writes to the page.
+// Limitations: the CPU only has a few hardware breakpoint slots (e.g. 6 on Apple M-series). Setting a
+// breakpoint beyond that fails rather than falling back to software. Only live processes are affected.
+static const char* LldbJitBreakpointOptions()
+{
+    const char* value = getenv("SOS_LLDB_HARDWARE_JIT_BREAKPOINTS");
+    return value != nullptr && strcmp(value, "1") == 0 ? " --hardware" : "";
+}
+#endif
+
 void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
 {
     const int MaxBPsCached = 1024;
@@ -5057,7 +5072,7 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
 #ifndef FEATURE_PAL
         sprintf_s(buffer, ARRAY_SIZE(buffer), "bp %p", SOS_PTR(addr));
 #else
-        sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%p", SOS_PTR(addr));
+        sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%p%s", SOS_PTR(addr), LldbJitBreakpointOptions());
 #endif
         ExtOut("Setting breakpoint: %s [%S]\n", buffer, wszNameBuffer);
         g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
@@ -5819,7 +5834,7 @@ public:
 #ifndef FEATURE_PAL
                 sprintf_s(buffer, ARRAY_SIZE(buffer), "bp /1 %p", SOS_PTR(startAddr+catcherNativeOffset));
 #else
-                sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%p", SOS_PTR(startAddr+catcherNativeOffset));
+                sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%p%s", SOS_PTR(startAddr+catcherNativeOffset), LldbJitBreakpointOptions());
 #endif
                 g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
             }

@@ -45,6 +45,12 @@ variables:
   - name: helix_windows_x64_server_2022_internal
     value: Windows.Amd64.Server2022
 
+  - name: helix_windows_arm64_windows_11
+    value: Windows.11.Arm64.Open
+
+  - name: helix_windows_arm64_windows_11_internal
+    value: Windows.11.Arm64
+
   # Common aliases
   # These must remain after the versioned definitions they reference.
 
@@ -83,6 +89,12 @@ variables:
 
   - name: helix_win_x64_internal
     value: ${{ variables.helix_windows_x64_server_2022_internal }}
+
+  - name: helix_win_arm64
+    value: ${{ variables.helix_windows_arm64_windows_11 }}
+
+  - name: helix_win_arm64_internal
+    value: ${{ variables.helix_windows_arm64_windows_11_internal }}
 
   # Windows x86 tests run on the Windows x64 Helix queue.
   - name: helix_win_x86

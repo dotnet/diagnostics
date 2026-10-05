@@ -109,6 +109,7 @@ public abstract class DbgEngHostBase : IDebuggerHost
 
         RunCore($".load {ToolPaths.SosPath}");
         VerifyOurSosLoaded();
+        DbgEngSosHost.Initialize();
 
         _sosLoaded = true;
     }

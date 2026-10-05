@@ -78,9 +78,17 @@ namespace Microsoft.Diagnostics
             {
                 Assert.Skip("Authenticode verification is Windows-only");
             }
-            string frameworkDirectory = Environment.Is64BitProcess
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Microsoft.NET", "Framework64", "v4.0.30319")
-                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Microsoft.NET", "Framework", "v4.0.30319");
+            string frameworkDirectoryName = RuntimeInformation.ProcessArchitecture switch
+            {
+                Architecture.Arm64 => "FrameworkArm64",
+                Architecture.X64 => "Framework64",
+                _ => "Framework"
+            };
+            string frameworkDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+                "Microsoft.NET",
+                frameworkDirectoryName,
+                "v4.0.30319");
             string desktopDbiPath = Path.Combine(frameworkDirectory, "mscordbi.dll");
             string desktopDacPath = Path.Combine(frameworkDirectory, "mscordacwks.dll");
             if (!File.Exists(desktopDbiPath) || !File.Exists(desktopDacPath))

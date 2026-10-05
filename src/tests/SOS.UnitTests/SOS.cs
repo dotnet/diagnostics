@@ -291,39 +291,6 @@ public class SOSStackTraceTests
     private ITestOutputHelper Output { get; set; }
 
     [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task StackTraceSoftwareExceptionFrame(TestConfiguration config)
-    {
-        if (config.RuntimeFrameworkVersionMajor < 10)
-        {
-            Assert.Skip("This test validates SoftwareExceptionFrame handling, before .NET10, these aren't used in this debuggee scenario.");
-        }
-
-        SOSTestHelpers.SkipIfWinX86(config);
-
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "SimpleThrow",
-            scriptName: "StackTraceSoftwareExceptionFrame.script",
-            Output,
-            testName: "SOS.StackTraceSoftwareExceptionFrame",
-            testTriage: true);
-    }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task StackTraceFaultingExceptionFrame(TestConfiguration config)
-    {
-        SOSTestHelpers.SkipIfWinX86(config);
-
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "DivZero",
-            scriptName: "StackTraceFaultingExceptionFrame.script",
-            Output,
-            testName: "SOS.StackTraceFaultingExceptionFrame",
-            testTriage: true);
-    }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task StackTests(TestConfiguration config)
     {
         // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)

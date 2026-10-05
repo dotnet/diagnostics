@@ -280,6 +280,18 @@ namespace SOS.Extensions
             catch (InvalidCastException)
             {
             }
+            try
+            {
+                ThreadStackTraceService threadStackTraceService = new(iunk);
+                // This service needs another reference since it is implemented as part of IDebuggerServices and gets
+                // disposed in Uninitialize() below by the DisposeServices call.
+                threadStackTraceService.AddRef();
+                _host.ServiceContainer.AddService<IThreadStackTraceService>(threadStackTraceService);
+            }
+            catch (InvalidCastException)
+            {
+                Trace.TraceInformation("Debugger stack trace service is not available.");
+            }
             hr = DebuggerServices.GetSymbolPath(out string symbolPath);
             if (hr == HResult.S_OK)
             {
@@ -402,14 +414,12 @@ namespace SOS.Extensions
                 // Send shutdown event on exit
                 _host.OnShutdownEvent.Fire();
 
-                // Dispose of the global services which RemoteMemoryService but not host services (this)
-                _host.ServiceContainer.DisposeServices();
-
                 // This turns off any logging to console now that debugger services will be released and the console service will no longer work.
                 DiagnosticLoggingService.Instance.SetConsole(consoleService: null, fileLoggingService: null);
 
-                // Release the debugger services instance
-                DebuggerServices?.ReleaseWithCheck();
+                // Dispose of the global services, including DebuggerServices and RemoteMemoryService, but not host services (this)
+                _host.ServiceContainer.DisposeServices();
+
                 DebuggerServices = null;
 
                 // Clear HostService instance

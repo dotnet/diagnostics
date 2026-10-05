@@ -193,7 +193,7 @@ thread checks use existing targets. Frame-limit tests
 retain the original Heap-dump matrix; live and additional dump-kind coverage
 are deferred. Their shared debuggees remain.
 The ICorDebug frame-limit test excludes Framework, as the legacy test did.
-Temporary, narrowly scoped ICorDebug skips for .NET 10 Windows x86 NestedException
+Temporary, narrowly scoped ICorDebug skips for .NET 10 Windows x86 legacy-DAC reduced dumps
 and .NET 11 macOS ARM64 SingleFile/cDAC are defined in
 [SOSTestSkips.cs](SOSTestSkips.cs), with inline investigation notes and removal criteria.
 `AsyncMain.script` is retired by `ClrStackTests.ClrStack_DmlPreservesAsyncMainName`,
@@ -204,6 +204,14 @@ matrices and retain their debuggees. ThreadApartment now captures its unhandled
 exception after both apartment threads are ready, instead of stopping at `Debugger.Break`;
 the worker threads remain alive through capture. Its Core, SingleFile, and Framework
 artifacts are included in the Windows harness payload.
+`ClrStackRuntimeFramesTests` adds dump-only checks for `FaultingExceptionFrame`
+on DivZero and `SoftwareExceptionFrame` on SimpleThrow. The latter runs on .NET 10+
+Core/SingleFile; both preserve the legacy Windows x86 exclusion.
+The DivZero faulting-frame check also skips ARM/ARM64 via `SOSTestSkips`: division by
+zero uses a software throw there, and the legacy test did not run on those platforms.
+The software-frame check remains enabled on ARM/ARM64.
+`StackTraceFaultingExceptionFrame.script` and `StackTraceSoftwareExceptionFrame.script`
+are retired; their shared debuggees remain.
 `GCTests.script` and `GCPOH.script` are retired using existing heap coverage plus
 known POH object location and roots, Core static reference fields, and native
 `dumpobj -refs` coverage using the existing Scenarios target. These additions use dump-only
@@ -256,6 +264,7 @@ processes; they are not supported user controls:
 | `DOTNET_DbgEnableMiniDump`, `DOTNET_DbgMiniDumpType`, `DOTNET_DbgMiniDumpName`, `DOTNET_CreateDumpDiagnostics` | Configure createdump crash capture. |
 | `DOTNET_DbgEnableElfDumpOnMacOS`, `TMPDIR` | Produce readable ELF dumps and a short diagnostics socket path on macOS. |
 | `DOTNET_gcServer`, `DOTNET_GCHeapCount`, `DOTNET_GCDynamicAdaptationMode` | Create deterministic four-heap Server GC targets. |
+| `SOS_LLDB_HARDWARE_JIT_BREAKPOINTS` | Set to `1` for live LLDB hosts on macOS arm64 so SOS plants `bpmd` breakpoints as hardware breakpoints. Debugserver writes a software breakpoint by copy-on-writing the `MAP_JIT` page, and running threads can then intermittently take a spurious `EXC_BAD_ACCESS` (`KERN_PROTECTION_FAILURE`) instruction fault. Hardware breakpoints are limited to a few per process (6 on Apple M-series), and setting more fails. |
 
 ## Output and artifacts
 
@@ -287,6 +296,13 @@ failed runtime/configuration leg without increasing artifacts for passing legs.
 test project, SOS owns file collection, staging, validation, and work-item metadata.
 It creates one self-contained payload per OS, RID, configuration, and queue;
 submission uses one work item per runtime, plus the Windows Framework work item.
+Windows ARM64 runs on the Windows 11 ARM64 Helix queue with an ARM64 SDK,
+runtime, DbgEng, native SOS, and debuggee payload.
+
+The managed DbgEng engine and capture processes initialize SOS through
+`HostServices.Initialize` after loading the native extension. This shares their
+existing CoreCLR instead of starting another runtime or falling back to Desktop CLR.
+
 The payload contains `SOS.Tests`, its harness subprocesses, native SOS, the
 repository-built dotnet-dump, DbgEng on Windows, and all prebuilt Core,
 SingleFile, and Framework debuggees needed by that platform. The exact runtime
