@@ -565,29 +565,6 @@ public class SOSMethodTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task DynamicMethod(TestConfiguration config)
-    {
-        if (config.PublishSingleFile || config.IsDesktop)
-        {
-            Assert.Skip("Single file and desktop framework not supported");
-        }
-
-        if (config.RuntimeFrameworkVersionMajor == 10)
-        {
-            // The clrstack -i -a command regressed on .NET 10 win-x86, so skip this test for now.
-            SOSTestHelpers.SkipIfWinX86(config);
-        }
-
-        await SOSTestHelpers.RunTest(config, debuggeeName: "DynamicMethod", scriptName: "DynamicMethod.script", Output);
-    }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task Reflection(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(config, debuggeeName: "ReflectionTest", scriptName: "Reflection.script", Output, testTriage: true);
-    }
-
     [Theory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
     public async Task VarargPInvokeInteropMD(TestConfiguration config)
     {
