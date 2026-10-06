@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,6 +59,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             private Dictionary<ExpectedCounter, ICounterPayload> _metrics = new();
             private readonly TaskCompletionSource<object> _foundExpectedCountersSource;
             private readonly ITestOutputHelper _output;
+            private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
 
             public TestMetricsLogger(IEnumerable<ExpectedCounter> expectedCounters, TaskCompletionSource<object> foundExpectedCountersSource, ITestOutputHelper output)
             {
@@ -68,6 +70,18 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     foundExpectedCountersSource.SetResult(null);
                 }
                 _output = output;
+            }
+
+            // Prefixes each line with the elapsed time since this logger was created and the
+            // payload's own timestamp/interval as reported by the runtime, so that the gap between
+            // receiving the last expected counter and the pipeline actually stopping can be measured
+            // precisely instead of only being bounded by neighboring timestamped log lines.
+            private void WriteLine(string message, ICounterPayload payload = null)
+            {
+                string payloadInfo = payload == null
+                    ? string.Empty
+                    : $" (payload.Timestamp={payload.Timestamp:HH:mm:ss.fff}, payload.Interval={payload.Interval})";
+                _output.WriteLine($"[{_stopwatch.Elapsed:mm\\:ss\\.fff}] {message}{payloadInfo}");
             }
 
             public IEnumerable<ICounterPayload> Metrics => _metrics.Values;
@@ -94,23 +108,23 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                     _expectedCounters.Remove(expectedCounter);
                     _metrics.Add(expectedCounter, payload);
 
-                    _output.WriteLine($"Found expected counter: {expectedCounter.ProviderName}/{expectedCounter.CounterName}. Counters remaining={_expectedCounters.Count}");
+                    WriteLine($"Found expected counter: {expectedCounter.ProviderName}/{expectedCounter.CounterName}. Counters remaining={_expectedCounters.Count}", payload);
                     // Complete the task source if the last expected key was removed.
                     if (_expectedCounters.Count == 0)
                     {
-                        _output.WriteLine($"All expected counters have been received. Signaling pipeline can exit.");
+                        WriteLine("All expected counters have been received. Signaling pipeline can exit.");
                         _foundExpectedCountersSource.TrySetResult(null);
                     }
                 }
                 else
                 {
-                    _output.WriteLine($"Received additional counter event: {payload.CounterMetadata.ProviderName}/{payload.CounterMetadata.CounterName}");
+                    WriteLine($"Received additional counter event: {payload.CounterMetadata.ProviderName}/{payload.CounterMetadata.CounterName}", payload);
                 }
             }
 
             public Task PipelineStarted(CancellationToken token)
             {
-                _output.WriteLine("Counters pipeline is running. Waiting to receive expected counters from tracee.");
+                WriteLine("Counters pipeline is running. Waiting to receive expected counters from tracee.");
                 return Task.CompletedTask;
             }
 
