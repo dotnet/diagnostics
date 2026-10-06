@@ -193,13 +193,14 @@ thread checks use existing targets. Frame-limit tests
 retain the original Heap-dump matrix; live and additional dump-kind coverage
 are deferred. Their shared debuggees remain.
 The ICorDebug frame-limit test excludes Framework, as the legacy test did.
-Temporary, narrowly scoped ICorDebug skips for .NET 10 Windows x86 legacy-DAC reduced dumps
+Temporary, narrowly scoped ICorDebug skips for .NET 10 Windows x86 legacy-DAC Heap and Mini dumps (not Full dumps)
 and .NET 11 macOS ARM64 SingleFile/cDAC are defined in
 [SOSTestSkips.cs](SOSTestSkips.cs), with inline investigation notes and removal criteria.
 `AsyncMain.script` is retired by `ClrStackTests.ClrStack_DmlPreservesAsyncMainName`,
 which runs `clrstack /d` and requires the literal `AsyncMainTest.<Main>(...)` frame.
 `ThreadApartment.script` is retired by `ClrThreadsTests.ClrThreads_ReportsApartmentStates`,
-which requires both STA and MTA rows on Windows. Both additions use dump-only Heap
+which identifies the STA and MTA workers by their stacks and matches their OS thread IDs
+to the expected apartment rows on Windows. Both additions use dump-only Heap
 matrices and retain their debuggees. ThreadApartment now captures its unhandled
 exception after both apartment threads are ready, instead of stopping at `Debugger.Break`;
 the worker threads remain alive through capture. Its Core, SingleFile, and Framework

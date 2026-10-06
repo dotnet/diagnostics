@@ -42,28 +42,13 @@ internal static class SOSTestSkips
     /// </summary>
     internal static string? GetX86DebugInfoSkipReason(TestConfig config, bool isWindows, Architecture architecture)
     {
-        // https://dev.azure.com/dnceng-public/public/_build/results?buildId=1617003 (ClrStack_ICorDebug)
-        // https://dev.azure.com/dnceng-public/public/_build/results?buildId=1616319 (ClrStack_ICorDebugFrameCount)
-        //
-        // The x86 DAC over-reads the compressed debug info, so the read fails against a reduced dump and
-        // the ICorDebug stack walk truncates. In coreclr's debuginfostore.cpp, EnumMemoryRegions pads the
-        // enumerated blob to sizeof(NibbleReader::NibbleChunkType) - 4 bytes on a 32-bit target - but
-        // DoBounds reads the packed bounds array through ReadFromBitOffsets, which issues 8-byte aligned
-        // loads off AlignDown(addrBoundsArray, sizeof(uint64_t)). The last load can therefore reach up to
-        // 4 bytes past the enumerated range. 64-bit targets are unaffected because NibbleChunkType is
-        // already 8 bytes there, and the cDAC is unaffected because it reads the bounds byte by byte
-        // through a stream bounded by cbBounds.
-        //
-        // This is intermittent: the dump is only unwalkable when an affected blob belongs to a method on
-        // the walked stack, which is why reruns can pass. Confirmed by decoding the blob headers in a
-        // failing CI dump (20 blobs whose 8-byte read lands outside the dump) and by reading the exact
-        // bytes in cdb, where the blob is present but its aligned 8-byte load returns "????????".
-        //
-        // .NET 11 Heap dumps happen to pass because their memory enumeration is coarser and incidentally
-        // covers the over-read; the defect is still present there and still reproduces in Mini dumps.
-        // Remove once a DAC carrying the coreclr fix flows into this repo. That fix also repairs dumps
-        // captured before it, so these cases recover without recapturing. Do not substitute Full dumps to
-        // hide the failure.
+        // In coreclr's debuginfostore.cpp, EnumMemoryRegions pads debug info to NibbleChunkType (4 bytes
+        // on x86), but DoBounds/ReadFromBitOffsets uses aligned 8-byte loads. The last load can extend
+        // up to 4 bytes past the enumerated range in Heap/Mini dumps and truncate an ICorDebug walk.
+        // Failure is intermittent: an affected blob must belong to a method on the walked stack.
+        // Full dumps, 64-bit targets (8-byte padding), and cDAC (bounded byte-wise reads) are unaffected.
+        // .NET 11 Heap enumeration incidentally covers the over-read; Mini dumps still expose it.
+        // Remove when a fixed DAC flows into the test runtimes; existing dumps need not be recaptured.
         if (isWindows
             && architecture == Architecture.X86
             && config.Liveness == Liveness.Dump

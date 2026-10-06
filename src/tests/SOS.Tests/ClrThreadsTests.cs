@@ -26,8 +26,17 @@ public sealed class ClrThreadsTests
         target.GoToFirstStop();
 
         SosTable threads = target.Sos("clrthreads").AsThreadsTable();
-        threads.AssertContainsRow(row => row["Apt"] == "STA", "an STA thread");
-        threads.AssertContainsRow(row => row["Apt"] == "MTA", "an MTA thread");
+        IReadOnlyList<TargetExtensions.ThreadStack> stacks = target.ClrstackAllThreads();
+        AssertWorkerApartment("ThreadApartment.StaWorker()", "STA");
+        AssertWorkerApartment("ThreadApartment.MtaWorker()", "MTA");
+
+        void AssertWorkerApartment(string method, string apartment)
+        {
+            TargetExtensions.ThreadStack stack = Assert.Single(stacks, thread => thread.Frames.Any(frame => frame.Function.Contains(method, StringComparison.Ordinal)));
+            uint osThreadId = Convert.ToUInt32(stack.OsThreadId, 16);
+            SosRow thread = Assert.Single(threads, row => row["OSID"].AsUInt32(Sos.Hex) == osThreadId);
+            Assert.Equal(apartment, thread["Apt"].Value);
+        }
     }
 
     /// <summary>

@@ -64,7 +64,7 @@ target-invocation boundary is still specialized legacy behavior.
 | `StackTraceSoftwareExceptionFrame.script` | Retired | Exception and ordinary stack data are covered; no new assertion requires the synthetic `[SoftwareExceptionFrame: ...]` row. |
 | `TaskNestedException.script` | Gap | New tests cover one inner-exception round-trip, not the AggregateException/task chain and source lines. |
 | `TestExtensions.script` | Retained | This validates extension-command interception and dispatch rather than SOS product output; it remains a legacy harness integration test. |
-| `ThreadApartment.script` | Retired | `ClrThreadsTests` validates thread rows and counts, but does not assert Windows STA/MTA apartment flags. |
+| `ThreadApartment.script` | Retired | `ClrThreadsTests.ClrThreads_ReportsApartmentStates` identifies the named STA/MTA workers in `clrstack -all`, matches their OS thread IDs to `clrthreads`, and asserts each worker's expected apartment on Windows. |
 | `VarargPInvokeInteropMD.script` | Retained | Vararg P/Invoke, IL stubs, native breakpointing, `ip2md`, and `clru -il` form one specialized interop scenario. Generic `ip2md` and `clru` have new structured tests. |
 | `WebApp.script` | Retained | Timers, ASP.NET/WebApp stacks, args/registers, and GC stress-log behavior remain in the specialized Windows legacy target; generic command equivalents are covered. |
 
