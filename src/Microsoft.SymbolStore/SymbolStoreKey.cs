@@ -40,12 +40,11 @@ namespace Microsoft.SymbolStore
         /// The checksums of the pdb file (if any)
         /// </summary>
         /// <remarks>
-        /// In the .NET Standard build, checksum validation uses algorithm names supported by
-        /// IncrementalHash on the current runtime and platform, not CryptoConfig aliases or
-        /// custom registrations. The .NET Framework build retains CryptoConfig name resolution.
+        /// Checksum validation uses algorithm names supported by IncrementalHash on the current
+        /// runtime and platform, not CryptoConfig aliases, custom registrations, or algorithms
+        /// supported only by .NET Framework.
         /// Unsupported algorithms are skipped; at least one supplied checksum must match.
-        /// Null algorithm names throw. Empty names throw in the .NET Standard build but are
-        /// treated as unknown algorithms in the .NET Framework build.
+        /// Null or empty algorithm names throw.
         /// </remarks>
         public readonly IEnumerable<PdbChecksum> PdbChecksums;
 

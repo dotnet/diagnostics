@@ -40,16 +40,22 @@ namespace Microsoft.SymbolStore.Tests
             Assert.Equal(originalBytes, pdbStream.ToArray());
         }
 
-        [Fact]
-        public void ValidateRejectsUnknownAlgorithm()
+        [Theory]
+        [InlineData("Unknown")]
+        [InlineData("sha256")]
+        [InlineData("SHA-256")]
+        [InlineData("System.Security.Cryptography.SHA256")]
+        [InlineData("System.Security.Cryptography.HashAlgorithm")]
+        [InlineData("RIPEMD160")]
+        public void ValidateRejectsUnknownAlgorithm(string algorithmName)
         {
             using MemoryStream pdbStream = CreatePdbStream();
-            PdbChecksum checksum = new("Unknown", new byte[32]);
+            PdbChecksum checksum = new(algorithmName, new byte[32]);
 
             InvalidChecksumException exception = Assert.Throws<InvalidChecksumException>(
                 () => ChecksumValidator.Validate(_tracer, pdbStream, new[] { checksum }));
 
-            Assert.Equal("Unknown hash algorithm: Unknown", exception.Message);
+            Assert.Equal($"Unknown hash algorithm: {algorithmName}", exception.Message);
         }
 
         [Theory]
