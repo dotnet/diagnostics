@@ -32,7 +32,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
             string[] PerfEvents,
             string[] Profiles,
             FileInfo Output,
-            TimeSpan Duration,
+            TimeSpan? Duration,
             string Name,
             int ProcessId,
             bool Probe,
@@ -110,16 +110,6 @@ namespace Microsoft.Diagnostics.Tools.Trace
 
                 byte[] command = BuildRecordTraceArgs(args, out scriptPath);
 
-                if (args.Duration != default)
-                {
-                    System.Timers.Timer durationTimer = new(args.Duration.TotalMilliseconds);
-                    durationTimer.Elapsed += (sender, e) =>
-                    {
-                        durationTimer.Stop();
-                        stopTracing = true;
-                    };
-                    durationTimer.Start();
-                }
                 stopwatch.Start();
                 ret = RecordTraceInvoker(command, (UIntPtr)command.Length, OutputHandler);
             }
@@ -194,7 +184,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     PerfEvents: perfEventsValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Profiles: profilesValue.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     Output: parseResult.GetValue(CommonOptions.OutputPathOption) ?? new FileInfo(CommonOptions.DefaultTraceName),
-                    Duration: parseResult.GetValue(CommonOptions.DurationOption),
+                    Duration: parseResult.GetResult(CommonOptions.DurationOption) is null ? null : parseResult.GetValue(CommonOptions.DurationOption),
                     Name: parseResult.GetValue(CommonOptions.NameOption) ?? string.Empty,
                     ProcessId: parseResult.GetValue(CommonOptions.ProcessIdOption),
                     Probe: parseResult.GetValue(ProbeOption),
@@ -502,6 +492,17 @@ namespace Microsoft.Diagnostics.Tools.Trace
             {
                 recordTraceArgs.Add($"--pid");
                 recordTraceArgs.Add($"{pid}");
+            }
+
+            if (args.Duration is TimeSpan duration)
+            {
+                if (duration < TimeSpan.Zero)
+                {
+                    throw new DiagnosticToolException("--duration must be greater than or equal to zero.");
+                }
+
+                recordTraceArgs.Add("--duration");
+                recordTraceArgs.Add($"{duration.Ticks / TimeSpan.TicksPerSecond}");
             }
 
             FileInfo resolvedOutput = ResolveOutputPath(args.Output, args.Name);
