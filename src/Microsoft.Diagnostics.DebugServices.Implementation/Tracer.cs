@@ -13,11 +13,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     {
         public static bool Enable { get; set; }
 
-        // Instance must be computed on every access (not cached via a field initializer) because
-        // Enable can be toggled after the Tracer type has already been initialized (for example,
-        // when multiple hosts with different HostTypes are created in the same process), and a
-        // cached value would permanently "stick" to whatever Enable was the first time any static
-        // member of Tracer was touched.
         public static ITracer Instance => Enable ? s_tracer : s_nullTracer;
 
         private static readonly Tracer s_tracer = new();
