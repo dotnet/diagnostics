@@ -31,8 +31,10 @@ Status meanings:
 No legacy script was retired by #5979. This layer retires `DivZero.script`,
 `NestedExceptionTest.script`, and `SimpleThrow.script` after moving their exact
 exception, source-line, stack, thread, live/dump, and CLRMA assertions into the
-command-focused suite. `Reflection.script` remains active because its reflected
-target-invocation boundary is still specialized legacy behavior.
+command-focused suite. Two additional scripts, `DynamicMethod.script` and
+`Reflection.script`, are retired using their existing modern debuggees and
+focused emitted-IL checks and existing reflection-exception coverage.
+The remaining legacy runner and scenarios stay in place.
 
 ## Legacy-to-new map
 
@@ -45,7 +47,7 @@ target-invocation boundary is still specialized legacy behavior.
 | `DualRuntimes.script` | Retained | Generic stacks, threads, heaps, and runtime listing are covered; loading and switching between two runtimes in one process remains a specialized legacy scenario. |
 | `DumpGCData.script` | Covered | `DiagnosticCommandTests.DumpGcData_ReportsGcStatistics` directly exercises `dumpgcdata`. |
 | `DumpGen.script` | Improved | `GcInspectionTests.DumpGen_ListsGenerationObjects` asserts a known gen0 object. `DumpGen_ArgumentsAndFilters` adds missing/invalid generation and valid `-type`/`-mt` coverage. Exact legacy gen1/gen2/LOH/POH populations remain retained. |
-| `DynamicMethod.script` | Retained | `DumpIlTests` validates IL addresses and instructions and ICorDebug is covered elsewhere; the emitted dynamic-method target remains a legacy scenario. |
+| `DynamicMethod.script` | Retired | `DynamicMethodTests` finds the debuggee's emitted Fibonacci method, checks its exact IL sequence, and uses the ICorDebug `dynamicMethod` local to select and disassemble the same object. |
 | `FindRootsOlderGeneration.script` | Gap | `GcRoot_FindsRootsForLive_NoneForDead` improves ordinary root correctness, but the live `findroots -gen any` notification/continue sequence and older-generation result are not represented. |
 | `GCPOH.script` | Retired | `DumpHeapGenerationsTests`, `DumpArrayTests`, `GcHandles`, `VerifyHeap`, `EeHeapTests`, and stack-root tests use deterministic objects and structured assertions; the original POH script remains active. |
 | `GCTests.script` | Retired | Object fields, `gcwhere`, stack objects, heap statistics, roots, handles, finalization, and verification are split into focused tests with exact object oracles. |
@@ -56,7 +58,7 @@ target-invocation boundary is still specialized legacy behavior.
 | `NestedExceptionTest.script` | Retired | `PrintExceptionTests` verifies exact outer/inner types, messages, HResults, `-nested`, `-lines`, frame data, and inner-address round-trip across live and dump rows. `LiveBpmdTests`, `ClrThreadsTests`, the stack tests, and `DiagnosticCommandTests.Clrma_ReportsCurrentExceptionChain` cover the breakpoint, thread, stack, and CLRMA paths. |
 | `OtherCommands.script` | Improved | Its broad command set is split across object, module, domain, heap, runtime, memory, code-info, and diagnostic test classes with structured round-trips. |
 | `Overflow.script` | Retained | Stack-overflow exception behavior remains a specialized crash/live legacy target; ordinary exception output is covered by `PrintExceptionTests`. |
-| `Reflection.script` | Retained | Target-invocation exception and reflection boundary behavior remains legacy; generic nested exception and stack behavior is improved in the new project. |
+| `Reflection.script` | Retired | Existing `PrintExceptionTests.PrintException_ReflectionInnerException` checks outer/inner exception types, messages, HResults, nested output, and caller source annotations. Generic stack/thread coverage is not duplicated on this target, and no new assertions are added. |
 | `SimpleThrow.script` | Retired | `PrintExceptionTests.PrintException_NoInnerException` verifies the exact exception type, message, HResult, no-inner state, generated frame, `-nested`, and `-lines` output across live and dump rows. `ClrThreadsTests` and the stack tests cover the remaining thread and managed-stack behavior. |
 | `StackAndOtherTests.script` | Improved | `RuntimeInfoTests` and the `ClrStack*Tests` classes separately cover runtime selection, plain/line/full/all/register/args/locals stack modes with stronger comparisons. |
 | `StackTests.script` | Improved | `ClrStackTests`, `ClrStackFullTests`, `ClrStackAllThreadsTests`, `ClrStackArgsLocalsTests`, `StackInspectionTests`, and `RuntimeInfoTests` replace shape-only checks with tables and address round-trips. |
