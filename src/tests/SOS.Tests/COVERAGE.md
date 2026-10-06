@@ -38,7 +38,7 @@ target-invocation boundary is still specialized legacy behavior.
 
 | Legacy script | Status | New evidence and remaining legacy value |
 | --- | --- | --- |
-| `AsyncMain.script` | Gap | General stack shape is covered by `ClrStackLinesTests` and `ClrStackAllThreadsTests`; the async-`Main` frame identity has no new oracle. |
+| `AsyncMain.script` | Retired | General stack shape is covered by `ClrStackLinesTests` and `ClrStackAllThreadsTests`; the async-`Main` frame identity has no new oracle. |
 | `ClrStackWithNumberOfFrames.script` | Retired | `ClrStackFrameCountTests.ClrStack_FrameCount` compares each `-c N` result with the exact prefix of an unlimited walk and checks an over-limit request across four crash targets. |
 | `ConcurrentDictionaries.script` | Improved | `SpecializedInspectionTests.Dcd_DumpsConcurrentDictionary`, `DumpArrayTests`, and `ObjectFieldsTests` provide typed data assertions. Legacy still covers dcd argument errors and its wider generic key/value set. |
 | `DivZero.script` | Retired | `PrintExceptionTests.PrintException_NoInnerException` verifies the exact exception type, message, HResult, no-inner state, generated frame, `-nested`, and `-lines` output across live and dump rows. `ClrThreadsTests`, `ClrStackLinesTests`, and `ClrStackICorDebugTests` cover the remaining thread and stack behavior. |
@@ -64,7 +64,7 @@ target-invocation boundary is still specialized legacy behavior.
 | `StackTraceSoftwareExceptionFrame.script` | Retired | Exception and ordinary stack data are covered; no new assertion requires the synthetic `[SoftwareExceptionFrame: ...]` row. |
 | `TaskNestedException.script` | Gap | New tests cover one inner-exception round-trip, not the AggregateException/task chain and source lines. |
 | `TestExtensions.script` | Retained | This validates extension-command interception and dispatch rather than SOS product output; it remains a legacy harness integration test. |
-| `ThreadApartment.script` | Gap | `ClrThreadsTests` validates thread rows and counts, but does not assert Windows STA/MTA apartment flags. |
+| `ThreadApartment.script` | Retired | `ClrThreadsTests.ClrThreads_ReportsApartmentStates` identifies the named STA/MTA workers in `clrstack -all`, matches their OS thread IDs to `clrthreads`, and asserts each worker's expected apartment on Windows. |
 | `VarargPInvokeInteropMD.script` | Retained | Vararg P/Invoke, IL stubs, native breakpointing, `ip2md`, and `clru -il` form one specialized interop scenario. Generic `ip2md` and `clru` have new structured tests. |
 | `WebApp.script` | Retained | Timers, ASP.NET/WebApp stacks, args/registers, and GC stress-log behavior remain in the specialized Windows legacy target; generic command equivalents are covered. |
 

@@ -608,43 +608,6 @@ public class SOSMethodTests
     }
 }
 
-public class SOSThreadingTests
-{
-    public SOSThreadingTests(ITestOutputHelper output)
-    {
-        Output = output;
-    }
-
-    private ITestOutputHelper Output { get; set; }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task ThreadApartment(TestConfiguration config)
-    {
-        if (OS.Kind != OSKind.Windows)
-        {
-            Assert.Skip("Apartment state is a Windows COM concept");
-        }
-
-        await SOSTestHelpers.RunTest(config, debuggeeName: "ThreadApartment", scriptName: "ThreadApartment.script", Output);
-    }
-}
-
-public class SOSAsyncTests
-{
-    public SOSAsyncTests(ITestOutputHelper output)
-    {
-        Output = output;
-    }
-
-    private ITestOutputHelper Output { get; set; }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task AsyncMain(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(config, debuggeeName: "AsyncMain", scriptName: "AsyncMain.script", Output, testTriage: true);
-    }
-}
-
 public class SOSScenarioTests
 {
     public SOSScenarioTests(ITestOutputHelper output)

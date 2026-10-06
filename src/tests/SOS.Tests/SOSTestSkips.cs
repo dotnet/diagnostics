@@ -9,6 +9,11 @@ namespace SOS.Tests;
 
 internal static class SOSTestSkips
 {
+    internal static void SkipICorDebugStackWalk(TestConfig config)
+    {
+        Skip(GetX86DebugInfoSkipReason(config, OperatingSystem.IsWindows(), RuntimeInformation.ProcessArchitecture));
+    }
+
     internal static void SkipFaultingExceptionFrame()
     {
         // The legacy exception-frame script did not run on ARM/ARM64 in CI.
@@ -22,33 +27,51 @@ internal static class SOSTestSkips
 
     internal static void SkipICorDebugFrameCount(TestConfig config)
     {
-        string? reason = GetICorDebugFrameCountSkipReason(config, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS(), RuntimeInformation.ProcessArchitecture);
+        Skip(GetICorDebugFrameCountSkipReason(config, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS(), RuntimeInformation.ProcessArchitecture));
+    }
+
+    private static void Skip(string? reason)
+    {
         if (reason is not null)
             Assert.Skip(reason);
     }
 
-    internal static string? GetICorDebugFrameCountSkipReason(TestConfig config, bool isWindows, bool isMacOS, Architecture architecture)
+    /// <summary>
+    /// Every ICorDebug stack walk decodes each frame's compressed debug info, so all of these tests share
+    /// the same .NET 10 Windows x86 DAC defect.
+    /// </summary>
+    internal static string? GetX86DebugInfoSkipReason(TestConfig config, bool isWindows, Architecture architecture)
     {
-        if (config.Liveness != Liveness.Dump || config.DumpKind != DumpKind.Heap || config.GcType != GcType.Workstation)
-            return null;
-
-        // https://dev.azure.com/dnceng-public/public/_build/results?buildId=1616319
-        // Four .NET 10 x86 NestedException failures: Core/SingleFile under CDB/dotnet-dump, legacy DAC.
-        // Core returns two native frames; SingleFile returns too few frames. Both fail before any -c call.
-        // Reproduced locally on .NET 10.0.12 (CI: 10.0.10): a Core Heap dump fails ReadVirtual for 28 bytes;
-        // a Full dump recovers the managed frames. The missing structure and SingleFile cause remain unknown.
-        // Equivalent Heap cases pass on .NET 8, 9, and 11 (including both DACs on 11).
-        // Remove when the .NET 10 Heap cases pass; do not substitute Full dumps to hide the failure.
+        // In coreclr's debuginfostore.cpp, EnumMemoryRegions pads debug info to NibbleChunkType (4 bytes
+        // on x86), but DoBounds/ReadFromBitOffsets uses aligned 8-byte loads. The last load can extend
+        // up to 4 bytes past the enumerated range in Heap/Mini dumps and truncate an ICorDebug walk.
+        // Failure is intermittent: an affected blob must belong to a method on the walked stack.
+        // Full dumps, 64-bit targets (8-byte padding), and cDAC (bounded byte-wise reads) are unaffected.
+        // .NET 11 Heap enumeration incidentally covers the over-read; Mini dumps still expose it.
+        // Remove when a fixed DAC flows into the test runtimes; existing dumps need not be recaptured.
         if (isWindows
             && architecture == Architecture.X86
-            && config.Target == TargetCatalog.NestedException
+            && config.Liveness == Liveness.Dump
+            && config.DumpKind != DumpKind.Full
             && config.CoreVersion == CoreVersion.Net10
             && config.Flavor is Flavor.Core or Flavor.SingleFile
-            && config.Host is Host.Cdb or Host.DotnetDump
             && config.Dac == Dac.Legacy)
         {
-            return ".NET 10 Windows x86 ICorDebug cannot recover managed frames from NestedException Heap dumps.";
+            return ".NET 10 Windows x86 ICorDebug stack walks truncate because the legacy DAC over-reads " +
+                "compressed debug info past the region enumerated into a reduced dump.";
         }
+
+        return null;
+    }
+
+    internal static string? GetICorDebugFrameCountSkipReason(TestConfig config, bool isWindows, bool isMacOS, Architecture architecture)
+    {
+        string? x86Reason = GetX86DebugInfoSkipReason(config, isWindows, architecture);
+        if (x86Reason is not null)
+            return x86Reason;
+
+        if (config.Liveness != Liveness.Dump || config.DumpKind != DumpKind.Heap || config.GcType != GcType.Workstation)
+            return null;
 
         // https://dev.azure.com/dnceng-public/public/_build/results?buildId=1615278&view=ms.vss-test-web.build-test-results-tab&runId=44719894&resultId=100677
         // Helix job 957ba6e6-3fa2-4b1d-ab8c-1db7f5fd7a26, work item SOS_osx-arm64_Debug-Net11:
