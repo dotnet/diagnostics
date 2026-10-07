@@ -6,7 +6,6 @@ using System.IO;
 using System.Text;
 using Microsoft.FileFormats.PE;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.SymbolStore.Tests
 {
