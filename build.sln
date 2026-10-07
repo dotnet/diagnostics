@@ -115,7 +115,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SymbolTestDll", "src\tests\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RandomUserLibrary", "src\tests\SOS.UnitTests\Debuggees\TaskNestedException\RandomUserLibrary\RandomUserLibrary.csproj", "{F5372D50-84CD-4DA1-A74A-FFEDA78920CC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TaskNestedException", "src\tests\SOS.UnitTests\Debuggees\TaskNestedException\TaskNestedException\TaskNestedException.csproj", "{A01C5649-8C86-45B9-A9A2-117056343F8A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TaskNestedException", "src\tests\SOS.UnitTests\Debuggees\TaskNestedException\TaskNestedException.csproj", "{A01C5649-8C86-45B9-A9A2-117056343F8A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VarargPInvokeInteropMD", "src\tests\SOS.UnitTests\Debuggees\VarargPInvokeInteropMD\VarargPInvokeInteropMD.csproj", "{8AADF39D-B793-4574-96F4-F13391C46288}"
 EndProject

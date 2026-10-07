@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RandomUserLibrary\RandomUserLibrary.csproj" />
+    <Compile Remove="RandomUserLibrary\**\*.cs" />
+    <ProjectReference Include="RandomUserLibrary\RandomUserLibrary.csproj" />
   </ItemGroup>
 </Project>
