@@ -994,6 +994,11 @@ void DumpStackWorker (DumpStackFlag &DSFlag)
         TADDR retAddr;
         TADDR whereCalled;
         move_xp(retAddr, ptr);
+        if (g_targetMachine->GetPlatform() == IMAGE_FILE_MACHINE_ARM64)
+        {
+            // Strip PAC from the saved return address before validating or looking it up.
+            retAddr &= IsWindowsTarget() ? 0x00007FFFFFFFFFFFULL : 0x0000FFFFFFFFFFFFULL;
+        }
         g_targetMachine->IsReturnAddress(retAddr, &whereCalled);
         if (whereCalled)
         {
