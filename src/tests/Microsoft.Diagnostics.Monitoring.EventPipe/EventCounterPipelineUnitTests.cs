@@ -193,7 +193,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TaskCompletionSource<object> foundExpectedCountersSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
             TestMetricsLogger logger = new(expectedCounters, foundExpectedCountersSource, _output);
 
-            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "DuplicateNameMetrics", _output, testProcessTimeout: 6_000))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "DuplicateNameMetrics", _output))
             {
                 DiagnosticsClient client = new(testRunner.Pid);
 
