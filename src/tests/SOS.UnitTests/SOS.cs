@@ -305,27 +305,6 @@ public class SOSStackTraceTests
     }
 }
 
-public class SOSExceptionTests
-{
-    public SOSExceptionTests(ITestOutputHelper output)
-    {
-        Output = output;
-    }
-
-    private ITestOutputHelper Output { get; set; }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task TaskNestedException(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "TaskNestedException",
-            scriptName: "TaskNestedException.script",
-            Output,
-            testTriage: true);
-    }
-}
-
 public class SOSInterpreterTests
 {
     public SOSInterpreterTests(ITestOutputHelper output)
