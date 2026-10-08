@@ -493,30 +493,6 @@ public class SOSDumpTests
     }
 
     [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task ConcurrentDictionaries(TestConfiguration config)
-    {
-        if (OS.Kind != OSKind.Windows && config.RuntimeFrameworkVersionMajor == 10)
-        {
-            Assert.Skip("Dumping concurrent dict objects in dumps hits unavailable memory on linux dumps. Tracking: dotnet/diagnostics#5491");
-        }
-
-        await SOSTestHelpers.RunTest(
-            scriptName: "ConcurrentDictionaries.script",
-            new SOSRunner.TestInformation
-            {
-                TestConfiguration = config,
-                TestLive = false,
-                TestName = "SOS.ConcurrentDictionaries",
-                DebuggeeName = "DotnetDumpCommands",
-                DebuggeeArguments = "dcd",
-                DumpNameSuffix = "dcd",
-                UsePipeSync = true,
-                DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
-            },
-            Output);
-    }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task OtherCommands(TestConfiguration config)
     {
         // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
