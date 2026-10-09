@@ -861,7 +861,7 @@ namespace SOS.Hosting {
             {
                 return default;
             }
-            return (T)Marshal.GetDelegateForFunctionPointer(functionAddress, typeof(T));
+            return Marshal.GetDelegateForFunctionPointer<T>(functionAddress);
         }
 
         private string GetFileName(string fileName) => Target.OperatingSystem == OSPlatform.Windows ? Path.GetFileNameWithoutExtension(fileName) : Path.GetFileName(fileName);
