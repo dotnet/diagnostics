@@ -189,18 +189,6 @@ public static class SosHarnessScenarios
         GC.KeepAlive(live);
         GC.KeepAlive(big);
         GC.KeepAlive(promoted);
-        GC.KeepAlive(s_live);
-        GC.KeepAlive(s_big);
-#if !NETFRAMEWORK
-        GC.KeepAlive(s_poh);
-#endif
-        GC.KeepAlive(s_promoted);
-        GC.KeepAlive(s_thinLock);
-        GC.KeepAlive(s_fields);
-        GC.KeepAlive(s_timer);
-        GC.KeepAlive(s_asyncTask);
-        GC.KeepAlive(s_concurrentDictionaries);
-        GC.KeepAlive(s_concurrentQueue);
     }
 
     // --- Diagnostic-state scenario helpers ---
