@@ -38,7 +38,7 @@ namespace Microsoft.FileFormats
             _layoutProviders.Add(layoutProvider);
         }
 
-        [RequiresDynamicCode("Runtime array allocation requires dynamic code. Use GetArrayLayout<T> or RegisterArray<T> instead.")]
+        [RequiresDynamicCode("Runtime array allocation requires dynamic code. Use GetArrayLayoutForElement<T> or RegisterArray<T> instead.")]
         [RequiresUnreferencedCode("The array element type's layout members may be trimmed. Register array element layouts explicitly.")]
         public ILayout GetArrayLayout(Type arrayType, uint numElements)
         {
@@ -62,8 +62,16 @@ namespace Microsoft.FileFormats
             return layout;
         }
 
-        /// <summary>Gets a layout for an array of the statically known element type.</summary>
+        /// <summary>Gets a layout for the specified array type.</summary>
+        [RequiresDynamicCode("Runtime array allocation requires dynamic code. Use GetArrayLayoutForElement<T> instead.")]
+        [RequiresUnreferencedCode("The array element type's layout members may be trimmed. Register array element layouts explicitly.")]
         public ILayout GetArrayLayout<T>(uint numElements)
+        {
+            return GetArrayLayout(typeof(T), numElements);
+        }
+
+        /// <summary>Gets a layout for an array of the statically known element type.</summary>
+        public ILayout GetArrayLayoutForElement<T>(uint numElements)
         {
             Tuple<Type, uint> key = new(typeof(T[]), numElements);
             if (!_arrayLayouts.TryGetValue(key, out ILayout layout))

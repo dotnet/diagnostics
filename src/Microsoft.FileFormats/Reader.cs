@@ -24,13 +24,13 @@ namespace Microsoft.FileFormats
 
         public T[] ReadArray<T>(ulong position, uint elementCount)
         {
-            return (T[])LayoutManager.GetArrayLayout<T>(elementCount).Read(DataSource, position);
+            return (T[])LayoutManager.GetArrayLayoutForElement<T>(elementCount).Read(DataSource, position);
         }
 
         public T[] ReadArray<T>(ref ulong position, uint elementCount)
         {
             uint bytesRead;
-            T[] ret = (T[])LayoutManager.GetArrayLayout<T>(elementCount).Read(DataSource, position, out bytesRead);
+            T[] ret = (T[])LayoutManager.GetArrayLayoutForElement<T>(elementCount).Read(DataSource, position, out bytesRead);
             position += bytesRead;
             return ret;
         }

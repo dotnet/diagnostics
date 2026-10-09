@@ -95,8 +95,9 @@ namespace Microsoft.FileFormats.Tests
         {
             LayoutManager registered = RegisteredScenarios.CreateLayouts(bigEndian, 4);
             LayoutManager reflection = CreateReflectionLayouts(bigEndian, 4, Array.Empty<string>());
-            ILayout typedLayout = registered.GetArrayLayout<RegisteredScenarios.Ordered>(count);
-            ILayout reflectionLayout = reflection.GetArrayLayout(typeof(RegisteredScenarios.Ordered[]), count);
+            ILayout typedLayout = registered.GetArrayLayoutForElement<RegisteredScenarios.Ordered>(count);
+            ILayout reflectionLayout = reflection.GetArrayLayout<RegisteredScenarios.Ordered[]>(count);
+            Assert.Same(reflectionLayout, reflection.GetArrayLayout(typeof(RegisteredScenarios.Ordered[]), count));
             AssertEquivalentLayouts(reflectionLayout, typedLayout);
             MemoryBufferAddressSpace source = new(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 });
             foreach (ILayout layout in new[] { typedLayout, reflectionLayout })
@@ -208,7 +209,7 @@ namespace Microsoft.FileFormats.Tests
             layouts.AddLayoutProvider((type, manager) => throw new InvalidOperationException("Unexpected provider"));
             ILayout layout = layouts.GetLayout<RegisteredScenarios.Ordered>();
             Assert.Same(layout, layouts.GetLayout<RegisteredScenarios.Ordered>());
-            Assert.Same(layouts.GetArrayLayout<byte>(3), layouts.GetArrayLayout<byte>(3));
+            Assert.Same(layouts.GetArrayLayoutForElement<byte>(3), layouts.GetArrayLayoutForElement<byte>(3));
             Assert.Throws<ArgumentException>(() => layouts.RegisterTStruct<RegisteredScenarios.Ordered>());
         }
 
@@ -216,7 +217,7 @@ namespace Microsoft.FileFormats.Tests
         public void RejectOversizedArrayAllocations()
         {
             LayoutManager layouts = new LayoutManager().AddPrimitives();
-            ILayout array = layouts.GetArrayLayout<byte>(uint.MaxValue);
+            ILayout array = layouts.GetArrayLayoutForElement<byte>(uint.MaxValue);
             Assert.Throws<ArgumentOutOfRangeException>(() => array.Read(new MemoryBufferAddressSpace(Array.Empty<byte>()), 0));
         }
 
@@ -227,8 +228,9 @@ namespace Microsoft.FileFormats.Tests
         {
             LayoutManager typed = new LayoutManager().AddPrimitives();
             LayoutManager legacy = new LayoutManager().AddPrimitives();
-            ILayout typedLayout = typed.GetArrayLayout<byte>(count);
-            ILayout legacyLayout = legacy.GetArrayLayout(typeof(byte[]), count);
+            ILayout typedLayout = typed.GetArrayLayoutForElement<byte>(count);
+            ILayout legacyLayout = legacy.GetArrayLayout<byte[]>(count);
+            Assert.Same(legacyLayout, legacy.GetArrayLayout(typeof(byte[]), count));
             Assert.Equal(legacyLayout.Type, typedLayout.Type);
             Assert.Equal(legacyLayout.Size, typedLayout.Size);
             Assert.Equal(legacyLayout.NaturalAlignment, typedLayout.NaturalAlignment);
@@ -241,6 +243,14 @@ namespace Microsoft.FileFormats.Tests
             Assert.Equal((int)count, actual.Length);
             Assert.Equal(legacyBytesRead, typedBytesRead);
             Assert.NotSame(actual, typedLayout.Read(source, 1));
+        }
+
+        [Fact]
+        public void LegacyGenericArrayLayoutRejectsNonArrayTypes()
+        {
+            LayoutManager layouts = new LayoutManager().AddPrimitives();
+            Assert.Throws<ArgumentException>(() => layouts.GetArrayLayout<byte>(3));
+            Assert.Throws<ArgumentException>(() => layouts.GetArrayLayout<byte[,]>(3));
         }
 
         [Theory]
