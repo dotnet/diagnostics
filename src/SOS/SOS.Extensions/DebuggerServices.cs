@@ -206,7 +206,7 @@ namespace SOS.Extensions
 
         public HResult GetModuleVersionInformation(int index, out VS_FIXEDFILEINFO fileInfo)
         {
-            int versionBufferSize = Marshal.SizeOf(typeof(VS_FIXEDFILEINFO));
+            int versionBufferSize = Marshal.SizeOf<VS_FIXEDFILEINFO>();
             byte[] versionBuffer = new byte[versionBufferSize];
             fileInfo = default;
 
