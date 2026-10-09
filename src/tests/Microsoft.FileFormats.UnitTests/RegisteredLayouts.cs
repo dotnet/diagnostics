@@ -18,6 +18,106 @@ namespace Microsoft.FileFormats.Tests
         [Fact]
         public void ReadRegisteredLayouts() => RegisteredScenarios.Run();
 
+        [Theory]
+        [InlineData(false, false, false)]
+        [InlineData(false, false, true)]
+        [InlineData(false, true, false)]
+        [InlineData(false, true, true)]
+        [InlineData(true, false, false)]
+        [InlineData(true, false, true)]
+        [InlineData(true, true, false)]
+        [InlineData(true, true, true)]
+        public void CustomLayoutsMatchReflection(bool bigEndian, bool wide, bool enabled)
+        {
+            int pointerSize = wide ? 8 : 4;
+            string[] defines = enabled ? new[] { "EXTRA" } : Array.Empty<string>();
+            LayoutManager registered = RegisteredScenarios.CreateLayouts(bigEndian, pointerSize)
+                .RegisterTStruct<RegisteredScenarios.Optional>(defines);
+            LayoutManager reflection = CreateReflectionLayouts(bigEndian, pointerSize, defines);
+            RegisteredScenarios.ReadCustomModels(registered, bigEndian);
+            RegisteredScenarios.ReadCustomModels(reflection, bigEndian);
+            RegisteredScenarios.ReadOptionalFields(registered, bigEndian, enabled);
+            RegisteredScenarios.ReadOptionalFields(reflection, bigEndian, enabled);
+
+            Type[] models =
+            {
+                typeof(RegisteredScenarios.Ordered),
+                typeof(RegisteredScenarios.Base),
+                typeof(RegisteredScenarios.Derived),
+                typeof(RegisteredScenarios.Empty),
+                typeof(RegisteredScenarios.Nested),
+                typeof(RegisteredScenarios.FixedArray),
+                typeof(RegisteredScenarios.FixedPrimitiveArray),
+                typeof(RegisteredScenarios.Optional),
+                typeof(RegisteredScenarios.Node),
+                typeof(RegisteredScenarios.NodePointer),
+                typeof(Pointer<byte, ulong>),
+                typeof(Pointer<byte, SizeT>)
+            };
+            foreach (Type model in models)
+            {
+                AssertEquivalentLayouts(reflection.GetLayout(model), registered.GetLayout(model));
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void MixRegisteredAndReflectionCustomLayouts(bool registerParent)
+        {
+            LayoutManager layouts = CreateReflectionLayouts(false, 4, Array.Empty<string>());
+            if (registerParent)
+            {
+                layouts.RegisterTStruct<RegisteredScenarios.FixedArray>()
+                    .RegisterArray<RegisteredScenarios.Ordered>();
+            }
+            else
+            {
+                layouts.RegisterTStruct<RegisteredScenarios.Ordered>();
+            }
+            MemoryBufferAddressSpace source = new(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 });
+            RegisteredScenarios.FixedArray value = new Reader(source, layouts).Read<RegisteredScenarios.FixedArray>(0);
+            Assert.Equal(2, value.Values.Length);
+            Assert.Equal(0x04030201u, value.Values[0].First);
+            Assert.Equal(0x0605, value.Values[0].Second);
+            Assert.Equal(0x0c0b0a09u, value.Values[1].First);
+            Assert.Equal(0x0e0d, value.Values[1].Second);
+        }
+
+        [Theory]
+        [InlineData(false, 0u)]
+        [InlineData(false, 1u)]
+        [InlineData(false, 2u)]
+        [InlineData(true, 0u)]
+        [InlineData(true, 1u)]
+        [InlineData(true, 2u)]
+        public void CustomModelArraysMatchReflection(bool bigEndian, uint count)
+        {
+            LayoutManager registered = RegisteredScenarios.CreateLayouts(bigEndian, 4);
+            LayoutManager reflection = CreateReflectionLayouts(bigEndian, 4, Array.Empty<string>());
+            ILayout typedLayout = registered.GetArrayLayout<RegisteredScenarios.Ordered>(count);
+            ILayout reflectionLayout = reflection.GetArrayLayout(typeof(RegisteredScenarios.Ordered[]), count);
+            AssertEquivalentLayouts(reflectionLayout, typedLayout);
+            MemoryBufferAddressSpace source = new(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 });
+            foreach (ILayout layout in new[] { typedLayout, reflectionLayout })
+            {
+                RegisteredScenarios.Ordered[] values = Assert.IsType<RegisteredScenarios.Ordered[]>(layout.Read(source, 1, out uint bytesRead));
+                Assert.Equal((int)count, values.Length);
+                Assert.Equal(count * 8, bytesRead);
+                for (int i = 0; i < values.Length; i++)
+                {
+                    Assert.Equal(bigEndian ? 0x02030405u + (uint)i * 0x08080808 : 0x05040302u + (uint)i * 0x08080808, values[i].First);
+                    Assert.Equal(bigEndian ? 0x0607 + i * 0x0808 : 0x0706 + i * 0x0808, values[i].Second);
+                }
+                RegisteredScenarios.Ordered[] repeated = (RegisteredScenarios.Ordered[])layout.Read(source, 1);
+                Assert.NotSame(values, repeated);
+                for (int i = 0; i < values.Length; i++)
+                {
+                    Assert.NotSame(values[i], repeated[i]);
+                }
+            }
+        }
+
         [Fact]
         public void ExtendPEVirtualAddressReader()
         {
@@ -228,14 +328,28 @@ namespace Microsoft.FileFormats.Tests
             Assert.NotEmpty(models);
             foreach (Type model in models)
             {
-                ILayout expected = legacy.GetLayout(model);
-                ILayout actual = registered.GetLayout(model);
-                Assert.Equal(expected.Size, actual.Size);
-                Assert.Equal(expected.SizeAsBaseType, actual.SizeAsBaseType);
-                Assert.Equal(expected.NaturalAlignment, actual.NaturalAlignment);
-                Assert.Equal(expected.Fields.Select(field => (field.Name, field.Offset, field.Layout.Type, field.Layout.Size)),
-                    actual.Fields.Select(field => (field.Name, field.Offset, field.Layout.Type, field.Layout.Size)));
+                AssertEquivalentLayouts(legacy.GetLayout(model), registered.GetLayout(model));
             }
+        }
+
+        private static LayoutManager CreateReflectionLayouts(bool bigEndian, int pointerSize, string[] defines)
+        {
+            return new LayoutManager().AddPrimitives(bigEndian)
+                .AddEnumTypes()
+                .AddSizeT(pointerSize)
+                .AddPointerTypes()
+                .AddTStructTypes(defines);
+        }
+
+        private static void AssertEquivalentLayouts(ILayout expected, ILayout actual)
+        {
+            Assert.Equal(expected.Type, actual.Type);
+            Assert.Equal(expected.IsFixedSize, actual.IsFixedSize);
+            Assert.Equal(expected.Size, actual.Size);
+            Assert.Equal(expected.SizeAsBaseType, actual.SizeAsBaseType);
+            Assert.Equal(expected.NaturalAlignment, actual.NaturalAlignment);
+            Assert.Equal(expected.Fields.Select(field => (field.Name, field.Offset, field.Layout.Type, field.Layout.Size, field.Layout.NaturalAlignment)),
+                actual.Fields.Select(field => (field.Name, field.Offset, field.Layout.Type, field.Layout.Size, field.Layout.NaturalAlignment)));
         }
     }
 }

@@ -129,6 +129,11 @@ remain available; custom providers must themselves be compatible with trimming a
 
 The standalone executable shares custom-model scenarios with the unit tests and additionally parses
 real PE, ELF32/ELF64, Mach-O, minidump32/minidump64, PDB, and MSFZ fixtures.
+Managed regression tests run the same custom-model checks through explicit registration and legacy
+reflection discovery, comparing values and layout metadata across endianness, pointer sizes, and
+conditional-field configurations. They also cover mixed registered/reflection dependencies and
+standalone custom-model arrays. The native executable runs the registered custom-model checks for
+both endiannesses and pointer sizes, with conditional fields enabled and disabled.
 It also constructs and reads every registered built-in layout across the supported word-size and
 endianness configurations, including layouts not reached by those fixtures.
 It is intentionally separate from the normal test traversal because publishing requires a native toolchain.
