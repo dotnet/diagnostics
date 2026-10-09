@@ -116,10 +116,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation {
                 }
                 int registerSize = field.FieldType switch
                 {
-                    Type type when type == typeof(ushort) => sizeof(ushort),
-                    Type type when type == typeof(int) => sizeof(int),
-                    Type type when type == typeof(uint) => sizeof(uint),
-                    Type type when type == typeof(ulong) => sizeof(ulong),
+                    Type type when type == typeof(ushort) || type == typeof(short) => sizeof(ushort),
+                    Type type when type == typeof(uint) || type == typeof(int) => sizeof(uint),
+                    Type type when type == typeof(ulong) || type == typeof(long) => sizeof(ulong),
                     _ => throw new NotSupportedException($"Unsupported register field type: {field.FieldType} ({contextType.Name}.{field.Name})")
                 };
                 RegisterInfo registerInfo = new(index, offsetAttribute.Value, registerSize, registerAttribute.Name ?? field.Name.ToLowerInvariant());
