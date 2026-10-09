@@ -1,11 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-
+using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.FileFormats
 {
     public class Reader
     {
+        [RequiresDynamicCode("Reflection-based field ordering requires CLR metadata tokens. Use Reader(IAddressSpace, LayoutManager) with registered layouts.")]
+        [RequiresUnreferencedCode("Reflection-based layouts require constructors and fields that may be trimmed. Register layouts explicitly.")]
         public Reader(IAddressSpace dataSource, bool isBigEndian = false) :
             this(dataSource, new LayoutManager().AddPrimitives(isBigEndian).AddEnumTypes().AddTStructTypes())
         { }
@@ -22,13 +24,13 @@ namespace Microsoft.FileFormats
 
         public T[] ReadArray<T>(ulong position, uint elementCount)
         {
-            return (T[])LayoutManager.GetArrayLayout<T[]>(elementCount).Read(DataSource, position);
+            return (T[])LayoutManager.GetArrayLayout<T>(elementCount).Read(DataSource, position);
         }
 
         public T[] ReadArray<T>(ref ulong position, uint elementCount)
         {
             uint bytesRead;
-            T[] ret = (T[])LayoutManager.GetArrayLayout<T[]>(elementCount).Read(DataSource, position, out bytesRead);
+            T[] ret = (T[])LayoutManager.GetArrayLayout<T>(elementCount).Read(DataSource, position, out bytesRead);
             position += bytesRead;
             return ret;
         }

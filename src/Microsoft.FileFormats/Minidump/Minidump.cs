@@ -32,7 +32,7 @@ namespace Microsoft.FileFormats.Minidump
         /// <returns>True if the address space is a minidump, false otherwise.</returns>
         public static bool IsValid(IAddressSpace addressSpace, ulong position = 0)
         {
-            Reader headerReader = new(addressSpace);
+            Reader headerReader = new(addressSpace, new LayoutManager().AddCrashDumpTypes(false, false));
             return headerReader.TryRead(position, out MinidumpHeader header) && header.IsSignatureValid.Check();
         }
 
@@ -46,7 +46,7 @@ namespace Microsoft.FileFormats.Minidump
         {
             _position = position;
 
-            Reader headerReader = new(dataSource);
+            Reader headerReader = new(dataSource, new LayoutManager().AddCrashDumpTypes(false, false));
             _header = headerReader.Read<MinidumpHeader>(_position);
             _header.IsSignatureValid.CheckThrowing();
 

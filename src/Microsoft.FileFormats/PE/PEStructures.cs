@@ -11,11 +11,11 @@ namespace Microsoft.FileFormats.PE
         public static LayoutManager AddPETypes(this LayoutManager layouts, bool is64Bit)
         {
             return layouts
-            .AddPrimitives(false)
-            .AddEnumTypes()
-            .AddSizeT(is64Bit ? 8 : 4)
-            .AddNullTerminatedString()
-            .AddTStructTypes(is64Bit ? new string[] { "PE32+" } : new string[] { "PE32" });
+                .AddPrimitives(false)
+                .AddEnumTypes()
+                .AddSizeT(is64Bit ? 8 : 4)
+                .AddNullTerminatedString()
+                .RegisterPE(is64Bit ? new[] { "PE32+" } : new[] { "PE32" });
         }
     }
 

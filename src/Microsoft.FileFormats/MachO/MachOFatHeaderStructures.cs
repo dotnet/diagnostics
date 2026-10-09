@@ -7,11 +7,10 @@ namespace Microsoft.FileFormats.MachO
     {
         public static LayoutManager AddMachFatHeaderTypes(this LayoutManager layoutManager, bool isBigEndian)
         {
-            layoutManager
+            return layoutManager
                 .AddPrimitives(isBigEndian)
                 .AddEnumTypes()
-                .AddTStructTypes();
-            return layoutManager;
+                .RegisterMachFat();
         }
     }
 
