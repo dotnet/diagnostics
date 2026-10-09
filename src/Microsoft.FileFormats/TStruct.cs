@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -31,10 +32,11 @@ namespace Microsoft.FileFormats
     ///    provides the extra information (e.g. pointer size) that permit the parser to compute the final
     ///    offsets and size of the TStruct fields.
     ///
-    /// Non-instance fields:
-    /// --------------------
-    ///    TStructs can contain methods, static or private fields and even nested classes if convenient. The parsing code
-    ///    ignores them.
+    /// Field registration:
+    /// -------------------
+    ///    RegisterTStruct uses metadata order for all declared instance fields, including private fields.
+    ///    Base types and nested structures must have their own layouts. Methods, static fields, and nested type
+    ///    declarations are not parsed.
     ///
     /// </remarks>
     public abstract class TStruct
@@ -93,13 +95,18 @@ namespace Microsoft.FileFormats
     /// </summary>
     public class TLayout : LayoutBase
     {
-        public TLayout(Type type, uint size, uint naturalAlignment, uint sizeAsBaseType, IField[] fields) :
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
+        private readonly Type _instanceType;
+
+        public TLayout([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type type, uint size, uint naturalAlignment, uint sizeAsBaseType, IField[] fields) :
             base(type, size, naturalAlignment, sizeAsBaseType, fields)
-        { }
+        {
+            _instanceType = type;
+        }
 
         public override object Read(IAddressSpace dataTarget, ulong position)
         {
-            TStruct blank = (TStruct)Activator.CreateInstance(Type);
+            TStruct blank = (TStruct)Activator.CreateInstance(_instanceType);
             foreach (IField field in Fields)
             {
                 object fieldValue = field.Layout.Read(dataTarget, position + field.Offset);
@@ -111,10 +118,61 @@ namespace Microsoft.FileFormats
 
     public static partial class LayoutManagerExtensions
     {
+        private const DynamicallyAccessedMemberTypes StructMembers = DynamicallyAccessedMemberTypes.PublicParameterlessConstructor |
+            DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.NonPublicFields;
+        private const string ReflectionLayoutMessage = "Reflection-based field ordering requires CLR metadata tokens. Use RegisterTStruct<T>.";
+        private const string ReflectionTrimmingMessage = "Reflection-based layouts require constructors and fields that may be trimmed. Register layouts explicitly.";
+
+        /// <summary>Registers a structure's declared instance fields in metadata order, with optional fields selected by the supplied defines.</summary>
+        public static LayoutManager RegisterTStruct<[DynamicallyAccessedMembers(StructMembers)] T>(this LayoutManager layouts, IEnumerable<string> enabledDefines = null)
+            where T : TStruct
+        {
+            FieldInfo[] fields = typeof(T).GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+#if !NET7_0_OR_GREATER
+            fields = fields.OrderBy(field => field.MetadataToken).ToArray();
+#endif
+            string[] defines = enabledDefines?.ToArray() ?? Array.Empty<string>();
+            layouts.RegisterLayoutFactory(typeof(T), manager => CreateRegisteredTStructLayout<T>(manager, fields, defines));
+            return layouts;
+        }
+
+        private static ILayout CreateRegisteredTStructLayout<[DynamicallyAccessedMembers(StructMembers)] T>(LayoutManager layouts, FieldInfo[] fields, string[] defines)
+            where T : TStruct
+        {
+            FieldInfo[] included = fields.Where(field => IsFieldIncludedInDefines(field, defines)).ToArray();
+            Type baseType = typeof(T).BaseType;
+            ILayout parent = baseType == typeof(TStruct) ? null : layouts.GetLayout(baseType);
+            ILayout[] fieldLayouts = included.Select(field => GetRegisteredFieldLayout(field, layouts)).ToArray();
+            PackAttribute pack = typeof(T).GetTypeInfo().GetCustomAttribute<PackAttribute>();
+            return BuildTStructLayout(typeof(T), pack, included, fieldLayouts, parent);
+        }
+
+        private static ILayout GetRegisteredFieldLayout(FieldInfo field, LayoutManager layouts)
+        {
+            ILayout layout;
+            if (field.FieldType.IsArray)
+            {
+                ArraySizeAttribute size = field.GetCustomAttribute<ArraySizeAttribute>()
+                    ?? throw new LayoutException("Array typed fields must use an ArraySize attribute to indicate their size");
+                layout = layouts.GetRegisteredArrayLayout(field.FieldType, size.NumElements);
+            }
+            else
+            {
+                layout = layouts.GetLayout(field.FieldType);
+            }
+            if (!layout.IsFixedSize)
+            {
+                throw new LayoutException(field.Name + " is not a fixed size field. Only fixed size fields are supported in structures");
+            }
+            return layout;
+        }
+
         /// <summary>
         /// Adds support for parsing types derived from TStruct. All the field types used within the TStruct types
         /// must also have layouts available from the LayoutManager.
         /// </summary>
+        [RequiresDynamicCode(ReflectionLayoutMessage)]
+        [RequiresUnreferencedCode(ReflectionTrimmingMessage)]
         public static LayoutManager AddTStructTypes(this LayoutManager layouts)
         {
             return AddTStructTypes(layouts, null);
@@ -128,6 +186,8 @@ namespace Microsoft.FileFormats
         /// <param name="enabledDefines">
         /// The set of defines that can be used to enabled optional fields decorated with the IfAttribute
         /// </param>
+        [RequiresDynamicCode(ReflectionLayoutMessage)]
+        [RequiresUnreferencedCode(ReflectionTrimmingMessage)]
         public static LayoutManager AddTStructTypes(this LayoutManager layouts, IEnumerable<string> enabledDefines)
         {
             return AddReflectionTypes(layouts, enabledDefines, typeof(TStruct));
@@ -142,6 +202,8 @@ namespace Microsoft.FileFormats
         /// The set of defines that can be used to enabled optional fields decorated with the IfAttribute
         /// </param>
         /// <param name="requiredBaseType"></param>
+        [RequiresDynamicCode(ReflectionLayoutMessage)]
+        [RequiresUnreferencedCode(ReflectionTrimmingMessage)]
         public static LayoutManager AddReflectionTypes(this LayoutManager layouts, IEnumerable<string> enabledDefines, Type requiredBaseType)
         {
             return layouts.AddReflectionTypes(enabledDefines, typeFilter: (type) => requiredBaseType.GetTypeInfo().IsAssignableFrom(type));
@@ -156,6 +218,8 @@ namespace Microsoft.FileFormats
         /// The set of defines that can be used to enabled optional fields decorated with the IfAttribute
         /// </param>
         /// <param name="typeFilter">return true if reflection should be used to layout the type</param>
+        [RequiresDynamicCode(ReflectionLayoutMessage)]
+        [RequiresUnreferencedCode(ReflectionTrimmingMessage)]
         public static LayoutManager AddReflectionTypes(this LayoutManager layouts, IEnumerable<string> enabledDefines, Func<Type, bool> typeFilter)
         {
             layouts.AddLayoutProvider((type, layoutManager) =>
@@ -169,6 +233,8 @@ namespace Microsoft.FileFormats
             return layouts;
         }
 
+        [RequiresDynamicCode(ReflectionLayoutMessage)]
+        [RequiresUnreferencedCode(ReflectionTrimmingMessage)]
         private static ILayout GetTStructLayout(Type tStructType, LayoutManager layoutManager, IEnumerable<string> enabledDefines)
         {
             enabledDefines ??= Array.Empty<string>();
@@ -181,18 +247,25 @@ namespace Microsoft.FileFormats
             reflectionFields = reflectionFields.OrderBy(f => f.MetadataToken).ToArray();
             reflectionFields = reflectionFields.Where(f => !f.DeclaringType.Equals(typeof(TStruct))).ToArray();
             reflectionFields = reflectionFields.Where(f => IsFieldIncludedInDefines(f, enabledDefines)).ToArray();
-            TField[] tFields = new TField[reflectionFields.Length];
+            Type baseType = typeInfo.BaseType;
+            ILayout parentLayout = baseType == typeof(TStruct) ? null : layoutManager.GetLayout(baseType);
+            ILayout[] fieldLayouts = reflectionFields.Select(field => GetFieldLayout(field, layoutManager)).ToArray();
+            return BuildTStructLayout(tStructType, pack, reflectionFields, fieldLayouts, parentLayout);
+        }
 
+        private static ILayout BuildTStructLayout(
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type tStructType,
+            PackAttribute pack,
+            FieldInfo[] reflectionFields,
+            ILayout[] fieldLayouts,
+            ILayout parentLayout)
+        {
+            TField[] tFields = new TField[reflectionFields.Length];
             uint alignCeiling = pack?.Pack ?? 8;
             uint biggestAlignmentSoFar = 1;
             uint curOffset = 0;
-
-            ILayout parentLayout = null;
-            Type baseType = typeInfo.BaseType;
-            if (!baseType.Equals(typeof(TStruct)))
+            if (parentLayout != null)
             {
-                // Treat base type as first member.
-                parentLayout = layoutManager.GetLayout(baseType);
                 uint align = Math.Min(parentLayout.NaturalAlignment, alignCeiling);
                 biggestAlignmentSoFar = Math.Max(biggestAlignmentSoFar, align);
                 curOffset += parentLayout.SizeAsBaseType;
@@ -201,7 +274,7 @@ namespace Microsoft.FileFormats
             // build the field list
             for (int i = 0; i < reflectionFields.Length; i++)
             {
-                ILayout fieldLayout = GetFieldLayout(reflectionFields[i], layoutManager);
+                ILayout fieldLayout = fieldLayouts[i];
                 uint fieldSize = fieldLayout.Size;
                 uint align = fieldLayout.NaturalAlignment;
                 align = Math.Min(align, alignCeiling);
@@ -247,6 +320,8 @@ namespace Microsoft.FileFormats
             return true;
         }
 
+        [RequiresDynamicCode(ReflectionLayoutMessage)]
+        [RequiresUnreferencedCode(ReflectionTrimmingMessage)]
         private static ILayout GetFieldLayout(FieldInfo fieldInfo, LayoutManager layoutManager)
         {
             ILayout fieldLayout;

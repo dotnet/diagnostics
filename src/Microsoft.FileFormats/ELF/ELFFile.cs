@@ -25,7 +25,7 @@ namespace Microsoft.FileFormats.ELF
         public ELFFile(IAddressSpace dataSource, ulong position = 0, bool isDataSourceVirtualAddressSpace = false)
         {
             _position = position;
-            _reader = new Reader(dataSource);
+            _reader = new Reader(dataSource, new LayoutManager().AddELFTypes(false, false));
             _isDataSourceVirtualAddressSpace = isDataSourceVirtualAddressSpace;
             _ident = new Lazy<ELFHeaderIdent>(() => _reader.Read<ELFHeaderIdent>(_position));
             _dataSourceReader = new Lazy<Reader>(() => new Reader(dataSource, new LayoutManager().AddELFTypes(IsBigEndian, Is64Bit)));
