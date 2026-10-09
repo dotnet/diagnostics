@@ -114,7 +114,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation {
                 {
                     FramePointerIndex = index;
                 }
-                RegisterInfo registerInfo = new(index, offsetAttribute.Value, Marshal.SizeOf(field.FieldType), registerAttribute.Name ?? field.Name.ToLowerInvariant());
+                int registerSize = field.FieldType switch
+                {
+                    Type type when type == typeof(ushort) => sizeof(ushort),
+                    Type type when type == typeof(int) => sizeof(int),
+                    Type type when type == typeof(uint) => sizeof(uint),
+                    Type type when type == typeof(ulong) => sizeof(ulong),
+                    _ => throw new NotSupportedException($"Unsupported register field type: {field.FieldType} ({contextType.Name}.{field.Name})")
+                };
+                RegisterInfo registerInfo = new(index, offsetAttribute.Value, registerSize, registerAttribute.Name ?? field.Name.ToLowerInvariant());
                 registers.Add(registerInfo);
                 index++;
             }
