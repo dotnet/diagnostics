@@ -68,11 +68,11 @@ public static class SosHarnessScenarios
     private static FieldMarker? s_fields;
 
     // Diagnostic-state oracles, live from the heap stop onward: a never-firing timer (!timerinfo), a
-    // suspended async state machine + its gate (!dumpasync), and a populated ConcurrentDictionary (!dcd).
+    // suspended async state machine + its gate (!dumpasync), and populated concurrent dictionaries (!dcd).
     private static Timer? s_timer;
     private static Task? s_asyncTask;
     private static readonly TaskCompletionSource<int> s_asyncGate = new();
-    private static ConcurrentDictionary<int, string>? s_concurrentDictionary;
+    private static object[]? s_concurrentDictionaries;
     private static ConcurrentQueue<int>? s_concurrentQueue;
 
     // A CONTENDED monitor for !syncblk: a holder parks while holding s_fatLock and a second thread blocks
@@ -132,14 +132,11 @@ public static class SosHarnessScenarios
 
         // Diagnostic-state oracles, all live at the heap stop: a never-firing timer (!timerinfo), a parked
         // thread-pool work item (!threadpool), a suspended async state machine (!dumpasync), a populated
-        // ConcurrentDictionary (!dcd), and a contended monitor that inflates to a sync block (!syncblk).
+        // set of concurrent dictionaries (!dcd), and a contended monitor that inflates to a sync block (!syncblk).
         s_timer = new Timer(_ => { }, null, dueTime: 3_600_000, period: Timeout.Infinite);
         ThreadPool.QueueUserWorkItem(_ => s_release.Wait());
         s_asyncTask = SuspendedAsync();
-        s_concurrentDictionary = new ConcurrentDictionary<int, string>();
-        s_concurrentDictionary[1] = "one";
-        s_concurrentDictionary[2] = "two";
-        s_concurrentDictionary[3] = "three";
+        s_concurrentDictionaries = CreateConcurrentDictionaries();
 
         s_concurrentQueue = new ConcurrentQueue<int>();
         s_concurrentQueue.Enqueue(0x111);
@@ -192,21 +189,41 @@ public static class SosHarnessScenarios
         GC.KeepAlive(live);
         GC.KeepAlive(big);
         GC.KeepAlive(promoted);
-        GC.KeepAlive(s_live);
-        GC.KeepAlive(s_big);
-#if !NETFRAMEWORK
-        GC.KeepAlive(s_poh);
-#endif
-        GC.KeepAlive(s_promoted);
-        GC.KeepAlive(s_thinLock);
-        GC.KeepAlive(s_fields);
-        GC.KeepAlive(s_timer);
-        GC.KeepAlive(s_asyncTask);
-        GC.KeepAlive(s_concurrentDictionary);
-        GC.KeepAlive(s_concurrentQueue);
     }
 
     // --- Diagnostic-state scenario helpers ---
+
+    private static object[] CreateConcurrentDictionaries()
+    {
+        ConcurrentDictionary<int, string> strings = new();
+        strings[1] = "one";
+        strings[2] = "two";
+        strings[3] = "three";
+
+        ConcurrentDictionary<int, string[]> arrays = new();
+        arrays[1] = new[] { "String1", "String2", "String3", "String4" };
+        arrays[2] = new[] { "String10", "String20" };
+
+        ConcurrentDictionary<int, int> integers = new();
+        integers[0] = 1;
+        integers[31] = 17;
+        integers[1521482] = 512487;
+
+        ConcurrentDictionary<string, bool> booleans = new();
+        booleans["String true"] = true;
+        booleans["String false"] = false;
+        booleans[new string('S', 150)] = false;
+
+        DateTime date = new(2020, 1, 2);
+        ConcurrentDictionary<DictionaryStructMarker, DictionaryClassMarker?> objects = new();
+        objects[new DictionaryStructMarker { IntValue = 1, StringValue = "Sample Struct1", Date = date }] = new DictionaryClassMarker();
+        objects[new DictionaryStructMarker { IntValue = 2, StringValue = "Sample Struct2", Date = date }] = null;
+
+        ConcurrentDictionary<int, DictionaryStructMarker> structs = new();
+        structs[0] = new DictionaryStructMarker { IntValue = 12, StringValue = "Sample Struct", Date = date };
+
+        return new object[] { strings, arrays, integers, booleans, objects, structs };
+    }
 
     // Suspends forever at the await (the gate is never completed), so a suspended async state machine is
     // present on the heap for !dumpasync.
@@ -364,6 +381,19 @@ public sealed class LocalUniqueMarker
 
 public sealed class ThinLockMarker
 {
+}
+
+public struct DictionaryStructMarker
+{
+    public int IntValue;
+    public string? StringValue;
+    public DateTime Date;
+}
+
+public sealed class DictionaryClassMarker
+{
+    public bool Value1;
+    public string? Value2;
 }
 
 // A value type with two known fields, embedded in FieldMarker so dumpvc can be exercised on the inline

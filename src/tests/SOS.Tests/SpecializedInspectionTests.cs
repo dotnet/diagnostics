@@ -11,8 +11,8 @@ namespace SOS.Tests;
 /// Commands that need specific runtime state, which the debuggee now stages at the heap stop:
 /// <c>!timerinfo</c> (a registered timer), <c>!threadpool</c> (a parked work item initialises the pool),
 /// <c>!syncblk</c> (a contended monitor inflated to a sync block), <c>!dumpasync</c> (a suspended async
-/// state machine), and <c>!dcd</c> (a populated <c>ConcurrentDictionary</c>). The legacy <c>.script</c>
-/// suite exercised these via dedicated debuggees; here one consolidated debuggee supplies the state.
+/// state machine). The legacy <c>.script</c> suite exercised these via dedicated debuggees; here one
+/// consolidated debuggee supplies the state.
 /// </summary>
 public sealed class SpecializedInspectionTests
 {
@@ -89,33 +89,5 @@ public sealed class SpecializedInspectionTests
         // The SuspendedAsync state machine is parked at its await, so dumpasync finds it. (dumpasync walks
         // the modern .NET async-task representation; desktop .NET Framework predates it, so Core-only.)
         target.Sos("dumpasync").AssertContains("SuspendedAsync");
-    }
-
-    [SosTheory]
-    [MemberData(nameof(DotnetDumpMatrix))]
-    public async Task Dcd_DumpsConcurrentDictionary(TestConfig config)
-    {
-        using Target target = await Targets.GetTargetAsync(config);
-        target.GoToStopPoint(TargetCatalog.StopHeap);
-
-        // dcd is a managed extension command (dotnet-dump only).
-        ulong dict = FindConcurrentDictionary(target);
-        SosOutput dcd = target.Sos($"dcd {dict:x}");
-        dcd.AssertContains("ConcurrentDictionary<System.Int32, System.String>");
-        Assert.Matches(@"Key:\s+1", dcd.Text);
-        dcd.AssertContains("\"one\"");
-    }
-
-    // The debuggee's ConcurrentDictionary<int, string>. A -type filter also matches its nested
-    // +Tables/+Node/+VolatileNode[] types, so select the exact-named method table and resolve its instance.
-    private static ulong FindConcurrentDictionary(Target target)
-    {
-        const string typeName = "System.Collections.Concurrent.ConcurrentDictionary<System.Int32, System.String>";
-        // dumpheap -type takes a single token, so filter on the space-free type prefix, then pick the row
-        // whose full class name is exactly the dictionary (not its nested +Tables/+Node/+VolatileNode[]).
-        SosRow row = target.DumpHeap("-type System.Collections.Concurrent.ConcurrentDictionary").Statistics
-            .SingleRow(r => r["Class Name"].Value == typeName, $"a single {typeName} method table");
-        ulong mt = row["MT"].AsUInt64(Sos.Addr);
-        return Assert.Single(target.DumpHeap($"-mt {mt:x} -short").ShortAddresses);
     }
 }

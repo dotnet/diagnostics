@@ -9,6 +9,13 @@ namespace SOS.Tests;
 
 internal static class SOSTestSkips
 {
+    internal static void SkipUnsupportedDictionary(TestConfig config)
+    {
+        Assert.SkipWhen(
+            !OperatingSystem.IsWindows() && config.CoreVersion == CoreVersion.Net10,
+            "https://github.com/dotnet/diagnostics/issues/5491: concurrent dictionary data is unavailable in .NET 10 Unix dumps.");
+    }
+
     internal static void SkipICorDebugStackWalk(TestConfig config)
     {
         Skip(GetX86DebugInfoSkipReason(config, OperatingSystem.IsWindows(), RuntimeInformation.ProcessArchitecture));
