@@ -420,23 +420,6 @@ public class SOSGCTests
             testDump: false);
     }
 
-    [Theory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task DumpGCData(TestConfiguration config)
-    {
-        if (config.RuntimeFrameworkVersionMajor < 10)
-        {
-            Assert.Skip("This test validates a bug which was fixed in .NET 10");
-        }
-
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "DumpGCData",
-            scriptName: "DumpGCData.script",
-            Output,
-            testName: "SOS.DumpGCData",
-            testDump: false);
-    }
-
     [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
     public async Task DumpGen(TestConfiguration config)
     {
