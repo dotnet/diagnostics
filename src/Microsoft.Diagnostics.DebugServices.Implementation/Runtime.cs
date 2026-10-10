@@ -30,6 +30,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string _dacFilePath;
         private bool _verifySignature;
         private string _dbiFilePath;
+        private string _runtimeModuleDirectory;
 
         protected readonly ServiceContainer _serviceContainer;
 
@@ -78,7 +79,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         public IModule RuntimeModule { get; }
 
-        public string RuntimeModuleDirectory { get; set; }
+        public string RuntimeModuleDirectory
+        {
+            get => _runtimeModuleDirectory;
+            set
+            {
+                if (value is not null && !PathUtilities.IsSafeAbsoluteLocalPath(value))
+                {
+                    throw new ArgumentException("Runtime module directory must be a local absolute path.", nameof(value));
+                }
+                _runtimeModuleDirectory = value;
+            }
+        }
 
         public Version RuntimeVersion
         {
@@ -256,10 +268,15 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     if (libraryInfo.ArchivedUnder != SymbolProperties.None)
                     {
                         libraryPath = DownloadFile(libraryInfo);
-                        if (libraryPath is not null)
+                        if (PathUtilities.IsSafeAbsoluteLocalPath(libraryPath))
                         {
                             break;
                         }
+                        if (libraryPath is not null)
+                        {
+                            Trace.TraceError($"Can't load {libraryInfo.Kind} from path '{libraryPath}' because it is not local");
+                        }
+                        libraryPath = null;
                     }
                 }
             }
@@ -269,26 +286,55 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         private string GetLocalPath(DebugLibraryInfo libraryInfo)
         {
-            string localFilePath;
-            if (!string.IsNullOrEmpty(RuntimeModuleDirectory))
+            string localFilePath = GetLocalCandidatePath(
+                libraryInfo.FileName,
+                RuntimeModuleDirectory,
+                RuntimeModule.FileName);
+
+            return PathUtilities.IsSafeAbsoluteLocalPath(localFilePath) && File.Exists(localFilePath)
+                ? localFilePath
+                : null;
+        }
+
+        internal static string GetLocalCandidatePath(
+            string libraryFileName,
+            string runtimeModuleDirectory,
+            string runtimeModuleFileName)
+        {
+            string fileName = PathUtilities.GetFileName(libraryFileName);
+            if (string.IsNullOrEmpty(fileName))
             {
-                localFilePath = Path.Combine(RuntimeModuleDirectory, Path.GetFileName(libraryInfo.FileName));
+                return null;
             }
-            else
+
+            if (!string.IsNullOrEmpty(runtimeModuleDirectory))
             {
-                localFilePath = Path.Combine(Path.GetDirectoryName(RuntimeModule.FileName), Path.GetFileName(libraryInfo.FileName));
+                return PathUtilities.IsSafeAbsoluteLocalPath(runtimeModuleDirectory)
+                    ? Path.Combine(runtimeModuleDirectory, fileName)
+                    : null;
             }
-            if (localFilePath is null || !File.Exists(localFilePath))
+
+            if (PathUtilities.IsSafeAbsoluteLocalPath(runtimeModuleFileName))
             {
-                localFilePath = null;
+                string runtimeDirectory = Path.GetDirectoryName(runtimeModuleFileName);
+                if (!string.IsNullOrEmpty(runtimeDirectory))
+                {
+                    return Path.Combine(runtimeDirectory, fileName);
+                }
             }
-            return localFilePath;
+
+            return null;
         }
 
         private string DownloadFile(DebugLibraryInfo libraryInfo)
         {
             OSPlatform platform = Target.OperatingSystem;
             string filePath = null;
+            string fileName = PathUtilities.GetFileName(libraryInfo.FileName);
+            if (string.IsNullOrEmpty(fileName))
+            {
+                return null;
+            }
 
             if (_symbolService.IsSymbolStoreEnabled)
             {
@@ -299,7 +345,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     // It is the coreclr.dll's id (timestamp/filesize) in the DacInfo used to download the the dac module.
                     if (libraryInfo.IndexTimeStamp != 0 && libraryInfo.IndexFileSize != 0)
                     {
-                        key = PEFileKeyGenerator.GetKey(libraryInfo.FileName, (uint)libraryInfo.IndexTimeStamp, (uint)libraryInfo.IndexFileSize);
+                        key = PEFileKeyGenerator.GetKey(fileName, (uint)libraryInfo.IndexTimeStamp, (uint)libraryInfo.IndexFileSize);
                     }
                     else
                     {
@@ -314,13 +360,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         byte[] buildId = libraryInfo.IndexBuildId.ToArray();
                         IEnumerable<SymbolStoreKey> keys = null;
                         KeyTypeFlags flags = KeyTypeFlags.None;
-                        string fileName = null;
+                        string keyGeneratorFileName = null;
 
                         switch (libraryInfo.ArchivedUnder)
                         {
                             case SymbolProperties.Self:
                                 flags = KeyTypeFlags.IdentityKey;
-                                fileName = libraryInfo.FileName;
+                                keyGeneratorFileName = fileName;
                                 break;
                             case SymbolProperties.Coreclr:
                                 flags = KeyTypeFlags.DacDbiKeys;
@@ -329,18 +375,18 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
                         if (platform == OSPlatform.Linux)
                         {
-                            keys = ELFFileKeyGenerator.GetKeys(flags, fileName ?? "libcoreclr.so", buildId, symbolFile: false, symbolFileName: null);
+                            keys = ELFFileKeyGenerator.GetKeys(flags, keyGeneratorFileName ?? "libcoreclr.so", buildId, symbolFile: false, symbolFileName: null);
                         }
                         else if (platform == OSPlatform.OSX)
                         {
-                            keys = MachOFileKeyGenerator.GetKeys(flags, fileName ?? "libcoreclr.dylib", buildId, symbolFile: false, symbolFileName: null);
+                            keys = MachOFileKeyGenerator.GetKeys(flags, keyGeneratorFileName ?? "libcoreclr.dylib", buildId, symbolFile: false, symbolFileName: null);
                         }
                         else
                         {
                             Trace.TraceError($"DownloadFile: {libraryInfo}: platform not supported - {platform}");
                         }
 
-                        key = keys?.SingleOrDefault((k) => Path.GetFileName(k.FullPathName) == Path.GetFileName(libraryInfo.FileName));
+                        key = keys?.SingleOrDefault((k) => PathUtilities.GetFileName(k.FullPathName) == fileName);
                     }
                     else
                     {

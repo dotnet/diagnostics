@@ -1383,6 +1383,12 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo);
 
 BOOL IsDumpFile ();
 const WCHAR GetTargetDirectorySeparatorW();
+bool IsRemoteOrDevicePath(const char* path);
+bool IsSafeAbsoluteLocalPath(const char* path);
+bool IsSafeAbsoluteLocalPath(const WCHAR* path);
+char* GetLastDirectorySeparator(char* path);
+const WCHAR* GetLastDirectorySeparator(const WCHAR* path);
+const WCHAR* GetFileName(const WCHAR* path);
 
 // IsMiniDumpFile will return true if 1) we are in
 // a small format minidump, and g_InMinidumpSafeMode is true.

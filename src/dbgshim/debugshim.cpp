@@ -1155,6 +1155,35 @@ static bool GetCurrentModulePath(SString& modulePath)
     return true;
 }
 
+static bool IsSafeAbsoluteLocalPath(const WCHAR* path)
+{
+    if (path == NULL || path[0] == W('\0'))
+    {
+        return false;
+    }
+
+    auto isDirectorySeparator = [](WCHAR character) { return character == W('\\') || character == W('/'); };
+    if (path[1] != W('\0') && isDirectorySeparator(path[0]) && isDirectorySeparator(path[1]))
+    {
+        return false;
+    }
+
+#ifdef HOST_WINDOWS
+    if (path[1] == W('\0') ||
+        path[2] == W('\0') ||
+        !((path[0] >= W('A') && path[0] <= W('Z')) || (path[0] >= W('a') && path[0] <= W('z'))) ||
+        path[1] != W(':') ||
+        !isDirectorySeparator(path[2]))
+    {
+        return false;
+    }
+
+    return true;
+#else
+    return path[0] == W('/');
+#endif
+}
+
 // Returns an override path or a path to a library bundled next to dbgshim.
 static bool GetBundledLibraryPath(
     const WCHAR* overrideName,
@@ -1166,6 +1195,10 @@ static bool GetBundledLibraryPath(
     SString overridePath;
     if (WszGetEnvironmentVariable(overrideName, overridePath) > 0)
     {
+        if (!IsSafeAbsoluteLocalPath(overridePath.GetUnicode()))
+        {
+            return false;
+        }
         libraryPath.Set(overridePath);
         return true;
     }
@@ -1184,6 +1217,11 @@ static bool GetBundledLibraryPath(
     lastSeparator++;
     modulePath.Truncate(lastSeparator);
     modulePath.Append(libraryName);
+
+    if (!IsSafeAbsoluteLocalPath(modulePath.GetUnicode()))
+    {
+        return false;
+    }
 
     libraryPath.Set(modulePath);
     return true;
