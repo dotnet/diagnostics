@@ -8,7 +8,7 @@
 * Data target for the debugged process. Provided to OpenVirtualProcess 
 * in order to get an ICorDebugProcess back.
 \**********************************************************************/
-class CorDebugDataTarget : public ICorDebugMutableDataTarget, public ICorDebugMetaDataLocator, public ICorDebugDataTarget4
+class CorDebugDataTarget : public ICorDebugMutableDataTarget, public ICorDebugMetaDataLocator, public ICorDebugDataTarget4, public ICorDebugDataTarget5
 {
 public:
     CorDebugDataTarget() : m_ref(1)
@@ -40,6 +40,10 @@ public:
         else if (InterfaceId == IID_ICorDebugDataTarget4)
         {
             *pInterface = static_cast<ICorDebugDataTarget4 *>(this);
+        }
+        else if (InterfaceId == IID_ICorDebugDataTarget5)
+        {
+            *pInterface = static_cast<ICorDebugDataTarget5 *>(this);
         }
         else
         {
@@ -254,6 +258,71 @@ public:
 #else 
         return E_NOTIMPL;
 #endif
+    }
+
+    //
+    // ICorDebugDataTarget5
+    //
+    virtual HRESULT STDMETHODCALLTYPE GetTargetInfo(CorDebugTargetInfo* pTargetInfo)
+    {
+        if (pTargetInfo == nullptr)
+        {
+            return E_INVALIDARG;
+        }
+        *pTargetInfo = {};
+        ITarget* target = GetTarget();
+        if (target == nullptr || g_targetMachine == nullptr)
+        {
+            ExtDbgOut("CorDebugDataTarget::GetTargetInfo target is unavailable\n");
+            return E_UNEXPECTED;
+        }
+
+        CorDebugTargetInfo info = {};
+        switch (g_targetMachine->GetPlatform())
+        {
+            case IMAGE_FILE_MACHINE_I386:
+                info.arch = CORDB_ARCH_X86;
+                info.pointerSize = 4;
+                break;
+            case IMAGE_FILE_MACHINE_AMD64:
+                info.arch = CORDB_ARCH_AMD64;
+                info.pointerSize = 8;
+                break;
+            case IMAGE_FILE_MACHINE_ARMNT:
+                info.arch = CORDB_ARCH_ARM;
+                info.pointerSize = 4;
+                break;
+            case IMAGE_FILE_MACHINE_ARM64:
+                info.arch = CORDB_ARCH_ARM64;
+                info.pointerSize = 8;
+                break;
+            case IMAGE_FILE_MACHINE_LOONGARCH64:
+                info.arch = CORDB_ARCH_LOONGARCH64;
+                info.pointerSize = 8;
+                break;
+            case IMAGE_FILE_MACHINE_RISCV64:
+                info.arch = CORDB_ARCH_RISCV64;
+                info.pointerSize = 8;
+                break;
+            default:
+                break;
+        }
+        switch (target->GetOperatingSystem())
+        {
+            case ITarget::OperatingSystem::Windows:
+                info.os = CORDB_OS_WINDOWS;
+                break;
+            case ITarget::OperatingSystem::Linux:
+                info.os = CORDB_OS_LINUX;
+                break;
+            case ITarget::OperatingSystem::OSX:
+                info.os = CORDB_OS_OSX;
+                break;
+            default:
+                break;
+        }
+        *pTargetInfo = info;
+        return S_OK;
     }
 
 protected:

@@ -7,11 +7,13 @@ using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime.Utilities;
 
-namespace SOS.Hosting {
+namespace SOS.Hosting
+{
     public sealed unsafe class CorDebugDataTargetWrapper : COMCallableIUnknown
     {
         private static readonly Guid IID_ICorDebugDataTarget = new("FE06DC28-49FB-4636-A4A3-E80DB4AE116C");
         private static readonly Guid IID_ICorDebugDataTarget4 = new("E799DC06-E099-4713-BDD9-906D3CC02CF2");
+        private static readonly Guid IID_ICorDebugDataTarget5 = new("E7F595E2-98BB-45DA-B1BE-520107FCCB57");
         private static readonly Guid IID_ICorDebugMutableDataTarget = new("A1B8A756-3CB6-4CCB-979F-3DF999673A59");
         private static readonly Guid IID_ICorDebugMetaDataLocator = new("7cef8ba9-2ef7-42bf-973f-4171474f87d9");
 
@@ -43,6 +45,10 @@ namespace SOS.Hosting {
 
             builder = AddInterface(IID_ICorDebugDataTarget4, validate: false);
             builder.AddMethod(new VirtualUnwindDelegate(VirtualUnwind));
+            builder.Complete();
+
+            builder = AddInterface(IID_ICorDebugDataTarget5, validate: false);
+            builder.AddMethod(new GetTargetInfoDelegate(GetTargetInfo));
             builder.Complete();
 
             builder = AddInterface(IID_ICorDebugMutableDataTarget, validate: false);
@@ -189,6 +195,41 @@ namespace SOS.Hosting {
 
         #endregion
 
+        #region ICorDebugDataTarget5
+
+        private int GetTargetInfo(IntPtr self, CorDebugTargetInfo* pTargetInfo)
+        {
+            if (pTargetInfo == null)
+            {
+                return HResult.E_INVALIDARG;
+            }
+            CorDebugTargetArchitecture architecture = _target.Architecture switch
+            {
+                Architecture.X86 => CorDebugTargetArchitecture.X86,
+                Architecture.X64 => CorDebugTargetArchitecture.Amd64,
+                Architecture.Arm => CorDebugTargetArchitecture.Arm,
+                Architecture.Arm64 => CorDebugTargetArchitecture.Arm64,
+                (Architecture)4 /* Architecture.Wasm */ => CorDebugTargetArchitecture.Wasm,
+                (Architecture)6 /* Architecture.LoongArch64 */ => CorDebugTargetArchitecture.LoongArch64,
+                (Architecture)9 /* Architecture.RiscV64 */ => CorDebugTargetArchitecture.RiscV64,
+                _ => CorDebugTargetArchitecture.Unknown
+            };
+            CorDebugTargetOperatingSystem operatingSystem =
+                _target.OperatingSystem == OSPlatform.Windows ? CorDebugTargetOperatingSystem.Windows :
+                _target.OperatingSystem == OSPlatform.Linux ? CorDebugTargetOperatingSystem.Linux :
+                _target.OperatingSystem == OSPlatform.OSX ? CorDebugTargetOperatingSystem.OSX :
+                CorDebugTargetOperatingSystem.Unknown;
+            *pTargetInfo = new CorDebugTargetInfo
+            {
+                Arch = architecture,
+                OS = operatingSystem,
+                PointerSize = unchecked((uint)_memoryService.PointerSize)
+            };
+            return HResult.S_OK;
+        }
+
+        #endregion
+
         #region ICorDebugMutableDataTarget
 
         private unsafe int WriteVirtual(
@@ -256,6 +297,15 @@ namespace SOS.Hosting {
             [In] uint threadId,
             [In] int contextSize,
             [In, Out, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] byte[] context);
+
+        #endregion
+
+        #region ICorDebugDataTarget5 delegates
+
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+        private delegate int GetTargetInfoDelegate(
+            [In] IntPtr self,
+            [Out] CorDebugTargetInfo* pTargetInfo);
 
         #endregion
 
