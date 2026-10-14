@@ -71,7 +71,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 new EventPipeProvider[] {
                     new("Microsoft-DotNETCore-SampleProfiler", EventLevel.Informational),
                 },
-                "Samples .NET thread stacks (~1000 Hz, every 1 ms by default in runtime builds with multithreading enabled) to estimate how much wall clock time code is using.") { VerbExclusivity = "collect" },
+                "Samples .NET thread stacks at the runtime's default rate (~1000 Hz, every 1 ms in builds with multithreading enabled) to estimate how much wall clock time code is using.") { VerbExclusivity = "collect" },
             new Profile(
                 "gc-verbose",
                 new EventPipeProvider[] {
