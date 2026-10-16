@@ -243,17 +243,24 @@ namespace Microsoft.Diagnostics.Tools.Symbol
         {
             using (Microsoft.SymbolStore.SymbolStores.SymbolStore symbolStore = BuildSymbolStore())
             {
-                foreach (SymbolStoreKeyWrapper wrapper in GetKeys().Distinct())
+                if (symbolStore != null)
                 {
-                    SymbolStoreKey key = wrapper.Key;
-                    if (symbolStore != null)
+                    foreach (SymbolStoreKeyWrapper wrapper in GetKeys().Distinct())
                     {
-                        using (SymbolStoreFile symbolFile = await symbolStore.GetFile(key, CancellationToken.None).ConfigureAwait(false))
+                        SymbolStoreKey key = wrapper.Key;
+                        try
                         {
-                            if (symbolFile != null)
+                            using (SymbolStoreFile symbolFile = await symbolStore.GetFile(key, CancellationToken.None).ConfigureAwait(false))
                             {
-                                await WriteFile(symbolFile, wrapper).ConfigureAwait(false);
+                                if (symbolFile != null)
+                                {
+                                    await WriteFile(symbolFile, wrapper).ConfigureAwait(false);
+                                }
                             }
+                        }
+                        catch (InvalidChecksumException)
+                        {
+                            Tracer.Verbose($"   Skipped invalid {key.FullPathName} file");
                         }
                     }
                 }
