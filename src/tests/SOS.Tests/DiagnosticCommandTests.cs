@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Globalization;
+using System.Text.RegularExpressions;
 using SOS.TestHarness;
 using Xunit;
 
@@ -16,6 +18,11 @@ public sealed class DiagnosticCommandTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
     public static TheoryData<TestConfig> DotnetDumpMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.DotnetDump);
+    public static TheoryData<TestConfig> PinningMatrix => TestConfig.BuildMatrix(
+        [TargetCatalog.DumpGcData],
+        Flavor.Core,
+        liveness: Liveness.AllValid,
+        gcType: GcType.AllValid);
 
     // clrma drives the native CLRMA provider, which is only surfaced by the dbgeng (cdb) and managed
     // (dotnet-dump) hosts. The lldb SOS plugin never registered it (true of the legacy suite too — clrma
@@ -32,6 +39,26 @@ public sealed class DiagnosticCommandTests
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("dumpgcdata").AssertContains("concurrent GCs");
+    }
+
+    [SosTheory]
+    [MemberData(nameof(PinningMatrix))]
+    public async Task DumpGcData_ReportsPinningAfterCollection(TestConfig config)
+    {
+        SOSTestSkips.SkipDumpGcDataPinning(config);
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint("unpinned");
+        Assert.All(ReadPinningData(target.Sos("dumpgcdata")), value => Assert.Equal(0, value));
+
+        target.GoToStopPoint("pinned");
+        Assert.Contains(1, ReadPinningData(target.Sos("dumpgcdata")));
+    }
+
+    private static int[] ReadPinningData(SosOutput output)
+    {
+        MatchCollection matches = Regex.Matches(output.Text, @"(?m)^\s*pre and post pin:\s*(\d+)\s*$");
+        Assert.True(matches.Count > 0, $"Expected pinning data in dumpgcdata output:\n{output.Text}");
+        return matches.Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)).ToArray();
     }
 
     [SosTheory]

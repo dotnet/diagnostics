@@ -54,9 +54,9 @@ public sealed record TargetDefinition(string Name, string Project, IReadOnlyList
 
 /// <summary>
 /// The debuggee targets the SOS test harness knows about, mapped to the diagnostics repo's existing
-/// <c>SOS.UnitTests/Debuggees</c> projects plus the one consolidated marker debuggee the harness adds
+/// <c>SOS.UnitTests/Debuggees</c> projects, including the consolidated marker debuggee
 /// (<see cref="Scenarios"/>). Crash targets reproduce an unhandled exception / fault that the runtime
-/// turns into a crash dump; the marker debuggee self-snapshots at named <c>TestHarness.Stop</c> points
+/// turns into a crash dump; marker debuggees self-snapshot at named <c>TestHarness.Stop</c> points
 /// (live tests set a <c>bpmd</c> breakpoint on the same marker method).
 /// </summary>
 public static class TargetCatalog
@@ -73,6 +73,7 @@ public static class TargetCatalog
     public const string Reflection = "reflection";
     public const string TaskNestedException = "tasknestedexception";
     public const string ThreadApartment = "threadapartment";
+    public const string DumpGcData = "dumpgcdata";
 
     // --- The one consolidated marker debuggee the harness adds (Phase 4). Every snapshot/oracle/live
     //     scenario is a named stop point on this single program (see SosHarnessScenarios). ---
@@ -160,6 +161,16 @@ public static class TargetCatalog
             ThreadApartment,
             Project: "ThreadApartment",
             StopPoints: new[] { new StopPoint("crash", StopKind.Crash, null) }),
+
+        new TargetDefinition(
+            DumpGcData,
+            Project: "DumpGCData",
+            StopPoints: new[]
+            {
+                new StopPoint("unpinned", StopKind.Snapshot, "DumpGCData.Program.AtUnpinned"),
+                new StopPoint("pinned", StopKind.Snapshot, "DumpGCData.Program.AtPinned"),
+            },
+            Flavors: Flavor.Core),
 
         // The consolidated marker debuggee: each scenario is a NoInlining marker method that calls
         // TestHarness.Stop(name). Ordered so the heap scenario (live/dead objects) is captured before
