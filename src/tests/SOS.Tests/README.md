@@ -228,7 +228,11 @@ in excluded flavor shards skip only these two theories.
 `PrintExceptionTests.PrintException_ReflectionInnerException` coverage without
 adding assertions or duplicating generic stack/thread checks on this target.
 Both retain their existing debuggees without changing the harness or CI.
-`DumpGCData.script` retains its zero-to-one pinned-object transition.
+`DumpGCData.script` is retired by
+`DiagnosticCommandTests.DumpGcData_ReportsPinningAfterCollection`, which preserves
+its zero-to-one pinning transition on .NET 10+ using an isolated two-stop target.
+Workstation GC runs live and in dumps; server GC runs in dumps. Core-only
+native and dotnet-dump rows retain the applicable host coverage.
 The legacy runner remains active. [COVERAGE.md](COVERAGE.md) records the
 evidence and all remaining retained scenarios and gaps.
 

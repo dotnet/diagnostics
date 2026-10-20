@@ -37,6 +37,9 @@ focused emitted-IL checks and existing reflection-exception coverage.
 `TaskNestedException.script` is retired by a three-level task-exception test.
 `ConcurrentDictionaries.script` is retired by focused dictionary-content,
 argument-error, and referenced-array/object/value-class tests.
+`DumpGCData.script` is retired by an isolated two-stop pinning test on .NET 10+,
+with workstation GC covered live and both workstation and server GC covered
+in dumps.
 The remaining legacy runner and scenarios stay in place.
 
 ## Legacy-to-new map
@@ -48,7 +51,7 @@ The remaining legacy runner and scenarios stay in place.
 | `ConcurrentDictionaries.script` | Retired | `ConcurrentDictionaryTests` checks all five legacy generic key/value shapes plus the existing int/string fixture, exact counts and entries, argument errors, long-string truncation, null values, and `dumparray`/`dumpobj`/`dumpvc` round-trips. Rooted fixtures at the Scenarios heap stop preserve native and dotnet-dump host coverage and add Framework/CDB coverage alongside Framework/dotnet-dump, without named-pipe capture infrastructure. The .NET 10 Unix exclusion (#5491) and Alpine `dumpobj` exclusion (#5840) remain. |
 | `DivZero.script` | Retired | `PrintExceptionTests.PrintException_NoInnerException` verifies the exact exception type, message, HResult, no-inner state, generated frame, `-nested`, and `-lines` output across live and dump rows. `ClrThreadsTests`, `ClrStackLinesTests`, and `ClrStackICorDebugTests` cover the remaining thread and stack behavior. |
 | `DualRuntimes.script` | Retained | Generic stacks, threads, heaps, and runtime listing are covered; loading and switching between two runtimes in one process remains a specialized legacy scenario. |
-| `DumpGCData.script` | Covered | `DiagnosticCommandTests.DumpGcData_ReportsGcStatistics` directly exercises `dumpgcdata`. |
+| `DumpGCData.script` | Retired | `DiagnosticCommandTests.DumpGcData_ReportsPinningAfterCollection` checks that `pre and post pin` is zero before pinning and reports one after a pinned `GCHandle` and explicit collection. An isolated debuggee preserves the .NET 10+ regression oracle with live workstation coverage and workstation/server dump coverage across native and dotnet-dump hosts. `DumpGcData_ReportsGcStatistics` retains generic command coverage on the broader matrix. |
 | `DumpGen.script` | Improved | `GcInspectionTests.DumpGen_ListsGenerationObjects` asserts a known gen0 object. `DumpGen_ArgumentsAndFilters` adds missing/invalid generation and valid `-type`/`-mt` coverage. Exact legacy gen1/gen2/LOH/POH populations remain retained. |
 | `DynamicMethod.script` | Retired | `DynamicMethodTests` finds the debuggee's emitted Fibonacci method, checks its exact IL sequence, and uses the ICorDebug `dynamicMethod` local to select and disassemble the same object. |
 | `FindRootsOlderGeneration.script` | Gap | `GcRoot_FindsRootsForLive_NoneForDead` improves ordinary root correctness, but the live `findroots -gen any` notification/continue sequence and older-generation result are not represented. |
