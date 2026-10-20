@@ -17,16 +17,40 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private readonly IDisposable _onFlushEvent;
         private ((bool, bool, bool, bool) Key, DescribedRegion[] Result) _previous;
 
-        [ServiceExport(Scope = ServiceScope.Target)]
-        public static NativeAddressHelper TryCreate(ITarget target, [ServiceImport(Optional = true)] IMemoryRegionService memoryRegionService)
+        public static NativeAddressHelper TryCreate(IServiceProvider services)
         {
-            return memoryRegionService != null ? new NativeAddressHelper(target, memoryRegionService) : null;
+            if (services is null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            ITarget target = services.GetRequiredService<ITarget>();
+            IMemoryRegionService memoryRegionService = services.GetService<IMemoryRegionService>();
+            if (memoryRegionService is null)
+            {
+                return null;
+            }
+
+            return new NativeAddressHelper(
+                target,
+                memoryRegionService,
+                services.GetRequiredService<IMemoryService>(),
+                services.GetRequiredService<IThreadService>(),
+                services.GetRequiredService<IRuntimeService>(),
+                services.GetRequiredService<IModuleService>(),
+                services.GetRequiredService<IConsoleService>());
         }
 
-        private NativeAddressHelper(ITarget target, IMemoryRegionService memoryRegionService)
+        private NativeAddressHelper(ITarget target, IMemoryRegionService memoryRegionService, IMemoryService memoryService,
+            IThreadService threadService, IRuntimeService runtimeService, IModuleService moduleService, IConsoleService console)
         {
             Target = target;
             MemoryRegionService = memoryRegionService;
+            MemoryService = memoryService;
+            ThreadService = threadService;
+            RuntimeService = runtimeService;
+            ModuleService = moduleService;
+            Console = console;
             _onFlushEvent = target.OnFlushEvent.Register(() => _previous = default);
         }
 
@@ -36,20 +60,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public IMemoryRegionService MemoryRegionService { get; }
 
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
+        public IMemoryService MemoryService { get; }
 
-        [ServiceImport]
-        public IThreadService ThreadService { get; set; }
+        public IThreadService ThreadService { get; }
 
-        [ServiceImport]
-        public IRuntimeService RuntimeService { get; set; }
+        public IRuntimeService RuntimeService { get; }
 
-        [ServiceImport]
-        public IModuleService ModuleService { get; set; }
+        public IModuleService ModuleService { get; }
 
-        [ServiceImport]
-        public IConsoleService Console { get; set; }
+        public IConsoleService Console { get; }
 
         /// <summary>
         /// Enumerates the entire address space, optionally tagging special CLR heaps, and optionally "collapsing"

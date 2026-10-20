@@ -9,6 +9,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "taskstate", Aliases = new string[] { "tks" }, Help = "Displays a Task state in a human readable format.")]
     public class TaskStateCommand : ClrMDHelperCommandBase
     {
+        public TaskStateCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         [Argument(Help = "The Task instance address.")]
         public string Address { get; set; }
 

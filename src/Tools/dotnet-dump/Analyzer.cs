@@ -3,7 +3,6 @@
 
 using System;
 using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Threading;
@@ -34,7 +33,6 @@ namespace Microsoft.Diagnostics.Tools.Dump
             DiagnosticLoggingService.Instance.SetConsole(_fileLoggingConsoleService, _fileLoggingConsoleService);
 
             _commandService = new CommandService();
-            ServiceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
         }
 
         public int Analyze(FileInfo dump_path, string[] command)
@@ -58,27 +56,17 @@ namespace Microsoft.Diagnostics.Tools.Dump
             {
             }
 
-            // Register all the services and commands in the dotnet-dump (this) assembly
-            ServiceManager.RegisterAssembly(typeof(Analyzer).Assembly);
+            ServiceManager.RegisterModule(new SOSHostingModule());
+            ServiceManager.RegisterModule(new AnalysisModule());
 
-            // Register all the services and commands in the SOS.Hosting assembly
-            ServiceManager.RegisterAssembly(typeof(SOSHost).Assembly);
-
-            // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
-            ServiceManager.RegisterAssembly(typeof(ClrMDHelper).Assembly);
-
-            // Add the specially handled exit command
-            _commandService.AddCommands(typeof(ExitCommand), (services) => new ExitCommand(_consoleService.Stop));
-
-            // Display any extension assembly loads on console
-            ServiceManager.NotifyExtensionLoad.Register((Assembly assembly) => _fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
-            ServiceManager.NotifyExtensionLoadFailure.Register((Exception ex) => _fileLoggingConsoleService.WriteLine(ex.Message));
-
-            // Load any extra extensions
-            ServiceManager.LoadExtensions();
-
-            // Loading extensions or adding service factories not allowed after this point.
+            // Adding service factories is not allowed after this point.
             ServiceContainer serviceContainer = CreateServiceContainer();
+
+            ServiceManager.RegisterCommands(_commandService);
+
+            // Register host commands last so they take precedence over module commands.
+            _commandService.AddCommands<SOSCommand>();
+            _commandService.AddCommands<ExitCommand>((services) => new ExitCommand(services, _consoleService.Stop));
 
             // Add all the global services to the global service container.
             serviceContainer.AddService<IConsoleService>(_fileLoggingConsoleService);

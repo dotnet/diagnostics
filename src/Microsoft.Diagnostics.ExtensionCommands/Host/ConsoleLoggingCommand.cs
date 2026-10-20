@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -9,8 +10,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "logclose", DefaultOptions = "--disable", Help = "Disables console file logging.")]
     public class ConsoleLoggingCommand : CommandBase
     {
-        [ServiceImport(Optional = true)]
-        public IConsoleFileLoggingService FileLoggingService { get; set; }
+        public ConsoleLoggingCommand(IServiceProvider services, IConsoleFileLoggingService fileLoggingService = null)
+            : base(services)
+        {
+            FileLoggingService = fileLoggingService;
+        }
+
+        public IConsoleFileLoggingService FileLoggingService { get; }
 
         [Argument(Name = "path", Help = "Log file path.")]
         public string FilePath { get; set; }

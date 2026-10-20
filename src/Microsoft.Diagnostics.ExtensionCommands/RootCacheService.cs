@@ -13,7 +13,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     /// It is very expensive to enumerate roots, and relatively cheap to store them in memory.
     /// This service is a cache of roots to use instead of calling ClrHeap.EnumerateRoots.
     /// </summary>
-    [ServiceExport(Scope = ServiceScope.Runtime)]
     public class RootCacheService
     {
         private List<(ulong Source, ulong Target)> _dependentHandles;
@@ -23,11 +22,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         private bool _printedWarning;
         private bool _printedStackWarning;
 
-        [ServiceImport]
-        public IConsoleService Console { get; set; }
+        public RootCacheService(IConsoleService console, ClrRuntime runtime)
+        {
+            Console = console;
+            Runtime = runtime;
+        }
 
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
+        public IConsoleService Console { get; }
+
+        public ClrRuntime Runtime { get; }
 
         public ReadOnlyCollection<(ulong Source, ulong Target)> GetDependentHandles()
         {

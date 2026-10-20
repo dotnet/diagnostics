@@ -9,19 +9,22 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [ServiceExport(Scope = ServiceScope.Runtime)]
     public class ManagedFileLineService
     {
         private readonly Dictionary<ClrModule, ISymbolFile> _cache = new();
 
-        [ServiceImport]
-        public ISymbolService SymbolService { get; set; }
+        public ManagedFileLineService(ISymbolService symbolService, IModuleService moduleService, ClrRuntime runtime)
+        {
+            SymbolService = symbolService;
+            ModuleService = moduleService;
+            Runtime = runtime;
+        }
 
-        [ServiceImport]
-        public IModuleService ModuleService { get; set; }
+        public ISymbolService SymbolService { get; }
 
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
+        public IModuleService ModuleService { get; }
+
+        public ClrRuntime Runtime { get; }
 
         public (string Source, int Line) GetSourceFromManagedMethod(ClrMethod method, ulong ip)
         {

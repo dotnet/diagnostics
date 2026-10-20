@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.PortableExecutable;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.FileFormats;
@@ -221,7 +222,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Creates a ELFFile service instance of the module in memory.
         /// </summary>
-        [ServiceExport(Scope = ServiceScope.Module)]
         public static ELFFile CreateELFFile(IMemoryService memoryService, IModule module)
         {
             if (module.Target.OperatingSystem == OSPlatform.Linux)
@@ -239,7 +239,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Creates a MachOFile service instance of the module in memory.
         /// </summary>
-        [ServiceExport(Scope = ServiceScope.Module)]
         public static MachOFile CreateMachOFile(IMemoryService memoryService, IModule module)
         {
             if (module.Target.OperatingSystem == OSPlatform.OSX)
@@ -291,124 +290,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         /// <summary>
-        /// Create the type instance and fill in any service imports
+        /// Call a method with parameters resolved from the service provider or their declared defaults.
         /// </summary>
-        /// <param name="type">type to create</param>
-        /// <param name="provider">service provider</param>
-        /// <returns>new instance</returns>
-        public static object CreateInstance(Type type, IServiceProvider provider)
-        {
-            object instance = InvokeConstructor(type, provider);
-            if (instance is not null)
-            {
-                ImportServices(instance, provider);
-            }
-            return instance;
-        }
-
-        /// <summary>
-        /// Call the static method (constructor) to create the instance and fill in any service imports
-        /// </summary>
-        /// <param name="method">static method (constructor) to use to create instance</param>
-        /// <param name="provider">service provider</param>
-        /// <returns>new instance</returns>
-        public static object CreateInstance(MethodBase method, IServiceProvider provider)
-        {
-            object instance = Invoke(method, null, provider);
-            if (instance is not null)
-            {
-                ImportServices(instance, provider);
-            }
-            return instance;
-        }
-
-        /// <summary>
-        /// Set any fields, property or method marked with the ServiceImportAttribute to the service requested.
-        /// </summary>
-        /// <param name="instance">object instance to process</param>
-        /// <param name="provider">service provider</param>
-        public static void ImportServices(object instance, IServiceProvider provider)
-        {
-            if (instance == null)
-            {
-                throw new ArgumentNullException(nameof(instance));
-            }
-
-            for (Type currentType = instance.GetType(); currentType is not null; currentType = currentType.BaseType)
-            {
-                if (currentType == typeof(object) || currentType == typeof(ValueType))
-                {
-                    break;
-                }
-                FieldInfo[] fields = currentType.GetFields(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
-                foreach (FieldInfo field in fields)
-                {
-                    ServiceImportAttribute attribute = field.GetCustomAttribute<ServiceImportAttribute>(inherit: false);
-                    if (attribute is not null)
-                    {
-                        object serviceInstance = provider.GetService(field.FieldType);
-                        if (serviceInstance is null && !attribute.Optional)
-                        {
-                            throw new DiagnosticsException($"The {field.FieldType.Name} service is required by the {field.Name} field");
-                        }
-                        field.SetValue(instance, serviceInstance);
-                    }
-                }
-                PropertyInfo[] properties = currentType.GetProperties(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
-                foreach (PropertyInfo property in properties)
-                {
-                    ServiceImportAttribute attribute = property.GetCustomAttribute<ServiceImportAttribute>(inherit: false);
-                    if (attribute is not null)
-                    {
-                        object serviceInstance = provider.GetService(property.PropertyType);
-                        if (serviceInstance is null && !attribute.Optional)
-                        {
-                            throw new DiagnosticsException($"The {property.PropertyType.Name} service is required by the {property.Name} property");
-                        }
-                        property.SetValue(instance, serviceInstance);
-                    }
-                }
-                MethodInfo[] methods = currentType.GetMethods(BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic);
-                foreach (MethodInfo method in methods)
-                {
-                    ServiceImportAttribute attribute = method.GetCustomAttribute<ServiceImportAttribute>(inherit: false);
-                    if (attribute is not null)
-                    {
-                        Utilities.Invoke(method, instance, provider);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Call the constructor of the type and return the instance binding any
-        /// services in the constructor parameters.
-        /// </summary>
-        /// <param name="type">type to create</param>
-        /// <param name="provider">services</param>
-        /// <returns>type instance</returns>
-        public static object InvokeConstructor(Type type, IServiceProvider provider)
-        {
-            ConstructorInfo constructor = type.GetConstructors().Single();
-            object[] arguments = BuildArguments(constructor, provider);
-            try
-            {
-                return constructor.Invoke(arguments);
-            }
-            catch (TargetInvocationException ex)
-            {
-                Trace.TraceError(ex.ToString());
-                throw ex.InnerException;
-            }
-        }
-
-        /// <summary>
-        /// Call the method and bind any services in the constructor parameters.
-        /// </summary>
-        /// <param name="method">method to invoke</param>
-        /// <param name="instance">class instance or null if static</param>
-        /// <param name="provider">services</param>
-        /// <returns>method return value</returns>
         public static object Invoke(MethodBase method, object instance, IServiceProvider provider)
         {
             object[] arguments = BuildArguments(method, provider);
@@ -416,32 +299,35 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 return method.Invoke(instance, arguments);
             }
-            catch (TargetInvocationException ex)
+            catch (TargetInvocationException ex) when (ex.InnerException is not null)
             {
                 Trace.TraceError(ex.ToString());
-                throw ex.InnerException;
+                ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+                throw;
             }
         }
 
-        private static object[] BuildArguments(MethodBase methodBase, IServiceProvider services)
+        private static object[] BuildArguments(MethodBase method, IServiceProvider services)
         {
-            ParameterInfo[] parameters = methodBase.GetParameters();
+            ParameterInfo[] parameters = method.GetParameters();
+            if (parameters.Length == 0)
+            {
+                return Array.Empty<object>();
+            }
             object[] arguments = new object[parameters.Length];
             for (int i = 0; i < parameters.Length; i++)
             {
-                // The service import attribute isn't necessary on parameters unless Optional property needs to be changed from the default of false.
-                bool optional = false;
-                ServiceImportAttribute attribute = parameters[i].GetCustomAttribute<ServiceImportAttribute>(inherit: false);
-                if (attribute is not null)
+                ParameterInfo parameter = parameters[i];
+                object argument = parameter.ParameterType == typeof(IServiceProvider) ? services : services.GetService(parameter.ParameterType);
+                if (argument is null)
                 {
-                    optional = attribute.Optional;
+                    if (!parameter.HasDefaultValue)
+                    {
+                        throw new DiagnosticsException($"The {parameter.ParameterType} service is required by the {parameter.Name} parameter of {method.DeclaringType}.{method.Name}");
+                    }
+                    argument = parameter.DefaultValue;
                 }
-                // The parameter will passed as null to allow for "optional" services. The invoked method needs to check for possible null parameters.
-                arguments[i] = services.GetService(parameters[i].ParameterType);
-                if (arguments[i] is null && !optional)
-                {
-                    throw new DiagnosticsException($"The {parameters[i].ParameterType} service is required by the {parameters[i].Name} parameter");
-                }
+                arguments[i] = argument;
             }
             return arguments;
         }

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.Diagnostics.DebugServices
 {
@@ -17,10 +18,13 @@ namespace Microsoft.Diagnostics.DebugServices
         IEnumerable<(string name, string help, IEnumerable<string> aliases)> Commands { get; }
 
         /// <summary>
-        /// Add the commands and aliases attributes found in the type.
+        /// Registers a command implementation with a custom factory.
         /// </summary>
-        /// <param name="type">Command type to search</param>
-        void AddCommands(Type type);
+        /// <typeparam name="TCommand">Command implementation to register</typeparam>
+        /// <param name="factory">Function to create a command instance</param>
+        void AddCommands<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
+            DynamicallyAccessedMemberTypes.PublicProperties)] TCommand>(
+            Func<IServiceProvider, TCommand> factory) where TCommand : class;
 
         /// <summary>
         /// Gets help for all of the commands

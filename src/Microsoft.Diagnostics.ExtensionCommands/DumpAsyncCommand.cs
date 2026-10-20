@@ -16,6 +16,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = CommandName, Aliases = new string[] { "DumpAsync" }, Help = "Displays information about async \"stacks\" on the garbage-collected heap.")]
     public sealed class DumpAsyncCommand : ClrRuntimeCommandBase
     {
+        public DumpAsyncCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         /// <summary>The name of the command.</summary>
         private const string CommandName = "dumpasync";
 

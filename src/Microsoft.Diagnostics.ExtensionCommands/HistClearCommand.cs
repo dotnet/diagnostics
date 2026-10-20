@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -8,8 +9,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "histclear", Aliases = new[] { "HistClear" }, Help = "Releases any resources used by the Hist-family of commands.")]
     public sealed class HistClearCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public GCHistory History { get; set; }
+        public HistClearCommand(IServiceProvider services, GCHistory history)
+            : base(services)
+        {
+            History = history;
+        }
+
+        public GCHistory History { get; }
 
         public override void Invoke()
         {

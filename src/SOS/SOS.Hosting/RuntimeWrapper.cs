@@ -14,7 +14,6 @@ using SOS.Hosting.DbgEng.Interop;
 
 namespace SOS.Hosting
 {
-    [ServiceExport(Scope = ServiceScope.Runtime)]
     public sealed unsafe class RuntimeWrapper : COMCallableIUnknown, IDisposable
     {
         /// <summary>

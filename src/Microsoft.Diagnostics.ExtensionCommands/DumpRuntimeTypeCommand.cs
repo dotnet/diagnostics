@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
@@ -11,6 +12,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumpruntimetypes", Aliases = new[] { "DumpRuntimeTypes" }, Help = "Finds all System.RuntimeType objects in the GC heap and prints the type name and MethodTable they refer to.")]
     public sealed class DumpRuntimeTypeCommand : ClrRuntimeCommandBase
     {
+        public DumpRuntimeTypeCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         public override void Invoke()
         {
             Table output = null;

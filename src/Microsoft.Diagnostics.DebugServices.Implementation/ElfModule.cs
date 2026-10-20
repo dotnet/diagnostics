@@ -20,7 +20,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Creates a ELFModule service instance of the downloaded or local (if exists) module file.
         /// </summary>
-        [ServiceExport(Scope = ServiceScope.Module)]
         public static ELFModule CreateELFModule(IModule module, ISymbolService symbolService)
         {
             if (module.Target.OperatingSystem == OSPlatform.Linux)
