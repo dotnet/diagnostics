@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Globalization;
 using System.Text.RegularExpressions;
 using SOS.TestHarness;
 using Xunit;
@@ -18,6 +19,8 @@ public sealed class GcInspectionTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
     public static TheoryData<TestConfig> PohMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.Core | Flavor.SingleFile);
+    public static TheoryData<TestConfig> DumpGenMatrix => TestConfig.BuildMatrix(
+        [TargetCatalog.DumpGen], Flavor.Core | Flavor.SingleFile, gcType: GcType.AllValid);
 
     [SosTheory]
     [MemberData(nameof(PohMatrix))]
@@ -176,6 +179,8 @@ public sealed class GcInspectionTests
 
         target.Sos("dumpgen").AssertContains("Generation argument is missing");
         target.Sos("dumpgen invalid").AssertContains("invalid is not a supported generation");
+        target.Sos("dumpgen gen0 -mt").AssertContains("Required argument missing for option: '-mt'.");
+        target.Sos("dumpgen gen1 -mt zzzzz").AssertContains("Hexadecimal address expected for -mt option");
 
         DumpHeapResult markerDump = target.DumpHeap("-type ThinLockMarker");
         SosRow markerStat = markerDump.Statistics
@@ -190,6 +195,64 @@ public sealed class GcInspectionTests
             .AssertContains("ThinLockMarker");
         target.Sos($"dumpgen gen0 -mt {methodTable:x}")
             .AssertContains(marker.ToString("x"));
+    }
+
+    [SosTheory]
+    [MemberData(nameof(DumpGenMatrix))]
+    public async Task DumpGen_ReportsExactGenerationPopulations(TestConfig config)
+    {
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint("ready");
+
+        const string sampleType = "DotnetDumpCommands.Program+DumpSampleClass";
+        const string sampleArrayType = sampleType + "[]";
+
+        Assert.Equal(10, GenerationCount(target.Sos("dumpgen gen0"), sampleType));
+        Assert.Equal(3, GenerationCount(target.Sos("dumpgen gen1"), sampleType));
+        Assert.Equal(5, GenerationCount(target.Sos("dumpgen gen2"), sampleType));
+        Assert.Equal(1, GenerationCount(target.Sos("dumpgen loh"), sampleArrayType));
+
+        SosOutput poh = target.Sos("dumpgen poh");
+        Assert.Equal(1, GenerationCount(poh, "System.Byte[]"));
+        ulong byteArrayMethodTable = GenerationStatistics(poh)
+            .SingleRow(row => row["Class Name"].Value == "System.Byte[]", "the pinned byte array")["MT"].AsUInt64(Sos.Addr);
+        ulong pinnedArray = GenerationObjects(target.Sos($"dumpgen poh -mt {byteArrayMethodTable:x}"))
+            .SingleRow(_ => true, "the pinned byte array")["Address"].AsUInt64(Sos.Addr);
+        Assert.DoesNotContain(
+            GenerationObjects(target.Sos($"dumpgen gen2 -mt {byteArrayMethodTable:x}")),
+            row => row["Address"].AsUInt64(Sos.Addr) == pinnedArray);
+
+        SosOutput gen0 = target.Sos("dumpgen gen0 -type DotnetDumpCommands");
+        Assert.Equal(10, GenerationCount(gen0, sampleType));
+        Assert.Equal(10, TotalObjects(gen0));
+
+        ulong methodTable = GenerationStatistics(target.Sos("dumpgen gen0"))
+            .SingleRow(row => row["Class Name"].Value == sampleType, sampleType)["MT"].AsUInt64(Sos.Addr);
+        SosOutput byMethodTable = target.Sos($"dumpgen gen0 -mt {methodTable:x}");
+        Assert.Equal(10, GenerationObjects(byMethodTable).Length);
+        Assert.Equal(10, TotalObjects(byMethodTable));
+
+        Assert.Equal(0, TotalObjects(target.Sos("dumpgen gen0 -mt 1")));
+        Assert.Equal(0, TotalObjects(target.Sos("dumpgen gen0 -type NoMatchingType")));
+    }
+
+    private static SosTable GenerationStatistics(SosOutput output) => output.Table(
+        ColumnAlignment.Right("MT"), ColumnAlignment.Right("Count"), ColumnAlignment.Right("TotalSize"), "Class Name");
+
+    private static SosTable GenerationObjects(SosOutput output) => output.Table(
+        ColumnAlignment.Right("Address"), ColumnAlignment.Right("MT"), ColumnAlignment.Right("Size"));
+
+    private static int GenerationCount(SosOutput output, string typeName)
+    {
+        SosRow? row = GenerationStatistics(output).SingleOrDefault(row => row["Class Name"].Value == typeName);
+        return row is null ? 0 : row["Count"].AsInt32(Sos.Integer);
+    }
+
+    private static int TotalObjects(SosOutput output)
+    {
+        Match match = Regex.Match(output.Text, @"Total\s+([\d,]+)\s+objects");
+        Assert.True(match.Success, $"expected a dumpgen total:\n{output.Text}");
+        return int.Parse(match.Groups[1].Value.Replace(",", ""), CultureInfo.InvariantCulture);
     }
 
     private static int UniqueRootCount(SosOutput output)

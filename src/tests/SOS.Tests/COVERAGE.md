@@ -39,7 +39,8 @@ focused emitted-IL checks and existing reflection-exception coverage.
 argument-error, and referenced-array/object/value-class tests.
 `DumpGCData.script` is retired by an isolated two-stop pinning test on .NET 10+,
 with workstation GC covered live and both workstation and server GC covered
-in dumps.
+in dumps. `DumpGen.script` is retired by a deterministic generation-population
+target that preserves its exact gen0/gen1/gen2/LOH/POH and filter assertions.
 The remaining legacy runner and scenarios stay in place.
 
 ## Legacy-to-new map
@@ -52,7 +53,7 @@ The remaining legacy runner and scenarios stay in place.
 | `DivZero.script` | Retired | `PrintExceptionTests.PrintException_NoInnerException` verifies the exact exception type, message, HResult, no-inner state, generated frame, `-nested`, and `-lines` output across live and dump rows. `ClrThreadsTests`, `ClrStackLinesTests`, and `ClrStackICorDebugTests` cover the remaining thread and stack behavior. |
 | `DualRuntimes.script` | Retained | Generic stacks, threads, heaps, and runtime listing are covered; loading and switching between two runtimes in one process remains a specialized legacy scenario. |
 | `DumpGCData.script` | Retired | `DiagnosticCommandTests.DumpGcData_ReportsPinningAfterCollection` checks that `pre and post pin` is zero before pinning and reports one after a pinned `GCHandle` and explicit collection. An isolated debuggee preserves the .NET 10+ regression oracle with live workstation coverage and workstation/server dump coverage across native and dotnet-dump hosts. `DumpGcData_ReportsGcStatistics` retains generic command coverage on the broader matrix. |
-| `DumpGen.script` | Improved | `GcInspectionTests.DumpGen_ListsGenerationObjects` asserts a known gen0 object. `DumpGen_ArgumentsAndFilters` adds missing/invalid generation and valid `-type`/`-mt` coverage. Exact legacy gen1/gen2/LOH/POH populations remain retained. |
+| `DumpGen.script` | Retired | `GcInspectionTests.DumpGen_ReportsExactGenerationPopulations` preserves the exact 10/3/5 `DumpSampleClass` populations in gen0/gen1/gen2, the LOH sample array, the POH pinned byte array, and positive/empty `-type`/`-mt` filters. `DumpGen_ListsGenerationObjects` and `DumpGen_ArgumentsAndFilters` retain broader matrix coverage on the consolidated scenario target. |
 | `DynamicMethod.script` | Retired | `DynamicMethodTests` finds the debuggee's emitted Fibonacci method, checks its exact IL sequence, and uses the ICorDebug `dynamicMethod` local to select and disassemble the same object. |
 | `FindRootsOlderGeneration.script` | Gap | `GcRoot_FindsRootsForLive_NoneForDead` improves ordinary root correctness, but the live `findroots -gen any` notification/continue sequence and older-generation result are not represented. |
 | `GCPOH.script` | Retired | `DumpHeapGenerationsTests`, `DumpArrayTests`, `GcHandles`, `VerifyHeap`, `EeHeapTests`, and stack-root tests use deterministic objects and structured assertions; the original POH script remains active. |

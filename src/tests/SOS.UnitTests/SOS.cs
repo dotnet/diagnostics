@@ -419,25 +419,6 @@ public class SOSGCTests
             testName: "SOS.FindRootsOlderGeneration",
             testDump: false);
     }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task DumpGen(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(
-            scriptName: "DumpGen.script",
-            new SOSRunner.TestInformation
-            {
-                TestConfiguration = config,
-                TestLive = false,
-                TestName = "SOS.DumpGen",
-                DebuggeeName = "DotnetDumpCommands",
-                DebuggeeArguments = "dumpgen",
-                DumpNameSuffix = "dumpgen",
-                UsePipeSync = true,
-                DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
-            },
-            Output);
-    }
 }
 
 public class SOSDumpTests
