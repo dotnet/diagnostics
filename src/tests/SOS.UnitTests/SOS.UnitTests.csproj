@@ -34,7 +34,6 @@
 
   <ItemGroup>
     <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
-    <ProjectReference Include="$(TestDir)/TestExtension/TestExtension.csproj" />
   </ItemGroup>
 
   <ItemGroup>
