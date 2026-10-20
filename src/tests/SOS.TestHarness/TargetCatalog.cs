@@ -74,6 +74,7 @@ public static class TargetCatalog
     public const string TaskNestedException = "tasknestedexception";
     public const string ThreadApartment = "threadapartment";
     public const string DumpGcData = "dumpgcdata";
+    public const string DumpGen = "dumpgen";
 
     // --- The one consolidated marker debuggee the harness adds (Phase 4). Every snapshot/oracle/live
     //     scenario is a named stop point on this single program (see SosHarnessScenarios). ---
@@ -171,6 +172,12 @@ public static class TargetCatalog
                 new StopPoint("pinned", StopKind.Snapshot, "DumpGCData.Program.AtPinned"),
             },
             Flavors: Flavor.Core),
+
+        new TargetDefinition(
+            DumpGen,
+            Project: "DotnetDumpCommands",
+            StopPoints: new[] { new StopPoint("ready", StopKind.Snapshot, "DotnetDumpCommands.Program.AtReady") },
+            Flavors: Flavor.Core | Flavor.SingleFile),
 
         // The consolidated marker debuggee: each scenario is a NoInlining marker method that calls
         // TestHarness.Stop(name). Ordered so the heap scenario (live/dead objects) is captured before
