@@ -281,30 +281,6 @@ public static class SOSTestHelpers
     }
 }
 
-public class SOSStackTraceTests
-{
-    public SOSStackTraceTests(ITestOutputHelper output)
-    {
-        Output = output;
-    }
-
-    private ITestOutputHelper Output { get; set; }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task StackTests(TestConfiguration config)
-    {
-        // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)
-        SOSTestHelpers.SkipIfWinX86(config);
-
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "NestedExceptionTest",
-            scriptName: "StackTests.script",
-            Output,
-            testName: "SOS.StackTests");
-    }
-}
-
 public class SOSInterpreterTests
 {
     public SOSInterpreterTests(ITestOutputHelper output)
