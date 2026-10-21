@@ -34,7 +34,8 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         string? dacDir,
         Dac dac,
         Flavor flavor,
-        IReadOnlyDictionary<string, string>? environmentVariables = null)
+        IReadOnlyDictionary<string, string>? environmentVariables = null,
+        bool disableManagedHosting = false)
     {
         Name = name;
 
@@ -106,6 +107,11 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
             }
         }
 
+        if (disableManagedHosting)
+        {
+            psi.Environment[DbgEngHostBase.DisableManagedHostingEnvironmentVariable] = "1";
+        }
+
         _process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start EngineHost");
         _stdin = _process.StandardInput;
         _stderr = _process.StandardError.ReadToEndAsync();
@@ -122,8 +128,13 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
     }
 
     /// <summary>A child engine over a crash/snapshot dump.</summary>
-    public static ChildEngineClient ForDump(string hostName, string dumpPath, string? dacDir = null, Dac dac = Dac.Legacy) =>
-        new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core);
+    public static ChildEngineClient ForDump(
+        string hostName,
+        string dumpPath,
+        string? dacDir = null,
+        Dac dac = Dac.Legacy,
+        bool disableManagedHosting = false) =>
+        new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core, disableManagedHosting: disableManagedHosting);
 
     /// <summary>A live child engine that launches the target (parked at the loader break, SOS loaded).</summary>
     public static ChildEngineClient ForLive(

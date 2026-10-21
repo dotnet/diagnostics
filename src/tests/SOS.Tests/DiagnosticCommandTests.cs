@@ -29,6 +29,12 @@ public sealed class DiagnosticCommandTests
     // (dotnet-dump) hosts. The lldb SOS plugin never registered it (true of the legacy suite too — clrma
     // ran only under the dotnet-dump host there), so lldb is excluded from the matrix rather than skipped.
     public static TheoryData<TestConfig> ClrmaMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.Cdb | Host.DotnetDump);
+    public static TheoryData<TestConfig> ClrmaNoManagedHostMatrix => TestConfig.BuildMatrix(
+        [TargetCatalog.Scenarios],
+        Flavor.Core,
+        Host.Cdb,
+        coreVersion: CoreVersion.Net10,
+        dac: Dac.Legacy);
     public static TheoryData<TestConfig> ClrmaExceptionMatrix =>
         TestConfig.BuildMatrix([TargetCatalog.NestedException], Flavor.AllValid, Host.DotnetDump, dumpKind: DumpKind.All);
 
@@ -137,6 +143,30 @@ public sealed class DiagnosticCommandTests
         SosOutput clrma = target.Sos("clrma");
         clrma.AssertContains("Managed analysis provider");
         clrma.AssertContains("OSThreadId:");
+    }
+
+    [SosTheory]
+    [MemberData(nameof(ClrmaNoManagedHostMatrix))]
+    public Task Clrma_UsesNativeDacProviderWithoutManagedHosting(TestConfig config)
+    {
+        string dump = SnapshotStore.GetDump(
+            config.Flavor,
+            config.Target,
+            TargetCatalog.StopHeap,
+            config.GcType,
+            config.DumpKind,
+            config.CoreVersion);
+
+        using ChildEngineClient host = ChildEngineClient.ForDump(
+            "cdb-no-managed-host",
+            dump,
+            dac: config.Dac,
+            disableManagedHosting: true);
+
+        SosOutput clrma = host.Sos("clrma");
+        clrma.AssertContains("Managed analysis provider: SOSCLRMA");
+        clrma.AssertContains("OSThreadId:");
+        return Task.CompletedTask;
     }
 
     [SosTheory]
