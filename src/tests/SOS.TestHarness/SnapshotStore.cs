@@ -31,7 +31,7 @@ namespace SOS.TestHarness;
 /// Capture mechanism depends on the flavor and stop kind:
 /// <list type="bullet">
 ///   <item><b>Snapshot stops (Core / SingleFile)</b> self-snapshot mid-run from inside the debuggee via
-///   the repo-built <c>dotnet-dump collect</c>.</item>
+///   the selected layout's <c>dotnet-dump collect</c>.</item>
 ///   <item><b>Crash stop, Core</b> lets the runtime's createdump write the dump.</item>
 ///   <item><b>Crash stop, SingleFile on Windows</b> can't use createdump, so it's captured with dbgeng like desktop.</item>
 ///   <item><b>Framework</b> (desktop) is always captured externally by <see cref="DbgEngCapturer"/>.</item>
@@ -105,7 +105,7 @@ public static class SnapshotStore
     }
 
     private static string DumpDir(Flavor flavor, string target, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion) =>
-        Path.Combine(RepoLayout.Scratch, "dumps", flavor.ToString().ToLowerInvariant(),
+        Path.Combine(ToolPaths.Layout.DumpCacheDirectory, flavor.ToString().ToLowerInvariant(),
             gcType.ToString().ToLowerInvariant(), dumpKind.ToString().ToLowerInvariant(),
             CoreVersions.Tfm(coreVersion), target);
 
@@ -365,9 +365,7 @@ public static class SnapshotStore
             CreateNoWindow = true,
         };
         psi.Environment["SOSHARNESS_CAPTURE_DIR"] = dumpDir;
-        // Tell the debuggee's stop-point helper which dotnet-dump to self-collect with (the repo-built one).
-        psi.Environment["SOSHARNESS_DOTNET"] = RepoLayout.DotNetExe;
-        psi.Environment["SOSHARNESS_DOTNETDUMP_DLL"] = ToolPaths.DotNetDumpDll;
+        ToolPaths.Layout.ConfigureCaptureEnvironment(psi);
         psi.Environment["SOSHARNESS_DUMP_TYPE"] = CollectType(flavor, dumpKind, OperatingSystem.IsWindows());
         ApplyRuntimeRoot(psi, flavor);
         ApplyMacOsDumpConfig(psi);
