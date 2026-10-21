@@ -7,16 +7,24 @@ namespace SOS.TestHarness;
 internal static class HostFactory
 {
     /// <summary>Create a dump-backed host.</summary>
-    public static IDebuggerHost CreateDumpHost(Host host, Flavor flavor, string dumpPath, Dac dac = Dac.Legacy, CoreVersion coreVersion = CoreVersion.Net10, string? targetExe = null, HostDiagnostics? diagnostics = null)
+    public static IDebuggerHost CreateDumpHost(
+        Host host,
+        Flavor flavor,
+        string dumpPath,
+        Dac dac = Dac.Legacy,
+        CoreVersion coreVersion = CoreVersion.Net10,
+        HostRuntime hostRuntime = HostRuntime.Managed,
+        string? targetExe = null,
+        HostDiagnostics? diagnostics = null)
     {
         PrepareCDacOverride(host, dac);
 
         return host switch
         {
             // cdb runs dbgeng in a CHILD process (EngineHost), so the test host never loads dbgeng.
-            Host.Cdb => ChildEngineClient.ForDump(host.ToString().ToLowerInvariant(), dumpPath, DacDirFor(flavor, coreVersion), dac),
+            Host.Cdb => ChildEngineClient.ForDump(host.ToString().ToLowerInvariant(), dumpPath, DacDirFor(flavor, coreVersion), dac, hostRuntime),
             Host.DotnetDump => new DotNetDumpHost(dumpPath, flavor, dac, coreVersion, diagnostics),
-            Host.Lldb => new LldbCliHost(dumpPath, flavor, dac, coreVersion, targetExe, diagnostics),
+            Host.Lldb => new LldbCliHost(dumpPath, flavor, dac, coreVersion, hostRuntime, targetExe, diagnostics),
             _ => throw new ArgumentException($"Unknown host '{host}'."),
         };
     }
@@ -29,14 +37,15 @@ internal static class HostFactory
         string exePath,
         CoreVersion coreVersion = CoreVersion.Net10,
         Dac dac = Dac.Legacy,
+        HostRuntime hostRuntime = HostRuntime.Managed,
         IReadOnlyDictionary<string, string>? environmentVariables = null)
     {
         PrepareCDacOverride(host, dac);
 
         return host switch
         {
-            Host.Cdb => ChildEngineClient.ForLive(host.ToString().ToLowerInvariant(), exePath, DacDirFor(flavor, coreVersion), dac, flavor, environmentVariables),
-            Host.Lldb => new LldbLiveHost(exePath, flavor, coreVersion, dac, environmentVariables),
+            Host.Cdb => ChildEngineClient.ForLive(host.ToString().ToLowerInvariant(), exePath, DacDirFor(flavor, coreVersion), dac, flavor, hostRuntime, environmentVariables),
+            Host.Lldb => new LldbLiveHost(exePath, flavor, coreVersion, dac, hostRuntime, environmentVariables),
             Host.DotnetDump => throw new ArgumentException("dotnet-dump is post-mortem only; it has no live host."),
             _ => throw new ArgumentException($"Unknown live host '{host}'."),
         };

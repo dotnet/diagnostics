@@ -34,8 +34,8 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         string? dacDir,
         Dac dac,
         Flavor flavor,
-        IReadOnlyDictionary<string, string>? environmentVariables = null,
-        bool disableManagedHosting = false)
+        HostRuntime hostRuntime,
+        IReadOnlyDictionary<string, string>? environmentVariables = null)
     {
         Name = name;
 
@@ -73,6 +73,7 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         }
 
         psi.Environment["_NT_SYMBOL_PATH"] = symbolPath;
+        psi.Environment[DbgEngHostBase.HostRuntimeEnvironmentVariable] = hostRuntime.ToString();
 
         if (mode == "live")
         {
@@ -107,11 +108,6 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
             }
         }
 
-        if (disableManagedHosting)
-        {
-            psi.Environment[DbgEngHostBase.DisableManagedHostingEnvironmentVariable] = "1";
-        }
-
         _process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start EngineHost");
         _stdin = _process.StandardInput;
         _stderr = _process.StandardError.ReadToEndAsync();
@@ -133,8 +129,8 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         string dumpPath,
         string? dacDir = null,
         Dac dac = Dac.Legacy,
-        bool disableManagedHosting = false) =>
-        new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core, disableManagedHosting: disableManagedHosting);
+        HostRuntime hostRuntime = HostRuntime.Managed) =>
+        new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core, hostRuntime);
 
     /// <summary>A live child engine that launches the target (parked at the loader break, SOS loaded).</summary>
     public static ChildEngineClient ForLive(
@@ -143,8 +139,9 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         string? dacDir = null,
         Dac dac = Dac.Legacy,
         Flavor flavor = Flavor.Core,
+        HostRuntime hostRuntime = HostRuntime.Managed,
         IReadOnlyDictionary<string, string>? environmentVariables = null) =>
-        new(hostName, "live", new[] { exePath }, dacDir, dac, flavor, environmentVariables);
+        new(hostName, "live", new[] { exePath }, dacDir, dac, flavor, hostRuntime, environmentVariables);
 
     public void LoadSos()
     {

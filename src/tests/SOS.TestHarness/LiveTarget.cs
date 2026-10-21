@@ -36,7 +36,8 @@ public sealed class LiveTarget : Target
     private bool _disposed;
 
     internal LiveTarget(Host hostKind, TargetDefinition definition, Flavor flavor, string exePath,
-                        CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy)
+                        CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy,
+                        HostRuntime hostRuntime = HostRuntime.Managed)
         : base(hostKind, definition.Name, flavor)
     {
         _definition = definition;
@@ -49,7 +50,7 @@ public sealed class LiveTarget : Target
         _gateHeld = true;
         try
         {
-            _host = HostFactory.CreateLiveHost(hostKind, flavor, exePath, coreVersion, dac, definition.EnvironmentVariables);
+            _host = HostFactory.CreateLiveHost(hostKind, flavor, exePath, coreVersion, dac, hostRuntime, definition.EnvironmentVariables);
         }
         catch
         {

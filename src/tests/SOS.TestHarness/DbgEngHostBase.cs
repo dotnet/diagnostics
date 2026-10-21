@@ -19,7 +19,7 @@ namespace SOS.TestHarness;
 /// </summary>
 public abstract class DbgEngHostBase : IDebuggerHost
 {
-    internal const string DisableManagedHostingEnvironmentVariable = "SOSHARNESS_DISABLE_MANAGED_HOSTING";
+    internal const string HostRuntimeEnvironmentVariable = "SOSHARNESS_HOSTRUNTIME";
 
     private readonly BlockingCollection<Action> _work = new();
     private readonly Thread _worker;
@@ -111,7 +111,7 @@ public abstract class DbgEngHostBase : IDebuggerHost
 
         RunCore($".load {ToolPaths.SosPath}");
         VerifyOurSosLoaded();
-        if (Environment.GetEnvironmentVariable(DisableManagedHostingEnvironmentVariable) == "1")
+        if (Environment.GetEnvironmentVariable(HostRuntimeEnvironmentVariable) == HostRuntime.None.ToString())
         {
             RunCore("!sethostruntime -none");
         }
