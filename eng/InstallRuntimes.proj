@@ -66,7 +66,7 @@
           DependsOnTargets="CleanupVersionManifest;InstallTestSdk;InstallRuntimesWindows;InstallRuntimesUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
 
   <Target Name="InstallTestSdk">
-    <MSBuild Projects="$(RepositoryEngineeringDir)InstallSdk.proj"
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="InstallSdk"
              Properties="InstallRoot=$(DotNetInstallRoot);SdkBuildIdentifier=$(MicrosoftNETSdkVersion);SdkArchitecture=$(TargetArch)" />
   </Target>
 
@@ -81,8 +81,74 @@
     <PropertyGroup>
       <DotNetBuildDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-build'))</DotNetBuildDir>
     </PropertyGroup>
-    <MSBuild Projects="$(RepositoryEngineeringDir)InstallSdk.proj"
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="InstallSdk"
              Properties="InstallRoot=$(DotNetBuildDir);SdkBuildIdentifier=$(MicrosoftNETSdkVersion);SdkArchitecture=$(HostArch)" />
+  </Target>
+
+  <Target Name="InstallSdk">
+
+    <Error Condition="'$(InstallRoot)' == ''"
+           Text="InstallSdk requires InstallRoot to specify the SDK installation directory." />
+    <Error Condition="'$(SdkBuildIdentifier)' == ''"
+           Text="InstallSdk requires SdkBuildIdentifier to specify the SDK build to download." />
+    <Error Condition="'$(SdkArchitecture)' == ''"
+           Text="InstallSdk requires SdkArchitecture to specify the SDK architecture (for example, x64 or arm64)." />
+
+    <PropertyGroup>
+      <_SdkInstallRoot>$([MSBuild]::NormalizeDirectory('$(InstallRoot)'))</_SdkInstallRoot>
+      <_SdkStamp>$(_SdkInstallRoot)sdk-install.txt</_SdkStamp>
+      <_DotNetPath>$(_SdkInstallRoot)dotnet</_DotNetPath>
+      <_DotNetPath Condition="$([MSBuild]::IsOsPlatform(Windows))">$(_SdkInstallRoot)dotnet.exe</_DotNetPath>
+      <SdkInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(SdkArchitecture) -InstallDir '$(_SdkInstallRoot.TrimEnd('\/'))' -Version $(SdkBuildIdentifier)</SdkInstallArgs>
+    </PropertyGroup>
+
+    <ItemGroup Condition="Exists('$(_SdkInstallRoot)sdk')">
+      <_InstalledSdkDirectories Include="$([System.IO.Directory]::GetDirectories('$(_SdkInstallRoot)sdk'))" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="'@(_InstalledSdkDirectories->Count())' == '1'">
+      <_InstalledSdkDirectory>@(_InstalledSdkDirectories)</_InstalledSdkDirectory>
+      <_InstalledSdkVersion>$([System.IO.Path]::GetFileName('$(_InstalledSdkDirectory)'))</_InstalledSdkVersion>
+    </PropertyGroup>
+
+    <ReadLinesFromFile File="$(_SdkStamp)" Condition="Exists('$(_SdkStamp)')">
+      <Output TaskParameter="Lines" PropertyName="_InstalledSdkIdentity" />
+    </ReadLinesFromFile>
+
+    <PropertyGroup>
+      <_ExpectedSdkIdentity>$(SdkBuildIdentifier)|$(SdkArchitecture)|$(_InstalledSdkVersion)</_ExpectedSdkIdentity>
+      <_InstallSdk Condition="'$(_InstalledSdkIdentity)' != '$(_ExpectedSdkIdentity)' or '$(_InstalledSdkVersion)' == '' or !Exists('$(_DotNetPath)') or !Exists('$(_SdkInstallRoot)sdk/$(_InstalledSdkVersion)/dotnet.dll') or !Exists('$(_SdkInstallRoot)sdk/$(_InstalledSdkVersion)/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props')">true</_InstallSdk>
+    </PropertyGroup>
+
+    <!-- Different builds can install the same product version. Remove SDKs before
+         installation so dotnet-install cannot mistake the old build for this one. -->
+    <Delete Files="$(_SdkStamp)" Condition="'$(_InstallSdk)' == 'true'" />
+    <RemoveDir Directories="@(_InstalledSdkDirectories)" Condition="'$(_InstallSdk)' == 'true'" />
+
+    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(SdkInstallArgs) }&quot;"
+          Condition="'$(_InstallSdk)' == 'true' and $([MSBuild]::IsOsPlatform(Windows))"
+          IgnoreStandardErrorWarningFormat="true" />
+    <Exec Command="bash $(DotnetInstallScriptCmd) $(SdkInstallArgs)"
+          Condition="'$(_InstallSdk)' == 'true' and !$([MSBuild]::IsOsPlatform(Windows))"
+          IgnoreStandardErrorWarningFormat="true" />
+
+    <ItemGroup>
+      <_InstalledSdkDirectories Remove="@(_InstalledSdkDirectories)" />
+      <_InstalledSdkDirectories Include="$([System.IO.Directory]::GetDirectories('$(_SdkInstallRoot)sdk'))" Condition="Exists('$(_SdkInstallRoot)sdk')" />
+    </ItemGroup>
+    <Error Condition="'@(_InstalledSdkDirectories->Count())' != '1'"
+           Text="Expected exactly one SDK in $(_SdkInstallRoot)sdk after installing $(SdkBuildIdentifier)." />
+
+    <PropertyGroup>
+      <_InstalledSdkDirectory>@(_InstalledSdkDirectories)</_InstalledSdkDirectory>
+      <_InstalledSdkVersion>$([System.IO.Path]::GetFileName('$(_InstalledSdkDirectory)'))</_InstalledSdkVersion>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_DotNetPath)') or !Exists('$(_SdkInstallRoot)sdk/$(_InstalledSdkVersion)/dotnet.dll') or !Exists('$(_SdkInstallRoot)sdk/$(_InstalledSdkVersion)/Sdks/Microsoft.NET.Sdk/Sdk/Sdk.props')"
+           Text="SDK $(SdkBuildIdentifier) is incomplete in $(_SdkInstallRoot)." />
+    <WriteLinesToFile File="$(_SdkStamp)"
+                      Lines="$(SdkBuildIdentifier)|$(SdkArchitecture)|$(_InstalledSdkVersion)"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
   </Target>
 
 <!--
