@@ -27,7 +27,14 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
 
     public string Name { get; }
 
-    private ChildEngineClient(string name, string mode, IReadOnlyList<string> modeArgs, string? dacDir, Dac dac, Flavor flavor)
+    private ChildEngineClient(
+        string name,
+        string mode,
+        IReadOnlyList<string> modeArgs,
+        string? dacDir,
+        Dac dac,
+        Flavor flavor,
+        IReadOnlyDictionary<string, string>? environmentVariables = null)
     {
         Name = name;
 
@@ -91,6 +98,14 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
             psi.Environment["DOTNET_MULTILEVEL_LOOKUP"] = "0";
         }
 
+        if (environmentVariables is not null)
+        {
+            foreach ((string variable, string value) in environmentVariables)
+            {
+                psi.Environment[variable] = value;
+            }
+        }
+
         _process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start EngineHost");
         _stdin = _process.StandardInput;
         _stderr = _process.StandardError.ReadToEndAsync();
@@ -111,8 +126,14 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core);
 
     /// <summary>A live child engine that launches the target (parked at the loader break, SOS loaded).</summary>
-    public static ChildEngineClient ForLive(string hostName, string exePath, string? dacDir = null, Dac dac = Dac.Legacy, Flavor flavor = Flavor.Core) =>
-        new(hostName, "live", new[] { exePath }, dacDir, dac, flavor);
+    public static ChildEngineClient ForLive(
+        string hostName,
+        string exePath,
+        string? dacDir = null,
+        Dac dac = Dac.Legacy,
+        Flavor flavor = Flavor.Core,
+        IReadOnlyDictionary<string, string>? environmentVariables = null) =>
+        new(hostName, "live", new[] { exePath }, dacDir, dac, flavor, environmentVariables);
 
     public void LoadSos()
     {

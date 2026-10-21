@@ -23,14 +23,20 @@ internal static class HostFactory
 
     /// <summary>A live host (exclusive, advancing). On Windows this is the in-process dbgeng engine driven
     /// through a child EngineHost process; on Linux/macOS it drives the lldb CLI directly.</summary>
-    public static ILiveDebuggerHost CreateLiveHost(Host host, Flavor flavor, string exePath, CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy)
+    public static ILiveDebuggerHost CreateLiveHost(
+        Host host,
+        Flavor flavor,
+        string exePath,
+        CoreVersion coreVersion = CoreVersion.Net10,
+        Dac dac = Dac.Legacy,
+        IReadOnlyDictionary<string, string>? environmentVariables = null)
     {
         PrepareCDacOverride(host, dac);
 
         return host switch
         {
-            Host.Cdb => ChildEngineClient.ForLive(host.ToString().ToLowerInvariant(), exePath, DacDirFor(flavor, coreVersion), dac, flavor),
-            Host.Lldb => new LldbLiveHost(exePath, flavor, coreVersion, dac),
+            Host.Cdb => ChildEngineClient.ForLive(host.ToString().ToLowerInvariant(), exePath, DacDirFor(flavor, coreVersion), dac, flavor, environmentVariables),
+            Host.Lldb => new LldbLiveHost(exePath, flavor, coreVersion, dac, environmentVariables),
             Host.DotnetDump => throw new ArgumentException("dotnet-dump is post-mortem only; it has no live host."),
             _ => throw new ArgumentException($"Unknown live host '{host}'."),
         };

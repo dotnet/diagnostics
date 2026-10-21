@@ -431,24 +431,6 @@ public class SOSDumpTests
             testMini: true,
             dumpGenerator: SOSRunner.DumpGenerator.NativeDebugger);
     }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task OtherCommands(TestConfiguration config)
-    {
-        // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
-        await SOSTestHelpers.RunTest(
-            scriptName: "OtherCommands.script",
-            new SOSRunner.TestInformation
-            {
-                TestConfiguration = config,
-                TestName = "SOS.OtherCommands",
-                DebuggeeName = "SymbolTestApp",
-                EnableStressLog = true,
-                // Assumes that SymbolTestDll.dll that is dynamically loaded is the parent directory of the single file app
-                DebuggeeArguments = config.PublishSingleFile ? Path.Combine("%DEBUG_ROOT%", "..") : "%DEBUG_ROOT%"
-            },
-            Output);
-    }
 }
 
 public class SOSMethodTests
@@ -547,73 +529,6 @@ public class SOSScenarioTests
                 DumpGenerator = SOSRunner.DumpGenerator.DotNetDump
             },
             Output);
-    }
-}
-
-public class SOSStackAndOtherTests
-{
-    public SOSStackAndOtherTests(ITestOutputHelper output)
-    {
-        Output = output;
-    }
-
-    private ITestOutputHelper Output { get; set; }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.StackAndOtherTests", MemberType = typeof(SOSTestHelpers))]
-    public async Task StackAndOtherTests(TestConfiguration config)
-    {
-        // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)
-        SOSTestHelpers.SkipIfWinX86(config);
-
-        foreach (TestConfiguration currentConfig in TestRunner.EnumeratePdbTypeConfigs(config))
-        {
-            // Assumes that SymbolTestDll.dll that is dynamically loaded is the parent directory of the single file app
-            string debuggeeArguments = currentConfig.PublishSingleFile ? Path.Combine("%DEBUG_ROOT%", "..") : "%DEBUG_ROOT%";
-            string debuggeeDumpOutputRootDir = Path.Combine(currentConfig.DebuggeeDumpOutputRootDir(), currentConfig.DebugType);
-            string debuggeeDumpInputRootDir = Path.Combine(currentConfig.DebuggeeDumpInputRootDir(), currentConfig.DebugType);
-
-            // This debuggee needs the directory of the exes/dlls to load the SymbolTestDll assembly.
-            await SOSTestHelpers.RunTest(
-                scriptName: "StackAndOtherTests.script", new SOSRunner.TestInformation
-                {
-                    TestConfiguration = currentConfig,
-                    TestName = "SOS.StackAndOtherTests",
-                    DebuggeeName = "SymbolTestApp",
-                    DebuggeeArguments = debuggeeArguments,
-                    DumpNameSuffix = currentConfig.DebugType,
-                    DebuggeeDumpOutputRootDir = debuggeeDumpOutputRootDir,
-                    DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
-                    UsePipeSync = true,
-                    DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
-                    DisableDacSignatureVerification = currentConfig.PublishSingleFile,
-                },
-                Output);
-
-            // This tests using regular Windows PDBs with no managed hosting. SOS should fallback
-            // to using native implementations of the host/target/runtime.
-            if (currentConfig.DebugType == "full")
-            {
-                Dictionary<string, string> settings = new(currentConfig.AllSettings)
-                {
-                    ["SetHostRuntime"] = "-none"
-                };
-                await SOSTestHelpers.RunTest(
-                    scriptName: "StackAndOtherTests.script", new SOSRunner.TestInformation
-                    {
-                        TestConfiguration = new TestConfiguration(settings),
-                        TestName = "SOS.StackAndOtherTests",
-                        DebuggeeName = "SymbolTestApp",
-                        DebuggeeArguments = debuggeeArguments,
-                        DumpNameSuffix = currentConfig.DebugType,
-                        DebuggeeDumpOutputRootDir = debuggeeDumpOutputRootDir,
-                        DebuggeeDumpInputRootDir = debuggeeDumpInputRootDir,
-                        UsePipeSync = true,
-                        DumpGenerator = SOSRunner.DumpGenerator.DotNetDump,
-                        DisableDacSignatureVerification = currentConfig.PublishSingleFile,
-                    },
-                    Output);
-            }
-        }
     }
 }
 

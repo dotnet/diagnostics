@@ -43,7 +43,12 @@ public sealed class LldbLiveHost : LldbHostBase, ILiveDebuggerHost
             ? TimeSpan.FromSeconds(s)
             : TimeSpan.FromSeconds(300);
 
-    public LldbLiveHost(string exePath, Flavor flavor, CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy)
+    public LldbLiveHost(
+        string exePath,
+        Flavor flavor,
+        CoreVersion coreVersion = CoreVersion.Net10,
+        Dac dac = Dac.Legacy,
+        IReadOnlyDictionary<string, string>? environmentVariables = null)
     {
         _flavor = flavor;
         _dac = dac;
@@ -71,6 +76,13 @@ public sealed class LldbLiveHost : LldbHostBase, ILiveDebuggerHost
                 psi.Environment["DOTNET_ROOT"] = RepoLayout.DotnetTestRoot;
                 psi.Environment["DOTNET_ROOT(x86)"] = RepoLayout.DotnetTestRoot;
                 psi.Environment["DOTNET_MULTILEVEL_LOOKUP"] = "0";
+            }
+            if (environmentVariables is not null)
+            {
+                foreach ((string variable, string value) in environmentVariables)
+                {
+                    psi.Environment[variable] = value;
+                }
             }
         }, diagnostics: new HostDiagnostics(Name));
 

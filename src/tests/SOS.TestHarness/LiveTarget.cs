@@ -49,7 +49,7 @@ public sealed class LiveTarget : Target
         _gateHeld = true;
         try
         {
-            _host = HostFactory.CreateLiveHost(hostKind, flavor, exePath, coreVersion, dac);
+            _host = HostFactory.CreateLiveHost(hostKind, flavor, exePath, coreVersion, dac, definition.EnvironmentVariables);
         }
         catch
         {

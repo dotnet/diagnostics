@@ -23,6 +23,14 @@ internal static class SOSTestSkips
             "https://github.com/dotnet/runtime/pull/119393: the dumpgcdata pinning-statistics regression was fixed in .NET 10.");
     }
 
+    internal static void SkipDumpLog(TestConfig config)
+    {
+        Assert.SkipWhen(
+            config.Flavor == Flavor.Framework && config.Liveness == Liveness.Dump,
+            "Desktop CLR DumpLog cannot read the stress-log header from a heap dump. " +
+            "See https://github.com/dotnet/diagnostics/issues/5757.");
+    }
+
     internal static void SkipICorDebugStackWalk(TestConfig config)
     {
         Skip(GetX86DebugInfoSkipReason(config, OperatingSystem.IsWindows(), RuntimeInformation.ProcessArchitecture));
