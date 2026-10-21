@@ -182,7 +182,15 @@ public sealed class MyModule : IDiagnosticsModule
 }
 ```
 
-`Host.CreateServiceContainer` consumes a snapshot of the catalog's factories, constructs each module once per service manager, and calls `RegisterServices` before finalization. `ServiceManager.RegisterCommands` then calls `RegisterCommands` once per command service, using the same module instances and order. Modules may register services at any scope or add ordered provider factories. Their constructors do not need to be public or parameterless because factories construct them directly. A services-only or commands-only module leaves its other registration method empty. Registration and construction failures propagate to the caller.
+Hosts explicitly call `ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories())` after registering built-in modules and before creating the global service container. This consumes a snapshot of the catalog's factories, constructs each module once per service manager, and calls `RegisterServices`. `Host.CreateServiceContainer` only finalizes the service factories and creates the global container; it does not register catalog modules. Command registration remains a separate step:
+
+```csharp
+host.ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
+ServiceContainer services = host.CreateServiceContainer();
+host.ServiceManager.RegisterCommands(commandService);
+```
+
+`ServiceManager.RegisterCommands` calls `RegisterCommands` once per command service, using the same module instances and order. Modules may register services at any scope or add ordered provider factories. Their constructors do not need to be public or parameterless because factories construct them directly. A services-only or commands-only module leaves its other registration method empty. Registration and construction failures propagate to the caller.
 
 Additional factories are sorted by assembly-qualified module name using ordinal comparison, independently of initializer execution order. Duplicate module types in the catalog are rejected. `ServiceManager.RegisterModule` registers each module type only once per manager, including when it is also advertised through the catalog. The catalog is shared within the application's load context, but module and service instances are not shared between hosts.
 

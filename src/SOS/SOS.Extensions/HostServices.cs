@@ -218,6 +218,9 @@ namespace SOS.Extensions
                 _host.ServiceManager.RegisterModule(new SOSHostingModule());
                 _host.ServiceManager.RegisterModule(new AnalysisModule());
 
+                // Register additional diagnostic modules from the catalog
+                _host.ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
+
                 // Adding service factories is not allowed after this point.
                 ServiceContainer serviceContainer = _host.CreateServiceContainer();
                 _host.ServiceManager.RegisterCommands(_commandService);

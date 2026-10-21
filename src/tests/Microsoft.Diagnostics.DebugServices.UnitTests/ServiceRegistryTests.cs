@@ -51,6 +51,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     .Skip(1)
                     .TakeWhile(line => line.StartsWith("-> ", StringComparison.Ordinal))
                     .ToArray();
+                Assert.Equal(3, modules.Length);
                 Assert.Equal(host.ServiceManager.DiagnosticModules.Select(module => {
                     Type type = module.GetType();
                     return $"-> {type.FullName} ({type.Assembly.GetName().Version})";
@@ -58,7 +59,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 Assert.Contains(modules, line => line.Contains(typeof(CoreModule).FullName));
                 Assert.Contains(modules, line => line.Contains(typeof(SOSHostingModule).FullName));
                 Assert.Contains(modules, line => line.Contains(typeof(AnalysisModule).FullName));
-                Assert.Contains(modules, line => line.Contains(typeof(DiagnosticsModuleTests.TestModule).FullName));
             }
             target.Destroy();
             services.DisposeServices();

@@ -25,6 +25,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             HostType = type;
 
             _serviceManager = new ServiceManager();
+
+            // Register the core services and commands from this assembly.
             _serviceManager.RegisterModule(new CoreModule());
         }
 
@@ -43,8 +45,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public ServiceContainer CreateServiceContainer()
         {
-            _serviceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
-
             // Adding service factories is not allowed after this point.
             _serviceManager.FinalizeServices();
 

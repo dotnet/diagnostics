@@ -129,9 +129,26 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
-        public void HostRegistersCatalogBeforeFinalization()
+        public void HostDoesNotRegisterCatalogAutomatically()
         {
             Host host = new(HostType.DotnetDump);
+            ServiceContainer services = host.CreateServiceContainer();
+
+            Assert.IsType<CoreModule>(Assert.Single(host.ServiceManager.DiagnosticModules));
+            Assert.Null(services.GetService<ModuleValue>());
+            Assert.Empty(host.ServiceManager.EnumerateProviderFactories<IModuleProvider>());
+            CommandService commands = new();
+            host.ServiceManager.RegisterCommands(commands);
+            Assert.Empty(commands.Commands);
+            Assert.Throws<InvalidOperationException>(() => host.ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories()));
+            services.DisposeServices();
+        }
+
+        [Fact]
+        public void HostRegistersExplicitCatalogBeforeFinalization()
+        {
+            Host host = new(HostType.DotnetDump);
+            host.ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
             ServiceContainer services = host.CreateServiceContainer();
 
             Assert.NotNull(services.GetRequiredService<ModuleValue>());
