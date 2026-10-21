@@ -49,10 +49,8 @@ public sealed class LiveBpmdTests
         target.RunToBreakpoint();
         target.Sos("clrstack").AssertContains("C.F2");
 
-        target.Sos($"bpmd {module} C.F3");
-        target.Sos("bpmd -clearall");
+        target.ClearBreakpoints();
         target.Sos("bpmd DivZero.cs:14");
-
         target.RunToBreakpoint();
         SosRow firstManagedFrame = target.Clrstack().First(row => !row["InternalFrame"].AsBoolean());
         Assert.Contains("C.DivideByZero", firstManagedFrame["Function"].Value, StringComparison.Ordinal);

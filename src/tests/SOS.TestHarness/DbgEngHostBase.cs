@@ -119,6 +119,10 @@ public abstract class DbgEngHostBase : IDebuggerHost
         {
             DbgEngSosHost.Initialize();
         }
+        if (!string.IsNullOrEmpty(dacDir))
+        {
+            RunCore($"!setclrpath {dacDir}");
+        }
 
         _sosLoaded = true;
     }

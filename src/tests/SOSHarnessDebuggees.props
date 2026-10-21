@@ -14,7 +14,7 @@
     </SOSHarnessDebuggee>
     <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/DotnetDumpCommands/DotnetDumpCommands.csproj">
       <SupportsSingleFile>true</SupportsSingleFile>
-      <SupportsFramework>false</SupportsFramework>
+      <SupportsFramework>true</SupportsFramework>
     </SOSHarnessDebuggee>
     <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/DumpGCData/DumpGCData.csproj">
       <SupportsSingleFile>false</SupportsSingleFile>

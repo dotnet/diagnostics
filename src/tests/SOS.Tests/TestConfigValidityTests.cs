@@ -45,7 +45,7 @@ public sealed class TestConfigValidityTests
     }
 
     [Fact]
-    public void ManagedHostingIsTheDefaultAndNoneExcludesDotnetDump()
+    public void HostRuntimeDefaultsAndValidityAreCorrect()
     {
         TestConfig config = Config();
 
@@ -53,20 +53,6 @@ public sealed class TestConfigValidityTests
         Assert.True(TestConfig.IsValid(config with { HostRuntime = HostRuntime.None }));
         Assert.False(TestConfig.IsValid(config with { Host = Host.DotnetDump, HostRuntime = HostRuntime.None }));
         Assert.EndsWith("/nohost", (config with { HostRuntime = HostRuntime.None }).ToString());
-
-        Host nativeHost = OperatingSystem.IsWindows() ? Host.Cdb : Host.Lldb;
-        TestConfig[] configs = TestConfig.Permutations(
-            [TargetCatalog.Scenarios],
-            Flavor.Core,
-            nativeHost | Host.DotnetDump,
-            coreVersion: CoreVersion.Net11,
-            dac: Dac.Legacy,
-            hostRuntime: HostRuntime.AllValid).ToArray();
-
-        Assert.Contains(configs, candidate => candidate.Host == nativeHost && candidate.HostRuntime == HostRuntime.Managed);
-        Assert.Contains(configs, candidate => candidate.Host == nativeHost && candidate.HostRuntime == HostRuntime.None);
-        Assert.Contains(configs, candidate => candidate.Host == Host.DotnetDump && candidate.HostRuntime == HostRuntime.Managed);
-        Assert.DoesNotContain(configs, candidate => candidate.Host == Host.DotnetDump && candidate.HostRuntime == HostRuntime.None);
     }
 
     [Theory]

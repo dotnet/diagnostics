@@ -118,6 +118,21 @@ public sealed class LiveTarget : Target
     }
 
     /// <summary>
+    /// Clear both SOS's pending managed breakpoints and any native breakpoints it already bound in the
+    /// underlying debugger.
+    /// </summary>
+    public void ClearBreakpoints()
+    {
+        Sos("bpmd -clearall");
+        Execute(Host switch
+        {
+            Host.Cdb => "bc *",
+            Host.Lldb => "breakpoint delete --force",
+            _ => throw new InvalidOperationException($"Unexpected live host '{Host}'."),
+        });
+    }
+
+    /// <summary>
     /// Live <c>bpmd</c> cannot bind in a self-contained single-file image under the lldb host: bpmd arms a
     /// JIT/prestub notification breakpoint on a CoreCLR routine, but in a self-contained single-file
     /// publish the runtime is statically linked into the (symbol-stripped) app image, so lldb has no

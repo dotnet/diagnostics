@@ -64,7 +64,7 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         // For self-contained single-file the runtime (coreclr.dll) and the DAC (mscordaccore.dll) are
         // bundled in the exe, so dbgeng can't find them on disk. Point it at the runtime pack that has
         // both: on the symbol/image path so dbgeng can index coreclr, and via SOSHARNESS_DAC_DIR so the
-        // EngineHost runs `.cordll -lp <dir>` (DAC load path) before `.load sos`.
+        // EngineHost configures both dbgeng (`.cordll -lp`) and SOS (`!setclrpath`) DAC discovery.
         if (!string.IsNullOrEmpty(dacDir))
         {
             symbolPath += ";" + dacDir;
