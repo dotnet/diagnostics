@@ -63,7 +63,12 @@
 
   <Target Name="InstallTestRuntimes"
           AfterTargets="Build"
-          DependsOnTargets="CleanupVersionManifest;InstallRuntimesWindows;InstallRuntimesUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
+          DependsOnTargets="CleanupVersionManifest;InstallTestSdk;InstallRuntimesWindows;InstallRuntimesUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
+
+  <Target Name="InstallTestSdk">
+    <MSBuild Projects="$(RepositoryEngineeringDir)InstallSdk.proj"
+             Properties="InstallRoot=$(DotNetInstallRoot);SdkBuildIdentifier=$(MicrosoftNETSdkVersion);SdkArchitecture=$(TargetArch)" />
+  </Target>
 
 <!--
     When cross-building (host arch != target arch), install a host-architecture SDK
@@ -75,14 +80,9 @@
           Condition="'$(HostArch)' != '' and '$(HostArch)' != '$(TargetArch)'">
     <PropertyGroup>
       <DotNetBuildDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-build'))</DotNetBuildDir>
-      <BuildSdkInstallArgs>-NoPath -SkipNonVersionedFiles -Architecture $(HostArch) -InstallDir $(DotNetBuildDir) -Version $(MicrosoftNETSdkVersion)</BuildSdkInstallArgs>
     </PropertyGroup>
-    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(BuildSdkInstallArgs) }&quot;"
-          Condition="$([MSBuild]::IsOsPlatform(Windows))"
-          IgnoreStandardErrorWarningFormat="true" />
-    <Exec Command="bash $(DotnetInstallScriptCmd) $(BuildSdkInstallArgs)"
-          Condition="!$([MSBuild]::IsOsPlatform(Windows))"
-          IgnoreStandardErrorWarningFormat="true" />
+    <MSBuild Projects="$(RepositoryEngineeringDir)InstallSdk.proj"
+             Properties="InstallRoot=$(DotNetBuildDir);SdkBuildIdentifier=$(MicrosoftNETSdkVersion);SdkArchitecture=$(HostArch)" />
   </Target>
 
 <!--
@@ -105,9 +105,6 @@
           Condition="$([MSBuild]::IsOsPlatform(Windows))"
           Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
 
-    <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(MicrosoftNetSdkVersion) }&quot;"
-          IgnoreStandardErrorWarningFormat="true" />
-
     <Exec Command="$(PowershellWrapper) &quot;&amp; { &amp;$(DotnetInstallScriptCmd) $(CommonInstallArgs) %(RuntimeTestVersions.ExtraInstallArgs) -Version %(RuntimeTestVersions.RuntimeDownload) -Runtime dotnet }&quot;"
           IgnoreStandardErrorWarningFormat="true" Condition="'%(RuntimeTestVersions.RuntimeDownload)' != ''" />
 
@@ -122,9 +119,6 @@
   <Target Name="InstallRuntimesUnix"
           Condition="!$([MSBuild]::IsOsPlatform(Windows))"
           Inputs="$(VersionsPropsPath)" Outputs="$(TestConfigFileName)">
-
-    <Exec Command="bash $(DotnetInstallScriptCmd) $(CommonInstallArgs) -Version $(MicrosoftNetSdkVersion)"
-          IgnoreStandardErrorWarningFormat="true" />
 
     <Exec Command="bash $(DotnetInstallScriptCmd) $(CommonInstallArgs) %(RuntimeTestVersions.ExtraInstallArgs) -Version %(RuntimeTestVersions.RuntimeDownload) -Runtime dotnet"
           IgnoreStandardErrorWarningFormat="true"

@@ -42,18 +42,10 @@
   <Target Name="BuildDebuggees"
           AfterTargets="Build"
           Condition="'$(SkipTests)' != 'true' and '$(SkipTestArtifactsBuild)' != 'true'">
-    <!-- Remove stale SDKs from the build dotnet dir so the repo root global.json
-         (rollForward:major) resolves to the correct test SDK.  InstallTestRuntimes
-         only installs $(MicrosoftNETSdkVersion); older SDKs are leftovers. -->
-    <ItemGroup Condition="Exists('$(DebuggeeBuildDotNetDir)sdk')">
-      <_StaleTestSdks Include="$([System.IO.Directory]::GetDirectories('$(DebuggeeBuildDotNetDir)sdk'))" />
-      <_StaleTestSdks Remove="$([MSBuild]::NormalizePath('$(DebuggeeBuildDotNetDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))" />
-    </ItemGroup>
-    <RemoveDir Directories="@(_StaleTestSdks)" />
     <!-- Clean up any generated global.json from prior runs that would shadow the repo root's -->
     <Delete Files="$(ArtifactsDir)global.json" Condition="Exists('$(ArtifactsDir)global.json')" />
     <PropertyGroup>
-      <_BuildSdkVersionDir>$([MSBuild]::NormalizePath('$(DebuggeeBuildDotNetDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))</_BuildSdkVersionDir>
+      <_BuildSdkVersionDir>$([System.IO.Directory]::GetDirectories('$(DebuggeeBuildDotNetDir)sdk'))</_BuildSdkVersionDir>
     </PropertyGroup>
     <ItemGroup>
       <DebuggeeBuildEnv Include="DOTNET_ROOT=$(DebuggeeBuildDotNetDir.TrimEnd('\/'))" />
