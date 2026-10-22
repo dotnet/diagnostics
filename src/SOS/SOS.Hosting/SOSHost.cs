@@ -464,7 +464,7 @@ namespace SOS.Hosting {
             }
             if (item == "\\")
             {
-                int versionSize = Marshal.SizeOf(typeof(VS_FIXEDFILEINFO));
+                int versionSize = Marshal.SizeOf<VS_FIXEDFILEINFO>();
                 Write(verInfoSize, (uint)versionSize);
                 if (bufferSize < versionSize)
                 {

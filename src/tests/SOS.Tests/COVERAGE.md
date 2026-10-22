@@ -68,7 +68,7 @@ The remaining legacy runner and scenarios stay in place.
 | `Reflection.script` | Retired | Existing `PrintExceptionTests.PrintException_ReflectionInnerException` checks outer/inner exception types, messages, HResults, nested output, and caller source annotations. Generic stack/thread coverage is not duplicated on this target, and no new assertions are added. |
 | `SimpleThrow.script` | Retired | `PrintExceptionTests.PrintException_NoInnerException` verifies the exact exception type, message, HResult, no-inner state, generated frame, `-nested`, and `-lines` output across live and dump rows. `ClrThreadsTests` and the stack tests cover the remaining thread and managed-stack behavior. |
 | `StackAndOtherTests.script` | Improved | `RuntimeInfoTests` and the `ClrStack*Tests` classes separately cover runtime selection, plain/line/full/all/register/args/locals stack modes with stronger comparisons. |
-| `StackTests.script` | Improved | `ClrStackTests`, `ClrStackFullTests`, `ClrStackAllThreadsTests`, `ClrStackArgsLocalsTests`, `StackInspectionTests`, and `RuntimeInfoTests` replace shape-only checks with tables and address round-trips. |
+| `StackTests.script` | Retired | `ClrStackTests`, `ClrStackFullTests`, `ClrStackArgsLocalsTests`, `ClrStackICorDebugTests`, `StackInspectionTests`, and `RuntimeInfoTests` replace shape-only checks with tables, address round-trips, exact argument/local values, verified stack-root objects, and native/managed frame checks. |
 | `StackTraceFaultingExceptionFrame.script` | Retired | Exception and ordinary stack data are covered; no new assertion requires the synthetic `[FaultingExceptionFrame: ...]` row. |
 | `StackTraceSoftwareExceptionFrame.script` | Retired | Exception and ordinary stack data are covered; no new assertion requires the synthetic `[SoftwareExceptionFrame: ...]` row. |
 | `TaskNestedException.script` | Retired | `PrintExceptionTests.PrintException_TaskExceptionChain` follows `AggregateException -> FormatException -> InvalidOperationException` addresses, checks messages, ordered task/caller/throw frames and source lines, and requires no further inner exception across live and Heap/Mini dump rows. The original sources and separately built library are included in the modern payload; the app project moves to the standard debuggee-folder location. |
@@ -77,10 +77,10 @@ The remaining legacy runner and scenarios stay in place.
 | `VarargPInvokeInteropMD.script` | Retained | Vararg P/Invoke, IL stubs, native breakpointing, `ip2md`, and `clru -il` form one specialized interop scenario. Generic `ip2md` and `clru` have new structured tests. |
 | `WebApp.script` | Retained | Timers, ASP.NET/WebApp stacks, args/registers, and GC stress-log behavior remain in the specialized Windows legacy target; generic command equivalents are covered. |
 
-The focused gap fixed in this review is `dumpgen` argument and filtering
-behavior. The new test uses the source-generated scenario marker, resolves its
-address and real MethodTable from `dumpheap`, and proves both `-type` and `-mt`
-select it.
+The focused gaps fixed in this review are the `dumpstack -EE` variant and
+`dumpstackobjects -verify`. Both now reuse the deterministic args/locals
+scenario and require its uniquely typed argument and local objects or managed
+frames, rather than only checking generic output shape.
 The remaining gaps require purpose-built targets, Mini-dump policy, or
 platform-specific debugger sequencing and are not appropriate baseline-harness
 refactors.
