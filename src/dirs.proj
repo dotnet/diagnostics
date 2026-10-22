@@ -19,6 +19,7 @@
     <ProjectReference Include="Microsoft.FileFormats/Microsoft.FileFormats.csproj" />
     <ProjectReference Include="Microsoft.SymbolManifestGenerator/Microsoft.SymbolManifestGenerator.csproj" />
     <ProjectReference Include="Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
+    <ProjectReference Include="cdac/dirs.proj" Condition="'$(BuildCDacFromSource)' == 'true'" />
 
   </ItemGroup>
 

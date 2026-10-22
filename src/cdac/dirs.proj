@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.Build.Traversal">
+  <PropertyGroup>
+    <CDacNativeProject>$(MSBuildThisFileDirectory)runtime\src\native\managed\cdac\mscordaccore_universal\mscordaccore_universal.csproj</CDacNativeProject>
+    <CDacPublishDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'cdac-native', '$(TargetRid)', '$(Configuration)'))</CDacPublishDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(CDacNativeProject)" />
+  </ItemGroup>
+
+  <Target Name="PublishCDac" AfterTargets="Build" Condition="'$(SkipCDacPublish)' != 'true'">
+    <MSBuild Projects="$(CDacNativeProject)" Targets="Publish"
+             Properties="Configuration=$(Configuration);TargetOS=$(TargetOS);TargetArch=$(TargetArch);TargetRid=$(TargetRid);PublishDir=$(CDacPublishDir)" />
+    <ItemGroup>
+      <CDacNativeFile Include="$(CDacPublishDir)*mscordaccore_universal*" />
+    </ItemGroup>
+    <Error Condition="'@(CDacNativeFile)' == ''" Text="NativeAOT did not produce the cDAC native reader in $(CDacPublishDir)." />
+    <Copy SourceFiles="@(CDacNativeFile)" DestinationFolder="$(ArtifactsBinNativeDir)" />
+  </Target>
+</Project>

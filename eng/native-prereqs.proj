@@ -7,6 +7,10 @@
     <SkipGetTargetFrameworkProperties>false</SkipGetTargetFrameworkProperties>
   </PropertyGroup>  
 
+  <ItemGroup Condition="'$(BuildCDacFromSource)' == 'true' and '$(PackageWithCDac)' == 'true'">
+    <ProjectReference Include="$(SrcDir)cdac\dirs.proj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" />
+  </ItemGroup>
+
   <PropertyGroup>
     <NativeVersionFile Condition="$([MSBuild]::IsOsPlatform(Windows))">$(ArtifactsObjDir)_version.h</NativeVersionFile>
     <NativeVersionFile Condition="!$([MSBuild]::IsOsPlatform(Windows))">$(ArtifactsObjDir)_version.c</NativeVersionFile>

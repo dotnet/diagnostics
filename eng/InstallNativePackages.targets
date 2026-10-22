@@ -21,11 +21,21 @@
     <PackageSourceFiles Include="$(NuGetPackageRoot)microsoft.diasymreader.native\$(MicrosoftDiaSymReaderNativeVersion)\runtimes\$(TargetRid)\native\*" Condition="'$(OS)' == 'Windows_NT'" />
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(BuildCDacFromSource)' == 'true'">
+    <CDacPackageExcludedFiles>$(NuGetPackageRoot)runtime.$(TargetRid).microsoft.dotnet.cdac.transport\$(runtimewinx64MicrosoftDotNetCdacTransportVersion)\runtimes\$(TargetRid)\native\*mscordaccore_universal*</CDacPackageExcludedFiles>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(PackageWithCDac)' == 'true'">
     <PackageDownload Include="runtime.$(TargetRid).Microsoft.DotNet.Cdac.Transport"
                      Version="[$(runtimewinx64MicrosoftDotNetCdacTransportVersion)]" />
-    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.$(TargetRid).microsoft.dotnet.cdac.transport\$(runtimewinx64MicrosoftDotNetCdacTransportVersion)\runtimes\$(TargetRid)\native\*" />
+    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.$(TargetRid).microsoft.dotnet.cdac.transport\$(runtimewinx64MicrosoftDotNetCdacTransportVersion)\runtimes\$(TargetRid)\native\*"
+                        Exclude="$(CDacPackageExcludedFiles)" />
   </ItemGroup>
+
+  <Target Name="BuildCDacSource" BeforeTargets="InstallNativePackages"
+          Condition="'$(BuildCDacFromSource)' == 'true' and '$(PackageWithCDac)' == 'true'">
+    <MSBuild Projects="$(SrcDir)cdac\dirs.proj" Targets="Build" />
+  </Target>
 
 <!--
     Installs the above packages into the $(ArtifactsBinNativeDir) directory.

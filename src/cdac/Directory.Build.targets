@@ -1,0 +1,15 @@
+<Project>
+  <Import Project="$(SrcDir)Directory.Build.targets" />
+  <Import Project="$(CDacRuntimeRoot)eng\generatorProjects.targets" Condition="'$(IsGeneratorProject)' == 'true'" />
+
+  <PropertyGroup>
+    <!-- Diagnostics consumes the native reader, not runtime's managed transport packages. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Runtime's split configurations are irrelevant here and otherwise duplicate the same build graph. -->
+    <ProjectReference Update="@(ProjectReference)"
+                      GlobalPropertiesToRemove="%(ProjectReference.GlobalPropertiesToRemove);RuntimeConfiguration;LibrariesConfiguration" />
+  </ItemGroup>
+</Project>
