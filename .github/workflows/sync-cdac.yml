@@ -44,8 +44,6 @@ jobs:
         with:
           token: ${{ github.token }}
           path: diagnostics
-          committer: GitHub <noreply@github.com>
-          author: GitHub <noreply@github.com>
           add-paths: |
             src/cdac/runtime
             src/cdac/runtime-source.txt
