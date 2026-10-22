@@ -71,15 +71,6 @@ try {
         Where-Object { $_.PSIsContainer -or $_.Extension -ne '.cs' } |
         Remove-Item -Recurse -Force
 
-    $propsPath = Join-Path $cdacRoot 'Directory.Build.props'
-    $content = [IO.File]::ReadAllText($propsPath)
-    $old = '<Import Project="..\Directory.Build.props" />'
-    $new = '<Import Project="$([MSBuild]::GetPathOfFileAbove(''Directory.Build.props'', ''$(MSBuildThisFileDirectory)..\''))" />'
-    if ([regex]::Matches($content, [regex]::Escape($old)).Count -ne 1) {
-        throw 'The cDAC Directory.Build.props patch no longer applies uniquely.'
-    }
-    [IO.File]::WriteAllText($propsPath, $content.Replace($old, $new), [Text.UTF8Encoding]::new($false))
-
     $destination = Join-Path $PSScriptRoot 'runtime'
     if (Test-Path -LiteralPath $destination) {
         if ((Get-Item -LiteralPath $destination -Force).Attributes.HasFlag([IO.FileAttributes]::ReparsePoint)) {

@@ -6,8 +6,8 @@ the managed reader, contracts, legacy interop layer, NativeAOT entry point,
 source generator and explicitly linked sources. Runtime's tests, usage-analysis
 tooling, contract documentation and native universal DBI source are not included.
 
-`update-source.ps1` contains the explicit source paths, exclusions and temporary
-transition patch used to produce the snapshot.
+`update-source.ps1` contains the explicit source paths and exclusions used to
+produce the snapshot.
 
 `runtime-source.txt` is generated provenance containing only the immutable
 upstream commit. There is no separate inventory or snapshot hash. Diagnostics
@@ -42,8 +42,8 @@ to the source-built reader with `-p:BuildCDacFromSource=true`:
 ```
 
 Bootstrap the repository's existing .NET SDK first if `.dotnet` is absent.
-The adapters use the diagnostics SDK and latest C# language version; they do not upgrade the repository
-toolchain or publish new managed packages.
+The adapters use the diagnostics SDK and latest C# language version; they do not
+upgrade the repository toolchain or publish new managed packages.
 
 `dirs.proj` builds and publishes the reader. All build outputs use the normal
 diagnostics artifact directories.
