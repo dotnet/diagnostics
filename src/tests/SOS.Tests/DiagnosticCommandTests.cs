@@ -68,7 +68,6 @@ public sealed class DiagnosticCommandTests
 
     private static int[] ReadInducedCompactionCounts(SosOutput output)
     {
-        // Unlike "pre and post pin", this per-heap counter has a deterministic trigger in the debuggee.
         MatchCollection matches = Regex.Matches(output.Text, @"(?m)^\[M\]\s*induced compacting GC:\s*(\d+)\s*$");
         Assert.True(matches.Count > 0, $"Expected induced compacting GC data in dumpgcdata output:\n{output.Text}");
         return matches.Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)).ToArray();
