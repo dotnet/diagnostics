@@ -11,6 +11,7 @@
     <LibrariesProjectRoot>$(CDacRuntimeRoot)src\libraries\</LibrariesProjectRoot>
     <NetCoreAppMinimum>net10.0</NetCoreAppMinimum>
     <NetCoreAppToolCurrent>net10.0</NetCoreAppToolCurrent>
+    <MicrosoftCodeAnalysisVersion_4_8>$(MicrosoftCodeAnalysisVersion_LatestVS)</MicrosoftCodeAnalysisVersion_4_8>
     <LangVersion>Latest</LangVersion>
     <Nullable Condition="'$(Nullable)' == ''">annotations</Nullable>
     <!-- Match runtime's pointer-to-COM-interface warning policy. -->
