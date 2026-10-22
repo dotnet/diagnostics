@@ -47,20 +47,3 @@ upgrade the repository toolchain or publish new managed packages.
 
 `dirs.proj` builds and publishes the reader. All build outputs use the normal
 diagnostics artifact directories.
-
-## GitHub automation
-
-`.github/workflows/sync-cdac.yml` runs daily at 08:00 UTC and can also be
-manually dispatched. It uses `dotnet/actions-create-pull-request` with the
-destination repository's `GITHUB_TOKEN`; no cross-repository write credential is
-needed. The action stages only the generated snapshot and provenance file, then
-creates or updates the PR. The resulting PR is validated by the repository's
-normal CI.
-
-The action maintains the fixed `automation/sync-cdac` branch using
-force-with-lease. Existing PRs and review threads are retained, but update commits
-may be replaced when the snapshot changes. There is no auto-merge.
-
-The repository must allow Actions to create PRs. Token-created PRs can require
-maintainer approval before GitHub Actions checks run; Azure Pipelines triggering
-must also be verified during onboarding.
