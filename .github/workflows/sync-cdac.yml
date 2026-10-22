@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 8 * * *'
-  push:
-    branches:
-      - dev/max-charlamb/cdac-source-sync
 
 permissions:
   contents: write
@@ -24,7 +21,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: diagnostics
-          ref: ${{ github.event_name == 'push' && github.sha || github.event.repository.default_branch }}
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -58,5 +55,5 @@ jobs:
             Updates the managed cDAC reader, generator and linked sources from [dotnet/runtime@${{ steps.mirror.outputs.commit }}](https://github.com/dotnet/runtime/commit/${{ steps.mirror.outputs.commit }}).
 
             The mirrored source tracks the latest `dotnet/runtime` main commit resolved when this workflow runs.
-          base: ${{ github.event_name == 'push' && github.ref_name || github.event.repository.default_branch }}
-          branch: automation/sync-cdac-test
+          base: ${{ github.event.repository.default_branch }}
+          branch: automation/sync-cdac
