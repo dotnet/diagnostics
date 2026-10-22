@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.CommandLine;
+using System.CommandLine.Help;
 using System.CommandLine.Parsing;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -18,6 +19,7 @@ namespace Microsoft.Diagnostics.Tools.SOS
                 InstallCommand(),
                 UninstallCommand()
             };
+            rootCommand.Action = new HelpAction();
 
             return rootCommand.Parse(args).Invoke();
         }

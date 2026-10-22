@@ -3,6 +3,7 @@
 
 using System;
 using System.CommandLine;
+using System.CommandLine.Help;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common;
@@ -333,6 +334,7 @@ namespace Microsoft.Diagnostics.Tools.DiagnosticsServerRouter
                 AndroidEmulatorRouterCommand(),
                 AndroidRouterCommand()
             };
+            rootCommand.Action = new HelpAction();
 
             ParseResult parseResult = rootCommand.Parse(args);
 

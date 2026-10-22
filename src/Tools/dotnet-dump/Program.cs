@@ -3,6 +3,7 @@
 
 using System;
 using System.CommandLine;
+using System.CommandLine.Help;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common;
@@ -20,6 +21,7 @@ namespace Microsoft.Diagnostics.Tools.Dump
                 AnalyzeCommand(),
                 ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that dumps can be collected from.")
             };
+            rootCommand.Action = new HelpAction();
 
             return rootCommand.Parse(args).Invoke();
         }

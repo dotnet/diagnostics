@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.CommandLine;
+using System.CommandLine.Help;
 using System.CommandLine.Parsing;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common;
@@ -24,6 +25,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                 ConvertCommandHandler.ConvertCommand(),
                 ReportCommandHandler.ReportCommand()
             };
+            rootCommand.Action = new HelpAction();
 
             ParseResult parseResult = rootCommand.Parse(args);
             string parsedCommandName = parseResult.CommandResult.Command.Name;
