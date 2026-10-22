@@ -16,11 +16,11 @@ internal static class SOSTestSkips
             "https://github.com/dotnet/diagnostics/issues/5491: concurrent dictionary data is unavailable in .NET 10 Unix dumps.");
     }
 
-    internal static void SkipDumpGcDataPinning(TestConfig config)
+    internal static void SkipDumpGcDataPerHeapStatistics(TestConfig config)
     {
         Assert.SkipWhen(
             config.CoreVersion is CoreVersion.Net8 or CoreVersion.Net9,
-            "https://github.com/dotnet/runtime/pull/119393: the dumpgcdata pinning-statistics regression was fixed in .NET 10.");
+            "https://github.com/dotnet/runtime/pull/119393: the dumpgcdata per-heap statistics regression was fixed in .NET 10.");
     }
 
     internal static void SkipDumpLog(TestConfig config)

@@ -175,8 +175,8 @@ public static class TargetCatalog
             Project: "DumpGCData",
             StopPoints: new[]
             {
-                new StopPoint("unpinned", StopKind.Snapshot, "DumpGCData.Program.AtUnpinned"),
-                new StopPoint("pinned", StopKind.Snapshot, "DumpGCData.Program.AtPinned"),
+                new StopPoint("beforeCollection", StopKind.Snapshot, "DumpGCData.Program.BeforeCollection"),
+                new StopPoint("afterCollection", StopKind.Snapshot, "DumpGCData.Program.AfterCollection"),
             },
             Flavors: Flavor.Core),
 
