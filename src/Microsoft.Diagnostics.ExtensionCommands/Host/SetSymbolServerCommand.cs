@@ -12,11 +12,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "loadsymbols", DefaultOptions = "--loadsymbols", Help = "Loads symbols for all modules.")]
     public class SetSymbolServerCommand : CommandBase
     {
-        [ServiceImport]
-        public ISymbolService SymbolService { get; set; }
+        public SetSymbolServerCommand(IServiceProvider services, ISymbolService symbolService, IModuleService moduleService = null)
+            : base(services)
+        {
+            SymbolService = symbolService;
+            ModuleService = moduleService;
+        }
 
-        [ServiceImport(Optional = true)]
-        public IModuleService ModuleService { get; set; }
+        public ISymbolService SymbolService { get; }
+
+        public IModuleService ModuleService { get; }
 
         [Option(Name = "--ms", Aliases = new string[] { "-ms" }, Help = "Use the public Microsoft symbol server.")]
         public bool MicrosoftSymbolServer { get; set; }
@@ -121,8 +126,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         [HelpInvoke]
-        public static string GetDetailedHelp(IHost host)
+        public static string GetDetailedHelp(IServiceProvider services)
         {
+            IHost host = services.GetRequiredService<IHost>();
             return host.HostType switch
             {
                 HostType.DbgEng => s_detailedHelpTextDbgEng,

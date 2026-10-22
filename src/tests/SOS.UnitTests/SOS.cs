@@ -489,17 +489,6 @@ public class SOSScenarioTests
 
     private ITestOutputHelper Output { get; set; }
 
-    [Theory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.TestExtensions", MemberType = typeof(SOSTestHelpers))]
-    public async Task TestExtensions(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "LineNums",
-            scriptName: "TestExtensions.script",
-            Output,
-            testName: "SOS.TestExtensions");
-    }
-
     [Theory, MemberData(nameof(SOSTestHelpers.GetConfigurations), "TestName", "SOS.WebApp3", MemberType = typeof(SOSTestHelpers))]
     public async Task WebApp3(TestConfiguration config)
     {

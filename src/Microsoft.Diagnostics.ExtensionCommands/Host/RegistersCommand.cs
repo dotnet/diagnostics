@@ -9,11 +9,16 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "registers", Aliases = new string[] { "r" }, Help = "Displays the thread's registers.")]
     public class RegistersCommand : CommandBase
     {
-        [ServiceImport]
-        public IThreadService ThreadService { get; set; }
+        public RegistersCommand(IServiceProvider services, IThreadService threadService, IThread currentThread = null)
+            : base(services)
+        {
+            ThreadService = threadService;
+            CurrentThread = currentThread;
+        }
 
-        [ServiceImport(Optional = true)]
-        public IThread CurrentThread { get; set; }
+        public IThreadService ThreadService { get; }
+
+        public IThread CurrentThread { get; }
 
         [Option(Name = "--verbose", Aliases = new string[] { "-v" }, Help = "Displays more details.")]
         public bool Verbose { get; set; }

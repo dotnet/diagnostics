@@ -12,7 +12,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// ClrMD runtime provider implementation
     /// </summary>
-    [ProviderExport(Type = typeof(IRuntimeProvider))]
     public class RuntimeProvider : IRuntimeProvider
     {
         private readonly IServiceProvider _services;

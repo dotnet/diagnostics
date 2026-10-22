@@ -12,18 +12,19 @@ namespace Microsoft.Diagnostics.Tools.Dump
     [Command(Name = "sos", Aliases = new string[] { "ext" }, Help = "Executes various SOS debugging commands.")]
     public class SOSCommand : CommandBase
     {
-        [ServiceImport]
-        public CommandService CommandService { get; set; }
+        public SOSCommand(IServiceProvider services, CommandService commandService, SOSHost sosHost = null)
+            : base(services)
+        {
+            CommandService = commandService;
+            SOSHost = sosHost;
+        }
 
-        [ServiceImport(Optional = true)]
-        public SOSHost SOSHost { get; set; }
+        public CommandService CommandService { get; }
+
+        public SOSHost SOSHost { get; }
 
         [Argument(Name = "command_and_arguments", Help = "SOS command and arguments.")]
         public string[] Arguments { get; set; }
-
-        public SOSCommand()
-        {
-        }
 
         public override void Invoke()
         {

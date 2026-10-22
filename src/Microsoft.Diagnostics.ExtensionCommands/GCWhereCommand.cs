@@ -14,8 +14,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "gcwhere", Aliases = new[] { "GCWhere" }, Help = "Displays the location in the GC heap of the specified address.")]
     public class GCWhereCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
+        public GCWhereCommand(IServiceProvider services, IMemoryService memoryService)
+            : base(services)
+        {
+            MemoryService = memoryService;
+        }
+
+        public IMemoryService MemoryService { get; }
 
         [Argument(Help = "The address on the GC heap to list near objects")]
         public string Address { get; set; }

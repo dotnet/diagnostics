@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
@@ -17,8 +18,18 @@ namespace SOS.Hosting;
 /// </summary>
 public sealed class HostAssetResolver : IHostAssetResolver
 {
-    private HostAssetResolver(string nativeBinariesDirectory)
+    public HostAssetResolver(IServiceProvider services)
     {
+        if (services is null)
+        {
+            throw new ArgumentNullException(nameof(services));
+        }
+
+        string nativeBinariesDirectory = services.GetService<SOSLibrary.ISOSModule>()?.SOSPath;
+        if (string.IsNullOrEmpty(nativeBinariesDirectory))
+        {
+            nativeBinariesDirectory = SOSPackageLayout.GetNativeBinariesDirectory();
+        }
         NativeBinariesDirectory = nativeBinariesDirectory;
     }
 
@@ -43,19 +54,5 @@ public sealed class HostAssetResolver : IHostAssetResolver
     public string GetCDacPath()
     {
         return Path.Combine(NativeBinariesDirectory, s_cDACBinaryName);
-    }
-
-    [ServiceExport(Scope = ServiceScope.Global)]
-    public static IHostAssetResolver Create([ServiceImport(Optional = true)] SOSLibrary.ISOSModule sosModule)
-    {
-        // A native debugger host that loaded sos for us is the authoritative source for where
-        // the native binaries (and the cDAC next to them) live. Otherwise fall back to this
-        // tool's package layout.
-        string nativeBinariesDirectory = sosModule?.SOSPath;
-        if (string.IsNullOrEmpty(nativeBinariesDirectory))
-        {
-            nativeBinariesDirectory = SOSPackageLayout.GetNativeBinariesDirectory();
-        }
-        return new HostAssetResolver(nativeBinariesDirectory);
     }
 }

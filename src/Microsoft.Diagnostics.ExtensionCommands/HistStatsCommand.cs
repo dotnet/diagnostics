@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
@@ -10,8 +11,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "histstats", Aliases = new[] { "HistStats" }, Help = "Displays stress log stats.")]
     public sealed class HistStatsCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public GCHistory History { get; set; }
+        public HistStatsCommand(IServiceProvider services, GCHistory history)
+            : base(services)
+        {
+            History = history;
+        }
+
+        public GCHistory History { get; }
 
         public override void Invoke()
         {

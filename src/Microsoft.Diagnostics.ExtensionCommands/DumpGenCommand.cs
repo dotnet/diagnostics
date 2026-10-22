@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
@@ -10,6 +11,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumpgen", Aliases = new string[] { "dg" }, Help = "Displays heap content for the specified generation.")]
     public class DumpGenCommand : ClrMDHelperCommandBase
     {
+        public DumpGenCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         private const string statsHeader32bits = "      MT    Count    TotalSize Class Name";
         private const string statsHeader64bits = "              MT    Count    TotalSize Class Name";
         private const string methodTableHeader32bits = " Address       MT     Size";

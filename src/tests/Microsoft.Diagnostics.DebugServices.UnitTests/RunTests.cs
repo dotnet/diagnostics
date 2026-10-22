@@ -20,6 +20,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     [Command(Name = "runtests", Help = "Runs the debug services xunit tests.")]
     public class RunTestsCommand : CommandBase, ITestOutputHelper
     {
+        public RunTestsCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         [Argument(Help = "Test name: debugservices, clrma or analyze.")]
         public string[] TestNames { get; set; } = Array.Empty<string>();
 

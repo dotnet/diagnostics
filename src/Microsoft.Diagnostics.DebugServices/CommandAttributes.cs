@@ -90,6 +90,8 @@ namespace Microsoft.Diagnostics.DebugServices
 
     /// <summary>
     /// Marks the function to invoke to execute the command.
+    /// Parameters are resolved from the current IServiceProvider; IServiceProvider parameters receive the provider itself.
+    /// Unavailable services use declared parameter defaults, or cause an error if no default is declared.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     public class CommandInvokeAttribute : Attribute
@@ -97,8 +99,10 @@ namespace Microsoft.Diagnostics.DebugServices
     }
 
     /// <summary>
-    /// Marks the function to invoke to return the alternate help for command. The function returns
-    /// a string. The Argument and Option properties of the command are not set.
+    /// Marks the function to invoke to return the alternate help for command. The function returns a string.
+    /// Parameters are resolved from the current IServiceProvider; IServiceProvider parameters receive the provider itself.
+    /// Unavailable services use declared parameter defaults, or cause an error if no default is declared.
+    /// Command-line arguments and options are not applied; declared defaults are preserved.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     public class HelpInvokeAttribute : Attribute
@@ -106,8 +110,10 @@ namespace Microsoft.Diagnostics.DebugServices
     }
 
     /// <summary>
-    /// Marks the function to invoke to filter a command. The function returns a bool; true if
-    /// the command is supported. The Argument and Option properties of the command are not set.
+    /// Marks the function to invoke to filter a command. The function returns a bool; true if the command is supported.
+    /// Parameters are resolved from the current IServiceProvider; IServiceProvider parameters receive the provider itself.
+    /// Unavailable services use declared parameter defaults, or cause an error if no default is declared.
+    /// Command-line arguments and options are not applied; declared defaults are preserved.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method)]
     public class FilterInvokeAttribute : Attribute

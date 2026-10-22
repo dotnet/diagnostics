@@ -9,23 +9,26 @@ using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [ServiceExport(Scope = ServiceScope.Runtime)]
     public class LiveObjectService
     {
         private HashSet<ulong> _liveObjs;
+
+        public LiveObjectService(RootCacheService rootCache, ClrRuntime runtime, IConsoleService console)
+        {
+            RootCache = rootCache;
+            Runtime = runtime;
+            Console = console;
+        }
 
         public int UpdateSeconds { get; set; } = 15;
 
         public bool PrintWarning { get; set; } = true;
 
-        [ServiceImport]
-        public RootCacheService RootCache { get; set; }
+        public RootCacheService RootCache { get; }
 
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
+        public ClrRuntime Runtime { get; }
 
-        [ServiceImport]
-        public IConsoleService Console { get; set; }
+        public IConsoleService Console { get; }
 
         public bool IsLive(ClrObject obj) => IsLive(obj.Address);
 

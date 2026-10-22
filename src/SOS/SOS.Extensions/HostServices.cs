@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
@@ -132,7 +131,6 @@ namespace SOS.Extensions
 
             _host = new HostForHostServices(this);
             _commandService = new CommandService(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ">!sos" : null);
-            _host.ServiceManager.NotifyExtensionLoad.Register(_commandService.AddCommands);
 
             _host.OnTargetCreate.Register((target) => {
                 target.OnDestroyEvent.Register(() => {
@@ -216,24 +214,16 @@ namespace SOS.Extensions
                 FileLoggingConsoleService fileLoggingConsoleService = new(consoleService);
                 DiagnosticLoggingService.Instance.SetConsole(consoleService, fileLoggingConsoleService);
 
-                // Register all the services and commands in the SOS.Extensions (this) assembly
-                _host.ServiceManager.RegisterAssembly(typeof(HostServices).Assembly);
+                // Register the default modules
+                _host.ServiceManager.RegisterModule(new SOSHostingModule());
+                _host.ServiceManager.RegisterModule(new AnalysisModule());
 
-                // Register all the services and commands in the SOS.Hosting assembly
-                _host.ServiceManager.RegisterAssembly(typeof(SOSHost).Assembly);
+                // Register additional diagnostic modules from the catalog
+                _host.ServiceManager.RegisterModules(DiagnosticsModuleCatalog.GetFactories());
 
-                // Register all the services and commands in the Microsoft.Diagnostics.ExtensionCommands assembly
-                _host.ServiceManager.RegisterAssembly(typeof(ClrMDHelper).Assembly);
-
-                // Display any extension assembly loads on console
-                _host.ServiceManager.NotifyExtensionLoad.Register((Assembly assembly) => fileLoggingConsoleService.WriteLine($"Loading extension {assembly.Location}"));
-                _host.ServiceManager.NotifyExtensionLoadFailure.Register((Exception ex) => fileLoggingConsoleService.WriteLine(ex.Message));
-
-                // Load any extra extensions in the search path
-                _host.ServiceManager.LoadExtensions();
-
-                // Loading extensions or adding service factories not allowed after this point.
+                // Adding service factories is not allowed after this point.
                 ServiceContainer serviceContainer = _host.CreateServiceContainer();
+                _host.ServiceManager.RegisterCommands(_commandService);
 
                 // Add all the global services to the global service container
                 serviceContainer.AddService<SOSLibrary.ISOSModule>(this);

@@ -15,6 +15,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumphttp", Aliases = new string[] { "DumpHttp" }, Help = "Displays information about HTTP requests.")]
     public sealed class DumpHttpCommand : ClrRuntimeCommandBase
     {
+        public DumpHttpCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         // Field names to get System.Net.Http.HttpRequestMessage.Method
         private static readonly string[] s_httpMethodFieldNames =["_method", "method"];
 

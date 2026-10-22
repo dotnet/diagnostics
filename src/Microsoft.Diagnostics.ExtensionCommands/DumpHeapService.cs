@@ -15,17 +15,20 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     /// A class to print output similar in the same way !dumpheap does to share the
     /// printing implementation and format.
     /// </summary>
-    [ServiceExport(Scope = ServiceScope.Runtime)]
     public class DumpHeapService
     {
         private const ulong FragmentationBlockMinSize = 512 * 1024;
         private const char StringReplacementCharacter = '.';
 
-        [ServiceImport]
-        public IConsoleService Console { get; set; }
+        public DumpHeapService(IConsoleService console, IMemoryService memory)
+        {
+            Console = console;
+            Memory = memory;
+        }
 
-        [ServiceImport]
-        public IMemoryService Memory { get; set; }
+        public IConsoleService Console { get; }
+
+        public IMemoryService Memory { get; }
 
         public enum DisplayKind
         {

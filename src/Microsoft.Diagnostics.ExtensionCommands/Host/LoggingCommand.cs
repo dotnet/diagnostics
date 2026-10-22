@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Microsoft.Diagnostics.DebugServices;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
@@ -8,8 +9,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "logging", Help = "Enables/disables internal diagnostic logging.")]
     public class LoggingCommand : CommandBase
     {
-        [ServiceImport(Optional = true)]
-        public IDiagnosticLoggingService DiagnosticLoggingService { get; set; }
+        public LoggingCommand(IServiceProvider services, IDiagnosticLoggingService diagnosticLoggingService = null)
+            : base(services)
+        {
+            DiagnosticLoggingService = diagnosticLoggingService;
+        }
+
+        public IDiagnosticLoggingService DiagnosticLoggingService { get; }
 
         [Argument(Name = "path", Help = "Log file path.")]
         public string FilePath { get; set; }

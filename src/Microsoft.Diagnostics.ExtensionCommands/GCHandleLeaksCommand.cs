@@ -13,20 +13,29 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "gchandleleaks", Help = "Reports strong and pinned GCHandles that could not be found in a scan of process memory.")]
     public sealed class GCHandleLeaksCommand : CommandBase
     {
+        public GCHandleLeaksCommand(IServiceProvider services, ClrRuntime runtime, IMemoryService memoryService, NativeAddressHelper addressHelper = null)
+            : base(services)
+        {
+            Runtime = runtime;
+            AddressHelper = addressHelper;
+            MemoryService = memoryService;
+        }
+
         private const int BufferSize = 64 * 1024;
 
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
+        public ClrRuntime Runtime { get; }
 
-        [ServiceImport(Optional = true)]
-        public NativeAddressHelper AddressHelper { get; set; }
+        public NativeAddressHelper AddressHelper { get; }
 
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
+        public IMemoryService MemoryService { get; }
 
         [FilterInvoke(Message = "The memory region service does not exist. This command is only supported under windbg/cdb debuggers.")]
-        public static bool FilterInvoke([ServiceImport(Optional = true)] ClrRuntime runtime, [ServiceImport(Optional = true)] NativeAddressHelper helper)
-            => runtime != null && helper != null;
+        public static bool FilterInvoke(IServiceProvider services)
+        {
+            ClrRuntime runtime = services.GetService<ClrRuntime>();
+            NativeAddressHelper helper = services.GetService<NativeAddressHelper>();
+            return runtime != null && helper != null;
+        }
 
         public override void Invoke()
         {

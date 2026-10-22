@@ -16,14 +16,19 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "findpointersin", Help = "Finds pointers to the GC heap within the given memory regions.")]
     public sealed class FindPointersInCommand : CommandBase
     {
-        [ServiceImport]
-        public IModuleService ModuleService { get; set; }
+        public FindPointersInCommand(IServiceProvider services, IModuleService moduleService, ClrRuntime runtime, NativeAddressHelper addressHelper)
+            : base(services)
+        {
+            ModuleService = moduleService;
+            Runtime = runtime;
+            AddressHelper = addressHelper;
+        }
 
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
+        public IModuleService ModuleService { get; }
 
-        [ServiceImport]
-        public NativeAddressHelper AddressHelper { get; set; }
+        public ClrRuntime Runtime { get; }
+
+        public NativeAddressHelper AddressHelper { get; }
 
         [Option(Name = "--showAllObjects", Aliases = new string[] { "-a", "--all" }, Help = "Show all objects instead of only objects Pinned on the heap.")]
         public bool ShowAllObjects { get; set; }
@@ -63,7 +68,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         [FilterInvoke(Message = "The memory region service does not exists. This command is only supported under windbg/cdb debuggers.")]
-        public static bool FilterInvoke([ServiceImport(Optional = true)] ClrRuntime runtime, [ServiceImport(Optional = true)] NativeAddressHelper helper) => runtime != null && helper != null;
+        public static bool FilterInvoke(IServiceProvider services)
+        {
+            ClrRuntime runtime = services.GetService<ClrRuntime>();
+            NativeAddressHelper helper = services.GetService<NativeAddressHelper>();
+            return runtime != null && helper != null;
+        }
 
         private void PrintPointers(bool pinnedOnly, params string[] memTypes)
         {

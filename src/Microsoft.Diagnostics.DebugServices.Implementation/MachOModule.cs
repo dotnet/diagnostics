@@ -23,7 +23,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <summary>
         /// Creates a MachOModule service instance of the downloaded or local (if exists) module file.
         /// </summary>
-        [ServiceExport(Scope = ServiceScope.Module)]
         public static MachOModule CreateMachOModule(ISymbolService symbolService, IModule module)
         {
             // Skip modules that have no build id, are not macOS, or are part of the dyld shared cache.

@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Diagnostics.DebugServices;
@@ -13,6 +14,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumprequests", Aliases = new string[] { "DumpRequests" }, Help = "Displays all currently active incoming HTTP requests.")]
     public class DumpRequestsCommand : ClrRuntimeCommandBase
     {
+        public DumpRequestsCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         public override void Invoke()
         {
             List<(ulong Address, string Method, string Protocol, string Url)> requests = new();

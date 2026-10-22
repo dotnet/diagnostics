@@ -97,16 +97,6 @@
       <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
     </Option>
     <!--
-        SOS.TestExtensions
-      -->
-    <Option Condition="'$(RuntimeVersionLatest)' != ''">
-      <TestName>SOS.TestExtensions</TestName>
-      <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-      <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
-      <DotNetDiagnosticExtensions>$(ArtifactsDir)/bin/TestExtension/$(TargetConfiguration)/netstandard2.0/TestExtension.dll</DotNetDiagnosticExtensions>
-      <SetHostRuntime>$(DotNetRoot)/shared/Microsoft.NETCore.App/$(RuntimeFrameworkVersion)</SetHostRuntime>
-    </Option>
-    <!--
         SOS.StackAndOtherTests (cli because tested with embedded, portable PDBs and single-file)
       -->
     <Option>

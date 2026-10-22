@@ -9,7 +9,6 @@ using Microsoft.Diagnostics.Runtime.Utilities;
 
 namespace SOS.Hosting
 {
-    [ServiceExport(Scope = ServiceScope.Target)]
     public sealed unsafe class TargetWrapper : COMCallableIUnknown, IDisposable
     {
         // Must be the same as ITarget::OperatingSystem

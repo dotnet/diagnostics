@@ -10,7 +10,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Runtime service implementation
     /// </summary>
-    [ServiceExport(Type = typeof(IRuntimeService), Scope = ServiceScope.Target)]
     public class RuntimeService : IRuntimeService, IDisposable
     {
         private readonly IServiceProvider _services;
@@ -53,9 +52,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             if (_runtimes is null)
             {
                 _runtimes = new List<IRuntime>();
-                foreach (ServiceFactory factory in _serviceManager.EnumerateProviderFactories(typeof(IRuntimeProvider)))
+                foreach (Func<IServiceProvider, IRuntimeProvider> factory in _serviceManager.EnumerateProviderFactories<IRuntimeProvider>())
                 {
-                    IRuntimeProvider provider = (IRuntimeProvider)factory(_services);
+                    IRuntimeProvider provider = factory(_services);
                     _runtimes.AddRange(provider.EnumerateRuntimes(_runtimes.Count, flags));
                 }
             }

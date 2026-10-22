@@ -13,12 +13,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = CommandName, Aliases = new[] { "VerifyHeap" }, Help = "Searches the managed heap for memory corruption..")]
     public class VerifyHeapCommand : ClrRuntimeCommandBase
     {
+        public VerifyHeapCommand(IServiceProvider services, IMemoryService memoryService)
+            : base(services)
+        {
+            MemoryService = memoryService;
+        }
+
         private const string CommandName = "verifyheap";
 
         private int _totalObjects;
 
-        [ServiceImport]
-        public IMemoryService MemoryService { get; set; }
+        public IMemoryService MemoryService { get; }
 
         [Option(Name = "-heap")]
         public int GCHeap { get; set; } = -1;

@@ -13,6 +13,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "dumpobjgcrefs", Help = "A helper command to implement !dumpobj -refs")]
     public sealed class DumpObjGCRefsCommand : ClrRuntimeCommandBase
     {
+        public DumpObjGCRefsCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         private readonly StringBuilderPool _stringBuilderPool = new(260);
 
         [Argument(Name = "object")]

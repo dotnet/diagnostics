@@ -26,8 +26,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             _serviceManager = new ServiceManager();
 
-            // Register all the services and commands in the Microsoft.Diagnostics.DebugServices.Implementation assembly
-            _serviceManager.RegisterAssembly(typeof(Target).Assembly);
+            // Register the core services and commands from this assembly.
+            _serviceManager.RegisterModule(new CoreModule());
         }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// </summary>
         public ServiceContainer CreateServiceContainer()
         {
-            // Loading extensions or adding service factories not allowed after this point.
+            // Adding service factories is not allowed after this point.
             _serviceManager.FinalizeServices();
 
             _serviceContainer = _serviceManager.CreateServiceContainer(ServiceScope.Global, parent: null);

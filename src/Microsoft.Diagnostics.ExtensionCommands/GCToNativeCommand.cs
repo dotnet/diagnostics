@@ -17,17 +17,22 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "gctonative", Help = "Finds GC objects which point to the given native memory ranges.")]
     public sealed class GCToNativeCommand : CommandBase
     {
+        public GCToNativeCommand(IServiceProvider services, NativeAddressHelper addressHelper, ClrRuntime runtime)
+            : base(services)
+        {
+            AddressHelper = addressHelper;
+            Runtime = runtime;
+        }
+
         [Argument(Help = "The types of memory to search the GC heap for.")]
         public string[] MemoryTypes { get; set; }
 
         [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Show the complete list of objects and not just a summary.")]
         public bool ShowAll { get; set; }
 
-        [ServiceImport]
-        public NativeAddressHelper AddressHelper { get; set; }
+        public NativeAddressHelper AddressHelper { get; }
 
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
+        public ClrRuntime Runtime { get; }
 
         private int Width
         {
@@ -59,7 +64,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         }
 
         [FilterInvoke(Message = "The memory region service does not exists. This command is only supported under windbg/cdb debuggers.")]
-        public static bool FilterInvoke([ServiceImport(Optional = true)] ClrRuntime runtime, [ServiceImport(Optional = true)] NativeAddressHelper helper) => runtime != null && helper != null;
+        public static bool FilterInvoke(IServiceProvider services)
+        {
+            ClrRuntime runtime = services.GetService<ClrRuntime>();
+            NativeAddressHelper helper = services.GetService<NativeAddressHelper>();
+            return runtime != null && helper != null;
+        }
 
         public void PrintGCPointersToMemory(bool showAll, params string[] memoryTypes)
         {

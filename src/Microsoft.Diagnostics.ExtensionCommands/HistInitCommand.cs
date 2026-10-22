@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.IO;
 using Microsoft.Diagnostics.DebugServices;
 
@@ -9,8 +10,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "histinit", Aliases = new[] { "HistInit" }, Help = "Initializes the SOS structures from the stress log saved in the debuggee.")]
     public sealed class HistInitCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public GCHistory History { get; set; }
+        public HistInitCommand(IServiceProvider services, GCHistory history)
+            : base(services)
+        {
+            History = history;
+        }
+
+        public GCHistory History { get; }
 
         public override void Invoke()
         {

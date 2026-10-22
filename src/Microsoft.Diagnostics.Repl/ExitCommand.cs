@@ -11,7 +11,7 @@ namespace Microsoft.Diagnostics.Repl
     {
         private readonly Action _exit;
 
-        public ExitCommand(Action exit)
+        public ExitCommand(IServiceProvider services, Action exit) : base(services)
         {
             _exit = exit;
         }

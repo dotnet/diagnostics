@@ -29,15 +29,9 @@ namespace SOS.Hosting
         private CLRCreateInstanceDelegate _clrCreateInstance;
         private ICLRDebugging _dataAccessClrDebugging;
 
-        private ClrDataProcessActivator(IHostAssetResolver assetResolver)
+        public ClrDataProcessActivator(IHostAssetResolver assetResolver)
         {
             _assetResolver = assetResolver;
-        }
-
-        [ServiceExport(Scope = ServiceScope.Global)]
-        public static IClrDataProcessActivator Create(IHostAssetResolver assetResolver)
-        {
-            return new ClrDataProcessActivator(assetResolver);
         }
 
         public int CreateClrDataProcessFromCDac(IRuntime runtime, out IClrDataProcess clrDataProcess)
