@@ -187,6 +187,7 @@ public static class SnapshotStore
         Directory.CreateDirectory(RepoLayout.SymbolCache);
         psi.Environment["_NT_SYMBOL_PATH"] = RepoLayout.SymbolCache;
         ApplyGcType(psi, gcType);
+        ApplyTargetEnvironment(psi, target);
 
         using Process p = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start Capturer");
         string stdout = p.StandardOutput.ReadToEnd();
@@ -225,6 +226,7 @@ public static class SnapshotStore
         ApplyRuntimeRoot(psi, flavor);
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
+        ApplyTargetEnvironment(psi, target);
 
         using Process process = Process.Start(psi)
             ?? throw new InvalidOperationException("Failed to launch target");
@@ -324,6 +326,17 @@ public static class SnapshotStore
         }
     }
 
+    private static void ApplyTargetEnvironment(ProcessStartInfo psi, TargetDefinition target)
+    {
+        if (target.EnvironmentVariables is not null)
+        {
+            foreach ((string name, string value) in target.EnvironmentVariables)
+            {
+                psi.Environment[name] = value;
+            }
+        }
+    }
+
     /// <summary>
     /// The <c>createdump</c>/<c>DOTNET_DbgMiniDumpType</c> value for a dump kind: Full=4, Heap=2, Mini=1.
     /// </summary>
@@ -359,6 +372,7 @@ public static class SnapshotStore
         ApplyRuntimeRoot(psi, flavor);
         ApplyMacOsDumpConfig(psi);
         ApplyGcType(psi, gcType);
+        ApplyTargetEnvironment(psi, target);
 
         using Process process = Process.Start(psi)
             ?? throw new InvalidOperationException("Failed to launch target");

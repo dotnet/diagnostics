@@ -18,6 +18,7 @@ public sealed class DiagnosticCommandTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
     public static TheoryData<TestConfig> DotnetDumpMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.DotnetDump);
+    public static TheoryData<TestConfig> DumpLogMatrix => TestConfig.BuildMatrix([TargetCatalog.StressLog], liveness: Liveness.AllValid);
     public static TheoryData<TestConfig> PinningMatrix => TestConfig.BuildMatrix(
         [TargetCatalog.DumpGcData],
         Flavor.Core,
@@ -27,7 +28,11 @@ public sealed class DiagnosticCommandTests
     // clrma drives the native CLRMA provider, which is only surfaced by the dbgeng (cdb) and managed
     // (dotnet-dump) hosts. The lldb SOS plugin never registered it (true of the legacy suite too — clrma
     // ran only under the dotnet-dump host there), so lldb is excluded from the matrix rather than skipped.
-    public static TheoryData<TestConfig> ClrmaMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.Cdb | Host.DotnetDump);
+    public static TheoryData<TestConfig> ClrmaMatrix => TestConfig.BuildMatrix(
+        [TargetCatalog.Scenarios],
+        Flavor.AllValid,
+        Host.Cdb | Host.DotnetDump,
+        hostRuntime: HostRuntime.AllValid);
     public static TheoryData<TestConfig> ClrmaExceptionMatrix =>
         TestConfig.BuildMatrix([TargetCatalog.NestedException], Flavor.AllValid, Host.DotnetDump, dumpKind: DumpKind.All);
 
@@ -97,6 +102,27 @@ public sealed class DiagnosticCommandTests
         {
             target.Sos($"logopen {logFile}").AssertContains("logging to");
             target.Sos("logclose");
+        }
+        finally
+        {
+            File.Delete(logFile);
+        }
+    }
+
+    [SosTheory]
+    [MemberData(nameof(DumpLogMatrix))]
+    public async Task DumpLog_DumpsStressLog(TestConfig config)
+    {
+        SOSTestSkips.SkipDumpLog(config);
+
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToFirstStop();
+
+        string logFile = Path.Combine(Path.GetTempPath(), $"stresslog-{Guid.NewGuid():N}.txt");
+        try
+        {
+            target.Sos($"dumplog \"{logFile}\"").AssertContains("SUCCESS: Stress log dumped");
+            Assert.True(File.Exists(logFile), $"dumplog did not create '{logFile}'.");
         }
         finally
         {

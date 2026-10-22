@@ -44,6 +44,17 @@ public sealed class TestConfigValidityTests
         Assert.True(TestConfig.IsDacSupported(config with { Flavor = Flavor.SingleFile }));
     }
 
+    [Fact]
+    public void HostRuntimeDefaultsAndValidityAreCorrect()
+    {
+        TestConfig config = Config();
+
+        Assert.Equal(HostRuntime.Managed, config.HostRuntime);
+        Assert.True(TestConfig.IsValid(config with { HostRuntime = HostRuntime.None }));
+        Assert.False(TestConfig.IsValid(config with { Host = Host.DotnetDump, HostRuntime = HostRuntime.None }));
+        Assert.EndsWith("/nohost", (config with { HostRuntime = HostRuntime.None }).ToString());
+    }
+
     [Theory]
     [InlineData(Flavor.Core, "linux-musl-x64", true)]
     [InlineData(Flavor.SingleFile, "linux-x64", true)]

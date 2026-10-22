@@ -129,66 +129,6 @@
           </Options>
         </Option>
         <!--
-            SOS.StackAndOtherTests (cli because tested with full, embedded and portable PDBs)
-          -->
-        <Option>
-          <DebuggeeBuildProcess>cli</DebuggeeBuildProcess>
-          <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees</DebuggeeBuildRoot>
-          <TestName>SOS.StackAndOtherTests</TestName>
-          <Options>
-            <Option Condition="'$(TestSingleFile)' == 'true'">
-              <Options>
-                <Option Condition="'$(RuntimeVersionLatest)' != ''">
-                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-                  <PublishSingleFile>true</PublishSingleFile>
-                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-                  <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-                  <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
-                  <BuildType>Nightly</BuildType>
-                </Option>
-                <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-                  <PublishSingleFile>true</PublishSingleFile>
-                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-                  <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
-                  <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
-                </Option>
-                <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-                  <PublishSingleFile>true</PublishSingleFile>
-                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-                  <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
-                  <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
-                </Option>
-                <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-                  <DebuggeeBuildRoot>$(ArtifactsDir)\Debuggees\SingleFile</DebuggeeBuildRoot>
-                  <PublishSingleFile>true</PublishSingleFile>
-                  <BuildProjectRuntime>$(TargetRid)</BuildProjectRuntime>
-                  <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
-                  <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
-                </Option>
-              </Options>
-            </Option>
-            <Option Condition="'$(RuntimeVersionLatest)' != ''">
-              <RuntimeFrameworkVersion>$(RuntimeVersionLatest)</RuntimeFrameworkVersion>
-              <BuildProjectFramework>$(TargetFrameworkLatest)</BuildProjectFramework>
-              <BuildType>Nightly</BuildType>
-            </Option>
-            <Option Condition="'$(RuntimeVersionServicing1)' != ''">
-              <RuntimeFrameworkVersion>$(RuntimeVersionServicing1)</RuntimeFrameworkVersion>
-              <BuildProjectFramework>$(TargetFrameworkServicing1)</BuildProjectFramework>
-            </Option>
-            <Option Condition="'$(RuntimeVersionServicing2)' != ''">
-              <RuntimeFrameworkVersion>$(RuntimeVersionServicing2)</RuntimeFrameworkVersion>
-              <BuildProjectFramework>$(TargetFrameworkServicing2)</BuildProjectFramework>
-            </Option>
-            <Option Condition="'$(RuntimeVersionServicing3)' != ''">
-              <RuntimeFrameworkVersion>$(RuntimeVersionServicing3)</RuntimeFrameworkVersion>
-              <BuildProjectFramework>$(TargetFrameworkServicing3)</BuildProjectFramework>
-            </Option>
-          </Options>
-        </Option>
-        <!--
             SOS.WebApp3 and SOS.DualRuntimes (runs on 3.1 and latest aspnetcore)
           -->
         <Option Condition="'$(TestWebApp3)' == 'true'">
@@ -258,9 +198,6 @@
     <Option Condition="'$(TestDesktop)' == 'true'">
       <Options>
         <Option>
-        </Option>
-        <Option>
-          <TestName>SOS.StackAndOtherTests</TestName>
         </Option>
         <Option>
           <TestName>DotnetDumpCommands</TestName>

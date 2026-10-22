@@ -27,7 +27,15 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
 
     public string Name { get; }
 
-    private ChildEngineClient(string name, string mode, IReadOnlyList<string> modeArgs, string? dacDir, Dac dac, Flavor flavor)
+    private ChildEngineClient(
+        string name,
+        string mode,
+        IReadOnlyList<string> modeArgs,
+        string? dacDir,
+        Dac dac,
+        Flavor flavor,
+        HostRuntime hostRuntime,
+        IReadOnlyDictionary<string, string>? environmentVariables = null)
     {
         Name = name;
 
@@ -56,7 +64,7 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         // For self-contained single-file the runtime (coreclr.dll) and the DAC (mscordaccore.dll) are
         // bundled in the exe, so dbgeng can't find them on disk. Point it at the runtime pack that has
         // both: on the symbol/image path so dbgeng can index coreclr, and via SOSHARNESS_DAC_DIR so the
-        // EngineHost runs `.cordll -lp <dir>` (DAC load path) before `.load sos`.
+        // EngineHost configures both dbgeng (`.cordll -lp`) and SOS (`!setclrpath`) DAC discovery.
         if (!string.IsNullOrEmpty(dacDir))
         {
             symbolPath += ";" + dacDir;
@@ -65,6 +73,7 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         }
 
         psi.Environment["_NT_SYMBOL_PATH"] = symbolPath;
+        psi.Environment[DbgEngHostBase.HostRuntimeEnvironmentVariable] = hostRuntime.ToString();
 
         if (mode == "live")
         {
@@ -91,6 +100,14 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
             psi.Environment["DOTNET_MULTILEVEL_LOOKUP"] = "0";
         }
 
+        if (environmentVariables is not null)
+        {
+            foreach ((string variable, string value) in environmentVariables)
+            {
+                psi.Environment[variable] = value;
+            }
+        }
+
         _process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start EngineHost");
         _stdin = _process.StandardInput;
         _stderr = _process.StandardError.ReadToEndAsync();
@@ -107,12 +124,24 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
     }
 
     /// <summary>A child engine over a crash/snapshot dump.</summary>
-    public static ChildEngineClient ForDump(string hostName, string dumpPath, string? dacDir = null, Dac dac = Dac.Legacy) =>
-        new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core);
+    public static ChildEngineClient ForDump(
+        string hostName,
+        string dumpPath,
+        string? dacDir = null,
+        Dac dac = Dac.Legacy,
+        HostRuntime hostRuntime = HostRuntime.Managed) =>
+        new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core, hostRuntime);
 
     /// <summary>A live child engine that launches the target (parked at the loader break, SOS loaded).</summary>
-    public static ChildEngineClient ForLive(string hostName, string exePath, string? dacDir = null, Dac dac = Dac.Legacy, Flavor flavor = Flavor.Core) =>
-        new(hostName, "live", new[] { exePath }, dacDir, dac, flavor);
+    public static ChildEngineClient ForLive(
+        string hostName,
+        string exePath,
+        string? dacDir = null,
+        Dac dac = Dac.Legacy,
+        Flavor flavor = Flavor.Core,
+        HostRuntime hostRuntime = HostRuntime.Managed,
+        IReadOnlyDictionary<string, string>? environmentVariables = null) =>
+        new(hostName, "live", new[] { exePath }, dacDir, dac, flavor, hostRuntime, environmentVariables);
 
     public void LoadSos()
     {

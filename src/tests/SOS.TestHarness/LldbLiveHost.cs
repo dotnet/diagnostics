@@ -31,6 +31,7 @@ public sealed class LldbLiveHost : LldbHostBase, ILiveDebuggerHost
     private readonly Flavor _flavor;
     private readonly Dac _dac;
     private readonly CoreVersion _coreVersion;
+    private readonly HostRuntime _hostRuntime;
 
     public override string Name => "lldb-live";
 
@@ -43,11 +44,18 @@ public sealed class LldbLiveHost : LldbHostBase, ILiveDebuggerHost
             ? TimeSpan.FromSeconds(s)
             : TimeSpan.FromSeconds(300);
 
-    public LldbLiveHost(string exePath, Flavor flavor, CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy)
+    public LldbLiveHost(
+        string exePath,
+        Flavor flavor,
+        CoreVersion coreVersion = CoreVersion.Net10,
+        Dac dac = Dac.Legacy,
+        HostRuntime hostRuntime = HostRuntime.Managed,
+        IReadOnlyDictionary<string, string>? environmentVariables = null)
     {
         _flavor = flavor;
         _dac = dac;
         _coreVersion = coreVersion;
+        _hostRuntime = hostRuntime;
 
         // The debuggee inherits the lldb process environment. Disable W^E so SOS's bpmd can patch JIT-ed
         // code (see dotnet/diagnostics#3126), matching what the legacy live lldb harness set. For a
@@ -71,6 +79,13 @@ public sealed class LldbLiveHost : LldbHostBase, ILiveDebuggerHost
                 psi.Environment["DOTNET_ROOT"] = RepoLayout.DotnetTestRoot;
                 psi.Environment["DOTNET_ROOT(x86)"] = RepoLayout.DotnetTestRoot;
                 psi.Environment["DOTNET_MULTILEVEL_LOOKUP"] = "0";
+            }
+            if (environmentVariables is not null)
+            {
+                foreach ((string variable, string value) in environmentVariables)
+                {
+                    psi.Environment[variable] = value;
+                }
             }
         }, diagnostics: new HostDiagnostics(Name));
 
@@ -100,7 +115,9 @@ public sealed class LldbLiveHost : LldbHostBase, ILiveDebuggerHost
     public override void LoadSos()
     {
         Run($"plugin load \"{ToolPaths.LldbPluginPath}\"");
-        Run($"sethostruntime \"{ToolPaths.HostRuntimeDirectory}\"");
+        Run(_hostRuntime == HostRuntime.None
+            ? "sethostruntime -none"
+            : $"sethostruntime \"{ToolPaths.HostRuntimeDirectory}\"");
 
         string? dacDir = _dac == Dac.CDac ? ToolPaths.CDacOverrideDirectory : null;
         dacDir ??= _flavor == Flavor.SingleFile ? ToolPaths.SingleFileDacDirectory(_coreVersion) : null;

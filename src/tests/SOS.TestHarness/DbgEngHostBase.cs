@@ -19,6 +19,8 @@ namespace SOS.TestHarness;
 /// </summary>
 public abstract class DbgEngHostBase : IDebuggerHost
 {
+    internal const string HostRuntimeEnvironmentVariable = "SOSHARNESS_HOSTRUNTIME";
+
     private readonly BlockingCollection<Action> _work = new();
     private readonly Thread _worker;
     private readonly StringBuilder _buffer = new();
@@ -109,7 +111,18 @@ public abstract class DbgEngHostBase : IDebuggerHost
 
         RunCore($".load {ToolPaths.SosPath}");
         VerifyOurSosLoaded();
-        DbgEngSosHost.Initialize();
+        if (Environment.GetEnvironmentVariable(HostRuntimeEnvironmentVariable) == HostRuntime.None.ToString())
+        {
+            RunCore("!sethostruntime -none");
+        }
+        else
+        {
+            DbgEngSosHost.Initialize();
+        }
+        if (!string.IsNullOrEmpty(dacDir))
+        {
+            RunCore($"!setclrpath {dacDir}");
+        }
 
         _sosLoaded = true;
     }
