@@ -97,11 +97,14 @@ public sealed class DbgEngLiveHost : DbgEngHostBase
     }
 
     /// <summary>
-    /// Run the process until it crashes (a second-chance exception break). Throws if it exits
-    /// cleanly without crashing. Used by the live <c>GoToCrash</c> path.
+    /// Run the process until it crashes. Most crashes stop on a second-chance exception; stack overflow is
+    /// fatal but dbgeng only reports its first-chance exception before the process exits. Throws if the
+    /// process exits cleanly without either stop. Used by the live <c>GoToCrash</c> path.
     /// </summary>
     public SosOutput RunToCrash()
     {
+        const uint StatusStackOverflow = 0xc00000fd;
+
         Invoke(() => {
             // Drop any bpmd breakpoints from earlier stop points so they don't break before the crash.
             RunCore("!bpmd -clearall");
@@ -116,9 +119,9 @@ public sealed class DbgEngLiveHost : DbgEngHostBase
 
                 if (status == DEBUG_STATUS.BREAK
                     && Control.GetLastEvent(out DEBUG_LAST_EVENT_INFO_EXCEPTION exception, out _, out _)
-                    && exception.FirstChance == 0)
+                    && (exception.FirstChance == 0 || exception.ExceptionRecord.ExceptionCode == StatusStackOverflow))
                 {
-                    return; // second-chance crash break
+                    return;
                 }
 
                 if (status == DEBUG_STATUS.NO_DEBUGGEE)

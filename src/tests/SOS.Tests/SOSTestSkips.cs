@@ -31,6 +31,21 @@ internal static class SOSTestSkips
             "See https://github.com/dotnet/diagnostics/issues/5757.");
     }
 
+    internal static void SkipStackOverflowDump(TestConfig config)
+    {
+        if (config.Liveness != Liveness.Dump)
+            return;
+
+        Assert.SkipWhen(
+            config.Flavor == Flavor.SingleFile,
+            "SingleFile dumps do not expose the stack overflow exception information. " +
+            "See https://github.com/dotnet/diagnostics/issues/2515.");
+        Assert.SkipWhen(
+            config.Flavor == Flavor.Framework,
+            "Desktop CLR dumps do not expose the stack overflow exception through the thread data. " +
+            "See https://github.com/dotnet/diagnostics/issues/5757.");
+    }
+
     internal static void SkipICorDebugStackWalk(TestConfig config)
     {
         Skip(GetX86DebugInfoSkipReason(config, OperatingSystem.IsWindows(), RuntimeInformation.ProcessArchitecture));
