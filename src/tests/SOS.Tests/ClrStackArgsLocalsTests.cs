@@ -105,6 +105,8 @@ public sealed class ClrStackArgsLocalsTests
     [MemberData(nameof(MiniDumpMatrix))]
     public async Task ClrStack_ICorDebugLocalsFromMiniDump(TestConfig config)
     {
+        SOSTestSkips.SkipICorDebugStackWalk(config);
+
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
 
