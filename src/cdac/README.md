@@ -6,8 +6,10 @@ the managed reader, contracts, legacy interop layer, NativeAOT entry point,
 source generator and explicitly linked sources. Runtime's tests, usage-analysis
 tooling, contract documentation and native universal DBI source are not included.
 
-`update-source.ps1` contains the explicit source paths and exclusions used to
-produce the snapshot.
+Runtime's `src/native/managed/cdac/SourceManifest.props` contains the explicit
+source paths. `update-source.ps1` reads that file from the selected runtime
+commit and applies the diagnostics-specific exclusions used to produce the
+snapshot.
 
 `runtime-source.txt` is generated provenance containing only the immutable
 upstream commit. There is no separate inventory or snapshot hash. Diagnostics
@@ -47,3 +49,20 @@ upgrade the repository toolchain or publish new managed packages.
 
 `dirs.proj` builds and publishes the reader. All build outputs use the normal
 diagnostics artifact directories.
+
+## GitHub automation
+
+`.github/workflows/sync-cdac.yml` runs daily at 08:00 UTC and can also be
+manually dispatched. It uses `dotnet/actions-create-pull-request` with the
+destination repository's `GITHUB_TOKEN`; no cross-repository write credential is
+needed. The action stages only the generated snapshot and provenance file, then
+creates or updates the PR. The resulting PR is validated by the repository's
+normal CI.
+
+The action maintains the fixed `automation/sync-cdac` branch using
+force-with-lease. Existing PRs and review threads are retained, but update commits
+may be replaced when the snapshot changes. There is no auto-merge.
+
+The repository must allow Actions to create PRs. Token-created PRs can require
+maintainer approval before GitHub Actions checks run; Azure Pipelines triggering
+must also be verified during onboarding.

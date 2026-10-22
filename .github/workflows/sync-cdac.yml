@@ -1,0 +1,57 @@
+name: Sync cDAC source
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: cdac-source-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'dotnet/diagnostics'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: diagnostics
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: dotnet/runtime
+          path: runtime
+          ref: main
+          persist-credentials: false
+      - name: Update the runtime source snapshot
+        id: mirror
+        shell: pwsh
+        working-directory: diagnostics
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./src/cdac/update-source.ps1 -RuntimeRoot ../runtime
+          $commit = (Get-Content src/cdac/runtime-source.txt -Raw).Trim()
+          if ($commit -notmatch '^[0-9a-f]{40}$') { throw 'The runtime source commit is invalid.' }
+          "commit=$commit" >> $env:GITHUB_OUTPUT
+      - name: Create or update the source-sync pull request
+        uses: dotnet/actions-create-pull-request@e8d799aa1f8b17f324f9513832811b0a62f1e0b1
+        with:
+          token: ${{ github.token }}
+          path: diagnostics
+          add-paths: |
+            src/cdac/runtime
+            src/cdac/runtime-source.txt
+          commit-message: Update cDAC source to runtime ${{ steps.mirror.outputs.commit }}
+          title: Update mirrored cDAC source
+          body: |
+            Updates the managed cDAC reader, generator and linked sources from [dotnet/runtime@${{ steps.mirror.outputs.commit }}](https://github.com/dotnet/runtime/commit/${{ steps.mirror.outputs.commit }}).
+
+            The mirrored source tracks the latest `dotnet/runtime` main commit resolved when this workflow runs. The imported paths come from runtime's `src/native/managed/cdac/SourceManifest.props`.
+          base: ${{ github.event.repository.default_branch }}
+          branch: automation/sync-cdac
