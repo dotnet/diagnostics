@@ -9,6 +9,14 @@ namespace SOS.Tests;
 
 internal static class SOSTestSkips
 {
+    internal static void SkipFindRootsNotifications(TestConfig config)
+    {
+        Assert.SkipWhen(
+            config.Host == Host.Lldb && config.CoreVersion == CoreVersion.Net10,
+            "https://github.com/dotnet/runtime/pull/120083: .NET 10 GC notifications require target-memory allocation, " +
+            "which the LLDB host does not support. .NET 11 uses a preallocated notification bitmask.");
+    }
+
     internal static void SkipUnsupportedDictionary(TestConfig config)
     {
         Assert.SkipWhen(

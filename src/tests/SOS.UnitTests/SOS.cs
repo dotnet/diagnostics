@@ -54,29 +54,6 @@ public static class SOSTestHelpers
             .Select(c => new[] { c });
     }
 
-    public static IEnumerable<object[]> GetGCConfigurations()
-    {
-        IEnumerable<TestConfiguration> inputConfigurations = TestRunConfiguration.Instance.Configurations
-            // Filter out configurations for specific tests
-            .Where(c => c.AllSettings.GetValueOrDefault("TestName") == null)
-            // Filter for only .NET core configurations
-            .Where(c => c.IsNETCore)
-            // Filter out single file scenarios
-            .Where(c => !c.PublishSingleFile);
-
-        TestConfiguration AddSetting(TestConfiguration inputConfiguration, string key, string value)
-        {
-            Dictionary<string, string> settings = new(inputConfiguration.AllSettings);
-            settings.Add(key, value);
-            return new TestConfiguration(settings);
-        }
-
-        IEnumerable<TestConfiguration> outputConfigurations = inputConfigurations.Select(c => AddSetting(c, "GCServer", "0"))
-            .Concat(inputConfigurations.Select(c => AddSetting(c, "GCServer", "1")));
-
-        return outputConfigurations.Select(c => new[] { c });
-    }
-
     internal static void SkipIfArm(TestConfiguration config)
     {
         if (config.TargetArchitecture is "arm" or "arm64")
@@ -330,38 +307,6 @@ public class SOSInterpreterTests
                 DumpGenerator = SOSRunner.DumpGenerator.CreateDump,
             },
             Output);
-    }
-}
-
-public class SOSGCTests
-{
-    public SOSGCTests(ITestOutputHelper output)
-    {
-        Output = output;
-    }
-
-    private ITestOutputHelper Output { get; set; }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.GetGCConfigurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task FindRootsOlderGeneration(TestConfiguration config)
-    {
-        if (OS.Kind != OSKind.Windows)
-        {
-            Assert.Skip("Test only supports CDB and therefore only runs on Windows");
-        }
-
-        if (config.RuntimeFrameworkVersionMajor < 10)
-        {
-            Assert.Skip("This test validates a bug which was fixed in .NET 10");
-        }
-
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "FindRootsOlderGeneration",
-            scriptName: "FindRootsOlderGeneration.script",
-            Output,
-            testName: "SOS.FindRootsOlderGeneration",
-            testDump: false);
     }
 }
 

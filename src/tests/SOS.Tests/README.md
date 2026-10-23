@@ -70,7 +70,7 @@ Each theory receives one `TestConfig`, whose axes are:
 
 `TestConfig.BuildMatrix` forms the cross-product and removes invalid rows.
 Notably, dotnet-dump is dump-only; cdb is Windows-only and LLDB is non-Windows;
-Framework is Windows-only; Server GC is Core/SingleFile dump-only; single-file
+Framework is Windows-only; Server GC is Core/SingleFile-only; single-file
 Mini dumps and live LLDB navigation through stripped single-file images are
 excluded; cDAC supports Core and SingleFile on .NET 11 or later.
 
