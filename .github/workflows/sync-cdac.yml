@@ -2,9 +2,6 @@ name: Sync cDAC source
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - dev/max-charlamb/cdac-source-sync
   schedule:
     - cron: '0 8 * * *'
 
@@ -23,7 +20,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           path: diagnostics
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -46,7 +43,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BASE_BRANCH: ${{ github.event.repository.default_branch }}
-          PR_BRANCH: automation/sync-cdac-test
+          PR_BRANCH: automation/sync-cdac
           RUNTIME_COMMIT: ${{ steps.mirror.outputs.commit }}
         run: |
           set -euo pipefail
