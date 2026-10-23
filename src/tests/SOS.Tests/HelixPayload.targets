@@ -128,6 +128,8 @@
            Text="RuntimeTestVersions must contain TargetFramework metadata for SOS Helix sharding." />
     <Error Condition="'%(RuntimeTestVersions.RuntimeDownload)' == ''"
            Text="RuntimeTestVersions must contain RuntimeDownload metadata for SOS Helix provisioning." />
+    <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '%(RuntimeTestVersions.Runtime)' == ''"
+           Text="RuntimeTestVersions must contain Runtime metadata for private runtime testing." />
     <ItemGroup>
       <_SOSRuntimeShard Include="@(RuntimeTestVersions)">
         <CoreVersion>$([System.String]::Copy('%(RuntimeTestVersions.TargetFramework)').Replace('net', 'Net').Replace('.0', ''))</CoreVersion>
@@ -135,10 +137,12 @@
       <HelixWorkItem Include="@(_SOSRuntimeShard->'$(SOSHelixWorkItemName)-%(CoreVersion)')" />
       <HelixWorkItem Include="$(SOSHelixWorkItemName)-Framework"
                     Condition="'$(TargetOS)' == 'Windows_NT' and '$(_SOSLiveRuntimeDir)' == ''" />
+      <!-- Helix installs RuntimeDownload (build version), but the runtime lands in
+           shared/Microsoft.NETCore.App/<Runtime> (product version), which is the overlay target. -->
       <HelixWorkItem>
         <PayloadArchive>$(SOSHelixPayloadDir).zip</PayloadArchive>
         <Command Condition="'$(_SOSLiveRuntimeDir)' == ''">$(_SOSHelixWorkItemCommand) --helix-work-item &quot;%(Identity)&quot;</Command>
-        <Command Condition="'$(_SOSLiveRuntimeDir)' != ''">$(_SOSHelixWorkItemCommand) --helix-work-item &quot;%(Identity)&quot; --runtime-override &quot;runtime-override&quot; --runtime-version &quot;%(HelixWorkItem.RuntimeDownload)&quot;</Command>
+        <Command Condition="'$(_SOSLiveRuntimeDir)' != ''">$(_SOSHelixWorkItemCommand) --helix-work-item &quot;%(Identity)&quot; --runtime-override &quot;runtime-override&quot; --runtime-version &quot;%(HelixWorkItem.Runtime)&quot;</Command>
         <Timeout>$(WorkItemTimeout)</Timeout>
         <RequiredRuntimeVersions>$(TestHostRuntimeVersion);%(HelixWorkItem.RuntimeDownload)</RequiredRuntimeVersions>
       </HelixWorkItem>
