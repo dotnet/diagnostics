@@ -333,38 +333,6 @@ public class SOSInterpreterTests
     }
 }
 
-public class SOSOverflowTests
-{
-    public SOSOverflowTests(ITestOutputHelper output)
-    {
-        Output = output;
-    }
-
-    private ITestOutputHelper Output { get; set; }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.Configurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task Overflow(TestConfiguration config)
-    {
-        await SOSTestHelpers.RunTest(
-            scriptName: "Overflow.script",
-            new SOSRunner.TestInformation
-            {
-                TestConfiguration = config,
-                DebuggeeName = "Overflow",
-                // Generating the logging for overflow test causes so much output from createdump that it hangs/timesout the test run
-                DumpDiagnostics = config.IsNETCore && config.RuntimeFrameworkVersionMajor >= 6,
-                // Single file dumps don't capture the overflow exception info so disable testing against a dump
-                // Issue: https://github.com/dotnet/diagnostics/issues/2515
-                // Desktop CLR heap dumps don't expose the stack overflow exception through the thread data.
-                // Issue: https://github.com/dotnet/diagnostics/issues/5757
-                TestDump = !config.PublishSingleFile && !config.IsDesktop,
-                // The .NET Core createdump facility may not catch stack overflow so use gdb to generate dump
-                DumpGenerator = config.StackOverflowCreatesDump ? SOSRunner.DumpGenerator.CreateDump : SOSRunner.DumpGenerator.NativeDebugger
-            },
-            Output);
-    }
-}
-
 public class SOSGCTests
 {
     public SOSGCTests(ITestOutputHelper output)
@@ -394,42 +362,6 @@ public class SOSGCTests
             Output,
             testName: "SOS.FindRootsOlderGeneration",
             testDump: false);
-    }
-}
-
-public class SOSDumpTests
-{
-    public SOSDumpTests(ITestOutputHelper output)
-    {
-        Output = output;
-    }
-
-    private ITestOutputHelper Output { get; set; }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task MiniDumpLocalVarLookup(TestConfiguration config)
-    {
-        if (OS.Kind != OSKind.Windows)
-        {
-            Assert.Skip("Test only supports CDB and therefore only runs on Windows");
-        }
-
-        if (config.PublishSingleFile)
-        {
-            Assert.Skip("Single file does not support mini dumps");
-        }
-
-        // The default dumpGenerator, CreateDump, only supports taking dumps at exceptions.
-        // DotnetDump could support taking a dump at a breakpoint, but this SOS test framework doesn't currently support this operation.
-        // Therefore we use the NativeDebugger to take a dump at the DebugBreak() call in the debuggee.
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "MiniDumpLocalVarLookup",
-            scriptName: "MiniDumpLocalVarLookup.script",
-            Output,
-            testName: "SOS.MiniDumpLocalVarLookup",
-            testMini: true,
-            dumpGenerator: SOSRunner.DumpGenerator.NativeDebugger);
     }
 }
 

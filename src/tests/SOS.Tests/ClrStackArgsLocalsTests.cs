@@ -24,6 +24,12 @@ public sealed class ClrStackArgsLocalsTests
             ],
             CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10);
 
+    public static TheoryData<TestConfig> MiniDumpMatrix { get; } =
+        TestMatrices.StackWalk(
+            [TargetCatalog.Scenarios],
+            Flavor.Core,
+            dumpKind: DumpKind.Mini);
+
     [SosTheory]
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_ArgsLocals(TestConfig config)
@@ -93,6 +99,20 @@ public sealed class ClrStackArgsLocalsTests
                 // structural checks alone; force adding a case when a target is added.
                 throw new ArgumentOutOfRangeException(nameof(config.Target), config.Target, "No clrstack args/locals value assertions defined for this target.");
         }
+    }
+
+    [SosTheory]
+    [MemberData(nameof(MiniDumpMatrix))]
+    public async Task ClrStack_ICorDebugLocalsFromMiniDump(TestConfig config)
+    {
+        SOSTestSkips.SkipICorDebugStackWalk(config);
+
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopArgsLocals);
+
+        SosOutput stack = target.Sos("clrstack -i -l");
+        stack.AssertContains("SosHarnessScenarios.ArgsLocalsMethod");
+        Assert.Matches(@"\bint\s+localInt\s+=\s+99\b", stack.Text);
     }
 
     private static IEnumerable<SosDataRow> Records(SosRow frame, string section) =>
