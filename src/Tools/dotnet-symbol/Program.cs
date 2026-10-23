@@ -68,7 +68,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                         program.SymbolServers.Add(new ServerInfo { Uri = uri, PersonalAccessToken = null });
                         break;
 
-                     case "--internal-server":
+                    case "--internal-server":
                         Uri.TryCreate("https://symweb.azurefd.net/", UriKind.Absolute, out uri);
                         program.SymbolServers.Add(new ServerInfo { Uri = uri, PersonalAccessToken = null, InternalSymwebServer = true });
                         break;
@@ -608,8 +608,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
 
         private IEnumerable<string> GetInputFiles()
         {
-            IEnumerable<string> inputFiles = InputFilePaths.SelectMany((string file) =>
-            {
+            IEnumerable<string> inputFiles = InputFilePaths.SelectMany((string file) => {
                 string directory = Path.GetDirectoryName(file);
                 string pattern = Path.GetFileName(file);
                 return Directory.EnumerateFiles(string.IsNullOrWhiteSpace(directory) ? "." : directory, pattern,
