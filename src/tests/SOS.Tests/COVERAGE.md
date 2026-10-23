@@ -41,6 +41,8 @@ argument-error, and referenced-array/object/value-class tests.
 with workstation GC covered live and both workstation and server GC covered
 in dumps. `DumpGen.script` is retired by a deterministic generation-population
 target that preserves its exact gen0/gen1/gen2/LOH/POH and filter assertions.
+`Overflow.script` and `MiniDumpLocalVarLookup.script` are retired by focused
+stack-overflow exception and Mini-dump ICorDebug local-variable tests.
 The remaining legacy runner and scenarios stay in place.
 
 ## Legacy-to-new map
@@ -61,10 +63,10 @@ The remaining legacy runner and scenarios stay in place.
 | `InterpreterStackInterleavedTest.script` | Retained | No generic target can replace the interleaved interpreter/JIT frame sequence; legacy ownership is intentional. |
 | `InterpreterStackTest.script` | Retained | Interpreter-frame ordering remains specialized legacy coverage. |
 | `LineNums.script` | Retired | `ClrStackLinesTests` checks source file/line behavior and `PrintExceptionTests` checks exception structure/data across the matrix. |
-| `MiniDumpLocalVarLookup.script` | Gap | `ClrStackArgsLocalsTests` and `ClrStackICorDebugTests` improve variable data checks, but they use full/heap dumps rather than proving local recovery from a Mini dump. |
+| `MiniDumpLocalVarLookup.script` | Retired | `ClrStackArgsLocalsTests.ClrStack_ICorDebugLocalsFromMiniDump` runs `clrstack -i -l` against Core Mini dumps across supported hosts and verifies the named `localInt` value from the deterministic args/locals scenario. |
 | `NestedExceptionTest.script` | Retired | `PrintExceptionTests` verifies exact outer/inner types, messages, HResults, `-nested`, `-lines`, frame data, and inner-address round-trip across live and dump rows. `LiveBpmdTests`, `ClrThreadsTests`, the stack tests, and `DiagnosticCommandTests.Clrma_ReportsCurrentExceptionChain` cover the breakpoint, thread, stack, and CLRMA paths. |
 | `OtherCommands.script` | Retired | Its broad command set is split across object, module, domain, heap, runtime, memory, code-info, and diagnostic test classes with structured round-trips. `LiveBpmdTests` covers method and source-line breakpoints plus `-clearall`, and `DiagnosticCommandTests.DumpLog_DumpsStressLog` preserves stress-log dumping on an isolated target. |
-| `Overflow.script` | Retained | Stack-overflow exception behavior remains a specialized crash/live legacy target; ordinary exception output is covered by `PrintExceptionTests`. |
+| `Overflow.script` | Retired | `PrintExceptionTests.PrintException_StackOverflow` covers the flavor/live/dump matrix. It runs `clrthreads -managedexception`, verifies the stack-overflow exception object/type and empty message/inner exception where available, and asserts the expected no-current-exception result for Windows live targets. SingleFile and Framework dumps retain the legacy exclusions for [#2515](https://github.com/dotnet/diagnostics/issues/2515) and [#5757](https://github.com/dotnet/diagnostics/issues/5757). |
 | `Reflection.script` | Retired | Existing `PrintExceptionTests.PrintException_ReflectionInnerException` checks outer/inner exception types, messages, HResults, nested output, and caller source annotations. Generic stack/thread coverage is not duplicated on this target, and no new assertions are added. |
 | `SimpleThrow.script` | Retired | `PrintExceptionTests.PrintException_NoInnerException` verifies the exact exception type, message, HResult, no-inner state, generated frame, `-nested`, and `-lines` output across live and dump rows. `ClrThreadsTests` and the stack tests cover the remaining thread and managed-stack behavior. |
 | `StackAndOtherTests.script` | Retired | `RuntimeInfoTests`, the `ClrStack*Tests` classes, `StackInspectionTests`, `CodeInfoTests`, `DumpIlTests`, `ClrUTests`, `ModuleResolveTests`, `ClrThreadsTests`, and `DiagnosticCommandTests` cover its runtime, stack, code, symbol, thread, and native CLRMA paths with stronger focused assertions. `ClrmaMatrix` includes the `HostRuntime.None` path that replaces the legacy `SetHostRuntime=-none` run. |
