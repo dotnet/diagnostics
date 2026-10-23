@@ -21,6 +21,14 @@ public sealed class GcInspectionTests
     public static TheoryData<TestConfig> PohMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.Core | Flavor.SingleFile);
     public static TheoryData<TestConfig> DumpGenMatrix => TestConfig.BuildMatrix(
         [TargetCatalog.DumpGen], Flavor.Core | Flavor.SingleFile, gcType: GcType.AllValid);
+    public static TheoryData<TestConfig> FindRootsMatrix => TestConfig.BuildMatrix(
+        [TargetCatalog.FindRootsOlderGeneration],
+        Flavor.Core,
+        Host.Cdb | Host.Lldb,
+        Liveness.Live,
+        GcType.AllValid,
+        coreVersion: CoreVersion.All & ~(CoreVersion.Net8 | CoreVersion.Net9),
+        dac: Dac.Legacy);
 
     [SosTheory]
     [MemberData(nameof(PohMatrix))]
@@ -71,6 +79,50 @@ public sealed class GcInspectionTests
         ulong dead = target.FindUniqueObject("DeadUniqueMarker");
         SosOutput deadRoots = target.Sos($"gcroot {dead:x}");
         Assert.Equal(0, UniqueRootCount(deadRoots));
+    }
+
+    [SosTheory(SkipTestWithoutData = true)]
+    [MemberData(nameof(FindRootsMatrix))]
+    public async Task FindRoots_SearchesOlderGenerations(TestConfig config)
+    {
+        // Regression for https://github.com/dotnet/runtime/pull/119396:
+        // findroots must search older generations for references to surviving young objects.
+        SOSTestSkips.SkipFindRootsNotifications(config);
+        using LiveTarget target = (LiveTarget)await Targets.GetTargetAsync(config);
+        target.GoToStopPoint("ready");
+
+        // The LOH array references a gen0 Thing, so a gen0 collection must preserve that older-generation root.
+        EeHeap heap = target.EeHeap();
+        Assert.Equal(config.GcType == GcType.Server, heap.HeapCount > 1);
+        SosTable stackObjects = target.DumpStackObjects();
+        SosRow array = stackObjects
+            .First(row => row["Name"].Value == "FindRootsOlderGeneration.Thing[]");
+        ulong arrayAddress = array["Object"].AsUInt64(Sos.Addr);
+        Assert.Contains(heap.GenerationRanges(GcGeneration.Loh), range => arrayAddress >= range.Start && arrayAddress < range.End);
+        ulong youngAddress = stackObjects.First(row => row["Name"].Value == "FindRootsOlderGeneration.Thing")["Object"].AsUInt64(Sos.Addr);
+        Assert.Contains(heap.GenerationRanges(GcGeneration.Gen0), range => youngAddress >= range.Start && youngAddress < range.End);
+
+        // Request GC notifications and resume to the end of marking, before the collection completes.
+        // findroots installs the debugger's notification handler itself.
+        target.Sos("findroots -gen any");
+        target.RunToBreakpoint();
+
+        // Server GC can report the notification on a GC worker; inspect the main thread's local objects.
+        TargetExtensions.ThreadStack mainThread = Assert.Single(target.ClrstackAllThreads(),
+            thread => thread.Frames.Any(frame => frame.Function.Contains("FindRootsOlderGeneration.Program.Main", StringComparison.Ordinal)));
+        ulong osThreadId = Convert.ToUInt64(mainThread.OsThreadId, 16);
+        string debuggerThreadId = target.Sos("clrthreads").AsThreadsTable()
+            .SingleRow(row => row["OSID"].AsUInt64(Sos.Addr) == osThreadId, "the main managed thread")["DBG"].Value;
+        target.Execute(config.Host == Host.Cdb ? $"~{debuggerThreadId}s" : $"thread select {debuggerThreadId}");
+
+        SosRow thing = target.DumpStackObjects()
+            .First(row => row["Name"].Value == "FindRootsOlderGeneration.Thing");
+        ulong address = thing["Object"].AsUInt64(Sos.Addr);
+        // The unique root must include the LOH array, not just find the Thing directly on the stack.
+        SosOutput roots = target.Sos($"findroots {address:x}");
+        Assert.Equal(1, UniqueRootCount(roots));
+        roots.AssertContains("FindRootsOlderGeneration.Thing[]");
+        roots.AssertContains(arrayAddress.ToString("x"));
     }
 
     [SosTheory]
