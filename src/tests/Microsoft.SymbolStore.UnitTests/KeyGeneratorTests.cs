@@ -174,10 +174,11 @@ namespace Microsoft.SymbolStore.Tests
 
                 IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
                 Assert.True(identityKey.Count() == 1);
-                Assert.True(identityKey.First().Index == "_.debug/elf-buildid-sym-126ba1461caf6644cfdd124bfcceeffa81b18897/_.debug");
+                Assert.True(identityKey.First().Index == "symbolized_executable/elf-buildid-126ba1461caf6644cfdd124bfcceeffa81b18897/symbolized_executable");
 
                 IEnumerable<SymbolStoreKey> symbolKey = generator.GetKeys(KeyTypeFlags.SymbolKey);
-                Assert.True(symbolKey.Count() == 0);
+                Assert.True(symbolKey.Count() == 1);
+                Assert.True(symbolKey.First().Index == "_.debug/elf-buildid-sym-126ba1461caf6644cfdd124bfcceeffa81b18897/_.debug");
 
                 IEnumerable<SymbolStoreKey> clrKeys = generator.GetKeys(KeyTypeFlags.ClrKeys);
                 Assert.True(clrKeys.Count() == 0);
