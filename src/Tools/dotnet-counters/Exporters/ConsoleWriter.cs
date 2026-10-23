@@ -31,8 +31,14 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
         /// <summary>Information about an observed counter.</summary>
         private class ObservedCounter
         {
-            public ObservedCounter(string displayName) => DisplayName = displayName;
+            public ObservedCounter(string displayName, bool isMeter)
+            {
+                DisplayName = displayName;
+                IsMeter = isMeter;
+            }
+
             public string DisplayName { get; } // Display name for this counter.
+            public bool IsMeter { get; }
             public int Row { get; set; } // Assigned row for this counter. May change during operation.
             public Dictionary<string, ObservedTagSet> TagSets { get; } = new Dictionary<string, ObservedTagSet>();
 
@@ -218,21 +224,21 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             int tagsCount = 0;
             foreach (ObservedTagSet tagSet in counter.TagSets.Values.OrderBy(t => t.Tags))
             {
-                string[] tags = tagSet.DisplayTags.Split(',');
-                for (int i = 0; i < tags.Length; i++)
+                IEnumerable<KeyValuePair<string, string>> tags = counter.IsMeter
+                    ? CounterTagFormatter.Decode(tagSet.Tags)
+                    : CounterUtilities.GetMetadata(tagSet.Tags);
+                foreach ((string tagKey, string tagValue) in tags)
                 {
-                    string tag = tags[i];
-                    string[] keyValue = tag.Split("=");
-                    int posTag = observedTags.FindIndex (tag => tag.header == keyValue[0]);
+                    int posTag = observedTags.FindIndex(tag => tag.header == tagKey);
                     if (posTag == -1)
                     {
-                        observedTags.Add((keyValue[0], new string[counter.TagSets.Count]));
-                        columnHeaderLen.Add(keyValue[0].Length);
+                        observedTags.Add((tagKey, new string[counter.TagSets.Count]));
+                        columnHeaderLen.Add(tagKey.Length);
                         maxValueColumnLen.Add(default(int));
                         posTag = observedTags.Count - 1;
                     }
-                    observedTags[posTag].values[tagsCount] = keyValue[1];
-                    maxValueColumnLen[posTag] = Math.Max(keyValue[1].Length, maxValueColumnLen[posTag]);
+                    observedTags[posTag].values[tagsCount] = tagValue;
+                    maxValueColumnLen[posTag] = Math.Max(tagValue.Length, maxValueColumnLen[posTag]);
                 }
                 tagsCount++;
             }
@@ -359,7 +365,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 if (!provider.Counters.TryGetValue(name, out ObservedCounter counter))
                 {
                     string displayName = payload.GetDisplay();
-                    provider.Counters[name] = counter = new ObservedCounter(displayName);
+                    provider.Counters[name] = counter = new ObservedCounter(displayName, payload.IsMeter);
                     redraw = true;
                 }
                 else
