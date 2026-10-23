@@ -18,7 +18,7 @@ namespace Microsoft.FileFormats.MachO
 
         public MachOFatFile(IAddressSpace dataSource)
         {
-            _reader = new Reader(dataSource);
+            _reader = new Reader(dataSource, new LayoutManager().AddMachFatHeaderTypes(false));
             _headerMagic = new Lazy<MachFatHeaderMagic>(() => _reader.Read<MachFatHeaderMagic>(0));
             _headerReader = new Lazy<Reader>(() => new Reader(dataSource, new LayoutManager().AddMachFatHeaderTypes(IsBigEndian)));
             _header = new Lazy<MachFatHeader>(() => _headerReader.Value.Read<MachFatHeader>(0));
@@ -96,7 +96,7 @@ namespace Microsoft.FileFormats.MachO
         {
             _position = position;
             _dataSourceIsVirtualAddressSpace = dataSourceIsVirtualAddressSpace;
-            _reader = new Reader(dataSource);
+            _reader = new Reader(dataSource, new LayoutManager().AddMachTypes(false, false));
             _headerMagic = new Lazy<MachHeaderMagic>(() => _reader.Read<MachHeaderMagic>(_position));
             _dataSourceReader = new Lazy<Reader>(CreateDataSourceReader);
             _header = new Lazy<MachHeader>(() => DataSourceReader.Read<MachHeader>(_position));

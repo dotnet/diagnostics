@@ -44,7 +44,7 @@ namespace Microsoft.FileFormats.PE
         public PEFile(IAddressSpace dataSource, bool isDataSourceVirtualAddressSpace = false)
         {
             _isDataSourceVirtualAddressSpace = isDataSourceVirtualAddressSpace;
-            _headerReader = new Reader(dataSource);
+            _headerReader = new Reader(dataSource, new LayoutManager().AddPETypes(false));
             _dosHeaderMagic = new Lazy<ushort>(() => _headerReader.Read<ushort>(0));
             _peHeaderOffset = new Lazy<uint>(ReadPEHeaderOffset);
             _peSignature = new Lazy<uint>(() => _headerReader.Read<uint>(PEHeaderOffset));
