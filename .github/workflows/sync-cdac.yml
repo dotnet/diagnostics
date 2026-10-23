@@ -5,10 +5,6 @@ on:
   schedule:
     - cron: '0 8 * * *'
 
-permissions:
-  contents: write
-  pull-requests: write
-
 concurrency:
   group: cdac-source-sync
   cancel-in-progress: false
@@ -17,6 +13,9 @@ jobs:
   sync:
     if: github.repository == 'dotnet/diagnostics'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -40,18 +39,46 @@ jobs:
           if ($commit -notmatch '^[0-9a-f]{40}$') { throw 'The runtime source commit is invalid.' }
           "commit=$commit" >> $env:GITHUB_OUTPUT
       - name: Create or update the source-sync pull request
-        uses: dotnet/actions-create-pull-request@e8d799aa1f8b17f324f9513832811b0a62f1e0b1
-        with:
-          token: ${{ github.token }}
-          path: diagnostics
-          add-paths: |
-            src/cdac/runtime
-            src/cdac/runtime-source.txt
-          commit-message: Update cDAC source to runtime ${{ steps.mirror.outputs.commit }}
-          title: Update mirrored cDAC source
-          body: |
-            Updates the managed cDAC reader, generator and linked sources from [dotnet/runtime@${{ steps.mirror.outputs.commit }}](https://github.com/dotnet/runtime/commit/${{ steps.mirror.outputs.commit }}).
+        working-directory: diagnostics
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          PR_BRANCH: automation/sync-cdac
+          RUNTIME_COMMIT: ${{ steps.mirror.outputs.commit }}
+        run: |
+          set -euo pipefail
 
-            The mirrored source tracks the latest `dotnet/runtime` main commit resolved when this workflow runs. The imported paths come from runtime's `src/native/managed/cdac/SourceManifest.props`.
-          base: ${{ github.event.repository.default_branch }}
-          branch: automation/sync-cdac
+          git add -- src/cdac/runtime src/cdac/runtime-source.txt
+          if git diff --cached --quiet; then
+            echo "The mirrored source is already current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$PR_BRANCH"
+          git commit -m "Update cDAC source to runtime $RUNTIME_COMMIT"
+
+          push_options=(--force-with-lease="refs/heads/$PR_BRANCH:")
+          if remote_ref=$(git ls-remote --exit-code --heads origin "$PR_BRANCH" | cut -f1); then
+            push_options=(--force-with-lease="refs/heads/$PR_BRANCH:$remote_ref")
+          fi
+
+          gh auth setup-git
+          git push "${push_options[@]}" origin "HEAD:refs/heads/$PR_BRANCH"
+
+          repo_owner=${GITHUB_REPOSITORY%%/*}
+          pr_number=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$PR_BRANCH" --base "$BASE_BRANCH" --state open --json number,headRepositoryOwner --jq "[.[] | select(.headRepositoryOwner.login == \"$repo_owner\")][0].number // empty")
+          if [[ -n "$pr_number" ]]; then
+            echo "Updated pull request #$pr_number."
+            exit 0
+          fi
+
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base "$BASE_BRANCH" \
+            --head "$PR_BRANCH" \
+            --title "Update mirrored cDAC source" \
+            --body "Updates the managed cDAC reader, generator and linked sources from [dotnet/runtime@$RUNTIME_COMMIT](https://github.com/dotnet/runtime/commit/$RUNTIME_COMMIT).
+
+          The mirrored source tracks the latest \`dotnet/runtime\` main commit resolved when this workflow runs. The imported paths come from runtime's \`src/native/managed/cdac/SourceManifest.props\`."
