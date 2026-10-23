@@ -17,6 +17,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         private const string SymbolPrefix = "elf-buildid-sym";
         private const string CoreClrPrefix = "elf-buildid-coreclr";
         private const string CoreClrFileName = "libcoreclr.so";
+        private const ulong AllocatedSectionFlag = 0x2; // SHF_ALLOC
 
         /// <summary>
         /// Symbol file extensions. The first one is the default symbol file extension used by .NET Core.
@@ -66,7 +67,18 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     bool symbolFile = false;
                     try
                     {
-                        symbolFile = Array.Exists(_elfFile.Sections, section => (section.Name.StartsWith(".debug_info") || section.Name.StartsWith(".zdebug_info")));
+                        ELFSection[] sections = _elfFile.Sections;
+                        bool hasDebugInfo = Array.Exists(sections, section =>
+                            section.Name.StartsWith(".debug_info") || section.Name.StartsWith(".zdebug_info"));
+                        // Separate debug files retain allocated section headers as NOBITS and may retain
+                        // file-backed notes (including the build ID), but not the module's code or data.
+                        bool hasModuleContents = Array.Exists(sections, section =>
+                            (section.Header.Flags & AllocatedSectionFlag) != 0 &&
+                            section.Header.FileSize > 0 &&
+                            section.Header.Type != ELFSectionHeaderType.NoBits &&
+                            section.Header.Type != ELFSectionHeaderType.Note &&
+                            section.Header.Type != ELFSectionHeaderType.Null);
+                        symbolFile = hasDebugInfo && !hasModuleContents;
                     }
                     catch (Exception ex) when
                        (ex is InvalidVirtualAddressException ||

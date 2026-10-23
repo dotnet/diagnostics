@@ -734,34 +734,52 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 return null;
             }
 
+            string downloadFilePath = DownloadELF(fileKey, validateDownloadedFile: false);
+            if (downloadFilePath is null && (flags & KeyTypeFlags.SymbolKey) != 0)
+            {
+                // Unstripped ELF symbol files are indexed under module keys.
+                SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey,
+                    fileKey.FullPathName, module.BuildId.ToArray(), symbolFile: false, symbolFileName: null).Single();
+                downloadFilePath = DownloadELF(moduleKey, validateDownloadedFile: true);
+            }
+            return downloadFilePath;
+        }
+
+        private string DownloadELF(SymbolStoreKey fileKey, bool validateDownloadedFile)
+        {
             // Check if the file is local and the key matches the module
             string fileName = fileKey.FullPathName;
-            if (File.Exists(fileName))
+            if (File.Exists(fileName) && MatchesELFKey(fileName, fileKey))
             {
-                using ELFFile elfFile = Utilities.OpenELFFile(fileName);
-                if (elfFile is not null)
-                {
-                    ELFFileKeyGenerator generator = new(Tracer.Instance, elfFile, fileName);
-                    foreach (SymbolStoreKey key in generator.GetKeys(flags))
-                    {
-                        if (fileKey.Equals(key))
-                        {
-                            Trace.TraceInformation("DownloadELF: local file match {0}", fileName);
-                            return fileName;
-                        }
-                    }
-                }
+                Trace.TraceInformation("DownloadELF: local file match {0}", fileName);
+                return fileName;
             }
 
             // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
             string downloadFilePath = DownloadFile(fileKey);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
+                if (validateDownloadedFile && !MatchesELFKey(downloadFilePath, fileKey))
+                {
+                    Trace.TraceWarning("DownloadELF: file {0} does not match {1}", downloadFilePath, fileKey.Index);
+                    return null;
+                }
                 Trace.TraceInformation("DownloadELF: downloaded {0}", downloadFilePath);
                 return downloadFilePath;
             }
 
             return null;
+        }
+
+        private static bool MatchesELFKey(string fileName, SymbolStoreKey fileKey)
+        {
+            using ELFFile elfFile = Utilities.OpenELFFile(fileName);
+            if (elfFile is null)
+            {
+                return false;
+            }
+            ELFFileKeyGenerator generator = new(Tracer.Instance, elfFile, fileKey.FullPathName);
+            return generator.GetKeys(KeyTypeFlags.IdentityKey).Any(key => fileKey.Equals(key));
         }
 
         /// <summary>

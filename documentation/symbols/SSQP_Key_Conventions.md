@@ -98,6 +98,14 @@ Example:
 
 **Lookup key:** `foo.so/elf-buildid-180a373d6afbabf0eb1f09be1bc45bd796a71085/foo.so`
 
+Full ELF images, including unstripped images containing DWARF debug information, use the
+ELF-buildid module identity key. Only separate debug-only files use an ELF-buildid-sym identity
+key; the presence of `.debug_info` or `.zdebug_info` alone does not distinguish them.
+
+Full images previously indexed only under ELF-buildid-sym remain available for symbol lookup,
+but must be reindexed for module lookup. The debuglink fallback applies only to symbol lookup
+and does not migrate existing symbol-store entries.
+
 
 ### ELF-buildid-sym
 
@@ -120,6 +128,12 @@ Example:
 **Build note bytes:** `0x18, 0x0a, 0x37, 0x3d, 0x6a, 0xfb, 0xab, 0xf0, 0xeb, 0x1f, 0x09, 0xbe, 0x1b, 0xc4, 0x5b, 0xd7`
 
 **Lookup key:** `_.debug/elf-buildid-sym-180a373d6afbabf0eb1f09be1bc45bd700000000/_.debug`
+
+A `.gnu_debuglink` target may also be a full, unstripped image rather than a separate debug file.
+Such a target uses its own filename and the ELF-buildid module identity key. DebugServices
+symbol retrieval first tries the ELF-buildid-sym key, then the debuglink target's module key
+if the symbol-only lookup fails. The full-image fallback verifies the target's identity,
+including its build ID, before returning it.
 
 
 ### Mach-uuid
