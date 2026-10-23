@@ -339,7 +339,9 @@ work items. To submit SOS alone, invoke `eng/helix/SendToHelix.proj` with
 Private runtime validation passes `PrivateBuildTesting=true` and
 `LiveRuntimeDir` to the sender. The payload includes that complete runtime
 layout and overlays it onto the matching Helix-provisioned runtime before the
-test starts. Private runs submit only the configured runtime shard and select
+test starts. Helix downloads the runtime by its `RuntimeDownload` (build)
+version, but installs it under `shared/Microsoft.NETCore.App/<Runtime>`, so the
+overlay targets the `Runtime` (product) version. Private runs submit only the configured runtime shard and select
 the `Core` flavor; self-contained and Framework targets continue to use product
 runtime packages and are therefore excluded.
 
