@@ -8,6 +8,7 @@
 
   <PropertyGroup>
     <CDacRuntimeRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'runtime'))</CDacRuntimeRoot>
+    <CDacSourceManifestRoot>$(CDacRuntimeRoot)</CDacSourceManifestRoot>
     <LibrariesProjectRoot>$(CDacRuntimeRoot)src\libraries\</LibrariesProjectRoot>
     <NetCoreAppMinimum>net10.0</NetCoreAppMinimum>
     <NetCoreAppToolCurrent>net10.0</NetCoreAppToolCurrent>

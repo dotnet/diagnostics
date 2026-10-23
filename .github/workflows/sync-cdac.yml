@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          git add -- src/cdac/runtime src/cdac/runtime-source.txt
+          git add -- src/cdac/runtime src/cdac/runtime-source.txt src/cdac/runtime-version.txt
           if git diff --cached --quiet; then
             echo "The mirrored source is already current."
             exit 0

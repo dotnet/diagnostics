@@ -6,7 +6,8 @@ build and ship on the dotnet/diagnostics release cadence instead of waiting for
 the corresponding runtime release.
 
 dotnet/runtime remains the source of truth. `runtime-source.txt` records the
-exact runtime commit used for the current copy.
+exact runtime commit used for the current copy, and `runtime-version.txt`
+records its product version.
 
 ## Updating the mirrored source
 
