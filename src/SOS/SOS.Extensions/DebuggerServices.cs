@@ -36,31 +36,36 @@ namespace SOS.Extensions
         private readonly HResult _symbolOptionsResult = HResult.S_OK;
 
         /// <summary>
-        /// A pointer to the underlying IDebugClient interface if the host is DbgEng.
+        /// The native symbol interface if the host is DbgEng.
         /// </summary>
-        public IDebugClient5 DebugClient { get; }
+        public DebugSymbolsWrapper DebugSymbols { get; }
 
         internal DebuggerServices(IntPtr punk, HostType hostType)
             : base(IID_IDebuggerServices, punk)
         {
             _hostType = hostType;
 
-            // This uses COM marshalling code, so we also check that the OSPlatform is Windows.
             if (hostType == HostType.DbgEng && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                object obj = Marshal.GetObjectForIUnknown(punk);
-                if (obj is IDebugClient5 client)
+                IntPtr symbols = QueryInterface(typeof(IDebugSymbols5).GUID);
+                if (symbols != IntPtr.Zero)
                 {
-                    DebugClient = client;
-                    if (client is IDebugSymbols5 symbols)
-                    {
-                        // NativeAOT emits debugger-friendly CodeView display names while retaining stable, reversible
-                        // COFF public names used by diagnostic tooling. Prefer the public names for SOS lookups.
-                        // See https://github.com/dotnet/runtime/pull/132735.
-                        _symbolOptionsResult = symbols.AddSymbolOptions(SYMOPT.PUBLICS_ONLY);
-                    }
+                    DebugSymbols = new DebugSymbolsWrapper(symbols);
+                    // NativeAOT emits debugger-friendly CodeView display names while retaining stable, reversible
+                    // COFF public names used by diagnostic tooling. Prefer the public names for SOS lookups.
+                    // See https://github.com/dotnet/runtime/pull/132735.
+                    _symbolOptionsResult = DebugSymbols.AddSymbolOptions(SYMOPT.PUBLICS_ONLY);
                 }
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                DebugSymbols?.Dispose();
+            }
+            base.Dispose(disposing);
         }
 
         #region SOSHost.INativeDebugger
