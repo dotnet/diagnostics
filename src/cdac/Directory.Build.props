@@ -20,15 +20,9 @@
     <PortableTargetRid>$(TargetRid)</PortableTargetRid>
     <IsShipping>false</IsShipping>
     <IsGeneratorProject Condition="$([System.IO.Path]::GetFileName('$(MSBuildProjectDirectory)')) == 'gen'">true</IsGeneratorProject>
+    <PlatformTarget Condition="'$(IsGeneratorProject)' == 'true'">AnyCPU</PlatformTarget>
     <EnforceExtendedAnalyzerRules Condition="'$(IsGeneratorProject)' == 'true'">true</EnforceExtendedAnalyzerRules>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(NeedsAotPublish)' == 'true'">
-    <PublishAot>true</PublishAot>
-    <SelfContained>true</SelfContained>
-    <NativeLib>Shared</NativeLib>
-    <StripSymbols>false</StripSymbols>
-    <ControlFlowGuard>Guard</ControlFlowGuard>
-    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(TargetRid)</RuntimeIdentifier>
-  </PropertyGroup>
+  <Import Project="native-library.props" Condition="'$(NeedsAotPublish)' == 'true'" />
 </Project>

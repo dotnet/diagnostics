@@ -24,13 +24,21 @@
   <ItemGroup Condition="'$(PackageWithCDac)' == 'true'">
     <PackageDownload Include="runtime.$(TargetRid).Microsoft.DotNet.Cdac.Transport"
                      Version="[$(runtimewinx64MicrosoftDotNetCdacTransportVersion)]" />
-    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.$(TargetRid).microsoft.dotnet.cdac.transport\$(runtimewinx64MicrosoftDotNetCdacTransportVersion)\runtimes\$(TargetRid)\native\*" />
+    <!-- The managed cDAC reader is built from mirrored source; the transport package supplies only the native DBI. -->
+    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.$(TargetRid).microsoft.dotnet.cdac.transport\$(runtimewinx64MicrosoftDotNetCdacTransportVersion)\runtimes\$(TargetRid)\native\*mscordbi_universal*" />
   </ItemGroup>
 
 <!--
     Installs the above packages into the $(ArtifactsBinNativeDir) directory.
 -->
-  <Target Name="InstallNativePackages">
+  <Target Name="PublishCDacReader"
+          Condition="'$(PackageWithCDac)' == 'true'">
+    <MSBuild Projects="$(RepoRoot)src\cdac\publish.proj"
+             Targets="Restore;Build" />
+  </Target>
+
+  <Target Name="InstallNativePackages"
+          DependsOnTargets="PublishCDacReader">
     <Message Importance="High" Text="Installing packages to $(ArtifactsBinNativeDir)..." />
 
     <Copy SourceFiles="@(PackageSourceFiles)" DestinationFolder="$(ArtifactsBinNativeDir)" SkipUnchangedFiles="false">

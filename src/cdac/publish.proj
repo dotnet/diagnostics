@@ -2,15 +2,18 @@
   <PropertyGroup>
     <CDacNativeProject>$(MSBuildThisFileDirectory)runtime\src\native\managed\cdac\mscordaccore_universal\mscordaccore_universal.csproj</CDacNativeProject>
     <CDacPublishDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'cdac-native', '$(TargetRid)', '$(Configuration)'))</CDacPublishDir>
+    <CrossBuild Condition="'$(CrossBuild)' == '' and '$(CROSSCOMPILE)' == '1'">true</CrossBuild>
+    <TraversalPublishGlobalProperties>$(TraversalPublishGlobalProperties);_IsPublishing=true</TraversalPublishGlobalProperties>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(CDacNativeProject)" />
+    <ProjectReference Include="$(CDacNativeProject)"
+                      AdditionalProperties="TargetOS=$(TargetOS);TargetArch=$(TargetArch);TargetArchitecture=$(TargetArch);TargetRid=$(TargetRid);RuntimeIdentifier=$(TargetRid);CrossBuild=$(CrossBuild);PublishDir=$(CDacPublishDir)"
+                      ReferenceOutputAssembly="false"
+                      Targets="Publish" />
   </ItemGroup>
 
-  <Target Name="PublishCDac" AfterTargets="Build" Condition="'$(SkipCDacPublish)' != 'true'">
-    <MSBuild Projects="$(CDacNativeProject)" Targets="Publish"
-             Properties="Configuration=$(Configuration);TargetOS=$(TargetOS);TargetArch=$(TargetArch);TargetRid=$(TargetRid);PublishDir=$(CDacPublishDir)" />
+  <Target Name="InstallCDacReader" AfterTargets="Build">
     <ItemGroup>
       <CDacNativeFile Include="$(CDacPublishDir)*mscordaccore_universal*" />
     </ItemGroup>
