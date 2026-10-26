@@ -171,6 +171,17 @@ if %__BuildNative% EQU 1 (
         echo Generate Version Header FAILED
         goto ExitWithError
     )
+
+    set "__DbiBuildArgs="
+    if defined __SkipConfigure set "__DbiBuildArgs=!__DbiBuildArgs! -skipconfigure"
+    if defined __ConfigureOnly set "__DbiBuildArgs=!__DbiBuildArgs! -configureonly"
+    call "%__RepoRootDir%\src\dbi\build.cmd" %VisualStudioVersion% %__HostArch% %__TargetOS% %__TargetArch% %__BuildType% "%__ArtifactsIntermediatesDir%" "%__BinDir%" !__DbiBuildArgs!
+    @if defined _echo @echo on
+    if not !errorlevel! == 0 (
+        echo %__MsgPrefix%Error: source-built universal DBI build failed.
+        goto ExitWithError
+    )
+
     if defined __SkipConfigure goto SkipConfigure
 
     echo %__MsgPrefix%Regenerating the Visual Studio solution

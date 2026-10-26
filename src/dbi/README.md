@@ -1,11 +1,16 @@
 # Mirrored universal DBI source
 
 The source-sync workflow populates the `runtime` directory with the runtime
-source needed to build `mscordbi_universal`. Build integration will be added
-separately after the first mirrored-source update.
+source needed to build `mscordbi_universal`.
 
 dotnet/runtime remains the source of truth. `runtime-source.txt` records the
 exact runtime commit used for the current copy.
+
+The diagnostics native build invokes `build.cmd` or `build.sh`, which owns the
+standalone DBI configuration, build, output validation, and installation. The
+separate CMake build allows the universal DBI to retain its private runtime PAL.
+The resulting DBI and symbols are copied into the normal diagnostics native
+output directory. The cDAC transport package is not used.
 
 ## Updating the mirrored source
 
