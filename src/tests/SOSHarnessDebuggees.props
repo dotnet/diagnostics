@@ -56,6 +56,10 @@
       <SupportsSingleFile>true</SupportsSingleFile>
       <SupportsFramework>true</SupportsFramework>
     </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/VarargPInvokeInteropMD/VarargPInvokeInteropMD.csproj" Condition="'$(OS)' == 'Windows_NT'">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>false</SupportsFramework>
+    </SOSHarnessDebuggee>
   </ItemGroup>
 
 </Project>

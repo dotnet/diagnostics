@@ -98,8 +98,9 @@ public sealed class ClrUResult
                 continue;
             }
 
-            // The method name is the non-empty line that precedes Begin and isn't the banner.
-            if (line.Length > 0 && Begin == 0 && line != "Normal JIT generated code")
+            // IL stubs can report a missing IL map between the method name and Begin.
+            if (line.Length > 0 && Begin == 0 && line != "Normal JIT generated code"
+                && line != "Failed to get IL address map, proceeding without IL map")
             {
                 MethodName = line.Trim();
             }
