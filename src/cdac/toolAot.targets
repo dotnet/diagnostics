@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup Condition="'$(UseNativeAotForComponents)' == 'true'">
+    <UseCommonLocateNativeCompilerTarget Condition="'$(TargetOS)' != 'Windows_NT' and '$(TargetOS)' != 'windows'">true</UseCommonLocateNativeCompilerTarget>
+  </PropertyGroup>
+
+  <Import Project="$(RepositoryEngineeringDir)common\native\LocateNativeCompiler.targets"
+          Condition="'$(UseCommonLocateNativeCompilerTarget)' == 'true'" />
+</Project>

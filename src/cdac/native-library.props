@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <NativeLib>Shared</NativeLib>
+    <StripSymbols>false</StripSymbols>
+    <ControlFlowGuard>Guard</ControlFlowGuard>
+    <UseNativeAotForComponents>true</UseNativeAotForComponents>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(TargetRid)</RuntimeIdentifier>
+  </PropertyGroup>
+</Project>

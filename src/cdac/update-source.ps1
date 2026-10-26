@@ -21,18 +21,6 @@ if ($LASTEXITCODE -ne 0) {
     throw "Cannot read '$sourceManifestPath' from runtime commit '$commit'."
 }
 
-$versionsPath = 'eng/Versions.props'
-$versionsContents = & git -C $runtimeRoot show "${commit}:$versionsPath"
-if ($LASTEXITCODE -ne 0) {
-    throw "Cannot read '$versionsPath' from runtime commit '$commit'."
-}
-
-[xml] $versions = $versionsContents -join "`n"
-$productVersion = $versions.SelectSingleNode('/Project/PropertyGroup/ProductVersion')?.InnerText
-if ($productVersion -notmatch '^\d+\.\d+\.\d+$') {
-    throw "Invalid ProductVersion '$productVersion' in '$versionsPath'."
-}
-
 [xml] $sourceManifest = $sourceManifestContents -join "`n"
 $includes = @(
     $sourceManifest.SelectNodes('/Project/ItemGroup/CDacSourceManifestSource') |
@@ -106,10 +94,6 @@ try {
     [IO.File]::WriteAllText(
         (Join-Path $PSScriptRoot 'runtime-source.txt'),
         "$commit`n",
-        [Text.UTF8Encoding]::new($false))
-    [IO.File]::WriteAllText(
-        (Join-Path $PSScriptRoot 'runtime-version.txt'),
-        "$productVersion`n",
         [Text.UTF8Encoding]::new($false))
 }
 finally {

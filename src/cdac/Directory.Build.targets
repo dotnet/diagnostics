@@ -1,5 +1,6 @@
 <Project>
   <Import Project="$(SrcDir)Directory.Build.targets" />
+  <Import Project="toolAot.targets" Condition="'$(NeedsAotPublish)' == 'true'" />
   <Import Project="$(CDacRuntimeRoot)eng\generatorProjects.targets" Condition="'$(IsGeneratorProject)' == 'true'" />
 
   <PropertyGroup>
