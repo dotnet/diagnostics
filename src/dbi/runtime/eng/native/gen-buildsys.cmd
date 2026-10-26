@@ -1,0 +1,186 @@
+@if not defined _echo @echo off
+rem
+rem This file invokes cmake and generates the build system for windows.
+
+set __argCount=0
+for %%x in (%*) do set /A __argCount+=1
+
+if %__argCount% lss 4 goto :USAGE
+if %1=="/?" goto :USAGE
+
+set __Os=%5
+set "__repoRoot=%~dp0..\.."
+:: normalize
+for %%i in ("%__repoRoot%") do set "__repoRoot=%%~fi"
+
+:: Set up the EMSDK environment before setlocal so that it propagates to the caller.
+:: Written without a parenthesized block so that %WASM_TOOL_CACHE_RESULT% expands without
+:: delayed expansion, which cannot be enabled here without discarding emsdk_env's variables.
+if /i not "%__Os%" == "browser" goto :AfterEmsdkEnv
+if not "%EMSDK_PATH%" == "" goto :CallEmsdkEnv
+
+call "%__repoRoot%\eng\wasm\wasm-tool-cache.cmd" emscripten "%__repoRoot%\src\mono\browser\emscripten-version.txt" "%__repoRoot%"
+if "%WASM_TOOL_CACHE_RESULT%" == "" (
+    echo Error: Should set EMSDK_PATH environment variable pointing to emsdk root.
+    exit /B 1
+)
+set "EMSDK_PATH=%WASM_TOOL_CACHE_RESULT%"
+
+:CallEmsdkEnv
+set "EMSDK_QUIET=1"
+call "%EMSDK_PATH%\emsdk_env.cmd"
+
+:AfterEmsdkEnv
+
+setlocal enabledelayedexpansion
+
+set __SourceDir=%1
+set __IntermediatesDir=%2
+set "__IntermediatesDirPath=%~2"
+set "__CompilerInputs=CMAKE_TOOLCHAIN_FILE=!CMAKE_TOOLCHAIN_FILE!;CC=!CC!;CXX=!CXX!;VCToolsInstallDir=!VCToolsInstallDir!"
+set __VSVersion=%3
+set __Arch=%4
+set __CmakeGenerator=Visual Studio
+set __ExtraCmakeParams=
+if /i "%__Ninja%" == "1" (
+    set __CmakeGenerator=Ninja
+) else (
+    if /i NOT "%__Arch%" == "wasm" (
+        if /i "%__VSVersion%" == "18.0" (set __CmakeGenerator=%__CmakeGenerator% 18 2026)
+        if /i "%__VSVersion%" == "17.0" (set __CmakeGenerator=%__CmakeGenerator% 17 2022)
+
+        if /i "%__Arch%" == "x64" (set __ExtraCmakeParams=%__ExtraCmakeParams% -A x64)
+        if /i "%__Arch%" == "arm" (set __ExtraCmakeParams=%__ExtraCmakeParams% -A ARM)
+        if /i "%__Arch%" == "arm64" (set __ExtraCmakeParams=%__ExtraCmakeParams% -A ARM64)
+        if /i "%__Arch%" == "x86" (set __ExtraCmakeParams=%__ExtraCmakeParams% -A Win32)
+    ) else (
+        set __CmakeGenerator=NMake Makefiles
+    )
+)
+
+if /i "%__Arch%" == "wasm" (
+    if "%__Os%" == "" (
+        echo Error: Please add target OS parameter
+        exit /B 1
+    )
+    if /i "%__Os%" == "browser" (
+        rem emcmake may be a batch file; call it so that control returns to this script.
+        set "CMakeToolPrefix=call emcmake"
+        for %%i in (emcmake.exe emcmake.bat) do set "__CompilerInputs=!__CompilerInputs!;%%i=%%~$PATH:i"
+        rem Use WASM-specific tryrun cache to speed up CMake configure
+        set __ExtraCmakeParams="-C %__repoRoot%/eng/native/tryrun.browser.cmake" !__ExtraCmakeParams!
+    )
+    if /i "%__Os%" == "wasi" (
+        if "%WASI_SDK_PATH%" == "" (
+            call "%__repoRoot%\eng\wasm\wasm-tool-cache.cmd" wasi-sdk "%__repoRoot%\eng\wasm\wasi-sdk-version.txt" "%__repoRoot%"
+            if "!WASM_TOOL_CACHE_RESULT!" == "" (
+                echo Error: Should set WASI_SDK_PATH environment variable pointing to WASI SDK root.
+                exit /B 1
+            )
+            set "WASI_SDK_PATH=!WASM_TOOL_CACHE_RESULT!"
+        )
+        set __CmakeGenerator=Ninja
+        set "__CompilerInputs=!__CompilerInputs!;-DCMAKE_TOOLCHAIN_FILE=!WASI_SDK_PATH!/share/cmake/wasi-sdk-p2.cmake"
+        set __ExtraCmakeParams=%__ExtraCmakeParams% -DCLR_CMAKE_TARGET_OS=wasi "-DCMAKE_TOOLCHAIN_FILE=!WASI_SDK_PATH!/share/cmake/wasi-sdk-p2.cmake"
+    )
+) else (
+    set __ExtraCmakeParams=%__ExtraCmakeParams%  "-DCMAKE_SYSTEM_VERSION=10.0"
+)
+
+if /i "%__Os%" == "android" (
+    :: Keep in sync with $(AndroidApiLevelMin) in Directory.Build.props in the repository rooot
+    set __ANDROID_API_LEVEL=24
+    if "%ANDROID_NDK_ROOT%" == "" (
+        echo Error: You need to set the ANDROID_NDK_ROOT environment variable pointing to the Android NDK root.
+        exit /B 1
+    )
+
+    set __ExtraCmakeParams=!__ExtraCmakeParams! "-DANDROID_BUILD=1" "-DANDROID_CPP_FEATURES='no-rtti exceptions'"
+    set __ExtraCmakeParams=!__ExtraCmakeParams! "-DANDROID_PLATFORM=android-!__ANDROID_API_LEVEL!" "-DANDROID_NATIVE_API_LEVEL=!__ANDROID_API_LEVEL!"
+
+    if "%__Arch%" == "x64" (
+        set __ExtraCmakeParams=!__ExtraCmakeParams! "-DANDROID_ABI=x86_64"
+    )
+    if "%__Arch%" == "x86" (
+        set __ExtraCmakeParams=!__ExtraCmakeParams! "-DANDROID_ABI=x86"
+    )
+    if "%__Arch%" == "arm64" (
+        set __ExtraCmakeParams=!__ExtraCmakeParams! "-DANDROID_ABI=arm64-v8a"
+    )
+    if "%__Arch%" == "arm" (
+        set __ExtraCmakeParams=!__ExtraCmakeParams! "-DANDROID_ABI=armeabi-v7a"
+    )
+
+    set "__CompilerInputs=!__CompilerInputs!;-DCMAKE_TOOLCHAIN_FILE=%ANDROID_NDK_ROOT%/build/cmake/android.toolchain.cmake"
+    set __ExtraCmakeParams=!__ExtraCmakeParams! "-DCMAKE_TOOLCHAIN_FILE='%ANDROID_NDK_ROOT:\=/%/build/cmake/android.toolchain.cmake'" "-C %__repoRoot%/eng/native/tryrun.cmake"
+)
+
+:loop
+if [%6] == [] goto end_loop
+set "__CurrentArg=%~6"
+if /i "!__CurrentArg:~0,23!" == "-DCMAKE_TOOLCHAIN_FILE=" set "__CompilerInputs=!__CompilerInputs!;!__CurrentArg!"
+if /i "!__CurrentArg:~0,23!" == "-DCMAKE_TOOLCHAIN_FILE:" set "__CompilerInputs=!__CompilerInputs!;!__CurrentArg!"
+set __ExtraCmakeParams=%__ExtraCmakeParams% %6
+shift
+goto loop
+:end_loop
+
+set __ExtraCmakeParams="-DCMAKE_INSTALL_PREFIX=%__CMakeBinDir%" "-DCLR_CMAKE_HOST_ARCH=%__Arch%" %__ExtraCmakeParams%
+
+rem CMake detects the compiler only on a build directory's first configure. Later configures keep the
+rem cached compiler even when the toolchain file, CC/CXX, the MSVC toolset or emcmake now select a
+rem different one, for example a new SDK version in the versioned wasm tool cache. Record those inputs
+rem next to the cache and reconfigure from scratch when they change.
+set "__CompilerInputs=!__CompilerInputs:"=!"
+set "__CompilerInputsFile=!__IntermediatesDirPath!\cmake_compiler_inputs.txt"
+set __CMakeFreshArg=
+if exist "!__IntermediatesDirPath!\CMakeCache.txt" (
+    >"!__CompilerInputsFile!.new" echo(!__CompilerInputs!
+    rem fc also fails when there is no record yet.
+    fc /b "!__CompilerInputsFile!" "!__CompilerInputsFile!.new" >nul 2>&1
+    if errorlevel 1 (
+        echo CMake compiler inputs changed since !__IntermediatesDirPath! was last configured; reconfiguring from scratch.
+        set __CMakeFreshArg=--fresh
+        rem Also delete the previous compiler's outputs: the build tool rebuilds an object only when its command
+        rem line changes, which it doesn't when the compiler at the same path is replaced (e.g. a VS update).
+        if exist "!__CompilerInputsFile!" "%CMakePath%" --build "!__IntermediatesDirPath!" --target clean
+    )
+    del "!__CompilerInputsFile!.new" 2>nul
+)
+
+set __CmdLineOptionsUpToDateFile=%__IntermediatesDir%\cmake_cmd_line.txt
+set __CMakeCmdLineCache=
+if not "%__ConfigureOnly%" == "1" if "%__CMakeFreshArg%" == "" (
+    REM MSBuild can't reload from a CMake reconfigure during build correctly, so only do this
+    REM command-line up to date check for non-VS generators.
+    if "%__CmakeGenerator:Visual Studio=%" == "%__CmakeGenerator%" (
+        if exist "%__CmdLineOptionsUpToDateFile%" (
+            set /p __CMakeCmdLineCache=<"%__CmdLineOptionsUpToDateFile%"
+            REM Strip the extra space from the end of the cached command line
+            if "!__ExtraCmakeParams!" == "!__CMakeCmdLineCache:~0,-1!" (
+                echo The CMake command line is the same as the last run. Skipping running CMake.
+                exit /B 0
+            ) else (
+                echo The CMake command line differs from the last run. Running CMake again.
+            )
+        )
+    )
+)
+
+echo %CMakeToolPrefix% "%CMakePath% %__CMakeFreshArg% %__ExtraCmakeParams% --no-warn-unused-cli -G %__CmakeGenerator% -B %__IntermediatesDir% -S %__SourceDir%"
+%CMakeToolPrefix% "%CMakePath%" %__CMakeFreshArg% %__ExtraCmakeParams% --no-warn-unused-cli -G "%__CmakeGenerator%" -B %__IntermediatesDir% -S %__SourceDir%
+
+if "%errorlevel%" == "0" (
+    echo %__ExtraCmakeParams% > %__CmdLineOptionsUpToDateFile%
+    >"!__CompilerInputsFile!" echo(!__CompilerInputs!
+)
+
+endlocal
+exit /B %errorlevel%
+
+:USAGE
+  echo "Usage..."
+  echo "gen-buildsys.cmd <path to top level CMakeLists.txt> <path to location for intermediate files> <VSVersion> <arch> <os>"
+  echo "Specify the path to the top level CMake file"
+  echo "Specify the VSVersion to be used, e. g. 17.0 for VS2022"
+  EXIT /B 1
