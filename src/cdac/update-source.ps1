@@ -59,29 +59,26 @@ try {
 
     $cdacRoot = Join-Path $snapshot 'src/native/managed/cdac'
     @(
-        'cmake'
-        'inc'
-        'scripts'
-        'IData.md'
-        'README.md'
-        'cdac.slnx'
-    ) | ForEach-Object {
-        $path = Join-Path $cdacRoot $_
-        if (Test-Path -LiteralPath $path) {
-            Remove-Item -LiteralPath $path -Recurse -Force
-        }
-    }
-
-    @(
+        @{ Path = 'cmake' }
+        @{ Path = 'inc' }
+        @{ Path = 'scripts' }
+        @{ Path = 'IData.md' }
+        @{ Path = 'README.md' }
+        @{ Path = 'cdac.slnx' }
         @{ Path = 'tests'; Keep = 'TestInfrastructure' }
         @{ Path = 'tools'; Keep = 'CdacUsageGraph' }
         @{ Path = 'tools\CdacUsageGraph'; Keep = 'src' }
     ) | ForEach-Object {
         $path = Join-Path $cdacRoot $_.Path
-        $keep = $_.Keep
-        Get-ChildItem -LiteralPath $path -Force |
-            Where-Object { $_.Name -ne $keep } |
-            Remove-Item -Recurse -Force
+        if ($_.ContainsKey('Keep')) {
+            $keep = $_.Keep
+            Get-ChildItem -LiteralPath $path -Force |
+                Where-Object { $_.Name -ne $keep } |
+                Remove-Item -Recurse -Force
+        }
+        elseif (Test-Path -LiteralPath $path) {
+            Remove-Item -LiteralPath $path -Recurse -Force
+        }
     }
 
     Get-ChildItem -LiteralPath $cdacRoot -Directory | ForEach-Object {
