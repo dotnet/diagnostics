@@ -1,0 +1,16 @@
+<Project>
+  <Import Project="..\..\..\Directory.Build.props" />
+
+  <PropertyGroup>
+    <PackageRID Condition="'$(PackageRID)' == ''">$(TargetRid)</PackageRID>
+    <IsShipping>false</IsShipping>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <PackageDescription>Internal transport package for the cDAC reader and universal DBI. Not intended for direct consumption.</PackageDescription>
+    <PackageArch>$(PackageRID.Substring($([MSBuild]::Add($(PackageRID.LastIndexOf('-')), 1))))</PackageArch>
+    <OsFolderName>$(PackageRID.Substring(0, $(PackageRID.LastIndexOf('-'))))</OsFolderName>
+    <OsFolderName Condition="'$(OsFolderName)' == 'win'">Windows_NT</OsFolderName>
+    <NativeBinDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', '$(OsFolderName).$(PackageArch).$(Configuration)'))</NativeBinDir>
+  </PropertyGroup>
+
+  <Import Project="$(RepositoryEngineeringDir)native\naming.props" />
+</Project>

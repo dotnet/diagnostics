@@ -24,8 +24,7 @@
 <!--
     Installs the above packages into the $(ArtifactsBinNativeDir) directory.
 -->
-  <Target Name="PublishCDacReader"
-          Condition="'$(PackageWithCDac)' == 'true'">
+  <Target Name="PublishCDacReader">
     <MSBuild Projects="$(RepoRoot)src\cdac\publish.proj"
              Targets="Restore;Build" />
   </Target>

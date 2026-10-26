@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <PackageRID>osx-x64</PackageRID>
+  </PropertyGroup>
+  <Import Project="Microsoft.Diagnostics.InternalAssets.props" />
+</Project>
