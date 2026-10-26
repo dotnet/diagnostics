@@ -62,8 +62,6 @@ try {
         'cmake'
         'inc'
         'scripts'
-        'tests'
-        'tools'
         'IData.md'
         'README.md'
         'cdac.slnx'
@@ -72,6 +70,18 @@ try {
         if (Test-Path -LiteralPath $path) {
             Remove-Item -LiteralPath $path -Recurse -Force
         }
+    }
+
+    @(
+        @{ Path = 'tests'; Keep = 'TestInfrastructure' }
+        @{ Path = 'tools'; Keep = 'CdacUsageGraph' }
+        @{ Path = 'tools\CdacUsageGraph'; Keep = 'src' }
+    ) | ForEach-Object {
+        $path = Join-Path $cdacRoot $_.Path
+        $keep = $_.Keep
+        Get-ChildItem -LiteralPath $path -Force |
+            Where-Object { $_.Name -ne $keep } |
+            Remove-Item -Recurse -Force
     }
 
     Get-ChildItem -LiteralPath $cdacRoot -Directory | ForEach-Object {
