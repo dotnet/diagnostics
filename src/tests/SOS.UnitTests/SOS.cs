@@ -85,14 +85,6 @@ public static class SOSTestHelpers
         }
     }
 
-    internal static void SkipIfWinX86(TestConfiguration config)
-    {
-        if (config.TargetArchitecture == "x86" && OS.Kind == OSKind.Windows)
-        {
-            Assert.Skip("Test does not support x86 on Windows");
-        }
-    }
-
     internal static async Task RunTest(
         string scriptName,
         SOSRunner.TestInformation information,
@@ -361,35 +353,6 @@ public class SOSGCTests
             scriptName: "FindRootsOlderGeneration.script",
             Output,
             testName: "SOS.FindRootsOlderGeneration",
-            testDump: false);
-    }
-}
-
-public class SOSMethodTests
-{
-    public SOSMethodTests(ITestOutputHelper output)
-    {
-        Output = output;
-    }
-
-    private ITestOutputHelper Output { get; set; }
-
-    [Theory, MemberData(nameof(SOSTestHelpers.GetNetCoreConfigurations), MemberType = typeof(SOSTestHelpers))]
-    public async Task VarargPInvokeInteropMD(TestConfiguration config)
-    {
-        if (OS.Kind != OSKind.Windows)
-        {
-            Assert.Skip("Test only supports CDB and therefore only runs on Windows");
-        }
-        // Tracking: https://github.com/dotnet/diagnostics/issues/5883 (dotnet/runtime#129456)
-        SOSTestHelpers.SkipIfWinX86(config);
-
-        await SOSTestHelpers.RunTest(
-            config,
-            debuggeeName: "VarargPInvokeInteropMD",
-            scriptName: "VarargPInvokeInteropMD.script",
-            Output,
-            testName: "SOS.VarargPInvokeInteropMD",
             testDump: false);
     }
 }

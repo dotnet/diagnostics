@@ -82,6 +82,7 @@ public static class TargetCatalog
     public const string DumpGcData = "dumpgcdata";
     public const string DumpGen = "dumpgen";
     public const string StressLog = "stresslog";
+    public const string VarargPInvoke = "varargpinvoke";
 
     // --- The one consolidated marker debuggee the harness adds (Phase 4). Every snapshot/oracle/live
     //     scenario is a named stop point on this single program (see SosHarnessScenarios). ---
@@ -197,6 +198,13 @@ public static class TargetCatalog
                 ["DOTNET_LogLevel"] = "6",
                 ["DOTNET_StressLogSize"] = "65536",
             }),
+
+        // Live-only: the test advances through Debugger.Break() and a native printf breakpoint.
+        new TargetDefinition(
+            VarargPInvoke,
+            Project: "VarargPInvokeInteropMD",
+            StopPoints: [],
+            Flavors: Flavor.Core | Flavor.SingleFile),
 
         // The consolidated marker debuggee: each scenario is a NoInlining marker method that calls
         // TestHarness.Stop(name). Ordered so the heap scenario (live/dead objects) is captured before

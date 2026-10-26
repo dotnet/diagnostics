@@ -43,6 +43,8 @@ in dumps. `DumpGen.script` is retired by a deterministic generation-population
 target that preserves its exact gen0/gen1/gen2/LOH/POH and filter assertions.
 `Overflow.script` and `MiniDumpLocalVarLookup.script` are retired by focused
 stack-overflow exception and Mini-dump ICorDebug local-variable tests.
+`VarargPInvokeInteropMD.script` is retired by a live native-breakpoint test of
+vararg P/Invoke frame identity and IL-stub resolution/disassembly.
 The remaining legacy runner and scenarios stay in place.
 
 ## Legacy-to-new map
@@ -76,7 +78,7 @@ The remaining legacy runner and scenarios stay in place.
 | `TaskNestedException.script` | Retired | `PrintExceptionTests.PrintException_TaskExceptionChain` follows `AggregateException -> FormatException -> InvalidOperationException` addresses, checks messages, ordered task/caller/throw frames and source lines, and requires no further inner exception across live and Heap/Mini dump rows. The original sources and separately built library are included in the modern payload; the app project moves to the standard debuggee-folder location. |
 | `TestExtensions.script` | Retained | This validates extension-command interception and dispatch rather than SOS product output; it remains a legacy harness integration test. |
 | `ThreadApartment.script` | Retired | `ClrThreadsTests.ClrThreads_ReportsApartmentStates` identifies the named STA/MTA workers in `clrstack -all`, matches their OS thread IDs to `clrthreads`, and asserts each worker's expected apartment on Windows. |
-| `VarargPInvokeInteropMD.script` | Retained | Vararg P/Invoke, IL stubs, native breakpointing, `ip2md`, and `clru -il` form one specialized interop scenario. Generic `ip2md` and `clru` have new structured tests. |
+| `VarargPInvokeInteropMD.script` | Retired | `VarargPInvokeTests.VarargPInvoke_ReportsInteropMethodAndDisassemblesStub` retains the debuggee and Windows/CDB live Core/SingleFile coverage, including the x86 exclusion (#5883). It stops at native `msvcrt!printf`, verifies the vararg `InlinedCallFrame` and exact IL-stub signature, resolves the stub IP with `ip2md`, and checks structured native disassembly with and without `clru -il`, including the absence of IL-read errors. |
 | `WebApp.script` | Retained | Timers, ASP.NET/WebApp stacks, args/registers, and GC stress-log behavior remain in the specialized Windows legacy target; generic command equivalents are covered. |
 
 The focused gaps fixed in this review are the `dumpstack -EE` variant and
