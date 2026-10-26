@@ -63,8 +63,15 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 {
                     return;
                 }
+                bool httpFailure = message.Length > 3 &&
+                    message[3] == ' ' &&
+                    int.TryParse(message.AsSpan(0, 3), out int statusCode) &&
+                    statusCode is >= 400 and <= 599 &&
+                    (message.Contains(" - 'http://", StringComparison.Ordinal) ||
+                        message.Contains(" - 'https://", StringComparison.Ordinal));
                 if (message.StartsWith("Not Found: ", StringComparison.Ordinal) ||
-                    message.Contains("HttpSymbolStore:", StringComparison.Ordinal))
+                    message.Contains("HttpSymbolStore:", StringComparison.Ordinal) ||
+                    httpFailure)
                 {
                     AnyFailureObserved = true;
                 }
