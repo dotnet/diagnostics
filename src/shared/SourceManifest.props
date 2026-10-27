@@ -1,0 +1,17 @@
+<Project>
+  <ItemGroup>
+    <SharedRuntimeSource Include="src/coreclr/clrfeatures.cmake" />
+    <SharedRuntimeSource Include="src/coreclr/minipal" />
+    <SharedRuntimeSource Include="src/coreclr/pal/inc" />
+    <SharedRuntimeSource Include="src/coreclr/pal/prebuilt" />
+    <SharedRuntimeSource Include="src/coreclr/pal/src" />
+    <SharedRuntimeSource Include="src/coreclr/runtime/CLREventBase.h" />
+    <SharedRuntimeSource Include="src/coreclr/runtime/unix/CLREventBase.cpp" />
+    <SharedRuntimeSource Include="src/coreclr/runtime/windows/CLREventBase.cpp" />
+    <SharedRuntimeSource Include="src/native/external/libunwind.cmake" />
+    <SharedRuntimeSource Include="src/native/external/libunwind" />
+    <SharedRuntimeSource Include="src/native/external/libunwind_extras" />
+    <SharedRuntimeSource Include="src/native/inc/generatedumpflags.h" />
+    <SharedRuntimeSource Include="src/native/minipal" />
+  </ItemGroup>
+</Project>
