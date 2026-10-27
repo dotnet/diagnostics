@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#include <minipal/com/memory.h>
 #else
 #include <softpub.h>
 #include <wintrust.h>

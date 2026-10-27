@@ -19,7 +19,9 @@ Revision History:
 
 --*/
 
-#include "../palrt/common.h"
+#include <switches.h>
+#include <winwrap.h>
+#include <minipal/utils.h>
 #include "bstr.h"
 #include <dn-u16.h>
 

@@ -185,7 +185,7 @@ else(CLR_CMAKE_HOST_WIN32)
     extensions
     corguids
     dbgutil
-    palrt
+    diagnosticspal
     coreclrpal
     coreclrminipal
   )

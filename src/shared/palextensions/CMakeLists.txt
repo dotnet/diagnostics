@@ -1,4 +1,5 @@
 set(PALEXTENSIONS_SOURCES
+    bstr.cpp
     processdescriptor.cpp
     processmodules.cpp
     runtimestartup.cpp

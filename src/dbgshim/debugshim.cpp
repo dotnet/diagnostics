@@ -18,6 +18,7 @@
 #include "winwrap.h"
 #ifndef HOST_WINDOWS
 #include <dlfcn.h>
+#include <minipal/com/memory.h>
 #endif
 
 //*****************************************************************************

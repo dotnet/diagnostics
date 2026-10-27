@@ -22,7 +22,7 @@ add_subdirectory(inc)
 add_subdirectory(debug)
 
 if (CLR_CMAKE_HOST_UNIX)
-  add_subdirectory(palrt)
+  add_subdirectory(palextensions)
 endif(CLR_CMAKE_HOST_UNIX)
 
 add_subdirectory(utilcode)
