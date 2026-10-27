@@ -30,3 +30,4 @@ if(CLR_CMAKE_TARGET_OSX)
 endif(CLR_CMAKE_TARGET_OSX)
 
 add_library(dbgutil STATIC ${DBGUTIL_SOURCES})
+target_link_libraries(dbgutil PUBLIC coreclrminipal)

@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include "elfreader.h"
 #include "arrayholder.h"
+#include <dn-stdio.h>
 
 #define Elf_Ehdr   ElfW(Ehdr)
 #define Elf_Phdr   ElfW(Phdr)
@@ -67,8 +68,7 @@ public:
     bool OpenFile(const WCHAR* modulePath)
     {
         _ASSERTE(m_file == NULL);
-        m_file = _wfopen(modulePath, W("rb"));
-        return m_file != NULL;
+        return u16_fopen_s(&m_file, modulePath, W("rb")) == 0;
     }
 
     uint64_t GetFileOffset(uint64_t address)
