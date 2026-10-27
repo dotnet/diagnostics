@@ -13,6 +13,7 @@
 
 #include "static_assert.h"
 #include "daccess.h"
+#include <minipal/utils.h>
 
 // Use the C++ detection idiom (https://isocpp.org/blog/2017/09/detection-idiom-a-stopgap-for-concepts-simon-brand)
 template <class... > struct make_void { using type = void; };
