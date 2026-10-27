@@ -16,6 +16,10 @@ endif(CLR_CMAKE_HOST_UNIX)
 
 add_subdirectory(${CORECLR_MINIPAL_SOURCE_DIR} minipal)
 
+if (CLR_CMAKE_TARGET_WIN32 AND CLR_CMAKE_TARGET_ARCH_I386)
+  target_compile_options(coreclrminipal PRIVATE /FIlimits.h)
+endif()
+
 include(shared.cmake)
 
 add_subdirectory(inc)
