@@ -12,6 +12,10 @@ build_universal_dbi()
     local dbi_intermediates_dir="$artifacts_intermediates_dir/dbi/$config_triplet"
     local dbi_cmake_args="$extra_cmake_args -DCLR_CMAKE_TARGET_ARCH=$target_arch -DRUNTIME_GENERATED_INCLUDE_DIR=$artifacts_intermediates_dir"
 
+    if [[ "$__CrossBuild" == 1 && "$target_os" == linux && ("$target_arch" == x64 || "$target_arch" == arm64) ]]; then
+        dbi_cmake_args="-DCLR_CMAKE_CXX_STANDARD_LIBRARY=libc++ -DCLR_CMAKE_CXX_STANDARD_LIBRARY_STATIC=ON -DCLR_CMAKE_CXX_ABI_LIBRARY=libstdc++ $dbi_cmake_args"
+    fi
+
     if [[ "$__CrossBuild" == 1 ]]; then
         dbi_cmake_args="-C \"$__RepoRootDir/src/dbi/runtime/eng/native/tryrun.cmake\" $dbi_cmake_args"
     fi
