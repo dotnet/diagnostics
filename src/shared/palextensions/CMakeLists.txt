@@ -12,8 +12,8 @@ target_include_directories(diagnosticspal
         ${CMAKE_CURRENT_SOURCE_DIR}/prebuilt/inc
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CLR_SHARED_DIR}/pal/src/include
-        ${CLR_SHARED_DIR}/runtime
+        ${COREPAL_SOURCE_DIR}/src/include
+        ${RUNTIME_DIR}
         ${CMAKE_CURRENT_BINARY_DIR}/../pal/src
 )
 
