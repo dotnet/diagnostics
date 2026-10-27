@@ -11,11 +11,6 @@
 
 # Build results
 [Aa]rtifacts/
-[Dd]ebug/
-!src/dbi/runtime/src/coreclr/debug/
-!src/dbi/runtime/src/coreclr/debug/**
-!src/dbi/runtime/src/coreclr/pal/src/debug/
-!src/dbi/runtime/src/coreclr/pal/src/debug/**
 [Rr]elease/
 !eng/[Rr]elease
 [Bb]in/
