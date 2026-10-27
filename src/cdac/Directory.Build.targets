@@ -5,7 +5,7 @@
 
   <PropertyGroup>
     <IsPackable Condition="'$(NeedsAotPublish)' == 'true'">false</IsPackable>
-    <PackageId Condition="'$(IsPackable)' == 'true'">$(MSBuildProjectName.Replace('Microsoft.Diagnostics.', 'Microsoft.Diagnostics.InternalAssets.'))</PackageId>
+    <PackageId Condition="'$(IsPackable)' == 'true'">$(AssemblyName.Replace('Microsoft.Diagnostics.', 'Microsoft.Diagnostics.InternalAssets.'))</PackageId>
     <BeforePack>$(BeforePack);IncludeAnalyzersInPackage</BeforePack>
   </PropertyGroup>
 
