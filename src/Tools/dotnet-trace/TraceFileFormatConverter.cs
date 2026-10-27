@@ -53,7 +53,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                     {
                         if (ex.ToString().Contains("Read past end of stream."))
                         {
-                            stdOut.WriteLine("Detected a potentially broken trace. Continuing with best-efforts to convert the trace, but resulting speedscope file may contain broken stacks as a result.");
+                            stdOut.WriteLine("Detected a potentially broken trace. Continuing with best-efforts to convert the trace, but resulting {format} file may contain broken stacks as a result.");
                             Convert(format, fileToConvert, outputFilename, continueOnError: true);
                         }
                         else
@@ -95,7 +95,7 @@ namespace Microsoft.Diagnostics.Tools.Trace
                         ChromiumStackSourceWriter.WriteStackViewAsJson(stackSource, outputFilename, compress: false);
                         break;
                     case TraceFileFormat.Callgrind:
-                        CallgrindStackSourceWriter.WriteStackViewAsCallgrind(stackSource, outputFilename);
+                        CallgrindStackSourceWriter.WriteStackViewAsCallgrind(stackSource, outputFilename, command: Path.GetFileName(fileToConvert));
                         break;
                     default:
                         // we should never get here
