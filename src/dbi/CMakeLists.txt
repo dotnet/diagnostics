@@ -140,6 +140,22 @@ endif()
 add_component(debug)
 
 add_subdirectory(${CLR_DIR}/debug/dbgutil debug/dbgutil)
+if(CLR_CMAKE_TARGET_LINUX)
+  include(CheckCXXSourceCompiles)
+  check_cxx_source_compiles(
+    "
+    #include <elf.h>
+    int main()
+    {
+      return EM_RISCV;
+    }
+    "
+    HAVE_ELF_EM_RISCV)
+  if(NOT HAVE_ELF_EM_RISCV)
+    # RISC-V uses the stable ELF machine identifier 243.
+    target_compile_definitions(dbgutil PRIVATE EM_RISCV=243)
+  endif()
+endif()
 
 if(CLR_CMAKE_HOST_UNIX)
   add_compile_options($<$<COMPILE_LANG_AND_ID:CXX,Clang,AppleClang>:-Wno-null-arithmetic>)
