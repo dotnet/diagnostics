@@ -4,6 +4,7 @@
     <UniversalDbiSourceManifestSource Include="eng/native" />
     <UniversalDbiSourceManifestSource Include="src/coreclr/clrdefinitions.cmake" />
     <UniversalDbiSourceManifestSource Include="src/coreclr/clrfeatures.cmake" />
+    <UniversalDbiSourceManifestSource Include="src/coreclr/debug/crashreport" />
     <UniversalDbiSourceManifestSource Include="src/coreclr/debug/dbgutil" />
     <UniversalDbiSourceManifestSource Include="src/coreclr/debug/debug-pal" />
     <UniversalDbiSourceManifestSource Include="src/coreclr/debug/di" />
