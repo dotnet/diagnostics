@@ -241,7 +241,7 @@ if [[ "$__NativeBuild" == 1 ]]; then
     fi
 
     source "$__RepoRootDir/src/dbi/build.sh"
-    if ! build_universal_dbi "$__TargetOS" "$__TargetArch" "$__ConfigTriplet" "$__ArtifactsIntermediatesDir" "$__BinDir" "$__ExtraCmakeArgs" "$__LogsDir/dbi-build.log"; then
+    if ! build_universal_dbi "$__TargetOS" "$__TargetArch" "$__ConfigTriplet" "$__ArtifactsIntermediatesDir" "$__BinDir" "$__ExtraCmakeArgs" "$__LogsDir/dbi-build.log" "$__TargetRid"; then
         exit 1
     fi
 
