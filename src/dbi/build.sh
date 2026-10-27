@@ -12,6 +12,10 @@ build_universal_dbi()
     local dbi_intermediates_dir="$artifacts_intermediates_dir/dbi/$config_triplet"
     local dbi_cmake_args="$extra_cmake_args -DCLR_CMAKE_TARGET_ARCH=$target_arch -DRUNTIME_GENERATED_INCLUDE_DIR=$artifacts_intermediates_dir"
 
+    if [[ "$__CrossBuild" == 1 ]]; then
+        dbi_cmake_args="-C \"$__RepoRootDir/src/dbi/runtime/eng/native/tryrun.cmake\" $dbi_cmake_args"
+    fi
+
     mkdir -p "$dbi_intermediates_dir"
     mkdir -p "$output_dir"
 
