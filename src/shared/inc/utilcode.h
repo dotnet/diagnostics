@@ -22,7 +22,11 @@ using std::nothrow;
 #include "winwrap.h"
 #include <wchar.h>
 #include <ole2.h>
+#ifdef FEATURE_PAL
+#include "../palextensions/bstr.h"
+#else
 #include <oleauto.h>
+#endif
 #include "clrtypes.h"
 #include "safewrap.h"
 #include "volatile.h"

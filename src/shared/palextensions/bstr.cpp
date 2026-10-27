@@ -19,12 +19,9 @@ Revision History:
 
 --*/
 
-#include "common.h"
-#include "intsafe.h"
+#include "../palrt/common.h"
+#include "bstr.h"
 #include <dn-u16.h>
-
-#define CCH_BSTRMAX 0x7FFFFFFF  // 4 + (0x7ffffffb + 1 ) * 2 ==> 0xFFFFFFFC
-#define CB_BSTRMAX 0xFFFFFFFa   // 4 + (0xfffffff6 + 2) ==> 0xFFFFFFFC
 
 #define WIN32_ALLOC_ALIGN (16 - 1)
 
@@ -35,27 +32,15 @@ inline HRESULT CbSysStringSize(ULONG cchSize, BOOL isByteLen, ULONG *result)
 
     // +2 for the null terminator
     // + DWORD_PTR to store the byte length of the string
-    int constant = sizeof(WCHAR) + sizeof(DWORD_PTR) + WIN32_ALLOC_ALIGN;
+    constexpr ULONG constant = sizeof(WCHAR) + sizeof(DWORD_PTR) + WIN32_ALLOC_ALIGN;
+    constexpr ULONG maxValue = UINT32_MAX;
+    ULONG elementSize = isByteLen ? 1 : sizeof(WCHAR);
 
-    if (isByteLen)
-    {
-        if (SUCCEEDED(ULongAdd(constant, cchSize, result)))
-        {
-            *result = *result & ~WIN32_ALLOC_ALIGN;
-            return NOERROR;
-        }
-    }
-    else
-    {
-        ULONG temp = 0; // should not use in-place addition in ULongAdd
-        if (SUCCEEDED(ULongMult(cchSize, sizeof(WCHAR), &temp)) &&
-            SUCCEEDED(ULongAdd(temp, constant, result)))
-        {
-            *result = *result & ~WIN32_ALLOC_ALIGN;
-            return NOERROR;
-        }
-    }
-    return INTSAFE_E_ARITHMETIC_OVERFLOW;
+    if (cchSize > (maxValue - constant) / elementSize)
+        return HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW);
+
+    *result = ((cchSize * elementSize) + constant) & ~WIN32_ALLOC_ALIGN;
+    return NOERROR;
 }
 
 /***
