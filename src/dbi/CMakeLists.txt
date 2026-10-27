@@ -75,6 +75,27 @@ add_subdirectory(${CLR_SRC_NATIVE_DIR}/containers containers)
 add_subdirectory(${CLR_SRC_NATIVE_DIR}/eventpipe eventpipe)
 add_subdirectory(${CLR_SRC_NATIVE_DIR}/minipal shared_minipal)
 
+if(CLR_CMAKE_TARGET_LINUX)
+  include(CheckCSourceCompiles)
+  check_c_source_compiles(
+    "
+    #include <linux/membarrier.h>
+    int main(void)
+    {
+      return MEMBARRIER_CMD_PRIVATE_EXPEDITED | MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED;
+    }
+    "
+    HAVE_PRIVATE_EXPEDITED_MEMBARRIER_COMMANDS)
+  if(NOT HAVE_PRIVATE_EXPEDITED_MEMBARRIER_COMMANDS)
+    # These values are part of the Linux UAPI but are absent from older kernel headers.
+    foreach(minipal_target IN ITEMS minipal_objects aotminipal)
+      target_compile_definitions(${minipal_target} PRIVATE
+        MEMBARRIER_CMD_PRIVATE_EXPEDITED=8
+        MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED=16)
+    endforeach()
+  endif()
+endif()
+
 if(CLR_CMAKE_HOST_UNIX)
   add_subdirectory(pal)
 endif()
