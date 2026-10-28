@@ -21,13 +21,6 @@
     <PackageSourceFiles Include="$(NuGetPackageRoot)microsoft.diasymreader.native\$(MicrosoftDiaSymReaderNativeVersion)\runtimes\$(TargetRid)\native\*" Condition="'$(OS)' == 'Windows_NT'" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(PackageWithCDac)' == 'true'">
-    <PackageDownload Include="runtime.$(TargetRid).Microsoft.DotNet.Cdac.Transport"
-                     Version="[$(runtimewinx64MicrosoftDotNetCdacTransportVersion)]" />
-    <!-- The managed cDAC reader is built from mirrored source; the transport package supplies only the native DBI. -->
-    <PackageSourceFiles Include="$(NuGetPackageRoot)runtime.$(TargetRid).microsoft.dotnet.cdac.transport\$(runtimewinx64MicrosoftDotNetCdacTransportVersion)\runtimes\$(TargetRid)\native\*mscordbi_universal*" />
-  </ItemGroup>
-
 <!--
     Installs the above packages into the $(ArtifactsBinNativeDir) directory.
 -->
