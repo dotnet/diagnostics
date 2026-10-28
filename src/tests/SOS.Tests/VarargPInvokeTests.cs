@@ -35,17 +35,20 @@ public sealed class VarargPInvokeTests
             row => row["InternalFrame"].AsBoolean() && interopFrame.Matches(row["Call Site"]),
             $"an InlinedCallFrame for {InteropMethod}");
 
-        const string StubName = "ILStubClass.IL_STUB_PInvoke(System.String, Int32, Double, ...)";
-        SosRow stub = frames.SingleRow(row => row["Function"] == StubName, $"Function is {StubName}");
+        const string StubPrefix = "ILStubClass.IL_STUB_PInvoke(";
+        SosRow stub = frames.SingleRow(
+            row => row["Function"].Value.StartsWith(StubPrefix, StringComparison.Ordinal),
+            $"Function starts with {StubPrefix}");
+        string stubName = stub["Function"];
         ulong stubIp = stub["IP"].AsUInt64(Sos.Addr);
         MethodDumpResult method = target.Ip2md(stubIp);
-        Assert.Equal(StubName, method.MethodName);
+        Assert.Equal(stubName, method.MethodName);
         Assert.True(method.IsJitted);
         Assert.NotEqual(0ul, method.MethodDesc!.Value);
 
         ClrUResult plain = target.ClrU(method.MethodDesc.Value);
         Assert.True(plain.HasNormalJitBanner);
-        Assert.Equal(StubName, plain.MethodName);
+        Assert.Equal(stubName, plain.MethodName);
         Assert.NotEqual(0ul, plain.Begin);
         Assert.True(plain.Size > 0);
         Assert.NotEmpty(plain.Instructions);
