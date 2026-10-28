@@ -4,6 +4,14 @@
 #ifndef DIAGNOSTICS_PAL_H
 #define DIAGNOSTICS_PAL_H
 
+#include <minipal/debugger.h>
+
+#include "../bstr.h"
+
+#ifndef IsDebuggerPresent
+#define IsDebuggerPresent minipal_is_native_debugger_present
+#endif
+
 #ifndef EMPTY_BASES_DECL
 #define EMPTY_BASES_DECL
 #endif
@@ -45,6 +53,14 @@ typedef struct tagVS_FIXEDFILEINFO
     DWORD dwFileDateMS;
     DWORD dwFileDateLS;
 } VS_FIXEDFILEINFO;
+
+#ifndef VS_FF_DEBUG
+#define VS_FF_DEBUG 0x00000001L
+#endif
+
+#ifndef VS_FF_SPECIALBUILD
+#define VS_FF_SPECIALBUILD 0x00000020L
+#endif
 
 extern "C"
 {

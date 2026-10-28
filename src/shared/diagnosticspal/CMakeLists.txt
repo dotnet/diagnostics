@@ -12,6 +12,13 @@ set(DIAGNOSTICSPAL_SOURCES
     safecrt/xtow_s.cpp
 )
 
+set_source_files_properties(
+    safecrt/safecrt_output_l.cpp
+    safecrt/safecrt_output_s.cpp
+    safecrt/xtow_s.cpp
+    PROPERTIES COMPILE_OPTIONS -U_UNICODE
+)
+
 add_library(diagnosticspal STATIC ${DIAGNOSTICSPAL_SOURCES})
 
 target_include_directories(diagnosticspal

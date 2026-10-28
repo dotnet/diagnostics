@@ -127,7 +127,7 @@ GenOpenMapping(
         return NULL;
     }
     
-    hMappedFile = CreateFileMappingA (
+    hMappedFile = CreateFileMappingW (
                         hFile,
                         NULL,
                         PAGE_READONLY,

@@ -7,6 +7,11 @@
 #include "host.h"
 #include <string>
 
+#ifdef FEATURE_PAL
+#include <dirent.h>
+#include <unistd.h>
+#endif
+
 Target* Target::s_target = nullptr;
 
 //----------------------------------------------------------------------------
@@ -31,6 +36,24 @@ Target::~Target()
     LPCSTR tmpPath = (LPCSTR)InterlockedExchangePointer((PVOID *)&m_tmpPath, nullptr);
     if (tmpPath != nullptr)
     {
+#ifdef FEATURE_PAL
+        DIR* directory = opendir(tmpPath);
+        if (directory != nullptr)
+        {
+            dirent* entry;
+            while ((entry = readdir(directory)) != nullptr)
+            {
+                if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
+                {
+                    std::string file(tmpPath);
+                    file.append(entry->d_name);
+                    unlink(file.c_str());
+                }
+            }
+            closedir(directory);
+        }
+        rmdir(tmpPath);
+#else
         std::string directory(tmpPath);
         directory.append("*");
 
@@ -54,6 +77,7 @@ Target::~Target()
         }
 
         RemoveDirectoryA(tmpPath);
+#endif
         free((void*)tmpPath);
     }
     if (m_netcore != nullptr)

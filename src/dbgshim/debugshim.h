@@ -57,6 +57,7 @@
 // interface from OpenVirtualProcess. ICLRDebugging itself is a frozen published interface, so the
 // policy is carried on this sibling interface instead of being added there.
 // {2D3B4F6A-1C7E-4B2A-9E5D-7F1A6C0B8D34}
+EXTERN_GUID(IID_ICLRDebuggingPolicy, 0x2D3B4F6A, 0x1C7E, 0x4B2A, 0x9E, 0x5D, 0x7F, 0x1A, 0x6C, 0x0B, 0x8D, 0x34);
 MIDL_INTERFACE("2D3B4F6A-1C7E-4B2A-9E5D-7F1A6C0B8D34")
 ICLRDebuggingPolicy : public IUnknown
 {

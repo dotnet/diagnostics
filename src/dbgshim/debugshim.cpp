@@ -18,6 +18,7 @@
 #include "winwrap.h"
 #ifndef HOST_WINDOWS
 #include <dlfcn.h>
+#include <sys/stat.h>
 #include <minipal/com/memory.h>
 #endif
 
@@ -305,7 +306,7 @@ static HRESULT OpenCorDebugProcessWithCDac(
         return CORDBG_E_DEBUG_COMPONENT_MISSING;
     }
 
-    HMODULE hDbi = LoadLibraryW(dbiModulePath);
+    HMODULE hDbi = LoadLibraryExW(dbiModulePath, nullptr, 0);
     if (hDbi == NULL)
     {
         return HRESULT_FROM_WIN32(GetLastError());
@@ -685,7 +686,7 @@ static HRESULT LoadResolvedLibraries(
     // Load DAC first because DBI references exports from the matching DAC PAL.
     if (*phDac == NULL)
     {
-        *phDac = LoadLibraryW(dacModulePath);
+        *phDac = LoadLibraryExW(dacModulePath, nullptr, 0);
         if (*phDac == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
@@ -695,7 +696,7 @@ static HRESULT LoadResolvedLibraries(
     // Load DBI after DAC (see comment above).
     if (SUCCEEDED(hr) && *phDbi == NULL)
     {
-        *phDbi = LoadLibraryW(dbiModulePath);
+        *phDbi = LoadLibraryExW(dbiModulePath, nullptr, 0);
         if (*phDbi == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
@@ -1215,12 +1216,28 @@ bool GetCDacAndDbiPaths(SString& cdacPath, SString& dbiPath)
         return false;
     }
 
+#ifdef HOST_WINDOWS
     DWORD dbiAttributes = GetFileAttributesW(resolvedDbiPath);
     DWORD cdacAttributes = GetFileAttributesW(resolvedCDacPath);
-    if (dbiAttributes == INVALID_FILE_ATTRIBUTES ||
-        (dbiAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 ||
-        cdacAttributes == INVALID_FILE_ATTRIBUTES ||
-        (cdacAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
+    bool validPaths =
+        dbiAttributes != INVALID_FILE_ATTRIBUTES &&
+        (dbiAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 &&
+        cdacAttributes != INVALID_FILE_ATTRIBUTES &&
+        (cdacAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+#else
+    SString resolvedDbiPathUtf8;
+    SString resolvedCDacPathUtf8;
+    resolvedDbiPath.ConvertToUTF8(resolvedDbiPathUtf8);
+    resolvedCDacPath.ConvertToUTF8(resolvedCDacPathUtf8);
+    struct stat dbiStat;
+    struct stat cdacStat;
+    bool validPaths =
+        stat(resolvedDbiPathUtf8.GetUTF8(), &dbiStat) == 0 &&
+        S_ISREG(dbiStat.st_mode) &&
+        stat(resolvedCDacPathUtf8.GetUTF8(), &cdacStat) == 0 &&
+        S_ISREG(cdacStat.st_mode);
+#endif
+    if (!validPaths)
     {
         return false;
     }
@@ -1238,7 +1255,7 @@ static HRESULT DacCreateInstance(
     REFIID riid,
     IUnknown** ppInstance)
 {
-    HMODULE hDac = LoadLibraryW(dacModulePath);
+    HMODULE hDac = LoadLibraryExW(dacModulePath, nullptr, 0);
     if (hDac == NULL)
     {
         return HRESULT_FROM_WIN32(GetLastError());
@@ -1327,7 +1344,7 @@ static HRESULT CDacCreateInstanceFromContractDescriptor(
     REFIID riid,
     IUnknown** ppInstance)
 {
-    HMODULE hCDac = LoadLibraryW(cdacModulePath);
+    HMODULE hCDac = LoadLibraryExW(cdacModulePath, nullptr, 0);
     if (hCDac == NULL)
     {
         return HRESULT_FROM_WIN32(GetLastError());
