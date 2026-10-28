@@ -189,6 +189,7 @@ else(CLR_CMAKE_HOST_WIN32)
     diagnosticspal
     coreclrpal
     coreclrminipal
+    utilcodestaticnohost
   )
 
 endif(CLR_CMAKE_HOST_WIN32)
