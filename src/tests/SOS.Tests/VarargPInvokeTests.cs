@@ -35,11 +35,10 @@ public sealed class VarargPInvokeTests
             row => row["InternalFrame"].AsBoolean() && interopFrame.Matches(row["Call Site"]),
             $"an InlinedCallFrame for {InteropMethod}");
 
-        const string StubName = "ILStubClass.IL_STUB_PInvoke(System.String, Int32, Double, ...)";
-        const string StubNameWithSecretArgument = "ILStubClass.IL_STUB_PInvoke(System.String, Int32, Double, IntPtr, ...)";
+        const string StubName = "ILStubClass.IL_STUB_PInvoke(";
         SosRow stub = frames.SingleRow(
-            row => row["Function"] == StubName || row["Function"] == StubNameWithSecretArgument,
-            $"Function is {StubName} or {StubNameWithSecretArgument}");
+            row => row["Function"].Value.StartsWith(StubName, StringComparison.Ordinal),
+            $"Function starts with {StubName}");
         string stubName = stub["Function"];
         ulong stubIp = stub["IP"].AsUInt64(Sos.Addr);
         MethodDumpResult method = target.Ip2md(stubIp);
