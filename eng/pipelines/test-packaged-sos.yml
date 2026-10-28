@@ -31,16 +31,16 @@ jobs:
         checkDownloadedFiles: true
 
     - ${{ if eq(parameters.createPackages, true) }}:
-      # Temporary PR coverage: use the same packaging targets without signing or publishing.
+      # Keep build-ID versioning, but opt out of the official signing path it normally enables.
       - powershell: |
           foreach ($tool in @('dotnet-sos', 'dotnet-dump')) {
             & .\eng\common\build.ps1 -restore -pack -configuration Release `
               -projects ".\src\Tools\$tool\$tool.csproj" `
-              /p:SingleTargetRidPackage=true /p:OfficialBuildId=$(Build.BuildNumber)
+              /p:SingleTargetRidPackage=true /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
         displayName: Create local-only Windows x64 NuGet packages
-      - script: build.cmd -ci -configuration Release -bundletools /p:SupportedRids=win-x64 /p:SingleTargetRidPackage=true /p:OfficialBuildId=$(Build.BuildNumber)
+      - script: build.cmd -ci -configuration Release -bundletools /p:SupportedRids=win-x64 /p:SingleTargetRidPackage=true /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false
         displayName: Create Windows x64 single-file archive
 
     - ${{ else }}:
