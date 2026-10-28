@@ -40,6 +40,35 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 ./artifacts/bin/SOS.Tests/Debug/net10.0/SOS.Tests
 ```
 
+## Installed-tool release smoke tests
+
+The default tool layout remains `Bin`. To test finalized NuGet tools and the
+shipped single-file archive on Windows x64, first build the Release test
+infrastructure and install the test runtimes, then run:
+
+```powershell
+.\eng\TestPackagedSOS.ps1 `
+  -PackageDirectory .\artifacts\packages\Release\Shipping `
+  -BundleArchive .\artifacts\bundledtools\Release\zips\diagnostic-tools-win-x64.zip `
+  -OutputDirectory ".\artifacts\tmp\packaged SOS smoke"
+```
+
+The output directory must not already exist. The script selects the exact
+version of the sole `dotnet-sos` package in the input directory and requires a
+matching `dotnet-dump` package. Both distributions get isolated installations,
+dump caches, logs, and xUnit reports. Test infrastructure is staged without
+Bin-layout product outputs or source-build fallbacks.
+
+The initial smoke matrix uses .NET 10 Core and SingleFile debuggees with the
+legacy DAC, testing runtime/module commands, dump collection and analysis,
+live heap inspection, and managed breakpoints through CDB and dotnet-dump
+where supported. It is not a replacement for the full SOS matrix.
+
+Official builds run this leg after packaging/signing, consuming the finalized
+NuGet artifacts and `BundledTools` archive. A temporary standalone Windows x64
+Release build and unsigned packaging leg exercises the same tests in PR CI.
+Existing Bin jobs and publication dependencies are unchanged.
+
 ## Architecture
 
 The harness is split into four parts:

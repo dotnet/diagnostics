@@ -1,0 +1,99 @@
+parameters:
+- name: pipelineJobTemplate
+  type: string
+- name: createPackages
+  type: boolean
+  default: false
+- name: dependsOn
+  type: object
+  default: []
+
+jobs:
+- template: ${{ parameters.pipelineJobTemplate }}
+  parameters:
+    name: Packaged_SOS_win_x64_Release
+    displayName: Packaged SOS win-x64 Release smoke tests
+    dependsOn: ${{ parameters.dependsOn }}
+    timeoutInMinutes: 120
+    enableMicrobuild: true
+    pool:
+      name: $(BuildPool)
+      demands: ImageOverride -equals $(WindowsImage)
+      os: windows
+    workspace:
+      clean: all
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: Download prebuilt Release test inputs
+      inputs:
+        artifact: TestArtifacts_Windows_x64_Release
+        targetPath: '$(Build.SourcesDirectory)/artifacts'
+        checkDownloadedFiles: true
+
+    - ${{ if eq(parameters.createPackages, true) }}:
+      # Temporary PR coverage: use the same packaging targets without signing or publishing.
+      - powershell: |
+          foreach ($tool in @('dotnet-sos', 'dotnet-dump')) {
+            & .\eng\common\build.ps1 -restore -pack -configuration Release `
+              -projects ".\src\Tools\$tool\$tool.csproj" `
+              /p:SingleTargetRidPackage=true /p:OfficialBuildId=$(Build.BuildNumber)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+        displayName: Create local-only Windows x64 NuGet packages
+      - script: build.cmd -ci -restore -build -configuration Release -bundletools /p:SupportedRids=win-x64 /p:SingleTargetRidPackage=true /p:OfficialBuildId=$(Build.BuildNumber)
+        displayName: Create Windows x64 single-file archive
+
+    - ${{ else }}:
+      - task: DownloadPipelineArtifact@2
+        displayName: Download finalized signed NuGet tools
+        inputs:
+          artifact: PackagedSOSTools
+          patterns: |
+            dotnet-sos.*.nupkg
+            dotnet-dump.*.nupkg
+          targetPath: '$(Build.SourcesDirectory)/artifacts/packages/Release/Shipping'
+          checkDownloadedFiles: true
+      - task: DownloadPipelineArtifact@2
+        displayName: Download finalized single-file archive
+        inputs:
+          artifact: BundledTools
+          patterns: Release/zips/diagnostic-tools-win-x64.zip
+          targetPath: '$(Build.SourcesDirectory)/artifacts/bundledtools'
+          checkDownloadedFiles: true
+
+    - powershell: |
+        & .\eng\common\build.ps1 -restore -build -configuration Release `
+          -projects .\eng\InstallRuntimes.proj /p:TargetArch=x64
+        exit $LASTEXITCODE
+      displayName: Acquire test SDK and runtimes
+
+    - task: PowerShell@2
+      displayName: Test installed NuGet and SingleFile layouts
+      inputs:
+        pwsh: true
+        filePath: eng\TestPackagedSOS.ps1
+        arguments: >
+          -PackageDirectory "$(Build.SourcesDirectory)\artifacts\packages\Release\Shipping"
+          -BundleArchive "$(Build.SourcesDirectory)\artifacts\bundledtools\Release\zips\diagnostic-tools-win-x64.zip"
+          -OutputDirectory "$(Build.SourcesDirectory)\artifacts\tmp\packaged-sos"
+
+    - task: PublishTestResults@2
+      displayName: Publish packaged SOS test results
+      condition: always()
+      inputs:
+        testResultsFormat: xUnit
+        testResultsFiles: '**/*.testResults.xml'
+        searchFolder: '$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos/results'
+        testRunTitle: Packaged SOS win-x64 Release
+        failTaskOnFailedTests: true
+        failTaskOnMissingResultsFile: true
+
+    - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+      parameters:
+        displayName: Publish packaged SOS logs and replays
+        condition: always()
+        continueOnError: true
+        inputs:
+          targetPath: '$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos/results'
+          artifactName: Logs_Packaged_SOS_win_x64_Release_$(System.JobAttempt)
+          sbomEnabled: false
