@@ -5,6 +5,7 @@
 
 #include <stdarg.h>
 #include <unknwn.h>
+#include <winwrap.h>
 
 #ifdef __cplusplus
 extern "C" {

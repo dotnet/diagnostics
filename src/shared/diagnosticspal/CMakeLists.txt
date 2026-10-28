@@ -1,11 +1,18 @@
-set(PALEXTENSIONS_SOURCES
+set(DIAGNOSTICSPAL_SOURCES
     bstr.cpp
     processdescriptor.cpp
     processmodules.cpp
     runtimestartup.cpp
+    safecrt/mbusafecrt_compat.cpp
+    safecrt/safecrt_output_l.cpp
+    safecrt/safecrt_output_s.cpp
+    safecrt/safecrt_woutput_s.cpp
+    safecrt/swprintf.cpp
+    safecrt/vswprint.cpp
+    safecrt/xtow_s.cpp
 )
 
-add_library(diagnosticspal STATIC ${PALEXTENSIONS_SOURCES})
+add_library(diagnosticspal STATIC ${DIAGNOSTICSPAL_SOURCES})
 
 target_include_directories(diagnosticspal
     PUBLIC
@@ -13,6 +20,7 @@ target_include_directories(diagnosticspal
         ${CMAKE_CURRENT_SOURCE_DIR}/prebuilt/inc
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/safecrt
         ${COREPAL_SOURCE_DIR}/src/include
         ${RUNTIME_DIR}
         ${CMAKE_CURRENT_BINARY_DIR}/../pal/src

@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#ifndef DIAGNOSTICS_PALEXTENSIONS_H
-#define DIAGNOSTICS_PALEXTENSIONS_H
+#ifndef DIAGNOSTICS_PAL_H
+#define DIAGNOSTICS_PAL_H
 
 #ifndef EMPTY_BASES_DECL
 #define EMPTY_BASES_DECL

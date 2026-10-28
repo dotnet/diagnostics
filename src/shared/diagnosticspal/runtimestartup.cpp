@@ -6,7 +6,7 @@ SET_DEFAULT_DEBUG_CHANNEL(PROCESS);
 #include "pal/palinternal.h"
 #include "processmodules.h"
 #include "processdescriptor.h"
-#include "palextensions.h"
+#include "diagnosticspal.h"
 #include <debugmacrosext.h>
 
 #include <errno.h>

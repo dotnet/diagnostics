@@ -26,7 +26,7 @@ add_subdirectory(inc)
 add_subdirectory(debug)
 
 if (CLR_CMAKE_HOST_UNIX)
-  add_subdirectory(palextensions)
+  add_subdirectory(diagnosticspal)
 endif(CLR_CMAKE_HOST_UNIX)
 
 add_subdirectory(utilcode)

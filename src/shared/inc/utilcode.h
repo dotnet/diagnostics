@@ -23,7 +23,7 @@ using std::nothrow;
 #include <wchar.h>
 #include <ole2.h>
 #ifdef FEATURE_PAL
-#include "../palextensions/bstr.h"
+#include "../diagnosticspal/bstr.h"
 #else
 #include <oleauto.h>
 #endif

@@ -575,6 +575,7 @@ public:
 
 typedef void (*PFN_MODULE_LOAD_CALLBACK)(void* param, const char* moduleFilePath, ULONG64 moduleAddress, int moduleSize);
 
+EXTERN_GUID(IID_ILLDBServices2, 0x012F32F0, 0x33BA, 0x4E8E, 0xBC, 0x01, 0x03, 0x7D, 0x38, 0x2D, 0x8A, 0x5E);
 MIDL_INTERFACE("012F32F0-33BA-4E8E-BC01-037D382D8A5E")
 ILLDBServices2: public IUnknown
 {

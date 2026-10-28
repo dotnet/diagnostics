@@ -4,7 +4,7 @@
 #ifndef __DIAGNOSTICS_BSTR_H__
 #define __DIAGNOSTICS_BSTR_H__
 
-#include <pal.h>
+#include <palrt.h>
 
 STDAPI_(BSTR) SysAllocString(const OLECHAR* value);
 STDAPI_(BSTR) SysAllocStringLen(const OLECHAR* value, UINT length);
