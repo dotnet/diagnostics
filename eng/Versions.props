@@ -17,8 +17,9 @@
     <!--
       Embed the cDAC native binary into the diagnostics-tool packages on preview branches.
       Release/servicing branches (PreReleaseVersionLabel != 'preview') keep the legacy
-      behavior of pulling the DAC from the runtime install or symbol server. This can be
-      overridden explicitly on the command line with /p:PackageWithCDac=true|false.
+      behavior of pulling the DAC from the runtime install or symbol server. The cDAC
+      binaries are built and published in InternalAssets independently of this setting.
+      This can be overridden explicitly on the command line with /p:PackageWithCDac=true|false.
     -->
     <PackageWithCDac Condition="'$(PackageWithCDac)' == '' and '$(PreReleaseVersionLabel)' == 'preview'">true</PackageWithCDac>
 
@@ -56,6 +57,7 @@
     <MicrosoftExtensionsConfigurationJsonVersion>8.0.1</MicrosoftExtensionsConfigurationJsonVersion>
     <MicrosoftExtensionsLoggingConfigurationVersion>8.0.1</MicrosoftExtensionsLoggingConfigurationVersion>
     <MicrosoftOneCollectRecordTraceVersions>0.1.35021</MicrosoftOneCollectRecordTraceVersions>
+    <MoqVersion>4.18.4</MoqVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>10.0.5</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>

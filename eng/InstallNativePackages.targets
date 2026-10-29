@@ -21,17 +21,17 @@
     <PackageSourceFiles Include="$(NuGetPackageRoot)microsoft.diasymreader.native\$(MicrosoftDiaSymReaderNativeVersion)\runtimes\$(TargetRid)\native\*" Condition="'$(OS)' == 'Windows_NT'" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="$(RepoRoot)src\cdac\publish.proj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true" />
+  </ItemGroup>
+
 <!--
     Installs the above packages into the $(ArtifactsBinNativeDir) directory.
 -->
-  <Target Name="PublishCDacReader"
-          Condition="'$(PackageWithCDac)' == 'true'">
-    <MSBuild Projects="$(RepoRoot)src\cdac\publish.proj"
-             Targets="Restore;Build" />
-  </Target>
-
   <Target Name="InstallNativePackages"
-          DependsOnTargets="PublishCDacReader">
+          DependsOnTargets="ResolveProjectReferences">
     <Message Importance="High" Text="Installing packages to $(ArtifactsBinNativeDir)..." />
 
     <Copy SourceFiles="@(PackageSourceFiles)" DestinationFolder="$(ArtifactsBinNativeDir)" SkipUnchangedFiles="false">
