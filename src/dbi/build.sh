@@ -13,7 +13,7 @@ build_universal_dbi()
     local dbi_intermediates_dir="$artifacts_intermediates_dir/dbi/$config_triplet"
     local dbi_cmake_args="$extra_cmake_args -DCLR_CMAKE_TARGET_ARCH=$target_arch -DRUNTIME_GENERATED_INCLUDE_DIR=$artifacts_intermediates_dir -DCLR_CMAKE_KEEP_NATIVE_SYMBOLS=OFF -DCLR_CMAKE_APPLE_DSYM=OFF"
 
-    if [[ "$__CrossBuild" == 1 && ("$target_rid" == linux-x64 || "$target_rid" == linux-arm64) ]]; then
+    if [[ "$__CrossBuild" == 1 && ("$target_rid" == linux-x64 || "$target_rid" == linux-arm || "$target_rid" == linux-arm64) ]]; then
         dbi_cmake_args="-DCLR_CMAKE_CXX_STANDARD_LIBRARY=libc++ -DCLR_CMAKE_CXX_STANDARD_LIBRARY_STATIC=ON -DCLR_CMAKE_CXX_ABI_LIBRARY=libstdc++ $dbi_cmake_args"
     fi
 
