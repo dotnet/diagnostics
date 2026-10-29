@@ -39,6 +39,8 @@ namespace Microsoft.FileFormats.ELF
 
         public ELFHeaderIdent Ident { get { return _ident.Value; } }
         public ELFHeader Header { get { return _header.Value; } }
+        public ulong DataSourceLength { get { return _position <= _reader.Length ? _reader.Length - _position : 0; } }
+        public bool IsDataSourceVirtualAddressSpace { get { return _isDataSourceVirtualAddressSpace; } }
         private Reader DataSourceReader { get { return _dataSourceReader.Value; } }
         public IEnumerable<ELFProgramSegment> Segments { get { return _segments.Value; } }
         public ELFSection[] Sections { get { return _sections.Value; } }
