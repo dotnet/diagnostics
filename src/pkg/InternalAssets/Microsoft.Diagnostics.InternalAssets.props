@@ -21,13 +21,12 @@
 
   <Target Name="ValidateInternalAssets" BeforeTargets="GenerateNuspec">
     <Error Condition="!Exists('%(NativeBinary.Identity)')"
-           Text="Native transport binary not found: %(NativeBinary.Identity). Build the cDAC reader and install the universal DBI before packing." />
+           Text="Native transport binary not found: %(NativeBinary.Identity). Build the cDAC reader and universal DBI before packing." />
   </Target>
 
   <Target Name="AddInternalAssetsSymbolsToPackage">
     <ItemGroup>
-      <_InternalAssetsSymbol Include="@(NativeBinary)"
-                             Condition="$(PackageRID.StartsWith('win')) or '$(KeepNativeSymbols)' != 'true'">
+      <_InternalAssetsSymbol Include="@(NativeBinary)">
         <SymbolPath>%(Identity)$(SymbolsSuffix)</SymbolPath>
         <SymbolPath Condition="$(PackageRID.StartsWith('win'))">%(RootDir)%(Directory)%(Filename).pdb</SymbolPath>
       </_InternalAssetsSymbol>
@@ -37,9 +36,10 @@
         <SymbolPath>%(_InternalAssetsSymbol.RootDir)%(_InternalAssetsSymbol.Directory)PDB\%(_InternalAssetsSymbol.Filename).pdb</SymbolPath>
       </_InternalAssetsSymbol>
     </ItemGroup>
+    <Error Condition="!Exists('%(_InternalAssetsSymbol.SymbolPath)')"
+           Text="Native transport symbol file not found: %(_InternalAssetsSymbol.SymbolPath). Build the cDAC reader and universal DBI with separate symbols before packing." />
     <ItemGroup>
       <TfmSpecificDebugSymbolsFile Include="@(_InternalAssetsSymbol->'%(SymbolPath)')"
-                                  Condition="Exists('%(_InternalAssetsSymbol.SymbolPath)')"
                                   TargetPath="/runtimes/$(PackageRID)/native/$([System.IO.Path]::GetFileName('%(_InternalAssetsSymbol.SymbolPath)'))"
                                   TargetFramework="$(TargetFramework)" />
     </ItemGroup>

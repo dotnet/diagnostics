@@ -11,7 +11,7 @@ build_universal_dbi()
     local log_file="$7"
     local target_rid="$8"
     local dbi_intermediates_dir="$artifacts_intermediates_dir/dbi/$config_triplet"
-    local dbi_cmake_args="$extra_cmake_args -DCLR_CMAKE_TARGET_ARCH=$target_arch -DRUNTIME_GENERATED_INCLUDE_DIR=$artifacts_intermediates_dir"
+    local dbi_cmake_args="$extra_cmake_args -DCLR_CMAKE_TARGET_ARCH=$target_arch -DRUNTIME_GENERATED_INCLUDE_DIR=$artifacts_intermediates_dir -DCLR_CMAKE_KEEP_NATIVE_SYMBOLS=OFF -DCLR_CMAKE_APPLE_DSYM=OFF"
 
     if [[ "$__CrossBuild" == 1 && ("$target_rid" == linux-x64 || "$target_rid" == linux-arm64) ]]; then
         dbi_cmake_args="-DCLR_CMAKE_CXX_STANDARD_LIBRARY=libc++ -DCLR_CMAKE_CXX_STANDARD_LIBRARY_STATIC=ON -DCLR_CMAKE_CXX_ABI_LIBRARY=libstdc++ $dbi_cmake_args"
@@ -34,10 +34,13 @@ build_universal_dbi()
     fi
 
     local dbi_name
+    local symbol_suffix
     if [[ "$target_os" == "osx" ]]; then
         dbi_name="libmscordbi_universal.dylib"
+        symbol_suffix=".dwarf"
     else
         dbi_name="libmscordbi_universal.so"
+        symbol_suffix=".dbg"
     fi
 
     local dbi_output_dir="$dbi_intermediates_dir/dlls/mscordbi_universal"
@@ -46,8 +49,10 @@ build_universal_dbi()
         return 1
     fi
 
-    cp -f "$dbi_output_dir/$dbi_name" "$output_dir/$dbi_name"
-    if [[ -f "$dbi_output_dir/$dbi_name.dbg" ]]; then
-        cp -f "$dbi_output_dir/$dbi_name.dbg" "$output_dir/$dbi_name.dbg"
+    if [[ ! -f "$dbi_output_dir/$dbi_name$symbol_suffix" ]]; then
+        echo "Source-built universal DBI symbols were not produced in '$dbi_output_dir'."
+        return 1
     fi
+
+    cp -f "$dbi_output_dir/$dbi_name" "$dbi_output_dir/$dbi_name$symbol_suffix" "$output_dir/"
 }
