@@ -4,18 +4,16 @@
 namespace SOS.TestHarness;
 
 /// <summary>
-/// Resolves the external tools the harness drives, pointing every one at the diagnostics repo's
-/// own build outputs (so the harness always validates freshly-built SOS, not a stale machine-wide
-/// install):
-/// <list type="bullet">
-///   <item><c>dbgeng.dll</c> comes from the restored <c>cdb-sos</c> package, so no WinDbg installation
-///   is required.</item>
-///   <item>Native <c>sos.dll</c> comes from the repo's native build output.</item>
-///   <item><c>dotnet-dump</c> is the repo-built tool, run as <c>dotnet dotnet-dump.dll</c>.</item>
-/// </list>
+/// Resolves debugger infrastructure and tools from the selected Bin, NuGet, or SingleFile layout.
 /// </summary>
 public static class ToolPaths
 {
+    /// <summary>
+    /// Bin by default. Set SOSHARNESS_TOOL_LAYOUT to NuGet or SingleFile and SOSHARNESS_TOOL_ROOT
+    /// to a directory prepared by eng/PrepareSOSTestLayout.ps1 to test packaged tools.
+    /// </summary>
+    internal static IToolLayout Layout => s_layout.Value;
+
     /// <summary>
     /// Directory containing <c>dbgeng.dll</c>, taken from the restored <c>cdb-sos</c> package's
     /// <c>runtimes/win-&lt;arch&gt;/native</c> directory. Windows-only; resolved lazily so non-Windows
@@ -23,16 +21,13 @@ public static class ToolPaths
     /// </summary>
     public static string DbgEngDirectory => s_dbgEngDirectory.Value;
 
-    /// <summary>Repo-built native SOS (<c>sos.dll</c>) from <see cref="RepoLayout.ArtifactsBinNative"/>.
+    /// <summary>Native SOS (<c>sos.dll</c>) from the selected layout.
     /// Windows-only (the dbgeng <c>.load</c> target); resolved lazily.</summary>
     public static string SosPath => s_sosPath.Value;
 
-    /// <summary>Repo-built <c>dotnet-dump</c> managed entry point, run as <c>dotnet &lt;dll&gt;</c>.</summary>
-    public static string DotNetDumpDll => s_dotNetDumpDll.Value;
-
     /// <summary>
     /// The native lldb plugin (<c>libsosplugin.so</c> on Linux, <c>libsosplugin.dylib</c> on macOS) that
-    /// SOS loads into lldb via <c>plugin load</c>, taken from <see cref="RepoLayout.ArtifactsBinNative"/>.
+    /// SOS loads into lldb via <c>plugin load</c>, taken from the selected layout.
     /// Non-Windows; resolved lazily.
     /// </summary>
     public static string LldbPluginPath => s_lldbPluginPath.Value;
@@ -79,37 +74,29 @@ public static class ToolPaths
     /// equivalents) for cDAC test rows. Defaults to <c>artifacts/cdac-override/&lt;Configuration&gt;</c>
     /// and can be overridden with <c>SOSHARNESS_CDAC_DIR</c>.
     /// </summary>
-    public static string? CDacOverrideDirectory => s_cdacOverrideDirectory.Value;
+    public static string? CDacOverrideDirectory => Layout.CDacOverrideDirectory;
 
     /// <summary>
     /// Installs the universal cDAC and DBI override in the selected host's native lookup directory.
     /// </summary>
     internal static void PrepareCDacOverride(Host host)
     {
-        string destinationDirectory = host switch
-        {
-            Host.Cdb or Host.Lldb => RepoLayout.ArtifactsBinNative,
-            Host.DotnetDump => Path.Combine(Path.GetDirectoryName(DotNetDumpDll)!, RepoLayout.Rid),
-            _ => throw new ArgumentException($"Unknown host '{host}'.", nameof(host)),
-        };
-
-        EnsureCDacOverride(destinationDirectory);
+        Layout.PrepareCDacOverride(host);
     }
 
     // Lazy so each host only resolves the tools it actually needs: the non-Windows lldb/dotnet-dump hosts
     // never touch the Windows-only dbgeng/sos.dll resolvers (which would throw for lack of those payloads),
     // and the Windows cdb host never touches the lldb resolvers.
+    private static readonly Lazy<IToolLayout> s_layout = new(() => ToolLayout.FromConfiguration(
+        Environment.GetEnvironmentVariable("SOSHARNESS_TOOL_LAYOUT"),
+        Environment.GetEnvironmentVariable("SOSHARNESS_TOOL_ROOT")));
     private static readonly Lazy<string> s_dbgEngDirectory = new(ResolveDbgEngDirectory);
     private static readonly Lazy<string> s_sosPath = new(ResolveSosPath);
-    private static readonly Lazy<string> s_dotNetDumpDll = new(ResolveDotNetDumpDll);
     private static readonly Lazy<string> s_lldbPluginPath = new(ResolveLldbPluginPath);
     private static readonly Lazy<string> s_lldbExe = new(ResolveLldbExe);
     private static readonly Lazy<string> s_hostRuntimeDirectory = new(ResolveHostRuntimeDirectory);
     private static readonly Lazy<string> s_createDumpPath = new(ResolveCreateDumpPath);
-    private static readonly Lazy<string?> s_cdacOverrideDirectory = new(ResolveCDacOverrideDirectory);
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<CoreVersion, string?> s_singleFileDacDirectory = new();
-    private static readonly object s_cdacCopyLock = new();
-    private static readonly HashSet<string> s_cdacOverrideDestinations = new(StringComparer.OrdinalIgnoreCase);
 
     private static string ResolveDbgEngDirectory()
     {
@@ -155,29 +142,13 @@ public static class ToolPaths
 
     private static string ResolveSosPath()
     {
-        string path = Path.Combine(RepoLayout.ArtifactsBinNative, "sos.dll");
-        if (!File.Exists(path))
-        {
-            throw new FileNotFoundException(
-                $"Repo-built native SOS not found at '{path}'. Build the repo (Build.cmd) so the native " +
-                "SOS is produced for this configuration/architecture.", path);
-        }
-
-        return path;
+        return ToolLayout.RequireFile(Path.Combine(Layout.SosDirectory, "sos.dll"));
     }
 
     private static string ResolveLldbPluginPath()
     {
         string name = OperatingSystem.IsMacOS() ? "libsosplugin.dylib" : "libsosplugin.so";
-        string path = Path.Combine(RepoLayout.ArtifactsBinNative, name);
-        if (!File.Exists(path))
-        {
-            throw new FileNotFoundException(
-                $"Repo-built lldb SOS plugin not found at '{path}'. Build the repo (./build.sh) so the native " +
-                "lldb plugin is produced for this configuration/architecture.", path);
-        }
-
-        return path;
+        return ToolLayout.RequireFile(Path.Combine(Layout.SosDirectory, name));
     }
 
     private static string ResolveLldbExe()
@@ -355,28 +326,6 @@ public static class ToolPaths
         }
     }
 
-    private static string ResolveDotNetDumpDll()
-    {
-        // dotnet-dump targets net8.0 and is published under the repo artifacts; prefer the published
-        // copy (self-contained closure) and fall back to the plain build output.
-        string baseDir = Path.Combine(RepoLayout.ArtifactsBin, "dotnet-dump", RepoLayout.ArtifactsConfiguration, "net8.0");
-        string published = Path.Combine(baseDir, "publish", "dotnet-dump.dll");
-        if (File.Exists(published))
-        {
-            return published;
-        }
-
-        string built = Path.Combine(baseDir, "dotnet-dump.dll");
-        if (File.Exists(built))
-        {
-            return built;
-        }
-
-        throw new FileNotFoundException(
-            $"Repo-built dotnet-dump not found under '{baseDir}'. Build the repo (Build.cmd) so dotnet-dump " +
-            "is produced.", published);
-    }
-
     private static string? ResolveSingleFileDacDirectory(CoreVersion coreVersion)
     {
         string rid = RepoLayout.Rid; // win-x64 / linux-x64 / osx-arm64 / ...
@@ -439,83 +388,11 @@ public static class ToolPaths
         return null;
     }
 
-    private static string? ResolveCDacOverrideDirectory()
-    {
-        string? env = Environment.GetEnvironmentVariable("SOSHARNESS_CDAC_DIR");
-        string directory = string.IsNullOrEmpty(env)
-            ? Path.Combine(RepoLayout.Root, "artifacts", "cdac-override", RepoLayout.ArtifactsConfiguration)
-            : env;
-
-        return File.Exists(Path.Combine(directory, CDacFileName)) ? directory : null;
-    }
-
-    private static void EnsureCDacOverride(string destinationDirectory)
-    {
-        string? overrideDirectory = CDacOverrideDirectory;
-        if (overrideDirectory is null)
-        {
-            return;
-        }
-
-        lock (s_cdacCopyLock)
-        {
-            if (s_cdacOverrideDestinations.Contains(destinationDirectory))
-            {
-                return;
-            }
-
-            CopyOverrideFile(CDacFileName);
-            CopyOverrideFile(CDbiFileName);
-            s_cdacOverrideDestinations.Add(destinationDirectory);
-
-            void CopyOverrideFile(string fileName)
-            {
-                string source = Path.Combine(overrideDirectory, fileName);
-                string destination = Path.Combine(destinationDirectory, fileName);
-                if (!File.Exists(destination) || !FilesEqual(source, destination))
-                {
-                    File.Copy(source, destination, overwrite: true);
-                }
-            }
-        }
-    }
-
-    private static bool FilesEqual(string leftPath, string rightPath)
-    {
-        FileInfo leftInfo = new(leftPath);
-        FileInfo rightInfo = new(rightPath);
-        if (leftInfo.Length != rightInfo.Length)
-        {
-            return false;
-        }
-
-        using FileStream left = File.OpenRead(leftPath);
-        using FileStream right = File.OpenRead(rightPath);
-        int leftByte;
-        while ((leftByte = left.ReadByte()) != -1)
-        {
-            if (leftByte != right.ReadByte())
-            {
-                return false;
-            }
-        }
-
-        return right.ReadByte() == -1;
-    }
-
     /// <summary>The platform-specific DAC module file name: <c>mscordaccore.dll</c> on Windows,
     /// <c>libmscordaccore.dylib</c> on macOS, <c>libmscordaccore.so</c> elsewhere.</summary>
     internal static string DacFileName =>
         OperatingSystem.IsWindows() ? "mscordaccore.dll" :
         OperatingSystem.IsMacOS() ? "libmscordaccore.dylib" : "libmscordaccore.so";
-
-    private static string CDacFileName =>
-        OperatingSystem.IsWindows() ? "mscordaccore_universal.dll" :
-        OperatingSystem.IsMacOS() ? "libmscordaccore_universal.dylib" : "libmscordaccore_universal.so";
-
-    private static string CDbiFileName =>
-        OperatingSystem.IsWindows() ? "mscordbi_universal.dll" :
-        OperatingSystem.IsMacOS() ? "libmscordbi_universal.dylib" : "libmscordbi_universal.so";
 
     private static IEnumerable<string> NuGetPackageRoots()
     {

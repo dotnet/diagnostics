@@ -42,19 +42,11 @@ public sealed class DotNetDumpHost : IDebuggerHost, IDiagnosticHost
         _dac = dac;
         _coreVersion = coreVersion;
         _diagnostics = diagnostics;
-        ProcessStartInfo psi = new()
-        {
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        // Drive the repo-built dotnet-dump as `dotnet <dll> analyze <dump>` so the harness always
-        // validates the freshly-built tool, not a machine-wide install.
-        psi.FileName = RepoLayout.DotNetExe;
-        psi.ArgumentList.Add(ToolPaths.DotNetDumpDll);
+        ProcessStartInfo psi = ToolPaths.Layout.CreateDotNetDumpStartInfo();
+        psi.RedirectStandardInput = true;
+        psi.RedirectStandardOutput = true;
+        psi.RedirectStandardError = true;
+        psi.CreateNoWindow = true;
         psi.ArgumentList.Add("analyze");
         psi.ArgumentList.Add(dumpPath);
 

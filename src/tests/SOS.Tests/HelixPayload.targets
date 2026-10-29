@@ -4,6 +4,7 @@
   <Import Project="$(MSBuildThisFileDirectory)..\SOSHarnessDebuggees.props" />
 
   <PropertyGroup>
+    <SOSTestToolLayout Condition="'$(SOSTestToolLayout)' == ''">Bin</SOSTestToolLayout>
     <SOSHelixPayloadDir Condition="'$(SOSHelixPayloadDir)' == ''">$(ArtifactsDir)helix/SOS.Tests/$(TargetRid)/$(Configuration)/$(HelixTargetQueue)/payload</SOSHelixPayloadDir>
     <SOSHelixWorkItemName Condition="'$(SOSHelixWorkItemName)' == ''">SOS_$(TargetRid)_$(Configuration)</SOSHelixWorkItemName>
     <WorkItemTimeout Condition="'$(WorkItemTimeout)' == ''">02:00:00</WorkItemTimeout>
@@ -23,6 +24,12 @@
   </ItemGroup>
 
   <Target Name="StageSOSHelixPayload">
+    <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(SOSTestToolLayout)' != 'Packaged'"
+           Text="SOSTestToolLayout must be Bin or Packaged." />
+    <ItemGroup Condition="'$(SOSTestToolLayout)' == 'Packaged'">
+      <SOSHarnessDebuggee Remove="@(SOSHarnessDebuggee)"
+                          Condition="'%(SOSHarnessDebuggee.Filename)' != 'SosHarnessScenarios' and '%(SOSHarnessDebuggee.Filename)' != 'DivZero'" />
+    </ItemGroup>
     <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '@(RuntimeTestVersions->Count())' != '1'"
            Text="A private runtime override requires exactly one RuntimeTestVersions entry." />
     <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '%(RuntimeTestVersions.TargetFramework)' == ''"
@@ -44,11 +51,13 @@
 
       <_SOSPayloadBinFile Include="$(_SOSTestOutputDir)**/*;
                                   $(ArtifactsBinDir)SOS.TestHarness.EngineHost/$(Configuration)/**/*;
-                                  $(ArtifactsBinDir)SOS.TestHarness.Capturer/$(Configuration)/**/*;
-                                  $(ArtifactsBinDir)dotnet-dump/$(Configuration)/**/*" />
-      <_SOSPayloadNativeFile Include="$(ArtifactsBinNativeDir)**/*" />
+                                  $(ArtifactsBinDir)SOS.TestHarness.Capturer/$(Configuration)/**/*" />
+      <_SOSPayloadBinFile Include="$(ArtifactsBinDir)dotnet-dump/$(Configuration)/**/*"
+                         Condition="'$(SOSTestToolLayout)' == 'Bin'" />
+      <_SOSPayloadNativeFile Include="$(ArtifactsBinNativeDir)**/*"
+                            Condition="'$(SOSTestToolLayout)' == 'Bin'" />
       <_SOSPayloadCDacFile Include="$(ArtifactsDir)cdac-override/$(Configuration)/**/*"
-                           Condition="Exists('$(ArtifactsDir)cdac-override/$(Configuration)')" />
+                           Condition="'$(SOSTestToolLayout)' == 'Bin' and Exists('$(ArtifactsDir)cdac-override/$(Configuration)')" />
       <_SOSPayloadRuntimeFile Include="$(_SOSLiveRuntimeDir)**/*"
                               Condition="'$(_SOSLiveRuntimeDir)' != ''" />
       <_SOSPayloadDebuggerFile Include="$(_SOSCdbDir)*"
@@ -90,15 +99,16 @@
     <!-- Required inputs are explicit because a missing file would disappear from the globs above. -->
     <ItemGroup>
       <_SOSRequiredInput Include="$(_SOSTestOutputDir)SOS.Tests.dll" />
-      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)sos.dll;$(_SOSCdbDir)dbgeng.dll" Condition="'$(TargetOS)' == 'Windows_NT'" />
-      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.so" Condition="'$(TargetOS)' == 'linux'" />
+      <_SOSRequiredInput Include="$(_SOSCdbDir)dbgeng.dll" Condition="'$(TargetOS)' == 'Windows_NT'" />
+      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)sos.dll" Condition="'$(SOSTestToolLayout)' == 'Bin' and '$(TargetOS)' == 'Windows_NT'" />
+      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.so" Condition="'$(SOSTestToolLayout)' == 'Bin' and '$(TargetOS)' == 'linux'" />
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.dylib;$(ArtifactsBinNativeDir)sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
       <_SOSRequiredInput Include="$(_SOSLiveRuntimeDir)System.Private.CoreLib.dll"
                          Condition="'$(_SOSLiveRuntimeDir)' != ''" />
     </ItemGroup>
     <Error Condition="!Exists('%(_SOSRequiredInput.Identity)')"
            Text="Required SOS Helix input '%(_SOSRequiredInput.Identity)' was not found in the prebuilt artifacts." />
-    <Error Condition="!Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/dotnet-dump.dll') and !Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/publish/dotnet-dump.dll')"
+    <Error Condition="'$(SOSTestToolLayout)' == 'Bin' and !Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/dotnet-dump.dll') and !Exists('$(ArtifactsBinDir)dotnet-dump/$(Configuration)/net8.0/publish/dotnet-dump.dll')"
            Text="dotnet-dump was not found under '$(ArtifactsBinDir)dotnet-dump/$(Configuration)'." />
 
     <RemoveDir Directories="$(SOSHelixPayloadDir)" />
