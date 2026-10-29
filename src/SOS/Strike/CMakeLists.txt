@@ -114,6 +114,7 @@ if (CLR_CMAKE_HOST_WIN32)
     corguids
     dbgutil
     coreclrminipal
+    utilcodestaticnohost
     ${STATIC_MT_CRT_LIB}
     ${STATIC_MT_CPP_LIB}
     ${STATIC_MT_VCRT_LIB}
@@ -185,9 +186,10 @@ else(CLR_CMAKE_HOST_WIN32)
     extensions
     corguids
     dbgutil
-    palrt
+    diagnosticspal
     coreclrpal
     coreclrminipal
+    utilcodestaticnohost
   )
 
 endif(CLR_CMAKE_HOST_WIN32)

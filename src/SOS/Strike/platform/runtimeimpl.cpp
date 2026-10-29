@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#include <minipal/com/memory.h>
 #else
 #include <softpub.h>
 #include <wintrust.h>
@@ -59,6 +60,21 @@ typedef HRESULT (STDAPICALLTYPE *OpenVirtualProcess2FnPtr)(
     IUnknown** instance,
     CLR_DEBUGGING_PROCESS_FLAGS* flags);
 
+static HMODULE LoadLibraryFromPath(LPCSTR path)
+{
+    int length = MultiByteToWideChar(CP_ACP, 0, path, -1, nullptr, 0);
+    if (length <= 0)
+    {
+        return nullptr;
+    }
+    std::vector<WCHAR> widePath(length);
+    if (MultiByteToWideChar(CP_ACP, 0, path, -1, widePath.data(), length) <= 0)
+    {
+        return nullptr;
+    }
+    return LoadLibraryExW(widePath.data(), nullptr, 0);
+}
+
 enum class DbgShimCDacLoadPolicy : DWORD
 {
     PreferCDac = 0,
@@ -66,6 +82,7 @@ enum class DbgShimCDacLoadPolicy : DWORD
     LegacyDacOnly = 2
 };
 
+EXTERN_GUID(IID_ICLRDebuggingPolicy, 0x2D3B4F6A, 0x1C7E, 0x4B2A, 0x9E, 0x5D, 0x7F, 0x1A, 0x6C, 0x0B, 0x8D, 0x34);
 MIDL_INTERFACE("2D3B4F6A-1C7E-4B2A-9E5D-7F1A6C0B8D34")
 ICLRDebuggingPolicy : public IUnknown
 {
@@ -510,7 +527,12 @@ LPCSTR Runtime::GetRuntimeDirectory()
 {
     if (m_runtimeDirectory == nullptr)
     {
-        if (GetFileAttributesA(m_name) == INVALID_FILE_ATTRIBUTES)
+#ifdef FEATURE_PAL
+        bool exists = access(m_name, F_OK) == 0;
+#else
+        bool exists = GetFileAttributesA(m_name) != INVALID_FILE_ATTRIBUTES;
+#endif
+        if (!exists)
         {
             ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", m_name, HRESULT_FROM_WIN32(GetLastError()));
             return nullptr;
@@ -609,10 +631,10 @@ void Runtime::SetCDacLoadPolicy(CDacLoadPolicy policy)
 \**********************************************************************/
 IXCLRDataProcess* Runtime::CreateClrDataProcessDirect(LPCSTR dacFilePath)
 {
-    HMODULE hdac = LoadLibraryA(dacFilePath);
+    HMODULE hdac = LoadLibraryFromPath(dacFilePath);
     if (hdac == NULL)
     {
-        ExtDbgOut("LoadLibraryA(%s) FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
+        ExtDbgOut("Loading %s FAILED %08x\n", dacFilePath, HRESULT_FROM_WIN32(GetLastError()));
         return nullptr;
     }
     PFN_CLRDataCreateInstance pfnCLRDataCreateInstance = (PFN_CLRDataCreateInstance)GetProcAddress(hdac, "CLRDataCreateInstance");
@@ -663,7 +685,7 @@ HRESULT Runtime::CreateClrDataProcessViaDbgShim(IXCLRDataProcess** ppClrDataProc
         {
             return CORDBG_E_NO_IMAGE_AVAILABLE;
         }
-        m_dbgShimHandle = LoadLibraryA(dbgShimFilePath);
+        m_dbgShimHandle = LoadLibraryFromPath(dbgShimFilePath);
         if (m_dbgShimHandle == nullptr)
         {
             return HRESULT_FROM_WIN32(GetLastError());
@@ -874,7 +896,7 @@ public:
             return CORDBG_E_LIBRARY_PROVIDER_ERROR;
         }
 
-        *moduleHandle = LoadLibraryA(path);
+        *moduleHandle = LoadLibraryFromPath(path);
         return *moduleHandle != nullptr
             ? S_OK
             : HRESULT_FROM_WIN32(GetLastError());
@@ -1168,7 +1190,7 @@ HRESULT Runtime::CreateCorDebugProcessViaDbgShim(ICorDebugProcess** ppCorDebugPr
         {
             return CORDBG_E_NO_IMAGE_AVAILABLE;
         }
-        m_dbgShimHandle = LoadLibraryA(dbgShimFilePath);
+        m_dbgShimHandle = LoadLibraryFromPath(dbgShimFilePath);
         if (m_dbgShimHandle == nullptr)
         {
             return HRESULT_FROM_WIN32(GetLastError());

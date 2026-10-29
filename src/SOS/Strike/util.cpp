@@ -4172,7 +4172,11 @@ OutputVaList(
     PCSTR format,
     va_list args)
 {
+#ifdef FEATURE_PAL
+    int length = DiagnosticsVsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
+#else
     int length = _vsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
+#endif
     if (length > 0)
     {
 #ifdef HOST_WINDOWS
@@ -4196,7 +4200,11 @@ ControlledOutputVaList(
     PCSTR format,
     va_list args)
 {
+#ifdef FEATURE_PAL
+    int length = DiagnosticsVsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
+#else
     int length = _vsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
+#endif
     if (length > 0)
     {
 #ifdef HOST_WINDOWS

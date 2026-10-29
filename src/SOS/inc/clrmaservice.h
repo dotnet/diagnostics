@@ -14,6 +14,7 @@ extern "C" {
 /// <summary>
 /// ICLRMAService
 /// </summary>
+EXTERN_GUID(IID_ICLRMAService, 0x1FCF4C14, 0x60C1, 0x44E6, 0x84, 0xED, 0x20, 0x50, 0x6E, 0xF3, 0xDC, 0x60);
 MIDL_INTERFACE("1FCF4C14-60C1-44E6-84ED-20506EF3DC60")
 ICLRMAService : public IUnknown
 {

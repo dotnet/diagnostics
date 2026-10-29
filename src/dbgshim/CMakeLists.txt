@@ -73,7 +73,7 @@ if(CLR_CMAKE_HOST_WIN32)
     )
 else()
     list(APPEND DBGSHIM_LIBRARIES
-        palrt
+        diagnosticspal
         coreclrpal
     )
 endif(CLR_CMAKE_HOST_WIN32)

@@ -123,6 +123,7 @@ set(SOURCES
 
 set(LIBRARIES
     extensions
+    diagnosticspal
     sos_lldb_dependencies
 )
 

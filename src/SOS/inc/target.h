@@ -15,6 +15,7 @@ struct IRuntime;
 /// <summary>
 /// ITarget - the native target interface
 /// </summary>
+EXTERN_GUID(IID_ITarget, 0xB4640016, 0x6CA0, 0x468E, 0xBA, 0x2C, 0x1F, 0xFF, 0x28, 0xDE, 0x7B, 0x72);
 MIDL_INTERFACE("B4640016-6CA0-468E-BA2C-1FFF28DE7B72")
 ITarget : public IUnknown
 {

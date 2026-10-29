@@ -8305,7 +8305,7 @@ DECLARE_API (ProcInfo)
         typedef BOOL (WINAPI *FntGetProcessTimes)(HANDLE, LPFILETIME, LPFILETIME, LPFILETIME, LPFILETIME);
         static FntGetProcessTimes pFntGetProcessTimes = (FntGetProcessTimes)-1;
         if (pFntGetProcessTimes == (FntGetProcessTimes)-1) {
-            HINSTANCE hstat = LoadLibraryA("kernel32.dll");
+            HINSTANCE hstat = LoadLibraryExW(W("kernel32.dll"), nullptr, 0);
             if (hstat != 0)
             {
                 pFntGetProcessTimes = (FntGetProcessTimes)GetProcAddress (hstat, "GetProcessTimes");
@@ -8404,7 +8404,7 @@ DECLARE_API (ProcInfo)
 
         static FntNtQueryInformationProcess pFntNtQueryInformationProcess = (FntNtQueryInformationProcess)-1;
         if (pFntNtQueryInformationProcess == (FntNtQueryInformationProcess)-1) {
-            HINSTANCE hstat = LoadLibraryA("ntdll.dll");
+            HINSTANCE hstat = LoadLibraryExW(W("ntdll.dll"), nullptr, 0);
             if (hstat != 0)
             {
                 pFntNtQueryInformationProcess = (FntNtQueryInformationProcess)GetProcAddress (hstat, "NtQueryInformationProcess");
@@ -13645,7 +13645,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
             return;
         }
 
-        HANDLE hMappedSosDocFile = CreateFileMappingA(hSosDocFile, NULL, PAGE_READONLY, 0, 0, NULL);
+        HANDLE hMappedSosDocFile = CreateFileMappingW(hSosDocFile, NULL, PAGE_READONLY, 0, 0, NULL);
         CloseHandle(hSosDocFile);
         if (hMappedSosDocFile == NULL) {
             ExtErr("Error mapping documentation file\n");

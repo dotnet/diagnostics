@@ -13,6 +13,7 @@ extern "C" {
 /// <summary>
 /// IRemoteMemoryService
 /// </summary>
+EXTERN_GUID(IID_IRemoteMemoryService, 0xCD6A0F22, 0x8BCF, 0x4297, 0x93, 0x66, 0xF4, 0x40, 0xC2, 0xD1, 0xC7, 0x81);
 MIDL_INTERFACE("CD6A0F22-8BCF-4297-9366-F440C2D1C781")
 IRemoteMemoryService : public IUnknown
 {

@@ -12,6 +12,7 @@
 #endif
 #include "sosplugin.h"
 #include "arrayholder.h"
+#include "winwrap.h"
 
 #define CONVERT_FROM_SIGN_EXTENDED(offset) ((ULONG_PTR)(offset))
 
