@@ -83,16 +83,23 @@ public static class SymbolManifestGenerator
                     return false;
                 }
 
-                SymbolStoreKey diagnosticFileIdentityKey = correlatedGenerator.GetKeys(KeyTypeFlags.IdentityKey).Single();
-                // This is the special module for the runtime in runtimeCorrelatedKey that's under its own identity key
-                // with the upgraded debug information level.
-                manifestData.Entries.Add(new()
+                SymbolStoreKey[] diagnosticFileIdentityKeys = correlatedGenerator.GetKeys(KeyTypeFlags.IdentityKey).ToArray();
+                if (diagnosticFileIdentityKeys.Length == 0)
                 {
-                    BasedirRelativePath = basedirRelativePath,
-                    SymbolKey = diagnosticFileIdentityKey.Index,
-                    Sha512 = fileHash,
-                    DebugInformationLevel = TargetDebugLevel
-                });
+                    tracer.Error("No identity keys generated for special diagnostic file '{0}' of runtime '{1}'", correlatedFile.FullName, file.FullName);
+                    return false;
+                }
+                foreach (SymbolStoreKey diagnosticFileIdentityKey in diagnosticFileIdentityKeys)
+                {
+                    // Include each identity with the upgraded debug information level.
+                    manifestData.Entries.Add(new()
+                    {
+                        BasedirRelativePath = basedirRelativePath,
+                        SymbolKey = diagnosticFileIdentityKey.Index,
+                        Sha512 = fileHash,
+                        DebugInformationLevel = TargetDebugLevel
+                    });
+                }
             }
         }
 

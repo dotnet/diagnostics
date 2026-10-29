@@ -44,7 +44,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             {
                 byte[] contents = File.ReadAllBytes(Path.Combine("TestBinaries", "symbolized_executable"));
                 using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
-                byte[] buildId = elf.BuildID;
+                byte[] actualBuildId = elf.BuildID.ToArray();
+                byte[] buildId = actualBuildId.ToArray();
                 if (mismatchedBuildId)
                 {
                     buildId[0] ^= 0xff;
@@ -56,8 +57,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 string expectedPath = targetName;
                 if (cached)
                 {
-                    SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, targetName,
-                        buildId, symbolFile: false, symbolFileName: null).Single();
+                    SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.SymbolKey, fileName,
+                        actualBuildId, hasLoadableImage: true, hasDebugInfo: false, module.GetSymbolFileName()).Single();
                     expectedPath = Path.Combine(directory, key.Index);
                     Directory.CreateDirectory(Path.GetDirectoryName(expectedPath));
                     symbolService.AddCachePath(directory);
@@ -93,7 +94,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 if (cached)
                 {
                     SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.SymbolKey, module.FileName,
-                        elf.BuildID, symbolFile: false, symbolFileName: targetName).Single();
+                        elf.BuildID, hasLoadableImage: true, hasDebugInfo: false, symbolFileName: targetName).Single();
                     expectedPath = Path.Combine(directory, key.Index);
                     Directory.CreateDirectory(Path.GetDirectoryName(expectedPath));
                     symbolService.AddCachePath(directory);
@@ -116,6 +117,85 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Null(symbolService.DownloadSymbolFile(module));
         }
 
+        [Fact]
+        public void DownloadELFRejectsStrippedLocalSymbolFile()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            try
+            {
+                byte[] contents = File.ReadAllBytes(Path.Combine("TestBinaries", "stripped_executable"));
+                using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
+                string symbolFileName = Path.Combine(directory, "module.dbg");
+                TestModule module = new(symbolFileName, elf.BuildID);
+                SymbolService symbolService = new(this);
+                File.WriteAllBytes(symbolFileName, contents);
+
+                Assert.Null(symbolService.DownloadSymbolFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void DownloadELFTruncatedLocalFileDoesNotThrow()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            string fileName = Path.Combine(directory, "module");
+            try
+            {
+                File.WriteAllBytes(fileName, new byte[]
+                {
+                    0x7f, (byte)'E', (byte)'L', (byte)'F', 2, 1, 1, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 1
+                });
+                TestModule module = new(fileName, Enumerable.Range(1, 20).Select(value => (byte)value).ToArray(), fileName);
+                SymbolService symbolService = new(this);
+
+                Assert.Null(symbolService.DownloadModuleFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DownloadELFSymbolFileDoesNotFallBackToModuleKey(bool cached)
+        {
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            try
+            {
+                byte[] contents = File.ReadAllBytes(Path.Combine("TestBinaries", "symbolized_executable"));
+                using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
+                string fileName = cached ? "module" : Path.Combine(directory, "module");
+                TestModule module = new(null, elf.BuildID, fileName);
+                SymbolService symbolService = new(this);
+                string modulePath = fileName;
+                if (cached)
+                {
+                    SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, fileName,
+                        elf.BuildID, hasLoadableImage: true, hasDebugInfo: false, symbolFileName: null).Single();
+                    modulePath = Path.Combine(directory, moduleKey.Index);
+                    Directory.CreateDirectory(Path.GetDirectoryName(modulePath));
+                    symbolService.AddCachePath(directory);
+                }
+                File.WriteAllBytes(modulePath, contents);
+
+                Assert.Null(symbolService.DownloadSymbolFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
         [Theory]
         [InlineData("symbolized_executable", false)]
         [InlineData("symbolized_executable", true)]
@@ -136,7 +216,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 if (cached)
                 {
                     SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, fileName,
-                        elf.BuildID, symbolFile: false, symbolFileName: null).Single();
+                        elf.BuildID, hasLoadableImage: true, hasDebugInfo: false, symbolFileName: null).Single();
                     expectedPath = Path.Combine(directory, key.Index);
                     Directory.CreateDirectory(Path.GetDirectoryName(expectedPath));
                     symbolService.AddCachePath(directory);
@@ -161,9 +241,9 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
                 TestModule module = new("module.full", elf.BuildID);
                 SymbolStoreKey symbolKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.SymbolKey, module.FileName,
-                    elf.BuildID, symbolFile: false, module.GetSymbolFileName()).Single();
+                    elf.BuildID, hasLoadableImage: true, hasDebugInfo: false, module.GetSymbolFileName()).Single();
                 SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.GetSymbolFileName(),
-                    elf.BuildID, symbolFile: false, symbolFileName: null).Single();
+                    elf.BuildID, hasLoadableImage: true, hasDebugInfo: false, symbolFileName: null).Single();
                 foreach (SymbolStoreKey key in new[] { symbolKey, moduleKey })
                 {
                     string fileName = Path.Combine(directory, key.Index);

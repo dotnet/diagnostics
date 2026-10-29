@@ -368,7 +368,8 @@ namespace SOS.Hosting
             }
             if (platform == OSPlatform.Linux)
             {
-                key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, moduleName, buildId, symbolFile: false, symbolFileName: null).SingleOrDefault();
+                key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, moduleName, buildId,
+                    hasLoadableImage: true, hasDebugInfo: false, symbolFileName: null).SingleOrDefault();
             }
             else if (platform == OSPlatform.OSX)
             {

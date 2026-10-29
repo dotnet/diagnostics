@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="$(SrcDir)Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
+    <ProjectReference Include="..\..\Microsoft.SymbolManifestGenerator\Microsoft.SymbolManifestGenerator.csproj" />
     <ProjectReference Include="$(TestDir)TestHelpers/TestHelpers.csproj" />
   </ItemGroup>
 

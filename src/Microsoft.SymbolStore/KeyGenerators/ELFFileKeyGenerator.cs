@@ -48,13 +48,17 @@ namespace Microsoft.SymbolStore.KeyGenerators
         {
         }
 
+        private bool IsOSSpecificType =>
+            (ushort)_elfFile.Header.Type >= (ushort)ELFHeaderType.LowOS &&
+            (ushort)_elfFile.Header.Type <= (ushort)ELFHeaderType.HighOS;
+
         public override bool IsValid()
         {
             return _elfFile.IsValid() &&
                 (_elfFile.Header.Type == ELFHeaderType.Executable ||
                  _elfFile.Header.Type == ELFHeaderType.Shared ||
                  _elfFile.Header.Type == ELFHeaderType.Relocatable ||
-                 ((ushort)_elfFile.Header.Type >= (ushort)ELFHeaderType.LowOS && (ushort)_elfFile.Header.Type <= (ushort)ELFHeaderType.HighOS));
+                 IsOSSpecificType);
         }
 
         public override IEnumerable<SymbolStoreKey> GetKeys(KeyTypeFlags flags)
@@ -64,35 +68,38 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 byte[] buildId = _elfFile.BuildID;
                 if (NormalizeBuildId(ref buildId))
                 {
-                    bool symbolFile = false;
+                    bool hasLoadableImage;
+                    bool hasDebugInfo = false;
                     try
                     {
-                        ELFSection[] sections = _elfFile.Sections;
-                        bool hasDebugInfo = Array.Exists(sections, section =>
-                            section.Name.StartsWith(".debug_info") || section.Name.StartsWith(".zdebug_info"));
-                        // Separate debug files retain allocated section headers as NOBITS and may retain
-                        // file-backed notes (including the build ID), but not the module's code or data.
-                        bool hasModuleContents = Array.Exists(sections, section =>
-                            (section.Header.Flags & AllocatedSectionFlag) != 0 &&
-                            section.Header.FileSize > 0 &&
-                            section.Header.Type != ELFSectionHeaderType.NoBits &&
-                            section.Header.Type != ELFSectionHeaderType.Note &&
-                            section.Header.Type != ELFSectionHeaderType.Null);
-                        symbolFile = hasDebugInfo && !hasModuleContents;
+                        hasLoadableImage = HasLoadableImage(out hasDebugInfo);
                     }
                     catch (Exception ex) when
                        (ex is InvalidVirtualAddressException ||
                         ex is ArgumentOutOfRangeException ||
                         ex is IndexOutOfRangeException ||
-                        ex is BadInputFormatException)
+                        ex is BadInputFormatException ||
+                        ex is OverflowException ||
+                        ex is IOException)
                     {
-                        // This could occur when trying to read sections for an ELF image grabbed from a core dump
-                        // In that case, fallback to checking the file extension
-                        symbolFile = Array.IndexOf(s_symbolFileExtensions, Path.GetExtension(_path)) != -1;
+                        Tracer.Verbose("ELF image classification failed for {0}: {1}", _path, ex.Message);
+                        hasLoadableImage = false;
+                        // Only standard ELF types can use the filename fallback.
+                        if (!IsOSSpecificType)
+                        {
+                            hasDebugInfo = Array.IndexOf(s_symbolFileExtensions, Path.GetExtension(_path)) != -1;
+                            hasLoadableImage = !hasDebugInfo;
+                        }
+                    }
+
+                    if (IsOSSpecificType && !hasLoadableImage)
+                    {
+                        Tracer.Verbose("ELF file '{0}': cannot establish a loadable image for OS-specific ELF type 0x{1:x4}; module key generation is unsupported.",
+                            _path, (ushort)_elfFile.Header.Type);
                     }
 
                     string symbolFileName = GetSymbolFileName();
-                    SymbolStoreKey[] keys = GetKeys(flags, _path, buildId, symbolFile, symbolFileName).ToArray();
+                    SymbolStoreKey[] keys = GetKeys(flags, _path, buildId, hasLoadableImage, hasDebugInfo, symbolFileName).ToArray();
                     if (keys.Length == 0 && (flags & (KeyTypeFlags.ClrKeys | KeyTypeFlags.DacDbiKeys)) != 0)
                     {
                         string keyType = (flags & KeyTypeFlags.ClrKeys) != 0 ? "CLR" : "DAC/DBI";
@@ -136,24 +143,44 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// <returns>symbol store keys</returns>
         public static IEnumerable<SymbolStoreKey> GetKeys(KeyTypeFlags flags, string path, byte[] buildId, bool symbolFile, string symbolFileName)
         {
+            return GetKeys(flags, path, buildId, hasLoadableImage: !symbolFile, hasDebugInfo: symbolFile, symbolFileName);
+        }
+
+        /// <summary>
+        /// Creates ELF file symbol store keys using the independently detected image and debug capabilities.
+        /// </summary>
+        /// <param name="flags">type of keys to return</param>
+        /// <param name="path">file name and path</param>
+        /// <param name="buildId">ELF file uuid bytes</param>
+        /// <param name="hasLoadableImage">whether the file contains a valid loadable image</param>
+        /// <param name="hasDebugInfo">whether the file contains debug information</param>
+        /// <param name="symbolFileName">name of symbol file (from .gnu_debuglink) or null</param>
+        public static IEnumerable<SymbolStoreKey> GetKeys(KeyTypeFlags flags, string path, byte[] buildId,
+            bool hasLoadableImage, bool hasDebugInfo, string symbolFileName)
+        {
             Debug.Assert(path != null);
             if (NormalizeBuildId(ref buildId))
             {
                 string fileName = GetFileName(path);
+                if (!hasLoadableImage && !hasDebugInfo)
+                {
+                    yield break;
+                }
+                bool debugCompanion = !hasLoadableImage && hasDebugInfo;
 
                 if ((flags & KeyTypeFlags.IdentityKey) != 0)
                 {
-                    if (symbolFile)
-                    {
-                        yield return BuildKey(path, SymbolPrefix, buildId, "_.debug");
-                    }
-                    else
+                    if (hasLoadableImage)
                     {
                         bool clrSpecialFile = s_coreClrSpecialFiles.Contains(fileName);
                         yield return BuildKey(path, IdentityPrefix, buildId, clrSpecialFile);
                     }
+                    if (hasDebugInfo)
+                    {
+                        yield return BuildKey(path, SymbolPrefix, buildId, "_.debug");
+                    }
                 }
-                if (!symbolFile)
+                if (!debugCompanion)
                 {
                     // This is a workaround for 5.0 where the ELF file type of dotnet isn't Executable but
                     // Shared. It doesn't work for self-contained apps (apphost renamed to host program).
@@ -165,7 +192,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     {
                         yield return BuildKey(path, IdentityPrefix, buildId);
                     }
-                    if ((flags & KeyTypeFlags.SymbolKey) != 0)
+                    if ((flags & KeyTypeFlags.SymbolKey) != 0 && ((flags & KeyTypeFlags.IdentityKey) == 0 || !hasDebugInfo))
                     {
                         if (string.IsNullOrEmpty(symbolFileName))
                         {
@@ -190,6 +217,127 @@ namespace Microsoft.SymbolStore.KeyGenerators
             {
                 Debug.Fail($"Invalid ELF BuildId '{(buildId == null ? "<null>" : ToHexString(buildId))}' for {path}");
             }
+        }
+
+        private bool HasLoadableImage(out bool hasDebugInfo)
+        {
+            hasDebugInfo = false;
+            ELFSection[] sections = null;
+            if (_elfFile.Header.SectionHeaderOffset != 0 || _elfFile.Header.SectionHeaderCount != 0)
+            {
+                sections = _elfFile.Sections;
+                hasDebugInfo = Array.Exists(sections, section =>
+                    section.Name.StartsWith(".debug_info", StringComparison.Ordinal) ||
+                    section.Name.StartsWith(".zdebug_info", StringComparison.Ordinal));
+            }
+
+            if (_elfFile.Header.Type != ELFHeaderType.Executable &&
+                _elfFile.Header.Type != ELFHeaderType.Shared &&
+                !IsOSSpecificType)
+            {
+                return false;
+            }
+
+            // Already-loaded images use memory layout, so skip on-disk validation.
+            if (_elfFile.IsDataSourceVirtualAddressSpace)
+            {
+                return true;
+            }
+
+            List<ELFProgramSegment> loadSegments = new();
+            bool hasLoadSegmentWithFileData = false;
+            foreach (ELFProgramSegment segment in _elfFile.Segments)
+            {
+                if (segment.Header.Type == ELFProgramHeaderType.Load)
+                {
+                    if (!IsValidLoadSegment(segment))
+                    {
+                        return false;
+                    }
+
+                    if (segment.Header.FileSize > 0)
+                    {
+                        hasLoadSegmentWithFileData = true;
+                    }
+                    loadSegments.Add(segment);
+                }
+            }
+
+            return hasLoadSegmentWithFileData && HasMappedModuleContents(sections, loadSegments);
+        }
+
+        private bool IsValidLoadSegment(ELFProgramSegment segment)
+        {
+            ulong fileOffset = segment.Header.FileOffset;
+            ulong fileSize = segment.Header.FileSize;
+            ulong virtualAddress = segment.Header.VirtualAddress;
+            ulong memorySize = segment.Header.VirtualSize;
+            ulong alignment = segment.Header.Alignment;
+            // File data must fit in memory and within the file, the memory range must not overflow.
+            // Alignment above 1 must be a power of two, with matching file and memory offsets.
+            if (fileSize > memorySize ||
+                fileOffset > _elfFile.DataSourceLength ||
+                fileSize > _elfFile.DataSourceLength - fileOffset ||
+                virtualAddress > ulong.MaxValue - memorySize ||
+                (alignment > 1 && ((alignment & (alignment - 1)) != 0 || fileOffset % alignment != virtualAddress % alignment)))
+            {
+                return false;
+            }
+
+            return fileSize == 0 || IsReadableRange(segment.Contents, fileSize);
+        }
+
+        private bool HasMappedModuleContents(ELFSection[] sections, List<ELFProgramSegment> loadSegments)
+        {
+            // Without section headers, rely on the load segments already validated by the caller.
+            if (sections is null)
+            {
+                return true;
+            }
+
+            foreach (ELFSection section in sections)
+            {
+                ELFSectionHeader sectionHeader = section.Header;
+                ulong sectionSize = sectionHeader.FileSize;
+                if ((sectionHeader.Flags & AllocatedSectionFlag) != 0 &&
+                    sectionSize > 0 &&
+                    sectionHeader.Type != ELFSectionHeaderType.NoBits &&
+                    sectionHeader.Type != ELFSectionHeaderType.Note &&
+                    sectionHeader.Type != ELFSectionHeaderType.Null &&
+                    sectionHeader.FileOffset <= _elfFile.DataSourceLength &&
+                    sectionSize <= _elfFile.DataSourceLength - sectionHeader.FileOffset &&
+                    sectionHeader.VirtualAddress <= ulong.MaxValue - sectionSize)
+                {
+                    foreach (ELFProgramSegment segment in loadSegments)
+                    {
+                        ulong fileOffset = segment.Header.FileOffset;
+                        ulong virtualAddress = segment.Header.VirtualAddress;
+                        ulong fileSize = segment.Header.FileSize;
+                        ulong memorySize = segment.Header.VirtualSize;
+                        if (IsRangeContained(sectionHeader.FileOffset, sectionSize, fileOffset, fileSize) &&
+                            IsRangeContained(sectionHeader.VirtualAddress, sectionSize, virtualAddress, memorySize) &&
+                            sectionHeader.FileOffset - fileOffset == sectionHeader.VirtualAddress - virtualAddress &&
+                            IsReadableRange(section.Contents, sectionSize))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static bool IsRangeContained(ulong start, ulong size, ulong containerStart, ulong containerSize)
+        {
+            return start >= containerStart &&
+                start - containerStart <= containerSize &&
+                size <= containerSize - (start - containerStart);
+        }
+
+        private static bool IsReadableRange(Reader reader, ulong size)
+        {
+            byte[] buffer = new byte[1];
+            return reader.Read(0, buffer, 0, 1) == 1 && (size <= 1 || reader.Read(size - 1, buffer, 0, 1) == 1);
         }
 
         private string GetSymbolFileName()

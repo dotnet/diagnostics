@@ -173,8 +173,12 @@ namespace Microsoft.SymbolStore.Tests
                 KeyGenerator generator = fileGenerator ? (KeyGenerator)new FileKeyGenerator(_tracer, file) : new ELFFileKeyGenerator(_tracer, file);
 
                 IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
-                Assert.True(identityKey.Count() == 1);
-                Assert.True(identityKey.First().Index == "symbolized_executable/elf-buildid-126ba1461caf6644cfdd124bfcceeffa81b18897/symbolized_executable");
+                Assert.Equal(new[]
+                {
+                    "symbolized_executable/elf-buildid-126ba1461caf6644cfdd124bfcceeffa81b18897/symbolized_executable",
+                    "_.debug/elf-buildid-sym-126ba1461caf6644cfdd124bfcceeffa81b18897/_.debug"
+                }, identityKey.Select(key => key.Index));
+                Assert.All(identityKey, key => Assert.Equal(file.FileName, key.FullPathName));
 
                 IEnumerable<SymbolStoreKey> symbolKey = generator.GetKeys(KeyTypeFlags.SymbolKey);
                 Assert.True(symbolKey.Count() == 1);
