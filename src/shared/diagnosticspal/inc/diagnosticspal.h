@@ -77,6 +77,7 @@ extern "C"
     int __cdecl _snwprintf_s(WCHAR* string, size_t sizeInWords, size_t count, const WCHAR* format, ...);
     int __cdecl vswprintf_s(WCHAR* string, size_t sizeInWords, const WCHAR* format, va_list arglist);
     int __cdecl _vsnwprintf_s(WCHAR* string, size_t sizeInWords, size_t count, const WCHAR* format, va_list arglist);
+    int __cdecl DiagnosticsVsnprintf_s(char* string, size_t sizeInBytes, size_t count, const char* format, va_list arglist);
     errno_t __cdecl _itow_s(int value, WCHAR* buffer, size_t bufferSize, int radix);
     errno_t __cdecl _i64tow_s(long long value, WCHAR* buffer, size_t bufferSize, int radix);
 }

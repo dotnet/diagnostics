@@ -8,6 +8,7 @@ set(DIAGNOSTICSPAL_SOURCES
     safecrt/safecrt_output_s.cpp
     safecrt/safecrt_woutput_s.cpp
     safecrt/swprintf.cpp
+    safecrt/vsnprintf.cpp
     safecrt/vswprint.cpp
     safecrt/xtow_s.cpp
 )
@@ -15,6 +16,7 @@ set(DIAGNOSTICSPAL_SOURCES
 set_source_files_properties(
     safecrt/safecrt_output_l.cpp
     safecrt/safecrt_output_s.cpp
+    safecrt/vsnprintf.cpp
     safecrt/xtow_s.cpp
     PROPERTIES COMPILE_OPTIONS -U_UNICODE
 )
