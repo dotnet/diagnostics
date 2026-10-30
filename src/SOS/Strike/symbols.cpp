@@ -477,9 +477,25 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
         pCallback = (IUnknown*) new PERvaMemoryReader(TO_TADDR(peAddress));
     }
 
+    CorSymSearchPolicyAttributes searchPolicy = (CorSymSearchPolicyAttributes)(AllowRegistryAccess | AllowSymbolServerAccess);
+    const WCHAR* moduleName = pModuleName;
+    if (IsSafeAbsoluteLocalPath(pModuleName))
+    {
+        searchPolicy = (CorSymSearchPolicyAttributes)(searchPolicy | AllowReferencePathAccess);
+    }
+    else
+    {
+        moduleName = GetFileName(pModuleName);
+    }
+
     // TODO: this should be better integrated with windbg's symbol lookup
-    Status = g_pSymBinder->GetReaderFromCallback(pMD, pModuleName, symbolPath, 
-        AllowRegistryAccess | AllowSymbolServerAccess | AllowOriginalPathAccess | AllowReferencePathAccess, pCallback, &m_pSymReader);
+    Status = g_pSymBinder->GetReaderFromCallback(
+        pMD,
+        moduleName,
+        symbolPath,
+        searchPolicy,
+        pCallback,
+        &m_pSymReader);
 
     if (FAILED(Status) && m_pSymReader != NULL)
     {
