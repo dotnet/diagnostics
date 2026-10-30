@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -75,15 +76,38 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     .Append("{ \"timestamp\": \"").Append(DateTime.Now.ToString("O")).Append("\", ")
                     .Append(" \"provider\": \"").Append(JsonEscape(payload.CounterMetadata.ProviderName)).Append("\", ")
                     .Append(" \"name\": \"").Append(JsonEscape(payload.GetDisplay())).Append("\", ")
-                    .Append(" \"tags\": \"").Append(JsonEscape(payload.ValueTags)).Append("\", ")
+                    .Append(" \"tags\": \"").Append(JsonEscape(FormatTags(payload.ValueTags, payload.IsMeter))).Append("\", ")
                     .Append(" \"counterType\": \"").Append(JsonEscape(payload.CounterType.ToString())).Append("\", ")
-                    .Append(" \"meterTags\": \"").Append(JsonEscape(payload.CounterMetadata.MeterTags)).Append("\", ")
-                    .Append(" \"instrumentTags\": \"").Append(JsonEscape(payload.CounterMetadata.InstrumentTags)).Append("\", ")
+                    .Append(" \"meterTags\": \"").Append(JsonEscape(FormatTags(payload.CounterMetadata.MeterTags, payload.IsMeter))).Append("\", ")
+                    .Append(" \"instrumentTags\": \"").Append(JsonEscape(FormatTags(payload.CounterMetadata.InstrumentTags, payload.IsMeter))).Append("\", ")
                     .Append(" \"value\": ").Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append(" },");
             }
         }
 
         public void CounterStopped(CounterPayload payload) { }
+
+        // Renders decoded tags as the flat "key=value,key=value" string this exporter emits. The values
+        // are unescaped; JSON string quoting handles any ',' or '=' they contain.
+        private static string FormatTags(string tags, bool isMeter)
+        {
+            if (!isMeter)
+            {
+                return tags;
+            }
+
+            StringBuilder sb = new();
+            foreach (KeyValuePair<string, string> tag in CounterTagFormatter.Decode(tags))
+            {
+                if (sb.Length > 0)
+                {
+                    sb.Append(',');
+                }
+
+                sb.Append(tag.Key).Append('=').Append(tag.Value);
+            }
+
+            return sb.ToString();
+        }
 
         public void Stop()
         {
@@ -97,8 +121,10 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
             Console.WriteLine("File saved to " + _output);
         }
 
-        private static readonly char[] s_escapeChars = new char[] { '"', '\n', '\r', '\t', '\\', '\b', '\f' };
-
+        // Escapes a string for embedding in a JSON string literal. The named short escapes are used for
+        // the common control characters; every other character below U+0020 is emitted as \u00XX because
+        // JSON (RFC 8259) forbids raw control characters in a string and a strict parser would otherwise
+        // reject the document.
         private static string JsonEscape(string input)
         {
             if (input is null)
@@ -106,8 +132,7 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                 return string.Empty;
             }
 
-            int offset = input.IndexOfAny(s_escapeChars);
-            if (offset == -1)
+            if (IndexOfEscapable(input) == -1)
             {
                 // fast path
                 return input;
@@ -144,11 +169,34 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                         sb.Append("\\f");
                         break;
                     default:
-                        sb.Append(c);
+                        if (c < '\u0020')
+                        {
+                            sb.Append("\\u").Append(((int)c).ToString("x4", CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            sb.Append(c);
+                        }
                         break;
                 }
             }
             return sb.ToString();
+        }
+
+        // Returns the index of the first character that must be escaped in a JSON string, or -1 if none.
+        // '"' and '\' are structural; every character below U+0020 is a control character JSON forbids raw.
+        private static int IndexOfEscapable(string input)
+        {
+            for (int i = 0; i < input.Length; i++)
+            {
+                char c = input[i];
+                if (c == '"' || c == '\\' || c < '\u0020')
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
     }
 }
