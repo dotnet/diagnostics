@@ -88,12 +88,12 @@ extends:
           - win-x86
           - win-arm64
           - linux-x64
+          - linux-arm
           - linux-arm64
           - linux-musl-x64
           - osx-x64
           - osx-arm64
           - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-            - linux-arm
             - linux-musl-arm
             - linux-musl-arm64
           jobParameters:
@@ -142,6 +142,7 @@ extends:
             - win-x86
             - win-arm64
             - linux-x64
+            - linux-arm
             - linux-arm64
             - linux-musl-x64
             - osx-arm64
