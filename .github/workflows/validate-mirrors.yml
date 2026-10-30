@@ -1,0 +1,58 @@
+name: Validate mirrored sources
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate:
+    name: Validate mirrored sources
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check mirrored paths
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const allowedBranches = [
+              "automation/sync-cdac",
+              "automation/sync-dbi"
+            ];
+            const mirroredDirectories = [
+              "src/cdac/runtime",
+              "src/dbi/runtime"
+            ];
+            const mirroredFiles = [
+              "src/cdac/runtime-source.txt",
+              "src/dbi/runtime-source.txt"
+            ];
+
+            const pr = context.payload.pull_request;
+            if (pr.head.repo?.full_name === `${context.repo.owner}/${context.repo.repo}` &&
+                allowedBranches.includes(pr.head.ref)) {
+              core.info("Source-sync branch; mirrored source changes are allowed.");
+              return;
+            }
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo,
+              pull_number: pr.number,
+              per_page: 100
+            });
+            if (files.length !== pr.changed_files) {
+              core.setFailed("Could not inspect all changed files; refusing to approve mirrored source changes.");
+              return;
+            }
+
+            const isMirroredPath = path => mirroredFiles.includes(path) ||
+              mirroredDirectories.some(directory => path === directory || path.startsWith(`${directory}/`));
+            if (files.some(file => isMirroredPath(file.filename) ||
+                (file.previous_filename && isMirroredPath(file.previous_filename)))) {
+              core.setFailed("These paths are mirrored from dotnet/runtime. Make source changes upstream and use the source-sync workflows to update the mirrors.");
+              return;
+            }
+
+            core.info("No mirrored source changes.");
