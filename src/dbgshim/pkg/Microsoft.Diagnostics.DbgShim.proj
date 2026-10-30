@@ -13,7 +13,10 @@
       Listing the runtime specific packages to populate the dependencies section.
       Not building these references to avoid unintentional Build/Pack invocations.
     -->
-    <ProjectReference Include="$(MSBuildThisFileDirectory)*.proj" Exclude="$(MSBuildProjectFile)" BuildReference="false" />
+    <!-- Temporarily exclude linux-arm from release packaging: https://github.com/dotnet/diagnostics/issues/6174 -->
+    <ProjectReference Include="$(MSBuildThisFileDirectory)*.proj"
+                      Exclude="$(MSBuildProjectFile);$(MSBuildThisFileDirectory)Microsoft.Diagnostics.DbgShim.linux-arm.proj"
+                      BuildReference="false" />
   </ItemGroup>
 
   <Target Name="PackRidSpecificPackages"

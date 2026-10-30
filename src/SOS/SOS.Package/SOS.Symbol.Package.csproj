@@ -52,12 +52,13 @@
       <PackagePath>$(SOSPackagePathPrefix)/linux-musl-x64</PackagePath>
     </None>
 
+    <!-- Temporarily keep linux-arm local-only: https://github.com/dotnet/diagnostics/issues/6174 -->
     <None Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\libsosplugin.so.dbg" Pack="true" Visible="false"
-          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-arm'">
+          Condition="'$(SingleTargetRidPackage)' == 'true' and '$(TargetRid)' == 'linux-arm'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-arm</PackagePath>
     </None>
     <None Include="$(ArtifactsBinDir)\Linux.arm.$(Configuration)\libsos.so.dbg" Pack="true" Visible="false"
-          Condition="'$(_PackAllTargetRids)' == 'true' or '$(TargetRid)' == 'linux-arm'">
+          Condition="'$(SingleTargetRidPackage)' == 'true' and '$(TargetRid)' == 'linux-arm'">
       <PackagePath>$(SOSPackagePathPrefix)/linux-arm</PackagePath>
     </None>
 

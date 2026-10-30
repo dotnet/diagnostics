@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.Build.Traversal">
   <ItemGroup>
-    <ProjectReference Include="Microsoft.Diagnostics.InternalAssets.*.proj" Condition="'$(SingleTargetRidPackage)' != 'true'" />
+    <!-- Temporarily exclude linux-arm from release packaging: https://github.com/dotnet/diagnostics/issues/6174 -->
+    <ProjectReference Include="Microsoft.Diagnostics.InternalAssets.*.proj"
+                      Exclude="Microsoft.Diagnostics.InternalAssets.linux-arm.proj"
+                      Condition="'$(SingleTargetRidPackage)' != 'true'" />
     <ProjectReference Include="Microsoft.Diagnostics.InternalAssets.$(TargetRid).proj" Condition="'$(SingleTargetRidPackage)' == 'true'" />
   </ItemGroup>
 </Project>

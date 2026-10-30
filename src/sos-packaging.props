@@ -83,7 +83,8 @@
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux-musl.x64.$(Configuration)\sosdocsunix.txt" TargetRid="linux-musl-x64" TargetsMusl="true" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(SingleTargetRidPackage)' != 'true' or '$(TargetRid)' == 'linux-arm'">
+  <!-- Temporarily keep linux-arm local-only: https://github.com/dotnet/diagnostics/issues/6174 -->
+  <ItemGroup Condition="'$(SingleTargetRidPackage)' == 'true' and '$(TargetRid)' == 'linux-arm'">
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libsosplugin.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libsos.so" TargetRid="linux-arm" />
     <SosRequiredBinaries Include="$(ArtifactsBinDir)\linux.arm.$(Configuration)\libdbgshim.so" TargetRid="linux-arm" />

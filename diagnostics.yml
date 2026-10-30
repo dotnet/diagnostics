@@ -93,7 +93,8 @@ extends:
           - osx-x64
           - osx-arm64
           - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-            - linux-arm
+            # Temporarily disabled: https://github.com/dotnet/diagnostics/issues/6174
+            # - linux-arm
             - linux-musl-arm
             - linux-musl-arm64
           jobParameters:
@@ -199,8 +200,8 @@ extends:
                 cd $(Build.ArtifactStagingDirectory)/__download__
 
                 $dirs = Get-ChildItem -Directory
-                if ($dirs.Count -ne 11) {
-                  throw "Expected 11 release platforms to be present. 3 Linux glibc, 3 Linux musl, 3 Windows, and 2 macOS."
+                if ($dirs.Count -ne 10) {
+                  throw "Expected 10 release platforms to be present. 2 Linux glibc, 3 Linux musl, 3 Windows, and 2 macOS."
                 }
 
                 $targetDir = "$(Build.SourcesDirectory)/artifacts/bin"
