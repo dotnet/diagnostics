@@ -42,21 +42,20 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 
 ## Installed-tool release smoke tests
 
-The default tool layout remains `Bin`. To test finalized NuGet tools and the
-shipped single-file archive on Windows x64, first build the Release test
+The default tool layout remains `Bin`. To test finalized NuGet tools with the
+`Packaged` layout on Windows x64, first build the Release test
 infrastructure and install the test runtimes, then run:
 
 ```powershell
 .\eng\TestPackagedSOS.ps1 `
   -PackageDirectory .\artifacts\packages\Release\Shipping `
-  -BundleArchive .\artifacts\bundledtools\Release\zips\diagnostic-tools-win-x64.zip `
   -OutputDirectory ".\artifacts\tmp\packaged SOS smoke"
 ```
 
 The output directory must not already exist. The script selects the exact
 version of the sole `dotnet-sos` package in the input directory and requires a
-matching `dotnet-dump` package. Both distributions get isolated installations,
-staged payloads, dump caches, logs, and xUnit reports. The local runner uses the
+matching `dotnet-dump` package. The installed tools get an isolated installation,
+staged payload, dump cache, logs, and xUnit reports. The local runner uses the
 same launcher and smoke selection as Helix. Test infrastructure is staged
 without Bin-layout product outputs or source-build fallbacks.
 
@@ -65,23 +64,25 @@ legacy DAC, testing runtime/module commands, dump collection and analysis,
 live heap inspection, and managed breakpoints through CDB and dotnet-dump
 where supported. It is not a replacement for the full SOS matrix.
 
-Official builds prepare these layouts after packaging/signing, consuming the
-finalized NuGet artifacts and `BundledTools` archive. PR CI prepares unsigned
-packages from a standalone Windows x64 Release build. Both paths submit separate
-Helix work items named `SOS_win-x64_Release-NuGet-Net10` and
-`SOS_win-x64_Release-SingleFile-Net10`. Installed layouts initially cover only
-Windows x64 Release/.NET 10; they do not add Framework shards. Existing Bin jobs
+Official builds prepare this layout after packaging/signing, consuming the
+finalized NuGet artifacts. PR CI prepares unsigned packages from a standalone
+Windows x64 Release build. Both paths submit a Helix work item named
+`SOS_win-x64_Release-Packaged-Net10`. The Packaged layout initially covers only
+Windows x64 Release/.NET 10; it does not add Framework shards. Existing Bin jobs
 and publication dependencies are unchanged.
 
-`-PrepareOnly` installs the two distributions without running tests, for use by
+`-PrepareOnly` installs the packages without running tests, for use by
 the Helix submission step. The prepared `tools` and `sos` closures are copied into
-each layout's payload; package installation and SOS installation are not repeated
+the payload; package installation and SOS installation are not repeated
 on the Helix worker.
+
+SingleFile remains a debuggee flavor, not a tool-layout mode. Testing tools from
+the single-file archive is deferred.
 
 ## Architecture
 
 `IToolLayout` describes native SOS and managed assembly paths, the dotnet-dump
-command, dump-cache directory, and optional bundle-extraction and cDAC-override directories. It does
+command, dump-cache directory, and optional cDAC-override directory. It does
 not load assemblies, configure processes, or copy runtime binaries. `DotNetDumpHost`
 and `SnapshotStore` configure their own tool launches and debuggee self-capture;
 `DbgEngSosHost` loads the selected managed SOS assembly, retaining isolation for
@@ -141,7 +142,7 @@ dumps are reused only while newer than their debuggee.
 Helix identities include the tool installation layout, for example
 `SOS_win-x64_Release-Bin-Net10`. Payload directories include the RID,
 configuration, layout, and queue; report and log filenames also include the
-layout so Bin, NuGet, and SingleFile runs remain distinguishable.
+layout so Bin and Packaged runs remain distinguishable.
 
 For Bin layouts, Helix submits one work item per installed .NET runtime. Each runtime shard sets
 `SOSHARNESS_ONLY_COREVERSIONS` and runs the Core and SingleFile flavors.
@@ -309,8 +310,8 @@ Comma-separated matrix allow-lists are case-insensitive enum names:
 | `SOSHARNESS_DAC_DIR` | Override the legacy DAC directory used by the dbgeng engine host. |
 | `SOSHARNESS_CDAC_DIR` | Override cDAC discovery with a directory containing the matched universal cDAC and DBI binaries. |
 | `SOSHARNESS_USECDAC` | Local global DAC clamp; overrides the matrix DAC selection and is not set in CI. |
-| `SOSHARNESS_TOOL_LAYOUT` | Select `Bin` (the default), `NuGet`, or `SingleFile` tools. |
-| `SOSHARNESS_TOOL_ROOT` | Root of a prepared NuGet or SingleFile installation; required for installed layouts. |
+| `SOSHARNESS_TOOL_LAYOUT` | Select `Bin` (the default) or NuGet-installed `Packaged` tools. |
+| `SOSHARNESS_TOOL_ROOT` | Root of a prepared installation; required for the Packaged layout. |
 | `LLDB_PATH` | Override LLDB discovery. Otherwise Xcode and then `PATH` are searched. |
 | `NUGET_PACKAGES` | Override the NuGet package root used to locate runtime packs and cDAC assets. |
 

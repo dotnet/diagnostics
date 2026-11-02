@@ -14,14 +14,14 @@ internal static class ToolLayout
         {
             if (!string.IsNullOrEmpty(root))
             {
-                throw new ArgumentException("SOSHARNESS_TOOL_ROOT is only valid with a NuGet or SingleFile layout.");
+                throw new ArgumentException("SOSHARNESS_TOOL_ROOT is only valid with a Packaged layout.");
             }
             return new BinToolLayout();
         }
 
-        if (distribution is not ("NuGet" or "SingleFile"))
+        if (distribution != "Packaged")
         {
-            throw new ArgumentException($"Invalid SOSHARNESS_TOOL_LAYOUT '{distribution}'. Expected Bin, NuGet, or SingleFile.");
+            throw new ArgumentException($"Invalid SOSHARNESS_TOOL_LAYOUT '{distribution}'. Expected Bin or Packaged.");
         }
 
         if (string.IsNullOrWhiteSpace(root))
@@ -29,7 +29,7 @@ internal static class ToolLayout
             throw new ArgumentException($"SOSHARNESS_TOOL_ROOT is required for the {distribution} layout.");
         }
 
-        return distribution == "NuGet" ? new NuGetToolLayout(root) : new SingleFileToolLayout(root);
+        return new PackagedToolLayout(root);
     }
 
     internal static string RequireFile(string path)

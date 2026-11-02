@@ -94,10 +94,6 @@ public sealed class DotNetDumpHost : IDebuggerHost, IDiagnosticHost
         }
         psi.Environment["DOTNET_ROOT"] = RepoLayout.DotNetRoot;
         psi.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"] = RepoLayout.DotNetRoot;
-        if (layout.BundleExtractionDirectory is { } extractionDirectory)
-        {
-            psi.Environment["DOTNET_BUNDLE_EXTRACT_BASE_DIR"] = extractionDirectory;
-        }
         psi.ArgumentList.Add("analyze");
         psi.ArgumentList.Add(dumpPath);
         return psi;

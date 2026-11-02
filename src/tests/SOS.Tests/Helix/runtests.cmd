@@ -78,7 +78,7 @@ if %METADATA_LINES% GTR 3 (
   echo The payload marker contains unexpected metadata.
   exit /b 3
 )
-if not "%TOOL_LAYOUT%"=="Bin" if not "%TOOL_LAYOUT%"=="NuGet" if not "%TOOL_LAYOUT%"=="SingleFile" (
+if not "%TOOL_LAYOUT%"=="Bin" if not "%TOOL_LAYOUT%"=="Packaged" (
   echo Unsupported SOS tool layout "%TOOL_LAYOUT%".
   exit /b 3
 )

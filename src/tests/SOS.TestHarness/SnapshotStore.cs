@@ -403,10 +403,6 @@ public static class SnapshotStore
         debuggee.Environment["SOSHARNESS_DOTNETDUMP"] = command.FileName;
         debuggee.Environment["SOSHARNESS_DOTNETDUMP_DLL"] = command.AssemblyPath;
         debuggee.Environment["SOSHARNESS_DOTNET_ROOT"] = RepoLayout.DotNetRoot;
-        if (layout.BundleExtractionDirectory is { } extractionDirectory)
-        {
-            debuggee.Environment["DOTNET_BUNDLE_EXTRACT_BASE_DIR"] = extractionDirectory;
-        }
     }
 
     /// <summary>

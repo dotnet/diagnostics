@@ -29,11 +29,13 @@ public sealed class ToolLayoutTests : IDisposable
         Assert.Equal(RepoLayout.ArtifactsBinNative, layout.SosDirectory);
         Assert.Equal(Path.Combine(RepoLayout.Scratch, "dumps"), layout.DumpCacheDirectory);
         Assert.Equal(typeof(SOS.Extensions.HostServices).Assembly.Location, layout.SosAssemblyPath);
-        Assert.Null(layout.BundleExtractionDirectory);
     }
 
     [Theory]
     [InlineData("nuget")]
+    [InlineData("NuGet")]
+    [InlineData("SingleFile")]
+    [InlineData("packaged")]
     [InlineData("1")]
     [InlineData("Unknown")]
     [InlineData(" Bin")]
@@ -48,24 +50,20 @@ public sealed class ToolLayoutTests : IDisposable
         Assert.Throws<ArgumentException>(() => ToolLayout.FromConfiguration("Bin", _root));
     }
 
-    [Theory]
-    [InlineData("NuGet")]
-    [InlineData("SingleFile")]
-    public void PackagedLayoutsRequireAnExplicitRoot(string value)
+    [Fact]
+    public void PackagedLayoutRequiresAnExplicitRoot()
     {
-        Assert.Throws<ArgumentException>(() => ToolLayout.FromConfiguration(value, null));
-        Assert.Throws<ArgumentException>(() => ToolLayout.FromConfiguration(value, " "));
+        Assert.Throws<ArgumentException>(() => ToolLayout.FromConfiguration("Packaged", null));
+        Assert.Throws<ArgumentException>(() => ToolLayout.FromConfiguration("Packaged", " "));
     }
 
-    [Theory]
-    [InlineData("NuGet", typeof(NuGetToolLayout))]
-    [InlineData("SingleFile", typeof(SingleFileToolLayout))]
-    public void PackagedLayoutsUseOnlyPreparedInputs(string value, Type expected)
+    [Fact]
+    public void PackagedLayoutUsesOnlyPreparedInputs()
     {
         CreatePackagedInputs();
-        IToolLayout layout = ToolLayout.FromConfiguration(value, _root);
+        IToolLayout layout = ToolLayout.FromConfiguration("Packaged", _root);
 
-        Assert.Equal(expected, layout.GetType());
+        Assert.IsType<PackagedToolLayout>(layout);
         Assert.Equal(Path.Combine(_root, "sos"), layout.SosDirectory);
         Assert.Equal(Path.Combine(_root, "test-artifacts", "dumps"), layout.DumpCacheDirectory);
         Assert.Equal(Path.Combine(_root, "sos", "net8.0", "SOS.Extensions.dll"), layout.SosAssemblyPath);
@@ -85,17 +83,14 @@ public sealed class ToolLayoutTests : IDisposable
     }
 
     [Theory]
-    [InlineData("NuGet", "native")]
-    [InlineData("NuGet", "managed")]
-    [InlineData("NuGet", "dump")]
-    [InlineData("SingleFile", "native")]
-    [InlineData("SingleFile", "managed")]
-    [InlineData("SingleFile", "dump")]
-    public void MissingPackagedInputsNeverFallBackToBin(string value, string missing)
+    [InlineData("native")]
+    [InlineData("managed")]
+    [InlineData("dump")]
+    public void MissingPackagedInputsNeverFallBackToBin(string missing)
     {
         Dictionary<string, string> inputs = CreatePackagedInputs();
         File.Delete(inputs[missing]);
-        FileNotFoundException error = Assert.Throws<FileNotFoundException>(() => ToolLayout.FromConfiguration(value, _root));
+        FileNotFoundException error = Assert.Throws<FileNotFoundException>(() => ToolLayout.FromConfiguration("Packaged", _root));
         Assert.Equal(inputs[missing], error.FileName);
     }
 
@@ -112,13 +107,11 @@ public sealed class ToolLayoutTests : IDisposable
         Assert.Equal([dll, "analyze", Path.Combine(_root, "a dump.dmp")], process.ArgumentList);
     }
 
-    [Theory]
-    [InlineData("NuGet")]
-    [InlineData("SingleFile")]
-    public void CaptureEnvironmentPreservesDebuggeeRuntime(string value)
+    [Fact]
+    public void CaptureEnvironmentPreservesDebuggeeRuntime()
     {
         CreatePackagedInputs();
-        IToolLayout layout = ToolLayout.FromConfiguration(value, _root);
+        IToolLayout layout = ToolLayout.FromConfiguration("Packaged", _root);
         ProcessStartInfo debuggee = new("debuggee");
         debuggee.Environment["DOTNET_ROOT"] = "target runtime";
         debuggee.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"] = "target architecture runtime";
@@ -133,25 +126,21 @@ public sealed class ToolLayoutTests : IDisposable
         Assert.Null(debuggee.Environment["SOSHARNESS_DOTNETDUMP_DLL"]);
     }
 
-    [Theory]
-    [InlineData("NuGet")]
-    [InlineData("SingleFile")]
-    public void ProcessesUseLayoutBundleExtractionForToolsAndCapture(string value)
+    [Fact]
+    public void ProcessConfigurationPreservesInheritedBundleExtraction()
     {
         CreatePackagedInputs();
-        IToolLayout layout = ToolLayout.FromConfiguration(value, _root);
+        IToolLayout layout = ToolLayout.FromConfiguration("Packaged", _root);
         string? inheritedExtraction = Environment.GetEnvironmentVariable("DOTNET_BUNDLE_EXTRACT_BASE_DIR");
         ProcessStartInfo process = DotNetDumpHost.CreateStartInfo(layout, Path.Combine(_root, "a dump.dmp"));
         ProcessStartInfo debuggee = new("debuggee");
 
         SnapshotStore.ConfigureCaptureEnvironment(layout, debuggee);
 
-        string? expected = value == "SingleFile" ? Path.Combine(_root, "bundle-extract") : inheritedExtraction;
-        Assert.Equal(value == "SingleFile" ? Path.Combine(_root, "bundle-extract") : null, layout.BundleExtractionDirectory);
         process.Environment.TryGetValue("DOTNET_BUNDLE_EXTRACT_BASE_DIR", out string? toolExtraction);
         debuggee.Environment.TryGetValue("DOTNET_BUNDLE_EXTRACT_BASE_DIR", out string? captureExtraction);
-        Assert.Equal(expected, toolExtraction);
-        Assert.Equal(expected, captureExtraction);
+        Assert.Equal(inheritedExtraction, toolExtraction);
+        Assert.Equal(inheritedExtraction, captureExtraction);
         Assert.Equal(inheritedExtraction, Environment.GetEnvironmentVariable("DOTNET_BUNDLE_EXTRACT_BASE_DIR"));
     }
 
@@ -179,13 +168,11 @@ public sealed class ToolLayoutTests : IDisposable
         Assert.Same(typeof(SOS.Extensions.HostServices).Assembly, DbgEngSosHost.LoadSosAssembly(layout));
     }
 
-    [Theory]
-    [InlineData("NuGet")]
-    [InlineData("SingleFile")]
-    public void PackagedAssemblyLoadingNeverFallsBackWhenItsAssemblyIsInvalid(string value)
+    [Fact]
+    public void PackagedAssemblyLoadingNeverFallsBackWhenItsAssemblyIsInvalid()
     {
         CreatePackagedInputs();
-        IToolLayout layout = ToolLayout.FromConfiguration(value, _root);
+        IToolLayout layout = ToolLayout.FromConfiguration("Packaged", _root);
         Assert.Throws<BadImageFormatException>(() => DbgEngSosHost.LoadSosAssembly(layout));
     }
 
@@ -233,7 +220,7 @@ public sealed class ToolLayoutTests : IDisposable
     public void CDacPreparationWithoutAnOverrideDoesNotModifyTheLayout()
     {
         CreatePackagedInputs();
-        IToolLayout layout = ToolLayout.FromConfiguration("NuGet", _root);
+        IToolLayout layout = ToolLayout.FromConfiguration("Packaged", _root);
 
         CDacOverride.Prepare(layout, Host.Cdb);
 
@@ -285,8 +272,7 @@ public sealed class ToolLayoutTests : IDisposable
         string SosAssemblyPath,
         ToolCommand DotNetDump,
         string DumpCacheDirectory,
-        string? CDacOverrideDirectory,
-        string? BundleExtractionDirectory = null) : IToolLayout;
+        string? CDacOverrideDirectory) : IToolLayout;
 
     private Dictionary<string, string> CreatePackagedInputs()
     {

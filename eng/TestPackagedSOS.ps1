@@ -5,7 +5,7 @@
 
 <#
 .SYNOPSIS
-Prepares installed SOS layouts and optionally runs their Windows x64 smoke shards locally.
+Prepares a NuGet-installed SOS layout and optionally runs its Windows x64 smoke shard locally.
 .NOTES
 Requires prebuilt Release (or Debug) harnesses and debuggees, and eng/InstallRuntimes.proj runtimes.
 The staged payload excludes Bin-layout tools and disallows on-demand builds.
@@ -14,9 +14,6 @@ The staged payload excludes Bin-layout tools and disallows on-demand builds.
 param(
     [Parameter(Mandatory)]
     [string] $PackageDirectory,
-
-    [Parameter(Mandatory)]
-    [string] $BundleArchive,
 
     [Parameter(Mandatory)]
     [string] $OutputDirectory,
@@ -39,7 +36,6 @@ $dotnet = Join-Path $repo '.dotnet\dotnet.exe'
 $runtimeRoot = Join-Path $repo 'artifacts\dotnet-test'
 $testDotnet = Join-Path $runtimeRoot 'dotnet.exe'
 $packages = (Resolve-Path -LiteralPath $PackageDirectory).Path
-$archive = (Resolve-Path -LiteralPath $BundleArchive).Path
 $root = [IO.Path]::GetFullPath($OutputDirectory, $PWD.ProviderPath)
 if (Test-Path -LiteralPath $root) {
     throw "Output directory '$root' already exists. Choose a new directory."
@@ -82,7 +78,6 @@ $environment = @{
     HELIX_WORKITEM_UPLOAD_ROOT = ''
 }
 $previousEnvironment = @{}
-$failures = [Collections.Generic.List[string]]::new()
 try {
     if (!$PrepareOnly) {
         foreach ($name in $environment.Keys) {
@@ -91,41 +86,27 @@ try {
         }
     }
 
-    foreach ($distribution in @('NuGet', 'SingleFile')) {
-        $layout = Join-Path $root $distribution
-        $prepare = @{
-            Distribution = $distribution
-            OutputDirectory = $layout
-            DotNet = $dotnet
-        }
-        if ($distribution -eq 'NuGet') {
-            $prepare.PackageDirectory = $packages
-            $prepare.PackageVersion = $version
-        } else {
-            $prepare.BundleArchive = $archive
-        }
-        & (Join-Path $PSScriptRoot 'PrepareSOSTestLayout.ps1') @prepare
+    $layout = Join-Path $root 'Packaged'
+    & (Join-Path $PSScriptRoot 'PrepareSOSTestLayout.ps1') `
+        -PackageDirectory $packages -PackageVersion $version -OutputDirectory $layout -DotNet $dotnet
 
-        if ($PrepareOnly) {
-            continue
-        }
-
-        $payload = Join-Path $root "payloads\$distribution"
+    if (!$PrepareOnly) {
+        $payload = Join-Path $root 'payloads\Packaged'
         & $dotnet msbuild (Join-Path $repo 'src\tests\SOS.Tests\SOS.Tests.csproj') -nologo -restore `
             -t:StageSOSHelixPayload "-p:Configuration=$Configuration" -p:TargetArch=x64 -p:TargetRid=win-x64 `
-            "-p:SOSTestToolLayout=$distribution" "-p:SOSTestToolRoot=$layout" "-p:SOSHelixPayloadDir=$payload"
+            -p:SOSTestToolLayout=Packaged "-p:SOSTestToolRoot=$layout" "-p:SOSHelixPayloadDir=$payload"
         if ($LASTEXITCODE -ne 0) {
-            throw "Staging the $distribution SOS harness failed (exit $LASTEXITCODE)."
+            throw "Staging the Packaged SOS harness failed (exit $LASTEXITCODE)."
         }
 
-        $results = Join-Path $root "results\$distribution"
+        $results = Join-Path $root 'results\Packaged'
         New-Item -ItemType Directory -Path $results | Out-Null
         $env:HELIX_WORKITEM_ROOT = $payload
         $env:HELIX_WORKITEM_UPLOAD_ROOT = $results
-        $identity = "SOS_win-x64_$Configuration-$distribution-Net10"
+        $identity = "SOS_win-x64_$Configuration-Packaged-Net10"
         & (Join-Path $payload 'runtests.cmd') --helix-work-item $identity
         if ($LASTEXITCODE -ne 0) {
-            $failures.Add("$identity (exit $LASTEXITCODE)")
+            throw "Packaged SOS smoke tests failed: $identity (exit $LASTEXITCODE). Results: '$results'."
         }
     }
 } finally {
@@ -137,8 +118,4 @@ try {
             [Environment]::SetEnvironmentVariable($name, $value)
         }
     }
-}
-
-if ($failures.Count -ne 0) {
-    throw "Packaged SOS smoke tests failed: $($failures -join ', '). Results: '$root\results'."
 }

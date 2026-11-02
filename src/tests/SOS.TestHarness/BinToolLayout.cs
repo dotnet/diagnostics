@@ -11,7 +11,6 @@ internal sealed class BinToolLayout : IToolLayout
     public string SosAssemblyPath => typeof(SOS.Extensions.HostServices).Assembly.Location;
     public ToolCommand DotNetDump => _dotNetDump.Value;
     public string DumpCacheDirectory => Path.Combine(RepoLayout.Scratch, "dumps");
-    public string? BundleExtractionDirectory => null;
     public string? CDacOverrideDirectory => _cdacOverrideDirectory.Value;
 
     private static ToolCommand ResolveDotNetDump()

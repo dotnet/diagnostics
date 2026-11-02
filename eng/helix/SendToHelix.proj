@@ -22,15 +22,7 @@
   </PropertyGroup>
 
   <Target Name="DiscoverHelixTestProjects">
-    <ItemGroup Condition="'$(SOSTestToolLayouts)' != ''">
-      <_SOSToolLayout Include="$([MSBuild]::Unescape('$(SOSTestToolLayouts)'))" />
-      <HelixTestProject Include="$(HelixTestProject)">
-        <AdditionalProperties>SOSTestToolLayout=%(_SOSToolLayout.Identity);SOSTestToolRoot=$(SOSTestToolRoot)/%(_SOSToolLayout.Identity)</AdditionalProperties>
-      </HelixTestProject>
-    </ItemGroup>
-    <Error Condition="'$(SOSTestToolLayouts)' != '' and ('$(HelixTestProject)' == '' or '$(SOSTestToolRoot)' == '')"
-           Text="Installed SOS layout sharding requires HelixTestProject and SOSTestToolRoot." />
-    <ItemGroup Condition="'$(HelixTestProject)' != '' and '$(SOSTestToolLayouts)' == ''">
+    <ItemGroup Condition="'$(HelixTestProject)' != ''">
       <HelixTestProject Include="$(HelixTestProject)" />
     </ItemGroup>
     <MSBuild Projects="$(RepoRoot)src/tests/dirs.proj"

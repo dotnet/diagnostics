@@ -3,20 +3,19 @@
 
 namespace SOS.TestHarness;
 
-/// <summary>The installed SOS layout shared by NuGet tools and single-file bundles.</summary>
-internal abstract class PackagedToolLayout : IToolLayout
+/// <summary>The SOS layout installed from NuGet tools.</summary>
+internal sealed class PackagedToolLayout : IToolLayout
 {
     private readonly Lazy<string?> _cdacOverrideDirectory = new(ValidateCDacOverride);
 
-    protected string Root { get; }
+    private string Root { get; }
     public string SosDirectory => Path.Combine(Root, "sos");
     public string SosAssemblyPath => Path.Combine(SosDirectory, "net8.0", "SOS.Extensions.dll");
     public ToolCommand DotNetDump { get; }
     public string DumpCacheDirectory => Path.Combine(Root, "test-artifacts", "dumps");
-    public virtual string? BundleExtractionDirectory => null;
     public string? CDacOverrideDirectory => _cdacOverrideDirectory.Value;
 
-    protected PackagedToolLayout(string root)
+    public PackagedToolLayout(string root)
     {
         Root = Path.GetFullPath(root);
         string nativeSosName = OperatingSystem.IsWindows() ? "sos.dll" :

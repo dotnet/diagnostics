@@ -40,8 +40,6 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
         displayName: Create local-only Windows x64 NuGet packages
-      - script: build.cmd -ci -configuration Release -bundletools /p:SupportedRids=win-x64 /p:SingleTargetRidPackage=true /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false
-        displayName: Create Windows x64 single-file archive
 
     - ${{ else }}:
       - task: DownloadPipelineArtifact@2
@@ -53,13 +51,6 @@ jobs:
             dotnet-dump.*.nupkg
           targetPath: '$(Build.SourcesDirectory)/artifacts/packages/Release/Shipping'
           checkDownloadedFiles: true
-      - task: DownloadPipelineArtifact@2
-        displayName: Download finalized single-file archive
-        inputs:
-          artifact: BundledTools
-          patterns: Release/zips/diagnostic-tools-win-x64.zip
-          targetPath: '$(Build.SourcesDirectory)/artifacts/bundledtools'
-          checkDownloadedFiles: true
 
     - powershell: |
         & .\eng\common\build.ps1 -restore -build -configuration Release `
@@ -68,27 +59,26 @@ jobs:
       displayName: Acquire test SDK and runtimes
 
     - task: PowerShell@2
-      displayName: Prepare installed NuGet and SingleFile layouts
+      displayName: Prepare Packaged layout from NuGet tools
       inputs:
         pwsh: true
         filePath: eng\TestPackagedSOS.ps1
         arguments: >
           -PackageDirectory "$(Build.SourcesDirectory)\artifacts\packages\Release\Shipping"
-          -BundleArchive "$(Build.SourcesDirectory)\artifacts\bundledtools\Release\zips\diagnostic-tools-win-x64.zip"
           -OutputDirectory "$(Build.SourcesDirectory)\artifacts\tmp\packaged-sos"
           -PrepareOnly
 
     - template: /eng/pipelines/send-to-helix-step.yml
       parameters:
-        displayName: Run installed SOS win-x64 Release Net10 shards on Helix
+        displayName: Run Packaged SOS win-x64 Release Net10 shard on Helix
         osGroup: windows
         sendParams: >
           $(Build.SourcesDirectory)/eng/helix/SendToHelix.proj
           /restore /p:TreatWarningsAsErrors=false /t:Test
           /p:Configuration=Release /p:TargetArch=x64 /p:TargetOS=Windows_NT /p:TargetRid=win-x64
           /p:HelixTestProject=$(Build.SourcesDirectory)/src/tests/SOS.Tests/SOS.Tests.csproj
-          /p:SOSTestToolLayouts=NuGet%3BSingleFile
-          /p:SOSTestToolRoot=$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos
+          /p:SOSTestToolLayout=Packaged
+          /p:SOSTestToolRoot=$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos/Packaged
           /p:OfficialBuildId=$(Build.BuildNumber)
           /bl:$(Build.SourcesDirectory)/artifacts/log/Release/SendPackagedSOS.binlog
         env:

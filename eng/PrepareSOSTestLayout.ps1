@@ -5,11 +5,9 @@
 
 <#
 .SYNOPSIS
-Prepares an isolated NuGet or SingleFile tool layout for local SOS harness testing.
+Prepares an isolated Packaged tool layout from NuGet packages for SOS harness testing.
 .EXAMPLE
-./eng/PrepareSOSTestLayout.ps1 -Distribution NuGet -PackageDirectory ./artifacts/packages/Release/Shipping -PackageVersion 10.0.0 -OutputDirectory ./artifacts/tmp/sos-nuget
-.EXAMPLE
-./eng/PrepareSOSTestLayout.ps1 -Distribution SingleFile -BundleArchive ./diagnostic-tools-win-x64.zip -OutputDirectory ./artifacts/tmp/sos-singlefile
+./eng/PrepareSOSTestLayout.ps1 -PackageDirectory ./artifacts/packages/Release/Shipping -PackageVersion 10.0.0 -OutputDirectory ./artifacts/tmp/sos-packaged
 .NOTES
 Run on the target OS/architecture. The input tools must support dotnet-sos install
 --install-directory and --no-lldbinit. The output directory must not already exist.
@@ -17,37 +15,24 @@ Run on the target OS/architecture. The input tools must support dotnet-sos insta
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [ValidateSet('NuGet', 'SingleFile')]
-    [string] $Distribution,
-
-    [Parameter(Mandatory)]
     [string] $OutputDirectory,
 
+    [Parameter(Mandatory)]
     [string] $PackageDirectory,
+
+    [Parameter(Mandatory)]
     [string] $PackageVersion,
-    [string] $BundleArchive,
+
     [string] $DotNet
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-if ($Distribution -eq 'NuGet') {
-    $Distribution = 'NuGet'
-    if (!$PackageDirectory -or !$PackageVersion -or $BundleArchive) {
-        throw 'NuGet requires -PackageDirectory and -PackageVersion, without -BundleArchive.'
-    }
-    if ($PackageVersion.Contains('*') -or $PackageVersion.Contains('[') -or $PackageVersion.Contains(']')) {
-        throw '-PackageVersion must be an exact version, not a range or wildcard.'
-    }
-    $source = (Resolve-Path -LiteralPath $PackageDirectory).Path
-} else {
-    $Distribution = 'SingleFile'
-    if (!$BundleArchive -or $PackageDirectory -or $PackageVersion) {
-        throw 'SingleFile requires -BundleArchive, without NuGet package arguments.'
-    }
-    $source = (Resolve-Path -LiteralPath $BundleArchive).Path
+if ($PackageVersion.Contains('*') -or $PackageVersion.Contains('[') -or $PackageVersion.Contains(']')) {
+    throw '-PackageVersion must be an exact version, not a range or wildcard.'
 }
+$source = (Resolve-Path -LiteralPath $PackageDirectory).Path
 
 $suffix = if ($IsWindows) { '.exe' } else { '' }
 if (!$DotNet) {
@@ -61,13 +46,11 @@ if (Test-Path -LiteralPath $root) {
 
 $tools = Join-Path $root 'tools'
 $sos = Join-Path $root 'sos'
-$extraction = Join-Path $root 'bundle-extract'
-New-Item -ItemType Directory -Path $tools, $extraction | Out-Null
+New-Item -ItemType Directory -Path $tools | Out-Null
 
 $environment = @{
     NUGET_PACKAGES = (Join-Path $root 'packages')
     DOTNET_CLI_HOME = (Join-Path $root 'dotnet-home')
-    DOTNET_BUNDLE_EXTRACT_BASE_DIR = $extraction
     DOTNET_ROOT = (Split-Path $DotNet)
     DOTNET_GENERATE_ASPNET_CERTIFICATE = 'false'
     DOTNET_NOLOGO = 'true'
@@ -81,20 +64,16 @@ try {
         [Environment]::SetEnvironmentVariable($name, $environment[$name])
     }
 
-    if ($Distribution -eq 'NuGet') {
-        $config = Join-Path $root 'tool-install.config'
-        $escapedSource = [Security.SecurityElement]::Escape($source)
-        "<configuration><packageSources><clear/><add key=`"local`" value=`"$escapedSource`"/></packageSources></configuration>" |
-            Set-Content -LiteralPath $config -Encoding utf8
+    $config = Join-Path $root 'tool-install.config'
+    $escapedSource = [Security.SecurityElement]::Escape($source)
+    "<configuration><packageSources><clear/><add key=`"local`" value=`"$escapedSource`"/></packageSources></configuration>" |
+        Set-Content -LiteralPath $config -Encoding utf8
 
-        foreach ($tool in @('dotnet-sos', 'dotnet-dump')) {
-            & $DotNet tool install $tool --version $PackageVersion --tool-path $tools --configfile $config
-            if ($LASTEXITCODE -ne 0) {
-                throw "Installing $tool from '$source' failed (exit $LASTEXITCODE)."
-            }
+    foreach ($tool in @('dotnet-sos', 'dotnet-dump')) {
+        & $DotNet tool install $tool --version $PackageVersion --tool-path $tools --configfile $config
+        if ($LASTEXITCODE -ne 0) {
+            throw "Installing $tool from '$source' failed (exit $LASTEXITCODE)."
         }
-    } else {
-        Expand-Archive -LiteralPath $source -DestinationPath $tools
     }
 
     $sosTool = Join-Path $tools "dotnet-sos$suffix"
@@ -124,7 +103,7 @@ try {
     }
 
     @{
-        Distribution = $Distribution
+        Layout = 'Packaged'
         Source = $source
         PackageVersion = $PackageVersion
     } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $root 'layout.json') -Encoding utf8
@@ -139,6 +118,6 @@ try {
     }
 }
 
-Write-Host "Prepared $Distribution SOS test layout at '$root'."
-Write-Host "`$env:SOSHARNESS_TOOL_LAYOUT = '$Distribution'"
+Write-Host "Prepared Packaged SOS test layout at '$root'."
+Write-Host "`$env:SOSHARNESS_TOOL_LAYOUT = 'Packaged'"
 Write-Host "`$env:SOSHARNESS_TOOL_ROOT = '$($root.Replace("'", "''"))'"

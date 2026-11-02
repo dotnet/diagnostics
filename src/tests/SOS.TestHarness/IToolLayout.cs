@@ -10,6 +10,5 @@ internal interface IToolLayout
     string SosAssemblyPath { get; }
     ToolCommand DotNetDump { get; }
     string DumpCacheDirectory { get; }
-    string? BundleExtractionDirectory { get; }
     string? CDacOverrideDirectory { get; }
 }

@@ -26,8 +26,8 @@
   </ItemGroup>
 
   <Target Name="StageSOSHelixPayload">
-    <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(SOSTestToolLayout)' != 'NuGet' and '$(SOSTestToolLayout)' != 'SingleFile'"
-           Text="SOSTestToolLayout must be Bin, NuGet, or SingleFile." />
+    <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(SOSTestToolLayout)' != 'Packaged'"
+           Text="SOSTestToolLayout must be Bin or Packaged." />
     <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and ('$(TargetOS)' != 'Windows_NT' or '$(TargetArch)' != 'x64' or '$(TargetRid)' != 'win-x64' or '$(_SOSLiveRuntimeDir)' != '')"
            Text="Installed SOS payloads currently support Windows x64 without a private runtime override." />
     <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(SOSTestToolRoot)' == ''"
