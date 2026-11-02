@@ -82,8 +82,8 @@ on the Helix worker.
 
 `IToolLayout` describes native SOS and managed assembly paths, the dotnet-dump
 command, dump-cache directory, and optional bundle-extraction and cDAC-override directories. It does
-not load assemblies, configure processes, or copy runtime binaries. `ToolProcess`
-configures tool launches and debuggee self-capture from that state;
+not load assemblies, configure processes, or copy runtime binaries. `DotNetDumpHost`
+and `SnapshotStore` configure their own tool launches and debuggee self-capture;
 `DbgEngSosHost` loads the selected managed SOS assembly, retaining isolation for
 installed products; `CDacOverride` prepares private override binaries when needed.
 

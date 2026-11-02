@@ -71,10 +71,15 @@ public sealed class ToolLayoutTests : IDisposable
         Assert.Equal(Path.Combine(_root, "sos", "net8.0", "SOS.Extensions.dll"), layout.SosAssemblyPath);
         Assert.Equal(Path.Combine(_root, "tools", "dotnet-dump" + RepoLayout.ExeSuffix), layout.DotNetDump.FileName);
         Assert.Null(layout.DotNetDump.AssemblyPath);
-        ProcessStartInfo process = ToolProcess.CreateStartInfo(layout.DotNetDump, layout.BundleExtractionDirectory);
+        string dumpPath = Path.Combine(_root, "a dump.dmp");
+        ProcessStartInfo process = DotNetDumpHost.CreateStartInfo(layout, dumpPath);
         Assert.Equal(Path.Combine(_root, "tools", "dotnet-dump" + RepoLayout.ExeSuffix), process.FileName);
-        Assert.Empty(process.ArgumentList);
+        Assert.Equal(["analyze", dumpPath], process.ArgumentList);
         Assert.False(process.UseShellExecute);
+        Assert.True(process.RedirectStandardInput);
+        Assert.True(process.RedirectStandardOutput);
+        Assert.True(process.RedirectStandardError);
+        Assert.True(process.CreateNoWindow);
         Assert.Equal(RepoLayout.DotNetRoot, process.Environment["DOTNET_ROOT"]);
         Assert.Equal(RepoLayout.DotNetRoot, process.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"]);
     }
@@ -99,9 +104,8 @@ public sealed class ToolLayoutTests : IDisposable
     {
         string dotnet = Path.Combine(_root, "dotnet host.exe");
         string dll = Path.Combine(_root, "tool directory", "dotnet-dump.dll");
-        ProcessStartInfo process = ToolProcess.CreateStartInfo(new ToolCommand(dotnet, dll));
-        process.ArgumentList.Add("analyze");
-        process.ArgumentList.Add(Path.Combine(_root, "a dump.dmp"));
+        TestToolLayout layout = new(_root, Path.Combine(_root, "SOS.Extensions.dll"), new ToolCommand(dotnet, dll), _root, null);
+        ProcessStartInfo process = DotNetDumpHost.CreateStartInfo(layout, Path.Combine(_root, "a dump.dmp"));
 
         Assert.False(process.UseShellExecute);
         Assert.Equal(dotnet, process.FileName);
@@ -120,7 +124,7 @@ public sealed class ToolLayoutTests : IDisposable
         debuggee.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"] = "target architecture runtime";
         debuggee.Environment["SOSHARNESS_DOTNETDUMP_DLL"] = "inherited.dll";
 
-        ToolProcess.ConfigureCaptureEnvironment(layout.DotNetDump, debuggee, layout.BundleExtractionDirectory);
+        SnapshotStore.ConfigureCaptureEnvironment(layout, debuggee);
 
         Assert.Equal("target runtime", debuggee.Environment["DOTNET_ROOT"]);
         Assert.Equal("target architecture runtime", debuggee.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"]);
@@ -137,10 +141,10 @@ public sealed class ToolLayoutTests : IDisposable
         CreatePackagedInputs();
         IToolLayout layout = ToolLayout.FromConfiguration(value, _root);
         string? inheritedExtraction = Environment.GetEnvironmentVariable("DOTNET_BUNDLE_EXTRACT_BASE_DIR");
-        ProcessStartInfo process = ToolProcess.CreateStartInfo(layout.DotNetDump, layout.BundleExtractionDirectory);
+        ProcessStartInfo process = DotNetDumpHost.CreateStartInfo(layout, Path.Combine(_root, "a dump.dmp"));
         ProcessStartInfo debuggee = new("debuggee");
 
-        ToolProcess.ConfigureCaptureEnvironment(layout.DotNetDump, debuggee, layout.BundleExtractionDirectory);
+        SnapshotStore.ConfigureCaptureEnvironment(layout, debuggee);
 
         string? expected = value == "SingleFile" ? Path.Combine(_root, "bundle-extract") : inheritedExtraction;
         Assert.Equal(value == "SingleFile" ? Path.Combine(_root, "bundle-extract") : null, layout.BundleExtractionDirectory);
@@ -159,7 +163,8 @@ public sealed class ToolLayoutTests : IDisposable
         ProcessStartInfo debuggee = new("debuggee");
         debuggee.Environment["DOTNET_ROOT"] = "target runtime";
 
-        ToolProcess.ConfigureCaptureEnvironment(new ToolCommand(dotnet, dll), debuggee);
+        TestToolLayout layout = new(_root, Path.Combine(_root, "SOS.Extensions.dll"), new ToolCommand(dotnet, dll), _root, null);
+        SnapshotStore.ConfigureCaptureEnvironment(layout, debuggee);
 
         Assert.Equal(dotnet, debuggee.Environment["SOSHARNESS_DOTNETDUMP"]);
         Assert.Equal(dll, debuggee.Environment["SOSHARNESS_DOTNETDUMP_DLL"]);

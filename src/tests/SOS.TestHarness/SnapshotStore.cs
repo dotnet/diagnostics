@@ -365,8 +365,7 @@ public static class SnapshotStore
             CreateNoWindow = true,
         };
         psi.Environment["SOSHARNESS_CAPTURE_DIR"] = dumpDir;
-        IToolLayout layout = ToolPaths.Layout;
-        ToolProcess.ConfigureCaptureEnvironment(layout.DotNetDump, psi, layout.BundleExtractionDirectory);
+        ConfigureCaptureEnvironment(ToolPaths.Layout, psi);
         psi.Environment["SOSHARNESS_DUMP_TYPE"] = CollectType(flavor, dumpKind, OperatingSystem.IsWindows());
         ApplyRuntimeRoot(psi, flavor);
         ApplyMacOsDumpConfig(psi);
@@ -394,6 +393,19 @@ public static class SnapshotStore
                 $"Target '{target.Project}' ({flavor}) failed ({process.ExitCode}):\n" +
                 $"stdout:\n{stdout}\n" +
                 $"stderr:\n{stderr}");
+        }
+    }
+
+    internal static void ConfigureCaptureEnvironment(IToolLayout layout, ProcessStartInfo debuggee)
+    {
+        ToolCommand command = layout.DotNetDump;
+        debuggee.Environment["SOSHARNESS_DOTNET"] = RepoLayout.DotNetExe;
+        debuggee.Environment["SOSHARNESS_DOTNETDUMP"] = command.FileName;
+        debuggee.Environment["SOSHARNESS_DOTNETDUMP_DLL"] = command.AssemblyPath;
+        debuggee.Environment["SOSHARNESS_DOTNET_ROOT"] = RepoLayout.DotNetRoot;
+        if (layout.BundleExtractionDirectory is { } extractionDirectory)
+        {
+            debuggee.Environment["DOTNET_BUNDLE_EXTRACT_BASE_DIR"] = extractionDirectory;
         }
     }
 
