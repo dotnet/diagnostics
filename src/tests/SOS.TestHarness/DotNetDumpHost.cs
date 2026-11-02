@@ -30,22 +30,20 @@ public sealed class DotNetDumpHost : IDebuggerHost, IDiagnosticHost
     private readonly Flavor _flavor;
     private readonly Dac _dac;
     private readonly CoreVersion _coreVersion;
-    private readonly DumpArtifact? _dump;
 
     public string Name => "dotnet-dump";
 
     /// <summary>Captured stdout/stderr and crash dumps for this host (see <see cref="IDiagnosticHost"/>).</summary>
     public HostDiagnostics? Diagnostics => _diagnostics;
 
-    public DotNetDumpHost(string dumpPath, Flavor flavor, Dac dac = Dac.Legacy, CoreVersion coreVersion = CoreVersion.Net10,
-        HostDiagnostics? diagnostics = null, DumpArtifact? dump = null)
+    public DotNetDumpHost(string dumpPath, Flavor flavor, Dac dac = Dac.Legacy, CoreVersion coreVersion = CoreVersion.Net10, HostDiagnostics? diagnostics = null)
     {
         _flavor = flavor;
         _dac = dac;
         _coreVersion = coreVersion;
         _diagnostics = diagnostics;
-        _dump = dump;
-        ProcessStartInfo psi = ToolPaths.Layout.CreateDotNetDumpStartInfo();
+        IToolLayout layout = ToolPaths.Layout;
+        ProcessStartInfo psi = ToolProcess.CreateStartInfo(layout.DotNetDump, layout.BundleExtractionDirectory);
         psi.RedirectStandardInput = true;
         psi.RedirectStandardOutput = true;
         psi.RedirectStandardError = true;
@@ -95,7 +93,6 @@ public sealed class DotNetDumpHost : IDebuggerHost, IDiagnosticHost
         // prevents the intermittent multi-minute hang where a symbol-resolving command (e.g.
         // `!clrstack -gc`) blocks on a PDB download from msdl.
         Run("setsymbolserver -disable");
-        _dump?.ConfigureSymbols(this, _dac);
 
         // Self-contained single-file bundles carry coreclr inside the exe, so there is no runtime
         // directory on disk next to which SOS can find the matching DAC — `analyze` was relying on the
@@ -104,7 +101,7 @@ public sealed class DotNetDumpHost : IDebuggerHost, IDiagnosticHost
         // coreclr build locally and the session stays hermetic. Mirrors LldbCliHost. Other flavors find
         // their DAC next to the on-disk runtime and need no override.
         string? dacDir = _dac == Dac.CDac ? ToolPaths.CDacOverrideDirectory : null;
-        dacDir ??= _dump?.RuntimeDirectory ?? (_flavor == Flavor.SingleFile ? ToolPaths.SingleFileDacDirectory(_coreVersion) : null);
+        dacDir ??= _flavor == Flavor.SingleFile ? ToolPaths.SingleFileDacDirectory(_coreVersion) : null;
         if (dacDir is { Length: > 0 })
         {
             Run($"setsymbolserver -directory \"{dacDir}\"");

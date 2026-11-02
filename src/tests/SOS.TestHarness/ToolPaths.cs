@@ -76,14 +76,6 @@ public static class ToolPaths
     /// </summary>
     public static string? CDacOverrideDirectory => Layout.CDacOverrideDirectory;
 
-    /// <summary>
-    /// Installs the universal cDAC and DBI override in the selected host's native lookup directory.
-    /// </summary>
-    internal static void PrepareCDacOverride(Host host)
-    {
-        Layout.PrepareCDacOverride(host);
-    }
-
     // Lazy so each host only resolves the tools it actually needs: the non-Windows lldb/dotnet-dump hosts
     // never touch the Windows-only dbgeng/sos.dll resolvers (which would throw for lack of those payloads),
     // and the Windows cdb host never touches the lldb resolvers.

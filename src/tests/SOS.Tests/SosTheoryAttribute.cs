@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using SOS.TestHarness;
 using Xunit;
 
 namespace SOS.Tests;
@@ -14,7 +13,6 @@ namespace SOS.Tests;
 /// was misconfigured (or a host regressed), and that should surface as a real failure rather than a silent
 /// skip. Tests whose matrix is intentionally single-platform use a platform-gated attribute instead, for
 /// example <see cref="WindowsTheoryAttribute"/> for cdb-only matrices.
-/// Imported dump runs allow empty matrices for live-only and unsupported analysis configurations.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
 public sealed class SosTheoryAttribute : TheoryAttribute
@@ -24,6 +22,5 @@ public sealed class SosTheoryAttribute : TheoryAttribute
         [System.Runtime.CompilerServices.CallerLineNumber] int sourceLineNumber = -1)
         : base(sourceFilePath, sourceLineNumber)
     {
-        SkipTestWithoutData = DumpStore.IsReadOnly;
     }
 }

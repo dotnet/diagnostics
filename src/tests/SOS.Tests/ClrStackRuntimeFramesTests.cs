@@ -38,7 +38,7 @@ public sealed class ClrStackRuntimeFramesTests
     {
         // Preserve the Windows x86 exclusion in both legacy exception-frame tests.
         Assert.SkipWhen(
-            DumpStore.SourcePlatform.IsWindows && DumpStore.SourcePlatform.Architecture == Architecture.X86,
+            OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X86,
             "Exception-frame tests do not support x86 on Windows.");
 
         using Target target = await Targets.GetTargetAsync(config);

@@ -12,6 +12,12 @@ public sealed class ToolLayoutTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("sos tool layout ").FullName;
 
+    [Fact]
+    public void LayoutInterfaceExposesOnlyState()
+    {
+        Assert.All(typeof(IToolLayout).GetMethods(), method => Assert.True(method.IsSpecialName));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -21,6 +27,9 @@ public sealed class ToolLayoutTests : IDisposable
         IToolLayout layout = ToolLayout.FromConfiguration(value, null);
         Assert.IsType<BinToolLayout>(layout);
         Assert.Equal(RepoLayout.ArtifactsBinNative, layout.SosDirectory);
+        Assert.Equal(Path.Combine(RepoLayout.Scratch, "dumps"), layout.DumpCacheDirectory);
+        Assert.Equal(typeof(SOS.Extensions.HostServices).Assembly.Location, layout.SosAssemblyPath);
+        Assert.Null(layout.BundleExtractionDirectory);
     }
 
     [Theory]
@@ -58,8 +67,11 @@ public sealed class ToolLayoutTests : IDisposable
 
         Assert.Equal(expected, layout.GetType());
         Assert.Equal(Path.Combine(_root, "sos"), layout.SosDirectory);
-        Assert.Equal(Path.Combine(_root, "sos", "net8.0"), layout.ManagedSosDirectory);
-        ProcessStartInfo process = layout.CreateDotNetDumpStartInfo();
+        Assert.Equal(Path.Combine(_root, "test-artifacts", "dumps"), layout.DumpCacheDirectory);
+        Assert.Equal(Path.Combine(_root, "sos", "net8.0", "SOS.Extensions.dll"), layout.SosAssemblyPath);
+        Assert.Equal(Path.Combine(_root, "tools", "dotnet-dump" + RepoLayout.ExeSuffix), layout.DotNetDump.FileName);
+        Assert.Null(layout.DotNetDump.AssemblyPath);
+        ProcessStartInfo process = ToolProcess.CreateStartInfo(layout.DotNetDump, layout.BundleExtractionDirectory);
         Assert.Equal(Path.Combine(_root, "tools", "dotnet-dump" + RepoLayout.ExeSuffix), process.FileName);
         Assert.Empty(process.ArgumentList);
         Assert.False(process.UseShellExecute);
@@ -87,7 +99,7 @@ public sealed class ToolLayoutTests : IDisposable
     {
         string dotnet = Path.Combine(_root, "dotnet host.exe");
         string dll = Path.Combine(_root, "tool directory", "dotnet-dump.dll");
-        ProcessStartInfo process = new ToolCommand(dotnet, dll).CreateStartInfo();
+        ProcessStartInfo process = ToolProcess.CreateStartInfo(new ToolCommand(dotnet, dll));
         process.ArgumentList.Add("analyze");
         process.ArgumentList.Add(Path.Combine(_root, "a dump.dmp"));
 
@@ -108,7 +120,7 @@ public sealed class ToolLayoutTests : IDisposable
         debuggee.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"] = "target architecture runtime";
         debuggee.Environment["SOSHARNESS_DOTNETDUMP_DLL"] = "inherited.dll";
 
-        layout.ConfigureCaptureEnvironment(debuggee);
+        ToolProcess.ConfigureCaptureEnvironment(layout.DotNetDump, debuggee, layout.BundleExtractionDirectory);
 
         Assert.Equal("target runtime", debuggee.Environment["DOTNET_ROOT"]);
         Assert.Equal("target architecture runtime", debuggee.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"]);
@@ -120,17 +132,18 @@ public sealed class ToolLayoutTests : IDisposable
     [Theory]
     [InlineData("NuGet")]
     [InlineData("SingleFile")]
-    public void LayoutOwnsBundleExtractionForToolsAndCapture(string value)
+    public void ProcessesUseLayoutBundleExtractionForToolsAndCapture(string value)
     {
         CreatePackagedInputs();
         IToolLayout layout = ToolLayout.FromConfiguration(value, _root);
         string? inheritedExtraction = Environment.GetEnvironmentVariable("DOTNET_BUNDLE_EXTRACT_BASE_DIR");
-        ProcessStartInfo process = layout.CreateDotNetDumpStartInfo();
+        ProcessStartInfo process = ToolProcess.CreateStartInfo(layout.DotNetDump, layout.BundleExtractionDirectory);
         ProcessStartInfo debuggee = new("debuggee");
 
-        layout.ConfigureCaptureEnvironment(debuggee);
+        ToolProcess.ConfigureCaptureEnvironment(layout.DotNetDump, debuggee, layout.BundleExtractionDirectory);
 
         string? expected = value == "SingleFile" ? Path.Combine(_root, "bundle-extract") : inheritedExtraction;
+        Assert.Equal(value == "SingleFile" ? Path.Combine(_root, "bundle-extract") : null, layout.BundleExtractionDirectory);
         process.Environment.TryGetValue("DOTNET_BUNDLE_EXTRACT_BASE_DIR", out string? toolExtraction);
         debuggee.Environment.TryGetValue("DOTNET_BUNDLE_EXTRACT_BASE_DIR", out string? captureExtraction);
         Assert.Equal(expected, toolExtraction);
@@ -146,7 +159,7 @@ public sealed class ToolLayoutTests : IDisposable
         ProcessStartInfo debuggee = new("debuggee");
         debuggee.Environment["DOTNET_ROOT"] = "target runtime";
 
-        new ToolCommand(dotnet, dll).ConfigureCaptureEnvironment(debuggee);
+        ToolProcess.ConfigureCaptureEnvironment(new ToolCommand(dotnet, dll), debuggee);
 
         Assert.Equal(dotnet, debuggee.Environment["SOSHARNESS_DOTNETDUMP"]);
         Assert.Equal(dll, debuggee.Environment["SOSHARNESS_DOTNETDUMP_DLL"]);
@@ -158,13 +171,23 @@ public sealed class ToolLayoutTests : IDisposable
     public void BinLoadsTheHarnessReferencedSosAssembly()
     {
         IToolLayout layout = ToolLayout.FromConfiguration("Bin", null);
-        Assert.Same(typeof(SOS.Extensions.HostServices).Assembly, layout.LoadSosAssembly());
+        Assert.Same(typeof(SOS.Extensions.HostServices).Assembly, DbgEngSosHost.LoadSosAssembly(layout));
+    }
+
+    [Theory]
+    [InlineData("NuGet")]
+    [InlineData("SingleFile")]
+    public void PackagedAssemblyLoadingNeverFallsBackWhenItsAssemblyIsInvalid(string value)
+    {
+        CreatePackagedInputs();
+        IToolLayout layout = ToolLayout.FromConfiguration(value, _root);
+        Assert.Throws<BadImageFormatException>(() => DbgEngSosHost.LoadSosAssembly(layout));
     }
 
     [Fact]
     public void PackagedAssemblyLoadingDoesNotFallBackToHarnessAssemblies()
     {
-        PackagedToolLayout.SosLoadContext context = new(_root);
+        DbgEngSosHost.SosLoadContext context = new(_root);
         Assert.Throws<FileNotFoundException>(() => context.LoadFromAssemblyName(typeof(RepoLayout).Assembly.GetName()));
         Assert.Same(typeof(object).Assembly, context.LoadFromAssemblyName(typeof(object).Assembly.GetName()));
     }
@@ -173,11 +196,92 @@ public sealed class ToolLayoutTests : IDisposable
     public void PackagedAssemblyLoadingUsesItsOwnProductAssembly()
     {
         string assemblyPath = typeof(SOS.Extensions.HostServices).Assembly.Location;
-        PackagedToolLayout.SosLoadContext context = new(Path.GetDirectoryName(assemblyPath)!);
+        DbgEngSosHost.SosLoadContext context = new(Path.GetDirectoryName(assemblyPath)!);
         Assembly assembly = context.LoadFromAssemblyName(typeof(SOS.Extensions.HostServices).Assembly.GetName());
         Assert.Equal(assemblyPath, assembly.Location);
         Assert.NotSame(typeof(SOS.Extensions.HostServices).Assembly, assembly);
     }
+
+    [Theory]
+    [InlineData(Host.Cdb)]
+    [InlineData(Host.Lldb)]
+    [InlineData(Host.DotnetDump)]
+    public void CDacPreparationCopiesOverridesToTheSelectedHost(Host host)
+    {
+        IToolLayout layout = CreateOverrideLayout();
+        string destination = host == Host.DotnetDump
+            ? Path.Combine(Path.GetDirectoryName(layout.DotNetDump.AssemblyPath)!, RepoLayout.Rid)
+            : layout.SosDirectory;
+        Directory.CreateDirectory(destination);
+        File.WriteAllText(Path.Combine(destination, CDacOverride.DacFileName), "old dac");
+        File.WriteAllText(Path.Combine(destination, CDacOverride.DbiFileName), "old dbi");
+
+        CDacOverride.Prepare(layout, host);
+
+        Assert.Equal("new dac", File.ReadAllText(Path.Combine(destination, CDacOverride.DacFileName)));
+        Assert.Equal("new dbi", File.ReadAllText(Path.Combine(destination, CDacOverride.DbiFileName)));
+        Assert.Equal("new dac", File.ReadAllText(Path.Combine(layout.CDacOverrideDirectory!, CDacOverride.DacFileName)));
+        Assert.Equal("new dbi", File.ReadAllText(Path.Combine(layout.CDacOverrideDirectory!, CDacOverride.DbiFileName)));
+    }
+
+    [Fact]
+    public void CDacPreparationWithoutAnOverrideDoesNotModifyTheLayout()
+    {
+        CreatePackagedInputs();
+        IToolLayout layout = ToolLayout.FromConfiguration("NuGet", _root);
+
+        CDacOverride.Prepare(layout, Host.Cdb);
+
+        Assert.False(File.Exists(Path.Combine(layout.SosDirectory, CDacOverride.DacFileName)));
+        Assert.False(File.Exists(Path.Combine(layout.SosDirectory, CDacOverride.DbiFileName)));
+    }
+
+    [Fact]
+    public void CDacPreparationCanRetryAfterAMissingOverrideFile()
+    {
+        IToolLayout layout = CreateOverrideLayout();
+        Directory.CreateDirectory(layout.SosDirectory);
+        string dbiSource = Path.Combine(layout.CDacOverrideDirectory!, CDacOverride.DbiFileName);
+        File.Delete(dbiSource);
+
+        FileNotFoundException error = Assert.Throws<FileNotFoundException>(() => CDacOverride.Prepare(layout, Host.Cdb));
+        Assert.Equal(dbiSource, error.FileName);
+
+        File.WriteAllText(dbiSource, "restored dbi");
+        CDacOverride.Prepare(layout, Host.Cdb);
+
+        Assert.Equal("restored dbi", File.ReadAllText(Path.Combine(layout.SosDirectory, CDacOverride.DbiFileName)));
+    }
+
+    [Fact]
+    public void CDacPreparationRejectsAnExecutableOnlyDotnetDump()
+    {
+        TestToolLayout layout = CreateOverrideLayout();
+        layout = layout with { DotNetDump = new ToolCommand("dotnet-dump.exe") };
+
+        Assert.Throws<InvalidOperationException>(() => CDacOverride.Prepare(layout, Host.DotnetDump));
+    }
+
+    private TestToolLayout CreateOverrideLayout()
+    {
+        string source = Directory.CreateDirectory(Path.Combine(_root, "cdac-source")).FullName;
+        File.WriteAllText(Path.Combine(source, CDacOverride.DacFileName), "new dac");
+        File.WriteAllText(Path.Combine(source, CDacOverride.DbiFileName), "new dbi");
+        return new TestToolLayout(
+            Path.Combine(_root, "sos"),
+            Path.Combine(_root, "sos", "SOS.Extensions.dll"),
+            new ToolCommand("dotnet", Path.Combine(_root, "dump-tool", "dotnet-dump.dll")),
+            Path.Combine(_root, "dumps"),
+            source);
+    }
+
+    private sealed record TestToolLayout(
+        string SosDirectory,
+        string SosAssemblyPath,
+        ToolCommand DotNetDump,
+        string DumpCacheDirectory,
+        string? CDacOverrideDirectory,
+        string? BundleExtractionDirectory = null) : IToolLayout;
 
     private Dictionary<string, string> CreatePackagedInputs()
     {

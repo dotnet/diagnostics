@@ -1,6 +1,6 @@
 # SOS.Tests
 
-`SOS.Tests` validates the repository-built SOS across debugger hosts, runtime
+`SOS.Tests` validates repository-built and installed SOS across debugger hosts, runtime
 flavors, runtime versions, dump kinds, GC modes, and DAC implementations. It is
 an xUnit v3 Microsoft.Testing.Platform application. See
 [COVERAGE.md](COVERAGE.md) for the legacy-to-new coverage audit and mutation
@@ -78,73 +78,14 @@ the Helix submission step. The prepared `tools` and `sos` closures are copied in
 each layout's payload; package installation and SOS installation are not repeated
 on the Helix worker.
 
-## Portable dump production and consumption
-
-Tool selection and dump inputs are independent. A producer can capture dumps
-once, then a different machine can run the same dump tests with Bin, NuGet, or
-SingleFile tools. There is no two-stage Helix job yet; these are the entry points
-that such a job can invoke.
-
-After building the harness helpers and debuggees for the producer's platform,
-capture a bundle using the existing matrix allow-lists:
-
-```powershell
-$env:SOSHARNESS_ONLY_FLAVORS = 'Core,SingleFile'
-$env:SOSHARNESS_ONLY_COREVERSIONS = 'Net11'
-$env:SOSHARNESS_ONLY_GCTYPE = 'Workstation'
-$env:SOSHARNESS_ONLY_DUMPKIND = 'Heap,Full'
-.\artifacts\dotnet-test\dotnet.exe `
-  .\artifacts\bin\SOS.TestHarness.Capturer\Release\net10.0\win-x64\SOS.TestHarness.Capturer.dll `
-  bundle ".\artifacts\tmp\SOS dump bundle" scenarios divzero
-```
-
-Use the corresponding producer RID and `dotnet` executable on Unix, and run
-`ulimit -c 0` first to suppress additional system core dumps. Target names
-come from `TargetCatalog`; `all` selects all dump-capable targets for the producer
-platform. Capture expands GC and dump-kind coverage, including Full, unless
-narrowed by the allow-lists. Host, DAC, hosting-mode, and liveness allow-lists do
-not affect production: none of those is part of a dump's identity.
-
-The output directory must not exist. Its `dumps.json` manifest records the source
-RID, capture configurations, exact runtime versions, relative paths, and file
-inventory. It accompanies the dumps, debuggee images/PDBs, and matching runtime
-files. Core runtime files are taken from the runtime actually recorded in the
-dump, not inferred from the analyzer's installed runtime patch. Universal cDAC/DBI
-binaries remain part of the selected tools under test, not the dump bundle.
-Archive and transfer the **whole directory**, preserving its contents.
-
-On the consumer, select the same capture axes and set the extracted input root:
-
-```powershell
-$env:SOSHARNESS_DUMP_INPUT = 'Q:\downloaded\SOS dump bundle'
-$env:SOSHARNESS_ONLY_HOSTS = 'DotnetDump'
-$env:SOSHARNESS_ONLY_DAC = 'CDac'
-.\artifacts\dotnet-test\dotnet.exe `
-  .\artifacts\bin\SOS.Tests\Release\net10.0\SOS.Tests.dll `
-  --filter-class SOS.Tests.RuntimeInfoTests --parallel none
-```
-
-Select installed tools independently with `SOSHARNESS_TOOL_LAYOUT` and
-`SOSHARNESS_TOOL_ROOT`, as printed by `eng/PrepareSOSTestLayout.ps1`. The consumer
-needs its own test infrastructure, debugger/tools, and host runtime, but does not
-need runnable producer debuggees or the producer's runtime installation.
-Missing bundle files or requested dump configurations fail rather than falling
-back to local capture. Imported runs exclude live rows and permit empty matrices
-for tests that have no applicable dump/host configuration.
-
-Same-RID bundles retain the normal debugger/DAC matrix. Different source and
-analysis RIDs initially select only dotnet-dump with .NET 11+ cDAC; native-debugger
-and legacy-DAC cross-platform combinations are not enabled. Source OS and
-architecture govern dump-content expectations, separately from debugger-host
-availability. Cross-platform combinations still need end-to-end Helix validation.
-
-Without `SOSHARNESS_DUMP_INPUT`, tests keep their normal on-demand capture behavior.
-`SOSHARNESS_DUMP_OUTPUT` optionally selects an independent capture cache; its
-default is `artifacts/tmp/sos-harness/<Configuration>/dumps`. The packaged smoke
-runner uses each layout's isolated staged payload for its output cache.
-Unset the input variable before producing another bundle or running live tests.
-
 ## Architecture
+
+`IToolLayout` describes native SOS and managed assembly paths, the dotnet-dump
+command, dump-cache directory, and optional bundle-extraction and cDAC-override directories. It does
+not load assemblies, configure processes, or copy runtime binaries. `ToolProcess`
+configures tool launches and debuggee self-capture from that state;
+`DbgEngSosHost` loads the selected managed SOS assembly, retaining isolation for
+installed products; `CDacOverride` prepares private override binaries when needed.
 
 The harness is split into four parts:
 
@@ -187,7 +128,7 @@ behavior.
 `SnapshotStore` acquires each `(flavor, target, core version)` once. Core and
 single-file targets consume repository build outputs; desktop Framework targets
 are built in the scratch tree. Snapshot stops self-collect through the
-repository-built dotnet-dump, Core crash targets use createdump, and desktop
+selected layout's dotnet-dump, Core crash targets use createdump, and desktop
 capture is delegated to the dbgeng capturer child. On Linux and macOS, the
 matching runtime DAC is staged beside each single-file executable before launch
 so createdump can honor Heap dump requests instead of falling back to Full.
@@ -222,7 +163,7 @@ Tests issue the same `target.Sos("command")` call through `IDebuggerHost`.
 - `ChildEngineClient` for cdb/dbgeng, keeping native engine faults outside the
   test process;
 - `LldbCliHost` or `LldbLiveHost` for LLDB;
-- `DotNetDumpHost` for the repository-built dotnet-dump.
+- `DotNetDumpHost` for the selected layout's dotnet-dump.
 
 LLDB runs with external symbol lookup disabled before loading a target. Dumps,
 executables, SOS, and matching DACs come from local build artifacts, so network
@@ -368,8 +309,8 @@ Comma-separated matrix allow-lists are case-insensitive enum names:
 | `SOSHARNESS_DAC_DIR` | Override the legacy DAC directory used by the dbgeng engine host. |
 | `SOSHARNESS_CDAC_DIR` | Override cDAC discovery with a directory containing the matched universal cDAC and DBI binaries. |
 | `SOSHARNESS_USECDAC` | Local global DAC clamp; overrides the matrix DAC selection and is not set in CI. |
-| `SOSHARNESS_DUMP_INPUT` | Consume a complete portable dump bundle without capture, builds, or debuggee launches. |
-| `SOSHARNESS_DUMP_OUTPUT` | Override the local capture cache independently of the selected tool layout. |
+| `SOSHARNESS_TOOL_LAYOUT` | Select `Bin` (the default), `NuGet`, or `SingleFile` tools. |
+| `SOSHARNESS_TOOL_ROOT` | Root of a prepared NuGet or SingleFile installation; required for installed layouts. |
 | `LLDB_PATH` | Override LLDB discovery. Otherwise Xcode and then `PATH` are searched. |
 | `NUGET_PACKAGES` | Override the NuGet package root used to locate runtime packs and cDAC assets. |
 
@@ -381,7 +322,7 @@ processes; they are not supported user controls:
 
 | Variable | Owner and purpose |
 | --- | --- |
-| `SOSHARNESS_CAPTURE_DIR`, `SOSHARNESS_DOTNET`, `SOSHARNESS_DOTNETDUMP_DLL`, `SOSHARNESS_DUMP_TYPE` | Tell a snapshot debuggee where and how to self-collect. |
+| `SOSHARNESS_CAPTURE_DIR`, `SOSHARNESS_DOTNET`, `SOSHARNESS_DOTNETDUMP`, `SOSHARNESS_DOTNETDUMP_DLL`, `SOSHARNESS_DOTNET_ROOT`, `SOSHARNESS_DUMP_TYPE` | Tell a snapshot debuggee where and how to self-collect. |
 | `SOSHARNESS_STATE` | LLDB stop-point protocol emitted by a live debuggee. |
 | `_NT_SYMBOL_PATH` | Constrains child engines to the harness symbol cache. |
 | `DOTNET_ROOT`, `DOTNET_ROOT(x86)`, `DOTNET_MULTILEVEL_LOOKUP` | Bind Core debuggees to the selected test-runtime installation. |
@@ -404,8 +345,10 @@ ordered command, copy/paste host replay instructions, host stdout/stderr, LLDB
 trace setting, and debugger-host crash dumps. Capture failures remain the
 original test failure even if replay writing also fails.
 
-Reusable targets, dumps, and symbols live under
-`artifacts/tmp/sos-harness/<Configuration>`. Replays and debugger-host crash
+Reusable targets, symbols, and Bin-layout dumps live under
+`artifacts/tmp/sos-harness/<Configuration>`. Installed layouts keep dumps under
+`<tool-root>/test-artifacts/dumps`, isolated from Bin and other installations.
+Replays and debugger-host crash
 artifacts live under `artifacts/TestResults/SOS.Tests`. Dumps can be large;
 remove the scratch subtree when a clean recapture is required.
 

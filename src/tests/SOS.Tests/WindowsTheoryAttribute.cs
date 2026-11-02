@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Runtime.CompilerServices;
-using SOS.TestHarness;
+using System.Runtime.InteropServices;
 using Xunit.Sdk;
 using Xunit.v3;
 using Xunit;
@@ -12,8 +12,8 @@ namespace SOS.Tests;
 /// <summary>
 /// A <see cref="TheoryAttribute"/> for an SOS test whose matrix is populated only on Windows — for example
 /// a cdb-only matrix (<c>!clru</c>, <c>!dumpstack</c>/<c>!eestack</c>), which <c>TestConfig.IsValid</c>
-/// gates to the Windows-only cdb host. Non-Windows targets produce no test cases. Imported bundles
-/// may also exclude native-debugger or live rows; ordinary local runs still fail on unexpected empty data.
+/// gates to the Windows-only cdb host. On Linux/macOS that matrix is legitimately empty, so the attribute
+/// discovers no test cases. On Windows, an unexpectedly empty matrix remains a real failure.
 /// </summary>
 [XunitTestCaseDiscoverer(typeof(WindowsTheoryDiscoverer))]
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
@@ -24,7 +24,6 @@ public sealed class WindowsTheoryAttribute : TheoryAttribute
         [CallerLineNumber] int sourceLineNumber = -1)
         : base(sourceFilePath, sourceLineNumber)
     {
-        SkipTestWithoutData = DumpStore.IsReadOnly;
     }
 }
 
@@ -35,7 +34,7 @@ public sealed class WindowsTheoryDiscoverer : TheoryDiscoverer
         IXunitTestMethod testMethod,
         IFactAttribute factAttribute)
     {
-        if (!DumpStore.IsReadOnly && !OperatingSystem.IsWindows())
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             return ValueTask.FromResult<IReadOnlyCollection<IXunitTestCase>>(Array.Empty<IXunitTestCase>());
         }

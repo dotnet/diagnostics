@@ -91,8 +91,6 @@ if not "%TOOL_LAYOUT%"=="Bin" (
     exit /b 3
   )
   set "SOSHARNESS_TOOL_ROOT=%ROOT%tool-layout"
-  set "SOSHARNESS_DUMP_INPUT="
-  set "SOSHARNESS_DUMP_OUTPUT=%ROOT%artifacts\tmp\sos-harness\%CONFIGURATION%\dumps"
   set "SOSHARNESS_CDAC_DIR="
   set "SOSHARNESS_USECDAC="
   set "SOSHARNESS_ONLY_HOSTS=Cdb,DotnetDump"
@@ -229,6 +227,7 @@ type "%LOG%"
 
 if not "%EXIT_CODE%"=="0" (
   set "DUMP_ROOT=%ROOT%\artifacts\tmp\sos-harness\%CONFIGURATION%"
+  if not "%TOOL_LAYOUT%"=="Bin" set "DUMP_ROOT=%SOSHARNESS_TOOL_ROOT%\test-artifacts"
   if exist "!DUMP_ROOT!\dumps\." (
     set "DUMP_ARCHIVE=%UPLOAD%\SOS.Tests-dumps-%RID%-%CONFIGURATION%-%TOOL_LAYOUT%-%IDENTITY%.tar.gz"
     echo Archiving SOS dumps to "!DUMP_ARCHIVE!".

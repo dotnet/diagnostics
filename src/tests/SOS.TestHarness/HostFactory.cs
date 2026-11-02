@@ -8,22 +8,24 @@ internal static class HostFactory
 {
     /// <summary>Create a dump-backed host.</summary>
     public static IDebuggerHost CreateDumpHost(
-        TestConfig config,
-        DumpArtifact dump,
+        Host host,
+        Flavor flavor,
+        string dumpPath,
+        Dac dac = Dac.Legacy,
+        CoreVersion coreVersion = CoreVersion.Net10,
+        HostRuntime hostRuntime = HostRuntime.Managed,
+        string? targetExe = null,
         HostDiagnostics? diagnostics = null)
     {
-        PrepareCDacOverride(config.Host, config.Dac);
+        PrepareCDacOverride(host, dac);
 
-        return config.Host switch
+        return host switch
         {
             // cdb runs dbgeng in a CHILD process (EngineHost), so the test host never loads dbgeng.
-            Host.Cdb => ChildEngineClient.ForDump("cdb", dump.DumpPath,
-                dump.RuntimeDirectory is null ? DacDirFor(config.Flavor, config.CoreVersion) :
-                    config.Dac == Dac.Legacy ? dump.RuntimeDirectory : null,
-                config.Dac, config.HostRuntime, dump.SymbolDirectories),
-            Host.DotnetDump => new DotNetDumpHost(dump.DumpPath, config.Flavor, config.Dac, config.CoreVersion, diagnostics, dump),
-            Host.Lldb => new LldbCliHost(dump.DumpPath, config.Flavor, config.Dac, config.CoreVersion, config.HostRuntime, dump.ExecutablePath, diagnostics, dump),
-            _ => throw new ArgumentException($"Unknown host '{config.Host}'."),
+            Host.Cdb => ChildEngineClient.ForDump(host.ToString().ToLowerInvariant(), dumpPath, DacDirFor(flavor, coreVersion), dac, hostRuntime),
+            Host.DotnetDump => new DotNetDumpHost(dumpPath, flavor, dac, coreVersion, diagnostics),
+            Host.Lldb => new LldbCliHost(dumpPath, flavor, dac, coreVersion, hostRuntime, targetExe, diagnostics),
+            _ => throw new ArgumentException($"Unknown host '{host}'."),
         };
     }
 
@@ -53,7 +55,7 @@ internal static class HostFactory
     {
         if (dac == Dac.CDac)
         {
-            ToolPaths.PrepareCDacOverride(host);
+            CDacOverride.Prepare(ToolPaths.Layout, host);
         }
     }
 

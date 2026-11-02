@@ -24,8 +24,7 @@ namespace SOS.TestHarness;
 /// </summary>
 internal sealed class DumpSession : IPooledHost
 {
-    private readonly TestConfig _config;
-    private readonly DumpArtifact _dump;
+    private readonly Host _hostKind;
     private readonly HostSlot _slot;
     private IDebuggerHost? _host;
 
@@ -33,32 +32,40 @@ internal sealed class DumpSession : IPooledHost
     // reopened), for the child-process hosts that support capture. Null for the cdb child host.
     private readonly HostDiagnostics? _diagnostics;
 
-    public Host Host => _config.Host;
-    public string TargetName => _config.Target;
+    public Host Host { get; }
+    public string TargetName { get; }
     public string StopName { get; }
-    public Flavor Flavor => _config.Flavor;
-    public string DumpPath => _dump.DumpPath;
-    public CoreVersion CoreVersion => _config.CoreVersion;
-    public Dac Dac => _config.Dac;
-    public HostRuntime HostRuntime => _config.HostRuntime;
+    public Flavor Flavor { get; }
+    public string DumpPath { get; }
+    public CoreVersion CoreVersion { get; }
+    public Dac Dac { get; }
+    public HostRuntime HostRuntime { get; }
 
     /// <summary>Captured stdout/stderr and crash dumps for this session's host, or null for the cdb child
     /// host (which does not support capture). Surfaced in a failing test's replay.</summary>
     public HostDiagnostics? Diagnostics => _diagnostics;
 
-    internal DumpSession(TestConfig config, string stopName, DumpArtifact dump)
+    internal DumpSession(Host hostKind, string targetName, string stopName, Flavor flavor, string dumpPath,
+                         CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy,
+                         HostRuntime hostRuntime = HostRuntime.Managed)
     {
-        _config = config;
-        _dump = dump;
+        _hostKind = hostKind;
+        Host = hostKind;
+        TargetName = targetName;
         StopName = stopName;
+        Flavor = flavor;
+        DumpPath = dumpPath;
+        CoreVersion = coreVersion;
+        Dac = dac;
+        HostRuntime = hostRuntime;
 
         // Bound resource-heavy dump hosts independently. Cdb uses two slots to retain the suite's
         // observed two-test concurrency without allowing one EngineHost process per memoized session.
-        _slot = HostSlotPool.HostSlotFor(config.Host);
+        _slot = HostSlotPool.HostSlotFor(hostKind);
 
         // The child-process hosts (lldb, dotnet-dump) capture their stdout/stderr and crash dumps; the cdb
         // child host runs dbgeng out-of-process and is not wired for capture.
-        _diagnostics = config.Host is Host.Lldb or Host.DotnetDump ? new HostDiagnostics(config.Host.ToString().ToLowerInvariant()) : null;
+        _diagnostics = hostKind is Host.Lldb or Host.DotnetDump ? new HostDiagnostics(hostKind.ToString().ToLowerInvariant()) : null;
 
     }
 
@@ -109,7 +116,8 @@ internal sealed class DumpSession : IPooledHost
 
     void IPooledHost.OpenHost()
     {
-        _host = HostFactory.CreateDumpHost(_config, _dump, _diagnostics);
+        _host = HostFactory.CreateDumpHost(_hostKind, Flavor, DumpPath, Dac, CoreVersion, HostRuntime,
+            SnapshotStore.TargetExe(Flavor, TargetName, CoreVersion), _diagnostics);
         _host.LoadSos();
     }
 

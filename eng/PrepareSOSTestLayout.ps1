@@ -142,4 +142,3 @@ try {
 Write-Host "Prepared $Distribution SOS test layout at '$root'."
 Write-Host "`$env:SOSHARNESS_TOOL_LAYOUT = '$Distribution'"
 Write-Host "`$env:SOSHARNESS_TOOL_ROOT = '$($root.Replace("'", "''"))'"
-Write-Host "`$env:SOSHARNESS_DUMP_OUTPUT = '$((Join-Path $root 'test-artifacts\dumps').Replace("'", "''"))'"

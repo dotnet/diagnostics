@@ -101,7 +101,7 @@ internal static class TestMatrices
         TheoryData<TestConfig> data = new();
         foreach (TestConfig config in TestConfig.Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac))
         {
-            if (DumpStore.SourcePlatform.IsWindows && (config.CoreVersion & fullDumpVersions) != 0)
+            if (OperatingSystem.IsWindows() && (config.CoreVersion & fullDumpVersions) != 0)
             {
                 data.Add(config with { DumpKind = DumpKind.Full });
             }
@@ -134,7 +134,7 @@ internal static class TestMatrices
             dac: dac,
             filter: filter))
         {
-            data.Add(DumpStore.SourcePlatform.IsWindows && (config.CoreVersion & fullDumpVersions) != 0
+            data.Add(OperatingSystem.IsWindows() && (config.CoreVersion & fullDumpVersions) != 0
                 ? config with { DumpKind = DumpKind.Full }
                 : config);
         }
@@ -143,7 +143,7 @@ internal static class TestMatrices
     }
 
     internal static bool SupportsHeapEnumeration(TestConfig config) =>
-        SupportsHeapEnumeration(config, DumpStore.SourcePlatform.IsWindows);
+        SupportsHeapEnumeration(config, OperatingSystem.IsWindows());
 
     internal static bool SupportsHeapEnumeration(TestConfig config, bool isWindows) =>
         // https://github.com/dotnet/runtime/pull/132938: dbgeng /mw dumps omit the WKS card-table
@@ -159,7 +159,7 @@ internal static class TestMatrices
 
     internal static void SkipUnsupportedDumpObj(TestConfig config)
     {
-        if (!SupportsDumpObj(config, DumpStore.SourcePlatform.IsWindows))
+        if (!SupportsDumpObj(config, OperatingSystem.IsWindows()))
         {
             HarnessSkipException.Now(
                 "https://github.com/dotnet/runtime/issues/124640: the .NET 10 legacy DAC crashes while " +
@@ -181,7 +181,7 @@ internal static class TestMatrices
         config.Host != Host.Lldb || config.Liveness != Liveness.Dump;
 
     internal static bool SupportsICorDebugStackWalk(TestConfig config) =>
-        SupportsICorDebugStackWalk(config, DumpStore.SourcePlatform.Architecture is System.Runtime.InteropServices.Architecture.X64 or System.Runtime.InteropServices.Architecture.Arm64);
+        SupportsICorDebugStackWalk(config, Environment.Is64BitProcess);
 
     internal static bool SupportsICorDebugStackWalk(TestConfig config, bool is64BitProcess) =>
         // Desktop x64 ICorDebug returns no frames for a dump captured at DivZero's second-chance crash.

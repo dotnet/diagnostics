@@ -4,36 +4,20 @@
 namespace SOS.TestHarness;
 
 /// <summary>
-/// Entry point for the capture helper (the <c>Capturer</c> exe). Exports portable dump bundles,
-/// or captures one Windows target using in-process dbgeng in a
+/// Entry point for the out-of-process capture helper (the <c>Capturer</c> exe). Captures the
+/// desktop .NET Framework dumps for one <c>(target)</c> using in-process dbgeng — but in a
 /// short-lived <em>child</em> process, so the heavy/risky live-debugging dbgeng work never runs
 /// inside the test host (where it can corrupt the host CLR; see the design note's subprocess
 /// recommendation). On success the dumps land in the given directory and the process exits 0.
 /// </summary>
 public static class CaptureCli
 {
-    /// <summary>Args: <c>bundle &lt;outputDirectory&gt; &lt;targets...&gt;</c>, or a Windows debuggee, target, dump directory, and kind.</summary>
+    /// <summary>Args: <c>&lt;exePath&gt; &lt;targetName&gt; &lt;dumpDir&gt; &lt;dumpKind&gt;</c>.</summary>
     public static int Run(string[] args)
     {
-        if (args.Length >= 3 && args[0] == "bundle")
-        {
-            try
-            {
-                string[] targets = args.Length == 3 && args[2] == "all" ? TargetCatalog.DumpTargets.ToArray() : args[2..];
-                DumpBundle.Capture(args[1], TestConfig.CaptureConfigurations(targets));
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine(ex);
-                return 1;
-            }
-        }
-
         if (args.Length != 4)
         {
             Console.Error.WriteLine("usage: Capturer <debuggeeExe> <targetName> <dumpDir> <dumpKind>");
-            Console.Error.WriteLine("       Capturer bundle <outputDirectory> <targetName> [targetName ...]");
             return 2;
         }
 

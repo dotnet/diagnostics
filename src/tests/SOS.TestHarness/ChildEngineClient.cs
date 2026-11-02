@@ -35,8 +35,7 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         Dac dac,
         Flavor flavor,
         HostRuntime hostRuntime,
-        IReadOnlyDictionary<string, string>? environmentVariables = null,
-        IEnumerable<string>? symbolDirectories = null)
+        IReadOnlyDictionary<string, string>? environmentVariables = null)
     {
         Name = name;
 
@@ -74,12 +73,6 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         }
 
         psi.Environment["_NT_SYMBOL_PATH"] = symbolPath;
-        string[] directories = symbolDirectories?.ToArray() ?? [];
-        if (directories.Length > 0)
-        {
-            psi.Environment["_NT_SYMBOL_PATH"] = string.Join(";", directories.Append(symbolPath));
-            psi.Environment["_NT_EXECUTABLE_IMAGE_PATH"] = string.Join(";", directories);
-        }
         psi.Environment[DbgEngHostBase.HostRuntimeEnvironmentVariable] = hostRuntime.ToString();
 
         if (mode == "live")
@@ -124,11 +117,6 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
 
         WaitForReady(TimeSpan.FromSeconds(120));
 
-        foreach (string directory in directories)
-        {
-            Send($"!setsymbolserver -directory \"{directory}\"");
-        }
-
         // Select the DAC for this config's Dac axis (Legacy => false, CDac on .NET 11+ => true). SOS is
         // already loaded by the time the child reports ready, so issue it now. The same dump is reused
         // across both DAC values — only this debug-time toggle differs.
@@ -141,9 +129,8 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
         string dumpPath,
         string? dacDir = null,
         Dac dac = Dac.Legacy,
-        HostRuntime hostRuntime = HostRuntime.Managed,
-        IEnumerable<string>? symbolDirectories = null) =>
-        new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core, hostRuntime, symbolDirectories: symbolDirectories);
+        HostRuntime hostRuntime = HostRuntime.Managed) =>
+        new(hostName, "dump", new[] { dumpPath }, dacDir, dac, Flavor.Core, hostRuntime);
 
     /// <summary>A live child engine that launches the target (parked at the loader break, SOS loaded).</summary>
     public static ChildEngineClient ForLive(

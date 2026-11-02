@@ -1,33 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Diagnostics;
-
 namespace SOS.TestHarness;
 
 /// <summary>A tool entry point: either an executable or a managed DLL run by a specific dotnet host.</summary>
-internal sealed record ToolCommand(string FileName, string? AssemblyPath = null)
-{
-    public ProcessStartInfo CreateStartInfo()
-    {
-        ProcessStartInfo startInfo = new(FileName) { UseShellExecute = false };
-        if (AssemblyPath is not null)
-        {
-            startInfo.ArgumentList.Add(AssemblyPath);
-        }
-        startInfo.Environment["DOTNET_ROOT"] = RepoLayout.DotNetRoot;
-        startInfo.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"] = RepoLayout.DotNetRoot;
-        return startInfo;
-    }
-
-    public void ConfigureCaptureEnvironment(ProcessStartInfo debuggee)
-    {
-        debuggee.Environment["SOSHARNESS_DOTNET"] = RepoLayout.DotNetExe;
-        debuggee.Environment["SOSHARNESS_DOTNETDUMP"] = FileName;
-        debuggee.Environment["SOSHARNESS_DOTNETDUMP_DLL"] = AssemblyPath;
-        debuggee.Environment["SOSHARNESS_DOTNET_ROOT"] = RepoLayout.DotNetRoot;
-    }
-}
+internal sealed record ToolCommand(string FileName, string? AssemblyPath = null);
 
 internal static class ToolLayout
 {

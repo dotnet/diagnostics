@@ -117,16 +117,6 @@ public sealed class TestConfigValidityTests
     }
 
     [Fact]
-    public void CaptureExcludesOnlyTheUnsupportedSingleFileStackOverflowVariant()
-    {
-        TestConfig[] configs = TestConfig.CaptureConfigurations([TargetCatalog.Overflow, TargetCatalog.DivZero]).ToArray();
-
-        Assert.Contains(configs, config => config.Target == TargetCatalog.Overflow && config.Flavor == Flavor.Core);
-        Assert.Contains(configs, config => config.Target == TargetCatalog.DivZero && config.Flavor == Flavor.SingleFile);
-        Assert.DoesNotContain(configs, config => config.Target == TargetCatalog.Overflow && config.Flavor == Flavor.SingleFile);
-    }
-
-    [Fact]
     public void CoreFrameworkConfigsUseHeapDumps()
     {
         TestConfig[] configs = TestMatrices.CoreFrameworkConfigs([TargetCatalog.Scenarios]).ToArray();

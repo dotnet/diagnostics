@@ -3,6 +3,6 @@
 
 using SOS.TestHarness;
 
-// Dump-bundle producer and out-of-process Windows capturer. Keeps risky in-process dbgeng
-// live-debugging work outside the test host. See CaptureCli for usage.
+// Out-of-process desktop-dump capturer. Runs the risky in-process dbgeng live-debugging work in
+// a short-lived child process so it can never crash the test host. See CaptureCli for usage.
 return CaptureCli.Run(args);
