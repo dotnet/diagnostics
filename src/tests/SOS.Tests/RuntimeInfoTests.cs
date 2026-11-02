@@ -54,7 +54,7 @@ public sealed class RuntimeInfoTests
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("modules").AssertContains("SosHarnessScenarios");
-        string stackPointerRegister = RuntimeInformation.ProcessArchitecture switch
+        string stackPointerRegister = DumpStore.SourcePlatform.Architecture switch
         {
             Architecture.X86 => "esp",
             Architecture.X64 => "rsp",

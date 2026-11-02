@@ -59,8 +59,11 @@ public static class SnapshotStore
     /// <summary>Path to the built EngineHost.dll (the subprocess dbgeng backend), produced on first use.</summary>
     public static string EngineHostDll => s_engineHostDll.Value;
 
-    /// <summary>Path to the dump for one stop point of a target in a flavor/GC/dump-kind/version, producing it on first use.</summary>
+    /// <summary>Resolve one stop's dump from the input bundle, or capture it locally on first use.</summary>
     public static string GetDump(Flavor flavor, string targetName, string stopName, GcType gcType = GcType.Workstation, DumpKind dumpKind = DumpKind.Heap, CoreVersion coreVersion = CoreVersion.Net10)
+        => DumpStore.Resolve(new(targetName, Host.DotnetDump, flavor, Liveness.Dump, gcType, dumpKind, coreVersion), stopName).DumpPath;
+
+    internal static string CaptureDump(Flavor flavor, string targetName, string stopName, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion)
     {
         TargetDefinition target = TargetCatalog.Get(targetName);
         target.Stop(stopName); // validate
@@ -82,6 +85,11 @@ public static class SnapshotStore
     /// <summary>Path to the runnable executable for a target in a flavor/version, producing it on first use.</summary>
     public static string TargetExe(Flavor flavor, string targetName, CoreVersion coreVersion = CoreVersion.Net10)
     {
+        if (DumpStore.IsReadOnly)
+        {
+            throw new InvalidOperationException("Debuggee acquisition is disabled when SOSHARNESS_DUMP_INPUT is configured.");
+        }
+
         string exe = s_targetExe
             .GetOrAdd((flavor, targetName, coreVersion), k => new Lazy<string>(() => AcquireTarget(k.Flavor, TargetCatalog.Get(k.Target), k.CoreVersion)))
             .Value;
@@ -105,9 +113,7 @@ public static class SnapshotStore
     }
 
     private static string DumpDir(Flavor flavor, string target, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion) =>
-        Path.Combine(ToolPaths.Layout.DumpCacheDirectory, flavor.ToString().ToLowerInvariant(),
-            gcType.ToString().ToLowerInvariant(), dumpKind.ToString().ToLowerInvariant(),
-            CoreVersions.Tfm(coreVersion), target);
+        Path.Combine(DumpStore.OutputDirectory, new DumpKey(flavor, target, gcType, dumpKind, coreVersion).RelativeDirectory);
 
     private static string CaptureTarget(Flavor flavor, TargetDefinition target, GcType gcType, DumpKind dumpKind, CoreVersion coreVersion)
     {

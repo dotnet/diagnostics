@@ -20,7 +20,7 @@ internal static class SOSTestSkips
     internal static void SkipUnsupportedDictionary(TestConfig config)
     {
         Assert.SkipWhen(
-            !OperatingSystem.IsWindows() && config.CoreVersion == CoreVersion.Net10,
+            !DumpStore.SourcePlatform.IsWindows && config.CoreVersion == CoreVersion.Net10,
             "https://github.com/dotnet/diagnostics/issues/5491: concurrent dictionary data is unavailable in .NET 10 Unix dumps.");
     }
 
@@ -56,7 +56,7 @@ internal static class SOSTestSkips
 
     internal static void SkipICorDebugStackWalk(TestConfig config)
     {
-        Skip(GetX86DebugInfoSkipReason(config, OperatingSystem.IsWindows(), RuntimeInformation.ProcessArchitecture));
+        Skip(GetX86DebugInfoSkipReason(config, DumpStore.SourcePlatform.IsWindows, DumpStore.SourcePlatform.Architecture));
     }
 
     internal static void SkipFaultingExceptionFrame()
@@ -66,13 +66,13 @@ internal static class SOSTestSkips
         // ARM64 stacks show HelperMethodFrame on .NET 8/9 and SoftwareExceptionFrame on .NET 10/11.
         // https://dev.azure.com/dnceng-public/public/_build/results?buildId=1616829
         Assert.SkipWhen(
-            RuntimeInformation.ProcessArchitecture is Architecture.Arm or Architecture.Arm64,
+            DumpStore.SourcePlatform.Architecture is Architecture.Arm or Architecture.Arm64,
             "DivZero does not produce a FaultingExceptionFrame on ARM/ARM64; the legacy test did not run on these platforms.");
     }
 
     internal static void SkipICorDebugFrameCount(TestConfig config)
     {
-        Skip(GetICorDebugFrameCountSkipReason(config, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS(), RuntimeInformation.ProcessArchitecture));
+        Skip(GetICorDebugFrameCountSkipReason(config, DumpStore.SourcePlatform.IsWindows, DumpStore.SourcePlatform.IsMacOS, DumpStore.SourcePlatform.Architecture));
     }
 
     private static void Skip(string? reason)

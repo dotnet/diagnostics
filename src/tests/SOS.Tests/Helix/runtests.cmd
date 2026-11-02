@@ -55,8 +55,16 @@ if defined RUNTIME_OVERRIDE if not defined RUNTIME_VERSION (
   echo --runtime-version is required with --runtime-override.
   exit /b 3
 )
-set /p RID=<"%ROOT%\.sos-test-payload"
-for /f "usebackq skip=1 delims=" %%M in ("%ROOT%\.sos-test-payload") do if not defined CONFIGURATION set "CONFIGURATION=%%M"
+set "RID="
+set "CONFIGURATION="
+set "TOOL_LAYOUT="
+set "METADATA_LINES=0"
+for /f "usebackq delims=" %%M in ("%ROOT%\.sos-test-payload") do (
+  set /a METADATA_LINES+=1 >nul
+  if !METADATA_LINES!==1 set "RID=%%M"
+  if !METADATA_LINES!==2 set "CONFIGURATION=%%M"
+  if !METADATA_LINES!==3 set "TOOL_LAYOUT=%%M"
+)
 if "%RID%"=="" (
   echo The payload marker does not contain a RID.
   exit /b 3
@@ -64,6 +72,36 @@ if "%RID%"=="" (
 if "%CONFIGURATION%"=="" (
   echo The payload marker does not contain a configuration.
   exit /b 3
+)
+if not defined TOOL_LAYOUT set "TOOL_LAYOUT=Bin"
+if %METADATA_LINES% GTR 3 (
+  echo The payload marker contains unexpected metadata.
+  exit /b 3
+)
+if not "%TOOL_LAYOUT%"=="Bin" if not "%TOOL_LAYOUT%"=="NuGet" if not "%TOOL_LAYOUT%"=="SingleFile" (
+  echo Unsupported SOS tool layout "%TOOL_LAYOUT%".
+  exit /b 3
+)
+set "SOSHARNESS_TOOL_LAYOUT=%TOOL_LAYOUT%"
+set "SOSHARNESS_TOOL_ROOT="
+set "TEST_FILTERS="
+if not "%TOOL_LAYOUT%"=="Bin" (
+  if not "%RID%"=="win-x64" (
+    echo Installed SOS layouts currently support Windows x64 only.
+    exit /b 3
+  )
+  set "SOSHARNESS_TOOL_ROOT=%ROOT%tool-layout"
+  set "SOSHARNESS_DUMP_INPUT="
+  set "SOSHARNESS_DUMP_OUTPUT=%ROOT%artifacts\tmp\sos-harness\%CONFIGURATION%\dumps"
+  set "SOSHARNESS_CDAC_DIR="
+  set "SOSHARNESS_USECDAC="
+  set "SOSHARNESS_ONLY_HOSTS=Cdb,DotnetDump"
+  set "SOSHARNESS_ONLY_DAC=Legacy"
+  set "SOSHARNESS_ONLY_HOSTRUNTIME=Managed"
+  set "SOSHARNESS_ONLY_LIVENESS=Dump,Live"
+  set "SOSHARNESS_ONLY_GCTYPE=Workstation"
+  set "SOSHARNESS_ONLY_DUMPKIND=Heap"
+  set "TEST_FILTERS=--filter-class SOS.Tests.RuntimeInfoTests SOS.Tests.DumpHeapObjectsTests SOS.Tests.LiveBpmdTests --parallel none --minimum-expected-tests 28 --fail-skips on"
 )
 
 set "IDENTITY=all"
@@ -85,6 +123,10 @@ if defined HELIX_WORK_ITEM (
     exit /b 3
   )
   echo Running SOS shard !IDENTITY!.
+)
+if not "%TOOL_LAYOUT%"=="Bin" if not "%IDENTITY%"=="Net10" (
+  echo Installed SOS layouts require a Net10 work item.
+  exit /b 3
 )
 
 set "TARGET_ARCH=%RID:win-=%"
@@ -159,7 +201,7 @@ if not exist "%SIGNATURE_RUNTIME%\." (
 set "DOTNET_ROOT=%SIGNATURE_RUNTIME%"
 set "DOTNET_ROOT_X86=%DOTNET_ROOT%"
 
-set "LOG=%UPLOAD%\SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.log"
+set "LOG=%UPLOAD%\SOS.Tests-%RID%-%CONFIGURATION%-%TOOL_LAYOUT%-%IDENTITY%.log"
 
 "%POWERSHELL_EXE%" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass ^
   -File "%SIGNATURE_SCRIPT%" -RepoRoot "%SIGNATURE_REPO%"
@@ -170,12 +212,12 @@ if not "%SIGNATURE_EXIT_CODE%"=="0" (
   exit /b %SIGNATURE_EXIT_CODE%
 )
 
-"%DOTNET_ROOT%\dotnet.exe" "%TEST_DLL%" ^
+"%DOTNET_ROOT%\dotnet.exe" "%TEST_DLL%" %TEST_FILTERS% ^
   --results-directory "%UPLOAD%" ^
   --report-xunit ^
-  --report-xunit-filename "SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.testResults.xml" ^
+  --report-xunit-filename "SOS.Tests-%RID%-%CONFIGURATION%-%TOOL_LAYOUT%-%IDENTITY%.testResults.xml" ^
   --report-xunit-html ^
-  --report-xunit-html-filename "SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.html" ^
+  --report-xunit-html-filename "SOS.Tests-%RID%-%CONFIGURATION%-%TOOL_LAYOUT%-%IDENTITY%.html" ^
   --auto-reporters off > "%LOG%" 2>&1
 set "EXIT_CODE=%ERRORLEVEL%"
 
@@ -188,7 +230,7 @@ type "%LOG%"
 if not "%EXIT_CODE%"=="0" (
   set "DUMP_ROOT=%ROOT%\artifacts\tmp\sos-harness\%CONFIGURATION%"
   if exist "!DUMP_ROOT!\dumps\." (
-    set "DUMP_ARCHIVE=%UPLOAD%\SOS.Tests-dumps-%RID%-%CONFIGURATION%-%IDENTITY%.tar.gz"
+    set "DUMP_ARCHIVE=%UPLOAD%\SOS.Tests-dumps-%RID%-%CONFIGURATION%-%TOOL_LAYOUT%-%IDENTITY%.tar.gz"
     echo Archiving SOS dumps to "!DUMP_ARCHIVE!".
     tar.exe -czf "!DUMP_ARCHIVE!" -C "!DUMP_ROOT!" dumps
     if errorlevel 1 echo Failed to archive SOS dumps. 1>&2

@@ -18,7 +18,7 @@ namespace SOS.TestHarness;
 /// </summary>
 public static class Targets
 {
-    private static readonly ConcurrentDictionary<(Host Host, string Target, string Stop, Flavor Flavor, GcType GcType, DumpKind DumpKind, CoreVersion CoreVersion, Dac Dac, HostRuntime HostRuntime), Lazy<DumpSession>> s_sessions = new();
+    private static readonly ConcurrentDictionary<(TestConfig Config, string Stop), Lazy<DumpSession>> s_sessions = new();
 
     static Targets()
     {
@@ -51,6 +51,11 @@ public static class Targets
 
         if (live)
         {
+            if (DumpStore.IsReadOnly)
+            {
+                throw new InvalidOperationException("Live tests cannot use SOSHARNESS_DUMP_INPUT.");
+            }
+
             return Task.Run<Target>(() => {
                 string exe = SnapshotStore.TargetExe(config.Flavor, config.Target, config.CoreVersion);
                 return new LiveTarget(config.Host, definition, config.Flavor, exe, config.CoreVersion, config.Dac, config.HostRuntime, config.GcType);
@@ -69,15 +74,9 @@ public static class Targets
     internal static DumpSession ResolveSession(TestConfig config, string stop)
     {
         return s_sessions
-            .GetOrAdd((config.Host, config.Target, stop, config.Flavor, config.GcType, config.DumpKind, config.CoreVersion, config.Dac, config.HostRuntime),
-                key => new Lazy<DumpSession>(() => CreateSession(key)))
+            .GetOrAdd((config, stop),
+                key => new Lazy<DumpSession>(() => new(key.Config, key.Stop, DumpStore.Resolve(key.Config, key.Stop))))
             .Value;
-    }
-
-    private static DumpSession CreateSession((Host Host, string Target, string Stop, Flavor Flavor, GcType GcType, DumpKind DumpKind, CoreVersion CoreVersion, Dac Dac, HostRuntime HostRuntime) key)
-    {
-        string dump = SnapshotStore.GetDump(key.Flavor, key.Target, key.Stop, key.GcType, key.DumpKind, key.CoreVersion);
-        return new DumpSession(key.Host, key.Target, key.Stop, key.Flavor, dump, key.CoreVersion, key.Dac, key.HostRuntime);
     }
 
     /// <summary>Close pooled debugger children.</summary>

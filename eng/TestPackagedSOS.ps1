@@ -5,7 +5,7 @@
 
 <#
 .SYNOPSIS
-Runs Windows x64 SOS smoke tests against finalized NuGet packages and a shipped single-file archive.
+Prepares installed SOS layouts and optionally runs their Windows x64 smoke shards locally.
 .NOTES
 Requires prebuilt Release (or Debug) harnesses and debuggees, and eng/InstallRuntimes.proj runtimes.
 The staged payload excludes Bin-layout tools and disallows on-demand builds.
@@ -22,7 +22,9 @@ param(
     [string] $OutputDirectory,
 
     [ValidateSet('Debug', 'Release')]
-    [string] $Configuration = 'Release'
+    [string] $Configuration = 'Release',
+
+    [switch] $PrepareOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -54,45 +56,41 @@ foreach ($file in @($dotnet, $testDotnet, (Join-Path $packages "dotnet-dump.$ver
     }
 }
 
-$payload = Join-Path $root 'payload'
-& $dotnet msbuild (Join-Path $repo 'src\tests\SOS.Tests\SOS.Tests.csproj') -nologo -restore `
-    -t:StageSOSHelixPayload "-p:Configuration=$Configuration" -p:TargetArch=x64 -p:TargetRid=win-x64 `
-    -p:SOSTestToolLayout=Packaged "-p:SOSHelixPayloadDir=$payload"
-if ($LASTEXITCODE -ne 0) {
-    throw "Staging the prebuilt SOS harness failed (exit $LASTEXITCODE)."
+if (!$PrepareOnly) {
+    New-Item -ItemType Directory -Path $root | Out-Null
+    New-Item -ItemType Junction -Path (Join-Path $root 'dotnet-cli') -Target $runtimeRoot | Out-Null
 }
 
-New-Item -ItemType Junction -Path (Join-Path $root 'dotnet-cli') -Target $runtimeRoot | Out-Null
-$testDll = Join-Path $payload "artifacts\bin\SOS.Tests\$Configuration\net10.0\SOS.Tests.dll"
 $environment = @{
-    HELIX_WORKITEM_ROOT = $payload
+    HELIX_WORKITEM_ROOT = ''
     HELIX_CORRELATION_PAYLOAD = $root
     DOTNET_ROOT = $runtimeRoot
     DOTNET_ROOT_X64 = $runtimeRoot
     DOTNET_MULTILEVEL_LOOKUP = '0'
-    SOSHARNESS_ONLY_HOSTS = 'Cdb,DotnetDump'
-    SOSHARNESS_ONLY_FLAVORS = 'Core,SingleFile'
-    SOSHARNESS_ONLY_COREVERSIONS = 'Net10'
-    SOSHARNESS_ONLY_DAC = 'Legacy'
-    SOSHARNESS_ONLY_HOSTRUNTIME = 'Managed'
-    SOSHARNESS_ONLY_LIVENESS = 'Dump,Live'
-    SOSHARNESS_ONLY_GCTYPE = 'Workstation'
-    SOSHARNESS_ONLY_DUMPKIND = 'Heap'
+    SOSHARNESS_ONLY_HOSTS = ''
+    SOSHARNESS_ONLY_FLAVORS = ''
+    SOSHARNESS_ONLY_COREVERSIONS = ''
+    SOSHARNESS_ONLY_DAC = ''
+    SOSHARNESS_ONLY_HOSTRUNTIME = ''
+    SOSHARNESS_ONLY_LIVENESS = ''
+    SOSHARNESS_ONLY_GCTYPE = ''
+    SOSHARNESS_ONLY_DUMPKIND = ''
     SOSHARNESS_TOOL_LAYOUT = ''
     SOSHARNESS_TOOL_ROOT = ''
+    SOSHARNESS_DUMP_OUTPUT = ''
+    SOSHARNESS_DUMP_INPUT = ''
+    SOSHARNESS_CDAC_DIR = ''
+    SOSHARNESS_USECDAC = ''
     HELIX_WORKITEM_UPLOAD_ROOT = ''
 }
 $previousEnvironment = @{}
 $failures = [Collections.Generic.List[string]]::new()
-$testClasses = [ordered]@{
-    RuntimeInfoTests = 18
-    DumpHeapObjectsTests = 6
-    LiveBpmdTests = 4
-}
 try {
-    foreach ($name in $environment.Keys) {
-        $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
-        [Environment]::SetEnvironmentVariable($name, $environment[$name])
+    if (!$PrepareOnly) {
+        foreach ($name in $environment.Keys) {
+            $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable($name)
+            [Environment]::SetEnvironmentVariable($name, $environment[$name])
+        }
     }
 
     foreach ($distribution in @('NuGet', 'SingleFile')) {
@@ -110,22 +108,26 @@ try {
         }
         & (Join-Path $PSScriptRoot 'PrepareSOSTestLayout.ps1') @prepare
 
+        if ($PrepareOnly) {
+            continue
+        }
+
+        $payload = Join-Path $root "payloads\$distribution"
+        & $dotnet msbuild (Join-Path $repo 'src\tests\SOS.Tests\SOS.Tests.csproj') -nologo -restore `
+            -t:StageSOSHelixPayload "-p:Configuration=$Configuration" -p:TargetArch=x64 -p:TargetRid=win-x64 `
+            "-p:SOSTestToolLayout=$distribution" "-p:SOSTestToolRoot=$layout" "-p:SOSHelixPayloadDir=$payload"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Staging the $distribution SOS harness failed (exit $LASTEXITCODE)."
+        }
+
         $results = Join-Path $root "results\$distribution"
         New-Item -ItemType Directory -Path $results | Out-Null
-        $env:SOSHARNESS_TOOL_LAYOUT = $distribution
-        $env:SOSHARNESS_TOOL_ROOT = $layout
+        $env:HELIX_WORKITEM_ROOT = $payload
         $env:HELIX_WORKITEM_UPLOAD_ROOT = $results
-        foreach ($entry in $testClasses.GetEnumerator()) {
-            $class = $entry.Key
-            $identity = "SOS.Tests-$distribution-win-x64-$Configuration-Net10-$class"
-            & $testDotnet $testDll --filter-class "SOS.Tests.$class" --parallel none `
-                --minimum-expected-tests $entry.Value --fail-skips on --no-progress --auto-reporters off `
-                --results-directory $results --report-xunit `
-                --report-xunit-filename "$identity.testResults.xml" 2>&1 |
-                Tee-Object -FilePath (Join-Path $results "$identity.log")
-            if ($LASTEXITCODE -ne 0) {
-                $failures.Add("$identity (exit $LASTEXITCODE)")
-            }
+        $identity = "SOS_win-x64_$Configuration-$distribution-Net10"
+        & (Join-Path $payload 'runtests.cmd') --helix-work-item $identity
+        if ($LASTEXITCODE -ne 0) {
+            $failures.Add("$identity (exit $LASTEXITCODE)")
         }
     }
 } finally {

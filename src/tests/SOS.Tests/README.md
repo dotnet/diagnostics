@@ -56,18 +56,93 @@ infrastructure and install the test runtimes, then run:
 The output directory must not already exist. The script selects the exact
 version of the sole `dotnet-sos` package in the input directory and requires a
 matching `dotnet-dump` package. Both distributions get isolated installations,
-dump caches, logs, and xUnit reports. Test infrastructure is staged without
-Bin-layout product outputs or source-build fallbacks.
+staged payloads, dump caches, logs, and xUnit reports. The local runner uses the
+same launcher and smoke selection as Helix. Test infrastructure is staged
+without Bin-layout product outputs or source-build fallbacks.
 
 The initial smoke matrix uses .NET 10 Core and SingleFile debuggees with the
 legacy DAC, testing runtime/module commands, dump collection and analysis,
 live heap inspection, and managed breakpoints through CDB and dotnet-dump
 where supported. It is not a replacement for the full SOS matrix.
 
-Official builds run this leg after packaging/signing, consuming the finalized
-NuGet artifacts and `BundledTools` archive. A temporary standalone Windows x64
-Release build and unsigned packaging leg exercises the same tests in PR CI.
-Existing Bin jobs and publication dependencies are unchanged.
+Official builds prepare these layouts after packaging/signing, consuming the
+finalized NuGet artifacts and `BundledTools` archive. PR CI prepares unsigned
+packages from a standalone Windows x64 Release build. Both paths submit separate
+Helix work items named `SOS_win-x64_Release-NuGet-Net10` and
+`SOS_win-x64_Release-SingleFile-Net10`. Installed layouts initially cover only
+Windows x64 Release/.NET 10; they do not add Framework shards. Existing Bin jobs
+and publication dependencies are unchanged.
+
+`-PrepareOnly` installs the two distributions without running tests, for use by
+the Helix submission step. The prepared `tools` and `sos` closures are copied into
+each layout's payload; package installation and SOS installation are not repeated
+on the Helix worker.
+
+## Portable dump production and consumption
+
+Tool selection and dump inputs are independent. A producer can capture dumps
+once, then a different machine can run the same dump tests with Bin, NuGet, or
+SingleFile tools. There is no two-stage Helix job yet; these are the entry points
+that such a job can invoke.
+
+After building the harness helpers and debuggees for the producer's platform,
+capture a bundle using the existing matrix allow-lists:
+
+```powershell
+$env:SOSHARNESS_ONLY_FLAVORS = 'Core,SingleFile'
+$env:SOSHARNESS_ONLY_COREVERSIONS = 'Net11'
+$env:SOSHARNESS_ONLY_GCTYPE = 'Workstation'
+$env:SOSHARNESS_ONLY_DUMPKIND = 'Heap,Full'
+.\artifacts\dotnet-test\dotnet.exe `
+  .\artifacts\bin\SOS.TestHarness.Capturer\Release\net10.0\win-x64\SOS.TestHarness.Capturer.dll `
+  bundle ".\artifacts\tmp\SOS dump bundle" scenarios divzero
+```
+
+Use the corresponding producer RID and `dotnet` executable on Unix, and run
+`ulimit -c 0` first to suppress additional system core dumps. Target names
+come from `TargetCatalog`; `all` selects all dump-capable targets for the producer
+platform. Capture expands GC and dump-kind coverage, including Full, unless
+narrowed by the allow-lists. Host, DAC, hosting-mode, and liveness allow-lists do
+not affect production: none of those is part of a dump's identity.
+
+The output directory must not exist. Its `dumps.json` manifest records the source
+RID, capture configurations, exact runtime versions, relative paths, and file
+inventory. It accompanies the dumps, debuggee images/PDBs, and matching runtime
+files. Core runtime files are taken from the runtime actually recorded in the
+dump, not inferred from the analyzer's installed runtime patch. Universal cDAC/DBI
+binaries remain part of the selected tools under test, not the dump bundle.
+Archive and transfer the **whole directory**, preserving its contents.
+
+On the consumer, select the same capture axes and set the extracted input root:
+
+```powershell
+$env:SOSHARNESS_DUMP_INPUT = 'Q:\downloaded\SOS dump bundle'
+$env:SOSHARNESS_ONLY_HOSTS = 'DotnetDump'
+$env:SOSHARNESS_ONLY_DAC = 'CDac'
+.\artifacts\dotnet-test\dotnet.exe `
+  .\artifacts\bin\SOS.Tests\Release\net10.0\SOS.Tests.dll `
+  --filter-class SOS.Tests.RuntimeInfoTests --parallel none
+```
+
+Select installed tools independently with `SOSHARNESS_TOOL_LAYOUT` and
+`SOSHARNESS_TOOL_ROOT`, as printed by `eng/PrepareSOSTestLayout.ps1`. The consumer
+needs its own test infrastructure, debugger/tools, and host runtime, but does not
+need runnable producer debuggees or the producer's runtime installation.
+Missing bundle files or requested dump configurations fail rather than falling
+back to local capture. Imported runs exclude live rows and permit empty matrices
+for tests that have no applicable dump/host configuration.
+
+Same-RID bundles retain the normal debugger/DAC matrix. Different source and
+analysis RIDs initially select only dotnet-dump with .NET 11+ cDAC; native-debugger
+and legacy-DAC cross-platform combinations are not enabled. Source OS and
+architecture govern dump-content expectations, separately from debugger-host
+availability. Cross-platform combinations still need end-to-end Helix validation.
+
+Without `SOSHARNESS_DUMP_INPUT`, tests keep their normal on-demand capture behavior.
+`SOSHARNESS_DUMP_OUTPUT` optionally selects an independent capture cache; its
+default is `artifacts/tmp/sos-harness/<Configuration>/dumps`. The packaged smoke
+runner uses each layout's isolated staged payload for its output cache.
+Unset the input variable before producing another bundle or running live tests.
 
 ## Architecture
 
@@ -122,7 +197,12 @@ The DAC is deliberately not a capture dimension: legacy DAC and cDAC analyze
 the same dump, with DAC selection happening when the host opens it. Cached
 dumps are reused only while newer than their debuggee.
 
-Helix submits one work item per installed .NET runtime. Each runtime shard sets
+Helix identities include the tool installation layout, for example
+`SOS_win-x64_Release-Bin-Net10`. Payload directories include the RID,
+configuration, layout, and queue; report and log filenames also include the
+layout so Bin, NuGet, and SingleFile runs remain distinguishable.
+
+For Bin layouts, Helix submits one work item per installed .NET runtime. Each runtime shard sets
 `SOSHARNESS_ONLY_COREVERSIONS` and runs the Core and SingleFile flavors.
 Windows submits one additional Framework work item so desktop Framework
 coverage runs once rather than being repeated in every runtime shard. Dump
@@ -288,6 +368,8 @@ Comma-separated matrix allow-lists are case-insensitive enum names:
 | `SOSHARNESS_DAC_DIR` | Override the legacy DAC directory used by the dbgeng engine host. |
 | `SOSHARNESS_CDAC_DIR` | Override cDAC discovery with a directory containing the matched universal cDAC and DBI binaries. |
 | `SOSHARNESS_USECDAC` | Local global DAC clamp; overrides the matrix DAC selection and is not set in CI. |
+| `SOSHARNESS_DUMP_INPUT` | Consume a complete portable dump bundle without capture, builds, or debuggee launches. |
+| `SOSHARNESS_DUMP_OUTPUT` | Override the local capture cache independently of the selected tool layout. |
 | `LLDB_PATH` | Override LLDB discovery. Otherwise Xcode and then `PATH` are searched. |
 | `NUGET_PACKAGES` | Override the NuGet package root used to locate runtime packs and cDAC assets. |
 

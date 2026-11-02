@@ -96,14 +96,14 @@ public sealed class MemoryAndDecodeTests
         using StreamAddressSpace dataSource = new(File.OpenRead(dumpPath));
         (ulong Start, ulong End)[] savedRanges;
 
-        if (OperatingSystem.IsWindows())
+        if (DumpStore.SourcePlatform.IsWindows)
         {
             Minidump dump = new(dataSource);
             savedRanges = dump.Segments
                 .Select(segment => (segment.VirtualAddress, segment.VirtualAddress + segment.Size))
                 .ToArray();
         }
-        else if (!OperatingSystem.IsMacOS())
+        else if (!DumpStore.SourcePlatform.IsMacOS)
         {
             ELFCoreFile dump = new(dataSource);
             Assert.True(dump.IsValid(), $"'{dumpPath}' is not an ELF core dump");

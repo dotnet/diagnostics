@@ -12,9 +12,9 @@ jobs:
 - template: ${{ parameters.pipelineJobTemplate }}
   parameters:
     name: Packaged_SOS_win_x64_Release
-    displayName: Packaged SOS win-x64 Release smoke tests
+    displayName: Packaged SOS win-x64 Release Helix smoke tests
     dependsOn: ${{ parameters.dependsOn }}
-    timeoutInMinutes: 120
+    timeoutInMinutes: 420
     enableMicrobuild: true
     pool:
       name: $(BuildPool)
@@ -68,7 +68,7 @@ jobs:
       displayName: Acquire test SDK and runtimes
 
     - task: PowerShell@2
-      displayName: Test installed NuGet and SingleFile layouts
+      displayName: Prepare installed NuGet and SingleFile layouts
       inputs:
         pwsh: true
         filePath: eng\TestPackagedSOS.ps1
@@ -76,21 +76,44 @@ jobs:
           -PackageDirectory "$(Build.SourcesDirectory)\artifacts\packages\Release\Shipping"
           -BundleArchive "$(Build.SourcesDirectory)\artifacts\bundledtools\Release\zips\diagnostic-tools-win-x64.zip"
           -OutputDirectory "$(Build.SourcesDirectory)\artifacts\tmp\packaged-sos"
+          -PrepareOnly
 
-    - task: PublishTestResults@2
-      displayName: Publish packaged SOS test results
+    - template: /eng/pipelines/send-to-helix-step.yml
+      parameters:
+        displayName: Run installed SOS win-x64 Release Net10 shards on Helix
+        osGroup: windows
+        sendParams: >
+          $(Build.SourcesDirectory)/eng/helix/SendToHelix.proj
+          /restore /p:TreatWarningsAsErrors=false /t:Test
+          /p:Configuration=Release /p:TargetArch=x64 /p:TargetOS=Windows_NT /p:TargetRid=win-x64
+          /p:HelixTestProject=$(Build.SourcesDirectory)/src/tests/SOS.Tests/SOS.Tests.csproj
+          /p:SOSTestToolLayouts=NuGet%3BSingleFile
+          /p:SOSTestToolRoot=$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos
+          /p:OfficialBuildId=$(Build.BuildNumber)
+          /bl:$(Build.SourcesDirectory)/artifacts/log/Release/SendPackagedSOS.binlog
+        env:
+          HelixSource: pr/dotnet/diagnostics/tests
+          HelixType: tests/
+          HelixConfiguration: win-x64_Release_Packaged
+          ${{ if eq(variables['System.TeamProject'], 'public') }}:
+            HelixTargetQueues: $(helix_win_x64)
+            Creator: dotnet-bot
+          ${{ else }}:
+            HelixTargetQueues: $(helix_win_x64_internal)
+            HelixAccessToken: $(HelixApiAccessToken)
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+    - task: CopyFiles@2
+      displayName: Gather packaged SOS Helix logs
       condition: always()
       inputs:
-        testResultsFormat: xUnit
-        testResultsFiles: '**/*.testResults.xml'
-        searchFolder: '$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos/results'
-        testRunTitle: Packaged SOS win-x64 Release
-        failTaskOnFailedTests: true
-        failTaskOnMissingResultsFile: true
+        sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+        contents: '?(log|TestResults)/**'
+        targetFolder: '$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos/results'
 
     - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
       parameters:
-        displayName: Publish packaged SOS logs and replays
+        displayName: Publish packaged SOS Helix logs
         condition: always()
         continueOnError: true
         inputs:

@@ -227,6 +227,10 @@ public static class TargetCatalog
             ? t
             : throw new ArgumentException($"Unknown target '{name}'. Known: {string.Join(", ", s_targets.Keys)}");
 
+    public static IEnumerable<string> DumpTargets =>
+        s_targets.Values.Where(target => target.StopPoints.Count > 0 &&
+            (target.Name != ThreadApartment || OperatingSystem.IsWindows())).Select(target => target.Name);
+
     /// <summary>
     /// The flavors a target supports, or <see cref="Flavor.AllValid"/> when <paramref name="name"/> is
     /// not a known target (some tests pass other tokens — e.g. a stop name — through the matrix's string

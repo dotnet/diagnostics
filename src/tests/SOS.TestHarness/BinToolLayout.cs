@@ -15,7 +15,6 @@ internal sealed class BinToolLayout : IToolLayout
 
     public string SosDirectory => RepoLayout.ArtifactsBinNative;
     public string ManagedSosDirectory => Path.Combine(SosDirectory, "net8.0");
-    public string DumpCacheDirectory => Path.Combine(RepoLayout.Scratch, "dumps");
     public string? CDacOverrideDirectory => _cdacOverrideDirectory.Value;
 
     public ProcessStartInfo CreateDotNetDumpStartInfo() => _dotNetDump.Value.CreateStartInfo();

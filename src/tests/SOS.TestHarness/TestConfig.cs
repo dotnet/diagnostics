@@ -136,12 +136,26 @@ public sealed record TestConfig : IXunitSerializable
         CoreVersion coreVersion = CoreVersion.All,
         Dac dac = Dac.All,
         HostRuntime hostRuntime = HostRuntime.Managed)
+        => PermutationsCore(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac, hostRuntime);
+
+    internal static IEnumerable<TestConfig> CaptureConfigurations(string[] targets) =>
+        PermutationsCore(targets, Flavor.AllValid, Host.AllValid, Liveness.Dump, GcType.AllValid,
+            DumpKind.All | DumpKind.Full, CoreVersion.All, Dac.Legacy, HostRuntime.Managed, captureOnly: true)
+            // These dumps lack stack-overflow exception information and are already skipped by SOS tests.
+            // https://github.com/dotnet/diagnostics/issues/2515
+            .Where(config => config.Target != TargetCatalog.Overflow || config.Flavor != Flavor.SingleFile);
+
+    private static IEnumerable<TestConfig> PermutationsCore(
+        string[] targets, Flavor flavor, Host host, Liveness liveness, GcType gcType, DumpKind dumpKind,
+        CoreVersion coreVersion, Dac dac, HostRuntime hostRuntime, bool captureOnly = false)
     {
         HashSet<TestConfig> seen = new();
 
         // Only ever expand versions the harness actually builds/installs; a requested bit outside the
         // available set is silently dropped (the axis disables, it never positively enables — see CoreVersion).
-        CoreVersion requestedVersions = coreVersion & CoreVersions.Available;
+        CoreVersion available = DumpStore.Input?.AvailableCoreVersions is { } versions && versions != CoreVersion.None
+            ? versions : CoreVersions.Available;
+        CoreVersion requestedVersions = coreVersion & available;
 
         // Exclude out-of-support versions from the default matrix. They still run when opted in or when
         // explicitly named in SOSHARNESS_ONLY_COREVERSIONS (the explicit allow-list is authoritative).
@@ -153,11 +167,11 @@ public sealed record TestConfig : IXunitSerializable
 
         foreach (string target in targets)
         {
-            foreach (Host h in SingleFlags(host, "SOSHARNESS_ONLY_HOSTS"))
+            foreach (Host h in SingleFlags(host, captureOnly ? null : "SOSHARNESS_ONLY_HOSTS"))
             {
                 foreach (Flavor f in SingleFlags(flavor, "SOSHARNESS_ONLY_FLAVORS"))
                 {
-                    foreach (Liveness l in SingleFlags(liveness, "SOSHARNESS_ONLY_LIVENESS"))
+                    foreach (Liveness l in SingleFlags(liveness, captureOnly ? null : "SOSHARNESS_ONLY_LIVENESS"))
                     {
                         foreach (GcType g in SingleFlags(gcType, "SOSHARNESS_ONLY_GCTYPE"))
                         {
@@ -165,9 +179,9 @@ public sealed record TestConfig : IXunitSerializable
                             {
                                 foreach (CoreVersion cv in SingleFlags(requestedVersions, "SOSHARNESS_ONLY_COREVERSIONS"))
                                 {
-                                    foreach (Dac da in SingleFlags(dac, "SOSHARNESS_ONLY_DAC"))
+                                    foreach (Dac da in SingleFlags(dac, captureOnly ? null : "SOSHARNESS_ONLY_DAC"))
                                     {
-                                        foreach (HostRuntime hr in SingleFlags(hostRuntime, "SOSHARNESS_ONLY_HOSTRUNTIME"))
+                                        foreach (HostRuntime hr in SingleFlags(hostRuntime, captureOnly ? null : "SOSHARNESS_ONLY_HOSTRUNTIME"))
                                         {
                                             // A live target has no dump kind. Collapse it to the canonical
                                             // value so we emit one live row, not one per dump-kind permutation.
@@ -199,28 +213,41 @@ public sealed record TestConfig : IXunitSerializable
     /// Whether a configuration is valid on the current platform. Centralizes every constraint that the old
     /// nested-loop <c>BuildMatrix</c> scattered across per-axis <c>continue</c>s.
     /// </summary>
-    internal static bool IsValid(TestConfig c)
+    internal static bool IsValid(TestConfig c) =>
+        IsValid(c, DumpStore.SourcePlatform, DumpStore.AnalyzerPlatform, DumpStore.IsReadOnly);
+
+    internal static bool IsValid(TestConfig c, TargetPlatform source, TargetPlatform analyzer, bool readOnly)
     {
-        // Host platform constraints: cdb is Windows-only, lldb is non-Windows-only.
-        if (c.Host == Host.Cdb && !OperatingSystem.IsWindows())
+        if ((readOnly && c.IsLive) || !source.Supports(c, analyzer))
         {
             return false;
         }
 
-        if (c.Host == Host.Lldb && OperatingSystem.IsWindows())
+        if (c.Target == TargetCatalog.ThreadApartment && !source.IsWindows)
+        {
+            return false;
+        }
+
+        // Host platform constraints: cdb is Windows-only, lldb is non-Windows-only.
+        if (c.Host == Host.Cdb && !analyzer.IsWindows)
+        {
+            return false;
+        }
+
+        if (c.Host == Host.Lldb && analyzer.IsWindows)
         {
             return false;
         }
 
         // Desktop .NET Framework is Windows-only.
-        if (c.Flavor == Flavor.Framework && !OperatingSystem.IsWindows())
+        if (c.Flavor == Flavor.Framework && !source.IsWindows)
         {
             return false;
         }
 
         // SOS hosts cannot discover the statically linked CoreCLR module in musl single-file processes
         // or dumps. Keep Core coverage on Alpine while excluding unsupported single-file rows.
-        if (!IsFlavorSupportedOnRid(c.Flavor, RepoLayout.Rid))
+        if (!IsFlavorSupportedOnRid(c.Flavor, source.Rid))
         {
             return false;
         }
@@ -323,9 +350,9 @@ public sealed record TestConfig : IXunitSerializable
     /// subset of the matrix during bring-up, e.g. <c>SOSHARNESS_ONLY_FLAVORS=Core</c>,
     /// <c>SOSHARNESS_ONLY_HOSTS=Cdb,DotnetDump</c>, <c>SOSHARNESS_ONLY_GCTYPE=Server</c>.
     /// </summary>
-    private static IEnumerable<T> SingleFlags<T>(T value, string envVar) where T : struct, Enum
+    private static IEnumerable<T> SingleFlags<T>(T value, string? envVar) where T : struct, Enum
     {
-        string? only = Environment.GetEnvironmentVariable(envVar);
+        string? only = envVar is null ? null : Environment.GetEnvironmentVariable(envVar);
         HashSet<string>? allowed = string.IsNullOrEmpty(only)
             ? null
             : new HashSet<string>(only.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), StringComparer.OrdinalIgnoreCase);

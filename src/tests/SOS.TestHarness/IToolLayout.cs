@@ -11,7 +11,6 @@ internal interface IToolLayout
 {
     string SosDirectory { get; }
     string ManagedSosDirectory { get; }
-    string DumpCacheDirectory { get; }
     string? CDacOverrideDirectory { get; }
 
     ProcessStartInfo CreateDotNetDumpStartInfo();

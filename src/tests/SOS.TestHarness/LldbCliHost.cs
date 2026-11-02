@@ -20,6 +20,7 @@ public sealed class LldbCliHost : LldbHostBase
     private readonly Dac _dac;
     private readonly CoreVersion _coreVersion;
     private readonly HostRuntime _hostRuntime;
+    private readonly DumpArtifact? _dump;
 
     public override string Name => "lldb";
 
@@ -30,12 +31,14 @@ public sealed class LldbCliHost : LldbHostBase
         CoreVersion coreVersion = CoreVersion.Net10,
         HostRuntime hostRuntime = HostRuntime.Managed,
         string? targetExe = null,
-        HostDiagnostics? diagnostics = null)
+        HostDiagnostics? diagnostics = null,
+        DumpArtifact? dump = null)
     {
         _flavor = flavor;
         _dac = dac;
         _coreVersion = coreVersion;
         _hostRuntime = hostRuntime;
+        _dump = dump;
         StartLldb(diagnostics: diagnostics, captureCrashDumps: true);
 
         // Load the core. Pass the target executable as the module so lldb can map the program image —
@@ -55,6 +58,7 @@ public sealed class LldbCliHost : LldbHostBase
         Run(_hostRuntime == HostRuntime.None
             ? "sethostruntime -none"
             : $"sethostruntime \"{ToolPaths.HostRuntimeDirectory}\"");
+        _dump?.ConfigureSymbols(this, _dac);
 
         // Self-contained single-file bundles carry coreclr inside the exe, so there is no runtime
         // directory on disk next to which SOS can find the matching DAC. Point SOS's symbol store at the
@@ -63,7 +67,7 @@ public sealed class LldbCliHost : LldbHostBase
         // (no network), so the session stays hermetic. Other flavors find their DAC next to the on-disk
         // runtime and need no override. (cdb does the equivalent via `.cordll -lp`.)
         string? dacDir = _dac == Dac.CDac ? ToolPaths.CDacOverrideDirectory : null;
-        dacDir ??= _flavor == Flavor.SingleFile ? ToolPaths.SingleFileDacDirectory(_coreVersion) : null;
+        dacDir ??= _dump?.RuntimeDirectory ?? (_flavor == Flavor.SingleFile ? ToolPaths.SingleFileDacDirectory(_coreVersion) : null);
         if (dacDir is { Length: > 0 })
         {
             Run($"setsymbolserver -directory \"{dacDir}\"");

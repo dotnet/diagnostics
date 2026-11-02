@@ -21,7 +21,6 @@ public sealed class ToolLayoutTests : IDisposable
         IToolLayout layout = ToolLayout.FromConfiguration(value, null);
         Assert.IsType<BinToolLayout>(layout);
         Assert.Equal(RepoLayout.ArtifactsBinNative, layout.SosDirectory);
-        Assert.Equal(Path.Combine(RepoLayout.Scratch, "dumps"), layout.DumpCacheDirectory);
     }
 
     [Theory]
@@ -60,7 +59,6 @@ public sealed class ToolLayoutTests : IDisposable
         Assert.Equal(expected, layout.GetType());
         Assert.Equal(Path.Combine(_root, "sos"), layout.SosDirectory);
         Assert.Equal(Path.Combine(_root, "sos", "net8.0"), layout.ManagedSosDirectory);
-        Assert.Equal(Path.Combine(_root, "test-artifacts", "dumps"), layout.DumpCacheDirectory);
         ProcessStartInfo process = layout.CreateDotNetDumpStartInfo();
         Assert.Equal(Path.Combine(_root, "tools", "dotnet-dump" + RepoLayout.ExeSuffix), process.FileName);
         Assert.Empty(process.ArgumentList);

@@ -18,7 +18,6 @@ internal abstract class PackagedToolLayout : IToolLayout
     protected string Root { get; }
     public string SosDirectory => Path.Combine(Root, "sos");
     public string ManagedSosDirectory => Path.Combine(SosDirectory, "net8.0");
-    public string DumpCacheDirectory => Path.Combine(Root, "test-artifacts", "dumps");
     public string? CDacOverrideDirectory => _cdacOverrideDirectory.Value;
 
     protected PackagedToolLayout(string root)
