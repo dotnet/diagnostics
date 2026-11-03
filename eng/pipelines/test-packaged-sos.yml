@@ -12,7 +12,7 @@ jobs:
 - template: ${{ parameters.pipelineJobTemplate }}
   parameters:
     name: Packaged_SOS_win_x64_Release
-    displayName: Packaged SOS win-x64 Release Helix smoke tests
+    displayName: Packaged SOS win-x64 Release Helix tests
     dependsOn: ${{ parameters.dependsOn }}
     timeoutInMinutes: 420
     enableMicrobuild: true
@@ -70,7 +70,7 @@ jobs:
 
     - template: /eng/pipelines/send-to-helix-step.yml
       parameters:
-        displayName: Run Packaged SOS win-x64 Release Net10 shard on Helix
+        displayName: Run full Packaged SOS win-x64 Release matrix on Helix
         osGroup: windows
         sendParams: >
           $(Build.SourcesDirectory)/eng/helix/SendToHelix.proj

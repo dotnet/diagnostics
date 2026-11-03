@@ -84,7 +84,6 @@ if not "%TOOL_LAYOUT%"=="Bin" if not "%TOOL_LAYOUT%"=="Packaged" (
 )
 set "SOSHARNESS_TOOL_LAYOUT=%TOOL_LAYOUT%"
 set "SOSHARNESS_TOOL_ROOT="
-set "TEST_FILTERS="
 if not "%TOOL_LAYOUT%"=="Bin" (
   if not "%RID%"=="win-x64" (
     echo Installed SOS layouts currently support Windows x64 only.
@@ -93,13 +92,6 @@ if not "%TOOL_LAYOUT%"=="Bin" (
   set "SOSHARNESS_TOOL_ROOT=%ROOT%tool-layout"
   set "SOSHARNESS_CDAC_DIR="
   set "SOSHARNESS_USECDAC="
-  set "SOSHARNESS_ONLY_HOSTS=Cdb,DotnetDump"
-  set "SOSHARNESS_ONLY_DAC=Legacy"
-  set "SOSHARNESS_ONLY_HOSTRUNTIME=Managed"
-  set "SOSHARNESS_ONLY_LIVENESS=Dump,Live"
-  set "SOSHARNESS_ONLY_GCTYPE=Workstation"
-  set "SOSHARNESS_ONLY_DUMPKIND=Heap"
-  set "TEST_FILTERS=--filter-class SOS.Tests.RuntimeInfoTests SOS.Tests.DumpHeapObjectsTests SOS.Tests.LiveBpmdTests --parallel none --minimum-expected-tests 28 --fail-skips on"
 )
 
 set "IDENTITY=all"
@@ -121,10 +113,6 @@ if defined HELIX_WORK_ITEM (
     exit /b 3
   )
   echo Running SOS shard !IDENTITY!.
-)
-if not "%TOOL_LAYOUT%"=="Bin" if not "%IDENTITY%"=="Net10" (
-  echo Installed SOS layouts require a Net10 work item.
-  exit /b 3
 )
 
 set "TARGET_ARCH=%RID:win-=%"
@@ -210,7 +198,7 @@ if not "%SIGNATURE_EXIT_CODE%"=="0" (
   exit /b %SIGNATURE_EXIT_CODE%
 )
 
-"%DOTNET_ROOT%\dotnet.exe" "%TEST_DLL%" %TEST_FILTERS% ^
+"%DOTNET_ROOT%\dotnet.exe" "%TEST_DLL%" ^
   --results-directory "%UPLOAD%" ^
   --report-xunit ^
   --report-xunit-filename "SOS.Tests-%RID%-%CONFIGURATION%-%TOOL_LAYOUT%-%IDENTITY%.testResults.xml" ^

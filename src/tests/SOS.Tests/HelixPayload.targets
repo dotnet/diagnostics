@@ -16,7 +16,6 @@
     <_SOSCdbDir>$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/</_SOSCdbDir>
     <_SOSLiveRuntimeDir Condition="'$(PrivateBuildTesting)' == 'true' and '$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizeDirectory('$(LiveRuntimeDir)'))</_SOSLiveRuntimeDir>
     <_SOSDebuggeeFramework>net*</_SOSDebuggeeFramework>
-    <_SOSDebuggeeFramework Condition="'$(SOSTestToolLayout)' != 'Bin'">net10.0</_SOSDebuggeeFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,10 +31,6 @@
            Text="Installed SOS payloads currently support Windows x64 without a private runtime override." />
     <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(SOSTestToolRoot)' == ''"
            Text="SOSTestToolRoot must identify a prepared $(SOSTestToolLayout) installation." />
-    <ItemGroup Condition="'$(SOSTestToolLayout)' != 'Bin'">
-      <SOSHarnessDebuggee Remove="@(SOSHarnessDebuggee)"
-                          Condition="'%(SOSHarnessDebuggee.Filename)' != 'SosHarnessScenarios' and '%(SOSHarnessDebuggee.Filename)' != 'DivZero'" />
-    </ItemGroup>
     <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '@(RuntimeTestVersions->Count())' != '1'"
            Text="A private runtime override requires exactly one RuntimeTestVersions entry." />
     <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '%(RuntimeTestVersions.TargetFramework)' == ''"
@@ -158,13 +153,12 @@
     <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '%(RuntimeTestVersions.Runtime)' == ''"
            Text="RuntimeTestVersions must contain Runtime metadata for private runtime testing." />
     <ItemGroup>
-      <_SOSRuntimeShard Include="@(RuntimeTestVersions)"
-                        Condition="'$(SOSTestToolLayout)' == 'Bin' or '%(RuntimeTestVersions.TargetFramework)' == 'net10.0'">
+      <_SOSRuntimeShard Include="@(RuntimeTestVersions)">
         <CoreVersion>$([System.String]::Copy('%(RuntimeTestVersions.TargetFramework)').Replace('net', 'Net').Replace('.0', ''))</CoreVersion>
       </_SOSRuntimeShard>
       <HelixWorkItem Include="@(_SOSRuntimeShard->'$(SOSHelixWorkItemName)-%(CoreVersion)')" />
       <HelixWorkItem Include="$(SOSHelixWorkItemName)-Framework"
-                    Condition="'$(SOSTestToolLayout)' == 'Bin' and '$(TargetOS)' == 'Windows_NT' and '$(_SOSLiveRuntimeDir)' == ''" />
+                    Condition="'$(TargetOS)' == 'Windows_NT' and '$(_SOSLiveRuntimeDir)' == ''" />
       <!-- Helix installs RuntimeDownload (build version), but the runtime lands in
            shared/Microsoft.NETCore.App/<Runtime> (product version), which is the overlay target. -->
       <HelixWorkItem>
@@ -175,8 +169,6 @@
         <RequiredRuntimeVersions>$(TestHostRuntimeVersion);%(HelixWorkItem.RuntimeDownload)</RequiredRuntimeVersions>
       </HelixWorkItem>
     </ItemGroup>
-    <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and '@(_SOSRuntimeShard->Count())' != '1'"
-           Text="Installed SOS Helix work items require exactly one .NET 10 RuntimeTestVersions entry." />
     <!-- The SDK's PayloadDirectory path creates its ZIP in memory. Keep the large SOS archive on disk. -->
     <ZipDirectory SourceDirectory="$(SOSHelixPayloadDir)"
                   DestinationFile="$(SOSHelixPayloadDir).zip"

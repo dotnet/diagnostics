@@ -40,7 +40,7 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 ./artifacts/bin/SOS.Tests/Debug/net10.0/SOS.Tests
 ```
 
-## Installed-tool release smoke tests
+## Installed-tool validation
 
 The default tool layout remains `Bin`. To test finalized NuGet tools with the
 `Packaged` layout on Windows x64, first build the Release test
@@ -49,27 +49,33 @@ infrastructure and install the test runtimes, then run:
 ```powershell
 .\eng\TestPackagedSOS.ps1 `
   -PackageDirectory .\artifacts\packages\Release\Shipping `
-  -OutputDirectory ".\artifacts\tmp\packaged SOS smoke"
+  -OutputDirectory ".\artifacts\tmp\packaged SOS validation"
 ```
 
 The output directory must not already exist. The script selects the exact
 version of the sole `dotnet-sos` package in the input directory and requires a
 matching `dotnet-dump` package. The installed tools get an isolated installation,
 staged payload, dump cache, logs, and xUnit reports. The local runner uses the
-same launcher and smoke selection as Helix. Test infrastructure is staged
+same launcher and full test selection as Helix. Test infrastructure is staged
 without Bin-layout product outputs or source-build fallbacks.
 
-The initial smoke matrix uses .NET 10 Core and SingleFile debuggees with the
-legacy DAC, testing runtime/module commands, dump collection and analysis,
-live heap inspection, and managed breakpoints through CDB and dotnet-dump
-where supported. It is not a replacement for the full SOS matrix.
+Both layouts run the full applicable SOS suite with the same test-defined
+runtime, host, DAC, hosting, GC, dump-kind, and liveness coverage. Packaged
+validation does not restrict the suite to smoke-test classes or the legacy DAC;
+normal capability exclusions and known-issue skips still apply. It tests shipped
+products without injecting private cDAC/DBI overrides.
 
 Official builds prepare this layout after packaging/signing, consuming the
 finalized NuGet artifacts. PR CI prepares unsigned packages from a standalone
-Windows x64 Release build. Both paths submit a Helix work item named
-`SOS_win-x64_Release-Packaged-Net10`. The Packaged layout initially covers only
-Windows x64 Release/.NET 10; it does not add Framework shards. Existing Bin jobs
-and publication dependencies are unchanged.
+Windows x64 Release build. Both paths submit one Packaged work item per
+`RuntimeTestVersions` entry (currently .NET 8, 9, 10, and 11), plus a Framework
+work item. For example, `SOS_win-x64_Release-Packaged-Net11` runs Core and
+SingleFile debuggees for .NET 11, and
+`SOS_win-x64_Release-Packaged-Framework` runs desktop Framework coverage once.
+The opt-in local runner executes the same runtime and Framework shards,
+continuing through all shards before reporting any failures. Packaged validation
+currently supports Windows x64; its Helix jobs use Release builds. Existing Bin
+jobs and publication dependencies are unchanged.
 
 `-PrepareOnly` installs the packages without running tests, for use by
 the Helix submission step. The prepared `tools` and `sos` closures are copied into
@@ -144,7 +150,7 @@ Helix identities include the tool installation layout, for example
 configuration, layout, and queue; report and log filenames also include the
 layout so Bin and Packaged runs remain distinguishable.
 
-For Bin layouts, Helix submits one work item per installed .NET runtime. Each runtime shard sets
+For both layouts, Helix submits one work item per installed .NET runtime. Each runtime shard sets
 `SOSHARNESS_ONLY_COREVERSIONS` and runs the Core and SingleFile flavors.
 Windows submits one additional Framework work item so desktop Framework
 coverage runs once rather than being repeated in every runtime shard. Dump

@@ -5,7 +5,7 @@
 
 <#
 .SYNOPSIS
-Prepares a NuGet-installed SOS layout and optionally runs its Windows x64 smoke shard locally.
+Prepares a NuGet-installed SOS layout and optionally runs its full Windows x64 test matrix locally.
 .NOTES
 Requires prebuilt Release (or Debug) harnesses and debuggees, and eng/InstallRuntimes.proj runtimes.
 The staged payload excludes Bin-layout tools and disallows on-demand builds.
@@ -28,7 +28,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 if (!$IsWindows -or [Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -ne 'X64') {
-    throw 'The packaged SOS smoke leg currently supports Windows x64 only.'
+    throw 'The packaged SOS tests currently support Windows x64 only.'
 }
 
 $repo = Split-Path $PSScriptRoot
@@ -91,8 +91,27 @@ try {
         -PackageDirectory $packages -PackageVersion $version -OutputDirectory $layout -DotNet $dotnet
 
     if (!$PrepareOnly) {
+        $project = Join-Path $repo 'src\tests\SOS.Tests\SOS.Tests.csproj'
+        $runtimeMetadata = & $dotnet msbuild $project -nologo "-p:Configuration=$Configuration" -getItem:RuntimeTestVersions
+        if ($LASTEXITCODE -ne 0) {
+            throw "Reading the SOS runtime matrix failed (exit $LASTEXITCODE)."
+        }
+        $runtimeVersions = @(($runtimeMetadata | ConvertFrom-Json).Items.RuntimeTestVersions)
+        if ($runtimeVersions.Count -eq 0) {
+            throw 'RuntimeTestVersions must contain at least one runtime for packaged SOS testing.'
+        }
+        $shards = @(
+            foreach ($runtime in $runtimeVersions) {
+                if ($runtime.TargetFramework -notmatch '^net\d+\.0$') {
+                    throw "Invalid runtime TargetFramework '$($runtime.TargetFramework)' for packaged SOS testing."
+                }
+                $runtime.TargetFramework.Replace('net', 'Net').Replace('.0', '')
+            }
+            'Framework'
+        )
+
         $payload = Join-Path $root 'payloads\Packaged'
-        & $dotnet msbuild (Join-Path $repo 'src\tests\SOS.Tests\SOS.Tests.csproj') -nologo -restore `
+        & $dotnet msbuild $project -nologo -restore `
             -t:StageSOSHelixPayload "-p:Configuration=$Configuration" -p:TargetArch=x64 -p:TargetRid=win-x64 `
             -p:SOSTestToolLayout=Packaged "-p:SOSTestToolRoot=$layout" "-p:SOSHelixPayloadDir=$payload"
         if ($LASTEXITCODE -ne 0) {
@@ -103,10 +122,16 @@ try {
         New-Item -ItemType Directory -Path $results | Out-Null
         $env:HELIX_WORKITEM_ROOT = $payload
         $env:HELIX_WORKITEM_UPLOAD_ROOT = $results
-        $identity = "SOS_win-x64_$Configuration-Packaged-Net10"
-        & (Join-Path $payload 'runtests.cmd') --helix-work-item $identity
-        if ($LASTEXITCODE -ne 0) {
-            throw "Packaged SOS smoke tests failed: $identity (exit $LASTEXITCODE). Results: '$results'."
+        $failures = @()
+        foreach ($shard in $shards) {
+            $identity = "SOS_win-x64_$Configuration-Packaged-$shard"
+            & (Join-Path $payload 'runtests.cmd') --helix-work-item $identity
+            if ($LASTEXITCODE -ne 0) {
+                $failures += "$identity (exit $LASTEXITCODE)"
+            }
+        }
+        if ($failures.Count -ne 0) {
+            throw "Packaged SOS tests failed: $($failures -join ', '). Results: '$results'."
         }
     }
 } finally {

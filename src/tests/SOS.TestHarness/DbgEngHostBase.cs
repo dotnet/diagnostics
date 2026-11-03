@@ -121,11 +121,15 @@ public abstract class DbgEngHostBase : IDebuggerHost
         }
         if (!string.IsNullOrEmpty(dacDir))
         {
-            RunCore($"!setclrpath {dacDir}");
+            RunCore(ClrPathCommand(dacDir));
         }
 
         _sosLoaded = true;
     }
+
+    // Native SOS recognizes single quotes, not double quotes, around arguments containing spaces.
+    internal static string ClrPathCommand(string directory) =>
+        $"!setclrpath '{directory}'";
 
     /// <summary>
     /// Remove any SOS cdb auto-loaded, looping over .chain until none remain. Throws if an SOS is

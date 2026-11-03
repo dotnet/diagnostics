@@ -221,7 +221,7 @@ public static class SnapshotStore
         };
         psi.Environment["DOTNET_DbgEnableMiniDump"] = "1";
         psi.Environment["DOTNET_DbgMiniDumpType"] = CreatedumpType(dumpKind);
-        psi.Environment["DOTNET_DbgMiniDumpName"] = dumpPath;
+        psi.Environment["DOTNET_DbgMiniDumpName"] = CreatedumpName(dumpPath, OperatingSystem.IsWindows());
         psi.Environment["DOTNET_CreateDumpDiagnostics"] = "1";
         ApplyRuntimeRoot(psi, flavor);
         ApplyMacOsDumpConfig(psi);
@@ -343,6 +343,10 @@ public static class SnapshotStore
     internal static string CreatedumpType(DumpKind dumpKind) =>
         dumpKind == DumpKind.Full ? "4" :
         dumpKind == DumpKind.Mini ? "1" : "2";
+
+    // Windows CoreCLR inserts this value verbatim into createdump's command line.
+    internal static string CreatedumpName(string dumpPath, bool isWindows) =>
+        isWindows && dumpPath.Contains(' ') ? $"\"{dumpPath}\"" : dumpPath;
 
     /// <summary>
     /// The <c>dotnet-dump collect --type</c> value for a dump kind. On Unix, the matching DAC staged beside
