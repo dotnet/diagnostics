@@ -134,7 +134,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 }
             }
 
-            if (entryPointBase.HasValue && !string.IsNullOrEmpty(entryPointFileName))
+            if (dataReader.TargetPlatform != OSPlatform.Windows)
+            {
+                // Unix module ordering does not identify the executable reliably. Follow ClrMD:
+                // use createdump's runtime hint when supported, otherwise probe every module.
+                bool hasDiagnosticRuntime = SpecialDiagInfo.TryGetRuntimeBaseAddress(dataReader, out ulong runtimeBase) &&
+                    modules.Any(module => module.ImageBase == runtimeBase && HasRuntimeExport(module));
+                foreach (ModuleInfo module in modules)
+                {
+                    if (hasDiagnosticRuntime ? module.ImageBase == runtimeBase : HasRuntimeExport(module))
+                    {
+                        candidates.Add(module.ImageBase);
+                    }
+                }
+            }
+            else if (entryPointBase.HasValue && !string.IsNullOrEmpty(entryPointFileName))
             {
                 string entryPointName = GetFileNameWithoutExtension(entryPointFileName);
                 foreach (ModuleInfo module in modules)
