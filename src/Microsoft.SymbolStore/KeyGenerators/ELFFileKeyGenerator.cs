@@ -97,6 +97,12 @@ namespace Microsoft.SymbolStore.KeyGenerators
                         Tracer.Verbose("ELF file '{0}': cannot establish a loadable image for OS-specific ELF type 0x{1:x4}; module key generation is unsupported.",
                             _path, (ushort)_elfFile.Header.Type);
                     }
+                    if (!hasLoadableImage && !hasDebugInfo)
+                    {
+                        Tracer.Verbose(
+                            "ELF file '{0}': neither loadable image contents nor supported debug information was detected; no module or symbol keys will be generated.",
+                            _path);
+                    }
 
                     string symbolFileName = GetSymbolFileName();
                     SymbolStoreKey[] keys = GetKeys(flags, _path, buildId, hasLoadableImage, hasDebugInfo, symbolFileName).ToArray();
@@ -155,7 +161,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
         /// <param name="hasLoadableImage">whether the file contains a valid loadable image</param>
         /// <param name="hasDebugInfo">whether the file contains debug information</param>
         /// <param name="symbolFileName">name of symbol file (from .gnu_debuglink) or null</param>
-        public static IEnumerable<SymbolStoreKey> GetKeys(KeyTypeFlags flags, string path, byte[] buildId,
+        private static IEnumerable<SymbolStoreKey> GetKeys(KeyTypeFlags flags, string path, byte[] buildId,
             bool hasLoadableImage, bool hasDebugInfo, string symbolFileName)
         {
             Debug.Assert(path != null);
@@ -166,8 +172,6 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 {
                     yield break;
                 }
-                bool debugCompanion = !hasLoadableImage && hasDebugInfo;
-
                 if ((flags & KeyTypeFlags.IdentityKey) != 0)
                 {
                     if (hasLoadableImage)
@@ -180,7 +184,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                         yield return BuildKey(path, SymbolPrefix, buildId, "_.debug");
                     }
                 }
-                if (!debugCompanion)
+                if (hasLoadableImage)
                 {
                     // This is a workaround for 5.0 where the ELF file type of dotnet isn't Executable but
                     // Shared. It doesn't work for self-contained apps (apphost renamed to host program).

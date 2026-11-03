@@ -728,19 +728,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             string symbolFileName = (flags & KeyTypeFlags.SymbolKey) != 0 ? module.GetSymbolFileName() : null;
             SymbolStoreKey fileKey = ELFFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(),
-                hasLoadableImage: true, hasDebugInfo: false, symbolFileName).SingleOrDefault();
+                symbolFile: false, symbolFileName).SingleOrDefault();
             if (fileKey is null)
             {
                 Trace.TraceWarning($"DownloadELF: no index generated for module {module.FileName} ");
                 return null;
             }
 
-            string downloadFilePath = DownloadELF(fileKey, validateDownloadedFile: false);
-            return downloadFilePath;
-        }
-
-        private string DownloadELF(SymbolStoreKey fileKey, bool validateDownloadedFile)
-        {
             // Check if the file is local and the key matches the module
             string fileName = fileKey.FullPathName;
             if (File.Exists(fileName) && MatchesELFKey(fileName, fileKey))
@@ -753,11 +747,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string downloadFilePath = DownloadFile(fileKey);
             if (!string.IsNullOrEmpty(downloadFilePath))
             {
-                if (validateDownloadedFile && !MatchesELFKey(downloadFilePath, fileKey))
-                {
-                    Trace.TraceWarning("DownloadELF: file {0} does not match {1}", downloadFilePath, fileKey.Index);
-                    return null;
-                }
                 Trace.TraceInformation("DownloadELF: downloaded {0}", downloadFilePath);
                 return downloadFilePath;
             }

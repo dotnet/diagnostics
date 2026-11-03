@@ -299,7 +299,7 @@ namespace Microsoft.SymbolStore.Tests
             Assert.Equal(count, keys.Length);
             Assert.Equal(ELFFileKeyGenerator.GetKeys(flags, file.FileName,
                 Enumerable.Range(1, 20).Select(value => (byte)value).ToArray(),
-                hasLoadableImage: true, hasDebugInfo: true, symbolFileName: null)
+                symbolFile: false, symbolFileName: null)
                 .Select(key => key.Index), keys);
         }
 

@@ -330,7 +330,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         if (platform == OSPlatform.Linux)
                         {
                             keys = ELFFileKeyGenerator.GetKeys(flags, fileName ?? "libcoreclr.so", buildId,
-                                hasLoadableImage: true, hasDebugInfo: false, symbolFileName: null);
+                                symbolFile: false, symbolFileName: null);
                         }
                         else if (platform == OSPlatform.OSX)
                         {

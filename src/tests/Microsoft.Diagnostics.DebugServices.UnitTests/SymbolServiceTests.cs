@@ -58,7 +58,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 if (cached)
                 {
                     SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.SymbolKey, fileName,
-                        actualBuildId, hasLoadableImage: true, hasDebugInfo: false, module.GetSymbolFileName()).Single();
+                        actualBuildId, symbolFile: false, module.GetSymbolFileName()).Single();
                     expectedPath = Path.Combine(directory, key.Index);
                     Directory.CreateDirectory(Path.GetDirectoryName(expectedPath));
                     symbolService.AddCachePath(directory);
@@ -94,7 +94,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 if (cached)
                 {
                     SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.SymbolKey, module.FileName,
-                        elf.BuildID, hasLoadableImage: true, hasDebugInfo: false, symbolFileName: targetName).Single();
+                        elf.BuildID, symbolFile: false, symbolFileName: targetName).Single();
                     expectedPath = Path.Combine(directory, key.Index);
                     Directory.CreateDirectory(Path.GetDirectoryName(expectedPath));
                     symbolService.AddCachePath(directory);
@@ -181,7 +181,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 if (cached)
                 {
                     SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, fileName,
-                        elf.BuildID, hasLoadableImage: true, hasDebugInfo: false, symbolFileName: null).Single();
+                        elf.BuildID, symbolFile: false, symbolFileName: null).Single();
                     modulePath = Path.Combine(directory, moduleKey.Index);
                     Directory.CreateDirectory(Path.GetDirectoryName(modulePath));
                     symbolService.AddCachePath(directory);
@@ -216,7 +216,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 if (cached)
                 {
                     SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, fileName,
-                        elf.BuildID, hasLoadableImage: true, hasDebugInfo: false, symbolFileName: null).Single();
+                        elf.BuildID, symbolFile: false, symbolFileName: null).Single();
                     expectedPath = Path.Combine(directory, key.Index);
                     Directory.CreateDirectory(Path.GetDirectoryName(expectedPath));
                     symbolService.AddCachePath(directory);
@@ -241,9 +241,9 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
                 TestModule module = new("module.full", elf.BuildID);
                 SymbolStoreKey symbolKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.SymbolKey, module.FileName,
-                    elf.BuildID, hasLoadableImage: true, hasDebugInfo: false, module.GetSymbolFileName()).Single();
+                    elf.BuildID, symbolFile: false, module.GetSymbolFileName()).Single();
                 SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.GetSymbolFileName(),
-                    elf.BuildID, hasLoadableImage: true, hasDebugInfo: false, symbolFileName: null).Single();
+                    elf.BuildID, symbolFile: false, symbolFileName: null).Single();
                 foreach (SymbolStoreKey key in new[] { symbolKey, moduleKey })
                 {
                     string fileName = Path.Combine(directory, key.Index);
