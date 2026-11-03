@@ -4509,11 +4509,19 @@ CachedString Output::BuildManagedVarValue(__in_z LPCWSTR expansionName, ULONG fr
 
     if (IsDMLEnabled())
     {
+#ifdef FEATURE_PAL
+        DiagnosticsSprintf_s(ret, ret.GetStrLen(), DMLFormats[type], expansionName, frame, simpleName);
+#else
         sprintf_s(ret, ret.GetStrLen(), DMLFormats[type], expansionName, frame, simpleName);
+#endif
     }
     else
     {
+#ifdef FEATURE_PAL
+        DiagnosticsSprintf_s(ret, ret.GetStrLen(), "%S", simpleName);
+#else
         sprintf_s(ret, ret.GetStrLen(), "%S", simpleName);
+#endif
     }
 
     return ret;
