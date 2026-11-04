@@ -67,9 +67,10 @@ public sealed class CodeInfoTests
         string transitionMarker = IntPtr.Size == 4 ? "becoming live" : "interruptible";
         Assert.Contains(gc.Transitions, t => t.Contains(transitionMarker, StringComparison.OrdinalIgnoreCase));
 
-        // gcinfo accepts an IP and reports the same entry point.
+        // gcinfo accepts an IP and reports the same entry point and GC info address.
         GcInfoResult byIp = target.GcInfo(atHeap.JittedCodeAddress!.Value);
         Assert.Equal(gc.EntryPoint, byIp.EntryPoint);
+        Assert.Equal(gc.GcInfoAddress, byIp.GcInfoAddress);
     }
 
     private static EEMatch Method(Target target, Flavor flavor, string name)
