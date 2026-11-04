@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.SymbolStore;
@@ -30,14 +31,21 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         private string _dacFilePath;
         private bool _verifySignature;
         private string _dbiFilePath;
+        private Action _releaseDataTarget;
 
         protected readonly ServiceContainer _serviceContainer;
 
         public Runtime(IServiceProvider services, int id, ClrInfo clrInfo)
+            : this(services, id, clrInfo, clrInfo is null ? null : clrInfo.DataTarget.Dispose)
+        {
+        }
+
+        internal Runtime(IServiceProvider services, int id, ClrInfo clrInfo, Action releaseDataTarget)
         {
             Target = services.GetService<ITarget>() ?? throw new DiagnosticsException("Dump or live session target required");
             Id = id;
             _clrInfo = clrInfo ?? throw new ArgumentNullException(nameof(clrInfo));
+            _releaseDataTarget = releaseDataTarget ?? throw new ArgumentNullException(nameof(releaseDataTarget));
             _settingsService = services.GetService<ISettingsService>() ?? throw new ArgumentException("ISettingsService required");
             _symbolService = services.GetService<ISymbolService>() ?? throw new ArgumentException("ISymbolService required");
 
@@ -55,14 +63,19 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         void IDisposable.Dispose()
         {
-            // The ClrRuntime instance is disposed below in DisposeServices().
-            _clrInfo.DataTarget.Dispose();
-            _clrRuntime = null;
-            _serviceContainer.RemoveService(typeof(IRuntime));
-            _serviceContainer.DisposeServices();
-            _clrDataProcess?.Dispose();
-            _clrDataProcess = null;
-            _cdacActivationResult = null;
+            try
+            {
+                _clrRuntime = null;
+                _serviceContainer.RemoveService(typeof(IRuntime));
+                _serviceContainer.DisposeServices();
+                _clrDataProcess?.Dispose();
+                _clrDataProcess = null;
+                _cdacActivationResult = null;
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _releaseDataTarget, null)?.Invoke();
+            }
         }
 
         #region IRuntime

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
@@ -35,13 +36,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         /// <param name="flags">Enumeration control flags</param>
         public IEnumerable<IRuntime> EnumerateRuntimes(int startingRuntimeId, RuntimeEnumerationFlags flags)
         {
-            // The ClrInfo and DataTarget instances are disposed when Runtime instance is disposed. Runtime instances are
-            // not flushed when the Target/RuntimeService is flushed; they are all disposed and the list cleared. They are
-            // all re-created the next time the IRuntime or ClrRuntime instance is queried.
             ISettingsService settingsService = _services.GetService<ISettingsService>();
             bool verifyDac = settingsService?.DacSignatureVerificationEnabled ?? true;
             IDataReader dataReader = _services.GetService<IDataReader>();
-            IModule entryPoint = _services.GetService<IModuleService>()?.EntryPointModule;
+            IModule entryPoint = dataReader.TargetPlatform == OSPlatform.Windows
+                ? _services.GetService<IModuleService>()?.EntryPointModule
+                : null;
             IReadOnlyList<ModuleInfo> runtimeModules = EnumerateRuntimeModules(
                 dataReader,
                 flags,
@@ -58,16 +58,13 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             string normalizedTrustedCDacPath = string.IsNullOrEmpty(trustedCDacPath) ? null : Path.GetFullPath(trustedCDacPath);
             StringComparison pathComparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
-            DataTargetOptions CreateDataTargetOptions(
-                bool skipRuntimeEnumeration,
-                bool forceCompleteRuntimeEnumeration) => new()
+            DataTargetOptions CreateDataTargetOptions(bool skipRuntimeEnumeration) => new()
             {
-                ForceCompleteRuntimeEnumeration = forceCompleteRuntimeEnumeration,
+                ForceCompleteRuntimeEnumeration = !skipRuntimeEnumeration,
                 SkipRuntimeEnumeration = skipRuntimeEnumeration,
                 VerifyDacOnWindows = verifyDac,
                 // Takes priority over VerifyDacOnWindows: skip verification only for the exact bundled cDAC.
-                DacSignatureVerificationOverride = (dacFilePath) =>
-                {
+                DacSignatureVerificationOverride = (dacFilePath) => {
                     if (normalizedTrustedCDacPath is not null
                         && !string.IsNullOrEmpty(dacFilePath)
                         && string.Equals(Path.GetFullPath(dacFilePath), normalizedTrustedCDacPath, pathComparison))
@@ -79,32 +76,39 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 SymbolProvider = _services.GetService<IClrSymbolProvider>(),
             };
 
-            List<ClrInfo> runtimes;
-            using (DataTarget discoveryTarget = new(
-                new RuntimeModuleDataReader(dataReader, runtimeModules),
-                CreateDataTargetOptions(
-                    skipRuntimeEnumeration: false,
-                    forceCompleteRuntimeEnumeration: true)))
-            {
-                List<ClrInfo> discoveredRuntimes = discoveryTarget.ClrVersions.ToList();
-                runtimes = discoveredRuntimes
-                    .Select(clrInfo => CloneClrInfo(
-                        clrInfo,
-                        // ClrMD's legacy DAC loader currently requires DataTarget.ClrVersions to be
-                        // populated. Keep enumeration enabled on the full-reader target until ClrMD
-                        // supports registering host-discovered metadata without a loaded interface.
-                        new DataTarget(
-                            dataReader,
-                            CreateDataTargetOptions(
-                                skipRuntimeEnumeration: false,
-                                forceCompleteRuntimeEnumeration:
-                                    (flags & RuntimeEnumerationFlags.All) != 0))))
-                    .ToList();
-            }
+            DataTarget dataTarget = new(dataReader, CreateDataTargetOptions(skipRuntimeEnumeration: true));
+            // The enumerator and each yielded runtime own a reference to the shared, complete target.
+            int referenceCount = 1;
+            Action releaseDataTarget = () => {
+                if (Interlocked.Decrement(ref referenceCount) == 0)
+                {
+                    dataTarget.Dispose();
+                }
+            };
 
-            for (int i = 0; i < runtimes.Count; i++)
+            try
             {
-                yield return new Runtime(_services, startingRuntimeId + i, runtimes[i]);
+                using (DataTarget discoveryTarget = new(
+                    new RuntimeModuleDataReader(dataReader, runtimeModules),
+                    CreateDataTargetOptions(skipRuntimeEnumeration: false)))
+                {
+                    foreach (ClrInfo clrInfo in discoveryTarget.ClrVersions)
+                    {
+                        dataTarget.AddRuntime(CloneClrInfo(clrInfo, dataTarget));
+                    }
+                }
+
+                int runtimeId = startingRuntimeId;
+                foreach (ClrInfo clrInfo in dataTarget.ClrVersions)
+                {
+                    Runtime runtime = new(_services, runtimeId++, clrInfo, releaseDataTarget);
+                    Interlocked.Increment(ref referenceCount);
+                    yield return runtime;
+                }
+            }
+            finally
+            {
+                releaseDataTarget();
             }
         }
 
