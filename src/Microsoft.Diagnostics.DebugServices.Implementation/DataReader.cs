@@ -118,7 +118,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             private IResourceNode _resourceRoot;
 
             public DataReaderModule(IDataReader reader, IModule module)
-                : base(module.ImageBase, module.FileName)
+                : base(module.ImageBase, GetFilePathForClrMd(module.FileName))
             {
                 _reader = reader;
                 _module = module;
@@ -179,7 +179,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                 return default;
                             }
                         }
-                        return new PdbInfo(pdbFileInfo.Path, pdbFileInfo.Guid, pdbFileInfo.Revision);
+                        return new PdbInfo(GetFilePathForClrMd(pdbFileInfo.Path), pdbFileInfo.Guid, pdbFileInfo.Revision);
                     }
                     catch (DiagnosticsException ex)
                     {
@@ -205,6 +205,11 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             public override IResourceNode ResourceRoot => _resourceRoot ??= ModuleInfo.TryCreateResourceRoot(_reader, _module.ImageBase, _module.ImageSize, _module.IsFileLayout.GetValueOrDefault(false));
+        }
+
+        internal static string GetFilePathForClrMd(string filePath)
+        {
+            return PathUtilities.IsSafeAbsoluteLocalPath(filePath) ? filePath : PathUtilities.GetFileName(filePath);
         }
     }
 }

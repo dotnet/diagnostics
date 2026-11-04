@@ -184,17 +184,26 @@ namespace SOS.Hosting
             IntPtr self,
             string runtimeModuleDirectory)
         {
+            if (runtimeModuleDirectory is not null && !PathUtilities.IsSafeAbsoluteLocalPath(runtimeModuleDirectory))
+            {
+                Trace.TraceError($"Ignoring non-local runtime module directory: {runtimeModuleDirectory}");
+                return;
+            }
             _runtime.RuntimeModuleDirectory = runtimeModuleDirectory;
         }
 
         private string GetRuntimeDirectory(
             IntPtr self)
         {
-            if (_runtime.RuntimeModuleDirectory is not null)
+            if (PathUtilities.IsSafeAbsoluteLocalPath(_runtime.RuntimeModuleDirectory))
             {
                 return _runtime.RuntimeModuleDirectory;
             }
-            return Path.GetDirectoryName(_runtime.RuntimeModule.FileName);
+            if (PathUtilities.IsSafeAbsoluteLocalPath(_runtime.RuntimeModule.FileName))
+            {
+                return Path.GetDirectoryName(_runtime.RuntimeModule.FileName);
+            }
+            return null;
         }
 
         private int GetClrDataProcess(
@@ -409,9 +418,8 @@ namespace SOS.Hosting
             corDebugProcess = IntPtr.Zero;
             string dacFilePath = _runtime.GetDacFilePath(out bool verifySignature);
             string dbiFilePath = _runtime.GetDbiFilePath();
-            if (string.IsNullOrEmpty(dacFilePath) || string.IsNullOrEmpty(dbiFilePath))
+            if (!IsLoadableModulePath(dacFilePath, "DAC") || !IsLoadableModulePath(dbiFilePath, "DBI"))
             {
-                Trace.TraceError($"Could not find matching Desktop DAC or DBI for this runtime: {_runtime.RuntimeModule.FileName}");
                 return HResult.E_NOINTERFACE;
             }
 
@@ -517,9 +525,8 @@ namespace SOS.Hosting
             if (_dacHandle == IntPtr.Zero)
             {
                 string dacFilePath = _runtime.GetDacFilePath(out bool verifySignature);
-                if (dacFilePath == null)
+                if (!IsLoadableModulePath(dacFilePath, "DAC"))
                 {
-                    Trace.TraceError($"Could not find matching DAC for this runtime: {_runtime.RuntimeModule.FileName}");
                     return IntPtr.Zero;
                 }
                 _dacHandle = LoadDacLibrary(dacFilePath, verifySignature);
@@ -544,6 +551,12 @@ namespace SOS.Hosting
 
         internal static IntPtr LoadLibraryWithSignatureVerification(string libraryPath, bool verifySignature)
         {
+            if (!PathUtilities.IsSafeAbsoluteLocalPath(libraryPath))
+            {
+                Trace.TraceError($"Can't load library from path '{libraryPath}' because it is not local");
+                return IntPtr.Zero;
+            }
+
             IntPtr libraryHandle = IntPtr.Zero;
             IDisposable fileLock = null;
             try
@@ -574,6 +587,21 @@ namespace SOS.Hosting
             }
             Debug.Assert(libraryHandle != IntPtr.Zero);
             return libraryHandle;
+        }
+
+        private bool IsLoadableModulePath(string modulePath, string moduleName)
+        {
+            if (string.IsNullOrEmpty(modulePath))
+            {
+                Trace.TraceError($"Could not find matching {moduleName} for this runtime: {_runtime.RuntimeModule.FileName}");
+                return false;
+            }
+            if (!PathUtilities.IsSafeAbsoluteLocalPath(modulePath))
+            {
+                Trace.TraceError($"Can't load {moduleName} from path '{modulePath}' because it is not local for this runtime: {_runtime.RuntimeModule.FileName}");
+                return false;
+            }
+            return true;
         }
 
         #region IRuntime delegates
