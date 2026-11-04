@@ -12,14 +12,14 @@ using Microsoft.Diagnostics.Runtime;
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
     /// <summary>
-    /// ClrMD runtime provider implementation
+    /// Converts runtime descriptions into IRuntime instances using ClrMD.
     /// </summary>
     [ProviderExport(Type = typeof(IRuntimeProvider))]
-    public class RuntimeProvider : IRuntimeProvider
+    public class DescriptionBasedRuntimeProvider : IRuntimeProvider
     {
         private readonly IServiceProvider _services;
 
-        public RuntimeProvider(IServiceProvider services)
+        public DescriptionBasedRuntimeProvider(IServiceProvider services)
         {
             _services = services;
         }

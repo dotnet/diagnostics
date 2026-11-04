@@ -57,7 +57,7 @@ public class RuntimeProviderTests
         RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x10000, "/app/singlefile", needsSymbols: true);
         target.AddSingleFileRuntime(app, symbolOnly: true);
 
-        RuntimeProvider provider = new(target.Services);
+        DescriptionBasedRuntimeProvider provider = new(target.Services);
         Assert.Empty(provider.EnumerateRuntimeDescriptions([new DotNetRuntimeDiscoveryProvider(target.Services)], RuntimeEnumerationFlags.All));
         Assert.Empty(target.ExportProbes);
         Assert.Empty(target.Symbols.Requests);
@@ -75,7 +75,7 @@ public class RuntimeProviderTests
     {
         using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64);
         target.AddModule(0x10000, @"C:\app\sample.exe", entryPoint: true, needsSymbols: true);
-        RuntimeProvider provider = new(target.Services);
+        DescriptionBasedRuntimeProvider provider = new(target.Services);
         Assert.Empty(provider.EnumerateRuntimeDescriptions([], RuntimeEnumerationFlags.All));
         Assert.Empty(target.ExportProbes);
         target.Symbols.Verify();
