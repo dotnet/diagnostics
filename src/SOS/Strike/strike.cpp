@@ -5072,7 +5072,7 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
 #ifndef FEATURE_PAL
         sprintf_s(buffer, ARRAY_SIZE(buffer), "bp %p", SOS_PTR(addr));
 #else
-        DiagnosticsSprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%p%s", SOS_PTR(addr), LldbJitBreakpointOptions());
+        sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%llx%s", static_cast<unsigned long long>(addr), LldbJitBreakpointOptions());
 #endif
         ExtOut("Setting breakpoint: %s [%S]\n", buffer, wszNameBuffer);
         g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
@@ -5834,7 +5834,8 @@ public:
 #ifndef FEATURE_PAL
                 sprintf_s(buffer, ARRAY_SIZE(buffer), "bp /1 %p", SOS_PTR(startAddr+catcherNativeOffset));
 #else
-                DiagnosticsSprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%p%s", SOS_PTR(startAddr+catcherNativeOffset), LldbJitBreakpointOptions());
+                sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%llx%s",
+                    static_cast<unsigned long long>(startAddr + catcherNativeOffset), LldbJitBreakpointOptions());
 #endif
                 g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
             }

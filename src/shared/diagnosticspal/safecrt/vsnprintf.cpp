@@ -4,7 +4,6 @@
 #include <errno.h>
 #include <limits.h>
 #include <stddef.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include "internal_securecrt.h"
@@ -76,18 +75,5 @@ extern "C" int __cdecl DiagnosticsVsnprintf_s(
     }
 
     _SECURECRT__FILL_STRING(string, sizeInBytes, result + 1);
-    return result;
-}
-
-extern "C" int __cdecl DiagnosticsSprintf_s(
-    char* string,
-    size_t sizeInBytes,
-    const char* format,
-    ...)
-{
-    va_list args;
-    va_start(args, format);
-    int result = DiagnosticsVsnprintf_s(string, sizeInBytes, sizeInBytes, format, args);
-    va_end(args);
     return result;
 }
