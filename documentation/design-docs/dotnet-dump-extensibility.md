@@ -221,7 +221,33 @@ See [ISymbolService.cs](../../src/Microsoft.Diagnostics.DebugServices/ISymbolSer
 
 This service provides the runtime instances in the target process. The IRuntimeService gathers all the runtimes from the possibility multiple IRuntimeProvider's in the system. There is a IRuntimeProvider for the runtimes found with CLRMD and will be one for the Native AOT snapshot parser. The IRuntime abstracts the runtime providing the ClrInfo and ClrRuntime instances from CLRMD and snapshot parser instance for Native AOT.
 
+SOS discovers runtime descriptions through `IRuntimeDescriptionProvider` implementations registered in its service manager. This contract uses SOS types, not ClrMD types: each `RuntimeDescription` contains a module, runtime type, version, identities, contract-descriptor address, and debugging-library metadata captured during discovery. `DotNetRuntimeDiscoveryProvider` recognizes normal CoreCLR/Desktop modules, while `SingleFileRuntimeDiscoveryProvider` recognizes `DotNetRuntimeInfo` exports. They share `RuntimeDescriptionBuilder` to preserve ClrMD's metadata rules without constructing `ClrInfo`.
+
+Extensions can export a public `IRuntimeDescriptionProvider` with `[ProviderExport(Type = typeof(IRuntimeDescriptionProvider))]`, or hosts can register a factory through `Host.ServiceManager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), services => new CustomRuntimeDiscoveryProvider(...))` before `CreateServiceContainer`. Factories receive target-scoped services and are invoked once per uncached enumeration. Providers expose `Priority` and `TryDescribeRuntime(IModule, out RuntimeDescription)`. Higher priorities run first; equal priorities favor later registration. The first successful recognizer wins for that module, so lower-priority providers do not repeat export or symbol lookups. The normal .NET provider has priority 0 and the single-file provider has priority -1.
+
+Extensions that previously registered discovery only with ClrMD must register the SOS discovery contract instead; automatic ClrMD discovery is disabled.
+
+`RuntimeProvider` converts the selected descriptions into `ClrInfo` objects using `ClrInfoConverter` and registers them with `AddRuntime` on one shared, full-reader `DataTarget` with `SkipRuntimeEnumeration` enabled. Conversion only maps captured metadata; it does not probe module exports or repeat discovery. ClrMD still resolves and loads the DAC lazily.
+
+`RuntimeProvider` owns module order and stopping rules, independently of provider priority. It tries the crash-info runtime base first, then a createdump runtime hint on Unix or the entry-point module on Windows, followed by remaining modules in base-address order. Each module is visited at most once. Default discovery stops at the first recognized runtime module; `runtimes --all` retains the same order but continues through every module. There is no separate preferred-module pass or CoreCLR-specific candidate filter: a NativeAOT provider can recognize any candidate and supply its own cDAC metadata. Without a usable hint, fallback recognition can load symbols.
+
+The enumerator and each yielded runtime hold a reference to the shared target. Enumeration releases its reference in `finally`; each runtime releases its reference after disposing its services. The target is disposed only after the last reference is released.
+
 See [IRuntimeService.cs](../../src/Microsoft.Diagnostics.DebugServices/IRuntimeService.cs), [IRuntimeProvider](../../src/Microsoft.Diagnostics.DebugServices/IRuntimeProvider.cs), [IRuntime.cs](../../src/Microsoft.Diagnostics.DebugServices/IRuntime.cs) and [runtime.h](../../src/SOS/inc/runtime.h) for details.
+
+#### Offline runtime-discovery tests
+
+`RuntimeDiscoveryTests` in `Microsoft.Diagnostics.DebugServices.UnitTests` exercises the real SOS service wiring, `DataReader`, runtime provider, and host-owned metadata construction against synthetic target modules and memory. The target OS and architecture are independent of the test host: cases cover Windows x86/x64/arm64, Linux arm/x64/arm64, and macOS x64/arm64. Parity cases compare registered metadata with ClrMD's built-in discovery and verify that reading registered runtimes does not trigger additional export probes.
+
+`RuntimeDiscoveryTestTarget.Symbols.ExpectSymbolFile` specifies the exact module request order and returned symbol-file paths (or misses); `Verify` checks that all expected requests occurred. Unexpected symbol, module-image, or arbitrary file downloads fail the test. Export probes are recorded separately. The tests cover default and exhaustive discovery, provider priority and first-success recognition, single-file metadata, crash/diagnostic hints and fallback, and runtime-cache flushes. The missing-header cases explicitly capture fallback's unrelated-module symbol requests before the first recognized runtime, rather than treating default discovery as always cheap.
+
+Debugger symbol loading and its per-module cache are simulated; no HTTP requests, real symbol parsing, DAC loading, or native execution occur. These are discovery-policy tests, not replacements for debugger integration tests.
+
+After building the test project, run this suite with:
+
+```powershell
+dotnet artifacts\bin\Microsoft.Diagnostics.DebugServices.UnitTests\Debug\net10.0\Microsoft.Diagnostics.DebugServices.UnitTests.dll --filter-class Microsoft.Diagnostics.DebugServices.UnitTests.RuntimeDiscoveryTests --no-progress
+```
 
 ### SOSHost/SOSLibrary
 
@@ -328,4 +354,3 @@ TBD
 
 ```C#
 ```
-

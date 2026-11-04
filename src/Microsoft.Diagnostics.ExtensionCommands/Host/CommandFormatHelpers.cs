@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
+using RuntimeInfo = Microsoft.Diagnostics.DebugServices.Implementation.RuntimeInfo;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -155,7 +156,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Console().Write($"{indent}{RuntimeInfo.RUNTIME_INFO_SYMBOL}: {infoAddress:X16}");
                 if (RuntimeInfo.TryRead(command.Services, infoAddress, out RuntimeInfo info))
                 {
-                    Console().WriteLine(info.IsValid ? "" : " <INVALID>");
+                    bool validVersion = info.TryReadVersion(command.Services, infoAddress, out Version runtimeVersion);
+                    Console().WriteLine(info.IsValid && validVersion ? "" : " <INVALID>");
                     Console().WriteLine($"{indent}    Signature:            {info.Signature}");
                     Console().WriteLine($"{indent}    Version:              {info.Version}");
                     Console().WriteLine($"{indent}    RuntimeModuleIndex:   {info.RawRuntimeModuleIndex.ToHex()}");
@@ -173,7 +175,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         Console().WriteLine($"{indent}    DacBuildId:           {info.DacBuildId.ToHex()}");
                         Console().WriteLine($"{indent}    DbiBuildId:           {info.DbiBuildId.ToHex()}");
                     }
-                    Console().WriteLine($"{indent}    RuntimeVersion:       {info.RuntimeVersion?.ToString() ?? "<none>"}");
+                    Console().WriteLine($"{indent}    RuntimeVersion:       {runtimeVersion?.ToString() ?? "<none>"}");
                 }
                 else
                 {
