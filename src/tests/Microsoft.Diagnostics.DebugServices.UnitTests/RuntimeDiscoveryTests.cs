@@ -64,21 +64,16 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         [Theory]
         [MemberData(nameof(Targets))]
-        public void FallbackStopsAtFirstRuntimeWithinSymbolBudget(string platform, Architecture architecture)
+        public void HigherPriorityProviderFindsRuntimeWithoutProbingSymbols(string platform, Architecture architecture)
         {
             OSPlatform os = OSPlatform.Create(platform);
             using RuntimeDiscoveryTestTarget target = new(os, architecture);
             target.AddModule(0x10000, ApplicationName(os, "native"), needsSymbols: true);
             target.AddCoreRuntime(0x20000, diagnosticHeader: false);
             target.AddModule(0x30000, ApplicationName(os, "plugin"), needsSymbols: true);
-            ulong[] expectedRequests = [0x10000UL];
-            foreach (ulong moduleBase in expectedRequests)
-            {
-                target.Symbols.ExpectSymbolFile(moduleBase, result: null);
-            }
 
             Assert.Equal(0x20000UL, Assert.Single(target.Enumerate()).RuntimeModule.ImageBase);
-            Assert.Equal(expectedRequests, target.Symbols.Requests);
+            Assert.Empty(target.Symbols.Requests);
             target.Symbols.Verify();
         }
 
@@ -358,7 +353,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                                 RuntimeDebuggingLibraryKind.CDac, cdacPath, RuntimeInformation.ProcessArchitecture,
                                 OSPlatform.Windows, RuntimeDebuggingLibraryIndex.None, ImmutableArray<byte>.Empty)],
                         };
-                    });
+                    }, priority: 1);
                 }));
             target.AddCoreRuntime(0x20000);
             RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x30000,
@@ -395,7 +390,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64,
                 manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
                     new TestRuntimeDiscoveryProvider(module =>
-                        new RuntimeDescription(otherModule, RuntimeType.NativeAOT, new Version(1, 0)))));
+                        new RuntimeDescription(otherModule, RuntimeType.NativeAOT, new Version(1, 0)), priority: 1)));
             target.AddCoreRuntime(0x20000);
 
             DiagnosticsException exception = Assert.Throws<DiagnosticsException>(() => target.Enumerate());
@@ -427,12 +422,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
-        public void LaterProvidersReplaceMetadataForTheSameModule()
+        public void HigherPriorityProvidersReplaceMetadataForTheSameModule()
         {
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64,
                 manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
                     new TestRuntimeDiscoveryProvider(module =>
-                        new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 2, 3, 4)))));
+                        new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 2, 3, 4)), priority: 1)));
             target.AddCoreRuntime(0x20000);
 
             IRuntime runtime = Assert.Single(target.Enumerate());
@@ -457,7 +452,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                         return module.ImageBase == 0x20000
                             ? new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 0))
                             : null;
-                    })));
+                    }, priority: 1)));
             target.AddModule(0x10000, "/lib/unrelated", needsSymbols: true);
             target.AddModule(0x20000, "/app/nativeaot");
             target.AddDiagnosticHeader(0x20000);
@@ -484,7 +479,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             using RuntimeDiscoveryTestTarget target = new(os, architecture,
                 manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
                     new TestRuntimeDiscoveryProvider(module =>
-                        new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 2)))));
+                        new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 2)), priority: 1)));
             target.AddModule(0x20000, os == OSPlatform.Windows ? @"C:\plugins\custom.dll" : "/plugins/custom", needsSymbols: true);
             target.AddModule(0x30000, ApplicationName(os, "unrelated"), needsSymbols: true);
 
@@ -503,7 +498,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), services =>
                     new TestRuntimeDiscoveryProvider(_ =>
                         new RuntimeDescription(services.GetService<IModuleService>().GetModuleFromBaseAddress(0x30000),
-                            RuntimeType.NativeAOT, new Version(1, 0)))));
+                            RuntimeType.NativeAOT, new Version(1, 0)), priority: 1)));
             target.AddCoreRuntime(0x20000);
             target.AddModule(0x30000, "/app/nativeaot");
 
@@ -561,6 +556,59 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             target.Symbols.Verify();
         }
 
+        [Fact]
+        public void FallbackTriesEachProviderAcrossAllModules()
+        {
+            List<(int Priority, ulong ModuleBase)> calls = [];
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64, manager => {
+                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                    new TestRuntimeDiscoveryProvider(module => {
+                        calls.Add((100, module.ImageBase));
+                        return null;
+                    }, priority: 100));
+                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                    new TestRuntimeDiscoveryProvider(module => {
+                        calls.Add((50, module.ImageBase));
+                        return module.ImageBase == 0x20000
+                            ? new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 0))
+                            : null;
+                    }, priority: 50));
+            });
+            target.AddModule(0x10000, "/plugins/first");
+            target.AddModule(0x20000, "/plugins/second");
+
+            Assert.Equal(0x20000UL, Assert.Single(target.Enumerate()).RuntimeModule.ImageBase);
+            Assert.Equal([(100, 0x10000UL), (100, 0x20000UL), (50, 0x10000UL), (50, 0x20000UL)], calls);
+            target.Symbols.Verify();
+        }
+
+        [Fact]
+        public void PriorityModulesTryAllProvidersBeforeFallback()
+        {
+            List<(int Priority, ulong ModuleBase)> calls = [];
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64, manager => {
+                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                    new TestRuntimeDiscoveryProvider(module => {
+                        calls.Add((100, module.ImageBase));
+                        return null;
+                    }, priority: 100));
+                manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                    new TestRuntimeDiscoveryProvider(module => {
+                        calls.Add((50, module.ImageBase));
+                        return module.ImageBase == 0x20000
+                            ? new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 0))
+                            : null;
+                    }, priority: 50));
+            });
+            target.AddModule(0x10000, "/plugins/fallback");
+            target.AddModule(0x20000, "/plugins/hinted");
+            target.AddDiagnosticHeader(0x20000);
+
+            Assert.Equal(0x20000UL, Assert.Single(target.Enumerate()).RuntimeModule.ImageBase);
+            Assert.Equal([(100, 0x20000UL), (50, 0x20000UL)], calls);
+            target.Symbols.Verify();
+        }
+
         [Theory]
         [InlineData(RuntimeEnumerationFlags.Default)]
         [InlineData(RuntimeEnumerationFlags.All)]
@@ -574,7 +622,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                         return module.ImageBase == 0x10000
                             ? null
                             : new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 0));
-                    })));
+                    }, priority: 1)));
             target.AddModule(0x10000, "/lib/unrelated", needsSymbols: true);
             target.AddModule(0x20000, "/app/hinted");
             target.AddModule(0x30000, "/app/crashing");
@@ -601,7 +649,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     new TestRuntimeDiscoveryProvider(module => {
                         visited.Add(module.ImageBase);
                         return null;
-                    })));
+                    }, priority: 1)));
             target.AddModule(0x10000, "/lib/unrelated", needsSymbols: true);
             target.AddCoreRuntime(0x20000);
             target.AddCrashInfo(0x20000);

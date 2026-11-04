@@ -26,6 +26,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 IndexTimeStamp = description.IndexTimeStamp,
                 BuildId = description.BuildId,
                 ContractDescriptorAddress = description.ContractDescriptorAddress,
+                // Do NOT take a dependency on the order of enumerated libraries.
                 DebuggingLibraries = description.DebuggingLibraries.Select(ConvertLibrary).Distinct()
                     .OrderBy(library => library.Kind)
                     .ThenBy(library => !PathUtilities.IsSafeAbsoluteLocalPath(library.FileName))

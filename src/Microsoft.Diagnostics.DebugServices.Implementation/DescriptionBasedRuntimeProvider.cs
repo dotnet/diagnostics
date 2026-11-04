@@ -111,23 +111,23 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 yield break;
             }
-            IRuntimeDescriptionProvider[] orderedProviders = providers.Select((provider, index) => (Provider: provider, Index: index))
-                .OrderByDescending(entry => entry.Provider.Priority)
-                .ThenByDescending(entry => entry.Index)
-                .Select(entry => entry.Provider).ToArray();
+            // Try higher-priority providers first. Ordering among providers with equal priority is unspecified.
+            IRuntimeDescriptionProvider[] orderedProviders = providers
+                .OrderByDescending(provider => provider.Priority)
+                .ToArray();
             bool all = (flags & RuntimeEnumerationFlags.All) != 0;
-            foreach (IModule module in EnumerateModules())
+            (IReadOnlyList<IModule> priorityModules, IReadOnlyList<IModule> remainingModules) = GetModulePhases();
+            HashSet<ulong> describedModules = [];
+
+            foreach (IModule module in priorityModules)
             {
                 foreach (IRuntimeDescriptionProvider provider in orderedProviders)
                 {
-                    if (!provider.TryDescribeRuntime(module, out RuntimeDescription description))
+                    if (!TryDescribeRuntime(provider, module, out RuntimeDescription description))
                     {
                         continue;
                     }
-                    if (description is null || description.Module.Target != module.Target || description.Module.ImageBase != module.ImageBase)
-                    {
-                        throw new DiagnosticsException($"Discovered runtime description does not match the probed target module {module.ImageBase:X16}");
-                    }
+                    describedModules.Add(module.ImageBase);
                     yield return description;
                     if (!all)
                     {
@@ -136,38 +136,67 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     break;
                 }
             }
+
+            foreach (IRuntimeDescriptionProvider provider in orderedProviders)
+            {
+                foreach (IModule module in remainingModules)
+                {
+                    if (describedModules.Contains(module.ImageBase) ||
+                        !TryDescribeRuntime(provider, module, out RuntimeDescription description))
+                    {
+                        continue;
+                    }
+                    describedModules.Add(module.ImageBase);
+                    yield return description;
+                    if (!all)
+                    {
+                        yield break;
+                    }
+                }
+            }
         }
 
-        private IEnumerable<IModule> EnumerateModules()
+        private static bool TryDescribeRuntime(
+            IRuntimeDescriptionProvider provider, IModule module, out RuntimeDescription description)
+        {
+            if (!provider.TryDescribeRuntime(module, out description))
+            {
+                return false;
+            }
+            if (description is null || description.Module.Target != module.Target || description.Module.ImageBase != module.ImageBase)
+            {
+                throw new DiagnosticsException($"Discovered runtime description does not match the probed target module {module.ImageBase:X16}");
+            }
+            return true;
+        }
+
+        private (IReadOnlyList<IModule> PriorityModules, IReadOnlyList<IModule> RemainingModules) GetModulePhases()
         {
             IModuleService moduleService = _services.GetService<IModuleService>();
-            Dictionary<ulong, IModule> modules = moduleService.EnumerateModules().ToDictionary(module => module.ImageBase);
-            HashSet<ulong> visited = [];
+            IModule[] modules = moduleService.EnumerateModules().ToArray();
+            Dictionary<ulong, IModule> modulesByBase = modules.ToDictionary(module => module.ImageBase);
+            List<IModule> priorityModules = [];
+            HashSet<ulong> priorityModuleBases = [];
             ulong crashRuntimeBase = _services.GetService<ICrashInfoService>()?.RuntimeBaseAddress ?? 0;
-            if (modules.TryGetValue(crashRuntimeBase, out IModule crashModule) && visited.Add(crashRuntimeBase))
+            if (modulesByBase.TryGetValue(crashRuntimeBase, out IModule crashModule) && priorityModuleBases.Add(crashRuntimeBase))
             {
-                yield return crashModule;
+                priorityModules.Add(crashModule);
             }
 
             IDataReader reader = _services.GetService<IDataReader>();
             if (reader.TargetPlatform != OSPlatform.Windows &&
                 SpecialDiagInfo.TryGetRuntimeBaseAddress(reader, out ulong runtimeBase) &&
-                modules.TryGetValue(runtimeBase, out IModule runtimeModule) && visited.Add(runtimeBase))
+                modulesByBase.TryGetValue(runtimeBase, out IModule runtimeModule) && priorityModuleBases.Add(runtimeBase))
             {
-                yield return runtimeModule;
+                priorityModules.Add(runtimeModule);
             }
             if (reader.TargetPlatform == OSPlatform.Windows &&
-                moduleService.EntryPointModule is IModule entryPoint && visited.Add(entryPoint.ImageBase))
+                moduleService.EntryPointModule is IModule entryPoint && priorityModuleBases.Add(entryPoint.ImageBase))
             {
-                yield return entryPoint;
+                priorityModules.Add(entryPoint);
             }
-            foreach (IModule module in modules.Values.OrderBy(module => module.ImageBase))
-            {
-                if (visited.Add(module.ImageBase))
-                {
-                    yield return module;
-                }
-            }
+            IModule[] remainingModules = modules.Where(module => !priorityModuleBases.Contains(module.ImageBase)).ToArray();
+            return (priorityModules, remainingModules);
         }
     }
 }

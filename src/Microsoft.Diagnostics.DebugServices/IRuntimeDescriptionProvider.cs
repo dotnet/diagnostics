@@ -10,7 +10,7 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IRuntimeDescriptionProvider
     {
         /// <summary>
-        /// Higher priorities are tried first. Ties favor the later registered provider.
+        /// Higher priorities are tried first.
         /// </summary>
         int Priority { get; }
 
