@@ -56,7 +56,7 @@
     <MicrosoftExtensionsConfigurationVersion>8.0.0</MicrosoftExtensionsConfigurationVersion>
     <MicrosoftExtensionsConfigurationJsonVersion>8.0.1</MicrosoftExtensionsConfigurationJsonVersion>
     <MicrosoftExtensionsLoggingConfigurationVersion>8.0.1</MicrosoftExtensionsLoggingConfigurationVersion>
-    <MicrosoftOneCollectRecordTraceVersions>0.1.35021</MicrosoftOneCollectRecordTraceVersions>
+    <MicrosoftOneCollectRecordTraceVersions>0.1.35931</MicrosoftOneCollectRecordTraceVersions>
     <MoqVersion>4.18.4</MoqVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>10.0.5</MicrosoftExtensionsLoggingEventSourceVersion>
