@@ -74,18 +74,12 @@ namespace Microsoft.SymbolStore.KeyGenerators
                     {
                         hasLoadableImage = HasLoadableImage(out hasDebugInfo);
                     }
-                    catch (Exception ex) when
-                       (ex is InvalidVirtualAddressException ||
-                        ex is ArgumentOutOfRangeException ||
-                        ex is IndexOutOfRangeException ||
-                        ex is BadInputFormatException ||
-                        ex is OverflowException ||
-                        ex is IOException)
+                    catch (Exception ex) when (ex is InputParsingException or IOException)
                     {
                         Tracer.Verbose("ELF image classification failed for {0}: {1}", _path, ex.Message);
                         hasLoadableImage = false;
-                        // Only standard ELF types can use the filename fallback.
-                        if (!IsOSSpecificType)
+                        // Memory-backed images may not retain usable section metadata.
+                        if (_elfFile.IsDataSourceVirtualAddressSpace && !IsOSSpecificType)
                         {
                             hasDebugInfo = Array.IndexOf(s_symbolFileExtensions, Path.GetExtension(_path)) != -1;
                             hasLoadableImage = !hasDebugInfo;
@@ -237,8 +231,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
             }
 
             if (_elfFile.Header.Type != ELFHeaderType.Executable &&
-                _elfFile.Header.Type != ELFHeaderType.Shared &&
-                !IsOSSpecificType)
+                _elfFile.Header.Type != ELFHeaderType.Shared)
             {
                 return false;
             }

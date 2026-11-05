@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
 using Microsoft.SymbolStore.KeyGenerators;
 using TestHelpers;
@@ -25,34 +26,28 @@ namespace Microsoft.SymbolStore.Tests
 
         public static IEnumerable<object[]> ClassificationCases()
         {
-            foreach (bool fileGenerator in new[] { false, true })
+            foreach (ELFHeaderType headerType in new[] { ELFHeaderType.Executable, ELFHeaderType.Shared, ELFHeaderType.Relocatable })
             {
-                foreach (ELFHeaderType headerType in new[] { ELFHeaderType.Executable, ELFHeaderType.Shared, ELFHeaderType.Relocatable })
-                {
-                    foreach (string debugSection in new[] { ".debug_info", ".zdebug_info" })
-                    {
-                        bool hasLoadableImage = headerType != ELFHeaderType.Relocatable;
-                        // A debug-only file retains allocated section sizes and flags, but not their contents.
-                        yield return new object[] { fileGenerator, headerType, debugSection, ELFSectionHeaderType.NoBits, 6UL, 16UL, true };
-                        yield return new object[] { fileGenerator, headerType, debugSection, ELFSectionHeaderType.ProgBits, 6UL, 16UL, !hasLoadableImage };
-                        // File-backed data, without any executable code, also identifies a module.
-                        yield return new object[] { fileGenerator, headerType, debugSection, ELFSectionHeaderType.ProgBits, 3UL, 16UL, !hasLoadableImage };
-                        yield return new object[] { fileGenerator, headerType, debugSection, ELFSectionHeaderType.ProgBits, 6UL, 0UL, true };
-                        yield return new object[] { fileGenerator, headerType, debugSection, ELFSectionHeaderType.ProgBits, 0UL, 16UL, true };
-                    }
-                }
+                bool hasLoadableImage = headerType != ELFHeaderType.Relocatable;
+                // A debug-only file retains allocated section sizes and flags, but not their contents.
+                yield return new object[] { headerType, ELFSectionHeaderType.NoBits, 6UL, 16UL, true };
+                yield return new object[] { headerType, ELFSectionHeaderType.ProgBits, 6UL, 16UL, !hasLoadableImage };
+                // File-backed data, without any executable code, also identifies a module.
+                yield return new object[] { headerType, ELFSectionHeaderType.ProgBits, 3UL, 16UL, !hasLoadableImage };
+                yield return new object[] { headerType, ELFSectionHeaderType.ProgBits, 6UL, 0UL, true };
+                yield return new object[] { headerType, ELFSectionHeaderType.ProgBits, 0UL, 16UL, true };
             }
         }
 
         [Theory]
         [MemberData(nameof(ClassificationCases))]
-        public void ClassifiesModuleContents(bool fileGenerator, ELFHeaderType headerType, string debugSection,
+        public void ClassifiesModuleContents(ELFHeaderType headerType,
             ELFSectionHeaderType contentType, ulong contentFlags, ulong contentSize, bool debugCompanion)
         {
-            using MemoryStream stream = CreateELF(headerType, debugSection, contentType, contentFlags, contentSize);
+            using MemoryStream stream = CreateELF(headerType, ".debug_info", contentType, contentFlags, contentSize);
             // Neither a debug-looking extension nor the absence of .symtab determines the file's identity.
             using SymbolStoreFile file = new(stream, "module.dbg");
-            KeyGenerator generator = fileGenerator ? new FileKeyGenerator(_tracer, file) : new ELFFileKeyGenerator(_tracer, file);
+            ELFFileKeyGenerator generator = new(_tracer, file);
             string symbolIndex = $"_.debug/elf-buildid-sym-{BuildId}/_.debug";
             string identityIndex = debugCompanion ? symbolIndex : $"module.dbg/elf-buildid-{BuildId}/module.dbg";
 
@@ -71,11 +66,11 @@ namespace Microsoft.SymbolStore.Tests
         }
 
         [Theory]
-        [InlineData("module.dbg", true)]
-        [InlineData("module.debug", true)]
-        [InlineData("module.so", false)]
-        [InlineData("module", false)]
-        public void UnreadableSectionsFallBackToFileExtension(string fileName, bool debugCompanion)
+        [InlineData("module.dbg")]
+        [InlineData("module.debug")]
+        [InlineData("module.so")]
+        [InlineData("module")]
+        public void MalformedOnDiskLayoutDoesNotFallBackToFileExtension(string fileName)
         {
             using MemoryStream stream = CreateELF(ELFHeaderType.Executable, ".debug_info",
                 ELFSectionHeaderType.ProgBits, 6, 16, sectionless: true);
@@ -91,6 +86,31 @@ namespace Microsoft.SymbolStore.Tests
             stream.Position = 0;
             using SymbolStoreFile file = new(stream, fileName);
             ELFFileKeyGenerator generator = new(_tracer, file);
+
+            Assert.Empty(generator.GetKeys(KeyTypeFlags.IdentityKey));
+            Assert.Empty(generator.GetKeys(KeyTypeFlags.IdentityKey | KeyTypeFlags.SymbolKey));
+        }
+
+        [Theory]
+        [InlineData("module.dbg", true)]
+        [InlineData("module.debug", true)]
+        [InlineData("module.so", false)]
+        [InlineData("module", false)]
+        public void UnreadableMemoryBackedSectionsFallBackToFileExtension(string fileName, bool debugCompanion)
+        {
+            using MemoryStream stream = CreateELF(ELFHeaderType.Executable, ".debug_info",
+                ELFSectionHeaderType.ProgBits, 6, 16, sectionless: true, virtualAddressSpace: true);
+            using (BinaryWriter writer = new(stream, Encoding.UTF8, leaveOpen: true))
+            {
+                stream.Position = 40;
+                writer.Write((ulong)stream.Length + 1);
+                stream.Position = 58;
+                writer.Write((ushort)64);
+                writer.Write((ushort)1);
+            }
+            stream.Position = 0;
+            using ELFFile elfFile = new(new StreamAddressSpace(stream), isDataSourceVirtualAddressSpace: true);
+            ELFFileKeyGenerator generator = new(_tracer, elfFile, fileName);
             string symbolIndex = $"_.debug/elf-buildid-sym-{BuildId}/_.debug";
             string identityIndex = debugCompanion ? symbolIndex : $"{fileName}/elf-buildid-{BuildId}/{fileName}";
 
@@ -190,16 +210,11 @@ namespace Microsoft.SymbolStore.Tests
         }
 
         [Theory]
-        [InlineData(ELFHeaderType.LowOS, ".debug_info", true, true)]
-        [InlineData(ELFHeaderType.LowOS, ".other", false, true)]
-        [InlineData(ELFHeaderType.HighOS, ".debug_info", true, true)]
-        [InlineData(ELFHeaderType.HighOS, ".other", false, true)]
-        [InlineData(ELFHeaderType.LowOS, ".debug_info", true, false)]
-        [InlineData(ELFHeaderType.LowOS, ".other", false, false)]
-        [InlineData(ELFHeaderType.HighOS, ".debug_info", true, false)]
-        [InlineData(ELFHeaderType.HighOS, ".other", false, false)]
-        public void OSSpecificImageUsesLoadEvidence(ELFHeaderType headerType, string debugSection,
-            bool hasDebugInfo, bool hasLoadSegment)
+        [InlineData(ELFHeaderType.LowOS, ".debug_info", true)]
+        [InlineData(ELFHeaderType.LowOS, ".other", false)]
+        [InlineData(ELFHeaderType.HighOS, ".debug_info", true)]
+        [InlineData(ELFHeaderType.HighOS, ".other", false)]
+        public void OSSpecificImageIsNotClassifiedAsLoadable(ELFHeaderType headerType, string debugSection, bool hasDebugInfo)
         {
             using MemoryStream stream = CreateELF(ELFHeaderType.Executable, debugSection,
                 ELFSectionHeaderType.ProgBits, 6, 16);
@@ -207,31 +222,19 @@ namespace Microsoft.SymbolStore.Tests
             {
                 stream.Position = 16;
                 writer.Write((ushort)headerType);
-                if (!hasLoadSegment)
-                {
-                    stream.Position = 56;
-                    writer.Write((ushort)0);
-                }
             }
             stream.Position = 0;
             using SymbolStoreFile file = new(stream, "module");
             ELFFileKeyGenerator generator = new(_tracer, file);
 
             List<string> expectedKeys = new();
-            if (hasLoadSegment)
-            {
-                expectedKeys.Add($"module/elf-buildid-{BuildId}/module");
-            }
             if (hasDebugInfo)
             {
                 expectedKeys.Add($"_.debug/elf-buildid-sym-{BuildId}/_.debug");
             }
             Assert.Equal(expectedKeys, generator.GetKeys(KeyTypeFlags.IdentityKey).Select(key => key.Index));
-            if (!hasLoadSegment)
-            {
-                Assert.Contains(_tracer.VerboseMessages, message =>
-                    message.Contains("OS-specific ELF type") && message.Contains("unsupported"));
-            }
+            Assert.Contains(_tracer.VerboseMessages, message =>
+                message.Contains("OS-specific ELF type") && message.Contains("unsupported"));
         }
 
         [Fact]
@@ -515,7 +518,7 @@ namespace Microsoft.SymbolStore.Tests
 
         private static MemoryStream CreateELF(ELFHeaderType headerType, string debugSection,
             ELFSectionHeaderType contentType, ulong contentFlags, ulong contentSize, ulong loadAlignment = 1,
-            bool sectionless = false, bool loadOutsideFile = false)
+            bool sectionless = false, bool loadOutsideFile = false, bool virtualAddressSpace = false)
         {
             const int HeaderSize = 64;
             const int ProgramHeaderSize = 56;
@@ -568,7 +571,7 @@ namespace Microsoft.SymbolStore.Tests
                         writer.Write((uint)ELFProgramHeaderType.Note);
                         writer.Write(4U);
                         writer.Write((ulong)noteOffset);
-                        writer.Write(0UL);
+                        writer.Write(virtualAddressSpace ? (ulong)noteOffset : 0UL);
                         writer.Write(0UL);
                         writer.Write(36UL);
                         writer.Write(36UL);

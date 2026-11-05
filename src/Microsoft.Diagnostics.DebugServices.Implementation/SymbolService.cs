@@ -766,12 +766,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 ELFFileKeyGenerator generator = new(Tracer.Instance, elfFile, fileKey.FullPathName);
                 return generator.GetKeys(KeyTypeFlags.IdentityKey).Any(key => fileKey.Equals(key));
             }
-            catch (Exception ex) when
-                (ex is InputParsingException or
-                 IOException or
-                 ArgumentOutOfRangeException or
-                 IndexOutOfRangeException or
-                 OverflowException)
+            catch (Exception ex) when (ex is InputParsingException or IOException)
             {
                 Trace.TraceWarning("MatchesELFKey: unable to validate ELF file {0}: {1}", fileName, ex.Message);
                 return false;
