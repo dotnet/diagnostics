@@ -14,24 +14,26 @@ public class RuntimeProviderTests
     public void NormalProviderRecognizesOnlyNamedRuntimeModules()
     {
         using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64);
-        string[] names =
+        TestModuleInfo[] modules =
         [
-            @"C:\app\app.exe",
-            @"C:\runtime\coreclr.dll",
-            @"C:\runtime\clr.dll",
-            "/runtime/libcoreclr.so",
-            "/runtime/libcoreclr.dylib",
-            @"C:\app\other.dll",
+            new(0x1000, @"C:\app\app.exe"),
+            new(0x2000, @"C:\runtime\coreclr.dll"),
+            new(0x3000, @"C:\runtime\clr.dll"),
+            new(0x4000, "/runtime/libcoreclr.so"),
+            new(0x5000, "/runtime/libcoreclr.dylib"),
+            new(0x6000, @"C:\app\other.dll"),
         ];
-        for (int i = 0; i < names.Length; i++)
+        foreach (TestModuleInfo module in modules)
         {
-            target.AddModule((ulong)(i + 1) * 0x1000, names[i]);
+            target.AddModule(module.ImageBase, module.FileName);
         }
 
         DotNetRuntimeDiscoveryProvider provider = new(target.Services);
-        IModule[] modules = target.Services.GetService<IModuleService>().EnumerateModules().ToArray();
-        Assert.Equal([0x2000UL, 0x3000UL, 0x4000UL, 0x5000UL],
-            modules.Where(module => provider.TryDescribeRuntime(module, out _)).Select(module => module.ImageBase));
+        TestModuleInfo[] recognizedModules = target.Services.GetService<IModuleService>().EnumerateModules()
+            .Where(module => provider.TryDescribeRuntime(module, out _))
+            .Select(module => new TestModuleInfo(module.ImageBase, module.FileName))
+            .ToArray();
+        Assert.Equal([modules[1], modules[2], modules[3], modules[4]], recognizedModules);
         Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase is 0x1000 or 0x6000);
         target.Symbols.Verify();
     }
@@ -116,4 +118,6 @@ public class RuntimeProviderTests
         Assert.Empty(target.ExportProbes);
         target.Symbols.Verify();
     }
+
+    private readonly record struct TestModuleInfo(ulong ImageBase, string FileName);
 }

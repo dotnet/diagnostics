@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 namespace Microsoft.Diagnostics.DebugServices
 {
     /// <summary>
-    /// Captured discovery results. Consumers must not need to probe the module again to construct runtime metadata.
+    /// Information on a candidate runtime.
     /// </summary>
     public sealed class RuntimeDescription
     {
