@@ -1,9 +1,10 @@
 name: Validate mirrored sources
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - main
+    types: [opened, synchronize, reopened, edited]
 
 permissions:
   pull-requests: read
@@ -18,8 +19,7 @@ jobs:
         with:
           script: |
             const allowedBranches = [
-              "automation/sync-cdac",
-              "automation/sync-dbi"
+              "automation/sync-runtime-source"
             ];
             const mirroredDirectories = [
               "src/cdac/runtime",
@@ -51,7 +51,7 @@ jobs:
               mirroredDirectories.some(directory => path === directory || path.startsWith(`${directory}/`));
             if (files.some(file => isMirroredPath(file.filename) ||
                 (file.previous_filename && isMirroredPath(file.previous_filename)))) {
-              core.setFailed("These paths are mirrored from dotnet/runtime. Make source changes upstream and use the source-sync workflows to update the mirrors.");
+              core.setFailed("These paths are mirrored from dotnet/runtime. Make source changes upstream and use the source-sync workflow to update the mirrors.");
               return;
             }
 
