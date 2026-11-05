@@ -34,7 +34,9 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             _memory = new(architecture is Architecture.X86 or Architecture.Arm ? 4 : 8);
             configureProviders?.Invoke(_host.ServiceManager);
-            _host.CreateServiceContainer().AddService<ISymbolService>(Symbols);
+            ServiceContainer hostServices = _host.CreateServiceContainer();
+            hostServices.AddService<ISymbolService>(Symbols);
+            hostServices.AddService<IContextService>(new ContextService(_host));
             _target = new(_host, platform, architecture, _memory,
                 services => new TestModules(services, _modules, Symbols, ExportProbes));
         }
