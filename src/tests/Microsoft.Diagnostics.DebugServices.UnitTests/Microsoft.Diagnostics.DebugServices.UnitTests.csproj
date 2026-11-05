@@ -32,6 +32,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="$(TestDir)Microsoft.SymbolStore.UnitTests\TestBinaries\symbolized_executable;$(TestDir)Microsoft.SymbolStore.UnitTests\TestBinaries\stripped_executable;$(TestDir)Microsoft.FileFormats.UnitTests\TestBinaries\libcoreclrtraceptprovider.so.dbg.gz">
+      <Link>TestBinaries\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="$(MSBuildThisFileDirectory)ConfigFiles\Windows\Debugger.Tests.Config.txt" Condition="'$(OS)' == 'Windows_NT'">
       <Link>Debugger.Tests.Config.txt</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
