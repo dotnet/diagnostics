@@ -111,42 +111,81 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 yield break;
             }
-            // Try higher-priority providers first. Ordering among providers with equal priority is unspecified.
+            // Hinted and fallback modules try providers in priority order; ties are unspecified.
             IRuntimeDescriptionProvider[] orderedProviders = providers
                 .OrderByDescending(provider => provider.Priority)
                 .ToArray();
             bool all = (flags & RuntimeEnumerationFlags.All) != 0;
-            (IReadOnlyList<IModule> priorityModules, IReadOnlyList<IModule> remainingModules) = GetModulePhases();
-            HashSet<ulong> describedModules = [];
+            IModule[] modules = _services.GetService<IModuleService>().EnumerateModules().ToArray();
+            HashSet<ulong> handledModules = [];
+            bool foundRuntime = false;
 
-            foreach (IModule module in priorityModules)
+            foreach (RuntimeDescription description in EnumeratePriorityRuntimeDescriptions(orderedProviders, modules, handledModules))
             {
-                foreach (IRuntimeDescriptionProvider provider in orderedProviders)
+                foundRuntime = true;
+                yield return description;
+            }
+
+            if (foundRuntime && !all)
+            {
+                yield break;
+            }
+
+            foreach (RuntimeDescription description in EnumerateFallbackRuntimeDescriptions(orderedProviders, modules, handledModules, all))
+            {
+                yield return description;
+            }
+        }
+
+        private IEnumerable<RuntimeDescription> EnumeratePriorityRuntimeDescriptions(
+            IReadOnlyList<IRuntimeDescriptionProvider> providers, IReadOnlyList<IModule> modules, HashSet<ulong> handledModules)
+        {
+            foreach (DotNetRuntimeDiscoveryProvider provider in providers.OfType<DotNetRuntimeDiscoveryProvider>())
+            {
+                foreach (IModule module in modules)
+                {
+                    if (handledModules.Contains(module.ImageBase) ||
+                        !TryDescribeRuntime(provider, module, out RuntimeDescription description))
+                    {
+                        continue;
+                    }
+                    handledModules.Add(module.ImageBase);
+                    yield return description;
+                }
+            }
+
+            foreach (IModule module in EnumerateHintedModules(modules))
+            {
+                // Hints are fully handled here, even if no provider matches.
+                if (!handledModules.Add(module.ImageBase))
+                {
+                    continue;
+                }
+                foreach (IRuntimeDescriptionProvider provider in providers.Where(provider => provider is not DotNetRuntimeDiscoveryProvider))
                 {
                     if (!TryDescribeRuntime(provider, module, out RuntimeDescription description))
                     {
                         continue;
                     }
-                    describedModules.Add(module.ImageBase);
                     yield return description;
-                    if (!all)
-                    {
-                        yield break;
-                    }
                     break;
                 }
             }
+        }
 
-            foreach (IRuntimeDescriptionProvider provider in orderedProviders)
+        private static IEnumerable<RuntimeDescription> EnumerateFallbackRuntimeDescriptions(
+            IReadOnlyList<IRuntimeDescriptionProvider> providers, IReadOnlyList<IModule> modules, HashSet<ulong> handledModules, bool all)
+        {
+            foreach (IRuntimeDescriptionProvider provider in providers.Where(provider => provider is not DotNetRuntimeDiscoveryProvider))
             {
-                foreach (IModule module in remainingModules)
+                foreach (IModule module in modules)
                 {
-                    if (describedModules.Contains(module.ImageBase) ||
+                    if (handledModules.Contains(module.ImageBase) ||
                         !TryDescribeRuntime(provider, module, out RuntimeDescription description))
                     {
                         continue;
                     }
-                    describedModules.Add(module.ImageBase);
+                    handledModules.Add(module.ImageBase);
                     yield return description;
                     if (!all)
                     {
@@ -170,33 +209,28 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             return true;
         }
 
-        private (IReadOnlyList<IModule> PriorityModules, IReadOnlyList<IModule> RemainingModules) GetModulePhases()
+        private IEnumerable<IModule> EnumerateHintedModules(IReadOnlyList<IModule> modules)
         {
             IModuleService moduleService = _services.GetService<IModuleService>();
-            IModule[] modules = moduleService.EnumerateModules().ToArray();
             Dictionary<ulong, IModule> modulesByBase = modules.ToDictionary(module => module.ImageBase);
-            List<IModule> priorityModules = [];
-            HashSet<ulong> priorityModuleBases = [];
             ulong crashRuntimeBase = _services.GetService<ICrashInfoService>()?.RuntimeBaseAddress ?? 0;
-            if (modulesByBase.TryGetValue(crashRuntimeBase, out IModule crashModule) && priorityModuleBases.Add(crashRuntimeBase))
+            if (modulesByBase.TryGetValue(crashRuntimeBase, out IModule crashModule))
             {
-                priorityModules.Add(crashModule);
+                yield return crashModule;
             }
 
             IDataReader reader = _services.GetService<IDataReader>();
             if (reader.TargetPlatform != OSPlatform.Windows &&
                 SpecialDiagInfo.TryGetRuntimeBaseAddress(reader, out ulong runtimeBase) &&
-                modulesByBase.TryGetValue(runtimeBase, out IModule runtimeModule) && priorityModuleBases.Add(runtimeBase))
+                modulesByBase.TryGetValue(runtimeBase, out IModule runtimeModule))
             {
-                priorityModules.Add(runtimeModule);
+                yield return runtimeModule;
             }
             if (reader.TargetPlatform == OSPlatform.Windows &&
-                moduleService.EntryPointModule is IModule entryPoint && priorityModuleBases.Add(entryPoint.ImageBase))
+                moduleService.EntryPointModule is IModule entryPoint)
             {
-                priorityModules.Add(entryPoint);
+                yield return entryPoint;
             }
-            IModule[] remainingModules = modules.Where(module => !priorityModuleBases.Contains(module.ImageBase)).ToArray();
-            return (priorityModules, remainingModules);
         }
     }
 }

@@ -51,6 +51,25 @@ public class RuntimeProviderTests
     }
 
     [Fact]
+    public void NormalProviderRunsBeforeHintedModules()
+    {
+        using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64);
+        target.AddModule(0x10000, @"C:\app\native.exe", needsSymbols: true);
+        RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x20000, @"C:\app\singlefile.exe", entryPoint: true);
+        target.AddSingleFileRuntime(app);
+        target.AddCoreRuntime(0x30000, diagnosticHeader: false);
+
+        DescriptionBasedRuntimeProvider provider = new(target.Services);
+        RuntimeDescription[] descriptions = provider.EnumerateRuntimeDescriptions(
+            [new DotNetRuntimeDiscoveryProvider(target.Services), new SingleFileRuntimeDiscoveryProvider(target.Services)],
+            RuntimeEnumerationFlags.Default).ToArray();
+
+        Assert.Equal([0x30000UL, 0x20000UL], descriptions.Select(description => description.Module.ImageBase));
+        Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase == 0x10000);
+        target.Symbols.Verify();
+    }
+
+    [Fact]
     public void SingleFileDiscoveryOnlyRunsWhenRegistered()
     {
         using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);

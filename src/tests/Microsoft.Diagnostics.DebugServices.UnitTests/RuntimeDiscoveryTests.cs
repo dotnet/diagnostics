@@ -78,6 +78,103 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Theory]
+        [InlineData(0UL)]
+        [InlineData(0x20000UL)]
+        [InlineData(0x30000UL)]
+        public void DefaultDiscoveryFindsCoreAndDesktopRuntimes(ulong crashRuntimeBase)
+        {
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64);
+            target.AddModule(0x10000, @"C:\app\native.exe", needsSymbols: true);
+            target.AddCoreRuntime(0x20000);
+            target.AddModule(0x30000, @"C:\runtime\clr.dll");
+            target.AddModule(0x40000, @"C:\app\plugin.exe", needsSymbols: true);
+            if (crashRuntimeBase != 0)
+            {
+                target.AddCrashInfo(crashRuntimeBase);
+            }
+
+            IRuntime[] runtimes = target.Enumerate();
+            Assert.Equal(2, runtimes.Length);
+            Assert.Equal(0x20000UL, Assert.Single(runtimes, runtime => runtime.RuntimeType == RuntimeType.NetCore).RuntimeModule.ImageBase);
+            Assert.Equal(0x30000UL, Assert.Single(runtimes, runtime => runtime.RuntimeType == RuntimeType.Desktop).RuntimeModule.ImageBase);
+            Assert.Empty(target.Symbols.Requests);
+            Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase is 0x10000 or 0x40000);
+            target.Symbols.Verify();
+        }
+
+        [Theory]
+        [MemberData(nameof(Targets))]
+        public void HintedSingleFileRuntimeDoesNotSkipNamedRuntimeDiscovery(string platform, Architecture architecture)
+        {
+            OSPlatform os = OSPlatform.Create(platform);
+            using RuntimeDiscoveryTestTarget target = new(os, architecture);
+            target.AddModule(0x10000, ApplicationName(os, "native"), needsSymbols: true);
+            RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x20000, ApplicationName(os, "singlefile"), entryPoint: true);
+            target.AddSingleFileRuntime(app);
+            target.AddDiagnosticHeader(app.ImageBase);
+            target.AddCoreRuntime(0x30000, diagnosticHeader: false);
+
+            IRuntime[] runtimes = target.Enumerate();
+            Assert.Equal(2, runtimes.Length);
+            Assert.Equal(0x20000UL, Assert.Single(runtimes, runtime => runtime.Services.GetService<ClrInfo>().IsSingleFile).RuntimeModule.ImageBase);
+            Assert.Equal(0x30000UL, Assert.Single(runtimes, runtime => !runtime.Services.GetService<ClrInfo>().IsSingleFile).RuntimeModule.ImageBase);
+            Assert.Empty(target.Symbols.Requests);
+            Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase == 0x10000);
+            target.Symbols.Verify();
+        }
+
+        [Theory]
+        [InlineData(RuntimeEnumerationFlags.Default)]
+        [InlineData(RuntimeEnumerationFlags.All)]
+        public void PriorityMatchSkipsFallbackUnlessAllIsRequested(RuntimeEnumerationFlags flags)
+        {
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);
+            target.AddModule(0x10000, "/app/native", needsSymbols: true);
+            target.AddCoreRuntime(0x20000, diagnosticHeader: false);
+            RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x30000, "/app/singlefile", needsSymbols: true);
+            target.AddSingleFileRuntime(app, symbolOnly: true);
+            if (flags == RuntimeEnumerationFlags.All)
+            {
+                target.Symbols.ExpectSymbolFile(0x10000, result: null);
+                target.Symbols.ExpectSymbolFile(0x30000, result: "mock-symbols");
+            }
+
+            IRuntime[] runtimes = target.Enumerate(flags);
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x20000UL, 0x30000UL] : new[] { 0x20000UL },
+                runtimes.Select(runtime => runtime.RuntimeModule.ImageBase));
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x10000UL, 0x30000UL] : Array.Empty<ulong>(), target.Symbols.Requests);
+            target.Symbols.Verify();
+        }
+
+        [Theory]
+        [InlineData(false, RuntimeEnumerationFlags.Default)]
+        [InlineData(true, RuntimeEnumerationFlags.Default)]
+        [InlineData(false, RuntimeEnumerationFlags.All)]
+        [InlineData(true, RuntimeEnumerationFlags.All)]
+        public void NormalProviderOwnsNamedRuntimeModulesBeforeOtherProviders(bool hinted, RuntimeEnumerationFlags flags)
+        {
+            List<ulong> visited = [];
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64,
+                manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                    new TestRuntimeDiscoveryProvider(module => {
+                        visited.Add(module.ImageBase);
+                        return new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 0));
+                    }, priority: 1)));
+            target.AddModule(0x10000, "/app/native", needsSymbols: true);
+            target.AddCoreRuntime(0x20000, diagnosticHeader: hinted);
+            target.AddCoreRuntime(0x30000, diagnosticHeader: false);
+
+            IRuntime[] runtimes = target.Enumerate(flags);
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? 3 : 2, runtimes.Length);
+            Assert.Equal([0x20000UL, 0x30000UL],
+                runtimes.Where(runtime => runtime.RuntimeType == RuntimeType.NetCore).Select(runtime => runtime.RuntimeModule.ImageBase));
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x10000UL] : Array.Empty<ulong>(), visited);
+            Assert.Empty(target.Symbols.Requests);
+            Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase == 0x10000);
+            target.Symbols.Verify();
+        }
+
+        [Theory]
         [MemberData(nameof(Targets))]
         public void AllAllowsOnlyExpectedSymbolRequestsAndConstructsSingleFileMetadata(string platform, Architecture architecture)
         {
@@ -373,11 +470,12 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             DebugLibraryInfo library = Assert.Single(info.DebuggingLibraries);
             Assert.Equal(DebugLibraryKind.CDac, library.Kind);
             Assert.Equal(cdacPath, library.FileName);
-            Assert.Equal([0x20000UL, 0x30000UL, 0x40000UL], visited);
+            ulong[] expectedVisited = [0x30000UL, 0x40000UL];
+            Assert.Equal(expectedVisited, visited);
             int probes = target.ExportProbes.Count;
             Assert.Same(custom, Assert.Single(target.Enumerate(RuntimeEnumerationFlags.All), runtime => runtime.RuntimeType == RuntimeType.NativeAOT));
             Assert.Equal(probes, target.ExportProbes.Count);
-            Assert.Equal([0x20000UL, 0x30000UL, 0x40000UL], visited);
+            Assert.Equal(expectedVisited, visited);
             target.Symbols.Verify();
         }
 
@@ -391,7 +489,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
                     new TestRuntimeDiscoveryProvider(module =>
                         new RuntimeDescription(otherModule, RuntimeType.NativeAOT, new Version(1, 0)), priority: 1)));
-            target.AddCoreRuntime(0x20000);
+            target.AddModule(0x20000, "/plugins/custom");
 
             DiagnosticsException exception = Assert.Throws<DiagnosticsException>(() => target.Enumerate());
             Assert.Contains("does not match the probed target module", exception.Message);
@@ -422,13 +520,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
-        public void HigherPriorityProvidersReplaceMetadataForTheSameModule()
+        public void HigherPriorityProvidersOwnHintedModules()
         {
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64,
                 manager => manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
                     new TestRuntimeDiscoveryProvider(module =>
                         new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 2, 3, 4)), priority: 1)));
-            target.AddCoreRuntime(0x20000);
+            target.AddModule(0x20000, @"C:\app\custom.exe", entryPoint: true);
 
             IRuntime runtime = Assert.Single(target.Enumerate());
             Assert.Equal(RuntimeType.NativeAOT, runtime.RuntimeType);
@@ -499,7 +597,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     new TestRuntimeDiscoveryProvider(_ =>
                         new RuntimeDescription(services.GetService<IModuleService>().GetModuleFromBaseAddress(0x30000),
                             RuntimeType.NativeAOT, new Version(1, 0)), priority: 1)));
-            target.AddCoreRuntime(0x20000);
+            target.AddModule(0x20000, "/plugins/first");
             target.AddModule(0x30000, "/app/nativeaot");
 
             DiagnosticsException exception = Assert.Throws<DiagnosticsException>(() => target.Enumerate());
@@ -508,9 +606,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void ProviderPriorityOverridesRegistrationOrder(bool highPriorityRegisteredFirst)
+        [InlineData(true, RuntimeEnumerationFlags.Default)]
+        [InlineData(false, RuntimeEnumerationFlags.Default)]
+        [InlineData(true, RuntimeEnumerationFlags.All)]
+        [InlineData(false, RuntimeEnumerationFlags.All)]
+        public void ProviderPriorityOverridesRegistrationOrder(bool highPriorityRegisteredFirst, RuntimeEnumerationFlags flags)
         {
             List<int> calls = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64, manager => {
@@ -526,7 +626,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             });
             target.AddModule(0x20000, "/plugins/custom", needsSymbols: true);
 
-            Assert.Equal(new Version(100, 0), Assert.Single(target.Enumerate()).RuntimeVersion);
+            Assert.Equal(new Version(100, 0), Assert.Single(target.Enumerate(flags)).RuntimeVersion);
             Assert.Equal([100], calls);
             Assert.Empty(target.ExportProbes);
             target.Symbols.Verify();
@@ -556,8 +656,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             target.Symbols.Verify();
         }
 
-        [Fact]
-        public void FallbackTriesEachProviderAcrossAllModules()
+        [Theory]
+        [InlineData(RuntimeEnumerationFlags.Default)]
+        [InlineData(RuntimeEnumerationFlags.All)]
+        public void FallbackTriesEachProviderAcrossAllModules(RuntimeEnumerationFlags flags)
         {
             List<(int Priority, ulong ModuleBase)> calls = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64, manager => {
@@ -569,16 +671,24 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
                     new TestRuntimeDiscoveryProvider(module => {
                         calls.Add((50, module.ImageBase));
-                        return module.ImageBase == 0x20000
+                        return module.ImageBase >= 0x20000
                             ? new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 0))
                             : null;
                     }, priority: 50));
             });
             target.AddModule(0x10000, "/plugins/first");
             target.AddModule(0x20000, "/plugins/second");
+            target.AddModule(0x30000, "/plugins/third");
 
-            Assert.Equal(0x20000UL, Assert.Single(target.Enumerate()).RuntimeModule.ImageBase);
-            Assert.Equal([(100, 0x10000UL), (100, 0x20000UL), (50, 0x10000UL), (50, 0x20000UL)], calls);
+            IRuntime[] runtimes = target.Enumerate(flags);
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x20000UL, 0x30000UL] : new[] { 0x20000UL },
+                runtimes.Select(runtime => runtime.RuntimeModule.ImageBase));
+            List<(int, ulong)> expectedCalls = [(100, 0x10000UL), (100, 0x20000UL), (100, 0x30000UL), (50, 0x10000UL), (50, 0x20000UL)];
+            if (flags == RuntimeEnumerationFlags.All)
+            {
+                expectedCalls.Add((50, 0x30000UL));
+            }
+            Assert.Equal(expectedCalls, calls);
             target.Symbols.Verify();
         }
 
@@ -634,9 +744,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
 
             IRuntime[] runtimes = target.Enumerate(flags);
-            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x30000UL, 0x20000UL] : new[] { 0x30000UL },
-                runtimes.Select(runtime => runtime.RuntimeModule.ImageBase));
-            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x30000UL, 0x20000UL, 0x10000UL] : new[] { 0x30000UL }, visited);
+            Assert.Equal([0x30000UL, 0x20000UL], runtimes.Select(runtime => runtime.RuntimeModule.ImageBase));
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x30000UL, 0x20000UL, 0x10000UL] : new[] { 0x30000UL, 0x20000UL }, visited);
             target.Symbols.Verify();
         }
 
@@ -651,11 +760,14 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                         return null;
                     }, priority: 1)));
             target.AddModule(0x10000, "/lib/unrelated", needsSymbols: true);
-            target.AddCoreRuntime(0x20000);
+            target.AddModule(0x20000, "/app/hinted", needsSymbols: true);
+            target.AddCoreRuntime(0x30000, diagnosticHeader: false);
             target.AddCrashInfo(0x20000);
+            target.AddDiagnosticHeader(0x20000);
+            target.Symbols.ExpectSymbolFile(0x20000, result: null);
             target.Symbols.ExpectSymbolFile(0x10000, result: null);
 
-            Assert.Equal(0x20000UL, Assert.Single(target.Enumerate(RuntimeEnumerationFlags.All)).RuntimeModule.ImageBase);
+            Assert.Equal(0x30000UL, Assert.Single(target.Enumerate(RuntimeEnumerationFlags.All)).RuntimeModule.ImageBase);
             Assert.Equal([0x20000UL, 0x10000UL], visited);
             target.Symbols.Verify();
         }

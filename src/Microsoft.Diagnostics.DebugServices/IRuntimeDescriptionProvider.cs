@@ -10,7 +10,8 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IRuntimeDescriptionProvider
     {
         /// <summary>
-        /// Higher priorities are tried first.
+        /// Higher priorities are tried first for hinted-module and fallback discovery.
+        /// The built-in normal .NET provider runs before those probes, regardless of priority.
         /// </summary>
         int Priority { get; }
 
