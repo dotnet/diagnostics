@@ -50,22 +50,39 @@ public class RuntimeProviderTests
         target.Symbols.Verify();
     }
 
-    [Fact]
-    public void NormalProviderRunsBeforeHintedModules()
+    [Theory]
+    [InlineData("WINDOWS", RuntimeEnumerationFlags.Default)]
+    [InlineData("WINDOWS", RuntimeEnumerationFlags.All)]
+    [InlineData("LINUX", RuntimeEnumerationFlags.Default)]
+    [InlineData("LINUX", RuntimeEnumerationFlags.All)]
+    [InlineData("OSX", RuntimeEnumerationFlags.Default)]
+    [InlineData("OSX", RuntimeEnumerationFlags.All)]
+    public void NormalMatchSkipsHintedModulesUnlessAllIsRequested(string platform, RuntimeEnumerationFlags flags)
     {
-        using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64);
-        target.AddModule(0x10000, @"C:\app\native.exe", needsSymbols: true);
-        RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x20000, @"C:\app\singlefile.exe", entryPoint: true);
+        OSPlatform os = OSPlatform.Create(platform);
+        using RuntimeDiscoveryTestTarget target = new(os, Architecture.X64);
+        target.AddModule(0x10000, os == OSPlatform.Windows ? @"C:\app\native.exe" : "/app/native", needsSymbols: true);
+        RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x20000,
+            os == OSPlatform.Windows ? @"C:\app\singlefile.exe" : "/app/singlefile", entryPoint: true);
         target.AddSingleFileRuntime(app);
+        target.AddDiagnosticHeader(app.ImageBase);
         target.AddCoreRuntime(0x30000, diagnosticHeader: false);
+        if (flags == RuntimeEnumerationFlags.All)
+        {
+            target.Symbols.ExpectSymbolFile(0x10000, result: null);
+        }
 
         DescriptionBasedRuntimeProvider provider = new(target.Services);
         RuntimeDescription[] descriptions = provider.EnumerateRuntimeDescriptions(
             [new DotNetRuntimeDiscoveryProvider(target.Services), new SingleFileRuntimeDiscoveryProvider(target.Services)],
-            RuntimeEnumerationFlags.Default).ToArray();
+            flags).ToArray();
 
-        Assert.Equal([0x30000UL, 0x20000UL], descriptions.Select(description => description.Module.ImageBase));
-        Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase == 0x10000);
+        Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x30000UL, 0x20000UL] : new[] { 0x30000UL },
+            descriptions.Select(description => description.Module.ImageBase));
+        if (flags == RuntimeEnumerationFlags.Default)
+        {
+            Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase is 0x10000 or 0x20000);
+        }
         target.Symbols.Verify();
     }
 

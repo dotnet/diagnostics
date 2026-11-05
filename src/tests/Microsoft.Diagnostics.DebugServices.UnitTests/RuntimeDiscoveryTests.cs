@@ -105,7 +105,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         [Theory]
         [MemberData(nameof(Targets))]
-        public void HintedSingleFileRuntimeDoesNotSkipNamedRuntimeDiscovery(string platform, Architecture architecture)
+        public void NormalRuntimeSkipsHintedSingleFileDiscovery(string platform, Architecture architecture)
         {
             OSPlatform os = OSPlatform.Create(platform);
             using RuntimeDiscoveryTestTarget target = new(os, architecture);
@@ -115,19 +115,18 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             target.AddDiagnosticHeader(app.ImageBase);
             target.AddCoreRuntime(0x30000, diagnosticHeader: false);
 
-            IRuntime[] runtimes = target.Enumerate();
-            Assert.Equal(2, runtimes.Length);
-            Assert.Equal(0x20000UL, Assert.Single(runtimes, runtime => runtime.Services.GetService<ClrInfo>().IsSingleFile).RuntimeModule.ImageBase);
-            Assert.Equal(0x30000UL, Assert.Single(runtimes, runtime => !runtime.Services.GetService<ClrInfo>().IsSingleFile).RuntimeModule.ImageBase);
+            IRuntime runtime = Assert.Single(target.Enumerate());
+            Assert.Equal(0x30000UL, runtime.RuntimeModule.ImageBase);
+            Assert.False(runtime.Services.GetService<ClrInfo>().IsSingleFile);
             Assert.Empty(target.Symbols.Requests);
-            Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase == 0x10000);
+            Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase is 0x10000 or 0x20000);
             target.Symbols.Verify();
         }
 
         [Theory]
         [InlineData(RuntimeEnumerationFlags.Default)]
         [InlineData(RuntimeEnumerationFlags.All)]
-        public void PriorityMatchSkipsFallbackUnlessAllIsRequested(RuntimeEnumerationFlags flags)
+        public void NormalMatchSkipsFallbackUnlessAllIsRequested(RuntimeEnumerationFlags flags)
         {
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);
             target.AddModule(0x10000, "/app/native", needsSymbols: true);

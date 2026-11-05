@@ -111,102 +111,78 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             {
                 yield break;
             }
-            // Hinted and fallback modules try providers in priority order; ties are unspecified.
+            // Modules try providers in priority order; ties are unspecified.
             IRuntimeDescriptionProvider[] orderedProviders = providers
                 .OrderByDescending(provider => provider.Priority)
                 .ToArray();
             bool all = (flags & RuntimeEnumerationFlags.All) != 0;
             IModule[] modules = _services.GetService<IModuleService>().EnumerateModules().ToArray();
             HashSet<ulong> handledModules = [];
-            bool foundRuntime = false;
 
-            foreach (RuntimeDescription description in EnumeratePriorityRuntimeDescriptions(orderedProviders, modules, handledModules))
+            // DotNetRuntimeDiscoveryProvider is efficient at discovering coreclr/clr .NET runtimes, so we try it first.
+            foreach (RuntimeDescription description in EnumerateRuntimeDescriptions(
+                orderedProviders.OfType<DotNetRuntimeDiscoveryProvider>(), modules))
             {
-                foundRuntime = true;
+                handledModules.Add(description.Module.ImageBase);
                 yield return description;
             }
 
-            if (foundRuntime && !all)
+            if (handledModules.Count > 0 && !all)
             {
                 yield break;
             }
 
-            foreach (RuntimeDescription description in EnumerateFallbackRuntimeDescriptions(orderedProviders, modules, handledModules, all))
+            IRuntimeDescriptionProvider[] otherProviders = orderedProviders
+                .Where(provider => provider is not DotNetRuntimeDiscoveryProvider)
+                .ToArray();
+            // Hints are fully handled here, even if no provider matches.
+            IModule[] priorityModules = EnumerateHintedModules(modules)
+                .Where(module => handledModules.Add(module.ImageBase))
+                .ToArray();
+
+            // Priority modules are handled next, using providers in priority order.
+            foreach (RuntimeDescription description in EnumerateRuntimeDescriptions(otherProviders, priorityModules))
             {
                 yield return description;
+                if (!all)
+                {
+                    yield break;
+                }
+            }
+
+            // All modules are then tried if nothing was found or using the 'All' flag.
+            IModule[] remainingModules = modules.Where(module => !handledModules.Contains(module.ImageBase)).ToArray();
+            foreach (RuntimeDescription description in EnumerateRuntimeDescriptions(otherProviders, remainingModules))
+            {
+                yield return description;
+                if (!all)
+                {
+                    yield break;
+                }
             }
         }
 
-        private IEnumerable<RuntimeDescription> EnumeratePriorityRuntimeDescriptions(
-            IReadOnlyList<IRuntimeDescriptionProvider> providers, IReadOnlyList<IModule> modules, HashSet<ulong> handledModules)
+        private static IEnumerable<RuntimeDescription> EnumerateRuntimeDescriptions(
+            IEnumerable<IRuntimeDescriptionProvider> providers, IReadOnlyList<IModule> modules)
         {
-            foreach (DotNetRuntimeDiscoveryProvider provider in providers.OfType<DotNetRuntimeDiscoveryProvider>())
+            HashSet<ulong> matchedModules = [];
+            foreach (IRuntimeDescriptionProvider provider in providers)
             {
                 foreach (IModule module in modules)
                 {
-                    if (handledModules.Contains(module.ImageBase) ||
-                        !TryDescribeRuntime(provider, module, out RuntimeDescription description))
+                    if (matchedModules.Contains(module.ImageBase) ||
+                        !provider.TryDescribeRuntime(module, out RuntimeDescription description))
                     {
                         continue;
                     }
-                    handledModules.Add(module.ImageBase);
+                    if (description is null || description.Module.Target != module.Target || description.Module.ImageBase != module.ImageBase)
+                    {
+                        throw new DiagnosticsException($"Discovered runtime description does not match the probed target module {module.ImageBase:X16}");
+                    }
+                    matchedModules.Add(module.ImageBase);
                     yield return description;
                 }
             }
-
-            foreach (IModule module in EnumerateHintedModules(modules))
-            {
-                // Hints are fully handled here, even if no provider matches.
-                if (!handledModules.Add(module.ImageBase))
-                {
-                    continue;
-                }
-                foreach (IRuntimeDescriptionProvider provider in providers.Where(provider => provider is not DotNetRuntimeDiscoveryProvider))
-                {
-                    if (!TryDescribeRuntime(provider, module, out RuntimeDescription description))
-                    {
-                        continue;
-                    }
-                    yield return description;
-                    break;
-                }
-            }
-        }
-
-        private static IEnumerable<RuntimeDescription> EnumerateFallbackRuntimeDescriptions(
-            IReadOnlyList<IRuntimeDescriptionProvider> providers, IReadOnlyList<IModule> modules, HashSet<ulong> handledModules, bool all)
-        {
-            foreach (IRuntimeDescriptionProvider provider in providers.Where(provider => provider is not DotNetRuntimeDiscoveryProvider))
-            {
-                foreach (IModule module in modules)
-                {
-                    if (handledModules.Contains(module.ImageBase) ||
-                        !TryDescribeRuntime(provider, module, out RuntimeDescription description))
-                    {
-                        continue;
-                    }
-                    handledModules.Add(module.ImageBase);
-                    yield return description;
-                    if (!all)
-                    {
-                        yield break;
-                    }
-                }
-            }
-        }
-
-        private static bool TryDescribeRuntime(
-            IRuntimeDescriptionProvider provider, IModule module, out RuntimeDescription description)
-        {
-            if (!provider.TryDescribeRuntime(module, out description))
-            {
-                return false;
-            }
-            if (description is null || description.Module.Target != module.Target || description.Module.ImageBase != module.ImageBase)
-            {
-                throw new DiagnosticsException($"Discovered runtime description does not match the probed target module {module.ImageBase:X16}");
-            }
-            return true;
         }
 
         private IEnumerable<IModule> EnumerateHintedModules(IReadOnlyList<IModule> modules)

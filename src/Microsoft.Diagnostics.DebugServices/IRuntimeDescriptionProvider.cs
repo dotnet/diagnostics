@@ -12,6 +12,7 @@ namespace Microsoft.Diagnostics.DebugServices
         /// <summary>
         /// Higher priorities are tried first for hinted-module and fallback discovery.
         /// The built-in normal .NET provider runs before those probes, regardless of priority.
+        /// A normal runtime match skips those probes unless complete enumeration is requested.
         /// </summary>
         int Priority { get; }
 
