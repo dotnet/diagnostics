@@ -273,8 +273,9 @@ namespace Microsoft.SymbolStore.KeyGenerators
             // File data must fit in memory and within the file, the memory range must not overflow.
             // Alignment above 1 must be a power of two, with matching file and memory offsets.
             if (fileSize > memorySize ||
-                fileOffset > _elfFile.DataSourceLength ||
-                fileSize > _elfFile.DataSourceLength - fileOffset ||
+                (fileSize > 0 &&
+                (fileOffset > _elfFile.DataSourceLength ||
+                fileSize > _elfFile.DataSourceLength - fileOffset)) ||
                 virtualAddress > ulong.MaxValue - memorySize ||
                 (alignment > 1 && ((alignment & (alignment - 1)) != 0 || fileOffset % alignment != virtualAddress % alignment)))
             {
