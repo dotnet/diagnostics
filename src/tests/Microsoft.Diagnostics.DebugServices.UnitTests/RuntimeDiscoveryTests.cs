@@ -58,6 +58,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Equal(new Version(11, 0, 1, 2), info.Version);
             Assert.Equal(4, info.DataTarget.EnumerateModules().Count());
             Assert.Same(runtime, Assert.Single(target.Enumerate()));
+            Assert.Equal(0, target.CrashInfoRequests);
             Assert.Empty(target.Symbols.Requests);
             target.Symbols.Verify();
         }
@@ -722,7 +723,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Theory]
         [InlineData(RuntimeEnumerationFlags.Default)]
         [InlineData(RuntimeEnumerationFlags.All)]
-        public void CrashRuntimePrecedesDiagnosticHint(RuntimeEnumerationFlags flags)
+        public void DiagnosticHintPrecedesFallbackWithoutQueryingCrashInfo(RuntimeEnumerationFlags flags)
         {
             List<ulong> visited = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64,
@@ -744,13 +745,15 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
 
             IRuntime[] runtimes = target.Enumerate(flags);
-            Assert.Equal([0x30000UL, 0x20000UL], runtimes.Select(runtime => runtime.RuntimeModule.ImageBase));
-            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x30000UL, 0x20000UL, 0x10000UL] : new[] { 0x30000UL, 0x20000UL }, visited);
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x20000UL, 0x30000UL] : new[] { 0x20000UL },
+                runtimes.Select(runtime => runtime.RuntimeModule.ImageBase));
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x20000UL, 0x10000UL, 0x30000UL] : new[] { 0x20000UL }, visited);
+            Assert.Equal(0, target.CrashInfoRequests);
             target.Symbols.Verify();
         }
 
         [Fact]
-        public void CrashAndDiagnosticHintsDoNotProbeTheSameModuleTwice()
+        public void AllDoesNotProbeDiagnosticHintTwice()
         {
             List<ulong> visited = [];
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64,
@@ -762,7 +765,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             target.AddModule(0x10000, "/lib/unrelated", needsSymbols: true);
             target.AddModule(0x20000, "/app/hinted", needsSymbols: true);
             target.AddCoreRuntime(0x30000, diagnosticHeader: false);
-            target.AddCrashInfo(0x20000);
             target.AddDiagnosticHeader(0x20000);
             target.Symbols.ExpectSymbolFile(0x20000, result: null);
             target.Symbols.ExpectSymbolFile(0x10000, result: null);
@@ -773,7 +775,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         }
 
         [Fact]
-        public void UnrecognizedCrashRuntimeFallsBackToDiagnosticHint()
+        public void DiagnosticHintDoesNotProbeCrashRuntime()
         {
             using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);
             target.AddModule(0x10000, "/lib/unrelated", needsSymbols: true);
@@ -782,10 +784,10 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             target.AddDiagnosticHeader(app.ImageBase);
             target.AddModule(0x30000, "/app/crashing", needsSymbols: true);
             target.AddCrashInfo(0x30000);
-            target.Symbols.ExpectSymbolFile(0x30000, result: null);
 
             Assert.Equal(app.ImageBase, Assert.Single(target.Enumerate()).RuntimeModule.ImageBase);
-            Assert.Equal([0x30000UL, 0x20000UL], target.ExportProbes
+            Assert.Equal(0, target.CrashInfoRequests);
+            Assert.Equal([0x20000UL], target.ExportProbes
                 .Where(probe => probe.Symbol == "DotNetRuntimeInfo").Select(probe => probe.ModuleBase));
             target.Symbols.Verify();
         }

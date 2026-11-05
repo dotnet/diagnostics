@@ -28,6 +28,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public List<(ulong ModuleBase, string Symbol)> ExportProbes { get; } = [];
         public IServiceProvider Services => _target.Services;
         public IRuntimeService Runtimes => _target.Services.GetService<IRuntimeService>();
+        public int CrashInfoRequests => _target.CrashInfoRequests;
 
         public RuntimeDiscoveryTestTarget(OSPlatform platform, Architecture architecture, Action<ServiceManager> configureProviders = null)
         {
@@ -113,6 +114,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         private sealed class TestTarget : Target
         {
             public ulong? CrashRuntimeBase { get; set; }
+            public int CrashInfoRequests { get; private set; }
 
             public TestTarget(Host host, OSPlatform platform, Architecture architecture, IMemoryService memory, ServiceFactory modules)
                 : base(host, dumpPath: null)
@@ -124,11 +126,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 _serviceContainerFactory.AddServiceFactory<IModuleService>(modules);
                 _serviceContainerFactory.AddServiceFactory<IMemoryService>(_ => memory);
                 _serviceContainerFactory.AddServiceFactory<IThreadService>(_ => new NoThreads());
-                _serviceContainerFactory.AddServiceFactory<ICrashInfoService>(services =>
-                    CrashRuntimeBase is ulong runtimeBase
+                _serviceContainerFactory.AddServiceFactory<ICrashInfoService>(services => {
+                    CrashInfoRequests++;
+                    return CrashRuntimeBase is ulong runtimeBase
                         ? CrashInfoService.Create(0, Encoding.UTF8.GetBytes(
                             $"{{\"version\":\"1.0\",\"runtime_base\":\"0x{runtimeBase:X}\"}}"), services.GetService<IModuleService>())
-                        : null);
+                        : null;
+                });
                 OnFlushEvent.Register(() => FlushService<ICrashInfoService>());
                 Finished();
             }

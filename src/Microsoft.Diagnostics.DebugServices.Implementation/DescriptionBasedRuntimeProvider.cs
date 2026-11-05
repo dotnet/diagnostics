@@ -213,12 +213,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         {
             IModuleService moduleService = _services.GetService<IModuleService>();
             Dictionary<ulong, IModule> modulesByBase = modules.ToDictionary(module => module.ImageBase);
-            ulong crashRuntimeBase = _services.GetService<ICrashInfoService>()?.RuntimeBaseAddress ?? 0;
-            if (modulesByBase.TryGetValue(crashRuntimeBase, out IModule crashModule))
-            {
-                yield return crashModule;
-            }
-
             IDataReader reader = _services.GetService<IDataReader>();
             if (reader.TargetPlatform != OSPlatform.Windows &&
                 SpecialDiagInfo.TryGetRuntimeBaseAddress(reader, out ulong runtimeBase) &&
