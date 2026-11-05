@@ -1,21 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
-using Microsoft.Diagnostics.Runtime;
+using Microsoft.Diagnostics.DebugServices.UnitTests;
 using Xunit;
 
 public class RuntimeProviderTests
 {
     [Fact]
-    public void NamedRuntimeModulesAreSelected()
+    public void NormalProviderRecognizesOnlyNamedRuntimeModules()
     {
+        using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64);
         TestModuleInfo[] modules =
         [
             new(0x1000, @"C:\app\app.exe"),
@@ -25,128 +23,101 @@ public class RuntimeProviderTests
             new(0x5000, "/runtime/libcoreclr.dylib"),
             new(0x6000, @"C:\app\other.dll"),
         ];
+        foreach (TestModuleInfo module in modules)
+        {
+            target.AddModule(module.ImageBase, module.FileName);
+        }
 
-        IReadOnlyList<ModuleInfo> result = RuntimeProvider.EnumerateRuntimeModules(
-            new TestDataReader(OSPlatform.Windows, modules),
-            RuntimeEnumerationFlags.Default,
-            entryPointBase: 0x1000,
-            entryPointFileName: modules[0].FileName);
-
-        Assert.Equal([0x2000UL, 0x3000UL, 0x4000UL, 0x5000UL], result.Select(module => module.ImageBase));
+        DotNetRuntimeDiscoveryProvider provider = new(target.Services);
+        TestModuleInfo[] recognizedModules = target.Services.GetService<IModuleService>().EnumerateModules()
+            .Where(module => provider.TryDescribeRuntime(module, out _))
+            .Select(module => new TestModuleInfo(module.ImageBase, module.FileName))
+            .ToArray();
+        Assert.Equal([modules[1], modules[2], modules[3], modules[4]], recognizedModules);
+        Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase is 0x1000 or 0x6000);
+        target.Symbols.Verify();
     }
 
     [Fact]
-    public void EntrypointRuntimeExportsAreSelected()
+    public void WindowsEntrypointRunsBeforeOtherModules()
     {
-        TestModuleInfo[] modules =
-        [
-            new(0x1000, @"C:\app\sample.exe", "DotNetRuntimeInfo"),
-            new(0x2000, @"C:\app\sample.dll", "DotNetRuntimeContractDescriptor"),
-            new(0x3000, @"C:\other\other.dll", "DotNetRuntimeContractDescriptor"),
-            new(0x4000, @"C:\runtime\coreclr.dll"),
-        ];
+        using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64);
+        target.AddModule(0x10000, @"C:\app\native.exe", needsSymbols: true);
+        target.AddModule(0x20000, @"C:\app\sample.dll", needsSymbols: true);
+        RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x30000, @"C:\app\sample.exe", entryPoint: true);
+        target.AddSingleFileRuntime(app);
 
-        IReadOnlyList<ModuleInfo> result = RuntimeProvider.EnumerateRuntimeModules(
-            new TestDataReader(OSPlatform.Windows, modules),
-            RuntimeEnumerationFlags.Default,
-            entryPointBase: 0x1000,
-            entryPointFileName: modules[0].FileName);
+        Assert.Equal(app.ImageBase, Assert.Single(target.Enumerate()).RuntimeModule.ImageBase);
+        Assert.All(target.ExportProbes, probe => Assert.Equal(app.ImageBase, probe.ModuleBase));
+        target.Symbols.Verify();
+    }
 
-        Assert.Equal([0x1000UL, 0x2000UL, 0x4000UL], result.Select(module => module.ImageBase));
+    [Theory]
+    [InlineData("WINDOWS", RuntimeEnumerationFlags.Default)]
+    [InlineData("WINDOWS", RuntimeEnumerationFlags.All)]
+    [InlineData("LINUX", RuntimeEnumerationFlags.Default)]
+    [InlineData("LINUX", RuntimeEnumerationFlags.All)]
+    [InlineData("OSX", RuntimeEnumerationFlags.Default)]
+    [InlineData("OSX", RuntimeEnumerationFlags.All)]
+    public void NormalMatchSkipsHintedModulesUnlessAllIsRequested(string platform, RuntimeEnumerationFlags flags)
+    {
+        OSPlatform os = OSPlatform.Create(platform);
+        using RuntimeDiscoveryTestTarget target = new(os, Architecture.X64);
+        target.AddModule(0x10000, os == OSPlatform.Windows ? @"C:\app\native.exe" : "/app/native", needsSymbols: true);
+        RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x20000,
+            os == OSPlatform.Windows ? @"C:\app\singlefile.exe" : "/app/singlefile", entryPoint: true);
+        target.AddSingleFileRuntime(app);
+        target.AddDiagnosticHeader(app.ImageBase);
+        target.AddCoreRuntime(0x30000, diagnosticHeader: false);
+        if (flags == RuntimeEnumerationFlags.All)
+        {
+            target.Symbols.ExpectSymbolFile(0x10000, result: null);
+        }
+
+        DescriptionBasedRuntimeProvider provider = new(target.Services);
+        RuntimeDescription[] descriptions = provider.EnumerateRuntimeDescriptions(
+            [new DotNetRuntimeDiscoveryProvider(target.Services), new SingleFileRuntimeDiscoveryProvider(target.Services)],
+            flags).ToArray();
+
+        Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x30000UL, 0x20000UL] : new[] { 0x30000UL },
+            descriptions.Select(description => description.Module.ImageBase));
+        if (flags == RuntimeEnumerationFlags.Default)
+        {
+            Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase is 0x10000 or 0x20000);
+        }
+        target.Symbols.Verify();
     }
 
     [Fact]
-    public void AllReturnsEveryModule()
+    public void SingleFileDiscoveryOnlyRunsWhenRegistered()
     {
-        TestModuleInfo[] modules =
-        [
-            new(0x1000, "app"),
-            new(0x2000, "other"),
-        ];
+        using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);
+        RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x10000, "/app/singlefile", needsSymbols: true);
+        target.AddSingleFileRuntime(app, symbolOnly: true);
 
-        IReadOnlyList<ModuleInfo> result = RuntimeProvider.EnumerateRuntimeModules(
-            new TestDataReader(OSPlatform.Linux, modules),
-            RuntimeEnumerationFlags.All,
-            entryPointBase: null,
-            entryPointFileName: null);
+        DescriptionBasedRuntimeProvider provider = new(target.Services);
+        Assert.Empty(provider.EnumerateRuntimeDescriptions([new DotNetRuntimeDiscoveryProvider(target.Services)], RuntimeEnumerationFlags.All));
+        Assert.Empty(target.ExportProbes);
+        Assert.Empty(target.Symbols.Requests);
 
-        Assert.Same(modules[0], result[0]);
-        Assert.Same(modules[1], result[1]);
+        target.Symbols.ExpectSymbolFile(app.ImageBase, result: "mock-symbols");
+        RuntimeDescription description = Assert.Single(provider.EnumerateRuntimeDescriptions(
+            [new SingleFileRuntimeDiscoveryProvider(target.Services)], RuntimeEnumerationFlags.All));
+        Assert.Equal(app.ImageBase, description.Module.ImageBase);
+        Assert.True(description.IsSingleFile);
+        target.Symbols.Verify();
     }
 
     [Fact]
-    public void ExportProbeFailureDoesNotSelectEntrypoint()
+    public void NoRegisteredProvidersProbeNoModules()
     {
-        TestModuleInfo entryPoint = new(0x1000, @"C:\app\sample.exe", throwOnExport: true);
-
-        IReadOnlyList<ModuleInfo> result = RuntimeProvider.EnumerateRuntimeModules(
-            new TestDataReader(OSPlatform.Windows, [entryPoint]),
-            RuntimeEnumerationFlags.Default,
-            entryPoint.ImageBase,
-            entryPoint.FileName);
-
-        Assert.Empty(result);
+        using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64);
+        target.AddModule(0x10000, @"C:\app\sample.exe", entryPoint: true, needsSymbols: true);
+        DescriptionBasedRuntimeProvider provider = new(target.Services);
+        Assert.Empty(provider.EnumerateRuntimeDescriptions([], RuntimeEnumerationFlags.All));
+        Assert.Empty(target.ExportProbes);
+        target.Symbols.Verify();
     }
 
-    private sealed class TestModuleInfo : ModuleInfo
-    {
-        private readonly HashSet<string> _exports;
-        private readonly bool _throwOnExport;
-
-        public TestModuleInfo(
-            ulong imageBase,
-            string fileName,
-            string export = null,
-            bool throwOnExport = false)
-            : base(imageBase, fileName)
-        {
-            _exports = export is null ? [] : [export];
-            _throwOnExport = throwOnExport;
-        }
-
-        public override ModuleKind Kind => ModuleKind.Unknown;
-
-        public override ulong GetExportSymbolAddress(string symbol)
-        {
-            if (_throwOnExport)
-            {
-                throw new InvalidDataException();
-            }
-            return _exports.Contains(symbol) ? ImageBase + 0x100 : 0;
-        }
-    }
-
-    private sealed class TestDataReader : IDataReader
-    {
-        private readonly IReadOnlyList<ModuleInfo> _modules;
-
-        public TestDataReader(OSPlatform targetPlatform, IReadOnlyList<ModuleInfo> modules)
-        {
-            TargetPlatform = targetPlatform;
-            _modules = modules;
-        }
-
-        public string DisplayName => nameof(TestDataReader);
-        public bool IsThreadSafe => true;
-        public OSPlatform TargetPlatform { get; }
-        public Architecture Architecture => Architecture.X64;
-        public int ProcessId => 1;
-        public int PointerSize => sizeof(long);
-        public IEnumerable<ModuleInfo> EnumerateModules() => _modules;
-        public bool GetThreadContext(uint threadID, uint contextFlags, Span<byte> context) => false;
-        public void FlushCachedData() { }
-        public int Read(ulong address, Span<byte> buffer) => 0;
-        public bool Read<T>(ulong address, out T value) where T : unmanaged
-        {
-            value = default;
-            return false;
-        }
-        public T Read<T>(ulong address) where T : unmanaged => default;
-        public bool ReadPointer(ulong address, out ulong value)
-        {
-            value = 0;
-            return false;
-        }
-        public ulong ReadPointer(ulong address) => 0;
-    }
+    private readonly record struct TestModuleInfo(ulong ImageBase, string FileName);
 }
