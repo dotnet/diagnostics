@@ -105,6 +105,8 @@ The ELF format files indexed with the ELF-buildid-sym suffix contain debug infor
 
 `_.debug/elf-buildid-sym-<note_byte_sequence>/_.debug`
 
+Debug information may be DWARF or a regular ELF symbol table (`SHT_SYMTAB`) containing named, defined symbols for functions or data. A dynamic symbol table (`SHT_DYNSYM`) alone does not qualify, since stripped modules commonly retain it for runtime linking.
+
 Example:
 
 **File name:** `foo.so.dbg`

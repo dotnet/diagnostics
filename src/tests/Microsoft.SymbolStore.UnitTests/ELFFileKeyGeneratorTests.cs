@@ -315,6 +315,204 @@ namespace Microsoft.SymbolStore.Tests
                 Assert.Single(generator.GetKeys(KeyTypeFlags.HostKeys)).Index);
         }
 
+        public static IEnumerable<object[]> SymbolTableCases()
+        {
+            (string Kind, bool Useful)[] symbolKinds =
+            {
+                ("function", true),
+                ("object", true),
+                ("notype", true),
+                ("tls", true),
+                ("ifunc", true),
+                ("absolute", true),
+                ("dynamic", false),
+                ("undefined", false),
+                ("common", false),
+                ("file", false),
+                ("section", false),
+                ("empty", false),
+                ("zero-name", false),
+                ("empty-name", false),
+                ("bad-name", false),
+                ("unterminated", false),
+                ("bad-link", false),
+                ("wrong-string-type", false),
+                ("bad-entry-size", false),
+                ("partial-entry", false),
+                ("truncated", false),
+                ("bad-string-range", false),
+                ("bad-section-index", false)
+            };
+
+            foreach (bool is64Bit in new[] { false, true })
+            {
+                foreach (bool bigEndian in new[] { false, true })
+                {
+                    foreach (bool loadable in new[] { false, true })
+                    {
+                        foreach ((string kind, bool useful) in symbolKinds)
+                        {
+                            yield return new object[] { is64Bit, bigEndian, loadable, kind, useful };
+                        }
+                    }
+                }
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(SymbolTableCases))]
+        public void ClassifiesSymbolTableWithoutDWARF(bool is64Bit, bool bigEndian, bool loadable, string kind, bool useful)
+        {
+            using MemoryStream stream = CreateSymbolTableELF(is64Bit, bigEndian, loadable, kind);
+            using SymbolStoreFile file = new(stream, "module");
+            FileKeyGenerator generator = new(_tracer, file);
+            List<string> expected = new();
+            if (loadable)
+            {
+                expected.Add($"module/elf-buildid-{BuildId}/module");
+            }
+            if (useful)
+            {
+                expected.Add($"_.debug/elf-buildid-sym-{BuildId}/_.debug");
+            }
+            SymbolStoreKey[] keys = generator.GetKeys(KeyTypeFlags.IdentityKey).ToArray();
+            Assert.Equal(expected, keys.Select(key => key.Index));
+            Assert.All(keys, key => Assert.Equal("module", key.FullPathName));
+            Assert.Equal(loadable ? new[] { $"_.debug/elf-buildid-sym-{BuildId}/_.debug" } : Enumerable.Empty<string>(),
+                generator.GetKeys(KeyTypeFlags.SymbolKey).Select(key => key.Index));
+            if (loadable && !useful)
+            {
+                expected.Add($"_.debug/elf-buildid-sym-{BuildId}/_.debug");
+            }
+            Assert.Equal(expected, generator.GetKeys(KeyTypeFlags.IdentityKey | KeyTypeFlags.SymbolKey).Select(key => key.Index));
+        }
+
+        private static MemoryStream CreateSymbolTableELF(bool is64Bit, bool bigEndian, bool loadable, string kind)
+        {
+            int headerSize = is64Bit ? 64 : 52;
+            int programSize = is64Bit ? 56 : 32;
+            int sectionSize = is64Bit ? 64 : 40;
+            int wordSize = is64Bit ? 8 : 4;
+            int entrySize = is64Bit ? 24 : 16;
+            int sectionOffset = headerSize + (loadable ? programSize : 0);
+            int noteOffset = sectionOffset + 5 * sectionSize;
+            int payloadOffset = noteOffset + 36;
+            int symbolsOffset = payloadOffset + 16;
+            int stringsOffset = symbolsOffset + entrySize * 2;
+            MemoryStream stream = new();
+            using (BinaryWriter writer = new(stream, Encoding.ASCII, leaveOpen: true))
+            {
+                void Write(ulong value, int size)
+                {
+                    for (int i = 0; i < size; i++)
+                    {
+                        int shift = (bigEndian ? size - i - 1 : i) * 8;
+                        writer.Write((byte)((value >> shift) & 0xff));
+                    }
+                }
+                void Section(ELFSectionHeaderType type, ulong flags, ulong offset, ulong address, ulong size,
+                    uint link = 0, ulong symbolEntrySize = 0)
+                {
+                    Write(0, 4);
+                    Write((uint)type, 4);
+                    Write(flags, wordSize);
+                    Write(address, wordSize);
+                    Write(offset, wordSize);
+                    Write(size, wordSize);
+                    Write(link, 4);
+                    Write(0, 4);
+                    Write(1, wordSize);
+                    Write(symbolEntrySize, wordSize);
+                }
+
+                writer.Write(new byte[] { 0x7f, (byte)'E', (byte)'L', (byte)'F',
+                    (byte)(is64Bit ? 2 : 1), (byte)(bigEndian ? 2 : 1), 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+                Write((ushort)(loadable ? ELFHeaderType.Shared : ELFHeaderType.Relocatable), 2);
+                Write((uint)(is64Bit ? 62 : 3), 2);
+                Write(1, 4);
+                Write(0, wordSize);
+                Write((ulong)(loadable ? headerSize : 0), wordSize);
+                Write((ulong)sectionOffset, wordSize);
+                Write(0, 4);
+                Write((ulong)headerSize, 2);
+                Write((ulong)(loadable ? programSize : 0), 2);
+                Write(loadable ? 1UL : 0UL, 2);
+                Write((ulong)sectionSize, 2);
+                Write(5, 2);
+                Write(0, 2);
+                if (loadable)
+                {
+                    Write((uint)ELFProgramHeaderType.Load, 4);
+                    if (is64Bit)
+                    {
+                        Write(5, 4);
+                    }
+                    Write((ulong)payloadOffset, wordSize);
+                    Write((ulong)payloadOffset, wordSize);
+                    Write(0, wordSize);
+                    Write(16, wordSize);
+                    Write(16, wordSize);
+                    if (!is64Bit)
+                    {
+                        Write(5, 4);
+                    }
+                    Write(1, wordSize);
+                }
+                Section(ELFSectionHeaderType.Null, 0, 0, 0, 0);
+                Section(ELFSectionHeaderType.Note, 0, (ulong)noteOffset, 0, 36);
+                Section(loadable ? ELFSectionHeaderType.ProgBits : ELFSectionHeaderType.NoBits,
+                    6, (ulong)payloadOffset, (ulong)payloadOffset, 16);
+                ulong tableSize = (ulong)(kind == "empty" ? entrySize : entrySize * 2);
+                Section(kind == "dynamic" ? ELFSectionHeaderType.DynSym : ELFSectionHeaderType.SymTab, 0,
+                    kind == "truncated" ? (ulong)stringsOffset : (ulong)symbolsOffset, 0,
+                    kind == "partial-entry" ? tableSize - 1 : tableSize,
+                    kind == "bad-link" ? 9U : 4U, (ulong)(kind == "bad-entry-size" ? 1 : entrySize));
+                Section(kind == "wrong-string-type" ? ELFSectionHeaderType.ProgBits : ELFSectionHeaderType.StrTab,
+                    0, kind == "bad-string-range" ? ulong.MaxValue : (ulong)stringsOffset, 0, 6);
+                Write(4, 4);
+                Write(20, 4);
+                Write(3, 4);
+                writer.Write(new byte[] { (byte)'G', (byte)'N', (byte)'U', 0 });
+                writer.Write(Enumerable.Range(1, 20).Select(value => (byte)value).ToArray());
+                writer.Write(new byte[16 + entrySize]);
+                byte symbolType = kind switch
+                {
+                    "notype" => 0,
+                    "object" => 1,
+                    "section" => 3,
+                    "file" => 4,
+                    "tls" => 6,
+                    "ifunc" => 10,
+                    _ => 2
+                };
+                ushort symbolSection = kind switch
+                {
+                    "undefined" => 0,
+                    "common" => 0xfff2,
+                    "absolute" => 0xfff1,
+                    "bad-section-index" => 9,
+                    _ => 2
+                };
+                Write(kind == "bad-name" ? 7UL : kind == "zero-name" ? 0UL : kind == "empty-name" ? 5UL : 1UL, 4);
+                if (!is64Bit)
+                {
+                    Write((ulong)payloadOffset, 4);
+                    Write(16, 4);
+                }
+                writer.Write(symbolType);
+                writer.Write((byte)0);
+                Write(symbolSection, 2);
+                if (is64Bit)
+                {
+                    Write((ulong)payloadOffset, 8);
+                    Write(16, 8);
+                }
+                writer.Write(Encoding.ASCII.GetBytes(kind == "unterminated" ? "\0funcx" : "\0func\0"));
+            }
+            stream.Position = 0;
+            return stream;
+        }
+
         private static MemoryStream CreateELF(ELFHeaderType headerType, string debugSection,
             ELFSectionHeaderType contentType, ulong contentFlags, ulong contentSize, ulong loadAlignment = 1,
             bool sectionless = false, bool loadOutsideFile = false)

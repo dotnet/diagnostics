@@ -232,7 +232,8 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 sections = _elfFile.Sections;
                 hasDebugInfo = Array.Exists(sections, section =>
                     section.Name.StartsWith(".debug_info", StringComparison.Ordinal) ||
-                    section.Name.StartsWith(".zdebug_info", StringComparison.Ordinal));
+                    section.Name.StartsWith(".zdebug_info", StringComparison.Ordinal)) ||
+                    HasSymbolTableSymbols(sections);
             }
 
             if (_elfFile.Header.Type != ELFHeaderType.Executable &&
@@ -268,6 +269,69 @@ namespace Microsoft.SymbolStore.KeyGenerators
             }
 
             return hasLoadSegmentWithFileData && HasMappedModuleContents(sections, loadSegments);
+        }
+
+        private bool HasSymbolTableSymbols(ELFSection[] sections)
+        {
+            foreach (ELFSection section in sections)
+            {
+                // Dynamic symbol tables are normally retained in stripped modules for runtime linking.
+                if (section.Header.Type == ELFSectionHeaderType.SymTab)
+                {
+                    try
+                    {
+                        ELFSectionHeader header = section.Header;
+                        ulong entrySize = _elfFile.Is64Bit ? 24UL : 16UL;
+                        if (header.EntrySize != entrySize || header.FileSize < entrySize ||
+                            header.FileSize % entrySize != 0 || header.Link >= sections.Length ||
+                            !IsRangeContained(header.FileOffset, header.FileSize, 0, _elfFile.DataSourceLength))
+                        {
+                            Tracer.Verbose("ELF symbol table in {0}: invalid size, range, or string table link.", _path);
+                            continue;
+                        }
+                        ELFSection strings = sections[header.Link];
+                        if (strings.Header.Type != ELFSectionHeaderType.StrTab ||
+                            !IsRangeContained(strings.Header.FileOffset, strings.Header.FileSize, 0, _elfFile.DataSourceLength) ||
+                            !IsReadableRange(section.Contents, header.FileSize))
+                        {
+                            Tracer.Verbose("ELF symbol table in {0}: invalid string table or unreadable contents.", _path);
+                            continue;
+                        }
+
+                        Reader symbols = section.Contents;
+                        for (ulong offset = entrySize; offset < header.FileSize; offset += entrySize)
+                        {
+                            uint name = symbols.Read<uint>(offset);
+                            // ELF32 places st_info/st_shndx after st_value/st_size; ELF64 places them before.
+                            byte type = (byte)(symbols.Read<byte>(offset + (_elfFile.Is64Bit ? 4UL : 12UL)) & 0xf);
+                            ushort sectionIndex = symbols.Read<ushort>(offset + (_elfFile.Is64Bit ? 6UL : 14UL));
+                            bool defined = (sectionIndex > 0 && sectionIndex < 0xff00 && sectionIndex < sections.Length) ||
+                                sectionIndex == 0xfff1; // SHN_ABS
+                            // NOTYPE, OBJECT, FUNC, TLS and GNU_IFUNC can name addresses; FILE/SECTION do not.
+                            if (defined && (type == 0 || type == 1 || type == 2 || type == 6 || type == 10) &&
+                                name > 0 && name < strings.Header.FileSize)
+                            {
+                                Reader names = strings.Contents;
+                                if (names.Read<byte>(name) != 0)
+                                {
+                                    for (ulong position = name + 1UL; position < strings.Header.FileSize; position++)
+                                    {
+                                        if (names.Read<byte>(position) == 0)
+                                        {
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex) when (ex is InputParsingException || ex is IOException)
+                    {
+                        Tracer.Verbose("ELF symbol table in {0}: {1}", _path, ex.Message);
+                    }
+                }
+            }
+            return false;
         }
 
         private bool IsValidLoadSegment(ELFProgramSegment segment)
