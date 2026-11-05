@@ -14,10 +14,14 @@ output directory. The cDAC transport package is not used.
 
 ## Updating the mirrored source
 
-1. Open the **Sync universal DBI source** workflow.
+1. Open the [Sync cDAC and universal DBI source](https://github.com/dotnet/diagnostics/actions/workflows/sync-runtime-source.yml) workflow.
 2. Run it from the default branch.
 3. Review the pull request created or updated by the workflow.
 4. Merge the pull request after its normal validation completes.
 
-The workflow uses runtime's
-`src/coreclr/dlls/mscordbi_universal/SourceManifest.props` manifest.
+The workflow updates cDAC and the universal DBI together from the same runtime
+`main` commit so their private DAC/DBI interface stays in sync. It uses runtime's
+`src/native/managed/cdac/SourceManifest.props` and
+`src/coreclr/dlls/mscordbi_universal/SourceManifest.props` manifests. It maintains
+the `automation/sync-runtime-source` branch and reuses its existing pull request
+when one is open.
