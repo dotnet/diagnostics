@@ -264,6 +264,7 @@ typedef void (*PFN_MODULE_LOAD_CALLBACK)(void* param, const char* moduleFilePath
 // ILLDBServices
 //----------------------------------------------------------------------------
 
+EXTERN_GUID(IID_ILLDBServices, 0x2E6C569A, 0x9E14, 0x4DA4, 0x9D, 0xFC, 0xCD, 0xB7, 0x3A, 0x53, 0x25, 0x66);
 MIDL_INTERFACE("2E6C569A-9E14-4DA4-9DFC-CDB73A532566")
 ILLDBServices : public IUnknown
 {
@@ -575,6 +576,7 @@ public:
 
 typedef void (*PFN_MODULE_LOAD_CALLBACK)(void* param, const char* moduleFilePath, ULONG64 moduleAddress, int moduleSize);
 
+EXTERN_GUID(IID_ILLDBServices2, 0x012F32F0, 0x33BA, 0x4E8E, 0xBC, 0x01, 0x03, 0x7D, 0x38, 0x2D, 0x8A, 0x5E);
 MIDL_INTERFACE("012F32F0-33BA-4E8E-BC01-037D382D8A5E")
 ILLDBServices2: public IUnknown
 {

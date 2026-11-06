@@ -25,6 +25,10 @@
 
 #include "palclr.h"
 
+#ifndef HOST_WINDOWS
+#include "../diagnosticspal/inc/diagnosticspal.h"
+#endif
+
 #undef CreateSemaphore
 #define WszCreateEvent CreateEventW
 #define WszOpenEvent OpenEventW

@@ -76,7 +76,7 @@ HANDLE ClrGetProcessExecutableHeap();
 CRITSEC_COOKIE ClrCreateCriticalSection(CrstType type, CrstFlags flags);
 void ClrDeleteCriticalSection(CRITSEC_COOKIE cookie);
 void ClrEnterCriticalSection(CRITSEC_COOKIE cookie);
-void ClrLeaveCriticalSection(CRITSEC_COOKIE cookie);
+void ClrLeaveCriticalSection(CRITSEC_COOKIE cookie) noexcept;
 
 DWORD ClrSleepEx(DWORD dwMilliseconds, BOOL bAlertable);
 

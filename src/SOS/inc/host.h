@@ -15,6 +15,7 @@ struct ITarget;
 /// <summary>
 /// IHost - Provides native services from the host to SOS.
 /// </summary>
+EXTERN_GUID(IID_IHost, 0xE0CD8534, 0xA88B, 0x40D7, 0x91, 0xBA, 0x1B, 0x4C, 0x92, 0x57, 0x61, 0xE9);
 MIDL_INTERFACE("E0CD8534-A88B-40D7-91BA-1B4C925761E9")
 IHost : public IUnknown
 {

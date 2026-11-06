@@ -33,6 +33,7 @@ struct IHost;
 /// debugger (dbgeng/lldb) plugins (sos.dll, libsosplugin.*). Isn't presented when SOS is hosted
 /// by SOS.Hosting (i.e. dotnet-dump).
 /// </summary>
+EXTERN_GUID(IID_IHostServices, 0x27B2CB8D, 0xBDEE, 0x4CBD, 0xB6, 0xEF, 0x75, 0x88, 0x0D, 0x76, 0xD4, 0x6F);
 MIDL_INTERFACE("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F")
 IHostServices : public IUnknown
 {

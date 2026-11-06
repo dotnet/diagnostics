@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <arrayholder.h>
 #include "machoreader.h"
+#include <dn-stdio.h>
 
 #if TARGET_64BIT
 #define PRIx PRIx64
@@ -42,8 +43,7 @@ public:
     bool OpenFile(const WCHAR* modulePath)
     {
         _ASSERTE(m_file == NULL);
-        m_file = _wfopen(modulePath, W("rb"));
-        return m_file != NULL;
+        return u16_fopen_s(&m_file, modulePath, W("rb")) == 0;
     }
 
     virtual bool ReadMemory(void* address, void* buffer, size_t size)
