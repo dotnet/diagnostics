@@ -101,7 +101,7 @@ Example:
 
 ### ELF-buildid-sym
 
-The ELF format files indexed with the ELF-buildid-sym suffix are the result of the stripping process and contain only the symbols from the ELF-buildid indexed module. They commonly end in ‘.debug’, ‘.so.dbg’ or ‘.dbg’. The key is computed by reading the 20 byte sequence of the ELF Note section that is named “GNU” and that has note type GNU Build Id (3). If byte sequence is smaller than 20 bytes, bytes of value 0x00 should be added until the byte sequence is 20 bytes long. The file name is not used in the index because there are cases where all we have is the build id. The final key is formatted:
+The ELF format files indexed with the ELF-buildid-sym suffix contain debug information for the ELF-buildid indexed module. These may be separate debug companions produced by stripping, commonly ending in ‘.debug’, ‘.so.dbg’ or ‘.dbg’, or full unstripped images. Unstripped images have two identity keys: the ELF-buildid module key and the ELF-buildid-sym symbol key, both referring to the same file. A SymbolKey request on a module instead generates a lookup key for its debug companion. The key is computed by reading the 20 byte sequence of the ELF Note section that is named “GNU” and that has note type GNU Build Id (3). If byte sequence is smaller than 20 bytes, bytes of value 0x00 should be added until the byte sequence is 20 bytes long. The file name is not used in the index because there are cases where all we have is the build id. The final key is formatted:
 
 `_.debug/elf-buildid-sym-<note_byte_sequence>/_.debug`
 
@@ -120,7 +120,6 @@ Example:
 **Build note bytes:** `0x18, 0x0a, 0x37, 0x3d, 0x6a, 0xfb, 0xab, 0xf0, 0xeb, 0x1f, 0x09, 0xbe, 0x1b, 0xc4, 0x5b, 0xd7`
 
 **Lookup key:** `_.debug/elf-buildid-sym-180a373d6afbabf0eb1f09be1bc45bd700000000/_.debug`
-
 
 ### Mach-uuid
 This applies to any MachO format files that have been stripped of debugging information, commonly ending in 'dylib'. The key is computed by reading the uuid byte sequence of the MachO LC_UUID load command. The final key is formatted:

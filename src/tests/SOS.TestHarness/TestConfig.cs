@@ -272,13 +272,6 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
-        // Server GC for a LIVE target would require injecting the GC env vars into the dbgeng-launched
-        // debuggee process; that isn't wired yet (no consumer), so Server is dump-only for now.
-        if (c.GcType == GcType.Server && c.IsLive)
-        {
-            return false;
-        }
-
         // Keep single-file reduced-dump coverage focused on Heap until Mini has been validated across hosts.
         if (c.DumpKind == DumpKind.Mini && c.Flavor == Flavor.SingleFile)
         {

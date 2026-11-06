@@ -53,7 +53,7 @@ public static class Targets
         {
             return Task.Run<Target>(() => {
                 string exe = SnapshotStore.TargetExe(config.Flavor, config.Target, config.CoreVersion);
-                return new LiveTarget(config.Host, definition, config.Flavor, exe, config.CoreVersion, config.Dac, config.HostRuntime);
+                return new LiveTarget(config.Host, definition, config.Flavor, exe, config.CoreVersion, config.Dac, config.HostRuntime, config.GcType);
             });
         }
 

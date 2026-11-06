@@ -1,13 +1,13 @@
 <Dependencies>
-  <Source Uri="https://github.com/dotnet/dotnet" Mapping="diagnostics" Sha="50580101e1933db73f4b04af8401db92fc38a68a" BarId="338284" />
+  <Source Uri="https://github.com/dotnet/dotnet" Mapping="diagnostics" Sha="1f64ef47a8bab8b70faef698083e1d7a45dc4146" BarId="340151" />
   <ProductDependencies>
-    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.2.752201">
+    <Dependency Name="Microsoft.Diagnostics.Runtime" Version="4.2.755401">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>a16ead09f45f816fc43a8c69ccc814cf4291ad66</Sha>
+      <Sha>cf787f60c0aebe8c266edbfcfc55ad25dd784f41</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.2.752201">
+    <Dependency Name="Microsoft.Diagnostics.Runtime.Utilities" Version="4.2.755401">
       <Uri>https://github.com/microsoft/clrmd</Uri>
-      <Sha>a16ead09f45f816fc43a8c69ccc814cf4291ad66</Sha>
+      <Sha>cf787f60c0aebe8c266edbfcfc55ad25dd784f41</Sha>
     </Dependency>
     <Dependency Name="System.CommandLine" Version="2.0.0-beta5.25210.1">
       <Uri>https://github.com/dotnet/command-line-api</Uri>
@@ -19,31 +19,31 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26523.10">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26553.9">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>e7190175efc76434762e73a7a881ac451186ce2d</Sha>
+      <Sha>8f6ae2f6b8dc50ecb3cbe1523351801a40a0ddac</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="10.0.0-beta.26523.10">
+    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="10.0.0-beta.26553.9">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>e7190175efc76434762e73a7a881ac451186ce2d</Sha>
+      <Sha>8f6ae2f6b8dc50ecb3cbe1523351801a40a0ddac</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="10.0.0-beta.26523.10">
+    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="10.0.0-beta.26553.9">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>e7190175efc76434762e73a7a881ac451186ce2d</Sha>
+      <Sha>8f6ae2f6b8dc50ecb3cbe1523351801a40a0ddac</Sha>
     </Dependency>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
-    <Dependency Name="Microsoft.NET.Sdk" Version="11.0.100-rtm.26524.110">
+    <Dependency Name="Microsoft.NET.Sdk" Version="11.0.100-rtm.26555.108">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>50580101e1933db73f4b04af8401db92fc38a68a</Sha>
+      <Sha>1f64ef47a8bab8b70faef698083e1d7a45dc4146</Sha>
     </Dependency>
     <!-- Latest shared aspnetcore version updated by darc -->
-    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="11.0.0-rtm.26524.110">
+    <Dependency Name="Microsoft.AspNetCore.App.Ref.Internal" Version="11.0.0-rtm.26555.108">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>50580101e1933db73f4b04af8401db92fc38a68a</Sha>
+      <Sha>1f64ef47a8bab8b70faef698083e1d7a45dc4146</Sha>
     </Dependency>
     <Dependency Name="Microsoft.AspNetCore.App.Ref" Version="11.0.0">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>50580101e1933db73f4b04af8401db92fc38a68a</Sha>
+      <Sha>1f64ef47a8bab8b70faef698083e1d7a45dc4146</Sha>
     </Dependency>
     <!-- Latest shared runtime version updated by darc -->
     <!-- We use platforms for the unstable package version and
@@ -51,56 +51,32 @@
       use the unstable version, but the installed assets are all stable.  -->
     <Dependency Name="Microsoft.NETCore.App.Ref" Version="11.0.0">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>50580101e1933db73f4b04af8401db92fc38a68a</Sha>
+      <Sha>1f64ef47a8bab8b70faef698083e1d7a45dc4146</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.NETCore.Platforms" Version="11.0.0-rtm.26524.110">
+    <Dependency Name="Microsoft.NETCore.Platforms" Version="11.0.0-rtm.26555.108">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>50580101e1933db73f4b04af8401db92fc38a68a</Sha>
-    </Dependency>
-    <Dependency Name="runtime.win-x64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26523.103">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>846769e14f918f16ee85e7055c72fcc2f6b141bb</Sha>
-    </Dependency>
-    <Dependency Name="runtime.win-arm64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26523.103">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>846769e14f918f16ee85e7055c72fcc2f6b141bb</Sha>
-    </Dependency>
-    <Dependency Name="runtime.linux-x64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26523.103">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>846769e14f918f16ee85e7055c72fcc2f6b141bb</Sha>
-    </Dependency>
-    <Dependency Name="runtime.linux-arm64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26523.103">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>846769e14f918f16ee85e7055c72fcc2f6b141bb</Sha>
-    </Dependency>
-    <Dependency Name="runtime.osx-x64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26523.103">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>846769e14f918f16ee85e7055c72fcc2f6b141bb</Sha>
-    </Dependency>
-    <Dependency Name="runtime.osx-arm64.Microsoft.DotNet.Cdac.Transport" Version="12.0.0-alpha.1.26523.103">
-      <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>846769e14f918f16ee85e7055c72fcc2f6b141bb</Sha>
+      <Sha>1f64ef47a8bab8b70faef698083e1d7a45dc4146</Sha>
     </Dependency>
     <!--
       These versions should not be used by any project that contributes to the design-time experience in VS, such as an analyzer, code-fix, or generator assembly.
       Any tools that contribute to the design-time experience should use the MicrosoftCodeAnalysisVersion_LatestVS property above to ensure
       they do not break the local dev experience.
     -->
-    <Dependency Name="Microsoft.CodeAnalysis" Version="5.12.0-1.26524.110">
+    <Dependency Name="Microsoft.CodeAnalysis" Version="5.12.0-1.26555.108">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>50580101e1933db73f4b04af8401db92fc38a68a</Sha>
+      <Sha>1f64ef47a8bab8b70faef698083e1d7a45dc4146</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.CodeAnalysis.CSharp" Version="5.12.0-1.26524.110">
+    <Dependency Name="Microsoft.CodeAnalysis.CSharp" Version="5.12.0-1.26555.108">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>50580101e1933db73f4b04af8401db92fc38a68a</Sha>
+      <Sha>1f64ef47a8bab8b70faef698083e1d7a45dc4146</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.CodeAnalysis.Analyzers" Version="5.12.0-1.26524.110">
+    <Dependency Name="Microsoft.CodeAnalysis.Analyzers" Version="5.12.0-1.26555.108">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>50580101e1933db73f4b04af8401db92fc38a68a</Sha>
+      <Sha>1f64ef47a8bab8b70faef698083e1d7a45dc4146</Sha>
     </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis.NetAnalyzers" Version="11.0.100">
       <Uri>https://github.com/dotnet/dotnet</Uri>
-      <Sha>50580101e1933db73f4b04af8401db92fc38a68a</Sha>
+      <Sha>1f64ef47a8bab8b70faef698083e1d7a45dc4146</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

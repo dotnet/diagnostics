@@ -37,7 +37,7 @@ public sealed class LiveTarget : Target
 
     internal LiveTarget(Host hostKind, TargetDefinition definition, Flavor flavor, string exePath,
                         CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy,
-                        HostRuntime hostRuntime = HostRuntime.Managed)
+                        HostRuntime hostRuntime = HostRuntime.Managed, GcType gcType = GcType.Workstation)
         : base(hostKind, definition.Name, flavor)
     {
         _definition = definition;
@@ -50,7 +50,17 @@ public sealed class LiveTarget : Target
         _gateHeld = true;
         try
         {
-            _host = HostFactory.CreateLiveHost(hostKind, flavor, exePath, coreVersion, dac, hostRuntime, definition.EnvironmentVariables);
+            Dictionary<string, string> environment = definition.EnvironmentVariables is null
+                ? new()
+                : new(definition.EnvironmentVariables);
+            if (gcType == GcType.Server)
+            {
+                environment["DOTNET_gcServer"] = "1";
+                environment["DOTNET_GCHeapCount"] = "4";
+                environment["DOTNET_GCDynamicAdaptationMode"] = "0";
+            }
+
+            _host = HostFactory.CreateLiveHost(hostKind, flavor, exePath, coreVersion, dac, hostRuntime, environment);
         }
         catch
         {

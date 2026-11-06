@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.Build.Traversal">
+  <ItemGroup>
+    <ProjectReference Include="Microsoft.Diagnostics.InternalAssets.*.proj" Condition="'$(SingleTargetRidPackage)' != 'true'" />
+    <ProjectReference Include="Microsoft.Diagnostics.InternalAssets.$(TargetRid).proj" Condition="'$(SingleTargetRidPackage)' == 'true'" />
+  </ItemGroup>
+</Project>

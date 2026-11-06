@@ -108,6 +108,23 @@ jobs:
           targetPath: '$(Build.SourcesDirectory)/artifacts'
           checkDownloadedFiles: true
 
+    - ${{ if and(eq(parameters.testOnly, false), eq(parameters.platform.rid, 'linux-arm')) }}:
+      - bash: |
+          set -euo pipefail
+          asset_dir="$(Build.SourcesDirectory)/artifacts/tmp/lldb-9.0.0"
+          archive="$asset_dir/lldb-9.0.0.src.tar.xz"
+          mkdir -p "$asset_dir"
+          curl --fail --location --retry 5 \
+            https://netcorenativeassets.blob.core.windows.net/resource-packages/external/linux/llvm9.0.0/lldb-9.0.0.src.tar.xz \
+            --output "$archive"
+          echo "1e4c2f6a1f153f4b8afa2470d2e99dab493034c1ba8b7ffbbd7600de016d0794  $archive" | sha256sum --check
+          tar --extract --xz --file "$archive" --directory "$asset_dir" --no-same-owner \
+            lldb-9.0.0.src/include/lldb lldb-9.0.0.src/LICENSE.TXT
+          lldb_headers="$asset_dir/lldb-9.0.0.src/include"
+          test -f "$lldb_headers/lldb/API/LLDB.h"
+          echo "##vso[task.setvariable variable=LLDB_H]$lldb_headers"
+        displayName: Provision LLDB headers for Linux ARM
+
     - script: $(_buildScript)
         -ci
         -binaryLog

@@ -81,6 +81,7 @@ public static class TargetCatalog
     public const string ThreadApartment = "threadapartment";
     public const string DumpGcData = "dumpgcdata";
     public const string DumpGen = "dumpgen";
+    public const string FindRootsOlderGeneration = "findrootsoldergeneration";
     public const string StressLog = "stresslog";
     public const string VarargPInvoke = "varargpinvoke";
 
@@ -186,6 +187,12 @@ public static class TargetCatalog
             Project: "DotnetDumpCommands",
             StopPoints: new[] { new StopPoint("ready", StopKind.Snapshot, "DotnetDumpCommands.Program.AtReady") },
             Flavors: Flavor.Core | Flavor.SingleFile),
+
+        new TargetDefinition(
+            FindRootsOlderGeneration,
+            Project: "FindRootsOlderGeneration",
+            StopPoints: new[] { new StopPoint("ready", StopKind.Snapshot, "FindRootsOlderGeneration.Program.AtReady") },
+            Flavors: Flavor.Core),
 
         new TargetDefinition(
             StressLog,
