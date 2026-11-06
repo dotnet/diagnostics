@@ -78,7 +78,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             try
             {
                 Dictionary<ulong, ModuleInfo> modules = dataTarget.EnumerateModules().ToDictionary(module => module.ImageBase);
-                foreach (RuntimeDescription description in EnumerateRuntimeDescriptions(providers, flags))
+                IEnumerable<RuntimeDescription> descriptions = (flags & RuntimeEnumerationFlags.All) != 0
+                    ? EnumerateAllRuntimeDescriptions(providers)
+                    : EnumerateDefaultRuntimeDescriptions(providers);
+                foreach (RuntimeDescription description in descriptions)
                 {
                     if (description.Module.Target != _services.GetService<ITarget>() ||
                         !modules.TryGetValue(description.Module.ImageBase, out ModuleInfo module))
@@ -104,38 +107,39 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #endregion
 
-        internal IEnumerable<RuntimeDescription> EnumerateRuntimeDescriptions(
-            IReadOnlyList<IRuntimeDescriptionProvider> providers, RuntimeEnumerationFlags flags)
+        internal IEnumerable<RuntimeDescription> EnumerateAllRuntimeDescriptions(
+            IReadOnlyList<IRuntimeDescriptionProvider> providers)
+        {
+            if (providers.Count == 0)
+            {
+                return [];
+            }
+            IModule[] modules = _services.GetService<IModuleService>().EnumerateModules().ToArray();
+            return EnumerateRuntimeDescriptions(providers, modules);
+        }
+
+        internal IEnumerable<RuntimeDescription> EnumerateDefaultRuntimeDescriptions(
+            IReadOnlyList<IRuntimeDescriptionProvider> providers)
         {
             if (providers.Count == 0)
             {
                 yield break;
             }
-            // Modules try providers in priority order; ties are unspecified.
-            IRuntimeDescriptionProvider[] orderedProviders = providers
-                .OrderByDescending(provider => provider.Priority)
-                .ToArray();
-            bool all = (flags & RuntimeEnumerationFlags.All) != 0;
             IModule[] modules = _services.GetService<IModuleService>().EnumerateModules().ToArray();
             HashSet<ulong> handledModules = [];
 
             // DotNetRuntimeDiscoveryProvider is efficient at discovering coreclr/clr .NET runtimes, so we try it first.
             foreach (RuntimeDescription description in EnumerateRuntimeDescriptions(
-                orderedProviders.OfType<DotNetRuntimeDiscoveryProvider>(), modules))
+                providers.OfType<DotNetRuntimeDiscoveryProvider>(), modules))
             {
                 handledModules.Add(description.Module.ImageBase);
                 yield return description;
             }
 
-            if (handledModules.Count > 0 && !all)
-            {
-                yield break;
-            }
-
-            IRuntimeDescriptionProvider[] otherProviders = orderedProviders
+            IRuntimeDescriptionProvider[] otherProviders = providers
                 .Where(provider => provider is not DotNetRuntimeDiscoveryProvider)
                 .ToArray();
-            // Hints are fully handled here, even if no provider matches.
+            // Only probe hints that weren't already handled by the normal pass.
             IModule[] priorityModules = EnumerateHintedModules(modules)
                 .Where(module => handledModules.Add(module.ImageBase))
                 .ToArray();
@@ -144,21 +148,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             foreach (RuntimeDescription description in EnumerateRuntimeDescriptions(otherProviders, priorityModules))
             {
                 yield return description;
-                if (!all)
-                {
-                    yield break;
-                }
-            }
-
-            // All modules are then tried if nothing was found or using the 'All' flag.
-            IModule[] remainingModules = modules.Where(module => !handledModules.Contains(module.ImageBase)).ToArray();
-            foreach (RuntimeDescription description in EnumerateRuntimeDescriptions(otherProviders, remainingModules))
-            {
-                yield return description;
-                if (!all)
-                {
-                    yield break;
-                }
             }
         }
 
@@ -166,7 +155,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             IEnumerable<IRuntimeDescriptionProvider> providers, IReadOnlyList<IModule> modules)
         {
             HashSet<ulong> matchedModules = [];
-            foreach (IRuntimeDescriptionProvider provider in providers)
+            // Providers are tried in priority order; ties are unspecified.
+            foreach (IRuntimeDescriptionProvider provider in providers.OrderByDescending(provider => provider.Priority))
             {
                 foreach (IModule module in modules)
                 {

@@ -59,7 +59,7 @@ public class RuntimeProviderTests
     [InlineData("LINUX", RuntimeEnumerationFlags.All)]
     [InlineData("OSX", RuntimeEnumerationFlags.Default)]
     [InlineData("OSX", RuntimeEnumerationFlags.All)]
-    public void NormalMatchSkipsHintedModulesUnlessAllIsRequested(string platform, RuntimeEnumerationFlags flags)
+    public void NormalMatchStillChecksHintedModules(string platform, RuntimeEnumerationFlags flags)
     {
         OSPlatform os = OSPlatform.Create(platform);
         using RuntimeDiscoveryTestTarget target = new(os, Architecture.X64);
@@ -75,15 +75,16 @@ public class RuntimeProviderTests
         }
 
         DescriptionBasedRuntimeProvider provider = new(target.Services);
-        RuntimeDescription[] descriptions = provider.EnumerateRuntimeDescriptions(
-            [new DotNetRuntimeDiscoveryProvider(target.Services), new SingleFileRuntimeDiscoveryProvider(target.Services)],
-            flags).ToArray();
+        IRuntimeDescriptionProvider[] providers =
+            [new DotNetRuntimeDiscoveryProvider(target.Services), new SingleFileRuntimeDiscoveryProvider(target.Services)];
+        RuntimeDescription[] descriptions = (flags == RuntimeEnumerationFlags.All
+            ? provider.EnumerateAllRuntimeDescriptions(providers)
+            : provider.EnumerateDefaultRuntimeDescriptions(providers)).ToArray();
 
-        Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x30000UL, 0x20000UL] : new[] { 0x30000UL },
-            descriptions.Select(description => description.Module.ImageBase));
+        Assert.Equal([0x30000UL, 0x20000UL], descriptions.Select(description => description.Module.ImageBase));
         if (flags == RuntimeEnumerationFlags.Default)
         {
-            Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase is 0x10000 or 0x20000);
+            Assert.DoesNotContain(target.ExportProbes, probe => probe.ModuleBase == 0x10000);
         }
         target.Symbols.Verify();
     }
@@ -96,13 +97,13 @@ public class RuntimeProviderTests
         target.AddSingleFileRuntime(app, symbolOnly: true);
 
         DescriptionBasedRuntimeProvider provider = new(target.Services);
-        Assert.Empty(provider.EnumerateRuntimeDescriptions([new DotNetRuntimeDiscoveryProvider(target.Services)], RuntimeEnumerationFlags.All));
+        Assert.Empty(provider.EnumerateAllRuntimeDescriptions([new DotNetRuntimeDiscoveryProvider(target.Services)]));
         Assert.Empty(target.ExportProbes);
         Assert.Empty(target.Symbols.Requests);
 
         target.Symbols.ExpectSymbolFile(app.ImageBase, result: "mock-symbols");
-        RuntimeDescription description = Assert.Single(provider.EnumerateRuntimeDescriptions(
-            [new SingleFileRuntimeDiscoveryProvider(target.Services)], RuntimeEnumerationFlags.All));
+        RuntimeDescription description = Assert.Single(provider.EnumerateAllRuntimeDescriptions(
+            [new SingleFileRuntimeDiscoveryProvider(target.Services)]));
         Assert.Equal(app.ImageBase, description.Module.ImageBase);
         Assert.True(description.IsSingleFile);
         target.Symbols.Verify();
@@ -114,7 +115,8 @@ public class RuntimeProviderTests
         using RuntimeDiscoveryTestTarget target = new(OSPlatform.Windows, Architecture.X64);
         target.AddModule(0x10000, @"C:\app\sample.exe", entryPoint: true, needsSymbols: true);
         DescriptionBasedRuntimeProvider provider = new(target.Services);
-        Assert.Empty(provider.EnumerateRuntimeDescriptions([], RuntimeEnumerationFlags.All));
+        Assert.Empty(provider.EnumerateAllRuntimeDescriptions([]));
+        Assert.Empty(provider.EnumerateDefaultRuntimeDescriptions([]));
         Assert.Empty(target.ExportProbes);
         target.Symbols.Verify();
     }
