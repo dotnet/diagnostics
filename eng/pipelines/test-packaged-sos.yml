@@ -1,0 +1,112 @@
+parameters:
+- name: pipelineJobTemplate
+  type: string
+- name: createPackages
+  type: boolean
+  default: false
+- name: dependsOn
+  type: object
+  default: []
+
+jobs:
+- template: ${{ parameters.pipelineJobTemplate }}
+  parameters:
+    name: Packaged_SOS_win_x64_Release
+    displayName: Packaged SOS win-x64 Release Helix tests
+    dependsOn: ${{ parameters.dependsOn }}
+    timeoutInMinutes: 420
+    enableMicrobuild: true
+    pool:
+      name: $(BuildPool)
+      demands: ImageOverride -equals $(WindowsImage)
+      os: windows
+    workspace:
+      clean: all
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: Download prebuilt Release test inputs
+      inputs:
+        artifact: TestArtifacts_Windows_x64_Release
+        targetPath: '$(Build.SourcesDirectory)/artifacts'
+        checkDownloadedFiles: true
+
+    - ${{ if eq(parameters.createPackages, true) }}:
+      # Keep build-ID versioning, but opt out of the official signing path it normally enables.
+      - powershell: |
+          foreach ($tool in @('dotnet-sos', 'dotnet-dump')) {
+            & .\eng\common\build.ps1 -restore -pack -configuration Release `
+              -projects ".\src\Tools\$tool\$tool.csproj" `
+              /p:SingleTargetRidPackage=true /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+        displayName: Create local-only Windows x64 NuGet packages
+
+    - ${{ else }}:
+      - task: DownloadPipelineArtifact@2
+        displayName: Download finalized signed NuGet tools
+        inputs:
+          artifact: PackagedSOSTools
+          patterns: |
+            dotnet-sos.*.nupkg
+            dotnet-dump.*.nupkg
+          targetPath: '$(Build.SourcesDirectory)/artifacts/packages/Release/Shipping'
+          checkDownloadedFiles: true
+
+    - powershell: |
+        & .\eng\common\build.ps1 -restore -build -configuration Release `
+          -projects .\eng\InstallRuntimes.proj /p:TargetArch=x64
+        exit $LASTEXITCODE
+      displayName: Acquire test SDK and runtimes
+
+    - task: PowerShell@2
+      displayName: Prepare Packaged layout from NuGet tools
+      inputs:
+        pwsh: true
+        filePath: eng\TestPackagedSOS.ps1
+        arguments: >
+          -PackageDirectory "$(Build.SourcesDirectory)\artifacts\packages\Release\Shipping"
+          -OutputDirectory "$(Build.SourcesDirectory)\artifacts\tmp\packaged-sos"
+          -PrepareOnly
+
+    - template: /eng/pipelines/send-to-helix-step.yml
+      parameters:
+        displayName: Run full Packaged SOS win-x64 Release matrix on Helix
+        osGroup: windows
+        sendParams: >
+          $(Build.SourcesDirectory)/eng/helix/SendToHelix.proj
+          /restore /p:TreatWarningsAsErrors=false /t:Test
+          /p:Configuration=Release /p:TargetArch=x64 /p:TargetOS=Windows_NT /p:TargetRid=win-x64
+          /p:HelixTestProject=$(Build.SourcesDirectory)/src/tests/SOS.Tests/SOS.Tests.csproj
+          /p:SOSTestToolLayout=Packaged
+          /p:SOSTestToolRoot=$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos/Packaged
+          /p:OfficialBuildId=$(Build.BuildNumber)
+          /bl:$(Build.SourcesDirectory)/artifacts/log/Release/SendPackagedSOS.binlog
+        env:
+          HelixSource: pr/dotnet/diagnostics/tests
+          HelixType: tests/
+          HelixConfiguration: win-x64_Release_Packaged
+          ${{ if eq(variables['System.TeamProject'], 'public') }}:
+            HelixTargetQueues: $(helix_win_x64)
+            Creator: dotnet-bot
+          ${{ else }}:
+            HelixTargetQueues: $(helix_win_x64_internal)
+            HelixAccessToken: $(HelixApiAccessToken)
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+    - task: CopyFiles@2
+      displayName: Gather packaged SOS Helix logs
+      condition: always()
+      inputs:
+        sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+        contents: '?(log|TestResults)/**'
+        targetFolder: '$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos/results'
+
+    - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+      parameters:
+        displayName: Publish packaged SOS Helix logs
+        condition: always()
+        continueOnError: true
+        inputs:
+          targetPath: '$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos/results'
+          artifactName: Logs_Packaged_SOS_win_x64_Release_$(System.JobAttempt)
+          sbomEnabled: false

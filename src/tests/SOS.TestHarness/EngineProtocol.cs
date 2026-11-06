@@ -15,6 +15,7 @@ internal static class EngineProtocol
     public const string Ready = "<<<SOSHARNESS-ENGINE-READY>>>";
     public const string End = "<<<SOSHARNESS-CMD-END-9F3A>>>";
     public const string Error = "<<<SOSHARNESS-CMD-ERROR-9F3A>>>";
+    public const string DiagnosticPrefix = "<<<SOSHARNESS-ENGINE-DIAGNOSTIC>>> ";
 
     /// <summary>Request: <c>@runtobpmd &lt;module&gt; &lt;method&gt;</c>.</summary>
     public const string RunToBpmdPrefix = "@runtobpmd ";

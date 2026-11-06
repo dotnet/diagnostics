@@ -30,14 +30,18 @@ namespace Microsoft.Diagnostics.Tools.SOS
                 name: "install",
                 description: "Installs SOS and configures LLDB to load it on startup.")
             {
-                ArchitectureOption
+                ArchitectureOption,
+                InstallDirectoryOption,
+                NoLldbInitOption
             };
 
             installCommand.SetAction(parseResult => Invoke(
                 parseResult.Configuration.Output,
                 parseResult.Configuration.Error,
                 architecture: parseResult.GetValue(ArchitectureOption),
-                install: true));
+                install: true,
+                installDirectory: parseResult.GetValue(InstallDirectoryOption),
+                noLldbInit: parseResult.GetValue(NoLldbInitOption)));
 
             return installCommand;
         }
@@ -46,6 +50,18 @@ namespace Microsoft.Diagnostics.Tools.SOS
             new("--architecture", "-a", "--arch")
             {
                 Description = "The processor architecture to install."
+            };
+
+        private static readonly Option<string> InstallDirectoryOption =
+            new("--install-directory")
+            {
+                Description = "The directory to install SOS into instead of the default user installation."
+            };
+
+        private static readonly Option<bool> NoLldbInitOption =
+            new("--no-lldbinit")
+            {
+                Description = "Do not modify the LLDB initialization file."
             };
 
         private static Command UninstallCommand()
@@ -63,11 +79,20 @@ namespace Microsoft.Diagnostics.Tools.SOS
             return uninstallCommand;
         }
 
-        private static int Invoke(TextWriter stdOut, TextWriter stdError, Architecture? architecture, bool install)
+        private static int Invoke(TextWriter stdOut, TextWriter stdError, Architecture? architecture, bool install,
+            string installDirectory = null, bool noLldbInit = false)
         {
             try
             {
                 InstallHelper sosInstaller = new((message) => stdOut.WriteLine(message), architecture);
+                if (installDirectory is not null)
+                {
+                    sosInstaller.InstallLocation = Path.GetFullPath(installDirectory);
+                }
+                if (noLldbInit)
+                {
+                    sosInstaller.LLDBInitFile = null;
+                }
                 if (install)
                 {
                     sosInstaller.Install();

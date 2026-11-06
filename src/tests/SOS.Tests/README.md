@@ -1,6 +1,6 @@
 # SOS.Tests
 
-`SOS.Tests` validates the repository-built SOS across debugger hosts, runtime
+`SOS.Tests` validates repository-built and installed SOS across debugger hosts, runtime
 flavors, runtime versions, dump kinds, GC modes, and DAC implementations. It is
 an xUnit v3 Microsoft.Testing.Platform application. See
 [COVERAGE.md](COVERAGE.md) for the legacy-to-new coverage audit and mutation
@@ -40,7 +40,59 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 ./artifacts/bin/SOS.Tests/Debug/net10.0/SOS.Tests
 ```
 
+## Installed-tool validation
+
+The default tool layout remains `Bin`. To test finalized NuGet tools with the
+`Packaged` layout on Windows x64, first build the Release test
+infrastructure and install the test runtimes, then run:
+
+```powershell
+.\eng\TestPackagedSOS.ps1 `
+  -PackageDirectory .\artifacts\packages\Release\Shipping `
+  -OutputDirectory ".\artifacts\tmp\packaged SOS validation"
+```
+
+The output directory must not already exist. The script selects the exact
+version of the sole `dotnet-sos` package in the input directory and requires a
+matching `dotnet-dump` package. The installed tools get an isolated installation,
+staged payload, dump cache, logs, and xUnit reports. The local runner uses the
+same launcher and full test selection as Helix. Test infrastructure is staged
+without Bin-layout product outputs or source-build fallbacks.
+
+Both layouts run the full applicable SOS suite with the same test-defined
+runtime, host, DAC, hosting, GC, dump-kind, and liveness coverage. Packaged
+validation does not restrict the suite to smoke-test classes or the legacy DAC;
+normal capability exclusions and known-issue skips still apply. It tests shipped
+products without injecting private cDAC/DBI overrides.
+
+Official builds prepare this layout after packaging/signing, consuming the
+finalized NuGet artifacts. PR CI prepares unsigned packages from a standalone
+Windows x64 Release build. Both paths submit one Packaged work item per
+`RuntimeTestVersions` entry (currently .NET 8, 9, 10, and 11), plus a Framework
+work item. For example, `SOS_win-x64_Release-Packaged-Net11` runs Core and
+SingleFile debuggees for .NET 11, and
+`SOS_win-x64_Release-Packaged-Framework` runs desktop Framework coverage once.
+The opt-in local runner executes the same runtime and Framework shards,
+continuing through all shards before reporting any failures. Packaged validation
+currently supports Windows x64; its Helix jobs use Release builds. Existing Bin
+jobs and publication dependencies are unchanged.
+
+`-PrepareOnly` installs the packages without running tests, for use by
+the Helix submission step. The prepared `tools` and `sos` closures are copied into
+the payload; package installation and SOS installation are not repeated
+on the Helix worker.
+
+SingleFile remains a debuggee flavor, not a tool-layout mode. Testing tools from
+the single-file archive is deferred.
+
 ## Architecture
+
+`IToolLayout` describes native SOS and managed assembly paths, the dotnet-dump
+command, dump-cache directory, and optional cDAC-override directory. It does
+not load assemblies, configure processes, or copy runtime binaries. `DotNetDumpHost`
+and `SnapshotStore` configure their own tool launches and debuggee self-capture;
+`DbgEngSosHost` loads the selected managed SOS assembly, retaining isolation for
+installed products; `CDacOverride` prepares private override binaries when needed.
 
 The harness is split into four parts:
 
@@ -83,7 +135,7 @@ behavior.
 `SnapshotStore` acquires each `(flavor, target, core version)` once. Core and
 single-file targets consume repository build outputs; desktop Framework targets
 are built in the scratch tree. Snapshot stops self-collect through the
-repository-built dotnet-dump, Core crash targets use createdump, and desktop
+selected layout's dotnet-dump, Core crash targets use createdump, and desktop
 capture is delegated to the dbgeng capturer child. On Linux and macOS, the
 matching runtime DAC is staged beside each single-file executable before launch
 so createdump can honor Heap dump requests instead of falling back to Full.
@@ -93,7 +145,12 @@ The DAC is deliberately not a capture dimension: legacy DAC and cDAC analyze
 the same dump, with DAC selection happening when the host opens it. Cached
 dumps are reused only while newer than their debuggee.
 
-Helix submits one work item per installed .NET runtime. Each runtime shard sets
+Helix identities include the tool installation layout, for example
+`SOS_win-x64_Release-Bin-Net10`. Payload directories include the RID,
+configuration, layout, and queue; report and log filenames also include the
+layout so Bin and Packaged runs remain distinguishable.
+
+For both layouts, Helix submits one work item per installed .NET runtime. Each runtime shard sets
 `SOSHARNESS_ONLY_COREVERSIONS` and runs the Core and SingleFile flavors.
 Windows submits one additional Framework work item so desktop Framework
 coverage runs once rather than being repeated in every runtime shard. Dump
@@ -113,7 +170,7 @@ Tests issue the same `target.Sos("command")` call through `IDebuggerHost`.
 - `ChildEngineClient` for cdb/dbgeng, keeping native engine faults outside the
   test process;
 - `LldbCliHost` or `LldbLiveHost` for LLDB;
-- `DotNetDumpHost` for the repository-built dotnet-dump.
+- `DotNetDumpHost` for the selected layout's dotnet-dump.
 
 LLDB runs with external symbol lookup disabled before loading a target. Dumps,
 executables, SOS, and matching DACs come from local build artifacts, so network
@@ -259,6 +316,8 @@ Comma-separated matrix allow-lists are case-insensitive enum names:
 | `SOSHARNESS_DAC_DIR` | Override the legacy DAC directory used by the dbgeng engine host. |
 | `SOSHARNESS_CDAC_DIR` | Override cDAC discovery with a directory containing the matched universal cDAC and DBI binaries. |
 | `SOSHARNESS_USECDAC` | Local global DAC clamp; overrides the matrix DAC selection and is not set in CI. |
+| `SOSHARNESS_TOOL_LAYOUT` | Select `Bin` (the default) or NuGet-installed `Packaged` tools. |
+| `SOSHARNESS_TOOL_ROOT` | Root of a prepared installation; required for the Packaged layout. |
 | `LLDB_PATH` | Override LLDB discovery. Otherwise Xcode and then `PATH` are searched. |
 | `NUGET_PACKAGES` | Override the NuGet package root used to locate runtime packs and cDAC assets. |
 
@@ -270,7 +329,7 @@ processes; they are not supported user controls:
 
 | Variable | Owner and purpose |
 | --- | --- |
-| `SOSHARNESS_CAPTURE_DIR`, `SOSHARNESS_DOTNET`, `SOSHARNESS_DOTNETDUMP_DLL`, `SOSHARNESS_DUMP_TYPE` | Tell a snapshot debuggee where and how to self-collect. |
+| `SOSHARNESS_CAPTURE_DIR`, `SOSHARNESS_DOTNET`, `SOSHARNESS_DOTNETDUMP`, `SOSHARNESS_DOTNETDUMP_DLL`, `SOSHARNESS_DOTNET_ROOT`, `SOSHARNESS_DUMP_TYPE` | Tell a snapshot debuggee where and how to self-collect. |
 | `SOSHARNESS_STATE` | LLDB stop-point protocol emitted by a live debuggee. |
 | `_NT_SYMBOL_PATH` | Constrains child engines to the harness symbol cache. |
 | `DOTNET_ROOT`, `DOTNET_ROOT(x86)`, `DOTNET_MULTILEVEL_LOOKUP` | Bind Core debuggees to the selected test-runtime installation. |
@@ -293,8 +352,10 @@ ordered command, copy/paste host replay instructions, host stdout/stderr, LLDB
 trace setting, and debugger-host crash dumps. Capture failures remain the
 original test failure even if replay writing also fails.
 
-Reusable targets, dumps, and symbols live under
-`artifacts/tmp/sos-harness/<Configuration>`. Replays and debugger-host crash
+Reusable targets, symbols, and Bin-layout dumps live under
+`artifacts/tmp/sos-harness/<Configuration>`. Installed layouts keep dumps under
+`<tool-root>/test-artifacts/dumps`, isolated from Bin and other installations.
+Replays and debugger-host crash
 artifacts live under `artifacts/TestResults/SOS.Tests`. Dumps can be large;
 remove the scratch subtree when a clean recapture is required.
 

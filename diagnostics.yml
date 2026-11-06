@@ -106,6 +106,21 @@ extends:
       ############################
 
       - ${{ if ne(parameters.buildOnly, true) }}:
+        # Temporary standalone Release coverage for packaged SOS in PR validation.
+        - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+          - template: /eng/pipelines/platform-matrix.yml
+            parameters:
+              jobTemplate: /eng/pipelines/build.yml
+              configurations: [ Release ]
+              platforms: [ win-x64 ]
+              jobParameters:
+                pipelineJobTemplate: ${{ variables.jobTemplate }}
+          - template: /eng/pipelines/test-packaged-sos.yml
+            parameters:
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
+              createPackages: true
+              dependsOn: [ Windows_x64_Release ]
+
         - template: /eng/pipelines/platform-matrix.yml
           parameters:
             jobTemplate: /eng/pipelines/build.yml
@@ -176,6 +191,11 @@ extends:
                 displayName: 'Publish Bundled Tools'
                 condition: succeeded()
               - output: pipelineArtifact
+                artifact: PackagedSOSTools
+                path: '$(Build.SourcesDirectory)/artifacts/packages/Release/Shipping'
+                displayName: 'Publish Finalized NuGet Tools for SOS Testing'
+                condition: succeeded()
+              - output: pipelineArtifact
                 artifact: Logs_Packaging_Signing_Attempt$(System.JobAttempt)
                 path: '$(Build.SourcesDirectory)/artifacts/log'
                 displayName: 'Publish Signing and Packaging Logs'
@@ -225,6 +245,15 @@ extends:
             configuration: Release
             dependsOn: Package_Sign_Publish
             publishUsingPipelines: true
+
+      - ${{ if ne(parameters.buildOnly, true) }}:
+        - stage: packaged_sos
+          displayName: Test Packaged SOS
+          dependsOn: package
+          jobs:
+          - template: /eng/pipelines/test-packaged-sos.yml
+            parameters:
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
 
       - template: /eng/common/templates-official/post-build/post-build.yml@self
         parameters:

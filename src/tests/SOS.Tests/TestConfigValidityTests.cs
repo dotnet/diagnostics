@@ -103,6 +103,23 @@ public sealed class TestConfigValidityTests
     }
 
     [Theory]
+    [InlineData(@"C:\dumps\crash.dmp", true, @"C:\dumps\crash.dmp")]
+    [InlineData(@"C:\dump cache\crash.dmp", true, "\"C:\\dump cache\\crash.dmp\"")]
+    [InlineData("/dump cache/crash.dmp", false, "/dump cache/crash.dmp")]
+    public void CreatedumpNameQuotesSpacedWindowsPaths(string dumpPath, bool isWindows, string expected)
+    {
+        Assert.Equal(expected, SnapshotStore.CreatedumpName(dumpPath, isWindows));
+    }
+
+    [Theory]
+    [InlineData(@"C:\dacs", @"!setclrpath 'C:\dacs'")]
+    [InlineData(@"C:\dac cache\11.0.0", @"!setclrpath 'C:\dac cache\11.0.0'")]
+    public void ClrPathCommandUsesNativeQuoteSyntax(string directory, string expected)
+    {
+        Assert.Equal(expected, DbgEngHostBase.ClrPathCommand(directory));
+    }
+
+    [Theory]
     [InlineData(Flavor.Core, DumpKind.Heap, false, "Heap")]
     [InlineData(Flavor.SingleFile, DumpKind.Heap, false, "Heap")]
     [InlineData(Flavor.SingleFile, DumpKind.Full, false, "Full")]
