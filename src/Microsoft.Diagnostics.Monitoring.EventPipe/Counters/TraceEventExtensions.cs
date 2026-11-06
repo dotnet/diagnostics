@@ -254,7 +254,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //string meterVersion = (string)obj.PayloadValue(2);
             string instrumentName = (string)obj.PayloadValue(3);
             //string unit = (string)obj.PayloadValue(4);
-            string tags = (string)obj.PayloadValue(5);
+            string tags = CounterTagFormatter.Normalize((string)obj.PayloadValue(5), escaped: obj.Version >= 3);
             string lastValueText = (string)obj.PayloadValue(6);
             int? id = null;
 
@@ -313,8 +313,8 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
                 // string instrumentType = (string)traceEvent.PayloadValue(4);
                 instrumentUnit = (string)traceEvent.PayloadValue(5);
                 instrumentDescription = (string)traceEvent.PayloadValue(6);
-                instrumentTags = (string)traceEvent.PayloadValue(7);
-                meterTags = (string)traceEvent.PayloadValue(8);
+                instrumentTags = CounterTagFormatter.Normalize((string)traceEvent.PayloadValue(7), escaped: traceEvent.Version >= 4);
+                meterTags = CounterTagFormatter.Normalize((string)traceEvent.PayloadValue(8), escaped: traceEvent.Version >= 4);
                 meterScopeHash = (string)traceEvent.PayloadValue(9);
             }
             if (traceEvent.Version >= 2)
@@ -354,7 +354,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //string meterVersion = (string)obj.PayloadValue(2);
             string instrumentName = (string)traceEvent.PayloadValue(3);
             //string unit = (string)traceEvent.PayloadValue(4);
-            string tags = (string)traceEvent.PayloadValue(5);
+            string tags = CounterTagFormatter.Normalize((string)traceEvent.PayloadValue(5), escaped: traceEvent.Version >= 3);
             string rateText = (string)traceEvent.PayloadValue(6);
             //Starting in .NET 8 we also publish the absolute value of these counters
             string absoluteValueText = null;
@@ -410,7 +410,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //string meterVersion = (string)obj.PayloadValue(2);
             string instrumentName = (string)traceEvent.PayloadValue(3);
             //string unit = (string)traceEvent.PayloadValue(4);
-            string tags = (string)traceEvent.PayloadValue(5);
+            string tags = CounterTagFormatter.Normalize((string)traceEvent.PayloadValue(5), escaped: traceEvent.Version >= 3);
             string rateText = (string)traceEvent.PayloadValue(6);
             string valueText = (string)traceEvent.PayloadValue(7);
             int? id = null;
@@ -460,7 +460,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe
             //string meterVersion = (string)obj.PayloadValue(2);
             string instrumentName = (string)obj.PayloadValue(3);
             //string unit = (string)obj.PayloadValue(4);
-            string tags = (string)obj.PayloadValue(5);
+            string tags = CounterTagFormatter.Normalize((string)obj.PayloadValue(5), escaped: obj.Version >= 3);
             string quantilesText = (string)obj.PayloadValue(6);
 
             int count;

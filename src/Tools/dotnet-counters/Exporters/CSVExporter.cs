@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -69,23 +70,73 @@ namespace Microsoft.Diagnostics.Tools.Counters.Exporters
                     builder.Clear();
                 }
 
-                builder
-                    .Append(payload.Timestamp.ToString()).Append(',')
-                    .Append(payload.CounterMetadata.ProviderName).Append(',')
-                    .Append(payload.GetDisplay());
-
+                string counterName = payload.GetDisplay();
                 string tags = payload.CombineTags();
                 if (!string.IsNullOrEmpty(tags))
                 {
-                    builder.Append('[').Append(tags.Replace(',', ';')).Append(']');
+                    counterName += "[" + FormatTags(tags, payload.IsMeter) + "]";
                 }
-                builder.Append(',')
-                    .Append(payload.CounterType).Append(',')
-                    .Append(payload.Value.ToString(CultureInfo.InvariantCulture)).Append('\n');
+
+                AppendField(builder, payload.Timestamp.ToString());
+                builder.Append(',');
+                AppendField(builder, payload.CounterMetadata.ProviderName);
+                builder.Append(',');
+                AppendField(builder, counterName);
+                builder.Append(',');
+                AppendField(builder, payload.CounterType.ToString());
+                builder.Append(',');
+                AppendField(builder, payload.Value.ToString(CultureInfo.InvariantCulture));
+                builder.Append('\n');
             }
         }
 
         public void CounterStopped(CounterPayload payload) { }
+
+        // Renders decoded tags into the single "[key=value;key=value]" column this exporter writes.
+        // Pairs are separated by ';'. A decoded key or value may still contain a real ',': it is kept
+        // as-is here because AppendField quotes the whole field per RFC 4180, so the comma cannot spill
+        // into the next column.
+        private static string FormatTags(string tags, bool isMeter)
+        {
+            if (!isMeter)
+            {
+                return tags.Replace(',', ';');
+            }
+
+            StringBuilder sb = new();
+            foreach (KeyValuePair<string, string> tag in CounterTagFormatter.Decode(tags))
+            {
+                if (sb.Length > 0)
+                {
+                    sb.Append(';');
+                }
+
+                sb.Append(tag.Key).Append('=').Append(tag.Value);
+            }
+
+            return sb.ToString();
+        }
+
+        // Appends one field using RFC 4180 quoting: a field containing ',', '"', CR or LF is wrapped in
+        // double quotes with any embedded '"' doubled. Every field is written through this so a comma in
+        // a tag value, provider name, or counter display name cannot corrupt the row.
+        private static void AppendField(StringBuilder builder, string field)
+        {
+            if (string.IsNullOrEmpty(field))
+            {
+                return;
+            }
+
+            if (field.IndexOfAny(s_csvSpecialCharacters) < 0)
+            {
+                builder.Append(field);
+                return;
+            }
+
+            builder.Append('"').Append(field.Replace("\"", "\"\"")).Append('"');
+        }
+
+        private static readonly char[] s_csvSpecialCharacters = [',', '"', '\r', '\n'];
 
         public void Stop()
         {
