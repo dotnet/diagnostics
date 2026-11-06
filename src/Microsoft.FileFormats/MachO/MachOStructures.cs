@@ -11,13 +11,12 @@ namespace Microsoft.FileFormats.MachO
     {
         public static LayoutManager AddMachTypes(this LayoutManager layoutManager, bool isBigEndian, bool is64Bit)
         {
-            layoutManager
+            return layoutManager
                 .AddPrimitives(isBigEndian)
                 .AddSizeT(is64Bit ? 8 : 4)
                 .AddEnumTypes()
                 .AddNullTerminatedString()
-                .AddTStructTypes();
-            return layoutManager;
+                .RegisterMach();
         }
     }
 
