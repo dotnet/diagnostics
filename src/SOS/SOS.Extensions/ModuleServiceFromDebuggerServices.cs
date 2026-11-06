@@ -183,8 +183,8 @@ namespace SOS.Extensions
                 }
 
                 // GetSymbolStatus is not implemented for anything other than DbgEng for now.
-                IDebugClient client = _moduleService._debuggerServices.DebugClient;
-                if (client is null || client is not IDebugSymbols5 symbols)
+                DebugSymbolsWrapper symbols = _moduleService._debuggerServices.DebugSymbols;
+                if (symbols is null)
                 {
                     return SymbolStatus.Unknown;
                 }
@@ -200,7 +200,7 @@ namespace SOS.Extensions
 
             protected override ModuleService ModuleService => _moduleService;
 
-            private SymbolStatus GetSymbolStatusFromDbgEng(IDebugSymbols5 symbols)
+            private SymbolStatus GetSymbolStatusFromDbgEng(DebugSymbolsWrapper symbols)
             {
                 // First, see if the symbol is already loaded.  Note that getting the symbol type
                 // from DbgEng won't force a symbol load, it will only tell us if it's already
@@ -223,7 +223,7 @@ namespace SOS.Extensions
                         // Ugh, Reload might not like the module name that GetModuleName gives us.
                         // Instead, force DbgEng to look up the base address as a symbol which will
                         // force symbol load as well.
-                        symbols.GetNameByOffset(ImageBase, null, 0, out _, out _);
+                        symbols.GetNameByOffset(ImageBase);
                     }
                 }
 
@@ -247,12 +247,11 @@ namespace SOS.Extensions
                 };
             }
 
-            private static DEBUG_SYMTYPE GetSymType(IDebugSymbols symbols, ulong imageBase)
+            private static DEBUG_SYMTYPE GetSymType(DebugSymbolsWrapper symbols, ulong imageBase)
             {
-                DEBUG_MODULE_PARAMETERS[] moduleParams = new DEBUG_MODULE_PARAMETERS[1];
-                HResult hr = symbols.GetModuleParameters(1, new ulong[] { imageBase }, 0, moduleParams);
+                HResult hr = symbols.GetModuleParameters(imageBase, out DEBUG_MODULE_PARAMETERS moduleParams);
 
-                DEBUG_SYMTYPE symType = hr ? moduleParams[0].SymbolType : DEBUG_SYMTYPE.NONE;
+                DEBUG_SYMTYPE symType = hr ? moduleParams.SymbolType : DEBUG_SYMTYPE.NONE;
                 return symType;
             }
         }
