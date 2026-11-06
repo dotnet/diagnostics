@@ -47,7 +47,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
         private bool VerifyCore;
         private Tracer Tracer;
 
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             if (args.Length == 0)
             {
@@ -80,12 +80,12 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                         }
                         else
                         {
-                            goto usage;
+                            goto invalidUsage;
                         }
                         if (string.IsNullOrEmpty(personalAccessToken))
                         {
                             tracer.Error("No personal access token option");
-                            goto usage;
+                            goto invalidUsage;
                         }
                         goto case "--server-path";
 
@@ -97,14 +97,14 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                             if (!Uri.TryCreate(serverPath, UriKind.Absolute, out uri) || uri.IsFile)
                             {
                                 tracer.Error(Resources.InvalidServerPath, args[i]);
-                                goto usage;
+                                goto invalidUsage;
                             }
                             Uri.TryCreate(serverPath, UriKind.Absolute, out uri);
                             program.SymbolServers.Add(new ServerInfo { Uri = uri, PersonalAccessToken = personalAccessToken });
                         }
                         else
                         {
-                            goto usage;
+                            goto invalidUsage;
                         }
                         break;
 
@@ -116,7 +116,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                         }
                         else
                         {
-                            goto usage;
+                            goto invalidUsage;
                         }
                         break;
 
@@ -132,7 +132,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                         }
                         else
                         {
-                            goto usage;
+                            goto invalidUsage;
                         }
                         break;
 
@@ -143,7 +143,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                         }
                         else
                         {
-                            goto usage;
+                            goto invalidUsage;
                         }
                         break;
 
@@ -191,7 +191,7 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                         if (inputFile.StartsWith("-") || inputFile.StartsWith("--"))
                         {
                             tracer.Error(Resources.InvalidCommandLineOption, inputFile);
-                            goto usage;
+                            goto invalidUsage;
                         }
                         program.InputFilePaths.Add(inputFile);
                         break;
@@ -225,12 +225,18 @@ namespace Microsoft.Diagnostics.Tools.Symbol
                 catch (Exception ex)
                 {
                     tracer.Error("{0}{1}", ex.Message, ex.InnerException != null ? " -> " + ex.InnerException.Message : "");
+                    return 1;
                 }
             }
-            return;
+            return 0;
+
+        invalidUsage:
+            PrintUsage();
+            return 1;
 
         usage:
             PrintUsage();
+            return 0;
         }
 
         private static void PrintUsage()
