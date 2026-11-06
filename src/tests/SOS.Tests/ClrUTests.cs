@@ -70,10 +70,21 @@ public sealed class ClrUTests
 
         // -gcinfo interleaves the same interruptibility info that standalone gcinfo prints.
         ClrUResult withGc = target.ClrU(atHeap.MethodDesc.Value, gcInfo: true);
-        string transitionMarker = IntPtr.Size == 4 ? "becoming live" : "interruptible";
-        Assert.Contains(transitionMarker, withGc.Output.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.True(withGc.Output.Text.Contains("interruptible", StringComparison.OrdinalIgnoreCase) ||
+            withGc.Output.Text.Contains("safepoint", StringComparison.OrdinalIgnoreCase) ||
+            withGc.Output.Text.Contains("becoming live", StringComparison.OrdinalIgnoreCase),
+            "expected legacy or Interface18 GC transitions");
         Assert.NotEmpty(withGc.Instructions); // still a real disassembly, not just the gc dump
-        Assert.NotEmpty(target.GcInfo(atHeap.MethodDesc.Value).Transitions);
+        GcInfoResult standalone = target.GcInfo(atHeap.MethodDesc.Value);
+        Assert.NotEmpty(standalone.Transitions);
+        foreach (string transition in standalone.Transitions)
+        {
+            if (transition.Contains("interruptible", StringComparison.OrdinalIgnoreCase) ||
+                transition.Contains("safepoint", StringComparison.OrdinalIgnoreCase))
+            {
+                Assert.Contains(transition, withGc.Output.Text, StringComparison.OrdinalIgnoreCase);
+            }
+        }
 
         // -ehinfo interleaves the EH clause markers of a method that has a (finally) handler.
         ClrUResult withEh = target.ClrU(lockHolder.MethodDesc!.Value, ehInfo: true);

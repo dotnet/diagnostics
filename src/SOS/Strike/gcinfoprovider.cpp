@@ -31,42 +31,82 @@ HRESULT GCInfoData::Create(CLRDATA_ADDRESS methodIP, GCInfoData& out)
 
     ULONG rangeCount = 0;
     hr = pSos18->GetGCInfoInterruptibleRanges(methodIP, 0, nullptr, &rangeCount);
+    if (FAILED(hr))
+        return hr;
     if (SUCCEEDED(hr) && rangeCount > 0)
     {
         out.InterruptibleRanges.resize(rangeCount);
         ULONG fetched = 0;
         hr = pSos18->GetGCInfoInterruptibleRanges(methodIP, rangeCount, out.InterruptibleRanges.data(), &fetched);
-        if (SUCCEEDED(hr))
+        if (hr == S_OK && fetched <= rangeCount)
             out.InterruptibleRanges.resize(fetched);
         else
-            out.InterruptibleRanges.clear();
+            return FAILED(hr) ? hr : E_FAIL;
     }
 
     ULONG slotCount = 0;
     hr = pSos18->GetGCInfoSlotLifetimes(methodIP, 0, nullptr, &slotCount);
+    if (FAILED(hr))
+        return hr;
     if (SUCCEEDED(hr) && slotCount > 0)
     {
         out.SlotLifetimes.resize(slotCount);
         ULONG fetched = 0;
         hr = pSos18->GetGCInfoSlotLifetimes(methodIP, slotCount, out.SlotLifetimes.data(), &fetched);
-        if (SUCCEEDED(hr))
+        if (hr == S_OK && fetched <= slotCount)
             out.SlotLifetimes.resize(fetched);
         else
-            out.SlotLifetimes.clear();
+            return FAILED(hr) ? hr : E_FAIL;
     }
 
     ULONG safePointCount = 0;
     hr = pSos18->GetGCInfoSafePoints(methodIP, 0, nullptr, &safePointCount);
+    if (FAILED(hr))
+        return hr;
     if (SUCCEEDED(hr) && safePointCount > 0)
     {
         out.SafePoints.resize(safePointCount);
         ULONG fetched = 0;
         hr = pSos18->GetGCInfoSafePoints(methodIP, safePointCount, out.SafePoints.data(), &fetched);
-        if (SUCCEEDED(hr))
+        if (hr == S_OK && fetched <= safePointCount)
             out.SafePoints.resize(fetched);
         else
-            out.SafePoints.clear();
+            return FAILED(hr) ? hr : E_FAIL;
     }
+
+#if defined(SOS_TARGET_X86)
+    ReleaseHolder<ISOSDacInterface19> pSos19;
+    hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface19), (void**)&pSos19);
+    if (SUCCEEDED(hr) && pSos19 != nullptr)
+    {
+        out.X86Header.SizeOf = sizeof(SOSGCInfoX86Header);
+        hr = pSos19->GetGCInfoX86Header(methodIP, &out.X86Header);
+        if (hr != E_NOTIMPL && hr != E_NOINTERFACE)
+        {
+            if (FAILED(hr))
+                return hr;
+            ULONG count = 0;
+            hr = pSos19->GetGCInfoX86Epilogs(methodIP, 0, nullptr, &count);
+            if (FAILED(hr))
+                return hr;
+            out.X86Epilogs.resize(count);
+            ULONG fetched = 0;
+            hr = pSos19->GetGCInfoX86Epilogs(methodIP, count, out.X86Epilogs.data(), &fetched);
+            if (hr != S_OK || fetched > count)
+                return FAILED(hr) ? hr : E_FAIL;
+            out.X86Epilogs.resize(fetched);
+            hr = pSos19->GetGCInfoX86Transitions(methodIP, 0, nullptr, &count);
+            if (FAILED(hr))
+                return hr;
+            out.X86Transitions.resize(count);
+            hr = pSos19->GetGCInfoX86Transitions(methodIP, count, out.X86Transitions.data(), &fetched);
+            if (hr != S_OK || fetched > count)
+                return FAILED(hr) ? hr : E_FAIL;
+            out.X86Transitions.resize(fetched);
+            out.HasX86Info = true;
+        }
+    }
+#endif
 
     out.IsValid = true;
     return S_OK;
@@ -174,6 +214,36 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
     pfnPrintf("Size of parameter area: %x\n", Header.SizeOfStackParameterArea);
     pfnPrintf("Code size: %x\n", Header.CodeSize);
 
+    if (HasX86Info)
+    {
+        pfnPrintf("X86 epilog size: %u, count: %u, at end: %u\n",
+            X86Header.EpilogSize, X86Header.EpilogCount, X86Header.Flags & 1);
+        pfnPrintf("X86 saved registers:");
+        for (unsigned int reg = 0; reg < 8; reg++)
+            if (X86Header.SavedRegisters & (1u << reg))
+                pfnPrintf(" %s", getRegName(reg));
+        pfnPrintf("\nX86 argument size: %u, frame size: %u (bytes)\n",
+            X86Header.ArgumentSize, X86Header.FrameSize);
+        pfnPrintf("X86 untracked count: %u, VarPtr table size: %u\n",
+            X86Header.UntrackedCount, X86Header.VarPtrTableSize);
+        pfnPrintf("X86 flags: %x (ebp frame=%u, interruptible=%u, double align=%u, security=%u, "
+            "handlers=%u, localloc=%u, EnC=%u, profiler callbacks=%u, async=%u)\n",
+            X86Header.Flags, (X86Header.Flags >> 1) & 1, (X86Header.Flags >> 2) & 1,
+            (X86Header.Flags >> 3) & 1, (X86Header.Flags >> 4) & 1,
+            (X86Header.Flags >> 5) & 1, (X86Header.Flags >> 6) & 1,
+            (X86Header.Flags >> 7) & 1, (X86Header.Flags >> 8) & 1, (X86Header.Flags >> 9) & 1);
+        pfnPrintf("X86 synchronization range: [%x;%x), no-GC regions: %u\n",
+            X86Header.SyncStartOffset, X86Header.SyncEndOffset, X86Header.NoGCRegionCount);
+        if (X86Header.Flags & 1024)
+            pfnPrintf("X86 argument table offset: %x\n", X86Header.ArgumentTableOffset);
+        pfnPrintf("X86 return kind: %u, reverse P/Invoke offset: %x\n",
+            X86Header.ReturnKind, X86Header.ReversePInvokeOffset);
+        pfnPrintf("X86 epilog offsets:");
+        for (unsigned int offset : X86Epilogs)
+            pfnPrintf(" %x", offset);
+        pfnPrintf("\n");
+    }
+
     const char* frameRegName = (Header.StackBaseRegister != 0xFFFFFFFF) ? getRegName(Header.StackBaseRegister) : "sp";
 
     // Helper to format a stack slot offset as hex with sign, matching legacy format
@@ -186,20 +256,66 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
         if (s.SpOffset >= 0)
             sprintf_s(buf, ARRAY_SIZE(buf), "%s+%x", baseReg, (unsigned)s.SpOffset);
         else
-            sprintf_s(buf, ARRAY_SIZE(buf), "%s-%x", baseReg, (unsigned)(-s.SpOffset));
+            sprintf_s(buf, ARRAY_SIZE(buf), "%s-%x", baseReg, 0u - (unsigned)s.SpOffset);
         return buf;
     };
 
-    // Untracked slots (spanning the entire method)
+    auto isStaticUntracked = [&](const SOSGCSlotLifetime& s) {
+        return (s.GcFlags & 4) != 0 && s.BeginOffset == 0 && s.EndOffset == Header.CodeSize;
+    };
+    auto printSlot = [&](const SOSGCSlotLifetime& s, const char* sign) {
+        pfnPrintf(" %s%s", sign, s.IsRegister ? getRegName(s.RegisterNumber) : fmtStackSlot(s));
+        if (s.GcFlags & 1) pfnPrintf(" (interior)");
+        if (s.GcFlags & 2) pfnPrintf(" (pinned)");
+        if ((s.GcFlags & 4) && !isStaticUntracked(s)) pfnPrintf(" (untracked)");
+    };
+    auto printX86Transition = [&](const SOSGCInfoX86Transition& t) {
+        switch (t.Kind)
+        {
+        case 2:
+            if (X86Header.Flags & 2)
+            {
+                pfnPrintf("%08x push pointer arg %u%s%s\n", t.CodeOffset, t.ArgumentOffset,
+                    (t.Flags & 1) ? " (interior)" : "", (t.Flags & 4) ? " (this)" : "");
+                break;
+            }
+            pfnPrintf("%08x push %d bytes%s%s%s\n", t.CodeOffset, t.StackDepthChange,
+                (t.Flags & 2) ? " (pointer)" : " (non-pointer)",
+                (t.Flags & 1) ? " (interior)" : "", (t.Flags & 4) ? " (this)" : "");
+            break;
+        case 3:
+            if (X86Header.Flags & 2)
+            {
+                pfnPrintf("%08x pop %u pointer args\n", t.CodeOffset, t.ArgumentOffset);
+                break;
+            }
+            pfnPrintf("%08x pop %d bytes\n", t.CodeOffset, -t.StackDepthChange);
+            break;
+        case 4:
+            pfnPrintf("%08x kill %u pointer args\n", t.CodeOffset, t.ArgumentOffset);
+            break;
+        case 5:
+            pfnPrintf("%08x stack depth delta: %d bytes\n", t.CodeOffset, t.StackDepthChange);
+            break;
+        case 6:
+            pfnPrintf("%08x this in %s\n", t.CodeOffset, getRegName(t.RegisterNumber));
+            break;
+        default:
+            if (t.Flags & 4)
+                pfnPrintf("%08x this in %s\n", t.CodeOffset,
+                    t.RegisterNumber != 0xFFFFFFFF ? getRegName(t.RegisterNumber) : "pushed argument");
+            break;
+        }
+    };
+
     for (size_t i = 0; i < SlotLifetimes.size(); i++)
     {
         const SOSGCSlotLifetime& s = SlotLifetimes[i];
-        if (s.BeginOffset == 0 && s.EndOffset == Header.CodeSize)
+        if (isStaticUntracked(s))
         {
-            if (s.IsRegister)
-                pfnPrintf("Untracked: %s+%s\n", s.GcFlags & 0x2 ? "pinned " : "", getRegName(s.RegisterNumber));
-            else
-                pfnPrintf("Untracked: %s+%s\n", s.GcFlags & 0x2 ? "pinned " : "", fmtStackSlot(s));
+            pfnPrintf("Untracked:");
+            printSlot(s, "+");
+            pfnPrintf("\n");
         }
     }
 
@@ -211,25 +327,27 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
     {
         // Non-interruptible: only show safe points with live slots listed on the same line.
         // No +/- transitions shown separately.
+        size_t transitionIndex = 0;
         for (size_t sp = 0; sp < SafePoints.size(); sp++)
         {
             unsigned int spOffset = SafePoints[sp];
+            while (transitionIndex < X86Transitions.size() && X86Transitions[transitionIndex].CodeOffset <= spOffset)
+                printX86Transition(X86Transitions[transitionIndex++]);
             pfnPrintf("%08x is a safepoint: ", spOffset);
             for (size_t i = 0; i < SlotLifetimes.size(); i++)
             {
                 const SOSGCSlotLifetime& s = SlotLifetimes[i];
-                if (s.BeginOffset == 0 && s.EndOffset == Header.CodeSize)
+                if (isStaticUntracked(s))
                     continue; // skip untracked
                 if (spOffset >= s.BeginOffset && spOffset < s.EndOffset)
                 {
-                    if (s.IsRegister)
-                        pfnPrintf(" +%s", getRegName(s.RegisterNumber));
-                    else
-                        pfnPrintf(" +%s", fmtStackSlot(s));
+                    printSlot(s, "+");
                 }
             }
             pfnPrintf("\n");
         }
+        while (transitionIndex < X86Transitions.size())
+            printX86Transition(X86Transitions[transitionIndex++]);
     }
     else
     {
@@ -252,11 +370,13 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
 
         for (size_t i = 0; i < SlotLifetimes.size(); i++)
         {
-            if (SlotLifetimes[i].BeginOffset == 0 && SlotLifetimes[i].EndOffset == Header.CodeSize)
+            if (isStaticUntracked(SlotLifetimes[i]))
                 continue;
             events.push_back({SlotLifetimes[i].BeginOffset, 2, i});
             events.push_back({SlotLifetimes[i].EndOffset, 3, i});
         }
+        for (size_t i = 0; i < X86Transitions.size(); i++)
+            events.push_back({X86Transitions[i].CodeOffset, 4, i});
 
         std::sort(events.begin(), events.end(), [](const TimelineEvent& a, const TimelineEvent& b) {
             if (a.offset != b.offset) return a.offset < b.offset;
@@ -269,10 +389,14 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
             switch (ev.type)
             {
             case 0:
+                if (lastOffset != (unsigned int)-1)
+                    pfnPrintf("\n");
                 pfnPrintf("%08x interruptible\n", ev.offset);
                 lastOffset = (unsigned int)-1;
                 break;
             case 1:
+                if (lastOffset != (unsigned int)-1)
+                    pfnPrintf("\n");
                 pfnPrintf("%08x not interruptible\n", ev.offset);
                 lastOffset = (unsigned int)-1;
                 break;
@@ -286,10 +410,7 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
                     pfnPrintf("%08x", ev.offset);
                     lastOffset = ev.offset;
                 }
-                if (s.IsRegister)
-                    pfnPrintf(" +%s", getRegName(s.RegisterNumber));
-                else
-                    pfnPrintf(" +%s", fmtStackSlot(s));
+                printSlot(s, "+");
                 break;
             }
             case 3:
@@ -302,12 +423,15 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
                     pfnPrintf("%08x", ev.offset);
                     lastOffset = ev.offset;
                 }
-                if (s.IsRegister)
-                    pfnPrintf(" -%s", getRegName(s.RegisterNumber));
-                else
-                    pfnPrintf(" -%s", fmtStackSlot(s));
+                printSlot(s, "-");
                 break;
             }
+            case 4:
+                if (lastOffset != (unsigned int)-1)
+                    pfnPrintf("\n");
+                lastOffset = (unsigned int)-1;
+                printX86Transition(X86Transitions[ev.slotIndex]);
+                break;
             }
         }
         if (lastOffset != (unsigned int)-1)
