@@ -727,7 +727,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             string symbolFileName = (flags & KeyTypeFlags.SymbolKey) != 0 ? module.GetSymbolFileName() : null;
-            SymbolStoreKey fileKey = ELFFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(), symbolFile: false, symbolFileName).SingleOrDefault();
+            SymbolStoreKey fileKey = ELFFileKeyGenerator.GetKeys(flags, module.FileName, module.BuildId.ToArray(),
+                symbolFile: false, symbolFileName).SingleOrDefault();
             if (fileKey is null)
             {
                 Trace.TraceWarning($"DownloadELF: no index generated for module {module.FileName} ");
@@ -736,21 +737,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // Check if the file is local and the key matches the module
             string fileName = fileKey.FullPathName;
-            if (File.Exists(fileName))
+            if (File.Exists(fileName) && MatchesELFKey(fileName, fileKey))
             {
-                using ELFFile elfFile = Utilities.OpenELFFile(fileName);
-                if (elfFile is not null)
-                {
-                    ELFFileKeyGenerator generator = new(Tracer.Instance, elfFile, fileName);
-                    foreach (SymbolStoreKey key in generator.GetKeys(flags))
-                    {
-                        if (fileKey.Equals(key))
-                        {
-                            Trace.TraceInformation("DownloadELF: local file match {0}", fileName);
-                            return fileName;
-                        }
-                    }
-                }
+                Trace.TraceInformation("DownloadELF: local file match {0}", fileName);
+                return fileName;
             }
 
             // Now download the module from the symbol server if local file doesn't exists or doesn't have the right key
@@ -762,6 +752,25 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             }
 
             return null;
+        }
+
+        private static bool MatchesELFKey(string fileName, SymbolStoreKey fileKey)
+        {
+            try
+            {
+                using ELFFile elfFile = Utilities.OpenELFFile(fileName);
+                if (elfFile is null)
+                {
+                    return false;
+                }
+                ELFFileKeyGenerator generator = new(Tracer.Instance, elfFile, fileKey.FullPathName);
+                return generator.GetKeys(KeyTypeFlags.IdentityKey).Any(key => fileKey.Equals(key));
+            }
+            catch (Exception ex) when (ex is InputParsingException or IOException)
+            {
+                Trace.TraceWarning("MatchesELFKey: unable to validate ELF file {0}: {1}", fileName, ex.Message);
+                return false;
+            }
         }
 
         /// <summary>

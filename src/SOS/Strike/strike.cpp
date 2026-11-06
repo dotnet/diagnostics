@@ -6830,6 +6830,9 @@ DECLARE_API(GCInfo)
         ExtOut("preJIT generated code\n");
     }
 
+    taGCInfoAddr = TO_TADDR(codeHeaderData.GCInfo);
+    ExtOut("GC info %p\n", SOS_PTR(taGCInfoAddr));
+
     // Use GCInfoData abstraction (tries ISOSDacInterface18 first, then legacy)
     if (!useLegacy)
     {
@@ -6844,10 +6847,6 @@ DECLARE_API(GCInfo)
     }
 
     // Final fallback: raw GC info blob + DumpGCInfo (for older runtimes without Interface18)
-    taGCInfoAddr = TO_TADDR(codeHeaderData.GCInfo);
-
-    ExtOut("GC info %p\n", SOS_PTR(taGCInfoAddr));
-
     // assume that GC encoding table is never more than
     // 40 + methodSize * 2
     int tableSize = 0;
