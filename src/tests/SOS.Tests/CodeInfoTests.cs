@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Globalization;
+using System.Text.RegularExpressions;
 using SOS.TestHarness;
 using Xunit;
 
@@ -83,6 +85,33 @@ public sealed class CodeInfoTests
         GcInfoResult byIp = target.GcInfo(atHeap.JittedCodeAddress!.Value);
         Assert.Equal(gc.EntryPoint, byIp.EntryPoint);
         Assert.Equal(gc.GcInfoAddress, byIp.GcInfoAddress);
+
+        if (IntPtr.Size == 4 && config.Dac == Dac.CDac)
+        {
+            EEMatch dictionaries = Method(target, config.Flavor, "CreateConcurrentDictionaries");
+            GcInfoResult legacyArguments = target.GcInfo(dictionaries.MethodDesc!.Value, legacy: true);
+            GcInfoResult interfaceArguments = target.GcInfo(dictionaries.MethodDesc.Value);
+            Match[] nonPointerPushes = legacyArguments.Output.Lines
+                .Select(line => Regex.Match(line, @"(?:^|\|)\s*([0-9a-fA-F]+)\s+push non-ptr"))
+                .Where(match => match.Success)
+                .ToArray();
+            Assert.NotEmpty(nonPointerPushes);
+            foreach (Match push in nonPointerPushes)
+            {
+                uint offset = uint.Parse(push.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                Assert.Contains($"{offset:x8} push non-pointer arg", interfaceArguments.Output.Lines);
+            }
+            Match[] pops = legacyArguments.Output.Lines
+                .Select(line => Regex.Match(line, @"(?:^|\|)\s*([0-9a-fA-F]+)\s+pop\s+(\d+) ptrs"))
+                .Where(match => match.Success)
+                .ToArray();
+            Assert.NotEmpty(pops);
+            foreach (Match pop in pops)
+            {
+                uint offset = uint.Parse(pop.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                Assert.Contains($"{offset:x8} pop {pop.Groups[2].Value} args", interfaceArguments.Output.Lines);
+            }
+        }
     }
 
     private static EEMatch Method(Target target, Flavor flavor, string name)

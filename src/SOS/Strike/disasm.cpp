@@ -1139,8 +1139,11 @@ void X86Machine::DumpGCInfoTransition(const GCInfoData& gcInfo, size_t index, pr
     case 2:
         if (gcInfo.X86Header.Flags & 2)
         {
-            gcPrintf("%08x push pointer arg %u%s%s\n", transition.CodeOffset, transition.ArgumentOffset,
-                (transition.Flags & 1) ? " (interior)" : "", (transition.Flags & 4) ? " (this)" : "");
+            if (transition.Flags & 2)
+                gcPrintf("%08x push pointer arg %u%s%s\n", transition.CodeOffset, transition.ArgumentOffset,
+                    (transition.Flags & 1) ? " (interior)" : "", (transition.Flags & 4) ? " (this)" : "");
+            else
+                gcPrintf("%08x push non-pointer arg\n", transition.CodeOffset);
             break;
         }
         gcPrintf("%08x push %d bytes%s%s%s\n", transition.CodeOffset, transition.StackDepthChange,
@@ -1150,7 +1153,7 @@ void X86Machine::DumpGCInfoTransition(const GCInfoData& gcInfo, size_t index, pr
     case 3:
         if (gcInfo.X86Header.Flags & 2)
         {
-            gcPrintf("%08x pop %u pointer args\n", transition.CodeOffset, transition.ArgumentOffset);
+            gcPrintf("%08x pop %u args\n", transition.CodeOffset, transition.ArgumentOffset);
             break;
         }
         gcPrintf("%08x pop %d bytes\n", transition.CodeOffset, -transition.StackDepthChange);
