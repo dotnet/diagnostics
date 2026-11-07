@@ -331,6 +331,8 @@ class GCDump;
 /// actual limitation.
 ///
 
+struct GCInfoData;
+
 class IMachine
 {
 public:
@@ -397,6 +399,11 @@ public:
     typedef void (*printfFtn)(const char* fmt, ...);
     // Dumps the GCInfo
     virtual void DumpGCInfo(GCInfoToken gcInfoToken, unsigned methodSize, printfFtn gcPrintf, bool encBytes, bool bPrintHeader) const = 0;
+    // Interface18 uses ICorDebugInfo::RegNum, not the ordering from GetGCRegisters.
+    virtual LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const = 0;
+    virtual HRESULT GetGCInfoDetails(CLRDATA_ADDRESS methodIP, GCInfoData& gcInfo) const { return S_OK; }
+    virtual void DumpGCInfoHeader(const GCInfoData& gcInfo, printfFtn gcPrintf) const {}
+    virtual void DumpGCInfoTransition(const GCInfoData& gcInfo, size_t index, printfFtn gcPrintf) const {}
     // The amount of bytes to adjust the IP for software exception throw instructions (the STACKWALK_CONTROLPC_ADJUST_OFFSET define in the runtime)
     virtual int StackWalkIPAdjustOffset() const = 0;
 

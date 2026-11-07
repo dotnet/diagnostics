@@ -83,4 +83,20 @@ public sealed class CodeCommandParsingTests
         Assert.Contains("becoming live", result.Transitions[0], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("becoming dead", result.Transitions[1], StringComparison.OrdinalIgnoreCase);
     }
+
+    [Theory]
+    [InlineData("00000017 +ecx (interior)")]
+    [InlineData("00000017 is a safepoint: +edi (interior) +sp+4 (pinned)")]
+    public void GcInfoParsesInterface18HexSizeAndQualifiedRoots(string transition)
+    {
+        GcInfoResult result = new(new SosOutput("cdb", "gcinfo", $"""
+            entry point 08755230
+            GC info 0A7596E4
+            Code size: 2a
+            {transition}
+            00000020 not interruptible
+            """));
+        Assert.Equal(0x2a, result.CodeSize);
+        Assert.Equal(new[] { transition, "00000020 not interruptible" }, result.Transitions);
+    }
 }

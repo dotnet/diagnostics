@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Globalization;
+using System.Text.RegularExpressions;
 using SOS.TestHarness;
 using Xunit;
 
@@ -64,13 +66,52 @@ public sealed class CodeInfoTests
         Assert.NotEqual(0ul, gc.GcInfoAddress);
         Assert.True(gc.CodeSize > 0, "expected a positive code size");
         Assert.NotEmpty(gc.Transitions);
-        string transitionMarker = IntPtr.Size == 4 ? "becoming live" : "interruptible";
-        Assert.Contains(gc.Transitions, t => t.Contains(transitionMarker, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(gc.Transitions, t =>
+            t.Contains("interruptible", StringComparison.OrdinalIgnoreCase) ||
+            t.Contains("safepoint", StringComparison.OrdinalIgnoreCase) ||
+            t.Contains("becoming live", StringComparison.OrdinalIgnoreCase));
+        foreach (string transition in gc.Transitions)
+        {
+            Assert.DoesNotMatch(@"[+\-]\S+[0-9a-fA-F]{8} (?:not )?interruptible", transition);
+        }
+        GcInfoResult legacy = target.GcInfo(atHeap.MethodDesc.Value, legacy: true);
+        Assert.Equal(gc.EntryPoint, legacy.EntryPoint);
+        Assert.Equal(gc.CodeSize, legacy.CodeSize);
+        Assert.NotEmpty(legacy.Transitions);
+        if (IntPtr.Size == 4)
+            Assert.Contains(legacy.Transitions, t => t.Contains("becoming live", StringComparison.OrdinalIgnoreCase));
 
         // gcinfo accepts an IP and reports the same entry point and GC info address.
         GcInfoResult byIp = target.GcInfo(atHeap.JittedCodeAddress!.Value);
         Assert.Equal(gc.EntryPoint, byIp.EntryPoint);
         Assert.Equal(gc.GcInfoAddress, byIp.GcInfoAddress);
+
+        if (IntPtr.Size == 4 && config.Dac == Dac.CDac)
+        {
+            EEMatch dictionaries = Method(target, config.Flavor, "CreateConcurrentDictionaries");
+            GcInfoResult legacyArguments = target.GcInfo(dictionaries.MethodDesc!.Value, legacy: true);
+            GcInfoResult interfaceArguments = target.GcInfo(dictionaries.MethodDesc.Value);
+            Match[] nonPointerPushes = legacyArguments.Output.Lines
+                .Select(line => Regex.Match(line, @"(?:^|\|)\s*([0-9a-fA-F]+)\s+push non-ptr"))
+                .Where(match => match.Success)
+                .ToArray();
+            Assert.NotEmpty(nonPointerPushes);
+            foreach (Match push in nonPointerPushes)
+            {
+                uint offset = uint.Parse(push.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                Assert.Contains($"{offset:x8} push non-pointer arg", interfaceArguments.Output.Lines);
+            }
+            Match[] pops = legacyArguments.Output.Lines
+                .Select(line => Regex.Match(line, @"(?:^|\|)\s*([0-9a-fA-F]+)\s+pop\s+(\d+) ptrs"))
+                .Where(match => match.Success)
+                .ToArray();
+            Assert.NotEmpty(pops);
+            foreach (Match pop in pops)
+            {
+                uint offset = uint.Parse(pop.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                Assert.Contains($"{offset:x8} pop {pop.Groups[2].Value} args", interfaceArguments.Output.Lines);
+            }
+        }
     }
 
     private static EEMatch Method(Target target, Flavor flavor, string name)
