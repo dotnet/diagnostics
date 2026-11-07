@@ -119,15 +119,30 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             IModule[] modules = _services.GetService<IModuleService>().EnumerateModules().ToArray();
             HashSet<ulong> handledModules = [];
 
-            // DotNetRuntimeDiscoveryProvider is efficient at discovering coreclr/clr .NET runtimes, so we try it first.
-            foreach (RuntimeDescription description in EnumerateRuntimeDescriptions(
-                orderedProviders.OfType<DotNetRuntimeDiscoveryProvider>(), modules))
+            if (!all &&
+                _services.GetService<IRuntimeService>()?.PreferredRuntimeModule is ulong preferredBase &&
+                modules.FirstOrDefault(module => module.ImageBase == preferredBase) is IModule preferredModule)
             {
+                handledModules.Add(preferredModule.ImageBase);
+                foreach (RuntimeDescription description in EnumerateRuntimeDescriptions(orderedProviders, [preferredModule]))
+                {
+                    yield return description;
+                    yield break;
+                }
+            }
+
+            // DotNetRuntimeDiscoveryProvider is efficient at discovering coreclr/clr .NET runtimes.
+            bool foundNormalRuntime = false;
+            IModule[] normalModules = modules.Where(module => !handledModules.Contains(module.ImageBase)).ToArray();
+            foreach (RuntimeDescription description in EnumerateRuntimeDescriptions(
+                orderedProviders.OfType<DotNetRuntimeDiscoveryProvider>(), normalModules))
+            {
+                foundNormalRuntime = true;
                 handledModules.Add(description.Module.ImageBase);
                 yield return description;
             }
 
-            if (handledModules.Count > 0 && !all)
+            if (foundNormalRuntime && !all)
             {
                 yield break;
             }

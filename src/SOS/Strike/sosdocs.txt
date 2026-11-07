@@ -2011,11 +2011,17 @@ runtime directory.
 \\
 
 COMMAND: runtimes.
-runtimes [-netfx] [-netcore]
+runtimes [-netfx] [-netcore] [--all] [--module <name> | --address <base> | --clear-priority]
 
 -netfx   - switch to the desktop .NET Framework runtime if loaded.
 -netcore - switch to the .NET Core runtime if loaded.
+--module <name> - try the named module before any other runtime discovery.
+--address <base> - try the module at the specified hexadecimal base address first.
+--clear-priority - clear the preferred module.
+--all - enumerate all runtimes.
 
 List and select the .NET runtimes in the target process.
+If the preferred module is recognized, discovery stops unless --all is specified.
+Otherwise, discovery falls back to normal runtime modules, automatic hints, and
+remaining modules. The preference is per target and survives flushes.
 \\
-

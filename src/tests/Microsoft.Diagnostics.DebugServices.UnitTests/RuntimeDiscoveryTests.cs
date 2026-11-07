@@ -791,6 +791,168 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             target.Symbols.Verify();
         }
 
+        [Theory]
+        [InlineData("WINDOWS", RuntimeEnumerationFlags.Default)]
+        [InlineData("WINDOWS", RuntimeEnumerationFlags.All)]
+        [InlineData("LINUX", RuntimeEnumerationFlags.Default)]
+        [InlineData("LINUX", RuntimeEnumerationFlags.All)]
+        [InlineData("OSX", RuntimeEnumerationFlags.Default)]
+        [InlineData("OSX", RuntimeEnumerationFlags.All)]
+        public void OnlyDefaultDiscoveryPrioritizesPreferredModule(string platform, RuntimeEnumerationFlags flags)
+        {
+            OSPlatform os = OSPlatform.Create(platform);
+            using RuntimeDiscoveryTestTarget target = new(os, Architecture.X64);
+            target.AddModule(0x10000, ApplicationName(os, "unrelated"), needsSymbols: true);
+            RuntimeDiscoveryTestTarget.ModuleDefinition automatic = target.AddModule(0x20000, ApplicationName(os, "automatic"), entryPoint: true);
+            RuntimeDiscoveryTestTarget.ModuleDefinition preferred = target.AddModule(0x30000, ApplicationName(os, "preferred"));
+            target.AddSingleFileRuntime(automatic);
+            target.AddSingleFileRuntime(preferred);
+            target.AddDiagnosticHeader(automatic.ImageBase);
+            target.Runtimes.PreferredRuntimeModule = preferred.ImageBase;
+            if (flags == RuntimeEnumerationFlags.All)
+            {
+                target.Symbols.ExpectSymbolFile(0x10000, result: null);
+            }
+
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [automatic.ImageBase, preferred.ImageBase] : new[] { preferred.ImageBase },
+                target.Enumerate(flags).Select(runtime => runtime.RuntimeModule.ImageBase));
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [automatic.ImageBase, 0x10000UL, preferred.ImageBase] : new[] { preferred.ImageBase },
+                target.ExportProbes.Where(probe => probe.Symbol == "DotNetRuntimeInfo").Select(probe => probe.ModuleBase));
+            target.Symbols.Verify();
+        }
+
+        [Theory]
+        [InlineData(RuntimeEnumerationFlags.Default)]
+        [InlineData(RuntimeEnumerationFlags.All)]
+        public void OnlyDefaultDiscoveryProbesPreferredModuleBeforeNormalRuntime(RuntimeEnumerationFlags flags)
+        {
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);
+            RuntimeDiscoveryTestTarget.ModuleDefinition preferred = target.AddModule(0x10000, "/app/preferred", needsSymbols: true);
+            target.AddSingleFileRuntime(preferred, symbolOnly: true);
+            target.AddCoreRuntime(0x20000);
+            target.Runtimes.PreferredRuntimeModule = preferred.ImageBase;
+            target.Symbols.ExpectSymbolFile(preferred.ImageBase, result: "mock-symbols");
+
+            IRuntime[] runtimes = target.Enumerate(flags);
+            Assert.Equal(preferred.ImageBase, Assert.Single(runtimes, runtime => runtime.Services.GetService<ClrInfo>().IsSingleFile).RuntimeModule.ImageBase);
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? 2 : 1, runtimes.Length);
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? 0x20000UL : preferred.ImageBase, target.ExportProbes.First().ModuleBase);
+            Assert.Equal([preferred.ImageBase], target.Symbols.Requests);
+            target.Symbols.Verify();
+        }
+
+        [Theory]
+        [InlineData(RuntimeEnumerationFlags.Default)]
+        [InlineData(RuntimeEnumerationFlags.All)]
+        public void PreferredNamedRuntimeIsOnlyPrioritizedInDefaultDiscovery(RuntimeEnumerationFlags flags)
+        {
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);
+            target.AddCoreRuntime(0x20000, diagnosticHeader: false);
+            target.AddCoreRuntime(0x30000, diagnosticHeader: false);
+            target.Runtimes.PreferredRuntimeModule = 0x30000;
+
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x20000UL, 0x30000UL] : new[] { 0x30000UL },
+                target.Enumerate(flags).Select(runtime => runtime.RuntimeModule.ImageBase));
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [0x20000UL, 0x30000UL] : new[] { 0x30000UL },
+                target.ExportProbes.Where(probe => probe.Symbol == "DotNetRuntimeContractDescriptor").Select(probe => probe.ModuleBase));
+            target.Symbols.Verify();
+        }
+
+        [Theory]
+        [InlineData(RuntimeEnumerationFlags.Default)]
+        [InlineData(RuntimeEnumerationFlags.All)]
+        public void UnrecognizedPreferredModuleFallsBackToNormalDiscovery(RuntimeEnumerationFlags flags)
+        {
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);
+            target.AddModule(0x10000, "/app/preferred", needsSymbols: true);
+            target.AddCoreRuntime(0x20000);
+            target.Runtimes.PreferredRuntimeModule = 0x10000;
+            target.Symbols.ExpectSymbolFile(0x10000, result: null);
+
+            Assert.Equal(0x20000UL, Assert.Single(target.Enumerate(flags)).RuntimeModule.ImageBase);
+            Assert.Single(target.ExportProbes, probe => probe.ModuleBase == 0x10000 && probe.Symbol == "DotNetRuntimeInfo");
+            target.Symbols.Verify();
+        }
+
+        [Theory]
+        [InlineData(RuntimeEnumerationFlags.Default)]
+        [InlineData(RuntimeEnumerationFlags.All)]
+        public void UnrecognizedPreferredModuleRetainsUnhintedSingleFileFallback(RuntimeEnumerationFlags flags)
+        {
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);
+            target.AddModule(0x10000, "/app/preferred", needsSymbols: true);
+            RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x20000, "/app/singlefile", needsSymbols: true);
+            target.AddSingleFileRuntime(app, symbolOnly: true);
+            target.Runtimes.PreferredRuntimeModule = 0x10000;
+            target.Symbols.ExpectSymbolFile(0x10000, result: null);
+            target.Symbols.ExpectSymbolFile(app.ImageBase, result: "mock-symbols");
+
+            Assert.Equal(app.ImageBase, Assert.Single(target.Enumerate(flags)).RuntimeModule.ImageBase);
+            Assert.Equal([0x10000UL, app.ImageBase], target.Symbols.Requests);
+            target.Symbols.Verify();
+        }
+
+        [Theory]
+        [InlineData(RuntimeEnumerationFlags.Default)]
+        [InlineData(RuntimeEnumerationFlags.All)]
+        public void UnrecognizedPreferredModuleFallsBackWithoutRetrying(RuntimeEnumerationFlags flags)
+        {
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);
+            target.AddModule(0x10000, "/app/preferred", needsSymbols: true);
+            RuntimeDiscoveryTestTarget.ModuleDefinition automatic = target.AddModule(0x20000, "/app/automatic");
+            target.AddSingleFileRuntime(automatic);
+            target.AddDiagnosticHeader(automatic.ImageBase);
+            target.Runtimes.PreferredRuntimeModule = 0x10000;
+            target.Symbols.ExpectSymbolFile(0x10000, result: null);
+
+            Assert.Equal(automatic.ImageBase, Assert.Single(target.Enumerate(flags)).RuntimeModule.ImageBase);
+            Assert.Equal(flags == RuntimeEnumerationFlags.All ? [automatic.ImageBase, 0x10000UL] : new[] { 0x10000UL, automatic.ImageBase }, target.ExportProbes
+                .Where(probe => probe.Symbol == "DotNetRuntimeInfo").Select(probe => probe.ModuleBase));
+            target.Symbols.Verify();
+        }
+
+        [Fact]
+        public void PreferredModuleTriesAllProvidersBeforeAutomaticHints()
+        {
+            List<(int Priority, ulong ModuleBase)> calls = [];
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64, manager => {
+                foreach (int priority in new[] { 100, 50 })
+                {
+                    manager.AddProviderFactory(typeof(IRuntimeDescriptionProvider), _ =>
+                        new TestRuntimeDiscoveryProvider(module => {
+                            calls.Add((priority, module.ImageBase));
+                            return module.ImageBase == (priority == 100 ? 0x20000UL : 0x30000UL)
+                                ? new RuntimeDescription(module, RuntimeType.NativeAOT, new Version(1, 0))
+                                : null;
+                        }, priority));
+                }
+            });
+            target.AddModule(0x20000, "/app/automatic");
+            target.AddModule(0x30000, "/app/preferred");
+            target.AddDiagnosticHeader(0x20000);
+            target.Runtimes.PreferredRuntimeModule = 0x30000;
+
+            Assert.Equal(0x30000UL, Assert.Single(target.Enumerate()).RuntimeModule.ImageBase);
+            Assert.Equal([(100, 0x30000UL), (50, 0x30000UL)], calls);
+            target.Symbols.Verify();
+        }
+
+        [Theory]
+        [InlineData(RuntimeEnumerationFlags.Default)]
+        [InlineData(RuntimeEnumerationFlags.All)]
+        public void PreferredModuleMatchingAutomaticHintIsOnlyProbedOnce(RuntimeEnumerationFlags flags)
+        {
+            using RuntimeDiscoveryTestTarget target = new(OSPlatform.Linux, Architecture.X64);
+            RuntimeDiscoveryTestTarget.ModuleDefinition app = target.AddModule(0x20000, "/app/preferred");
+            target.AddSingleFileRuntime(app);
+            target.AddDiagnosticHeader(app.ImageBase);
+            target.Runtimes.PreferredRuntimeModule = app.ImageBase;
+
+            Assert.Equal(app.ImageBase, Assert.Single(target.Enumerate(flags)).RuntimeModule.ImageBase);
+            Assert.Single(target.ExportProbes, probe => probe.Symbol == "DotNetRuntimeInfo");
+            target.Symbols.Verify();
+        }
+
         private sealed class TestRuntimeDiscoveryProvider(Func<IModule, RuntimeDescription> describe, int priority = 0) : IRuntimeDescriptionProvider
         {
             public int Priority => priority;
