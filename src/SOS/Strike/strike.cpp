@@ -6833,16 +6833,21 @@ DECLARE_API(GCInfo)
     taGCInfoAddr = TO_TADDR(codeHeaderData.GCInfo);
     ExtOut("GC info %p\n", SOS_PTR(taGCInfoAddr));
 
-    // Use GCInfoData abstraction (tries ISOSDacInterface18 first, then legacy)
+    // Use the DAC interfaces when available; only their absence permits legacy decoding.
     if (!useLegacy)
     {
         GCInfoData gcInfo;
         CLRDATA_ADDRESS methodIP = TO_CDADDR(codeHeaderData.MethodStart);
         HRESULT hr = GCInfoData::Create(methodIP, gcInfo);
-        if (SUCCEEDED(hr) && gcInfo.IsValid)
+        if (hr == S_OK && gcInfo.IsValid)
         {
             gcInfo.DumpToOutput(ExtOut);
             return Status;
+        }
+        if (hr != S_FALSE)
+        {
+            ExtOut("Failed to retrieve GC info through DAC interfaces: %08x\n", hr);
+            return FAILED(hr) ? hr : E_FAIL;
         }
     }
 
@@ -7533,15 +7538,20 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
             return E_OUTOFMEMORY;
         }
 
-        // Try the GCInfoData abstraction first (ISOSDacInterface18, then legacy decoder)
+        // Use the DAC interfaces when available; only their absence permits legacy decoding.
         {
             GCInfoData gcInfo;
             CLRDATA_ADDRESS methodIP = TO_CDADDR(codeHeaderData.MethodStart);
             HRESULT hr = GCInfoData::Create(methodIP, gcInfo);
-            if (SUCCEEDED(hr) && gcInfo.IsValid)
+            if (hr == S_OK && gcInfo.IsValid)
             {
                 gcInfo.DumpToOutput(DecodeGCTableEntry);
                 return S_OK;
+            }
+            if (hr != S_FALSE)
+            {
+                ExtOut("Failed to retrieve GC info through DAC interfaces: %08x\n", hr);
+                return FAILED(hr) ? hr : E_FAIL;
             }
         }
 

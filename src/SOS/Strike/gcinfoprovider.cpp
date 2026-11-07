@@ -17,12 +17,16 @@ HRESULT GCInfoData::Create(CLRDATA_ADDRESS methodIP, GCInfoData& out)
     out = GCInfoData();
 
     if (g_clrData == NULL)
-        return E_NOINTERFACE;
+        return E_UNEXPECTED;
 
     ReleaseHolder<ISOSDacInterface18> pSos18;
     HRESULT hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface18), (void**)&pSos18);
-    if (FAILED(hr) || pSos18 == NULL)
-        return E_NOINTERFACE;
+    if (hr == E_NOINTERFACE)
+        return S_FALSE;
+    if (FAILED(hr))
+        return hr;
+    if (pSos18 == NULL)
+        return E_UNEXPECTED;
 
     out.Header.SizeOf = sizeof(SOSGCInfoHeader);
     hr = pSos18->GetGCInfoHeader(methodIP, &out.Header);
@@ -74,39 +78,9 @@ HRESULT GCInfoData::Create(CLRDATA_ADDRESS methodIP, GCInfoData& out)
             return FAILED(hr) ? hr : E_FAIL;
     }
 
-#if defined(SOS_TARGET_X86)
-    ReleaseHolder<ISOSDacInterface19> pSos19;
-    hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface19), (void**)&pSos19);
-    if (SUCCEEDED(hr) && pSos19 != nullptr)
-    {
-        out.X86Header.SizeOf = sizeof(SOSGCInfoX86Header);
-        hr = pSos19->GetGCInfoX86Header(methodIP, &out.X86Header);
-        if (hr != E_NOTIMPL && hr != E_NOINTERFACE)
-        {
-            if (FAILED(hr))
-                return hr;
-            ULONG count = 0;
-            hr = pSos19->GetGCInfoX86Epilogs(methodIP, 0, nullptr, &count);
-            if (FAILED(hr))
-                return hr;
-            out.X86Epilogs.resize(count);
-            ULONG fetched = 0;
-            hr = pSos19->GetGCInfoX86Epilogs(methodIP, count, out.X86Epilogs.data(), &fetched);
-            if (hr != S_OK || fetched > count)
-                return FAILED(hr) ? hr : E_FAIL;
-            out.X86Epilogs.resize(fetched);
-            hr = pSos19->GetGCInfoX86Transitions(methodIP, 0, nullptr, &count);
-            if (FAILED(hr))
-                return hr;
-            out.X86Transitions.resize(count);
-            hr = pSos19->GetGCInfoX86Transitions(methodIP, count, out.X86Transitions.data(), &fetched);
-            if (hr != S_OK || fetched > count)
-                return FAILED(hr) ? hr : E_FAIL;
-            out.X86Transitions.resize(fetched);
-            out.HasX86Info = true;
-        }
-    }
-#endif
+    hr = g_targetMachine->GetGCInfoDetails(methodIP, out);
+    if (FAILED(hr))
+        return hr;
 
     out.IsValid = true;
     return S_OK;
@@ -126,44 +100,6 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
         pfnPrintf("No GC info available\n");
         return;
     }
-
-    // Map ICorDebugInfo::RegNum to register names.
-    // The cDAC returns register numbers using ICorDebugInfo::RegNum ordering,
-    // NOT SOS's s_GCRegs ordering. Use the same mapping as GetRegName() in gcdumpnonx86.cpp.
-    auto getRegName = [](unsigned int regNum) -> const char* {
-#if defined(SOS_TARGET_AMD64)
-        static const char* s_regNames[] = {
-            "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi",
-            "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
-        };
-        if (regNum < ARRAY_SIZE(s_regNames))
-            return s_regNames[regNum];
-#elif defined(SOS_TARGET_X86)
-        static const char* s_regNames[] = {
-            "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"
-        };
-        if (regNum < ARRAY_SIZE(s_regNames))
-            return s_regNames[regNum];
-#elif defined(SOS_TARGET_ARM64)
-        if (regNum <= 28)
-        {
-            static char buf[8];
-            sprintf_s(buf, ARRAY_SIZE(buf), "x%u", regNum);
-            return buf;
-        }
-        if (regNum == 29) return "fp";
-        if (regNum == 30) return "lr";
-        if (regNum == 31) return "sp";
-#elif defined(SOS_TARGET_ARM)
-        static const char* s_regNames[] = {
-            "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
-            "r8", "r9", "r10", "r11", "r12", "sp", "lr", "pc"
-        };
-        if (regNum < ARRAY_SIZE(s_regNames))
-            return s_regNames[regNum];
-#endif
-        return "???";
-    };
 
     // Print header fields matching legacy DumpGCTable format
     pfnPrintf("Prolog size: %d\n", Header.PrologSize);
@@ -207,44 +143,17 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
 
     pfnPrintf("Varargs: %d\n", Header.IsVarArg ? 1 : 0);
     if (Header.StackBaseRegister != 0xFFFFFFFF)
-        pfnPrintf("Frame pointer: %s\n", getRegName(Header.StackBaseRegister));
+        pfnPrintf("Frame pointer: %s\n", g_targetMachine->GetGCInfoRegisterName(Header.StackBaseRegister));
     else
         pfnPrintf("Frame pointer: <none>\n");
     pfnPrintf("Wants Report Only Leaf: %d\n", Header.WantsReportOnlyLeaf ? 1 : 0);
     pfnPrintf("Size of parameter area: %x\n", Header.SizeOfStackParameterArea);
     pfnPrintf("Code size: %x\n", Header.CodeSize);
 
-    if (HasX86Info)
-    {
-        pfnPrintf("X86 epilog size: %u, count: %u, at end: %u\n",
-            X86Header.EpilogSize, X86Header.EpilogCount, X86Header.Flags & 1);
-        pfnPrintf("X86 saved registers:");
-        for (unsigned int reg = 0; reg < 8; reg++)
-            if (X86Header.SavedRegisters & (1u << reg))
-                pfnPrintf(" %s", getRegName(reg));
-        pfnPrintf("\nX86 argument size: %u, frame size: %u (bytes)\n",
-            X86Header.ArgumentSize, X86Header.FrameSize);
-        pfnPrintf("X86 untracked count: %u, VarPtr table size: %u\n",
-            X86Header.UntrackedCount, X86Header.VarPtrTableSize);
-        pfnPrintf("X86 flags: %x (ebp frame=%u, interruptible=%u, double align=%u, security=%u, "
-            "handlers=%u, localloc=%u, EnC=%u, profiler callbacks=%u, async=%u)\n",
-            X86Header.Flags, (X86Header.Flags >> 1) & 1, (X86Header.Flags >> 2) & 1,
-            (X86Header.Flags >> 3) & 1, (X86Header.Flags >> 4) & 1,
-            (X86Header.Flags >> 5) & 1, (X86Header.Flags >> 6) & 1,
-            (X86Header.Flags >> 7) & 1, (X86Header.Flags >> 8) & 1, (X86Header.Flags >> 9) & 1);
-        pfnPrintf("X86 synchronization range: [%x;%x), no-GC regions: %u\n",
-            X86Header.SyncStartOffset, X86Header.SyncEndOffset, X86Header.NoGCRegionCount);
-        if (X86Header.Flags & 1024)
-            pfnPrintf("X86 argument table offset: %x\n", X86Header.ArgumentTableOffset);
-        pfnPrintf("X86 return kind: %u, reverse P/Invoke offset: %x\n",
-            X86Header.ReturnKind, X86Header.ReversePInvokeOffset);
-        pfnPrintf("X86 epilog offsets:");
-        for (unsigned int offset : X86Epilogs)
-            pfnPrintf(" %x", offset);
-        pfnPrintf("\n");
-    }
+    g_targetMachine->DumpGCInfoHeader(*this, pfnPrintf);
 
-    const char* frameRegName = (Header.StackBaseRegister != 0xFFFFFFFF) ? getRegName(Header.StackBaseRegister) : "sp";
+    const char* frameRegName = (Header.StackBaseRegister != 0xFFFFFFFF)
+        ? g_targetMachine->GetGCInfoRegisterName(Header.StackBaseRegister) : "sp";
 
     // Helper to format a stack slot offset as hex with sign, matching legacy format
     auto fmtStackSlot = [&](const SOSGCSlotLifetime& s) -> const char* {
@@ -264,48 +173,10 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
         return (s.GcFlags & 4) != 0 && s.BeginOffset == 0 && s.EndOffset == Header.CodeSize;
     };
     auto printSlot = [&](const SOSGCSlotLifetime& s, const char* sign) {
-        pfnPrintf(" %s%s", sign, s.IsRegister ? getRegName(s.RegisterNumber) : fmtStackSlot(s));
+        pfnPrintf(" %s%s", sign, s.IsRegister ? g_targetMachine->GetGCInfoRegisterName(s.RegisterNumber) : fmtStackSlot(s));
         if (s.GcFlags & 1) pfnPrintf(" (interior)");
         if (s.GcFlags & 2) pfnPrintf(" (pinned)");
         if ((s.GcFlags & 4) && !isStaticUntracked(s)) pfnPrintf(" (untracked)");
-    };
-    auto printX86Transition = [&](const SOSGCInfoX86Transition& t) {
-        switch (t.Kind)
-        {
-        case 2:
-            if (X86Header.Flags & 2)
-            {
-                pfnPrintf("%08x push pointer arg %u%s%s\n", t.CodeOffset, t.ArgumentOffset,
-                    (t.Flags & 1) ? " (interior)" : "", (t.Flags & 4) ? " (this)" : "");
-                break;
-            }
-            pfnPrintf("%08x push %d bytes%s%s%s\n", t.CodeOffset, t.StackDepthChange,
-                (t.Flags & 2) ? " (pointer)" : " (non-pointer)",
-                (t.Flags & 1) ? " (interior)" : "", (t.Flags & 4) ? " (this)" : "");
-            break;
-        case 3:
-            if (X86Header.Flags & 2)
-            {
-                pfnPrintf("%08x pop %u pointer args\n", t.CodeOffset, t.ArgumentOffset);
-                break;
-            }
-            pfnPrintf("%08x pop %d bytes\n", t.CodeOffset, -t.StackDepthChange);
-            break;
-        case 4:
-            pfnPrintf("%08x kill %u pointer args\n", t.CodeOffset, t.ArgumentOffset);
-            break;
-        case 5:
-            pfnPrintf("%08x stack depth delta: %d bytes\n", t.CodeOffset, t.StackDepthChange);
-            break;
-        case 6:
-            pfnPrintf("%08x this in %s\n", t.CodeOffset, getRegName(t.RegisterNumber));
-            break;
-        default:
-            if (t.Flags & 4)
-                pfnPrintf("%08x this in %s\n", t.CodeOffset,
-                    t.RegisterNumber != 0xFFFFFFFF ? getRegName(t.RegisterNumber) : "pushed argument");
-            break;
-        }
     };
 
     for (size_t i = 0; i < SlotLifetimes.size(); i++)
@@ -332,7 +203,7 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
         {
             unsigned int spOffset = SafePoints[sp];
             while (transitionIndex < X86Transitions.size() && X86Transitions[transitionIndex].CodeOffset <= spOffset)
-                printX86Transition(X86Transitions[transitionIndex++]);
+                g_targetMachine->DumpGCInfoTransition(*this, transitionIndex++, pfnPrintf);
             pfnPrintf("%08x is a safepoint: ", spOffset);
             for (size_t i = 0; i < SlotLifetimes.size(); i++)
             {
@@ -347,7 +218,7 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
             pfnPrintf("\n");
         }
         while (transitionIndex < X86Transitions.size())
-            printX86Transition(X86Transitions[transitionIndex++]);
+            g_targetMachine->DumpGCInfoTransition(*this, transitionIndex++, pfnPrintf);
     }
     else
     {
@@ -430,7 +301,7 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
                 if (lastOffset != (unsigned int)-1)
                     pfnPrintf("\n");
                 lastOffset = (unsigned int)-1;
-                printX86Transition(X86Transitions[ev.slotIndex]);
+                g_targetMachine->DumpGCInfoTransition(*this, ev.slotIndex, pfnPrintf);
                 break;
             }
         }

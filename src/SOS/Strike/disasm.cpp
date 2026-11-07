@@ -58,6 +58,7 @@ namespace X86GCDump
 #endif // SOS_TARGET_AMD64
 
 #include "disasm.h"
+#include "gcinfoprovider.h"
 
 #ifndef ERANGE
 #define ERANGE 34
@@ -1048,6 +1049,130 @@ LPCSTR X86Machine::s_DumpStackHeading = "ChildEBP RetAddr  Caller, Callee\n";
 LPCSTR X86Machine::s_GCRegs[7]        = {"eax", "ebx", "ecx", "edx", "esi", "edi", "ebp"};
 LPCSTR X86Machine::s_SPName           = "ESP";
 
+LPCSTR X86Machine::GetGCInfoRegisterName(unsigned int registerNumber) const
+{
+    static const char* names[] = {
+        "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"
+    };
+    return registerNumber < ARRAY_SIZE(names) ? names[registerNumber] : "???";
+}
+
+HRESULT X86Machine::GetGCInfoDetails(CLRDATA_ADDRESS methodIP, GCInfoData& gcInfo) const
+{
+    ReleaseHolder<ISOSDacInterface19> pSos19;
+    HRESULT hr = g_clrData->QueryInterface(__uuidof(ISOSDacInterface19), (void**)&pSos19);
+    if (hr == E_NOINTERFACE)
+        return S_OK;
+    if (FAILED(hr))
+        return hr;
+    if (pSos19 == nullptr)
+        return E_FAIL;
+
+    gcInfo.X86Header.SizeOf = sizeof(SOSGCInfoX86Header);
+    hr = pSos19->GetGCInfoX86Header(methodIP, &gcInfo.X86Header);
+    if (hr == E_NOTIMPL || hr == E_NOINTERFACE)
+        return S_OK;
+    if (FAILED(hr))
+        return hr;
+
+    ULONG count = 0;
+    hr = pSos19->GetGCInfoX86Epilogs(methodIP, 0, nullptr, &count);
+    if (FAILED(hr))
+        return hr;
+    gcInfo.X86Epilogs.resize(count);
+    ULONG fetched = 0;
+    hr = pSos19->GetGCInfoX86Epilogs(methodIP, count, gcInfo.X86Epilogs.data(), &fetched);
+    if (hr != S_OK || fetched > count)
+        return FAILED(hr) ? hr : E_FAIL;
+    gcInfo.X86Epilogs.resize(fetched);
+    hr = pSos19->GetGCInfoX86Transitions(methodIP, 0, nullptr, &count);
+    if (FAILED(hr))
+        return hr;
+    gcInfo.X86Transitions.resize(count);
+    hr = pSos19->GetGCInfoX86Transitions(methodIP, count, gcInfo.X86Transitions.data(), &fetched);
+    if (hr != S_OK || fetched > count)
+        return FAILED(hr) ? hr : E_FAIL;
+    gcInfo.X86Transitions.resize(fetched);
+    gcInfo.HasX86Info = true;
+    return S_OK;
+}
+
+void X86Machine::DumpGCInfoHeader(const GCInfoData& gcInfo, printfFtn gcPrintf) const
+{
+    if (!gcInfo.HasX86Info)
+        return;
+
+    const SOSGCInfoX86Header& header = gcInfo.X86Header;
+    gcPrintf("X86 epilog size: %u, count: %u, at end: %u\n",
+        header.EpilogSize, header.EpilogCount, header.Flags & 1);
+    gcPrintf("X86 saved registers:");
+    for (unsigned int reg = 0; reg < 8; reg++)
+        if (header.SavedRegisters & (1u << reg))
+            gcPrintf(" %s", GetGCInfoRegisterName(reg));
+    gcPrintf("\nX86 argument size: %u, frame size: %u (bytes)\n",
+        header.ArgumentSize, header.FrameSize);
+    gcPrintf("X86 untracked count: %u, VarPtr table size: %u\n",
+        header.UntrackedCount, header.VarPtrTableSize);
+    gcPrintf("X86 flags: %x (ebp frame=%u, interruptible=%u, double align=%u, security=%u, "
+        "handlers=%u, localloc=%u, EnC=%u, profiler callbacks=%u, async=%u)\n",
+        header.Flags, (header.Flags >> 1) & 1, (header.Flags >> 2) & 1,
+        (header.Flags >> 3) & 1, (header.Flags >> 4) & 1,
+        (header.Flags >> 5) & 1, (header.Flags >> 6) & 1,
+        (header.Flags >> 7) & 1, (header.Flags >> 8) & 1, (header.Flags >> 9) & 1);
+    gcPrintf("X86 synchronization range: [%x;%x), no-GC regions: %u\n",
+        header.SyncStartOffset, header.SyncEndOffset, header.NoGCRegionCount);
+    if (header.Flags & 1024)
+        gcPrintf("X86 argument table offset: %x\n", header.ArgumentTableOffset);
+    gcPrintf("X86 return kind: %u, reverse P/Invoke offset: %x\n",
+        header.ReturnKind, header.ReversePInvokeOffset);
+    gcPrintf("X86 epilog offsets:");
+    for (unsigned int offset : gcInfo.X86Epilogs)
+        gcPrintf(" %x", offset);
+    gcPrintf("\n");
+}
+
+void X86Machine::DumpGCInfoTransition(const GCInfoData& gcInfo, size_t index, printfFtn gcPrintf) const
+{
+    const SOSGCInfoX86Transition& transition = gcInfo.X86Transitions[index];
+    switch (transition.Kind)
+    {
+    case 2:
+        if (gcInfo.X86Header.Flags & 2)
+        {
+            gcPrintf("%08x push pointer arg %u%s%s\n", transition.CodeOffset, transition.ArgumentOffset,
+                (transition.Flags & 1) ? " (interior)" : "", (transition.Flags & 4) ? " (this)" : "");
+            break;
+        }
+        gcPrintf("%08x push %d bytes%s%s%s\n", transition.CodeOffset, transition.StackDepthChange,
+            (transition.Flags & 2) ? " (pointer)" : " (non-pointer)",
+            (transition.Flags & 1) ? " (interior)" : "", (transition.Flags & 4) ? " (this)" : "");
+        break;
+    case 3:
+        if (gcInfo.X86Header.Flags & 2)
+        {
+            gcPrintf("%08x pop %u pointer args\n", transition.CodeOffset, transition.ArgumentOffset);
+            break;
+        }
+        gcPrintf("%08x pop %d bytes\n", transition.CodeOffset, -transition.StackDepthChange);
+        break;
+    case 4:
+        gcPrintf("%08x kill %u pointer args\n", transition.CodeOffset, transition.ArgumentOffset);
+        break;
+    case 5:
+        gcPrintf("%08x stack depth delta: %d bytes\n", transition.CodeOffset, transition.StackDepthChange);
+        break;
+    case 6:
+        gcPrintf("%08x this in %s\n", transition.CodeOffset, GetGCInfoRegisterName(transition.RegisterNumber));
+        break;
+    default:
+        if (transition.Flags & 4)
+            gcPrintf("%08x this in %s\n", transition.CodeOffset,
+                transition.RegisterNumber != 0xFFFFFFFF
+                    ? GetGCInfoRegisterName(transition.RegisterNumber) : "pushed argument");
+        break;
+    }
+}
+
 void PrintNothing (const char *fmt, ...)
 {
     // Do nothing.
@@ -1090,6 +1215,15 @@ LPCSTR ARMMachine::s_GCRegs[14]       = {"r0", "r1", "r2",  "r3",  "r4",  "r5", 
                                          "r7", "r8", "r9",  "r10", "r11", "r12", "lr"};
 LPCSTR ARMMachine::s_SPName           = "sp";
 
+LPCSTR ARMMachine::GetGCInfoRegisterName(unsigned int registerNumber) const
+{
+    static const char* names[] = {
+        "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
+        "r8", "r9", "r10", "r11", "r12", "sp", "lr", "pc"
+    };
+    return registerNumber < ARRAY_SIZE(names) ? names[registerNumber] : "???";
+}
+
 #endif // SOS_TARGET_ARM
 
 #ifdef SOS_TARGET_AMD64
@@ -1100,6 +1234,11 @@ LPCSTR AMD64Machine::s_DumpStackHeading = "Child-SP         RetAddr          Cal
 LPCSTR AMD64Machine::s_GCRegs[15]       = {"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp",
                                            "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
 LPCSTR AMD64Machine::s_SPName           = "RSP";
+
+LPCSTR AMD64Machine::GetGCInfoRegisterName(unsigned int registerNumber) const
+{
+    return GetRegName(registerNumber);
+}
 
 ///
 /// Dump AMD64 GCInfo table
@@ -1130,6 +1269,17 @@ LPCSTR ARM64Machine::s_GCRegs[28]       = {"x0", "x1", "x2",  "x3",  "x4",  "x5"
                                            "x14", "x15", "x16", "x17", "x19", "x20","x21",
                                            "x22", "x23", "x24", "x25", "x26", "x27", "x28"};
 LPCSTR ARM64Machine::s_SPName           = "sp";
+
+LPCSTR ARM64Machine::GetGCInfoRegisterName(unsigned int registerNumber) const
+{
+    static const char* names[] = {
+        "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7",
+        "x8", "x9", "x10", "x11", "x12", "x13", "x14", "x15",
+        "x16", "x17", "x18", "x19", "x20", "x21", "x22", "x23",
+        "x24", "x25", "x26", "x27", "x28", "fp", "lr", "sp"
+    };
+    return registerNumber < ARRAY_SIZE(names) ? names[registerNumber] : "???";
+}
 
 #endif // SOS_TARGET_ARM64
 

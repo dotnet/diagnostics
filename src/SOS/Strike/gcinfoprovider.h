@@ -23,7 +23,7 @@ struct GCInfoData
     GCInfoData() : Header{}, X86Header{}, HasX86Info(false), IsValid(false) {}
 
     // Populate GCInfoData for the method at the given IP via ISOSDacInterface18.
-    // Returns E_NOINTERFACE if the interface is not available.
+    // Returns S_FALSE only if Interface18 is absent; other failures must not use the legacy decoder.
     static HRESULT Create(CLRDATA_ADDRESS methodIP, GCInfoData& out);
 
     // Format and print the GC info to the debugger output.
