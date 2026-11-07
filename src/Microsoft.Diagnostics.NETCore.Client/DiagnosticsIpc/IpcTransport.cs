@@ -305,7 +305,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// Searches files in a directory for a diagnostic endpoint matching the given PID.
         /// On Windows, resolves named pipes. On other platforms, searches for Unix domain sockets.
         /// </summary>
-        internal static bool TryResolveAddress(string searchDirectory, int pid, out string address)
+        internal static bool TryResolveAddress(string searchDirectory, int pid, out string address, int? hostPid = null)
         {
             address = null;
 
@@ -327,7 +327,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 try
                 {
+                    bool checkOwner = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+                        RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+                    uint uid = checkOwner ? UnixSocketOwner.GetProcessUid(hostPid ?? pid) : 0;
                     address = Directory.GetFiles(searchDirectory, string.Format(_defaultAddressFormatNonWindows, pid, "*"))
+                        .Where(f => !checkOwner || UnixSocketOwner.IsSocketOwnedBy(f, uid))
                         .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                         .FirstOrDefault();
 
@@ -346,8 +350,16 @@ namespace Microsoft.Diagnostics.NETCore.Client
                         }
                     }
                 }
-                catch
+                catch (IOException ex)
                 {
+                    Trace.TraceWarning($"Unable to resolve diagnostic socket for process {hostPid ?? pid}: {ex.Message}");
+                    address = null;
+                    return false;
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Trace.TraceWarning($"Unable to resolve diagnostic socket for process {hostPid ?? pid}: {ex.Message}");
+                    address = null;
                     return false;
                 }
             }
@@ -525,7 +537,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
 
-            if (TryResolveAddress(searchDirectory, searchPid, out string address))
+            if (TryResolveAddress(searchDirectory, searchPid, out string address, pid))
             {
                 return address;
             }
