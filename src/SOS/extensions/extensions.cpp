@@ -92,11 +92,18 @@ HRESULT Extensions::InitializeHostServices(
         return hr;
     }
     hr = m_pHostServices->GetHost(&m_pHost);
-    if (FAILED(hr)) {
-        return hr;
+    if (SUCCEEDED(hr)) {
+        hr = m_pHostServices->RegisterDebuggerServices(m_pDebuggerServices);
     }
-    hr = m_pHostServices->RegisterDebuggerServices(m_pDebuggerServices);
     if (FAILED(hr)) {
+        // A failed registration must not leave CLRMA calling into an incomplete managed host.
+        m_pHostServices->Uninitialize();
+        m_pHostServices->Release();
+        m_pHostServices = nullptr;
+        if (m_pHost != nullptr) {
+            m_pHost->Release();
+            m_pHost = nullptr;
+        }
         return hr;
     }
     ULONG processId = 0;
