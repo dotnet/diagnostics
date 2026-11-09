@@ -86,7 +86,8 @@ public sealed class CodeInfoTests
         Assert.Equal(gc.EntryPoint, byIp.EntryPoint);
         Assert.Equal(gc.GcInfoAddress, byIp.GcInfoAddress);
 
-        if (IntPtr.Size == 4 && config.Dac == Dac.CDac)
+        // DAC selection alone does not imply support for supplemental X86 reporting.
+        if (IntPtr.Size == 4 && gc.Output.Lines.Any(line => line.StartsWith("X86 epilog size:", StringComparison.Ordinal)))
         {
             EEMatch dictionaries = Method(target, config.Flavor, "CreateConcurrentDictionaries");
             GcInfoResult legacyArguments = target.GcInfo(dictionaries.MethodDesc!.Value, legacy: true);

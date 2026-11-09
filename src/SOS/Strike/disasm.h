@@ -137,10 +137,10 @@ public:
     { static X86Machine s_X86MachineInstance; return &s_X86MachineInstance; }
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_I386; }
-    LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const override;
-    HRESULT GetGCInfoDetails(CLRDATA_ADDRESS methodIP, GCInfoData& gcInfo) const override;
-    void DumpGCInfoHeader(const GCInfoData& gcInfo, printfFtn gcPrintf) const override;
-    void DumpGCInfoTransition(const GCInfoData& gcInfo, size_t index, printfFtn gcPrintf) const override;
+    virtual LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const;
+    virtual HRESULT GetGCInfoDetails(CLRDATA_ADDRESS methodIP, GCInfoData& gcInfo) const;
+    virtual void DumpGCInfoHeader(const GCInfoData& gcInfo, printfFtn gcPrintf) const;
+    virtual void DumpGCInfoTransition(const GCInfoData& gcInfo, size_t index, printfFtn gcPrintf) const;
     ULONG GetContextSize()          const { return sizeof(X86_CONTEXT); }
     ULONG GetFullContextFlags()     const { return 0x0001000BL; }
     void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((X86_CONTEXT*)context)->ContextFlags = contextFlags; };
@@ -210,7 +210,7 @@ public:
     { return &s_ARMMachineInstance; }
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_ARMNT; }
-    LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const override;
+    virtual LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const;
     ULONG GetContextSize()          const { return sizeof(ARM_CONTEXT); }
     ULONG GetFullContextFlags()     const { return 0x00200007L; }
     void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((ARM_CONTEXT*)context)->ContextFlags = contextFlags; };
@@ -281,7 +281,7 @@ public:
     { static AMD64Machine s_AMD64MachineInstance; return &s_AMD64MachineInstance; }
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_AMD64; }
-    LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const override;
+    virtual LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const;
     ULONG GetContextSize()          const { return sizeof(AMD64_CONTEXT); }
     ULONG GetFullContextFlags()     const { return 0x0010000BL; }
     void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((AMD64_CONTEXT*)context)->ContextFlags = contextFlags; };
@@ -352,7 +352,7 @@ public:
     { static ARM64Machine s_ARM64MachineInstance; return &s_ARM64MachineInstance; }
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_ARM64; }
-    LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const override;
+    virtual LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const;
     ULONG GetContextSize()          const { return sizeof(ARM64_CONTEXT); }
     ULONG GetFullContextFlags()     const { return 0x00400007L; }
     void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((ARM64_CONTEXT*)context)->ContextFlags = contextFlags; };
@@ -421,7 +421,7 @@ public:
     { static RISCV64Machine s_RISCV64MachineInstance; return &s_RISCV64MachineInstance; }
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_RISCV64; }
-    LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const override;
+    virtual LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const;
     ULONG GetContextSize()          const { return sizeof(RISCV64_CONTEXT); }
     ULONG GetFullContextFlags()     const { return 0x01000007L; }
     void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((RISCV64_CONTEXT*)context)->ContextFlags = contextFlags; };
@@ -490,7 +490,7 @@ public:
     { static LOONGARCH64Machine s_LOONGARCH64MachineInstance; return &s_LOONGARCH64MachineInstance; }
 
     ULONG GetPlatform()             const { return IMAGE_FILE_MACHINE_LOONGARCH64; }
-    LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const override;
+    virtual LPCSTR GetGCInfoRegisterName(unsigned int registerNumber) const;
     ULONG GetContextSize()          const { return sizeof(LOONGARCH64_CONTEXT); }
     ULONG GetFullContextFlags()     const { return 0x00800007L; }
     void SetContextFlags(BYTE* context, ULONG32 contextFlags)   { ((LOONGARCH64_CONTEXT*)context)->ContextFlags = contextFlags; };
