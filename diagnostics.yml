@@ -58,6 +58,7 @@ extends:
       - template: /eng/pipelines/test-nightly-sos.yml
         parameters:
           packageVersion: ${{ parameters.nightlyPackageVersion }}
+          pipelineJobTemplate: ${{ variables.jobTemplate }}
     - ${{ else }}:
       - stage: build
         displayName: Diagnostics

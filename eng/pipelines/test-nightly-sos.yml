@@ -2,12 +2,14 @@ parameters:
 - name: packageVersion
   displayName: Exact diagnostics package version from the dotnet-tools feed
   type: string
+- name: pipelineJobTemplate
+  type: string
 
 stages:
     - stage: test_nightly
       displayName: Test installed nightly tools
       jobs:
-      - template: ${{ variables.jobTemplate }}
+      - template: ${{ parameters.pipelineJobTemplate }}
         parameters:
           name: Nightly_SOS_win_x64
           displayName: Nightly SOS win-x64 Release tests
