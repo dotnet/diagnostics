@@ -240,6 +240,11 @@ if [[ "$__NativeBuild" == 1 ]]; then
         exit 1
     fi
 
+    source "$__RepoRootDir/src/dbi/build.sh"
+    if ! build_universal_dbi "$__TargetOS" "$__TargetArch" "$__ConfigTriplet" "$__ArtifactsIntermediatesDir" "$__BinDir" "$__ExtraCmakeArgs" "$__LogsDir/dbi-build.log" "$__TargetRid"; then
+        exit 1
+    fi
+
     build_native "$__TargetOS" "$__TargetArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
 
     if [ "${PIPESTATUS[0]}" != 0 ]; then
