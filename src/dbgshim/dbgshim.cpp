@@ -28,10 +28,18 @@
 #ifdef TARGET_WINDOWS
 #define PSAPI_VERSION 2
 #include <psapi.h>
+#else
+#include <ctype.h>
+#include <errno.h>
+#include <signal.h>
+#include <unistd.h>
 #endif
 
 #include "dbgshim.h"
 #include "debugshim.h"
+#ifdef TARGET_UNIX
+#include "processmodules.h"
+#endif
 
 /*
 
@@ -71,6 +79,92 @@ Notes:
     CONTRACTL_END;
 
 #ifdef TARGET_UNIX
+
+struct UnixResumeHandle
+{
+    int ResumePipe;
+};
+
+static
+char*
+ConvertToUtf8(
+    LPCWSTR value)
+{
+    if (value == nullptr)
+    {
+        return nullptr;
+    }
+
+    int length = WideCharToMultiByte(CP_UTF8, 0, value, -1, nullptr, 0, nullptr, nullptr);
+    if (length == 0)
+    {
+        return nullptr;
+    }
+
+    char* utf8 = new (nothrow) char[length];
+    if (utf8 == nullptr ||
+        WideCharToMultiByte(CP_UTF8, 0, value, -1, utf8, length, nullptr, nullptr) == 0)
+    {
+        delete[] utf8;
+        return nullptr;
+    }
+    return utf8;
+}
+
+static
+char**
+BuildArgv(
+    char* commandLine)
+{
+    size_t commandLineLength = strlen(commandLine);
+    char** argv = new (nothrow) char*[(commandLineLength / 2) + 2];
+    if (argv == nullptr)
+    {
+        return nullptr;
+    }
+
+    size_t argument = 0;
+    char* read = commandLine;
+    char* write = commandLine;
+    while (*read != '\0')
+    {
+        while (isspace((unsigned char)*read))
+        {
+            read++;
+        }
+        if (*read == '\0')
+        {
+            break;
+        }
+
+        argv[argument++] = write;
+        bool quoted = false;
+        while (*read != '\0' && (quoted || !isspace((unsigned char)*read)))
+        {
+            if (*read == '"')
+            {
+                quoted = !quoted;
+                read++;
+            }
+            else if (*read == '\\' && read[1] == '"')
+            {
+                *write++ = '"';
+                read += 2;
+            }
+            else
+            {
+                *write++ = *read++;
+            }
+        }
+        while (isspace((unsigned char)*read))
+        {
+            read++;
+        }
+        *write++ = '\0';
+    }
+    argv[argument] = nullptr;
+    return argv;
+}
 
 static
 bool
@@ -177,7 +271,7 @@ HRESULT CreateCoreDbg(
     HMODULE hDbi = NULL;
     HRESULT hr = S_OK;
 
-    hDbi = LoadLibraryW(dbiModulePath);
+    hDbi = LoadLibraryExW(dbiModulePath, nullptr, 0);
     if (hDbi != NULL)
     {
         FPCoreCLRCreateCordbObject3 fpCreate3 = (FPCoreCLRCreateCordbObject3)GetProcAddress(hDbi, "CoreCLRCreateCordbObject3");
@@ -779,6 +873,7 @@ CreateProcessForLaunch(
 {
     PUBLIC_CONTRACT;
 
+#ifdef TARGET_WINDOWS
     PROCESS_INFORMATION processInfo;
     STARTUPINFOW startupInfo;
     DWORD dwCreationFlags = 0;
@@ -820,6 +915,124 @@ CreateProcessForLaunch(
     *pResumeHandle = processInfo.hThread;
 
     return S_OK;
+#else
+    if (lpCommandLine == nullptr || pProcessId == nullptr || pResumeHandle == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    *pProcessId = 0;
+    *pResumeHandle = nullptr;
+
+    ArrayHolder<char> commandLine = ConvertToUtf8(lpCommandLine);
+    ArrayHolder<char> currentDirectory = ConvertToUtf8(lpCurrentDirectory);
+    if (commandLine == nullptr || (lpCurrentDirectory != nullptr && currentDirectory == nullptr))
+    {
+        return E_OUTOFMEMORY;
+    }
+
+    ArrayHolder<char*> argv = BuildArgv(commandLine);
+    if (argv == nullptr || argv[0] == nullptr)
+    {
+        return argv == nullptr ? E_OUTOFMEMORY : E_INVALIDARG;
+    }
+
+    ArrayHolder<char*> environment = nullptr;
+    if (lpEnvironment != nullptr)
+    {
+        size_t environmentCount = 0;
+        for (char* entry = (char*)lpEnvironment; *entry != '\0'; entry += strlen(entry) + 1)
+        {
+            environmentCount++;
+        }
+
+        environment = new (nothrow) char*[environmentCount + 1];
+        if (environment == nullptr)
+        {
+            return E_OUTOFMEMORY;
+        }
+
+        size_t index = 0;
+        for (char* entry = (char*)lpEnvironment; *entry != '\0'; entry += strlen(entry) + 1)
+        {
+            environment[index++] = entry;
+        }
+        environment[index] = nullptr;
+    }
+
+    NewHolder<UnixResumeHandle> resumeHandle = new (nothrow) UnixResumeHandle{ -1 };
+    if (resumeHandle == nullptr)
+    {
+        return E_OUTOFMEMORY;
+    }
+
+    int resumePipe[2] = { -1, -1 };
+    if (bSuspendProcess && pipe(resumePipe) == -1)
+    {
+        return HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
+    }
+
+    pid_t processId = fork();
+    if (processId == -1)
+    {
+        if (bSuspendProcess)
+        {
+            close(resumePipe[0]);
+            close(resumePipe[1]);
+        }
+        return E_FAIL;
+    }
+
+    if (processId == 0)
+    {
+        sigset_t signalMask;
+        sigemptyset(&signalMask);
+        if (sigprocmask(SIG_SETMASK, &signalMask, nullptr) != 0)
+        {
+            _exit(EXIT_FAILURE);
+        }
+
+        if (bSuspendProcess)
+        {
+            close(resumePipe[1]);
+            char resumeCode;
+            ssize_t readResult;
+            do
+            {
+                readResult = read(resumePipe[0], &resumeCode, sizeof(resumeCode));
+            }
+            while (readResult == -1 && errno == EINTR);
+            close(resumePipe[0]);
+            if (readResult != sizeof(resumeCode))
+            {
+                _exit(EXIT_FAILURE);
+            }
+        }
+
+        if (currentDirectory != nullptr && chdir(currentDirectory) == -1)
+        {
+            _exit(EXIT_FAILURE);
+        }
+
+        if (environment != nullptr)
+        {
+            extern char** environ;
+            environ = environment;
+        }
+        execvp(argv[0], argv);
+        _exit(EXIT_FAILURE);
+    }
+
+    if (bSuspendProcess)
+    {
+        close(resumePipe[0]);
+        resumeHandle->ResumePipe = resumePipe[1];
+    }
+
+    *pProcessId = (DWORD)processId;
+    *pResumeHandle = (HANDLE)resumeHandle.Extract();
+    return S_OK;
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -834,10 +1047,35 @@ ResumeProcess(
     _In_ HANDLE hResumeHandle)
 {
     PUBLIC_CONTRACT;
+#ifdef TARGET_WINDOWS
     if (ResumeThread(hResumeHandle) == (DWORD)-1)
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
+#else
+    if (hResumeHandle == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    UnixResumeHandle* resumeHandle = (UnixResumeHandle*)hResumeHandle;
+    if (resumeHandle->ResumePipe != -1)
+    {
+        char resumeCode = 1;
+        ssize_t writeResult;
+        do
+        {
+            writeResult = write(resumeHandle->ResumePipe, &resumeCode, sizeof(resumeCode));
+        }
+        while (writeResult == -1 && errno == EINTR);
+        close(resumeHandle->ResumePipe);
+        resumeHandle->ResumePipe = -1;
+        if (writeResult != sizeof(resumeCode))
+        {
+            return E_FAIL;
+        }
+    }
+#endif
     return S_OK;
 }
 
@@ -853,10 +1091,24 @@ CloseResumeHandle(
     _In_ HANDLE hResumeHandle)
 {
     PUBLIC_CONTRACT;
+#ifdef TARGET_WINDOWS
     if (!CloseHandle(hResumeHandle))
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
+#else
+    if (hResumeHandle == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    UnixResumeHandle* resumeHandle = (UnixResumeHandle*)hResumeHandle;
+    if (resumeHandle->ResumePipe != -1)
+    {
+        close(resumeHandle->ResumePipe);
+    }
+    delete resumeHandle;
+#endif
     return S_OK;
 }
 
@@ -1429,6 +1681,7 @@ GetTargetCLRMetrics(
 //
 // Enumerates all the modules in the process
 //
+#ifdef TARGET_WINDOWS
 static
 HRESULT
 EnumProcessModulesInternal(
@@ -1480,6 +1733,7 @@ EnumProcessModulesInternal(
     *ppModules = modules.Detach();
     return S_OK;
 }
+#endif
 
 //
 // Finds any coreclr or single-file app in the process
@@ -1490,6 +1744,7 @@ GetRuntime(
     DWORD debuggeePID,
     ClrRuntimeInfo& clrRuntimeInfo)
 {
+#ifdef TARGET_WINDOWS
     HandleHolder hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, debuggeePID);
     if (hProcess == NULL)
     {
@@ -1504,10 +1759,19 @@ GetRuntime(
     {
         return hr;
     }
+#else
+    DWORD countModules;
+    CorUnix::ProcessModules* modules = CreateProcessModules(debuggeePID, &countModules);
+    if (modules == nullptr)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+#endif
 
     // This assumes we are only going to find one .NET runtime in the process. We do the module
     // enumeration only once because looking for single-file runtime info symbol is expensive.
 
+#ifdef TARGET_WINDOWS
     WCHAR modulePath[MAX_LONGPATH];
     for (DWORD i = 0; i < countModules; i++)
     {
@@ -1557,6 +1821,40 @@ GetRuntime(
             return S_OK;
         }
     }
+#else
+    HRESULT result = S_FALSE;
+    for (CorUnix::ProcessModules* module = modules; module != nullptr; module = module->GetNext())
+    {
+        SString modulePath;
+        HRESULT hr = S_OK;
+        EX_TRY
+        {
+            modulePath.SetUTF8(module->GetName());
+        }
+        EX_CATCH_HRESULT(hr);
+        if (FAILED(hr))
+        {
+            result = hr;
+            break;
+        }
+
+        DWORD rvaContinueStartupEvent = 0;
+        hr = GetTargetCLRMetrics(modulePath.GetUnicode(), &clrRuntimeInfo.EngineMetrics, &clrRuntimeInfo.ClrInfo, &rvaContinueStartupEvent);
+        if (SUCCEEDED(hr))
+        {
+            clrRuntimeInfo.ModuleHandle = (HMODULE)module->GetBaseAddress();
+            EX_TRY
+            {
+                clrRuntimeInfo.ClrInfo.RuntimeModulePath.Set(modulePath);
+            }
+            EX_CATCH_HRESULT(hr);
+            result = hr;
+            break;
+        }
+    }
+    DestroyProcessModules(modules);
+    return result;
+#endif
 
     // Didn't find any runtimes and there were no failures
     return S_FALSE;
@@ -1704,6 +2002,7 @@ GetRemoteModuleBaseAddress(
     }
     CONTRACTL_END;
 
+#ifdef TARGET_WINDOWS
     HandleHolder hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwPID);
     if (NULL == hProcess)
     {
@@ -1735,6 +2034,37 @@ GetRemoteModuleBaseAddress(
             }
         }
     }
+#else
+    DWORD countModules;
+    CorUnix::ProcessModules* modules = CreateProcessModules(dwPID, &countModules);
+    if (modules == nullptr)
+    {
+        ThrowHR(HRESULT_FROM_WIN32(GetLastError()));
+    }
+
+    BYTE* baseAddress = nullptr;
+    HRESULT hr = S_OK;
+    EX_TRY
+    {
+        for (CorUnix::ProcessModules* module = modules; module != nullptr; module = module->GetNext())
+        {
+            SString modulePath;
+            modulePath.SetUTF8(module->GetName());
+            if (_wcsicmp(modulePath.GetUnicode(), szFullModulePath) == 0)
+            {
+                baseAddress = (BYTE*)module->GetBaseAddress();
+                break;
+            }
+        }
+    }
+    EX_CATCH_HRESULT(hr);
+    DestroyProcessModules(modules);
+    IfFailThrow(hr);
+    if (baseAddress != nullptr)
+    {
+        return baseAddress;
+    }
+#endif
 
     // Successfully enumerated modules but couldn't find the requested one.
     return NULL;
@@ -1877,12 +2207,28 @@ ParseVersionString(
         return E_INVALIDARG;
     }
 
-    int numFieldsAssigned = swscanf_s(szDebuggeeVersion, c_versionStrFormat, piDebuggerVersion, pdwPidDebuggee, phmodTargetCLR);
-    if (numFieldsAssigned != 3)
+    WCHAR* end = nullptr;
+    unsigned int debuggerVersion = u16_strtoul(szDebuggeeVersion, &end, 16);
+    if (end == nullptr || *end != W(';'))
     {
         return E_FAIL;
     }
 
+    DWORD pidDebuggee = u16_strtoul(end + 1, &end, 16);
+    if (end == nullptr || *end != W(';'))
+    {
+        return E_FAIL;
+    }
+
+    uintptr_t targetClr = (uintptr_t)u16_strtoui64(end + 1, &end, 16);
+    if (end == nullptr || *end != W('\0'))
+    {
+        return E_FAIL;
+    }
+
+    *piDebuggerVersion = (CorDebugInterfaceVersion)debuggerVersion;
+    *pdwPidDebuggee = pidDebuggee;
+    *phmodTargetCLR = (HMODULE)targetClr;
     return S_OK;
 }
 
@@ -1924,6 +2270,7 @@ GetDbiFilenameNextToRuntime(
     //
     // Step 1: (pid, hmodule) --> full path
     //
+#ifdef TARGET_WINDOWS
     HandleHolder hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pidDebuggee);
     if (hProcess == NULL)
     {
@@ -1935,11 +2282,37 @@ GetDbiFilenameNextToRuntime(
     {
         ThrowHR(E_FAIL);
     }
+#else
+    DWORD countModules;
+    CorUnix::ProcessModules* modules = CreateProcessModules(pidDebuggee, &countModules);
+    if (modules == nullptr)
+    {
+        ThrowHR(HRESULT_FROM_WIN32(GetLastError()));
+    }
+
+    HRESULT hr = E_FAIL;
+    for (CorUnix::ProcessModules* module = modules; module != nullptr; module = module->GetNext())
+    {
+        if (module->GetBaseAddress() == hmodTargetCLR)
+        {
+            EX_TRY
+            {
+                szFullCoreClrPath.SetUTF8(module->GetName());
+                hr = S_OK;
+            }
+            EX_CATCH_HRESULT(hr);
+            break;
+        }
+    }
+    DestroyProcessModules(modules);
+    IfFailThrow(hr);
+    const WCHAR* modulePath = szFullCoreClrPath.GetUnicode();
+#endif
 
     //
     // Step 2: 'Coreclr.dll' --> 'mscordbi.dll'
     //
-    WCHAR * pCoreClrPath = modulePath;
+    const WCHAR * pCoreClrPath = modulePath;
     const WCHAR * pLast = u16_strrchr(pCoreClrPath, DIRECTORY_SEPARATOR_CHAR_W);
     if (pLast == NULL)
     {
@@ -1957,7 +2330,9 @@ GetDbiFilenameNextToRuntime(
 
     AppendDbiDllName(szFullDbiPath);
 
+#ifdef TARGET_WINDOWS
     szFullCoreClrPath.Set(pCoreClrPath, (COUNT_T)u16_strlen(pCoreClrPath));
+#endif
 }
 
 
@@ -2314,7 +2689,7 @@ RegisterForRuntimeStartupRemotePort(
     HRESULT hr = S_OK;
     HMODULE hMod = NULL;
 
-    hMod = LoadLibraryW(szMscordbiPath);
+    hMod = LoadLibraryExW(szMscordbiPath, nullptr, 0);
     if (hMod == NULL)
     {
         hr = CORDBG_E_DEBUG_COMPONENT_MISSING;

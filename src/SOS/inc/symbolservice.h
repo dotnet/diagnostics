@@ -18,6 +18,7 @@ extern "C" {
 ///
 /// Provides symbol related services to SOS.
 /// </summary>
+EXTERN_GUID(IID_ISymbolService, 0x7EE88D46, 0xF8B3, 0x4645, 0xAD, 0x3E, 0x01, 0xFE, 0x7D, 0x4F, 0x70, 0xF1);
 MIDL_INTERFACE("7EE88D46-F8B3-4645-AD3E-01FE7D4F70F1")
 ISymbolService : public IUnknown
 {

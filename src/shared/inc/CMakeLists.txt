@@ -7,7 +7,6 @@ set(CORGUIDS_IDL_SOURCES
   clrinternal.idl
   xclrdata.idl
   corprof.idl
-  corpub.idl
   corsym.idl
   sospriv.idl
 )
@@ -47,7 +46,7 @@ else(CLR_CMAKE_HOST_WIN32)
     add_compile_options(-D_MIDL_USE_GUIDDEF_)
     foreach(IDL_SOURCE IN LISTS CORGUIDS_IDL_SOURCES)
         get_filename_component(IDLNAME ${IDL_SOURCE} NAME_WE)
-        set(C_SOURCE ../pal/prebuilt/idl/${IDLNAME}_i.cpp)
+        set(C_SOURCE ${COREPAL_SOURCE_DIR}/prebuilt/idl/${IDLNAME}_i.cpp)
         list(APPEND CORGUIDS_SOURCES ${C_SOURCE})
     endforeach(IDL_SOURCE)
 

@@ -8,6 +8,10 @@
 #include <algorithm>
 #include <vector>
 
+#ifdef FEATURE_PAL
+EXTERN_GUID(IID_ISOSDacInterface18, 0x3DCCF95B, 0xBCA2, 0x40EE, 0x8B, 0x83, 0xD8, 0xD7, 0x57, 0x4A, 0x1D, 0xF0);
+#endif
+
 // ============================================================================
 // Create: query ISOSDacInterface18 for GC info
 // ============================================================================

@@ -5072,7 +5072,7 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
 #ifndef FEATURE_PAL
         sprintf_s(buffer, ARRAY_SIZE(buffer), "bp %p", SOS_PTR(addr));
 #else
-        sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%p%s", SOS_PTR(addr), LldbJitBreakpointOptions());
+        sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%llx%s", static_cast<unsigned long long>(addr), LldbJitBreakpointOptions());
 #endif
         ExtOut("Setting breakpoint: %s [%S]\n", buffer, wszNameBuffer);
         g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
@@ -5834,7 +5834,8 @@ public:
 #ifndef FEATURE_PAL
                 sprintf_s(buffer, ARRAY_SIZE(buffer), "bp /1 %p", SOS_PTR(startAddr+catcherNativeOffset));
 #else
-                sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%p%s", SOS_PTR(startAddr+catcherNativeOffset), LldbJitBreakpointOptions());
+                sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%llx%s",
+                    static_cast<unsigned long long>(startAddr + catcherNativeOffset), LldbJitBreakpointOptions());
 #endif
                 g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
             }
@@ -8304,7 +8305,7 @@ DECLARE_API (ProcInfo)
         typedef BOOL (WINAPI *FntGetProcessTimes)(HANDLE, LPFILETIME, LPFILETIME, LPFILETIME, LPFILETIME);
         static FntGetProcessTimes pFntGetProcessTimes = (FntGetProcessTimes)-1;
         if (pFntGetProcessTimes == (FntGetProcessTimes)-1) {
-            HINSTANCE hstat = LoadLibraryA("kernel32.dll");
+            HINSTANCE hstat = LoadLibraryExW(W("kernel32.dll"), nullptr, 0);
             if (hstat != 0)
             {
                 pFntGetProcessTimes = (FntGetProcessTimes)GetProcAddress (hstat, "GetProcessTimes");
@@ -8403,7 +8404,7 @@ DECLARE_API (ProcInfo)
 
         static FntNtQueryInformationProcess pFntNtQueryInformationProcess = (FntNtQueryInformationProcess)-1;
         if (pFntNtQueryInformationProcess == (FntNtQueryInformationProcess)-1) {
-            HINSTANCE hstat = LoadLibraryA("ntdll.dll");
+            HINSTANCE hstat = LoadLibraryExW(W("ntdll.dll"), nullptr, 0);
             if (hstat != 0)
             {
                 pFntNtQueryInformationProcess = (FntNtQueryInformationProcess)GetProcAddress (hstat, "NtQueryInformationProcess");
@@ -13644,7 +13645,7 @@ void PrintHelp (__in_z LPCSTR pszCmdName)
             return;
         }
 
-        HANDLE hMappedSosDocFile = CreateFileMappingA(hSosDocFile, NULL, PAGE_READONLY, 0, 0, NULL);
+        HANDLE hMappedSosDocFile = CreateFileMappingW(hSosDocFile, NULL, PAGE_READONLY, 0, 0, NULL);
         CloseHandle(hSosDocFile);
         if (hMappedSosDocFile == NULL) {
             ExtErr("Error mapping documentation file\n");

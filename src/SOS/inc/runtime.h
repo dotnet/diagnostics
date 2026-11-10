@@ -5,6 +5,7 @@
 
 #include <stdarg.h>
 #include <unknwn.h>
+#include <winwrap.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,6 +14,7 @@ extern "C" {
 /// <summary>
 /// IRuntime - the native interface 
 /// </summary>
+EXTERN_GUID(IID_IRuntime, 0xA5F152B9, 0xBA78, 0x4512, 0x92, 0x28, 0x50, 0x91, 0xA4, 0xCB, 0x7E, 0x35);
 MIDL_INTERFACE("A5F152B9-BA78-4512-9228-5091A4CB7E35")
 IRuntime : public IUnknown
 {

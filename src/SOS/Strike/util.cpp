@@ -4172,7 +4172,11 @@ OutputVaList(
     PCSTR format,
     va_list args)
 {
+#ifdef FEATURE_PAL
+    int length = DiagnosticsVsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
+#else
     int length = _vsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
+#endif
     if (length > 0)
     {
 #ifdef HOST_WINDOWS
@@ -4196,7 +4200,11 @@ ControlledOutputVaList(
     PCSTR format,
     va_list args)
 {
+#ifdef FEATURE_PAL
+    int length = DiagnosticsVsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
+#else
     int length = _vsnprintf_s((char* const)&g_printBuffer, sizeof(g_printBuffer), _TRUNCATE, format, args);
+#endif
     if (length > 0)
     {
 #ifdef HOST_WINDOWS
@@ -4344,7 +4352,7 @@ const char * const DMLFormats[] =
     "<exec cmd=\"!PrintException /d %s\">%s</exec>",// DML_PrintException
     "<exec cmd=\"!DumpRCW /d %s\">%s</exec>",       // DML_RCWrapper
     "<exec cmd=\"!DumpCCW /d %s\">%s</exec>",       // DML_CCWrapper
-    "<exec cmd=\"!ClrStack -i %S %d\">%S</exec>",   // DML_ManagedVar
+    "<exec cmd=\"!ClrStack -i %s %d\">%s</exec>",   // DML_ManagedVar
     "<exec cmd=\"!DumpObj /d %s\">%s</exec>",       // DML_Async
     "<exec cmd=\"!DumpIL /i %s\">%s</exec>",         // DML_IL
     "<exec cmd=\"!DumpRCW -cw /d %s\">%s</exec>",    // DML_ComWrapperRCW
@@ -4488,7 +4496,38 @@ CachedString Output::BuildManagedVarValue(__in_z LPCWSTR expansionName, ULONG fr
         numFrameDigits = 1;
     }
 
-    size_t totalStringLength = strlen(DMLFormats[type]) + u16_strlen(expansionName) + numFrameDigits + u16_strlen(simpleName) + 1;
+    int expansionNameSize = WideCharToMultiByte(CP_ACP, 0, expansionName, -1, nullptr, 0, nullptr, nullptr);
+    int simpleNameSize = WideCharToMultiByte(CP_ACP, 0, simpleName, -1, nullptr, 0, nullptr, nullptr);
+    if (expansionNameSize <= 0 || simpleNameSize <= 0)
+    {
+        ExtErr("Failed to determine the size of a managed variable name\n");
+        static_cast<char*>(ret)[0] = '\0';
+        return ret;
+    }
+
+    ArrayHolder<char> expansionNameBuffer = new NOTHROW char[expansionNameSize];
+    ArrayHolder<char> simpleNameBuffer = new NOTHROW char[simpleNameSize];
+    if (expansionNameBuffer == nullptr || simpleNameBuffer == nullptr)
+    {
+        ReportOOM();
+        static_cast<char*>(ret)[0] = '\0';
+        return ret;
+    }
+
+    if (WideCharToMultiByte(CP_ACP, 0, expansionName, -1, expansionNameBuffer, expansionNameSize, nullptr, nullptr) <= 0 ||
+        WideCharToMultiByte(CP_ACP, 0, simpleName, -1, simpleNameBuffer, simpleNameSize, nullptr, nullptr) <= 0)
+    {
+        ExtErr("Failed to convert a managed variable name\n");
+        static_cast<char*>(ret)[0] = '\0';
+        return ret;
+    }
+
+    LPCSTR formattedExpansionName = expansionNameBuffer;
+    LPCSTR formattedSimpleName = simpleNameBuffer;
+    size_t expansionNameLength = strlen(formattedExpansionName);
+    size_t simpleNameLength = strlen(formattedSimpleName);
+
+    size_t totalStringLength = strlen(DMLFormats[type]) + expansionNameLength + numFrameDigits + simpleNameLength + 1;
     if (totalStringLength > ret.GetStrLen())
     {
         ret.Allocate(static_cast<int>(totalStringLength));
@@ -4501,11 +4540,11 @@ CachedString Output::BuildManagedVarValue(__in_z LPCWSTR expansionName, ULONG fr
 
     if (IsDMLEnabled())
     {
-        sprintf_s(ret, ret.GetStrLen(), DMLFormats[type], expansionName, frame, simpleName);
+        sprintf_s(ret, ret.GetStrLen(), DMLFormats[type], formattedExpansionName, frame, formattedSimpleName);
     }
     else
     {
-        sprintf_s(ret, ret.GetStrLen(), "%S", simpleName);
+        sprintf_s(ret, ret.GetStrLen(), "%s", formattedSimpleName);
     }
 
     return ret;

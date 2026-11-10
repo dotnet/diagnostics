@@ -1,3 +1,5 @@
+include(${CLR_SHARED_DIR}/runtime.cmake)
+
 #-------------------------
 # Enable C++ EH with SEH
 #-------------------------
@@ -6,7 +8,8 @@ if (MSVC)
 endif()
 
 include_directories(${CLR_SRC_NATIVE_DIR})
-include_directories(${CLR_SHARED_DIR}/pal/prebuilt/inc)
+include_directories(${CLR_SRC_NATIVE_DIR}/inc)
+include_directories(${COREPAL_SOURCE_DIR}/prebuilt/inc)
 
 # All of the compiler options are specified in file compileoptions.cmake
 # Do not add any new options here. They should be added in compileoptions.cmake
@@ -22,12 +25,12 @@ endif(CLR_CMAKE_HOST_WIN32)
 include(${CLR_SHARED_DIR}/clrdefinitions.cmake)
 
 if (CLR_CMAKE_HOST_UNIX)
-  include_directories("${CLR_SHARED_DIR}/pal/inc")
-  include_directories("${CLR_SHARED_DIR}/pal/inc/rt")
-  include_directories("${CLR_SHARED_DIR}/pal/src/safecrt")
+  include_directories("${COREPAL_SOURCE_DIR}/inc")
+  include_directories("${COREPAL_SOURCE_DIR}/inc/rt")
+  include_directories("${COREPAL_SOURCE_DIR}/src/safecrt")
 endif (CLR_CMAKE_HOST_UNIX)
 
-include_directories(${CLR_SHARED_DIR}/minipal)
+include_directories(${CORECLR_MINIPAL_SOURCE_DIR})
 include_directories(${CLR_SHARED_DIR}/debug/inc)
 include_directories(${CLR_SHARED_DIR}/debug/inc/dump)
 include_directories(${CLR_SHARED_DIR}/hosts/inc)

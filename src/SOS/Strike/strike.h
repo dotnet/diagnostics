@@ -19,7 +19,7 @@
 
 #include <winternl.h>
 #include <winver.h>
-#include <windows.h>
+#include <winwrap.h>
 #include <wchar.h>
 #include <minipal/utils.h>
 #include <dn-u16.h>
