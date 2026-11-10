@@ -46,10 +46,11 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 
 The existing `dotnet-diagnostics` official pipeline runs the `test_packaged`
 stage after its full `build` stage, in parallel with packaging and publication.
-`diagnostics.yml` includes `eng/pipelines/test-packaged-sos.yml` for official
-non-build-only runs, so it covers both nightly `main` builds and official
-release-branch builds once the change is present on that branch. No new
-pipeline definition or nightly feed-version lookup is needed.
+`diagnostics.yml` includes `eng/pipelines/test-packaged-sos.yml` for all official
+runs, so it covers both nightly `main` builds and official release-branch builds
+once the change is present on that branch. Official builds omit the normal
+test-only and Helix test jobs; the installed-tool stage is their only test run.
+No new pipeline definition or nightly feed-version lookup is needed.
 
 The stage downloads `TestArtifacts_Windows_x64_Release` from the same run,
 packs its prebuilt `dotnet-sos` and `dotnet-dump` outputs into local-only Windows
@@ -61,7 +62,9 @@ It acquires test runtimes but does not rebuild the tools, harnesses, or debuggee
 These tests validate unsigned, Windows x64 packages made from the build outputs,
 not the finalized signed multi-platform shipping packages or their publication.
 The existing release-promotion pipeline consumes completed build assets; it
-does not rerun this stage. PR validation and `buildOnly` runs do not include it.
+does not rerun this stage. PR validation retains its normal tests and does not
+include this stage. `buildOnly` skips normal tests in non-official builds but
+does not disable installed-tool tests in official builds.
 
 The `Packaged` layout installs `dotnet-sos` and `dotnet-dump` at the same exact
 version into a private tool directory with an isolated NuGet cache and source
