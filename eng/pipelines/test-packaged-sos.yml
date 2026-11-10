@@ -78,6 +78,7 @@ stages:
             ${{ else }}:
               HelixTargetQueues: $(helix_win_x64_internal)
               HelixAccessToken: $(HelixApiAccessToken)
+              Creator: $(Build.RequestedFor)
             SYSTEM_ACCESSTOKEN: $(System.AccessToken)
 
       - task: CopyFiles@2
