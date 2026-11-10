@@ -1,0 +1,101 @@
+parameters:
+- name: pipelineJobTemplate
+  type: string
+
+stages:
+- stage: test_packaged
+  displayName: Test installed build artifacts
+  dependsOn: build
+  jobs:
+  - template: ${{ parameters.pipelineJobTemplate }}
+    parameters:
+      name: Packaged_SOS_win_x64_Release
+      displayName: Packaged SOS win-x64 Release tests
+      timeoutInMinutes: 420
+      enableMicrobuild: true
+      pool:
+        name: $(BuildPool)
+        demands: ImageOverride -equals $(WindowsImage)
+        os: windows
+      workspace:
+        clean: all
+      steps:
+      - task: DownloadPipelineArtifact@2
+        displayName: Download prebuilt Release test inputs
+        inputs:
+          artifact: TestArtifacts_Windows_x64_Release
+          targetPath: '$(Build.SourcesDirectory)/artifacts'
+          checkDownloadedFiles: true
+
+      - powershell: |
+          # Preserve this build's package version without rebuilding or invoking official signing.
+          foreach ($tool in @('dotnet-sos', 'dotnet-dump')) {
+            & .\eng\common\build.ps1 -restore -pack -configuration Release `
+              -projects ".\src\Tools\$tool\$tool.csproj" `
+              /p:TargetArch=x64 /p:TargetRid=win-x64 /p:SingleTargetRidPackage=true `
+              /p:NoBuild=true /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false `
+              /p:PackageOutputPath="$(Build.SourcesDirectory)\artifacts\tmp\packaged-sos-packages"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+        displayName: Pack prebuilt Windows x64 tools for isolated installation
+
+      - powershell: |
+          & .\eng\common\build.ps1 -restore -build -configuration Release `
+            -projects .\eng\InstallRuntimes.proj /p:TargetArch=x64 /p:OfficialBuild=false
+          exit $LASTEXITCODE
+        displayName: Acquire test SDK and runtimes
+
+      - task: PowerShell@2
+        displayName: Install packages made from this build
+        inputs:
+          pwsh: true
+          filePath: eng\TestPackagedSOS.ps1
+          arguments: >
+            -PackageDirectory "$(Build.SourcesDirectory)\artifacts\tmp\packaged-sos-packages"
+            -OutputDirectory "$(Build.SourcesDirectory)\artifacts\tmp\packaged-sos"
+            -PrepareOnly
+
+      - template: /eng/pipelines/send-to-helix-step.yml
+        parameters:
+          displayName: Test installed build artifacts on Helix
+          osGroup: windows
+          sendParams: >
+            $(Build.SourcesDirectory)/eng/helix/SendToHelix.proj
+            /restore /p:TreatWarningsAsErrors=false /t:Test
+            /p:Configuration=Release /p:TargetArch=x64 /p:TargetOS=Windows_NT /p:TargetRid=win-x64
+            /p:HelixTestProject=$(Build.SourcesDirectory)/src/tests/SOS.Tests/SOS.Tests.csproj
+            /p:SOSTestToolLayout=Packaged
+            /p:SOSTestToolRoot=$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos/Packaged
+            /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false
+            /bl:$(Build.SourcesDirectory)/artifacts/log/Release/SendPackagedSOS.binlog
+          env:
+            HelixSource: ci/dotnet/diagnostics/packaged-sos
+            HelixType: tests/
+            HelixConfiguration: win-x64_Release_Packaged
+            ${{ if eq(variables['System.TeamProject'], 'public') }}:
+              HelixTargetQueues: $(helix_win_x64)
+              Creator: dotnet-bot
+            ${{ else }}:
+              HelixTargetQueues: $(helix_win_x64_internal)
+              HelixAccessToken: $(HelixApiAccessToken)
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+      - task: CopyFiles@2
+        displayName: Gather installed-tool test logs and package provenance
+        condition: always()
+        inputs:
+          sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+          contents: |
+            log/**
+            TestResults/**
+            tmp/packaged-sos/Packaged/layout.json
+          targetFolder: '$(Build.ArtifactStagingDirectory)/packaged-sos-results'
+
+      - template: /eng/pipelines/publish-pipeline-artifact-shim.yml
+        parameters:
+          displayName: Publish installed-tool test results
+          condition: always()
+          inputs:
+            targetPath: '$(Build.ArtifactStagingDirectory)/packaged-sos-results'
+            artifactName: Packaged_SOS_Results_$(System.JobAttempt)
+            sbomEnabled: false

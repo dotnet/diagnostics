@@ -150,6 +150,11 @@ extends:
             jobParameters:
               pipelineJobTemplate: ${{ variables.jobTemplate }}
 
+    - ${{ if and(eq(variables.isOfficialBuild, true), ne(parameters.buildOnly, true)) }}:
+      - template: /eng/pipelines/test-packaged-sos.yml
+        parameters:
+          pipelineJobTemplate: ${{ variables.jobTemplate }}
+
     ############################
     #                          #
     #      Package stage       #

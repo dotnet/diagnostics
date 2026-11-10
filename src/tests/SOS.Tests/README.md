@@ -42,18 +42,26 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 
 ## Architecture
 
-### Testing published nightly tools
+### Testing installed tools from official builds
 
-Run the dedicated `diagnostics-nightly-tests` pipeline manually and set
-`packageVersion` to an exact version from the public `dotnet-tools` feed,
-for example `10.0.755903`. Its entry point is `diagnostics-nightly-tests.yml`,
-which uses `eng/pipelines/test-nightly-sos.yml` to build the test harnesses and
-debuggees, not native SOS or tool packages, then tests the installed tools on
-Windows x64 using the existing Helix runtime shards.
+The existing `dotnet-diagnostics` official pipeline runs the `test_packaged`
+stage after its full `build` stage, in parallel with packaging and publication.
+`diagnostics.yml` includes `eng/pipelines/test-packaged-sos.yml` for official
+non-build-only runs, so it covers both nightly `main` builds and official
+release-branch builds once the change is present on that branch. No new
+pipeline definition or nightly feed-version lookup is needed.
 
-The pipeline has no CI, PR, or scheduled trigger. It is not an official product
-build and does not package, sign, publish, or prepare releases. Normal PR
-validation and official builds continue to use the unchanged `diagnostics.yml`.
+The stage downloads `TestArtifacts_Windows_x64_Release` from the same run,
+packs its prebuilt `dotnet-sos` and `dotnet-dump` outputs into local-only Windows
+x64 NuGet packages, and installs those exact packages into an isolated layout.
+It preserves the build's package version, disables rebuilding and official
+signing, and submits the existing Windows x64 SOS runtime shards to Helix.
+It acquires test runtimes but does not rebuild the tools, harnesses, or debuggees.
+
+These tests validate unsigned, Windows x64 packages made from the build outputs,
+not the finalized signed multi-platform shipping packages or their publication.
+The existing release-promotion pipeline consumes completed build assets; it
+does not rerun this stage. PR validation and `buildOnly` runs do not include it.
 
 The `Packaged` layout installs `dotnet-sos` and `dotnet-dump` at the same exact
 version into a private tool directory with an isolated NuGet cache and source
@@ -79,6 +87,9 @@ With the harnesses, debuggees, and test runtimes already built, prepare or run
 the same layout locally:
 
 ```powershell
+.\eng\TestPackagedSOS.ps1 -PackageDirectory .\artifacts\tmp\packaged-sos-packages `
+    -OutputDirectory .\artifacts\tmp\packaged-sos -PrepareOnly
+# Or install an exact version from the nightly feed:
 .\eng\TestPackagedSOS.ps1 -PackageVersion 10.0.755903 `
     -OutputDirectory .\artifacts\tmp\nightly-sos -PrepareOnly
 # Omit -PrepareOnly to stage and run all Windows x64 runtime shards locally.

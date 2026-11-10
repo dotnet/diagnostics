@@ -5,18 +5,22 @@
 
 <#
 .SYNOPSIS
-Installs an exact nightly SOS tool version and optionally runs its Windows x64 test matrix.
+Installs SOS tools from local build packages or an exact feed version and optionally runs its Windows x64 test matrix.
 .NOTES
 Requires prebuilt Release (or Debug) harnesses and debuggees, and eng/InstallRuntimes.proj runtimes.
 The staged payload excludes Bin-layout tools and disallows on-demand builds.
 #>
-[CmdletBinding()]
+[CmdletBinding(DefaultParameterSetName = 'Feed')]
 param(
-    [Parameter(Mandatory)]
+    [Parameter(Mandatory, ParameterSetName = 'Feed')]
     [ValidatePattern('^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$')]
     [string] $PackageVersion,
 
+    [Parameter(ParameterSetName = 'Feed')]
     [string] $PackageSource = 'https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-tools/nuget/v3/index.json',
+
+    [Parameter(Mandatory, ParameterSetName = 'Packages')]
+    [string] $PackageDirectory,
 
     [Parameter(Mandatory)]
     [string] $OutputDirectory,
@@ -41,6 +45,19 @@ $testDotnet = Join-Path $runtimeRoot 'dotnet.exe'
 $root = [IO.Path]::GetFullPath($OutputDirectory, $PWD.ProviderPath)
 if (Test-Path -LiteralPath $root) {
     throw "Output directory '$root' already exists. Choose a new directory."
+}
+
+if ($PSCmdlet.ParameterSetName -eq 'Packages') {
+    $PackageSource = (Resolve-Path -LiteralPath $PackageDirectory).Path
+    $sosPackages = @(Get-ChildItem -LiteralPath $PackageSource -Filter 'dotnet-sos.*.nupkg' -File)
+    if ($sosPackages.Count -ne 1) {
+        throw "Expected exactly one dotnet-sos package in '$PackageSource', found $($sosPackages.Count)."
+    }
+    $PackageVersion = $sosPackages[0].BaseName.Substring('dotnet-sos.'.Length)
+    $dumpPackage = Join-Path $PackageSource "dotnet-dump.$PackageVersion.nupkg"
+    if (!(Test-Path -LiteralPath $dumpPackage -PathType Leaf)) {
+        throw "Matching dotnet-dump package '$dumpPackage' was not found."
+    }
 }
 
 foreach ($file in @($dotnet, $testDotnet)) {
