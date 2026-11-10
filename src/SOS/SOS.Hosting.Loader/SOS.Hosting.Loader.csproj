@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(NetCoreAppMinTargetFramework)</TargetFramework>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
+    <Description>Isolated managed host loader for SOS</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SOS.UnitTests" />
+    <InternalsVisibleTo Include="SOS.Cohost" />
+  </ItemGroup>
+
+  <Target Name="InstallProjectBinaries" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ArtifactsBinNativeDir)$(TargetFramework)" />
+  </Target>
+</Project>

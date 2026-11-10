@@ -6,12 +6,19 @@
 #include <psapi.h>
 #include <tchar.h>
 #include <limits.h>
+#include <mscoree.h>
+#include <corerror.h>
 
 #ifdef FEATURE_PAL
 #include <sys/stat.h>
 #include <dirent.h>
 #include <dlfcn.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#else
+#include <link.h>
+#endif
 #endif // FEATURE_PAL
 
 #include <functional>
@@ -26,6 +33,7 @@
 
 #include <minipal/utils.h>
 #include <minipal/getexepath.h>
+#include <minipal/utf8.h>
 
 #undef IfFailRet
 #define IfFailRet(EXPR) do { Status = (EXPR); if(FAILED(Status)) { return (Status); } } while (0)
@@ -63,7 +71,7 @@ bool g_hostingInitialized = false;
 static HostRuntimeFlavor g_hostRuntimeFlavor = HostRuntimeFlavor::NetCore;
 static RuntimeVersion g_hostRuntimeVersion = { };
 static LPCSTR g_hostRuntimeDirectory = nullptr;
-static ExtensionsInitializeDelegate g_extensionsInitializeFunc = nullptr;
+static ICLRRuntimeHost* g_coreClrHost = nullptr;
 
 namespace RuntimeHostingConstants
 {
@@ -75,19 +83,6 @@ namespace RuntimeHostingConstants
         {8, 0},
         {12, 0},
     };
-
-    struct RuntimeAssemblyOverride
-    {
-        const char* FileName;
-        uint32_t FirstRuntimeMajor;
-        uint32_t CompatibleRuntimeMajor;
-    };
-
-#define HOST_RUNTIME_ASSEMBLY(fileName, firstRuntimeMajor, compatibleRuntimeMajor) { fileName, firstRuntimeMajor, compatibleRuntimeMajor },
-    constexpr RuntimeAssemblyOverride RuntimeAssemblyOverrides[] = {
-#include "hostruntimeassemblylist.inc"
-    };
-#undef HOST_RUNTIME_ASSEMBLY
 
     constexpr char DotnetRootEnvVar[] = "DOTNET_ROOT";
 
@@ -328,29 +323,6 @@ static void AddFilesFromDirectoryToTpaList(const char* directory, std::string& t
     }
 }
 
-static std::string GetTpaListForRuntimeVersion(
-    const std::string& sosModuleDirectory,
-    const std::string& hostRuntimeDirectory,
-    const RuntimeVersion& hostRuntimeVersion)
-{
-    std::string tpaList;
-    const char* directory = sosModuleDirectory.c_str();
-
-    for (const RuntimeHostingConstants::RuntimeAssemblyOverride& assembly : RuntimeHostingConstants::RuntimeAssemblyOverrides)
-    {
-        if (hostRuntimeVersion.Major >= assembly.FirstRuntimeMajor &&
-            hostRuntimeVersion.Major < assembly.CompatibleRuntimeMajor)
-        {
-            AddFileToTpaList(directory, assembly.FileName, tpaList);
-        }
-    }
-
-    // Trust the runtime assemblies that are newer than the ones needed and provided by SOS's managed
-    // components.
-    AddFilesFromDirectoryToTpaList(hostRuntimeDirectory.c_str(), tpaList);
-    return tpaList;
-}
-
 //
 // Searches the runtime directory for a .NET Core runtime version
 //
@@ -547,6 +519,44 @@ static HRESULT GetHostRuntime(std::string& coreClrPath, std::string& hostRuntime
 /**********************************************************************\
  * Initializes the host coreclr runtime
 \**********************************************************************/
+static std::string GetLoadedCoreClrPath()
+{
+#ifndef FEATURE_PAL
+    HMODULE module = GetModuleHandleA(MAKEDLLNAME_A("coreclr"));
+    if (module != nullptr)
+    {
+        char path[MAX_LONGPATH + 1];
+        DWORD length = GetModuleFileNameA(module, path, ARRAY_SIZE(path));
+        if (length > 0 && length < ARRAY_SIZE(path))
+        {
+            return std::string(path, length);
+        }
+    }
+#elif defined(__APPLE__)
+    for (uint32_t index = 0; index < _dyld_image_count(); index++)
+    {
+        const char* path = _dyld_get_image_name(index);
+        if (path != nullptr && GetFileName(path) == MAKEDLLNAME_A("coreclr"))
+        {
+            return path;
+        }
+    }
+#else
+    std::string path;
+    dl_iterate_phdr([](struct dl_phdr_info* info, size_t, void* state) -> int
+    {
+        if (GetFileName(info->dlpi_name) == MAKEDLLNAME_A("coreclr"))
+        {
+            *static_cast<std::string*>(state) = info->dlpi_name;
+            return 1;
+        }
+        return 0;
+    }, &path);
+    return path;
+#endif
+    return {};
+}
+
 static HRESULT InitializeNetCoreHost()
 {
     std::string sosModulePath;
@@ -570,19 +580,38 @@ static HRESULT InitializeNetCoreHost()
     sosModulePath = szSOSModulePath;
 #endif // FEATURE_PAL
 
-    if (g_extensionsInitializeFunc == nullptr)
+    std::string sosModuleDirectory = sosModulePath;
+    size_t lastSlash = sosModuleDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
+    if (lastSlash == std::string::npos)
+    {
+        TraceHostingError("Failed to parse SOS module name\n");
+        return E_FAIL;
+    }
+    sosModuleDirectory.erase(lastSlash);
+    std::string loaderPath = sosModuleDirectory + DIRECTORY_SEPARATOR_STR_A +
+        ExtensionsNetCoreSubdirectory + DIRECTORY_SEPARATOR_STR_A + "SOS.Hosting.Loader.dll";
+
+    if (g_coreClrHost == nullptr)
     {
         coreclr_initialize_ptr initializeCoreCLR = nullptr;
-        coreclr_create_delegate_ptr createDelegate = nullptr;
-        std::string sosModuleDirectory;
+        using GetRuntimeHost = HRESULT (STDAPICALLTYPE *)(REFIID, IUnknown**);
+        GetRuntimeHost getRuntimeHost = nullptr;
         std::string hostRuntimeDirectory;
-        std::string coreClrPath;
+        std::string coreClrPath = GetLoadedCoreClrPath();
+        bool reuseRuntime = !coreClrPath.empty();
         RuntimeVersion hostRuntimeVersion = {};
 
-        hr = GetHostRuntime(coreClrPath, hostRuntimeDirectory, hostRuntimeVersion);
-        if (FAILED(hr))
+        if (reuseRuntime)
         {
-            return hr;
+            hostRuntimeDirectory = coreClrPath.substr(0, coreClrPath.rfind(DIRECTORY_SEPARATOR_CHAR_A));
+        }
+        else
+        {
+            hr = GetHostRuntime(coreClrPath, hostRuntimeDirectory, hostRuntimeVersion);
+            if (FAILED(hr))
+            {
+                return hr;
+            }
         }
 #ifdef FEATURE_PAL
         void* coreclrLib = dlopen(coreClrPath.c_str(), RTLD_NOW | RTLD_LOCAL);
@@ -592,7 +621,7 @@ static HRESULT InitializeNetCoreHost()
             return E_FAIL;
         }
         initializeCoreCLR = (coreclr_initialize_ptr)dlsym(coreclrLib, "coreclr_initialize");
-        createDelegate = (coreclr_create_delegate_ptr)dlsym(coreclrLib, "coreclr_create_delegate");
+        getRuntimeHost = (GetRuntimeHost)dlsym(coreclrLib, "GetCLRRuntimeHost");
 #else
         HMODULE coreclrLib = LoadLibraryA(coreClrPath.c_str());
         if (coreclrLib == nullptr)
@@ -601,91 +630,125 @@ static HRESULT InitializeNetCoreHost()
             return E_FAIL;
         }
         initializeCoreCLR = (coreclr_initialize_ptr)GetProcAddress(coreclrLib, "coreclr_initialize");
-        createDelegate = (coreclr_create_delegate_ptr)GetProcAddress(coreclrLib, "coreclr_create_delegate");
+        getRuntimeHost = (GetRuntimeHost)GetProcAddress(coreclrLib, "GetCLRRuntimeHost");
 #endif // FEATURE_PAL
 
-        if (initializeCoreCLR == nullptr || createDelegate == nullptr)
+        if (initializeCoreCLR == nullptr || getRuntimeHost == nullptr)
         {
-            TraceHostingError("coreclr_initialize or coreclr_create_delegate not found in %s\n", coreClrPath.c_str());
+            TraceHostingError("CoreCLR hosting exports not found in %s\n", coreClrPath.c_str());
             return E_FAIL;
         }
 
-        // Get just the sos module directory
-        sosModuleDirectory = sosModulePath;
-        size_t lastSlash = sosModuleDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A);
-        if (lastSlash == std::string::npos)
+        if (reuseRuntime)
         {
-            TraceHostingError("Failed to parse SOS module name\n");
-            return E_FAIL;
+            // coreclr_initialize cannot attach to an active runtime or change its binding paths.
+            ICLRRuntimeHost* runtimeHost = nullptr;
+            hr = getRuntimeHost(IID_ICLRRuntimeHost, reinterpret_cast<IUnknown**>(&runtimeHost));
+            if (FAILED(hr))
+            {
+                TraceHostingError("Failed to attach to existing CoreCLR %s: %08x\n", coreClrPath.c_str(), hr);
+                return hr;
+            }
+            DWORD domainId;
+            hr = runtimeHost->GetCurrentAppDomainId(&domainId);
+            if (hr == HOST_E_CLRNOTAVAILABLE)
+            {
+                runtimeHost->Release();
+                runtimeHost = nullptr;
+                reuseRuntime = false;
+            }
+            // An active runtime returns E_UNEXPECTED for a native thread without a CLR thread.
+            else if (FAILED(hr) && hr != E_UNEXPECTED)
+            {
+                runtimeHost->Release();
+                TraceHostingError("Failed to query existing CoreCLR %s: %08x\n", coreClrPath.c_str(), hr);
+                return hr;
+            }
+            if (!SetHostRuntime(HostRuntimeFlavor::NetCore, 0, 0, hostRuntimeDirectory.c_str()))
+            {
+                if (runtimeHost != nullptr)
+                {
+                    runtimeHost->Release();
+                }
+                TraceHostingError("Failed to record existing CoreCLR directory %s\n", hostRuntimeDirectory.c_str());
+                return E_FAIL;
+            }
+            if (reuseRuntime)
+            {
+                // A COM reference alone does not prevent another host's normal shutdown from stopping the runtime.
+                hr = runtimeHost->Start();
+                if (FAILED(hr))
+                {
+                    runtimeHost->Release();
+                    TraceHostingError("Failed to retain existing CoreCLR runtime ownership %s: %08x\n", coreClrPath.c_str(), hr);
+                    return hr;
+                }
+                g_coreClrHost = runtimeHost;
+            }
         }
-        sosModuleDirectory.erase(lastSlash);
-
-        std::string managedModuleDirectory = sosModuleDirectory;
-        managedModuleDirectory.append(DIRECTORY_SEPARATOR_STR_A);
-        managedModuleDirectory.append(ExtensionsNetCoreSubdirectory);
-
-        // Trust the SOS managed and dependent assemblies from the CoreCLR payload directory.
-        std::string tpaList = GetTpaListForRuntimeVersion(managedModuleDirectory, hostRuntimeDirectory, hostRuntimeVersion);
-
-        std::string appPaths;
-        appPaths.append(managedModuleDirectory);
-
-        const char* propertyKeys[] = {
-            "TRUSTED_PLATFORM_ASSEMBLIES",
-            "APP_PATHS",
-            "APP_NI_PATHS",
-            "NATIVE_DLL_SEARCH_DIRECTORIES",
-            "AppDomainCompatSwitch"
-        };
-
-        const char* propertyValues[] = {
-            // TRUSTED_PLATFORM_ASSEMBLIES
-            tpaList.c_str(),
-            // APP_PATHS
-            appPaths.c_str(),
-            // APP_NI_PATHS
-            hostRuntimeDirectory.c_str(),
-            // NATIVE_DLL_SEARCH_DIRECTORIES
-            sosModuleDirectory.c_str(),
-            // AppDomainCompatSwitch
-            "UseLatestBehaviorWhenTFMNotSpecified"
-        };
-
-        char* exePath = minipal_getexepath();
-        if (!exePath)
+        if (!reuseRuntime)
         {
-            TraceHostingError("Could not get full path to current executable\n");
-            return E_FAIL;
-        }
+            std::string tpaList;
+            AddFilesFromDirectoryToTpaList(hostRuntimeDirectory.c_str(), tpaList);
+            const char* propertyKeys[] = {
+                "TRUSTED_PLATFORM_ASSEMBLIES",
+                "NATIVE_DLL_SEARCH_DIRECTORIES",
+                "AppDomainCompatSwitch"
+            };
+            const char* propertyValues[] = {
+                tpaList.c_str(),
+                sosModuleDirectory.c_str(),
+                "UseLatestBehaviorWhenTFMNotSpecified"
+            };
 
-        void* hostHandle;
-        unsigned int domainId;
-        hr = initializeCoreCLR(exePath, "sos", ARRAY_SIZE(propertyKeys), propertyKeys, propertyValues, &hostHandle, &domainId);
-        free(exePath);
-        if (FAILED(hr))
-        {
-            TraceHostingError("Fail to initialize hosting runtime '%s' %08x\n", coreClrPath.c_str(), hr);
-            return hr;
-        }
+            char* exePath = minipal_getexepath();
+            if (exePath == nullptr)
+            {
+                TraceHostingError("Could not get full path to current executable\n");
+                return E_FAIL;
+            }
+            void* hostHandle;
+            unsigned int domainId;
+            hr = initializeCoreCLR(exePath, "sos", ARRAY_SIZE(propertyKeys), propertyKeys, propertyValues, &hostHandle, &domainId);
+            free(exePath);
+            if (FAILED(hr))
+            {
+                TraceHostingError("Failed to initialize hosting runtime '%s': %08x\n", coreClrPath.c_str(), hr);
+                return hr;
+            }
 
-        hr = createDelegate(hostHandle, domainId, ExtensionsDllName, ExtensionsClassName, ExtensionsInitializeFunctionName, (void**)&g_extensionsInitializeFunc);
-        if (FAILED(hr))
-        {
-            TraceHostingError("Fail to create hosting delegate %08x\n", hr);
-            return hr;
+            g_coreClrHost = static_cast<ICLRRuntimeHost*>(hostHandle);
         }
     }
-    try
+
+    std::vector<WCHAR> loaderPathW(loaderPath.size() + 1);
+    std::vector<WCHAR> sosModulePathW(sosModulePath.size() + 1);
+#ifdef FEATURE_PAL
+    if (minipal_convert_utf8_to_utf16(loaderPath.c_str(), loaderPath.size() + 1, reinterpret_cast<CHAR16_T*>(loaderPathW.data()), loaderPathW.size(), MINIPAL_MB_NO_REPLACE_INVALID_CHARS) == 0 ||
+        minipal_convert_utf8_to_utf16(sosModulePath.c_str(), sosModulePath.size() + 1, reinterpret_cast<CHAR16_T*>(sosModulePathW.data()), sosModulePathW.size(), MINIPAL_MB_NO_REPLACE_INVALID_CHARS) == 0)
     {
-        hr = g_extensionsInitializeFunc(sosModulePath.c_str());
+        TraceHostingError("SOS module path is not valid UTF-8\n");
+        return E_INVALIDARG;
     }
-    catch (...)
+#else
+    if (MultiByteToWideChar(CP_ACP, 0, loaderPath.c_str(), -1, loaderPathW.data(), static_cast<int>(loaderPathW.size())) == 0 ||
+        MultiByteToWideChar(CP_ACP, 0, sosModulePath.c_str(), -1, sosModulePathW.data(), static_cast<int>(sosModulePathW.size())) == 0)
     {
-        hr = E_ACCESSDENIED;
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        TraceHostingError("Failed to convert SOS module path: %08x\n", hr);
+        return hr;
+    }
+#endif
+    DWORD result = E_FAIL;
+    hr = g_coreClrHost->ExecuteInDefaultAppDomain(loaderPathW.data(), W("SOS.Hosting.Loader.SOSLoader"),
+        W("Initialize"), sosModulePathW.data(), &result);
+    if (SUCCEEDED(hr))
+    {
+        hr = static_cast<HRESULT>(result);
     }
     if (FAILED(hr))
     {
-        TraceHostingError("Extension host initialization FAILED %08x\n", hr);
+        TraceHostingError("Isolated SOS host initialization failed (requires .NET 8 or later): %08x\n", hr);
         return hr;
     }
     return hr;

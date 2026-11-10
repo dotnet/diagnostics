@@ -17,6 +17,9 @@
     
   <ItemGroup>
     <ProjectReference Include="..\SOS.FrameworkHost\SOS.FrameworkHost.csproj" Condition="'$(TargetFramework)' == '$(DesktopTargetFramework)'" />
+    <ProjectReference Include="..\SOS.Hosting.Loader\SOS.Hosting.Loader.csproj"
+                      ReferenceOutputAssembly="false"
+                      Condition="'$(TargetFramework)' == '$(NetCoreAppMinTargetFramework)'" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.ExtensionCommands\Microsoft.Diagnostics.ExtensionCommands.csproj" />

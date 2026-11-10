@@ -26,6 +26,8 @@
                            TargetFramework="$(DesktopTargetFramework)" />
     <SOSExtensionsBinaries Include="$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(NetCoreAppMinTargetFramework)\publish\*.dll"
                            TargetFramework="$(NetCoreAppMinTargetFramework)" />
+    <SOSExtensionsBinaries Include="$(ArtifactsBinDir)\SOS.Hosting.Loader\$(Configuration)\$(NetCoreAppMinTargetFramework)\SOS.Hosting.Loader.dll"
+                           TargetFramework="$(NetCoreAppMinTargetFramework)" />
   </ItemGroup>
 
   <Target Name="ValidateSOSExtensionsBinaries"
@@ -35,8 +37,10 @@
            Text="The $(DesktopTargetFramework) SOS managed payload was not found. Build SOS.Extensions for $(Configuration) before packing." />
     <Error Condition="!Exists('$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(DesktopTargetFramework)\publish\SOS.FrameworkHost.dll')"
            Text="The SOS Framework bootstrap was not found. Build SOS.Extensions for $(Configuration) before packing." />
-    <Error Condition="'@(SOSExtensionsBinaries->WithMetadataValue('TargetFramework', '$(NetCoreAppMinTargetFramework)'))' == ''"
+    <Error Condition="!Exists('$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(NetCoreAppMinTargetFramework)\publish\SOS.Extensions.dll')"
            Text="The $(NetCoreAppMinTargetFramework) SOS managed payload was not found. Build SOS.Extensions for $(Configuration) before packing." />
+    <Error Condition="!Exists('$(ArtifactsBinDir)\SOS.Hosting.Loader\$(Configuration)\$(NetCoreAppMinTargetFramework)\SOS.Hosting.Loader.dll')"
+           Text="The SOS isolated host loader was not found. Build SOS.Extensions for $(Configuration) before packing." />
   </Target>
 
   <!-- Each RID's required binaries are grouped in an ItemGroup guarded by SingleTargetRidPackage:

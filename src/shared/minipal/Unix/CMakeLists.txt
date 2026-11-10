@@ -1,5 +1,6 @@
 set(SOURCES
     dn-u16.cpp
+    ${CLR_SRC_NATIVE_DIR}/minipal/utf8.c
     ${CLR_SRC_NATIVE_DIR}/minipal/time.c
 )
 

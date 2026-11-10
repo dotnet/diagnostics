@@ -363,7 +363,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 "SOS.Hosting"
             };
 
-            private static readonly string _defaultAssembliesPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            private static readonly AssemblyLoadContext s_hostLoadContext = GetLoadContext(typeof(ServiceManager).Assembly);
 
             private readonly string _extensionPath;
             private Dictionary<string, string> _extensionPaths;
@@ -388,10 +388,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                         }
                     }
                 }
-                if (s_defaultAssemblies.Contains(assemblyName.Name))
+                bool sharedSOSAssembly = s_defaultAssemblies.Contains(assemblyName.Name);
+                // ImmutableArray is part of the public SOS contracts.
+                if (sharedSOSAssembly || assemblyName.Name == "System.Collections.Immutable")
                 {
-                    Assembly assembly = Default.LoadFromAssemblyPath(Path.Combine(_defaultAssembliesPath, assemblyName.Name) + ".dll");
-                    if (assemblyName.Version.Major != assembly.GetName().Version.Major)
+                    Assembly assembly = s_hostLoadContext.LoadFromAssemblyName(assemblyName);
+                    if (sharedSOSAssembly && assemblyName.Version.Major != assembly.GetName().Version.Major)
                     {
                         throw new InvalidOperationException($"Extension assembly reference version not supported for {assemblyName.Name} {assemblyName.Version}");
                     }
@@ -403,8 +405,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     Trace.TraceInformation($"ExtensionLoadContext: loading from extension path {path}");
                     return LoadFromAssemblyPath(path);
                 }
-                Trace.TraceInformation($"ExtensionLoadContext: returning null {assemblyName}");
-                return null;
+                Trace.TraceInformation($"ExtensionLoadContext: loading from host context {assemblyName}");
+                return s_hostLoadContext.LoadFromAssemblyName(assemblyName);
             }
         }
     }

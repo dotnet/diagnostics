@@ -22,3 +22,4 @@ else(CLR_CMAKE_HOST_UNIX)
 endif(CLR_CMAKE_HOST_UNIX)
 
 add_library(extensions STATIC ${SOURCES})
+target_link_libraries(extensions PRIVATE coreclrminipal)
