@@ -31,8 +31,8 @@ internal static class CodeCommandParsing
     public static EhInfoResult EhInfo(this Target target, ulong address) =>
         new(target.Sos($"ehinfo {address:x}"));
 
-    public static GcInfoResult GcInfo(this Target target, ulong address) =>
-        new(target.Sos($"gcinfo {address:x}"));
+    public static GcInfoResult GcInfo(this Target target, ulong address, bool legacy = false) =>
+        new(target.Sos($"gcinfo {(legacy ? "-legacy " : "")}{address:x}"));
 
     public static DumpIlResult DumpIl(this Target target, ulong address, bool ilPointer = false) =>
         new(target.Sos(ilPointer ? $"dumpil -i {address:x}" : $"dumpil {address:x}"));
@@ -205,10 +205,10 @@ public sealed class GcInfoResult
     private static readonly Regex s_entry = new(@"^entry point\s+([0-9a-fA-F`]+)", RegexOptions.Compiled);
     private static readonly Regex s_gcinfo = new(@"^GC info\s+([0-9a-fA-F`]+)", RegexOptions.Compiled);
     private static readonly Regex s_codeSize = new(
-        @"^(?:Code size:\s+(?<decimal>\d+)|method\s+size\s*=\s*(?<hex>[0-9a-fA-F]+))",
+        @"^(?:Code size:\s+(?<hex>[0-9a-fA-F]+)|method\s+size\s*=\s*(?<hex>[0-9a-fA-F]+))",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex s_transition =
-        new(@"^[0-9a-fA-F]{4,}\s+(interruptible|not interruptible|[+\-].+|reg .+ becoming (?:live|dead))$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        new(@"^[0-9a-fA-F]{4,}\s+(interruptible|not interruptible|is a safepoint:.*|[+\-].+|reg .+ becoming (?:live|dead).*)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public GcInfoResult(SosOutput output)
     {
@@ -234,9 +234,7 @@ public sealed class GcInfoResult
             Match c = s_codeSize.Match(line);
             if (c.Success)
             {
-                CodeSize = c.Groups["decimal"].Success
-                    ? int.Parse(c.Groups["decimal"].Value, CultureInfo.InvariantCulture)
-                    : int.Parse(c.Groups["hex"].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                CodeSize = int.Parse(c.Groups["hex"].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
                 continue;
             }
 
