@@ -42,6 +42,49 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 
 ## Architecture
 
+### Testing published nightly tools
+
+Run the existing `diagnostics-public-ci` pipeline manually and set
+`nightlyPackageVersion` to an exact version from the public `dotnet-tools` feed,
+for example `10.0.755902`. No additional pipeline registration is required.
+`diagnostics.yml` selects the `eng/pipelines/test-nightly-sos.yml` stage instead
+of the normal build, packaging, publication, and release-preparation stages.
+It builds the test harnesses and debuggees, not native SOS or tool packages,
+then tests the installed tools on Windows x64 using the existing Helix runtime
+shards.
+
+Leave `nightlyPackageVersion` blank for normal PR validation and official builds.
+When a version is supplied, nightly testing takes precedence over `buildOnly`.
+The same switch is available on the internal pipelines using `diagnostics.yml`;
+nightly-test runs are not classified as official builds and do not publish packages.
+
+The `Packaged` layout installs `dotnet-sos` and `dotnet-dump` at the same exact
+version into a private tool directory with an isolated NuGet cache and source
+configuration. SOS is installed through the downloaded package's own
+`SOS.InstallHelper`, allowing versions without private-install CLI flags to be
+tested without modifying the user's SOS installation or LLDB configuration. This
+tests the shipped installer API and tool launchers, not the CLI's default
+user-profile installation behavior.
+
+The staged payload excludes Bin-layout tools. Native SOS, managed SOS dependencies,
+and dump collection/analysis all use the selected package installation, with no
+fallback to build outputs or injected cDAC overrides. `layout.json` records the
+requested version, source, and installer path and is published with the test logs.
+Installation or test failures fail the pipeline.
+
+With the harnesses, debuggees, and test runtimes already built, prepare or run
+the same layout locally:
+
+```powershell
+.\eng\TestPackagedSOS.ps1 -PackageVersion 10.0.755902 `
+    -OutputDirectory .\artifacts\tmp\nightly-sos -PrepareOnly
+# Omit -PrepareOnly to stage and run all Windows x64 runtime shards locally.
+```
+
+`PrepareSOSTestLayout.ps1` also accepts `-PackageSource` for a local package
+directory or another HTTPS feed. Default local-build testing continues to use
+the `Bin` layout.
+
 The harness is split into four parts:
 
 - `SOS.Tests` contains command-oriented xUnit theories and structured parsers

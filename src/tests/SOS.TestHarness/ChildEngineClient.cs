@@ -184,6 +184,11 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
             {
                 return;
             }
+
+            if (line.StartsWith(EngineProtocol.DiagnosticPrefix, StringComparison.Ordinal))
+            {
+                Console.WriteLine(line[EngineProtocol.DiagnosticPrefix.Length..]);
+            }
         }
     }
 

@@ -1,0 +1,105 @@
+parameters:
+- name: packageVersion
+  displayName: Exact diagnostics package version from the dotnet-tools feed
+  type: string
+
+stages:
+    - stage: test_nightly
+      displayName: Test installed nightly tools
+      jobs:
+      - template: ${{ variables.jobTemplate }}
+        parameters:
+          name: Nightly_SOS_win_x64
+          displayName: Nightly SOS win-x64 Release tests
+          timeoutInMinutes: 420
+          pool:
+            name: $(BuildPool)
+            demands: ImageOverride -equals $(WindowsImage)
+            os: windows
+          workspace:
+            clean: all
+          steps:
+          - powershell: |
+              foreach ($project in @(
+                'eng\InstallRuntimes.proj',
+                'src\tests\SOS.Tests\SOS.Tests.csproj',
+                'src\tests\SOS.TestHarness.EngineHost\SOS.TestHarness.EngineHost.csproj',
+                'src\tests\SOS.TestHarness.Capturer\SOS.TestHarness.Capturer.csproj'
+              )) {
+                & .\eng\common\build.ps1 -restore -build -configuration Release `
+                  -projects $project /p:TargetArch=x64 /p:OfficialBuild=false
+                if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              }
+            displayName: Build test harnesses and acquire test runtimes
+
+          - task: PowerShell@2
+            displayName: Build debuggees with the test SDK
+            inputs:
+              pwsh: true
+              targetType: inline
+              script: |
+                $repo = $PWD.Path
+                Push-Location .\artifacts\dotnet-test
+                try {
+                  & .\dotnet.exe build "$repo\src\tests\Debuggees.proj" -c Release `
+                    /p:TargetOS=Windows_NT /p:TargetArch=x64 /p:TargetRid=win-x64 `
+                    "/p:RepoRoot=$repo\" "/bl:$repo\artifacts\log\Release\NightlyDebuggees.binlog"
+                  exit $LASTEXITCODE
+                } finally {
+                  Pop-Location
+                }
+
+          - task: PowerShell@2
+            displayName: Install exact nightly tools into an isolated layout
+            inputs:
+              pwsh: true
+              targetType: inline
+              script: |
+                & .\eng\TestPackagedSOS.ps1 -PackageVersion $env:DIAGNOSTICS_PACKAGE_VERSION `
+                  -OutputDirectory "$(Build.SourcesDirectory)\artifacts\tmp\nightly-sos" -PrepareOnly
+            env:
+              DIAGNOSTICS_PACKAGE_VERSION: ${{ parameters.packageVersion }}
+
+          - template: /eng/pipelines/send-to-helix-step.yml
+            parameters:
+              displayName: Test installed nightly tools on Helix
+              osGroup: windows
+              sendParams: >
+                $(Build.SourcesDirectory)/eng/helix/SendToHelix.proj
+                /restore /p:TreatWarningsAsErrors=false /t:Test
+                /p:Configuration=Release /p:TargetArch=x64 /p:TargetOS=Windows_NT /p:TargetRid=win-x64
+                /p:HelixTestProject=$(Build.SourcesDirectory)/src/tests/SOS.Tests/SOS.Tests.csproj
+                /p:SOSTestToolLayout=Packaged
+                /p:SOSTestToolRoot=$(Build.SourcesDirectory)/artifacts/tmp/nightly-sos/Packaged
+                /bl:$(Build.SourcesDirectory)/artifacts/log/Release/SendNightlySOS.binlog
+              env:
+                HelixSource: ci/dotnet/diagnostics/nightly-package-tests
+                HelixType: tests/
+                HelixConfiguration: win-x64_Release_Packaged
+                ${{ if eq(variables['System.TeamProject'], 'public') }}:
+                  HelixTargetQueues: $(helix_win_x64)
+                  Creator: dotnet-bot
+                ${{ else }}:
+                  HelixTargetQueues: $(helix_win_x64_internal)
+                  HelixAccessToken: $(HelixApiAccessToken)
+                SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+
+          - task: CopyFiles@2
+            displayName: Gather nightly test logs and package provenance
+            condition: always()
+            inputs:
+              sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+              contents: |
+                log/**
+                TestResults/**
+                tmp/nightly-sos/Packaged/layout.json
+              targetFolder: '$(Build.ArtifactStagingDirectory)/nightly-sos-results'
+
+          - template: /eng/pipelines/publish-pipeline-artifact-shim.yml
+            parameters:
+              displayName: Publish nightly package test results
+              condition: always()
+              inputs:
+                targetPath: '$(Build.ArtifactStagingDirectory)/nightly-sos-results'
+                artifactName: Nightly_SOS_Results_$(System.JobAttempt)
+                sbomEnabled: false

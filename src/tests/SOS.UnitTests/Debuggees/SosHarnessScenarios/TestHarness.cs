@@ -12,8 +12,8 @@ using System.Threading.Tasks;
 /// named point of interest in the running program. The harness realizes that same marker two ways:
 /// <list type="bullet">
 ///   <item><b>Snapshot (capture mode):</b> when <c>SOSHARNESS_CAPTURE_DIR</c> is set, the call
-///   snapshots this process (via the repo-built <c>dotnet-dump collect</c> by PID, located through
-///   <c>SOSHARNESS_DOTNET</c> + <c>SOSHARNESS_DOTNETDUMP_DLL</c>) into <c>&lt;name&gt;.dmp</c> and lets
+///   snapshots this process (via the selected <c>dotnet-dump collect</c> by PID, located through
+///   <c>SOSHARNESS_DOTNETDUMP</c> + optional <c>SOSHARNESS_DOTNETDUMP_DLL</c>) into <c>&lt;name&gt;.dmp</c> and lets
 ///   the process keep running. One run drops every named dump.</item>
 ///   <item><b>Live (under a debugger):</b> the env var is absent, so the call is a no-op. The harness
 ///   instead sets a managed <c>bpmd</c> breakpoint on the marker method to pause here.</item>
@@ -38,11 +38,14 @@ public static class TestHarness
         // dotnet-dump collect. Desktop dumps are captured externally by the harness (DbgEng).
         _ = name;
 #else
-        string dotnet = Environment.GetEnvironmentVariable("SOSHARNESS_DOTNET") ?? "dotnet";
+        string? toolExecutable = Environment.GetEnvironmentVariable("SOSHARNESS_DOTNETDUMP");
+        string dotnet = toolExecutable
+            ?? Environment.GetEnvironmentVariable("SOSHARNESS_DOTNET")
+            ?? throw new InvalidOperationException("SOSHARNESS_DOTNETDUMP is not set; cannot self-snapshot.");
         string? dumpDll = Environment.GetEnvironmentVariable("SOSHARNESS_DOTNETDUMP_DLL");
-        if (string.IsNullOrEmpty(dumpDll))
+        if (toolExecutable is null && string.IsNullOrEmpty(dumpDll))
         {
-            throw new InvalidOperationException("SOSHARNESS_DOTNETDUMP_DLL is not set; cannot self-snapshot.");
+            throw new InvalidOperationException("SOSHARNESS_DOTNETDUMP_DLL is required with the legacy SOSHARNESS_DOTNET setting.");
         }
 
         string outPath = Path.Combine(captureDir, name + ".dmp");
@@ -56,7 +59,17 @@ public static class TestHarness
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        psi.ArgumentList.Add(dumpDll);
+        string? dotnetRoot = Environment.GetEnvironmentVariable("SOSHARNESS_DOTNET_ROOT");
+        if (!string.IsNullOrEmpty(dotnetRoot))
+        {
+            string architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString().ToUpperInvariant();
+            psi.Environment["DOTNET_ROOT"] = dotnetRoot;
+            psi.Environment["DOTNET_ROOT_" + architecture] = dotnetRoot;
+        }
+        if (!string.IsNullOrEmpty(dumpDll))
+        {
+            psi.ArgumentList.Add(dumpDll);
+        }
         psi.ArgumentList.Add("collect");
         psi.ArgumentList.Add("-p");
         psi.ArgumentList.Add(Environment.ProcessId.ToString());
