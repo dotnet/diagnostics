@@ -16,7 +16,7 @@ parameters:
   - custom
   - dotnetclimsrc-sas-token-base64
 - name: buildOnly
-  displayName: Build only (official builds still run installed-tool tests)
+  displayName: Build only (skip tests)
   type: boolean
   default: false
 
@@ -150,7 +150,7 @@ extends:
             jobParameters:
               pipelineJobTemplate: ${{ variables.jobTemplate }}
 
-    - ${{ if eq(variables.isOfficialBuild, true) }}:
+    - ${{ if and(eq(variables.isOfficialBuild, true), ne(parameters.buildOnly, true)) }}:
       - template: /eng/pipelines/test-packaged-sos.yml
         parameters:
           pipelineJobTemplate: ${{ variables.jobTemplate }}

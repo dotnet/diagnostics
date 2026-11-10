@@ -42,65 +42,21 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 
 ## Architecture
 
-### Testing installed tools from official builds
+### Testing installed tools
 
-The existing `dotnet-diagnostics` official pipeline runs the `test_packaged`
-stage after its full `build` stage, in parallel with packaging and publication.
-`diagnostics.yml` includes `eng/pipelines/test-packaged-sos.yml` for all official
-runs, so it covers both nightly `main` builds and official release-branch builds
-once the change is present on that branch. Official builds omit the normal
-test-only and Helix test jobs; the installed-tool stage is their only test run.
-No new pipeline definition or nightly feed-version lookup is needed.
+Official builds run installed-tool SOS tests after `build`, in parallel with
+packaging/publishing, instead of the standard test jobs. `buildOnly` skips all
+tests; PR validation is unchanged.
 
-The stage downloads `TestArtifacts_Windows_x64_Release` from the same run,
-packs its prebuilt `dotnet-sos` and `dotnet-dump` outputs into local-only Windows
-x64 NuGet packages, and installs those exact packages into an isolated layout.
-It preserves the build's package version, disables rebuilding and official
-signing, and submits the existing Windows x64 SOS runtime shards to Helix.
-It acquires test runtimes but does not rebuild the tools, harnesses, or debuggees.
-
-These tests validate unsigned, Windows x64 packages made from the build outputs,
-not the finalized signed multi-platform shipping packages or their publication.
-The existing release-promotion pipeline consumes completed build assets; it
-does not rerun this stage. PR validation retains its normal tests and does not
-include this stage. `buildOnly` skips normal tests in non-official builds but
-does not disable installed-tool tests in official builds.
-
-The `Packaged` layout installs `dotnet-sos` and `dotnet-dump` at the same exact
-version into a private tool directory with an isolated NuGet cache and source
-configuration. SOS is installed through the downloaded package's own
-`SOS.InstallHelper`, allowing versions without private-install CLI flags to be
-tested without modifying the user's SOS installation or LLDB configuration. This
-tests the shipped installer API and tool launchers, not the CLI's default
-user-profile installation behavior.
-
-The staged payload excludes Bin-layout tools. Native SOS, managed SOS dependencies,
-and dump collection/analysis all use the selected package installation, with no
-fallback to build outputs or injected cDAC overrides. `layout.json` records the
-requested version, source, and installer path and is published with the test logs.
-Installation or test failures fail the pipeline.
-
-Known limitation: the Framework shard leaves some Core-only theories with no
-data. With xUnit 3.0.0, XML reporting can turn those failures into "Cannot find
-test case metadata" errors while the console reports success. Inspect the XML
-results as well as the run status; these are test-discovery/reporting errors,
-not failures of the installed SOS.
-
-With the harnesses, debuggees, and test runtimes already built, prepare or run
-the same layout locally:
+This tests unsigned Windows x64 packages made from the same build, not final
+signed shipping packages. Run against prebuilt local packages with:
 
 ```powershell
-.\eng\TestPackagedSOS.ps1 -PackageDirectory .\artifacts\tmp\packaged-sos-packages `
-    -OutputDirectory .\artifacts\tmp\packaged-sos -PrepareOnly
-# Or install an exact version from the nightly feed:
-.\eng\TestPackagedSOS.ps1 -PackageVersion 10.0.755903 `
-    -OutputDirectory .\artifacts\tmp\nightly-sos -PrepareOnly
-# Omit -PrepareOnly to stage and run all Windows x64 runtime shards locally.
+.\eng\TestPackagedSOS.ps1 -PackageDirectory .\artifacts\tmp\packaged-sos-packages
 ```
 
-`PrepareSOSTestLayout.ps1` also accepts `-PackageSource` for a local package
-directory or another HTTPS feed. Default local-build testing continues to use
-the `Bin` layout.
+Known limitation: Framework shards can report empty-theory errors only in their
+XML results; the console summary can still report success.
 
 The harness is split into four parts:
 
