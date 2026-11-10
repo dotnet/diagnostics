@@ -44,19 +44,16 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 
 ### Testing published nightly tools
 
-Run the existing `diagnostics-public-ci` pipeline manually and set
-`nightlyPackageVersion` to an exact version from the public `dotnet-tools` feed,
-for example `10.0.755902`. No additional pipeline registration is required.
-`diagnostics.yml` selects the `eng/pipelines/test-nightly-sos.yml` stage instead
-of the normal build, packaging, publication, and release-preparation stages.
-It builds the test harnesses and debuggees, not native SOS or tool packages,
-then tests the installed tools on Windows x64 using the existing Helix runtime
-shards.
+Run the dedicated `diagnostics-nightly-tests` pipeline manually and set
+`packageVersion` to an exact version from the public `dotnet-tools` feed,
+for example `10.0.755903`. Its entry point is `diagnostics-nightly-tests.yml`,
+which uses `eng/pipelines/test-nightly-sos.yml` to build the test harnesses and
+debuggees, not native SOS or tool packages, then tests the installed tools on
+Windows x64 using the existing Helix runtime shards.
 
-Leave `nightlyPackageVersion` blank for normal PR validation and official builds.
-When a version is supplied, nightly testing takes precedence over `buildOnly`.
-The same switch is available on the internal pipelines using `diagnostics.yml`;
-nightly-test runs are not classified as official builds and do not publish packages.
+The pipeline has no CI, PR, or scheduled trigger. It is not an official product
+build and does not package, sign, publish, or prepare releases. Normal PR
+validation and official builds continue to use the unchanged `diagnostics.yml`.
 
 The `Packaged` layout installs `dotnet-sos` and `dotnet-dump` at the same exact
 version into a private tool directory with an isolated NuGet cache and source
@@ -72,11 +69,17 @@ fallback to build outputs or injected cDAC overrides. `layout.json` records the
 requested version, source, and installer path and is published with the test logs.
 Installation or test failures fail the pipeline.
 
+Known limitation: the Framework shard leaves some Core-only theories with no
+data. With xUnit 3.0.0, XML reporting can turn those failures into "Cannot find
+test case metadata" errors while the console reports success. Inspect the XML
+results as well as the run status; these are test-discovery/reporting errors,
+not failures of the installed SOS.
+
 With the harnesses, debuggees, and test runtimes already built, prepare or run
 the same layout locally:
 
 ```powershell
-.\eng\TestPackagedSOS.ps1 -PackageVersion 10.0.755902 `
+.\eng\TestPackagedSOS.ps1 -PackageVersion 10.0.755903 `
     -OutputDirectory .\artifacts\tmp\nightly-sos -PrepareOnly
 # Omit -PrepareOnly to stage and run all Windows x64 runtime shards locally.
 ```
