@@ -1,6 +1,13 @@
 <Project InitialTargets="OverrideTestingVersions">
   <Target Name="OverrideTestingVersions">
 
+    <!-- Console debuggees do not need the SDK's transitive Windows Desktop targeting packs. -->
+    <ItemGroup>
+      <KnownFrameworkReference Remove="Microsoft.WindowsDesktop.App" />
+      <KnownFrameworkReference Remove="Microsoft.WindowsDesktop.App.WPF" />
+      <KnownFrameworkReference Remove="Microsoft.WindowsDesktop.App.WindowsForms" />
+    </ItemGroup>
+
     <PropertyGroup>
        <RuntimeVersion80>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net8.0')->Metadata('Runtime'))</RuntimeVersion80>
        <RuntimeVersion90>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net9.0')->Metadata('Runtime'))</RuntimeVersion90>
