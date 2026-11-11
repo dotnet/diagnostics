@@ -9,19 +9,18 @@
     <DotNetFinalVersionKind></DotNetFinalVersionKind>
 
     <!-- Lines intentionally left blank to prevent merge conflicts when upgrading version -->
-    <VersionPrefix>10.0.0</VersionPrefix>
+    <VersionPrefix>11.0.0</VersionPrefix>
 
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
 
     <!--
-      Embed the cDAC native binary into the diagnostics-tool packages on preview branches.
-      Release/servicing branches (PreReleaseVersionLabel != 'preview') keep the legacy
-      behavior of pulling the DAC from the runtime install or symbol server. The cDAC
-      binaries are built and published in InternalAssets independently of this setting.
-      This can be overridden explicitly on the command line with /p:PackageWithCDac=true|false.
+      Embed the cDAC native binary into the diagnostics-tool packages. The cDAC binaries are
+      built and published in InternalAssets independently of this setting. Pass
+      /p:PackageWithCDac=false to fall back to pulling the DAC from the runtime install or
+      symbol server.
     -->
-    <PackageWithCDac Condition="'$(PackageWithCDac)' == '' and '$(PreReleaseVersionLabel)' == 'preview'">true</PackageWithCDac>
+    <PackageWithCDac Condition="'$(PackageWithCDac)' == ''">true</PackageWithCDac>
 
     <!--
       Our nightly tools are stable versioned but go to a non-stable feed.
