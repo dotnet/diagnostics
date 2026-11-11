@@ -43,7 +43,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             // (the bundled binary next to sos); matching by file name alone would let a name-hijacked DLL
             // loaded from elsewhere (target runtime dir, symbol cache, ...) bypass verification.
             string trustedCDacPath = _services.GetService<IHostAssetResolver>()?.GetCDacPath();
-            string normalizedTrustedCDacPath = PathUtilities.IsSafeAbsoluteLocalPath(trustedCDacPath) ? Path.GetFullPath(trustedCDacPath) : null;
+            string normalizedTrustedCDacPath = string.IsNullOrEmpty(trustedCDacPath) ? null : Path.GetFullPath(trustedCDacPath);
             StringComparison pathComparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
             IRuntimeDescriptionProvider[] providers = _services.GetService<IServiceManager>()
@@ -57,7 +57,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 // Takes priority over VerifyDacOnWindows: skip verification only for the exact bundled cDAC.
                 DacSignatureVerificationOverride = (dacFilePath) => {
                     if (normalizedTrustedCDacPath is not null
-                        && PathUtilities.IsSafeAbsoluteLocalPath(dacFilePath)
+                        && !string.IsNullOrEmpty(dacFilePath)
                         && string.Equals(Path.GetFullPath(dacFilePath), normalizedTrustedCDacPath, pathComparison))
                     {
                         return false;
