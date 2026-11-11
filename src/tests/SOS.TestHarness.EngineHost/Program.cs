@@ -53,16 +53,9 @@ internal static class EngineHostMain
             return 1;
         }
 
-        using (Process process = Process.GetCurrentProcess())
+        foreach ((string moduleName, string modulePath) in GetLoadedDebuggerModules())
         {
-            foreach (ProcessModule module in process.Modules)
-            {
-                if (string.Equals(module.ModuleName, "dbgeng.dll", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(module.ModuleName, "sos.dll", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.Out.WriteLine($"{EngineProtocol.DiagnosticPrefix}Loaded {module.ModuleName}: {module.FileName}");
-                }
-            }
+            Console.Out.WriteLine($"{EngineProtocol.DiagnosticPrefix}Loaded {moduleName}: {modulePath}");
         }
 
         // Signal that the target is open and SOS is ready.
@@ -110,6 +103,13 @@ internal static class EngineHostMain
 
                         result = liveHost.RunToBreakpoint();
                     }
+                    else if (line == EngineProtocol.LoadedModules)
+                    {
+                        string modules = string.Join(
+                            Environment.NewLine,
+                            GetLoadedDebuggerModules().Select(module => $"{module.Key}={module.Value}"));
+                        result = new SosOutput("engine", line, modules);
+                    }
                     else
                     {
                         result = host.Execute(line);
@@ -138,5 +138,16 @@ internal static class EngineHostMain
         }
 
         return 0;
+    }
+
+    private static Dictionary<string, string> GetLoadedDebuggerModules()
+    {
+        using Process process = Process.GetCurrentProcess();
+        return process.Modules
+            .Cast<ProcessModule>()
+            .Where(module =>
+                string.Equals(module.ModuleName, "dbgeng.dll", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(module.ModuleName, "sos.dll", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(module => module.ModuleName, module => module.FileName, StringComparer.OrdinalIgnoreCase);
     }
 }

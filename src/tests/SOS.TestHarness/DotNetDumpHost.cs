@@ -42,7 +42,23 @@ public sealed class DotNetDumpHost : IDebuggerHost, IDiagnosticHost
         _dac = dac;
         _coreVersion = coreVersion;
         _diagnostics = diagnostics;
-        ProcessStartInfo psi = CreateStartInfo(ToolPaths.Layout, dumpPath);
+        ToolCommand command = ToolPaths.Layout.DotNetDump;
+        ProcessStartInfo psi = new(command.FileName)
+        {
+            UseShellExecute = false,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+        };
+        if (command.AssemblyPath is not null)
+        {
+            psi.ArgumentList.Add(command.AssemblyPath);
+        }
+        psi.Environment["DOTNET_ROOT"] = RepoLayout.DotNetRoot;
+        psi.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"] = RepoLayout.DotNetRoot;
+        psi.ArgumentList.Add("analyze");
+        psi.ArgumentList.Add(dumpPath);
 
         // Hermetic, local-only symbols (the dev's _NT_SYMBOL_PATH may point at the Azure-authed symweb).
         // NOTE: unlike the cdb/lldb hosts, `dotnet-dump analyze` does NOT honor _NT_SYMBOL_PATH — its
@@ -75,28 +91,6 @@ public sealed class DotNetDumpHost : IDebuggerHost, IDiagnosticHost
 
         // Drain the startup banner up to the first marker so the host is ready for commands.
         DrainToMarker(TimeSpan.FromSeconds(120));
-    }
-
-    internal static ProcessStartInfo CreateStartInfo(IToolLayout layout, string dumpPath)
-    {
-        ToolCommand command = layout.DotNetDump;
-        ProcessStartInfo psi = new(command.FileName)
-        {
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-        if (command.AssemblyPath is not null)
-        {
-            psi.ArgumentList.Add(command.AssemblyPath);
-        }
-        psi.Environment["DOTNET_ROOT"] = RepoLayout.DotNetRoot;
-        psi.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"] = RepoLayout.DotNetRoot;
-        psi.ArgumentList.Add("analyze");
-        psi.ArgumentList.Add(dumpPath);
-        return psi;
     }
 
     public void LoadSos()

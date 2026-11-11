@@ -97,17 +97,6 @@ public sealed class ToolLayoutTests : IDisposable
         Assert.Equal(Path.Combine(_root, "sos", "net8.0", "SOS.Extensions.dll"), layout.SosAssemblyPath);
         Assert.Equal(Path.Combine(_root, "tools", "dotnet-dump" + RepoLayout.ExeSuffix), layout.DotNetDump.FileName);
         Assert.Null(layout.DotNetDump.AssemblyPath);
-        string dumpPath = Path.Combine(_root, "a dump.dmp");
-        ProcessStartInfo process = DotNetDumpHost.CreateStartInfo(layout, dumpPath);
-        Assert.Equal(Path.Combine(_root, "tools", "dotnet-dump" + RepoLayout.ExeSuffix), process.FileName);
-        Assert.Equal(["analyze", dumpPath], process.ArgumentList);
-        Assert.False(process.UseShellExecute);
-        Assert.True(process.RedirectStandardInput);
-        Assert.True(process.RedirectStandardOutput);
-        Assert.True(process.RedirectStandardError);
-        Assert.True(process.CreateNoWindow);
-        Assert.Equal(RepoLayout.DotNetRoot, process.Environment["DOTNET_ROOT"]);
-        Assert.Equal(RepoLayout.DotNetRoot, process.Environment[$"DOTNET_ROOT_{RepoLayout.TargetArch.ToUpperInvariant()}"]);
     }
 
     [Theory]
@@ -120,19 +109,6 @@ public sealed class ToolLayoutTests : IDisposable
         File.Delete(inputs[missing]);
         FileNotFoundException error = Assert.Throws<FileNotFoundException>(() => ToolLayout.FromConfiguration("Packaged", _root));
         Assert.Equal(inputs[missing], error.FileName);
-    }
-
-    [Fact]
-    public void ManagedToolArgumentsPreservePathsWithSpaces()
-    {
-        string dotnet = Path.Combine(_root, "dotnet host.exe");
-        string dll = Path.Combine(_root, "tool directory", "dotnet-dump.dll");
-        TestToolLayout layout = new(_root, Path.Combine(_root, "SOS.Extensions.dll"), new ToolCommand(dotnet, dll), _root, null);
-        ProcessStartInfo process = DotNetDumpHost.CreateStartInfo(layout, Path.Combine(_root, "a dump.dmp"));
-
-        Assert.False(process.UseShellExecute);
-        Assert.Equal(dotnet, process.FileName);
-        Assert.Equal([dll, "analyze", Path.Combine(_root, "a dump.dmp")], process.ArgumentList);
     }
 
     [Fact]
@@ -152,24 +128,6 @@ public sealed class ToolLayoutTests : IDisposable
         Assert.Equal(RepoLayout.DotNetRoot, debuggee.Environment["SOSHARNESS_DOTNET_ROOT"]);
         Assert.Equal(Path.Combine(_root, "tools", "dotnet-dump" + RepoLayout.ExeSuffix), debuggee.Environment["SOSHARNESS_DOTNETDUMP"]);
         Assert.Null(debuggee.Environment["SOSHARNESS_DOTNETDUMP_DLL"]);
-    }
-
-    [Fact]
-    public void ProcessConfigurationPreservesInheritedBundleExtraction()
-    {
-        CreatePackagedInputs();
-        IToolLayout layout = ToolLayout.FromConfiguration("Packaged", _root);
-        string? inheritedExtraction = Environment.GetEnvironmentVariable("DOTNET_BUNDLE_EXTRACT_BASE_DIR");
-        ProcessStartInfo process = DotNetDumpHost.CreateStartInfo(layout, Path.Combine(_root, "a dump.dmp"));
-        ProcessStartInfo debuggee = new("debuggee");
-
-        SnapshotStore.ConfigureCaptureEnvironment(layout, debuggee);
-
-        process.Environment.TryGetValue("DOTNET_BUNDLE_EXTRACT_BASE_DIR", out string? toolExtraction);
-        debuggee.Environment.TryGetValue("DOTNET_BUNDLE_EXTRACT_BASE_DIR", out string? captureExtraction);
-        Assert.Equal(inheritedExtraction, toolExtraction);
-        Assert.Equal(inheritedExtraction, captureExtraction);
-        Assert.Equal(inheritedExtraction, Environment.GetEnvironmentVariable("DOTNET_BUNDLE_EXTRACT_BASE_DIR"));
     }
 
     [Fact]

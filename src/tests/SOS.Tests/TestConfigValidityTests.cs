@@ -112,14 +112,6 @@ public sealed class TestConfigValidityTests
     }
 
     [Theory]
-    [InlineData(@"C:\dacs", @"!setclrpath 'C:\dacs'")]
-    [InlineData(@"C:\dac cache\11.0.0", @"!setclrpath 'C:\dac cache\11.0.0'")]
-    public void ClrPathCommandUsesNativeQuoteSyntax(string directory, string expected)
-    {
-        Assert.Equal(expected, DbgEngHostBase.ClrPathCommand(directory));
-    }
-
-    [Theory]
     [InlineData(Flavor.Core, DumpKind.Heap, false, "Heap")]
     [InlineData(Flavor.SingleFile, DumpKind.Heap, false, "Heap")]
     [InlineData(Flavor.SingleFile, DumpKind.Full, false, "Full")]

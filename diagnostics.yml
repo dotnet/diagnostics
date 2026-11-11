@@ -151,9 +151,27 @@ extends:
               pipelineJobTemplate: ${{ variables.jobTemplate }}
 
     - ${{ if and(eq(variables.isOfficialBuild, true), ne(parameters.buildOnly, true)) }}:
-      - template: /eng/pipelines/test-packaged-sos.yml
-        parameters:
-          pipelineJobTemplate: ${{ variables.jobTemplate }}
+      - stage: test_packaged
+        displayName: Test installed build artifacts
+        dependsOn: build
+        jobs:
+        - template: /eng/pipelines/platform-matrix.yml
+          parameters:
+            jobTemplate: /eng/pipelines/tests-packaged-sos.yml
+            isOfficialBuild: ${{ variables.isOfficialBuild }}
+            configurations:
+            - Release
+            platforms:
+            - win-x64
+            - win-x86
+            - win-arm64
+            - linux-x64
+            - linux-arm64
+            - linux-musl-x64
+            - osx-x64
+            - osx-arm64
+            jobParameters:
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
 
     ############################
     #                          #

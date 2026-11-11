@@ -8,24 +8,14 @@ parameters:
 - name: isOfficialBuild
   type: boolean
   default: false
-- name: toolLayout
-  type: string
-  default: Bin
-  values:
-  - Bin
-  - Packaged
 
 jobs:
 - template: ${{ parameters.pipelineJobTemplate }}
   parameters:
-    ${{ if eq(parameters.toolLayout, 'Packaged') }}:
-      name: Tests_Packaged_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
-      displayName: Installed SOS ${{ parameters.platform.rid }} ${{ parameters.configuration }}
-    ${{ else }}:
-      name: Tests_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
-      displayName: Tests Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
+    name: Tests_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
+    displayName: Tests Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
     timeoutInMinutes: 420
-    continueOnError: ${{ and(parameters.isOfficialBuild, eq(parameters.toolLayout, 'Bin')) }}
+    continueOnError: ${{ parameters.isOfficialBuild }}
     enableMicrobuild: true
     enableTelemetry: true
 
@@ -45,19 +35,7 @@ jobs:
       ${{ else }}:
         'error, unsupported OS': ${{ parameters.platform.os }}
 
-    ${{ if eq(parameters.toolLayout, 'Bin') }}:
-      dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
-
-    variables:
-    - name: SOSToolLayoutArguments
-      ${{ if eq(parameters.toolLayout, 'Packaged') }}:
-        value: >-
-          /p:HelixTestProject=$(Build.SourcesDirectory)/src/tests/SOS.Tests/SOS.Tests.csproj
-          /p:SOSTestToolLayout=Packaged
-          /p:SOSTestPackageDirectory=$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos-packages
-          /p:OfficialBuild=false
-      ${{ else }}:
-        value: ''
+    dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
 
     steps:
     - task: DownloadPipelineArtifact@2
@@ -66,32 +44,6 @@ jobs:
         artifact: TestArtifacts_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
         targetPath: '$(Build.SourcesDirectory)/artifacts'
         checkDownloadedFiles: true
-
-    - ${{ if eq(parameters.toolLayout, 'Packaged') }}:
-      - ${{ if eq(parameters.platform.os, 'windows') }}:
-        - powershell: |
-            foreach ($tool in @('dotnet-sos', 'dotnet-dump')) {
-              & .\eng\common\build.ps1 -restore -pack -binaryLog -configuration ${{ parameters.configuration }} `
-                -projects "$(Build.SourcesDirectory)\src\Tools\$tool\$tool.csproj" `
-                /p:TargetArch=${{ parameters.platform.arch }} /p:TargetRid=${{ parameters.platform.rid }} `
-                /p:SingleTargetRidPackage=true /p:NoBuild=true `
-                /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false `
-                /p:PackageOutputPath="$(Build.SourcesDirectory)\artifacts\tmp\packaged-sos-packages"
-              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-            }
-          displayName: Pack prebuilt tools for isolated installation
-      - ${{ else }}:
-        - bash: |
-            set -euo pipefail
-            for tool in dotnet-sos dotnet-dump; do
-              ./eng/common/build.sh --restore --pack --binaryLog --configuration ${{ parameters.configuration }} \
-                --projects "$(Build.SourcesDirectory)/src/Tools/$tool/$tool.csproj" \
-                /p:TargetArch=${{ parameters.platform.arch }} /p:TargetRid=${{ parameters.platform.rid }} \
-                /p:SingleTargetRidPackage=true /p:NoBuild=true \
-                /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false \
-                /p:PackageOutputPath="$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos-packages"
-            done
-          displayName: Pack prebuilt tools for isolated installation
 
     - template: /eng/pipelines/send-to-helix-step.yml
       parameters:
@@ -105,13 +57,9 @@ jobs:
           /p:TargetOS=${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}
           /p:TargetRid=${{ parameters.platform.rid }}
           /p:OfficialBuildId=$(Build.BuildNumber)
-          $(SOSToolLayoutArguments)
           /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/SendTestsToHelix.binlog
         env:
-          ${{ if eq(parameters.toolLayout, 'Packaged') }}:
-            HelixSource: official/dotnet/diagnostics/packaged-sos
-          ${{ if eq(parameters.toolLayout, 'Bin') }}:
-            HelixSource: pr/dotnet/diagnostics/tests
+          HelixSource: pr/dotnet/diagnostics/tests
           HelixType: tests/
           HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
           ${{ if eq(variables['System.TeamProject'], 'public') }}:
@@ -122,7 +70,7 @@ jobs:
             HelixAccessToken: $(HelixApiAccessToken)
           HelixPreCommands: ${{ coalesce(parameters.platform.helixPreCommands, '') }}
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)
-        continueOnError: ${{ and(parameters.isOfficialBuild, eq(parameters.toolLayout, 'Bin')) }}
+        continueOnError: ${{ parameters.isOfficialBuild }}
 
     - task: CopyFiles@2
       displayName: Gather Helix logs
@@ -138,10 +86,7 @@ jobs:
         displayName: Publish Helix logs
         inputs:
           targetPath: '$(Build.StagingDirectory)/HelixLogs'
-          ${{ if eq(parameters.toolLayout, 'Packaged') }}:
-            artifactName: Logs_Tests_Packaged_${{ parameters.platform.rid }}_${{ parameters.configuration }}_$(System.JobAttempt)
-          ${{ else }}:
-            artifactName: Logs_Tests_Helix_${{ parameters.platform.rid }}_${{ parameters.configuration }}_$(System.JobAttempt)
+          artifactName: Logs_Tests_Helix_${{ parameters.platform.rid }}_${{ parameters.configuration }}_$(System.JobAttempt)
           sbomEnabled: false
         continueOnError: true
         condition: always()
