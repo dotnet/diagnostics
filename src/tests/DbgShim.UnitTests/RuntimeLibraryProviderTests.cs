@@ -57,7 +57,51 @@ namespace DbgShim.UnitTests
                 Assert.Skip("Authenticode verification is Windows-only");
             }
 
-            Assert.Equal(IntPtr.Zero, RuntimeWrapper.LoadLibraryWithSignatureVerification(Path.Combine(_directory, "mscordbi.dll"), verifySignature: true));
+            Assert.Equal(IntPtr.Zero, RuntimeWrapper.LoadLibraryWithSignatureVerification(Path.Combine(_directory, "mscordbi.dll"), verifySignature: true, out VerifiedLibraryCopy libraryCopy));
+            Assert.Null(libraryCopy);
+        }
+
+        [Fact]
+        public void ProvideLibraryReturnsVerifiedPrivateCopy()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Skip("Authenticode verification is Windows-only");
+            }
+            string desktopDacPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Microsoft.NET", Environment.Is64BitProcess ? "Framework64" : "Framework", "v4.0.30319", "mscordacwks.dll");
+            if (!File.Exists(desktopDacPath))
+            {
+                Assert.Skip($"Desktop DAC not available: {desktopDacPath}");
+            }
+            if (!AuthenticodeUtil.VerifyDacDll(desktopDacPath, out IDisposable fileLock))
+            {
+                Assert.Skip($"Desktop DAC is not signed: {desktopDacPath}");
+            }
+            fileLock.Dispose();
+
+            string copyPath;
+            using (RuntimeLibraryProvider provider = new(() => null, () => desktopDacPath, verifySignature: true))
+            {
+                int result = provider.ProvideLibrary2(IntPtr.Zero, "mscordacwks.dll", timeStamp: 0, sizeOfImage: 0, out IntPtr modulePath);
+                try
+                {
+                    Assert.Equal(HResult.S_OK, result);
+                    copyPath = Marshal.PtrToStringUni(modulePath);
+                }
+                finally
+                {
+                    Marshal.FreeCoTaskMem(modulePath);
+                }
+
+                // The returned path is a private copy, not the original, and it still verifies.
+                Assert.NotEqual(Path.GetDirectoryName(desktopDacPath), Path.GetDirectoryName(copyPath), StringComparer.OrdinalIgnoreCase);
+                Assert.Equal("mscordacwks.dll", Path.GetFileName(copyPath), ignoreCase: true);
+                Assert.True(File.Exists(copyPath));
+            }
+
+            // Nothing loaded the copy, so disposing the provider deletes it.
+            Assert.False(File.Exists(copyPath));
+            Assert.False(Directory.Exists(Path.GetDirectoryName(copyPath)));
         }
 
         [Theory]

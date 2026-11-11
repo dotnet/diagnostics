@@ -792,6 +792,7 @@ private:
 #ifndef FEATURE_PAL
     bool m_verifySignature;
     std::vector<HANDLE> m_verifiedFiles;
+    std::vector<std::string> m_libraryCopies;
 #endif
 
 public:
@@ -819,6 +820,11 @@ public:
         for (HANDLE file : m_verifiedFiles)
         {
             CloseHandle(file);
+        }
+        // Best effort: copies of libraries that are still loaded can't be deleted.
+        for (const std::string& copyPath : m_libraryCopies)
+        {
+            DeleteLibraryCopy(copyPath);
         }
 #endif
     }
@@ -880,12 +886,13 @@ public:
         {
             return CORDBG_E_LIBRARY_PROVIDER_ERROR;
         }
-        if (!VerifyLibrary(path))
+        std::string loadPath;
+        if (!PrepareLibrary(path, loadPath))
         {
             return CORDBG_E_LIBRARY_PROVIDER_ERROR;
         }
 
-        *moduleHandle = LoadLibraryA(path);
+        *moduleHandle = LoadLibraryA(loadPath.c_str());
         return *moduleHandle != nullptr
             ? S_OK
             : HRESULT_FROM_WIN32(GetLastError());
@@ -910,10 +917,12 @@ public:
         {
             return CORDBG_E_LIBRARY_PROVIDER_ERROR;
         }
-        if (!VerifyLibrary(path))
+        std::string loadPath;
+        if (!PrepareLibrary(path, loadPath))
         {
             return CORDBG_E_LIBRARY_PROVIDER_ERROR;
         }
+        path = loadPath.c_str();
 
         int length = MultiByteToWideChar(CP_ACP, 0, path, -1, nullptr, 0);
         if (length <= 0)
@@ -938,6 +947,98 @@ public:
     }
 
 private:
+    // When signature verification is enabled, copies the library to a private temp
+    // directory and verifies the copy so the verified file is the one that gets loaded.
+    bool PrepareLibrary(LPCSTR path, std::string& loadPath)
+    {
+        loadPath = path;
+#ifndef FEATURE_PAL
+        if (m_verifySignature)
+        {
+            std::string copyPath;
+            if (!CreateLibraryCopy(path, copyPath))
+            {
+                return false;
+            }
+            if (!VerifyLibrary(copyPath.c_str()))
+            {
+                DeleteLibraryCopy(copyPath);
+                return false;
+            }
+            m_libraryCopies.push_back(copyPath);
+            loadPath = copyPath;
+        }
+#endif
+        return true;
+    }
+
+#ifndef FEATURE_PAL
+    static bool CreateLibraryCopy(LPCSTR sourcePath, std::string& copyPath)
+    {
+        LPCSTR fileName = strrchr(sourcePath, '\\');
+        LPCSTR altFileName = strrchr(sourcePath, '/');
+        if (altFileName != nullptr && (fileName == nullptr || altFileName > fileName))
+        {
+            fileName = altFileName;
+        }
+        fileName = fileName != nullptr ? fileName + 1 : sourcePath;
+        if (*fileName == '\0')
+        {
+            return false;
+        }
+
+        char tempPath[MAX_PATH + 1];
+        DWORD tempLength = GetTempPathA(ARRAY_SIZE(tempPath), tempPath);
+        if (tempLength == 0 || tempLength > MAX_PATH)
+        {
+            ExtErr("RuntimeLibraryProvider: GetTempPath FAILED %08x\n", HRESULT_FROM_WIN32(GetLastError()));
+            return false;
+        }
+
+        GUID guid;
+        if (FAILED(CoCreateGuid(&guid)))
+        {
+            return false;
+        }
+        char directoryName[64];
+        sprintf_s(directoryName, ARRAY_SIZE(directoryName), "%08lx%04x%04x%02x%02x%02x%02x%02x%02x%02x%02x",
+            guid.Data1, guid.Data2, guid.Data3,
+            guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
+            guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+
+        std::string directory(tempPath);
+        directory.append(directoryName);
+        if (!CreateDirectoryA(directory.c_str(), nullptr))
+        {
+            ExtErr("RuntimeLibraryProvider: CreateDirectory(%s) FAILED %08x\n",
+                directory.c_str(), HRESULT_FROM_WIN32(GetLastError()));
+            return false;
+        }
+
+        copyPath = directory;
+        copyPath.append("\\");
+        copyPath.append(fileName);
+        if (!CopyFileA(sourcePath, copyPath.c_str(), TRUE))
+        {
+            ExtErr("RuntimeLibraryProvider: CopyFile(%s) FAILED %08x\n",
+                sourcePath, HRESULT_FROM_WIN32(GetLastError()));
+            RemoveDirectoryA(directory.c_str());
+            return false;
+        }
+        return true;
+    }
+
+    static void DeleteLibraryCopy(const std::string& copyPath)
+    {
+        DeleteFileA(copyPath.c_str());
+        size_t separator = copyPath.find_last_of('\\');
+        if (separator != std::string::npos)
+        {
+            RemoveDirectoryA(copyPath.substr(0, separator).c_str());
+        }
+    }
+#endif
+
     bool VerifyLibrary(LPCSTR path)
     {
 #ifndef FEATURE_PAL
@@ -1091,9 +1192,10 @@ HRESULT Runtime::CreateDesktopCorDebugProcess(ICorDebugProcess** ppCorDebugProce
     }
 
     ArrayHolder<WCHAR> dacModulePath = new WCHAR[MAX_LONGPATH + 1];
-    if (MultiByteToWideChar(CP_ACP, 0, dacFilePath, -1, dacModulePath, MAX_LONGPATH) <= 0)
+    DWORD dacModulePathLength = GetModuleFileNameW(dacHandle, dacModulePath, MAX_LONGPATH + 1);
+    if (dacModulePathLength == 0 || dacModulePathLength > MAX_LONGPATH)
     {
-        return HRESULT_FROM_WIN32(GetLastError());
+        return HRESULT_FROM_WIN32(dacModulePathLength == 0 ? GetLastError() : ERROR_INSUFFICIENT_BUFFER);
     }
 
     CLR_DEBUGGING_VERSION maxVersion = {0, 4, 0, 0, 0};
