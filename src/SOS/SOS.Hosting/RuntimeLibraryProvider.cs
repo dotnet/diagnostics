@@ -47,7 +47,7 @@ namespace SOS.Hosting
             this.ReleaseWithCheck();
         }
 
-        private int ProvideLibrary2(
+        internal int ProvideLibrary2(
             IntPtr self,
             string fileName,
             uint timeStamp,

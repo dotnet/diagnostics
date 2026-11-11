@@ -48,11 +48,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             return module;
         }
 
-        public void AddCoreRuntime(ulong imageBase, bool diagnosticHeader = true)
+        public void AddCoreRuntime(ulong imageBase, bool diagnosticHeader = true, string fileName = null)
         {
-            string name = _target.OperatingSystem == OSPlatform.Windows ? @"C:\runtime\coreclr.dll"
+            string name = fileName ?? (_target.OperatingSystem == OSPlatform.Windows ? @"C:\runtime\coreclr.dll"
                 : _target.OperatingSystem == OSPlatform.Linux ? "/runtime/libcoreclr.so"
-                : "/runtime/libcoreclr.dylib";
+                : "/runtime/libcoreclr.dylib");
             ModuleDefinition core = AddModule(imageBase, name);
             core.Exports.Add("DotNetRuntimeContractDescriptor", core.ImageBase + 0x100);
             if (diagnosticHeader)
@@ -272,7 +272,21 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
 
             public string DownloadModuleFile(IModule module) => throw new Xunit.Sdk.XunitException($"Unexpected module-file request for {module.ImageBase:X16} ({module.FileName})");
-            public string DownloadFile(string index, string file) => throw new Xunit.Sdk.XunitException($"Unexpected file request for {index} ({file})");
+
+            // Unset by default so unexpected symbol-store file requests fail the test.
+            public Func<string, string, string> FileDownloader { get; set; }
+            public List<(string Index, string File)> FileRequests { get; } = [];
+
+            public string DownloadFile(string index, string file)
+            {
+                if (FileDownloader is null)
+                {
+                    throw new Xunit.Sdk.XunitException($"Unexpected file request for {index} ({file})");
+                }
+                FileRequests.Add((index, file));
+                return FileDownloader(index, file);
+            }
+
             public IServiceEvent OnChangeEvent { get; } = new ServiceEvent();
             public bool IsSymbolStoreEnabled => true;
             public string DefaultSymbolPath => throw new NotSupportedException();
