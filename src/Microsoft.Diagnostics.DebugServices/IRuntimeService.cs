@@ -11,6 +11,13 @@ namespace Microsoft.Diagnostics.DebugServices
     public interface IRuntimeService
     {
         /// <summary>
+        /// Module base address to try first during default runtime discovery.
+        /// Full runtime enumeration ignores this preference.
+        /// The preference survives target flushes. Flush the target after changing it.
+        /// </summary>
+        ulong? PreferredRuntimeModule { get; set; }
+
+        /// <summary>
         /// Returns the list of runtimes in the target
         /// </summary>
         /// <param name="flags">Enumeration control flags</param>

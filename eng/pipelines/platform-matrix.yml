@@ -1,0 +1,162 @@
+parameters:
+- name: jobTemplate
+  type: string
+- name: configurations
+  type: object
+- name: platforms
+  type: object
+- name: jobParameters
+  type: object
+  default: {}
+- name: isOfficialBuild
+  type: boolean
+  default: false
+
+jobs:
+- ${{ each configuration in parameters.configurations }}:
+  - ${{ if containsValue(parameters.platforms, 'win-x64') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: win-x64
+          name: Windows
+          os: windows
+          arch: x64
+          queueKey: win_x64
+        ${{ insert }}: ${{ parameters.jobParameters }}
+
+  - ${{ if containsValue(parameters.platforms, 'win-x86') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: win-x86
+          name: Windows
+          os: windows
+          arch: x86
+          queueKey: win_x86
+        ${{ insert }}: ${{ parameters.jobParameters }}
+
+  - ${{ if containsValue(parameters.platforms, 'win-arm64') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: win-arm64
+          name: Windows
+          os: windows
+          arch: arm64
+          queueKey: win_arm64
+        ${{ insert }}: ${{ parameters.jobParameters }}
+
+  - ${{ if containsValue(parameters.platforms, 'linux-x64') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: linux-x64
+          name: Linux
+          os: linux
+          arch: x64
+          queueKey: linux_x64
+        ${{ insert }}: ${{ parameters.jobParameters }}
+
+  - ${{ if containsValue(parameters.platforms, 'linux-arm') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: linux-arm
+          name: Linux
+          os: linux
+          arch: arm
+          queueKey: linux_arm
+        ${{ insert }}: ${{ parameters.jobParameters }}
+
+  - ${{ if containsValue(parameters.platforms, 'linux-arm64') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: linux-arm64
+          name: Linux
+          os: linux
+          arch: arm64
+          queueKey: linux_arm64
+        ${{ insert }}: ${{ parameters.jobParameters }}
+
+  - ${{ if containsValue(parameters.platforms, 'linux-musl-x64') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: linux-musl-x64
+          name: Linux_musl
+          os: linux
+          arch: x64
+          artifactOS: linux-musl
+          queueKey: linux_musl_x64
+          helixPreCommands: sudo apk add --no-cache py3-lldb
+        ${{ insert }}: ${{ parameters.jobParameters }}
+
+  - ${{ if containsValue(parameters.platforms, 'linux-musl-arm') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: linux-musl-arm
+          name: Linux_musl
+          os: linux
+          arch: arm
+          artifactOS: linux-musl
+          queueKey: linux_musl_arm
+        ${{ insert }}: ${{ parameters.jobParameters }}
+
+  - ${{ if containsValue(parameters.platforms, 'linux-musl-arm64') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: linux-musl-arm64
+          name: Linux_musl
+          os: linux
+          arch: arm64
+          artifactOS: linux-musl
+          queueKey: linux_musl_arm64
+        ${{ insert }}: ${{ parameters.jobParameters }}
+
+  - ${{ if containsValue(parameters.platforms, 'osx-x64') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: osx-x64
+          name: MacOS
+          os: osx
+          arch: x64
+          queueKey: osx_x64
+        ${{ insert }}: ${{ parameters.jobParameters }}
+
+  - ${{ if containsValue(parameters.platforms, 'osx-arm64') }}:
+    - template: ${{ parameters.jobTemplate }}
+      parameters:
+        configuration: ${{ configuration }}
+        isOfficialBuild: ${{ parameters.isOfficialBuild }}
+        platform:
+          rid: osx-arm64
+          name: MacOS
+          os: osx
+          arch: arm64
+          queueKey: osx_arm64
+        ${{ insert }}: ${{ parameters.jobParameters }}

@@ -5,9 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security;
+using Microsoft.Diagnostics.Shared;
 
 namespace SOS
 {
@@ -55,7 +55,6 @@ namespace SOS
         public InstallHelper(Action<string> writeLine, Architecture? architecture = null)
         {
             m_writeLine = writeLine;
-            string rid = GetRid(architecture);
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -63,8 +62,9 @@ namespace SOS
                 LLDBInitFile = Path.Combine(home, ".lldbinit");
             }
             InstallLocation = Path.GetFullPath(Path.Combine(home, ".dotnet", "sos"));
-            SOSNativeSourcePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), rid);
-            SOSManagedSourcePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "lib");
+
+            SOSNativeSourcePath = SOSPackageLayout.GetNativeBinariesDirectory(architecture);
+            SOSManagedSourcePath = SOSPackageLayout.GetManagedBinariesDirectory();
         }
 
         /// <summary>
@@ -304,44 +304,6 @@ namespace SOS
                 }
                 throw new SOSInstallerException($"{errorMessage}: {lastfailure.Message}", lastfailure);
             }
-        }
-
-        /// <summary>
-        /// Returns the RID
-        /// </summary>
-        /// <param name="architecture">architecture to install or if null using the current process architecture</param>
-        public static string GetRid(Architecture? architecture = null)
-        {
-            string os = null;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                os = "win";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                os = "osx";
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                os = "linux";
-                try
-                {
-                    string ostype = File.ReadAllText("/etc/os-release");
-                    if (ostype.Contains("ID=alpine"))
-                    {
-                        os = "linux-musl";
-                    }
-                }
-                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or IOException)
-                {
-                }
-            }
-            if (os == null)
-            {
-                throw new SOSInstallerException($"Unsupported operating system {RuntimeInformation.OSDescription}");
-            }
-            string architectureString = (architecture.HasValue ? architecture : RuntimeInformation.ProcessArchitecture).ToString().ToLowerInvariant();
-            return $"{os}-{architectureString}";
         }
 
         private static void CopyFiles(string sourcePath, string destinationPath)

@@ -58,6 +58,7 @@ namespace Microsoft.SymbolStore.KeyGenerators
                 yield return new PDBFileKeyGenerator(Tracer, _file);
                 yield return new PortablePDBFileKeyGenerator(Tracer, _file);
                 yield return new PerfMapFileKeyGenerator(Tracer, _file);
+                yield return new WasmFileKeyGenerator(Tracer, _file);
             }
         }
     }

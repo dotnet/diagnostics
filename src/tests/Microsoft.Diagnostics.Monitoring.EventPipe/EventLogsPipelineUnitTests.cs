@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,8 +11,6 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
@@ -40,14 +37,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that all log events are collected if no filters are specified.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesAllLevels(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
             });
@@ -62,13 +54,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         /// <summary>
         /// Test that log events at or above the default level are collected.
         /// </summary>
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/2541"), MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevel(TestConfiguration config)
         {
             using Stream outputStream = await GetLogsAsync(config, settings => {
@@ -84,20 +76,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         /// <summary>
         /// Test that log events at the default level are collected for categories without a specified level.
         /// </summary>
-        [SkippableTheory(Skip = "Unreliable test https://github.com/dotnet/diagnostics/issues/3143"), MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevelFallback(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Error;
@@ -116,13 +103,13 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateLoggerRemoteCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         /// <summary>
         /// Test that LogLevel.None is not supported as the default log level.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsAllCategoriesDefaultLevelNoneNotSupported(TestConfiguration config)
         {
             // Pipeline should throw PipelineException with inner exception of NotSupportedException.
@@ -140,14 +127,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
         /// <summary>
         /// Test that log events are collected for the categories and levels specified by the application.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsUseAppFilters(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config);
 
             Assert.True(outputStream.Length > 0, "No data written by logging process.");
@@ -157,14 +139,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         /// <summary>
         /// Test that log events are collected for the categories and levels specified by the application
         /// and for the categories and levels specified in the filter specs.
         /// </summary>
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/2541"), MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsUseAppFiltersAndFilterSpecs(TestConfiguration config)
         {
             using Stream outputStream = await GetLogsAsync(config, settings => {
@@ -182,20 +164,15 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         /// <summary>
         /// Test that log events are collected for wildcard categories.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsWildcardCategory(TestConfiguration config)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/2541");
-            }
-
             using Stream outputStream = await GetLogsAsync(config, settings => {
                 settings.UseAppFilters = false;
                 settings.LogLevel = LogLevel.Critical;
@@ -213,7 +190,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             ValidateAppLoggerCategoryWarningMessage(reader);
             ValidateAppLoggerCategoryErrorMessage(reader);
 
-            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync()), "Expected to have read all entries from stream.");
+            Assert.True(string.IsNullOrEmpty(await reader.ReadToEndAsync(TestContext.Current.CancellationToken)), "Expected to have read all entries from stream.");
         }
 
         private async Task<Stream> GetLogsAsync(TestConfiguration config, Action<EventLogsPipelineSettings> settingsCallback = null)

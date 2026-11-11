@@ -1,11 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <IsHelixTestProject>true</IsHelixTestProject>
     <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="$(SrcDir)Tools\dotnet-gcdump\dotnet-gcdump.csproj" />
   </ItemGroup>
+
+  <Import Project="..\Helix\Managed\HelixPayload.targets" />
 
 </Project>

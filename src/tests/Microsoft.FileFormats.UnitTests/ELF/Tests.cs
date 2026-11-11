@@ -11,6 +11,36 @@ namespace Microsoft.FileFormats.ELF.Tests
     public class Tests
     {
         [Fact]
+        public void OutOfRangeSectionNameTableIndexIsHandledAsMalformedInput()
+        {
+            using MemoryStream stream = new();
+            using (BinaryWriter writer = new(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            {
+                writer.Write(new byte[] { 0x7f, (byte)'E', (byte)'L', (byte)'F', 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 });
+                writer.Write((ushort)ELFHeaderType.Shared);
+                writer.Write((ushort)62);
+                writer.Write(1U);
+                writer.Write(0UL);
+                writer.Write(0UL);
+                writer.Write(64UL);
+                writer.Write(0U);
+                writer.Write((ushort)64);
+                writer.Write((ushort)0);
+                writer.Write((ushort)0);
+                writer.Write((ushort)64);
+                writer.Write((ushort)1);
+                writer.Write((ushort)2);
+                writer.Write(new byte[64]);
+            }
+            stream.Position = 0;
+
+            using ELFFile elf = new(new StreamAddressSpace(stream));
+
+            Assert.True(elf.IsValid());
+            Assert.Null(elf.SectionNameTable);
+        }
+
+        [Fact]
         public void CheckIndexingInfo()
         {
             using (Stream libcoreclr = TestUtilities.OpenCompressedFile("TestBinaries/libcoreclr.so.gz"))

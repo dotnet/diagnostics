@@ -12,8 +12,8 @@ using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.TestHelpers;
 using SOS.Extensions;
-using Xunit.Abstractions;
-using Xunit.Extensions;
+using Xunit;
+using Xunit.Sdk;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
 {
@@ -104,7 +104,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                     }
                     catch (Exception ex)
                     {
-                        if (ex is SkipTestException)
+                        if (ex is SkipException)
                         {
                             WriteLineWarning($"Test {testName} SKIPPED - {ex.Message}");
                         }
@@ -126,9 +126,27 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         #region ITestOutputHelper
 
-        void ITestOutputHelper.WriteLine(string message) => WriteLine(message);
+        string ITestOutputHelper.Output => string.Empty;
 
-        void ITestOutputHelper.WriteLine(string format, params object[] args) => WriteLine(format, args);
+        void ITestOutputHelper.Write(string message)
+        {
+            Write(message);
+        }
+
+        void ITestOutputHelper.Write(string format, params object[] args)
+        {
+            ((ITestOutputHelper)this).Write(string.Format(format, args));
+        }
+
+        void ITestOutputHelper.WriteLine(string message)
+        {
+            WriteLine(message);
+        }
+
+        void ITestOutputHelper.WriteLine(string format, params object[] args)
+        {
+            ((ITestOutputHelper)this).WriteLine(string.Format(format, args));
+        }
 
         #endregion
     }

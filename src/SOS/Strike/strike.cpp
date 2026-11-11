@@ -101,12 +101,6 @@
 #include "strike.h"
 #include "sos.h"
 
-#ifndef STRESS_LOG
-#define STRESS_LOG
-#endif // STRESS_LOG
-#define STRESS_LOG_READONLY
-#include "stresslog.h"
-
 #include "util.h"
 
 #include "corhdr.h"
@@ -127,6 +121,7 @@
 #include "predeftlsslot.h"
 #include "hillclimbing.h"
 #include "sos_md.h"
+#include "gcinfoprovider.h"
 
 #ifndef FEATURE_PAL
 
@@ -2296,55 +2291,80 @@ DECLARE_API(DumpDelegate)
                     delegateObj = TO_TADDR(delegateAddr);
 
                     int offset;
-                    if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_target"))) != 0)
+
+                    // Read the field that (for a multicast delegate) holds the invocation list along
+                    // with the count of live entries in it. The runtime layout differs by version:
+                    //   * .NET 10 and earlier: MulticastDelegate._invocationList (Delegate[]) and
+                    //     _invocationCount (int).
+                    //   * .NET 11 and later:   Delegate._helperObject (Delegate.Wrapper[]) and
+                    //     _extraData (nint), where _extraData holds the multicast count when
+                    //     _helperObject is a Wrapper[] array.
+                    // In both layouts a Wrapper/element is a single delegate-sized reference, so the
+                    // array can be walked identically once we have the array object and the count.
+                    CLRDATA_ADDRESS invocationList = 0;
+                    int invocationCount = 0;
+                    if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationList"))) > 0)
                     {
-                        CLRDATA_ADDRESS target;
-                        MOVE(target, delegateObj.GetAddress() + offset);
-
-                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationList"))) != 0)
+                        MOVE(invocationList, delegateObj.GetAddress() + offset);
+                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationCount"))) > 0)
                         {
-                            CLRDATA_ADDRESS invocationList;
-                            MOVE(invocationList, delegateObj.GetAddress() + offset);
+                            MOVE(invocationCount, delegateObj.GetAddress() + offset);
+                        }
+                    }
+                    else if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_helperObject"))) > 0)
+                    {
+                        MOVE(invocationList, delegateObj.GetAddress() + offset);
+                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_extraData"))) > 0)
+                        {
+                            TADDR extraData = 0;
+                            MOVE(extraData, delegateObj.GetAddress() + offset);
+                            invocationCount = (int)extraData;
+                        }
+                    }
 
-                            if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_invocationCount"))) != 0)
+                    // A true multicast delegate stores an array of delegates in the invocation list.
+                    // For single-target delegates the field is either null or (in the .NET 11 layout)
+                    // a non-array helper object (e.g. a cached MethodInfo or LoaderAllocator).
+                    DacpObjectData objData;
+                    bool isMulticast =
+                        invocationList != (TADDR)0 &&
+                        sos::IsObject(invocationList, false) &&
+                        objData.Request(g_sos, invocationList) == S_OK &&
+                        objData.ObjectType == OBJ_ARRAY &&
+                        invocationCount > 0 &&
+                        invocationCount <= objData.dwNumComponents;
+
+                    if (isMulticast)
+                    {
+                        for (int i = 0; i < invocationCount; i++)
+                        {
+                            CLRDATA_ADDRESS elementPtr;
+                            MOVE(elementPtr, TO_CDADDR(objData.ArrayDataPtr + (i * objData.dwComponentSize)));
+                            if (elementPtr != (TADDR)0 && sos::IsObject(elementPtr, false))
                             {
-                                int invocationCount;
-                                MOVE(invocationCount, delegateObj.GetAddress() + offset);
-
-                                if (invocationList == (TADDR)0)
-                                {
-                                    CLRDATA_ADDRESS md;
-                                    DMLOut("%s ", DMLObject(target));
-                                    if (TryGetMethodDescriptorForDelegate(delegateAddr, &md))
-                                    {
-                                        DMLOut("%s ", DMLMethodDesc(md));
-                                        NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
-                                        ExtOut("%S\n", g_mdName);
-                                    }
-                                    else
-                                    {
-                                        ExtOut("(unknown)\n");
-                                    }
-                                }
-                                else if (sos::IsObject(invocationList, false))
-                                {
-                                    DacpObjectData objData;
-                                    if (objData.Request(g_sos, invocationList) == S_OK &&
-                                        objData.ObjectType == OBJ_ARRAY &&
-                                        invocationCount <= objData.dwNumComponents)
-                                    {
-                                        for (int i = 0; i < invocationCount; i++)
-                                        {
-                                            CLRDATA_ADDRESS elementPtr;
-                                            MOVE(elementPtr, TO_CDADDR(objData.ArrayDataPtr + (i * objData.dwComponentSize)));
-                                            if (elementPtr != (TADDR)0 && sos::IsObject(elementPtr, false))
-                                            {
-                                                delegatesRemaining.push_back(elementPtr);
-                                            }
-                                        }
-                                    }
-                                }
+                                delegatesRemaining.push_back(elementPtr);
                             }
+                        }
+                    }
+                    else
+                    {
+                        CLRDATA_ADDRESS target = 0;
+                        if ((offset = GetObjFieldOffset(delegateObj.GetAddress(), delegateObj.GetMT(), W("_target"))) > 0)
+                        {
+                            MOVE(target, delegateObj.GetAddress() + offset);
+                        }
+
+                        CLRDATA_ADDRESS md;
+                        DMLOut("%s ", DMLObject(target));
+                        if (TryGetMethodDescriptorForDelegate(delegateAddr, &md))
+                        {
+                            DMLOut("%s ", DMLMethodDesc(md));
+                            NameForMD_s((DWORD_PTR)md, g_mdName, mdNameLen);
+                            ExtOut("%S\n", g_mdName);
+                        }
+                        else
+                        {
+                            ExtOut("(unknown)\n");
                         }
                     }
                 }
@@ -4202,14 +4222,17 @@ DECLARE_API(DumpDomain)
     }
 
     ExtOut("--------------------------------------\n");
-    DMLOut("System Domain:      %s\n", DMLDomain(adsData.systemDomain));
     DacpAppDomainData appDomain;
-    if ((Status=appDomain.Request(g_sos,adsData.systemDomain))!=S_OK)
+    if (adsData.systemDomain != (TADDR)0)
     {
-        ExtOut("Unable to get system domain info.\n");
-        return Status;
+        DMLOut("System Domain:      %s\n", DMLDomain(adsData.systemDomain));
+        if ((Status=appDomain.Request(g_sos,adsData.systemDomain))!=S_OK)
+        {
+            ExtOut("Unable to get system domain info.\n");
+            return Status;
+        }
+        DomainInfo(&appDomain);
     }
-    DomainInfo(&appDomain);
 
     if (adsData.sharedDomain != (TADDR)0)
     {
@@ -4990,6 +5013,21 @@ struct PendingBreakpoint
     }
 };
 
+#ifdef FEATURE_PAL
+// Setting SOS_LLDB_HARDWARE_JIT_BREAKPOINTS=1 makes SOS plant its JIT-code breakpoints as LLDB hardware
+// breakpoints. On macOS arm64, a software breakpoint makes debugserver copy-on-write the MAP_JIT page
+// (mach_vm_protect with VM_PROT_COPY) and patch in a BRK. Threads that then run code on the new page can
+// intermittently take a spurious EXC_BAD_ACCESS/KERN_PROTECTION_FAILURE instruction abort. A hardware
+// breakpoint uses a per-thread debug register instead and never writes to the page.
+// Limitations: the CPU only has a few hardware breakpoint slots (e.g. 6 on Apple M-series). Setting a
+// breakpoint beyond that fails rather than falling back to software. Only live processes are affected.
+static const char* LldbJitBreakpointOptions()
+{
+    const char* value = getenv("SOS_LLDB_HARDWARE_JIT_BREAKPOINTS");
+    return value != nullptr && strcmp(value, "1") == 0 ? " --hardware" : "";
+}
+#endif
+
 void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
 {
     const int MaxBPsCached = 1024;
@@ -5034,7 +5072,7 @@ void IssueDebuggerBPCommand ( CLRDATA_ADDRESS addr )
 #ifndef FEATURE_PAL
         sprintf_s(buffer, ARRAY_SIZE(buffer), "bp %p", SOS_PTR(addr));
 #else
-        sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%p", SOS_PTR(addr));
+        sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --address 0x%p%s", SOS_PTR(addr), LldbJitBreakpointOptions());
 #endif
         ExtOut("Setting breakpoint: %s [%S]\n", buffer, wszNameBuffer);
         g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
@@ -5796,7 +5834,7 @@ public:
 #ifndef FEATURE_PAL
                 sprintf_s(buffer, ARRAY_SIZE(buffer), "bp /1 %p", SOS_PTR(startAddr+catcherNativeOffset));
 #else
-                sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%p", SOS_PTR(startAddr+catcherNativeOffset));
+                sprintf_s(buffer, ARRAY_SIZE(buffer), "breakpoint set --one-shot --address 0x%p%s", SOS_PTR(startAddr+catcherNativeOffset), LldbJitBreakpointOptions());
 #endif
                 g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, buffer, 0);
             }
@@ -5897,8 +5935,9 @@ HRESULT HandleCLRNotificationEvent()
         ExtOut("Expecting first chance CLRN exception\n");
         return E_FAIL;
 #else
-        g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "process continue", 0);
-        return S_OK;
+        // The LLDB exception breakpoint can observe non-CLR exceptions. Return S_FALSE so
+        // LLDB continues after the callback unwinds.
+        return S_FALSE;
 #endif
     }
 
@@ -5919,10 +5958,12 @@ HRESULT HandleCLRNotificationEvent()
             case DEBUG_STATUS_GO_NOT_HANDLED:
 #ifndef FEATURE_PAL
                 g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "g", 0);
-#else
-                g_ExtControl->Execute(DEBUG_OUTCTL_NOT_LOGGED, "process continue", 0);
-#endif
                 break;
+#else
+                // The LLDB breakpoint callback interprets S_FALSE as continue. Returning here lets
+                // LLDB resume after the callback unwinds instead of re-entering it with "process continue".
+                return S_FALSE;
+#endif
             default:
                 break;
         }
@@ -6707,10 +6748,12 @@ DECLARE_API(GCInfo)
     TADDR taStartAddr = (TADDR)0;
     TADDR taGCInfoAddr;
     BOOL dml = FALSE;
+    BOOL useLegacy = FALSE;
 
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"/d", &dml, COBOOL, FALSE},
+        {"-legacy", &useLegacy, COBOOL, FALSE},
     };
     CMDValue arg[] =
     {   // vptr, type
@@ -6788,9 +6831,27 @@ DECLARE_API(GCInfo)
     }
 
     taGCInfoAddr = TO_TADDR(codeHeaderData.GCInfo);
-
     ExtOut("GC info %p\n", SOS_PTR(taGCInfoAddr));
 
+    // Use the DAC interfaces when available; only their absence permits legacy decoding.
+    if (!useLegacy)
+    {
+        GCInfoData gcInfo;
+        CLRDATA_ADDRESS methodIP = TO_CDADDR(codeHeaderData.MethodStart);
+        HRESULT hr = GCInfoData::Create(methodIP, gcInfo);
+        if (hr == S_OK && gcInfo.IsValid)
+        {
+            gcInfo.DumpToOutput(ExtOut);
+            return Status;
+        }
+        if (hr != S_FALSE)
+        {
+            ExtOut("Failed to retrieve GC info through DAC interfaces: %08x\n", hr);
+            return FAILED(hr) ? hr : E_FAIL;
+        }
+    }
+
+    // Final fallback: raw GC info blob + DumpGCInfo (for older runtimes without Interface18)
     // assume that GC encoding table is never more than
     // 40 + methodSize * 2
     int tableSize = 0;
@@ -7472,6 +7533,29 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
 
     if (fWithGCInfo)
     {
+        if (!g_gcEncodingInfo.Initialize())
+        {
+            return E_OUTOFMEMORY;
+        }
+
+        // Use the DAC interfaces when available; only their absence permits legacy decoding.
+        {
+            GCInfoData gcInfo;
+            CLRDATA_ADDRESS methodIP = TO_CDADDR(codeHeaderData.MethodStart);
+            HRESULT hr = GCInfoData::Create(methodIP, gcInfo);
+            if (hr == S_OK && gcInfo.IsValid)
+            {
+                gcInfo.DumpToOutput(DecodeGCTableEntry);
+                return S_OK;
+            }
+            if (hr != S_FALSE)
+            {
+                ExtOut("Failed to retrieve GC info through DAC interfaces: %08x\n", hr);
+                return FAILED(hr) ? hr : E_FAIL;
+            }
+        }
+
+        // Final fallback: raw GC info blob + DumpGCInfo (for older runtimes)
         // assume that GC encoding table is never more than 40 + methodSize * 2
         int tableSize = 0;
         if (!ClrSafeInt<int>::multiply(codeHeaderData.MethodSize, 2, tableSize) ||
@@ -7502,11 +7586,6 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
         // Skip the info header
         //
         unsigned int methodSize = (unsigned int)codeHeaderData.MethodSize;
-
-        if (!g_gcEncodingInfo.Initialize())
-        {
-            return E_OUTOFMEMORY;
-        }
 
         GCInfoToken gcInfoToken = { table, GCInfoVersion() };
         g_targetMachine->DumpGCInfo(gcInfoToken, methodSize, DecodeGCTableEntry, false /*encBytes*/, false /*bPrintHeader*/);
@@ -7557,114 +7636,6 @@ HRESULT GetIntermediateLangMap(BOOL bIL, const DacpCodeHeaderData& codeHeaderDat
         }
     }
     return S_OK;
-}
-
-/**********************************************************************\
-* Routine Description:                                                 *
-*                                                                      *
-*    This function is called to dump the in-memory stress log          *
-*    !DumpLog [filename]                                               *
-*             will dump the stress log corresponding to the clr.dll    *
-*             loaded in the debuggee's VAS                             *
-*    !DumpLog -addr <addr_of_StressLog::theLog> [filename]             *
-*             will dump the stress log associated with any DLL linked  *
-*             against utilcode.lib, most commonly mscordbi.dll         *
-*             (e.g. !DumpLog -addr mscordbi!StressLog::theLog)         *
-*                                                                      *
-\**********************************************************************/
-DECLARE_API(DumpLog)
-{
-    INIT_API_NO_RET_ON_FAILURE("dumplog");
-    MINIDUMP_NOT_SUPPORTED();
-    _ASSERTE(g_pRuntime != nullptr);
-
-    // Not supported on desktop runtime
-    if (g_pRuntime->GetRuntimeConfiguration() == IRuntime::WindowsDesktop)
-    {
-        ExtErr("DumpLog not supported on desktop runtime\n");
-        return E_FAIL;
-    }
-
-    if (CheckBreakingRuntimeChange())
-    {
-        return E_FAIL;
-    }
-
-    LoadRuntimeSymbols();
-
-    const char* fileName = "StressLog.txt";
-    CLRDATA_ADDRESS StressLogAddress = (TADDR)0;
-
-    StringHolder sFileName, sLogAddr;
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"-addr", &sLogAddr.data, COSTRING, TRUE}
-    };
-    CMDValue arg[] =
-    {   // vptr, type
-        {&sFileName.data, COSTRING}
-    };
-    size_t nArg;
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), arg, ARRAY_SIZE(arg), &nArg))
-    {
-        return E_INVALIDARG;
-    }
-    if (nArg > 0 && sFileName.data != NULL)
-    {
-        fileName = sFileName.data;
-    }
-
-    // allow users to specify -addr mscordbdi!StressLog::theLog, for example.
-    if (sLogAddr.data != NULL)
-    {
-        StressLogAddress = GetExpression(sLogAddr.data);
-    }
-
-    if (StressLogAddress == (TADDR)0)
-    {
-        if (g_bDacBroken)
-        {
-#ifndef FEATURE_PAL
-            if (IsWindowsTarget())
-            {
-                // Try to find stress log symbols
-                DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
-                StressLogAddress = dwAddr;
-            }
-            else
-#endif
-            {
-                ExtOut("No stress log address. DAC is broken; can't get it\n");
-                return E_FAIL;
-            }
-        }
-        else if (g_sos->GetStressLogAddress(&StressLogAddress) != S_OK)
-        {
-            ExtOut("Unable to find stress log via DAC\n");
-            return E_FAIL;
-        }
-    }
-
-    if (StressLogAddress == (TADDR)0)
-    {
-        ExtOut("Please provide the -addr argument for the address of the stress log, since no recognized runtime is loaded.\n");
-        return E_FAIL;
-    }
-
-    ExtOut("Attempting to dump Stress log to file '%s'\n", fileName);
-
-
-
-    Status = StressLog::Dump(StressLogAddress, fileName, g_ExtData);
-
-    if (Status == S_OK)
-        ExtOut("SUCCESS: Stress log dumped\n");
-    else if (Status == S_FALSE)
-        ExtOut("No Stress log in the image, no file written\n");
-    else
-        ExtOut("FAILURE: Stress log not dumped\n");
-
-    return Status;
 }
 
 #ifdef TRACE_GC
@@ -8609,7 +8580,11 @@ public:
             if (adsData.Request(g_sos) != S_OK)
                 return FALSE;
 
-            LONG numSpecialDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
+            LONG numSpecialDomains = 0;
+            if (adsData.sharedDomain != (TADDR)0)
+                numSpecialDomains++;
+            if (adsData.systemDomain != (TADDR)0)
+                numSpecialDomains++;
             m_numDomains = adsData.DomainCount + numSpecialDomains;
             ArrayHolder<CLRDATA_ADDRESS> pArray = new NOTHROW CLRDATA_ADDRESS[m_numDomains];
             if (pArray == NULL)
@@ -8621,10 +8596,14 @@ public:
                 pArray[i++] = adsData.sharedDomain;
             }
 
-            pArray[i] = adsData.systemDomain;
-
             m_sharedDomainIndex = i - 1; // The m_sharedDomainIndex is set to -1 if there is no shared domain
-            m_systemDomainIndex = i;
+
+            if (adsData.systemDomain != (TADDR)0)
+            {
+                pArray[i] = adsData.systemDomain;
+                m_systemDomainIndex = i;
+                i++;
+            }
 
             if (g_sos->GetAppDomainList(adsData.DomainCount, pArray+numSpecialDomains, NULL) != S_OK)
                 return FALSE;
@@ -9322,206 +9301,6 @@ DECLARE_API(StopOnException)
 
     return Status;
 }
-
-#ifndef FEATURE_PAL
-// For FEATURE_PAL, MEMORY_BASIC_INFORMATION64 doesn't exist yet. TODO?
-DECLARE_API(GCHandleLeaks)
-{
-    INIT_API();
-    MINIDUMP_NOT_SUPPORTED();
-    ONLY_SUPPORTED_ON_WINDOWS_TARGET();
-
-    ExtOut("-------------------------------------------------------------------------------\n");
-    ExtOut("GCHandleLeaks will report any GCHandles that couldn't be found in memory.      \n");
-    ExtOut("Strong and Pinned GCHandles are reported at this time. You can safely abort the\n");
-    ExtOut("memory scan with Control-C or Control-Break.                                   \n");
-    ExtOut("-------------------------------------------------------------------------------\n");
-
-    static DWORD_PTR array[2000];
-    UINT i;
-    BOOL dml = FALSE;
-
-    CMDOption option[] =
-    {   // name, vptr, type, hasValue
-        {"/d", &dml, COBOOL, FALSE},
-    };
-
-    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
-    {
-        return E_INVALIDARG;
-    }
-
-    EnableDMLHolder dmlHolder(dml);
-
-    UINT iFinal = FindAllPinnedAndStrong(array,sizeof(array)/sizeof(DWORD_PTR));
-    ExtOut("Found %d handles:\n",iFinal);
-    for (i=1;i<=iFinal;i++)
-    {
-        ExtOut("%p\t", SOS_PTR(array[i-1]));
-        if ((i % 4) == 0)
-            ExtOut("\n");
-    }
-
-    ExtOut("\nSearching memory\n");
-    // Now search memory for this:
-    DWORD_PTR buffer[1024];
-    ULONG64 memCur = 0x0;
-    BOOL bAbort = FALSE;
-
-    //find out memory used by stress log
-    StressLogMem stressLog;
-    CLRDATA_ADDRESS StressLogAddress = NULL;
-    if (LoadClrDebugDll() != S_OK)
-    {
-        // Try to find stress log symbols
-        DWORD_PTR dwAddr = GetValueFromExpression("StressLog::theLog");
-        StressLogAddress = dwAddr;
-        g_bDacBroken = TRUE;
-    }
-    else
-    {
-        if (g_sos->GetStressLogAddress(&StressLogAddress) != S_OK)
-        {
-            ExtOut("Unable to find stress log via DAC\n");
-        }
-        g_bDacBroken = FALSE;
-    }
-
-    if (stressLog.Init (StressLogAddress, g_ExtData))
-    {
-        ExtOut("Reference found in stress log will be ignored\n");
-    }
-    else
-    {
-        ExtOut("Failed to read whole or part of stress log, some references may come from stress log\n");
-    }
-
-
-    while (!bAbort)
-    {
-        NTSTATUS status;
-        MEMORY_BASIC_INFORMATION64 memInfo;
-
-        status = g_ExtData2->QueryVirtual(UL64_TO_CDA(memCur), &memInfo);
-
-        if( !NT_SUCCESS(status) )
-        {
-            break;
-        }
-
-        if (memInfo.State == MEM_COMMIT)
-        {
-            for (ULONG64 memIter = memCur; memIter < (memCur + memInfo.RegionSize); memIter+=sizeof(buffer))
-            {
-                if (IsInterrupt())
-                {
-                    ExtOut("Quitting at %p due to user abort\n", SOS_PTR(memIter));
-                    bAbort = TRUE;
-                    break;
-                }
-
-                if ((memIter % 0x10000000)==0x0)
-                {
-                    ExtOut("Searching %p...\n", SOS_PTR(memIter));
-                }
-
-                ULONG size = 0;
-                HRESULT ret;
-                ret = g_ExtData->ReadVirtual(UL64_TO_CDA(memIter), buffer, sizeof(buffer), &size);
-                if (ret == S_OK)
-                {
-                    for (UINT x=0;x<1024;x++)
-                    {
-                        DWORD_PTR value = buffer[x];
-                        // We don't care about the low bit. Also, the GCHandle class turns on the
-                        // low bit for pinned handles, so without the statement below, we wouldn't
-                        // notice pinned handles.
-                        value = value & ~1;
-                        for (i=0;i<iFinal;i++)
-                        {
-                            ULONG64 addrInDebugee = (ULONG64)memIter+(x*sizeof(DWORD_PTR));
-                            if ((array[i] & ~1) == value)
-                            {
-                                if (stressLog.IsInStressLog (addrInDebugee))
-                                {
-                                    ExtOut("Found %p in stress log at location %p, reference not counted\n", SOS_PTR(value), addrInDebugee);
-                                }
-                                else
-                                {
-                                    ExtOut("Found %p at location %p\n", SOS_PTR(value), addrInDebugee);
-                                    array[i] |= 0x1;
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    if (size > 0)
-                    {
-                        ExtOut("only read %x bytes at %p\n", size, SOS_PTR(memIter));
-                    }
-                }
-            }
-        }
-
-        memCur += memInfo.RegionSize;
-    }
-
-    int numNotFound = 0;
-    for (i=0;i<iFinal;i++)
-    {
-        if ((array[i] & 0x1) == 0)
-        {
-            numNotFound++;
-            // ExtOut("WARNING: %p not found\n", SOS_PTR(array[i]));
-        }
-    }
-
-    if (numNotFound > 0)
-    {
-        ExtOut("------------------------------------------------------------------------------\n");
-        ExtOut("Some handles were not found. If the number of not-found handles grows over the\n");
-        ExtOut("lifetime of your application, you may have a GCHandle leak. This will cause   \n");
-        ExtOut("the GC Heap to grow larger as objects are being kept alive, referenced only   \n");
-        ExtOut("by the orphaned handle. If the number doesn't grow over time, note that there \n");
-        ExtOut("may be some noise in this output, as an unmanaged application may be storing  \n");
-        ExtOut("the handle in a non-standard way, perhaps with some bits flipped. The memory  \n");
-        ExtOut("scan wouldn't be able to find those.                                          \n");
-        ExtOut("------------------------------------------------------------------------------\n");
-
-        ExtOut("Didn't find %d handles:\n", numNotFound);
-        int numPrinted=0;
-        for (i=0;i<iFinal;i++)
-        {
-            if ((array[i] & 0x1) == 0)
-            {
-                numPrinted++;
-                ExtOut("%p\t", SOS_PTR(array[i]));
-                if ((numPrinted % 4) == 0)
-                    ExtOut("\n");
-            }
-        }
-        ExtOut("\n");
-    }
-    else
-    {
-        ExtOut("------------------------------------------------------------------------------\n");
-        ExtOut("All handles found");
-        if (bAbort)
-            ExtOut(" even though you aborted.\n");
-        else
-            ExtOut(".\n");
-        ExtOut("A leak may still exist because in a general scan of process memory SOS can't  \n");
-        ExtOut("differentiate between garbage and valid structures, so you may have false     \n");
-        ExtOut("positives. If you still suspect a leak, use this function over time to        \n");
-        ExtOut("identify a possible trend.                                                    \n");
-        ExtOut("------------------------------------------------------------------------------\n");
-    }
-
-    return Status;
-}
-#endif // FEATURE_PAL
 
 class ClrStackImplWithICorDebug
 {
@@ -13717,16 +13496,11 @@ DECLARE_API(SetClrPath)
     }
     if (narg > 0)
     {
-        if (IsRemoteOrDevicePath(runtimeModulePath.data))
-        {
-            ExtErr("Runtime directory must be local: %s\n", runtimeModulePath.data);
-            return E_INVALIDARG;
-        }
         std::string fullPath;
-        if (!GetAbsolutePath(runtimeModulePath.data, fullPath) || !IsSafeAbsoluteLocalPath(fullPath.c_str()))
+        if (!GetAbsolutePath(runtimeModulePath.data, fullPath))
         {
-            ExtErr("Invalid local runtime directory %s\n", runtimeModulePath.data);
-            return E_INVALIDARG;
+            ExtErr("Invalid runtime directory %s\n", fullPath.c_str());
+            return E_FAIL;
         }
         g_pRuntime->SetRuntimeDirectory(fullPath.c_str());
     }
@@ -13740,21 +13514,73 @@ DECLARE_API(SetClrPath)
 //
 // Lists and selects the current runtime
 //
+static void DisplayCDacLoadPolicy()
+{
+    PCSTR cdacPolicy = "prefer";
+    switch (Runtime::GetConfiguredCDacLoadPolicy())
+    {
+        case CDacLoadPolicy::OnlyUseCDac:
+            cdacPolicy = "true";
+            break;
+        case CDacLoadPolicy::UseLegacyDac:
+            cdacPolicy = "false";
+            break;
+        case CDacLoadPolicy::PreferCDac:
+            cdacPolicy = "prefer";
+            break;
+        default:
+            break;
+    }
+    ExtOut("Settings:\n");
+    ExtOut("-> Use cDAC: %s\n", cdacPolicy);
+}
+
 DECLARE_API(runtimes)
 {
-    INIT_API_NODAC_PROBE_MANAGED("runtimes");
+    INIT_API_NOEE_PROBE_MANAGED("runtimes");
 
     BOOL bNetFx = FALSE;
     BOOL bNetCore = FALSE;
+    StringHolder useCDac;
     CMDOption option[] =
     {   // name, vptr, type, hasValue
         {"-netfx", &bNetFx, COBOOL, FALSE},
         {"-netcore", &bNetCore, COBOOL, FALSE},
+        {"--usecdac", &useCDac.data, COSTRING, TRUE},
     };
     if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
     {
         return E_INVALIDARG;
     }
+    if (useCDac.data != nullptr)
+    {
+        CDacLoadPolicy policy;
+        if (_stricmp(useCDac.data, "true") == 0)
+        {
+            policy = CDacLoadPolicy::OnlyUseCDac;
+        }
+        else if (_stricmp(useCDac.data, "false") == 0)
+        {
+            policy = CDacLoadPolicy::UseLegacyDac;
+        }
+        else if (_stricmp(useCDac.data, "prefer") == 0)
+        {
+            policy = CDacLoadPolicy::PreferCDac;
+        }
+        else
+        {
+            ExtErr("Invalid --usecdac value '%s'. Expected true, false, or prefer.\n", useCDac.data);
+            return E_INVALIDARG;
+        }
+        Runtime::SetCDacLoadPolicy(policy);
+        GetTarget()->Flush();
+    }
+    if (useCDac.data != nullptr && !bNetCore && !bNetFx)
+    {
+        DisplayCDacLoadPolicy();
+        return Status;
+    }
+    INIT_API_EE();
     if (bNetCore || bNetFx)
     {
 #ifndef FEATURE_PAL
@@ -13778,6 +13604,7 @@ DECLARE_API(runtimes)
     else
     {
         Target::DisplayStatus();
+        DisplayCDacLoadPolicy();
     }
     return Status;
 }

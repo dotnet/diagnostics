@@ -1,0 +1,70 @@
+<!-- Licensed to the .NET Foundation under one or more agreements. The .NET Foundation licenses this file to you under the MIT license. -->
+<Project Sdk="Microsoft.DotNet.Helix.Sdk" DefaultTargets="Test">
+
+  <PropertyGroup>
+    <Language>msbuild</Language>
+    <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' != ''">true</EnableAzurePipelinesReporter>
+    <EnableAzurePipelinesReporter Condition="'$(SYSTEM_ACCESSTOKEN)' == ''">false</EnableAzurePipelinesReporter>
+    <EnableXUnitReporter>true</EnableXUnitReporter>
+    <WaitForWorkItemCompletion>true</WaitForWorkItemCompletion>
+    <FailOnWorkItemFailure>true</FailOnWorkItemFailure>
+    <FailOnTestFailure>true</FailOnTestFailure>
+
+    <!-- The work item runs the test assembly with the dotnet host Helix
+         provisions for us as a correlation payload (see IncludeDotNetCli). -->
+    <IncludeDotNetCli>true</IncludeDotNetCli>
+    <DotNetCliPackageType>sdk</DotNetCliPackageType>
+    <DotNetCliVersion Condition="'$(DotNetCliVersion)' == ''">10.0.110</DotNetCliVersion>
+    <!-- Queue names do not always identify the target architecture, so use the explicit test RID. -->
+    <DotNetCliRuntime>$(TargetRid)</DotNetCliRuntime>
+  </PropertyGroup>
+
+  <Target Name="DiscoverHelixTestProjects">
+    <ItemGroup Condition="'$(HelixTestProject)' != ''">
+      <HelixTestProject Include="$(HelixTestProject)" />
+    </ItemGroup>
+    <MSBuild Projects="$(RepoRoot)src/tests/dirs.proj"
+             Targets="DiscoverHelixTestProjects"
+             Condition="'@(HelixTestProject)' == ''">
+      <Output TaskParameter="TargetOutputs" ItemName="HelixTestProject" />
+    </MSBuild>
+    <Error Condition="'@(HelixTestProject)' == ''" Text="At least one Helix test project is required." />
+  </Target>
+
+  <!-- Restore candidate projects' package inputs (not binaries), including SOS's Windows debugger package. -->
+  <Target Name="RestoreHelixTestProjects"
+          BeforeTargets="Restore"
+          DependsOnTargets="DiscoverHelixTestProjects"
+          Condition="'$(HelixTargetQueue)' != ''">
+    <!-- Independent restores can write the same shared dependency's assets concurrently. -->
+    <MSBuild Projects="@(HelixTestProject)" Targets="Restore" BuildInParallel="false" />
+  </Target>
+
+  <!-- The SDK invokes Build for each queue. Each project stages into its queue-specific directory.
+       Gather before the SDK's AfterTargets=Build runtime provisioning, not during submission. -->
+  <Target Name="GatherHelixWorkItems" DependsOnTargets="DiscoverHelixTestProjects" Returns="@(HelixWorkItem)">
+    <Error Condition="'$(HelixTargetQueue)' == ''" Text="GatherHelixWorkItems requires a single HelixTargetQueue." />
+    <MSBuild Projects="@(HelixTestProject)" Targets="CreateHelixPayload" SkipNonexistentTargets="true" BuildInParallel="true">
+      <Output TaskParameter="TargetOutputs" ItemName="HelixWorkItem" />
+    </MSBuild>
+    <Error Condition="'@(HelixWorkItem)' == ''" Text="At least one Helix work item is required." />
+    <Error Condition="'@(HelixWorkItem->Count())' != '@(HelixWorkItem->Distinct()->Count())'"
+           Text="Helix work-item identities must be unique across the selected test projects." />
+  </Target>
+
+  <Target Name="PrepareHelixRuntimePackages"
+          BeforeTargets="Build"
+          DependsOnTargets="GatherHelixWorkItems"
+          Condition="'$(HelixTargetQueue)' != ''"
+          Returns="@(AdditionalDotNetPackage)">
+    <ItemGroup>
+      <_HelixRuntimeVersion Include="%(HelixWorkItem.RequiredRuntimeVersions)" />
+      <AdditionalDotNetPackage Include="@(_HelixRuntimeVersion->Distinct())">
+        <PackageType>runtime</PackageType>
+      </AdditionalDotNetPackage>
+    </ItemGroup>
+  </Target>
+
+</Project>

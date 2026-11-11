@@ -1,0 +1,92 @@
+parameters:
+- name: pipelineJobTemplate
+  type: string
+- name: configuration
+  type: string
+- name: platform
+  type: object
+- name: isOfficialBuild
+  type: boolean
+  default: false
+
+jobs:
+- template: ${{ parameters.pipelineJobTemplate }}
+  parameters:
+    name: Tests_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
+    displayName: Tests Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
+    timeoutInMinutes: 420
+    continueOnError: ${{ parameters.isOfficialBuild }}
+    enableMicrobuild: true
+    enableTelemetry: true
+
+    pool:
+      ${{ if eq(parameters.platform.os, 'windows') }}:
+        name: $(BuildPool)
+        demands: ImageOverride -equals $(WindowsImage)
+        os: windows
+      ${{ elseif eq(parameters.platform.os, 'linux') }}:
+        name: $(BuildPool)
+        demands: ImageOverride -equals $(LinuxImage)
+        os: linux
+      ${{ elseif eq(parameters.platform.os, 'osx') }}:
+        name: Azure Pipelines
+        vmImage: $(macOSImage)
+        os: macOS
+      ${{ else }}:
+        'error, unsupported OS': ${{ parameters.platform.os }}
+
+    dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
+
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: Download test payload inputs
+      inputs:
+        artifact: TestArtifacts_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
+        targetPath: '$(Build.SourcesDirectory)/artifacts'
+        checkDownloadedFiles: true
+
+    - template: /eng/pipelines/send-to-helix-step.yml
+      parameters:
+        displayName: Run tests on Helix
+        osGroup: ${{ parameters.platform.os }}
+        sendParams: >
+          $(Build.SourcesDirectory)/eng/helix/SendToHelix.proj
+          /restore /p:TreatWarningsAsErrors=false /t:Test
+          /p:Configuration=${{ parameters.configuration }}
+          /p:TargetArch=${{ parameters.platform.arch }}
+          /p:TargetOS=${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}
+          /p:TargetRid=${{ parameters.platform.rid }}
+          /p:OfficialBuildId=$(Build.BuildNumber)
+          /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/SendTestsToHelix.binlog
+        env:
+          HelixSource: pr/dotnet/diagnostics/tests
+          HelixType: tests/
+          HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
+          ${{ if eq(variables['System.TeamProject'], 'public') }}:
+            HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }})
+            Creator: dotnet-bot
+          ${{ else }}:
+            HelixTargetQueues: $(helix_${{ parameters.platform.queueKey }}_internal)
+            HelixAccessToken: $(HelixApiAccessToken)
+          HelixPreCommands: ${{ coalesce(parameters.platform.helixPreCommands, '') }}
+          SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+        continueOnError: ${{ parameters.isOfficialBuild }}
+
+    - task: CopyFiles@2
+      displayName: Gather Helix logs
+      inputs:
+        sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+        contents: '?(log|TestResults)/**'
+        targetFolder: '$(Build.StagingDirectory)/HelixLogs'
+      continueOnError: true
+      condition: always()
+
+    - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+      parameters:
+        displayName: Publish Helix logs
+        inputs:
+          targetPath: '$(Build.StagingDirectory)/HelixLogs'
+          artifactName: Logs_Tests_Helix_${{ parameters.platform.rid }}_${{ parameters.configuration }}_$(System.JobAttempt)
+          sbomEnabled: false
+        continueOnError: true
+        condition: always()

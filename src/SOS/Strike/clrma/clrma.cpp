@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#include "exts.h"
 #include "managedanalysis.h"
+#include "exts.h"
 
 HRESULT CLRMACreateInstance(ICLRManagedAnalysis** ppCLRMA);
 HRESULT CLRMAReleaseInstance();
@@ -137,6 +137,198 @@ DECLARE_API(clrmaconfig)
                                                     "Only read crashinfo from Exception if present (use -enumScheme 0)");
 
     return Status;
+}
+
+//
+// !clrma command
+//
+// Drives the CLRMA (CLR Managed Analysis) interfaces the same way Watson/!analyze does so the
+// managed crash bucketing path can be exercised locally with any SOS host (e.g. dotnet-dump),
+// without requiring the debugger engine's built-in !clrma/!analyze commands.
+//
+
+template <typename T>
+static void
+PrintClrmaFrames(T* frameProvider, PCSTR indent)
+{
+    UINT frameCount = 0;
+    if (FAILED(frameProvider->get_FrameCount(&frameCount)) || frameCount == 0)
+    {
+        ExtOut("%s<no managed frames>\n", indent);
+        return;
+    }
+    for (UINT i = 0; i < frameCount; i++)
+    {
+        if (IsInterrupt())
+        {
+            return;
+        }
+        ULONG64 ip = 0;
+        ULONG64 sp = 0;
+        ULONG64 displacement = 0;
+        BSTR module = nullptr;
+        BSTR function = nullptr;
+        if (SUCCEEDED(frameProvider->Frame(i, &ip, &sp, &module, &function, &displacement)))
+        {
+            ExtOut("%s%p %p %S!%S+0x%llx\n",
+                indent,
+                SOS_PTR(sp),
+                SOS_PTR(ip),
+                module != nullptr ? module : W("<unknown_module>"),
+                function != nullptr ? function : W("<unknown_function>"),
+                (unsigned long long)displacement);
+        }
+        SysFreeString(module);
+        SysFreeString(function);
+    }
+}
+
+static void
+PrintClrmaException(ICLRMAClrException* exception, int nestingLevel)
+{
+    if (exception == nullptr)
+    {
+        return;
+    }
+
+    const char* indent = nestingLevel <= 0 ? "    " :
+                         nestingLevel == 1 ? "        " :
+                         nestingLevel == 2 ? "            " : "                ";
+
+    ULONG64 address = 0;
+    exception->get_Address(&address);
+
+    HRESULT exceptionHResult = 0;
+    exception->get_HResult(&exceptionHResult);
+
+    BSTR type = nullptr;
+    exception->get_Type(&type);
+
+    BSTR message = nullptr;
+    exception->get_Message(&message);
+
+    ExtOut("%sException object: %p\n", indent, SOS_PTR(address));
+    ExtOut("%sException type:   %S\n", indent, type != nullptr ? type : W("<Unknown>"));
+    ExtOut("%sMessage:          %S\n", indent, message != nullptr ? message : W("<none>"));
+    ExtOut("%sHResult:          %08x\n", indent, exceptionHResult);
+    ExtOut("%sStackTrace (generated):\n", indent);
+    PrintClrmaFrames(exception, indent);
+
+    SysFreeString(type);
+    SysFreeString(message);
+
+    USHORT innerCount = 0;
+    if (SUCCEEDED(exception->get_InnerExceptionCount(&innerCount)))
+    {
+        for (USHORT i = 0; i < innerCount; i++)
+        {
+            if (IsInterrupt())
+            {
+                return;
+            }
+            ReleaseHolder<ICLRMAClrException> inner;
+            if (exception->InnerException(i, inner.GetAddr()) == S_OK && inner != nullptr)
+            {
+                ExtOut("%sInnerException:\n", indent);
+                PrintClrmaException(inner, nestingLevel + 1);
+            }
+        }
+    }
+}
+
+DECLARE_API(clrma)
+{
+    INIT_API_EXT();
+
+    ULONG64 osThreadId = 0;
+
+    CMDOption option[] =
+    {   // name, vptr, type, hasValue
+        {"-t", &osThreadId, COSIZE_T, TRUE},
+    };
+
+    if (!GetCMDOption(args, option, ARRAY_SIZE(option), NULL, 0, NULL))
+    {
+        return E_INVALIDARG;
+    }
+
+    ReleaseHolder<ICLRManagedAnalysis> managedAnalysis;
+    if (FAILED(Status = CLRMACreateInstance(managedAnalysis.GetAddr())))
+    {
+        ExtErr("CLRMACreateInstance FAILED %08x\n", Status);
+        return Status;
+    }
+
+    if (FAILED(Status = managedAnalysis->AssociateClient(client)))
+    {
+        ExtErr("No managed analysis provider available (AssociateClient FAILED %08x).\n", Status);
+        ExtErr("Use 'clrmaconfig' to check the enabled CLRMA providers.\n");
+        return Status;
+    }
+
+    BSTR providerName = nullptr;
+    if (SUCCEEDED(managedAnalysis->get_ProviderName(&providerName)) && providerName != nullptr)
+    {
+        ExtOut("Managed analysis provider: %S\n", providerName);
+        SysFreeString(providerName);
+    }
+
+    if (osThreadId == 0)
+    {
+        ULONG currentThreadId = 0;
+        if (FAILED(Status = g_ExtSystem->GetCurrentThreadSystemId(&currentThreadId)))
+        {
+            ExtErr("GetCurrentThreadSystemId FAILED %08x\n", Status);
+            return Status;
+        }
+        osThreadId = currentThreadId;
+    }
+
+    ReleaseHolder<ICLRMAClrThread> thread;
+    Status = managedAnalysis->GetThread((ULONG)osThreadId, thread.GetAddr());
+    if (FAILED(Status) || thread == nullptr)
+    {
+        ExtOut("Thread %04x is not a managed thread or has no managed analysis (%08x).\n", (ULONG)osThreadId, Status);
+        return S_OK;
+    }
+
+    ULONG reportedThreadId = (ULONG)osThreadId;
+    thread->get_OSThreadId(&reportedThreadId);
+    ExtOut("OSThreadId: %04x\n", reportedThreadId);
+
+    ExtOut("Managed stack trace:\n");
+    PrintClrmaFrames(thread.GetPtr(), "    ");
+
+    ReleaseHolder<ICLRMAClrException> currentException;
+    if (thread->get_CurrentException(currentException.GetAddr()) == S_OK && currentException != nullptr)
+    {
+        ExtOut("Current exception:\n");
+        PrintClrmaException(currentException, 0);
+    }
+    else
+    {
+        ExtOut("Current exception: <none>\n");
+    }
+
+    USHORT nestedCount = 0;
+    if (SUCCEEDED(thread->get_NestedExceptionCount(&nestedCount)) && nestedCount > 0)
+    {
+        for (USHORT i = 0; i < nestedCount; i++)
+        {
+            if (IsInterrupt())
+            {
+                break;
+            }
+            ReleaseHolder<ICLRMAClrException> nested;
+            if (thread->NestedException(i, nested.GetAddr()) == S_OK && nested != nullptr)
+            {
+                ExtOut("Nested exception #%d:\n", i);
+                PrintClrmaException(nested, 0);
+            }
+        }
+    }
+
+    return S_OK;
 }
 
 extern void InternalOutputVaList(ULONG mask, PCSTR format, va_list args);

@@ -61,7 +61,7 @@ HistRoot                           SetSymbolServer (setsymbolserver)
 HistObj                            SetClrPath (setclrpath)
 HistObjFind                        SOSFlush (sosflush)
 HistClear                          SOSStatus (sosstatus)
-                                   FAQ
+HistStats                          FAQ
                                    Help (soshelp)
 \\
 
@@ -1479,8 +1479,8 @@ disturb a fragile repro environment. The !DumpLog function allows you to write
 that log out to a file. If no Filename is specified, the file "Stresslog.txt" 
 in the current directory is created.
 
-The optional argument addr allows one to specify a stress log other then the 
-default one.
+The optional -addr argument allows one to specify the hex address of a stress 
+log other than the default one.
 
     0:000> !DumpLog
     Attempting to dump Stress log to file 'StressLog.txt'
@@ -1911,6 +1911,14 @@ cleanup the previous resources.
 
 \\
 
+COMMAND: histstats.
+!HistStats
+
+This command displays per-GC counts of promote and relocate messages 
+reconstructed from the stress log, then reports any root that was promoted or 
+relocated more than once within a single GC. Run HistInit first.
+\\
+
 COMMAND: dumprcw.
 !DumpRCW <RCW address>
 
@@ -2003,11 +2011,17 @@ runtime directory.
 \\
 
 COMMAND: runtimes.
-runtimes [-netfx] [-netcore]
+runtimes [-netfx] [-netcore] [--all] [--module <name> | --address <base> | --clear-priority]
 
 -netfx   - switch to the desktop .NET Framework runtime if loaded.
 -netcore - switch to the .NET Core runtime if loaded.
+--module <name> - try the named module before any other runtime discovery.
+--address <base> - try the module at the specified hexadecimal base address first.
+--clear-priority - clear the preferred module.
+--all - enumerate all runtimes.
 
 List and select the .NET runtimes in the target process.
+If the preferred module is recognized, discovery stops unless --all is specified.
+Otherwise, discovery falls back to normal runtime modules, automatic hints, and
+remaining modules. The preference is per target and survives flushes.
 \\
-

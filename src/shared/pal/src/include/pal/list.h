@@ -22,12 +22,12 @@ Revision History:
 #ifndef _LIST_H_INCLUDED
 #define _LIST_H_INCLUDED
 
+#include <cstddef>
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif // __cplusplus
-
-#include <cstddef>
 
 typedef struct _LIST_ENTRY {
    struct _LIST_ENTRY *Flink;
@@ -139,4 +139,3 @@ typedef struct _LIST_ENTRY {
 #endif // __cplusplus
 
 #endif // _LIST_H_INCLUDED
-

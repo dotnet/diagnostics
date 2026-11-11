@@ -13,7 +13,10 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     {
         public static bool Enable { get; set; }
 
-        public static ITracer Instance { get; } = Enable ? new Tracer() : new NullTracer();
+        public static ITracer Instance => Enable ? s_tracer : s_nullTracer;
+
+        private static readonly Tracer s_tracer = new();
+        private static readonly NullTracer s_nullTracer = new();
 
         private Tracer()
         {

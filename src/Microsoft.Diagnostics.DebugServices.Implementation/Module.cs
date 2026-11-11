@@ -34,16 +34,24 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
 
         private Flags _flags;
-        private IEnumerable<PdbFileInfo> _pdbFileInfos;
+        private IEnumerable<PdbFileInfo> _pdbFileInfos = [];
         private string _symbolFileName;
 
         protected ImmutableArray<byte> _buildId;
         protected readonly ServiceContainer _serviceContainer;
 
         public Module(IServiceProvider services)
+            : this(services, isPEModuleProbeSupported: true)
+        {
+        }
+
+        protected Module(IServiceProvider services, bool isPEModuleProbeSupported)
         {
             ServiceContainerFactory containerFactory = services.GetService<IServiceManager>().CreateServiceContainerFactory(ServiceScope.Module, services);
-            containerFactory.AddServiceFactory<PEFile>((services) => ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, ref _flags));
+            if (isPEModuleProbeSupported)
+            {
+                containerFactory.AddServiceFactory<PEFile>((services) => ModuleService.GetPEInfo(ImageBase, ImageSize, out _pdbFileInfos, ref _flags));
+            }
             _serviceContainer = containerFactory.Build();
             _serviceContainer.AddService<IModule>(this);
             _serviceContainer.AddService<IExportSymbols>(this);

@@ -1,0 +1,123 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.Globalization;
+using System.Text.RegularExpressions;
+using SOS.TestHarness;
+using Xunit;
+
+namespace SOS.Tests;
+
+/// <summary>
+/// The standalone code-metadata commands <c>!ehinfo</c> and <c>!gcinfo</c>, on both hosts. Both accept a
+/// MethodDesc or an instruction pointer; the tests anchor on a simple jitted method (<c>AtHeap</c>) and a
+/// method whose <c>lock</c> lowers to a try/finally (<c>LockHolder</c>) so a real EH clause is present, and
+/// assert the structured identity / clauses / GC encoding rather than scraping lines.
+/// </summary>
+public sealed class CodeInfoTests
+{
+    public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
+
+    // !ehinfo's clause data comes from per-method debug info the DAC only sees in a Full dump on net8-net10
+    // (present in Heap dumps from net11 on); capture Full there. GcInfo_ReportsEncoding reads GC info that
+    // survives the reduced Heap dump, so it stays on the default Heap Matrix.
+    public static TheoryData<TestConfig> FullDumpMatrix => TestMatrices.FullDumpOnCoreVersions([TargetCatalog.Scenarios], CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10);
+
+    [SosTheory]
+    [MemberData(nameof(FullDumpMatrix))]
+    public async Task EhInfo_ReportsClauses(TestConfig config)
+    {
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+
+        // A method with no try/catch has native code but no EH clauses.
+        EEMatch atHeap = Method(target, config.Flavor, "AtHeap");
+        EhInfoResult simple = target.EhInfo(atHeap.MethodDesc!.Value);
+        Assert.Equal("SosHarnessScenarios.AtHeap()", simple.MethodName);
+        Assert.Empty(simple.Clauses);
+
+        // LockHolder's lock => try/finally, so ehinfo reports a FINALLY clause. (Desktop .NET Framework's
+        // JIT additionally emits a "cloned finally" with an empty clause range, so assert on the real one
+        // rather than an exact count.)
+        EEMatch lockHolder = Method(target, config.Flavor, "LockHolder");
+        EhInfoResult eh = target.EhInfo(lockHolder.MethodDesc!.Value);
+        Assert.Contains("LockHolder", eh.MethodName, StringComparison.Ordinal);
+        Assert.NotEmpty(eh.Clauses);
+        Assert.Contains(eh.Clauses, c =>
+            c.Kind.Contains("FINALLY", StringComparison.Ordinal) &&
+            c.ClauseEnd > c.ClauseStart &&
+            c.HandlerEnd > c.HandlerStart);
+
+        // ehinfo accepts an IP and resolves to the same MethodDesc.
+        EhInfoResult byIp = target.EhInfo(lockHolder.JittedCodeAddress!.Value);
+        Assert.Equal(lockHolder.MethodDesc.Value, byIp.MethodDesc);
+    }
+
+    [SosTheory]
+    [MemberData(nameof(Matrix))]
+    public async Task GcInfo_ReportsEncoding(TestConfig config)
+    {
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint(TargetCatalog.StopHeap);
+        EEMatch atHeap = Method(target, config.Flavor, "AtHeap");
+
+        GcInfoResult gc = target.GcInfo(atHeap.MethodDesc!.Value);
+        Assert.NotEqual(0ul, gc.EntryPoint);
+        Assert.NotEqual(0ul, gc.GcInfoAddress);
+        Assert.True(gc.CodeSize > 0, "expected a positive code size");
+        Assert.NotEmpty(gc.Transitions);
+        Assert.Contains(gc.Transitions, t =>
+            t.Contains("interruptible", StringComparison.OrdinalIgnoreCase) ||
+            t.Contains("safepoint", StringComparison.OrdinalIgnoreCase) ||
+            t.Contains("becoming live", StringComparison.OrdinalIgnoreCase));
+        foreach (string transition in gc.Transitions)
+        {
+            Assert.DoesNotMatch(@"[+\-]\S+[0-9a-fA-F]{8} (?:not )?interruptible", transition);
+        }
+        GcInfoResult legacy = target.GcInfo(atHeap.MethodDesc.Value, legacy: true);
+        Assert.Equal(gc.EntryPoint, legacy.EntryPoint);
+        Assert.Equal(gc.CodeSize, legacy.CodeSize);
+        Assert.NotEmpty(legacy.Transitions);
+        if (IntPtr.Size == 4)
+            Assert.Contains(legacy.Transitions, t => t.Contains("becoming live", StringComparison.OrdinalIgnoreCase));
+
+        // gcinfo accepts an IP and reports the same entry point and GC info address.
+        GcInfoResult byIp = target.GcInfo(atHeap.JittedCodeAddress!.Value);
+        Assert.Equal(gc.EntryPoint, byIp.EntryPoint);
+        Assert.Equal(gc.GcInfoAddress, byIp.GcInfoAddress);
+
+        // DAC selection alone does not imply support for supplemental X86 reporting.
+        if (IntPtr.Size == 4 && gc.Output.Lines.Any(line => line.StartsWith("X86 epilog size:", StringComparison.Ordinal)))
+        {
+            EEMatch dictionaries = Method(target, config.Flavor, "CreateConcurrentDictionaries");
+            GcInfoResult legacyArguments = target.GcInfo(dictionaries.MethodDesc!.Value, legacy: true);
+            GcInfoResult interfaceArguments = target.GcInfo(dictionaries.MethodDesc.Value);
+            Match[] nonPointerPushes = legacyArguments.Output.Lines
+                .Select(line => Regex.Match(line, @"(?:^|\|)\s*([0-9a-fA-F]+)\s+push non-ptr"))
+                .Where(match => match.Success)
+                .ToArray();
+            Assert.NotEmpty(nonPointerPushes);
+            foreach (Match push in nonPointerPushes)
+            {
+                uint offset = uint.Parse(push.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                Assert.Contains($"{offset:x8} push non-pointer arg", interfaceArguments.Output.Lines);
+            }
+            Match[] pops = legacyArguments.Output.Lines
+                .Select(line => Regex.Match(line, @"(?:^|\|)\s*([0-9a-fA-F]+)\s+pop\s+(\d+) ptrs"))
+                .Where(match => match.Success)
+                .ToArray();
+            Assert.NotEmpty(pops);
+            foreach (Match pop in pops)
+            {
+                uint offset = uint.Parse(pop.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                Assert.Contains($"{offset:x8} pop {pop.Groups[2].Value} args", interfaceArguments.Output.Lines);
+            }
+        }
+    }
+
+    private static EEMatch Method(Target target, Flavor flavor, string name)
+    {
+        string module = TargetCatalog.Get(TargetCatalog.Scenarios).ModuleFor(flavor);
+        return target.Name2EE($"{module}!SosHarnessScenarios.{name}").Single;
+    }
+}

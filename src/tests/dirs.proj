@@ -42,18 +42,10 @@
   <Target Name="BuildDebuggees"
           AfterTargets="Build"
           Condition="'$(SkipTests)' != 'true' and '$(SkipTestArtifactsBuild)' != 'true'">
-    <!-- Remove stale SDKs from the build dotnet dir so the repo root global.json
-         (rollForward:major) resolves to the correct test SDK.  InstallTestRuntimes
-         only installs $(MicrosoftNETSdkVersion); older SDKs are leftovers. -->
-    <ItemGroup Condition="Exists('$(DebuggeeBuildDotNetDir)sdk')">
-      <_StaleTestSdks Include="$([System.IO.Directory]::GetDirectories('$(DebuggeeBuildDotNetDir)sdk'))" />
-      <_StaleTestSdks Remove="$([MSBuild]::NormalizePath('$(DebuggeeBuildDotNetDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))" />
-    </ItemGroup>
-    <RemoveDir Directories="@(_StaleTestSdks)" />
     <!-- Clean up any generated global.json from prior runs that would shadow the repo root's -->
     <Delete Files="$(ArtifactsDir)global.json" Condition="Exists('$(ArtifactsDir)global.json')" />
     <PropertyGroup>
-      <_BuildSdkVersionDir>$([MSBuild]::NormalizePath('$(DebuggeeBuildDotNetDir)', 'sdk', '$(MicrosoftNETSdkVersion)'))</_BuildSdkVersionDir>
+      <_BuildSdkVersionDir>$([System.IO.Directory]::GetDirectories('$(DebuggeeBuildDotNetDir)sdk'))</_BuildSdkVersionDir>
     </PropertyGroup>
     <ItemGroup>
       <DebuggeeBuildEnv Include="DOTNET_ROOT=$(DebuggeeBuildDotNetDir.TrimEnd('\/'))" />
@@ -64,8 +56,15 @@
       <DebuggeeBuildEnv Include="MSBuildSDKsPath=$(_BuildSdkVersionDir)$([System.IO.Path]::DirectorySeparatorChar)Sdks" />
       <DebuggeeBuildEnv Include="MSBuildExtensionsPath=$(_BuildSdkVersionDir)" />
     </ItemGroup>
-    <Exec Command="$(DebuggeeBuildDotNetPath) build $(MSBuildThisFileDirectory)Debuggees.proj -c $(Configuration) -bl:$(ArtifactsLogDir)Debuggees.binlog /p:TargetOS=$(TargetOS) /p:TargetArch=$(TargetArch) /p:RepoRoot=$(RepoRoot)"
+    <Exec Command="$(DebuggeeBuildDotNetPath) build $(MSBuildThisFileDirectory)Debuggees.proj -c $(Configuration) -bl:$(ArtifactsLogDir)Debuggees.binlog /p:TargetOS=$(TargetOS) /p:TargetArch=$(TargetArch) /p:TargetRid=$(TargetRid) /p:RepoRoot=$(RepoRoot)"
           WorkingDirectory="$(DebuggeeBuildDotNetDir)"
           EnvironmentVariables="@(DebuggeeBuildEnv)" />
   </Target>
+
+  <Target Name="DiscoverHelixTestProjects" Returns="@(HelixTestProject->'%(FullPath)')">
+    <ItemGroup>
+      <HelixTestProject Include="@(ProjectReference)" Condition="'%(ProjectReference.Extension)' == '.csproj'" />
+    </ItemGroup>
+  </Target>
+
 </Project>

@@ -11,12 +11,11 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Trace;
-using Microsoft.DotNet.XUnitExtensions;
 using Microsoft.Internal.Common.Utils;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Tools.Trace
 {
@@ -32,20 +31,20 @@ namespace Microsoft.Diagnostics.Tools.Trace
             _outputHelper = outputHelper;
         }
         private static CollectLinuxCommandHandler.CollectLinuxArgs TestArgs(
-            CancellationToken ct = default,
+            CancellationToken? ct = null,
             string[] providers = null,
             string clrEventLevel = "",
             string clrEvents = "",
             string[] perfEvents = null,
             string[] profile = null,
             FileInfo output = null,
-            TimeSpan duration = default,
+            TimeSpan? duration = null,
             string name = "",
             int processId = 0,
             bool probe = false,
             int maxMemory = 0)
         {
-            return new CollectLinuxCommandHandler.CollectLinuxArgs(ct,
+            return new CollectLinuxCommandHandler.CollectLinuxArgs(ct ?? TestContext.Current.CancellationToken,
                                                                    providers ?? Array.Empty<string>(),
                                                                    clrEventLevel,
                                                                    clrEvents,
@@ -58,6 +57,96 @@ namespace Microsoft.Diagnostics.Tools.Trace
                                                                    probe,
                                                                    maxMemory);
         }
+
+        #region Duration
+
+        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [InlineData("invalid")]
+        [InlineData(null)]
+        public void CollectLinuxCommand_RejectsInvalidDurationSyntax(string value)
+        {
+            Command command = CollectLinuxCommandHandler.CollectLinuxCommand();
+            ParseResult result = command.Parse(value == null ? new[] { "--duration" } : new[] { "--duration", value });
+
+            Assert.NotEmpty(result.Errors);
+        }
+
+        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [InlineData(null, null)]
+        [InlineData("0", "0")]
+        [InlineData("00:00:00", "0")]
+        [InlineData("00:00:00.0000001", "0")]
+        [InlineData("00:00:00.5", "0")]
+        [InlineData("00:00:01.9", "1")]
+        [InlineData("00:00:42", "42")]
+        [InlineData("2:03:04:05.9", "183845")]
+        [InlineData("10675199.02:48:05.4775807", "922337203685")]
+        public void CollectLinuxCommand_ForwardsWholeSeconds(string value, string expectedSeconds)
+        {
+            ParseResult result = CollectLinuxCommandHandler.CollectLinuxCommand().Parse(
+                value == null ? Array.Empty<string>() : new[] { "--duration", value });
+            Assert.Empty(result.Errors);
+            TimeSpan? duration = result.GetResult(CommonOptions.DurationOption) is null ? null : result.GetValue(CommonOptions.DurationOption);
+
+            MockConsole console = new(200, 30, _outputHelper);
+            CollectLinuxCommandHandler handler = new(console);
+            FileInfo output = new($"duration-{Guid.NewGuid():N}.nettrace");
+            string command = null;
+            handler.RecordTraceInvoker = (cmd, len, cb) =>
+            {
+                command = Encoding.UTF8.GetString(cmd);
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs(
+                output: output,
+                duration: duration));
+
+            Assert.Equal((int)ReturnCode.Ok, exitCode);
+            Assert.NotNull(command);
+            string[] arguments = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (expectedSeconds == null)
+            {
+                Assert.DoesNotContain("--duration", arguments);
+            }
+            else
+            {
+                int durationIndex = Array.IndexOf(arguments, "--duration");
+                Assert.InRange(durationIndex, 0, arguments.Length - 2);
+                Assert.Equal(expectedSeconds, arguments[durationIndex + 1]);
+            }
+            Assert.False(File.Exists(Path.ChangeExtension(output.FullName, ".script")));
+        }
+
+        [ConditionalTheory(nameof(IsCollectLinuxSupported))]
+        [InlineData("-00:00:00.0000001")]
+        [InlineData("-00:00:01")]
+        public void CollectLinuxCommand_RejectsNegativeDurationBeforeNativeInvocation(string value)
+        {
+            ParseResult result = CollectLinuxCommandHandler.CollectLinuxCommand().Parse(new[] { "--duration", value });
+            Assert.Empty(result.Errors);
+
+            MockConsole console = new(200, 30, _outputHelper);
+            CollectLinuxCommandHandler handler = new(console);
+            FileInfo output = new($"negative-duration-{Guid.NewGuid():N}.nettrace");
+            bool invoked = false;
+            handler.RecordTraceInvoker = (cmd, len, cb) =>
+            {
+                invoked = true;
+                return 0;
+            };
+
+            int exitCode = handler.CollectLinux(TestArgs(
+                duration: result.GetValue(CommonOptions.DurationOption), output: output));
+
+            Assert.Equal((int)ReturnCode.ArgumentError, exitCode);
+            Assert.Contains("[ERROR] --duration must be greater than or equal to zero.", console.Lines);
+            Assert.False(invoked);
+            Assert.False(File.Exists(output.FullName));
+            Assert.False(File.Exists(Path.ChangeExtension(output.FullName, ".script")));
+        }
+
+        #endregion
 
         [ConditionalTheory(nameof(IsCollectLinuxSupported))]
         [MemberData(nameof(BasicCases))]
@@ -435,8 +524,11 @@ namespace Microsoft.Diagnostics.Tools.Trace
             List<string> result = new();
             foreach (string line in lines)
             {
-                // Filter out possible pid lines
-                if (Regex.IsMatch(line, @"^\d"))
+                if (// Filter out possible pid lines
+                    Regex.IsMatch(line, @"^\d") ||
+                    // Process enumeration and probing are not atomic, so this optional section can
+                    // appear whenever an enumerated process exits before its diagnostic port is probed.
+                    string.Equals(line, ".NET processes that could not be probed:", StringComparison.Ordinal))
                 {
                     continue;
                 }

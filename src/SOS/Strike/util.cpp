@@ -238,83 +238,6 @@ const WCHAR GetTargetDirectorySeparatorW()
     }
 }
 
-template <typename T>
-static bool IsSafeAbsoluteLocalPathImpl(const T* path)
-{
-    if (path == nullptr || path[0] == '\0')
-    {
-        return false;
-    }
-
-    auto isDirectorySeparator = [](T character) { return character == '\\' || character == '/'; };
-    if (path[1] != '\0' && isDirectorySeparator(path[0]) && isDirectorySeparator(path[1]))
-    {
-        return false;
-    }
-
-#ifdef FEATURE_PAL
-    return path[0] == '/';
-#else
-    return path[1] != '\0' &&
-        path[2] != '\0' &&
-        ((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) &&
-        path[1] == ':' &&
-        isDirectorySeparator(path[2]);
-#endif
-}
-
-template <typename T>
-static const T* GetLastDirectorySeparatorImpl(const T* path)
-{
-    const T* lastSeparator = nullptr;
-    if (path != nullptr)
-    {
-        for (const T* current = path; *current != '\0'; current++)
-        {
-            if (*current == '\\' || *current == '/')
-            {
-                lastSeparator = current;
-            }
-        }
-    }
-    return lastSeparator;
-}
-
-bool IsRemoteOrDevicePath(const char* path)
-{
-    return path != nullptr &&
-        path[0] != '\0' &&
-        path[1] != '\0' &&
-        (path[0] == '\\' || path[0] == '/') &&
-        (path[1] == '\\' || path[1] == '/');
-}
-
-bool IsSafeAbsoluteLocalPath(const char* path)
-{
-    return IsSafeAbsoluteLocalPathImpl(path);
-}
-
-bool IsSafeAbsoluteLocalPath(const WCHAR* path)
-{
-    return IsSafeAbsoluteLocalPathImpl(path);
-}
-
-char* GetLastDirectorySeparator(char* path)
-{
-    return const_cast<char*>(GetLastDirectorySeparatorImpl(path));
-}
-
-const WCHAR* GetLastDirectorySeparator(const WCHAR* path)
-{
-    return GetLastDirectorySeparatorImpl(path);
-}
-
-const WCHAR* GetFileName(const WCHAR* path)
-{
-    const WCHAR* lastSeparator = GetLastDirectorySeparator(path);
-    return lastSeparator != nullptr ? lastSeparator + 1 : path;
-}
-
 #ifndef FEATURE_PAL
 
 // Check if a file exist
@@ -2248,7 +2171,11 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
     ArrayHolder<CLRDATA_ADDRESS> pAssemblyArray = NULL;
     ArrayHolder<CLRDATA_ADDRESS> pModules = NULL;
     int arrayLength = 0;
-    int numSpecialDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
+    int numSpecialDomains = 0;
+    if (adsData.systemDomain != (TADDR)0)
+        numSpecialDomains++;
+    if (adsData.sharedDomain != (TADDR)0)
+        numSpecialDomains++;
     if (!ClrSafeInt<int>::addition(adsData.DomainCount, numSpecialDomains, arrayLength))
     {
         ExtOut("<integer overflow>\n");
@@ -2261,10 +2188,14 @@ DWORD_PTR *ModuleFromName(__in_opt LPSTR mName, int *numModule)
         return NULL;
     }
 
-    pArray[0] = adsData.systemDomain;
+    int i = 0;
+    if (adsData.systemDomain != (TADDR)0)
+    {
+        pArray[i++] = adsData.systemDomain;
+    }
     if (adsData.sharedDomain != (TADDR)0)
     {
-        pArray[1] = adsData.sharedDomain;
+        pArray[i++] = adsData.sharedDomain;
     }
     if ((hr = g_sos->GetAppDomainList(adsData.DomainCount, pArray.GetPtr() + numSpecialDomains, NULL)) != S_OK)
     {
@@ -2916,7 +2847,11 @@ void GetDomainList (DWORD_PTR *&domainList, int &numDomain)
     // Do prefast integer checks before the malloc.
     size_t AllocSize;
     LONG DomainAllocCount;
-    LONG NumExtraDomains = (adsData.sharedDomain != (TADDR)0) ? 2 : 1;
+    LONG NumExtraDomains = 0;
+    if (adsData.systemDomain != (TADDR)0)
+        NumExtraDomains++;
+    if (adsData.sharedDomain != (TADDR)0)
+        NumExtraDomains++;
     if (!ClrSafeInt<LONG>::addition(adsData.DomainCount, NumExtraDomains, DomainAllocCount) ||
         !ClrSafeInt<size_t>::multiply(DomainAllocCount, sizeof(PVOID), AllocSize) ||
         (domainList = new DWORD_PTR[DomainAllocCount]) == NULL)
@@ -2924,7 +2859,10 @@ void GetDomainList (DWORD_PTR *&domainList, int &numDomain)
         return;
     }
 
-    domainList[numDomain++] = (DWORD_PTR) adsData.systemDomain;
+    if (adsData.systemDomain != (TADDR)0)
+    {
+        domainList[numDomain++] = (DWORD_PTR) adsData.systemDomain;
+    }
     if (adsData.sharedDomain != (TADDR)0)
     {
         domainList[numDomain++] = (DWORD_PTR) adsData.sharedDomain;
@@ -3210,7 +3148,7 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo)
                 UINT uLen = 0;
                 if (VerQueryValueA(pVersionInfo, "\\", (LPVOID *) &pTmpFileInfo, &uLen))
                 {
-                    if (pFileInfo->dwFileVersionMS == (DWORD)-1) {
+                    if (pTmpFileInfo->dwFileVersionMS == (DWORD)-1) {
                         return FALSE;
                     }
                     *pFileInfo = *pTmpFileInfo; // Copy the info
@@ -3872,9 +3810,14 @@ public:
 HRESULT LoadClrDebugDll(void)
 {
     _ASSERTE(g_pRuntime != nullptr);
-    HRESULT hr = g_pRuntime->GetClrDataProcess(IRuntime::ClrDataProcessFlags::None, &g_clrData);
+    CDacLoadPolicy policy = g_pRuntime->GetCDacLoadPolicy();
+    HRESULT hr = g_pRuntime->GetClrDataProcess(policy, &g_clrData);
     if (FAILED(hr))
     {
+        if (policy == CDacLoadPolicy::OnlyUseCDac || hr == CORDBG_E_UNSUPPORTED_DEBUGGING_MODEL)
+        {
+            return hr;
+        }
         g_clrData = GetClrDataFromDbgEng();
         if (g_clrData == nullptr)
         {
@@ -4063,83 +4006,6 @@ HRESULT GetMTOfObject(TADDR obj, TADDR *mt)
 
     return hr;
 }
-
-#ifndef FEATURE_PAL
-
-StressLogMem::~StressLogMem ()
-{
-    MemRange * range = list;
-
-    while (range)
-    {
-        MemRange * temp = range->next;
-        delete range;
-        range = temp;
-    }
-}
-
-bool StressLogMem::Init (ULONG64 stressLogAddr, IDebugDataSpaces* memCallBack)
-{
-    size_t ThreadStressLogAddr = NULL;
-    HRESULT hr = memCallBack->ReadVirtual(UL64_TO_CDA(stressLogAddr + offsetof (StressLog, logs)),
-            &ThreadStressLogAddr, sizeof (ThreadStressLogAddr), 0);
-    if (hr != S_OK)
-    {
-        return false;
-    }
-
-    while(ThreadStressLogAddr != NULL)
-    {
-        size_t ChunkListHeadAddr = NULL;
-        hr = memCallBack->ReadVirtual(TO_CDADDR(ThreadStressLogAddr + ThreadStressLog::OffsetOfListHead ()),
-            &ChunkListHeadAddr, sizeof (ChunkListHeadAddr), 0);
-        if (hr != S_OK || ChunkListHeadAddr == NULL)
-        {
-            return false;
-        }
-
-        size_t StressLogChunkAddr = ChunkListHeadAddr;
-
-        do
-        {
-            AddRange (StressLogChunkAddr, sizeof (StressLogChunk));
-            hr = memCallBack->ReadVirtual(TO_CDADDR(StressLogChunkAddr + offsetof (StressLogChunk, next)),
-                &StressLogChunkAddr, sizeof (StressLogChunkAddr), 0);
-            if (hr != S_OK)
-            {
-                return false;
-            }
-            if (StressLogChunkAddr == NULL)
-            {
-                return true;
-            }
-        } while (StressLogChunkAddr != ChunkListHeadAddr);
-
-        hr = memCallBack->ReadVirtual(TO_CDADDR(ThreadStressLogAddr + ThreadStressLog::OffsetOfNext ()),
-            &ThreadStressLogAddr, sizeof (ThreadStressLogAddr), 0);
-        if (hr != S_OK)
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-bool StressLogMem::IsInStressLog (ULONG64 addr)
-{
-    MemRange * range = list;
-    while (range)
-    {
-        if (range->InRange (addr))
-            return true;
-        range = range->next;
-    }
-
-    return false;
-}
-
-#endif // !FEATURE_PAL
 
 unsigned int Output::g_bSuppressOutput = 0;
 unsigned int Output::g_Indent = 0;
@@ -5399,7 +5265,7 @@ WString DmlEscape(const WString &input)
     const WCHAR *str = input.c_str();
     size_t len = input.length();
     WString result;
-    
+
     for (size_t i = 0; i < len; i++)
     {
         // Ampersand must be escaped FIRST to avoid double-escaping
@@ -5423,7 +5289,7 @@ WString DmlEscape(const WString &input)
             result += temp;
         }
     }
-    
+
     return result;
 }
 

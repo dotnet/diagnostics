@@ -60,15 +60,17 @@ namespace Microsoft.Diagnostics.DebugServices
         string RuntimeModuleDirectory { get; set; }
 
         /// <summary>
-        /// Returns the DAC file path
+        /// Returns the DAC file path to use for this runtime.
         /// </summary>
-        /// <param name="verifySignature">returns if the DAC signature should be verified</param>
+        /// <param name="verifySignature">returns whether the returned DAC requires signature verification.</param>
         string GetDacFilePath(out bool verifySignature);
 
         /// <summary>
-        /// Returns the CDac file path if enabled by global settings
+        /// Gets a cDAC-backed IXCLRDataProcess owned by this runtime.
         /// </summary>
-        string GetCDacFilePath();
+        /// <param name="clrDataProcess">A borrowed IXCLRDataProcess pointer.</param>
+        /// <returns>The activation HRESULT.</returns>
+        int GetClrDataProcessFromCDac(out IntPtr clrDataProcess);
 
         /// <summary>
         /// Returns the DBI file path

@@ -24,6 +24,9 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [ServiceImport]
         public ITarget Target { get; set; }
 
+        [ServiceImport]
+        public IModuleService ModuleService { get; set; }
+
         [Argument(Help = "Switch to the runtime by id.")]
         public int? Id { get; set; }
 
@@ -36,11 +39,17 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         [Option(Name = "--all", Aliases = new string[] { "-a" }, Help = "Forces all runtimes to be enumerated.")]
         public bool All { get; set; }
 
-        [Option(Name = "--usecdac", Help = "Use the CDAC if available and requested (true/false).")]
-        public bool? UseContractReader { get; set; }
+        [Option(Name = "--module", Help = "Tries the named module first, stopping on a match unless --all is specified.")]
+        public string ModuleName { get; set; }
 
-        [Option(Name = "--forceusecdac", Help = "Always use the CDAC (true/false).")]
-        public bool? ForceUseContractReader { get; set; }
+        [Option(Name = "--address", Help = "Tries the module at the hexadecimal base address first, stopping on a match unless --all is specified.")]
+        public string ModuleAddress { get; set; }
+
+        [Option(Name = "--clear-priority", Help = "Clears the preferred runtime module.")]
+        public bool ClearPriority { get; set; }
+
+        [Option(Name = "--usecdac", Help = "Controls cDAC usage: true (required), false (disabled), prefer (allow DAC fallback).")]
+        public string UseCDac { get; set; }
 
         [Option(Name = "--DacSignatureVerification", Aliases = new string[] { "-v" }, Help = "Enforce the proper DAC certificate signing when loaded (true/false).")]
         public bool? DacSignatureVerification { get; set; }
@@ -52,17 +61,48 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 throw new DiagnosticsException("Cannot specify both -netfx and -netcore options");
             }
 
-            bool flush = false;
-            if (UseContractReader.HasValue)
+            if ((ModuleName is not null ? 1 : 0) + (ModuleAddress is not null ? 1 : 0) + (ClearPriority ? 1 : 0) > 1)
             {
-                SettingsService.UseContractReader = UseContractReader.Value;
-                flush = true;
+                throw new DiagnosticsException("Specify only one of --module, --address, or --clear-priority");
             }
 
-            if (ForceUseContractReader.HasValue)
+            ulong? preferredModule = RuntimeService.PreferredRuntimeModule;
+            if (ModuleName is not null)
             {
-                SettingsService.UseContractReader = ForceUseContractReader.Value;
-                SettingsService.ForceUseContractReader = ForceUseContractReader.Value;
+                IModule[] matches = ModuleService.GetModuleFromModuleName(ModuleName).ToArray();
+                if (matches.Length == 0)
+                {
+                    throw new DiagnosticsException($"Module '{ModuleName}' was not found");
+                }
+                if (matches.Length > 1)
+                {
+                    throw new DiagnosticsException($"Module '{ModuleName}' is ambiguous. Use --address to specify a module base address.");
+                }
+                preferredModule = matches[0].ImageBase;
+            }
+            else if (ModuleAddress is not null)
+            {
+                if (!TryParseAddress(ModuleAddress, out ulong address))
+                {
+                    throw new DiagnosticsException($"Invalid module base address '{ModuleAddress}'");
+                }
+                preferredModule = ModuleService.GetModuleFromBaseAddress(address).ImageBase;
+            }
+            else if (ClearPriority)
+            {
+                preferredModule = null;
+            }
+
+            bool flush = false;
+            if (UseCDac is not null)
+            {
+                SettingsService.CDacLoadPolicy = UseCDac.ToLowerInvariant() switch
+                {
+                    "true" => CDacLoadPolicy.OnlyUseCDac,
+                    "false" => CDacLoadPolicy.UseLegacyDac,
+                    "prefer" => CDacLoadPolicy.PreferCDac,
+                    _ => throw new DiagnosticsException($"Invalid --usecdac value '{UseCDac}'. Expected true, false, or prefer."),
+                };
                 flush = true;
             }
 
@@ -77,6 +117,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 // Force all runtimes to be enumerated. This requires a target flush.
                 flags = RuntimeEnumerationFlags.All;
+                flush = true;
+            }
+
+            if (preferredModule != RuntimeService.PreferredRuntimeModule)
+            {
+                RuntimeService.PreferredRuntimeModule = preferredModule;
                 flush = true;
             }
 
@@ -128,6 +174,10 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                     }
                     this.DisplayResources(runtime.RuntimeModule, all: false, indent: "    ");
                     this.DisplayRuntimeExports(runtime.RuntimeModule, error: true, indent: "    ");
+                }
+                if (RuntimeService.PreferredRuntimeModule is ulong preferredBase)
+                {
+                    WriteLine($"Preferred runtime module: {preferredBase:X16}");
                 }
                 this.DisplaySettingService();
             }

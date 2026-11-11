@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.ExtensionCommands.Output;
 using Microsoft.Diagnostics.Runtime;
+using RuntimeInfo = Microsoft.Diagnostics.DebugServices.Implementation.RuntimeInfo;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
@@ -20,8 +21,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
         {
             ISettingsService settingsService = command.Services.GetService<ISettingsService>() ?? throw new DiagnosticsException("Settings service required");
             command.Console.WriteLine("Settings:");
-            command.Console.WriteLine($"-> Use CDAC contract reader: {settingsService.UseContractReader}");
-            command.Console.WriteLine($"-> Force use CDAC contract reader: {settingsService.ForceUseContractReader}");
+            command.Console.WriteLine($"-> Use cDAC: {settingsService.CDacLoadPolicy switch { CDacLoadPolicy.OnlyUseCDac => "true", CDacLoadPolicy.UseLegacyDac => "false", _ => "prefer" }}");
             command.Console.WriteLine($"-> DAC signature verification check enabled: {settingsService.DacSignatureVerificationEnabled}");
         }
 
@@ -156,7 +156,8 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                 Console().Write($"{indent}{RuntimeInfo.RUNTIME_INFO_SYMBOL}: {infoAddress:X16}");
                 if (RuntimeInfo.TryRead(command.Services, infoAddress, out RuntimeInfo info))
                 {
-                    Console().WriteLine(info.IsValid ? "" : " <INVALID>");
+                    bool validVersion = info.TryReadVersion(command.Services, infoAddress, out Version runtimeVersion);
+                    Console().WriteLine(info.IsValid && validVersion ? "" : " <INVALID>");
                     Console().WriteLine($"{indent}    Signature:            {info.Signature}");
                     Console().WriteLine($"{indent}    Version:              {info.Version}");
                     Console().WriteLine($"{indent}    RuntimeModuleIndex:   {info.RawRuntimeModuleIndex.ToHex()}");
@@ -174,7 +175,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
                         Console().WriteLine($"{indent}    DacBuildId:           {info.DacBuildId.ToHex()}");
                         Console().WriteLine($"{indent}    DbiBuildId:           {info.DbiBuildId.ToHex()}");
                     }
-                    Console().WriteLine($"{indent}    RuntimeVersion:       {info.RuntimeVersion?.ToString() ?? "<none>"}");
+                    Console().WriteLine($"{indent}    RuntimeVersion:       {runtimeVersion?.ToString() ?? "<none>"}");
                 }
                 else
                 {

@@ -150,6 +150,12 @@ DbgEngServices::QueryInterface(
         AddRef();
         return S_OK;
     }
+    else if (InterfaceId == __uuidof(IDebuggerThreadStackTraceService))
+    {
+        *Interface = static_cast<IDebuggerThreadStackTraceService*>(this);
+        AddRef();
+        return S_OK;
+    }
     else if (InterfaceId == __uuidof(IRemoteMemoryService))
     {
         *Interface = static_cast<IRemoteMemoryService*>(this);
@@ -465,6 +471,58 @@ DbgEngServices::VirtualUnwind(
     return E_NOTIMPL;
 }
 
+HRESULT
+DbgEngServices::GetDebuggerStackTrace(
+    ULONG32 sysId,
+    PDEBUGGER_STACK_FRAME frames,
+    ULONG framesSize,
+    PULONG framesFilled)
+{
+    if (framesFilled == nullptr || (frames == nullptr && framesSize > 0))
+    {
+        return E_INVALIDARG;
+    }
+
+    *framesFilled = 0;
+    if (framesSize == 0)
+    {
+        return S_OK;
+    }
+
+    ArrayHolder<DEBUG_STACK_FRAME> debugFrames = new DEBUG_STACK_FRAME[framesSize];
+    if (debugFrames.GetPtr() == nullptr)
+    {
+        return E_OUTOFMEMORY;
+    }
+
+    ULONG originalThreadId;
+    HRESULT hr = SetCurrentThreadIdFromSystemId(sysId, &originalThreadId);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    ULONG count = 0;
+    hr = m_control->GetStackTrace(0, 0, 0, debugFrames, framesSize, &count);
+    m_system->SetCurrentThreadId(originalThreadId);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (count > framesSize)
+    {
+        count = framesSize;
+    }
+    for (ULONG index = 0; index < count; index++)
+    {
+        frames[index].InstructionPointer = debugFrames[index].InstructionOffset;
+        frames[index].StackPointer = debugFrames[index].StackOffset;
+    }
+    *framesFilled = count;
+    return S_OK;
+}
+
 HRESULT 
 DbgEngServices::GetSymbolPath(
     PSTR buffer,
@@ -623,6 +681,38 @@ DbgEngServices::ExecuteHostCommand(
     return m_control->Execute(DEBUG_OUTCTL_THIS_CLIENT, commandLine, DEBUG_EXECUTE_NO_REPEAT);
 }
 
+static HRESULT GetDebuggerSettingValue(
+    IModelObject* settings,
+    PCWSTR categoryName,
+    PCWSTR settingName,
+    VARIANT* value)
+{
+    if (settings == nullptr || categoryName == nullptr || settingName == nullptr || value == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    VariantInit(value);
+    ReleaseHolder<IModelObject> category;
+    HRESULT hr = settings->GetKeyValue(categoryName, category.GetAddr(), nullptr);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    ReleaseHolder<IModelObject> setting;
+    hr = category->GetKeyValue(settingName, setting.GetAddr(), nullptr);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    hr = setting->GetIntrinsicValue(value);
+    if (FAILED(hr))
+    {
+        VariantClear(value);
+    }
+    return hr;
+}
+
 HRESULT
 DbgEngServices::GetDacSignatureVerificationSettings(
     BOOL* dacSignatureVerificationEnabled)
@@ -633,23 +723,23 @@ DbgEngServices::GetDacSignatureVerificationSettings(
     }
     *dacSignatureVerificationEnabled = FALSE;
 
-    HRESULT hr;
-    ReleaseHolder <IModelObject> engineInit;
-    if (FAILED(hr = m_settings->GetKeyValue(L"EngineInitialization", engineInit.GetAddr(), nullptr)))
-    {
-        return hr;
-    }
-    ReleaseHolder <IModelObject> secureLoadDotNetExtensions;
-    if (FAILED(hr = engineInit->GetKeyValue(L"SecureLoadDotNetExtensions", secureLoadDotNetExtensions.GetAddr(), nullptr)))
-    {
-        return hr;
-    }
     VARIANT value;
-    if (FAILED(hr = secureLoadDotNetExtensions->GetIntrinsicValue(&value)))
+    HRESULT hr = GetDebuggerSettingValue(
+        m_settings,
+        L"EngineInitialization",
+        L"SecureLoadDotNetExtensions",
+        &value);
+    if (FAILED(hr))
     {
         return hr;
+    }
+    if (value.vt != VT_BOOL)
+    {
+        VariantClear(&value);
+        return E_INVALIDARG;
     }
     *dacSignatureVerificationEnabled = value.boolVal != 0;
+    VariantClear(&value);
     return S_OK;
 }
 

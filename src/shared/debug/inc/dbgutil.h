@@ -90,3 +90,12 @@ HRESULT ReadFromDataTarget(ICorDebugDataTarget* pDataTarget,
     ULONG64 addr,
     BYTE* pBuffer,
     ULONG32 bytesToRead);
+
+#ifdef HOST_WINDOWS
+// Reads the named export from the PE export directory of the module at baseAddress through the
+// data target. Returns true and sets *symbolAddress on success. Windows-host only.
+bool TryGetPEExportSymbol(ICorDebugDataTarget* pDataTarget,
+    uint64_t baseAddress,
+    const char* symbolName,
+    uint64_t* symbolAddress);
+#endif // HOST_WINDOWS

@@ -5,6 +5,7 @@
 #include <string>
 #include <set>
 #include <vector>
+#include "debuggerthreadstacktraceservice.h"
 
 #define CACHE_SIZE  4096
 
@@ -18,7 +19,7 @@ struct SectionRange
     lldb::SBSection section;
 };
 
-class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices
+class LLDBServices : public ILLDBServices, public ILLDBServices2, public IDebuggerServices, public IDebuggerThreadStackTraceService
 {
 private:
     LONG m_ref;
@@ -43,7 +44,7 @@ private:
     uint32_t m_sectionCacheStopId;
 
     ULONG64 GetModuleBase(lldb::SBTarget& target, lldb::SBModule& module);
-    ULONG64 GetModuleSize(ULONG64 baseAddress, lldb::SBModule& module);
+    ULONG64 GetModuleSize(lldb::SBTarget& target, ULONG64 baseAddress, lldb::SBModule& module);
     ULONG64 GetExpression(lldb::SBFrame& frame, lldb::SBError& error, PCSTR exp);
     void GetContextFromFrame(lldb::SBFrame& frame, DT_CONTEXT *dtcontext);
     DWORD_PTR GetRegister(lldb::SBFrame& frame, const char *name);
@@ -65,13 +66,35 @@ private:
 
     void InitializeThreadInfo(lldb::SBProcess process);
     uint32_t GetProcessId(lldb::SBProcess process);
-    uint32_t GetThreadId(lldb::SBThread thread);
+    HRESULT GetThreadId(lldb::SBThread thread, PULONG threadId);
     lldb::SBThread GetThreadBySystemId(ULONG sysId);
     lldb::SBProcess GetCurrentProcess();
     lldb::SBThread GetCurrentThread();
     lldb::SBFrame GetCurrentFrame();
 
 public:
+    class CurrentResultScope
+    {
+        LLDBServices* m_services;
+        lldb::SBCommandReturnObject* m_previousResult;
+
+    public:
+        CurrentResultScope(LLDBServices* services, lldb::SBCommandReturnObject* result) :
+            m_services(services),
+            m_previousResult(services->m_currentResult)
+        {
+            m_services->m_currentResult = result;
+        }
+
+        ~CurrentResultScope()
+        {
+            m_services->m_currentResult = m_previousResult;
+        }
+
+        CurrentResultScope(const CurrentResultScope&) = delete;
+        CurrentResultScope& operator=(const CurrentResultScope&) = delete;
+    };
+
     LLDBServices(lldb::SBDebugger debugger);
     ~LLDBServices();
 
@@ -114,6 +137,12 @@ public:
         DWORD threadId,
         ULONG32 contextSize,
         PBYTE context);
+
+    HRESULT STDMETHODCALLTYPE GetDebuggerStackTrace(
+        ULONG32 sysId,
+        PDEBUGGER_STACK_FRAME frames,
+        ULONG framesSize,
+        PULONG framesFilled);
 
     HRESULT STDMETHODCALLTYPE SetExceptionCallback(
         PFN_EXCEPTION_CALLBACK callback);
@@ -454,9 +483,6 @@ public:
     void AddManagedCommand(const char* name, const char* help);
 
     bool ExecuteCommand( const char* commandName, char** arguments, lldb::SBCommandReturnObject &result);
-
-    void SetCurrentResult(lldb::SBCommandReturnObject *result) { m_currentResult = result; }
-    void ClearCurrentResult() { m_currentResult = nullptr; }
 
     HRESULT InternalOutputVaList(ULONG mask, PCSTR format, va_list args);
 };

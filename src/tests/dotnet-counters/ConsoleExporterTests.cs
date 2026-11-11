@@ -10,7 +10,6 @@ using Microsoft.Diagnostics.Monitoring.EventPipe;
 using Microsoft.Diagnostics.Tests.Common;
 using Microsoft.Diagnostics.Tools.Counters.Exporters;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace DotnetCounters.UnitTests
 {

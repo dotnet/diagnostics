@@ -38,20 +38,11 @@ public:
 #endif
     };
 
-    /// <summary>
-    /// Flags to GetClrDataProcess when creating the DAC instance
-    /// </summary>
-    enum ClrDataProcessFlags
+    enum CDacLoadPolicy
     {
-        /// <summary>
-        /// No flags
-        /// </summary>
-        None,
-
-        /// <summary>
-        /// Use the CDac if available and enabled by global setting
-        /// </summary>
-        UseCDac
+        PreferCDac = 0,
+        OnlyUseCDac = 1,
+        UseLegacyDac = 2,
     };
 
     /// <summary>
@@ -82,7 +73,7 @@ public:
     /// <summary>
     /// Returns the DAC data process instance
     /// </summary>
-    virtual HRESULT STDMETHODCALLTYPE GetClrDataProcess(ClrDataProcessFlags flags, IXCLRDataProcess** ppClrDataProcess) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetClrDataProcess(CDacLoadPolicy policy, IXCLRDataProcess** ppClrDataProcess) = 0;
 
     /// <summary>
     /// Initializes and returns the DBI debugging interface instance 
@@ -97,6 +88,8 @@ public:
     /// <param name="fileVersionBufferSizeInBytes">size of fileVersionBuffer</param>
     /// <returns></returns>
     virtual HRESULT STDMETHODCALLTYPE GetEEVersion(VS_FIXEDFILEINFO* pFileInfo, char* fileVersionBuffer, int fileVersionBufferSizeInBytes) = 0;
+
+    virtual CDacLoadPolicy STDMETHODCALLTYPE GetCDacLoadPolicy() const = 0;
 };
 
 #ifdef __cplusplus

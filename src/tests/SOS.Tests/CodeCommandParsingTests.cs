@@ -1,0 +1,102 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using SOS.TestHarness;
+using Xunit;
+
+namespace SOS.Tests;
+
+public sealed class CodeCommandParsingTests
+{
+    [Fact]
+    public void ClrUParsesX86InstructionWithoutOffset()
+    {
+        ClrUResult result = new(new SosOutput("cdb", "clru", """
+            Normal JIT generated code
+            Type.Method()
+            Begin 088837b0, size 10
+            088837b0 03c1 add eax,ecx
+            """));
+
+        DisasmLine instruction = Assert.Single(result.Instructions);
+        Assert.Null(instruction.Offset);
+        Assert.Equal(0x088837b0ul, instruction.Address);
+        Assert.Equal("03c1", instruction.Bytes);
+        Assert.Equal("add", instruction.Mnemonic);
+        Assert.Equal("eax,ecx", instruction.Operands);
+        Assert.False(result.HasOffsets);
+    }
+
+    [Fact]
+    public void ClrUParsesX86InstructionWithOffset()
+    {
+        ClrUResult result = new(new SosOutput("cdb", "clru -o", """
+            Normal JIT generated code
+            Type.Method()
+            Begin 088837b0, size 10
+            0000 088837b0 03c1 add eax,ecx
+            """), hasOffsets: true);
+
+        DisasmLine instruction = Assert.Single(result.Instructions);
+        Assert.Equal(0, instruction.Offset);
+        Assert.Equal(0x088837b0ul, instruction.Address);
+        Assert.Equal("03c1", instruction.Bytes);
+        Assert.Equal("add", instruction.Mnemonic);
+        Assert.True(result.HasOffsets);
+    }
+
+    [Fact]
+    public void ClrUPreservesStubNameWithoutIlMap()
+    {
+        ClrUResult result = new(new SosOutput("cdb", "clru -il", """
+            Normal JIT generated code
+            ILStubClass.IL_STUB_PInvoke(System.String, Int32, Double, ...)
+            Failed to get IL address map, proceeding without IL map
+            Begin 00007ffa12340000, size 10
+            00007ffa`12340000 4883ec28 sub rsp,28h
+            """));
+
+        Assert.True(result.HasNormalJitBanner);
+        Assert.Equal("ILStubClass.IL_STUB_PInvoke(System.String, Int32, Double, ...)", result.MethodName);
+        Assert.Equal(0x00007ffa12340000ul, result.Begin);
+        Assert.Equal(0x10, result.Size);
+        Assert.Single(result.Instructions);
+    }
+
+    [Fact]
+    public void GcInfoParsesX86LegacyEncoding()
+    {
+        GcInfoResult result = new(new SosOutput("cdb", "gcinfo", """
+            entry point 08755230
+            GC info 0A7596E4
+            Method info block:
+                method      size   = 0022
+            Pointer table:
+            F1 4F    FF ...| 0017        reg ECX becoming live
+            0E    00 39 ...| 001D        reg ECX becoming dead
+            """));
+
+        Assert.Equal(0x08755230ul, result.EntryPoint);
+        Assert.Equal(0x0A7596E4ul, result.GcInfoAddress);
+        Assert.Equal(0x22, result.CodeSize);
+        Assert.Equal(2, result.Transitions.Count);
+        Assert.Contains("becoming live", result.Transitions[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("becoming dead", result.Transitions[1], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("00000017 +ecx (interior)")]
+    [InlineData("00000017 is a safepoint: +edi (interior) +sp+4 (pinned)")]
+    public void GcInfoParsesInterface18HexSizeAndQualifiedRoots(string transition)
+    {
+        GcInfoResult result = new(new SosOutput("cdb", "gcinfo", $"""
+            entry point 08755230
+            GC info 0A7596E4
+            Code size: 2a
+            {transition}
+            00000020 not interruptible
+            """));
+        Assert.Equal(0x2a, result.CodeSize);
+        Assert.Equal(new[] { transition, "00000020 not interruptible" }, result.Transitions);
+    }
+}

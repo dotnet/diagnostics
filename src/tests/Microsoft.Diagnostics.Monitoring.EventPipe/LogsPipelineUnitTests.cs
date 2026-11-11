@@ -13,8 +13,6 @@ using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
@@ -32,7 +30,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             _output = output;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestLogsPipeline(TestConfiguration config)
         {
             // TODO: When distributed tracing support lands EventPipeTracee

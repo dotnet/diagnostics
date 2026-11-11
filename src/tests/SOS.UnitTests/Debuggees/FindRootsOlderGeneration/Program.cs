@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Diagnostics;
 using System.Runtime;
+using System.Runtime.CompilerServices;
 
 namespace FindRootsOlderGeneration;
 
@@ -14,8 +14,6 @@ internal class Program
         // Allocate a large object to ensure it goes on the LOH
         Thing[] things = new Thing[1024 * 100];
 
-        Debugger.Break();
-
         // On CI runs, in server GC mode, these collects have sometimes triggered
         // a gen 2 collection that is not expected and causes the test to fail.
         // Adding "SustainedLowLatency" mode to try to prevent that.
@@ -24,8 +22,7 @@ internal class Program
         PopulateArray(things);
         Thing lastThing = things[things.Length - 1];
 
-        Console.WriteLine("Enable CLRN notifications: SXE CLRN");
-        Debugger.Break();
+        AtReady();
 
         int dataGen = GC.GetGeneration(things);
         int thingGen = GC.GetGeneration(lastThing);
@@ -42,11 +39,13 @@ internal class Program
         thingGen = GC.GetGeneration(lastThing);
         Console.WriteLine($"After GC - Array Gen: {dataGen}, Thing Gen: {thingGen}");
 
-        Debugger.Break();
-
         // Keep data alive
+        GC.KeepAlive(lastThing);
         PrintSumArray(things);
     }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static void AtReady() => TestHarness.Stop("ready");
 
     private static void PopulateArray(Thing[] things)
     {

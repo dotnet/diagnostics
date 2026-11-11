@@ -22,6 +22,25 @@
 #include <runtime.h>
 #include <vector>
 
+#ifdef FEATURE_PAL
+// On Unix the cross-platform debugger services (xplat/dbgeng.h, backed by ILLDBServices)
+// expose only a subset of the dbgeng interfaces. Map the CLRMA debugger interface usage to
+// the available compat interfaces: there is no COM IDebugClient (the ILLDBServices client is
+// passed directly), no base IDebugControl (only IDebugControl2), and no IDebugSymbols3.
+typedef IUnknown        IClrmaDebugClient;
+typedef IDebugControl2  IClrmaDebugControl;
+typedef IDebugSymbols   IClrmaDebugSymbols;
+#else
+typedef IDebugClient    IClrmaDebugClient;
+typedef IDebugControl   IClrmaDebugControl;
+typedef IDebugSymbols3  IClrmaDebugSymbols;
+#endif
+
+// E_BOUNDS (a WinRT HRESULT) isn't defined by the PAL headers used on non-Windows platforms.
+#ifndef E_BOUNDS
+#define E_BOUNDS ((HRESULT)0x8000000BL)
+#endif
+
 enum ClrmaGlobalFlags
 {
     LoggingEnabled = 0x01,                  // CLRMA logging enabled
@@ -40,8 +59,8 @@ typedef struct StackFrame
     ULONG64 SP = 0;
     ULONG64 IP = 0;
     ULONG64 Displacement = 0;
-    std::wstring Module;
-    std::wstring Function;
+    std::basic_string<WCHAR> Module;
+    std::basic_string<WCHAR> Function;
 } StackFrame;
 
 extern int g_clrmaGlobalFlags;
@@ -112,11 +131,11 @@ private:
     int m_pointerSize;
     WCHAR m_fileSeparator;
     ULONG m_processorType;
-    IDebugClient* m_debugClient;
+    IClrmaDebugClient* m_debugClient;
     IDebugDataSpaces*  m_debugData;
     IDebugSystemObjects*  m_debugSystem;
-    IDebugControl*  m_debugControl;
-    IDebugSymbols3*  m_debugSymbols;
+    IClrmaDebugControl*  m_debugControl;
+    IClrmaDebugSymbols*  m_debugSymbols;
 
     // CLRMA service from managed code
     ICLRMAService* m_clrmaService;

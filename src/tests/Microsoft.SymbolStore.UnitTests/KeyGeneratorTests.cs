@@ -7,7 +7,6 @@ using System.Linq;
 using Microsoft.SymbolStore.KeyGenerators;
 using TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.SymbolStore.Tests
 {
@@ -33,6 +32,7 @@ namespace Microsoft.SymbolStore.Tests
             PEFileKeyGeneratorInternal(fileGenerator: true);
             PortablePDBFileKeyGeneratorInternal(fileGenerator: true);
             PerfMapFileKeyGeneratorInternal(fileGenerator: true);
+            WasmFileKeyGeneratorInternal(fileGenerator: true);
         }
 
 
@@ -173,11 +173,16 @@ namespace Microsoft.SymbolStore.Tests
                 KeyGenerator generator = fileGenerator ? (KeyGenerator)new FileKeyGenerator(_tracer, file) : new ELFFileKeyGenerator(_tracer, file);
 
                 IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
-                Assert.True(identityKey.Count() == 1);
-                Assert.True(identityKey.First().Index == "_.debug/elf-buildid-sym-126ba1461caf6644cfdd124bfcceeffa81b18897/_.debug");
+                Assert.Equal(new[]
+                {
+                    "symbolized_executable/elf-buildid-126ba1461caf6644cfdd124bfcceeffa81b18897/symbolized_executable",
+                    "_.debug/elf-buildid-sym-126ba1461caf6644cfdd124bfcceeffa81b18897/_.debug"
+                }, identityKey.Select(key => key.Index));
+                Assert.All(identityKey, key => Assert.Equal(file.FileName, key.FullPathName));
 
                 IEnumerable<SymbolStoreKey> symbolKey = generator.GetKeys(KeyTypeFlags.SymbolKey);
-                Assert.True(symbolKey.Count() == 0);
+                Assert.True(symbolKey.Count() == 1);
+                Assert.True(symbolKey.First().Index == "_.debug/elf-buildid-sym-126ba1461caf6644cfdd124bfcceeffa81b18897/_.debug");
 
                 IEnumerable<SymbolStoreKey> clrKeys = generator.GetKeys(KeyTypeFlags.ClrKeys);
                 Assert.True(clrKeys.Count() == 0);
@@ -529,6 +534,78 @@ namespace Microsoft.SymbolStore.Tests
 
                 IEnumerable<SymbolStoreKey> clrKeys = generator.GetKeys(KeyTypeFlags.ClrKeys);
                 Assert.True(clrKeys.Count() == 0);
+            }
+        }
+        [Fact]
+        public void WasmFileKeyGenerator()
+        {
+            WasmFileKeyGeneratorInternal(fileGenerator: false);
+        }
+
+        private void WasmFileKeyGeneratorInternal(bool fileGenerator)
+        {
+            // Test 1: Plain Wasm module with build_id (not a symbol file)
+            const string WasmModulePath = "TestBinaries/test_module.wasm";
+            using (Stream stream = File.OpenRead(WasmModulePath))
+            {
+                var file = new SymbolStoreFile(stream, WasmModulePath);
+                KeyGenerator generator = fileGenerator ? (KeyGenerator)new FileKeyGenerator(_tracer, file) : new WasmFileKeyGenerator(_tracer, file);
+
+                Assert.True(generator.IsValid());
+
+                IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                Assert.True(identityKey.Count() == 1);
+                Assert.True(identityKey.First().Index == "test_module.wasm/deadbeef0123456789abcdeffedcba98/test_module.wasm");
+
+                IEnumerable<SymbolStoreKey> symbolKey = generator.GetKeys(KeyTypeFlags.SymbolKey);
+                Assert.True(!symbolKey.Any());
+
+                IEnumerable<SymbolStoreKey> clrKeys = generator.GetKeys(KeyTypeFlags.ClrKeys);
+                Assert.True(!clrKeys.Any());
+            }
+
+            // Test 2: Wasm symbol file with build_id and .debug_info section
+            const string WasmSymbolPath = "TestBinaries/test_module_symbols.wasm";
+            using (Stream stream = File.OpenRead(WasmSymbolPath))
+            {
+                var file = new SymbolStoreFile(stream, WasmSymbolPath);
+                KeyGenerator generator = fileGenerator ? (KeyGenerator)new FileKeyGenerator(_tracer, file) : new WasmFileKeyGenerator(_tracer, file);
+
+                Assert.True(generator.IsValid());
+
+                IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                Assert.True(identityKey.Count() == 1);
+                Assert.True(identityKey.First().Index == "test_module_symbols.wasm/deadbeef0123456789abcdeffedcba98/test_module_symbols.wasm");
+
+                IEnumerable<SymbolStoreKey> symbolKey = generator.GetKeys(KeyTypeFlags.SymbolKey);
+                Assert.True(!symbolKey.Any());
+            }
+
+            // Test 3: Wasm file without build_id should be invalid
+            const string WasmNoBuildIdPath = "TestBinaries/test_module_no_buildid.wasm";
+            using (Stream stream = File.OpenRead(WasmNoBuildIdPath))
+            {
+                var file = new SymbolStoreFile(stream, WasmNoBuildIdPath);
+                var generator = new WasmFileKeyGenerator(_tracer, file);
+
+                Assert.False(generator.IsValid());
+
+                IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                Assert.True(!identityKey.Any());
+            }
+
+            // Test 4: Wasm file with a custom section name longer than 64 chars before build_id
+            const string WasmLongNamePath = "TestBinaries/test_module_long_section_name.wasm";
+            using (Stream stream = File.OpenRead(WasmLongNamePath))
+            {
+                var file = new SymbolStoreFile(stream, WasmLongNamePath);
+                var generator = new WasmFileKeyGenerator(_tracer, file);
+
+                Assert.True(generator.IsValid());
+
+                IEnumerable<SymbolStoreKey> identityKey = generator.GetKeys(KeyTypeFlags.IdentityKey);
+                Assert.True(identityKey.Count() == 1);
+                Assert.True(identityKey.First().Index == "test_module_long_section_name.wasm/deadbeef0123456789abcdeffedcba98/test_module_long_section_name.wasm");
             }
         }
     }

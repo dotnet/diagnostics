@@ -83,6 +83,12 @@ LLDBServices::QueryInterface(
         AddRef();
         return S_OK;
     }
+    else if (InterfaceId == __uuidof(IDebuggerThreadStackTraceService))
+    {
+        *Interface = static_cast<IDebuggerThreadStackTraceService*>(this);
+        AddRef();
+        return S_OK;
+    }
     else
     {
         *Interface = NULL;
@@ -281,6 +287,41 @@ LLDBServices::VirtualUnwind(
     return S_OK;
 }
 
+HRESULT
+LLDBServices::GetDebuggerStackTrace(
+    ULONG32 sysId,
+    PDEBUGGER_STACK_FRAME frames,
+    ULONG framesSize,
+    PULONG framesFilled)
+{
+    if (framesFilled == nullptr || (frames == nullptr && framesSize > 0))
+    {
+        return E_INVALIDARG;
+    }
+
+    *framesFilled = 0;
+    lldb::SBThread thread = GetThreadBySystemId(sysId);
+    if (!thread.IsValid())
+    {
+        return E_FAIL;
+    }
+
+    for (ULONG index = 0; index < framesSize; index++)
+    {
+        lldb::SBFrame frame = thread.GetFrameAtIndex(index);
+        if (!frame.IsValid())
+        {
+            break;
+        }
+
+        lldb::addr_t stackPointer = frame.GetSP();
+        frames[index].InstructionPointer = frame.GetPC();
+        frames[index].StackPointer = stackPointer != LLDB_INVALID_ADDRESS ? stackPointer : 0;
+        (*framesFilled)++;
+    }
+    return S_OK;
+}
+
 bool
 ExceptionBreakpointCallback(
     void *baton,
@@ -292,7 +333,11 @@ ExceptionBreakpointCallback(
     lldb::SBThread* savedThread = g_services->SetCurrentThread(&thread);
     g_services->FlushCheck();
 
-    bool result = ((PFN_EXCEPTION_CALLBACK)baton)(g_services) == S_OK;
+    HRESULT status = ((PFN_EXCEPTION_CALLBACK)baton)(g_services);
+
+    // S_OK requests a stop and S_FALSE requests continuation. Stop on errors so
+    // notification-processing failures remain visible to the debugger.
+    bool result = status != S_FALSE;
 
     g_services->SetCurrentProcess(savedProcess);
     g_services->SetCurrentThread(savedThread);
@@ -535,7 +580,11 @@ LLDBServices::GetLastEventInformation(
     InitializeThreadInfo(process);
 
     *processId = GetProcessId(process);
-    *threadId = GetThreadId(thread);
+    HRESULT hr = GetThreadId(thread, threadId);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
     SpecialDiagInfoHeader header;
     size_t read = process.ReadMemory(SpecialDiagInfoAddress, &header, sizeof(header), error);
@@ -1087,6 +1136,32 @@ LLDBServices::GetNameByOffset(
     }
 
     symbol = address.GetSymbol();
+    if (!symbol.IsValid())
+    {
+        // Local Mach-O symbols in a separate dSYM are not exposed through the loaded module.
+        lldb::SBAddress moduleHeaderAddress = module.GetObjectFileHeaderAddress();
+        lldb::addr_t moduleFileAddress = moduleHeaderAddress.GetFileAddress();
+        lldb::addr_t moduleLoadAddress = moduleHeaderAddress.GetLoadAddress(target);
+        if (moduleHeaderAddress.IsValid() &&
+            moduleFileAddress != LLDB_INVALID_ADDRESS &&
+            moduleLoadAddress != LLDB_INVALID_ADDRESS &&
+            offset >= moduleLoadAddress)
+        {
+            lldb::SBModuleSpec moduleSpec;
+            moduleSpec.SetFileSpec(module.GetSymbolFileSpec());
+            lldb::SBModule symbolModule(moduleSpec);
+            if (symbolModule.IsValid())
+            {
+                lldb::addr_t symbolFileAddress = moduleFileAddress + offset - moduleLoadAddress;
+                lldb::SBAddress symbolAddress = symbolModule.ResolveFileAddress(symbolFileAddress);
+                if (symbolAddress.IsValid())
+                {
+                    address = symbolAddress;
+                    symbol = address.GetSymbol();
+                }
+            }
+        }
+    }
     if (symbol.IsValid())
     {
         lldb::SBAddress startAddress = symbol.GetStartAddress();
@@ -1540,12 +1615,13 @@ LLDBServices::GetModuleBase(
 
 ULONG64
 LLDBServices::GetModuleSize(
+    /* const */ lldb::SBTarget& target,
     ULONG64 baseAddress,
     /* const */ lldb::SBModule& module)
 {
     ULONG64 size = 0;
 
-    // Find the first section with an valid base address
+    // Include section alignment gaps in the module range.
     int numSections = module.GetNumSections();
     for (int si = 0; si < numSections; si++)
     {
@@ -1558,7 +1634,15 @@ LLDBServices::GetModuleSize(
                 continue;
             }
  #endif
-            size += section.GetByteSize();
+            lldb::addr_t sectionAddress = section.GetLoadAddress(target);
+            lldb::addr_t sectionSize = section.GetByteSize();
+            if (sectionAddress == LLDB_INVALID_ADDRESS ||
+                sectionAddress < baseAddress ||
+                sectionSize > UINT64_MAX - sectionAddress)
+            {
+                continue;
+            }
+            size = std::max(size, sectionAddress + sectionSize - baseAddress);
         }
     }
     // For core dumps lldb doesn't return the section sizes when it
@@ -1647,8 +1731,7 @@ LLDBServices::GetCurrentThreadSystemId(
         return E_FAIL;
     }
 
-    *sysId = GetThreadId(thread);
-    return S_OK;
+    return GetThreadId(thread, sysId);
 }
 
 HRESULT
@@ -1984,7 +2067,7 @@ LLDBServices::LoadNativeSymbols(
                 path.append("/");
                 path.append(filename);
 
-                int moduleSize = GetModuleSize(moduleAddress, module);
+                int moduleSize = GetModuleSize(target, moduleAddress, module);
 
                 callback(&module, path.c_str(), moduleAddress, moduleSize);
             }
@@ -2073,7 +2156,7 @@ HRESULT LLDBServices::GetModuleInfo(
     }
     if (pSize)
     {
-        *pSize = GetModuleSize(moduleBase, module);
+        *pSize = GetModuleSize(target, moduleBase, module);
     }
     if (pTimestamp)
     {
@@ -2284,6 +2367,7 @@ public:
                char** arguments,
                lldb::SBCommandReturnObject &result)
     {
+        LLDBServices::CurrentResultScope resultScope(g_services, &result);
         IHostServices* hostservices = GetHostServices();
         if (hostservices == nullptr)
         {
@@ -2433,7 +2517,11 @@ LLDBServices::GetThreadIdsByIndex(
         }
         if (sysIds != nullptr)
         {
-            sysIds[index] = GetThreadId(thread);
+            HRESULT hr = GetThreadId(thread, &sysIds[index]);
+            if (FAILED(hr))
+            {
+                return hr;
+            }
         }
     }
     return S_OK;
@@ -2496,6 +2584,7 @@ LLDBServices::GetOffsetBySymbol(
     lldb::SBModule module;
     lldb::SBSymbol symbol;
     lldb::SBAddress startAddress;
+    bool symbolFromSeparateFile = false;
 
     if (offset == nullptr)
     {
@@ -2517,8 +2606,20 @@ LLDBServices::GetOffsetBySymbol(
     symbol = module.FindSymbol(name);
     if (!symbol.IsValid())
     {
-        hr = E_INVALIDARG;
-        goto exit;
+        // Local Mach-O symbols in a separate dSYM are not exposed through the loaded module.
+        lldb::SBModuleSpec moduleSpec;
+        moduleSpec.SetFileSpec(module.GetSymbolFileSpec());
+        lldb::SBModule symbolModule(moduleSpec);
+        if (symbolModule.IsValid())
+        {
+            symbol = symbolModule.FindSymbol(name);
+            symbolFromSeparateFile = symbol.IsValid();
+        }
+        if (!symbol.IsValid())
+        {
+            hr = E_INVALIDARG;
+            goto exit;
+        }
     }
     startAddress = symbol.GetStartAddress();
     if (!startAddress.IsValid())
@@ -2526,7 +2627,27 @@ LLDBServices::GetOffsetBySymbol(
         hr = E_INVALIDARG;
         goto exit;
     }
-    *offset = startAddress.GetLoadAddress(target);
+    if (symbolFromSeparateFile)
+    {
+        lldb::SBAddress moduleHeaderAddress = module.GetObjectFileHeaderAddress();
+        lldb::addr_t symbolFileAddress = startAddress.GetFileAddress();
+        lldb::addr_t moduleFileAddress = moduleHeaderAddress.GetFileAddress();
+        lldb::addr_t moduleLoadAddress = moduleHeaderAddress.GetLoadAddress(target);
+        if (!moduleHeaderAddress.IsValid() ||
+            symbolFileAddress == LLDB_INVALID_ADDRESS ||
+            moduleFileAddress == LLDB_INVALID_ADDRESS ||
+            moduleLoadAddress == LLDB_INVALID_ADDRESS ||
+            symbolFileAddress < moduleFileAddress)
+        {
+            hr = E_INVALIDARG;
+            goto exit;
+        }
+        *offset = moduleLoadAddress + symbolFileAddress - moduleFileAddress;
+    }
+    else
+    {
+        *offset = startAddress.GetLoadAddress(target);
+    }
 exit:
     return hr;
 }
@@ -2747,7 +2868,17 @@ LLDBServices::InitializeThreadInfo(lldb::SBProcess process)
     }
     SpecialThreadInfoHeader header;
     lldb::SBError error;
-    size_t read = process.ReadMemory(SpecialThreadInfoAddress, &header, sizeof(SpecialThreadInfoHeader), error);
+    uint64_t threadInfoAddress = SpecialThreadInfoAddress;
+    size_t read = process.ReadMemory(threadInfoAddress, &header, sizeof(SpecialThreadInfoHeader), error);
+    if ((error.Fail() || read != sizeof(header) ||
+         strncmp(header.signature, SPECIAL_THREADINFO_SIGNATURE, sizeof(SPECIAL_THREADINFO_SIGNATURE)) != 0)
+        && SpecialThreadInfoAddress != SpecialThreadInfoLegacyAddress)
+    {
+        // Fall back to the legacy address for dumps produced by older createdump binaries.
+        error.Clear();
+        threadInfoAddress = SpecialThreadInfoLegacyAddress;
+        read = process.ReadMemory(threadInfoAddress, &header, sizeof(SpecialThreadInfoHeader), error);
+    }
     if (error.Fail() || read != sizeof(header))
     {
         return;
@@ -2766,7 +2897,7 @@ LLDBServices::InitializeThreadInfo(lldb::SBProcess process)
     m_processId = header.pid;
     m_threadInfos.clear();
 
-    uint64_t address = SpecialThreadInfoAddress + sizeof(header);
+    uint64_t address = threadInfoAddress + sizeof(header);
     for (int index = 0; index < number; index++)
     {
         SpecialThreadInfoEntry entry;
@@ -2859,18 +2990,37 @@ LLDBServices::GetProcessId(lldb::SBProcess process)
     return m_processId != 0 ? m_processId : process.GetProcessID();
 }
 
-uint32_t
-LLDBServices::GetThreadId(lldb::SBThread thread)
+HRESULT
+LLDBServices::GetThreadId(lldb::SBThread thread, PULONG threadId)
 {
+    if (threadId == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
     uint32_t index = thread.GetIndexID() - 1;
+    ULONG id;
     if (m_threadInfos.size() > index && m_threadInfos[index].tid != 0)
     {
-        return m_threadInfos[index].tid;
+        id = m_threadInfos[index].tid;
     }
     else
     {
-        return thread.GetThreadID();
+        lldb::tid_t lldbId = thread.GetThreadID();
+        if (lldbId == LLDB_INVALID_THREAD_ID || lldbId > UINT32_MAX)
+        {
+            *threadId = 0;
+            return E_UNEXPECTED;
+        }
+        id = static_cast<ULONG>(lldbId);
     }
+    if (id == 0 || id == UINT32_MAX)
+    {
+        *threadId = 0;
+        return E_UNEXPECTED;
+    }
+    *threadId = id;
+    return S_OK;
 }
 
 lldb::SBProcess
@@ -3135,6 +3285,8 @@ LLDBServices::ExecuteCommand(
     char** arguments,
     lldb::SBCommandReturnObject &result)
 {
+    CurrentResultScope resultScope(this, &result);
+
     // Build all the possible arguments into a string
     std::string commandArguments;
     for (const char* arg = *arguments; arg != nullptr; arg = *(++arguments))

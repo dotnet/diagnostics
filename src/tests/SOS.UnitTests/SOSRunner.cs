@@ -13,8 +13,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
-using Xunit.Abstractions;
-using Xunit.Extensions;
+using Xunit;
+using Xunit.Sdk;
 
 public class SOSRunner : IDisposable
 {
@@ -146,6 +146,10 @@ public class SOSRunner : IDisposable
         public string DumpNameSuffix { get; set; }
 
         public bool EnableSOSLogging { get; set; } = true;
+
+        public bool EnableStressLog { get; set; }
+
+        public bool DisableDacSignatureVerification { get; set; }
 
         public bool TestCrashReport
         {
@@ -333,6 +337,18 @@ public class SOSRunner : IDisposable
                     processRunner.WithEnvironmentVariable("DOTNET_Interpreter", "InterpTestMethod*");
                 }
 
+                // Enable stress logging so DumpLog tests have data to read.
+                // Must be set before any dump generation path so the stress log
+                // is captured regardless of how the dump is generated.
+                if (information.EnableStressLog)
+                {
+                    processRunner.
+                        WithRuntimeConfiguration("StressLog", "1").
+                        WithRuntimeConfiguration("LogFacility", "0xffffffbf").
+                        WithRuntimeConfiguration("LogLevel", "6").
+                        WithRuntimeConfiguration("StressLogSize", "65536");
+                }
+
                 if (dumpGeneration == DumpGenerator.CreateDump)
                 {
                     // Run the debuggee with the createdump environment variables set to generate a coredump on unhandled exception
@@ -383,7 +399,7 @@ public class SOSRunner : IDisposable
                     {
                         if (string.IsNullOrWhiteSpace(config.DotNetDumpHost()) || string.IsNullOrWhiteSpace(config.DotNetDumpPath()))
                         {
-                            throw new SkipTestException("dotnet-dump collect needs DotNetDumpHost and DotNetDumpPath config variables");
+                            Assert.Skip("dotnet-dump collect needs DotNetDumpHost and DotNetDumpPath config variables");
                         }
 
                         // Wait until the debuggee gets started. It needs time to spin up before generating the core dump.
@@ -573,6 +589,8 @@ public class SOSRunner : IDisposable
 
                     bool shouldVerifyDacSignature = !config.IsPrivateBuildTesting()
                                                     && !config.IsNightlyBuild()
+                                                    && !config.IsDesktop
+                                                    && !information.DisableDacSignatureVerification
                                                     && !"-none".Equals(config.SetHostRuntime(), StringComparison.OrdinalIgnoreCase);
                     initialCommands.Add($"dx @Debugger.Settings.EngineInitialization.SecureLoadDotNetExtensions={(shouldVerifyDacSignature ? "true" : "false")}");
                     break;
@@ -585,7 +603,7 @@ public class SOSRunner : IDisposable
                     {
                         throw new ArgumentException("LLDB helper script path not set or does not exist: " + lldbHelperScript);
                     }
-                    arguments.Append(@"--no-lldbinit -o ""settings set target.disable-aslr false"" -o ""settings set interpreter.prompt-on-quit false""");
+                    arguments.Append(@"--no-lldbinit -o ""settings set target.disable-aslr false"" -o ""settings set interpreter.prompt-on-quit false"" -o ""settings set symbols.enable-external-lookup false""");
                     arguments.AppendFormat(@" -o ""command script import {0}"" -o ""version""", lldbHelperScript);
 
                     string debuggeeTarget = config.HostExe;
@@ -690,7 +708,9 @@ public class SOSRunner : IDisposable
                     initialCommands.Add("setsymbolserver -directory %DEBUG_ROOT%");
                     shouldVerifyDacSignature = OS.Kind == OSKind.Windows
                         && !config.IsPrivateBuildTesting()
-                        && !config.IsNightlyBuild();
+                        && !config.IsNightlyBuild()
+                        && !config.IsDesktop
+                        && !information.DisableDacSignatureVerification;
                     initialCommands.Add($"runtimes --DacSignatureVerification:{(shouldVerifyDacSignature ? "true" : "false")}");
                     arguments.Append(debuggerPath);
                     arguments.Append(@" analyze %DUMP_NAME%");
@@ -705,14 +725,36 @@ public class SOSRunner : IDisposable
                 WithLog(scriptLogger).
                 WithTimeout(TimeSpan.FromMinutes(10));
 
-            if (config.TestCDACNoFallback)
+            // Configure which DAC/cDAC SOS loads, driven entirely by the DacMode test setting (see
+            // TestConfiguration.DacMode). The harness translates the mode through two channels:
+            //  * Env vars (DOTNET_ENABLE_CDAC / CDAC_NO_FALLBACK) set here on the debugger process. The
+            //    in-box DAC, loaded into the debugger host, reads them and hosts the cDAC reader itself;
+            //    there is no SOS-command equivalent. They are set before the debugger launches.
+            //  * SOS's own cDAC load policy ("runtimes --usecdac"), applied in LoadSosExtension. That
+            //    command is an SOS extension command and is not available until SOS has been loaded, so
+            //    it cannot be issued as a pre-SOS initial debugger command.
+            switch (config.DacMode)
             {
-                processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
-                processRunner.WithEnvironmentVariable("CDAC_NO_FALLBACK", "1");
+                case DacMode.CDacVerify:
+                    // cDAC hosted by the in-box DAC, with no fallback to the legacy DAC.
+                    processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
+                    processRunner.WithEnvironmentVariable("CDAC_NO_FALLBACK", "1");
+                    break;
+                case DacMode.CDac:
+                case DacMode.Dac:
+                case DacMode.Default:
+                    // No debuggee env vars; the SOS load policy (if any) is applied in LoadSosExtension.
+                    break;
             }
-            else if (config.TestCDAC)
+
+            // Enable stress logging for both live and dump paths when requested
+            if (information.EnableStressLog)
             {
-                processRunner.WithEnvironmentVariable("DOTNET_ENABLE_CDAC", "1");
+                processRunner.
+                    WithEnvironmentVariable("DOTNET_StressLog", "1").
+                    WithEnvironmentVariable("DOTNET_LogFacility", "0xffffffbf").
+                    WithEnvironmentVariable("DOTNET_LogLevel", "6").
+                    WithEnvironmentVariable("DOTNET_StressLogSize", "65536");
             }
 
             // Exit codes on Windows should always be 0, but not on Linux/OSX for the faulting debuggees.
@@ -1110,6 +1152,22 @@ public class SOSRunner : IDisposable
             default:
                 throw new Exception($"{DebuggerToString} cannot load sos extension");
         }
+
+        // Apply the cDAC load policy selected by the test's DacMode now that SOS is loaded (the
+        // "runtimes" command is unavailable before this) and before any runtime is accessed, so SOS
+        // uses the requested DAC/cDAC the first time it resolves the runtime. CDacVerify explicitly
+        // selects the legacy DAC so DOTNET_ENABLE_CDAC affects only the DAC-hosted contract reader.
+        string cdacPolicyCommand = _config.DacMode switch
+        {
+            DacMode.CDac => "runtimes --usecdac true",    // Force the standalone cDAC next to sos.dll.
+            DacMode.CDacVerify or DacMode.Dac => "runtimes --usecdac false", // Force the legacy in-box DAC.
+            _ => null,
+        };
+        if (cdacPolicyCommand is not null && Debugger != NativeDebugger.Gdb)
+        {
+            commands.Add((Debugger == NativeDebugger.Cdb ? "!" : "") + cdacPolicyCommand);
+        }
+
         await RunCommands(commands);
 
         // Helper function to switch to the thread with an exception
@@ -1136,7 +1194,11 @@ public class SOSRunner : IDisposable
             switch (Debugger)
             {
                 case NativeDebugger.Cdb:
-                    command = "g";
+                    // Workaround for a race condition in cdb: if a background thread fires an event
+                    // while the debugger is processing the breakpoint, we can end up hitting the same
+                    // breakpoint again. Single-stepping once (t) and then continuing prevents this
+                    // from happening.
+                    command = "t; g";
                     // Don't add the !runcommand prefix because it gets printed when cdb stops
                     // again because the helper extension used .pcmd to set a stop command.
                     addPrefix = false;
@@ -1515,7 +1577,7 @@ public class SOSRunner : IDisposable
                 defines.Add($"MAJOR_RUNTIME_VERSION_GE_{v}");
             }
         }
-        catch (SkipTestException)
+        catch (SkipException)
         {
         }
         if (_dumpType.HasValue)
@@ -1557,6 +1619,10 @@ public class SOSRunner : IDisposable
         {
             defines.Add("ALPINE");
         }
+        if (_config.IsDesktop)
+        {
+            defines.Add("DESKTOP");
+        }
         // This is a special "OR" of two conditions. Add this is easier than changing the parser to support "OR".
         if (_config.IsNETCore || Debugger == NativeDebugger.DotNetDump)
         {
@@ -1570,14 +1636,14 @@ public class SOSRunner : IDisposable
                 defines.Add("UNIX_SINGLE_FILE_APP");
             }
         }
+        if (_config.DacMode == DacMode.CDac)
+        {
+            defines.Add("CDAC_ONLY");
+        }
         string setHostRuntime = _config.SetHostRuntime();
         if (!string.IsNullOrEmpty(setHostRuntime) && setHostRuntime == "-none")
         {
             defines.Add("HOST_RUNTIME_NONE");
-        }
-        if (_config.TestCDACNoFallback)
-        {
-            defines.Add("CDAC_NO_FALLBACK_TESTING");
         }
         return defines;
     }

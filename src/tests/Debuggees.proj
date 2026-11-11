@@ -1,10 +1,62 @@
 <Project Sdk="Microsoft.Build.Traversal">
 
+  <Import Project="SOSHarnessDebuggees.props" />
+
   <!-- Debuggee and tracee projects, built using the test SDK from artifacts/dotnet-test/ -->
   <ItemGroup>
     <ProjectReference Include="SOS.UnitTests/Debuggees/**/*.csproj" />
     <ProjectReference Include="CommonTestRunner/Debuggees/**/*.csproj" />
     <ProjectReference Include="DbgShim.UnitTests/Debuggees/**/*.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- The SOS harness consumes these as self-contained single-file apps. Publish them during the
+         build so test legs only read immutable artifacts and never invoke an SDK concurrently. -->
+    <SOSSingleFileDebuggee Include="@(SOSHarnessDebuggee->WithMetadataValue('SupportsSingleFile', 'true'))" />
+    <SOSFrameworkDebuggee Include="@(SOSHarnessDebuggee->WithMetadataValue('SupportsFramework', 'true'))" />
+  </ItemGroup>
+
+  <Target Name="PublishSOSSingleFileDebuggees"
+          AfterTargets="Build"
+          Condition="'$(SkipSOSSingleFileDebuggees)' != 'true'">
+    <ItemGroup>
+      <_SOSSingleFileRuntime Include="@(RuntimeTestVersions)"
+                            Condition="'%(RuntimeTestVersions.TargetFramework)' != ''" />
+    </ItemGroup>
+
+    <Error Condition="'@(_SOSSingleFileRuntime)' == ''"
+           Text="RuntimeTestVersions must contain target-framework metadata before publishing SOS single-file debuggees." />
+
+    <!-- Batch once per tested runtime. RuntimeFrameworkVersion pins the bundle to the configured runtime
+         patch later used for DAC resolution. Give each
+         project/TFM/RID publish a private intermediate directory so its restore cannot race the ordinary
+         multi-target Debuggees.proj build or another publish's project.assets.json. -->
+    <MSBuild Projects="@(SOSSingleFileDebuggee)"
+             Targets="Restore;Publish"
+             BuildInParallel="true"
+             Properties="Configuration=$(Configuration);BuildProjectFramework=%(_SOSSingleFileRuntime.TargetFramework);RuntimeIdentifier=$(TargetRid);RuntimeFrameworkVersion=%(_SOSSingleFileRuntime.Runtime);SelfContained=true;PublishSingleFile=true;SOSSingleFileRuntimeVersion=%(_SOSSingleFileRuntime.Runtime);ArtifactsObjDir=$(ArtifactsObjDir)SOSSingleFile/%(_SOSSingleFileRuntime.TargetFramework)/$(TargetRid)/" />
+  </Target>
+
+  <Target Name="BuildSOSFrameworkDebuggees"
+          AfterTargets="Build"
+          Condition="'$(OS)' == 'Windows_NT' and '$(SkipSOSFrameworkDebuggees)' != 'true'">
+    <PropertyGroup>
+      <_SOSFrameworkPlatformProperty>PlatformTarget=$(TargetArch);</_SOSFrameworkPlatformProperty>
+    </PropertyGroup>
+    <MSBuild Projects="@(SOSFrameworkDebuggee)"
+             Targets="Restore;Build"
+             BuildInParallel="true"
+             Properties="Configuration=$(Configuration);BuildProjectFramework=net462;$(_SOSFrameworkPlatformProperty)DebugType=full;DebugSymbols=true;ArtifactsObjDir=$(ArtifactsObjDir)SOSFramework/$(TargetArch)/%(Filename)/" />
+  </Target>
+
+  <Target Name="PublishDbgShimSingleFileDebuggees"
+          AfterTargets="Build"
+          Condition="'$(PrivateBuildTesting)' != 'true'">
+    <Error Condition="'@(RuntimeTestVersions)' == '' or '%(RuntimeTestVersions.TargetFramework)' == ''"
+           Text="RuntimeTestVersions must contain target-framework metadata before publishing DbgShim single-file debuggees." />
+    <MSBuild Projects="$(MSBuildThisFileDirectory)DbgShim.UnitTests/Debuggees/SimpleDebuggee/SimpleDebuggee.csproj"
+             Targets="Restore;Publish"
+             Properties="Configuration=$(Configuration);BuildProjectFramework=%(RuntimeTestVersions.TargetFramework);RuntimeIdentifier=$(TargetRid);RuntimeFrameworkVersion=%(RuntimeTestVersions.Runtime);SelfContained=true;PublishSingleFile=true;DbgShimSingleFileRuntimeVersion=%(RuntimeTestVersions.Runtime);ArtifactsObjDir=$(ArtifactsObjDir)DbgShimSingleFile/%(RuntimeTestVersions.TargetFramework)/$(TargetRid)/" />
+  </Target>
 
 </Project>
