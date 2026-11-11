@@ -284,7 +284,7 @@ isolation takes effect. The bootstrap's framework references must also be resolv
 by that host; SOS payload assemblies do not require TPA entries. This limitation is
 tracked in [#6207](https://github.com/dotnet/diagnostics/issues/6207).
 
-`SOSHostRuntimeTests` covers lower- and higher-version ClrMD conflicts loaded into Default
+`SOS.Tests/SOSHostRuntimeTests` covers lower- and higher-version ClrMD conflicts loaded into Default
 before SOS, framework selection, and optional-extension contract sharing. Its Windows CDB
 test loads `soscohost.dll` first; that extension starts CoreCLR and loads the competing
 dependency before native SOS starts. Test logs retain the generated conflicting assemblies.

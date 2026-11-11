@@ -34,8 +34,6 @@
   <ItemGroup>
     <ProjectReference Include="$(SrcDir)/Microsoft.Diagnostics.TestHelpers/Microsoft.Diagnostics.TestHelpers.csproj" />
     <ProjectReference Include="$(TestDir)/TestExtension/TestExtension.csproj" />
-    <ProjectReference Include="$(SrcDir)SOS/SOS.Hosting.Loader/SOS.Hosting.Loader.csproj" />
-    <ProjectReference Include="$(TestDir)SOS.Cohost/SOS.Cohost.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
@@ -60,19 +58,6 @@
                              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
-
-  <Target Name="IncludeCohost" BeforeTargets="GetCopyToOutputDirectoryItems;GetCopyToPublishDirectoryItems">
-    <ItemGroup>
-      <CohostFiles Include="$(ArtifactsBinDir)SOS.Cohost/$(Configuration)/$(NetCoreAppMinTargetFramework)/*.dll;
-                            $(ArtifactsBinDir)SOS.Cohost/$(Configuration)/$(NetCoreAppMinTargetFramework)/*.json" />
-      <ContentWithTargetPath Include="@(CohostFiles)">
-        <TargetPath>Hosting/%(CohostFiles.Filename)%(CohostFiles.Extension)</TargetPath>
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-      </ContentWithTargetPath>
-    </ItemGroup>
-  </Target>
-
   <ItemGroup>
     <PackageDownload Include="cdb-sos" Version="[$(cdbsosversion)]" />
   </ItemGroup>
