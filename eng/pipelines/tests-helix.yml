@@ -71,8 +71,8 @@ jobs:
       - ${{ if eq(parameters.platform.os, 'windows') }}:
         - powershell: |
             foreach ($tool in @('dotnet-sos', 'dotnet-dump')) {
-              & .\eng\common\build.ps1 -restore -pack -configuration ${{ parameters.configuration }} `
-                -projects ".\src\Tools\$tool\$tool.csproj" `
+              & .\eng\common\build.ps1 -restore -pack -binaryLog -configuration ${{ parameters.configuration }} `
+                -projects "$(Build.SourcesDirectory)\src\Tools\$tool\$tool.csproj" `
                 /p:TargetArch=${{ parameters.platform.arch }} /p:TargetRid=${{ parameters.platform.rid }} `
                 /p:SingleTargetRidPackage=true /p:NoBuild=true `
                 /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false `
@@ -84,8 +84,8 @@ jobs:
         - bash: |
             set -euo pipefail
             for tool in dotnet-sos dotnet-dump; do
-              ./eng/common/build.sh --restore --pack --configuration ${{ parameters.configuration }} \
-                --projects "./src/Tools/$tool/$tool.csproj" \
+              ./eng/common/build.sh --restore --pack --binaryLog --configuration ${{ parameters.configuration }} \
+                --projects "$(Build.SourcesDirectory)/src/Tools/$tool/$tool.csproj" \
                 /p:TargetArch=${{ parameters.platform.arch }} /p:TargetRid=${{ parameters.platform.rid }} \
                 /p:SingleTargetRidPackage=true /p:NoBuild=true \
                 /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false \
