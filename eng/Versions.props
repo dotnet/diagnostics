@@ -9,7 +9,7 @@
     <DotNetFinalVersionKind></DotNetFinalVersionKind>
 
     <!-- Lines intentionally left blank to prevent merge conflicts when upgrading version -->
-    <VersionPrefix>10.0.0</VersionPrefix>
+    <VersionPrefix>11.0.0</VersionPrefix>
 
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
