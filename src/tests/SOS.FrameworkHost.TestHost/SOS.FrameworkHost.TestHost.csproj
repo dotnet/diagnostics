@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>$(DesktopTargetFramework)</TargetFramework>
     <OutputType>Exe</OutputType>
+    <PlatformTarget>$(TargetArch)</PlatformTarget>
     <IsPackable>false</IsPackable>
     <IsShipping>false</IsShipping>
   </PropertyGroup>

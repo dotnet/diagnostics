@@ -30,7 +30,28 @@ public class SOSHostRuntimeTests
     [InlineData("conflict")]
     [InlineData("missing")]
     [InlineData("cleanup")]
-    public async Task FrameworkHostIsolatesDependenciesAndInitialization(string scenario)
+    public Task FrameworkHostIsolatesDependenciesAndInitialization(string scenario) =>
+        RunFrameworkHostTest(scenario);
+
+    [Theory]
+    [InlineData("native-update-failure")]
+    [InlineData("native-registration-failure")]
+    [InlineData("native-no-target")]
+    [InlineData("native-success")]
+    public Task NativeHostInitializationHandlesTargetStatus(string scenario)
+    {
+        if (OS.Kind != OSKind.Windows)
+        {
+            Assert.Skip("Native SOS hosting test is Windows-only");
+        }
+
+        TestConfiguration config = SOSTestHelpers.GetNetCoreConfigurations()
+            .Select(arguments => (TestConfiguration)arguments[0])
+            .First();
+        return RunFrameworkHostTest(scenario, config.SOSPath());
+    }
+
+    private static async Task RunFrameworkHostTest(string scenario, string sosPath = null)
     {
         if (OS.Kind != OSKind.Windows)
         {
@@ -51,6 +72,10 @@ public class SOSHostRuntimeTests
             start.ArgumentList.Add(Path.Combine(hostDirectory, "SOS.FrameworkHost.dll"));
             start.ArgumentList.Add(directory);
             start.ArgumentList.Add(scenario);
+            if (sosPath != null)
+            {
+                start.ArgumentList.Add(sosPath);
+            }
             using Process process = Process.Start(start);
             Task<string> output = process.StandardOutput.ReadToEndAsync(TestContext.Current.CancellationToken);
             Task<string> error = process.StandardError.ReadToEndAsync(TestContext.Current.CancellationToken);

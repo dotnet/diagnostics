@@ -18,6 +18,12 @@ namespace SOS.FrameworkHost.TestHost
         {
             try
             {
+                if (args[2].StartsWith("native-", StringComparison.Ordinal))
+                {
+                    NativeHostInitializationTest.Run(args[3], args[2]);
+                    return 0;
+                }
+
                 if (args[2] == "cleanup")
                 {
                     CheckPartialHostCleanup(Path.Combine(Path.GetDirectoryName(args[0]), "SOS.Extensions.dll"));
