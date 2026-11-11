@@ -92,20 +92,29 @@ HRESULT Extensions::InitializeHostServices(
         return hr;
     }
     hr = m_pHostServices->GetHost(&m_pHost);
+    if (SUCCEEDED(hr)) {
+        hr = m_pHostServices->RegisterDebuggerServices(m_pDebuggerServices);
+    }
+    if (SUCCEEDED(hr)) {
+        ULONG processId = 0;
+        if (FAILED(m_pDebuggerServices->GetCurrentProcessSystemId(&processId)))
+        {
+            m_pHostServices->DestroyTarget();
+            return S_OK;
+        }
+        hr = m_pHostServices->UpdateTarget(processId);
+    }
     if (FAILED(hr)) {
-        return hr;
+        // A failed initialization must not leave CLRMA calling into an incomplete managed host.
+        m_pHostServices->Uninitialize();
+        m_pHostServices->Release();
+        m_pHostServices = nullptr;
+        if (m_pHost != nullptr) {
+            m_pHost->Release();
+            m_pHost = nullptr;
+        }
     }
-    hr = m_pHostServices->RegisterDebuggerServices(m_pDebuggerServices);
-    if (FAILED(hr)) {
-        return hr;
-    }
-    ULONG processId = 0;
-    if (FAILED(m_pDebuggerServices->GetCurrentProcessSystemId(&processId)))
-    {
-        m_pHostServices->DestroyTarget();
-        return S_OK;
-    }
-    return m_pHostServices->UpdateTarget(processId);
+    return hr;
 }
 
 /// <summary>
