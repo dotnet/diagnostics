@@ -103,13 +103,6 @@ internal static class EngineHostMain
 
                         result = liveHost.RunToBreakpoint();
                     }
-                    else if (line == EngineProtocol.LoadedModules)
-                    {
-                        string modules = string.Join(
-                            Environment.NewLine,
-                            GetLoadedDebuggerModules().Select(module => $"{module.Key}={module.Value}"));
-                        result = new SosOutput("engine", line, modules);
-                    }
                     else
                     {
                         result = host.Execute(line);

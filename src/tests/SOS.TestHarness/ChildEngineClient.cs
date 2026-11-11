@@ -17,15 +17,17 @@ namespace SOS.TestHarness;
 ///
 /// The child blocks on stdin between commands (no busy-wait), so idle clients are cheap.
 /// </summary>
-public sealed class ChildEngineClient : ILiveDebuggerHost
+public sealed class ChildEngineClient : ILiveDebuggerHost, IStartupDiagnosticHost
 {
     private readonly Process _process;
     private readonly StreamWriter _stdin;
     private readonly BlockingCollection<string> _lines = new();
     private readonly Thread _reader;
     private readonly Task<string> _stderr;
+    private readonly List<string> _startupDiagnostics = [];
 
     public string Name { get; }
+    IReadOnlyList<string> IStartupDiagnosticHost.StartupDiagnostics => _startupDiagnostics;
 
     private ChildEngineClient(
         string name,
@@ -187,7 +189,9 @@ public sealed class ChildEngineClient : ILiveDebuggerHost
 
             if (line.StartsWith(EngineProtocol.DiagnosticPrefix, StringComparison.Ordinal))
             {
-                Console.WriteLine(line[EngineProtocol.DiagnosticPrefix.Length..]);
+                string diagnostic = line[EngineProtocol.DiagnosticPrefix.Length..];
+                _startupDiagnostics.Add(diagnostic);
+                Console.WriteLine(diagnostic);
             }
         }
     }

@@ -33,12 +33,13 @@ public sealed class DbgEngHostingTests
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
-        Dictionary<string, string> modules = target.Execute(EngineProtocol.LoadedModules).Text
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Split('=', 2))
-            .ToDictionary(parts => parts[0], parts => parts[1], StringComparer.OrdinalIgnoreCase);
-
-        Assert.Equal(Path.Combine(ToolPaths.DbgEngDirectory, "dbgeng.dll"), modules["dbgeng.dll"], ignoreCase: true);
-        Assert.Equal(ToolPaths.SosPath, modules["sos.dll"], ignoreCase: true);
+        Assert.Contains(
+            target.HostStartupDiagnostics,
+            diagnostic => diagnostic.Equals(
+                $"Loaded dbgeng.dll: {Path.Combine(ToolPaths.DbgEngDirectory, "dbgeng.dll")}",
+                StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            target.HostStartupDiagnostics,
+            diagnostic => diagnostic.Equals($"Loaded sos.dll: {ToolPaths.SosPath}", StringComparison.OrdinalIgnoreCase));
     }
 }
