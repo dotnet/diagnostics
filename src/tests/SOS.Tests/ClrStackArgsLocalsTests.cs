@@ -101,7 +101,7 @@ public sealed class ClrStackArgsLocalsTests
         }
     }
 
-    [SosTheory]
+    [SosTheory(coreOnly: true)]
     [MemberData(nameof(MiniDumpMatrix))]
     public async Task ClrStack_ICorDebugLocalsFromMiniDump(TestConfig config)
     {

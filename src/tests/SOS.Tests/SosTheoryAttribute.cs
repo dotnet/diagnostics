@@ -13,14 +13,30 @@ namespace SOS.Tests;
 /// was misconfigured (or a host regressed), and that should surface as a real failure rather than a silent
 /// skip. Tests whose matrix is intentionally single-platform use a platform-gated attribute instead, for
 /// example <see cref="WindowsTheoryAttribute"/> for cdb-only matrices.
+/// Core-only matrices opt into <c>coreOnly</c> so Framework shards skip them before data discovery.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
 public sealed class SosTheoryAttribute : TheoryAttribute
 {
     public SosTheoryAttribute(
+        bool coreOnly = false,
         [System.Runtime.CompilerServices.CallerFilePath] string sourceFilePath = "",
         [System.Runtime.CompilerServices.CallerLineNumber] int sourceLineNumber = -1)
         : base(sourceFilePath, sourceLineNumber)
     {
+        Skip = GetCoreOnlySkipReason(coreOnly, Environment.GetEnvironmentVariable("SOSHARNESS_ONLY_FLAVORS"));
+    }
+
+    internal static string? GetCoreOnlySkipReason(bool coreOnly, string? selectedFlavors)
+    {
+        if (!coreOnly || selectedFlavors is null)
+        {
+            return null;
+        }
+
+        string[] flavors = selectedFlavors.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return flavors.Length > 0 && flavors.All(flavor => flavor.Equals("Framework", StringComparison.OrdinalIgnoreCase))
+            ? "This test requires .NET Core."
+            : null;
     }
 }

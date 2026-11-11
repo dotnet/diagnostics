@@ -50,7 +50,7 @@ public sealed class ClrStackFrameCountTests
         AssertSameFrames(full, over, full.Length);
     }
 
-    [SosTheory]
+    [SosTheory(coreOnly: true)]
     [MemberData(nameof(ICorDebugMatrix))]
     public async Task ClrStack_ICorDebugFrameCount(TestConfig config)
     {

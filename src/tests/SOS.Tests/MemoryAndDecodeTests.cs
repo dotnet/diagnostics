@@ -67,7 +67,7 @@ public sealed class MemoryAndDecodeTests
         target.Sos($"db {marker:x}").AssertContains(":"); // byte dump prints "<addr>: <bytes>"
     }
 
-    [SosTheory]
+    [SosTheory(coreOnly: true)]
     [MemberData(nameof(MiniDumpMatrix))]
     public async Task MemoryDumper_MapsOmittedManagedModuleData(TestConfig config)
     {

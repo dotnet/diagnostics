@@ -46,7 +46,7 @@ public sealed class DiagnosticCommandTests
         target.Sos("dumpgcdata").AssertContains("concurrent GCs");
     }
 
-    [SosTheory]
+    [SosTheory(coreOnly: true)]
     [MemberData(nameof(GcCollectionMatrix))]
     public async Task DumpGcData_ReportsInducedCompactionAfterCollection(TestConfig config)
     {

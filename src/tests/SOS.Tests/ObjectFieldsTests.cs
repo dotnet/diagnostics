@@ -47,7 +47,7 @@ public sealed class ObjectFieldsTests
         Assert.NotEqual(0ul, ObjectCommandParsing.Hex(textField.Value)); // its value is the string's address
     }
 
-    [SosTheory]
+    [SosTheory(coreOnly: true)]
     [MemberData(nameof(CoreMatrix))]
     public async Task DumpObj_StaticReferenceField(TestConfig config)
     {

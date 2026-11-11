@@ -30,7 +30,7 @@ public sealed class GcInspectionTests
         coreVersion: CoreVersion.All & ~(CoreVersion.Net8 | CoreVersion.Net9),
         dac: Dac.Legacy);
 
-    [SosTheory]
+    [SosTheory(coreOnly: true)]
     [MemberData(nameof(PohMatrix))]
     public async Task GcRoot_FindsRootsForPohObject(TestConfig config)
     {
@@ -249,7 +249,7 @@ public sealed class GcInspectionTests
             .AssertContains(marker.ToString("x"));
     }
 
-    [SosTheory]
+    [SosTheory(coreOnly: true)]
     [MemberData(nameof(DumpGenMatrix))]
     public async Task DumpGen_ReportsExactGenerationPopulations(TestConfig config)
     {

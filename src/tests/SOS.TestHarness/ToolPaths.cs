@@ -10,7 +10,7 @@ public static class ToolPaths
 {
     /// <summary>
     /// Bin by default. Set SOSHARNESS_TOOL_LAYOUT to Packaged and SOSHARNESS_TOOL_ROOT
-    /// to a directory prepared by eng/PrepareSOSTestLayout.ps1 to test packaged tools.
+    /// to an installed tool directory to test packaged tools.
     /// </summary>
     internal static IToolLayout Layout => s_layout.Value;
 

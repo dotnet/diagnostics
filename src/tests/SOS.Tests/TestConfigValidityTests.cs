@@ -12,6 +12,20 @@ namespace SOS.Tests;
 public sealed class TestConfigValidityTests
 {
     [Theory]
+    [InlineData(true, "Framework", true)]
+    [InlineData(true, " framework,Framework, ", true)]
+    [InlineData(false, "Framework", false)]
+    [InlineData(true, "Core", false)]
+    [InlineData(true, "SingleFile,Framework", false)]
+    [InlineData(true, null, false)]
+    [InlineData(true, "", false)]
+    [InlineData(true, "Unknown", false)]
+    public void CoreOnlyTheoriesSkipOnlyFrameworkOnlySelections(bool coreOnly, string? selectedFlavors, bool expectedSkip)
+    {
+        Assert.Equal(expectedSkip, SosTheoryAttribute.GetCoreOnlySkipReason(coreOnly, selectedFlavors) is not null);
+    }
+
+    [Theory]
     [InlineData(null, false)]
     [InlineData("", false)]
     [InlineData("0", false)]
