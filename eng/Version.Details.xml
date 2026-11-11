@@ -70,6 +70,10 @@
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>22d26e3787fa38eaa8cab9282c88598125cc4c2f</Sha>
     </Dependency>
+    <Dependency Name="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.12.0-1.26560.122">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>22d26e3787fa38eaa8cab9282c88598125cc4c2f</Sha>
+    </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis.Analyzers" Version="5.12.0-1.26560.122">
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>22d26e3787fa38eaa8cab9282c88598125cc4c2f</Sha>
