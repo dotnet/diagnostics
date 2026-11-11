@@ -13,7 +13,7 @@ public sealed class VarargPInvokeTests
     public static TheoryData<TestConfig> Matrix =>
         TestConfig.BuildMatrix([TargetCatalog.VarargPInvoke], Flavor.Core | Flavor.SingleFile, Host.Cdb, Liveness.Live);
 
-    [WindowsTheory(coreOnly: true)]
+    [WindowsTheory]
     [MemberData(nameof(Matrix))]
     public async Task VarargPInvoke_ReportsInteropMethodAndDisassemblesStub(TestConfig config)
     {

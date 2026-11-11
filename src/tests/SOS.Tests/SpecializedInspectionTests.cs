@@ -79,7 +79,7 @@ public sealed class SpecializedInspectionTests
             $"expected a held sync block:\n{sync.Text}");
     }
 
-    [SosTheory(coreOnly: true)]
+    [SosTheory]
     [MemberData(nameof(CoreRuntimeMatrix))]
     public async Task DumpAsync_ShowsSuspendedStateMachine(TestConfig config)
     {

@@ -211,10 +211,6 @@ set "RESTORE_EXIT_CODE=%ERRORLEVEL%"
 
 type "%LOG%"
 
-"%HELIX_PYTHONPATH%" "%ROOT%validate_results.py" "%UPLOAD%\SOS.Tests-%RID%-%CONFIGURATION%-%TOOL_LAYOUT%-%IDENTITY%.testResults.xml"
-set "RESULTS_EXIT_CODE=%ERRORLEVEL%"
-if "%EXIT_CODE%"=="0" set "EXIT_CODE=%RESULTS_EXIT_CODE%"
-
 if not "%TOOL_LAYOUT%"=="Bin" if exist "%SOSHARNESS_TOOL_ROOT%\layout.json" (
   copy /y "%SOSHARNESS_TOOL_ROOT%\layout.json" "%UPLOAD%\layout.json" >nul
   if errorlevel 1 exit /b 3

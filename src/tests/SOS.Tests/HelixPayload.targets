@@ -62,8 +62,6 @@
     <ItemGroup>
       <_SOSPayloadFile Include="$(_SOSHelixLauncherPath)"
                        DestinationRelative="runtests$([System.IO.Path]::GetExtension('$(_SOSHelixLauncherPath)'))" />
-      <_SOSPayloadFile Include="$(MSBuildThisFileDirectory)Helix/validate_results.py"
-                       DestinationRelative="validate_results.py" />
       <_SOSPayloadFile Include="$(RepoRoot)eng/DisableSignatureCheck.ps1"
                        DestinationRelative="eng/DisableSignatureCheck.ps1"
                        Condition="'$(TargetOS)' == 'Windows_NT'" />

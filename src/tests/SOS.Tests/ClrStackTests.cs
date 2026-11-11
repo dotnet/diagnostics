@@ -136,7 +136,7 @@ public sealed class ClrStackTests
         return data;
     }
 
-    [SosTheory(coreOnly: true)]
+    [SosTheory]
     [MemberData(nameof(GcRootsMatrix))]
     public async Task ClrStack_GcRoots(TestConfig config, string stopName)
     {
@@ -182,7 +182,7 @@ public sealed class ClrStackTests
         CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10,
         filter: TestMatrices.SupportsGcRootEnumeration);
 
-    [SosTheory(coreOnly: true)]
+    [SosTheory]
     [MemberData(nameof(GcRootsFlagMatrix))]
     public async Task ClrStack_GcRoots_Flags(TestConfig config)
     {

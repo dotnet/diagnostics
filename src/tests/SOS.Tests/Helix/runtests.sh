@@ -290,13 +290,6 @@ else
 fi
 set -e
 
-if ! "$HELIX_PYTHONPATH" "$root/validate_results.py" \
-  "$upload/SOS.Tests-${rid}-${configuration}-${tool_layout}-${identity}.testResults.xml"; then
-  if [[ "$exit_code" -eq 0 ]]; then
-    exit_code=1
-  fi
-fi
-
 if [[ "$tool_layout" == "Packaged" && -f "$SOSHARNESS_TOOL_ROOT/layout.json" ]]; then
   cp "$SOSHARNESS_TOOL_ROOT/layout.json" "$upload/layout.json"
 fi

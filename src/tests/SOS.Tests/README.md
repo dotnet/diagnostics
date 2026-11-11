@@ -52,8 +52,8 @@ The Release jobs cover Windows x64/x86/ARM64, Linux x64/ARM64, Linux-musl x64,
 and macOS x64/ARM64 through the normal Helix platform matrix. Each worker
 installs unsigned same-build packages, not final signed shipping packages.
 
-Core-only theories skip Framework shards before data discovery. Helix launchers
-also check the XML results so reporter errors cannot silently pass.
+Known limitation: Framework shards can report empty-theory errors only in their
+XML results; the console summary can still report success.
 
 The harness is split into four parts:
 

@@ -116,7 +116,7 @@ public sealed class ObjectGcHelperTests
         Assert.Contains("System.String", path.Text, StringComparison.Ordinal);
     }
 
-    [SosTheory(coreOnly: true)]
+    [SosTheory]
     [MemberData(nameof(CoreRuntimeMatrix))]
     public async Task DumpAlc_ResolvesDefaultLoadContext(TestConfig config)
     {
@@ -127,7 +127,7 @@ public sealed class ObjectGcHelperTests
         target.Sos($"dumpalc {target.FindUniqueObject("FieldMarker"):x}").AssertContains("DefaultAssemblyLoadContext");
     }
 
-    [WindowsTheory(coreOnly: true)]
+    [WindowsTheory]
     [MemberData(nameof(CdbMatrix))]
     public async Task GcHandleLeaks_RunsHandleScan(TestConfig config)
     {

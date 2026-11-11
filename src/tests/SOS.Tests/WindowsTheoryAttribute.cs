@@ -20,12 +20,10 @@ namespace SOS.Tests;
 public sealed class WindowsTheoryAttribute : TheoryAttribute
 {
     public WindowsTheoryAttribute(
-        bool coreOnly = false,
         [CallerFilePath] string sourceFilePath = "",
         [CallerLineNumber] int sourceLineNumber = -1)
         : base(sourceFilePath, sourceLineNumber)
     {
-        Skip = SosTheoryAttribute.GetCoreOnlySkipReason(coreOnly, Environment.GetEnvironmentVariable("SOSHARNESS_ONLY_FLAVORS"));
     }
 }
 
