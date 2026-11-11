@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.IO;
 using Microsoft.Diagnostics.DebugServices;
 
@@ -35,19 +34,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
             else
             {
-                if (PathUtilities.IsRemoteOrDevicePath(Argument))
-                {
-                    throw new DiagnosticsException($"Runtime directory must be local: '{Argument}'");
-                }
-                string fullPath = Path.GetFullPath(Argument);
-                try
-                {
-                    Runtime.RuntimeModuleDirectory = fullPath;
-                }
-                catch (ArgumentException)
-                {
-                    throw new DiagnosticsException($"Runtime directory must be a local absolute path: '{Argument}'");
-                }
+                Runtime.RuntimeModuleDirectory = Path.GetFullPath(Argument);
                 WriteLine("Set load path for DAC/DBI to '{0}'", Runtime.RuntimeModuleDirectory);
             }
         }

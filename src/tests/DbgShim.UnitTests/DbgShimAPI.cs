@@ -34,6 +34,8 @@ namespace Microsoft.Diagnostics
 
         private static CLRCreateInstanceDelegate _clrCreateInstance;
 
+        private static SetCDacLoadPolicyDelegate _setCDacLoadPolicy;
+
         private static IntPtr _dbgshimModuleHandle = IntPtr.Zero;
 
         public const int CorDebugVersion_2_0 = 3;
@@ -66,12 +68,15 @@ namespace Microsoft.Diagnostics
             _createDebuggingInterfaceFromVersion2 = GetDelegateFunction<CreateDebuggingInterfaceFromVersion2Delegate>("CreateDebuggingInterfaceFromVersion2");
             _createDebuggingInterfaceFromVersion3 = GetDelegateFunction<CreateDebuggingInterfaceFromVersion3Delegate>("CreateDebuggingInterfaceFromVersion3", optional: true);
             _clrCreateInstance = GetDelegateFunction<CLRCreateInstanceDelegate>("CLRCreateInstance");
+            _setCDacLoadPolicy = GetDelegateFunction<SetCDacLoadPolicyDelegate>("SetCDacLoadPolicy", optional: true);
             _initialized = true;
         }
 
         public static bool IsRegisterForRuntimeStartup3Supported => _registerForRuntimeStartup3 != default;
 
         public static bool IsCreateDebuggingInterfaceFromVersion3Supported => _createDebuggingInterfaceFromVersion3 != default;
+
+        public static bool IsSetCDacLoadPolicySupported => _setCDacLoadPolicy != default;
 
         public static HResult CreateProcessForLaunch(string commandLine, bool suspendProcess, string currentDirectory, out int processId, out IntPtr resumeHandle)
         {
@@ -242,6 +247,15 @@ namespace Microsoft.Diagnostics
             return hr;
         }
 
+        public static HResult SetCDacLoadPolicy(DbgShimCDacLoadPolicy policy)
+        {
+            if (_setCDacLoadPolicy == default)
+            {
+                throw new NotSupportedException("SetCDacLoadPolicy not supported");
+            }
+            return _setCDacLoadPolicy(policy);
+        }
+
         private static T GetDelegateFunction<T>(string functionName, bool optional = false)
             where T : Delegate
         {
@@ -356,6 +370,10 @@ namespace Microsoft.Diagnostics
             in Guid clrsid,
             in Guid riid,
             out IntPtr pInterface);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate int SetCDacLoadPolicyDelegate(
+            DbgShimCDacLoadPolicy policy);
 
         #endregion
     }

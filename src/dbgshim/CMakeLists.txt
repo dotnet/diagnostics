@@ -6,6 +6,7 @@ add_definitions(-DFEATURE_NO_HOST)
 add_definitions(-DSELF_NO_HOST)
 
 set(DBGSHIM_SOURCES
+    cordbdatatarget.cpp
     dbgshim.cpp
     debugshim.cpp
 )

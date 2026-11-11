@@ -18,7 +18,7 @@ namespace Microsoft.Diagnostics
         public static ICorDebugController Create(IntPtr punk) => punk != IntPtr.Zero ? new ICorDebugController(punk) : null;
 
         private ICorDebugController(IntPtr punk)
-            : base(new RefCountedFreeLibrary(IntPtr.Zero), IID_ICorDebugController, punk)
+            : base(IID_ICorDebugController, punk)
         {
             SuppressRelease();
         }

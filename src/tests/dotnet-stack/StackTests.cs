@@ -9,8 +9,6 @@ using System.CommandLine.Parsing;
 using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Tools.Stack
@@ -56,7 +54,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
             _output = outputHelper;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task ReportsStacksCorrectly(TestConfiguration config)
         {
             Command reportCommand = ReportCommandHandler.ReportCommand();

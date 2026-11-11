@@ -255,6 +255,7 @@ typedef struct _DEBUG_STACK_FRAME_EX
 #define SYMOPT_LOAD_LINES                0x00000010
 
 interface ILLDBServices;
+// Exception callbacks return S_OK to stop, S_FALSE to continue, or an error to stop.
 typedef HRESULT (*PFN_EXCEPTION_CALLBACK)(ILLDBServices *services);
 typedef HRESULT (*PFN_RUNTIME_LOADED_CALLBACK)(ILLDBServices *services);
 typedef void (*PFN_MODULE_LOAD_CALLBACK)(void* param, const char* moduleFilePath, ULONG64 moduleAddress, int moduleSize);

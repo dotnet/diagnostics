@@ -3,14 +3,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Diagnostics.DebugServices.Implementation;
+using Microsoft.FileFormats;
+using Microsoft.FileFormats.ELF;
 using Microsoft.SymbolStore;
-using Microsoft.SymbolStore.SymbolStores;
+using Microsoft.SymbolStore.KeyGenerators;
 using Xunit;
 
 namespace Microsoft.Diagnostics.DebugServices.UnitTests
@@ -18,20 +21,291 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
     /// <summary>
     /// Test the service event implementation
     /// </summary>
-    public class SymbolServiceTests : IHost, IDisposable
+    public class SymbolServiceTests : IHost
     {
-        private readonly string _tempDirectory = Path.Combine(Path.GetTempPath(), "SymbolServiceTests-" + Guid.NewGuid().ToString("N"));
-
         public SymbolServiceTests()
         {
         }
 
-        public void Dispose()
+        [Theory]
+        [InlineData(false, false, false)]
+        [InlineData(false, false, true)]
+        [InlineData(false, true, false)]
+        [InlineData(false, true, true)]
+        [InlineData(true, false, false)]
+        [InlineData(true, false, true)]
+        [InlineData(true, true, false)]
+        [InlineData(true, true, true)]
+        public void DownloadELFFullSymbolFile(bool cached, bool mismatchedBuildId, bool hasDebugLink)
         {
-            if (Directory.Exists(_tempDirectory))
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            try
             {
-                Directory.Delete(_tempDirectory, recursive: true);
+                byte[] contents = File.ReadAllBytes(Path.Combine("TestBinaries", "symbolized_executable"));
+                using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
+                byte[] actualBuildId = elf.BuildID.ToArray();
+                byte[] buildId = actualBuildId.ToArray();
+                if (mismatchedBuildId)
+                {
+                    buildId[0] ^= 0xff;
+                }
+                string fileName = cached ? "module" : Path.Combine(directory, "module");
+                string targetName = hasDebugLink ? fileName + ".full" : fileName + ".dbg";
+                TestModule module = new(hasDebugLink ? targetName : null, buildId, fileName);
+                SymbolService symbolService = new(this);
+                string expectedPath = targetName;
+                if (cached)
+                {
+                    SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.SymbolKey, fileName,
+                        actualBuildId, symbolFile: false, module.GetSymbolFileName()).Single();
+                    expectedPath = Path.Combine(directory, key.Index);
+                    Directory.CreateDirectory(Path.GetDirectoryName(expectedPath));
+                    symbolService.AddCachePath(directory);
+                }
+                File.WriteAllBytes(expectedPath, contents);
+
+                Assert.Equal(mismatchedBuildId ? null : expectedPath, symbolService.DownloadSymbolFile(module));
             }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DownloadELFSeparateDebugFile(bool cached)
+        {
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            try
+            {
+                using FileStream compressed = File.OpenRead(Path.Combine("TestBinaries", "libcoreclrtraceptprovider.so.dbg.gz"));
+                using GZipStream decompressed = new(compressed, CompressionMode.Decompress);
+                using MemoryStream contents = new();
+                decompressed.CopyTo(contents);
+                using ELFFile elf = new(new StreamAddressSpace(contents));
+                string targetName = cached ? "module.dbg" : Path.Combine(directory, "module.dbg");
+                TestModule module = new(targetName, elf.BuildID);
+                SymbolService symbolService = new(this);
+                string expectedPath = targetName;
+                if (cached)
+                {
+                    SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.SymbolKey, module.FileName,
+                        elf.BuildID, symbolFile: false, symbolFileName: targetName).Single();
+                    expectedPath = Path.Combine(directory, key.Index);
+                    Directory.CreateDirectory(Path.GetDirectoryName(expectedPath));
+                    symbolService.AddCachePath(directory);
+                }
+                File.WriteAllBytes(expectedPath, contents.ToArray());
+                Assert.Equal(expectedPath, symbolService.DownloadSymbolFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void DownloadELFMissingSymbolFile()
+        {
+            TestModule module = new(Path.Combine(Path.GetTempPath(), Path.GetRandomFileName()),
+                Enumerable.Range(1, 20).Select(value => (byte)value).ToArray());
+            SymbolService symbolService = new(this);
+            Assert.Null(symbolService.DownloadSymbolFile(module));
+        }
+
+        [Fact]
+        public void DownloadELFRejectsStrippedLocalSymbolFile()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            try
+            {
+                byte[] contents = File.ReadAllBytes(Path.Combine("TestBinaries", "stripped_executable"));
+                using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
+                string symbolFileName = Path.Combine(directory, "module.dbg");
+                TestModule module = new(symbolFileName, elf.BuildID);
+                SymbolService symbolService = new(this);
+                File.WriteAllBytes(symbolFileName, contents);
+
+                Assert.Null(symbolService.DownloadSymbolFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void DownloadELFTruncatedLocalFileDoesNotThrow()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            string fileName = Path.Combine(directory, "module");
+            try
+            {
+                File.WriteAllBytes(fileName, new byte[]
+                {
+                    0x7f, (byte)'E', (byte)'L', (byte)'F', 2, 1, 1, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 1
+                });
+                TestModule module = new(fileName, Enumerable.Range(1, 20).Select(value => (byte)value).ToArray(), fileName);
+                SymbolService symbolService = new(this);
+
+                Assert.Null(symbolService.DownloadModuleFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DownloadELFSymbolFileDoesNotFallBackToModuleKey(bool cached)
+        {
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            try
+            {
+                byte[] contents = File.ReadAllBytes(Path.Combine("TestBinaries", "symbolized_executable"));
+                using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
+                string fileName = cached ? "module" : Path.Combine(directory, "module");
+                TestModule module = new(null, elf.BuildID, fileName);
+                SymbolService symbolService = new(this);
+                string modulePath = fileName;
+                if (cached)
+                {
+                    SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, fileName,
+                        elf.BuildID, symbolFile: false, symbolFileName: null).Single();
+                    modulePath = Path.Combine(directory, moduleKey.Index);
+                    Directory.CreateDirectory(Path.GetDirectoryName(modulePath));
+                    symbolService.AddCachePath(directory);
+                }
+                File.WriteAllBytes(modulePath, contents);
+
+                Assert.Null(symbolService.DownloadSymbolFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData("symbolized_executable", false)]
+        [InlineData("symbolized_executable", true)]
+        [InlineData("stripped_executable", false)]
+        [InlineData("stripped_executable", true)]
+        public void DownloadELFModule(string fixture, bool cached)
+        {
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            try
+            {
+                byte[] contents = File.ReadAllBytes(Path.Combine("TestBinaries", fixture));
+                using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
+                string fileName = cached ? "module" : Path.Combine(directory, "module");
+                TestModule module = new(null, elf.BuildID, fileName);
+                SymbolService symbolService = new(this);
+                string expectedPath = fileName;
+                if (cached)
+                {
+                    SymbolStoreKey key = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, fileName,
+                        elf.BuildID, symbolFile: false, symbolFileName: null).Single();
+                    expectedPath = Path.Combine(directory, key.Index);
+                    Directory.CreateDirectory(Path.GetDirectoryName(expectedPath));
+                    symbolService.AddCachePath(directory);
+                }
+                File.WriteAllBytes(expectedPath, contents);
+                Assert.Equal(expectedPath, symbolService.DownloadModuleFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void DownloadELFDebugLinkPrefersSymbolKey()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            try
+            {
+                byte[] contents = File.ReadAllBytes(Path.Combine("TestBinaries", "symbolized_executable"));
+                using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
+                TestModule module = new("module.full", elf.BuildID);
+                SymbolStoreKey symbolKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.SymbolKey, module.FileName,
+                    elf.BuildID, symbolFile: false, module.GetSymbolFileName()).Single();
+                SymbolStoreKey moduleKey = ELFFileKeyGenerator.GetKeys(KeyTypeFlags.IdentityKey, module.GetSymbolFileName(),
+                    elf.BuildID, symbolFile: false, symbolFileName: null).Single();
+                foreach (SymbolStoreKey key in new[] { symbolKey, moduleKey })
+                {
+                    string fileName = Path.Combine(directory, key.Index);
+                    Directory.CreateDirectory(Path.GetDirectoryName(fileName));
+                    File.WriteAllBytes(fileName, contents);
+                }
+                SymbolService symbolService = new(this);
+                symbolService.AddCachePath(directory);
+
+                // Previously uploaded full binaries may still be stored under the symbol-only key.
+                Assert.Equal(Path.Combine(directory, symbolKey.Index), symbolService.DownloadSymbolFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        private sealed class TestModule : IModule
+        {
+            private readonly string _symbolFileName;
+
+            public TestModule(string symbolFileName, byte[] buildId, string fileName = "module")
+            {
+                _symbolFileName = symbolFileName;
+                BuildId = ImmutableArray.CreateRange(buildId);
+                FileName = fileName;
+            }
+
+            public ITarget Target { get; } = new TestTarget();
+            public string FileName { get; }
+            public ImmutableArray<byte> BuildId { get; }
+            public uint? IndexFileSize => null;
+            public uint? IndexTimeStamp => null;
+            public IEnumerable<PdbFileInfo> GetPdbFileInfos() => Array.Empty<PdbFileInfo>();
+            public string GetSymbolFileName() => _symbolFileName;
+            public IServiceProvider Services => throw new NotImplementedException();
+            public int ModuleIndex => throw new NotImplementedException();
+            public ulong ImageBase => throw new NotImplementedException();
+            public ulong ImageSize => throw new NotImplementedException();
+            public bool IsPEImage => false;
+            public bool IsManaged => false;
+            public bool? IsFileLayout => null;
+            public Version GetVersionData() => throw new NotImplementedException();
+            public string GetVersionString() => throw new NotImplementedException();
+            public string LoadSymbols() => throw new NotImplementedException();
+            public ImmutableArray<byte> GetMetadata() => throw new NotImplementedException();
+        }
+
+        private sealed class TestTarget : ITarget
+        {
+            public OSPlatform OperatingSystem => OSPlatform.Linux;
+            public IHost Host => throw new NotImplementedException();
+            public int Id => throw new NotImplementedException();
+            public Architecture Architecture => Architecture.X64;
+            public bool IsDump => true;
+            public uint? ProcessId => null;
+            public IServiceProvider Services => throw new NotImplementedException();
+            public IServiceEvent OnFlushEvent => throw new NotImplementedException();
+            public IServiceEvent OnDestroyEvent => throw new NotImplementedException();
+            public void Flush() => throw new NotImplementedException();
+            public void Destroy() => throw new NotImplementedException();
         }
 
         [Fact]
@@ -135,20 +409,6 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Null(result);
         }
 
-        [Fact]
-        public void DownloadFileStagesRemoteStoreFileLocally()
-        {
-            byte[] contents = new byte[] { 1, 2, 3, 4 };
-            SymbolService symbolService = new(this);
-            symbolService.SetSymbolStore(new TestSymbolStore(contents, @"\\server\share\mscordaccore.dll"));
-
-            string filePath = symbolService.DownloadFile("mscordaccore.dll/test", "mscordaccore.dll");
-
-            Assert.True(PathUtilities.IsSafeAbsoluteLocalPath(filePath));
-            Assert.StartsWith(_tempDirectory, filePath, StringComparison.OrdinalIgnoreCase);
-            Assert.Equal(contents, File.ReadAllBytes(filePath));
-        }
-
         #region IHost
 
         public IServiceEvent OnShutdownEvent { get; } = new ServiceEvent();
@@ -163,32 +423,9 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         public int AddTarget(ITarget target) => throw new NotImplementedException();
 
-        public string GetTempDirectory()
-        {
-            Directory.CreateDirectory(_tempDirectory);
-            return _tempDirectory;
-        }
+        public string GetTempDirectory() => throw new NotImplementedException();
 
         #endregion
-
-        private sealed class TestSymbolStore : Microsoft.SymbolStore.SymbolStores.SymbolStore
-        {
-            private readonly byte[] _contents;
-            private readonly string _fileName;
-
-            public TestSymbolStore(byte[] contents, string fileName)
-                : base(Microsoft.Diagnostics.DebugServices.Implementation.Tracer.Instance)
-            {
-                _contents = contents;
-                _fileName = fileName;
-            }
-
-            protected override Task<SymbolStoreFile> GetFileInner(SymbolStoreKey key, CancellationToken token)
-            {
-                Stream stream = new MemoryStream(_contents, writable: false);
-                return Task.FromResult(new SymbolStoreFile(stream, _fileName));
-            }
-        }
     }
 
     public static class SymbolServiceExtensions

@@ -9,10 +9,18 @@
     <DotNetFinalVersionKind></DotNetFinalVersionKind>
 
     <!-- Lines intentionally left blank to prevent merge conflicts when upgrading version -->
-    <VersionPrefix>10.0.0</VersionPrefix>
+    <VersionPrefix>11.0.0</VersionPrefix>
 
     <DotNetUseShippingVersions>true</DotNetUseShippingVersions>
     <AutoGenerateAssemblyVersion>true</AutoGenerateAssemblyVersion>
+
+    <!--
+      Embed the cDAC native binary into the diagnostics-tool packages. The cDAC binaries are
+      built and published in InternalAssets independently of this setting. Pass
+      /p:PackageWithCDac=false to fall back to pulling the DAC from the runtime install or
+      symbol server.
+    -->
+    <PackageWithCDac Condition="'$(PackageWithCDac)' == ''">true</PackageWithCDac>
 
     <!--
       Our nightly tools are stable versioned but go to a non-stable feed.
@@ -38,8 +46,8 @@
     <SystemCollectionsImmutableVersion>9.0.11</SystemCollectionsImmutableVersion>
     <!-- Other libs -->
     <MicrosoftBclAsyncInterfacesVersion>9.0.8</MicrosoftBclAsyncInterfacesVersion>
-    <MicrosoftDiaSymReaderNativeVersion>17.10.0-beta1.24272.1</MicrosoftDiaSymReaderNativeVersion>
-    <MicrosoftDiagnosticsTracingTraceEventVersion>3.1.23</MicrosoftDiagnosticsTracingTraceEventVersion>
+    <MicrosoftDiaSymReaderNativeVersion>18.9.0-beta1.26405.2</MicrosoftDiaSymReaderNativeVersion>
+    <MicrosoftDiagnosticsTracingTraceEventVersion>3.2.6</MicrosoftDiagnosticsTracingTraceEventVersion>
     <MicrosoftDotNetXUnitExtensionsVersion>11.0.0-beta.25528.108</MicrosoftDotNetXUnitExtensionsVersion>
     <MicrosoftExtensionsLoggingVersion>8.0.1</MicrosoftExtensionsLoggingVersion>
     <MicrosoftExtensionsLoggingAbstractionsVersion>8.0.3</MicrosoftExtensionsLoggingAbstractionsVersion>
@@ -47,7 +55,8 @@
     <MicrosoftExtensionsConfigurationVersion>8.0.0</MicrosoftExtensionsConfigurationVersion>
     <MicrosoftExtensionsConfigurationJsonVersion>8.0.1</MicrosoftExtensionsConfigurationJsonVersion>
     <MicrosoftExtensionsLoggingConfigurationVersion>8.0.1</MicrosoftExtensionsLoggingConfigurationVersion>
-    <MicrosoftOneCollectRecordTraceVersions>0.1.35021</MicrosoftOneCollectRecordTraceVersions>
+    <MicrosoftOneCollectRecordTraceVersions>0.1.35931</MicrosoftOneCollectRecordTraceVersions>
+    <MoqVersion>4.18.4</MoqVersion>
     <!-- Need version that understands UseAppFilters sentinel. -->
     <MicrosoftExtensionsLoggingEventSourceVersion>10.0.5</MicrosoftExtensionsLoggingEventSourceVersion>
     <SystemComponentModelAnnotationsVersion>5.0.0</SystemComponentModelAnnotationsVersion>
@@ -99,9 +108,9 @@
 
   -->
   <PropertyGroup>
-    <MicrosoftNETCoreApp100Version>10.0.5</MicrosoftNETCoreApp100Version>
-    <MicrosoftNETCoreApp90Version>9.0.14</MicrosoftNETCoreApp90Version>
-    <MicrosoftNETCoreApp80Version>8.0.25</MicrosoftNETCoreApp80Version>
+    <MicrosoftNETCoreApp100Version>10.0.10</MicrosoftNETCoreApp100Version>
+    <MicrosoftNETCoreApp90Version>9.0.18</MicrosoftNETCoreApp90Version>
+    <MicrosoftNETCoreApp80Version>8.0.29</MicrosoftNETCoreApp80Version>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -159,11 +168,13 @@
     <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' != 'default'">
       <RuntimeDownload>$(DotnetRuntimeDownloadVersion)</RuntimeDownload>
       <Runtime>$(DotnetRuntimeDownloadVersion)</Runtime>
+      <TargetFramework>net$([System.Text.RegularExpressions.Regex]::Match('$(DotnetRuntimeDownloadVersion)', '^\d+\.\d+').Value)</TargetFramework>
       <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
     </RuntimeTestVersions>
     <RuntimeTestVersions Include="Latest" Condition="'$(DotnetRuntimeDownloadVersion)' == 'default'">
       <RuntimeDownload>$(DotnetRuntimeVersion)</RuntimeDownload>
       <Runtime>$(DotnetRuntimeVersion)</Runtime>
+      <TargetFramework>net$([System.Text.RegularExpressions.Regex]::Match('$(DotnetRuntimeVersion)', '^\d+\.\d+').Value)</TargetFramework>
       <ExtraInstallArgs>$(ExtraInstallArgs)</ExtraInstallArgs>
     </RuntimeTestVersions>
   </ItemGroup>

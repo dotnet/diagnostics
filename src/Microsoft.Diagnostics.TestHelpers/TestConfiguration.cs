@@ -12,7 +12,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Microsoft.Diagnostics.TestHelpers
 {
@@ -59,9 +58,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                     nugetPackages = Path.Combine(basePath, ".nuget", "packages");
                 }
             }
-            // The TargetArchitecture and NuGetPackageCacheDir can still be overridden
-            // in a config file. This is just setting the default. The other values can
-            // also // be overridden but it is not recommended.
+            // TargetArchitecture, NuGetPackageCacheDir, and DotNetRoot can be overridden
+            // in a config file. These are defaults. Overriding the other values is not recommended.
             Dictionary<string, string> initialConfig = new()
             {
                 ["Timestamp"] = GetTimeStampText(),
@@ -72,8 +70,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                 ["TargetRid"] = GetRid(),
                 ["TargetArchitecture"] = OS.TargetArchitecture.ToString().ToLowerInvariant(),
                 ["NuGetPackageCacheDir"] = nugetPackages,
-                ["TestCDAC"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC"),
-                ["TestCDACNoFallback"] = Environment.GetEnvironmentVariable("SOS_TEST_CDAC_NO_FALLBACK")
+                ["DotNetRoot"] = Environment.GetEnvironmentVariable("DOTNET_ROOT"),
+                ["HelixWorkItemUploadRoot"] = Environment.GetEnvironmentVariable("HELIX_WORKITEM_UPLOAD_ROOT"),
             };
             if (OS.Kind == OSKind.Windows)
             {
@@ -378,7 +376,7 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static TestConfiguration Empty { get; } = new TestConfiguration();
 
-        public static string BaseDir { get; set; } = Path.GetFullPath(".");
+        public static string BaseDir { get; set; } = AppContext.BaseDirectory;
 
         private static readonly Regex versionRegex = GetVersionRegex();
 
@@ -455,13 +453,17 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 sb.Append(".singlefile");
             }
-            if (TestCDACNoFallback)
+            switch (DacMode)
             {
-                sb.Append(".cdac_no_fallback");
-            }
-            else if (TestCDAC)
-            {
-                sb.Append(".cdac");
+                case DacMode.CDacVerify:
+                    sb.Append(".cdacverify");
+                    break;
+                case DacMode.CDac:
+                    sb.Append(".cdac");
+                    break;
+                case DacMode.Dac:
+                    sb.Append(".dac");
+                    break;
             }
             if (UseInterpreter)
             {
@@ -562,19 +564,24 @@ namespace Microsoft.Diagnostics.TestHelpers
         }
 
         /// <summary>
-        /// Returns true if test should use the cDAC.
+        /// Controls which DAC/cDAC the SOS tests load (see <see cref="Microsoft.Diagnostics.TestHelpers.DacMode"/>). The value comes
+        /// from the SOS_TEST_DAC_MODE environment variable, which eng/build.* sets from its -dacMode argument
+        /// (and which direct "dotnet test" runs can set themselves).
         /// </summary>
-        public bool TestCDAC
+        public DacMode DacMode
         {
-            get { return string.Equals(GetValue("TestCDAC"), "true", StringComparison.InvariantCultureIgnoreCase); }
-        }
-
-        /// <summary>
-        /// Returns true if tests should use the cDAC with no fallback to the legacy DAC.
-        /// </summary>
-        public bool TestCDACNoFallback
-        {
-            get { return string.Equals(GetValue("TestCDACNoFallback"), "true", StringComparison.InvariantCultureIgnoreCase); }
+            get
+            {
+                string mode = Environment.GetEnvironmentVariable("SOS_TEST_DAC_MODE");
+                return (mode ?? string.Empty).Trim().ToLowerInvariant() switch
+                {
+                    "" => DacMode.Default,
+                    "cdac" => DacMode.CDac,
+                    "cdacverify" => DacMode.CDacVerify,
+                    "dac" => DacMode.Dac,
+                    _ => throw new NotSupportedException($"Unknown DacMode '{mode}'. Expected cdac, cdacverify, dac, or empty."),
+                };
+            }
         }
 
         /// <summary>
@@ -744,7 +751,7 @@ namespace Microsoft.Diagnostics.TestHelpers
         /// <summary>
         /// The major portion of the runtime framework version
         /// </summary>
-        /// <exception cref="SkipTestException">the RuntimeFrameworkVersion property doesn't exist</exception>
+        /// <exception cref="Xunit.Sdk.SkipException">the RuntimeFrameworkVersion property doesn't exist</exception>
         public int RuntimeFrameworkVersionMajor
         {
             get
@@ -761,7 +768,8 @@ namespace Microsoft.Diagnostics.TestHelpers
                         }
                     }
                 }
-                throw new SkipTestException("RuntimeFrameworkVersion (major) is not valid");
+                Assert.Skip("RuntimeFrameworkVersion (major) is not valid");
+                return default;
             }
         }
 
@@ -898,6 +906,14 @@ namespace Microsoft.Diagnostics.TestHelpers
 
         public static string MakeCanonicalExePath(string maybeRelativePath)
         {
+            return MakeCanonicalExePath(maybeRelativePath, followSymlinks: false);
+        }
+
+        /// <summary>
+        /// Normalizes an executable path, optionally resolving symbolic links in the existing path.
+        /// </summary>
+        public static string MakeCanonicalExePath(string maybeRelativePath, bool followSymlinks)
+        {
             if (string.IsNullOrWhiteSpace(maybeRelativePath))
             {
                 return null;
@@ -907,7 +923,26 @@ namespace Microsoft.Diagnostics.TestHelpers
             {
                 maybeRelativePathWithExtension = maybeRelativePath + ".exe";
             }
-            return MakeCanonicalPath(maybeRelativePathWithExtension);
+            string path = MakeCanonicalPath(maybeRelativePathWithExtension);
+            if (!followSymlinks)
+            {
+                return path;
+            }
+
+            FileInfo file = new(path);
+            FileInfo resolved = new(Path.Combine(ResolveDirectoryPath(file.Directory), file.Name));
+            return resolved.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? resolved.FullName;
+        }
+
+        private static string ResolveDirectoryPath(DirectoryInfo directory)
+        {
+            if (directory.Parent is not DirectoryInfo parent)
+            {
+                return directory.FullName;
+            }
+
+            DirectoryInfo resolved = new(Path.Combine(ResolveDirectoryPath(parent), directory.Name));
+            return resolved.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? resolved.FullName;
         }
 
         public static string MakeCanonicalPath(string maybeRelativePath)
@@ -950,6 +985,35 @@ namespace Microsoft.Diagnostics.TestHelpers
         Linux,
         OSX,
         Unknown,
+    }
+
+    /// <summary>
+    /// Controls which DAC/cDAC the SOS tests load. The harness (SOSRunner) translates this into the
+    /// DOTNET_ENABLE_CDAC / CDAC_NO_FALLBACK environment variables and the "runtimes --usecdac" SOS
+    /// command, so there are no per-mode special cases elsewhere.
+    /// </summary>
+    public enum DacMode
+    {
+        /// <summary>
+        /// Unspecified: the harness applies no DAC/cDAC configuration (SOS uses its default load policy).
+        /// </summary>
+        Default,
+
+        /// <summary>
+        /// cDAC hosted by the in-box DAC, with no fallback to the legacy DAC (still verifies against it).
+        /// </summary>
+        CDacVerify,
+
+        /// <summary>
+        /// The standalone cDAC (mscordaccore_universal) loaded directly through SOS hosting -- the
+        /// canonical cDAC path.
+        /// </summary>
+        CDac,
+
+        /// <summary>
+        /// The legacy in-box DAC only.
+        /// </summary>
+        Dac,
     }
 
     /// <summary>

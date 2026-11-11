@@ -79,7 +79,6 @@ if (CLR_CMAKE_HOST_WIN32)
     ExpressionNode.cpp
     dbgengservices.cpp
     exts.cpp
-    gchist.cpp
     gcroot.cpp
     symbols.cpp
     managedcommands.cpp
@@ -88,7 +87,7 @@ if (CLR_CMAKE_HOST_WIN32)
     sildasm.cpp
     sos.cpp
     sosextensions.cpp
-    stressLogDump.cpp
+    gcinfoprovider.cpp
     strike.cpp
     util.cpp
     vm.cpp
@@ -129,6 +128,8 @@ if (CLR_CMAKE_HOST_WIN32)
     advapi32.lib
     psapi.lib
     ntdll.lib
+    crypt32.lib
+    wintrust.lib
   )
 
   if(NOT CLR_CMAKE_HOST_ARCH_ARM64 AND NOT CLR_CMAKE_HOST_ARCH_ARM)
@@ -147,17 +148,20 @@ else(CLR_CMAKE_HOST_WIN32)
     disasm.cpp
     eeheap.cpp
     exts.cpp
-    gchist.cpp
     gcroot.cpp
     symbols.cpp
     metadata.cpp
     sigparser.cpp
     sildasm.cpp
-    stressLogDump.cpp
+    gcinfoprovider.cpp
     strike.cpp
     sos.cpp
     sosextensions.cpp
     util.cpp
+    clrma/clrma.cpp
+    clrma/managedanalysis.cpp
+    clrma/exception.cpp
+    clrma/thread.cpp
     platform/datatarget.cpp
     platform/hostimpl.cpp
     platform/targetimpl.cpp

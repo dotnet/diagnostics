@@ -1,0 +1,130 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.IO;
+
+namespace SOS.TestHarness;
+
+/// <summary>
+/// An internal, read-only debug session over a specific dump (one <c>(target, stopPoint, flavor)</c>)
+/// loaded into a host, with SOS ready. Because the dump is immutable, a session is safe to reuse
+/// across many assertions, and is memoized by <see cref="Targets"/> and reused by every
+/// <see cref="DeadTarget"/> cursor that navigates to the same point.
+///
+/// Host lifetime differs by backend:
+/// <list type="bullet">
+///   <item><b>cdb</b> runs dbgeng in a <see cref="ChildEngineClient"/> child process. Dump sessions
+///   are distributed across two capacity-1 slots, bounding retained dump mappings while allowing
+///   two independent sessions to execute concurrently.</item>
+///   <item><b>dotnet-dump</b> sessions are distributed across two capacity-1 slots. This materially
+///   reduces analyzer queueing and host churn while keeping retained dump mappings bounded.</item>
+///   <item><b>lldb</b> children retain their loaded core and hosted SOS runtime. Like cdb, they are
+///   distributed across two capacity-1 slots to preserve limited concurrency while bounding memory.</item>
+/// </list>
+/// </summary>
+internal sealed class DumpSession : IPooledHost
+{
+    private readonly Host _hostKind;
+    private readonly HostSlot _slot;
+    private IDebuggerHost? _host;
+
+    // One diagnostics collector for the life of this session (survives a pooled host being closed and
+    // reopened), for the child-process hosts that support capture. Null for the cdb child host.
+    private readonly HostDiagnostics? _diagnostics;
+
+    public Host Host { get; }
+    public string TargetName { get; }
+    public string StopName { get; }
+    public Flavor Flavor { get; }
+    public string DumpPath { get; }
+    public CoreVersion CoreVersion { get; }
+    public Dac Dac { get; }
+    public HostRuntime HostRuntime { get; }
+
+    /// <summary>Captured stdout/stderr and crash dumps for this session's host, or null for the cdb child
+    /// host (which does not support capture). Surfaced in a failing test's replay.</summary>
+    public HostDiagnostics? Diagnostics => _diagnostics;
+
+    internal DumpSession(Host hostKind, string targetName, string stopName, Flavor flavor, string dumpPath,
+                         CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy,
+                         HostRuntime hostRuntime = HostRuntime.Managed)
+    {
+        _hostKind = hostKind;
+        Host = hostKind;
+        TargetName = targetName;
+        StopName = stopName;
+        Flavor = flavor;
+        DumpPath = dumpPath;
+        CoreVersion = coreVersion;
+        Dac = dac;
+        HostRuntime = hostRuntime;
+
+        // Bound resource-heavy dump hosts independently. Cdb uses two slots to retain the suite's
+        // observed two-test concurrency without allowing one EngineHost process per memoized session.
+        _slot = HostSlotPool.HostSlotFor(hostKind);
+
+        // The child-process hosts (lldb, dotnet-dump) capture their stdout/stderr and crash dumps; the cdb
+        // child host runs dbgeng out-of-process and is not wired for capture.
+        _diagnostics = hostKind is Host.Lldb or Host.DotnetDump ? new HostDiagnostics(hostKind.ToString().ToLowerInvariant()) : null;
+
+    }
+
+    /// <summary>
+    /// Run a SOS command against this target (host prefixing handled by the host). A shared target
+    /// may be handed to several tests at once (it is memoized by host/target/stop/flavor), and the
+    /// cdb backend is a single child process whose stdin/stdout pipe is not safe for concurrent
+    /// callers — so non-pooled commands are serialized on a per-target gate. Pooled paths serialize
+    /// themselves on their slot locks.
+    /// </summary>
+    public SosOutput Sos(string command) =>
+        RunCommand("SOS", command, h => h.Sos(command));
+
+    /// <summary>Run a raw debugger command against this target.</summary>
+    public SosOutput Execute(string command) =>
+        RunCommand("Execute", command, h => h.Execute(command));
+
+    public IDisposable AcquireDebuggerSession() => _slot.Acquire(this);
+
+    private SosOutput RunCommand(string kind, string command, Func<IDebuggerHost, SosOutput> action)
+    {
+        try
+        {
+            using (_slot.Acquire(this))
+            {
+                return action(_host!);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException or TimeoutException)
+        {
+            throw new InvalidOperationException(
+                $"Dump session command failed:{Environment.NewLine}" +
+                $"Host={Host}{Environment.NewLine}" +
+                $"Target={TargetName}{Environment.NewLine}" +
+                $"Stop={StopName}{Environment.NewLine}" +
+                $"Flavor={Flavor}{Environment.NewLine}" +
+                $"CoreVersion={CoreVersion}{Environment.NewLine}" +
+                $"Dac={Dac}{Environment.NewLine}" +
+                $"HostRuntime={HostRuntime}{Environment.NewLine}" +
+                $"DumpPath={DumpPath}{Environment.NewLine}" +
+                $"CommandKind={kind}{Environment.NewLine}" +
+                $"Command={command}",
+                ex);
+        }
+    }
+
+    IDebuggerHost IPooledHost.Host => _host!;
+
+    void IPooledHost.OpenHost()
+    {
+        _host = HostFactory.CreateDumpHost(_hostKind, Flavor, DumpPath, Dac, CoreVersion, HostRuntime,
+            SnapshotStore.TargetExe(Flavor, TargetName, CoreVersion), _diagnostics);
+        _host.LoadSos();
+    }
+
+    void IPooledHost.CloseHost()
+    {
+        _host?.Dispose();
+        _host = null;
+    }
+
+}

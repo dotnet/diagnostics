@@ -211,7 +211,7 @@ namespace SOS.Extensions
 
             public ulong End { get; internal set; }
 
-            public ulong Size { get; internal set; }
+            public ulong Size => End <= Start ? 0 : End - Start;
 
             public MemoryRegionType Type { get; internal set; }
 

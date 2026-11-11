@@ -39,6 +39,11 @@ namespace Microsoft.SymbolStore
         /// <summary>
         /// The checksums of the pdb file (if any)
         /// </summary>
+        /// <remarks>
+        /// Checksum validation uses algorithm names supported by IncrementalHash.
+        /// Unsupported algorithms are skipped; at least one supplied checksum must match.
+        /// Null or empty algorithm names throw.
+        /// </remarks>
         public readonly IEnumerable<PdbChecksum> PdbChecksums;
 
         /// <summary>

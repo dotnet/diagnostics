@@ -401,6 +401,93 @@ HRESULT GetNextLevelResourceEntryRVAByName(ICorDebugDataTarget* pDataTarget,
     return hr;
 }
 
+// Reads the PE export directory of the module at baseAddress through the data target and returns
+// the address of the named export.
+//
+// This intentionally does not reuse the name TryGetSymbol (the ELF/MachO reader in elfreader.cpp /
+// machoreader.cpp): the diagnostics dbgutil compiles elfreader.cpp on the Windows host so it can
+// read cross-OS ELF dumps, which already defines TryGetSymbol. A distinct name avoids a duplicate
+// symbol at link time.
+bool TryGetPEExportSymbol(ICorDebugDataTarget* dataTarget, uint64_t baseAddress, const char* symbolName, uint64_t* symbolAddress)
+{
+    *symbolAddress = 0;
+
+    DWORD exportTableRva;
+    if (FAILED(GetMachineAndDirectoryAddress(dataTarget, baseAddress, IMAGE_DIRECTORY_ENTRY_EXPORT, nullptr, &exportTableRva)))
+    {
+        return false;
+    }
+
+    // A module with no export directory reports a zero RVA here; there is nothing to search and
+    // reading at baseAddress would parse the PE headers as an IMAGE_EXPORT_DIRECTORY.
+    if (exportTableRva == 0)
+    {
+        return false;
+    }
+
+    // Manually read the export directory from the target to find the requested symbol.
+    IMAGE_EXPORT_DIRECTORY exportDir{};
+    if (FAILED(ReadFromDataTarget(dataTarget, baseAddress + exportTableRva, (BYTE*)&exportDir, sizeof(exportDir))))
+    {
+        return false;
+    }
+
+    uint32_t namePointerCount = VAL32(exportDir.NumberOfNames);
+    uint32_t exportAddressCount = VAL32(exportDir.NumberOfFunctions);
+    uint32_t addressTableRVA = VAL32(exportDir.AddressOfFunctions);
+    uint32_t ordinalTableRVA = VAL32(exportDir.AddressOfNameOrdinals);
+    uint32_t nameTableRVA = VAL32(exportDir.AddressOfNames);
+
+    for (uint32_t nameIndex = 0; nameIndex < namePointerCount; nameIndex++)
+    {
+        uint32_t namePointerRVA = 0;
+        if (FAILED(ReadFromDataTarget(dataTarget, baseAddress + nameTableRVA + sizeof(uint32_t) * nameIndex, (BYTE*)&namePointerRVA, sizeof(namePointerRVA))))
+        {
+            return false;
+        }
+        if (namePointerRVA != 0)
+        {
+            size_t symbolNameLength = strlen(symbolName);
+            if (symbolNameLength > UINT32_MAX)
+            {
+                // Symbol name is too large, we won't discover it.
+                return false;
+            }
+            // Allocate a buffer for the memory that we'll read out of the target image.
+            // We can allocate as much space as the target symbol name as we gracefully handle reading
+            // inaccessible memory.
+            std::unique_ptr<char[]> namePointer(new char[symbolNameLength + 1]);
+            // If we fail to read the memory or the name doesn't match, then we don't have the right export.
+            if (SUCCEEDED(ReadFromDataTarget(dataTarget, baseAddress + namePointerRVA, (BYTE*)namePointer.get(), (UINT32)symbolNameLength + 1))
+                && strncmp(namePointer.get(), symbolName, symbolNameLength + 1) == 0)
+            {
+                // If the name matches, we should be able to get the ordinal
+                uint16_t ordinalForNamedExport = 0;
+                if (FAILED(ReadFromDataTarget(dataTarget, baseAddress + ordinalTableRVA + sizeof(uint16_t) * nameIndex, (BYTE*)&ordinalForNamedExport, sizeof(ordinalForNamedExport))))
+                {
+                    return false;
+                }
+                // The ordinal indexes the export address table; reject an out-of-range value from
+                // untrusted image data before using it to compute a read offset.
+                if (ordinalForNamedExport >= exportAddressCount)
+                {
+                    return false;
+                }
+                // If the name matches, we should be able to get the export
+                uint32_t exportRVA = 0;
+                if (FAILED(ReadFromDataTarget(dataTarget, baseAddress + addressTableRVA + sizeof(uint32_t) * ordinalForNamedExport, (BYTE*)&exportRVA, sizeof(exportRVA))))
+                {
+                    return false;
+                }
+                *symbolAddress = baseAddress + exportRVA;
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 #endif // HOST_WINDOWS
 
 // A small wrapper that reads from the data target and throws on error

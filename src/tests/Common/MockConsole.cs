@@ -7,7 +7,6 @@ using System.IO;
 using System.Text;
 using Microsoft.Diagnostics.Tools.Common;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics.Tests.Common
 {

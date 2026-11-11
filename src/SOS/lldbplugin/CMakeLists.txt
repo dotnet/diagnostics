@@ -113,8 +113,6 @@ add_compile_options(-Wno-delete-non-virtual-dtor)
 
 include_directories(${ROOT_DIR}/src/SOS/inc)
 include_directories(${ROOT_DIR}/src/SOS/extensions)
-include_directories("${LLDB_H}")
-
 set(SOURCES
     sosplugin.cpp
     soscommand.cpp
@@ -125,10 +123,14 @@ set(SOURCES
 
 set(LIBRARIES
     extensions
+    sos_lldb_dependencies
 )
 
+add_library(sos_lldb_dependencies INTERFACE)
+target_include_directories(sos_lldb_dependencies INTERFACE "${LLDB_H}")
+
 if(NOT ${LLDB_LIB} STREQUAL "")
-    list(APPEND LIBRARIES ${LLDB_LIB})
+    target_link_libraries(sos_lldb_dependencies INTERFACE ${LLDB_LIB})
 endif()
 
 add_library_clr(sosplugin SHARED ${SOURCES})

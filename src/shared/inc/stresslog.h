@@ -211,6 +211,10 @@ public:
     // This function is defined in the tools\strike\stressLogDump.cpp file
     static HRESULT Dump(ULONG64 logAddr, const char* fileName, struct IDebugDataSpaces* memCallBack);
 
+    // Try to dump via ISOSDacInterface17.
+    // Returns S_OK on success, S_FALSE if no messages, or E_NOINTERFACE if unavailable.
+    static HRESULT DumpViaInterface17(const char* fileName, struct IDebugDataSpaces* memCallBack);
+
     static BOOL StressLogOn(unsigned facility, unsigned level);
     static BOOL ETWLogOn(unsigned facility, unsigned level);
     static BOOL LogOn(unsigned facility, unsigned level);

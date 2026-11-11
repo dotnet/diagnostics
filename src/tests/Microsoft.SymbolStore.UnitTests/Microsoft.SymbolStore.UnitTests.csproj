@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <IsHelixTestProject>true</IsHelixTestProject>
     <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
     <NoWarn>;1591;1701</NoWarn>
   </PropertyGroup>
@@ -14,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="$(SrcDir)Microsoft.SymbolStore/Microsoft.SymbolStore.csproj" />
+    <ProjectReference Include="..\..\Microsoft.SymbolManifestGenerator\Microsoft.SymbolManifestGenerator.csproj" />
     <ProjectReference Include="$(TestDir)TestHelpers/TestHelpers.csproj" />
   </ItemGroup>
 
@@ -31,4 +33,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+
+  <Import Project="..\Helix\Managed\HelixPayload.targets" Condition="'$(TargetRid)' == 'linux-x64'" />
 </Project>

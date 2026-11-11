@@ -1,0 +1,532 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+namespace SOS.TestHarness;
+
+/// <summary>
+/// Resolves the external tools the harness drives, pointing every one at the diagnostics repo's
+/// own build outputs (so the harness always validates freshly-built SOS, not a stale machine-wide
+/// install):
+/// <list type="bullet">
+///   <item><c>dbgeng.dll</c> comes from the restored <c>cdb-sos</c> package, so no WinDbg installation
+///   is required.</item>
+///   <item>Native <c>sos.dll</c> comes from the repo's native build output.</item>
+///   <item><c>dotnet-dump</c> is the repo-built tool, run as <c>dotnet dotnet-dump.dll</c>.</item>
+/// </list>
+/// </summary>
+public static class ToolPaths
+{
+    /// <summary>
+    /// Directory containing <c>dbgeng.dll</c>, taken from the restored <c>cdb-sos</c> package's
+    /// <c>runtimes/win-&lt;arch&gt;/native</c> directory. Windows-only; resolved lazily so non-Windows
+    /// hosts never trigger it.
+    /// </summary>
+    public static string DbgEngDirectory => s_dbgEngDirectory.Value;
+
+    /// <summary>Repo-built native SOS (<c>sos.dll</c>) from <see cref="RepoLayout.ArtifactsBinNative"/>.
+    /// Windows-only (the dbgeng <c>.load</c> target); resolved lazily.</summary>
+    public static string SosPath => s_sosPath.Value;
+
+    /// <summary>Repo-built <c>dotnet-dump</c> managed entry point, run as <c>dotnet &lt;dll&gt;</c>.</summary>
+    public static string DotNetDumpDll => s_dotNetDumpDll.Value;
+
+    /// <summary>
+    /// The native lldb plugin (<c>libsosplugin.so</c> on Linux, <c>libsosplugin.dylib</c> on macOS) that
+    /// SOS loads into lldb via <c>plugin load</c>, taken from <see cref="RepoLayout.ArtifactsBinNative"/>.
+    /// Non-Windows; resolved lazily.
+    /// </summary>
+    public static string LldbPluginPath => s_lldbPluginPath.Value;
+
+    /// <summary>
+    /// The <c>lldb</c> executable the harness drives. On macOS the repo-built <c>sos-lldb</c> driver is
+    /// preferred because it embeds Xcode's LLDB framework without inheriting the system executable's
+    /// CoreCLR-hosting restriction. The staged debugger layout, <c>LLDB_PATH</c>, and system LLDB are
+    /// checked in that order. Non-Windows; resolved lazily.
+    /// </summary>
+    public static string LldbExe => s_lldbExe.Value;
+
+    /// <summary>
+    /// The .NET runtime directory SOS hosts its managed extension on (the <c>sethostruntime</c> target).
+    /// Defaults to the repo's locally-acquired <c>.dotnet</c> shared runtime (highest net10 present), so the
+    /// host runtime is deterministic and hermetic rather than auto-detected from <c>PATH</c>. Set
+    /// <c>SOSHARNESS_HOST_RUNTIME_DIR</c> to validate SOS against another complete runtime layout.
+    /// </summary>
+    public static string HostRuntimeDirectory => s_hostRuntimeDirectory.Value;
+
+    /// <summary>
+    /// Full path to the <c>createdump</c> executable the debugger host's hosted .NET runtime can use to
+    /// write a crash dump. NativeAOT components (notably the universal cDAC) may not have a neighboring
+    /// <c>createdump</c>, so the crash-dump environment points explicitly at the one from the host runtime.
+    /// </summary>
+    public static string CreateDumpPath => s_createDumpPath.Value;
+
+    /// <summary>
+    /// Directory containing the DAC (<c>mscordaccore.dll</c> / <c>libmscordaccore.so</c> /
+    /// <c>libmscordaccore.dylib</c>) that matches the runtime a self-contained single-file debuggee of the
+    /// given <paramref name="coreVersion"/> bundles. Self-contained single-file apps carry the runtime
+    /// inside the exe, so a native debugger can't find the DAC next to a runtime on disk and (hermetically)
+    /// can't download it. The cdb host loads it explicitly via <c>.cordll -lp</c>; the lldb host adds it as a
+    /// local symbol-store directory via <c>setsymbolserver -directory</c>. The version is the runtime patch
+    /// the single-file publish resolved against (from the configured test runtime version,
+    /// or the matching runtime pack cache). Returns <c>null</c> if it can't be located.
+    /// </summary>
+    public static string? SingleFileDacDirectory(CoreVersion coreVersion) =>
+        s_singleFileDacDirectory.GetOrAdd(coreVersion, ResolveSingleFileDacDirectory);
+
+    /// <summary>
+    /// Optional local directory containing override universal cDAC and DBI binaries
+    /// (<c>libmscordaccore_universal.so</c> and <c>libmscordbi_universal.so</c>, or platform
+    /// equivalents) for cDAC test rows. Defaults to <c>artifacts/cdac-override/&lt;Configuration&gt;</c>
+    /// and can be overridden with <c>SOSHARNESS_CDAC_DIR</c>.
+    /// </summary>
+    public static string? CDacOverrideDirectory => s_cdacOverrideDirectory.Value;
+
+    /// <summary>
+    /// Installs the universal cDAC and DBI override in the selected host's native lookup directory.
+    /// </summary>
+    internal static void PrepareCDacOverride(Host host)
+    {
+        string destinationDirectory = host switch
+        {
+            Host.Cdb or Host.Lldb => RepoLayout.ArtifactsBinNative,
+            Host.DotnetDump => Path.Combine(Path.GetDirectoryName(DotNetDumpDll)!, RepoLayout.Rid),
+            _ => throw new ArgumentException($"Unknown host '{host}'.", nameof(host)),
+        };
+
+        EnsureCDacOverride(destinationDirectory);
+    }
+
+    // Lazy so each host only resolves the tools it actually needs: the non-Windows lldb/dotnet-dump hosts
+    // never touch the Windows-only dbgeng/sos.dll resolvers (which would throw for lack of those payloads),
+    // and the Windows cdb host never touches the lldb resolvers.
+    private static readonly Lazy<string> s_dbgEngDirectory = new(ResolveDbgEngDirectory);
+    private static readonly Lazy<string> s_sosPath = new(ResolveSosPath);
+    private static readonly Lazy<string> s_dotNetDumpDll = new(ResolveDotNetDumpDll);
+    private static readonly Lazy<string> s_lldbPluginPath = new(ResolveLldbPluginPath);
+    private static readonly Lazy<string> s_lldbExe = new(ResolveLldbExe);
+    private static readonly Lazy<string> s_hostRuntimeDirectory = new(ResolveHostRuntimeDirectory);
+    private static readonly Lazy<string> s_createDumpPath = new(ResolveCreateDumpPath);
+    private static readonly Lazy<string?> s_cdacOverrideDirectory = new(ResolveCDacOverrideDirectory);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<CoreVersion, string?> s_singleFileDacDirectory = new();
+    private static readonly object s_cdacCopyLock = new();
+    private static readonly HashSet<string> s_cdacOverrideDestinations = new(StringComparer.OrdinalIgnoreCase);
+
+    private static string ResolveDbgEngDirectory()
+    {
+        string debuggerPath = Path.Combine(RepoLayout.DebuggerRoot, "cdb.exe");
+        if (File.Exists(debuggerPath))
+        {
+            string dbgEngPath = Path.Combine(RepoLayout.DebuggerRoot, "dbgeng.dll");
+            if (File.Exists(dbgEngPath))
+            {
+                return RepoLayout.DebuggerRoot;
+            }
+
+            throw new FileNotFoundException(
+                $"The staged debugger '{debuggerPath}' does not have dbgeng.dll beside it.",
+                dbgEngPath);
+        }
+
+        string relativeNative = Path.Combine("runtimes", $"win-{RepoLayout.TargetArch}", "native");
+
+        foreach (string root in NuGetPackageRoots())
+        {
+            string pkg = Path.Combine(root, "cdb-sos");
+            if (!Directory.Exists(pkg))
+            {
+                continue;
+            }
+
+            // Prefer the highest version present.
+            foreach (string versionDir in Directory.GetDirectories(pkg).OrderByDescending(d => d, StringComparer.OrdinalIgnoreCase))
+            {
+                string native = Path.Combine(versionDir, relativeNative);
+                if (File.Exists(Path.Combine(native, "dbgeng.dll")))
+                {
+                    return native;
+                }
+            }
+        }
+
+        throw new FileNotFoundException(
+            "Could not locate dbgeng.dll from the cdb-sos package. Restore the harness test project so " +
+            "its PackageDownload populates the NuGet cache.");
+    }
+
+    private static string ResolveSosPath()
+    {
+        string path = Path.Combine(RepoLayout.ArtifactsBinNative, "sos.dll");
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException(
+                $"Repo-built native SOS not found at '{path}'. Build the repo (Build.cmd) so the native " +
+                "SOS is produced for this configuration/architecture.", path);
+        }
+
+        return path;
+    }
+
+    private static string ResolveLldbPluginPath()
+    {
+        string name = OperatingSystem.IsMacOS() ? "libsosplugin.dylib" : "libsosplugin.so";
+        string path = Path.Combine(RepoLayout.ArtifactsBinNative, name);
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException(
+                $"Repo-built lldb SOS plugin not found at '{path}'. Build the repo (./build.sh) so the native " +
+                "lldb plugin is produced for this configuration/architecture.", path);
+        }
+
+        return path;
+    }
+
+    private static string ResolveLldbExe()
+    {
+        // 1) Debugger selected by the payload launcher.
+        string debuggerPath = Path.Combine(
+            RepoLayout.DebuggerRoot,
+            OperatingSystem.IsMacOS() ? "sos-lldb" : "lldb");
+        if (File.Exists(debuggerPath))
+        {
+            return debuggerPath;
+        }
+
+        // 2) The repo-built macOS driver uses the selected Xcode's LLDB framework without running inside
+        //    Apple's restricted LLDB executable.
+        if (OperatingSystem.IsMacOS())
+        {
+            string driver = Path.Combine(RepoLayout.ArtifactsBinNative, "sos-lldb");
+            if (File.Exists(driver))
+            {
+                return driver;
+            }
+        }
+
+        // 3) Existing build-script override.
+        string? env = Environment.GetEnvironmentVariable("LLDB_PATH");
+        if (!string.IsNullOrEmpty(env) && File.Exists(env))
+        {
+            return env;
+        }
+
+        // 4) Xcode's LLDB.
+        if (OperatingSystem.IsMacOS())
+        {
+            string? developerDir = TryRun("xcode-select", "-p");
+            if (!string.IsNullOrWhiteSpace(developerDir))
+            {
+                string candidate = Path.Combine(developerDir.Trim(), "usr", "bin", "lldb");
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        // 5) A plain `lldb` on PATH.
+        string? onPath = FindOnPath("lldb");
+        if (onPath is not null)
+        {
+            return onPath;
+        }
+
+        throw new FileNotFoundException(
+            "Could not locate an 'lldb' executable. Set LLDB_PATH, install lldb " +
+            "on PATH, or (on macOS) install Xcode.");
+    }
+
+    internal static string? ResolveXcodeSharedFrameworksDirectory()
+    {
+        string? developerDir = Environment.GetEnvironmentVariable("DEVELOPER_DIR");
+        if (string.IsNullOrWhiteSpace(developerDir))
+        {
+            developerDir = TryRun("xcode-select", "-p");
+        }
+
+        if (string.IsNullOrWhiteSpace(developerDir))
+        {
+            return null;
+        }
+
+        string sharedFrameworks = Path.GetFullPath(Path.Combine(developerDir.Trim(), "..", "SharedFrameworks"));
+        return Directory.Exists(sharedFrameworks) ? sharedFrameworks : null;
+    }
+
+    private static string ResolveHostRuntimeDirectory()
+    {
+        string? configuredDirectory = Environment.GetEnvironmentVariable("SOSHARNESS_HOST_RUNTIME_DIR");
+        if (!string.IsNullOrEmpty(configuredDirectory))
+        {
+            string directory = Path.GetFullPath(configuredDirectory);
+            string coreClrName = OperatingSystem.IsWindows()
+                ? "coreclr.dll"
+                : OperatingSystem.IsMacOS() ? "libcoreclr.dylib" : "libcoreclr.so";
+            string coreClrPath = Path.Combine(directory, coreClrName);
+            string coreLibPath = Path.Combine(directory, "System.Private.CoreLib.dll");
+            if (File.Exists(coreClrPath) && File.Exists(coreLibPath))
+            {
+                return directory;
+            }
+
+            throw new DirectoryNotFoundException(
+                $"The configured SOS harness host runtime directory '{directory}' must contain " +
+                $"{coreClrName} and System.Private.CoreLib.dll.");
+        }
+
+        // SOS hosts its managed extension on a deterministic runtime from the selected layout. The macOS
+        // Helix payload uses the net11 runtime containing the required CoreCLR hosting fix.
+        string sharedRoot = Path.Combine(RepoLayout.DotNetRoot, "shared", "Microsoft.NETCore.App");
+        string majorPrefix = OperatingSystem.IsMacOS() && RepoLayout.IsHelix ? "11.0." : "10.0.";
+        if (Directory.Exists(sharedRoot))
+        {
+            string? best = Directory.GetDirectories(sharedRoot)
+                .Select(Path.GetFileName)
+                .Where(v => v is not null && v.StartsWith(majorPrefix, StringComparison.Ordinal))
+                .OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+            if (best is not null)
+            {
+                return Path.Combine(sharedRoot, best);
+            }
+        }
+
+        throw new DirectoryNotFoundException(
+            $"Could not locate a {majorPrefix.TrimEnd('.')} host runtime under '{sharedRoot}'.");
+    }
+
+    private static string ResolveCreateDumpPath()
+    {
+        string exe = OperatingSystem.IsWindows() ? "createdump.exe" : "createdump";
+        string candidate = Path.Combine(HostRuntimeDirectory, exe);
+        if (File.Exists(candidate))
+        {
+            return candidate;
+        }
+
+        throw new FileNotFoundException(
+            $"createdump not found at '{candidate}'. Run ./build.sh so the repo's .dotnet runtime is acquired.", candidate);
+    }
+
+    private static string? FindOnPath(string fileName)
+    {
+        string? path = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(path))
+        {
+            return null;
+        }
+
+        foreach (string dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            string candidate = Path.Combine(dir, fileName);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? TryRun(string fileName, string arguments)
+    {
+        try
+        {
+            using System.Diagnostics.Process? p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            });
+            if (p is null)
+            {
+                return null;
+            }
+
+            string output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit(5000);
+            return p.ExitCode == 0 ? output : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string ResolveDotNetDumpDll()
+    {
+        // dotnet-dump targets net8.0 and is published under the repo artifacts; prefer the published
+        // copy (self-contained closure) and fall back to the plain build output.
+        string baseDir = Path.Combine(RepoLayout.ArtifactsBin, "dotnet-dump", RepoLayout.ArtifactsConfiguration, "net8.0");
+        string published = Path.Combine(baseDir, "publish", "dotnet-dump.dll");
+        if (File.Exists(published))
+        {
+            return published;
+        }
+
+        string built = Path.Combine(baseDir, "dotnet-dump.dll");
+        if (File.Exists(built))
+        {
+            return built;
+        }
+
+        throw new FileNotFoundException(
+            $"Repo-built dotnet-dump not found under '{baseDir}'. Build the repo (Build.cmd) so dotnet-dump " +
+            "is produced.", published);
+    }
+
+    private static string? ResolveSingleFileDacDirectory(CoreVersion coreVersion)
+    {
+        string rid = RepoLayout.Rid; // win-x64 / linux-x64 / osx-arm64 / ...
+        string packId = $"microsoft.netcore.app.runtime.{rid}";
+        string relativeNative = Path.Combine("runtimes", rid, "native");
+        string dacFileName = DacFileName; // mscordaccore.dll / libmscordaccore.so / libmscordaccore.dylib
+        int major = CoreVersions.Major(coreVersion);
+
+        // Preferred: the exact runtime version configured for the single-file publish, read straight
+        // from the test runtime installation. The
+        // corresponding runtime pack is not necessarily restored into the user's NuGet cache.
+        string? pinned = CoreVersions.RuntimeVersion(coreVersion);
+        if (!string.IsNullOrEmpty(pinned))
+        {
+            string sharedRuntime = Path.Combine(
+                RepoLayout.DotnetTestRoot,
+                "shared",
+                "Microsoft.NETCore.App",
+                pinned!);
+            if (File.Exists(Path.Combine(sharedRuntime, dacFileName)))
+            {
+                return sharedRuntime;
+            }
+
+            foreach (string root in NuGetPackageRoots())
+            {
+                string native = Path.Combine(root, packId, pinned!, relativeNative);
+                if (File.Exists(Path.Combine(native, dacFileName)))
+                {
+                    return native;
+                }
+            }
+        }
+
+        // Fallback: the highest patch of this major present in the runtime-pack cache.
+        string majorPrefix = $"{major}.0.";
+        foreach (string root in NuGetPackageRoots())
+        {
+            string pkg = Path.Combine(root, packId);
+            if (!Directory.Exists(pkg))
+            {
+                continue;
+            }
+
+            string? best = Directory.GetDirectories(pkg)
+                .Select(Path.GetFileName)
+                .Where(v => v is not null && v.StartsWith(majorPrefix, StringComparison.Ordinal))
+                .OrderByDescending(v => v, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+            if (best is not null)
+            {
+                string native = Path.Combine(pkg, best, relativeNative);
+                if (File.Exists(Path.Combine(native, dacFileName)))
+                {
+                    return native;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ResolveCDacOverrideDirectory()
+    {
+        string? env = Environment.GetEnvironmentVariable("SOSHARNESS_CDAC_DIR");
+        string directory = string.IsNullOrEmpty(env)
+            ? Path.Combine(RepoLayout.Root, "artifacts", "cdac-override", RepoLayout.ArtifactsConfiguration)
+            : env;
+
+        return File.Exists(Path.Combine(directory, CDacFileName)) ? directory : null;
+    }
+
+    private static void EnsureCDacOverride(string destinationDirectory)
+    {
+        string? overrideDirectory = CDacOverrideDirectory;
+        if (overrideDirectory is null)
+        {
+            return;
+        }
+
+        lock (s_cdacCopyLock)
+        {
+            if (s_cdacOverrideDestinations.Contains(destinationDirectory))
+            {
+                return;
+            }
+
+            CopyOverrideFile(CDacFileName);
+            CopyOverrideFile(CDbiFileName);
+            s_cdacOverrideDestinations.Add(destinationDirectory);
+
+            void CopyOverrideFile(string fileName)
+            {
+                string source = Path.Combine(overrideDirectory, fileName);
+                string destination = Path.Combine(destinationDirectory, fileName);
+                if (!File.Exists(destination) || !FilesEqual(source, destination))
+                {
+                    File.Copy(source, destination, overwrite: true);
+                }
+            }
+        }
+    }
+
+    private static bool FilesEqual(string leftPath, string rightPath)
+    {
+        FileInfo leftInfo = new(leftPath);
+        FileInfo rightInfo = new(rightPath);
+        if (leftInfo.Length != rightInfo.Length)
+        {
+            return false;
+        }
+
+        using FileStream left = File.OpenRead(leftPath);
+        using FileStream right = File.OpenRead(rightPath);
+        int leftByte;
+        while ((leftByte = left.ReadByte()) != -1)
+        {
+            if (leftByte != right.ReadByte())
+            {
+                return false;
+            }
+        }
+
+        return right.ReadByte() == -1;
+    }
+
+    /// <summary>The platform-specific DAC module file name: <c>mscordaccore.dll</c> on Windows,
+    /// <c>libmscordaccore.dylib</c> on macOS, <c>libmscordaccore.so</c> elsewhere.</summary>
+    internal static string DacFileName =>
+        OperatingSystem.IsWindows() ? "mscordaccore.dll" :
+        OperatingSystem.IsMacOS() ? "libmscordaccore.dylib" : "libmscordaccore.so";
+
+    private static string CDacFileName =>
+        OperatingSystem.IsWindows() ? "mscordaccore_universal.dll" :
+        OperatingSystem.IsMacOS() ? "libmscordaccore_universal.dylib" : "libmscordaccore_universal.so";
+
+    private static string CDbiFileName =>
+        OperatingSystem.IsWindows() ? "mscordbi_universal.dll" :
+        OperatingSystem.IsMacOS() ? "libmscordbi_universal.dylib" : "libmscordbi_universal.so";
+
+    private static IEnumerable<string> NuGetPackageRoots()
+    {
+        string? env = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
+        if (!string.IsNullOrEmpty(env))
+        {
+            yield return env;
+        }
+
+        yield return Path.Combine(UserProfile, ".nuget", "packages");
+    }
+
+    private static string UserProfile => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+}

@@ -1,0 +1,29 @@
+parameters:
+- name: displayName
+  type: string
+- name: osGroup
+  type: string
+- name: sendParams
+  type: string
+- name: env
+  type: object
+- name: continueOnError
+  type: boolean
+  default: false
+
+steps:
+- ${{ if eq(parameters.osGroup, 'windows') }}:
+  - powershell: >
+      powershell "$env:BUILD_SOURCESDIRECTORY\eng\common\msbuild.ps1
+      ${{ parameters.sendParams }}"
+    displayName: ${{ parameters.displayName }}
+    env: ${{ parameters.env }}
+    continueOnError: ${{ parameters.continueOnError }}
+
+- ${{ if ne(parameters.osGroup, 'windows') }}:
+  - script: >
+      $BUILD_SOURCESDIRECTORY/eng/common/msbuild.sh
+      ${{ parameters.sendParams }}
+    displayName: ${{ parameters.displayName }}
+    env: ${{ parameters.env }}
+    continueOnError: ${{ parameters.continueOnError }}

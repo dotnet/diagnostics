@@ -12,8 +12,6 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
@@ -29,12 +27,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             _output = output;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestTracesPipeline(TestConfiguration config)
         {
-            TestActivityLogger logger = new();
+            TaskCompletionSource<object?> pipelineStartedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<object?> activityLoggedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TestActivityLogger logger = new(pipelineStartedSource, activityLoggedSource);
 
-            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TracesRemoteTest UseActivitySource", _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TracesRemoteTest UseActivitySource WaitForActivitySourceListener", _output))
             {
                 DiagnosticsClient client = new(testRunner.Pid);
 
@@ -47,7 +47,9 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
                 await PipelineTestUtilities.ExecutePipelineWithTracee(
                     pipeline,
-                    testRunner);
+                    testRunner,
+                    activityLoggedSource,
+                    pipelineStartedSource.Task);
             }
 
             Assert.Single(logger.LoggedActivities);
@@ -80,12 +82,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.Equal("18", tags["custom.tag.int"]);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestTracesPipelineWithSamplingRatio(TestConfiguration config)
         {
-            TestActivityLogger logger = new();
+            TaskCompletionSource<object?> pipelineStartedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<object?> activityLoggedSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            TestActivityLogger logger = new(pipelineStartedSource, activityLoggedSource);
 
-            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TracesRemoteTest UseActivitySource", _output))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "TracesRemoteTest UseActivitySource WaitForActivitySourceListener", _output))
             {
                 DiagnosticsClient client = new(testRunner.Pid);
 
@@ -98,14 +102,11 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
                 await PipelineTestUtilities.ExecutePipelineWithTracee(
                     pipeline,
-                    testRunner);
+                    testRunner,
+                    activityLoggedSource,
+                    pipelineStartedSource.Task);
             }
 
-            // ParentRatioSampler used to be unavailable on DiagnosticSource < 9,
-            // which caused the sampler portion of the FilterAndPayloadSpec to be
-            // ignored and no activities to flow. Newer net 8 servicing runtimes
-            // honor it, so all supported TFMs now produce a single (un-recorded)
-            // activity here.
             Assert.Single(logger.LoggedActivities);
 
             var activityData = logger.LoggedActivities[0];
@@ -134,6 +135,17 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
 
         private sealed class TestActivityLogger : IActivityLogger
         {
+            private readonly TaskCompletionSource<object?> _pipelineStartedSource;
+            private readonly TaskCompletionSource<object?> _activityLoggedSource;
+
+            public TestActivityLogger(
+                TaskCompletionSource<object?> pipelineStartedSource,
+                TaskCompletionSource<object?> activityLoggedSource)
+            {
+                _pipelineStartedSource = pipelineStartedSource;
+                _activityLoggedSource = activityLoggedSource;
+            }
+
             public List<(ActivityData, KeyValuePair<string, object?>[])> LoggedActivities { get; } = new();
 
             public void Log(
@@ -141,9 +153,14 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
                 ReadOnlySpan<KeyValuePair<string, object?>> tags)
             {
                 LoggedActivities.Add((activity, tags.ToArray()));
+                _activityLoggedSource.TrySetResult(null);
             }
 
-            public Task PipelineStarted(CancellationToken token) => Task.CompletedTask;
+            public Task PipelineStarted(CancellationToken token)
+            {
+                _pipelineStartedSource.TrySetResult(null);
+                return Task.CompletedTask;
+            }
 
             public Task PipelineStopped(CancellationToken token) => Task.CompletedTask;
         }

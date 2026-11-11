@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>$(DesktopTargetFramework);$(NetCoreAppMinTargetFramework)</TargetFrameworks>
     <AssemblyName>SOS.Hosting</AssemblyName>
     <NoWarn>$(NoWarn);1591;1701;IDE0060</NoWarn>
     <IsPackable>true</IsPackable>
@@ -11,15 +11,21 @@
     <IsShipping>true</IsShipping>
     <IsShippingPackage>false</IsShippingPackage>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == '$(NetCoreAppMinTargetFramework)'">
+    <NoWarn>$(NoWarn);SYSLIB1054;CA1416;CA2249</NoWarn>
+  </PropertyGroup>
   
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DbgShim.UnitTests" />
+  </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="$(MSBuildThisFileDirectory)..\SOS.InstallHelper\SOS.InstallHelper.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.SymbolStore\Microsoft.SymbolStore.csproj" />
-    <Compile Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\PathUtilities.cs" Link="Shared\PathUtilities.cs" />
   </ItemGroup>
 </Project>

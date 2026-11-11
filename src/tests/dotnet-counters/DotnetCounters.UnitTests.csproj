@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <IsHelixTestProject>true</IsHelixTestProject>
     <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
   </PropertyGroup>
 
@@ -17,5 +18,7 @@
   <ItemGroup>
     <PackageReference Include="NewtonSoft.Json" Version="$(NewtonSoftJsonVersion)" />
   </ItemGroup>
+
+  <Import Project="..\CommonTestRunner\HelixPayload.targets" />
 
 </Project>

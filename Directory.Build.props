@@ -29,9 +29,6 @@
   </PropertyGroup>
 
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
-  <PropertyGroup>
-    <CustomAfterTraversalTargets>$(RepoRoot)eng/traversalFixups.targets</CustomAfterTraversalTargets>
-  </PropertyGroup>
 
   <!--
     $(TargetOS) - target operating system (win, linux, osx). Defaults to host OS.
@@ -78,24 +75,25 @@
         This represents the minimum supported .NET Version, so the min version that the tools must
         be able to run against for a simple customer experience.
 
-        NetCoreAppMinTargetFramework and ExtensionsNetCoreSubdirectory in
-        src/SOS/inc/hostservices.h must remain aligned. Otherwise the native CoreCLR host probes a
-        package directory that the build does not produce.
+        NetCoreAppMinTargetFramework, ExtensionsNetCoreSubdirectory in src/SOS/inc/hostservices.h,
+        __targetFramework in build.sh/build-native.cmd, and the Debugger.Tests.Configs must remain
+        aligned. Otherwise the native CoreCLR host probes a package directory that the build does
+        not produce.
      -->
     <NetCoreAppMinVersion>8.0</NetCoreAppMinVersion>
     <NetCoreAppMinTargetFramework>net$(NetCoreAppMinVersion)</NetCoreAppMinTargetFramework>
     <!--
         The TFM our unit tests run as. The tools must remain on $(NetCoreAppMinTargetFramework),
-        but the tests can target a different TFM.
+        but the tests run on the SDK version from global.json, so they can target a newer TFM.
+        Keeping the tests on the live SDK's TFM means the SDK already ships the matching runtime,
+        so no extra shared runtime needs to be installed via global.json's tools.runtimes node.
      -->
-    <NetCoreAppTestVersion>8.0</NetCoreAppTestVersion>
+    <NetCoreAppTestVersion>10.0</NetCoreAppTestVersion>
     <NetCoreAppTestTargetFramework>net$(NetCoreAppTestVersion)</NetCoreAppTestTargetFramework>
     <!-- This is the list of TFMs we build our debuggees and tracees as. -->
     <SupportedSubProcessTargetFrameworks>net8.0;net9.0;net10.0;net11.0</SupportedSubProcessTargetFrameworks>
     <!-- This is the list of TFMs we build our unit tests as. -->
     <SupportedXUnitTestTargetFrameworks>$(NetCoreAppTestTargetFramework)</SupportedXUnitTestTargetFrameworks>
-    <DebugType>portable</DebugType>
-
   </PropertyGroup>
 
 </Project>

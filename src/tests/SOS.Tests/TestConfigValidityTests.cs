@@ -1,0 +1,147 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using Microsoft.Win32;
+using SOS.TestHarness;
+using Xunit;
+
+namespace SOS.Tests;
+
+public sealed class TestConfigValidityTests
+{
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("0", false)]
+    [InlineData("1", true)]
+    public void SingleFileSnapshotExclusionIsStrict(string? value, bool expected)
+    {
+        Assert.Equal(expected, TestConfig.ExcludeSingleFileSnapshots(value));
+    }
+
+    [Theory]
+    [InlineData("true")]
+    [InlineData(" 1")]
+    [InlineData("yes")]
+    public void SingleFileSnapshotExclusionRejectsInvalidValues(string value)
+    {
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => TestConfig.ExcludeSingleFileSnapshots(value));
+
+        Assert.Contains("SOSHARNESS_EXCLUDE_SINGLEFILE_SNAPSHOTS", error.Message);
+    }
+
+    [Fact]
+    public void CDacRequiresSupportedNet11Configuration()
+    {
+        TestConfig config = Config() with { Dac = Dac.CDac, CoreVersion = CoreVersion.Net11 };
+
+        Assert.True(TestConfig.IsDacSupported(config));
+        Assert.False(TestConfig.IsDacSupported(config with { CoreVersion = CoreVersion.Net10 }));
+        Assert.False(TestConfig.IsDacSupported(config with { Flavor = Flavor.Framework }));
+        Assert.True(TestConfig.IsDacSupported(config with { Flavor = Flavor.SingleFile }));
+    }
+
+    [Fact]
+    public void HostRuntimeDefaultsAndValidityAreCorrect()
+    {
+        TestConfig config = Config();
+
+        Assert.Equal(HostRuntime.Managed, config.HostRuntime);
+        Assert.True(TestConfig.IsValid(config with { HostRuntime = HostRuntime.None }));
+        Assert.False(TestConfig.IsValid(config with { Host = Host.DotnetDump, HostRuntime = HostRuntime.None }));
+        Assert.EndsWith("/nohost", (config with { HostRuntime = HostRuntime.None }).ToString());
+    }
+
+    [Theory]
+    [InlineData(Flavor.Core, "linux-musl-x64", true)]
+    [InlineData(Flavor.SingleFile, "linux-x64", true)]
+    [InlineData(Flavor.SingleFile, "linux-musl-x64", false)]
+    [InlineData(Flavor.SingleFile, "linux-musl-arm64", false)]
+    public void MuslExcludesOnlySingleFile(Flavor flavor, string rid, bool expected)
+    {
+        Assert.Equal(expected, TestConfig.IsFlavorSupportedOnRid(flavor, rid));
+    }
+
+    [Fact]
+    public void PreNet10LinuxCreatedumpPermissionFailureSkips()
+    {
+        const string error = "open(/proc/123/mem) FAILED Permission denied (13)";
+
+        HarnessSkipException exception = Assert.Throws<HarnessSkipException>(
+            () => SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+                CoreVersion.Net8, Architecture.X64, isLinux: true, string.Empty, error));
+
+        Assert.Contains("github.com/dotnet/runtime/pull/120000", exception.Message);
+
+        Assert.Throws<HarnessSkipException>(
+            () => SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+                CoreVersion.Net8, Architecture.Arm64, isLinux: true, error, string.Empty));
+        Assert.Throws<HarnessSkipException>(
+            () => SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+                CoreVersion.Net9, Architecture.X64, isLinux: true, error, string.Empty));
+
+        SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+            CoreVersion.Net10, Architecture.X64, isLinux: true, error, string.Empty);
+        SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.X86, isLinux: true, error, string.Empty);
+        SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.X64, isLinux: false, error, string.Empty);
+        SnapshotStore.SkipKnownCreatedumpPermissionFailure(
+            CoreVersion.Net8, Architecture.X64, isLinux: true, "unrelated failure", string.Empty);
+    }
+
+    [Theory]
+    [InlineData(DumpKind.Heap, "2")]
+    [InlineData(DumpKind.Mini, "1")]
+    [InlineData(DumpKind.Full, "4")]
+    public void CreatedumpTypePreservesRequestedKind(DumpKind dumpKind, string expected)
+    {
+        Assert.Equal(expected, SnapshotStore.CreatedumpType(dumpKind));
+    }
+
+    [Theory]
+    [InlineData(Flavor.Core, DumpKind.Heap, false, "Heap")]
+    [InlineData(Flavor.SingleFile, DumpKind.Heap, false, "Heap")]
+    [InlineData(Flavor.SingleFile, DumpKind.Full, false, "Full")]
+    [InlineData(Flavor.SingleFile, DumpKind.Heap, true, "Full")]
+    public void CollectTypeUsesReducedSingleFileDumpsOnUnix(
+        Flavor flavor,
+        DumpKind dumpKind,
+        bool isWindows,
+        string expected)
+    {
+        Assert.Equal(expected, SnapshotStore.CollectType(flavor, dumpKind, isWindows));
+    }
+
+    [Fact]
+    public void CoreFrameworkConfigsUseHeapDumps()
+    {
+        TestConfig[] configs = TestMatrices.CoreFrameworkConfigs([TargetCatalog.Scenarios]).ToArray();
+
+        Assert.NotEmpty(configs);
+        Assert.All(configs, config => Assert.Equal(DumpKind.Heap, config.DumpKind));
+    }
+
+    [Theory]
+    [InlineData(false, RegistryView.Registry32)]
+    [InlineData(true, RegistryView.Registry64)]
+    [SupportedOSPlatform("windows")]
+    public void DumpGenerationRegistryViewMatchesProcessBitness(bool is64BitProcess, RegistryView expected)
+    {
+        Assert.Equal(expected, DumpGenerationRequirements.RegistryViewForProcess(is64BitProcess));
+    }
+
+    private static TestConfig Config() =>
+        new(
+            TargetCatalog.DivZero,
+            OperatingSystem.IsWindows() ? Host.Cdb : Host.Lldb,
+            Flavor.Core,
+            Liveness.Dump,
+            GcType.Workstation,
+            DumpKind.Heap,
+            CoreVersion.Net10,
+            Dac.Legacy);
+}

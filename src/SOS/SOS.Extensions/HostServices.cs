@@ -22,7 +22,7 @@ namespace SOS.Extensions
     /// <summary>
     /// The extension services Wrapper the native hosts are given
     /// </summary>
-    public sealed unsafe class HostServices : COMCallableIUnknown, SOSLibrary.ISOSModule
+    public sealed class HostServices : COMCallableIUnknown, SOSLibrary.ISOSModule
     {
         private static readonly Guid IID_IHostServices = new("27B2CB8D-BDEE-4CBD-B6EF-75880D76D46F");
 
@@ -43,6 +43,7 @@ namespace SOS.Extensions
         private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private readonly HostWrapper _hostWrapper;
+        private ServiceContainer _serviceContainer;
         private ServiceContainer _servicesWithManagedOnlyFilter;
         private TargetFromDebuggerServices _targetFromDebuggerServices;
         private ContextServiceFromDebuggerServices _contextServiceFromDebuggerServices;
@@ -234,6 +235,7 @@ namespace SOS.Extensions
 
                 // Loading extensions or adding service factories not allowed after this point.
                 ServiceContainer serviceContainer = _host.CreateServiceContainer();
+                _serviceContainer = serviceContainer;
 
                 // Add all the global services to the global service container
                 serviceContainer.AddService<SOSLibrary.ISOSModule>(this);
@@ -279,6 +281,18 @@ namespace SOS.Extensions
             }
             catch (InvalidCastException)
             {
+            }
+            try
+            {
+                ThreadStackTraceService threadStackTraceService = new(iunk);
+                // This service needs another reference since it is implemented as part of IDebuggerServices and gets
+                // disposed in Uninitialize() below by the DisposeServices call.
+                threadStackTraceService.AddRef();
+                _host.ServiceContainer.AddService<IThreadStackTraceService>(threadStackTraceService);
+            }
+            catch (InvalidCastException)
+            {
+                Trace.TraceInformation("Debugger stack trace service is not available.");
             }
             hr = DebuggerServices.GetSymbolPath(out string symbolPath);
             if (hr == HResult.S_OK)
@@ -402,14 +416,20 @@ namespace SOS.Extensions
                 // Send shutdown event on exit
                 _host.OnShutdownEvent.Fire();
 
-                // Dispose of the global services which RemoteMemoryService but not host services (this)
-                _host.ServiceContainer.DisposeServices();
-
                 // This turns off any logging to console now that debugger services will be released and the console service will no longer work.
                 DiagnosticLoggingService.Instance.SetConsole(consoleService: null, fileLoggingService: null);
 
-                // Release the debugger services instance
-                DebuggerServices?.ReleaseWithCheck();
+                // Dispose of the global services, including DebuggerServices and RemoteMemoryService, but not host services (this)
+                if (_serviceContainer != null)
+                {
+                    _serviceContainer.DisposeServices();
+                }
+                else
+                {
+                    // Registration can fail before the global container owns the debugger wrapper.
+                    DebuggerServices?.Dispose();
+                }
+
                 DebuggerServices = null;
 
                 // Clear HostService instance

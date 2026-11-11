@@ -1,0 +1,28 @@
+<Project>
+  <!-- Import diagnostics infrastructure without its source-style rules: mirrored files stay upstream-owned. -->
+  <Import Project="..\..\Directory.Build.props" />
+  <PropertyGroup>
+    <PackageRID Condition="'$(PackageRID)' == ''">$(TargetRid)</PackageRID>
+  </PropertyGroup>
+  <Import Project="$(RepositoryEngineeringDir)native\naming.props" />
+
+  <PropertyGroup>
+    <CDacRuntimeRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', 'runtime'))</CDacRuntimeRoot>
+    <CDacSourceManifestRoot>$(CDacRuntimeRoot)</CDacSourceManifestRoot>
+    <LibrariesProjectRoot>$(CDacRuntimeRoot)src\libraries\</LibrariesProjectRoot>
+    <NetCoreAppMinimum>net10.0</NetCoreAppMinimum>
+    <NetCoreAppToolCurrent>net10.0</NetCoreAppToolCurrent>
+    <MicrosoftCodeAnalysisVersion_4_8>$(MicrosoftCodeAnalysisVersion_LatestVS)</MicrosoftCodeAnalysisVersion_4_8>
+    <LangVersion>Latest</LangVersion>
+    <Nullable Condition="'$(Nullable)' == ''">annotations</Nullable>
+    <!-- Match runtime's pointer-to-COM-interface warning policy. -->
+    <NoWarn>$(NoWarn);CS8500;CS8969</NoWarn>
+    <PortableTargetRid>$(TargetRid)</PortableTargetRid>
+    <IsShipping>false</IsShipping>
+    <IsGeneratorProject Condition="$([System.IO.Path]::GetFileName('$(MSBuildProjectDirectory)')) == 'gen'">true</IsGeneratorProject>
+    <PlatformTarget Condition="'$(IsGeneratorProject)' == 'true'">AnyCPU</PlatformTarget>
+    <EnforceExtendedAnalyzerRules Condition="'$(IsGeneratorProject)' == 'true'">true</EnforceExtendedAnalyzerRules>
+  </PropertyGroup>
+
+  <Import Project="native-library.props" Condition="'$(NeedsAotPublish)' == 'true'" />
+</Project>

@@ -1,0 +1,33 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+#pragma once
+
+#include <vector>
+#include "sospriv.h"
+
+// GCInfoData holds decoded GC info for a method, populated from either
+// ISOSDacInterface18 or the legacy GcInfoDecoder/GcInfoDumper.
+struct GCInfoData
+{
+    SOSGCInfoHeader Header;
+    std::vector<SOSCodeRange> InterruptibleRanges;
+    std::vector<SOSGCSlotLifetime> SlotLifetimes;
+    std::vector<unsigned int> SafePoints;
+    SOSGCInfoX86Header X86Header;
+    std::vector<unsigned int> X86Epilogs;
+    std::vector<SOSGCInfoX86Transition> X86Transitions;
+    bool HasX86Info;
+    bool IsValid;
+
+    GCInfoData() : Header{}, X86Header{}, HasX86Info(false), IsValid(false) {}
+
+    // Populate GCInfoData for the method at the given IP via ISOSDacInterface18.
+    // Returns S_FALSE only if Interface18 is absent; other failures must not use the legacy decoder.
+    static HRESULT Create(CLRDATA_ADDRESS methodIP, GCInfoData& out);
+
+    // Format and print the GC info to the debugger output.
+    // If pfnPrintf is NULL, uses ExtOut.
+    typedef void (*printfFtn)(const char* fmt, ...);
+    void DumpToOutput(printfFtn pfnPrintf) const;
+};

@@ -3,6 +3,7 @@
 ; See the LICENSE file in the project root for more information.
 
 bpmd
+clrma
 ClrStack
 dbgout
 DumpALC
@@ -13,7 +14,6 @@ DumpDelegate
 DumpDomain
 DumpGCData
 DumpIL
-DumpLog
 DumpMD
 DumpModule
 DumpMT
@@ -31,12 +31,6 @@ FindRoots
 GCHandles
 GCInfo
 Help
-HistClear
-HistInit
-HistObj
-HistObjFind
-HistRoot
-HistStats
 IP2MD
 PrintException
 runtimes

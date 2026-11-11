@@ -51,11 +51,22 @@ namespace Microsoft.SymbolStore
             {
                 tracer.Information($"Testing checksum: {checksum}");
 
-                HashAlgorithm algorithm = HashAlgorithm.Create(checksum.AlgorithmName);
-                if (algorithm != null)
+                IncrementalHash algorithm;
+                try
+                {
+                    algorithm = IncrementalHash.CreateHash(new HashAlgorithmName(checksum.AlgorithmName));
+                }
+                catch (Exception ex) when (ex is CryptographicException || ex is PlatformNotSupportedException)
+                {
+                    tracer.Warning("Unable to create hash algorithm '{0}': {1}", checksum.AlgorithmName, ex.Message);
+                    continue;
+                }
+
+                using (algorithm)
                 {
                     algorithmNameKnown = true;
-                    byte[] hash = algorithm.ComputeHash(bytes);
+                    algorithm.AppendData(bytes);
+                    byte[] hash = algorithm.GetHashAndReset();
                     if (hash.SequenceEqual(checksum.Checksum))
                     {
                         // If any of the checksums are OK, we're good

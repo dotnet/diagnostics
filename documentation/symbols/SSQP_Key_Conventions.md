@@ -101,7 +101,7 @@ Example:
 
 ### ELF-buildid-sym
 
-The ELF format files indexed with the ELF-buildid-sym suffix are the result of the stripping process and contain only the symbols from the ELF-buildid indexed module. They commonly end in ‘.debug’, ‘.so.dbg’ or ‘.dbg’. The key is computed by reading the 20 byte sequence of the ELF Note section that is named “GNU” and that has note type GNU Build Id (3). If byte sequence is smaller than 20 bytes, bytes of value 0x00 should be added until the byte sequence is 20 bytes long. The file name is not used in the index because there are cases where all we have is the build id. The final key is formatted:
+The ELF format files indexed with the ELF-buildid-sym suffix contain debug information for the ELF-buildid indexed module. These may be separate debug companions produced by stripping, commonly ending in ‘.debug’, ‘.so.dbg’ or ‘.dbg’, or full unstripped images. Unstripped images have two identity keys: the ELF-buildid module key and the ELF-buildid-sym symbol key, both referring to the same file. A SymbolKey request on a module instead generates a lookup key for its debug companion. The key is computed by reading the 20 byte sequence of the ELF Note section that is named “GNU” and that has note type GNU Build Id (3). If byte sequence is smaller than 20 bytes, bytes of value 0x00 should be added until the byte sequence is 20 bytes long. The file name is not used in the index because there are cases where all we have is the build id. The final key is formatted:
 
 `_.debug/elf-buildid-sym-<note_byte_sequence>/_.debug`
 
@@ -120,7 +120,6 @@ Example:
 **Build note bytes:** `0x18, 0x0a, 0x37, 0x3d, 0x6a, 0xfb, 0xab, 0xf0, 0xeb, 0x1f, 0x09, 0xbe, 0x1b, 0xc4, 0x5b, 0xd7`
 
 **Lookup key:** `_.debug/elf-buildid-sym-180a373d6afbabf0eb1f09be1bc45bd700000000/_.debug`
-
 
 ### Mach-uuid
 This applies to any MachO format files that have been stripped of debugging information, commonly ending in 'dylib'. The key is computed by reading the uuid byte sequence of the MachO LC_UUID load command. The final key is formatted:
@@ -195,12 +194,26 @@ Example:
 
 ### WASM (WebAssembly) Modules
 
-WebAssembly symbols, which can be used by browser developer tools to provide source-level debugging experiences, are based on the DWARF format. These are indexed by their DWARF Build ID 
-(built with `-Wl,--build-id` arguments) and the name of the module being debugged via the 
-[buildId property](https://chromedevtools.github.io/devtools-protocol/tot/Debugger/#event-scriptParsed), and the symbol file itself is suffixed with `.s` to disambiguate from the WASM file.
+WebAssembly symbols, which can be used by browser developer tools to provide source-level debugging experiences, are based on the DWARF format. These are indexed by the Build ID stored in the `build_id` custom section of the Wasm binary. The Build ID is a byte sequence typically produced by the linker (e.g., with `-Wl,--build-id` arguments). Both the module and its corresponding symbol file contain the same `build_id` section, allowing them to be matched.
+
+The key uses the actual filename of the file being indexed. For split symbol files, toolchains such as Emscripten produce a separate file (e.g., `foo.debug.wasm`) that contains the DWARF debug sections (`.debug_info`, `.debug_line`, etc.) stripped from the original module.
+
+The final key is formatted as follows:
+
+`<file_name>/<build_id_byte_sequence>/<file_name>`
+
+Example (module):
 
 **File name:** `main.wasm`
 
-**Build ID of file:** `e3b0c44298fc1c149afbf4c8996fb92427ae41e4`
+**Build ID bytes:** `0xe3, 0xb0, 0xc4, 0x42, 0x98, 0xfc, 0x1c, 0x14, 0x9a, 0xfb, 0xf4, 0xc8, 0x99, 0x6f, 0xb9, 0x24, 0x27, 0xae, 0x41, 0xe4`
 
-**Lookup key:**: `main.wasm.s/e3b0c44298fc1c149afbf4c8996fb92427ae41e4/main.wasm.s`
+**Lookup key:** `main.wasm/e3b0c44298fc1c149afbf4c8996fb92427ae41e4/main.wasm`
+
+Example (split symbol file):
+
+**File name:** `main.debug.wasm`
+
+**Build ID bytes:** `(same as module)`
+
+**Lookup key:** `main.debug.wasm/e3b0c44298fc1c149afbf4c8996fb92427ae41e4/main.debug.wasm`

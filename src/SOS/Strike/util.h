@@ -1383,12 +1383,6 @@ BOOL GetSOSVersion(VS_FIXEDFILEINFO *pFileInfo);
 
 BOOL IsDumpFile ();
 const WCHAR GetTargetDirectorySeparatorW();
-bool IsRemoteOrDevicePath(const char* path);
-bool IsSafeAbsoluteLocalPath(const char* path);
-bool IsSafeAbsoluteLocalPath(const WCHAR* path);
-char* GetLastDirectorySeparator(char* path);
-const WCHAR* GetLastDirectorySeparator(const WCHAR* path);
-const WCHAR* GetFileName(const WCHAR* path);
 
 // IsMiniDumpFile will return true if 1) we are in
 // a small format minidump, and g_InMinidumpSafeMode is true.
@@ -1917,25 +1911,6 @@ struct MemRange
 }; //struct MemRange
 
 #ifndef FEATURE_PAL
-
-class StressLogMem
-{
-private:
-    // use a linked list for now, could be optimazied later
-    MemRange * list;
-
-    void AddRange (ULONG64 s, size_t l)
-    {
-        list = new MemRange (s, l, list);
-    }
-
-public:
-    StressLogMem () : list (NULL)
-        {}
-    ~StressLogMem ();
-    bool Init (ULONG64 stressLogAddr, IDebugDataSpaces* memCallBack);
-    bool IsInStressLog (ULONG64 addr);
-}; //class StressLogMem
 
 // An adapter class that DIA consumes so that it can read PE data from the an image
 // This implementation gets the backing data from the image loaded in debuggee memory

@@ -29,6 +29,147 @@ To install the platform's prerequisites and build:
  * [NetBSD Instructions](documentation/building/netbsd-instructions.md)
  * [Testing on private runtime builds](documentation/privatebuildtesting.md)
 
+## Test execution
+
+Projects migrated to Helix provide a `CreateHelixPayload` target and mark
+themselves for exclusion from legacy CI runs in their `.csproj`:
+
+```xml
+<IsHelixTestProject>true</IsHelixTestProject>
+```
+
+The flag defaults to `false`. Normal CI test jobs pass `/p:SkipHelixTests=true`
+to exclude Helix projects, regardless of their payload selection. Local test runs
+do not set this flag and remain enabled. The flag controls only legacy CI exclusion.
+`src/tests/dirs.proj` returns candidate paths from its existing project catalog,
+without evaluating child properties. The sender skips projects without a
+`CreateHelixPayload` target; there is no separate Helix project list.
+
+Each project controls whether to contribute work items through its payload-target
+import or target condition. Unselected projects contribute no items and do not stage files.
+The four initially migrated managed suites require only `TargetRid=linux-x64`, regardless of
+queue name or configuration. They share the existing Linux x64 Helix jobs with
+SOS in both Debug and Release instead of running in a separate managed-only job.
+SOS retains its full matrix.
+
+`EventPipe.UnitTests` and `DotnetGCDump.UnitTests` participate on every configured
+Helix platform because they exercise runtime diagnostics and, for EventPipe,
+child-process execution. Both are excluded from legacy CI execution.
+Helix includes macOS x64 in non-PR builds only.
+
+The NETCore.Client, Monitoring.EventPipe, DotnetCounters, and DotnetTrace suites
+also run on every configured Helix platform and are excluded from legacy CI.
+They import `src/tests/CommonTestRunner/HelixPayload.targets`, which extends the
+managed payload with all projects discovered under `CommonTestRunner/Debuggees`,
+using the same project glob as the debuggee build, for every entry in
+`RuntimeTestVersions`. Suites can use multiple debuggees without a per-suite
+packaging list. DotnetTrace additionally sets `HelixIncludeDotNetTrace`
+to stage the prebuilt tool and provision its runtime.
+
+These payloads replace build-machine configuration with relative artifact paths
+and use the launcher's `DOTNET_ROOT` for child processes. Each configured runtime
+is provisioned through work-item metadata, preserving the tracee runtime matrix.
+Tracees use `sdk.prebuilt` exclusively; missing inputs fail payload creation
+rather than triggering a build or restore on the worker.
+
+`DbgShim.UnitTests` and `Microsoft.Diagnostics.DebugServices.UnitTests` also
+participate on every configured Helix platform. Their payloads include the
+packaged dump fixtures needed by each platform and replace build-machine paths
+with payload-relative configuration. DbgShim stages the native shim and
+`SimpleDebuggee` for every configured runtime, including self-contained
+single-file publishes produced by `Debuggees.proj`. Payload creation rejects
+missing inputs and single-file bundles published for different runtime versions.
+DbgShim uses these prebuilt debuggees for local runs too; build the debuggees
+before running the tests. Tests do not build or publish debuggees on demand.
+Local and Helix runs use the same platform configuration files; Helix supplies
+payload-relative paths and its provisioned runtime through `DOTNET_ROOT`.
+DebugServices stages its Windows debugger dependencies alongside its dump fixtures.
+Existing symbol-server lookups remain unchanged.
+
+`SOS.UnitTests` remains on the legacy CI test jobs. `DotnetStack.UnitTests` remains
+disabled in the project catalog; the Helix migration does not re-enable it.
+
+`src/tests/Directory.Build.targets` applies the legacy-CI skip flag.
+Every project participating in Helix defines or imports a `CreateHelixPayload`
+target, which stages prebuilt artifacts and returns ready-to-run
+`HelixWorkItem` items. The four managed-only projects explicitly import
+`src/tests/Helix/Managed/HelixPayload.targets` when `TargetRid` is `linux-x64`.
+This helper owns their common staging, validation, and work-item metadata.
+It is not imported globally. SOS keeps its separate implementation in
+`SOS.Tests/HelixPayload.targets`.
+
+The shared helper stages the entire assembly output, including `.deps.json`,
+`.runtimeconfig.json`, and dependencies such as `Microsoft.DotNet.RemoteExecutor.dll`.
+RemoteExecutor uses the running `dotnet` host and the test assembly's runtime
+configuration to launch children; it does not require an SDK or a separately
+installed runtime for its own package target framework.
+
+The managed projects explicitly pass `TestHostRuntimeVersion` to their launcher. This property
+defaults to the .NET 10 servicing pin `MicrosoftNETCoreApp100Version` to match
+`NetCoreAppTestTargetFramework`. This host version is independent of the SOS
+debuggee runtime matrix, including private-build and internal servicing modes.
+The helper includes this version in each work item's `RequiredRuntimeVersions`
+metadata so the sender provisions it.
+
+Projects specify native SDK metadata such as `Command`, `Timeout`, `PreCommands`,
+and `PostCommands` on their returned items. They must provide `PayloadDirectory`
+or `PayloadArchive`; the sender does not supply a payload or fill missing metadata.
+Payloads, commands, and timeouts are passed through unchanged. Work-item identities
+must be unique across the selected projects in a job.
+`RequiredRuntimeVersions` metadata lists all runtime versions a work item needs,
+separated by semicolons. It can be omitted when no additional runtimes are needed.
+The sender deduplicates these versions into native `AdditionalDotNetPackage` items,
+without distinguishing test-host and debuggee runtimes. Installing a runtime does not create
+work items or change which tests execute. SDK-wide configuration such as package
+feeds and correlation payloads belongs in the sender, not in test-project getters.
+Use absolute paths for SDK payload files/directories (for example, paths under
+`$(ArtifactsDir)`), since the SDK consumes these items in a separate project.
+
+The managed helper stages each project's assembly output under `tests/<assembly>`
+and selects its launcher using `TargetOS`: `runtests.cmd` invoked with `call` for
+`Windows_NT`, or `runtests.sh` invoked with `bash` otherwise. It then returns a
+directory for the SDK to archive, with explicit launcher arguments and a
+30-minute timeout. The four initially migrated suites remain limited to `linux-x64`;
+EventPipe, DotnetGCDump, and the CommonTestRunner suites use the existing
+cross-platform Helix matrix.
+
+`eng/helix/SendToHelix.proj` is a dedicated `Microsoft.DotNet.Helix.Sdk` project.
+It gets candidate projects, calls `CreateHelixPayload` with
+`SkipNonexistentTargets=true` in parallel, and submits their combined work items
+as one job per queue. The SDK owns queue
+fanout, runtime provisioning, reporting, and waiting. Each queue stages into its
+own payload directory, preventing concurrent queue evaluations from overwriting
+one another. Restore processes the candidate projects' package inputs, including
+projects without Helix targets and SOS's Windows debugger package. Candidate restores
+run sequentially within each queue to avoid concurrent writes to shared dependency
+outputs. The SDK's per-queue restore fan-out is unchanged. Payload creation never
+builds or publishes.
+
+Invoke `eng/helix/SendToHelix.proj /restore /t:Test` with
+`/p:HelixTargetQueues=<queue>` and matching `TargetOS`, `TargetArch`, `TargetRid`,
+and `Configuration` properties. To submit just one project, pass
+`/p:HelixTestProject=<absolute-project-path>`. Its payload condition still applies,
+and an entirely empty job is an error.
+All Helix legs use `eng/pipelines/tests-helix.yml`.
+
+SOS creates its own repository-shaped payload, on-disk ZIP, dedicated launcher, and one work
+item per `RuntimeTestVersions` entry in `eng/Versions.props`, plus the Windows
+Framework shard. SOS includes its test-host version and each shard's `RuntimeDownload`
+version in `RequiredRuntimeVersions`; the managed-only suites do not expand this matrix.
+
+The shared `src/tests/Helix/Managed/runtests.cmd` and `runtests.sh` launchers accept
+`--helix-work-item <assembly>` for the default layout, or `--test-dll <path>`
+and `--report-name <name>` for specialized payloads. Optional `--dotnet-root`
+and `--runtime-version` select the host and runtime. Arguments after `--` are
+forwarded to the test runner. SOS uses its dedicated
+`src/tests/SOS.Tests/Helix/runtests.cmd` and `runtests.sh` launchers
+for debugger preparation, runtime shard selection, and platform-specific cleanup.
+
+Both sets of launchers emit xUnit XML reports with filenames ending in
+`.testResults.xml`, which the Helix reporter recognizes and publishes to Azure
+Pipelines. They do not emit TRX reports, avoiding duplicate result publication.
+SOS also emits HTML reports for inspection.
+
 ## SOS and Other Diagnostic Tools
 
 * [SOS](documentation/sos.md) - About the SOS debugger extension.

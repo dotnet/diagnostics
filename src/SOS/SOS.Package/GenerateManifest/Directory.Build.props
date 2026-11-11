@@ -1,0 +1,13 @@
+<Project>
+  <!--
+    Intentionally empty. Does NOT import the repo Directory.Build.props.
+
+    GenerateManifest.cs runs as a file based app (dotnet run file) from the
+    SOS.Package GenerateGalleryManifest target. The implicit file based build
+    walks up for Directory.Build.props and .targets. Inheriting the repo (Arcade)
+    customizations redirects output through UseArtifactsOutput, so dotnet run
+    computes a RunCommand path under artifacts bin GenerateManifest that does not
+    match the produced binary and fails to launch. Shielding this folder keeps the
+    file based app on the default SDK output layout.
+  -->
+</Project>

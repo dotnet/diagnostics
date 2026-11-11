@@ -11,8 +11,6 @@ using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.Tracing;
 using Microsoft.Diagnostics.Tracing.Etlx;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
@@ -32,13 +30,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             _output = outputHelper;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task BasicEventPipeSessionTest(TestConfiguration config)
         {
             return BasicEventPipeSessionTestCore(config, useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task BasicEventPipeSessionTestAsync(TestConfiguration config)
         {
             return BasicEventPipeSessionTestCore(config, useAsync: true);
@@ -61,13 +59,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             runner.Stop();
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task EventPipeSessionStreamTest(TestConfiguration config)
         {
             return EventPipeSessionStreamTestCore(config, useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task EventPipeSessionStreamTestAsync(TestConfiguration config)
         {
             return EventPipeSessionStreamTestCore(config, useAsync: true);
@@ -110,22 +108,22 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         runner.WakeupTracee();
                     }
-                });
+                }, TestContext.Current.CancellationToken);
                 runner.WriteLine("Waiting for stream Task");
-                streamTask.Wait(10000);
+                await Task.WhenAny(streamTask, Task.Delay(10000, TestContext.Current.CancellationToken));
                 runner.WriteLine("Done waiting for stream Task");
 
                 Assert.True(Volatile.Read(ref evntCnt) > 0);
             }
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task EventPipeSessionUnavailableTest(TestConfiguration config)
         {
             return EventPipeSessionTests.EventPipeSessionUnavailableTestCore(config, useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task EventPipeSessionUnavailableTestAsync(TestConfiguration config)
         {
             return EventPipeSessionTests.EventPipeSessionUnavailableTestCore(config, useAsync: true);
@@ -147,13 +145,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             }));
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task StartEventPipeSessionWithSingleProviderTest(TestConfiguration config)
         {
             return StartEventPipeSessionWithSingleProviderTestCore(config, useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public Task StartEventPipeSessionWithSingleProviderTestAsync(TestConfiguration config)
         {
             return StartEventPipeSessionWithSingleProviderTestCore(config, useAsync: true);
@@ -173,12 +171,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
             runner.Stop();
         }
 
-        [SkippableTheory(Skip = "https://github.com/dotnet/diagnostics/issues/4717"), MemberData(nameof(Configurations))]
+        [Theory(Skip = "https://github.com/dotnet/diagnostics/issues/4717"), MemberData(nameof(Configurations))]
         public async Task StartEventPipeSessionWithoutStackwalkTestAsync(TestConfiguration testConfig)
         {
             if (testConfig.RuntimeFrameworkVersionMajor < 9)
             {
-                throw new SkipTestException("Not supported on < .NET 9.0");
+                Assert.Skip("Not supported on < .NET 9.0");
             }
 
             await using TestRunner runner = await TestRunner.Create(testConfig, _output, "Tracee");
@@ -214,9 +212,9 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     {
                         runner.WakeupTracee();
                     }
-                });
+                }, TestContext.Current.CancellationToken);
                 runner.WriteLine("Waiting for stream Task");
-                streamTask.Wait(10000);
+                await Task.WhenAny(streamTask, Task.Delay(10000, TestContext.Current.CancellationToken));
                 runner.WriteLine("Done waiting for stream Task");
                 session.Stop();
                 await streamTask;

@@ -26,9 +26,7 @@ pr:
   autoCancel: true
   branches:
     include:
-    - main
-    - release/*
-    - internal/*
+    - '*'
   paths:
     exclude:
     - documentation/*
@@ -46,13 +44,14 @@ variables:
   parameters:
     runtimeFeed: ${{ parameters.runtimeFeed }}
     runtimeFeedToken: ${{ parameters.runtimeFeedToken }}
+- template: /eng/pipelines/helix-platforms.yml
 
 extends:
   template: /eng/pipelines/pipeline-resources.yml
   parameters:
     stages:
     - stage: build
-      displayName: Build Diagnostics
+      displayName: Diagnostics
       jobs:
 
         ############################
@@ -74,238 +73,82 @@ extends:
       #                          #
       ############################
 
-      - template: /eng/pipelines/build.yml
+      - template: /eng/pipelines/platform-matrix.yml
         parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          name: Windows
-          osGroup: Windows_NT
-          buildOnly: true
-          publishTestArtifacts: true
-          buildConfigs:
-          - configuration: Debug
-            architecture: x64
-            artifactUploadPath: bin/Windows_NT.x64.Debug
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin
-          - configuration: Release
-            architecture: x86
-            artifactUploadPath: bin/Windows_NT.x86.Release
+          jobTemplate: /eng/pipelines/build.yml
+          isOfficialBuild: ${{ variables.isOfficialBuild }}
+          configurations:
+          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+            - Debug
+          - ${{ else }}:
+            - Release
+            - Debug
+          platforms:
+          - win-x64
+          - win-x86
+          - win-arm64
+          - linux-x64
+          - linux-arm64
+          - linux-musl-x64
+          - osx-x64
+          - osx-arm64
           - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-            - configuration: Release
-              architecture: arm64
-              artifactUploadPath: bin/Windows_NT.arm64.Release
+            - linux-arm
+            - linux-musl-arm
+            - linux-musl-arm64
+          jobParameters:
+            pipelineJobTemplate: ${{ variables.jobTemplate }}
 
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          osGroup: Linux
-          container: linux_x64
-          crossBuild: true
-          buildOnly: true
-          publishTestArtifacts: true
-          buildConfigs:
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin/linux.x64.Release
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - configuration: Debug
-              architecture: x64
-              artifactUploadPath: bin/linux.x64.Debug
+      ############################
+      #                          #
+      #        Test legs         #
+      #                          #
+      ############################
 
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          name: Linux_musl
-          osGroup: Linux
-          osSuffix: -musl
-          container: linux_musl_x64
-          crossBuild: true
-          buildOnly: true
-          publishTestArtifacts: true
-          buildConfigs:
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin/linux.x64.Release
-            artifactTargetPath: bin/linux-musl.x64.Release
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - configuration: Debug
-              architecture: x64
-              artifactUploadPath: bin/linux.x64.Debug
-              artifactTargetPath: bin/linux-musl.x64.Debug
-
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          osGroup: MacOS
-          buildOnly: true
-          publishTestArtifacts: true
-          buildConfigs:
-          - configuration: Release
-            architecture: x64
-            artifactUploadPath: bin/osx.x64.Release
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - configuration: Debug
-              architecture: x64
-              artifactUploadPath: bin/osx.x64.Debug
-
-      - template: /eng/pipelines/build.yml
-        parameters:
-          jobTemplate: ${{ variables.jobTemplate }}
-          osGroup: MacOS
-          crossBuild: true
-          buildOnly: true
-          buildConfigs:
-          - configuration: Release
-            architecture: arm64
-            artifactUploadPath: bin/osx.arm64.Release
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - configuration: Debug
-              architecture: arm64
-
-      - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-        - template: /eng/pipelines/build.yml
+      - ${{ if ne(parameters.buildOnly, true) }}:
+        - template: /eng/pipelines/platform-matrix.yml
           parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Linux
-            container: linux_arm
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm
-              artifactUploadPath: bin/linux.arm.Release
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            osGroup: Linux
-            container: linux_arm64
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm64
-              artifactUploadPath: bin/linux.arm64.Release
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Linux_musl
-            osGroup: Linux
-            osSuffix: -musl
-            container: linux_musl_arm
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm
-              artifactUploadPath: bin/linux.arm.Release
-              artifactTargetPath: bin/linux-musl.arm.Release
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Linux_musl
-            osGroup: Linux
-            osSuffix: -musl
-            container: linux_musl_arm64
-            crossBuild: true
-            buildOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: arm64
-              artifactUploadPath: bin/linux.arm64.Release
-              artifactTargetPath: bin/linux-musl.arm64.Release
-
-    ############################
-    #                          #
-    #        Test stage        #
-    #                          #
-    ############################
-
-    - ${{ if ne(parameters.buildOnly, true) }}:
-      - stage: test
-        displayName: Test Diagnostics
-        dependsOn: build
-        jobs:
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Windows_Test
-            osGroup: Windows_NT
-            dependsOn: Windows
-            testOnly: true
-            buildConfigs:
-            - configuration: Debug
-              architecture: x64
-            - configuration: Release
-              architecture: x64
-            - configuration: Release
-              architecture: x86
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: MacOS_Test
-            osGroup: MacOS
-            dependsOn: MacOS
-            testOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
+            jobTemplate: /eng/pipelines/build.yml
+            isOfficialBuild: ${{ variables.isOfficialBuild }}
+            configurations:
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
+              - Debug
+            - ${{ else }}:
+              - Release
+              - Debug
+            platforms:
+            - win-x64
+            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+              - win-x86
+            - osx-x64
+            - linux-x64
+            - linux-musl-x64
+            jobParameters:
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
+              testOnly: true
 
-        - template: /eng/pipelines/build.yml
+        - template: /eng/pipelines/platform-matrix.yml
           parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Ubuntu_22_04
-            osGroup: Linux
-            container: test_ubuntu_22_04
-            dependsOn: Linux
-            testOnly: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
+            jobTemplate: /eng/pipelines/tests-helix.yml
+            isOfficialBuild: ${{ variables.isOfficialBuild }}
+            configurations:
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
-
-        - template: /eng/pipelines/build.yml
-          parameters:
-            jobTemplate: ${{ variables.jobTemplate }}
-            name: Alpine3_23
-            osGroup: Linux
-            osSuffix: -musl
-            container: test_linux_musl_x64
-            dependsOn: Linux_musl
-            testOnly: true
-            disableComponentGovernance: true
-            buildConfigs:
-            - configuration: Release
-              architecture: x64
-            - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-              - configuration: Debug
-                architecture: x64
-
-        # - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-        #   - template: /eng/pipelines/build.yml
-        #     parameters:
-        #       jobTemplate: ${{ variables.jobTemplate }}
-        #       name: Fedora_43
-        #       osGroup: Linux
-        #       container: test_fedora
-        #       dependsOn: Linux
-        #       testOnly: true
-        #       buildConfigs:
-        #       - configuration: Release
-        #         architecture: x64
-        #       - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-        #         - configuration: Debug
-        #           architecture: x64
+              - Debug
+            - ${{ else }}:
+              - Release
+              - Debug
+            platforms:
+            - win-x64
+            - win-x86
+            - win-arm64
+            - linux-x64
+            - linux-arm64
+            - linux-musl-x64
+            - osx-arm64
+            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+              - osx-x64
+            jobParameters:
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
 
     ############################
     #                          #
@@ -406,7 +249,7 @@ extends:
         repoAllowList: https://github.com/dotnet/diagnostics https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics
         productAllowList: diagnostics dotnet-diagnostics
         skipFileList: MergedManifest.xml
-        ${{ if eq(variables['isOfficialBuild'], 'true') }}:
+        ${{ if eq(variables.isOfficialBuild, true) }}:
           dependsOn: [ publish_using_darc ]
         ${{ else }}:
           dependsOn: [ build ]

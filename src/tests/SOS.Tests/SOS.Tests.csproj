@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsHelixTestProject>true</IsHelixTestProject>
+    <!-- net10.0 only: the harness depends on Microsoft.Diagnostics.Runtime.Utilities, which ships
+         net10.0-only, so the test project must target net10.0 (overriding the repo's net8.0 default). -->
+    <TargetFrameworks>$(NetCoreAppTestTargetFramework)</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
+    <ProjectReference Include="..\SOS.TestHarness\SOS.TestHarness.csproj" />
+    <ProjectReference Include="..\SOS.TestHarness.SourceGen\SOS.TestHarness.SourceGen.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Debuggee sources whose public const / static-readonly fields are mirrored into the test project
+         (TestTargets.<Type>.<Field>) by the source generator, for value-oracle assertions. -->
+    <AdditionalFiles Include="..\SOS.UnitTests\Debuggees\SosHarnessScenarios\SosHarnessScenarios.cs" />
+  </ItemGroup>
+
+  <Import Project="HelixPayload.targets" />
+
+</Project>

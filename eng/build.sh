@@ -30,8 +30,8 @@ __PrivateBuild=0
 __Test=0
 __TestFilter=
 __UnprocessedBuildArgs=
-__UseCdac=0
-__NoFallback=0
+__DacMode=
+__CDacPath=
 __TestInterpreter=0
 __LiveRuntimeDir=
 
@@ -40,6 +40,8 @@ usage_list+=("-skipnative: do not build native components.")
 usage_list+=("-test: run xunit tests")
 usage_list+=("-methodfilter: pass method filter to xunit runner (Namespace.ClassName.MethodName)")
 usage_list+=("-classfilter: pass class filter to xunit runner (Namespace.ClassName)")
+usage_list+=("-dacmode: which DAC/cDAC the SOS tests load: cdac, cdacverify, or dac.")
+usage_list+=("-cdacpath: path to an mscordaccore_universal to overlay next to SOS. This option also copies the universal DBI found next to the cdac).")
 
 handle_arguments() {
     lowerI="$(echo "${1/--/-}" | tr "[:upper:]" "[:lower:]")"
@@ -106,21 +108,25 @@ handle_arguments() {
             ;;
 
         methodfilter|-methodfilter)
-            __TestFilter="-method $2"
+            __TestFilterProperty="DiagnosticsTestMethodFilter"
+            __TestFilter="$2"
             __ShiftArgs=1
             ;;
         
         classfilter|-classfilter)
-            __TestFilter="-class $2"
+            __TestFilterProperty="DiagnosticsTestClassFilter"
+            __TestFilter="$2"
             __ShiftArgs=1
             ;;
 
-        usecdac|-usecdac)
-            __UseCdac=1
+        dacmode|-dacmode)
+            __DacMode="$(echo "$2" | tr "[:upper:]" "[:lower:]")"
+            __ShiftArgs=1
             ;;
 
-        nofallback|-nofallback)
-            __NoFallback=1
+        cdacpath|-cdacpath)
+            __CDacPath="$2"
+            __ShiftArgs=1
             ;;
 
         testinterpreter|-testinterpreter)
@@ -140,9 +146,17 @@ handle_arguments() {
 
 source "$__RepoRootDir"/eng/native/build-commons.sh
 
-if [[ "$__NoFallback" == 1 && "$__UseCdac" != 1 ]]; then
-    echo "-nofallback requires -usecdac to also be specified."
+case "$__DacMode" in
+    ""|cdac|cdacverify|dac) ;;
+    *) echo "Invalid -dacmode '$__DacMode'. Expected cdac, cdacverify, or dac."; exit 1 ;;
+esac
+if [[ -n "$__CDacPath" && "$__DacMode" != "cdac" ]]; then
+    echo "-cdacpath is only valid with -dacmode cdac."
     exit 1
+fi
+
+if [[ "$__TestInterpreter" == 1 ]]; then
+    export SOS_TEST_INTERPRETER="true"
 fi
 
 __LogsDir="$__RootBinDir/log/$__BuildType"
@@ -226,12 +240,46 @@ if [[ "$__NativeBuild" == 1 ]]; then
         exit 1
     fi
 
+    source "$__RepoRootDir/src/dbi/build.sh"
+    if ! build_universal_dbi "$__TargetOS" "$__TargetArch" "$__ConfigTriplet" "$__ArtifactsIntermediatesDir" "$__BinDir" "$__ExtraCmakeArgs" "$__LogsDir/dbi-build.log" "$__TargetRid"; then
+        exit 1
+    fi
+
     build_native "$__TargetOS" "$__TargetArch" "$__RepoRootDir" "$__IntermediatesDir" "install" "$__ExtraCmakeArgs" "diagnostic component" | tee "$__LogsDir"/make.log
 
     if [ "${PIPESTATUS[0]}" != 0 ]; then
         echo "Native build FAILED"
         exit 1
     fi
+fi
+
+#
+# Overlay an externally-provided cDAC next to the freshly built sos. SOS resolves the cDAC
+# and universal DBI from its own native binaries directory, so both files must come from the runtime
+# under test instead of mixing one with the copy restored from a referenced runtime package.
+#
+if [[ -n "$__CDacPath" ]]; then
+    if [[ ! -f "$__CDacPath" ]]; then
+        echo "-cdacpath '$__CDacPath' does not exist."
+        exit 1
+    fi
+    if [[ "$__TargetOS" == "osx" ]]; then
+        __CDacDestName="libmscordaccore_universal.dylib"
+        __DbiName="libmscordbi_universal.dylib"
+    else
+        __CDacDestName="libmscordaccore_universal.so"
+        __DbiName="libmscordbi_universal.so"
+    fi
+    __DbiPath="$(dirname "$__CDacPath")/$__DbiName"
+    if [[ ! -f "$__DbiPath" ]]; then
+        echo "-cdacpath requires the matching universal DBI at '$__DbiPath'."
+        exit 1
+    fi
+    mkdir -p "$__BinDir"
+    echo "Overlaying cDAC: $__CDacPath -> $__BinDir/$__CDacDestName"
+    cp -f "$__CDacPath" "$__BinDir/$__CDacDestName"
+    echo "Overlaying universal DBI: $__DbiPath -> $__BinDir/$__DbiName"
+    cp -f "$__DbiPath" "$__BinDir/$__DbiName"
 fi
 
 #
@@ -311,22 +359,14 @@ if [[ "$__Test" == 1 ]]; then
       # The .NET createdump facility writes dumps directly and is not affected by ulimit.
       ulimit -c 0
 
-      if [[ "$__UseCdac" == 1 ]]; then
-          export SOS_TEST_CDAC="true"
-      fi
-
-      if [[ "$__NoFallback" == 1 ]]; then
-          export SOS_TEST_CDAC_NO_FALLBACK="true"
-      fi
-
-      if [[ "$__TestInterpreter" == 1 ]]; then
-          export SOS_TEST_INTERPRETER="true"
+      if [[ -n "$__DacMode" ]]; then
+          export SOS_TEST_DAC_MODE="$__DacMode"
       fi
 
       # Build the test filter argument if provided
       __TestFilterArg=
       if [[ -n "$__TestFilter" ]]; then
-          __TestFilterArg="/p:TestRunnerAdditionalArguments=\"$__TestFilter\""
+          __TestFilterArg="/p:$__TestFilterProperty=\"$__TestFilter\""
       fi
 
       # When the managed build was skipped (e.g. the test-only CI legs that download prebuilt
@@ -353,6 +393,14 @@ if [[ "$__Test" == 1 ]]; then
           fi
       fi
 
+      # A filter is applied to every test project. xUnit v3 projects ignore the zero-tests exit
+      # code for individual projects, so clear prior results and verify that at least one test
+      # matched across the full traversal.
+      __ResultsDir="$__RootBinDir/TestResults/$__BuildType"
+      if [[ -n "$__TestFilter" && -d "$__ResultsDir" ]]; then
+          rm -f "$__ResultsDir"/*.xml
+      fi
+
       # __CommonMSBuildArgs contains TargetOS property
       "$__RepoRootDir/eng/common/build.sh" \
         --test \
@@ -368,10 +416,26 @@ if [[ "$__Test" == 1 ]]; then
         /p:RuntimeSourceFeedKey="$__RuntimeSourceFeedKey" \
         /p:LiveRuntimeDir="$__LiveRuntimeDir" \
         "$__TestFilterArg" \
-        $__CommonMSBuildArgs
+        $__CommonMSBuildArgs \
+        $__UnprocessedBuildArgs
 
       if [ $? != 0 ]; then
           exit 1
+      fi
+
+      if [[ -n "$__TestFilter" ]]; then
+          __TestsRan=0
+          if [[ -d "$__ResultsDir" ]]; then
+              __TestsRan=$(cat "$__ResultsDir"/*.xml 2>/dev/null | grep -oE '<assembly [^>]*total="[0-9]+"' | grep -oE 'total="[0-9]+"' | grep -oE '[0-9]+' | awk '{s+=$1} END {print s+0}')
+          fi
+          if [[ -z "$__TestsRan" ]]; then
+              __TestsRan=0
+          fi
+          if [[ "$__TestsRan" == 0 ]]; then
+              echo "ERROR: The test filter matched zero tests across all projects. Check the -methodfilter/-classfilter value."
+              exit 1
+          fi
+          echo "Test filter matched $__TestsRan test(s) across the run."
       fi
    fi
 fi

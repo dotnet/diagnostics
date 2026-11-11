@@ -1,0 +1,289 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Disable system core dumps for test debuggees that intentionally crash.
+# The .NET createdump facility writes dumps directly and is not affected by ulimit.
+ulimit -c 0
+
+: "${HELIX_WORKITEM_UPLOAD_ROOT:?HELIX_WORKITEM_UPLOAD_ROOT is required}"
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+upload="$HELIX_WORKITEM_UPLOAD_ROOT"
+identity="all"
+
+helix_work_item=""
+runtime_override=""
+runtime_version=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --helix-work-item)
+      if [[ $# -lt 2 ]]; then
+        echo "Argument '$1' requires a value." >&2
+        exit 3
+      fi
+      helix_work_item="$2"
+      shift 2
+      ;;
+    --runtime-override)
+      if [[ $# -lt 2 ]]; then
+        echo "Argument '$1' requires a value." >&2
+        exit 3
+      fi
+      runtime_override="$2"
+      shift 2
+      ;;
+    --runtime-version)
+      if [[ $# -lt 2 ]]; then
+        echo "Argument '$1' requires a value." >&2
+        exit 3
+      fi
+      runtime_version="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown argument '$1'." >&2
+      exit 3
+      ;;
+  esac
+done
+
+if [[ -n "$runtime_override" && -z "$runtime_version" ]]; then
+  echo "--runtime-version is required with --runtime-override." >&2
+  exit 3
+fi
+
+mkdir -p "$upload"
+
+rid="$(sed -n '1p' "$root/.sos-test-payload")"
+configuration="$(sed -n '2p' "$root/.sos-test-payload")"
+extra_metadata="$(sed -n '3p' "$root/.sos-test-payload")"
+if [[ -z "$rid" || -z "$configuration" || -n "$extra_metadata" ]]; then
+  echo "The payload marker must contain the RID and configuration." >&2
+  exit 3
+fi
+
+if [[ -n "$helix_work_item" ]]; then
+  identity="${helix_work_item##*-}"
+  case "$identity" in
+    Net[0-9]*)
+      export SOSHARNESS_ONLY_COREVERSIONS="$identity"
+      if [[ -n "$runtime_override" ]]; then
+        export SOSHARNESS_ONLY_FLAVORS="Core"
+      else
+        export SOSHARNESS_ONLY_FLAVORS="Core,SingleFile"
+      fi
+      ;;
+    Framework)
+      export SOSHARNESS_ONLY_FLAVORS="Framework"
+      ;;
+    *)
+      echo "The Helix work item '$helix_work_item' does not identify a runtime or Framework shard." >&2
+      exit 3
+      ;;
+  esac
+  echo "Running SOS shard $identity."
+fi
+
+test_dlls=("$root/artifacts/bin/SOS.Tests/$configuration/"*/SOS.Tests.dll)
+if [[ ${#test_dlls[@]} -ne 1 || ! -f "${test_dlls[0]}" ]]; then
+  echo "Expected exactly one staged SOS.Tests.dll for $configuration." >&2
+  exit 3
+fi
+test_dll="${test_dlls[0]}"
+
+max_parallel_threads=""
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  max_parallel_threads=2
+elif [[ "$rid" == linux-musl-* || "$rid" == linux-arm64 ]]; then
+  max_parallel_threads=1
+fi
+
+prepare_dotnet_root()
+{
+  dotnet_root="${HELIX_CORRELATION_PAYLOAD:?HELIX_CORRELATION_PAYLOAD is required}/dotnet-cli"
+  if [[ ! -x "$dotnet_root/dotnet" ]]; then
+    echo "The Helix-provisioned dotnet host was not found at '$dotnet_root/dotnet'." >&2
+    exit 3
+  fi
+
+  if [[ -n "$runtime_override" ]]; then
+    runtime_override_root="$root/$runtime_override"
+    target_runtime_root="$dotnet_root/shared/Microsoft.NETCore.App/$runtime_version"
+    if [[ ! -f "$runtime_override_root/System.Private.CoreLib.dll" ]]; then
+      echo "The private runtime override was not found at '$runtime_override_root'." >&2
+      exit 3
+    fi
+    if [[ ! -f "$target_runtime_root/System.Private.CoreLib.dll" ]]; then
+      echo "The Helix-provisioned runtime was not found at '$target_runtime_root'." >&2
+      exit 3
+    fi
+    echo "Overlaying private runtime from '$runtime_override_root' onto '$target_runtime_root'."
+    cp -a "$runtime_override_root/." "$target_runtime_root/"
+    if [[ -f "$target_runtime_root/createdump" ]]; then
+      chmod +x "$target_runtime_root/createdump"
+    fi
+  fi
+}
+
+configure_lldb()
+{
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    driver="$root/debugger/sos-lldb"
+    if [[ ! -f "$driver" ]]; then
+      echo "The SOS LLDB driver was not found at '$driver'." >&2
+      exit 4
+    fi
+
+    chmod +x "$driver"
+
+    developer_dir="${DEVELOPER_DIR:-$(xcode-select -p)}"
+    shared_frameworks="$(cd "$developer_dir/../SharedFrameworks" && pwd)"
+    if [[ ! -d "$shared_frameworks/LLDB.framework" ]]; then
+      echo "LLDB.framework was not found under the selected Xcode at '$shared_frameworks'." >&2
+      exit 4
+    fi
+    export DYLD_FRAMEWORK_PATH="$shared_frameworks${DYLD_FRAMEWORK_PATH:+:$DYLD_FRAMEWORK_PATH}"
+
+    lldb_check="$("$driver" --no-lldbinit --batch \
+      -o 'script print("__SOSHARNESS_LLDB_READY__")' 2>&1 || true)"
+    if [[ "$lldb_check" != *"__SOSHARNESS_LLDB_READY__"* ]]; then
+      echo "The SOS LLDB driver failed its Python interpreter preflight at '$driver'." >&2
+      echo "$lldb_check" >&2
+      exit 4
+    fi
+    echo "Using SOS LLDB driver at '$driver'."
+    return
+  fi
+
+  if [[ "$(uname -s)" != "Linux" ]]; then
+    return
+  fi
+
+  if [[ -z "${LLDB_PATH:-}" ]]; then
+    for candidate in lldb-16 lldb16 lldb-15 lldb15 lldb-14 lldb14 lldb-13 lldb13 lldb-12 lldb12 lldb; do
+      if command -v "$candidate" > /dev/null 2>&1; then
+        LLDB_PATH="$(command -v "$candidate")"
+        break
+      fi
+    done
+  fi
+
+  if [[ -z "${LLDB_PATH:-}" || ! -x "$LLDB_PATH" ]]; then
+    echo "Could not locate an executable LLDB. Set LLDB_PATH or install LLDB on the Helix image." >&2
+    exit 4
+  fi
+
+  lldb_python_module=""
+  resolved_lldb="$(readlink -f "$LLDB_PATH" 2>/dev/null || printf '%s' "$LLDB_PATH")"
+  lldb_version="${resolved_lldb##*-}"
+  for llvm_root in "/usr/lib/llvm-$lldb_version" "/usr/lib/llvm$lldb_version" /usr/lib/llvm-* /usr/lib/llvm*; do
+    if [[ ! -d "$llvm_root" ]]; then
+      continue
+    fi
+
+    lldb_python_module="$(find "$llvm_root" -type f -path '*/lldb/embedded_interpreter.py' -print 2>/dev/null | head -n 1 || true)"
+    if [[ -n "$lldb_python_module" ]]; then
+      break
+    fi
+  done
+
+  if [[ -n "$lldb_python_module" ]]; then
+    lldb_python_root="$(dirname "$(dirname "$lldb_python_module")")"
+    export PYTHONPATH="$lldb_python_root${PYTHONPATH:+:$PYTHONPATH}"
+  fi
+
+  mkdir -p "$root/debugger"
+  ln -sf "$resolved_lldb" "$root/debugger/lldb"
+  LLDB_PATH="$root/debugger/lldb"
+
+  lldb_check="$("$LLDB_PATH" --no-lldbinit --batch \
+    -o 'script print("__SOSHARNESS_LLDB_READY__")' \
+    -o quit 2>&1 || true)"
+  if [[ "$lldb_check" != *"__SOSHARNESS_LLDB_READY__"* ]]; then
+    echo "LLDB failed its Python interpreter preflight at '$LLDB_PATH'." >&2
+    echo "$lldb_check" >&2
+    exit 4
+  fi
+  echo "Using LLDB at '$LLDB_PATH'."
+  export LLDB_PATH
+}
+
+prepare_dotnet_root
+dotnet="$dotnet_root/dotnet"
+dotnet_arguments=("$test_dll")
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  test_runtime_version="$("$dotnet" --list-runtimes | awk \
+    '$1 == "Microsoft.NETCore.App" && index($2, "11.") == 1 { version = $2 } END { print version }')"
+  if [[ -z "$test_runtime_version" ]]; then
+    echo "Microsoft.NETCore.App 11.x was not found under '$dotnet_root'." >&2
+    exit 3
+  fi
+
+  echo "Running SOS.Tests on Microsoft.NETCore.App $test_runtime_version."
+  dotnet_arguments=(--fx-version "$test_runtime_version" "$test_dll")
+fi
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  entitlements="$root/eng/helix/sos/debuggee-entitlements.plist"
+  while IFS= read -r target_directory; do
+    debuggee="$(basename "$(dirname "$(dirname "$target_directory")")")"
+    for source_executable in \
+      "$target_directory/$debuggee" \
+      "$target_directory/$rid/publish/$debuggee"; do
+      if [[ -f "$source_executable" ]]; then
+        chmod +x "$source_executable"
+        codesign --force --sign - --entitlements "$entitlements" "$source_executable"
+      fi
+    done
+  done < <(find "$root/artifacts/bin" -type d -name "net*" -path "*/$configuration/net*")
+fi
+
+if [[ "$rid" == linux-musl-* ]]; then
+  target_arch="${rid##*-}"
+  native_root="$root/artifacts/bin/linux.$target_arch.$configuration"
+  if [[ -e "$native_root/libmscordaccore_universal.so" ]]; then
+    chmod u+w "$native_root/libmscordaccore_universal.so"
+  fi
+fi
+
+configure_lldb
+
+export DOTNET_ROOT="$dotnet_root"
+export DOTNET_ROOT_X64="$DOTNET_ROOT"
+export DOTNET_MULTILEVEL_LOOKUP=0
+log="$upload/SOS.Tests-${rid}-${configuration}-${identity}.log"
+run_tests()
+{
+  "$dotnet" "${dotnet_arguments[@]}" "$@" \
+    --results-directory "$upload" \
+    --report-xunit \
+    --report-xunit-filename "SOS.Tests-${rid}-${configuration}-${identity}.testResults.xml" \
+    --report-xunit-html \
+    --report-xunit-html-filename "SOS.Tests-${rid}-${configuration}-${identity}.html" \
+    --auto-reporters off
+}
+
+set +e
+if [[ -n "$max_parallel_threads" ]]; then
+  run_tests --max-threads "$max_parallel_threads" 2>&1 | tee "$log"
+  exit_code=${PIPESTATUS[0]}
+else
+  run_tests 2>&1 | tee "$log"
+  exit_code=${PIPESTATUS[0]}
+fi
+set -e
+
+if [[ "$exit_code" -ne 0 ]]; then
+  dump_root="$root/artifacts/tmp/sos-harness/$configuration"
+  if [[ -d "$dump_root/dumps" ]]; then
+    dump_archive="$upload/SOS.Tests-dumps-$rid-$configuration-$identity.tar.gz"
+    echo "Archiving SOS dumps to '$dump_archive'."
+    if ! tar -czf "$dump_archive" -C "$dump_root" dumps; then
+      echo "Failed to archive SOS dumps." >&2
+    fi
+  fi
+fi
+
+exit "$exit_code"

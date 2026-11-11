@@ -7,7 +7,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using Microsoft.DotNet.XUnitExtensions;
+using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 
 namespace Microsoft.Diagnostics.NETCore.Client
@@ -305,7 +305,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
             if (unreadableEnvironPid == -1)
             {
-                throw new SkipTestException("No process with an unreadable (IOException) /proc/{pid}/environ was found.");
+                Assert.Skip("No process with an unreadable (IOException) /proc/{pid}/environ was found.");
             }
 
             bool environReadable = true;

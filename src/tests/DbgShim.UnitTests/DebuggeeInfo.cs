@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Microsoft.Diagnostics
 {

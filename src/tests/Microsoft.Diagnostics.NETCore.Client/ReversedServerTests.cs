@@ -14,8 +14,6 @@ using Microsoft.Diagnostics.CommonTestRunner;
 using Microsoft.Diagnostics.TestHelpers;
 using Microsoft.Diagnostics.Tracing;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
@@ -103,12 +101,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 () => server.RemoveConnection(Guid.Empty));
         }
 
-        [SkippableFact]
+        [Fact]
         public async Task ReversedServerAddressInUseTest()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                throw new SkipTestException("Not applicable on Windows due to named pipe usage.");
+                Assert.Skip("Not applicable on Windows due to named pipe usage.");
             }
 
             await using ReversedDiagnosticsServer server = CreateReversedServer(out string transportName);
@@ -156,13 +154,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.True(acceptTask.IsCanceled);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task ReversedServerNonExistingRuntimeIdentifierTest(TestConfiguration config)
         {
             await ReversedServerNonExistingRuntimeIdentifierTestCore(config, useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task ReversedServerNonExistingRuntimeIdentifierTestAsync(TestConfiguration config)
         {
             await ReversedServerNonExistingRuntimeIdentifierTestCore(config, useAsync: true);
@@ -194,13 +192,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             Assert.False(server.RemoveConnection(Guid.NewGuid()), "Removal of nonexisting connection should fail.");
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task ReversedServerSingleTargetMultipleUseClientTest(TestConfiguration config)
         {
             await ReversedServerSingleTargetMultipleUseClientTestCore(config, useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task ReversedServerSingleTargetMultipleUseClientTestAsync(TestConfiguration config)
         {
             await ReversedServerSingleTargetMultipleUseClientTestCore(config, useAsync: true);
@@ -219,7 +217,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (config.RuntimeFrameworkVersionMajor < 5)
             {
-                throw new SkipTestException("Not supported on < .NET 5.0");
+                Assert.Skip("Not supported on < .NET 5.0");
             }
             await using ReversedDiagnosticsServer server = CreateReversedServer(out string transportName);
             server.Start();
@@ -254,13 +252,13 @@ namespace Microsoft.Diagnostics.NETCore.Client
             await VerifyNoNewEndpointInfos(server, useAsync);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task ReversedServerSingleTargetExitsClientInviableTest(TestConfiguration config)
         {
             await ReversedServerSingleTargetExitsClientInviableTestCore(config, useAsync: false);
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task ReversedServerSingleTargetExitsClientInviableTestAsync(TestConfiguration config)
         {
             await ReversedServerSingleTargetExitsClientInviableTestCore(config, useAsync: true);
@@ -273,7 +271,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
         {
             if (config.RuntimeFrameworkVersionMajor < 5)
             {
-                throw new SkipTestException("Not supported on < .NET 5.0");
+                Assert.Skip("Not supported on < .NET 5.0");
             }
             await using ReversedDiagnosticsServer server = CreateReversedServer(out string transportName);
             server.Start();
@@ -313,12 +311,12 @@ namespace Microsoft.Diagnostics.NETCore.Client
         /// Validates that the <see cref="ReversedDiagnosticsServer"/> does not create a new server
         /// transport during disposal.
         /// </summary>
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task ReversedServerNoCreateTransportAfterDispose(TestConfiguration config)
         {
             if (config.RuntimeFrameworkVersionMajor < 5)
             {
-                throw new SkipTestException("Not supported on < .NET 5.0");
+                Assert.Skip("Not supported on < .NET 5.0");
             }
             IpcServerTransportCallback transportCallback = new();
             int transportVersion = 0;

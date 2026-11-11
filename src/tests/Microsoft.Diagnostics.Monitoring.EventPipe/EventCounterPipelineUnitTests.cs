@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Diagnostics.NETCore.Client;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Extensions;
 using TestRunner = Microsoft.Diagnostics.CommonTestRunner.TestRunner;
 
 // Newer SDKs flag MemberData(nameof(Configurations)) with this error
@@ -119,7 +117,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             public Task PipelineStopped(CancellationToken token) => Task.CompletedTask;
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestCounterEventPipeline(TestConfiguration config)
         {
             string[] expectedCounters = new[] { "cpu-usage", "working-set" };
@@ -162,16 +160,12 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             Assert.True(logger.Metrics.All(m => string.Equals(m.CounterMetadata.ProviderName, expectedProvider)));
         }
 
-        [SkippableTheory, MemberData(nameof(Configurations))]
+        [Theory, MemberData(nameof(Configurations))]
         public async Task TestDuplicateNameMetrics(TestConfiguration config)
         {
             if (config.RuntimeFrameworkVersionMajor < 9)
             {
-                throw new SkipTestException("MetricsEventSource only supports instrument IDs starting in .NET 9.0.");
-            }
-            if (OS.Kind == OSKind.OSX || OS.Kind == OSKind.Windows)
-            {
-                throw new SkipTestException("https://github.com/dotnet/diagnostics/issues/5375");
+                Assert.Skip("MetricsEventSource only supports instrument IDs starting in .NET 9.0.");
             }
             string providerName = "AmbiguousNameMeter";
             string counterName = "AmbiguousNameCounter";
@@ -185,7 +179,7 @@ namespace Microsoft.Diagnostics.Monitoring.EventPipe.UnitTests
             TaskCompletionSource<object> foundExpectedCountersSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
             TestMetricsLogger logger = new(expectedCounters, foundExpectedCountersSource, _output);
 
-            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "DuplicateNameMetrics", _output, testProcessTimeout: 3_000))
+            await using (TestRunner testRunner = await PipelineTestUtilities.StartProcess(config, "DuplicateNameMetrics", _output))
             {
                 DiagnosticsClient client = new(testRunner.Pid);
 

@@ -19,7 +19,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         public override void Invoke()
         {
-            int segments = Runtime.Heap.Segments.Count(seg => seg.Kind is not GCSegmentKind.Frozen or GCSegmentKind.Pinned);
+            int segments = Runtime.Heap.Segments.Count(seg => seg.Kind is not (GCSegmentKind.Frozen or GCSegmentKind.Pinned));
             if (segments > 50)
             {
                 string gcSegKind = Runtime.Heap.SubHeaps[0].HasRegions ? "regions" : "segments";
@@ -121,7 +121,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
                     // This handles both regions and segments
                     Generation gen = seg.GetGeneration(obj);
-                    if (gen is not Generation.Generation0 or Generation.Generation1)
+                    if (gen is not (Generation.Generation0 or Generation.Generation1))
                     {
                         continue;
                     }

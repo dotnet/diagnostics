@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -398,7 +398,6 @@
     <ClCompile Include="eeheap.cpp" />
     <ClCompile Include="ExpressionNode.cpp" />
     <ClCompile Include="exts.cpp" />
-    <ClCompile Include="gchist.cpp" />
     <ClCompile Include="gcroot.cpp" />
     <ClCompile Include="managedcommands.cpp" />
     <ClCompile Include="metadata.cpp" />
@@ -409,7 +408,6 @@
     <ClCompile Include="sildasm.cpp" />
     <ClCompile Include="sos.cpp" />
     <ClCompile Include="sosextensions.cpp" />
-    <ClCompile Include="stressLogDump.cpp" />
     <ClCompile Include="strike.cpp" />
     <ClCompile Include="symbols.cpp" />
     <ClCompile Include="util.cpp" />
