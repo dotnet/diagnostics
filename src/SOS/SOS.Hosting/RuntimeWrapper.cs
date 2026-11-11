@@ -7,6 +7,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats.ELF;
@@ -184,6 +185,11 @@ namespace SOS.Hosting
             IntPtr self,
             string runtimeModuleDirectory)
         {
+            if (runtimeModuleDirectory is not null && !PathUtilities.IsSafeAbsoluteLocalPath(runtimeModuleDirectory))
+            {
+                Trace.TraceError($"Ignoring non-local runtime module directory: {runtimeModuleDirectory}");
+                return;
+            }
             _runtime.RuntimeModuleDirectory = runtimeModuleDirectory;
         }
 
@@ -194,7 +200,12 @@ namespace SOS.Hosting
             {
                 return _runtime.RuntimeModuleDirectory;
             }
-            return Path.GetDirectoryName(_runtime.RuntimeModule.FileName);
+            // Never hand native SOS a directory from the dump that is not local.
+            if (PathUtilities.IsSafeAbsoluteLocalPath(_runtime.RuntimeModule.FileName))
+            {
+                return Path.GetDirectoryName(_runtime.RuntimeModule.FileName);
+            }
+            return null;
         }
 
         private int GetClrDataProcess(

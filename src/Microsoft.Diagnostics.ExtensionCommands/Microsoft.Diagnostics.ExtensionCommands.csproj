@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.DebugServices.Implementation\RuntimeInfo.cs" Link="Host\RuntimeInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)..\Microsoft.Diagnostics.DebugServices.Implementation\PathUtilities.cs" Link="Shared\PathUtilities.cs" />
   </ItemGroup>
 
   <ItemGroup>

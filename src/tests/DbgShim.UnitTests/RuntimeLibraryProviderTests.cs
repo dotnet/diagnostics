@@ -29,6 +29,40 @@ namespace DbgShim.UnitTests
         [Theory]
         [InlineData("mscordaccore.dll")]
         [InlineData("mscordbi.dll")]
+        public void ProvideLibraryVerifiesDacAndDbiAlike(string fileName)
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Skip("Authenticode verification is Windows-only");
+            }
+
+            // Only the debugger-bundled mscordbi_universal (loaded by dbgshim) skips verification.
+            // A runtime DBI is verified exactly like the DAC, so an unsigned one must be refused.
+            using RuntimeLibraryProvider provider = new(
+                () => Path.Combine(_directory, "mscordbi.dll"),
+                () => Path.Combine(_directory, "mscordaccore.dll"),
+                verifySignature: true);
+
+            int result = provider.ProvideLibrary2(IntPtr.Zero, fileName, timeStamp: 0, sizeOfImage: 0, out IntPtr modulePath);
+
+            Assert.Equal(HResult.E_NOINTERFACE, result);
+            Assert.Equal(IntPtr.Zero, modulePath);
+        }
+
+        [Fact]
+        public void DesktopDbiLoadVerifiesSignature()
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.Skip("Authenticode verification is Windows-only");
+            }
+
+            Assert.Equal(IntPtr.Zero, RuntimeWrapper.LoadLibraryWithSignatureVerification(Path.Combine(_directory, "mscordbi.dll"), verifySignature: true));
+        }
+
+        [Theory]
+        [InlineData("mscordaccore.dll")]
+        [InlineData("mscordbi.dll")]
         public void ProvideLibraryReturnsLocalPath(string fileName)
         {
             using RuntimeLibraryProvider provider = new(

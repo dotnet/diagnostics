@@ -492,6 +492,11 @@ ULONG Runtime::Release()
 \**********************************************************************/
 void Runtime::SetRuntimeDirectory(LPCSTR runtimeModuleDirectory)
 {
+    if (runtimeModuleDirectory != nullptr && !IsSafeAbsoluteLocalPath(runtimeModuleDirectory))
+    {
+        ExtDbgOut("Ignoring non-local runtime module directory: %s\n", runtimeModuleDirectory);
+        return;
+    }
     if (m_runtimeDirectory != nullptr)
     {
         free((void*)m_runtimeDirectory);
@@ -510,6 +515,12 @@ LPCSTR Runtime::GetRuntimeDirectory()
 {
     if (m_runtimeDirectory == nullptr)
     {
+        // Never probe or use a runtime module directory from the dump that is not local.
+        if (!IsSafeAbsoluteLocalPath(m_name))
+        {
+            ExtDbgOut("Error: Runtime module path %s is not local\n", m_name);
+            return nullptr;
+        }
         if (GetFileAttributesA(m_name) == INVALID_FILE_ATTRIBUTES)
         {
             ExtDbgOut("Error: Runtime module %s doesn't exist %08x\n", m_name, HRESULT_FROM_WIN32(GetLastError()));
@@ -517,7 +528,7 @@ LPCSTR Runtime::GetRuntimeDirectory()
         }
         // Parse off the file name
         char* runtimeDirectory = _strdup(m_name);
-        char* lastSlash = strrchr(runtimeDirectory, GetTargetDirectorySeparatorW());
+        char* lastSlash = GetLastDirectorySeparator(runtimeDirectory);
         if (lastSlash != nullptr)
         {
             *lastSlash = '\0';
