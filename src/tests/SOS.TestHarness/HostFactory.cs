@@ -55,7 +55,7 @@ internal static class HostFactory
     {
         if (dac == Dac.CDac)
         {
-            CDacOverride.Prepare(ToolPaths.Layout, host);
+            ToolPaths.Layout.PrepareCDacOverride(host);
         }
     }
 

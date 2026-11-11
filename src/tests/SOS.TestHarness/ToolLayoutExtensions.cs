@@ -3,7 +3,7 @@
 
 namespace SOS.TestHarness;
 
-internal static class CDacOverride
+internal static class ToolLayoutExtensions
 {
     private static readonly object s_copyLock = new();
     private static readonly HashSet<string> s_destinations = new(StringComparer.OrdinalIgnoreCase);
@@ -16,7 +16,7 @@ internal static class CDacOverride
         OperatingSystem.IsWindows() ? "mscordbi_universal.dll" :
         OperatingSystem.IsMacOS() ? "libmscordbi_universal.dylib" : "libmscordbi_universal.so";
 
-    internal static void Prepare(IToolLayout layout, Host host)
+    internal static void PrepareCDacOverride(this IToolLayout layout, Host host)
     {
         string? overrideDirectory = layout.CDacOverrideDirectory;
         if (overrideDirectory is null)

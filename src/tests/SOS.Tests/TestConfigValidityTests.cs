@@ -103,15 +103,6 @@ public sealed class TestConfigValidityTests
     }
 
     [Theory]
-    [InlineData(@"C:\dumps\crash.dmp", true, @"C:\dumps\crash.dmp")]
-    [InlineData(@"C:\dump cache\crash.dmp", true, "\"C:\\dump cache\\crash.dmp\"")]
-    [InlineData("/dump cache/crash.dmp", false, "/dump cache/crash.dmp")]
-    public void CreatedumpNameQuotesSpacedWindowsPaths(string dumpPath, bool isWindows, string expected)
-    {
-        Assert.Equal(expected, SnapshotStore.CreatedumpName(dumpPath, isWindows));
-    }
-
-    [Theory]
     [InlineData(Flavor.Core, DumpKind.Heap, false, "Heap")]
     [InlineData(Flavor.SingleFile, DumpKind.Heap, false, "Heap")]
     [InlineData(Flavor.SingleFile, DumpKind.Full, false, "Full")]

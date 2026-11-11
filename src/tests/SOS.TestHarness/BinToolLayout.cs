@@ -5,6 +5,10 @@ namespace SOS.TestHarness;
 
 internal sealed class BinToolLayout : IToolLayout
 {
+    private static string CDacFileName =>
+        OperatingSystem.IsWindows() ? "mscordaccore_universal.dll" :
+        OperatingSystem.IsMacOS() ? "libmscordaccore_universal.dylib" : "libmscordaccore_universal.so";
+
     private readonly Lazy<ToolCommand> _dotNetDump = new(ResolveDotNetDump);
     private readonly Lazy<string?> _cdacOverrideDirectory = new(ResolveCDacOverrideDirectory);
     public string SosDirectory => RepoLayout.ArtifactsBinNative;
@@ -28,6 +32,6 @@ internal sealed class BinToolLayout : IToolLayout
             ? Path.Combine(RepoLayout.Root, "artifacts", "cdac-override", RepoLayout.ArtifactsConfiguration)
             : configured;
 
-        return File.Exists(Path.Combine(directory, CDacOverride.DacFileName)) ? directory : null;
+        return File.Exists(Path.Combine(directory, CDacFileName)) ? directory : null;
     }
 }
