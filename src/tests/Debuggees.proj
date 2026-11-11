@@ -2,6 +2,14 @@
 
   <Import Project="SOSHarnessDebuggees.props" />
 
+  <ItemGroup Condition="'$(InternalReleaseTesting)' != 'true' and '$(PrivateBuildTesting)' != 'true'">
+    <!-- Product-version host packages can differ across feeds. Use the target test SDK's
+         packs so the latest single-file host matches the installed DAC and DBI. -->
+    <RuntimeTestVersions Update="Latest">
+      <HostPackProperties>NetCoreTargetingPackRoot=$(ArtifactsDotnetTestDir)packs;EnableAppHostPackDownload=false</HostPackProperties>
+    </RuntimeTestVersions>
+  </ItemGroup>
+
   <!-- Debuggee and tracee projects, built using the test SDK from artifacts/dotnet-test/ -->
   <ItemGroup>
     <ProjectReference Include="SOS.UnitTests/Debuggees/**/*.csproj" />
@@ -34,7 +42,7 @@
     <MSBuild Projects="@(SOSSingleFileDebuggee)"
              Targets="Restore;Publish"
              BuildInParallel="true"
-             Properties="Configuration=$(Configuration);BuildProjectFramework=%(_SOSSingleFileRuntime.TargetFramework);RuntimeIdentifier=$(TargetRid);RuntimeFrameworkVersion=%(_SOSSingleFileRuntime.Runtime);SelfContained=true;PublishSingleFile=true;SOSSingleFileRuntimeVersion=%(_SOSSingleFileRuntime.Runtime);ArtifactsObjDir=$(ArtifactsObjDir)SOSSingleFile/%(_SOSSingleFileRuntime.TargetFramework)/$(TargetRid)/" />
+             Properties="Configuration=$(Configuration);BuildProjectFramework=%(_SOSSingleFileRuntime.TargetFramework);RuntimeIdentifier=$(TargetRid);RuntimeFrameworkVersion=%(_SOSSingleFileRuntime.Runtime);SelfContained=true;PublishSingleFile=true;SOSSingleFileRuntimeVersion=%(_SOSSingleFileRuntime.Runtime);ArtifactsObjDir=$(ArtifactsObjDir)SOSSingleFile/%(_SOSSingleFileRuntime.TargetFramework)/$(TargetRid)/;%(_SOSSingleFileRuntime.HostPackProperties)" />
   </Target>
 
   <Target Name="BuildSOSFrameworkDebuggees"
@@ -56,7 +64,7 @@
            Text="RuntimeTestVersions must contain target-framework metadata before publishing DbgShim single-file debuggees." />
     <MSBuild Projects="$(MSBuildThisFileDirectory)DbgShim.UnitTests/Debuggees/SimpleDebuggee/SimpleDebuggee.csproj"
              Targets="Restore;Publish"
-             Properties="Configuration=$(Configuration);BuildProjectFramework=%(RuntimeTestVersions.TargetFramework);RuntimeIdentifier=$(TargetRid);RuntimeFrameworkVersion=%(RuntimeTestVersions.Runtime);SelfContained=true;PublishSingleFile=true;DbgShimSingleFileRuntimeVersion=%(RuntimeTestVersions.Runtime);ArtifactsObjDir=$(ArtifactsObjDir)DbgShimSingleFile/%(RuntimeTestVersions.TargetFramework)/$(TargetRid)/" />
+             Properties="Configuration=$(Configuration);BuildProjectFramework=%(RuntimeTestVersions.TargetFramework);RuntimeIdentifier=$(TargetRid);RuntimeFrameworkVersion=%(RuntimeTestVersions.Runtime);SelfContained=true;PublishSingleFile=true;DbgShimSingleFileRuntimeVersion=%(RuntimeTestVersions.Runtime);ArtifactsObjDir=$(ArtifactsObjDir)DbgShimSingleFile/%(RuntimeTestVersions.TargetFramework)/$(TargetRid)/;%(RuntimeTestVersions.HostPackProperties)" />
   </Target>
 
 </Project>
