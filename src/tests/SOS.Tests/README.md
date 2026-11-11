@@ -88,6 +88,20 @@ capture is delegated to the dbgeng capturer child. On Linux and macOS, the
 matching runtime DAC is staged beside each single-file executable before launch
 so createdump can honor Heap dump requests instead of falling back to Full.
 
+The latest single-file debuggees use the host pack from the target-architecture
+test SDK in `artifacts/dotnet-test/packs`, even when a separate host-architecture
+SDK runs a cross-build. The single-file host contains the runtime: NuGet host
+packages with the same product version can come from different builds and need
+not match the installed DAC/DBI. Missing SDK host packs fail publishing rather
+than falling back to the package cache. Servicing, private-build, and internal
+release testing retain their existing pack selection.
+
+Before launching a single-file debuggee, both SOS harnesses and the DbgShim tests
+compare its embedded DAC/DBI identities with the selected libraries (PE
+timestamp/image size, ELF build ID, or Mach-O UUID). An identity-mismatch error
+includes the executable, library, and expected/actual identities. Rebuild with
+the matching test SDK and runtime; product-version equality is insufficient.
+
 Dumps are cached by `(flavor, target, GC type, dump kind, core version)`.
 The DAC is deliberately not a capture dimension: legacy DAC and cDAC analyze
 the same dump, with DAC selection happening when the host opens it. Cached

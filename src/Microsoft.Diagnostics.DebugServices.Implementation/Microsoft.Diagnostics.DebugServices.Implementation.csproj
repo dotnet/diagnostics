@@ -33,5 +33,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Microsoft.Diagnostics.DebugServices.UnitTests" />
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.TestHelpers" />
   </ItemGroup>
 </Project>
