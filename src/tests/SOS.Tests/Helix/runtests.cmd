@@ -84,14 +84,12 @@ if not "%TOOL_LAYOUT%"=="Bin" if not "%TOOL_LAYOUT%"=="Packaged" (
 )
 set "SOSHARNESS_TOOL_LAYOUT=%TOOL_LAYOUT%"
 set "SOSHARNESS_TOOL_ROOT="
+set "SOSHARNESS_PACKAGE_DIRECTORY="
 if not "%TOOL_LAYOUT%"=="Bin" (
-  if not "%RID%"=="win-x64" (
-    echo Installed SOS layouts currently support Windows x64 only.
-    exit /b 3
-  )
   set "SOSHARNESS_TOOL_ROOT=%ROOT%tool-layout"
   set "SOSHARNESS_CDAC_DIR="
   set "SOSHARNESS_USECDAC="
+  if exist "%ROOT%packages\." set "SOSHARNESS_PACKAGE_DIRECTORY=%ROOT%packages"
 )
 
 set "IDENTITY=all"
@@ -212,6 +210,11 @@ set "EXIT_CODE=%ERRORLEVEL%"
 set "RESTORE_EXIT_CODE=%ERRORLEVEL%"
 
 type "%LOG%"
+
+if not "%TOOL_LAYOUT%"=="Bin" if exist "%SOSHARNESS_TOOL_ROOT%\layout.json" (
+  copy /y "%SOSHARNESS_TOOL_ROOT%\layout.json" "%UPLOAD%\layout.json" >nul
+  if errorlevel 1 exit /b 3
+)
 
 if not "%EXIT_CODE%"=="0" (
   set "DUMP_ROOT=%ROOT%\artifacts\tmp\sos-harness\%CONFIGURATION%"

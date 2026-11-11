@@ -58,6 +58,34 @@ public sealed class ToolLayoutTests : IDisposable
     }
 
     [Fact]
+    public void PackageInstallationRequiresMatchingToolVersions()
+    {
+        File.WriteAllText(Path.Combine(_root, "dotnet-sos.10.0.123.nupkg"), "");
+        File.WriteAllText(Path.Combine(_root, "dotnet-dump.10.0.122.nupkg"), "");
+
+        FileNotFoundException error = Assert.Throws<FileNotFoundException>(() => PackagedToolSetup.GetPackageVersion(_root));
+
+        Assert.Equal(Path.Combine(_root, "dotnet-dump.10.0.123.nupkg"), error.FileName);
+        File.WriteAllText(error.FileName!, "");
+        Assert.Equal("10.0.123", PackagedToolSetup.GetPackageVersion(_root));
+    }
+
+    [Fact]
+    public void PackageInstallationRejectsAmbiguousVersions()
+    {
+        File.WriteAllText(Path.Combine(_root, "dotnet-sos.10.0.123.nupkg"), "");
+        File.WriteAllText(Path.Combine(_root, "dotnet-sos.10.0.124.nupkg"), "");
+
+        Assert.Throws<InvalidDataException>(() => PackagedToolSetup.GetPackageVersion(_root));
+    }
+
+    [Fact]
+    public void PackageInstallationRejectsMissingPackages()
+    {
+        Assert.Throws<InvalidDataException>(() => PackagedToolSetup.GetPackageVersion(_root));
+    }
+
+    [Fact]
     public void PackagedLayoutUsesOnlyPreparedInputs()
     {
         CreatePackagedInputs();

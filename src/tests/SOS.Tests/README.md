@@ -48,8 +48,9 @@ Official builds run installed-tool SOS tests after `build`, in parallel with
 packaging/publishing, instead of the standard test jobs. `buildOnly` skips all
 tests; PR validation is unchanged.
 
-This tests unsigned Windows x64 packages made from the same build, not final
-signed shipping packages. Run against prebuilt local packages with:
+The Release jobs use the normal Helix platform matrix and install unsigned
+same-build packages on each worker, not final signed shipping packages.
+Run against prebuilt local Windows x64 packages with:
 
 ```powershell
 .\eng\TestPackagedSOS.ps1 -PackageDirectory .\artifacts\tmp\packaged-sos-packages

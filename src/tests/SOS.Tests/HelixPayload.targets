@@ -16,6 +16,10 @@
     <_SOSCdbDir>$(NuGetPackageRoot)cdb-sos/$(cdbsosversion)/runtimes/$(TargetRid)/native/</_SOSCdbDir>
     <_SOSLiveRuntimeDir Condition="'$(PrivateBuildTesting)' == 'true' and '$(LiveRuntimeDir)' != ''">$([MSBuild]::NormalizeDirectory('$(LiveRuntimeDir)'))</_SOSLiveRuntimeDir>
     <_SOSDebuggeeFramework>net*</_SOSDebuggeeFramework>
+    <_SOSToolExeSuffix Condition="'$(TargetOS)' == 'Windows_NT'">.exe</_SOSToolExeSuffix>
+    <_SOSInstalledNativeFile Condition="'$(TargetOS)' == 'Windows_NT'">sos.dll</_SOSInstalledNativeFile>
+    <_SOSInstalledNativeFile Condition="'$(TargetOS)' == 'linux'">libsosplugin.so</_SOSInstalledNativeFile>
+    <_SOSInstalledNativeFile Condition="'$(TargetOS)' == 'osx'">libsosplugin.dylib</_SOSInstalledNativeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,17 +31,32 @@
   <Target Name="StageSOSHelixPayload">
     <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(SOSTestToolLayout)' != 'Packaged'"
            Text="SOSTestToolLayout must be Bin or Packaged." />
-    <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and ('$(TargetOS)' != 'Windows_NT' or '$(TargetArch)' != 'x64' or '$(TargetRid)' != 'win-x64' or '$(_SOSLiveRuntimeDir)' != '')"
-           Text="Installed SOS payloads currently support Windows x64 without a private runtime override." />
-    <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(SOSTestToolRoot)' == ''"
-           Text="SOSTestToolRoot must identify a prepared $(SOSTestToolLayout) installation." />
+    <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(_SOSLiveRuntimeDir)' != ''"
+           Text="Installed SOS payloads do not support a private runtime override." />
+    <Error Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(SOSTestToolRoot)' == '' and '$(SOSTestPackageDirectory)' == ''"
+           Text="SOSTestToolRoot or SOSTestPackageDirectory must identify the installed SOS test inputs." />
+    <Error Condition="'$(SOSTestToolRoot)' != '' and '$(SOSTestPackageDirectory)' != ''"
+           Text="SOSTestToolRoot and SOSTestPackageDirectory cannot be combined." />
     <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '@(RuntimeTestVersions->Count())' != '1'"
            Text="A private runtime override requires exactly one RuntimeTestVersions entry." />
     <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '%(RuntimeTestVersions.TargetFramework)' == ''"
            Text="RuntimeTestVersions must contain TargetFramework metadata for private runtime testing." />
     <PropertyGroup>
       <_SOSPrivateTargetFramework Condition="'$(_SOSLiveRuntimeDir)' != ''">@(RuntimeTestVersions->'%(TargetFramework)')</_SOSPrivateTargetFramework>
+      <_SOSInstallFromPackages Condition="'$(SOSTestToolLayout)' == 'Packaged' and '$(SOSTestPackageDirectory)' != ''">true</_SOSInstallFromPackages>
     </PropertyGroup>
+    <ItemGroup Condition="'$(_SOSInstallFromPackages)' == 'true'">
+      <_SOSCandidateSosPackage Include="$(SOSTestPackageDirectory)/dotnet-sos.*.nupkg" />
+    </ItemGroup>
+    <Error Condition="'$(_SOSInstallFromPackages)' == 'true' and '@(_SOSCandidateSosPackage->Count())' != '1'"
+           Text="SOSTestPackageDirectory must contain exactly one dotnet-sos package." />
+    <PropertyGroup Condition="'$(_SOSInstallFromPackages)' == 'true'">
+      <_SOSPackageFileName>@(_SOSCandidateSosPackage->'%(Filename)')</_SOSPackageFileName>
+      <_SOSPackageVersion>$(_SOSPackageFileName.Substring(11))</_SOSPackageVersion>
+    </PropertyGroup>
+    <ItemGroup Condition="'$(_SOSInstallFromPackages)' == 'true'">
+      <_SOSCandidatePackage Include="@(_SOSCandidateSosPackage);$(SOSTestPackageDirectory)/dotnet-dump.$(_SOSPackageVersion).nupkg" />
+    </ItemGroup>
 
     <!-- Scripts use fixed payload paths; binaries and debuggees retain their artifact layout. -->
     <ItemGroup>
@@ -60,7 +79,7 @@
       <_SOSPayloadCDacFile Include="$(ArtifactsDir)cdac-override/$(Configuration)/**/*"
                            Condition="'$(SOSTestToolLayout)' == 'Bin' and Exists('$(ArtifactsDir)cdac-override/$(Configuration)')" />
       <_SOSPayloadInstalledFile Include="$(SOSTestToolRoot)/tools/**/*;$(SOSTestToolRoot)/sos/**/*;$(SOSTestToolRoot)/layout.json"
-                                Condition="'$(SOSTestToolLayout)' != 'Bin'" />
+                                Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(_SOSInstallFromPackages)' != 'true'" />
       <_SOSPayloadRuntimeFile Include="$(_SOSLiveRuntimeDir)**/*"
                               Condition="'$(_SOSLiveRuntimeDir)' != ''" />
       <_SOSPayloadDebuggerFile Include="$(_SOSCdbDir)*"
@@ -91,8 +110,11 @@
       <_SOSPayloadFile Include="@(_SOSPayloadCDacFile)">
         <DestinationRelative>artifacts/cdac-override/$(Configuration)/%(_SOSPayloadCDacFile.RecursiveDir)%(_SOSPayloadCDacFile.Filename)%(_SOSPayloadCDacFile.Extension)</DestinationRelative>
       </_SOSPayloadFile>
-      <_SOSPayloadFile Include="@(_SOSPayloadInstalledFile)" Condition="'$(SOSTestToolLayout)' != 'Bin'">
+      <_SOSPayloadFile Include="@(_SOSPayloadInstalledFile)" Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(_SOSInstallFromPackages)' != 'true'">
         <DestinationRelative>tool-layout/$([MSBuild]::MakeRelative('$(SOSTestToolRoot)', '%(_SOSPayloadInstalledFile.Identity)'))</DestinationRelative>
+      </_SOSPayloadFile>
+      <_SOSPayloadFile Include="@(_SOSCandidatePackage)" Condition="'$(_SOSInstallFromPackages)' == 'true'">
+        <DestinationRelative>packages/%(_SOSCandidatePackage.Filename)%(_SOSCandidatePackage.Extension)</DestinationRelative>
       </_SOSPayloadFile>
       <_SOSPayloadFile Include="@(_SOSPayloadRuntimeFile)">
         <DestinationRelative>runtime-override/%(_SOSPayloadRuntimeFile.RecursiveDir)%(_SOSPayloadRuntimeFile.Filename)%(_SOSPayloadRuntimeFile.Extension)</DestinationRelative>
@@ -105,12 +127,14 @@
     <!-- Required inputs are explicit because a missing file would disappear from the globs above. -->
     <ItemGroup>
       <_SOSRequiredInput Include="$(_SOSTestOutputDir)SOS.Tests.dll" />
-      <_SOSRequiredInput Include="$(SOSTestToolRoot)/tools/dotnet-sos.exe;$(SOSTestToolRoot)/tools/dotnet-dump.exe;$(SOSTestToolRoot)/sos/sos.dll;$(SOSTestToolRoot)/sos/net8.0/SOS.Extensions.dll;$(SOSTestToolRoot)/layout.json"
-                         Condition="'$(SOSTestToolLayout)' != 'Bin'" />
+      <_SOSRequiredInput Include="$(SOSTestToolRoot)/tools/dotnet-sos$(_SOSToolExeSuffix);$(SOSTestToolRoot)/tools/dotnet-dump$(_SOSToolExeSuffix);$(SOSTestToolRoot)/sos/$(_SOSInstalledNativeFile);$(SOSTestToolRoot)/sos/net8.0/SOS.Extensions.dll;$(SOSTestToolRoot)/layout.json"
+                         Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(_SOSInstallFromPackages)' != 'true'" />
+      <_SOSRequiredInput Include="@(_SOSCandidatePackage)" Condition="'$(_SOSInstallFromPackages)' == 'true'" />
       <_SOSRequiredInput Include="$(_SOSCdbDir)dbgeng.dll" Condition="'$(TargetOS)' == 'Windows_NT'" />
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)sos.dll" Condition="'$(SOSTestToolLayout)' == 'Bin' and '$(TargetOS)' == 'Windows_NT'" />
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.so" Condition="'$(SOSTestToolLayout)' == 'Bin' and '$(TargetOS)' == 'linux'" />
-      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.dylib;$(ArtifactsBinNativeDir)sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
+      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.dylib" Condition="'$(SOSTestToolLayout)' == 'Bin' and '$(TargetOS)' == 'osx'" />
+      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
       <_SOSRequiredInput Include="$(_SOSLiveRuntimeDir)System.Private.CoreLib.dll"
                          Condition="'$(_SOSLiveRuntimeDir)' != ''" />
     </ItemGroup>
@@ -132,8 +156,10 @@
       <_SOSRequiredPayloadFile Include=".sos-test-payload;artifacts/bin/SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/SOS.Tests.dll" />
       <_SOSRequiredPayloadFile Include="debugger/cdb.exe;debugger/dbgeng.dll" Condition="'$(TargetOS)' == 'Windows_NT'" />
       <_SOSRequiredPayloadFile Include="debugger/sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
-      <_SOSRequiredPayloadFile Include="tool-layout/tools/dotnet-sos.exe;tool-layout/tools/dotnet-dump.exe;tool-layout/sos/sos.dll;tool-layout/sos/net8.0/SOS.Extensions.dll;tool-layout/layout.json"
-                              Condition="'$(SOSTestToolLayout)' != 'Bin'" />
+      <_SOSRequiredPayloadFile Include="tool-layout/tools/dotnet-sos$(_SOSToolExeSuffix);tool-layout/tools/dotnet-dump$(_SOSToolExeSuffix);tool-layout/sos/$(_SOSInstalledNativeFile);tool-layout/sos/net8.0/SOS.Extensions.dll;tool-layout/layout.json"
+                              Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(_SOSInstallFromPackages)' != 'true'" />
+      <_SOSRequiredPayloadFile Include="@(_SOSCandidatePackage->'packages/%(Filename)%(Extension)')"
+                              Condition="'$(_SOSInstallFromPackages)' == 'true'" />
     </ItemGroup>
     <Error Condition="!Exists('$(SOSHelixPayloadDir)/%(_SOSRequiredPayloadFile.Identity)')"
            Text="Required SOS Helix payload file '%(_SOSRequiredPayloadFile.Identity)' was not staged." />
@@ -153,6 +179,15 @@
     <Error Condition="'$(_SOSLiveRuntimeDir)' != '' and '%(RuntimeTestVersions.Runtime)' == ''"
            Text="RuntimeTestVersions must contain Runtime metadata for private runtime testing." />
     <ItemGroup>
+      <_SOSInstalledToolRuntime Include="@(RuntimeTestVersions)"
+                                Condition="'$(SOSTestToolLayout)' == 'Packaged' and '%(RuntimeTestVersions.TargetFramework)' == '$(NetCoreAppMinTargetFramework)'" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_SOSInstalledToolRuntimeVersion>@(_SOSInstalledToolRuntime->'%(RuntimeDownload)')</_SOSInstalledToolRuntimeVersion>
+    </PropertyGroup>
+    <Error Condition="'$(SOSTestToolLayout)' == 'Packaged' and '$(_SOSInstalledToolRuntimeVersion)' == ''"
+           Text="RuntimeTestVersions must include $(NetCoreAppMinTargetFramework) for the installed tools." />
+    <ItemGroup>
       <_SOSRuntimeShard Include="@(RuntimeTestVersions)">
         <CoreVersion>$([System.String]::Copy('%(RuntimeTestVersions.TargetFramework)').Replace('net', 'Net').Replace('.0', ''))</CoreVersion>
       </_SOSRuntimeShard>
@@ -167,6 +202,7 @@
         <Command Condition="'$(_SOSLiveRuntimeDir)' != ''">$(_SOSHelixWorkItemCommand) --helix-work-item &quot;%(Identity)&quot; --runtime-override &quot;runtime-override&quot; --runtime-version &quot;%(HelixWorkItem.Runtime)&quot;</Command>
         <Timeout>$(WorkItemTimeout)</Timeout>
         <RequiredRuntimeVersions>$(TestHostRuntimeVersion);%(HelixWorkItem.RuntimeDownload)</RequiredRuntimeVersions>
+        <RequiredRuntimeVersions Condition="'$(SOSTestToolLayout)' == 'Packaged'">$(TestHostRuntimeVersion);%(HelixWorkItem.RuntimeDownload);$(_SOSInstalledToolRuntimeVersion)</RequiredRuntimeVersions>
       </HelixWorkItem>
     </ItemGroup>
     <!-- The SDK's PayloadDirectory path creates its ZIP in memory. Keep the large SOS archive on disk. -->

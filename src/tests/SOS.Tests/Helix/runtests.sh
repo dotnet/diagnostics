@@ -64,12 +64,19 @@ if [[ -z "$rid" || -z "$configuration" || -n "$extra_metadata" ]]; then
   exit 3
 fi
 tool_layout="${tool_layout:-Bin}"
-if [[ "$tool_layout" != "Bin" ]]; then
-  echo "Installed SOS layouts currently support Windows x64 only." >&2
+if [[ "$tool_layout" != "Bin" && "$tool_layout" != "Packaged" ]]; then
+  echo "Unsupported SOS tool layout '$tool_layout'." >&2
   exit 3
 fi
 export SOSHARNESS_TOOL_LAYOUT="$tool_layout"
-unset SOSHARNESS_TOOL_ROOT
+unset SOSHARNESS_TOOL_ROOT SOSHARNESS_PACKAGE_DIRECTORY
+if [[ "$tool_layout" == "Packaged" ]]; then
+  export SOSHARNESS_TOOL_ROOT="$root/tool-layout"
+  unset SOSHARNESS_CDAC_DIR SOSHARNESS_USECDAC
+  if [[ -d "$root/packages" ]]; then
+    export SOSHARNESS_PACKAGE_DIRECTORY="$root/packages"
+  fi
+fi
 
 if [[ -n "$helix_work_item" ]]; then
   identity="${helix_work_item##*-}"
@@ -283,8 +290,15 @@ else
 fi
 set -e
 
+if [[ "$tool_layout" == "Packaged" && -f "$SOSHARNESS_TOOL_ROOT/layout.json" ]]; then
+  cp "$SOSHARNESS_TOOL_ROOT/layout.json" "$upload/layout.json"
+fi
+
 if [[ "$exit_code" -ne 0 ]]; then
   dump_root="$root/artifacts/tmp/sos-harness/$configuration"
+  if [[ "$tool_layout" == "Packaged" ]]; then
+    dump_root="$SOSHARNESS_TOOL_ROOT/test-artifacts"
+  fi
   if [[ -d "$dump_root/dumps" ]]; then
     dump_archive="$upload/SOS.Tests-dumps-$rid-$configuration-$tool_layout-$identity.tar.gz"
     echo "Archiving SOS dumps to '$dump_archive'."
