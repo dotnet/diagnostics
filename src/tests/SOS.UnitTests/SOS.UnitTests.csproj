@@ -38,8 +38,10 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-    <ProjectReference Include="..\SOS.FrameworkHost.TestHost\SOS.FrameworkHost.TestHost.csproj" ReferenceOutputAssembly="false"
-                      SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\SOS.FrameworkHost.TestHost\SOS.FrameworkHost.TestHost.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true"
+                      GlobalPropertiesToRemove="TargetFramework" />
     <Content Include="$(ArtifactsBinDir)SOS.FrameworkHost.TestHost\$(Configuration)\$(DesktopTargetFramework)\SOS.FrameworkHost.TestHost.exe;
                       $(ArtifactsBinDir)SOS.FrameworkHost.TestHost\$(Configuration)\$(DesktopTargetFramework)\SOS.FrameworkHost.TestHost.exe.config">
       <Link>FrameworkHostTest\%(Filename)%(Extension)</Link>
