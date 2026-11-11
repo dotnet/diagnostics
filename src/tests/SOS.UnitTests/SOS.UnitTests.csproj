@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <Content Include="testconfig.json" CopyToOutputDirectory="PreserveNewest" />
-    <EmbeddedResource Include="$(SrcDir)SOS\extensions\hostruntimeassemblylist.inc" LogicalName="SOS.HostRuntimeAssemblyList" />
   </ItemGroup>
 
   <ItemGroup>
@@ -59,7 +58,6 @@
                              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
   </Target>
-
   <ItemGroup>
     <PackageDownload Include="cdb-sos" Version="[$(cdbsosversion)]" />
   </ItemGroup>

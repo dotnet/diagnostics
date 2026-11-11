@@ -1,0 +1,5 @@
+EXPORTS
+    DebugExtensionInitialize
+    initialize
+    check
+    shutdown

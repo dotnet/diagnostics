@@ -13,9 +13,23 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.FileFormats\Microsoft.FileFormats.csproj" />
     <ProjectReference Include="..\SOS.TestHarness\SOS.TestHarness.csproj" />
+    <ProjectReference Include="..\TestExtension\TestExtension.csproj" />
+    <ProjectReference Include="..\SOS.Cohost\SOS.Cohost.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\SOS.TestHarness.SourceGen\SOS.TestHarness.SourceGen.csproj"
                       OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <Target Name="IncludeCohost" BeforeTargets="GetCopyToOutputDirectoryItems;GetCopyToPublishDirectoryItems">
+    <ItemGroup>
+      <CohostFiles Include="$(ArtifactsBinDir)SOS.Cohost/$(Configuration)/$(NetCoreAppMinTargetFramework)/*.dll;
+                            $(ArtifactsBinDir)SOS.Cohost/$(Configuration)/$(NetCoreAppMinTargetFramework)/*.json" />
+      <ContentWithTargetPath Include="@(CohostFiles)">
+        <TargetPath>Hosting/%(CohostFiles.Filename)%(CohostFiles.Extension)</TargetPath>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ContentWithTargetPath>
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <!-- Debuggee sources whose public const / static-readonly fields are mirrored into the test project

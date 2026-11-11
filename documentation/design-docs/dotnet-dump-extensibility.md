@@ -247,6 +247,50 @@ This native interface is what the SOS.Extensions host uses to implement the abov
 
 This assembly implements the host, target and services for the native debuggers (dbgeng, lldb). It provides the IHostServices to the native "extensions" library which registers the IDebuggerService used by the service implementations.
 
+### SOS.Hosting.Loader
+
+On CoreCLR, the native debugger host loads this framework-only bootstrap into the default
+AssemblyLoadContext (ALC). It creates a noncollectible SOS ALC and uses reflection once to
+create a delegate to `SOS.Extensions.HostServices.Initialize`. Subsequent calls and the
+native debugger interfaces use delegates and unmanaged COM-compatible interface pointers,
+not shared SOS managed types. The loader retains the delegate and the SOS ALC for the
+process lifetime because native debugger clients can retain these pointers.
+
+SOS dependencies load from its managed payload directory. An actual .NET runtime framework
+assembly is selected when its version satisfies the requested identity and is at least as
+new as the bundled assembly. Otherwise the bundled assembly is selected. Both load into
+the SOS ALC so that framework dependencies also follow SOS's binding policy. For example,
+framework metadata APIs must use the same `ImmutableArray` identity as SOS. CoreLib is
+shared with the runtime; unrelated assemblies in Default cannot override SOS dependencies.
+
+The native host reuses CoreCLR when another extension has already started it, without
+calling `coreclr_initialize` again or changing its binding paths. It calls `Start` once
+on its separately acquired runtime host and retains that ownership for the callback
+lifetime so another host's normal shutdown cannot stop the shared runtime. The active runtime must
+support SOS's minimum runtime version; ALC isolation cannot provide another CoreCLR
+version in the same process. Cold startup trusts only the selected runtime's assemblies.
+Loading the CoreCLR library without starting it still allows SOS to initialize that runtime.
+
+Optional diagnostic extensions have separate ALCs and share SOS contracts from the ALC
+that owns the hosting infrastructure, including `System.Collections.Immutable`, which
+appears in those public contracts. Other dependencies use the extension's own directory,
+then the owning host ALC. This is the SOS ALC in native debuggers and Default in dotnet-dump.
+Desktop Framework hosting continues to use the default AppDomain and its assembly resolver.
+
+Bootstrap assembly inspection uses `AssemblyName.GetAssemblyName`, whose metadata reader
+binds through Default. Missing or incompatible Metadata/Immutable assemblies in the
+existing host's binding configuration can therefore prevent startup before private
+isolation takes effect. The bootstrap's framework references must also be resolvable
+by that host; SOS payload assemblies do not require TPA entries. This limitation is
+tracked in [#6207](https://github.com/dotnet/diagnostics/issues/6207).
+
+`SOS.Tests/SOSHostRuntimeTests` covers lower- and higher-version ClrMD conflicts loaded into Default
+before SOS, framework selection, and optional-extension contract sharing. Its Windows CDB
+test loads `soscohost.dll` first; that extension starts CoreCLR and loads the competing
+dependency before native SOS starts. Test logs retain the generated conflicting assemblies.
+The test then shuts down the competing host, verifies that SOS retains runtime ownership,
+and runs another SOS command.
+
 ### The "extensions" native library
 
 This is the native code that interops with the managed SOS.Extensions to host the native debuggers. It sets up the managed runtime (.NET Core on Linux/MacOS or desktop on Windows) and calls the SOS.Extensions initialization entry point. It is linked into the lldbplugin on Linux/MacOS and into SOS.dll on Windows. 
@@ -328,4 +372,3 @@ TBD
 
 ```C#
 ```
-
