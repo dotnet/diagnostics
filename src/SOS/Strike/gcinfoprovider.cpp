@@ -109,6 +109,14 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
         pfnPrintf("GS cookie: caller.sp%+x\n", Header.GSCookieStackSlot);
         pfnPrintf("GS cookie valid range: [%x;%x)\n", Header.GSCookieValidRangeStart, Header.GSCookieValidRangeEnd);
     }
+    else if (HasX86Info && X86Header.GSCookieBase != 0)
+    {
+        // Interface18 reports only caller-SP-relative cookies; X86 double-aligned frames use the initial SP.
+        const char* cookieBase = X86Header.GSCookieBase == 1 ? "caller.sp"
+            : X86Header.GSCookieBase == 2 ? "initial.sp" : "???";
+        pfnPrintf("GS cookie: %s%+x\n", cookieBase, X86Header.GSCookieOffset);
+        pfnPrintf("GS cookie valid range: [%x;%x)\n", X86Header.GSCookieValidRangeStart, X86Header.GSCookieValidRangeEnd);
+    }
     else
     {
         pfnPrintf("GS cookie: <none>\n");
@@ -158,9 +166,10 @@ void GCInfoData::DumpToOutput(GCInfoData::printfFtn pfnPrintf) const
     // Helper to format a stack slot offset as hex with sign, matching legacy format
     auto fmtStackSlot = [&](const SOSGCSlotLifetime& s) -> const char* {
         static char buf[64];
-        const char* baseReg = frameRegName;
+        const char* baseReg = "???";
         if (s.BaseRegister == 0) baseReg = "sp";
         else if (s.BaseRegister == 1) baseReg = frameRegName;
+        else if (s.BaseRegister == 2) baseReg = "caller.sp";
 
         if (s.SpOffset >= 0)
             sprintf_s(buf, ARRAY_SIZE(buf), "%s+%x", baseReg, (unsigned)s.SpOffset);
