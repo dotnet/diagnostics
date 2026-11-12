@@ -7,11 +7,13 @@ using System.Collections.Immutable;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.FileFormats;
 using Microsoft.FileFormats.ELF;
+using Microsoft.FileFormats.MachO;
 using Microsoft.SymbolStore;
 using Microsoft.SymbolStore.KeyGenerators;
 using Xunit;
@@ -265,20 +267,31 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         private sealed class TestModule : IModule
         {
             private readonly string _symbolFileName;
+            private readonly PdbFileInfo[] _pdbFileInfos;
 
             public TestModule(string symbolFileName, byte[] buildId, string fileName = "module")
             {
                 _symbolFileName = symbolFileName;
                 BuildId = ImmutableArray.CreateRange(buildId);
                 FileName = fileName;
+                _pdbFileInfos = Array.Empty<PdbFileInfo>();
             }
 
-            public ITarget Target { get; } = new TestTarget();
+            public TestModule(string fileName, uint indexTimeStamp, uint indexFileSize, params PdbFileInfo[] pdbFileInfos)
+            {
+                BuildId = ImmutableArray<byte>.Empty;
+                FileName = fileName;
+                IndexTimeStamp = indexTimeStamp;
+                IndexFileSize = indexFileSize;
+                _pdbFileInfos = pdbFileInfos;
+            }
+
+            public ITarget Target { get; init; } = new TestTarget(OSPlatform.Linux);
             public string FileName { get; }
             public ImmutableArray<byte> BuildId { get; }
-            public uint? IndexFileSize => null;
-            public uint? IndexTimeStamp => null;
-            public IEnumerable<PdbFileInfo> GetPdbFileInfos() => Array.Empty<PdbFileInfo>();
+            public uint? IndexFileSize { get; }
+            public uint? IndexTimeStamp { get; }
+            public IEnumerable<PdbFileInfo> GetPdbFileInfos() => _pdbFileInfos;
             public string GetSymbolFileName() => _symbolFileName;
             public IServiceProvider Services => throw new NotImplementedException();
             public int ModuleIndex => throw new NotImplementedException();
@@ -295,7 +308,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
         private sealed class TestTarget : ITarget
         {
-            public OSPlatform OperatingSystem => OSPlatform.Linux;
+            public TestTarget(OSPlatform operatingSystem) => OperatingSystem = operatingSystem;
+            public OSPlatform OperatingSystem { get; }
             public IHost Host => throw new NotImplementedException();
             public int Id => throw new NotImplementedException();
             public Architecture Architecture => Architecture.X64;
@@ -407,6 +421,206 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
 
             ISymbolFile result = symbolService.OpenSymbolFile(stream);
             Assert.Null(result);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DownloadELFDoesNotProbeRemoteModulePath(bool symbolFile)
+        {
+            string directory = CreateTempDirectory();
+            try
+            {
+                byte[] contents = File.ReadAllBytes(Path.Combine("TestBinaries", "symbolized_executable"));
+                using ELFFile elf = new(new StreamAddressSpace(new MemoryStream(contents)));
+                string localPath = Path.Combine(directory, "module");
+                File.WriteAllBytes(localPath, contents);
+                File.WriteAllBytes(localPath + ".dbg", contents);
+                TestModule module = new(null, elf.BuildID, RemotePathTestHelpers.ToRemoteForm(localPath));
+                SymbolService symbolService = new(this);
+
+                Assert.Null(symbolFile ? symbolService.DownloadSymbolFile(module) : symbolService.DownloadModuleFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DownloadMachOModuleOnlyProbesLocalPath(bool remote)
+        {
+            string directory = CreateTempDirectory();
+            try
+            {
+                string localPath = Path.Combine(directory, "libcoreclr.dylib");
+                using (GZipStream gzip = new(File.OpenRead(Path.Combine("TestBinaries", "libcoreclr.dylib.gz")), CompressionMode.Decompress))
+                using (FileStream output = File.Create(localPath))
+                {
+                    gzip.CopyTo(output);
+                }
+                byte[] uuid;
+                using (FileStream input = File.OpenRead(localPath))
+                {
+                    uuid = new MachOFile(new StreamAddressSpace(input)).Uuid;
+                }
+                TestModule module = new(null, uuid, remote ? RemotePathTestHelpers.ToRemoteForm(localPath) : localPath)
+                {
+                    Target = new TestTarget(OSPlatform.OSX)
+                };
+                SymbolService symbolService = new(this);
+
+                Assert.Equal(remote ? null : localPath, symbolService.DownloadModuleFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DownloadPEModuleOnlyProbesLocalPath(bool remote)
+        {
+            string directory = CreateTempDirectory();
+            try
+            {
+                (string dllPath, string pdbPath) = CopyPEFixture(directory);
+                TestModule module = CreatePEModule(dllPath, pdbPath, remote);
+                SymbolService symbolService = new(this);
+
+                Assert.Equal(remote ? null : dllPath, symbolService.DownloadModuleFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DownloadPESymbolFileOnlyProbesLocalPath(bool remote)
+        {
+            string directory = CreateTempDirectory();
+            try
+            {
+                (string dllPath, string pdbPath) = CopyPEFixture(directory);
+                TestModule module = CreatePEModule(dllPath, pdbPath, remote);
+                SymbolService symbolService = new(this);
+
+                Assert.Equal(remote ? null : pdbPath, symbolService.DownloadSymbolFile(module));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void OpenSymbolFileOnlyProbesAdjacentPdbForLocalAssembly(bool remote)
+        {
+            string directory = CreateTempDirectory();
+            try
+            {
+                (string dllPath, _) = CopyPEFixture(directory);
+                SymbolService symbolService = new(this);
+                using Stream peStream = File.OpenRead(dllPath);
+
+                ISymbolFile symbolFile = symbolService.OpenSymbolFile(
+                    remote ? RemotePathTestHelpers.ToRemoteForm(dllPath) : dllPath, isFileLayout: true, peStream);
+                bool opened = symbolFile is not null;
+                (symbolFile as IDisposable)?.Dispose();
+
+                Assert.Equal(!remote, opened);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void OpenSymbolFileForRemoteAssemblyUsesPdbFileNameForSymbolStore()
+        {
+            string directory = CreateTempDirectory();
+            string symbolDirectory = CreateTempDirectory();
+            try
+            {
+                (string dllPath, string pdbPath) = CopyPEFixture(directory);
+                // Use a Windows style CodeView path so non-Windows platforms must normalize it.
+                const string pdbFileName = "Thread.pdb";
+                RewriteCodeViewPath(dllPath, @"C:\b\" + pdbFileName);
+                File.Move(pdbPath, Path.Combine(symbolDirectory, pdbFileName));
+                SymbolService symbolService = new(this);
+                symbolService.AddDirectoryPath(symbolDirectory);
+                using Stream peStream = File.OpenRead(dllPath);
+
+                ISymbolFile symbolFile = symbolService.OpenSymbolFile(RemotePathTestHelpers.ToRemoteForm(dllPath), isFileLayout: true, peStream);
+                bool opened = symbolFile is not null;
+                (symbolFile as IDisposable)?.Dispose();
+
+                Assert.True(opened);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+                Directory.Delete(symbolDirectory, recursive: true);
+            }
+        }
+
+        private static void RewriteCodeViewPath(string dllPath, string newPath)
+        {
+            int pathOffset;
+            int pathSize;
+            using (PEReader reader = new(File.OpenRead(dllPath)))
+            {
+                DebugDirectoryEntry codeView = reader.ReadDebugDirectory().First(entry => entry.Type == DebugDirectoryEntryType.CodeView && entry.IsPortableCodeView);
+                // CodeView data: 'RSDS' signature, GUID, age, then a null terminated path.
+                pathOffset = codeView.DataPointer + 4 + 16 + 4;
+                pathSize = codeView.DataSize - 4 - 16 - 4;
+            }
+            byte[] pathBytes = Encoding.UTF8.GetBytes(newPath);
+            Assert.True(pathBytes.Length < pathSize);
+            byte[] image = File.ReadAllBytes(dllPath);
+            Array.Clear(image, pathOffset, pathSize);
+            pathBytes.CopyTo(image, pathOffset);
+            File.WriteAllBytes(dllPath, image);
+        }
+
+        private static string CreateTempDirectory()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(directory);
+            return directory;
+        }
+
+        private static (string DllPath, string PdbPath) CopyPEFixture(string directory)
+        {
+            string dllPath = Path.Combine(directory, "System.Threading.Thread.dll");
+            string pdbPath = Path.Combine(directory, "System.Threading.Thread.pdb");
+            File.Copy(Path.Combine("TestBinaries", "System.Threading.Thread.dll"), dllPath);
+            File.Copy(Path.Combine("TestBinaries", "System.Threading.Thread.pdb"), pdbPath);
+            return (dllPath, pdbPath);
+        }
+
+        private static TestModule CreatePEModule(string dllPath, string pdbPath, bool remote)
+        {
+            using PEReader reader = new(File.OpenRead(dllPath));
+            DebugDirectoryEntry codeView = reader.ReadDebugDirectory().First(entry => entry.Type == DebugDirectoryEntryType.CodeView && entry.IsPortableCodeView);
+            CodeViewDebugDirectoryData data = reader.ReadCodeViewDebugDirectoryData(codeView);
+            if (remote)
+            {
+                dllPath = RemotePathTestHelpers.ToRemoteForm(dllPath);
+                pdbPath = RemotePathTestHelpers.ToRemoteForm(pdbPath);
+            }
+            return new TestModule(dllPath, (uint)reader.PEHeaders.CoffHeader.TimeDateStamp, (uint)reader.PEHeaders.PEHeader.SizeOfImage,
+                new PdbFileInfo(pdbPath, data.Guid, data.Age, codeView.IsPortableCodeView));
         }
 
         #region IHost

@@ -13496,11 +13496,21 @@ DECLARE_API(SetClrPath)
     }
     if (narg > 0)
     {
+        if (IsRemoteOrDevicePath(runtimeModulePath.data))
+        {
+            ExtErr("Runtime directory must be a local path: %s\n", runtimeModulePath.data);
+            return E_INVALIDARG;
+        }
         std::string fullPath;
         if (!GetAbsolutePath(runtimeModulePath.data, fullPath))
         {
             ExtErr("Invalid runtime directory %s\n", fullPath.c_str());
             return E_FAIL;
+        }
+        if (!IsSafeAbsoluteLocalPath(fullPath.c_str()))
+        {
+            ExtErr("Runtime directory must be a local path: %s\n", fullPath.c_str());
+            return E_INVALIDARG;
         }
         g_pRuntime->SetRuntimeDirectory(fullPath.c_str());
     }

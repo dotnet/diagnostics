@@ -610,7 +610,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                     return null;
                 }
                 fileName = module.FileName;
-                fileKey = PEFileKeyGenerator.GetKey(Path.GetFileName(fileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
+                fileKey = PEFileKeyGenerator.GetKey(PathUtilities.GetFileName(fileName), module.IndexTimeStamp.Value, module.IndexFileSize.Value);
                 if (fileKey is null)
                 {
                     Trace.TraceWarning($"DownLoadPE: no key generated for module {fileName} ");
@@ -652,8 +652,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                 throw new ArgumentException($"Key flag not supported {flags}");
             }
 
-            // Check if the file is local and the key matches the module
-            if (File.Exists(fileName))
+            // Check if the file is local and the key matches the module. Never probe a non-local
+            // (UNC/device/relative) path that came from the dump.
+            if (PathUtilities.IsSafeAbsoluteLocalPath(fileName) && File.Exists(fileName))
             {
                 using Stream stream = Utilities.TryOpenFile(fileName);
                 if (stream is not null)
@@ -737,7 +738,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // Check if the file is local and the key matches the module
             string fileName = fileKey.FullPathName;
-            if (File.Exists(fileName) && MatchesELFKey(fileName, fileKey))
+            if (PathUtilities.IsSafeAbsoluteLocalPath(fileName) && File.Exists(fileName) && MatchesELFKey(fileName, fileKey))
             {
                 Trace.TraceInformation("DownloadELF: local file match {0}", fileName);
                 return fileName;
@@ -801,7 +802,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
             // Check if the file is local and the key matches the module
             string fileName = fileKey.FullPathName;
-            if (File.Exists(fileName))
+            if (PathUtilities.IsSafeAbsoluteLocalPath(fileName) && File.Exists(fileName))
             {
                 using MachOFile machOFile = Utilities.OpenMachOFile(fileName);
                 if (machOFile is not null)
@@ -903,14 +904,25 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             try
             {
                 CodeViewDebugDirectoryData data = peReader.ReadCodeViewDebugDirectoryData(codeViewEntry);
-                string pdbPath = data.Path;
+                string pdbPath;
                 Stream pdbStream = null;
+                try
+                {
+                    // Never use the directory from the CodeView path; only its file name.
+                    pdbPath = PathUtilities.GetFileName(data.Path);
+                }
+                catch
+                {
+                    // invalid characters in CodeView path
+                    return null;
+                }
 
-                if (assemblyPath != null)
+                // Only look for the PDB next to the assembly when the assembly path is local.
+                if (assemblyPath != null && PathUtilities.IsSafeAbsoluteLocalPath(assemblyPath))
                 {
                     try
                     {
-                        pdbPath = Path.Combine(Path.GetDirectoryName(assemblyPath), GetFileName(pdbPath));
+                        pdbPath = Path.Combine(Path.GetDirectoryName(assemblyPath), pdbPath);
                     }
                     catch
                     {

@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Diagnostics.DebugServices;
+using Microsoft.Diagnostics.DebugServices.Implementation;
 using Microsoft.Diagnostics.Runtime;
 using Microsoft.Diagnostics.Runtime.Utilities;
 using Microsoft.FileFormats.ELF;
@@ -84,6 +86,8 @@ namespace SOS.Hosting
         private IntPtr _corDebugProcess = IntPtr.Zero;
         private IntPtr _dacHandle = IntPtr.Zero;
         private IntPtr _dbiHandle = IntPtr.Zero;
+        private string _dacLoadPath;
+        private readonly List<VerifiedLibraryCopy> _libraryCopies = [];
 
         public IntPtr IRuntime { get; }
 
@@ -141,6 +145,12 @@ namespace SOS.Hosting
                 DataTarget.PlatformFunctions.FreeLibrary(_dbiHandle);
                 _dbiHandle = IntPtr.Zero;
             }
+            // Best effort: copies of libraries that are still loaded (the DAC is never freed) can't be deleted.
+            foreach (VerifiedLibraryCopy libraryCopy in _libraryCopies)
+            {
+                libraryCopy.Dispose();
+            }
+            _libraryCopies.Clear();
         }
 
         #region IRuntime (native)
@@ -184,6 +194,11 @@ namespace SOS.Hosting
             IntPtr self,
             string runtimeModuleDirectory)
         {
+            if (runtimeModuleDirectory is not null && !PathUtilities.IsSafeAbsoluteLocalPath(runtimeModuleDirectory))
+            {
+                Trace.TraceError($"Ignoring non-local runtime module directory: {runtimeModuleDirectory}");
+                return;
+            }
             _runtime.RuntimeModuleDirectory = runtimeModuleDirectory;
         }
 
@@ -194,7 +209,12 @@ namespace SOS.Hosting
             {
                 return _runtime.RuntimeModuleDirectory;
             }
-            return Path.GetDirectoryName(_runtime.RuntimeModule.FileName);
+            // Never hand native SOS a directory from the dump that is not local.
+            if (PathUtilities.IsSafeAbsoluteLocalPath(_runtime.RuntimeModule.FileName))
+            {
+                return Path.GetDirectoryName(_runtime.RuntimeModule.FileName);
+            }
+            return null;
         }
 
         private int GetClrDataProcess(
@@ -389,7 +409,8 @@ namespace SOS.Hosting
             using RuntimeLibraryProvider libraryProvider = new(
                 _runtime.GetDbiFilePath,
                 () => _runtime.GetDacFilePath(out _),
-                _services.GetService<ISettingsService>()?.DacSignatureVerificationEnabled ?? true);
+                _services.GetService<ISettingsService>()?.DacSignatureVerificationEnabled ?? true,
+                _libraryCopies);
 
             IClrDataProcessActivator activator = _services.GetService<IClrDataProcessActivator>();
             if (activator is null)
@@ -422,10 +443,14 @@ namespace SOS.Hosting
             }
             if (_dbiHandle == IntPtr.Zero)
             {
-                _dbiHandle = LoadLibraryWithSignatureVerification(dbiFilePath, verifySignature);
+                _dbiHandle = LoadLibraryWithSignatureVerification(dbiFilePath, verifySignature, out VerifiedLibraryCopy dbiCopy);
                 if (_dbiHandle == IntPtr.Zero)
                 {
                     return HResult.E_NOINTERFACE;
+                }
+                if (dbiCopy is not null)
+                {
+                    _libraryCopies.Add(dbiCopy);
                 }
             }
 
@@ -449,7 +474,7 @@ namespace SOS.Hosting
                     int hr = openVirtualProcessImpl2(
                         clrInstanceId,
                         dataTarget.ICorDebugDataTarget,
-                        dacFilePath,
+                        _dacLoadPath,
                         ref maxDebuggerSupportedVersion,
                         ref iid,
                         out IntPtr process,
@@ -522,14 +547,19 @@ namespace SOS.Hosting
                     Trace.TraceError($"Could not find matching DAC for this runtime: {_runtime.RuntimeModule.FileName}");
                     return IntPtr.Zero;
                 }
-                _dacHandle = LoadDacLibrary(dacFilePath, verifySignature);
+                _dacHandle = LoadDacLibrary(dacFilePath, verifySignature, out VerifiedLibraryCopy dacCopy);
+                if (dacCopy is not null)
+                {
+                    _libraryCopies.Add(dacCopy);
+                }
+                _dacLoadPath = dacCopy?.FilePath ?? dacFilePath;
             }
             return _dacHandle;
         }
 
-        private static IntPtr LoadDacLibrary(string dacFilePath, bool verifySignature)
+        private static IntPtr LoadDacLibrary(string dacFilePath, bool verifySignature, out VerifiedLibraryCopy dacCopy)
         {
-            IntPtr dacHandle = LoadLibraryWithSignatureVerification(dacFilePath, verifySignature);
+            IntPtr dacHandle = LoadLibraryWithSignatureVerification(dacFilePath, verifySignature, out dacCopy);
             if (dacHandle == IntPtr.Zero)
             {
                 return IntPtr.Zero;
@@ -542,28 +572,42 @@ namespace SOS.Hosting
             return dacHandle;
         }
 
-        internal static IntPtr LoadLibraryWithSignatureVerification(string libraryPath, bool verifySignature)
+        internal static IntPtr LoadLibraryWithSignatureVerification(string libraryPath, bool verifySignature, out VerifiedLibraryCopy libraryCopy)
         {
+            libraryCopy = null;
             IntPtr libraryHandle = IntPtr.Zero;
             IDisposable fileLock = null;
+            VerifiedLibraryCopy verifiedCopy = null;
+            string loadPath = libraryPath;
             try
             {
                 if (verifySignature)
                 {
-                    Trace.TraceInformation($"Verifying library signing and cert {libraryPath}");
+                    // Verify and load a private copy so the original can't be swapped between the two.
+                    try
+                    {
+                        verifiedCopy = VerifiedLibraryCopy.Create(libraryPath);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        Trace.TraceError($"Copying {libraryPath} for verification FAILED {ex.Message}");
+                        return IntPtr.Zero;
+                    }
+                    loadPath = verifiedCopy.FilePath;
+                    Trace.TraceInformation($"Verifying library signing and cert {libraryPath} (copied to {loadPath})");
 
-                    if (!AuthenticodeUtil.VerifyDacDll(libraryPath, out fileLock))
+                    if (!AuthenticodeUtil.VerifyDacDll(loadPath, out fileLock))
                     {
                         return IntPtr.Zero;
                     }
                 }
                 try
                 {
-                    libraryHandle = DataTarget.PlatformFunctions.LoadLibrary(libraryPath);
+                    libraryHandle = DataTarget.PlatformFunctions.LoadLibrary(loadPath);
                 }
                 catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
                 {
-                    Trace.TraceError($"LoadLibrary({libraryPath}) FAILED {ex}");
+                    Trace.TraceError($"LoadLibrary({loadPath}) FAILED {ex}");
                     return IntPtr.Zero;
                 }
             }
@@ -571,8 +615,13 @@ namespace SOS.Hosting
             {
                 // Keep the verified file locked until it is loaded.
                 fileLock?.Dispose();
+                if (libraryHandle == IntPtr.Zero)
+                {
+                    verifiedCopy?.Dispose();
+                }
             }
             Debug.Assert(libraryHandle != IntPtr.Zero);
+            libraryCopy = verifiedCopy;
             return libraryHandle;
         }
 

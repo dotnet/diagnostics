@@ -238,6 +238,92 @@ const WCHAR GetTargetDirectorySeparatorW()
     }
 }
 
+template <typename T>
+static bool IsDirectorySeparatorImpl(T character)
+{
+    return character == '\\' || character == '/';
+}
+
+template <typename T>
+static bool IsRemoteOrDevicePathImpl(const T* path)
+{
+    return path != nullptr &&
+        path[0] != '\0' &&
+        IsDirectorySeparatorImpl(path[0]) &&
+        IsDirectorySeparatorImpl(path[1]);
+}
+
+template <typename T>
+static bool IsSafeAbsoluteLocalPathImpl(const T* path)
+{
+    if (path == nullptr || path[0] == '\0' || IsRemoteOrDevicePathImpl(path))
+    {
+        return false;
+    }
+#ifdef FEATURE_PAL
+    return path[0] == '/';
+#else
+    return path[1] != '\0' &&
+        ((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) &&
+        path[1] == ':' &&
+        IsDirectorySeparatorImpl(path[2]);
+#endif
+}
+
+template <typename T>
+static const T* GetLastDirectorySeparatorImpl(const T* path)
+{
+    const T* lastSeparator = nullptr;
+    if (path != nullptr)
+    {
+        for (const T* current = path; *current != '\0'; current++)
+        {
+            if (IsDirectorySeparatorImpl(*current))
+            {
+                lastSeparator = current;
+            }
+        }
+    }
+    return lastSeparator;
+}
+
+// UNC (\\server\share), device (\\?\, \\.\) or the equivalent forward slash forms.
+bool IsRemoteOrDevicePath(const char* path)
+{
+    return IsRemoteOrDevicePathImpl(path);
+}
+
+// A fully qualified local path: drive letter path on Windows (mapped network drives included)
+// or a rooted path elsewhere (network mounts included).
+bool IsSafeAbsoluteLocalPath(const char* path)
+{
+    return IsSafeAbsoluteLocalPathImpl(path);
+}
+
+bool IsSafeAbsoluteLocalPath(const WCHAR* path)
+{
+    return IsSafeAbsoluteLocalPathImpl(path);
+}
+
+char* GetLastDirectorySeparator(char* path)
+{
+    return const_cast<char*>(GetLastDirectorySeparatorImpl(path));
+}
+
+// Returns the file name of the path with any drive qualifiers ("C:", "C:D:") stripped.
+const WCHAR* GetFileName(const WCHAR* path)
+{
+    const WCHAR* lastSeparator = GetLastDirectorySeparatorImpl(path);
+    const WCHAR* fileName = lastSeparator != nullptr ? lastSeparator + 1 : path;
+    while (fileName != nullptr &&
+        ((fileName[0] >= W('A') && fileName[0] <= W('Z')) || (fileName[0] >= W('a') && fileName[0] <= W('z'))) &&
+        fileName[1] == W(':'))
+    {
+        fileName += 2;
+    }
+    return fileName;
+}
+
 #ifndef FEATURE_PAL
 
 // Check if a file exist
