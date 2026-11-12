@@ -23,7 +23,7 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const base = 'release/stable';
-            const head = 'release/weekly-staging';
+            const head = 'automation/release-staging';
             const [stable, main] = await Promise.all([
               github.rest.repos.getBranch({ owner, repo, branch: base }),
               github.rest.repos.getBranch({ owner, repo, branch: 'main' })
@@ -42,7 +42,7 @@ jobs:
               owner, repo, state: 'open', base, head: `${owner}:${head}`
             });
             if (existing.data.length > 1) {
-              throw new Error('More than one open weekly-staging -> release/stable PR was found.');
+              throw new Error('More than one open automation/release-staging -> release/stable PR was found.');
             }
 
             try {
@@ -70,7 +70,7 @@ jobs:
               pr = (await github.rest.pulls.create({
                 owner, repo, base, head,
                 title: 'Merge weekly staging into release/stable',
-                body: 'Weekly merge of release/stable and main into release/weekly-staging. Staging-branch pushes run Release dry-run validation. This workflow does not merge into release/stable or publish release artifacts.'
+                body: 'Weekly merge of release/stable and main into automation/release-staging. This PR runs Release dry-run validation of the proposed merge. This workflow does not merge into release/stable or publish release artifacts.'
               })).data;
             }
 

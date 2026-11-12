@@ -28,15 +28,15 @@ To release the latest tools:
 
 The `Update release/stable` GitHub workflow runs on Monday at 08:00 UTC and supports
 manual dispatch. When main has commits missing from release/stable, it creates
-`release/weekly-staging` from stable if needed, then merges the captured stable and
+`automation/release-staging` from stable if needed, then merges the captured stable and
 main commits into staging. It opens or reuses a same-repository
-`release/weekly-staging` -> `release/stable` PR and links it in the run summary.
+`automation/release-staging` -> `release/stable` PR and links it in the run summary.
 Merge conflicts fail the workflow rather than resetting or force-pushing staging.
 
-Staging-branch pushes trigger Release dry-run validation in the public Azure
-pipeline once its CI branch filter permits `release/weekly-staging` and the dry-run
-pipeline changes are merged. An unchanged staging branch does not explicitly queue
-another CI build.
+The existing PR trigger runs Release dry-run validation of the proposed merge in
+the public Azure pipeline once the companion pipeline changes are merged. CI
+recognizes the `automation/release-staging` source branch and `release/stable`
+target at runtime. No staging push trigger or explicit CI queue request is needed.
 
 The workflow never modifies main or release/stable, merges the stable-update PR,
 or publishes release artifacts. It uses GitHub's automatic token with contents-write
