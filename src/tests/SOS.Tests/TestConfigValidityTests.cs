@@ -45,6 +45,15 @@ public sealed class TestConfigValidityTests
     }
 
     [Fact]
+    public void Net12RequiresCDac()
+    {
+        TestConfig config = Config() with { CoreVersion = CoreVersion.Net12 };
+
+        Assert.False(TestConfig.IsValid(config));
+        Assert.True(TestConfig.IsValid(config with { Dac = Dac.CDac }));
+    }
+
+    [Fact]
     public void HostRuntimeDefaultsAndValidityAreCorrect()
     {
         TestConfig config = Config();

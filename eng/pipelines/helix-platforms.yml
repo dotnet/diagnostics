@@ -39,11 +39,11 @@ variables:
 
   # Windows platforms
 
-  - name: helix_windows_x64_server_2022
-    value: Windows.Amd64.Server2022.Open
+  - name: helix_windows_x64_runtime
+    value: Windows.Amd64.Open.rt
 
-  - name: helix_windows_x64_server_2022_internal
-    value: Windows.Amd64.Server2022
+  - name: helix_windows_x64_runtime_internal
+    value: Windows.Amd64.rt
 
   - name: helix_windows_arm64_windows_11
     value: Windows.11.Arm64.Open
@@ -85,10 +85,10 @@ variables:
     value: ${{ variables.helix_linux_musl_x64_alpine_323_internal }}
 
   - name: helix_win_x64
-    value: ${{ variables.helix_windows_x64_server_2022 }}
+    value: ${{ variables.helix_windows_x64_runtime }}
 
   - name: helix_win_x64_internal
-    value: ${{ variables.helix_windows_x64_server_2022_internal }}
+    value: ${{ variables.helix_windows_x64_runtime_internal }}
 
   - name: helix_win_arm64
     value: ${{ variables.helix_windows_arm64_windows_11 }}

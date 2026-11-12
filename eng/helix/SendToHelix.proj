@@ -67,4 +67,14 @@
     </ItemGroup>
   </Target>
 
+  <PropertyGroup Condition="'$(TargetOS)' == 'Windows_NT'">
+    <_DacRegKey>HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\MiniDumpSettings</_DacRegKey>
+    <_DacRegAdd>reg add &quot;$(_DacRegKey)&quot; /v DisableAuxProviderSignatureCheck /t REG_DWORD /d 1 /f</_DacRegAdd>
+    <_DacRegDelete>reg delete &quot;$(_DacRegKey)&quot; /v DisableAuxProviderSignatureCheck /f</_DacRegDelete>
+    <HelixPreCommands>$(HelixPreCommands);$(_DacRegAdd) 2&gt;nul || (echo DisableAuxProviderSignatureCheck registry write skipped &amp; exit /b 0)</HelixPreCommands>
+    <HelixPostCommands>$(_DacRegDelete) 2&gt;nul || echo DisableAuxProviderSignatureCheck registry cleanup skipped;$(HelixPostCommands)</HelixPostCommands>
+    <HelixPreCommands Condition="'$(TargetArch)' == 'x86'">$(HelixPreCommands);$(_DacRegAdd) /reg:32 2&gt;nul || (echo DisableAuxProviderSignatureCheck /reg:32 registry write skipped &amp; exit /b 0)</HelixPreCommands>
+    <HelixPostCommands Condition="'$(TargetArch)' == 'x86'">$(_DacRegDelete) /reg:32 2&gt;nul || echo DisableAuxProviderSignatureCheck /reg:32 registry cleanup skipped;$(HelixPostCommands)</HelixPostCommands>
+  </PropertyGroup>
+
 </Project>

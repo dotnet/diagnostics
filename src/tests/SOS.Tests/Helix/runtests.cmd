@@ -155,19 +155,9 @@ for /d %%D in ("%ROOT%\artifacts\bin\SOS.Tests\%CONFIGURATION%\*") do (
     set "TEST_DLL=%%~fD\SOS.Tests.dll"
   )
 )
-set "SIGNATURE_SCRIPT=%ROOT%\eng\DisableSignatureCheck.ps1"
-set "SIGNATURE_REPO=%HELIX_WORKITEM_ROOT%\sos-signature-repo"
-set "SIGNATURE_RUNTIME=%SIGNATURE_REPO%\artifacts\dotnet-test"
-set "POWERSHELL_EXE=powershell.exe"
-if /I "%TARGET_ARCH%"=="x86" set "POWERSHELL_EXE=%SystemRoot%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe"
 
 if not defined TEST_DLL (
   echo SOS.Tests.dll was not found for %CONFIGURATION%.
-  exit /b 3
-)
-
-if not exist "%SIGNATURE_SCRIPT%" (
-  echo DisableSignatureCheck.ps1 was not found at "%SIGNATURE_SCRIPT%".
   exit /b 3
 )
 
@@ -176,25 +166,10 @@ if not exist "%DEBUGGER_HOST%" (
   exit /b 3
 )
 
-if not exist "%SIGNATURE_REPO%\artifacts" mkdir "%SIGNATURE_REPO%\artifacts"
-if not exist "%SIGNATURE_RUNTIME%\." (
-  mklink /J "%SIGNATURE_RUNTIME%" "%PAYLOAD_DOTNET_ROOT%"
-  if errorlevel 1 exit /b 3
-)
-
-set "DOTNET_ROOT=%SIGNATURE_RUNTIME%"
+set "DOTNET_ROOT=%PAYLOAD_DOTNET_ROOT%"
 set "DOTNET_ROOT_X86=%DOTNET_ROOT%"
 
 set "LOG=%UPLOAD%\SOS.Tests-%RID%-%CONFIGURATION%-%TOOL_LAYOUT%-%IDENTITY%.log"
-
-"%POWERSHELL_EXE%" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass ^
-  -File "%SIGNATURE_SCRIPT%" -RepoRoot "%SIGNATURE_REPO%"
-set "SIGNATURE_EXIT_CODE=%ERRORLEVEL%"
-if not "%SIGNATURE_EXIT_CODE%"=="0" (
-  "%POWERSHELL_EXE%" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass ^
-    -File "%SIGNATURE_SCRIPT%" -Restore -RepoRoot "%SIGNATURE_REPO%"
-  exit /b %SIGNATURE_EXIT_CODE%
-)
 
 "%DOTNET_ROOT%\dotnet.exe" "%TEST_DLL%" ^
   --results-directory "%UPLOAD%" ^
@@ -204,10 +179,6 @@ if not "%SIGNATURE_EXIT_CODE%"=="0" (
   --report-xunit-html-filename "SOS.Tests-%RID%-%CONFIGURATION%-%TOOL_LAYOUT%-%IDENTITY%.html" ^
   --auto-reporters off > "%LOG%" 2>&1
 set "EXIT_CODE=%ERRORLEVEL%"
-
-"%POWERSHELL_EXE%" -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass ^
-  -File "%SIGNATURE_SCRIPT%" -Restore -RepoRoot "%SIGNATURE_REPO%"
-set "RESTORE_EXIT_CODE=%ERRORLEVEL%"
 
 type "%LOG%"
 
@@ -227,5 +198,4 @@ if not "%EXIT_CODE%"=="0" (
   )
 )
 
-if not "%RESTORE_EXIT_CODE%"=="0" exit /b %RESTORE_EXIT_CODE%
 exit /b %EXIT_CODE%
