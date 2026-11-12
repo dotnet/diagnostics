@@ -1,8 +1,9 @@
 @echo off
 setlocal
 
-set "_commonArgs=-restore -ci -prepareMachine -verbosity minimal -configuration Release"
-set "_logDir=%~dp0..\artifacts\log\Release\"
+if not defined DiagnosticsPackageConfiguration set "DiagnosticsPackageConfiguration=Release"
+set "_commonArgs=-restore -ci -prepareMachine -verbosity minimal -configuration %DiagnosticsPackageConfiguration%"
+set "_logDir=%~dp0..\artifacts\log\%DiagnosticsPackageConfiguration%\"
 
 echo Creating packages
 powershell -ExecutionPolicy ByPass -NoProfile -command "& """%~dp0common\Build.ps1""" %_commonArgs% -pack -noBl /bl:'%_logDir%Pack.binlog' %*"
@@ -20,11 +21,11 @@ echo Creating internal diagnostics assets packages
 powershell -ExecutionPolicy ByPass -NoProfile -command "& """%~dp0common\Build.ps1""" %_commonArgs% -pack -noBl /bl:'%_logDir%PackInternalAssets.binlog' -projects %~dp0..\src\pkg\InternalAssets\packages.proj %*"
 if NOT '%ERRORLEVEL%' == '0' goto ExitWithCode
 
-echo Signing and publishing manifest
+echo Signing and publishing artifacts and manifest
 powershell -ExecutionPolicy ByPass -NoProfile -command "& """%~dp0common\Build.ps1""" %_commonArgs% -sign -publish -noBl /bl:'%_logDir%SignPublish.binlog' %*"
 if NOT '%ERRORLEVEL%' == '0' goto ExitWithCode
 
 exit /b 0
 
 :ExitWithCode
-exit /b !__exitCode!
+exit /b %ERRORLEVEL%

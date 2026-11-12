@@ -18,4 +18,31 @@ resources:
             ${{ if notIn(pair.key, 'tenantId', 'identityType', 'registry') }}:
               ${{ pair.key }}: ${{ pair.value }}
 
-stages: ${{ parameters.stages }}
+# Translate pipelineArtifact outputs into ordinary public uploads; 1ES handles
+# these declarations in internal pipelines, including their SBOM settings.
+stages:
+- ${{ each stage in parameters.stages }}:
+  - ${{ each stageProperty in stage }}:
+      ${{ if ne(stageProperty.key, 'jobs') }}:
+        ${{ stageProperty.key }}: ${{ stageProperty.value }}
+      ${{ else }}:
+        jobs:
+        - ${{ each job in stageProperty.value }}:
+          - ${{ each jobProperty in job }}:
+              ${{ if ne(jobProperty.key, 'steps') }}:
+                ${{ jobProperty.key }}: ${{ jobProperty.value }}
+              ${{ else }}:
+                steps:
+                - ${{ each step in jobProperty.value }}:
+                  - ${{ step }}
+                - ${{ each output in job.templateContext.outputs }}:
+                  - ${{ if eq(output.output, 'pipelineArtifact') }}:
+                    - task: PublishPipelineArtifact@1
+                      inputs:
+                        targetPath: ${{ coalesce(output.path, output.targetPath) }}
+                        artifactName: ${{ coalesce(output.artifact, output.artifactName) }}
+                      ${{ each property in output }}:
+                        ${{ if in(property.key, 'displayName', 'condition', 'continueOnError', 'retryCountOnTaskFailure', 'timeoutInMinutes', 'enabled') }}:
+                          ${{ property.key }}: ${{ property.value }}
+                  - ${{ else }}:
+                    - 'Unsupported public pipeline output type: ${{ output.output }}': error

@@ -145,14 +145,14 @@ jobs:
       - task: CopyFiles@2
         displayName: Gather binaries for publish
         inputs:
-          ${{ if and(eq(parameters.platform.os, 'windows'), eq(parameters.platform.arch, 'x64'), eq(parameters.configuration, 'Release')) }}:
+          ${{ if and(eq(parameters.platform.os, 'windows'), eq(parameters.platform.arch, 'x64')) }}:
             SourceFolder: '$(Build.SourcesDirectory)/artifacts/bin'
           ${{ else }}:
             SourceFolder: "$(Build.SourcesDirectory)/artifacts/bin/${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}.${{ parameters.platform.arch }}.${{ parameters.configuration }}"
           Contents: '**'
           ${{ if ne(coalesce(parameters.platform.artifactOS, ''), '') }}:
             TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/bin/${{ parameters.platform.artifactOS }}.${{ parameters.platform.arch }}.${{ parameters.configuration }}
-          ${{ elseif and(eq(parameters.platform.os, 'windows'), eq(parameters.platform.arch, 'x64'), eq(parameters.configuration, 'Release')) }}:
+          ${{ elseif and(eq(parameters.platform.os, 'windows'), eq(parameters.platform.arch, 'x64')) }}:
             TargetFolder: $(Build.ArtifactStagingDirectory)/artifacts/bin
           ${{ else }}:
             TargetFolder: "$(Build.ArtifactStagingDirectory)/artifacts/bin/${{ replace(parameters.platform.os, 'windows', 'Windows_NT') }}.${{ parameters.platform.arch }}.${{ parameters.configuration }}"

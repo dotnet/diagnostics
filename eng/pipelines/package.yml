@@ -1,0 +1,87 @@
+parameters:
+- name: pipelineJobTemplate
+  type: string
+- name: configuration
+  type: string
+- name: isOfficialBuild
+  type: boolean
+  default: false
+- name: dependsOn
+  type: object
+  default: []
+
+jobs:
+- template: ${{ parameters.pipelineJobTemplate }}
+  parameters:
+    ${{ if eq(parameters.isOfficialBuild, true) }}:
+      name: Package_Sign_Publish
+    ${{ else }}:
+      name: Package_${{ parameters.configuration }}
+
+    ${{ if eq(parameters.isOfficialBuild, true) }}:
+      displayName: Package signed ${{ parameters.configuration }} artifacts
+    ${{ else }}:
+      displayName: Package unsigned ${{ parameters.configuration }} artifacts
+
+    ${{ if eq(parameters.isOfficialBuild, true) }}:
+      enableMicrobuild: true
+
+    templateContext:
+      outputs:
+      - output: pipelineArtifact
+        artifact: BundledTools
+        path: '$(Build.SourcesDirectory)/artifacts/bundledtools'
+        displayName: 'Publish Bundled Tools'
+        condition: succeeded()
+      - output: pipelineArtifact
+        artifact: Logs_Packaging_Signing_Attempt$(System.JobAttempt)
+        displayName: 'Publish Signing and Packaging Logs'
+        path: '$(Build.SourcesDirectory)/artifacts/log'
+        condition: always()
+        continueOnError: true
+        sbomEnabled: false # we don't need SBOM for logs
+    ${{ if ne(parameters.isOfficialBuild, true) }}:
+      pool:
+        name: $(BuildPool)
+        demands: ImageOverride -equals $(WindowsImage)
+        os: windows
+    condition: succeeded()
+    dependsOn: ${{ parameters.dependsOn }}
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: Download ${{ parameters.configuration }} builds
+      inputs:
+        patterns: |
+          Build_Linux_*_${{ parameters.configuration }}/bin/**
+          Build_Linux_musl_*_${{ parameters.configuration }}/bin/**
+          Build_Windows_*_${{ parameters.configuration }}/bin/**
+          Build_MacOS_*_${{ parameters.configuration }}/bin/**
+        downloadPath: '$(Build.ArtifactStagingDirectory)/__download__'
+        checkDownloadedFiles: true
+        cleanDestinationFolder: true
+
+    - powershell: |
+        $directories = @(Get-ChildItem -LiteralPath "$(Build.ArtifactStagingDirectory)/__download__" -Directory)
+        if ($directories.Count -ne 11) {
+          throw "Expected build outputs for all 11 platforms; found $($directories.Count)."
+        }
+        $destination = "$(Build.SourcesDirectory)/artifacts/bin"
+        New-Item -ItemType Directory -Path $destination -Force | Out-Null
+        foreach ($directory in $directories) {
+          Move-Item -Path "$($directory.FullName)/bin/*" -Destination $destination -ErrorAction Stop
+        }
+      displayName: Setup layout for packaging
+
+    - ${{ if eq(parameters.isOfficialBuild, true) }}:
+      - template: /eng/common/core-templates/steps/enable-internal-sources.yml@self
+
+    # Create packages, process signing and upload artifacts and manifests for downstream feed publishing.
+    - script: $(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd /p:OfficialBuild=${{ parameters.isOfficialBuild }} /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName) /p:DotNetPublishUsingPipelines=true /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+      ${{ if eq(parameters.isOfficialBuild, true) }}:
+        displayName: Package, sign, and publish build artifacts
+      ${{ else }}:
+        displayName: Package and publish unsigned build artifacts
+      continueOnError: false
+      condition: succeeded()
+      env:
+        DiagnosticsPackageConfiguration: ${{ parameters.configuration }}
