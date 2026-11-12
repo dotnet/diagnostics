@@ -6,6 +6,9 @@ parameters:
 - name: isOfficialBuild
   type: boolean
   default: false
+- name: isDryRun
+  type: boolean
+  default: false
 - name: dependsOn
   type: object
   default: []
@@ -18,12 +21,12 @@ jobs:
     ${{ else }}:
       name: Package_${{ parameters.configuration }}
 
-    ${{ if eq(parameters.isOfficialBuild, true) }}:
+    ${{ if and(eq(parameters.isOfficialBuild, true), ne(parameters.isDryRun, true)) }}:
       displayName: Package signed ${{ parameters.configuration }} artifacts
     ${{ else }}:
       displayName: Package unsigned ${{ parameters.configuration }} artifacts
 
-    ${{ if eq(parameters.isOfficialBuild, true) }}:
+    ${{ if and(eq(parameters.isOfficialBuild, true), ne(parameters.isDryRun, true)) }}:
       enableMicrobuild: true
 
     templateContext:
@@ -40,7 +43,7 @@ jobs:
         condition: always()
         continueOnError: true
         sbomEnabled: false # we don't need SBOM for logs
-    ${{ if ne(parameters.isOfficialBuild, true) }}:
+    ${{ if or(ne(parameters.isOfficialBuild, true), eq(parameters.isDryRun, true)) }}:
       pool:
         name: $(BuildPool)
         demands: ImageOverride -equals $(WindowsImage)
@@ -72,12 +75,12 @@ jobs:
         }
       displayName: Setup layout for packaging
 
-    - ${{ if eq(parameters.isOfficialBuild, true) }}:
+    - ${{ if and(eq(parameters.isOfficialBuild, true), ne(parameters.isDryRun, true)) }}:
       - template: /eng/common/core-templates/steps/enable-internal-sources.yml@self
 
     # Create packages, process signing and upload artifacts and manifests for downstream feed publishing.
-    - script: $(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd /p:OfficialBuild=${{ parameters.isOfficialBuild }} /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName) /p:DotNetPublishUsingPipelines=true /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
-      ${{ if eq(parameters.isOfficialBuild, true) }}:
+    - script: $(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd /p:OfficialBuild=${{ parameters.isOfficialBuild }} /p:ForceDryRunSigning=${{ parameters.isDryRun }} /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName) /p:DotNetPublishUsingPipelines=true /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+      ${{ if and(eq(parameters.isOfficialBuild, true), ne(parameters.isDryRun, true)) }}:
         displayName: Package, sign, and publish build artifacts
       ${{ else }}:
         displayName: Package and publish unsigned build artifacts

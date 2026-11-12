@@ -20,7 +20,11 @@ parameters:
   type: boolean
   default: false
 
-trigger: none
+trigger:
+  batch: true
+  branches:
+    include:
+    - release/weekly-staging
 
 pr:
   autoCancel: true
@@ -34,7 +38,12 @@ pr:
     - LICENSE.TXT
 
 variables:
-- ${{ if and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}:
+- name: isReleaseDryRun
+  value: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/release/weekly-staging') }}
+- ${{ if eq(variables.isReleaseDryRun, true) }}:
+  - name: ForceDryRunSigning
+    value: true
+- ${{ if and(ne(variables.isReleaseDryRun, true), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}:
   - name: isOfficialBuild
     value: true
 - ${{ else }}:
@@ -78,7 +87,9 @@ extends:
           jobTemplate: /eng/pipelines/build.yml
           isOfficialBuild: ${{ variables.isOfficialBuild }}
           configurations:
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
+          - ${{ if eq(variables.isReleaseDryRun, true) }}:
+            - Release
+          - ${{ elseif in(variables['Build.Reason'], 'PullRequest') }}:
             - Debug
           - ${{ else }}:
             - Release
@@ -123,7 +134,7 @@ extends:
       #                          #
       ############################
 
-      - ${{ if and(ne(variables.isOfficialBuild, true), ne(parameters.buildOnly, true)) }}:
+      - ${{ if and(ne(variables.isOfficialBuild, true), ne(variables.isReleaseDryRun, true), ne(parameters.buildOnly, true)) }}:
         - template: /eng/pipelines/platform-matrix.yml
           parameters:
             jobTemplate: /eng/pipelines/build.yml
@@ -168,7 +179,7 @@ extends:
             jobParameters:
               pipelineJobTemplate: ${{ variables.jobTemplate }}
 
-    - ${{ if and(eq(variables.isOfficialBuild, true), ne(parameters.buildOnly, true)) }}:
+    - ${{ if and(or(eq(variables.isOfficialBuild, true), eq(variables.isReleaseDryRun, true)), ne(parameters.buildOnly, true)) }}:
       - stage: test_packaged
         displayName: Test installed build artifacts
         dependsOn: build
@@ -197,45 +208,55 @@ extends:
     #                          #
     ############################
 
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+    - ${{ if or(eq(variables.isReleaseDryRun, true), and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'))) }}:
       - stage: package
-        displayName: Package, Sign, and Generate BAR Manifests
+        ${{ if eq(variables.isReleaseDryRun, true) }}:
+          displayName: Release dry-run packaging
+        ${{ else }}:
+          displayName: Package, Sign, and Generate BAR Manifests
         dependsOn: build
         jobs:
         - template: /eng/pipelines/package.yml
           parameters:
-            pipelineJobTemplate: /eng/common/templates-official/job/job.yml
+            ${{ if eq(variables.isReleaseDryRun, true) }}:
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
+            ${{ else }}:
+              pipelineJobTemplate: /eng/common/templates-official/job/job.yml
             configuration: Release
             isOfficialBuild: true
+            isDryRun: ${{ variables.isReleaseDryRun }}
 
-        - template: /eng/common/templates-official/job/publish-build-assets.yml
+        - ${{ if ne(variables.isReleaseDryRun, true) }}:
+          - template: /eng/common/templates-official/job/publish-build-assets.yml
+            parameters:
+              configuration: Release
+              dependsOn: Package_Sign_Publish
+              publishUsingPipelines: true
+
+      - ${{ if ne(variables.isReleaseDryRun, true) }}:
+        - template: /eng/common/templates-official/post-build/post-build.yml@self
           parameters:
-            configuration: Release
-            dependsOn: Package_Sign_Publish
-            publishUsingPipelines: true
-
-      - template: /eng/common/templates-official/post-build/post-build.yml@self
-        parameters:
-          # This is to enable SDL runs part of Post-Build Validation Stage.
-          # as well as NuGet, SourceLink, and signing validation.
-          # The variables get imported from group dotnet-diagnostics-sdl-params
-          validateDependsOn: package
-          publishingInfraVersion: 3
-          enableSourceLinkValidation: true
-          enableSigningValidation: false
-          enableSymbolValidation: false
-          enableNugetValidation: true
-          symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
-          publishInstallersAndChecksums: true
+            # This is to enable SDL runs part of Post-Build Validation Stage.
+            # as well as NuGet, SourceLink, and signing validation.
+            # The variables get imported from group dotnet-diagnostics-sdl-params
+            validateDependsOn: package
+            publishingInfraVersion: 3
+            enableSourceLinkValidation: true
+            enableSigningValidation: false
+            enableSymbolValidation: false
+            enableNugetValidation: true
+            symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
+            publishInstallersAndChecksums: true
 
     # This sets up the bits to do a Release.
-    - template: /eng/pipelines/prepare-release.yml
-      parameters:
-        isOfficialBuild: ${{ variables['isOfficialBuild'] }}
-        repoAllowList: https://github.com/dotnet/diagnostics https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics
-        productAllowList: diagnostics dotnet-diagnostics
-        skipFileList: MergedManifest.xml
-        ${{ if eq(variables.isOfficialBuild, true) }}:
-          dependsOn: [ publish_using_darc ]
-        ${{ else }}:
-          dependsOn: [ build ]
+    - ${{ if ne(variables.isReleaseDryRun, true) }}:
+      - template: /eng/pipelines/prepare-release.yml
+        parameters:
+          isOfficialBuild: ${{ variables['isOfficialBuild'] }}
+          repoAllowList: https://github.com/dotnet/diagnostics https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics
+          productAllowList: diagnostics dotnet-diagnostics
+          skipFileList: MergedManifest.xml
+          ${{ if eq(variables.isOfficialBuild, true) }}:
+            dependsOn: [ publish_using_darc ]
+          ${{ else }}:
+            dependsOn: [ build ]
