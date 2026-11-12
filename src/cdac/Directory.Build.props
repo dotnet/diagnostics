@@ -19,6 +19,7 @@
     <NoWarn>$(NoWarn);CS8500;CS8969</NoWarn>
     <PortableTargetRid>$(TargetRid)</PortableTargetRid>
     <IsShipping>false</IsShipping>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
     <IsGeneratorProject Condition="$([System.IO.Path]::GetFileName('$(MSBuildProjectDirectory)')) == 'gen'">true</IsGeneratorProject>
     <PlatformTarget Condition="'$(IsGeneratorProject)' == 'true'">AnyCPU</PlatformTarget>
     <EnforceExtendedAnalyzerRules Condition="'$(IsGeneratorProject)' == 'true'">true</EnforceExtendedAnalyzerRules>
