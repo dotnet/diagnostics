@@ -22,11 +22,9 @@ jobs:
     ${{ if eq(parameters.testOnly, true) }}:
       name: ${{ parameters.platform.name }}_Test_${{ parameters.platform.arch }}_${{ parameters.configuration }}
     ${{ else }}:
-      # Job IDs must be static even when configuration is selected at runtime.
-      name: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}
+      name: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
     ${{ if eq(parameters.testOnly, true) }}:
       displayName: Test ${{ replace(parameters.platform.name, '_', '-') }} ${{ parameters.platform.arch }} ${{ parameters.configuration }}
-      condition: and(succeeded(), ne(variables.isReleaseDryRun, 'true'))
     ${{ else }}:
       displayName: Build ${{ replace(parameters.platform.name, '_', '-') }} ${{ parameters.platform.arch }} ${{ parameters.configuration }}
     timeoutInMinutes: 180
@@ -55,7 +53,7 @@ jobs:
       container: ${{ parameters.platform.queueKey }}
 
     ${{ if eq(parameters.testOnly, true) }}:
-      dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}
+      dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
 
     workspace:
       clean: all
@@ -64,7 +62,7 @@ jobs:
     - ${{ if eq(parameters.testOnly, true) }}:
       - _PhaseName: ${{ parameters.platform.name }}_Test_${{ parameters.platform.arch }}_${{ parameters.configuration }}
     - ${{ else }}:
-      - _PhaseName: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}
+      - _PhaseName: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
     - _Pipeline_StreamDumpDir: $(Build.SourcesDirectory)/artifacts/tmp/${{ parameters.configuration }}/streams
     - _TestArgs: '-test'
     - _Cross: ''
@@ -164,7 +162,7 @@ jobs:
           displayName: Publish Build Artifacts
           inputs:
             targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
-            artifactName: Build_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
+            artifactName: Build_$(_PhaseName)
 
     # Publish the complete build outputs consumed by normal-test and SOS jobs.
     - ${{ if eq(parameters.testOnly, false) }}:
@@ -183,7 +181,7 @@ jobs:
           displayName: Publish Test Artifacts
           inputs:
             targetPath: '$(Build.ArtifactStagingDirectory)/testartifacts'
-            artifactName: TestArtifacts_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
+            artifactName: TestArtifacts_$(_PhaseName)
 
     # Publish test results to Azure Pipelines.
     - ${{ if eq(parameters.testOnly, true) }}:

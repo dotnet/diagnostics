@@ -1,0 +1,17 @@
+trigger: none
+
+pr:
+  autoCancel: true
+  branches:
+    include:
+    - release/stable
+  paths:
+    exclude:
+    - documentation/*
+    - THIRD-PARTY-NOTICES.TXT
+    - LICENSE.TXT
+
+extends:
+  template: /eng/pipelines/diagnostics.yml
+  parameters:
+    isReleaseDryRun: true

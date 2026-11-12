@@ -33,7 +33,8 @@ supply all packaging inputs. Windows x64 build artifacts include the complete
 managed output tree for Debug as well as Release.
 
 Both PR and official builds use `eng/pipelines/package.yml` for packaging. Its
-`isOfficialBuild` parameter is set explicitly by the callers in `diagnostics.yml`
+`isOfficialBuild` parameter is set explicitly by the shared pipeline template
+`eng/pipelines/diagnostics.yml`
 and also controls internal NuGet source setup. Both modes run Arcade's
 `-sign -publish` to process signing, upload build artifacts and generate asset
 manifests. PRs explicitly pass
@@ -56,11 +57,20 @@ to 1ES. The public adapter supports `path`/`artifact` and
 
 ## Weekly release rehearsal
 
-PRs from `automation/release-staging` to `release/stable` select release dry-run mode
-using runtime PR metadata. This branch is based on `release/stable` and merges
-main, retaining the release branch's version settings. The PR pipeline validates
-the proposed merge: it builds Release for all 11 platforms, runs the installed SOS
-tests on the eight supported test platforms, and packages the complete tool set.
+The `Update release/stable` GitHub workflow runs Monday at 08:00 UTC and supports
+manual dispatch. It creates `automation/release-staging` from stable if needed,
+merges captured stable and main commits into it, and opens or reuses its PR to
+`release/stable`. Conflicts fail rather than resetting or force-pushing staging.
+It never merges the PR or modifies main or stable. It uses GitHub's automatic
+token, not a PAT; the repository must allow GitHub Actions to create pull requests.
+
+The dedicated `diagnostics-public-release-dry-run` Azure definition uses
+`diagnostics-release-dry-run.yml` to validate all PRs targeting `release/stable`,
+including the bot's `automation/release-staging` PR. That branch is based on stable
+and merges main, retaining the release branch's version settings. The dry-run
+pipeline validates the proposed merge: it builds Release for all 11 platforms,
+runs the installed SOS tests on the eight supported test platforms, and packages
+the complete tool set.
 
 Packaging retains `OfficialBuild=true` for official versioning but passes
 `ForceDryRunSigning=true`. The pipeline also exports that signing safeguard to
@@ -68,9 +78,10 @@ build jobs. It does not initialize MicroBuild signing for packaging, register as
 with BAR, promote builds with Darc, or run release-storage preparation. Its outputs
 are downloadable build artifacts only.
 
-The existing PR trigger is sufficient; push CI remains disabled. One build matrix
-selects Debug for ordinary PRs and Release for weekly PRs and non-PR builds.
-Each platform has one build job using the runtime-selected configuration; ordinary
-PRs do not include extra Release build jobs. Artifact names retain the selected
-configuration for downstream downloads. Weekly PRs run the installed SOS tests
-instead of ordinary Debug tests and skip release preparation.
+Both definitions use the shared `eng/pipelines/diagnostics.yml` template. The
+normal `diagnostics.yml` entry point keeps all PRs Debug-only; non-PR builds use
+Release only. The dedicated entry point passes `isReleaseDryRun: true`, so its
+configuration, job IDs and stage selection are all resolved at compile time.
+Neither pipeline needs runtime PR branch inspection or a staging push trigger.
+PRs targeting stable receive both the normal Debug check and the Release dry-run
+check, regardless of their source branch.

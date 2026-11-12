@@ -14,7 +14,6 @@ jobs:
   parameters:
     name: Tests_Helix_${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
     displayName: Tests Helix ${{ parameters.platform.rid }} ${{ parameters.configuration }}
-    condition: and(succeeded(), ne(variables.isReleaseDryRun, 'true'))
     timeoutInMinutes: 420
     continueOnError: ${{ parameters.isOfficialBuild }}
     enableMicrobuild: true
@@ -36,7 +35,7 @@ jobs:
       ${{ else }}:
         'error, unsupported OS': ${{ parameters.platform.os }}
 
-    dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}
+    dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
 
     steps:
     - task: DownloadPipelineArtifact@2

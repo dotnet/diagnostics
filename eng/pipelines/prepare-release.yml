@@ -19,7 +19,6 @@ stages:
 - stage: PrepareReleaseStage
   displayName: Release Preparation
   dependsOn: ${{ parameters.dependsOn }}
-  condition: and(succeeded(), ne(variables.isReleaseDryRun, 'true'))
   jobs:
   - job: PrepareReleaseJob
     displayName: Prepare Release

@@ -48,7 +48,7 @@ jobs:
         name: $(BuildPool)
         demands: ImageOverride -equals $(WindowsImage)
         os: windows
-    condition: and(succeeded(), eq(variables.buildConfiguration, '${{ parameters.configuration }}'))
+    condition: succeeded()
     dependsOn: ${{ parameters.dependsOn }}
     steps:
     - task: DownloadPipelineArtifact@2

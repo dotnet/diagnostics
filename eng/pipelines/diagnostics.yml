@@ -1,0 +1,229 @@
+parameters:
+- name: runtimeFeed
+  displayName: Feed for runtime installation
+  type: string
+  default: default
+  values:
+  - default
+  - custom
+  - dotnetclimsrc-feed
+- name: runtimeFeedToken
+  displayName: Base 64 SAS Token for runtime installation
+  type: string
+  default: default
+  values:
+  - default
+  - custom
+  - dotnetclimsrc-sas-token-base64
+- name: buildOnly
+  displayName: Build only (skip tests)
+  type: boolean
+  default: false
+- name: isReleaseDryRun
+  type: boolean
+  default: false
+
+variables:
+- name: buildConfiguration
+  ${{ if and(eq(variables['Build.Reason'], 'PullRequest'), ne(parameters.isReleaseDryRun, true)) }}:
+    value: Debug
+  ${{ else }}:
+    value: Release
+- ${{ if eq(parameters.isReleaseDryRun, true) }}:
+  - name: ForceDryRunSigning
+    value: true
+- ${{ if and(ne(parameters.isReleaseDryRun, true), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}:
+  - name: isOfficialBuild
+    value: true
+- ${{ else }}:
+  - name: isOfficialBuild
+    value: false
+- template : /eng/pipelines/global-variables.yml
+  parameters:
+    runtimeFeed: ${{ parameters.runtimeFeed }}
+    runtimeFeedToken: ${{ parameters.runtimeFeedToken }}
+- template: /eng/pipelines/helix-platforms.yml
+
+extends:
+  template: /eng/pipelines/pipeline-resources.yml
+  parameters:
+    stages:
+    - stage: build
+      displayName: Diagnostics
+      jobs:
+
+        ############################
+        #                          #
+        #    Source Build leg      #
+        #                          #
+        ############################
+
+      - template: ${{ variables.sourceBuildTemplate }}
+        parameters:
+          enableInternalSources: true
+          platform:
+            name: Complete
+            buildScript: ./eng/common/build.sh
+
+      ############################
+      #                          #
+      #        Build legs        #
+      #                          #
+      ############################
+
+      - template: /eng/pipelines/platform-matrix.yml
+        parameters:
+          jobTemplate: /eng/pipelines/build.yml
+          isOfficialBuild: ${{ variables.isOfficialBuild }}
+          configurations:
+          - ${{ variables.buildConfiguration }}
+          platforms:
+          - win-x64
+          - win-x86
+          - win-arm64
+          - linux-x64
+          - linux-arm64
+          - linux-musl-x64
+          - osx-x64
+          - osx-arm64
+          - linux-arm
+          - linux-musl-arm
+          - linux-musl-arm64
+          jobParameters:
+            pipelineJobTemplate: ${{ variables.jobTemplate }}
+
+      - ${{ if or(eq(parameters.isReleaseDryRun, true), and(eq(variables['System.TeamProject'], 'public'), eq(variables['Build.Reason'], 'PullRequest'))) }}:
+        - template: /eng/pipelines/package.yml
+          parameters:
+            pipelineJobTemplate: ${{ variables.jobTemplate }}
+            configuration: ${{ variables.buildConfiguration }}
+            isOfficialBuild: ${{ parameters.isReleaseDryRun }}
+            isDryRun: ${{ parameters.isReleaseDryRun }}
+            dependsOn:
+            - Windows_x64_${{ variables.buildConfiguration }}
+            - Windows_x86_${{ variables.buildConfiguration }}
+            - Windows_arm64_${{ variables.buildConfiguration }}
+            - Linux_x64_${{ variables.buildConfiguration }}
+            - Linux_arm_${{ variables.buildConfiguration }}
+            - Linux_arm64_${{ variables.buildConfiguration }}
+            - Linux_musl_x64_${{ variables.buildConfiguration }}
+            - Linux_musl_arm_${{ variables.buildConfiguration }}
+            - Linux_musl_arm64_${{ variables.buildConfiguration }}
+            - MacOS_x64_${{ variables.buildConfiguration }}
+            - MacOS_arm64_${{ variables.buildConfiguration }}
+
+      ############################
+      #                          #
+      #        Test legs         #
+      #                          #
+      ############################
+
+      - ${{ if and(ne(parameters.isReleaseDryRun, true), ne(variables.isOfficialBuild, true), ne(parameters.buildOnly, true)) }}:
+        - template: /eng/pipelines/platform-matrix.yml
+          parameters:
+            jobTemplate: /eng/pipelines/build.yml
+            isOfficialBuild: ${{ variables.isOfficialBuild }}
+            configurations:
+            - ${{ variables.buildConfiguration }}
+            platforms:
+            - win-x64
+            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+              - win-x86
+            - osx-x64
+            - linux-x64
+            - linux-musl-x64
+            jobParameters:
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
+              testOnly: true
+
+        - template: /eng/pipelines/platform-matrix.yml
+          parameters:
+            jobTemplate: /eng/pipelines/tests-helix.yml
+            isOfficialBuild: ${{ variables.isOfficialBuild }}
+            configurations:
+            - ${{ variables.buildConfiguration }}
+            platforms:
+            - win-x64
+            - win-x86
+            - win-arm64
+            - linux-x64
+            - linux-arm64
+            - linux-musl-x64
+            - osx-arm64
+            - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+              - osx-x64
+            jobParameters:
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
+
+    - ${{ if and(or(eq(variables.isOfficialBuild, true), eq(parameters.isReleaseDryRun, true)), ne(parameters.buildOnly, true)) }}:
+      - stage: test_packaged
+        displayName: Test installed build artifacts
+        dependsOn: build
+        jobs:
+        - template: /eng/pipelines/platform-matrix.yml
+          parameters:
+            jobTemplate: /eng/pipelines/tests-packaged-sos.yml
+            isOfficialBuild: ${{ variables.isOfficialBuild }}
+            configurations:
+            - Release
+            platforms:
+            - win-x64
+            - win-x86
+            - win-arm64
+            - linux-x64
+            - linux-arm64
+            - linux-musl-x64
+            - osx-x64
+            - osx-arm64
+            jobParameters:
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
+
+    ############################
+    #                          #
+    #      Package stage       #
+    #                          #
+    ############################
+
+    - ${{ if and(ne(parameters.isReleaseDryRun, true), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+      - stage: package
+        displayName: Package, Sign, and Generate BAR Manifests
+        dependsOn: build
+        jobs:
+        - template: /eng/pipelines/package.yml
+          parameters:
+            pipelineJobTemplate: /eng/common/templates-official/job/job.yml
+            configuration: Release
+            isOfficialBuild: true
+
+        - template: /eng/common/templates-official/job/publish-build-assets.yml
+          parameters:
+            configuration: Release
+            dependsOn: Package_Sign_Publish
+            publishUsingPipelines: true
+
+      - template: /eng/common/templates-official/post-build/post-build.yml@self
+        parameters:
+          # This is to enable SDL runs part of Post-Build Validation Stage.
+          # as well as NuGet, SourceLink, and signing validation.
+          # The variables get imported from group dotnet-diagnostics-sdl-params
+          validateDependsOn: package
+          publishingInfraVersion: 3
+          enableSourceLinkValidation: true
+          enableSigningValidation: false
+          enableSymbolValidation: false
+          enableNugetValidation: true
+          symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
+          publishInstallersAndChecksums: true
+
+    # This sets up the bits to do a Release.
+    - ${{ if ne(parameters.isReleaseDryRun, true) }}:
+      - template: /eng/pipelines/prepare-release.yml
+        parameters:
+          isOfficialBuild: ${{ variables['isOfficialBuild'] }}
+          repoAllowList: https://github.com/dotnet/diagnostics https://dev.azure.com/dnceng/internal/_git/dotnet-diagnostics
+          productAllowList: diagnostics dotnet-diagnostics
+          skipFileList: MergedManifest.xml
+          ${{ if eq(variables.isOfficialBuild, true) }}:
+            dependsOn: [ publish_using_darc ]
+          ${{ else }}:
+            dependsOn: [ build ]
