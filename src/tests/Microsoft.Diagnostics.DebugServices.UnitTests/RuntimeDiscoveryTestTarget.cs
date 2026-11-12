@@ -184,7 +184,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             protected override ModuleService ModuleService => _moduleService;
             public override bool IsPEImage => Target.OperatingSystem == OSPlatform.Windows;
             public override ImmutableArray<byte> BuildId =>
-                Target.OperatingSystem == OSPlatform.Windows ? ImmutableArray<byte>.Empty : [1, 2, 3, 4, 5, 6, 7, 8];
+                Target.OperatingSystem == OSPlatform.Windows ? ImmutableArray<byte>.Empty : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
             public override Version GetVersionData() => new(11, 0, 1, 2);
             public override string GetVersionString() => "11.0.1.2";
 

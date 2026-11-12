@@ -904,15 +904,25 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             try
             {
                 CodeViewDebugDirectoryData data = peReader.ReadCodeViewDebugDirectoryData(codeViewEntry);
-                string pdbPath = data.Path;
+                string pdbPath;
                 Stream pdbStream = null;
+                try
+                {
+                    // Never use the directory from the CodeView path; only its file name.
+                    pdbPath = PathUtilities.GetFileName(data.Path);
+                }
+                catch
+                {
+                    // invalid characters in CodeView path
+                    return null;
+                }
 
                 // Only look for the PDB next to the assembly when the assembly path is local.
                 if (assemblyPath != null && PathUtilities.IsSafeAbsoluteLocalPath(assemblyPath))
                 {
                     try
                     {
-                        pdbPath = Path.Combine(Path.GetDirectoryName(assemblyPath), PathUtilities.GetFileName(pdbPath));
+                        pdbPath = Path.Combine(Path.GetDirectoryName(assemblyPath), pdbPath);
                     }
                     catch
                     {

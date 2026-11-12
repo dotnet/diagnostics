@@ -545,6 +545,54 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             }
         }
 
+        [Fact]
+        public void OpenSymbolFileForRemoteAssemblyUsesPdbFileNameForSymbolStore()
+        {
+            string directory = CreateTempDirectory();
+            string symbolDirectory = CreateTempDirectory();
+            try
+            {
+                (string dllPath, string pdbPath) = CopyPEFixture(directory);
+                // Use a Windows style CodeView path so non-Windows platforms must normalize it.
+                const string pdbFileName = "Thread.pdb";
+                RewriteCodeViewPath(dllPath, @"C:\b\" + pdbFileName);
+                File.Move(pdbPath, Path.Combine(symbolDirectory, pdbFileName));
+                SymbolService symbolService = new(this);
+                symbolService.AddDirectoryPath(symbolDirectory);
+                using Stream peStream = File.OpenRead(dllPath);
+
+                ISymbolFile symbolFile = symbolService.OpenSymbolFile(RemotePathTestHelpers.ToRemoteForm(dllPath), isFileLayout: true, peStream);
+                bool opened = symbolFile is not null;
+                (symbolFile as IDisposable)?.Dispose();
+
+                Assert.True(opened);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+                Directory.Delete(symbolDirectory, recursive: true);
+            }
+        }
+
+        private static void RewriteCodeViewPath(string dllPath, string newPath)
+        {
+            int pathOffset;
+            int pathSize;
+            using (PEReader reader = new(File.OpenRead(dllPath)))
+            {
+                DebugDirectoryEntry codeView = reader.ReadDebugDirectory().First(entry => entry.Type == DebugDirectoryEntryType.CodeView && entry.IsPortableCodeView);
+                // CodeView data: 'RSDS' signature, GUID, age, then a null terminated path.
+                pathOffset = codeView.DataPointer + 4 + 16 + 4;
+                pathSize = codeView.DataSize - 4 - 16 - 4;
+            }
+            byte[] pathBytes = Encoding.UTF8.GetBytes(newPath);
+            Assert.True(pathBytes.Length < pathSize);
+            byte[] image = File.ReadAllBytes(dllPath);
+            Array.Clear(image, pathOffset, pathSize);
+            pathBytes.CopyTo(image, pathOffset);
+            File.WriteAllBytes(dllPath, image);
+        }
+
         private static string CreateTempDirectory()
         {
             string directory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
