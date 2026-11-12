@@ -102,7 +102,7 @@ public abstract class DbgEngHostBase : IDebuggerHost
         string? dacDir = Environment.GetEnvironmentVariable("SOSHARNESS_DAC_DIR");
         if (!string.IsNullOrEmpty(dacDir))
         {
-            RunCore($".cordll -ve -u -lp {dacDir}");
+            RunCore($".cordll -ve -u -lp \"{dacDir}\"");
 
             // .cordll can cause dbgeng to auto-load an SOS after the initial cleanup. Re-assert a clean
             // extension chain immediately before loading the build under test.
@@ -121,7 +121,8 @@ public abstract class DbgEngHostBase : IDebuggerHost
         }
         if (!string.IsNullOrEmpty(dacDir))
         {
-            RunCore($"!setclrpath {dacDir}");
+            // Native SOS recognizes single quotes, not double quotes, around arguments containing spaces.
+            RunCore($"!setclrpath '{dacDir}'");
         }
 
         _sosLoaded = true;

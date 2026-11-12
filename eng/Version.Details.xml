@@ -19,17 +19,17 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26553.9">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26560.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>8f6ae2f6b8dc50ecb3cbe1523351801a40a0ddac</Sha>
+      <Sha>5e64e00dace05ac187c53ad185957b4f393058b7</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="10.0.0-beta.26553.9">
+    <Dependency Name="Microsoft.DotNet.CodeAnalysis" Version="10.0.0-beta.26560.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>8f6ae2f6b8dc50ecb3cbe1523351801a40a0ddac</Sha>
+      <Sha>5e64e00dace05ac187c53ad185957b4f393058b7</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="10.0.0-beta.26553.9">
+    <Dependency Name="Microsoft.DotNet.RemoteExecutor" Version="10.0.0-beta.26560.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>8f6ae2f6b8dc50ecb3cbe1523351801a40a0ddac</Sha>
+      <Sha>5e64e00dace05ac187c53ad185957b4f393058b7</Sha>
     </Dependency>
     <!-- dotnet/installer: Testing version of the SDK. Needed for the signed & entitled host. -->
     <Dependency Name="Microsoft.NET.Sdk" Version="11.0.101-servicing.26560.122">
@@ -70,11 +70,19 @@
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>22d26e3787fa38eaa8cab9282c88598125cc4c2f</Sha>
     </Dependency>
+    <Dependency Name="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.12.0-1.26560.122">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>22d26e3787fa38eaa8cab9282c88598125cc4c2f</Sha>
+    </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis.Analyzers" Version="5.12.0-1.26560.122">
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>22d26e3787fa38eaa8cab9282c88598125cc4c2f</Sha>
     </Dependency>
     <Dependency Name="Microsoft.CodeAnalysis.NetAnalyzers" Version="11.0.101">
+      <Uri>https://github.com/dotnet/dotnet</Uri>
+      <Sha>22d26e3787fa38eaa8cab9282c88598125cc4c2f</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.12.0-1.26560.122">
       <Uri>https://github.com/dotnet/dotnet</Uri>
       <Sha>22d26e3787fa38eaa8cab9282c88598125cc4c2f</Sha>
     </Dependency>

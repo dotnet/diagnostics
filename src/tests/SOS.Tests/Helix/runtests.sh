@@ -57,10 +57,25 @@ mkdir -p "$upload"
 
 rid="$(sed -n '1p' "$root/.sos-test-payload")"
 configuration="$(sed -n '2p' "$root/.sos-test-payload")"
-extra_metadata="$(sed -n '3p' "$root/.sos-test-payload")"
+tool_layout="$(sed -n '3p' "$root/.sos-test-payload")"
+extra_metadata="$(sed -n '4p' "$root/.sos-test-payload")"
 if [[ -z "$rid" || -z "$configuration" || -n "$extra_metadata" ]]; then
-  echo "The payload marker must contain the RID and configuration." >&2
+  echo "The payload marker must contain the RID, configuration, and tool layout." >&2
   exit 3
+fi
+tool_layout="${tool_layout:-Bin}"
+if [[ "$tool_layout" != "Bin" && "$tool_layout" != "Packaged" ]]; then
+  echo "Unsupported SOS tool layout '$tool_layout'." >&2
+  exit 3
+fi
+export SOSHARNESS_TOOL_LAYOUT="$tool_layout"
+unset SOSHARNESS_TOOL_ROOT SOSHARNESS_PACKAGE_DIRECTORY
+if [[ "$tool_layout" == "Packaged" ]]; then
+  export SOSHARNESS_TOOL_ROOT="$root/tool-layout"
+  unset SOSHARNESS_CDAC_DIR SOSHARNESS_USECDAC
+  if [[ -d "$root/packages" ]]; then
+    export SOSHARNESS_PACKAGE_DIRECTORY="$root/packages"
+  fi
 fi
 
 if [[ -n "$helix_work_item" ]]; then
@@ -253,15 +268,15 @@ configure_lldb
 export DOTNET_ROOT="$dotnet_root"
 export DOTNET_ROOT_X64="$DOTNET_ROOT"
 export DOTNET_MULTILEVEL_LOOKUP=0
-log="$upload/SOS.Tests-${rid}-${configuration}-${identity}.log"
+log="$upload/SOS.Tests-${rid}-${configuration}-${tool_layout}-${identity}.log"
 run_tests()
 {
   "$dotnet" "${dotnet_arguments[@]}" "$@" \
     --results-directory "$upload" \
     --report-xunit \
-    --report-xunit-filename "SOS.Tests-${rid}-${configuration}-${identity}.testResults.xml" \
+    --report-xunit-filename "SOS.Tests-${rid}-${configuration}-${tool_layout}-${identity}.testResults.xml" \
     --report-xunit-html \
-    --report-xunit-html-filename "SOS.Tests-${rid}-${configuration}-${identity}.html" \
+    --report-xunit-html-filename "SOS.Tests-${rid}-${configuration}-${tool_layout}-${identity}.html" \
     --auto-reporters off
 }
 
@@ -275,10 +290,17 @@ else
 fi
 set -e
 
+if [[ "$tool_layout" == "Packaged" && -f "$SOSHARNESS_TOOL_ROOT/layout.json" ]]; then
+  cp "$SOSHARNESS_TOOL_ROOT/layout.json" "$upload/layout.json"
+fi
+
 if [[ "$exit_code" -ne 0 ]]; then
   dump_root="$root/artifacts/tmp/sos-harness/$configuration"
+  if [[ "$tool_layout" == "Packaged" ]]; then
+    dump_root="$SOSHARNESS_TOOL_ROOT/test-artifacts"
+  fi
   if [[ -d "$dump_root/dumps" ]]; then
-    dump_archive="$upload/SOS.Tests-dumps-$rid-$configuration-$identity.tar.gz"
+    dump_archive="$upload/SOS.Tests-dumps-$rid-$configuration-$tool_layout-$identity.tar.gz"
     echo "Archiving SOS dumps to '$dump_archive'."
     if ! tar -czf "$dump_archive" -C "$dump_root" dumps; then
       echo "Failed to archive SOS dumps." >&2
