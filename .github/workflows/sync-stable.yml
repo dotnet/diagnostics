@@ -2,9 +2,6 @@ name: Update release/stable
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - dev/max-charlamb/weekly-stable-sync
   schedule:
     - cron: '0 8 * * 1'
 
