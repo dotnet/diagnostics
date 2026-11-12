@@ -48,7 +48,9 @@ namespace Microsoft.Diagnostics.TestHelpers
                     !string.Equals(config.GetValue("PrivateBuildTesting"), "true", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(config.GetValue("InternalReleaseTesting"), "true", StringComparison.OrdinalIgnoreCase))
                 {
-                    buildProperties.Add("NetCoreTargetingPackRoot", Path.Combine(Path.GetDirectoryName(dotNetPath), "packs"));
+                    string hostPackRoot = TestConfiguration.MakeCanonicalPath(config.GetValue("SingleFileHostPackRoot"))
+                        ?? Path.Combine(Path.GetDirectoryName(dotNetPath), "packs");
+                    buildProperties.Add("NetCoreTargetingPackRoot", hostPackRoot);
                     buildProperties.Add("EnableAppHostPackDownload", "false");
                 }
             }

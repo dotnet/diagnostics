@@ -67,14 +67,15 @@ namespace Microsoft.Diagnostics
         }
 
         [Theory]
-        [InlineData("11.0.1", "11.0.1", true, false, false, true)]
-        [InlineData("10.0.10", "11.0.1", true, false, false, false)]
-        [InlineData("11.0.1", "11.0.1", true, true, false, false)]
-        [InlineData("11.0.1", "11.0.1", true, false, true, false)]
-        [InlineData("11.0.1", "11.0.1", false, false, false, false)]
-        [InlineData(null, null, true, false, false, false)]
+        [InlineData("11.0.1", "11.0.1", "osx-arm64", true, false, false, true, false)]
+        [InlineData("11.0.1", "11.0.1", "linux-musl-x64", true, false, false, true, true)]
+        [InlineData("10.0.10", "11.0.1", "osx-arm64", true, false, false, false, true)]
+        [InlineData("11.0.1", "11.0.1", "osx-arm64", true, true, false, false, true)]
+        [InlineData("11.0.1", "11.0.1", "osx-arm64", true, false, true, false, true)]
+        [InlineData("11.0.1", "11.0.1", "osx-arm64", false, false, false, false, false)]
+        [InlineData(null, null, "osx-arm64", true, false, false, false, false)]
         public void SingleFileCliHostPackSelection(
-            string runtime, string latest, bool singleFile, bool privateBuild, bool internalRelease, bool pinned)
+            string runtime, string latest, string rid, bool singleFile, bool privateBuild, bool internalRelease, bool pinned, bool separatePackRoot)
         {
             string root = Path.Combine(Path.GetTempPath(), "single-file-pack-selection");
             TestConfiguration config = new(new Dictionary<string, string>
@@ -84,12 +85,13 @@ namespace Microsoft.Diagnostics
                 ["DebuggeeBuildRoot"] = Path.Combine(root, "build"),
                 ["DebuggeeSourceRoot"] = Path.Combine(root, "source"),
                 ["BuildProjectFramework"] = "net11.0",
-                ["BuildProjectRuntime"] = "osx-arm64",
+                ["BuildProjectRuntime"] = rid,
                 ["RuntimeFrameworkVersion"] = runtime,
                 ["RuntimeVersionLatest"] = latest,
                 ["PublishSingleFile"] = singleFile.ToString(),
                 ["PrivateBuildTesting"] = privateBuild.ToString(),
                 ["InternalReleaseTesting"] = internalRelease.ToString(),
+                ["SingleFileHostPackRoot"] = separatePackRoot ? Path.Combine(root, "musl-sdk", "packs") : null,
             });
             CliDebuggeeCompiler compiler = new(config, "SimpleDebuggee");
             string dotNetPath = Path.Combine(root, "target-sdk", "dotnet");
@@ -98,9 +100,13 @@ namespace Microsoft.Diagnostics
 
             Assert.Equal(pinned, step.BuildProperties.ContainsKey("NetCoreTargetingPackRoot"));
             Assert.Equal(pinned, step.BuildProperties.ContainsKey("EnableAppHostPackDownload"));
+            Assert.Equal(rid, step.BuildProperties["RuntimeIdentifier"]);
             if (pinned)
             {
-                Assert.Equal(Path.Combine(root, "target-sdk", "packs"), step.BuildProperties["NetCoreTargetingPackRoot"]);
+                string expectedRoot = separatePackRoot
+                    ? Path.Combine(root, "musl-sdk", "packs")
+                    : Path.Combine(root, "target-sdk", "packs");
+                Assert.Equal(expectedRoot, step.BuildProperties["NetCoreTargetingPackRoot"]);
                 Assert.Equal("false", step.BuildProperties["EnableAppHostPackDownload"]);
             }
             if (singleFile && runtime is not null)

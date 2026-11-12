@@ -1,0 +1,24 @@
+<Project DefaultTargets="Test">
+  <Import Project="../AuxMsbuildFiles/SdkPackOverrides.targets" />
+
+  <Target Name="Test">
+    <ItemGroup>
+      <_HostPackCase Include="ReferencedLibrary">
+        <UseAppHost>false</UseAppHost>
+        <RuntimeIdentifier>linux-musl-x64</RuntimeIdentifier>
+      </_HostPackCase>
+      <_HostPackCase Include="RidlessRestore">
+        <UseAppHost>true</UseAppHost>
+      </_HostPackCase>
+      <_HostPackCase Include="Executable">
+        <UseAppHost>true</UseAppHost>
+        <RuntimeIdentifier>linux-musl-x64</RuntimeIdentifier>
+        <AppHostSourcePath>$(MSBuildProjectFullPath)</AppHostSourcePath>
+        <SingleFileHostSourcePath>$(MSBuildProjectFullPath)</SingleFileHostSourcePath>
+      </_HostPackCase>
+    </ItemGroup>
+    <MSBuild Projects="$(MSBuildProjectFullPath)"
+             Targets="ValidateSingleFileHostPack"
+             Properties="PublishSingleFile=true;EnableAppHostPackDownload=false;UseAppHost=%(_HostPackCase.UseAppHost);RuntimeIdentifier=%(_HostPackCase.RuntimeIdentifier);AppHostSourcePath=%(_HostPackCase.AppHostSourcePath);SingleFileHostSourcePath=%(_HostPackCase.SingleFileHostSourcePath)" />
+  </Target>
+</Project>

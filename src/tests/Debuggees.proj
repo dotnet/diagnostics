@@ -6,7 +6,7 @@
     <!-- Product-version host packages can differ across feeds. The target test SDK's
          single-file host contains the runtime matching its installed DAC and DBI. -->
     <RuntimeTestVersions Update="Latest">
-      <HostPackProperties>NetCoreTargetingPackRoot=$(ArtifactsDotnetTestDir)packs;EnableAppHostPackDownload=false</HostPackProperties>
+      <HostPackProperties>NetCoreTargetingPackRoot=$(SingleFileHostPackRoot);EnableAppHostPackDownload=false</HostPackProperties>
     </RuntimeTestVersions>
   </ItemGroup>
 
