@@ -9,13 +9,13 @@ variables:
     value: OSX.26.Arm64.Open
 
   - name: helix_macos_arm64_osx_26_internal
-    value: OSX.26.Arm64
+    value: OSX.26.Arm64.Open
 
   - name: helix_macos_x64_osx_15
     value: OSX.15.Amd64.Open
 
   - name: helix_macos_x64_osx_15_internal
-    value: OSX.15.Amd64
+    value: OSX.15.Amd64.Open
 
   # Linux platforms
 
@@ -23,13 +23,13 @@ variables:
     value: Ubuntu.2404.Amd64.Open
 
   - name: helix_linux_x64_ubuntu_2404_internal
-    value: Ubuntu.2404.Amd64
+    value: Ubuntu.2404.Amd64.Open
 
   - name: helix_linux_arm64_ubuntu_2404
     value: Ubuntu.2404.ArmArch.Open
 
   - name: helix_linux_arm64_ubuntu_2404_internal
-    value: Ubuntu.2404.ArmArch
+    value: Ubuntu.2404.ArmArch.Open
 
   - name: helix_linux_musl_x64_alpine_323
     value: '(Alpine.323.Amd64.Open)azurelinux.3.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
@@ -43,13 +43,13 @@ variables:
     value: Windows.Amd64.Open.rt
 
   - name: helix_windows_x64_runtime_internal
-    value: Windows.Amd64.rt
+    value: Windows.Amd64.Open.rt
 
   - name: helix_windows_arm64_windows_11
     value: Windows.11.Arm64.Open
 
   - name: helix_windows_arm64_windows_11_internal
-    value: Windows.11.Arm64
+    value: Windows.11.Arm64.Open
 
   # Common aliases
   # These must remain after the versioned definitions they reference.
