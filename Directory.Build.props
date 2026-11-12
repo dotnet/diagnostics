@@ -91,7 +91,7 @@
     <NetCoreAppTestVersion>10.0</NetCoreAppTestVersion>
     <NetCoreAppTestTargetFramework>net$(NetCoreAppTestVersion)</NetCoreAppTestTargetFramework>
     <!-- This is the list of TFMs we build our debuggees and tracees as. -->
-    <SupportedSubProcessTargetFrameworks>net8.0;net9.0;net10.0;net11.0</SupportedSubProcessTargetFrameworks>
+    <SupportedSubProcessTargetFrameworks>net8.0;net10.0;net11.0;net12.0</SupportedSubProcessTargetFrameworks>
     <!-- This is the list of TFMs we build our unit tests as. -->
     <SupportedXUnitTestTargetFrameworks>$(NetCoreAppTestTargetFramework)</SupportedXUnitTestTargetFrameworks>
   </PropertyGroup>
