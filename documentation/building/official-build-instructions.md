@@ -56,11 +56,11 @@ to 1ES. The public adapter supports `path`/`artifact` and
 
 ## Weekly release rehearsal
 
-Pushes to `release/weekly-staging` select release dry-run mode at template expansion
-time. This branch is based on `release/stable` and merges main, retaining the release
-branch's version settings. The pipeline builds Release for all 11 platforms, runs
-the installed SOS tests on the eight supported test platforms, and packages the
-complete tool set.
+PRs from `release/weekly-staging` to `release/stable` select release dry-run mode
+using runtime PR metadata. This branch is based on `release/stable` and merges
+main, retaining the release branch's version settings. The PR pipeline validates
+the proposed merge: it builds Release for all 11 platforms, runs the installed SOS
+tests on the eight supported test platforms, and packages the complete tool set.
 
 Packaging retains `OfficialBuild=true` for official versioning but passes
 `ForceDryRunSigning=true`. The pipeline also exports that signing safeguard to
@@ -68,7 +68,9 @@ build jobs. It does not initialize MicroBuild signing for packaging, register as
 with BAR, promote builds with Darc, or run release-storage preparation. Its outputs
 are downloadable build artifacts only.
 
-The public Azure pipeline must permit CI triggers for `release/weekly-staging`.
-If its saved trigger settings override YAML, add that branch to the existing CI
-filter as well. PR builds still use their normal Debug validation; the release
-rehearsal runs on the staging-branch commit.
+The existing PR trigger is sufficient; push CI remains disabled. Weekly PRs run
+the Release dry-run stages instead of the ordinary Debug build and test stage.
+Other PRs retain their normal Debug validation. Both paths are present in the
+compiled PR pipeline because the PR branch names are only available at runtime;
+stage conditions select the appropriate path. The release preparation stage
+depends on the ordinary build stage and is skipped for weekly PRs.
