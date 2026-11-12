@@ -70,7 +70,7 @@ are downloadable build artifacts only.
 
 The existing PR trigger is sufficient; push CI remains disabled. One build matrix
 selects Debug for ordinary PRs and Release for weekly PRs and non-PR builds.
-PR pipelines include both configurations at template expansion time; job conditions
-run only the selected configuration, and dependent tests and packaging skip the
-unused configuration. Weekly PRs run the installed SOS tests instead of ordinary
-Debug tests and skip release preparation.
+Each platform has one build job using the runtime-selected configuration; ordinary
+PRs do not include extra Release build jobs. Artifact names retain the selected
+configuration for downstream downloads. Weekly PRs run the installed SOS tests
+instead of ordinary Debug tests and skip release preparation.

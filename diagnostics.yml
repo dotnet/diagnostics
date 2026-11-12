@@ -85,9 +85,7 @@ extends:
           jobTemplate: /eng/pipelines/build.yml
           isOfficialBuild: ${{ variables.isOfficialBuild }}
           configurations:
-          - Release
-          - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - Debug
+          - $(buildConfiguration)
           platforms:
           - win-x64
           - win-x86
@@ -110,17 +108,17 @@ extends:
             configuration: Debug
             isOfficialBuild: false
             dependsOn:
-            - Windows_x64_Debug
-            - Windows_x86_Debug
-            - Windows_arm64_Debug
-            - Linux_x64_Debug
-            - Linux_arm_Debug
-            - Linux_arm64_Debug
-            - Linux_musl_x64_Debug
-            - Linux_musl_arm_Debug
-            - Linux_musl_arm64_Debug
-            - MacOS_x64_Debug
-            - MacOS_arm64_Debug
+            - Windows_x64
+            - Windows_x86
+            - Windows_arm64
+            - Linux_x64
+            - Linux_arm
+            - Linux_arm64
+            - Linux_musl_x64
+            - Linux_musl_arm
+            - Linux_musl_arm64
+            - MacOS_x64
+            - MacOS_arm64
 
       - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
         - template: /eng/pipelines/package.yml
@@ -130,17 +128,17 @@ extends:
             isOfficialBuild: true
             isDryRun: true
             dependsOn:
-            - Windows_x64_Release
-            - Windows_x86_Release
-            - Windows_arm64_Release
-            - Linux_x64_Release
-            - Linux_arm_Release
-            - Linux_arm64_Release
-            - Linux_musl_x64_Release
-            - Linux_musl_arm_Release
-            - Linux_musl_arm64_Release
-            - MacOS_x64_Release
-            - MacOS_arm64_Release
+            - Windows_x64
+            - Windows_x86
+            - Windows_arm64
+            - Linux_x64
+            - Linux_arm
+            - Linux_arm64
+            - Linux_musl_x64
+            - Linux_musl_arm
+            - Linux_musl_arm64
+            - MacOS_x64
+            - MacOS_arm64
 
       ############################
       #                          #
