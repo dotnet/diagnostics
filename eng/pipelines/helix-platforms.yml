@@ -5,31 +5,31 @@ variables:
 
   # macOS platforms
 
-  - name: helix_macos_arm64_osx_26
-    value: OSX.26.Arm64.Open
+  - name: helix_macos_arm64_osx_15
+    value: OSX.15.Arm64.Open
 
-  - name: helix_macos_arm64_osx_26_internal
-    value: OSX.26.Arm64.Open
+  - name: helix_macos_arm64_osx_15_internal
+    value: OSX.15.Arm64
 
   - name: helix_macos_x64_osx_15
     value: OSX.15.Amd64.Open
 
   - name: helix_macos_x64_osx_15_internal
-    value: OSX.15.Amd64.Open
+    value: OSX.15.Amd64
 
   # Linux platforms
 
-  - name: helix_linux_x64_ubuntu_2404
-    value: Ubuntu.2404.Amd64.Open
+  - name: helix_linux_x64_ubuntu_2204
+    value: Ubuntu.2204.Amd64.Open
 
-  - name: helix_linux_x64_ubuntu_2404_internal
-    value: Ubuntu.2404.Amd64.Open
+  - name: helix_linux_x64_ubuntu_2204_internal
+    value: Ubuntu.2204.Amd64
 
-  - name: helix_linux_arm64_ubuntu_2404
-    value: Ubuntu.2404.ArmArch.Open
+  - name: helix_linux_arm64_ubuntu_2204
+    value: Ubuntu.2204.ArmArch.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-helix-arm64v8
 
-  - name: helix_linux_arm64_ubuntu_2404_internal
-    value: Ubuntu.2404.ArmArch.Open
+  - name: helix_linux_arm64_ubuntu_2204_internal
+    value: Ubuntu.2204.ArmArch@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-helix-arm64v8
 
   - name: helix_linux_musl_x64_alpine_323
     value: '(Alpine.323.Amd64.Open)azurelinux.3.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
@@ -49,16 +49,16 @@ variables:
     value: Windows.11.Arm64.Open
 
   - name: helix_windows_arm64_windows_11_internal
-    value: Windows.11.Arm64.Open
+    value: Windows.11.Arm64
 
   # Common aliases
   # These must remain after the versioned definitions they reference.
 
   - name: helix_osx_arm64
-    value: ${{ variables.helix_macos_arm64_osx_26 }}
+    value: ${{ variables.helix_macos_arm64_osx_15 }}
 
   - name: helix_osx_arm64_internal
-    value: ${{ variables.helix_macos_arm64_osx_26_internal }}
+    value: ${{ variables.helix_macos_arm64_osx_15_internal }}
 
   - name: helix_osx_x64
     value: ${{ variables.helix_macos_x64_osx_15 }}
@@ -67,16 +67,16 @@ variables:
     value: ${{ variables.helix_macos_x64_osx_15_internal }}
 
   - name: helix_linux_x64
-    value: ${{ variables.helix_linux_x64_ubuntu_2404 }}
+    value: ${{ variables.helix_linux_x64_ubuntu_2204 }}
 
   - name: helix_linux_x64_internal
-    value: ${{ variables.helix_linux_x64_ubuntu_2404_internal }}
+    value: ${{ variables.helix_linux_x64_ubuntu_2204_internal }}
 
   - name: helix_linux_arm64
-    value: ${{ variables.helix_linux_arm64_ubuntu_2404 }}
+    value: ${{ variables.helix_linux_arm64_ubuntu_2204 }}
 
   - name: helix_linux_arm64_internal
-    value: ${{ variables.helix_linux_arm64_ubuntu_2404_internal }}
+    value: ${{ variables.helix_linux_arm64_ubuntu_2204_internal }}
 
   - name: helix_linux_musl_x64
     value: ${{ variables.helix_linux_musl_x64_alpine_323 }}
