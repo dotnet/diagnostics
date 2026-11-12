@@ -91,7 +91,7 @@ internal static class SOSTestSkips
         // In coreclr's debuginfostore.cpp, EnumMemoryRegions pads debug info to NibbleChunkType (4 bytes
         // on x86), but DoBounds/ReadFromBitOffsets uses aligned 8-byte loads. The last load can extend
         // up to 4 bytes past the enumerated range in reduced dumps and truncate an ICorDebug walk.
-        bool affectedRuntime = config.CoreVersion is CoreVersion.Net10 or CoreVersion.Net11;
+        bool affectedRuntime = config.CoreVersion is CoreVersion.Net10 or CoreVersion.Net11 or CoreVersion.Net12;
         if (isWindows
             && architecture == Architecture.X86
             && config.Liveness == Liveness.Dump
