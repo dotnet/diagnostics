@@ -21,6 +21,8 @@ In the attach scenario, we need to do things differently. We couldn't stop WinDB
 
 This will ensure you are using your own sos.dll, of course you might have a different full path to `sos.dll`.
 
+When deploying a private build, copy the complete output directory, including the `net462` and `net8.0` subdirectories, rather than just `sos.dll`. The .NET Framework hosting path requires `net462\SOS.FrameworkHost.dll`, which loads `SOS.Extensions.dll` and its dependencies in an isolated AppDomain. The domain is retained for the debugger process lifetime because native SOS holds managed callback pointers. Additional managed extensions must match the DebugServices contracts in the same SOS payload.
+
 ## Linux
 
 On Linux, we have to manually load `libsosplugin.so`, so we can simply load it from the expected location ourselves.

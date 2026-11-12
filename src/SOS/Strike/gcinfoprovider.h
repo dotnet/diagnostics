@@ -14,12 +14,16 @@ struct GCInfoData
     std::vector<SOSCodeRange> InterruptibleRanges;
     std::vector<SOSGCSlotLifetime> SlotLifetimes;
     std::vector<unsigned int> SafePoints;
+    SOSGCInfoX86Header X86Header;
+    std::vector<unsigned int> X86Epilogs;
+    std::vector<SOSGCInfoX86Transition> X86Transitions;
+    bool HasX86Info;
     bool IsValid;
 
-    GCInfoData() : Header{}, IsValid(false) {}
+    GCInfoData() : Header{}, X86Header{}, HasX86Info(false), IsValid(false) {}
 
     // Populate GCInfoData for the method at the given IP via ISOSDacInterface18.
-    // Returns E_NOINTERFACE if the interface is not available.
+    // Returns S_FALSE only if Interface18 is absent; other failures must not use the legacy decoder.
     static HRESULT Create(CLRDATA_ADDRESS methodIP, GCInfoData& out);
 
     // Format and print the GC info to the debugger output.

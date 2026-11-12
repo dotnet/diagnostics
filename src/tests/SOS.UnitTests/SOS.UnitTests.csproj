@@ -37,6 +37,29 @@
     <ProjectReference Include="$(TestDir)/TestExtension/TestExtension.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <ProjectReference Include="..\SOS.FrameworkHost.TestHost\SOS.FrameworkHost.TestHost.csproj"
+                      ReferenceOutputAssembly="false"
+                      SkipGetTargetFrameworkProperties="true"
+                      GlobalPropertiesToRemove="TargetFramework" />
+    <Content Include="$(ArtifactsBinDir)SOS.FrameworkHost.TestHost\$(Configuration)\$(DesktopTargetFramework)\SOS.FrameworkHost.TestHost.exe;
+                      $(ArtifactsBinDir)SOS.FrameworkHost.TestHost\$(Configuration)\$(DesktopTargetFramework)\SOS.FrameworkHost.TestHost.exe.config">
+      <Link>FrameworkHostTest\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <Target Name="IncludeFrameworkHostTestPayload" AfterTargets="ResolveProjectReferences"
+          Condition="'$(OS)' == 'Windows_NT'">
+    <ItemGroup>
+      <_FrameworkHostTestFile Include="$(ArtifactsBinDir)SOS.FrameworkHost.TestHost\$(Configuration)\$(DesktopTargetFramework)\*.dll" />
+      <ContentWithTargetPath Include="@(_FrameworkHostTestFile)"
+                             TargetPath="FrameworkHostTest\%(_FrameworkHostTestFile.Filename)%(_FrameworkHostTestFile.Extension)"
+                             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <PackageDownload Include="cdb-sos" Version="[$(cdbsosversion)]" />
   </ItemGroup>
