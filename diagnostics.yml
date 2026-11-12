@@ -35,7 +35,12 @@ pr:
 
 variables:
 - name: isReleaseDryRun
-  value: $[and(eq(variables['Build.Reason'], 'PullRequest'), in(variables['System.PullRequest.SourceBranch'], 'release/weekly-staging', 'refs/heads/release/weekly-staging'), in(variables['System.PullRequest.TargetBranch'], 'release/stable', 'refs/heads/release/stable'))]
+  value: $[and(eq(variables['Build.Reason'], 'PullRequest'), in(variables['System.PullRequest.SourceBranch'], 'automation/release-staging', 'refs/heads/automation/release-staging'), in(variables['System.PullRequest.TargetBranch'], 'release/stable', 'refs/heads/release/stable'))]
+- name: buildConfiguration
+  value: $[iif(and(eq(variables['Build.Reason'], 'PullRequest'), ne(variables.isReleaseDryRun, 'true')), 'Debug', 'Release')]
+- ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+  - name: ForceDryRunSigning
+    value: $[eq(variables.isReleaseDryRun, 'true')]
 - ${{ if and(notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.DefinitionName'], 'dotnet-diagnostics')) }}:
   - name: isOfficialBuild
     value: true
@@ -54,7 +59,6 @@ extends:
     stages:
     - stage: build
       displayName: Diagnostics
-      condition: and(succeeded(), ne(variables.isReleaseDryRun, 'true'))
       jobs:
 
         ############################
@@ -81,10 +85,8 @@ extends:
           jobTemplate: /eng/pipelines/build.yml
           isOfficialBuild: ${{ variables.isOfficialBuild }}
           configurations:
+          - Release
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
-            - Debug
-          - ${{ else }}:
-            - Release
             - Debug
           platforms:
           - win-x64
@@ -120,6 +122,26 @@ extends:
             - MacOS_x64_Debug
             - MacOS_arm64_Debug
 
+      - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+        - template: /eng/pipelines/package.yml
+          parameters:
+            pipelineJobTemplate: ${{ variables.jobTemplate }}
+            configuration: Release
+            isOfficialBuild: true
+            isDryRun: true
+            dependsOn:
+            - Windows_x64_Release
+            - Windows_x86_Release
+            - Windows_arm64_Release
+            - Linux_x64_Release
+            - Linux_arm_Release
+            - Linux_arm64_Release
+            - Linux_musl_x64_Release
+            - Linux_musl_arm_Release
+            - Linux_musl_arm64_Release
+            - MacOS_x64_Release
+            - MacOS_arm64_Release
+
       ############################
       #                          #
       #        Test legs         #
@@ -136,7 +158,6 @@ extends:
               - Debug
             - ${{ else }}:
               - Release
-              - Debug
             platforms:
             - win-x64
             - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
@@ -157,7 +178,6 @@ extends:
               - Debug
             - ${{ else }}:
               - Release
-              - Debug
             platforms:
             - win-x64
             - win-x86
@@ -171,61 +191,12 @@ extends:
             jobParameters:
               pipelineJobTemplate: ${{ variables.jobTemplate }}
 
-    - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-      - stage: build_release_dry_run
-        displayName: Release dry-run builds
-        dependsOn: []
-        condition: and(succeeded(), eq(variables.isReleaseDryRun, 'true'))
-        variables:
-          ForceDryRunSigning: true
-        jobs:
-        - template: ${{ variables.sourceBuildTemplate }}
-          parameters:
-            enableInternalSources: true
-            platform:
-              name: Complete
-              buildScript: ./eng/common/build.sh
-        - template: /eng/pipelines/platform-matrix.yml
-          parameters:
-            jobTemplate: /eng/pipelines/build.yml
-            isOfficialBuild: false
-            configurations:
-            - Release
-            platforms:
-            - win-x64
-            - win-x86
-            - win-arm64
-            - linux-x64
-            - linux-arm64
-            - linux-musl-x64
-            - osx-x64
-            - osx-arm64
-            - linux-arm
-            - linux-musl-arm
-            - linux-musl-arm64
-            jobParameters:
-              pipelineJobTemplate: ${{ variables.jobTemplate }}
-
-      - stage: package_release_dry_run
-        displayName: Release dry-run packaging
-        dependsOn: build_release_dry_run
-        condition: and(succeeded(), eq(variables.isReleaseDryRun, 'true'))
-        jobs:
-        - template: /eng/pipelines/package.yml
-          parameters:
-            pipelineJobTemplate: ${{ variables.jobTemplate }}
-            configuration: Release
-            isOfficialBuild: true
-            isDryRun: true
-
     - ${{ if and(or(eq(variables.isOfficialBuild, true), eq(variables['Build.Reason'], 'PullRequest')), ne(parameters.buildOnly, true)) }}:
       - stage: test_packaged
         displayName: Test installed build artifacts
+        dependsOn: build
         ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
-          dependsOn: build_release_dry_run
           condition: and(succeeded(), eq(variables.isReleaseDryRun, 'true'))
-        ${{ else }}:
-          dependsOn: build
         jobs:
         - template: /eng/pipelines/platform-matrix.yml
           parameters:

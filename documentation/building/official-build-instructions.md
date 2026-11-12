@@ -56,7 +56,7 @@ to 1ES. The public adapter supports `path`/`artifact` and
 
 ## Weekly release rehearsal
 
-PRs from `release/weekly-staging` to `release/stable` select release dry-run mode
+PRs from `automation/release-staging` to `release/stable` select release dry-run mode
 using runtime PR metadata. This branch is based on `release/stable` and merges
 main, retaining the release branch's version settings. The PR pipeline validates
 the proposed merge: it builds Release for all 11 platforms, runs the installed SOS
@@ -68,9 +68,9 @@ build jobs. It does not initialize MicroBuild signing for packaging, register as
 with BAR, promote builds with Darc, or run release-storage preparation. Its outputs
 are downloadable build artifacts only.
 
-The existing PR trigger is sufficient; push CI remains disabled. Weekly PRs run
-the Release dry-run stages instead of the ordinary Debug build and test stage.
-Other PRs retain their normal Debug validation. Both paths are present in the
-compiled PR pipeline because the PR branch names are only available at runtime;
-stage conditions select the appropriate path. The release preparation stage
-depends on the ordinary build stage and is skipped for weekly PRs.
+The existing PR trigger is sufficient; push CI remains disabled. One build matrix
+selects Debug for ordinary PRs and Release for weekly PRs and non-PR builds.
+PR pipelines include both configurations at template expansion time; job conditions
+run only the selected configuration, and dependent tests and packaging skip the
+unused configuration. Weekly PRs run the installed SOS tests instead of ordinary
+Debug tests and skip release preparation.

@@ -27,6 +27,7 @@ jobs:
       displayName: Test ${{ replace(parameters.platform.name, '_', '-') }} ${{ parameters.platform.arch }} ${{ parameters.configuration }}
     ${{ else }}:
       displayName: Build ${{ replace(parameters.platform.name, '_', '-') }} ${{ parameters.platform.arch }} ${{ parameters.configuration }}
+      condition: and(succeeded(), eq(variables.buildConfiguration, '${{ parameters.configuration }}'))
     timeoutInMinutes: 180
     enableMicrobuild: true
     disableComponentGovernance: ${{ and(eq(parameters.testOnly, true), startsWith(parameters.platform.rid, 'linux-musl-')) }}
