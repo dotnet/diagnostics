@@ -27,11 +27,18 @@ To release the latest tools:
 ## Weekly stable updates
 
 The `Update release/stable` GitHub workflow runs on Monday at 08:00 UTC and supports
-manual dispatch. When main has commits missing from release/stable, it opens or
-reuses a same-repository `main` -> `release/stable` PR and links it in the run summary.
-Reusing an unchanged PR does not explicitly queue another CI build.
+manual dispatch. When main has commits missing from release/stable, it creates
+`release/weekly-staging` from stable if needed, then merges the captured stable and
+main commits into staging. It opens or reuses a same-repository
+`release/weekly-staging` -> `release/stable` PR and links it in the run summary.
+Merge conflicts fail the workflow rather than resetting or force-pushing staging.
 
-The workflow never merges the PR, changes either branch or publishes release
-artifacts. Conflicts require manual resolution. It uses GitHub's automatic token,
-not a PAT, and requires the repository to allow GitHub Actions to create pull
-requests.
+Staging-branch pushes trigger Release dry-run validation in the public Azure
+pipeline once its CI branch filter permits `release/weekly-staging` and the dry-run
+pipeline changes are merged. An unchanged staging branch does not explicitly queue
+another CI build.
+
+The workflow never modifies main or release/stable, merges the stable-update PR,
+or publishes release artifacts. It uses GitHub's automatic token with contents-write
+and pull-requests-write permissions, not a PAT. The repository must allow GitHub
+Actions to create pull requests.

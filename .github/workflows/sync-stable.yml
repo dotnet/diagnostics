@@ -14,7 +14,7 @@ jobs:
     if: github.repository == 'dotnet/diagnostics'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
     steps:
       - name: Open the stable update PR
@@ -23,9 +23,15 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const base = 'release/stable';
-            const head = 'main';
+            const head = 'release/weekly-staging';
+            const [stable, main] = await Promise.all([
+              github.rest.repos.getBranch({ owner, repo, branch: base }),
+              github.rest.repos.getBranch({ owner, repo, branch: 'main' })
+            ]);
+            const stableSha = stable.data.commit.sha;
+            const mainSha = main.data.commit.sha;
             const comparison = await github.rest.repos.compareCommitsWithBasehead({
-              owner, repo, basehead: `${base}...${head}`
+              owner, repo, basehead: `${stableSha}...${mainSha}`
             });
             if (comparison.data.ahead_by === 0) {
               core.info('release/stable already contains main.');
@@ -36,14 +42,35 @@ jobs:
               owner, repo, state: 'open', base, head: `${owner}:${head}`
             });
             if (existing.data.length > 1) {
-              throw new Error('More than one open main -> release/stable PR was found.');
+              throw new Error('More than one open weekly-staging -> release/stable PR was found.');
             }
+
+            try {
+              await github.rest.git.getRef({ owner, repo, ref: `heads/${head}` });
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+              await github.rest.git.createRef({
+                owner, repo, ref: `refs/heads/${head}`, sha: stableSha
+              });
+            }
+
+            await github.rest.repos.merge({
+              owner, repo, base: head, head: stableSha,
+              commit_message: `Merge ${base} into ${head}`
+            });
+            await github.rest.repos.merge({
+              owner, repo, base: head, head: mainSha,
+              commit_message: `Merge main into ${head}`
+            });
+
             let pr = existing.data[0];
             if (!pr) {
               pr = (await github.rest.pulls.create({
                 owner, repo, base, head,
-                title: 'Merge main into release/stable',
-                body: 'Weekly update of release/stable from main. This workflow only opens or reuses the PR; it does not merge it or publish release artifacts.'
+                title: 'Merge weekly staging into release/stable',
+                body: 'Weekly merge of release/stable and main into release/weekly-staging. Staging-branch pushes run Release dry-run validation. This workflow does not merge into release/stable or publish release artifacts.'
               })).data;
             }
 
