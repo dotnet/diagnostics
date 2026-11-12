@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using SOS.TestHarness;
 
 // The EngineHost child process: hosts dbgeng IN THIS PROCESS (reusing the in-process host
@@ -50,6 +51,11 @@ internal static class EngineHostMain
         {
             Console.Error.WriteLine("engine open failed: " + ex);
             return 1;
+        }
+
+        foreach ((string moduleName, string modulePath) in GetLoadedDebuggerModules())
+        {
+            Console.Out.WriteLine($"{EngineProtocol.DiagnosticPrefix}Loaded {moduleName}: {modulePath}");
         }
 
         // Signal that the target is open and SOS is ready.
@@ -125,5 +131,16 @@ internal static class EngineHostMain
         }
 
         return 0;
+    }
+
+    private static Dictionary<string, string> GetLoadedDebuggerModules()
+    {
+        using Process process = Process.GetCurrentProcess();
+        return process.Modules
+            .Cast<ProcessModule>()
+            .Where(module =>
+                string.Equals(module.ModuleName, "dbgeng.dll", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(module.ModuleName, "sos.dll", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(module => module.ModuleName, module => module.FileName, StringComparer.OrdinalIgnoreCase);
     }
 }
