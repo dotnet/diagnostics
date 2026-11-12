@@ -44,6 +44,16 @@ internal sealed class DumpSession : IPooledHost
     /// <summary>Captured stdout/stderr and crash dumps for this session's host, or null for the cdb child
     /// host (which does not support capture). Surfaced in a failing test's replay.</summary>
     public HostDiagnostics? Diagnostics => _diagnostics;
+    public IReadOnlyList<string> StartupDiagnostics
+    {
+        get
+        {
+            using (_slot.Acquire(this))
+            {
+                return (_host as IStartupDiagnosticHost)?.StartupDiagnostics.ToArray() ?? [];
+            }
+        }
+    }
 
     internal DumpSession(Host hostKind, string targetName, string stopName, Flavor flavor, string dumpPath,
                          CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy,

@@ -42,6 +42,19 @@ SOSHARNESS_ONLY_COREVERSIONS=Net10 \
 
 ## Architecture
 
+### Testing installed tools
+
+Official builds run installed-tool SOS tests after `build`, in parallel with
+packaging/publishing, instead of the standard test jobs. `buildOnly` skips all
+tests; PR validation is unchanged.
+
+The Release jobs cover Windows x64/x86/ARM64, Linux x64/ARM64, Linux-musl x64,
+and macOS x64/ARM64 through the normal Helix platform matrix. Each worker
+installs unsigned same-build packages, not final signed shipping packages.
+
+Known limitation: Framework shards can report empty-theory errors only in their
+XML results; the console summary can still report success.
+
 The harness is split into four parts:
 
 - `SOS.Tests` contains command-oriented xUnit theories and structured parsers

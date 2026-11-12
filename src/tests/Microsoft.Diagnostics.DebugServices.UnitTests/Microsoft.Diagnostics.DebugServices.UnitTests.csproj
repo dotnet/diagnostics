@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>$(NetCoreAppTestTargetFramework)</TargetFramework>
@@ -32,7 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="$(TestDir)Microsoft.SymbolStore.UnitTests\TestBinaries\symbolized_executable;$(TestDir)Microsoft.SymbolStore.UnitTests\TestBinaries\stripped_executable;$(TestDir)Microsoft.FileFormats.UnitTests\TestBinaries\libcoreclrtraceptprovider.so.dbg.gz">
+    <Content Include="$(TestDir)Microsoft.SymbolStore.UnitTests\TestBinaries\symbolized_executable;$(TestDir)Microsoft.SymbolStore.UnitTests\TestBinaries\stripped_executable;$(TestDir)Microsoft.FileFormats.UnitTests\TestBinaries\libcoreclrtraceptprovider.so.dbg.gz;$(TestDir)Microsoft.FileFormats.UnitTests\TestBinaries\libcoreclr.dylib.gz;$(TestDir)Microsoft.SymbolStore.UnitTests\TestBinaries\dir1\System.Threading.Thread.dll;$(TestDir)Microsoft.SymbolStore.UnitTests\TestBinaries\dir1\System.Threading.Thread.pdb">
       <Link>TestBinaries\%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

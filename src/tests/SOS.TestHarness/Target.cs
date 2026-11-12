@@ -27,6 +27,7 @@ public abstract class Target : IDisposable
     public Host Host { get; }
     public string TargetName { get; }
     public Flavor Flavor { get; }
+    public virtual IReadOnlyList<string> HostStartupDiagnostics => [];
 
     /// <summary>The dump file currently backing this target (dead targets only).</summary>
     public virtual string DumpPath =>
