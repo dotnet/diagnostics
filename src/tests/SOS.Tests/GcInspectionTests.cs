@@ -196,10 +196,10 @@ public sealed class GcInspectionTests
         if (OperatingSystem.IsMacOS() &&
             config.Host == Host.DotnetDump &&
             config.Dac == Dac.Legacy &&
-            config.CoreVersion == CoreVersion.Net11)
+            config.CoreVersion is CoreVersion.Net11 or CoreVersion.Net12)
         {
             HarnessSkipException.Now(
-                "https://github.com/dotnet/diagnostics/issues/5985: legacy DAC SyncBlock data is unavailable for macOS .NET 11 dumps.");
+                "https://github.com/dotnet/diagnostics/issues/5985: legacy DAC SyncBlock data is unavailable for macOS dumps.");
         }
 
         using Target target = await Targets.GetTargetAsync(config);
