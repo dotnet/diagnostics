@@ -145,15 +145,6 @@ set "DOTNET_ROOT_X86=%DOTNET_ROOT%"
 
 set "LOG=%UPLOAD%\SOS.Tests-%RID%-%CONFIGURATION%-%IDENTITY%.log"
 
-reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\MiniDumpSettings" ^
-  /v DisableAuxProviderSignatureCheck /t REG_DWORD /d 1 /f
-if errorlevel 1 exit /b 3
-if /I "%TARGET_ARCH%"=="x86" (
-  reg.exe add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\MiniDumpSettings" ^
-    /v DisableAuxProviderSignatureCheck /t REG_DWORD /d 1 /f /reg:32
-  if errorlevel 1 exit /b 3
-)
-
 "%DOTNET_ROOT%\dotnet.exe" "%TEST_DLL%" ^
   --results-directory "%UPLOAD%" ^
   --report-xunit ^
