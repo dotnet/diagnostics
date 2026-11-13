@@ -43,30 +43,28 @@ jobs:
         targetPath: '$(Build.SourcesDirectory)/artifacts'
         checkDownloadedFiles: true
 
-    - ${{ if eq(parameters.platform.os, 'windows') }}:
-      - powershell: |
-          foreach ($tool in @('dotnet-sos', 'dotnet-dump')) {
-            & .\eng\common\build.ps1 -restore -pack -binaryLog -configuration ${{ parameters.configuration }} `
-              -projects "$(Build.SourcesDirectory)\src\Tools\$tool\$tool.csproj" `
-              /p:TargetArch=${{ parameters.platform.arch }} /p:TargetRid=${{ parameters.platform.rid }} `
-              /p:SingleTargetRidPackage=true /p:NoBuild=true `
-              /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false `
-              /p:PackageOutputPath="$(Build.SourcesDirectory)\artifacts\tmp\packaged-sos-packages"
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-        displayName: Pack prebuilt tools for isolated installation
-    - ${{ else }}:
-      - bash: |
-          set -euo pipefail
-          for tool in dotnet-sos dotnet-dump; do
-            ./eng/common/build.sh --restore --pack --binaryLog --configuration ${{ parameters.configuration }} \
-              --projects "$(Build.SourcesDirectory)/src/Tools/$tool/$tool.csproj" \
-              /p:TargetArch=${{ parameters.platform.arch }} /p:TargetRid=${{ parameters.platform.rid }} \
-              /p:SingleTargetRidPackage=true /p:NoBuild=true \
-              /p:OfficialBuildId=$(Build.BuildNumber) /p:OfficialBuild=false \
-              /p:PackageOutputPath="$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos-packages"
-          done
-        displayName: Pack prebuilt tools for isolated installation
+    - task: DownloadBuildArtifacts@0
+      displayName: Download signed tool packages
+      inputs:
+        buildType: current
+        downloadType: single
+        artifactName: PackageArtifacts
+        itemPattern: |
+          **/dotnet-sos.*.nupkg
+          **/dotnet-dump.*.nupkg
+        downloadPath: '$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos-download'
+        checkDownloadedFiles: true
+
+    - task: CopyFiles@2
+      displayName: Stage signed tool packages
+      inputs:
+        sourceFolder: '$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos-download'
+        contents: |
+          **/dotnet-sos.*.nupkg
+          **/dotnet-dump.*.nupkg
+          !**/*.symbols.nupkg
+        targetFolder: '$(Build.SourcesDirectory)/artifacts/tmp/packaged-sos-packages'
+        flattenFolders: true
 
     - template: /eng/pipelines/send-to-helix-step.yml
       parameters:

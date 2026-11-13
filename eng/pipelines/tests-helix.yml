@@ -59,7 +59,10 @@ jobs:
           /p:OfficialBuildId=$(Build.BuildNumber)
           /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/SendTestsToHelix.binlog
         env:
-          HelixSource: pr/dotnet/diagnostics/tests
+          ${{ if parameters.isOfficialBuild }}:
+            HelixSource: official/dotnet/diagnostics/tests
+          ${{ else }}:
+            HelixSource: pr/dotnet/diagnostics/tests
           HelixType: tests/
           HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
           ${{ if eq(variables['System.TeamProject'], 'public') }}:

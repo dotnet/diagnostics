@@ -19,6 +19,10 @@ parameters:
   displayName: Build only (skip tests)
   type: boolean
   default: false
+- name: validationOnly
+  displayName: Validation only (skip asset publishing)
+  type: boolean
+  default: false
 
 trigger: none
 
@@ -105,7 +109,7 @@ extends:
       #                          #
       ############################
 
-      - ${{ if and(ne(variables.isOfficialBuild, true), ne(parameters.buildOnly, true)) }}:
+      - ${{ if ne(parameters.buildOnly, true) }}:
         - template: /eng/pipelines/platform-matrix.yml
           parameters:
             jobTemplate: /eng/pipelines/build.yml
@@ -147,29 +151,6 @@ extends:
             - osx-arm64
             - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
               - osx-x64
-            jobParameters:
-              pipelineJobTemplate: ${{ variables.jobTemplate }}
-
-    - ${{ if and(eq(variables.isOfficialBuild, true), ne(parameters.buildOnly, true)) }}:
-      - stage: test_packaged
-        displayName: Test installed build artifacts
-        dependsOn: build
-        jobs:
-        - template: /eng/pipelines/platform-matrix.yml
-          parameters:
-            jobTemplate: /eng/pipelines/tests-packaged-sos.yml
-            isOfficialBuild: ${{ variables.isOfficialBuild }}
-            configurations:
-            - Release
-            platforms:
-            - win-x64
-            - win-x86
-            - win-arm64
-            - linux-x64
-            - linux-arm64
-            - linux-musl-x64
-            - osx-x64
-            - osx-arm64
             jobParameters:
               pipelineJobTemplate: ${{ variables.jobTemplate }}
 
@@ -250,6 +231,7 @@ extends:
             configuration: Release
             dependsOn: Package_Sign_Publish
             publishUsingPipelines: true
+            isAssetlessBuild: ${{ parameters.validationOnly }}
 
       - template: /eng/common/templates-official/post-build/post-build.yml@self
         parameters:
@@ -264,6 +246,31 @@ extends:
           enableNugetValidation: true
           symbolPublishingAdditionalParameters: '/p:PublishSpecialClrFiles=false'
           publishInstallersAndChecksums: true
+          isAssetlessBuild: ${{ parameters.validationOnly }}
+
+      # Runs in parallel with Validate Build Assets against the signed packages from the package stage.
+      - ${{ if and(eq(variables.isOfficialBuild, true), ne(parameters.buildOnly, true)) }}:
+        - stage: test_packaged
+          displayName: Test installed build artifacts
+          dependsOn: package
+          jobs:
+          - template: /eng/pipelines/platform-matrix.yml
+            parameters:
+              jobTemplate: /eng/pipelines/tests-packaged-sos.yml
+              isOfficialBuild: ${{ variables.isOfficialBuild }}
+              configurations:
+              - Release
+              platforms:
+              - win-x64
+              - win-x86
+              - win-arm64
+              - linux-x64
+              - linux-arm64
+              - linux-musl-x64
+              - osx-x64
+              - osx-arm64
+              jobParameters:
+                pipelineJobTemplate: ${{ variables.jobTemplate }}
 
     # This sets up the bits to do a Release.
     - template: /eng/pipelines/prepare-release.yml
