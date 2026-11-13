@@ -38,7 +38,7 @@ jobs:
         cd $(Build.ArtifactStagingDirectory)/__download__
 
         $dirs = Get-ChildItem -Directory
-        $expected = if ("$(System.TeamProject)" -eq "public") { 8 } else { 11 }
+        $expected = 11
         if ($dirs.Count -ne $expected) {
           throw "Expected $expected platform builds, but found $($dirs.Count)."
         }

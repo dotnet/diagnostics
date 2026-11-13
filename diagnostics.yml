@@ -92,12 +92,11 @@ extends:
           - linux-x64
           - linux-arm64
           - linux-musl-x64
+          - linux-arm
+          - linux-musl-arm
+          - linux-musl-arm64
           - osx-x64
           - osx-arm64
-          - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-            - linux-arm
-            - linux-musl-arm
-            - linux-musl-arm64
           jobParameters:
             pipelineJobTemplate: ${{ variables.jobTemplate }}
 
@@ -151,10 +150,9 @@ extends:
             - Linux_musl_x64_${{ variables.buildConfiguration }}
             - MacOS_x64_${{ variables.buildConfiguration }}
             - MacOS_arm64_${{ variables.buildConfiguration }}
-            - ${{ if ne(variables['System.TeamProject'], 'public') }}:
-              - Linux_arm_${{ variables.buildConfiguration }}
-              - Linux_musl_arm_${{ variables.buildConfiguration }}
-              - Linux_musl_arm64_${{ variables.buildConfiguration }}
+            - Linux_arm_${{ variables.buildConfiguration }}
+            - Linux_musl_arm_${{ variables.buildConfiguration }}
+            - Linux_musl_arm64_${{ variables.buildConfiguration }}
 
     ########################
     # Non-PR Tests stage
