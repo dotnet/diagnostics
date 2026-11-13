@@ -33,6 +33,12 @@ creates `automation/release-sync` from release/stable if needed, then merges the
 latest release/stable and main commits into that branch. It opens or updates an
 `automation/release-sync` -> `release/stable` pull request for validation.
 
+The automation restores `eng/Versions.props`, `eng/Version.Details.props`,
+`eng/Version.Details.xml`, and `global.json` from the captured release/stable
+commit before pushing. The sync intentionally does not update those files;
+release version and dependency bumps must be made independently in separate,
+reviewed release/stable pull requests.
+
 The workflow does not modify main or release/stable directly, merge the pull
 request, or publish release artifacts. Merge conflicts fail the workflow instead
 of resetting or force-pushing the automation branch.
