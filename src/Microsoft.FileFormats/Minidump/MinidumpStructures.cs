@@ -14,12 +14,11 @@ namespace Microsoft.FileFormats.Minidump
         public static LayoutManager AddCrashDumpTypes(this LayoutManager layouts, bool isBigEndian, bool is64Bit)
         {
             return layouts
-                     .AddPrimitives(isBigEndian)
-                     .AddEnumTypes()
-                     .AddSizeT(is64Bit ? 8 : 4)
-                     .AddPointerTypes()
-                     .AddNullTerminatedString()
-                     .AddTStructTypes();
+                .AddPrimitives(isBigEndian)
+                .AddEnumTypes()
+                .AddSizeT(is64Bit ? 8 : 4)
+                .AddNullTerminatedString()
+                .RegisterMinidump();
         }
     }
 

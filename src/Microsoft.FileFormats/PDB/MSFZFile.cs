@@ -64,7 +64,7 @@ namespace Microsoft.FileFormats.PDB
             }
 
             uint streamSize = GetStreamSize(stream);
-            return new Reader(new MsfzStream(this, stream, streamSize));
+            return new Reader(new MsfzStream(this, stream, streamSize), new LayoutManager().AddPDBTypes());
         }
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace Microsoft.FileFormats.PDB
         // Can return null, on failure.
         internal static MSFZFile Open(IAddressSpace dataSource)
         {
-            Reader reader = new(dataSource);
+            Reader reader = new(dataSource, new LayoutManager().AddPDBTypes());
 
             ulong pos = 0;
 

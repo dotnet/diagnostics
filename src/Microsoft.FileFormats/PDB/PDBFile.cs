@@ -20,7 +20,7 @@ namespace Microsoft.FileFormats.PDB
 
         public PDBFile(IAddressSpace dataSource)
         {
-            Reader reader = new(dataSource);
+            Reader reader = new(dataSource, new LayoutManager().AddPDBTypes());
             _streams = new Lazy<Reader[]>(ReadDirectory);
             _nameStream = new Lazy<PDBNameStream>(() => {
                 CheckValid();

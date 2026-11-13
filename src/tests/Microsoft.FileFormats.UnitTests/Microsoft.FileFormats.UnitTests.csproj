@@ -11,6 +11,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="NativeAot\**\*.cs" />
     <Content Include="$(MSBuildThisFileDirectory)TestBinaries\**\*">
       <Link>TestBinaries\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

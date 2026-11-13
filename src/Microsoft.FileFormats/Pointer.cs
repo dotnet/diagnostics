@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -34,6 +35,8 @@ namespace Microsoft.FileFormats
     /// <summary>
     /// A pointer layout that can create pointers from the System.UInt64 storage type
     /// </summary>
+    [RequiresDynamicCode("Use RegisterPointer<TPointer, TTarget, TStorage> for NativeAOT-compatible pointer layouts.")]
+    [RequiresUnreferencedCode("Runtime pointer construction requires a constructor that may be trimmed. Register concrete pointer types explicitly.")]
     public class UInt64PointerLayout : PointerLayout
     {
         public UInt64PointerLayout(LayoutManager layoutManager, Type pointerType, ILayout storageLayout, Type targetType) :
@@ -57,6 +60,8 @@ namespace Microsoft.FileFormats
     /// <summary>
     /// A pointer layout that can create pointers from the System.UInt32 storage type
     /// </summary>
+    [RequiresDynamicCode("Use RegisterPointer<TPointer, TTarget, TStorage> for NativeAOT-compatible pointer layouts.")]
+    [RequiresUnreferencedCode("Runtime pointer construction requires a constructor that may be trimmed. Register concrete pointer types explicitly.")]
     public class UInt32PointerLayout : PointerLayout
     {
         public UInt32PointerLayout(LayoutManager layoutManager, Type pointerType, ILayout storageLayout, Type targetType) :
@@ -80,6 +85,8 @@ namespace Microsoft.FileFormats
     /// <summary>
     /// A pointer layout that can create pointers from the SizeT storage type
     /// </summary>
+    [RequiresDynamicCode("Use RegisterPointer<TPointer, TTarget, TStorage> for NativeAOT-compatible pointer layouts.")]
+    [RequiresUnreferencedCode("Runtime pointer construction requires a constructor that may be trimmed. Register concrete pointer types explicitly.")]
     public class SizeTPointerLayout : PointerLayout
     {
         public SizeTPointerLayout(LayoutManager layoutManager, Type pointerType, ILayout storageLayout, Type targetType) :
@@ -157,15 +164,32 @@ namespace Microsoft.FileFormats
 
     public static partial class LayoutManagerExtensions
     {
+        /// <summary>Registers a concrete pointer type without discovering its generic arguments at runtime.</summary>
+        public static LayoutManager RegisterPointer<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TPointer, TTarget, TStorage>(this LayoutManager layouts)
+            where TPointer : Pointer<TTarget, TStorage>, new()
+        {
+            if (typeof(TStorage) != typeof(SizeT) && typeof(TStorage) != typeof(uint) && typeof(TStorage) != typeof(ulong))
+            {
+                throw new LayoutException("Pointer types must have a storage type of SizeT, ulong, or uint");
+            }
+            layouts.RegisterLayoutFactory(typeof(TPointer), manager =>
+                new RegisteredPointerLayout<TPointer>(manager, manager.GetLayout<TStorage>(), typeof(TTarget)));
+            return layouts;
+        }
+
         /// <summary>
         /// Adds support for reading types derived from Pointer<,>
         /// </summary>
+        [RequiresDynamicCode("Runtime pointer discovery is not supported by the registered layout path. Use RegisterPointer<TPointer, TTarget, TStorage>.")]
+        [RequiresUnreferencedCode("Runtime pointer discovery requires constructors that may be trimmed. Register concrete pointer types explicitly.")]
         public static LayoutManager AddPointerTypes(this LayoutManager layouts)
         {
             layouts.AddLayoutProvider(GetPointerLayout);
             return layouts;
         }
 
+        [RequiresDynamicCode("Runtime pointer discovery requires preserved runtime type information.")]
+        [RequiresUnreferencedCode("Runtime pointer discovery requires constructors that may be trimmed.")]
         private static ILayout GetPointerLayout(Type pointerType, LayoutManager layoutManager)
         {
             if (!typeof(Pointer).GetTypeInfo().IsAssignableFrom(pointerType))
@@ -217,6 +241,24 @@ namespace Microsoft.FileFormats
             else
             {
                 throw new LayoutException("Pointer types must have a storage type of SizeT, ulong, or uint");
+            }
+        }
+
+        internal sealed class RegisteredPointerLayout<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TPointer> : PointerLayout
+            where TPointer : Pointer, new()
+        {
+            public RegisteredPointerLayout(LayoutManager manager, ILayout storage, Type target) :
+                base(manager, typeof(TPointer), storage, target)
+            { }
+
+            public override object Read(IAddressSpace dataSource, ulong position)
+            {
+                object storage = _storageLayout.Read(dataSource, position);
+                ulong value = _storageLayout.Type == typeof(SizeT) ? (SizeT)storage :
+                    _storageLayout.Type == typeof(uint) ? (uint)storage : (ulong)storage;
+                TPointer pointer = new();
+                pointer.Init(TargetLayout, value);
+                return pointer;
             }
         }
     }

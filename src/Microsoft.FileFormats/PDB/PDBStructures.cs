@@ -8,6 +8,17 @@ using System.Threading.Tasks;
 
 namespace Microsoft.FileFormats.PDB
 {
+    public static class PDBLayoutManagerExtensions
+    {
+        public static LayoutManager AddPDBTypes(this LayoutManager layouts)
+        {
+            return layouts
+                .AddPrimitives()
+                .AddEnumTypes()
+                .RegisterPDB();
+        }
+    }
+
     public class PDBFileHeader : TStruct
     {
         private static byte[] ExpectedMagic
