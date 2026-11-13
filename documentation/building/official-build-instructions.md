@@ -23,3 +23,16 @@ To release the latest tools:
 4) Download the above packages from the successful official build under "Artifacts" -> "PackageArtifacts".
 5) Upload these packages to nuget.org.
 6) Create a new "release" in the [releases](https://github.com/dotnet/diagnostics/releases) diagnostics repo release tab with the package version (not the official build id) as the "tag". Add any release notes about known issues, issues fixed and new features.
+
+Weekly stable updates
+---------------------
+
+The `Update release/stable` GitHub workflow runs every Friday at 20:00 UTC and
+supports manual dispatch. When main has commits missing from release/stable, it
+creates `automation/release-sync` from release/stable if needed, then merges the
+latest release/stable and main commits into that branch. It opens or updates an
+`automation/release-sync` -> `release/stable` pull request for validation.
+
+The workflow does not modify main or release/stable directly, merge the pull
+request, or publish release artifacts. Merge conflicts fail the workflow instead
+of resetting or force-pushing the automation branch.

@@ -1,0 +1,90 @@
+name: Update release/stable
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 20 * * 5'
+
+concurrency:
+  group: sync-release-stable
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'dotnet/diagnostics'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Create or update the stable sync pull request
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const base = 'release/stable';
+            const source = 'main';
+            const head = 'automation/release-sync';
+            const title = 'Merge main into release/stable';
+            const body = [
+              'Weekly update of `release/stable` from `main`.',
+              '',
+              'The automation updates this branch and pull request but does not merge it or publish release artifacts.'
+            ].join('\n');
+
+            const [stable, main] = await Promise.all([
+              github.rest.repos.getBranch({ owner, repo, branch: base }),
+              github.rest.repos.getBranch({ owner, repo, branch: source })
+            ]);
+            const stableSha = stable.data.commit.sha;
+            const mainSha = main.data.commit.sha;
+
+            const comparison = await github.rest.repos.compareCommitsWithBasehead({
+              owner, repo, basehead: `${stableSha}...${mainSha}`
+            });
+            if (comparison.data.ahead_by === 0) {
+              core.info(`${base} already contains ${source}.`);
+              return;
+            }
+
+            const existing = await github.rest.pulls.list({
+              owner, repo, state: 'open', base, head: `${owner}:${head}`
+            });
+            if (existing.data.length > 1) {
+              throw new Error(`More than one open ${head} -> ${base} pull request was found.`);
+            }
+
+            try {
+              await github.rest.git.getRef({ owner, repo, ref: `heads/${head}` });
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+              await github.rest.git.createRef({
+                owner, repo, ref: `refs/heads/${head}`, sha: stableSha
+              });
+            }
+
+            await github.rest.repos.merge({
+              owner, repo, base: head, head: stableSha,
+              commit_message: `Merge ${base} into ${head}`
+            });
+            await github.rest.repos.merge({
+              owner, repo, base: head, head: mainSha,
+              commit_message: `Merge ${source} into ${head}`
+            });
+
+            let pullRequest = existing.data[0];
+            if (pullRequest) {
+              pullRequest = (await github.rest.pulls.update({
+                owner, repo, pull_number: pullRequest.number, title, body
+              })).data;
+            } else {
+              pullRequest = (await github.rest.pulls.create({
+                owner, repo, base, head, title, body
+              })).data;
+            }
+
+            await core.summary
+              .addLink('Stable sync pull request', pullRequest.html_url)
+              .write();
