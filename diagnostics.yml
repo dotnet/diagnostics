@@ -84,6 +84,8 @@ extends:
           configurations:
           - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
             - Debug
+          - ${{ elseif eq(variables.isOfficialBuild, true) }}:
+            - Release
           - ${{ else }}:
             - Release
             - Debug
@@ -117,6 +119,8 @@ extends:
             configurations:
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               - Debug
+            - ${{ elseif eq(variables.isOfficialBuild, true) }}:
+              - Release
             - ${{ else }}:
               - Release
               - Debug
@@ -138,6 +142,8 @@ extends:
             configurations:
             - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
               - Debug
+            - ${{ elseif eq(variables.isOfficialBuild, true) }}:
+              - Release
             - ${{ else }}:
               - Release
               - Debug
