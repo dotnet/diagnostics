@@ -73,6 +73,33 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         [ConditionalFact(nameof(IsUnix))]
+        public void IsConnectedToProcess_ValidatesKernelPeerCredentials()
+        {
+            string directory = CreateSocketTestDirectory();
+            try
+            {
+                string path = Path.Combine(directory, "peer-socket");
+                using Socket listener = BindSocket(path);
+                listener.Listen(1);
+
+                using Socket client = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+                client.Connect(new UnixDomainSocketEndPoint(path));
+                using Socket server = listener.Accept();
+
+                int pid = Environment.ProcessId;
+                uint uid = UnixSocketOwner.GetProcessUid(pid);
+                Assert.True(UnixSocketOwner.IsConnectedToProcess(client, pid, uid));
+                Assert.True(UnixSocketOwner.IsConnectedToProcess(server, pid, uid));
+                Assert.False(UnixSocketOwner.IsConnectedToProcess(client, pid + 1, uid));
+                Assert.False(UnixSocketOwner.IsConnectedToProcess(client, pid, uid == 0 ? 1u : 0u));
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [ConditionalFact(nameof(IsUnix))]
         public void TryResolveAddress_FiltersBeforeSortingAndUsesHostPid()
         {
             string directory = CreateSocketTestDirectory();
@@ -123,7 +150,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 using Socket router = BindSocket(routerPath);
                 Assert.Equal(0, Chown(routerPath, 1, uint.MaxValue));
                 Assert.True(PidIpcEndpoint.TryResolveAddress(directory, Environment.ProcessId, out address));
-                Assert.Equal(routerPath, address);
+                Assert.Equal(valid, address);
 
                 validSocket.Dispose();
                 File.Delete(valid);

@@ -5,12 +5,19 @@ using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace Microsoft.Diagnostics.NETCore.Client
 {
     internal static class UnixSocketOwner
     {
+        private const int ErrorInterrupted = 4;
+        private const int LinuxSocketLevel = 1;
+        private const int LinuxPeerCredentialsOption = 17;
+        private const int MacSocketLevel = 0;
+        private const int MacPeerPidOption = 2;
+
         internal static uint GetProcessUid(int pid)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -88,7 +95,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     owner = stat.Uid;
                 }
             }
-            while (result != 0 && Marshal.GetLastWin32Error() == 4); // EINTR
+            while (result != 0 && Marshal.GetLastWin32Error() == ErrorInterrupted);
 
             if (result != 0)
             {
@@ -103,6 +110,75 @@ namespace Microsoft.Diagnostics.NETCore.Client
             const int FileTypeMask = 0xf000;
             const int SocketType = 0xc000;
             return (mode & FileTypeMask) == SocketType && owner == uid;
+        }
+
+        internal static bool IsConnectedToProcess(Socket socket, int pid, uint uid)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                LinuxPeerCredentials credentials;
+                uint length = (uint)Marshal.SizeOf<LinuxPeerCredentials>();
+                int result;
+                do
+                {
+                    result = GetLinuxPeerCredentials(
+                        socket.Handle.ToInt32(),
+                        LinuxSocketLevel,
+                        LinuxPeerCredentialsOption,
+                        out credentials,
+                        ref length);
+                }
+                while (result != 0 && Marshal.GetLastWin32Error() == ErrorInterrupted);
+
+                if (result != 0)
+                {
+                    throw CreateException("Unable to inspect diagnostic socket peer");
+                }
+                if (length != (uint)Marshal.SizeOf<LinuxPeerCredentials>())
+                {
+                    throw new IOException($"Incomplete diagnostic socket peer credentials: expected {Marshal.SizeOf<LinuxPeerCredentials>()} bytes, received {length}.");
+                }
+
+                return credentials.Pid == pid && credentials.Uid == uid;
+            }
+
+            int socketFd = socket.Handle.ToInt32();
+            int peerResult;
+            uint peerUid;
+            do
+            {
+                peerResult = GetMacPeerEffectiveId(socketFd, out peerUid, out _);
+            }
+            while (peerResult != 0 && Marshal.GetLastWin32Error() == ErrorInterrupted);
+
+            if (peerResult != 0)
+            {
+                throw CreateException("Unable to inspect diagnostic socket peer UID");
+            }
+
+            int peerPid;
+            uint peerPidLength = sizeof(int);
+            do
+            {
+                peerResult = GetMacPeerPid(
+                    socketFd,
+                    MacSocketLevel,
+                    MacPeerPidOption,
+                    out peerPid,
+                    ref peerPidLength);
+            }
+            while (peerResult != 0 && Marshal.GetLastWin32Error() == ErrorInterrupted);
+
+            if (peerResult != 0)
+            {
+                throw CreateException("Unable to inspect diagnostic socket peer PID");
+            }
+            if (peerPidLength != (uint)sizeof(int))
+            {
+                throw new IOException($"Incomplete diagnostic socket peer PID: expected {sizeof(int)} bytes, received {peerPidLength}.");
+            }
+
+            return peerPid == pid && peerUid == uid;
         }
 
         private static IOException CreateException(string message)
@@ -137,9 +213,26 @@ namespace Microsoft.Diagnostics.NETCore.Client
             [FieldOffset(20)] public uint Uid;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct LinuxPeerCredentials
+        {
+            public int Pid;
+            public uint Uid;
+            public uint Gid;
+        }
+
 #pragma warning disable SYSLIB1054
         [DllImport("libc", EntryPoint = "syscall", CharSet = CharSet.Ansi, SetLastError = true)]
         private static extern IntPtr FStatAt(IntPtr number, IntPtr directoryFd, string path, out LinuxStat stat, IntPtr flags);
+
+        [DllImport("libc", EntryPoint = "getsockopt", SetLastError = true)]
+        private static extern int GetLinuxPeerCredentials(int socket, int level, int optionName, out LinuxPeerCredentials credentials, ref uint length);
+
+        [DllImport("libSystem.B.dylib", EntryPoint = "getpeereid", SetLastError = true)]
+        private static extern int GetMacPeerEffectiveId(int socket, out uint effectiveUid, out uint effectiveGid);
+
+        [DllImport("libSystem.B.dylib", EntryPoint = "getsockopt", SetLastError = true)]
+        private static extern int GetMacPeerPid(int socket, int level, int optionName, out int pid, ref uint length);
 
         [DllImport("libSystem.B.dylib", EntryPoint = "lstat", CharSet = CharSet.Ansi, SetLastError = true)]
         private static extern int LStat(string path, out MacStat stat);
