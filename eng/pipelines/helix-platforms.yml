@@ -25,6 +25,14 @@ variables:
   - name: helix_linux_x64_ubuntu_2204_internal
     value: Ubuntu.2204.Amd64
 
+  # ArmArch workers support both architectures; select a 32-bit container so
+  # LLDB and the test runtime execute as ARM32 rather than ARM64.
+  - name: helix_linux_arm_ubuntu_2204
+    value: Ubuntu.2204.ArmArch.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-helix-arm32v7
+
+  - name: helix_linux_arm_ubuntu_2204_internal
+    value: Ubuntu.2204.ArmArch@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-helix-arm32v7
+
   - name: helix_linux_arm64_ubuntu_2204
     value: Ubuntu.2204.ArmArch.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-helix-arm64v8
 
@@ -71,6 +79,12 @@ variables:
 
   - name: helix_linux_x64_internal
     value: ${{ variables.helix_linux_x64_ubuntu_2204_internal }}
+
+  - name: helix_linux_arm
+    value: ${{ variables.helix_linux_arm_ubuntu_2204 }}
+
+  - name: helix_linux_arm_internal
+    value: ${{ variables.helix_linux_arm_ubuntu_2204_internal }}
 
   - name: helix_linux_arm64
     value: ${{ variables.helix_linux_arm64_ubuntu_2204 }}
