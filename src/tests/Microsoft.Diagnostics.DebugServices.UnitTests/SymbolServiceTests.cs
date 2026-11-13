@@ -523,6 +523,80 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
+        public void OpenSymbolFileWithNullStreamLoadsAssemblyFromDisk(bool isFileLayout)
+        {
+            var directory = CreateTempDirectory();
+            try
+            {
+                var (dllPath, _) = CopyPEFixture(directory);
+                SymbolService symbolService = new(this);
+
+                var symbolFile = symbolService.OpenSymbolFile(dllPath, isFileLayout, peStream: null);
+                using IDisposable disposable = symbolFile as IDisposable;
+
+                Assert.NotNull(symbolFile);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void OpenSymbolFileWithNullAssemblyPathUsesSymbolStore()
+        {
+            var directory = CreateTempDirectory();
+            try
+            {
+                var (dllPath, _) = CopyPEFixture(directory);
+                SymbolService symbolService = new(this);
+                symbolService.AddDirectoryPath(directory);
+                using Stream peStream = new MemoryStream(File.ReadAllBytes(dllPath));
+
+                var symbolFile = symbolService.OpenSymbolFile(assemblyPath: null, isFileLayout: true, peStream);
+                using IDisposable disposable = symbolFile as IDisposable;
+
+                Assert.NotNull(symbolFile);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void OpenSymbolFileWithNullStreamReturnsNullForMissingAssembly()
+        {
+            var directory = CreateTempDirectory();
+            try
+            {
+                SymbolService symbolService = new(this);
+                var path = Path.Combine(directory, "missing.dll");
+
+                var symbolFile = symbolService.OpenSymbolFile(path, isFileLayout: false, peStream: null);
+
+                Assert.Null(symbolFile);
+            }
+            finally
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+
+        [Fact]
+        public void OpenSymbolFileWithNullPathAndStreamThrows()
+        {
+            SymbolService symbolService = new(this);
+
+            var exception = Assert.Throws<ArgumentNullException>(() =>
+                symbolService.OpenSymbolFile(assemblyPath: null, isFileLayout: false, peStream: null));
+
+            Assert.Equal("assemblyPath", exception.ParamName);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
         public void OpenSymbolFileOnlyProbesAdjacentPdbForLocalAssembly(bool remote)
         {
             string directory = CreateTempDirectory();
