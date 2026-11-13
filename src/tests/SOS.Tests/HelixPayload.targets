@@ -201,6 +201,11 @@
         <RequiredRuntimeVersions>$(TestHostRuntimeVersion);%(HelixWorkItem.RuntimeDownload)</RequiredRuntimeVersions>
         <RequiredRuntimeVersions Condition="'$(SOSTestToolLayout)' == 'Packaged'">$(TestHostRuntimeVersion);%(HelixWorkItem.RuntimeDownload);$(_SOSInstalledToolRuntimeVersion)</RequiredRuntimeVersions>
       </HelixWorkItem>
+      <!-- The macOS launcher and SOS managed-extension host require the .NET 11 CoreCLR
+           hosting fix even when private or servicing testing excludes .NET 11 debuggees. -->
+      <HelixWorkItem Condition="'$(TargetOS)' == 'osx'">
+        <RequiredRuntimeVersions>%(HelixWorkItem.RequiredRuntimeVersions);$(MicrosoftNETCoreApp110Version)</RequiredRuntimeVersions>
+      </HelixWorkItem>
     </ItemGroup>
     <!-- The SDK's PayloadDirectory path creates its ZIP in memory. Keep the large SOS archive on disk. -->
     <ZipDirectory SourceDirectory="$(SOSHelixPayloadDir)"

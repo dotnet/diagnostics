@@ -342,7 +342,12 @@ The shared sender gathers all work items and deduplicates
 their runtime requirements into the SDK's `AdditionalDotNetPackage` items.
 This also ensures the test-host runtime is
 available independently of the debuggee matrix. SOS retains its existing
-platform-specific host selection, including .NET 11 on macOS.
+platform-specific host selection: on macOS, both the test application and SOS's
+managed extension use .NET 11 for its CoreCLR hosting fix, even though the test
+application targets `net10.0`. SOS explicitly requires the .NET 11 runtime on
+macOS independently of the debuggee matrix, including private and servicing
+runs that do not test .NET 11 debuggees. Windows and Linux use the normal
+`net10.0` test application runtime selection.
 
 `StageSOSHelixPayload` performs SOS staging without submitting; `CreateHelixPayload`
 also prepares the runtime shards, creates the on-disk ZIP, and returns complete
