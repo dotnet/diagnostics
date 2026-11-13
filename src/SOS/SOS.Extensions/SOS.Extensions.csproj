@@ -11,6 +11,7 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.DebugServices.UnitTests" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
     <PackageReference Include="System.Memory" Version="$(SystemMemoryVersion)" />
   </ItemGroup>
