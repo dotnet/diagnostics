@@ -274,16 +274,113 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public override Stream Connect(TimeSpan timeout)
         {
-            string address = GetDefaultAddress();
-            _config = IpcEndpointConfig.Parse(address + ",connect");
-            return IpcEndpointHelper.Connect(_config, timeout);
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) &&
+                !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                string address = GetDefaultAddress(_pid);
+                _config = IpcEndpointConfig.Parse(address + ",connect");
+                return IpcEndpointHelper.Connect(_config, timeout);
+            }
+
+            string[] addresses = GetDefaultAddresses(_pid);
+            uint expectedUid = GetExpectedUid();
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            Exception lastError = null;
+
+            foreach (string address in addresses)
+            {
+                TimeSpan remainingTimeout = timeout;
+                if (timeout != Timeout.InfiniteTimeSpan)
+                {
+                    remainingTimeout -= stopwatch.Elapsed;
+                    if (remainingTimeout < TimeSpan.Zero)
+                    {
+                        break;
+                    }
+                }
+
+                Stream stream = null;
+                try
+                {
+                    _config = IpcEndpointConfig.Parse(address + ",connect");
+                    stream = IpcEndpointHelper.Connect(_config, remainingTimeout);
+                    if (ValidateConnectedPeer(stream, expectedUid))
+                    {
+                        Stream connectedStream = stream;
+                        stream = null;
+                        return connectedStream;
+                    }
+
+                    lastError = new ServerNotAvailableException(
+                        $"Diagnostic endpoint '{address}' is not owned by process {_pid}.");
+                }
+                catch (ServerNotAvailableException ex)
+                {
+                    lastError = ex;
+                }
+                catch (IOException ex)
+                {
+                    lastError = ex;
+                }
+                catch (TimeoutException ex)
+                {
+                    lastError = ex;
+                }
+                finally
+                {
+                    stream?.Dispose();
+                }
+            }
+
+            throw new ServerNotAvailableException($"Unable to connect to Process {_pid}.", lastError);
         }
 
         public override async Task<Stream> ConnectAsync(CancellationToken token)
         {
-            string address = GetDefaultAddress();
-            _config = IpcEndpointConfig.Parse(address + ",connect");
-            return await IpcEndpointHelper.ConnectAsync(_config, token).ConfigureAwait(false);
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux) &&
+                !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                string address = GetDefaultAddress(_pid);
+                _config = IpcEndpointConfig.Parse(address + ",connect");
+                return await IpcEndpointHelper.ConnectAsync(_config, token).ConfigureAwait(false);
+            }
+
+            string[] addresses = GetDefaultAddresses(_pid);
+            uint expectedUid = GetExpectedUid();
+            Exception lastError = null;
+
+            foreach (string address in addresses)
+            {
+                Stream stream = null;
+                try
+                {
+                    _config = IpcEndpointConfig.Parse(address + ",connect");
+                    stream = await IpcEndpointHelper.ConnectAsync(_config, token).ConfigureAwait(false);
+                    if (ValidateConnectedPeer(stream, expectedUid))
+                    {
+                        Stream connectedStream = stream;
+                        stream = null;
+                        return connectedStream;
+                    }
+
+                    lastError = new ServerNotAvailableException(
+                        $"Diagnostic endpoint '{address}' is not owned by process {_pid}.");
+                }
+                catch (ServerNotAvailableException ex)
+                {
+                    lastError = ex;
+                }
+                catch (IOException ex)
+                {
+                    lastError = ex;
+                }
+                finally
+                {
+                    stream?.Dispose();
+                }
+            }
+
+            throw new ServerNotAvailableException($"Unable to connect to Process {_pid}.", lastError);
         }
 
         public override void WaitForConnection(TimeSpan timeout)
@@ -296,22 +393,33 @@ namespace Microsoft.Diagnostics.NETCore.Client
             using Stream _ = await ConnectAsync(token).ConfigureAwait(false);
         }
 
-        private string GetDefaultAddress()
+        private uint GetExpectedUid()
         {
-            return GetDefaultAddress(_pid);
+            return UnixSocketOwner.GetProcessUid(_pid);
+        }
+
+        private bool ValidateConnectedPeer(Stream stream, uint expectedUid)
+        {
+            return stream is ExposedSocketNetworkStream socketStream &&
+                UnixSocketOwner.IsConnectedToProcess(socketStream.Socket, _pid, expectedUid);
         }
 
         /// <summary>
         /// Searches files in a directory for a diagnostic endpoint matching the given PID.
         /// On Windows, resolves named pipes. On other platforms, searches for Unix domain sockets.
         /// </summary>
-        internal static bool TryResolveAddress(string searchDirectory, int pid, out string address)
+        internal static bool TryResolveAddress(string searchDirectory, int pid, out string address, int? hostPid = null)
         {
-            address = null;
+            string[] addresses = ResolveAddresses(searchDirectory, pid, hostPid);
+            address = addresses.FirstOrDefault();
+            return !string.IsNullOrEmpty(address);
+        }
 
+        private static string[] ResolveAddresses(string searchDirectory, int pid, int? hostPid)
+        {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                address = string.Format(_defaultAddressFormatWindows, pid);
+                string address = string.Format(_defaultAddressFormatWindows, pid);
 
                 try
                 {
@@ -322,37 +430,46 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     }
                 }
                 catch { }
+
+                return new[] { address };
             }
-            else
+
+            try
             {
-                try
+                bool checkOwner = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+                    RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+                uint uid = checkOwner ? UnixSocketOwner.GetProcessUid(hostPid ?? pid) : 0;
+                string[] runtimeAddresses = Directory.GetFiles(searchDirectory, string.Format(_defaultAddressFormatNonWindows, pid, "*"))
+                    .Where(f => !checkOwner || UnixSocketOwner.IsSocketOwnedBy(f, uid))
+                    .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+                    .ToArray();
+
+                if (runtimeAddresses.Length == 0)
                 {
-                    address = Directory.GetFiles(searchDirectory, string.Format(_defaultAddressFormatNonWindows, pid, "*"))
-                        .OrderByDescending(f => new FileInfo(f).LastWriteTime)
-                        .FirstOrDefault();
-
-                    string dsrouterAddress = Directory.GetFiles(searchDirectory, string.Format(_dsrouterAddressFormatNonWindows, pid, "*"))
-                        .OrderByDescending(f => new FileInfo(f).LastWriteTime)
-                        .FirstOrDefault();
-
-                    if (!string.IsNullOrEmpty(dsrouterAddress) && !string.IsNullOrEmpty(address))
-                    {
-                        FileInfo defaultFile = new(address);
-                        FileInfo dsrouterFile = new(dsrouterAddress);
-
-                        if (dsrouterFile.LastWriteTime >= defaultFile.LastWriteTime)
-                        {
-                            address = dsrouterAddress;
-                        }
-                    }
+                    return Array.Empty<string>();
                 }
-                catch
-                {
-                    return false;
-                }
+
+                string[] dsrouterAddresses = Directory.GetFiles(searchDirectory, string.Format(_dsrouterAddressFormatNonWindows, pid, "*"))
+                    .Where(f => !checkOwner || UnixSocketOwner.IsSocketOwnedBy(f, uid))
+                    .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+                    .ToArray();
+
+                // Prefer router sockets when timestamps are equal, matching the prior selection behavior.
+                return dsrouterAddresses
+                    .Concat(runtimeAddresses)
+                    .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+                    .ToArray();
             }
-
-            return !string.IsNullOrEmpty(address);
+            catch (IOException ex)
+            {
+                Trace.TraceWarning($"Unable to resolve diagnostic socket for process {hostPid ?? pid}: {ex.Message}");
+                return Array.Empty<string>();
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                Trace.TraceWarning($"Unable to resolve diagnostic socket for process {hostPid ?? pid}: {ex.Message}");
+                return Array.Empty<string>();
+            }
         }
 
         /// <summary>
@@ -501,6 +618,11 @@ namespace Microsoft.Diagnostics.NETCore.Client
 
         public static string GetDefaultAddress(int pid)
         {
+            return GetDefaultAddresses(pid)[0];
+        }
+
+        private static string[] GetDefaultAddresses(int pid)
+        {
             if (!CheckProcessExists(pid))
             {
                 throw new ServerNotAvailableException($"Process {pid} is not running.");
@@ -525,9 +647,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
                 }
             }
 
-            if (TryResolveAddress(searchDirectory, searchPid, out string address))
+            string[] addresses = ResolveAddresses(searchDirectory, searchPid, pid);
+            if (addresses.Length != 0)
             {
-                return address;
+                return addresses;
             }
 
             string msg = $"Unable to connect to Process {pid}.";
