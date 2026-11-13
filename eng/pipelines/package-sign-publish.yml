@@ -1,0 +1,91 @@
+parameters:
+- name: configuration
+  type: string
+- name: pipelineJobTemplate
+  type: string
+- name: isOfficialBuild
+  type: boolean
+- name: dependsOn
+  type: object
+  default: []
+
+jobs:
+- template: ${{ parameters.pipelineJobTemplate }}
+  parameters:
+    name: Package_Sign_Publish
+    displayName: Packaging
+    enableMicrobuild: true
+    pool:
+      name: $(BuildPool)
+      demands: ImageOverride -equals $(WindowsImage)
+      os: windows
+    ${{ if ne(length(parameters.dependsOn), 0) }}:
+      dependsOn: ${{ parameters.dependsOn }}
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: Download builds
+      inputs:
+        patterns: |
+          Build_Linux_*_${{ parameters.configuration }}/bin/**
+          Build_Linux_musl_*_${{ parameters.configuration }}/bin/**
+          Build_Windows_*_${{ parameters.configuration }}/bin/**
+          Build_MacOS_*_${{ parameters.configuration }}/bin/**
+        downloadPath: '$(Build.ArtifactStagingDirectory)/__download__'
+        checkDownloadedFiles: true
+        cleanDestinationFolder: true
+
+    - powershell: |
+        cd $(Build.ArtifactStagingDirectory)/__download__
+
+        $dirs = Get-ChildItem -Directory
+        $expected = if ("$(System.TeamProject)" -eq "public") { 8 } else { 11 }
+        if ($dirs.Count -ne $expected) {
+          throw "Expected $expected platform builds, but found $($dirs.Count)."
+        }
+
+        $targetDir = "$(Build.SourcesDirectory)/artifacts/bin"
+        if (!(Test-Path $targetDir)) {
+          New-Item $targetDir -ItemType Directory
+        }
+
+        $dirs | ForEach-Object {
+          $sourceDir = "$($_.FullName)/bin"
+          Move-Item -Path $sourceDir/* -Destination $targetDir -Verbose
+        }
+      displayName: Setup layout for packaging
+
+    - template: /eng/common/core-templates/steps/enable-internal-sources.yml@self
+
+    # Create NuGet packages, sign binaries, and publish the resulting pipeline artifacts.
+    - powershell: |
+        $arguments = @(
+          '/p:DotNetSignType=$(_SignType)'                           # Internal official builds use real signing; public PR builds leave this empty.
+          '/p:TeamName=$(_TeamName)'                                 # Identifies the owning team for Arcade signing and publishing infrastructure.
+          '/p:DotNetPublishUsingPipelines=true'                       # Uploads packages and manifests as pipeline artifacts instead of directly to feeds.
+          '/p:OfficialBuildId=$(BUILD.BUILDNUMBER)'                   # Provides the build identity used in package versions and manifests.
+          '/p:OfficialBuild=${{ parameters.isOfficialBuild }}'        # Enables official-only behavior such as real signing; must remain false for PR packages.
+        )
+
+        & "$(Build.SourcesDirectory)\eng\ci-prepare-artifacts.cmd" @arguments
+      displayName: Package, Sign, and Publish
+      continueOnError: false
+      condition: succeeded()
+      env:
+        DIAGNOSTICS_PACKAGE_CONFIGURATION: ${{ parameters.configuration }}
+
+    - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+      parameters:
+        displayName: Publish Bundled Tools
+        inputs:
+          targetPath: '$(Build.SourcesDirectory)/artifacts/bundledtools'
+          artifactName: BundledTools
+
+    - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
+      parameters:
+        displayName: Publish Signing and Packaging Logs
+        inputs:
+          targetPath: '$(Build.SourcesDirectory)/artifacts/log'
+          artifactName: Logs_Packaging_Signing_Attempt$(System.JobAttempt)
+        enableSbom: false # We don't need SBOM for logs.
+        continueOnError: true
+        condition: always()
