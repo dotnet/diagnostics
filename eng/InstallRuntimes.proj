@@ -63,11 +63,26 @@
 
   <Target Name="InstallTestRuntimes"
           AfterTargets="Build"
-          DependsOnTargets="CleanupVersionManifest;InstallTestSdk;InstallRuntimesWindows;InstallRuntimesUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
+          DependsOnTargets="CleanupVersionManifest;InstallTestSdk;InstallSingleFileHostPack;InstallRuntimesWindows;InstallRuntimesUnix;InstallHostRuntimeX86;InstallBuildSdk;OverrideLatestRuntime;WriteTestVersionManifest" />
 
   <Target Name="InstallTestSdk">
     <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="InstallSdk"
              Properties="InstallRoot=$(DotNetInstallRoot);SdkBuildIdentifier=$(MicrosoftNETSdkVersion);SdkArchitecture=$(TargetArch)" />
+  </Target>
+
+  <!-- A glibc SDK can cross-build musl debuggees, but does not contain their native hosts.
+       Acquire the same tracked SDK for the target RID without replacing the runnable build SDK. -->
+  <Target Name="InstallSingleFileHostPack"
+          DependsOnTargets="InstallTestSdk"
+          Condition="'$(PrivateBuildTesting)' != 'true' and '$(InternalReleaseTesting)' != 'true' and $(TargetRid.StartsWith('linux-musl-')) and '$([System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier)' != '$(TargetRid)'">
+    <PropertyGroup>
+      <_TargetSdkRoot>$([MSBuild]::NormalizeDirectory('$(SingleFileHostPackRoot)', '..'))</_TargetSdkRoot>
+      <_TargetHostPackRoot>$(_TargetSdkRoot)packs/Microsoft.NETCore.App.Host.$(TargetRid)/$(MicrosoftNETCoreAppRefVersion)/</_TargetHostPackRoot>
+    </PropertyGroup>
+    <Exec Command="bash &quot;$(DotNetInstallRoot)dotnet-install.sh&quot; --version &quot;$(MicrosoftNETSdkVersion)&quot; --os linux-musl --architecture &quot;$(TargetArch)&quot; --install-dir &quot;$(_TargetSdkRoot)&quot; --no-path"
+          IgnoreStandardErrorWarningFormat="true" />
+    <Error Condition="!Exists('$(_TargetHostPackRoot)runtimes/$(TargetRid)/native/singlefilehost') or !Exists('$(_TargetHostPackRoot)runtimes/$(TargetRid)/native/apphost')"
+           Text="SDK $(MicrosoftNETSdkVersion) does not contain the $(TargetRid) single-file host pack at '$(_TargetHostPackRoot)'." />
   </Target>
 
 <!--
@@ -224,6 +239,7 @@
 <Configuration>
   <InternalReleaseTesting>$(InternalReleaseTesting)</InternalReleaseTesting>
   <PrivateBuildTesting>$(PrivateBuildTesting)</PrivateBuildTesting>
+  <SingleFileHostPackRoot>$(SingleFileHostPackRoot)</SingleFileHostPackRoot>
 ]]>
         </ConfigFileEntry>
       </TestConfigFileLines>

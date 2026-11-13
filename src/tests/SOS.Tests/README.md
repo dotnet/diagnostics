@@ -101,6 +101,32 @@ capture is delegated to the dbgeng capturer child. On Linux and macOS, the
 matching runtime DAC is staged beside each single-file executable before launch
 so createdump can honor Heap dump requests instead of falling back to Full.
 
+The latest single-file debuggees use the host pack from the target-architecture
+test SDK in `artifacts/dotnet-test/packs`, even when a separate host-architecture
+SDK runs a cross-build. When cross-building musl on glibc, runtime installation
+acquires the musl SDK from the same tracked build under
+`artifacts/dotnet-target/<RID>/<SDK build>/`. Only latest-runtime SingleFile
+publishing uses its packs; the runnable glibc SDK and its packs remain untouched,
+so later servicing or internal-release runs cannot pick up a leftover musl pack.
+The selected pack root is also recorded for the legacy CLI publisher.
+The single-file host contains the runtime:
+NuGet host packages with the same product version can come from different builds
+and need not match the installed DAC/DBI. Missing SDK host packs fail publishing
+rather than falling back to the package cache; referenced libraries do not
+require a host pack. Servicing, private-build, and internal release testing
+retain their existing pack selection.
+
+Before launching a single-file debuggee, both SOS harnesses and the DbgShim tests
+compare its embedded DAC/DBI identities with the selected libraries (PE
+timestamp/image size, ELF build ID, or Mach-O UUID). An identity-mismatch error
+includes the executable, library, and expected/actual identities. Rebuild with
+the matching test SDK and runtime; product-version equality is insufficient.
+
+Run `dotnet msbuild eng/tests/SingleFileHostPack.Tests.proj` from the repository
+root to check host-pack validation for referenced libraries, RID-less restore
+evaluations, and executables. The SingleFile publish catalog includes
+`TaskNestedException`, which also exercises an actual referenced class library.
+
 Dumps are cached by `(flavor, target, GC type, dump kind, core version)`.
 The DAC is deliberately not a capture dimension: legacy DAC and cDAC analyze
 the same dump, with DAC selection happening when the host opens it. Cached

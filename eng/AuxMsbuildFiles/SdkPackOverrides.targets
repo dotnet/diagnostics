@@ -1,4 +1,11 @@
 <Project InitialTargets="OverrideTestingVersions">
+  <Target Name="ValidateSingleFileHostPack"
+          AfterTargets="ResolveFrameworkReferences"
+          Condition="'$(PublishSingleFile)' == 'true' and '$(EnableAppHostPackDownload)' == 'false' and '$(UseAppHost)' == 'true' and '$(RuntimeIdentifier)' != ''">
+    <Error Condition="'$(SingleFileHostSourcePath)' == '' or !Exists('$(SingleFileHostSourcePath)') or '$(AppHostSourcePath)' == '' or !Exists('$(AppHostSourcePath)')"
+           Text="The target test SDK host pack for $(RuntimeIdentifier) / $(RuntimeFrameworkVersion) is missing or incomplete under '$(NetCoreTargetingPackRoot)'. Install the matching target-architecture test SDK before publishing single-file debuggees. Package-cache fallback is disabled because equal product versions can contain different runtime builds." />
+  </Target>
+
   <Target Name="OverrideTestingVersions">
 
     <!-- Console debuggees do not need the SDK's transitive Windows Desktop targeting packs. -->

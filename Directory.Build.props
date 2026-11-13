@@ -65,6 +65,11 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <SingleFileHostPackRoot>$([MSBuild]::NormalizeDirectory('$(ArtifactsDotnetTestDir)', 'packs'))</SingleFileHostPackRoot>
+    <SingleFileHostPackRoot Condition="$(TargetRid.StartsWith('linux-musl-')) and '$([System.Runtime.InteropServices.RuntimeInformation]::RuntimeIdentifier)' != '$(TargetRid)'">$([MSBuild]::NormalizeDirectory('$(ArtifactsDir)', 'dotnet-target', '$(TargetRid)', '$(MicrosoftNETSdkVersion)', 'packs'))</SingleFileHostPackRoot>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <!--
         DesktopTargetFramework and ExtensionsDesktopSubdirectoryW in src/SOS/inc/hostservices.h
         must identify the same package directory; otherwise the native desktop host probes a path
