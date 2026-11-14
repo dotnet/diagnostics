@@ -30,7 +30,11 @@ public sealed class LldbHostingTests
             Assert.Contains("SOS test host: PAL_MachExceptionMode='7'", output);
             Assert.Contains(Path.Combine("10.0.2", "libcoreclr.dylib") + "' 8007000c", output);
             Assert.DoesNotContain("10.0.1/libcoreclr.dylib", output);
-            Assert.Contains($"Host runtime path: {runtime}", output);
+            string hostRuntime = Assert.Single(output.Split('\n'),
+                line => line.StartsWith("Host runtime path: ", StringComparison.Ordinal));
+            // Parent paths may be canonicalized, such as /tmp becoming /private/tmp on macOS.
+            Assert.EndsWith(Path.Combine(Path.GetFileName(directory), Path.GetRelativePath(directory, runtime)),
+                hostRuntime.TrimEnd('\r'));
         }
         finally
         {
