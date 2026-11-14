@@ -83,6 +83,8 @@
                                Condition="'$(TargetOS)' == 'Windows_NT'" />
       <_SOSPayloadDebuggerFile Include="$(ArtifactsBinNativeDir)sos-lldb"
                                Condition="'$(TargetOS)' == 'osx'" />
+      <_SOSPayloadDebuggerFile Include="$(ArtifactsBinNativeDir)libSOSHostRuntime.dylib"
+                               Condition="'$(TargetOS)' == 'osx'" />
     </ItemGroup>
 
     <!-- The RID directory beside publish is the loose self-contained publish intermediate and duplicates
@@ -132,6 +134,7 @@
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.so" Condition="'$(SOSTestToolLayout)' == 'Bin' and '$(TargetOS)' == 'linux'" />
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.dylib" Condition="'$(SOSTestToolLayout)' == 'Bin' and '$(TargetOS)' == 'osx'" />
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
+      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libSOSHostRuntime.dylib" Condition="'$(TargetOS)' == 'osx'" />
       <_SOSRequiredInput Include="$(_SOSLiveRuntimeDir)System.Private.CoreLib.dll"
                          Condition="'$(_SOSLiveRuntimeDir)' != ''" />
     </ItemGroup>
@@ -153,6 +156,7 @@
       <_SOSRequiredPayloadFile Include=".sos-test-payload;artifacts/bin/SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/SOS.Tests.dll" />
       <_SOSRequiredPayloadFile Include="debugger/cdb.exe;debugger/dbgeng.dll" Condition="'$(TargetOS)' == 'Windows_NT'" />
       <_SOSRequiredPayloadFile Include="debugger/sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
+      <_SOSRequiredPayloadFile Include="debugger/libSOSHostRuntime.dylib" Condition="'$(TargetOS)' == 'osx'" />
       <_SOSRequiredPayloadFile Include="tool-layout/tools/dotnet-sos$(_SOSToolExeSuffix);tool-layout/tools/dotnet-dump$(_SOSToolExeSuffix);tool-layout/sos/$(_SOSInstalledNativeFile);tool-layout/sos/net8.0/SOS.Extensions.dll;tool-layout/layout.json"
                               Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(_SOSInstallFromPackages)' != 'true'" />
       <_SOSRequiredPayloadFile Include="@(_SOSCandidatePackage->'packages/%(Filename)%(Extension)')"

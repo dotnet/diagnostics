@@ -132,6 +132,13 @@ LLDB runs with external symbol lookup disabled before loading a target. Dumps,
 executables, SOS, and matching DACs come from local build artifacts, so network
 symbol probing would only add nondeterministic startup delays.
 
+`LldbHostingTests` launches Apple's LLDB directly on macOS, without the harness's
+PAL environment setting or explicit host-runtime selection. A prebuilt failing
+runtime fixture verifies the single .NET 10-to-11 retry, `DOTNET_ROOT` precedence,
+and preservation of explicit runtime and PAL settings.
+The successful candidate uses the provisioned SOS host runtime; no runtime is
+built or downloaded by these tests.
+
 Debugger stdout, stderr, command lines, and host crash dumps are retained by
 `HostDiagnostics`. Dotnet-dump sessions use a single process slot because idle
 REPL children busy-wait; dump sessions are otherwise safe to share. Live
