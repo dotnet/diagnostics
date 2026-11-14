@@ -13,23 +13,20 @@ public sealed class LldbHostingTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task AutoProbingRetriesNet10WithNet11(bool architectureSpecificRoot)
+    public async Task AutoProbingPrefersNet11OverNet10(bool architectureSpecificRoot)
     {
         RequireMacOS();
         string directory = CreateTestDirectory();
         try
         {
             AddFailingRuntime(directory, "10.0.2");
-            AddFailingRuntime(directory, "10.0.1");
             string runtime = AddWorkingRuntime(directory);
 
             (int exitCode, string output) = await RunLldb(
                 directory, architectureSpecificRoot, null, "setsymbolserver -disable", "sethostruntime");
 
             Assert.True(exitCode == 0, output);
-            Assert.Contains("SOS test host: PAL_MachExceptionMode='7'", output);
-            Assert.Contains(Path.Combine("10.0.2", "libcoreclr.dylib") + "' 8007000c", output);
-            Assert.DoesNotContain("10.0.1/libcoreclr.dylib", output);
+            Assert.DoesNotContain("10.0.2/libcoreclr.dylib", output);
             string hostRuntime = Assert.Single(output.Split('\n'),
                 line => line.StartsWith("Host runtime path: ", StringComparison.Ordinal));
             // Parent paths may be canonicalized, such as /tmp becoming /private/tmp on macOS.
@@ -72,51 +69,24 @@ public sealed class LldbHostingTests
     }
 
     [Fact]
-    public async Task FailedNet11RetryDoesNotTryOtherRuntimes()
+    public async Task FailedNet11DoesNotFallBackToOtherRuntimes()
     {
         RequireMacOS();
         string directory = CreateTestDirectory();
         try
         {
-            AddFailingRuntime(directory, "10.0.2");
-            AddFailingRuntime(directory, "10.0.1");
             AddFailingRuntime(directory, "11.0.1");
             AddFailingRuntime(directory, "11.0.0");
+            AddFailingRuntime(directory, "10.0.1");
             AddFailingRuntime(directory, "12.0.0");
 
             (int exitCode, string output) = await RunLldb(directory, false, null, "setsymbolserver -disable");
 
             Assert.True(exitCode != 0, output);
-            Assert.Contains(Path.Combine("10.0.2", "libcoreclr.dylib") + "' 8007000c", output);
+            Assert.Contains("SOS test host: PAL_MachExceptionMode='7'", output);
             Assert.Contains(Path.Combine("11.0.1", "libcoreclr.dylib") + "' 8007000c", output);
-            Assert.DoesNotContain("10.0.1/libcoreclr.dylib", output);
             Assert.DoesNotContain("11.0.0/libcoreclr.dylib", output);
-            Assert.DoesNotContain("12.0.0/libcoreclr.dylib", output);
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
-    }
-
-    [Theory]
-    [InlineData("10.0.1")]
-    [InlineData("11.0.1")]
-    [InlineData("9.0.1")]
-    [InlineData("8.0.1")]
-    public async Task RetryRequiresNet10FailureAndInstalledNet11(string version)
-    {
-        RequireMacOS();
-        string directory = CreateTestDirectory();
-        try
-        {
-            AddFailingRuntime(directory, version);
-            AddFailingRuntime(directory, "12.0.0");
-
-            (int exitCode, string output) = await RunLldb(directory, false, null, "setsymbolserver -disable");
-
-            Assert.True(exitCode != 0, output);
-            Assert.Contains(Path.Combine(version, "libcoreclr.dylib") + "' 8007000c", output);
+            Assert.DoesNotContain("10.0.1/libcoreclr.dylib", output);
             Assert.DoesNotContain("12.0.0/libcoreclr.dylib", output);
         }
         finally

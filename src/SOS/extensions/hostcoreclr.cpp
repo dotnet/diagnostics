@@ -70,8 +70,8 @@ namespace RuntimeHostingConstants
 {
     // This list is in probing order.
     constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
-        {10, 0},
         {11, 0},
+        {10, 0},
         {9, 0},
         {8, 0},
         {12, 0},
@@ -572,8 +572,6 @@ static HRESULT InitializeNetCoreHost()
 #endif // FEATURE_PAL
 
 #ifdef HOST_OSX
-    const bool probeHostRuntime = g_hostRuntimeDirectory == nullptr;
-
     // Apple LLDB guards its Mach exception ports; CoreCLR must not replace them.
     if (setenv("PAL_MachExceptionMode", "7", 0) != 0)
     {
@@ -582,7 +580,7 @@ static HRESULT InitializeNetCoreHost()
     }
 #endif
 
-    while (g_extensionsInitializeFunc == nullptr)
+    if (g_extensionsInitializeFunc == nullptr)
     {
         coreclr_initialize_ptr initializeCoreCLR = nullptr;
         coreclr_create_delegate_ptr createDelegate = nullptr;
@@ -677,23 +675,6 @@ static HRESULT InitializeNetCoreHost()
         if (FAILED(hr))
         {
             TraceHostingError("Fail to initialize hosting runtime '%s' %08x\n", coreClrPath.c_str(), hr);
-#ifdef HOST_OSX
-            if (probeHostRuntime && hostRuntimeVersion.Major == 10)
-            {
-                // .NET 11 fixes a CoreCLR initialization failure in Apple LLDB.
-                // Retry in the same installation, keeping the failed runtime loaded as with sethostruntime.
-                std::string fallbackDirectory = hostRuntimeDirectory.substr(0, hostRuntimeDirectory.rfind(DIRECTORY_SEPARATOR_CHAR_A) + 1);
-                if (FindDotNetVersion({11, 0}, fallbackDirectory))
-                {
-                    if (!SetHostRuntime(HostRuntimeFlavor::NetCore, 11, 0, fallbackDirectory.c_str()))
-                    {
-                        TraceHostingError("Invalid fallback host runtime path: %s\n", fallbackDirectory.c_str());
-                        return hr;
-                    }
-                    continue;
-                }
-            }
-#endif
             return hr;
         }
 
