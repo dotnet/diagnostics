@@ -134,8 +134,8 @@ symbol probing would only add nondeterministic startup delays.
 
 `LldbHostingTests` launches Apple's LLDB directly on macOS, without the harness's
 PAL environment setting or explicit host-runtime selection. A prebuilt failing
-runtime fixture verifies the single .NET 10-to-11 retry, `DOTNET_ROOT` precedence,
-and preservation of explicit runtime and PAL settings.
+runtime fixture verifies that .NET 11 is preferred over .NET 10 without falling back,
+`DOTNET_ROOT` precedence, and preservation of explicit runtime and PAL settings.
 The successful candidate uses the provisioned SOS host runtime; no runtime is
 built or downloaded by these tests.
 
