@@ -20,16 +20,16 @@ variables:
   # Linux platforms
 
   - name: helix_linux_x64_ubuntu_2604_llvm
-    value: (Ubuntu.2604.Amd64.Open)AzureLinux.4.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-amd64@sha256:7a968e41eb94b655a241ef38ffa57cfad56039b2377957dbeda1e023d75d3eb8
+    value: (Ubuntu.2604.Amd64.Open)AzureLinux.4.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-amd64
 
   - name: helix_linux_x64_ubuntu_2604_llvm_internal
-    value: (Ubuntu.2604.Amd64)AzureLinux.4.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-amd64@sha256:7a968e41eb94b655a241ef38ffa57cfad56039b2377957dbeda1e023d75d3eb8
+    value: (Ubuntu.2604.Amd64)AzureLinux.4.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-amd64
 
   - name: helix_linux_arm64_ubuntu_2604_llvm
-    value: (Ubuntu.2604.ArmArch.Open)AzureLinux.4.Arm64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-arm64v8@sha256:a68ff74ded540b21506a6038c3ecaddf0d32aaf76d1a4c5553720f6e456b83bd
+    value: (Ubuntu.2604.ArmArch.Open)AzureLinux.4.Arm64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-arm64v8
 
   - name: helix_linux_arm64_ubuntu_2604_llvm_internal
-    value: (Ubuntu.2604.ArmArch)AzureLinux.4.Arm64@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-arm64v8@sha256:a68ff74ded540b21506a6038c3ecaddf0d32aaf76d1a4c5553720f6e456b83bd
+    value: (Ubuntu.2604.ArmArch)AzureLinux.4.Arm64@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-arm64v8
 
   - name: helix_linux_musl_x64_alpine_323
     value: '(Alpine.323.Amd64.Open)azurelinux.3.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
