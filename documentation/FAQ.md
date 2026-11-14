@@ -17,6 +17,19 @@ Frequently Asked Questions
 
     and then re-run command with the issue.
 
+* On macOS, SOS defaults `PAL_MachExceptionMode` to `7` before starting its managed
+  hosting runtime so CoreCLR does not replace LLDB's guarded Mach exception ports.
+  An existing value is preserved. If LLDB is killed when SOS starts, remove any
+  explicit value other than `7`.
+
+  If an automatically selected .NET 10 host fails in `coreclr_initialize`, SOS
+  retries once with .NET 11 from the same installation, if available.
+  This recovers from .NET 10's `0x8007000C` hosting failure using the .NET 11
+  [CoreCLR hosting fix](https://github.com/dotnet/runtime/pull/132925).
+  `DOTNET_ROOT_<ARCH>` and `DOTNET_ROOT` still select the installation to probe;
+  an explicit `sethostruntime <directory>` is used without automatic fallback.
+  Windows and Linux probing behavior is unchanged.
+
 * On MacOS if you see any of the following errors:
     ```
     (lldb) plugin load libsosplugin.so
