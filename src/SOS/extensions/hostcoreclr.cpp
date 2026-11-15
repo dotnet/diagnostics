@@ -8,6 +8,7 @@
 #include <limits.h>
 
 #ifdef FEATURE_PAL
+#include <errno.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include <dlfcn.h>
@@ -69,8 +70,8 @@ namespace RuntimeHostingConstants
 {
     // This list is in probing order.
     constexpr RuntimeVersion SupportedHostRuntimeVersions[] = {
-        {10, 0},
         {11, 0},
+        {10, 0},
         {9, 0},
         {8, 0},
         {12, 0},
@@ -569,6 +570,15 @@ static HRESULT InitializeNetCoreHost()
     }
     sosModulePath = szSOSModulePath;
 #endif // FEATURE_PAL
+
+#ifdef HOST_OSX
+    // Apple LLDB guards its Mach exception ports; CoreCLR must not replace them.
+    if (setenv("PAL_MachExceptionMode", "7", 0) != 0)
+    {
+        TraceHostingError("Failed to set PAL_MachExceptionMode: %s\n", strerror(errno));
+        return E_FAIL;
+    }
+#endif
 
     if (g_extensionsInitializeFunc == nullptr)
     {

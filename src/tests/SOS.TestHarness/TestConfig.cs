@@ -278,6 +278,11 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
+        if (c.CoreVersion == CoreVersion.Net12 && c.Dac == Dac.Legacy)
+        {
+            return false;
+        }
+
         if (!IsDacSupported(c))
         {
             return false;

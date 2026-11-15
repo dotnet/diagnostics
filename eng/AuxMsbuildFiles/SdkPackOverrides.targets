@@ -10,14 +10,14 @@
 
     <PropertyGroup>
        <RuntimeVersion80>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net8.0')->Metadata('Runtime'))</RuntimeVersion80>
-       <RuntimeVersion90>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net9.0')->Metadata('Runtime'))</RuntimeVersion90>
        <RuntimeVersion10>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net10.0')->Metadata('Runtime'))</RuntimeVersion10>
        <RuntimeVersion11>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net11.0')->Metadata('Runtime'))</RuntimeVersion11>
+       <RuntimeVersion12>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net12.0')->Metadata('Runtime'))</RuntimeVersion12>
 
        <AspNetVersion80>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net8.0')->Metadata('AspNet'))</AspNetVersion80>
-       <AspNetVersion90>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net9.0')->Metadata('AspNet'))</AspNetVersion90>
        <AspNetVersion10>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net10.0')->Metadata('AspNet'))</AspNetVersion10>
        <AspNetVersion11>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net11.0')->Metadata('AspNet'))</AspNetVersion11>
+       <AspNetVersion12>@(RuntimeTestVersions->WithMetadataValue('TargetFramework', 'net12.0')->Metadata('AspNet'))</AspNetVersion12>
     </PropertyGroup>
 
     <Message Importance="Low" Text="OverrideTestingVersions: RuntimeTestVersions=@(RuntimeTestVersions -> '%(Runtime)')" />
@@ -32,10 +32,6 @@
         <Crossgen2PackVersion>$(RuntimeVersion80)</Crossgen2PackVersion>
       </KnownCrossgen2Pack>
 
-      <KnownCrossgen2Pack Update="Microsoft.NETCore.App.Crossgen2" Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.NETCore.App.Crossgen2'">
-        <Crossgen2PackVersion>$(RuntimeVersion90)</Crossgen2PackVersion>
-      </KnownCrossgen2Pack>
-
       <KnownCrossgen2Pack Update="Microsoft.NETCore.App.Crossgen2" Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.NETCore.App.Crossgen2'">
         <Crossgen2PackVersion>$(RuntimeVersion10)</Crossgen2PackVersion>
       </KnownCrossgen2Pack>
@@ -44,17 +40,16 @@
         <Crossgen2PackVersion>$(RuntimeVersion11)</Crossgen2PackVersion>
       </KnownCrossgen2Pack>
 
+      <KnownCrossgen2Pack Update="Microsoft.NETCore.App.Crossgen2" Condition="'%(TargetFramework)' == 'net12.0' and '%(Identity)' == 'Microsoft.NETCore.App.Crossgen2'">
+        <Crossgen2PackVersion>$(RuntimeVersion12)</Crossgen2PackVersion>
+      </KnownCrossgen2Pack>
+
       <!--
         Microsoft.NETCore.App Runtimes
        -->
       <KnownFrameworkReference Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
         <TargetingPackVersion>$(RuntimeVersion80)</TargetingPackVersion>
         <LatestRuntimeFrameworkVersion>$(RuntimeVersion80)</LatestRuntimeFrameworkVersion>
-      </KnownFrameworkReference>
-
-      <KnownFrameworkReference Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
-        <TargetingPackVersion>$(RuntimeVersion90)</TargetingPackVersion>
-        <LatestRuntimeFrameworkVersion>$(RuntimeVersion90)</LatestRuntimeFrameworkVersion>
       </KnownFrameworkReference>
 
       <KnownFrameworkReference Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
@@ -67,12 +62,13 @@
         <LatestRuntimeFrameworkVersion>$(RuntimeVersion11)</LatestRuntimeFrameworkVersion>
       </KnownFrameworkReference>
 
+      <KnownFrameworkReference Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net12.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
+        <TargetingPackVersion>$(RuntimeVersion12)</TargetingPackVersion>
+        <LatestRuntimeFrameworkVersion>$(RuntimeVersion12)</LatestRuntimeFrameworkVersion>
+      </KnownFrameworkReference>
+
       <KnownAppHostPack Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
         <AppHostPackVersion>$(RuntimeVersion80)</AppHostPackVersion>
-      </KnownAppHostPack>
-
-      <KnownAppHostPack Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
-        <AppHostPackVersion>$(RuntimeVersion90)</AppHostPackVersion>
       </KnownAppHostPack>
 
       <KnownAppHostPack Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
@@ -83,12 +79,12 @@
         <AppHostPackVersion>$(RuntimeVersion11)</AppHostPackVersion>
       </KnownAppHostPack>
 
+      <KnownAppHostPack Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net12.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
+        <AppHostPackVersion>$(RuntimeVersion12)</AppHostPackVersion>
+      </KnownAppHostPack>
+
       <KnownRuntimePack Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
         <LatestRuntimeFrameworkVersion>$(RuntimeVersion80)</LatestRuntimeFrameworkVersion>
-      </KnownRuntimePack>
-
-      <KnownRuntimePack Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
-        <LatestRuntimeFrameworkVersion>$(RuntimeVersion90)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
 
       <KnownRuntimePack Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
@@ -99,17 +95,16 @@
         <LatestRuntimeFrameworkVersion>$(RuntimeVersion11)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
 
+      <KnownRuntimePack Update="Microsoft.NETCore.App" Condition="'%(TargetFramework)' == 'net12.0' and '%(Identity)' == 'Microsoft.NETCore.App'">
+        <LatestRuntimeFrameworkVersion>$(RuntimeVersion12)</LatestRuntimeFrameworkVersion>
+      </KnownRuntimePack>
+
       <!--
         Microsoft.AspNetCore.App Runtimes
        -->
       <KnownFrameworkReference Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
         <TargetingPackVersion>$(AspNetVersion80)</TargetingPackVersion>
         <LatestRuntimeFrameworkVersion>$(AspNetVersion80)</LatestRuntimeFrameworkVersion>
-      </KnownFrameworkReference>
-
-      <KnownFrameworkReference Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
-        <TargetingPackVersion>$(AspNetVersion90)</TargetingPackVersion>
-        <LatestRuntimeFrameworkVersion>$(AspNetVersion90)</LatestRuntimeFrameworkVersion>
       </KnownFrameworkReference>
 
       <KnownFrameworkReference Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
@@ -122,12 +117,13 @@
         <LatestRuntimeFrameworkVersion>$(AspNetVersion11)</LatestRuntimeFrameworkVersion>
       </KnownFrameworkReference>
 
+      <KnownFrameworkReference Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net12.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
+        <TargetingPackVersion>$(AspNetVersion12)</TargetingPackVersion>
+        <LatestRuntimeFrameworkVersion>$(AspNetVersion12)</LatestRuntimeFrameworkVersion>
+      </KnownFrameworkReference>
+
       <KnownAppHostPack Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
         <AppHostPackVersion>$(AspNetVersion80)</AppHostPackVersion>
-      </KnownAppHostPack>
-
-      <KnownAppHostPack Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
-        <AppHostPackVersion>$(AspNetVersion90)</AppHostPackVersion>
       </KnownAppHostPack>
 
       <KnownAppHostPack Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
@@ -138,12 +134,12 @@
         <AppHostPackVersion>$(AspNetVersion11)</AppHostPackVersion>
       </KnownAppHostPack>
 
+      <KnownAppHostPack Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net12.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
+        <AppHostPackVersion>$(AspNetVersion12)</AppHostPackVersion>
+      </KnownAppHostPack>
+
       <KnownRuntimePack Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
         <LatestRuntimeFrameworkVersion>$(AspNetVersion80)</LatestRuntimeFrameworkVersion>
-      </KnownRuntimePack>
-
-      <KnownRuntimePack Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
-        <LatestRuntimeFrameworkVersion>$(AspNetVersion90)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
 
       <KnownRuntimePack Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net10.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
@@ -154,15 +150,14 @@
         <LatestRuntimeFrameworkVersion>$(AspNetVersion11)</LatestRuntimeFrameworkVersion>
       </KnownRuntimePack>
 
+      <KnownRuntimePack Update="Microsoft.AspNetCore.App" Condition="'%(TargetFramework)' == 'net12.0' and '%(Identity)' == 'Microsoft.AspNetCore.App'">
+        <LatestRuntimeFrameworkVersion>$(AspNetVersion12)</LatestRuntimeFrameworkVersion>
+      </KnownRuntimePack>
+
       <KnownILCompilerPack
         Update="Microsoft.NET.ILCompiler"
         Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NET.ILCompiler'">
         <ILCompilerPackVersion>$(RuntimeVersion80)</ILCompilerPackVersion>
-      </KnownILCompilerPack>
-      <KnownILCompilerPack
-        Update="Microsoft.NET.ILCompiler"
-        Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.NET.ILCompiler'">
-        <ILCompilerPackVersion>$(RuntimeVersion90)</ILCompilerPackVersion>
       </KnownILCompilerPack>
       <KnownILCompilerPack
         Update="Microsoft.NET.ILCompiler"
@@ -174,16 +169,16 @@
         Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.NET.ILCompiler'">
         <ILCompilerPackVersion>$(RuntimeVersion11)</ILCompilerPackVersion>
       </KnownILCompilerPack>
+      <KnownILCompilerPack
+        Update="Microsoft.NET.ILCompiler"
+        Condition="'%(TargetFramework)' == 'net12.0' and '%(Identity)' == 'Microsoft.NET.ILCompiler'">
+        <ILCompilerPackVersion>$(RuntimeVersion12)</ILCompilerPackVersion>
+      </KnownILCompilerPack>
 
       <KnownILLinkPack
         Update="Microsoft.NET.ILLink.Tasks"
         Condition="'%(TargetFramework)' == 'net8.0' and '%(Identity)' == 'Microsoft.NET.ILLink.Tasks'">
         <ILLinkPackVersion>$(RuntimeVersion80)</ILLinkPackVersion>
-      </KnownILLinkPack>
-      <KnownILLinkPack
-        Update="Microsoft.NET.ILLink.Tasks"
-        Condition="'%(TargetFramework)' == 'net9.0' and '%(Identity)' == 'Microsoft.NET.ILLink.Tasks'">
-        <ILLinkPackVersion>$(RuntimeVersion90)</ILLinkPackVersion>
       </KnownILLinkPack>
       <KnownILLinkPack
         Update="Microsoft.NET.ILLink.Tasks"
@@ -194,6 +189,11 @@
         Update="Microsoft.NET.ILLink.Tasks"
         Condition="'%(TargetFramework)' == 'net11.0' and '%(Identity)' == 'Microsoft.NET.ILLink.Tasks'">
         <ILLinkPackVersion>$(RuntimeVersion11)</ILLinkPackVersion>
+      </KnownILLinkPack>
+      <KnownILLinkPack
+        Update="Microsoft.NET.ILLink.Tasks"
+        Condition="'%(TargetFramework)' == 'net12.0' and '%(Identity)' == 'Microsoft.NET.ILLink.Tasks'">
+        <ILLinkPackVersion>$(RuntimeVersion12)</ILLinkPackVersion>
       </KnownILLinkPack>
     </ItemGroup>
   </Target>

@@ -62,9 +62,6 @@
     <ItemGroup>
       <_SOSPayloadFile Include="$(_SOSHelixLauncherPath)"
                        DestinationRelative="runtests$([System.IO.Path]::GetExtension('$(_SOSHelixLauncherPath)'))" />
-      <_SOSPayloadFile Include="$(RepoRoot)eng/DisableSignatureCheck.ps1"
-                       DestinationRelative="eng/DisableSignatureCheck.ps1"
-                       Condition="'$(TargetOS)' == 'Windows_NT'" />
       <_SOSPayloadFile Include="$(MSBuildThisFileDirectory)Helix/debuggee-entitlements.plist"
                        DestinationRelative="eng/helix/sos/debuggee-entitlements.plist"
                        Condition="'$(TargetOS)' == 'osx'" />
@@ -85,6 +82,8 @@
       <_SOSPayloadDebuggerFile Include="$(_SOSCdbDir)*"
                                Condition="'$(TargetOS)' == 'Windows_NT'" />
       <_SOSPayloadDebuggerFile Include="$(ArtifactsBinNativeDir)sos-lldb"
+                               Condition="'$(TargetOS)' == 'osx'" />
+      <_SOSPayloadDebuggerFile Include="$(ArtifactsBinNativeDir)libSOSHostRuntime.dylib"
                                Condition="'$(TargetOS)' == 'osx'" />
     </ItemGroup>
 
@@ -135,6 +134,7 @@
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.so" Condition="'$(SOSTestToolLayout)' == 'Bin' and '$(TargetOS)' == 'linux'" />
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libsosplugin.dylib" Condition="'$(SOSTestToolLayout)' == 'Bin' and '$(TargetOS)' == 'osx'" />
       <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
+      <_SOSRequiredInput Include="$(ArtifactsBinNativeDir)libSOSHostRuntime.dylib" Condition="'$(TargetOS)' == 'osx'" />
       <_SOSRequiredInput Include="$(_SOSLiveRuntimeDir)System.Private.CoreLib.dll"
                          Condition="'$(_SOSLiveRuntimeDir)' != ''" />
     </ItemGroup>
@@ -156,6 +156,7 @@
       <_SOSRequiredPayloadFile Include=".sos-test-payload;artifacts/bin/SOS.Tests/$(Configuration)/$(NetCoreAppTestTargetFramework)/SOS.Tests.dll" />
       <_SOSRequiredPayloadFile Include="debugger/cdb.exe;debugger/dbgeng.dll" Condition="'$(TargetOS)' == 'Windows_NT'" />
       <_SOSRequiredPayloadFile Include="debugger/sos-lldb" Condition="'$(TargetOS)' == 'osx'" />
+      <_SOSRequiredPayloadFile Include="debugger/libSOSHostRuntime.dylib" Condition="'$(TargetOS)' == 'osx'" />
       <_SOSRequiredPayloadFile Include="tool-layout/tools/dotnet-sos$(_SOSToolExeSuffix);tool-layout/tools/dotnet-dump$(_SOSToolExeSuffix);tool-layout/sos/$(_SOSInstalledNativeFile);tool-layout/sos/net8.0/SOS.Extensions.dll;tool-layout/layout.json"
                               Condition="'$(SOSTestToolLayout)' != 'Bin' and '$(_SOSInstallFromPackages)' != 'true'" />
       <_SOSRequiredPayloadFile Include="@(_SOSCandidatePackage->'packages/%(Filename)%(Extension)')"
@@ -203,6 +204,11 @@
         <Timeout>$(WorkItemTimeout)</Timeout>
         <RequiredRuntimeVersions>$(TestHostRuntimeVersion);%(HelixWorkItem.RuntimeDownload)</RequiredRuntimeVersions>
         <RequiredRuntimeVersions Condition="'$(SOSTestToolLayout)' == 'Packaged'">$(TestHostRuntimeVersion);%(HelixWorkItem.RuntimeDownload);$(_SOSInstalledToolRuntimeVersion)</RequiredRuntimeVersions>
+      </HelixWorkItem>
+      <!-- The macOS launcher and SOS managed-extension host require the .NET 11 CoreCLR
+           hosting fix even when private or servicing testing excludes .NET 11 debuggees. -->
+      <HelixWorkItem Condition="'$(TargetOS)' == 'osx'">
+        <RequiredRuntimeVersions>%(HelixWorkItem.RequiredRuntimeVersions);$(MicrosoftNETCoreApp110Version)</RequiredRuntimeVersions>
       </HelixWorkItem>
     </ItemGroup>
     <!-- The SDK's PayloadDirectory path creates its ZIP in memory. Keep the large SOS archive on disk. -->

@@ -132,6 +132,13 @@ LLDB runs with external symbol lookup disabled before loading a target. Dumps,
 executables, SOS, and matching DACs come from local build artifacts, so network
 symbol probing would only add nondeterministic startup delays.
 
+`LldbHostingTests` launches Apple's LLDB directly on macOS, without the harness's
+PAL environment setting or explicit host-runtime selection. A prebuilt failing
+runtime fixture verifies that .NET 11 is preferred over .NET 10 without falling back,
+`DOTNET_ROOT` precedence, and preservation of explicit runtime and PAL settings.
+The successful candidate uses the provisioned SOS host runtime; no runtime is
+built or downloaded by these tests.
+
 Debugger stdout, stderr, command lines, and host crash dumps are retained by
 `HostDiagnostics`. Dotnet-dump sessions use a single process slot because idle
 REPL children busy-wait; dump sessions are otherwise safe to share. Live
@@ -342,7 +349,12 @@ The shared sender gathers all work items and deduplicates
 their runtime requirements into the SDK's `AdditionalDotNetPackage` items.
 This also ensures the test-host runtime is
 available independently of the debuggee matrix. SOS retains its existing
-platform-specific host selection, including .NET 11 on macOS.
+platform-specific host selection: on macOS, both the test application and SOS's
+managed extension use .NET 11 for its CoreCLR hosting fix, even though the test
+application targets `net10.0`. SOS explicitly requires the .NET 11 runtime on
+macOS independently of the debuggee matrix, including private and servicing
+runs that do not test .NET 11 debuggees. Windows and Linux use the normal
+`net10.0` test application runtime selection.
 
 `StageSOSHelixPayload` performs SOS staging without submitting; `CreateHelixPayload`
 also prepares the runtime shards, creates the on-disk ZIP, and returns complete
