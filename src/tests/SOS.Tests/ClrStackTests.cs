@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Runtime.InteropServices;
 using SOS.TestHarness;
 using Xunit;
 
@@ -14,9 +15,9 @@ namespace SOS.Tests;
 /// SOS fills the table's Child SP / IP columns from the same per-frame register context it dumps
 /// (strike.cpp <c>GetFrameLocation</c> / <c>PrintManagedFrameContext</c> read one context with
 /// <c>GetFullContextFlags</c>). So for every frame the IP column must equal the instruction-pointer
-/// register (rip/eip/pc), and for every real (non-internal) managed frame the Child SP column must
-/// equal the stack-pointer register (rsp/esp/sp). Internal clr!Frames report the Frame address as
-/// Child SP instead of the context SP, so only their IP is matched.
+/// register (rip/eip/pc), with the ARM Thumb bit cleared, and for every real (non-internal) managed frame
+/// the Child SP column must equal the stack-pointer register (rsp/esp/sp). Internal clr!Frames report
+/// the Frame address as Child SP instead of the context SP, so only their IP is matched.
 /// </summary>
 public sealed class ClrStackTests
 {
@@ -77,10 +78,9 @@ public sealed class ClrStackTests
         bool sawManagedFrame = false;
         foreach (SosRow row in tables.SelectMany(table => table))
         {
-            // The IP column is filled from the frame context's instruction pointer, which -r also
-            // dumps as a register column, so they must agree for every frame (internal frames included).
+            // GetFrameLocation clears the ARM Thumb bit in the IP column, but -r prints the raw PC.
             ulong ip = row["IP"].AsUInt64(Sos.Addr);
-            ulong ipRegister = Register(row, s_ipRegisters);
+            ulong ipRegister = NormalizeInstructionPointer(Register(row, s_ipRegisters), RuntimeInformation.ProcessArchitecture);
             Assert.Equal(ip, ipRegister);
 
             // Internal clr!Frames report the Frame address as Child SP (not the context SP), so only
@@ -97,6 +97,20 @@ public sealed class ClrStackTests
 
         Assert.True(sawManagedFrame, "clrstack -all -r produced no non-internal managed frame to match Child SP against.");
     }
+
+    [Theory]
+    [InlineData(Architecture.Arm, 0xf0000001UL, 0xf0000000UL)]
+    [InlineData(Architecture.Arm, 0xf0000000UL, 0xf0000000UL)]
+    [InlineData(Architecture.Arm64, 0xf0000001UL, 0xf0000001UL)]
+    [InlineData(Architecture.X64, 0xf0000001UL, 0xf0000001UL)]
+    [InlineData(Architecture.X86, 0xf0000001UL, 0xf0000001UL)]
+    public void InstructionPointerClearsOnlyArmThumbBit(Architecture architecture, ulong pc, ulong expected)
+    {
+        Assert.Equal(expected, NormalizeInstructionPointer(pc, architecture));
+    }
+
+    private static ulong NormalizeInstructionPointer(ulong pc, Architecture architecture) =>
+        architecture == Architecture.Arm ? pc & ~1UL : pc;
 
     // The value of the row's register column whose name is one of <paramref name="names"/>.
     private static ulong Register(SosRow row, string[] names)

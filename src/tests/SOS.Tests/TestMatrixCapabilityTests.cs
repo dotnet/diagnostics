@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Runtime.InteropServices;
 using SOS.TestHarness;
 using Xunit;
 
@@ -58,6 +59,29 @@ public sealed class TestMatrixCapabilityTests
         Assert.True(TestMatrices.SupportsCurrentThread(config with { Liveness = Liveness.Live }));
         Assert.True(TestMatrices.SupportsCurrentThread(config with { Host = Host.DotnetDump }));
         Assert.True(TestMatrices.SupportsCurrentThread(config with { Host = Host.Cdb }));
+    }
+
+    [Theory]
+    [InlineData(false, Architecture.Arm, true)]
+    [InlineData(false, Architecture.X86, true)]
+    [InlineData(false, Architecture.Arm64, false)]
+    [InlineData(false, Architecture.X64, false)]
+    [InlineData(true, Architecture.Arm, false)]
+    [InlineData(true, Architecture.X86, false)]
+    public void DumpLogExcludesOnly32BitUnixTargets(bool isWindows, Architecture architecture, bool expectedSkip)
+    {
+        TestConfig config = Config(Host.DotnetDump, Dac.Legacy);
+
+        Assert.Equal(expectedSkip, SOSTestSkips.GetDumpLogSkipReason(config, isWindows, architecture) is not null);
+    }
+
+    [Fact]
+    public void DumpLogPreservesDesktopDumpExclusion()
+    {
+        TestConfig config = Config(Host.Cdb, Dac.Legacy) with { Flavor = Flavor.Framework };
+
+        Assert.NotNull(SOSTestSkips.GetDumpLogSkipReason(config, isWindows: true, Architecture.X86));
+        Assert.Null(SOSTestSkips.GetDumpLogSkipReason(config with { Liveness = Liveness.Live }, isWindows: true, Architecture.X86));
     }
 
     [Fact]

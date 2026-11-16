@@ -33,10 +33,7 @@ internal static class SOSTestSkips
 
     internal static void SkipDumpLog(TestConfig config)
     {
-        Assert.SkipWhen(
-            config.Flavor == Flavor.Framework && config.Liveness == Liveness.Dump,
-            "Desktop CLR DumpLog cannot read the stress-log header from a heap dump. " +
-            "See https://github.com/dotnet/diagnostics/issues/5757.");
+        Skip(GetDumpLogSkipReason(config, OperatingSystem.IsWindows(), RuntimeInformation.ProcessArchitecture));
     }
 
     internal static void SkipStackOverflowDump(TestConfig config)
@@ -79,6 +76,22 @@ internal static class SOSTestSkips
     {
         if (reason is not null)
             Assert.Skip(reason);
+    }
+
+    internal static string? GetDumpLogSkipReason(TestConfig config, bool isWindows, Architecture architecture)
+    {
+        if (!isWindows && architecture is Architecture.Arm or Architecture.X86)
+        {
+            return "Stress logs on a 32-bit non-Windows target are not supported.";
+        }
+
+        if (config.Flavor == Flavor.Framework && config.Liveness == Liveness.Dump)
+        {
+            return "Desktop CLR DumpLog cannot read the stress-log header from a heap dump. " +
+                "See https://github.com/dotnet/diagnostics/issues/5757.";
+        }
+
+        return null;
     }
 
     /// <summary>
