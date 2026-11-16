@@ -29,7 +29,8 @@ namespace SOS.Extensions
                 return hr;
             }
 
-            // Ordinary lookup can select a different symbol; its displacement may not match the public name.
+            // Displacement may not exactly match the public symbol, but is correct where it matters
+            // for our validated use cases.
             hr = _symbols.GetNameByOffsetWide(address, null, 0, out _, out ulong offset);
             if (hr != HResult.S_OK || offset > address)
             {
