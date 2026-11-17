@@ -37,6 +37,11 @@ public sealed class PrintExceptionTests
             Liveness.AllValid,
             DumpKind.All);
 
+    public static TheoryData<TestConfig> OverflowMatrix { get; } =
+        TestMatrices.StackWalk(
+            [TargetCatalog.Overflow],
+            liveness: Liveness.AllValid);
+
     [SosTheory]
     [MemberData(nameof(NestedMatrix))]
     public async Task PrintException_Structure(TestConfig config)
@@ -159,6 +164,33 @@ public sealed class PrintExceptionTests
         Assert.Equal("<none>", lines["InnerException"]);
         Assert.Equal(hresult, lines.Field("HResult").AsUInt32(Sos.Hex));
         AssertFrameSequence(lines, functions, sourceLines);
+    }
+
+    [SosTheory]
+    [MemberData(nameof(OverflowMatrix))]
+    public async Task PrintException_StackOverflow(TestConfig config)
+    {
+        SOSTestSkips.SkipStackOverflowDump(config);
+
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToFirstStop();
+
+        target.Sos("clrthreads -managedexception");
+        SosOutput exception = target.Sos("printexception");
+
+        // DbgEng only provides a first-chance STATUS_STACK_OVERFLOW stop before the CLR records the
+        // last-thrown managed exception; continuing exits the process without a usable second-chance stop.
+        if (config.Liveness == Liveness.Live && OperatingSystem.IsWindows())
+        {
+            exception.AssertContains("There is no current managed exception on this thread");
+            return;
+        }
+
+        exception["Exception object"].AssertValid(Sos.Addr);
+        Assert.Equal("System.StackOverflowException", exception["Exception type"]);
+        Assert.Equal("<none>", exception["Message"]);
+        Assert.Equal("<none>", exception["InnerException"]);
+        exception.AssertContains("StackTrace (generated):");
     }
 
     [SosTheory]

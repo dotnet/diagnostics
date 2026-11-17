@@ -34,7 +34,13 @@ public sealed record StopPoint(string Name, StopKind Kind, string? Method);
 /// The flavors this target supports. Defaults to all; e.g. DynamicMethod uses a .NET-Core-only API
 /// (<c>DynamicMethod.CreateDelegate&lt;T&gt;</c>) so it can't build for desktop .NET Framework.
 /// </param>
-public sealed record TargetDefinition(string Name, string Project, IReadOnlyList<StopPoint> StopPoints, Flavor Flavors = Flavor.AllValid)
+/// <param name="EnvironmentVariables">Additional environment variables applied when launching or capturing the target.</param>
+public sealed record TargetDefinition(
+    string Name,
+    string Project,
+    IReadOnlyList<StopPoint> StopPoints,
+    Flavor Flavors = Flavor.AllValid,
+    IReadOnlyDictionary<string, string>? EnvironmentVariables = null)
 {
     /// <summary>Managed module name for <c>bpmd</c> on .NET Core (e.g. "SosHarnessScenarios.dll").</summary>
     public string Module => Project + ".dll";
@@ -75,6 +81,9 @@ public static class TargetCatalog
     public const string ThreadApartment = "threadapartment";
     public const string DumpGcData = "dumpgcdata";
     public const string DumpGen = "dumpgen";
+    public const string FindRootsOlderGeneration = "findrootsoldergeneration";
+    public const string StressLog = "stresslog";
+    public const string VarargPInvoke = "varargpinvoke";
 
     // --- The one consolidated marker debuggee the harness adds (Phase 4). Every snapshot/oracle/live
     //     scenario is a named stop point on this single program (see SosHarnessScenarios). ---
@@ -168,8 +177,8 @@ public static class TargetCatalog
             Project: "DumpGCData",
             StopPoints: new[]
             {
-                new StopPoint("unpinned", StopKind.Snapshot, "DumpGCData.Program.AtUnpinned"),
-                new StopPoint("pinned", StopKind.Snapshot, "DumpGCData.Program.AtPinned"),
+                new StopPoint("beforeCollection", StopKind.Snapshot, "DumpGCData.Program.BeforeCollection"),
+                new StopPoint("afterCollection", StopKind.Snapshot, "DumpGCData.Program.AfterCollection"),
             },
             Flavors: Flavor.Core),
 
@@ -177,6 +186,31 @@ public static class TargetCatalog
             DumpGen,
             Project: "DotnetDumpCommands",
             StopPoints: new[] { new StopPoint("ready", StopKind.Snapshot, "DotnetDumpCommands.Program.AtReady") },
+            Flavors: Flavor.Core | Flavor.SingleFile),
+
+        new TargetDefinition(
+            FindRootsOlderGeneration,
+            Project: "FindRootsOlderGeneration",
+            StopPoints: new[] { new StopPoint("ready", StopKind.Snapshot, "FindRootsOlderGeneration.Program.AtReady") },
+            Flavors: Flavor.Core),
+
+        new TargetDefinition(
+            StressLog,
+            Project: "DotnetDumpCommands",
+            StopPoints: new[] { new StopPoint("ready", StopKind.Snapshot, "DotnetDumpCommands.Program.AtReady") },
+            EnvironmentVariables: new Dictionary<string, string>
+            {
+                ["DOTNET_StressLog"] = "1",
+                ["DOTNET_LogFacility"] = "0xffffffbf",
+                ["DOTNET_LogLevel"] = "6",
+                ["DOTNET_StressLogSize"] = "65536",
+            }),
+
+        // Live-only: the test advances through Debugger.Break() and a native printf breakpoint.
+        new TargetDefinition(
+            VarargPInvoke,
+            Project: "VarargPInvokeInteropMD",
+            StopPoints: [],
             Flavors: Flavor.Core | Flavor.SingleFile),
 
         // The consolidated marker debuggee: each scenario is a NoInlining marker method that calls

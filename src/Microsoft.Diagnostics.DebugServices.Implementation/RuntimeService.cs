@@ -44,6 +44,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
 
         #region IRuntimeService
 
+        public ulong? PreferredRuntimeModule { get; set; }
+
         /// <summary>
         /// Returns the list of runtimes in the target
         /// </summary>

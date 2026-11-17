@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(DesktopTargetFramework)</TargetFramework>
+    <AssemblyName>SOS.FrameworkHost</AssemblyName>
+    <Description>Isolated .NET Framework host for SOS</Description>
+    <IsShipping>true</IsShipping>
+    <IsShippingPackage>false</IsShippingPackage>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+</Project>

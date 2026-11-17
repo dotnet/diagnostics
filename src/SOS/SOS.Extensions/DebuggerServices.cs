@@ -33,12 +33,13 @@ namespace SOS.Extensions
         private ref readonly IDebuggerServicesVTable VTable => ref Unsafe.AsRef<IDebuggerServicesVTable>(_vtable);
 
         private readonly HostType _hostType;
-        private readonly HResult _symbolOptionsResult = HResult.S_OK;
 
         /// <summary>
         /// The native symbol interface if the host is DbgEng.
         /// </summary>
         public DebugSymbolsWrapper DebugSymbols { get; }
+
+        public DebugAdvancedWrapper DebugAdvanced { get; }
 
         internal DebuggerServices(IntPtr punk, HostType hostType)
             : base(IID_IDebuggerServices, punk)
@@ -51,10 +52,11 @@ namespace SOS.Extensions
                 if (symbols != IntPtr.Zero)
                 {
                     DebugSymbols = new DebugSymbolsWrapper(symbols);
-                    // NativeAOT emits debugger-friendly CodeView display names while retaining stable, reversible
-                    // COFF public names used by diagnostic tooling. Prefer the public names for SOS lookups.
-                    // See https://github.com/dotnet/runtime/pull/132735.
-                    _symbolOptionsResult = DebugSymbols.AddSymbolOptions(SYMOPT.PUBLICS_ONLY);
+                }
+                IntPtr advanced = QueryInterface(typeof(IDebugAdvanced2).GUID);
+                if (advanced != IntPtr.Zero)
+                {
+                    DebugAdvanced = new DebugAdvancedWrapper(advanced);
                 }
             }
         }
@@ -64,6 +66,7 @@ namespace SOS.Extensions
             if (disposing)
             {
                 DebugSymbols?.Dispose();
+                DebugAdvanced?.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -343,11 +346,9 @@ namespace SOS.Extensions
 
         public HResult GetSymbolByOffset(int moduleIndex, ulong address, out string symbol, out ulong displacement)
         {
-            if (!_symbolOptionsResult.IsOK)
+            if (DebugAdvanced is not null && DebugSymbols is not null)
             {
-                symbol = null;
-                displacement = 0;
-                return _symbolOptionsResult;
+                return GetPublicSymbolByOffset(DebugAdvanced, DebugSymbols, moduleIndex, address, out symbol, out displacement);
             }
 
             symbol = null;
@@ -383,6 +384,113 @@ namespace SOS.Extensions
                 }
             }
             return hr;
+        }
+
+        internal static HResult GetPublicSymbolByOffset(
+            IDebugAdvancedOperations advanced,
+            IDebugSymbolsOperations symbols,
+            int moduleIndex,
+            ulong address,
+            out string symbol,
+            out ulong displacement)
+        {
+            symbol = null;
+            displacement = 0;
+
+            HResult hr = GetPublicSymbolName(advanced, address, out string publicName);
+            if (hr != HResult.S_OK)
+            {
+                return hr;
+            }
+            if (publicName.Length == 0)
+            {
+                // Export-only symbols can return an empty name at interior addresses. Query their base instead.
+                hr = symbols.GetNameByOffsetWide(address, out ulong offset);
+                if (hr != HResult.S_OK || offset > address)
+                {
+                    return hr != HResult.S_OK ? hr : HResult.E_FAIL;
+                }
+                hr = GetPublicSymbolName(advanced, address - offset, out publicName);
+                if (hr != HResult.S_OK || publicName.Length == 0)
+                {
+                    return hr != HResult.S_OK ? hr : HResult.E_FAIL;
+                }
+            }
+
+            hr = symbols.GetModuleNameStringWide(DEBUG_MODNAME.MODULE, (uint)moduleIndex, 0, null, 0, out uint moduleNameSize);
+            if (hr != HResult.S_OK)
+            {
+                return hr;
+            }
+            StringBuilder moduleName = new((int)moduleNameSize);
+            hr = symbols.GetModuleNameStringWide(DEBUG_MODNAME.MODULE, (uint)moduleIndex, 0, moduleName, moduleName.Capacity, out _);
+            if (hr != HResult.S_OK)
+            {
+                return hr;
+            }
+
+            // Resolve the selected public name rather than reusing a private symbol's displacement.
+            hr = symbols.GetOffsetByNameWide($"{moduleName}!{publicName}", out ulong symbolAddress);
+            if (hr != HResult.S_OK || symbolAddress > address)
+            {
+                return hr != HResult.S_OK ? hr : HResult.E_FAIL;
+            }
+            symbol = publicName;
+            displacement = address - symbolAddress;
+            return HResult.S_OK;
+        }
+
+        private static HResult GetPublicSymbolName(IDebugAdvancedOperations advanced, ulong address, out string symbol)
+        {
+            const uint SymTagPublicSymbol = 10;
+
+            symbol = null;
+            HResult hr = advanced.GetSymbolInformation(
+                DEBUG_SYMINFO.GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE,
+                address,
+                SymTagPublicSymbol,
+                null,
+                out int size);
+            if (hr != HResult.S_OK && hr != HResult.S_FALSE)
+            {
+                return hr;
+            }
+            if (size < sizeof(char) || size % sizeof(char) != 0)
+            {
+                return HResult.E_FAIL;
+            }
+            byte[] buffer = new byte[size];
+            hr = advanced.GetSymbolInformation(
+                DEBUG_SYMINFO.GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE,
+                address,
+                SymTagPublicSymbol,
+                buffer,
+                out size);
+            if (hr == HResult.S_OK)
+            {
+                symbol = Encoding.Unicode.GetString(buffer, 0, size).TrimEnd('\0');
+            }
+            return hr;
+        }
+
+        internal interface IDebugAdvancedOperations
+        {
+            HResult GetSymbolInformation(DEBUG_SYMINFO which, ulong arg64, uint arg32, byte[] buffer, out int infoSize);
+        }
+
+        internal interface IDebugSymbolsOperations
+        {
+            HResult GetNameByOffsetWide(ulong offset, out ulong displacement);
+
+            HResult GetOffsetByNameWide(string symbol, out ulong offset);
+
+            HResult GetModuleNameStringWide(
+                DEBUG_MODNAME which,
+                uint index,
+                ulong imageBase,
+                StringBuilder buffer,
+                int bufferSize,
+                out uint nameSize);
         }
 
         public HResult GetOffsetBySymbol(int moduleIndex, string symbol, out ulong address)

@@ -39,6 +39,8 @@ namespace Microsoft.FileFormats.ELF
 
         public ELFHeaderIdent Ident { get { return _ident.Value; } }
         public ELFHeader Header { get { return _header.Value; } }
+        public ulong DataSourceLength { get { return _position <= _reader.Length ? _reader.Length - _position : 0; } }
+        public bool IsDataSourceVirtualAddressSpace { get { return _isDataSourceVirtualAddressSpace; } }
         private Reader DataSourceReader { get { return _dataSourceReader.Value; } }
         public IEnumerable<ELFProgramSegment> Segments { get { return _segments.Value; } }
         public ELFSection[] Sections { get { return _sections.Value; } }
@@ -250,7 +252,12 @@ namespace Microsoft.FileFormats.ELF
                 int nameTableIndex = Header.SectionHeaderStringIndex;
                 if (Header.SectionHeaderOffset != 0 && Header.SectionHeaderCount > 0 && nameTableIndex != 0)
                 {
-                    ELFSection nameTableSection = Sections[nameTableIndex];
+                    ELFSection[] sections = Sections;
+                    if (nameTableIndex >= sections.Length)
+                    {
+                        throw new BadInputFormatException("ELF section name table index is out of range.");
+                    }
+                    ELFSection nameTableSection = sections[nameTableIndex];
                     if (nameTableSection.Header.FileOffset > 0 && nameTableSection.Header.FileSize > 0)
                     {
                         return nameTableSection.Contents.Read(0, (uint)nameTableSection.Contents.Length);

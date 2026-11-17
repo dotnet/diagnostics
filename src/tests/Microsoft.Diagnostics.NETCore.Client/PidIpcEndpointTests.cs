@@ -7,6 +7,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Diagnostics.TestHelpers;
 using Xunit;
 
@@ -154,12 +155,14 @@ namespace Microsoft.Diagnostics.NETCore.Client
         }
 
         [ConditionalFact(nameof(IsLinux))]
-        public void GetProcessTmpDir_ChildProcess_ReadsTmpdir()
+        public async Task GetProcessTmpDir_ChildProcess_ReadsTmpdir()
         {
             string customTmpDir = "/custom/tmp/test";
-            ProcessStartInfo psi = new("sleep", "30")
+            ProcessStartInfo psi = new("sh", "-c \"echo ready; read -r line\"")
             {
                 UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
             };
             psi.Environment["TMPDIR"] = customTmpDir;
 
@@ -168,27 +171,10 @@ namespace Microsoft.Diagnostics.NETCore.Client
             {
                 string environPath = $"/proc/{child.Id}/environ";
 
-                // Wait for /proc/{pid}/environ to be populated.
-                // Between fork() and execve(), the environ file may be empty (0 bytes).
-                bool environPopulated = false;
-                const int MAX_TRIES = 20;
-                const int DELAY_MS = 50;
-                for (int attempt = 0; attempt < MAX_TRIES && !environPopulated; attempt++)
-                {
-                    try
-                    {
-                        environPopulated = File.ReadAllBytes(environPath).Length > 0;
-                    }
-                    catch (IOException)
-                    {
-                        // File may be temporarily unavailable.
-                    }
-
-                    if (!environPopulated)
-                    {
-                        Thread.Sleep(DELAY_MS);
-                    }
-                }
+                // A nonempty environ can still be inherited from the parent before exec.
+                // Wait for the child to run, then keep it alive with its redirected stdin.
+                using CancellationTokenSource startupTimeout = new(TimeSpan.FromSeconds(30));
+                Assert.Equal("ready", await child.StandardOutput.ReadLineAsync(startupTimeout.Token));
 
                 // Read the child's environ directly for diagnostics
                 string environPerms = "unknown";
@@ -224,8 +210,7 @@ namespace Microsoft.Diagnostics.NETCore.Client
                     + $"environ permissions: {environPerms}, "
                     + $"parent TMPDIR: '{Environment.GetEnvironmentVariable("TMPDIR") ?? "(not set)"}', "
                     + $"psi.Environment TMPDIR: '{psi.Environment["TMPDIR"]}', "
-                    + $"current user: {Environment.UserName}, "
-                    + $"environ populated after poll: {environPopulated}, ";
+                    + $"current user: {Environment.UserName}, ";
 
                 if (environReadError != null)
                 {

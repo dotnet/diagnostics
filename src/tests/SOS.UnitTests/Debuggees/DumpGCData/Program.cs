@@ -3,7 +3,6 @@
 
 using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace DumpGCData;
 
@@ -11,19 +10,15 @@ internal class Program
 {
     private static void Main()
     {
-        AtUnpinned();
+        BeforeCollection();
 
-        byte[] data = new byte[1024 * 1024];
-
-        GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
-        GC.Collect();
-        AtPinned();
-        Console.WriteLine(handle.ToString());
+        GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
+        AfterCollection();
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void AtUnpinned() => TestHarness.Stop("unpinned");
+    private static void BeforeCollection() => TestHarness.Stop("beforeCollection");
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void AtPinned() => TestHarness.Stop("pinned");
+    private static void AfterCollection() => TestHarness.Stop("afterCollection");
 }

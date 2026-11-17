@@ -33,6 +33,8 @@
           Condition="'$(RequireSOSExtensionsBinaries)' == 'true'">
     <Error Condition="'@(SOSExtensionsBinaries->WithMetadataValue('TargetFramework', '$(DesktopTargetFramework)'))' == ''"
            Text="The $(DesktopTargetFramework) SOS managed payload was not found. Build SOS.Extensions for $(Configuration) before packing." />
+    <Error Condition="!Exists('$(ArtifactsBinDir)\SOS.Extensions\$(Configuration)\$(DesktopTargetFramework)\publish\SOS.FrameworkHost.dll')"
+           Text="The SOS Framework bootstrap was not found. Build SOS.Extensions for $(Configuration) before packing." />
     <Error Condition="'@(SOSExtensionsBinaries->WithMetadataValue('TargetFramework', '$(NetCoreAppMinTargetFramework)'))' == ''"
            Text="The $(NetCoreAppMinTargetFramework) SOS managed payload was not found. Build SOS.Extensions for $(Configuration) before packing." />
   </Target>
