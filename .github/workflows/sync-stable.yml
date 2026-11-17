@@ -57,16 +57,61 @@ jobs:
           git merge --no-edit "$stable_sha"
           git merge --no-edit "$main_sha"
 
-          # Darc-managed files track main's subscriptions (e.g. .NET 12 builds); release/stable keeps its own.
-          darc_files=(
-            eng/Version.Details.props
-            eng/Version.Details.xml
-          )
-          git restore --source="$stable_sha" -- "${darc_files[@]}"
-          if ! git diff --quiet -- "${darc_files[@]}"; then
-            git add -- "${darc_files[@]}"
-            git commit -m "Preserve release/stable darc dependencies"
-          fi
+          merge_base=$(git merge-base "$stable_sha" "$main_sha")
+          commit_count=$(git rev-list --count --first-parent "$merge_base..$main_sha")
+          max_commits=200
+          body_file="$RUNNER_TEMP/release-sync-pr.md"
+          {
+            echo "Weekly update of \`$BASE_BRANCH\` from \`$SOURCE_BRANCH\`. All changes, including dependency and version files, are taken from \`$SOURCE_BRANCH\`."
+            echo
+            echo "| | Commit |"
+            echo "| --- | --- |"
+            echo "| \`$BASE_BRANCH\` | $stable_sha |"
+            echo "| \`$SOURCE_BRANCH\` | $main_sha |"
+            echo "| Merge base | $merge_base |"
+            echo
+            echo "## Version and dependency changes"
+            echo
+            any_version_change=false
+            for file in global.json eng/Versions.props eng/Version.Details.xml; do
+              if ! git diff --quiet "$stable_sha" HEAD -- "$file"; then
+                any_version_change=true
+                echo "<details><summary><code>$file</code></summary>"
+                echo
+                echo '```diff'
+                if [[ "$file" == eng/Version.Details.xml ]]; then
+                  git diff -U0 "$stable_sha" HEAD -- "$file" | grep -E '^[-+][[:space:]]*<Dependency ' || true
+                else
+                  git diff "$stable_sha" HEAD -- "$file" | tail -n +5
+                fi
+                echo '```'
+                echo
+                echo "</details>"
+                echo
+              fi
+            done
+            if [[ "$any_version_change" == false ]]; then
+              echo "None."
+              echo
+            fi
+            echo "## Build and infrastructure changes"
+            echo
+            infra=$(git log --first-parent --format='- %h %s' "$merge_base..$main_sha" -- eng .github global.json '*.props' '*.targets' | head -n "$max_commits")
+            echo "${infra:-None.}"
+            echo
+            echo "## Commits from \`$SOURCE_BRANCH\` ($commit_count)"
+            echo
+            echo "<details><summary>Show commits</summary>"
+            echo
+            git log --first-parent --format='- %h %s' "$merge_base..$main_sha" | head -n "$max_commits"
+            if (( commit_count > max_commits )); then
+              echo "- ... and $(( commit_count - max_commits )) more"
+            fi
+            echo
+            echo "</details>"
+            echo
+            echo "This workflow updates the branch and pull request but does not merge it or publish release artifacts."
+          } > "$body_file"
 
           gh auth setup-git
           git push origin "HEAD:refs/heads/$PR_BRANCH"
@@ -82,14 +127,6 @@ jobs:
           set -euo pipefail
 
           body_file="$RUNNER_TEMP/release-sync-pr.md"
-          cat > "$body_file" <<'EOF'
-          Weekly source update of `release/stable` from `main`.
-
-          This sync takes `global.json` and `eng/Versions.props` from `main`. It keeps the darc-managed `eng/Version.Details.xml` and `eng/Version.Details.props` from `release/stable`, which receive their own updates through Maestro subscriptions targeting `release/stable`.
-
-          This workflow updates the branch and pull request but does not merge it or publish release artifacts.
-          EOF
-
           repo_owner=${GITHUB_REPOSITORY%%/*}
           pr_number=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$PR_BRANCH" --base "$BASE_BRANCH" --state open --json number,headRepositoryOwner --jq "[.[] | select(.headRepositoryOwner.login == \"$repo_owner\")][0].number // empty")
           if [[ -n "$pr_number" ]]; then

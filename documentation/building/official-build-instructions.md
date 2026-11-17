@@ -33,12 +33,12 @@ creates `automation/release-sync` from release/stable if needed, then merges the
 latest release/stable and main commits into that branch. It opens or updates an
 `automation/release-sync` -> `release/stable` pull request for validation.
 
-`global.json` and `eng/Versions.props` come from main. The automation restores
-the darc-managed `eng/Version.Details.props` and `eng/Version.Details.xml` from
-the captured release/stable commit before pushing, because main's subscriptions
-flow builds (such as .NET 12 previews) that release/stable must not take. Those
-files are updated on release/stable through Maestro subscriptions that target
-release/stable.
+The sync takes all changes from main, including `global.json`,
+`eng/Versions.props`, and the darc-managed `eng/Version.Details.*` files. The
+pull request description lists the release/stable, main, and merge-base commits,
+the version and dependency changes, build and infrastructure commits, and all
+commits brought in from main. If a release must hold back a dependency, update
+it with darc in the sync pull request or a separate release/stable pull request.
 
 The workflow does not modify main or release/stable directly, merge the pull
 request, or publish release artifacts. Merge conflicts fail the workflow instead
