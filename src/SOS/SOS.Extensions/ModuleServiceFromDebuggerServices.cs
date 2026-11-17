@@ -72,6 +72,7 @@ namespace SOS.Extensions
             private Version _version;
             private string _versionString;
             private SymbolStatus _symbolStatus = SymbolStatus.Unknown;
+            private DbgEngModuleSymbols _dbgEngSymbols;
 
             public ModuleFromDebuggerServices(
                 ModuleServiceFromDebuggerServices moduleService,
@@ -99,6 +100,7 @@ namespace SOS.Extensions
 
             public override void Dispose()
             {
+                _dbgEngSymbols = null;
                 _serviceContainer.RemoveService(typeof(IModuleSymbols));
                 base.Dispose();
             }
@@ -145,6 +147,7 @@ namespace SOS.Extensions
                 if (symbolFile is not null)
                 {
                     _moduleService._debuggerServices.AddModuleSymbol(symbolFile);
+                    _dbgEngSymbols = null;
                 }
                 return symbolFile;
             }
@@ -155,6 +158,13 @@ namespace SOS.Extensions
 
             bool IModuleSymbols.TryGetSymbolName(ulong address, out string symbol, out ulong displacement)
             {
+                DebugAdvancedWrapper advanced = _moduleService._debuggerServices.DebugAdvanced;
+                DebugSymbolsWrapper symbols = _moduleService._debuggerServices.DebugSymbols;
+                if (advanced is not null && symbols is not null)
+                {
+                    _dbgEngSymbols ??= new DbgEngModuleSymbols(advanced, symbols);
+                    return _dbgEngSymbols.GetSymbolByOffset(address, out symbol, out displacement).IsOK;
+                }
                 return _moduleService._debuggerServices.GetSymbolByOffset(ModuleIndex, address, out symbol, out displacement).IsOK;
             }
 

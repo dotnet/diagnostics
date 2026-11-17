@@ -63,46 +63,5 @@ namespace SOS.Extensions
             }
         }
 
-        public HResult GetOffsetByNameWide(string symbol, out ulong offset)
-        {
-            offset = 0;
-            IntPtr symbolPtr = Marshal.StringToHGlobalUni(symbol);
-            try
-            {
-                fixed (ulong* offsetPtr = &offset)
-                {
-                    return ((delegate* unmanaged[Stdcall]<IntPtr, IntPtr, ulong*, int>)VTable[61])(
-                        Self, symbolPtr, offsetPtr);
-                }
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(symbolPtr);
-            }
-        }
-
-        public HResult GetModuleNameStringWide(
-            DEBUG_MODNAME which,
-            uint index,
-            ulong imageBase,
-            System.Text.StringBuilder buffer,
-            int bufferSize,
-            out uint nameSize)
-        {
-            nameSize = 0;
-            char[] chars = buffer is null || bufferSize == 0 ? null : new char[bufferSize];
-            fixed (char* bufferPtr = chars)
-            fixed (uint* nameSizePtr = &nameSize)
-            {
-                HResult hr = ((delegate* unmanaged[Stdcall]<IntPtr, DEBUG_MODNAME, uint, ulong, char*, int, uint*, int>)VTable[89])(
-                    Self, which, index, imageBase, bufferPtr, bufferSize, nameSizePtr);
-                if (hr == HResult.S_OK && chars is not null)
-                {
-                    int length = Array.IndexOf(chars, '\0');
-                    buffer.Append(chars, 0, length >= 0 ? length : chars.Length);
-                }
-                return hr;
-            }
-        }
     }
 }
