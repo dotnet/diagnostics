@@ -57,16 +57,15 @@ jobs:
           git merge --no-edit "$stable_sha"
           git merge --no-edit "$main_sha"
 
-          version_files=(
-            eng/Versions.props
+          # Darc-managed files track main's subscriptions (e.g. .NET 12 builds); release/stable keeps its own.
+          darc_files=(
             eng/Version.Details.props
             eng/Version.Details.xml
-            global.json
           )
-          git restore --source="$stable_sha" -- "${version_files[@]}"
-          if ! git diff --quiet -- "${version_files[@]}"; then
-            git add -- "${version_files[@]}"
-            git commit -m "Preserve release/stable version metadata"
+          git restore --source="$stable_sha" -- "${darc_files[@]}"
+          if ! git diff --quiet -- "${darc_files[@]}"; then
+            git add -- "${darc_files[@]}"
+            git commit -m "Preserve release/stable darc dependencies"
           fi
 
           gh auth setup-git
@@ -86,7 +85,7 @@ jobs:
           cat > "$body_file" <<'EOF'
           Weekly source update of `release/stable` from `main`.
 
-          This sync intentionally does not update version or dependency metadata. Those versions must be bumped independently in a separate, reviewed `release/stable` pull request.
+          This sync takes `global.json` and `eng/Versions.props` from `main`. It keeps the darc-managed `eng/Version.Details.xml` and `eng/Version.Details.props` from `release/stable`, which receive their own updates through Maestro subscriptions targeting `release/stable`.
 
           This workflow updates the branch and pull request but does not merge it or publish release artifacts.
           EOF
