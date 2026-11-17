@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Diagnostics.DebugServices.Implementation;
@@ -105,8 +104,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         {
             public List<Type> Types { get; } = new();
             public IEnumerable<(string name, string help, IEnumerable<string> aliases)> Commands => throw new NotSupportedException();
-            public void AddCommands<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods |
-                DynamicallyAccessedMemberTypes.PublicProperties)] TCommand>(
+            public void AddCommands<TCommand>(
                 Func<IServiceProvider, TCommand> factory) where TCommand : class => Types.Add(typeof(TCommand));
             public IEnumerable<(string Invocation, string Help)> GetAllCommandHelp(IServiceProvider services) => throw new NotSupportedException();
             public string GetDetailedHelp(string commandName, IServiceProvider services, int consoleWidth) => throw new NotSupportedException();

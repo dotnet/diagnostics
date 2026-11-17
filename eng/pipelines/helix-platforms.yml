@@ -19,17 +19,17 @@ variables:
 
   # Linux platforms
 
-  - name: helix_linux_x64_ubuntu_2204
-    value: Ubuntu.2204.Amd64.Open
+  - name: helix_linux_x64_ubuntu_2604_llvm
+    value: (Ubuntu.2604.Amd64.Open)AzureLinux.4.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-amd64
 
-  - name: helix_linux_x64_ubuntu_2204_internal
-    value: Ubuntu.2204.Amd64
+  - name: helix_linux_x64_ubuntu_2604_llvm_internal
+    value: (Ubuntu.2604.Amd64)AzureLinux.4.Amd64@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-amd64
 
-  - name: helix_linux_arm64_ubuntu_2204
-    value: Ubuntu.2204.ArmArch.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-helix-arm64v8
+  - name: helix_linux_arm64_ubuntu_2604_llvm
+    value: (Ubuntu.2604.ArmArch.Open)AzureLinux.4.Arm64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-arm64v8
 
-  - name: helix_linux_arm64_ubuntu_2204_internal
-    value: Ubuntu.2204.ArmArch@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-22.04-helix-arm64v8
+  - name: helix_linux_arm64_ubuntu_2604_llvm_internal
+    value: (Ubuntu.2604.ArmArch)AzureLinux.4.Arm64@mcr.microsoft.com/dotnet-buildtools/prereqs:ubuntu-26.04-helix-llvm-arm64v8
 
   - name: helix_linux_musl_x64_alpine_323
     value: '(Alpine.323.Amd64.Open)azurelinux.3.Amd64.Open@mcr.microsoft.com/dotnet-buildtools/prereqs:alpine-3.23-helix-amd64'
@@ -39,11 +39,11 @@ variables:
 
   # Windows platforms
 
-  - name: helix_windows_x64_server_2022
-    value: Windows.Amd64.Server2022.Open
+  - name: helix_windows_x64_runtime
+    value: Windows.Amd64.Open.rt
 
-  - name: helix_windows_x64_server_2022_internal
-    value: Windows.Amd64.Server2022
+  - name: helix_windows_x64_runtime_internal
+    value: Windows.Amd64.rt
 
   - name: helix_windows_arm64_windows_11
     value: Windows.11.Arm64.Open
@@ -67,16 +67,16 @@ variables:
     value: ${{ variables.helix_macos_x64_osx_15_internal }}
 
   - name: helix_linux_x64
-    value: ${{ variables.helix_linux_x64_ubuntu_2204 }}
+    value: ${{ variables.helix_linux_x64_ubuntu_2604_llvm }}
 
   - name: helix_linux_x64_internal
-    value: ${{ variables.helix_linux_x64_ubuntu_2204_internal }}
+    value: ${{ variables.helix_linux_x64_ubuntu_2604_llvm_internal }}
 
   - name: helix_linux_arm64
-    value: ${{ variables.helix_linux_arm64_ubuntu_2204 }}
+    value: ${{ variables.helix_linux_arm64_ubuntu_2604_llvm }}
 
   - name: helix_linux_arm64_internal
-    value: ${{ variables.helix_linux_arm64_ubuntu_2204_internal }}
+    value: ${{ variables.helix_linux_arm64_ubuntu_2604_llvm_internal }}
 
   - name: helix_linux_musl_x64
     value: ${{ variables.helix_linux_musl_x64_alpine_323 }}
@@ -85,10 +85,10 @@ variables:
     value: ${{ variables.helix_linux_musl_x64_alpine_323_internal }}
 
   - name: helix_win_x64
-    value: ${{ variables.helix_windows_x64_server_2022 }}
+    value: ${{ variables.helix_windows_x64_runtime }}
 
   - name: helix_win_x64_internal
-    value: ${{ variables.helix_windows_x64_server_2022_internal }}
+    value: ${{ variables.helix_windows_x64_runtime_internal }}
 
   - name: helix_win_arm64
     value: ${{ variables.helix_windows_arm64_windows_11 }}

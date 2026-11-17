@@ -10,4 +10,5 @@ endif(CLR_CMAKE_HOST_WIN32)
 
 if(CLR_CMAKE_HOST_OSX AND TARGET sos_lldb_dependencies)
   add_subdirectory(sos-lldb)
+  add_subdirectory(SOSHostRuntime)
 endif()

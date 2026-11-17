@@ -12,8 +12,20 @@
       <SupportsSingleFile>true</SupportsSingleFile>
       <SupportsFramework>true</SupportsFramework>
     </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/DotnetDumpCommands/DotnetDumpCommands.csproj">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/DumpGCData/DumpGCData.csproj">
+      <SupportsSingleFile>false</SupportsSingleFile>
+      <SupportsFramework>false</SupportsFramework>
+    </SOSHarnessDebuggee>
     <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/DynamicMethod/DynamicMethod.csproj">
       <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>false</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/FindRootsOlderGeneration/FindRootsOlderGeneration.csproj">
+      <SupportsSingleFile>false</SupportsSingleFile>
       <SupportsFramework>false</SupportsFramework>
     </SOSHarnessDebuggee>
     <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/LineNums/LineNums.csproj">
@@ -47,6 +59,10 @@
     <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/ThreadApartment/ThreadApartment.csproj" Condition="'$(OS)' == 'Windows_NT'">
       <SupportsSingleFile>true</SupportsSingleFile>
       <SupportsFramework>true</SupportsFramework>
+    </SOSHarnessDebuggee>
+    <SOSHarnessDebuggee Include="$(MSBuildThisFileDirectory)SOS.UnitTests/Debuggees/VarargPInvokeInteropMD/VarargPInvokeInteropMD.csproj" Condition="'$(OS)' == 'Windows_NT'">
+      <SupportsSingleFile>true</SupportsSingleFile>
+      <SupportsFramework>false</SupportsFramework>
     </SOSHarnessDebuggee>
   </ItemGroup>
 

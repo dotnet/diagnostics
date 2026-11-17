@@ -26,6 +26,7 @@ public sealed record TestConfig : IXunitSerializable
     private CoreVersion _coreVersion;
     private Dac _dac;
     private DumpKind _dumpKind;
+    private HostRuntime _hostRuntime;
 
     /// <summary>The debuggee target name (e.g. <see cref="TargetCatalog.Scenarios"/>).</summary>
     public string Target { get => _target; init => _target = value; }
@@ -51,6 +52,9 @@ public sealed record TestConfig : IXunitSerializable
     /// <summary>The dump kind (Heap / Mini). Always <see cref="DumpKind.Heap"/> for live targets (no dump).</summary>
     public DumpKind DumpKind { get => _dumpKind; init => _dumpKind = value; }
 
+    /// <summary>Whether SOS hosts its managed extension runtime.</summary>
+    public HostRuntime HostRuntime { get => _hostRuntime; init => _hostRuntime = value; }
+
     /// <summary>Parameterless ctor required by <see cref="IXunitSerializable"/>; do not use directly.</summary>
     public TestConfig()
     {
@@ -58,7 +62,8 @@ public sealed record TestConfig : IXunitSerializable
 
     public TestConfig(string target, Host host, Flavor flavor, Liveness liveness,
                       GcType gcType = GcType.Workstation, DumpKind dumpKind = DumpKind.Heap,
-                      CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy)
+                      CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy,
+                      HostRuntime hostRuntime = HostRuntime.Managed)
     {
         Target = target;
         Host = host;
@@ -68,6 +73,7 @@ public sealed record TestConfig : IXunitSerializable
         DumpKind = dumpKind;
         CoreVersion = coreVersion;
         Dac = dac;
+        HostRuntime = hostRuntime;
     }
 
     /// <summary>True for a live process target; false for a post-mortem dump.</summary>
@@ -89,7 +95,8 @@ public sealed record TestConfig : IXunitSerializable
     ///
     /// <para>Each axis can be narrowed at run time by a comma-separated env allow-list:
     /// <c>SOSHARNESS_ONLY_HOSTS</c>, <c>_FLAVORS</c>, <c>_LIVENESS</c>, <c>_GCTYPE</c>, <c>_DUMPKIND</c>,
-    /// <c>_COREVERSIONS</c> (e.g. <c>Net10,Net11</c>), <c>_DAC</c> (e.g. <c>Legacy</c>).</para>
+    /// <c>_COREVERSIONS</c> (e.g. <c>Net10,Net11</c>), <c>_DAC</c> (e.g. <c>Legacy</c>), and
+    /// <c>_HOSTRUNTIME</c> (e.g. <c>Managed,None</c>).</para>
     ///
     /// <para>Out-of-support Core versions are excluded from the default matrix; set
     /// <c>SOSHARNESS_TEST_OUT_OF_SUPPORT_CORE=1</c> to include them, or name them explicitly in
@@ -102,10 +109,11 @@ public sealed record TestConfig : IXunitSerializable
         GcType gcType = GcType.Workstation,
         DumpKind dumpKind = DumpKind.Heap,
         CoreVersion coreVersion = CoreVersion.All,
-        Dac dac = Dac.All)
+        Dac dac = Dac.All,
+        HostRuntime hostRuntime = HostRuntime.Managed)
     {
         TheoryData<TestConfig> data = new();
-        foreach (TestConfig cfg in Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac))
+        foreach (TestConfig cfg in Permutations(targets, flavor, host, liveness, gcType, dumpKind, coreVersion, dac, hostRuntime))
         {
             data.Add(cfg);
         }
@@ -126,7 +134,8 @@ public sealed record TestConfig : IXunitSerializable
         GcType gcType = GcType.Workstation,
         DumpKind dumpKind = DumpKind.Heap,
         CoreVersion coreVersion = CoreVersion.All,
-        Dac dac = Dac.All)
+        Dac dac = Dac.All,
+        HostRuntime hostRuntime = HostRuntime.Managed)
     {
         HashSet<TestConfig> seen = new();
 
@@ -158,20 +167,23 @@ public sealed record TestConfig : IXunitSerializable
                                 {
                                     foreach (Dac da in SingleFlags(dac, "SOSHARNESS_ONLY_DAC"))
                                     {
-                                        // A live target has no dump kind. Collapse it to the canonical
-                                        // value so we emit one live row, not one per dump-kind permutation.
-                                        DumpKind dk = l == Liveness.Live ? DumpKind.Heap : d;
-
-                                        // Desktop .NET Framework has no .NET Core version — the axis is inert
-                                        // there. Collapse it to CoreVersion.None so every Framework row folds
-                                        // into one (via the seen-set dedup below) instead of fanning out an
-                                        // identical desktop-Framework config per Core version.
-                                        CoreVersion cvEffective = f == Flavor.Framework ? CoreVersion.None : cv;
-
-                                        TestConfig cfg = new(target, h, f, l, g, dk, cvEffective, da);
-                                        if (IsValid(cfg) && seen.Add(cfg))
+                                        foreach (HostRuntime hr in SingleFlags(hostRuntime, "SOSHARNESS_ONLY_HOSTRUNTIME"))
                                         {
-                                            yield return cfg;
+                                            // A live target has no dump kind. Collapse it to the canonical
+                                            // value so we emit one live row, not one per dump-kind permutation.
+                                            DumpKind dk = l == Liveness.Live ? DumpKind.Heap : d;
+
+                                            // Desktop .NET Framework has no .NET Core version — the axis is inert
+                                            // there. Collapse it to CoreVersion.None so every Framework row folds
+                                            // into one (via the seen-set dedup below) instead of fanning out an
+                                            // identical desktop-Framework config per Core version.
+                                            CoreVersion cvEffective = f == Flavor.Framework ? CoreVersion.None : cv;
+
+                                            TestConfig cfg = new(target, h, f, l, g, dk, cvEffective, da, hr);
+                                            if (IsValid(cfg) && seen.Add(cfg))
+                                            {
+                                                yield return cfg;
+                                            }
                                         }
                                     }
                                 }
@@ -219,6 +231,12 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
+        // dotnet-dump is itself a managed host and cannot exercise SOS with managed hosting disabled.
+        if (c.HostRuntime == HostRuntime.None && c.Host == Host.DotnetDump)
+        {
+            return false;
+        }
+
         // Live bpmd can't bind in a self-contained single-file image under the lldb host: CoreCLR is
         // statically linked into the symbol-stripped app image, so lldb has no symbol on which to set the
         // JIT/prestub notification breakpoint (.NET Core keeps CoreCLR as a distinct libcoreclr.so, so it
@@ -254,15 +272,13 @@ public sealed record TestConfig : IXunitSerializable
             return false;
         }
 
-        // Server GC for a LIVE target would require injecting the GC env vars into the dbgeng-launched
-        // debuggee process; that isn't wired yet (no consumer), so Server is dump-only for now.
-        if (c.GcType == GcType.Server && c.IsLive)
+        // Keep single-file reduced-dump coverage focused on Heap until Mini has been validated across hosts.
+        if (c.DumpKind == DumpKind.Mini && c.Flavor == Flavor.SingleFile)
         {
             return false;
         }
 
-        // Keep single-file reduced-dump coverage focused on Heap until Mini has been validated across hosts.
-        if (c.DumpKind == DumpKind.Mini && c.Flavor == Flavor.SingleFile)
+        if (c.CoreVersion == CoreVersion.Net12 && c.Dac == Dac.Legacy)
         {
             return false;
         }
@@ -338,6 +354,7 @@ public sealed record TestConfig : IXunitSerializable
         info.AddValue(nameof(DumpKind), DumpKind, typeof(DumpKind));
         info.AddValue(nameof(CoreVersion), CoreVersion, typeof(CoreVersion));
         info.AddValue(nameof(Dac), Dac, typeof(Dac));
+        info.AddValue(nameof(HostRuntime), HostRuntime, typeof(HostRuntime));
     }
 
     void IXunitSerializable.Deserialize(IXunitSerializationInfo info)
@@ -350,6 +367,7 @@ public sealed record TestConfig : IXunitSerializable
         _dumpKind = info.GetValue<DumpKind>(nameof(DumpKind));
         _coreVersion = info.GetValue<CoreVersion>(nameof(CoreVersion));
         _dac = info.GetValue<Dac>(nameof(Dac));
+        _hostRuntime = info.GetValue<HostRuntime>(nameof(HostRuntime));
     }
 
     /// <summary>
@@ -363,6 +381,7 @@ public sealed record TestConfig : IXunitSerializable
         string version = CoreVersion == CoreVersion.None ? "/netfx" : "/net" + CoreVersions.Major(CoreVersion);
         string dump = IsLive ? string.Empty : "/" + DumpKind;
         string dac = Dac == Dac.CDac ? "/cdac" : string.Empty;
-        return $"{Target}/{Host}/{Flavor}{version}/{Liveness}/{GcType}{dump}{dac}";
+        string hostRuntime = HostRuntime == HostRuntime.None ? "/nohost" : string.Empty;
+        return $"{Target}/{Host}/{Flavor}{version}/{Liveness}/{GcType}{dump}{dac}{hostRuntime}";
     }
 }

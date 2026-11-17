@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.CommandLine;
+using System.CommandLine.Help;
 using System.Threading.Tasks;
 using Microsoft.Internal.Common;
 using Microsoft.Internal.Common.Commands;
@@ -18,6 +19,7 @@ namespace Microsoft.Diagnostics.Tools.Stack
                 ProcessStatusCommandHandler.ProcessStatusCommand("Lists the dotnet processes that stack traces can be collected from."),
                 SymbolicateHandler.SymbolicateCommand()
             };
+            rootCommand.Action = new HelpAction();
 
             return rootCommand.Parse(args).InvokeAsync();
         }

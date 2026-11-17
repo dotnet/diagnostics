@@ -7,11 +7,13 @@
 // ******************************************************************************
 
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.DebugServices.Implementation
 {
@@ -64,35 +66,55 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             _memoryService = memoryService;
         }
 
-        private IEnumerable<ulong> SpecialDiagInfoAddresses
+        private IEnumerable<ulong> SpecialDiagInfoAddresses => GetSpecialDiagInfoAddresses(_target.OperatingSystem, _memoryService.PointerSize);
+
+        private static IEnumerable<ulong> GetSpecialDiagInfoAddresses(OSPlatform platform, int pointerSize)
         {
-            get
+            if (platform == OSPlatform.OSX)
             {
-                if (_target.OperatingSystem == OSPlatform.OSX)
+                if (pointerSize == 8)
                 {
-                    if (_memoryService.PointerSize == 8)
+                    // Try the arm64-valid address first (also valid on x86_64 macOS for newer
+                    // createdump output); fall back to the legacy x86_64 address.
+                    yield return SpecialDiagInfoAddressMacOSArm64;
+                    if (SpecialDiagInfoAddressMacOSArm64 != SpecialDiagInfoAddressMacOS64)
                     {
-                        // Try the arm64-valid address first (also valid on x86_64 macOS for newer
-                        // createdump output); fall back to the legacy x86_64 address.
-                        yield return SpecialDiagInfoAddressMacOSArm64;
-                        if (SpecialDiagInfoAddressMacOSArm64 != SpecialDiagInfoAddressMacOS64)
-                        {
-                            yield return SpecialDiagInfoAddressMacOS64;
-                        }
-                    }
-                }
-                else if (_target.OperatingSystem == OSPlatform.Linux)
-                {
-                    if (_memoryService.PointerSize == 8)
-                    {
-                        yield return SpecialDiagInfoAddress64;
-                    }
-                    else
-                    {
-                        yield return SpecialDiagInfoAddress32;
+                        yield return SpecialDiagInfoAddressMacOS64;
                     }
                 }
             }
+            else if (platform == OSPlatform.Linux)
+            {
+                if (pointerSize == 8)
+                {
+                    yield return SpecialDiagInfoAddress64;
+                }
+                else
+                {
+                    yield return SpecialDiagInfoAddress32;
+                }
+            }
+        }
+
+        internal static bool TryGetRuntimeBaseAddress(IDataReader reader, out ulong runtimeBaseAddress)
+        {
+            // Version 2 appends a 64-bit runtime base at offset 32, including in 32-bit dumps.
+            Span<byte> header = stackalloc byte[40];
+            foreach (ulong address in GetSpecialDiagInfoAddresses(reader.TargetPlatform, reader.PointerSize))
+            {
+                if (reader.Read(address, header) == header.Length &&
+                    header.Slice(0, SPECIAL_DIAGINFO_SIGNATURE.Length).SequenceEqual(SPECIAL_DIAGINFO_SIGNATURE) &&
+                    BinaryPrimitives.ReadInt32LittleEndian(header.Slice(16)) >= 2)
+                {
+                    runtimeBaseAddress = BinaryPrimitives.ReadUInt64LittleEndian(header.Slice(32));
+                    if (runtimeBaseAddress != 0)
+                    {
+                        return true;
+                    }
+                }
+            }
+            runtimeBaseAddress = 0;
+            return false;
         }
 
         /// <summary>

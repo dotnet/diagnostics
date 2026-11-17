@@ -19,14 +19,23 @@ public sealed class LldbCliHost : LldbHostBase
     private readonly Flavor _flavor;
     private readonly Dac _dac;
     private readonly CoreVersion _coreVersion;
+    private readonly HostRuntime _hostRuntime;
 
     public override string Name => "lldb";
 
-    public LldbCliHost(string dumpPath, Flavor flavor, Dac dac = Dac.Legacy, CoreVersion coreVersion = CoreVersion.Net10, string? targetExe = null, HostDiagnostics? diagnostics = null)
+    public LldbCliHost(
+        string dumpPath,
+        Flavor flavor,
+        Dac dac = Dac.Legacy,
+        CoreVersion coreVersion = CoreVersion.Net10,
+        HostRuntime hostRuntime = HostRuntime.Managed,
+        string? targetExe = null,
+        HostDiagnostics? diagnostics = null)
     {
         _flavor = flavor;
         _dac = dac;
         _coreVersion = coreVersion;
+        _hostRuntime = hostRuntime;
         StartLldb(diagnostics: diagnostics, captureCrashDumps: true);
 
         // Load the core. Pass the target executable as the module so lldb can map the program image —
@@ -43,7 +52,9 @@ public sealed class LldbCliHost : LldbHostBase
     public override void LoadSos()
     {
         Run($"plugin load \"{ToolPaths.LldbPluginPath}\"");
-        Run($"sethostruntime \"{ToolPaths.HostRuntimeDirectory}\"");
+        Run(_hostRuntime == HostRuntime.None
+            ? "sethostruntime -none"
+            : $"sethostruntime \"{ToolPaths.HostRuntimeDirectory}\"");
 
         // Self-contained single-file bundles carry coreclr inside the exe, so there is no runtime
         // directory on disk next to which SOS can find the matching DAC. Point SOS's symbol store at the

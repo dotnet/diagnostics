@@ -6830,24 +6830,28 @@ DECLARE_API(GCInfo)
         ExtOut("preJIT generated code\n");
     }
 
-    // Use GCInfoData abstraction (tries ISOSDacInterface18 first, then legacy)
+    taGCInfoAddr = TO_TADDR(codeHeaderData.GCInfo);
+    ExtOut("GC info %p\n", SOS_PTR(taGCInfoAddr));
+
+    // Use the DAC interfaces when available; only their absence permits legacy decoding.
     if (!useLegacy)
     {
         GCInfoData gcInfo;
         CLRDATA_ADDRESS methodIP = TO_CDADDR(codeHeaderData.MethodStart);
         HRESULT hr = GCInfoData::Create(methodIP, gcInfo);
-        if (SUCCEEDED(hr) && gcInfo.IsValid)
+        if (hr == S_OK && gcInfo.IsValid)
         {
             gcInfo.DumpToOutput(ExtOut);
             return Status;
         }
+        if (hr != S_FALSE)
+        {
+            ExtOut("Failed to retrieve GC info through DAC interfaces: %08x\n", hr);
+            return FAILED(hr) ? hr : E_FAIL;
+        }
     }
 
     // Final fallback: raw GC info blob + DumpGCInfo (for older runtimes without Interface18)
-    taGCInfoAddr = TO_TADDR(codeHeaderData.GCInfo);
-
-    ExtOut("GC info %p\n", SOS_PTR(taGCInfoAddr));
-
     // assume that GC encoding table is never more than
     // 40 + methodSize * 2
     int tableSize = 0;
@@ -7534,15 +7538,20 @@ HRESULT displayGcInfo(BOOL fWithGCInfo, const DacpCodeHeaderData& codeHeaderData
             return E_OUTOFMEMORY;
         }
 
-        // Try the GCInfoData abstraction first (ISOSDacInterface18, then legacy decoder)
+        // Use the DAC interfaces when available; only their absence permits legacy decoding.
         {
             GCInfoData gcInfo;
             CLRDATA_ADDRESS methodIP = TO_CDADDR(codeHeaderData.MethodStart);
             HRESULT hr = GCInfoData::Create(methodIP, gcInfo);
-            if (SUCCEEDED(hr) && gcInfo.IsValid)
+            if (hr == S_OK && gcInfo.IsValid)
             {
                 gcInfo.DumpToOutput(DecodeGCTableEntry);
                 return S_OK;
+            }
+            if (hr != S_FALSE)
+            {
+                ExtOut("Failed to retrieve GC info through DAC interfaces: %08x\n", hr);
+                return FAILED(hr) ? hr : E_FAIL;
             }
         }
 
@@ -13487,11 +13496,21 @@ DECLARE_API(SetClrPath)
     }
     if (narg > 0)
     {
+        if (IsRemoteOrDevicePath(runtimeModulePath.data))
+        {
+            ExtErr("Runtime directory must be a local path: %s\n", runtimeModulePath.data);
+            return E_INVALIDARG;
+        }
         std::string fullPath;
         if (!GetAbsolutePath(runtimeModulePath.data, fullPath))
         {
             ExtErr("Invalid runtime directory %s\n", fullPath.c_str());
             return E_FAIL;
+        }
+        if (!IsSafeAbsoluteLocalPath(fullPath.c_str()))
+        {
+            ExtErr("Runtime directory must be a local path: %s\n", fullPath.c_str());
+            return E_INVALIDARG;
         }
         g_pRuntime->SetRuntimeDirectory(fullPath.c_str());
     }

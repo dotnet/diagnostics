@@ -20,7 +20,9 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             registry.AddService<IDataReader, DataReader>(ServiceScope.Target);
             registry.AddService<IClrSymbolProvider, HostSymbolProvider>(ServiceScope.Target);
             registry.AddService<IRuntimeService, RuntimeService>(ServiceScope.Target);
-            registry.AddProvider<IRuntimeProvider, RuntimeProvider>();
+            registry.AddProvider<IRuntimeProvider, DescriptionBasedRuntimeProvider>();
+            registry.AddProvider<IRuntimeDescriptionProvider, DotNetRuntimeDiscoveryProvider>();
+            registry.AddProvider<IRuntimeDescriptionProvider, SingleFileRuntimeDiscoveryProvider>();
             registry.AddServiceFactory<PEModule>(ServiceScope.Module, services => PEModule.CreatePEModule(
                 services.GetRequiredService<IModule>(),
                 services.GetRequiredService<ISymbolService>()));

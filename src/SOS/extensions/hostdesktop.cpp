@@ -57,7 +57,7 @@ HRESULT InitializeDesktopClrHost()
         TraceHostingError("Failed to append managed module directory\n");
         return E_FAIL;
     }
-    if (wcscat_s(wszManagedModulePath.GetPtr(), MAX_LONGPATH, ExtensionsDllNameW) != 0)
+    if (wcscat_s(wszManagedModulePath.GetPtr(), MAX_LONGPATH, ExtensionsDesktopHostDllNameW) != 0)
     {
         TraceHostingError("Failed to append SOS module name\n");
         return E_FAIL;
@@ -101,7 +101,7 @@ HRESULT InitializeDesktopClrHost()
         }
     }
     // Initialize the managed code
-    hr = g_clrHost->ExecuteInDefaultAppDomain(wszManagedModulePath.GetPtr(), ExtensionsClassNameW, ExtensionsInitializeFunctionNameW, wszSOSModulePath.GetPtr(), (DWORD *)&ret);
+    hr = g_clrHost->ExecuteInDefaultAppDomain(wszManagedModulePath.GetPtr(), ExtensionsDesktopHostClassNameW, ExtensionsInitializeFunctionNameW, wszSOSModulePath.GetPtr(), (DWORD *)&ret);
     if (FAILED(hr)) 
     {
         TraceHostingError("ICLRRuntimeHost::ExecuteInDefaultAppDomain failed %08x\n", hr);

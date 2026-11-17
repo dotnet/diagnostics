@@ -35,4 +35,24 @@ public sealed class LiveBpmdTests
         SosOutput clrstack = target.Sos("clrstack");
         clrstack.AssertContains("C.F2");
     }
+
+    [SosTheory]
+    [MemberData(nameof(Matrix))]
+    public async Task RawBpmd_ClearsBreakpointsAndBreaksOnSourceLine(TestConfig config)
+    {
+        Assert.Equal(Liveness.Live, config.Liveness);
+
+        using LiveTarget target = (LiveTarget)await Targets.GetTargetAsync(config);
+
+        string module = TargetCatalog.Get(TargetCatalog.DivZero).ModuleFor(config.Flavor);
+        target.Sos($"bpmd {module} C.F2");
+        target.RunToBreakpoint();
+        target.Sos("clrstack").AssertContains("C.F2");
+
+        target.ClearBreakpoints();
+        target.Sos("bpmd DivZero.cs:14");
+        target.RunToBreakpoint();
+        SosRow firstManagedFrame = target.Clrstack().First(row => !row["InternalFrame"].AsBoolean());
+        Assert.Contains("C.DivideByZero", firstManagedFrame["Function"].Value, StringComparison.Ordinal);
+    }
 }

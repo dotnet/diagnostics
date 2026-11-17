@@ -102,20 +102,41 @@ namespace Microsoft.Diagnostics
             Assert.True(AuthenticodeUtil.VerifyDacDll(desktopDacPath, out fileLock));
             fileLock.Dispose();
 
-            IntPtr dbiHandle = RuntimeWrapper.LoadLibraryWithSignatureVerification(desktopDbiPath, verifySignature: true);
+            IntPtr dbiHandle = RuntimeWrapper.LoadLibraryWithSignatureVerification(desktopDbiPath, verifySignature: true, out VerifiedLibraryCopy dbiCopy);
             Assert.NotEqual(IntPtr.Zero, dbiHandle);
+            AssertLoadedFromPrivateCopy(dbiHandle, dbiCopy, desktopDbiPath);
             NativeLibrary.Free(dbiHandle);
+            dbiCopy.Dispose();
+            Assert.False(File.Exists(dbiCopy.FilePath));
 
-            IntPtr dacHandle = RuntimeWrapper.LoadLibraryWithSignatureVerification(desktopDacPath, verifySignature: true);
+            IntPtr dacHandle = RuntimeWrapper.LoadLibraryWithSignatureVerification(desktopDacPath, verifySignature: true, out VerifiedLibraryCopy dacCopy);
             Assert.NotEqual(IntPtr.Zero, dacHandle);
+            AssertLoadedFromPrivateCopy(dacHandle, dacCopy, desktopDacPath);
             NativeLibrary.Free(dacHandle);
+            dacCopy.Dispose();
+            Assert.False(File.Exists(dacCopy.FilePath));
 
             Assert.Equal(
                 IntPtr.Zero,
                 RuntimeWrapper.LoadLibraryWithSignatureVerification(
                     typeof(object).Assembly.Location,
-                    verifySignature: true));
+                    verifySignature: true,
+                    out VerifiedLibraryCopy unsignedCopy));
+            Assert.Null(unsignedCopy);
         }
+
+        private static void AssertLoadedFromPrivateCopy(IntPtr handle, VerifiedLibraryCopy copy, string originalPath)
+        {
+            Assert.NotNull(copy);
+            Assert.NotEqual(Path.GetDirectoryName(originalPath), Path.GetDirectoryName(copy.FilePath), StringComparer.OrdinalIgnoreCase);
+            Assert.Equal(Path.GetFileName(originalPath), Path.GetFileName(copy.FilePath), StringComparer.OrdinalIgnoreCase);
+            StringBuilder loadedPath = new(1024);
+            Assert.NotEqual(0u, GetModuleFileNameW(handle, loadedPath, (uint)loadedPath.Capacity));
+            Assert.Equal(copy.FilePath, loadedPath.ToString(), StringComparer.OrdinalIgnoreCase);
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern uint GetModuleFileNameW(IntPtr module, StringBuilder fileName, uint size);
 
         private static void SkipIfUnsigned(string path)
         {

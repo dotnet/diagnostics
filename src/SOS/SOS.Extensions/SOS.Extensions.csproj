@@ -11,11 +11,13 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.Diagnostics.DebugServices.UnitTests" />
     <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="$(MicrosoftDiagnosticsRuntimeVersion)" />
     <PackageReference Include="System.Memory" Version="$(SystemMemoryVersion)" />
   </ItemGroup>
     
   <ItemGroup>
+    <ProjectReference Include="..\SOS.FrameworkHost\SOS.FrameworkHost.csproj" Condition="'$(TargetFramework)' == '$(DesktopTargetFramework)'" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices\Microsoft.Diagnostics.DebugServices.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.DebugServices.Implementation\Microsoft.Diagnostics.DebugServices.Implementation.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\Microsoft.Diagnostics.ExtensionCommands\Microsoft.Diagnostics.ExtensionCommands.csproj" />

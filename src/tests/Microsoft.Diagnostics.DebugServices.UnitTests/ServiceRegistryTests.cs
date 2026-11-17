@@ -79,7 +79,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Contains((ServiceScope.Module, typeof(MachOModule)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Module, typeof(ELFFile)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Module, typeof(MachOFile)), registry.Services.Keys);
-            Assert.Equal(typeof(IRuntimeProvider), Assert.Single(registry.Providers).Type);
+            Assert.Collection(
+                registry.Providers,
+                provider => Assert.Equal(typeof(IRuntimeProvider), provider.Type),
+                provider => Assert.Equal(typeof(IRuntimeDescriptionProvider), provider.Type),
+                provider => Assert.Equal(typeof(IRuntimeDescriptionProvider), provider.Type));
         }
 
         [Fact]
@@ -111,7 +115,11 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Contains((ServiceScope.Runtime, typeof(LiveObjectService)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Runtime, typeof(StaticVariableService)), registry.Services.Keys);
             Assert.Contains((ServiceScope.Runtime, typeof(RootCacheService)), registry.Services.Keys);
-            Assert.Single(registry.Providers);
+            Assert.Collection(
+                registry.Providers,
+                provider => Assert.Equal(typeof(IRuntimeProvider), provider.Type),
+                provider => Assert.Equal(typeof(IRuntimeDescriptionProvider), provider.Type),
+                provider => Assert.Equal(typeof(IRuntimeDescriptionProvider), provider.Type));
             Assert.Equal("registry", Assert.Throws<ArgumentNullException>(() => new SOSHostingModule().RegisterServices(null)).ParamName);
             Assert.Equal("registry", Assert.Throws<ArgumentNullException>(() => new AnalysisModule().RegisterServices(null)).ParamName);
         }
@@ -506,7 +514,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.IsType<HostSymbolProvider>(target.Services.GetRequiredService<IClrSymbolProvider>());
             Assert.IsType<RuntimeService>(target.Services.GetRequiredService<IRuntimeService>());
             Func<IServiceProvider, IRuntimeProvider> provider = Assert.Single(host.ServiceManager.EnumerateProviderFactories<IRuntimeProvider>());
-            Assert.IsType<RuntimeProvider>(provider(target.Services));
+            Assert.IsType<DescriptionBasedRuntimeProvider>(provider(target.Services));
+            Func<IServiceProvider, IRuntimeDescriptionProvider>[] descriptionProviders =
+                host.ServiceManager.EnumerateProviderFactories<IRuntimeDescriptionProvider>().ToArray();
+            Assert.Collection(
+                descriptionProviders,
+                factory => Assert.IsType<DotNetRuntimeDiscoveryProvider>(factory(target.Services)),
+                factory => Assert.IsType<SingleFileRuntimeDiscoveryProvider>(factory(target.Services)));
             target.Destroy();
             host.ServiceContainer.DisposeServices();
         }

@@ -1,0 +1,32 @@
+<Project>
+  <Import Project="$(SrcDir)Directory.Build.targets" />
+  <Import Project="toolAot.targets" Condition="'$(NeedsAotPublish)' == 'true'" />
+  <Import Project="$(CDacRuntimeRoot)eng\generatorProjects.targets" Condition="'$(IsGeneratorProject)' == 'true'" />
+
+  <PropertyGroup>
+    <IsPackable Condition="'$(NeedsAotPublish)' == 'true'">false</IsPackable>
+    <PackageId Condition="'$(IsPackable)' == 'true'">$(AssemblyName.Replace('Microsoft.Diagnostics.', 'Microsoft.Diagnostics.InternalAssets.'))</PackageId>
+    <BeforePack>$(BeforePack);IncludeAnalyzersInPackage</BeforePack>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Runtime's split configurations are irrelevant here and otherwise duplicate the same build graph. -->
+    <ProjectReference Update="@(ProjectReference)"
+                      GlobalPropertiesToRemove="%(ProjectReference.GlobalPropertiesToRemove);RuntimeConfiguration;LibrariesConfiguration" />
+  </ItemGroup>
+
+  <!-- Based on target of the same name in the runtime repo for including analyzers in the package -->
+  <Target Name="IncludeAnalyzersInPackage"
+          Condition="'@(ProjectReference)' != '' and @(ProjectReference->AnyHaveMetadataValue('PackAsAnalyzer', 'true'))">
+    <MSBuild Projects="@(ProjectReference->WithMetadataValue('PackAsAnalyzer', 'true'))"
+             Targets="GetAnalyzerPackFiles"
+             RemoveProperties="SetTargetFramework">
+      <Output TaskParameter="TargetOutputs" ItemName="_AnalyzerFile" />
+    </MSBuild>
+
+    <ItemGroup>
+      <Content Include="@(_AnalyzerFile)" Pack="true" Condition="!%(_AnalyzerFile.IsSymbol)" />
+      <_TargetPathsToSymbols Include="@(_AnalyzerFile)" TargetPath="/%(_AnalyzerFile.PackagePath)" Condition="%(_AnalyzerFile.IsSymbol)" />
+    </ItemGroup>
+  </Target>
+</Project>

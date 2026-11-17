@@ -18,17 +18,26 @@ namespace SOS.Hosting
         private readonly Func<string> _getDacPath;
         private readonly bool _verifySignature;
         private readonly List<IDisposable> _verifiedFiles = [];
+        private readonly ICollection<VerifiedLibraryCopy> _libraryCopies;
+        private readonly bool _ownsLibraryCopies;
 
         public IntPtr ILibraryProvider { get; }
 
+        /// <param name="libraryCopies">
+        /// Receives the verified private copies handed out so the owner can delete them once the libraries are
+        /// unloaded. When null, the provider deletes them on dispose.
+        /// </param>
         public RuntimeLibraryProvider(
             Func<string> getDbiPath,
             Func<string> getDacPath,
-            bool verifySignature)
+            bool verifySignature,
+            ICollection<VerifiedLibraryCopy> libraryCopies = null)
         {
             _getDbiPath = getDbiPath ?? throw new ArgumentNullException(nameof(getDbiPath));
             _getDacPath = getDacPath ?? throw new ArgumentNullException(nameof(getDacPath));
             _verifySignature = verifySignature;
+            _libraryCopies = libraryCopies ?? new List<VerifiedLibraryCopy>();
+            _ownsLibraryCopies = libraryCopies is null;
 
             VTableBuilder builder = AddInterface(IID_ICLRDebuggingLibraryProvider2, validate: false);
             builder.AddMethod(new ProvideLibrary2Delegate(ProvideLibrary2));
@@ -44,10 +53,18 @@ namespace SOS.Hosting
                 verifiedFile.Dispose();
             }
             _verifiedFiles.Clear();
+            if (_ownsLibraryCopies)
+            {
+                foreach (VerifiedLibraryCopy libraryCopy in _libraryCopies)
+                {
+                    libraryCopy.Dispose();
+                }
+                _libraryCopies.Clear();
+            }
             this.ReleaseWithCheck();
         }
 
-        private int ProvideLibrary2(
+        internal int ProvideLibrary2(
             IntPtr self,
             string fileName,
             uint timeStamp,
@@ -69,14 +86,19 @@ namespace SOS.Hosting
 
                 if (_verifySignature && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    Trace.TraceInformation($"RuntimeLibraryProvider: verifying Authenticode signature {path}");
-                    if (!AuthenticodeUtil.VerifyDacDll(path, out IDisposable fileLock))
+                    // Verify and hand out a private copy so the original can't be swapped before it is loaded.
+                    VerifiedLibraryCopy libraryCopy = VerifiedLibraryCopy.Create(path);
+                    Trace.TraceInformation($"RuntimeLibraryProvider: verifying Authenticode signature {path} (copied to {libraryCopy.FilePath})");
+                    if (!AuthenticodeUtil.VerifyDacDll(libraryCopy.FilePath, out IDisposable fileLock))
                     {
                         fileLock?.Dispose();
+                        libraryCopy.Dispose();
                         Trace.TraceError($"RuntimeLibraryProvider: Authenticode verification failed for {path}");
                         return HResult.E_NOINTERFACE;
                     }
                     _verifiedFiles.Add(fileLock);
+                    _libraryCopies.Add(libraryCopy);
+                    path = libraryCopy.FilePath;
                 }
 
                 modulePath = Marshal.StringToCoTaskMemUni(path);

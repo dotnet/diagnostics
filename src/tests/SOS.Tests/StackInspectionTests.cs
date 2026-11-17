@@ -41,6 +41,12 @@ public sealed class StackInspectionTests
 
         // dso is the documented alias and prints the same listing.
         target.Sos($"dso").AssertContains("LocalUniqueMarker");
+
+        SosOutput verified = target.Sos("dumpstackobjects -verify");
+        verified.AssertContains("ArgUniqueMarker");
+        verified.AssertContains("LocalUniqueMarker");
+        Assert.Contains(arg.ToString("x"), verified.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(local.ToString("x"), verified.Text, StringComparison.OrdinalIgnoreCase);
     }
 
     [SosTheory]
@@ -66,6 +72,10 @@ public sealed class StackInspectionTests
         SosOutput stack = target.Sos("dumpstack");
         stack.AssertContains("SosHarnessScenarios.ArgsLocalsMethod");
         stack.AssertContains("SosHarnessScenarios.Main()");
+
+        SosOutput eeOnly = target.Sos("dumpstack -EE");
+        eeOnly.AssertContains("SosHarnessScenarios.ArgsLocalsMethod");
+        eeOnly.AssertContains("SosHarnessScenarios.Main()");
     }
 
     [WindowsTheory]

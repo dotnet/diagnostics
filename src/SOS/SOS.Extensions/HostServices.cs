@@ -42,6 +42,7 @@ namespace SOS.Extensions
         private readonly CommandService _commandService;
         private readonly SymbolService _symbolService;
         private readonly HostWrapper _hostWrapper;
+        private ServiceContainer _serviceContainer;
         private ServiceContainer _servicesWithManagedOnlyFilter;
         private TargetFromDebuggerServices _targetFromDebuggerServices;
         private ContextServiceFromDebuggerServices _contextServiceFromDebuggerServices;
@@ -224,6 +225,7 @@ namespace SOS.Extensions
                 // Adding service factories is not allowed after this point.
                 ServiceContainer serviceContainer = _host.CreateServiceContainer();
                 _host.ServiceManager.RegisterCommands(_commandService);
+                _serviceContainer = serviceContainer;
 
                 // Add all the global services to the global service container
                 serviceContainer.AddService<SOSLibrary.ISOSModule>(this);
@@ -408,7 +410,15 @@ namespace SOS.Extensions
                 DiagnosticLoggingService.Instance.SetConsole(consoleService: null, fileLoggingService: null);
 
                 // Dispose of the global services, including DebuggerServices and RemoteMemoryService, but not host services (this)
-                _host.ServiceContainer.DisposeServices();
+                if (_serviceContainer != null)
+                {
+                    _serviceContainer.DisposeServices();
+                }
+                else
+                {
+                    // Registration can fail before the global container owns the debugger wrapper.
+                    DebuggerServices?.Dispose();
+                }
 
                 DebuggerServices = null;
 
