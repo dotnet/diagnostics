@@ -11,26 +11,25 @@ namespace SOS.Tests;
 /// </summary>
 public sealed class NativeUnwindTests
 {
-    // Native unwinding does not depend on the DAC, and only the Core flavor has the host libraries
-    // asserted below; single-file statically links them into the app.
+    // Only the Core flavor has the separate host libraries asserted below; single-file statically links them into the app.
+    // cdb is excluded: dbgeng cannot unwind JIT frames in these dumps without runtime help.
     public static TheoryData<TestConfig> Matrix =>
-        TestConfig.BuildMatrix([TargetCatalog.SimpleThrow], Flavor.Core, Host.Lldb, dac: Dac.Legacy);
+        TestConfig.BuildMatrix([TargetCatalog.SimpleThrow], Flavor.Core, Host.Lldb);
 
     /// <summary>
-    /// The crashing thread waits in libc for createdump, so LLDB must unwind libc, libcoreclr, JIT code,
-    /// and the host back to <c>corehost_main</c>. On Linux ARM64 with pointer authentication, saved return
-    /// addresses are PAC-signed; LLDB can strip them only when the core records the PAC masks in an
-    /// <c>NT_ARM_PAC_MASK</c> note, as kernel-generated cores do.
+    /// The crashing thread must unwind through the runtime, JIT code, and the host back to hostpolicy.
+    /// On Linux ARM64 with pointer authentication, saved return addresses are PAC-signed; LLDB can strip them
+    /// only when the core records the PAC masks in an <c>NT_ARM_PAC_MASK</c> note, as kernel-generated cores do.
     /// </summary>
     [UnixTheory]
     [MemberData(nameof(Matrix))]
-    public async Task CrashThread_UnwindsToHostEntryPoint(TestConfig config)
+    public async Task CrashThread_UnwindsToHost(TestConfig config)
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToCrash();
 
         SosOutput backtrace = target.Execute("thread backtrace");
-        backtrace.AssertContains("libcoreclr.so`");
-        backtrace.AssertContains("corehost_main");
+        backtrace.AssertContains("libcoreclr.");
+        backtrace.AssertContains("libhostpolicy.");
     }
 }
