@@ -1,0 +1,54 @@
+parameters:
+- name: configuration
+  type: string
+- name: pipelineJobTemplate
+  type: string
+- name: isOfficialBuild
+  type: boolean
+- name: dependsOnBuild
+  type: boolean
+  default: true
+- name: fullMatrix
+  type: boolean
+  default: false
+
+jobs:
+# Local test jobs
+- template: /eng/pipelines/platform-matrix.yml
+  parameters:
+    jobTemplate: /eng/pipelines/build.yml
+    isOfficialBuild: ${{ parameters.isOfficialBuild }}
+    configurations:
+    - ${{ parameters.configuration }}
+    platforms:
+    - win-x64
+    - ${{ if eq(parameters.fullMatrix, true) }}:
+      - win-x86
+    - osx-x64
+    - linux-x64
+    - linux-musl-x64
+    jobParameters:
+      pipelineJobTemplate: ${{ parameters.pipelineJobTemplate }}
+      testOnly: true
+      dependsOnBuild: ${{ parameters.dependsOnBuild }}
+
+# Helix test jobs
+- template: /eng/pipelines/platform-matrix.yml
+  parameters:
+    jobTemplate: /eng/pipelines/tests-helix.yml
+    isOfficialBuild: ${{ parameters.isOfficialBuild }}
+    configurations:
+    - ${{ parameters.configuration }}
+    platforms:
+    - win-x64
+    - win-x86
+    - win-arm64
+    - linux-x64
+    - linux-arm64
+    - linux-musl-x64
+    - ${{ if eq(parameters.fullMatrix, true) }}:
+      - osx-x64
+    - osx-arm64
+    jobParameters:
+      pipelineJobTemplate: ${{ parameters.pipelineJobTemplate }}
+      dependsOnBuild: ${{ parameters.dependsOnBuild }}
