@@ -36,8 +36,7 @@ latest release/stable and main commits into that branch. It opens or updates an
 The sync takes all changes from main, including `global.json`,
 `eng/Versions.props`, and the darc-managed `eng/Version.Details.*` files. The
 pull request description lists the release/stable, main, and merge-base commits,
-the version and dependency changes, build and infrastructure commits, and all
-commits brought in from main. If a release must hold back a dependency, update
+the version and dependency changes, and the commits brought in from main. If a release must hold back a dependency, update
 it with darc in the sync pull request or a separate release/stable pull request.
 
 The workflow does not modify main or release/stable directly, merge the pull
