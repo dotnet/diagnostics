@@ -103,37 +103,11 @@ extends:
       # PR test legs
       - ${{ if in(variables['Build.Reason'], 'PullRequest') }}:
         - ${{ if ne(parameters.buildOnly, true) }}:
-          - template: /eng/pipelines/platform-matrix.yml
+          - template: /eng/pipelines/standard-tests.yml
             parameters:
-              jobTemplate: /eng/pipelines/build.yml
+              configuration: ${{ variables.buildConfiguration }}
+              pipelineJobTemplate: ${{ variables.jobTemplate }}
               isOfficialBuild: ${{ variables.isOfficialBuild }}
-              configurations:
-              - ${{ variables.buildConfiguration }}
-              platforms:
-              - win-x64
-              - osx-x64
-              - linux-x64
-              - linux-musl-x64
-              jobParameters:
-                pipelineJobTemplate: ${{ variables.jobTemplate }}
-                testOnly: true
-
-          - template: /eng/pipelines/platform-matrix.yml
-            parameters:
-              jobTemplate: /eng/pipelines/tests-helix.yml
-              isOfficialBuild: ${{ variables.isOfficialBuild }}
-              configurations:
-              - ${{ variables.buildConfiguration }}
-              platforms:
-              - win-x64
-              - win-x86
-              - win-arm64
-              - linux-x64
-              - linux-arm64
-              - linux-musl-x64
-              - osx-arm64
-              jobParameters:
-                pipelineJobTemplate: ${{ variables.jobTemplate }}
 
         # PR packaging
         - template: /eng/pipelines/package-sign-publish.yml
@@ -163,43 +137,13 @@ extends:
         displayName: Tests
         dependsOn: build
         jobs:
-        # Local test jobs
-        - template: /eng/pipelines/platform-matrix.yml
+        - template: /eng/pipelines/standard-tests.yml
           parameters:
-            jobTemplate: /eng/pipelines/build.yml
+            configuration: ${{ variables.buildConfiguration }}
+            pipelineJobTemplate: ${{ variables.jobTemplate }}
             isOfficialBuild: ${{ variables.isOfficialBuild }}
-            configurations:
-            - ${{ variables.buildConfiguration }}
-            platforms:
-            - win-x64
-            - win-x86
-            - osx-x64
-            - linux-x64
-            - linux-musl-x64
-            jobParameters:
-              pipelineJobTemplate: ${{ variables.jobTemplate }}
-              testOnly: true
-              dependsOnBuild: false
-
-        # Helix test jobs
-        - template: /eng/pipelines/platform-matrix.yml
-          parameters:
-            jobTemplate: /eng/pipelines/tests-helix.yml
-            isOfficialBuild: ${{ variables.isOfficialBuild }}
-            configurations:
-            - ${{ variables.buildConfiguration }}
-            platforms:
-            - win-x64
-            - win-x86
-            - win-arm64
-            - linux-x64
-            - linux-arm64
-            - linux-musl-x64
-            - osx-x64
-            - osx-arm64
-            jobParameters:
-              pipelineJobTemplate: ${{ variables.jobTemplate }}
-              dependsOnBuild: false
+            dependsOnBuild: false
+            fullMatrix: true
 
     ########################
     # Package/Publish stage
