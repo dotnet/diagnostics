@@ -96,14 +96,16 @@ jobs:
             fi
             echo "## Build and infrastructure changes"
             echo
-            infra=$(git log --first-parent --format='- %h %s' "$merge_base..$main_sha" -- eng .github global.json '*.props' '*.targets' | head -n "$max_commits")
+            # GitHub renders "#1234" with the PR title, so drop the duplicated subject for PR merges.
+            pr_refs_only='s/^(- [0-9a-f]+ ).* \((#[0-9]+)\)$/\1\2/'
+            infra=$(git log --first-parent --format='- %h %s' "$merge_base..$main_sha" -- eng .github global.json '*.props' '*.targets' | sed -E "$pr_refs_only" | head -n "$max_commits")
             echo "${infra:-None.}"
             echo
             echo "## Commits from \`$SOURCE_BRANCH\` ($commit_count)"
             echo
             echo "<details><summary>Show commits</summary>"
             echo
-            git log --first-parent --format='- %h %s' "$merge_base..$main_sha" | head -n "$max_commits"
+            git log --first-parent --format='- %h %s' "$merge_base..$main_sha" | sed -E "$pr_refs_only" | head -n "$max_commits"
             if (( commit_count > max_commits )); then
               echo "- ... and $(( commit_count - max_commits )) more"
             fi
