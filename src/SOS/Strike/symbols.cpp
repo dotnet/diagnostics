@@ -478,8 +478,15 @@ HRESULT SymbolReader::LoadSymbolsForWindowsPDB(___in IMetaDataImport* pMD, ___in
     }
 
     // TODO: this should be better integrated with windbg's symbol lookup
-    Status = g_pSymBinder->GetReaderFromCallback(pMD, pModuleName, symbolPath, 
-        AllowRegistryAccess | AllowSymbolServerAccess | AllowOriginalPathAccess | AllowReferencePathAccess, pCallback, &m_pSymReader);
+    // Never let diasymreader probe the dump supplied module directory or the PDB path embedded in the image when they are not local.
+    DWORD searchPolicy = AllowRegistryAccess | AllowSymbolServerAccess;
+    const WCHAR* moduleName = GetFileName(pModuleName);
+    if (IsSafeAbsoluteLocalPath(pModuleName))
+    {
+        searchPolicy |= AllowReferencePathAccess;
+        moduleName = pModuleName;
+    }
+    Status = g_pSymBinder->GetReaderFromCallback(pMD, moduleName, symbolPath, searchPolicy, pCallback, &m_pSymReader);
 
     if (FAILED(Status) && m_pSymReader != NULL)
     {

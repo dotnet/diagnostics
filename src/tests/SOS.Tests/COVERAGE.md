@@ -35,6 +35,16 @@ command-focused suite. Two additional scripts, `DynamicMethod.script` and
 `Reflection.script`, are retired using their existing modern debuggees and
 focused emitted-IL checks and existing reflection-exception coverage.
 `TaskNestedException.script` is retired by a three-level task-exception test.
+`ConcurrentDictionaries.script` is retired by focused dictionary-content,
+argument-error, and referenced-array/object/value-class tests.
+`DumpGCData.script` is retired by an isolated two-stop pinning test on .NET 10+,
+with workstation GC covered live and both workstation and server GC covered
+in dumps. `DumpGen.script` is retired by a deterministic generation-population
+target that preserves its exact gen0/gen1/gen2/LOH/POH and filter assertions.
+`Overflow.script` and `MiniDumpLocalVarLookup.script` are retired by focused
+stack-overflow exception and Mini-dump ICorDebug local-variable tests.
+`VarargPInvokeInteropMD.script` is retired by a live native-breakpoint test of
+vararg P/Invoke frame identity and IL-stub resolution/disassembly.
 The remaining legacy runner and scenarios stay in place.
 
 ## Legacy-to-new map
@@ -43,38 +53,38 @@ The remaining legacy runner and scenarios stay in place.
 | --- | --- | --- |
 | `AsyncMain.script` | Retired | General stack shape is covered by `ClrStackLinesTests` and `ClrStackAllThreadsTests`; the async-`Main` frame identity has no new oracle. |
 | `ClrStackWithNumberOfFrames.script` | Retired | `ClrStackFrameCountTests.ClrStack_FrameCount` compares each `-c N` result with the exact prefix of an unlimited walk and checks an over-limit request across four crash targets. |
-| `ConcurrentDictionaries.script` | Improved | `SpecializedInspectionTests.Dcd_DumpsConcurrentDictionary`, `DumpArrayTests`, and `ObjectFieldsTests` provide typed data assertions. Legacy still covers dcd argument errors and its wider generic key/value set. |
+| `ConcurrentDictionaries.script` | Retired | `ConcurrentDictionaryTests` checks all five legacy generic key/value shapes plus the existing int/string fixture, exact counts and entries, argument errors, long-string truncation, null values, and `dumparray`/`dumpobj`/`dumpvc` round-trips. Rooted fixtures at the Scenarios heap stop preserve native and dotnet-dump host coverage and add Framework/CDB coverage alongside Framework/dotnet-dump, without named-pipe capture infrastructure. The .NET 10 Unix exclusion (#5491) and Alpine `dumpobj` exclusion (#5840) remain. |
 | `DivZero.script` | Retired | `PrintExceptionTests.PrintException_NoInnerException` verifies the exact exception type, message, HResult, no-inner state, generated frame, `-nested`, and `-lines` output across live and dump rows. `ClrThreadsTests`, `ClrStackLinesTests`, and `ClrStackICorDebugTests` cover the remaining thread and stack behavior. |
 | `DualRuntimes.script` | Retained | Generic stacks, threads, heaps, and runtime listing are covered; loading and switching between two runtimes in one process remains a specialized legacy scenario. |
-| `DumpGCData.script` | Covered | `DiagnosticCommandTests.DumpGcData_ReportsGcStatistics` directly exercises `dumpgcdata`. |
-| `DumpGen.script` | Improved | `GcInspectionTests.DumpGen_ListsGenerationObjects` asserts a known gen0 object. `DumpGen_ArgumentsAndFilters` adds missing/invalid generation and valid `-type`/`-mt` coverage. Exact legacy gen1/gen2/LOH/POH populations remain retained. |
+| `DumpGCData.script` | Retired | `DiagnosticCommandTests.DumpGcData_ReportsInducedCompactionAfterCollection` checks that each heap's `induced compacting GC` count increases after an explicitly forced, blocking, compacting collection. This exercises per-heap statistics without treating `pre and post pin` as a pinned-object count or depending on runtime-owned pinned objects (dotnet/runtime#136190). An isolated debuggee preserves the .NET 10+ regression oracle with live workstation coverage and workstation/server dump coverage across native and dotnet-dump hosts. `DumpGcData_ReportsGcStatistics` retains generic command coverage on the broader matrix. |
+| `DumpGen.script` | Retired | `GcInspectionTests.DumpGen_ReportsExactGenerationPopulations` preserves the exact 10/3/5 `DumpSampleClass` populations in gen0/gen1/gen2, the LOH sample array, the POH pinned byte array, and positive/empty `-type`/`-mt` filters. `DumpGen_ListsGenerationObjects` and `DumpGen_ArgumentsAndFilters` retain broader matrix coverage on the consolidated scenario target. |
 | `DynamicMethod.script` | Retired | `DynamicMethodTests` finds the debuggee's emitted Fibonacci method, checks its exact IL sequence, and uses the ICorDebug `dynamicMethod` local to select and disassemble the same object. |
-| `FindRootsOlderGeneration.script` | Gap | `GcRoot_FindsRootsForLive_NoneForDead` improves ordinary root correctness, but the live `findroots -gen any` notification/continue sequence and older-generation result are not represented. |
+| `FindRootsOlderGeneration.script` | Retired | `GcInspectionTests.FindRoots_SearchesOlderGenerations` preserves the live `findroots -gen any`/GC notification sequence and verifies exactly one root through the older LOH array to a young object under workstation and server GC. CDB covers .NET 10+; LLDB covers .NET 11+, after dotnet/runtime#120083 removed notification setup's target-memory allocation requirement. |
 | `GCPOH.script` | Retired | `DumpHeapGenerationsTests`, `DumpArrayTests`, `GcHandles`, `VerifyHeap`, `EeHeapTests`, and stack-root tests use deterministic objects and structured assertions; the original POH script remains active. |
 | `GCTests.script` | Retired | Object fields, `gcwhere`, stack objects, heap statistics, roots, handles, finalization, and verification are split into focused tests with exact object oracles. |
 | `InterpreterStackInterleavedTest.script` | Retained | No generic target can replace the interleaved interpreter/JIT frame sequence; legacy ownership is intentional. |
 | `InterpreterStackTest.script` | Retained | Interpreter-frame ordering remains specialized legacy coverage. |
 | `LineNums.script` | Retired | `ClrStackLinesTests` checks source file/line behavior and `PrintExceptionTests` checks exception structure/data across the matrix. |
-| `MiniDumpLocalVarLookup.script` | Gap | `ClrStackArgsLocalsTests` and `ClrStackICorDebugTests` improve variable data checks, but they use full/heap dumps rather than proving local recovery from a Mini dump. |
+| `MiniDumpLocalVarLookup.script` | Retired | `ClrStackArgsLocalsTests.ClrStack_ICorDebugLocalsFromMiniDump` runs `clrstack -i -l` against Core Mini dumps across supported hosts and verifies the named `localInt` value from the deterministic args/locals scenario. |
 | `NestedExceptionTest.script` | Retired | `PrintExceptionTests` verifies exact outer/inner types, messages, HResults, `-nested`, `-lines`, frame data, and inner-address round-trip across live and dump rows. `LiveBpmdTests`, `ClrThreadsTests`, the stack tests, and `DiagnosticCommandTests.Clrma_ReportsCurrentExceptionChain` cover the breakpoint, thread, stack, and CLRMA paths. |
-| `OtherCommands.script` | Improved | Its broad command set is split across object, module, domain, heap, runtime, memory, code-info, and diagnostic test classes with structured round-trips. |
-| `Overflow.script` | Retained | Stack-overflow exception behavior remains a specialized crash/live legacy target; ordinary exception output is covered by `PrintExceptionTests`. |
+| `OtherCommands.script` | Retired | Its broad command set is split across object, module, domain, heap, runtime, memory, code-info, and diagnostic test classes with structured round-trips. `LiveBpmdTests` covers method and source-line breakpoints plus `-clearall`, and `DiagnosticCommandTests.DumpLog_DumpsStressLog` preserves stress-log dumping on an isolated target. |
+| `Overflow.script` | Retired | `PrintExceptionTests.PrintException_StackOverflow` covers the flavor/live/dump matrix. It runs `clrthreads -managedexception`, verifies the stack-overflow exception object/type and empty message/inner exception where available, and asserts the expected no-current-exception result for Windows live targets. SingleFile and Framework dumps retain the legacy exclusions for [#2515](https://github.com/dotnet/diagnostics/issues/2515) and [#5757](https://github.com/dotnet/diagnostics/issues/5757). |
 | `Reflection.script` | Retired | Existing `PrintExceptionTests.PrintException_ReflectionInnerException` checks outer/inner exception types, messages, HResults, nested output, and caller source annotations. Generic stack/thread coverage is not duplicated on this target, and no new assertions are added. |
 | `SimpleThrow.script` | Retired | `PrintExceptionTests.PrintException_NoInnerException` verifies the exact exception type, message, HResult, no-inner state, generated frame, `-nested`, and `-lines` output across live and dump rows. `ClrThreadsTests` and the stack tests cover the remaining thread and managed-stack behavior. |
-| `StackAndOtherTests.script` | Improved | `RuntimeInfoTests` and the `ClrStack*Tests` classes separately cover runtime selection, plain/line/full/all/register/args/locals stack modes with stronger comparisons. |
-| `StackTests.script` | Improved | `ClrStackTests`, `ClrStackFullTests`, `ClrStackAllThreadsTests`, `ClrStackArgsLocalsTests`, `StackInspectionTests`, and `RuntimeInfoTests` replace shape-only checks with tables and address round-trips. |
+| `StackAndOtherTests.script` | Retired | `RuntimeInfoTests`, the `ClrStack*Tests` classes, `StackInspectionTests`, `CodeInfoTests`, `DumpIlTests`, `ClrUTests`, `ModuleResolveTests`, `ClrThreadsTests`, and `DiagnosticCommandTests` cover its runtime, stack, code, symbol, thread, and native CLRMA paths with stronger focused assertions. `ClrmaMatrix` includes the `HostRuntime.None` path that replaces the legacy `SetHostRuntime=-none` run. |
+| `StackTests.script` | Retired | `ClrStackTests`, `ClrStackFullTests`, `ClrStackArgsLocalsTests`, `ClrStackICorDebugTests`, `StackInspectionTests`, and `RuntimeInfoTests` replace shape-only checks with tables, address round-trips, exact argument/local values, verified stack-root objects, and native/managed frame checks. |
 | `StackTraceFaultingExceptionFrame.script` | Retired | Exception and ordinary stack data are covered; no new assertion requires the synthetic `[FaultingExceptionFrame: ...]` row. |
 | `StackTraceSoftwareExceptionFrame.script` | Retired | Exception and ordinary stack data are covered; no new assertion requires the synthetic `[SoftwareExceptionFrame: ...]` row. |
 | `TaskNestedException.script` | Retired | `PrintExceptionTests.PrintException_TaskExceptionChain` follows `AggregateException -> FormatException -> InvalidOperationException` addresses, checks messages, ordered task/caller/throw frames and source lines, and requires no further inner exception across live and Heap/Mini dump rows. The original sources and separately built library are included in the modern payload; the app project moves to the standard debuggee-folder location. |
 | `TestExtensions.script` | Retained | This validates extension-command interception and dispatch rather than SOS product output; it remains a legacy harness integration test. |
 | `ThreadApartment.script` | Retired | `ClrThreadsTests.ClrThreads_ReportsApartmentStates` identifies the named STA/MTA workers in `clrstack -all`, matches their OS thread IDs to `clrthreads`, and asserts each worker's expected apartment on Windows. |
-| `VarargPInvokeInteropMD.script` | Retained | Vararg P/Invoke, IL stubs, native breakpointing, `ip2md`, and `clru -il` form one specialized interop scenario. Generic `ip2md` and `clru` have new structured tests. |
+| `VarargPInvokeInteropMD.script` | Retired | `VarargPInvokeTests.VarargPInvoke_ReportsInteropMethodAndDisassemblesStub` retains the debuggee and Windows/CDB live Core/SingleFile coverage, including the x86 exclusion (#5883). It stops at native `msvcrt!printf`, verifies the vararg `InlinedCallFrame` and exact IL-stub signature, resolves the stub IP with `ip2md`, and checks structured native disassembly with and without `clru -il`, including the absence of IL-read errors. |
 | `WebApp.script` | Retained | Timers, ASP.NET/WebApp stacks, args/registers, and GC stress-log behavior remain in the specialized Windows legacy target; generic command equivalents are covered. |
 
-The focused gap fixed in this review is `dumpgen` argument and filtering
-behavior. The new test uses the source-generated scenario marker, resolves its
-address and real MethodTable from `dumpheap`, and proves both `-type` and `-mt`
-select it.
+The focused gaps fixed in this review are the `dumpstack -EE` variant and
+`dumpstackobjects -verify`. Both now reuse the deterministic args/locals
+scenario and require its uniquely typed argument and local objects or managed
+frames, rather than only checking generic output shape.
 The remaining gaps require purpose-built targets, Mini-dump policy, or
 platform-specific debugger sequencing and are not appropriate baseline-harness
 refactors.

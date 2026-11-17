@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Globalization;
 using System.Text.RegularExpressions;
 using SOS.TestHarness;
 using Xunit;
@@ -18,6 +19,16 @@ public sealed class GcInspectionTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
     public static TheoryData<TestConfig> PohMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.Core | Flavor.SingleFile);
+    public static TheoryData<TestConfig> DumpGenMatrix => TestConfig.BuildMatrix(
+        [TargetCatalog.DumpGen], Flavor.Core | Flavor.SingleFile, gcType: GcType.AllValid);
+    public static TheoryData<TestConfig> FindRootsMatrix => TestConfig.BuildMatrix(
+        [TargetCatalog.FindRootsOlderGeneration],
+        Flavor.Core,
+        Host.Cdb | Host.Lldb,
+        Liveness.Live,
+        GcType.AllValid,
+        coreVersion: CoreVersion.All & ~(CoreVersion.Net8 | CoreVersion.Net9),
+        dac: Dac.Legacy);
 
     [SosTheory]
     [MemberData(nameof(PohMatrix))]
@@ -68,6 +79,50 @@ public sealed class GcInspectionTests
         ulong dead = target.FindUniqueObject("DeadUniqueMarker");
         SosOutput deadRoots = target.Sos($"gcroot {dead:x}");
         Assert.Equal(0, UniqueRootCount(deadRoots));
+    }
+
+    [SosTheory(SkipTestWithoutData = true)]
+    [MemberData(nameof(FindRootsMatrix))]
+    public async Task FindRoots_SearchesOlderGenerations(TestConfig config)
+    {
+        // Regression for https://github.com/dotnet/runtime/pull/119396:
+        // findroots must search older generations for references to surviving young objects.
+        SOSTestSkips.SkipFindRootsNotifications(config);
+        using LiveTarget target = (LiveTarget)await Targets.GetTargetAsync(config);
+        target.GoToStopPoint("ready");
+
+        // The LOH array references a gen0 Thing, so a gen0 collection must preserve that older-generation root.
+        EeHeap heap = target.EeHeap();
+        Assert.Equal(config.GcType == GcType.Server, heap.HeapCount > 1);
+        SosTable stackObjects = target.DumpStackObjects();
+        SosRow array = stackObjects
+            .First(row => row["Name"].Value == "FindRootsOlderGeneration.Thing[]");
+        ulong arrayAddress = array["Object"].AsUInt64(Sos.Addr);
+        Assert.Contains(heap.GenerationRanges(GcGeneration.Loh), range => arrayAddress >= range.Start && arrayAddress < range.End);
+        ulong youngAddress = stackObjects.First(row => row["Name"].Value == "FindRootsOlderGeneration.Thing")["Object"].AsUInt64(Sos.Addr);
+        Assert.Contains(heap.GenerationRanges(GcGeneration.Gen0), range => youngAddress >= range.Start && youngAddress < range.End);
+
+        // Request GC notifications and resume to the end of marking, before the collection completes.
+        // findroots installs the debugger's notification handler itself.
+        target.Sos("findroots -gen any");
+        target.RunToBreakpoint();
+
+        // Server GC can report the notification on a GC worker; inspect the main thread's local objects.
+        TargetExtensions.ThreadStack mainThread = Assert.Single(target.ClrstackAllThreads(),
+            thread => thread.Frames.Any(frame => frame.Function.Contains("FindRootsOlderGeneration.Program.Main", StringComparison.Ordinal)));
+        ulong osThreadId = Convert.ToUInt64(mainThread.OsThreadId, 16);
+        string debuggerThreadId = target.Sos("clrthreads").AsThreadsTable()
+            .SingleRow(row => row["OSID"].AsUInt64(Sos.Addr) == osThreadId, "the main managed thread")["DBG"].Value;
+        target.Execute(config.Host == Host.Cdb ? $"~{debuggerThreadId}s" : $"thread select {debuggerThreadId}");
+
+        SosRow thing = target.DumpStackObjects()
+            .First(row => row["Name"].Value == "FindRootsOlderGeneration.Thing");
+        ulong address = thing["Object"].AsUInt64(Sos.Addr);
+        // The unique root must include the LOH array, not just find the Thing directly on the stack.
+        SosOutput roots = target.Sos($"findroots {address:x}");
+        Assert.Equal(1, UniqueRootCount(roots));
+        roots.AssertContains("FindRootsOlderGeneration.Thing[]");
+        roots.AssertContains(arrayAddress.ToString("x"));
     }
 
     [SosTheory]
@@ -176,6 +231,8 @@ public sealed class GcInspectionTests
 
         target.Sos("dumpgen").AssertContains("Generation argument is missing");
         target.Sos("dumpgen invalid").AssertContains("invalid is not a supported generation");
+        target.Sos("dumpgen gen0 -mt").AssertContains("Required argument missing for option: '-mt'.");
+        target.Sos("dumpgen gen1 -mt zzzzz").AssertContains("Hexadecimal address expected for -mt option");
 
         DumpHeapResult markerDump = target.DumpHeap("-type ThinLockMarker");
         SosRow markerStat = markerDump.Statistics
@@ -190,6 +247,64 @@ public sealed class GcInspectionTests
             .AssertContains("ThinLockMarker");
         target.Sos($"dumpgen gen0 -mt {methodTable:x}")
             .AssertContains(marker.ToString("x"));
+    }
+
+    [SosTheory]
+    [MemberData(nameof(DumpGenMatrix))]
+    public async Task DumpGen_ReportsExactGenerationPopulations(TestConfig config)
+    {
+        using Target target = await Targets.GetTargetAsync(config);
+        target.GoToStopPoint("ready");
+
+        const string sampleType = "DotnetDumpCommands.Program+DumpSampleClass";
+        const string sampleArrayType = sampleType + "[]";
+
+        Assert.Equal(10, GenerationCount(target.Sos("dumpgen gen0"), sampleType));
+        Assert.Equal(3, GenerationCount(target.Sos("dumpgen gen1"), sampleType));
+        Assert.Equal(5, GenerationCount(target.Sos("dumpgen gen2"), sampleType));
+        Assert.Equal(1, GenerationCount(target.Sos("dumpgen loh"), sampleArrayType));
+
+        SosOutput poh = target.Sos("dumpgen poh");
+        Assert.Equal(1, GenerationCount(poh, "System.Byte[]"));
+        ulong byteArrayMethodTable = GenerationStatistics(poh)
+            .SingleRow(row => row["Class Name"].Value == "System.Byte[]", "the pinned byte array")["MT"].AsUInt64(Sos.Addr);
+        ulong pinnedArray = GenerationObjects(target.Sos($"dumpgen poh -mt {byteArrayMethodTable:x}"))
+            .SingleRow(_ => true, "the pinned byte array")["Address"].AsUInt64(Sos.Addr);
+        Assert.DoesNotContain(
+            GenerationObjects(target.Sos($"dumpgen gen2 -mt {byteArrayMethodTable:x}")),
+            row => row["Address"].AsUInt64(Sos.Addr) == pinnedArray);
+
+        SosOutput gen0 = target.Sos("dumpgen gen0 -type DotnetDumpCommands");
+        Assert.Equal(10, GenerationCount(gen0, sampleType));
+        Assert.Equal(10, TotalObjects(gen0));
+
+        ulong methodTable = GenerationStatistics(target.Sos("dumpgen gen0"))
+            .SingleRow(row => row["Class Name"].Value == sampleType, sampleType)["MT"].AsUInt64(Sos.Addr);
+        SosOutput byMethodTable = target.Sos($"dumpgen gen0 -mt {methodTable:x}");
+        Assert.Equal(10, GenerationObjects(byMethodTable).Length);
+        Assert.Equal(10, TotalObjects(byMethodTable));
+
+        Assert.Equal(0, TotalObjects(target.Sos("dumpgen gen0 -mt 1")));
+        Assert.Equal(0, TotalObjects(target.Sos("dumpgen gen0 -type NoMatchingType")));
+    }
+
+    private static SosTable GenerationStatistics(SosOutput output) => output.Table(
+        ColumnAlignment.Right("MT"), ColumnAlignment.Right("Count"), ColumnAlignment.Right("TotalSize"), "Class Name");
+
+    private static SosTable GenerationObjects(SosOutput output) => output.Table(
+        ColumnAlignment.Right("Address"), ColumnAlignment.Right("MT"), ColumnAlignment.Right("Size"));
+
+    private static int GenerationCount(SosOutput output, string typeName)
+    {
+        SosRow? row = GenerationStatistics(output).SingleOrDefault(row => row["Class Name"].Value == typeName);
+        return row is null ? 0 : row["Count"].AsInt32(Sos.Integer);
+    }
+
+    private static int TotalObjects(SosOutput output)
+    {
+        Match match = Regex.Match(output.Text, @"Total\s+([\d,]+)\s+objects");
+        Assert.True(match.Success, $"expected a dumpgen total:\n{output.Text}");
+        return int.Parse(match.Groups[1].Value.Replace(",", ""), CultureInfo.InvariantCulture);
     }
 
     private static int UniqueRootCount(SosOutput output)

@@ -201,7 +201,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         }
     }
 
-    public class CrashInfoService : ICrashInfoService
+    public partial class CrashInfoService : ICrashInfoService
     {
         /// <summary>
         /// This is a "transport" exception code required by Watson to trigger the proper analyzer/provider for bucketing
@@ -219,6 +219,12 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
         public const uint MAX_GLOBAL_ENTRY_NAME_CHARS = 32;
         public const uint DOTNET_RUNTIME_DEBUG_HEADER_COOKIE = 0x48444e44; // 'DNDH'
         public const string DOTNET_RUNTIME_DEBUG_HEADER_NAME = "DotNetRuntimeDebugHeader";
+
+        [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata, AllowTrailingCommas = true, NumberHandling = JsonNumberHandling.AllowReadingFromString)]
+        [JsonSerializable(typeof(CrashInfoJson))]
+        private sealed partial class CrashInfoJsonContext : JsonSerializerContext
+        {
+        }
 
         private sealed class CrashInfoJson
         {
@@ -416,8 +422,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             CrashInfoService crashInfoService = null;
             try
             {
-                JsonSerializerOptions options = new() { AllowTrailingCommas = true, NumberHandling = JsonNumberHandling.AllowReadingFromString };
-                CrashInfoJson crashInfo = JsonSerializer.Deserialize<CrashInfoJson>(triageBuffer, options);
+                CrashInfoJson crashInfo = JsonSerializer.Deserialize(triageBuffer, CrashInfoJsonContext.Default.CrashInfoJson);
                 if (crashInfo != null)
                 {
                     if (Version.TryParse(crashInfo.Version, out Version protocolVersion) && protocolVersion.Major >= 1)

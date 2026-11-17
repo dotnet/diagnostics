@@ -464,7 +464,7 @@ namespace SOS.Hosting {
             }
             if (item == "\\")
             {
-                int versionSize = Marshal.SizeOf(typeof(VS_FIXEDFILEINFO));
+                int versionSize = Marshal.SizeOf<VS_FIXEDFILEINFO>();
                 Write(verInfoSize, (uint)versionSize);
                 if (bufferSize < versionSize)
                 {
@@ -861,7 +861,7 @@ namespace SOS.Hosting {
             {
                 return default;
             }
-            return (T)Marshal.GetDelegateForFunctionPointer(functionAddress, typeof(T));
+            return Marshal.GetDelegateForFunctionPointer<T>(functionAddress);
         }
 
         private string GetFileName(string fileName) => Target.OperatingSystem == OSPlatform.Windows ? Path.GetFileNameWithoutExtension(fileName) : Path.GetFileName(fileName);

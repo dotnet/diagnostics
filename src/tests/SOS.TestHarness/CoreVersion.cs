@@ -38,7 +38,7 @@ public enum CoreVersion : uint
     /// <summary>.NET 11.</summary>
     Net11 = 1u << 11,
 
-    /// <summary>.NET 12 (not yet built; reserved so a test can pre-emptively opt in/out).</summary>
+    /// <summary>.NET 12.</summary>
     Net12 = 1u << 12,
 
     /// <summary>

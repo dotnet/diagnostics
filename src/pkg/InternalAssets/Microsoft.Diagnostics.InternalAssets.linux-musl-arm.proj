@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <PackageRID>linux-musl-arm</PackageRID>
+  </PropertyGroup>
+  <Import Project="Microsoft.Diagnostics.InternalAssets.props" />
+</Project>

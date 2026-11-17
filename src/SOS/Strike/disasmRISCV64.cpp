@@ -44,6 +44,11 @@ namespace RISCV64GCDump
 #endif
 
 
+LPCSTR RISCV64Machine::GetGCInfoRegisterName(unsigned int registerNumber) const
+{
+    return RISCV64GCDump::GetRegName(registerNumber);
+}
+
 void RISCV64Machine::IsReturnAddress(TADDR retAddr, TADDR* whereCalled) const
 {
     *whereCalled = 0;

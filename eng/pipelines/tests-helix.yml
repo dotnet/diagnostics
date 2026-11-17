@@ -8,6 +8,9 @@ parameters:
 - name: isOfficialBuild
   type: boolean
   default: false
+- name: dependsOnBuild
+  type: boolean
+  default: true
 
 jobs:
 - template: ${{ parameters.pipelineJobTemplate }}
@@ -35,7 +38,8 @@ jobs:
       ${{ else }}:
         'error, unsupported OS': ${{ parameters.platform.os }}
 
-    dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
+    ${{ if parameters.dependsOnBuild }}:
+      dependsOn: ${{ parameters.platform.name }}_${{ parameters.platform.arch }}_${{ parameters.configuration }}
 
     steps:
     - task: DownloadPipelineArtifact@2
@@ -59,7 +63,10 @@ jobs:
           /p:OfficialBuildId=$(Build.BuildNumber)
           /bl:$(Build.SourcesDirectory)/artifacts/log/${{ parameters.configuration }}/SendTestsToHelix.binlog
         env:
-          HelixSource: pr/dotnet/diagnostics/tests
+          ${{ if parameters.isOfficialBuild }}:
+            HelixSource: official/dotnet/diagnostics/tests
+          ${{ else }}:
+            HelixSource: pr/dotnet/diagnostics/tests
           HelixType: tests/
           HelixConfiguration: ${{ parameters.platform.rid }}_${{ parameters.configuration }}
           ${{ if eq(variables['System.TeamProject'], 'public') }}:

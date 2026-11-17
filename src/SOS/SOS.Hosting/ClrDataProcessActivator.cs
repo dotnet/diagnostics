@@ -262,8 +262,7 @@ namespace SOS.Hosting
                             Trace.TraceError("ClrDataProcessActivator: dbgshim!CLRCreateInstance export not found.");
                             return null;
                         }
-                        _clrCreateInstance =
-                            (CLRCreateInstanceDelegate)Marshal.GetDelegateForFunctionPointer(createInstance, typeof(CLRCreateInstanceDelegate));
+                        _clrCreateInstance = Marshal.GetDelegateForFunctionPointer<CLRCreateInstanceDelegate>(createInstance);
                     }
                     catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
                     {

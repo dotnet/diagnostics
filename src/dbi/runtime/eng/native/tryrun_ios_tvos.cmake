@@ -1,0 +1,16 @@
+macro(set_cache_value)
+  set(${ARGV0} ${ARGV1} CACHE STRING "Result from TRY_RUN" FORCE)
+  set(${ARGV0}__TRYRUN_OUTPUT "dummy output" CACHE STRING "Output from TRY_RUN" FORCE)
+endmacro()
+
+set_cache_value(HAVE_SCHED_GETCPU_EXITCODE 1)
+
+
+# TODO: these are taken from macOS, check these whether they're correct for iOS
+# some of them are probably not used by what we use from NativeAOT so could be reduced
+set_cache_value(HAVE_CLOCK_REALTIME_EXITCODE 0)
+set_cache_value(HAVE_CLOCK_THREAD_CPUTIME_EXITCODE 0)
+set_cache_value(HAVE_PROCFS_CTL_EXITCODE 1)
+set_cache_value(HAVE_PROCFS_STAT_EXITCODE 1)
+set_cache_value(HAVE_SCHED_GET_PRIORITY_EXITCODE 0)
+set_cache_value(HAVE_SHM_OPEN_THAT_WORKS_WELL_ENOUGH_WITH_MMAP_EXITCODE 1)

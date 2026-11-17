@@ -46,6 +46,24 @@ public sealed class CodeCommandParsingTests
     }
 
     [Fact]
+    public void ClrUPreservesStubNameWithoutIlMap()
+    {
+        ClrUResult result = new(new SosOutput("cdb", "clru -il", """
+            Normal JIT generated code
+            ILStubClass.IL_STUB_PInvoke(System.String, Int32, Double, ...)
+            Failed to get IL address map, proceeding without IL map
+            Begin 00007ffa12340000, size 10
+            00007ffa`12340000 4883ec28 sub rsp,28h
+            """));
+
+        Assert.True(result.HasNormalJitBanner);
+        Assert.Equal("ILStubClass.IL_STUB_PInvoke(System.String, Int32, Double, ...)", result.MethodName);
+        Assert.Equal(0x00007ffa12340000ul, result.Begin);
+        Assert.Equal(0x10, result.Size);
+        Assert.Single(result.Instructions);
+    }
+
+    [Fact]
     public void GcInfoParsesX86LegacyEncoding()
     {
         GcInfoResult result = new(new SosOutput("cdb", "gcinfo", """
@@ -64,5 +82,21 @@ public sealed class CodeCommandParsingTests
         Assert.Equal(2, result.Transitions.Count);
         Assert.Contains("becoming live", result.Transitions[0], StringComparison.OrdinalIgnoreCase);
         Assert.Contains("becoming dead", result.Transitions[1], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("00000017 +ecx (interior)")]
+    [InlineData("00000017 is a safepoint: +edi (interior) +sp+4 (pinned)")]
+    public void GcInfoParsesInterface18HexSizeAndQualifiedRoots(string transition)
+    {
+        GcInfoResult result = new(new SosOutput("cdb", "gcinfo", $"""
+            entry point 08755230
+            GC info 0A7596E4
+            Code size: 2a
+            {transition}
+            00000020 not interruptible
+            """));
+        Assert.Equal(0x2a, result.CodeSize);
+        Assert.Equal(new[] { transition, "00000020 not interruptible" }, result.Transitions);
     }
 }
