@@ -255,6 +255,7 @@ public sealed class GcInspectionTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint("ready");
+        using IDisposable session = target.AcquireDebuggerSession();
 
         const string sampleType = "DotnetDumpCommands.Program+DumpSampleClass";
         const string sampleArrayType = sampleType + "[]";

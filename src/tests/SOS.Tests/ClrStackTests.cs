@@ -71,6 +71,7 @@ public sealed class ClrStackTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         IReadOnlyList<SosTable> tables = target.ClrstackRegistersAllThreads();
 
@@ -142,6 +143,7 @@ public sealed class ClrStackTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(stopName);
+        using IDisposable session = target.AcquireDebuggerSession();
 
         // The objects dumpstackobjects finds by scanning stack memory.
         SosTable dsoTable = target.DumpStackObjects();

@@ -44,6 +44,7 @@ public sealed class ClrStackArgsLocalsTests
             target.GoToFirstStop();
         }
 
+        using IDisposable session = target.AcquireDebuggerSession();
         SosTable p = target.ClrstackArgsLocals(ArgsLocals.Parameters);
         SosTable l = target.ClrstackArgsLocals(ArgsLocals.Locals);
         SosTable a = target.ClrstackArgsLocals(ArgsLocals.Both);
