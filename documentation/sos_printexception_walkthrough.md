@@ -446,6 +446,7 @@ A quick rundown of some of the remaining SOS->DAC interactions in PrintException
 - Generate the exception stack trace from the DacpExceptionObjectData.StackTrace
     - Get the stack trace array size and start address with hard coded assumptions from the runtime's clrex.h.
     - Format the stack trace array. This is where SOS has direct knowledge about the StackTraceElement array from the Exception object. It makes assumptions about the layout and IP adjustment. All of this should ideally be in a DAC API.
+    - With `-lines`, SOS normally looks up the method by the frame's instruction pointer. If a minidump is missing the JIT lookup data for that address, SOS tries the saved MethodDesc's entry point to obtain the IL address map, then maps the frame's IP to a source line.
         - Call ISOSDacInterface::GetMethodDescData on the MethodDesc from StackTraceElement (pFunc).
         - Call ISOSDacInterface::GetModuleData on the module pointer in the MD.
         - Call ISOSDacInterface::GetPEFileBase on the module's PEAssembly. Returns the module base address.

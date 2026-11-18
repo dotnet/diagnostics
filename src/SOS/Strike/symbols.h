@@ -78,7 +78,8 @@ GetLineByOffset(
     ___out ULONG* pLinenum,
     __out_ecount(cchFileName) WCHAR* pwszFileName,
     ___in ULONG cchFileName,
-    ___in BOOL bAdjustOffsetForLineNumber = FALSE);
+    ___in BOOL bAdjustOffsetForLineNumber = FALSE,
+    ___in CLRDATA_ADDRESS methodDescHint = 0);
 
 // Clears the negative cache for failed symbol lookups, allowing modules
 // to be retried. Call when the symbol path changes.

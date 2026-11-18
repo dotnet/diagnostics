@@ -4682,12 +4682,13 @@ GetClrMethodInstance(
 
 //
 // Searches the IL address map for the entry containing the given native offset.
-// Fallback for older runtimes where GetILOffsetsByAddress is buggy or unsupported.
+// Fallback for older runtimes and for exception frames whose IP lookup failed.
 HRESULT
 GetILOffsetFromAddressMap(
     ___in IXCLRDataMethodInstance* Method,
     ___in ULONG64 nativeOffset,
-    ___out PULONG32 MethodOffs)
+    ___out PULONG32 MethodOffs,
+    ___in const DacpCodeHeaderData* codeHeader = nullptr)
 {
     HRESULT Status;
     CLRDATA_IL_ADDRESS_MAP MapLocal[16];
@@ -4728,9 +4729,9 @@ GetILOffsetFromAddressMap(
     }
 
     // Search for the entry whose native address range contains nativeOffset.
-    // The last map entry sometimes has a bogus endAddress (e.g., wrapping back to
-    // the method start). Handle this by treating any entry where endAddress <=
-    // startAddress as extending to infinity (the end of the method code).
+    // The last entry can have an endAddress that wraps back to the method start.
+    // When the method was looked up by its entry rather than the frame IP, do
+    // not use an open-ended range without a known end of the method's code.
     Status = E_FAIL;
     for (size_t i = 0; i < MapNeeded; i++)
     {
@@ -4742,8 +4743,11 @@ GetILOffsetFromAddressMap(
         }
         else
         {
-            // Malformed/last entry: endAddress <= startAddress. Treat as open-ended.
-            inRange = (Map[i].startAddress <= nativeOffset);
+            inRange = Map[i].startAddress <= nativeOffset &&
+                (codeHeader == nullptr ||
+                 (i == MapNeeded - 1 &&
+                  nativeOffset >= codeHeader->MethodStart &&
+                  nativeOffset - codeHeader->MethodStart < codeHeader->HotRegionSize));
         }
 
         if (inRange)
@@ -4829,46 +4833,77 @@ GetLastMethodIlOffset(
 }
 
 //
-// Convert a native offset (possibly already associated with a managed
-// method identified by the passed in IXCLRDataMethodInstance) to a
-// triplet (ImageInfo, MethodToken, MethodOffset) that can be used to
-// represent an "IL offset".
+// Convert a native offset to a managed module, method token and IL offset.
 HRESULT
 ConvertNativeToIlOffset(
     ___in ULONG64 nativeOffset,
     ___in BOOL bAdjustOffsetForLineNumber,
     ___out IXCLRDataModule** ppModule,
     ___out mdMethodDef* methodToken,
-    ___out PULONG32 methodOffs)
+    ___out PULONG32 methodOffs,
+    ___in CLRDATA_ADDRESS methodDescHint)
 {
     ToRelease<IXCLRDataMethodInstance> pMethodInst(NULL);
-    HRESULT Status;
+    HRESULT Status = GetClrMethodInstance(nativeOffset, &pMethodInst);
+    CLRDATA_ADDRESS methodEntry = 0;
+    if (Status != S_OK && methodDescHint != 0)
+    {
+        // A minidump can contain the JIT lookup data for the method entry but
+        // omit it for the saved IP of an unwound exception frame.
+        DacpMethodDescData methodData;
+        if (methodData.Request(g_sos, methodDescHint) == S_OK &&
+            methodData.bHasNativeCode && methodData.NativeCodeAddr != 0)
+        {
+            pMethodInst.Release();
+            Status = GetClrMethodInstance(methodData.NativeCodeAddr, &pMethodInst);
+            methodEntry = methodData.NativeCodeAddr;
+        }
+    }
 
-    if ((Status = GetClrMethodInstance(nativeOffset, &pMethodInst)) != S_OK)
+    if (Status != S_OK)
     {
         ExtDbgOut("ConvertNativeToIlOffset(%p): GetClrMethodInstance FAILED %08x\n", nativeOffset, Status);
         return Status;
     }
 
-    if (bAdjustOffsetForLineNumber)
+    CLRDATA_ADDRESS startAddr = 0;
+    if (bAdjustOffsetForLineNumber || methodEntry != 0)
     {
-        CLRDATA_ADDRESS startAddr;
-        if (pMethodInst->GetRepresentativeEntryAddress(&startAddr) == S_OK)
+        Status = pMethodInst->GetRepresentativeEntryAddress(&startAddr);
+        if (methodEntry != 0 && (Status != S_OK || startAddr != methodEntry))
         {
-            if (nativeOffset >= (startAddr + g_targetMachine->StackWalkIPAdjustOffset()))
-            {
-                nativeOffset -= g_targetMachine->StackWalkIPAdjustOffset();
-            }
+            // The address map may belong to a different tier of the method.
+            return E_NOINTERFACE;
+        }
+        if (bAdjustOffsetForLineNumber && Status == S_OK &&
+            nativeOffset >= startAddr + g_targetMachine->StackWalkIPAdjustOffset())
+        {
+            nativeOffset -= g_targetMachine->StackWalkIPAdjustOffset();
         }
     }
 
-    // For runtimes prior to .NET 5.0, GetILOffsetsByAddress can return S_OK with incorrect IL
-    // offsets (the bug we're working around for issue #794). For those runtimes, walk the IL
-    // address map ourselves. On .NET 5.0+ GetILOffsetsByAddress is correct and is preferred,
-    // because the raw map can ambiguously place an IP at the previous statement when an IP
-    // sits exactly on a sequence-point boundary.
-    if (!IsRuntimeVersionAtLeast(5))
+    if (methodEntry != 0)
     {
+        DacpCodeHeaderData codeHeader;
+        if (codeHeader.Request(g_sos, methodEntry) != S_OK)
+        {
+            codeHeader.HotRegionSize = 0;
+        }
+        else if (codeHeader.MethodDescPtr != methodDescHint || codeHeader.MethodStart != methodEntry)
+        {
+            return E_NOINTERFACE;
+        }
+
+        // GetILOffsetsByAddress would look up the saved IP again. Walk the map
+        // obtained from the method entry instead, but still map the frame IP.
+        if ((Status = GetILOffsetFromAddressMap(pMethodInst, nativeOffset, methodOffs, &codeHeader)) != S_OK)
+        {
+            return Status;
+        }
+    }
+    else if (!IsRuntimeVersionAtLeast(5))
+    {
+        // Before .NET 5, GetILOffsetsByAddress can return incorrect IL offsets (#794).
         Status = GetILOffsetFromAddressMap(pMethodInst, nativeOffset, methodOffs);
         if (Status != S_OK)
         {
@@ -4918,7 +4953,8 @@ GetLineByOffset(
     ___out ULONG *pLinenum,
     __out_ecount(cchFileName) WCHAR* pwszFileName,
     ___in ULONG cchFileName,
-    ___in BOOL bAdjustOffsetForLineNumber /* = FALSE */)
+    ___in BOOL bAdjustOffsetForLineNumber,
+    ___in CLRDATA_ADDRESS methodDescHint)
 {
     HRESULT status = S_OK;
     ULONG32 methodToken;
@@ -4926,11 +4962,11 @@ GetLineByOffset(
 
     // Find the image, method token and IL offset that correspond to "nativeOffset"
     ToRelease<IXCLRDataModule> pModule(NULL);
-    status = ConvertNativeToIlOffset(nativeOffset, bAdjustOffsetForLineNumber, &pModule, &methodToken, &methodOffs);
-    if (FAILED(status))
+    status = ConvertNativeToIlOffset(nativeOffset, bAdjustOffsetForLineNumber, &pModule, &methodToken, &methodOffs, methodDescHint);
+    if (status != S_OK)
     {
         ExtDbgOut("GetLineByOffset(%p): ConvertNativeToIlOffset FAILED %08x\n", nativeOffset, status);
-        return status;
+        return FAILED(status) ? status : E_NOINTERFACE;
     }
     ToRelease<IMetaDataImport> pMDImport(NULL);
     status = pModule->QueryInterface(IID_IMetaDataImport, (LPVOID *) &pMDImport);

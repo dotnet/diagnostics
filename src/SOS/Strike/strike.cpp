@@ -2669,6 +2669,8 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
         {
             WCHAR filename[MAX_LONGPATH] = W("");
             ULONG linenum = 0;
+            // On ARM64 the runtime can already have moved the saved IP to the call site.
+            BOOL adjustIP = (!bAsync || i > 0) && !(IsDbgTargetArm64() && (ste.flags & STEF_IP_ADJUSTED));
             if (bLineNumbers &&
                 // To get the source line number of the actual code that threw an exception, the IP needs
                 // to be adjusted in certain cases.
@@ -2691,7 +2693,7 @@ size_t FormatGeneratedException (DWORD_PTR dataPtr,
                 // The unmodified IP is displayed (above by DumpMDInfoBuffer) which points after the exception in most
                 // cases. This means that the printed IP and the printed line number often will not map to one another
                 // and this is intentional.
-                SUCCEEDED(GetLineByOffset(TO_CDADDR(ste.ip), &linenum, filename, ARRAY_SIZE(filename), !bAsync || i > 0)))
+                SUCCEEDED(GetLineByOffset(TO_CDADDR(ste.ip), &linenum, filename, ARRAY_SIZE(filename), adjustIP, TO_CDADDR(ste.pFunc))))
             {
                 swprintf_s(wszLineBuffer, ARRAY_SIZE(wszLineBuffer), W("    %s [%s @ %d]\n"), so.String(), filename, linenum);
             }
