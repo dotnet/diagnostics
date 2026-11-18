@@ -173,11 +173,13 @@ jobs:
         displayName: Gather test artifacts for publish
         inputs:
           SourceFolder: '$(Build.SourcesDirectory)/artifacts'
-          # Exclude loose self-contained publish intermediates, then re-include the final bundles.
+          # Exclude loose self-contained publish intermediates, then re-include final debuggee
+          # bundles and RID-specific tool publish outputs.
           Contents: |
             bin/**
             !bin/**/${{ parameters.platform.rid }}/**
             !!bin/**/${{ parameters.platform.rid }}/publish/**
+            !!bin/**/publish/${{ parameters.platform.rid }}/**
             test/**
           TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
 
