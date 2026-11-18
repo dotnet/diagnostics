@@ -59,6 +59,7 @@ public sealed class ClrThreadsTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         SosOutput clrthreads = target.Sos("clrthreads");
 
