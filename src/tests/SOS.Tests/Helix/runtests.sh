@@ -110,7 +110,7 @@ test_dll="${test_dlls[0]}"
 max_parallel_threads=""
 if [[ "$(uname -s)" == "Darwin" ]]; then
   max_parallel_threads=2
-elif [[ "$rid" == linux-musl-* || "$rid" == linux-arm64 ]]; then
+elif [[ "$rid" == linux-musl-* ]]; then
   max_parallel_threads=1
 fi
 
