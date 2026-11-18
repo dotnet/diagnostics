@@ -167,7 +167,7 @@ jobs:
             targetPath: '$(Build.ArtifactStagingDirectory)/artifacts'
             artifactName: Build_$(_PhaseName)
 
-    # Publish the complete build outputs consumed by normal-test and SOS jobs.
+    # Publish the build outputs consumed by normal-test and SOS jobs.
     - ${{ if eq(parameters.testOnly, false) }}:
       - task: CopyFiles@2
         displayName: Gather test artifacts for publish
@@ -175,8 +175,17 @@ jobs:
           SourceFolder: '$(Build.SourcesDirectory)/artifacts'
           Contents: |
             bin/**
-            obj/**
+            !bin/**/${{ parameters.platform.rid }}/**
             test/**
+          TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
+
+      # Self-contained debuggees leave a loose RID-specific intermediate beside the final
+      # single-file publish output. Tests consume only the publish directory.
+      - task: CopyFiles@2
+        displayName: Gather RID-specific test artifacts for publish
+        inputs:
+          SourceFolder: '$(Build.SourcesDirectory)/artifacts'
+          Contents: 'bin/**/${{ parameters.platform.rid }}/publish/**'
           TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
 
       - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
