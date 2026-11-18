@@ -188,11 +188,13 @@ namespace Microsoft.FileFormats.Tests
         {
             LayoutManager layouts = new LayoutManager().AddPrimitives()
                 .RegisterTStruct<RegisteredScenarios.Ordered>();
-            Assert.Throws<ArgumentException>(() => layouts.RegisterTStruct<RegisteredScenarios.Ordered>());
             ILayout custom = new TLayout(typeof(RegisteredScenarios.Ordered), 8, 4, 8, Array.Empty<IField>());
+            layouts.AddLayout(custom);
             Assert.Throws<ArgumentException>(() => layouts.AddLayout(custom));
+            Assert.Throws<ArgumentException>(() => layouts.RegisterTStruct<RegisteredScenarios.Ordered>());
             LayoutManager existing = new();
             existing.AddLayout(custom);
+            existing.RegisterTStruct<RegisteredScenarios.Ordered>();
             Assert.Throws<ArgumentException>(() => existing.RegisterTStruct<RegisteredScenarios.Ordered>());
             layouts.RegisterArray<byte>();
             Assert.Throws<ArgumentException>(() => layouts.RegisterArray<byte>());
@@ -211,6 +213,34 @@ namespace Microsoft.FileFormats.Tests
             Assert.Same(layout, layouts.GetLayout<RegisteredScenarios.Ordered>());
             Assert.Same(layouts.GetArrayLayoutForElement<byte>(3), layouts.GetArrayLayoutForElement<byte>(3));
             Assert.Throws<ArgumentException>(() => layouts.RegisterTStruct<RegisteredScenarios.Ordered>());
+        }
+
+        [Fact]
+        public void PreserveProviderRegistrationOrder()
+        {
+            ILayout custom = new TLayout(typeof(ImageFileHeader), 1, 1, 1, Array.Empty<IField>());
+            LayoutManager providerFirst = new();
+            providerFirst.AddLayoutProvider((type, manager) => type == typeof(ImageFileHeader) ? custom : null);
+            providerFirst.AddPETypes(false);
+            Assert.Same(custom, providerFirst.GetLayout<ImageFileHeader>());
+
+            LayoutManager factoryFirst = new LayoutManager().AddPETypes(false);
+            factoryFirst.AddLayoutProvider((type, manager) => type == typeof(ImageFileHeader) ? custom : null);
+            Assert.NotSame(custom, factoryFirst.GetLayout<ImageFileHeader>());
+        }
+
+        [Fact]
+        public void ExplicitLayoutsOverrideRegisteredFactories()
+        {
+            ILayout custom = new TLayout(typeof(ImageFileHeader), 1, 1, 1, Array.Empty<IField>());
+            LayoutManager layoutFirst = new();
+            layoutFirst.AddLayout(custom);
+            layoutFirst.AddPETypes(false);
+            Assert.Same(custom, layoutFirst.GetLayout<ImageFileHeader>());
+
+            LayoutManager factoryFirst = new LayoutManager().AddPETypes(false);
+            factoryFirst.AddLayout(custom);
+            Assert.Same(custom, factoryFirst.GetLayout<ImageFileHeader>());
         }
 
         [Fact]

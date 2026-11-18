@@ -20,17 +20,14 @@ namespace Microsoft.FileFormats
         private List<Func<Type, LayoutManager, ILayout>> _layoutProviders = new();
         private Dictionary<Tuple<Type, uint>, ILayout> _legacyArrayLayouts = new();
         private Dictionary<Tuple<Type, uint>, ILayout> _typedArrayLayouts = new();
-        private readonly Dictionary<Type, Func<LayoutManager, ILayout>> _layoutFactories = new();
+        private readonly HashSet<Type> _registeredLayoutFactoryTypes = new();
         private readonly Dictionary<Type, Func<LayoutManager, uint, ILayout>> _arrayFactories = new();
 
         public LayoutManager() { }
 
         public void AddLayout(ILayout layout)
         {
-            if (_layoutFactories.ContainsKey(layout.Type))
-            {
-                throw new ArgumentException("A layout is already registered for " + layout.Type.FullName, nameof(layout));
-            }
+            // Explicit layouts are resolved before registered factories and providers.
             _layouts.Add(layout.Type, layout);
         }
 
@@ -112,11 +109,12 @@ namespace Microsoft.FileFormats
 
         internal void RegisterLayoutFactory(Type type, Func<LayoutManager, ILayout> factory)
         {
-            if (_layouts.ContainsKey(type))
+            if (!_registeredLayoutFactoryTypes.Add(type))
             {
-                throw new ArgumentException("A layout already exists for " + type.FullName, nameof(type));
+                throw new ArgumentException("A layout factory is already registered for " + type.FullName, nameof(type));
             }
-            _layoutFactories.Add(type, factory);
+            // Factories participate in the same registration order as custom providers.
+            _layoutProviders.Add((requestedType, manager) => requestedType == type ? factory(manager) : null);
         }
 
         public ILayout GetLayout<T>()
@@ -129,19 +127,12 @@ namespace Microsoft.FileFormats
             ILayout layout;
             if (!_layouts.TryGetValue(t, out layout))
             {
-                if (_layoutFactories.TryGetValue(t, out Func<LayoutManager, ILayout> factory))
+                foreach (Func<Type, LayoutManager, ILayout> provider in _layoutProviders)
                 {
-                    layout = factory(this);
-                }
-                else
-                {
-                    foreach (Func<Type, LayoutManager, ILayout> provider in _layoutProviders)
+                    layout = provider(t, this);
+                    if (layout != null)
                     {
-                        layout = provider(t, this);
-                        if (layout != null)
-                        {
-                            break;
-                        }
+                        break;
                     }
                 }
                 if (layout == null)
