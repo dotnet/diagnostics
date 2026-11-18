@@ -173,19 +173,12 @@ jobs:
         displayName: Gather test artifacts for publish
         inputs:
           SourceFolder: '$(Build.SourcesDirectory)/artifacts'
+          # Exclude loose self-contained publish intermediates, then re-include the final bundles.
           Contents: |
             bin/**
             !bin/**/${{ parameters.platform.rid }}/**
+            !!bin/**/${{ parameters.platform.rid }}/publish/**
             test/**
-          TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
-
-      # Self-contained debuggees leave a loose RID-specific intermediate beside the final
-      # single-file publish output. Tests consume only the publish directory.
-      - task: CopyFiles@2
-        displayName: Gather RID-specific test artifacts for publish
-        inputs:
-          SourceFolder: '$(Build.SourcesDirectory)/artifacts'
-          Contents: 'bin/**/${{ parameters.platform.rid }}/publish/**'
           TargetFolder: $(Build.ArtifactStagingDirectory)/testartifacts
 
       - template: /eng/pipelines/publish-pipeline-artifact-shim.yml@self
