@@ -52,10 +52,9 @@ namespace SOS.Extensions
         /// </summary>
         static HostServices()
         {
-            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
-            {
-                AssemblyResolver.Enable();
-            }
+#if NETFRAMEWORK
+            AssemblyResolver.Enable();
+#endif
             DiagnosticLoggingService.Initialize();
         }
 

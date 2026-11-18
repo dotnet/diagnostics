@@ -42,6 +42,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 return false;
             }
+            RegisterLayout(reader.LayoutManager);
 
             try
             {
@@ -53,6 +54,12 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             }
 
             return true;
+        }
+
+        internal static void RegisterLayout(LayoutManager layouts)
+        {
+            layouts.TryRegisterArray<byte>();
+            layouts.TryRegisterTStruct<SpecialDiagInfoHeader>();
         }
 
         public static ulong GetAddress(IServiceProvider services)

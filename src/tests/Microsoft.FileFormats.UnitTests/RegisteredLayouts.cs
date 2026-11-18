@@ -202,6 +202,16 @@ namespace Microsoft.FileFormats.Tests
         }
 
         [Fact]
+        public void TryRegistrationsAreIdempotent()
+        {
+            LayoutManager layouts = new LayoutManager().AddPrimitives();
+            Assert.True(layouts.TryRegisterTStruct<RegisteredScenarios.Ordered>());
+            Assert.False(layouts.TryRegisterTStruct<RegisteredScenarios.Ordered>());
+            Assert.True(layouts.TryRegisterArray<byte>());
+            Assert.False(layouts.TryRegisterArray<byte>());
+        }
+
+        [Fact]
         public void PreferRegistrationsAndCacheLayouts()
         {
             LayoutManager layouts = new LayoutManager().AddPrimitives()

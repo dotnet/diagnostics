@@ -28,6 +28,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
             {
                 return false;
             }
+            RegisterLayout(reader.LayoutManager);
 
             try
             {
@@ -40,5 +41,7 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
             return true;
         }
+
+        internal static void RegisterLayout(LayoutManager layouts) => layouts.TryRegisterTStruct<ClrEngineMetrics>();
     }
 }

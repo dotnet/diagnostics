@@ -85,8 +85,23 @@ namespace Microsoft.FileFormats
         /// <summary>Registers typed allocation for fixed array fields whose elements have a layout.</summary>
         public LayoutManager RegisterArray<T>()
         {
-            _arrayFactories.Add(typeof(T[]), (manager, count) => manager.CreateArrayLayout<T>(count));
+            if (!TryRegisterArray<T>())
+            {
+                throw new ArgumentException("An array layout is already registered for " + typeof(T).FullName);
+            }
             return this;
+        }
+
+        /// <summary>Attempts to register typed allocation for fixed array fields whose elements have a layout.</summary>
+        public bool TryRegisterArray<T>()
+        {
+            Type arrayType = typeof(T[]);
+            if (_arrayFactories.ContainsKey(arrayType))
+            {
+                return false;
+            }
+            _arrayFactories.Add(arrayType, (manager, count) => manager.CreateArrayLayout<T>(count));
+            return true;
         }
 
         private ILayout CreateArrayLayout<T>(uint count)
@@ -111,11 +126,24 @@ namespace Microsoft.FileFormats
 
         internal void RegisterLayoutFactory(Type type, Func<LayoutManager, ILayout> factory)
         {
-            if (_layouts.ContainsKey(type))
+            if (!TryRegisterLayoutFactory(type, factory))
             {
                 throw new ArgumentException("A layout already exists for " + type.FullName, nameof(type));
             }
+        }
+
+        internal bool TryRegisterLayoutFactory(Type type, Func<LayoutManager, ILayout> factory)
+        {
+            if (_layouts.ContainsKey(type))
+            {
+                return false;
+            }
+            if (_layoutFactories.ContainsKey(type))
+            {
+                return false;
+            }
             _layoutFactories.Add(type, factory);
+            return true;
         }
 
         public ILayout GetLayout<T>()

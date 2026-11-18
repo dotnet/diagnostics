@@ -127,13 +127,23 @@ namespace Microsoft.FileFormats
         public static LayoutManager RegisterTStruct<[DynamicallyAccessedMembers(StructMembers)] T>(this LayoutManager layouts, IEnumerable<string> enabledDefines = null)
             where T : TStruct
         {
+            if (!TryRegisterTStruct<T>(layouts, enabledDefines))
+            {
+                throw new ArgumentException("A layout already exists for " + typeof(T).FullName, nameof(T));
+            }
+            return layouts;
+        }
+
+        /// <summary>Attempts to register a structure's declared instance fields in metadata order.</summary>
+        public static bool TryRegisterTStruct<[DynamicallyAccessedMembers(StructMembers)] T>(this LayoutManager layouts, IEnumerable<string> enabledDefines = null)
+            where T : TStruct
+        {
             FieldInfo[] fields = typeof(T).GetFields(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 #if !NET7_0_OR_GREATER
             fields = fields.OrderBy(field => field.MetadataToken).ToArray();
 #endif
             string[] defines = enabledDefines?.ToArray() ?? Array.Empty<string>();
-            layouts.RegisterLayoutFactory(typeof(T), manager => CreateRegisteredTStructLayout<T>(manager, fields, defines));
-            return layouts;
+            return layouts.TryRegisterLayoutFactory(typeof(T), manager => CreateRegisteredTStructLayout<T>(manager, fields, defines));
         }
 
         private static ILayout CreateRegisteredTStructLayout<[DynamicallyAccessedMembers(StructMembers)] T>(LayoutManager layouts, FieldInfo[] fields, string[] defines)

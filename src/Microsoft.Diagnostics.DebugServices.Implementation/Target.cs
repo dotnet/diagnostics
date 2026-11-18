@@ -129,9 +129,7 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
                                             .AddPrimitives()
                                             .AddEnumTypes()
                                             .AddSizeT(memoryService.PointerSize)
-                                            .AddPointerTypes()
-                                            .AddNullTerminatedString()
-                                            .AddTStructTypes();
+                                            .AddNullTerminatedString();
             return new Reader(new StreamAddressSpace(stream), layoutManager);
         }
 

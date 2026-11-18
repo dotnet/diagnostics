@@ -58,10 +58,14 @@ namespace Microsoft.Diagnostics.ExtensionCommands.Output
         }
 
         internal static Column ForEnum<TEnum>()
-            where TEnum : struct
+            where TEnum : struct, Enum
         {
             int len = 0;
+#if NET8_0_OR_GREATER
+            foreach (TEnum t in Enum.GetValues<TEnum>())
+#else
             foreach (TEnum t in Enum.GetValues(typeof(TEnum)))
+#endif
             {
                 len = Math.Max(len, t.ToString().Length);
             }
