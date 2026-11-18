@@ -22,8 +22,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [InlineData(0x35UL, 2)]
         public void PublicSymbolLookupUsesOrdinaryDisplacement(ulong offset, int nullTerminators)
         {
-            IDebugAdvanced2 advanced = CreateAdvanced(_ => PublicName, nullTerminators);
-            IDebugSymbols3 symbols = CreateSymbols(SymbolAddress + offset, offset);
+            DebuggerServices.IDebugAdvancedOperations advanced = CreateAdvanced(_ => PublicName, nullTerminators);
+            DebuggerServices.IDebugSymbolsOperations symbols = CreateSymbols(SymbolAddress + offset, offset);
             DbgEngModuleSymbols moduleSymbols = new(advanced, symbols);
 
             HResult hr = moduleSymbols.GetSymbolByOffset(SymbolAddress + offset, out string name, out ulong displacement);
@@ -37,12 +37,15 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         public void ExportLookupRetriesAtSymbolBase()
         {
             List<ulong> addresses = new();
-            IDebugAdvanced2 advanced = CreateAdvanced(address => {
+            DebuggerServices.IDebugAdvancedOperations advanced = CreateAdvanced(address => {
                 addresses.Add(address);
                 return address == SymbolAddress ? PublicName : string.Empty;
             });
             int ordinaryLookups = 0;
-            IDebugSymbols3 symbols = CreateSymbols(SymbolAddress + 0x35, 0x35, onLookup: () => ordinaryLookups++);
+            DebuggerServices.IDebugSymbolsOperations symbols = CreateSymbols(
+                SymbolAddress + 0x35,
+                0x35,
+                onLookup: () => ordinaryLookups++);
             DbgEngModuleSymbols moduleSymbols = new(advanced, symbols);
 
             HResult hr = moduleSymbols.GetSymbolByOffset(SymbolAddress + 0x35, out string name, out ulong displacement);
@@ -60,8 +63,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [InlineData(HResult.E_FAIL)]
         public void OrdinaryLookupFailureDoesNotReturnAPartialResult(int result)
         {
-            IDebugAdvanced2 advanced = CreateAdvanced(_ => PublicName);
-            IDebugSymbols3 symbols = CreateSymbols(SymbolAddress + 1, 1, lookupResult: result);
+            DebuggerServices.IDebugAdvancedOperations advanced = CreateAdvanced(_ => PublicName);
+            DebuggerServices.IDebugSymbolsOperations symbols = CreateSymbols(SymbolAddress + 1, 1, lookupResult: result);
             DbgEngModuleSymbols moduleSymbols = new(advanced, symbols);
 
             HResult hr = moduleSymbols.GetSymbolByOffset(SymbolAddress + 1, out string name, out ulong displacement);
@@ -74,12 +77,13 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Fact]
         public void PublicNameLookupFailureDoesNotPerformOrdinaryLookup()
         {
-            IDebugAdvanced2 advanced = CreateProxy<IDebugAdvanced2>((_, arguments) => {
+            IDebugAdvanced2 advancedProxy = CreateProxy<IDebugAdvanced2>((_, arguments) => {
                 arguments[5] = 0;
                 arguments[8] = 0;
                 return (int)HResult.E_FAIL;
             });
-            IDebugSymbols3 symbols = CreateSymbols(SymbolAddress, 0,
+            DebuggerServices.IDebugAdvancedOperations advanced = new DebugAdvancedOperations(advancedProxy);
+            DebuggerServices.IDebugSymbolsOperations symbols = CreateSymbols(SymbolAddress, 0,
                 onLookup: () => throw new InvalidOperationException("Unexpected ordinary lookup."));
             DbgEngModuleSymbols moduleSymbols = new(advanced, symbols);
 
@@ -93,8 +97,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Fact]
         public void InvalidOrdinaryDisplacementDoesNotUnderflowSymbolBase()
         {
-            IDebugAdvanced2 advanced = CreateAdvanced(_ => string.Empty);
-            IDebugSymbols3 symbols = CreateSymbols(SymbolAddress, SymbolAddress + 1);
+            DebuggerServices.IDebugAdvancedOperations advanced = CreateAdvanced(_ => string.Empty);
+            DebuggerServices.IDebugSymbolsOperations symbols = CreateSymbols(SymbolAddress, SymbolAddress + 1);
             DbgEngModuleSymbols moduleSymbols = new(advanced, symbols);
 
             HResult hr = moduleSymbols.GetSymbolByOffset(SymbolAddress, out string name, out ulong displacement);
@@ -107,8 +111,8 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
         [Fact]
         public void EmptyPublicNameAfterExportRetryDoesNotReturnAPartialResult()
         {
-            IDebugAdvanced2 advanced = CreateAdvanced(_ => string.Empty);
-            IDebugSymbols3 symbols = CreateSymbols(SymbolAddress + 0x35, 0x35);
+            DebuggerServices.IDebugAdvancedOperations advanced = CreateAdvanced(_ => string.Empty);
+            DebuggerServices.IDebugSymbolsOperations symbols = CreateSymbols(SymbolAddress + 0x35, 0x35);
             DbgEngModuleSymbols moduleSymbols = new(advanced, symbols);
 
             HResult hr = moduleSymbols.GetSymbolByOffset(SymbolAddress + 0x35, out string name, out ulong displacement);
@@ -118,9 +122,9 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             Assert.Equal(0UL, displacement);
         }
 
-        private static IDebugAdvanced2 CreateAdvanced(Func<ulong, string> getName, int nullTerminators = 2)
+        private static DebuggerServices.IDebugAdvancedOperations CreateAdvanced(Func<ulong, string> getName, int nullTerminators = 2)
         {
-            return CreateProxy<IDebugAdvanced2>((method, arguments) => {
+            IDebugAdvanced2 proxy = CreateProxy<IDebugAdvanced2>((method, arguments) => {
                 Assert.Equal(nameof(IDebugAdvanced2.GetSymbolInformation), method.Name);
                 Assert.Equal(DEBUG_SYMINFO.GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE, arguments[0]);
                 Assert.Equal(10U, arguments[2]);
@@ -135,11 +139,16 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 }
                 return 1;
             });
+            return new DebugAdvancedOperations(proxy);
         }
 
-        private static IDebugSymbols3 CreateSymbols(ulong expectedAddress, ulong displacement, int lookupResult = 0, Action onLookup = null)
+        private static DebuggerServices.IDebugSymbolsOperations CreateSymbols(
+            ulong expectedAddress,
+            ulong displacement,
+            int lookupResult = 0,
+            Action onLookup = null)
         {
-            return CreateProxy<IDebugSymbols3>((method, arguments) => {
+            IDebugSymbols3 proxy = CreateProxy<IDebugSymbols3>((method, arguments) => {
                 Assert.Equal(nameof(IDebugSymbols3.GetNameByOffsetWide), method.Name);
                 Assert.Equal(expectedAddress, arguments[0]);
                 Assert.Null(arguments[1]);
@@ -149,6 +158,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
                 arguments[4] = displacement;
                 return lookupResult;
             });
+            return new DebugSymbolsOperations(proxy);
         }
 
         private static T CreateProxy<T>(Func<MethodInfo, object[], object> handler) where T : class
@@ -163,6 +173,32 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             public Func<MethodInfo, object[], object> Handler { get; set; }
 
             protected override object Invoke(MethodInfo targetMethod, object[] args) => Handler(targetMethod, args);
+        }
+
+        private sealed class DebugAdvancedOperations : DebuggerServices.IDebugAdvancedOperations
+        {
+            private readonly IDebugAdvanced2 _advanced;
+
+            public DebugAdvancedOperations(IDebugAdvanced2 advanced)
+            {
+                _advanced = advanced;
+            }
+
+            public HResult GetSymbolInformation(DEBUG_SYMINFO which, ulong arg64, uint arg32, byte[] buffer, out int infoSize) =>
+                _advanced.GetSymbolInformation(which, arg64, arg32, buffer, buffer?.Length ?? 0, out infoSize, null, 0, out _);
+        }
+
+        private sealed class DebugSymbolsOperations : DebuggerServices.IDebugSymbolsOperations
+        {
+            private readonly IDebugSymbols3 _symbols;
+
+            public DebugSymbolsOperations(IDebugSymbols3 symbols)
+            {
+                _symbols = symbols;
+            }
+
+            public HResult GetNameByOffsetWide(ulong offset, out ulong displacement) =>
+                _symbols.GetNameByOffsetWide(offset, null, 0, out _, out displacement);
         }
     }
 }
