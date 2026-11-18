@@ -314,6 +314,22 @@ namespace Microsoft.FileFormats.Tests
         }
 
         [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void GenericElfPointersAreRegistered(bool wide)
+        {
+            LayoutManager layouts = new LayoutManager().AddELFTypes(false, wide);
+            ILayout fileOffset = layouts.GetLayout<FileOffset<uint>>();
+            ILayout virtualAddress = layouts.GetLayout<VirtualAddress<uint>>();
+            Assert.Equal(wide ? 8u : 4u, fileOffset.Size);
+            Assert.Equal(fileOffset.Size, virtualAddress.Size);
+
+            MemoryBufferAddressSpace source = new(new byte[checked((int)fileOffset.Size)]);
+            Assert.IsType<FileOffset<uint>>(fileOffset.Read(source, 0));
+            Assert.IsType<VirtualAddress<uint>>(virtualAddress.Read(source, 0));
+        }
+
+        [Theory]
         [InlineData("PE", false, false)]
         [InlineData("PE", false, true)]
         [InlineData("ELF", false, false)]

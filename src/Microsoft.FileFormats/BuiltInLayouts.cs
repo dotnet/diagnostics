@@ -39,6 +39,8 @@ namespace Microsoft.FileFormats
                 .RegisterArray<byte>()
                 .RegisterPointer<FileOffset, byte, SizeT>()
                 .RegisterPointer<VirtualAddress, byte, SizeT>()
+                .RegisterPointer<FileOffset<uint>, uint, SizeT>()
+                .RegisterPointer<VirtualAddress<uint>, uint, SizeT>()
                 .RegisterTStruct<ELFHeaderIdent>()
                 .RegisterTStruct<ELFHeader>()
                 .RegisterTStruct<ELFProgramHeader>(enabledDefines: defines)

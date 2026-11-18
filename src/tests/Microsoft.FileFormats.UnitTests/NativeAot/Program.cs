@@ -82,10 +82,10 @@ namespace Microsoft.FileFormats.Tests
         private static void VerifyLayouts(LayoutManager layouts)
         {
             // Enumerate registrations without Assembly.GetTypes, which cannot guarantee complete metadata under trimming.
-            FieldInfo registry = typeof(LayoutManager).GetField("_layoutFactories", BindingFlags.Instance | BindingFlags.NonPublic)
+            FieldInfo registry = typeof(LayoutManager).GetField("_registeredLayoutFactoryTypes", BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? throw new InvalidOperationException("Layout factory registry was not found.");
-            Dictionary<Type, Func<LayoutManager, ILayout>> factories = (Dictionary<Type, Func<LayoutManager, ILayout>>)registry.GetValue(layouts);
-            foreach (Type type in factories.Keys)
+            HashSet<Type> registeredTypes = (HashSet<Type>)registry.GetValue(layouts);
+            foreach (Type type in registeredTypes)
             {
                 ILayout layout = layouts.GetLayout(type);
                 object instance = layout.Read(new MemoryBufferAddressSpace(new byte[checked((int)layout.Size)]), 0);
