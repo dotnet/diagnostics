@@ -177,6 +177,13 @@ public static class RepoLayout
 
     private static string HelixDotnetRoot()
     {
+        // Set by runtests.sh when a private runtime is overlaid onto a writable copy of the dotnet root.
+        string? overrideRoot = Environment.GetEnvironmentVariable("SOSHARNESS_DOTNET_ROOT");
+        if (!string.IsNullOrEmpty(overrideRoot))
+        {
+            return Path.GetFullPath(overrideRoot);
+        }
+
         string? correlationPayload = Environment.GetEnvironmentVariable("HELIX_CORRELATION_PAYLOAD");
         if (string.IsNullOrEmpty(correlationPayload))
         {
