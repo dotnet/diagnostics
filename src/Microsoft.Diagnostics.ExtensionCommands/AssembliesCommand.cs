@@ -12,8 +12,13 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "assemblies", Aliases = new[] { "clrmodules" }, Help = "Lists the managed assemblies in the process.")]
     public class AssembliesCommand : ClrRuntimeCommandBase
     {
-        [ServiceImport]
-        public IModuleService ModuleService { get; set; }
+        public AssembliesCommand(IServiceProvider services, IModuleService moduleService)
+            : base(services)
+        {
+            ModuleService = moduleService;
+        }
+
+        public IModuleService ModuleService { get; }
 
         [Option(Name = "--name", Aliases = new string[] { "-n" }, Help = "RegEx filter on assembly name (path not included).")]
         public string AssemblyName { get; set; }

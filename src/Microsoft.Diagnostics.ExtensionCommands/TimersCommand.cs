@@ -11,6 +11,11 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     [Command(Name = "timerinfo", Aliases = new string[] { "ti" }, Help = "Displays information about running timers.")]
     public class TimersCommand : ClrMDHelperCommandBase
     {
+        public TimersCommand(IServiceProvider services)
+            : base(services)
+        {
+        }
+
         public override void Invoke()
         {
             try

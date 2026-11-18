@@ -2,19 +2,21 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using Microsoft.Diagnostics.DebugServices;
 using Microsoft.Diagnostics.Runtime;
 
 namespace Microsoft.Diagnostics.ExtensionCommands
 {
-    [ServiceExport(Scope = ServiceScope.Runtime)]
     public class StaticVariableService
     {
         private Dictionary<ulong, ClrStaticField> _fields;
         private IEnumerator<(ulong Address, ClrStaticField Static)> _enumerator;
 
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
+        public StaticVariableService(ClrRuntime runtime)
+        {
+            Runtime = runtime;
+        }
+
+        public ClrRuntime Runtime { get; }
 
         /// <summary>
         /// Returns the static field at the given address.

@@ -76,7 +76,6 @@ namespace Microsoft.Diagnostics.ExtensionCommands
     /// newest-first, plug/reloc/promote messages accumulate into the current GC,
     /// and a BEGINGC (GcStart) message commits and closes that GC.
     /// </summary>
-    [ServiceExport(Scope = ServiceScope.Runtime)]
     public sealed class GCHistory
     {
         // Matches the native MAX_GCRECORDS cap in gchist.cpp.
@@ -84,11 +83,15 @@ namespace Microsoft.Diagnostics.ExtensionCommands
 
         private readonly List<GCRecord> _records = new();
 
-        [ServiceImport]
-        public ClrRuntime Runtime { get; set; }
+        public GCHistory(ClrRuntime runtime, IConsoleService console)
+        {
+            Runtime = runtime;
+            Console = console;
+        }
 
-        [ServiceImport]
-        public IConsoleService Console { get; set; }
+        public ClrRuntime Runtime { get; }
+
+        public IConsoleService Console { get; }
 
         /// <summary>True once <see cref="Initialize"/> has successfully run.</summary>
         public bool IsInitialized { get; private set; }

@@ -131,7 +131,7 @@ namespace Microsoft.Diagnostics.DebugServices.UnitTests
             RuntimeDiscoveryTestTarget target)
         {
             CommandService commands = new();
-            commands.AddCommands(typeof(RuntimesCommand));
+            commands.AddCommands<RuntimesCommand>();
             CaptureConsoleService console = new();
             ServiceContainer services = new(target.Services);
             services.AddService<IConsoleService>(console);

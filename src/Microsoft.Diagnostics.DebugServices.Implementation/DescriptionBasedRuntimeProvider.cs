@@ -14,7 +14,6 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
     /// <summary>
     /// Converts runtime descriptions into IRuntime instances using ClrMD.
     /// </summary>
-    [ProviderExport(Type = typeof(IRuntimeProvider))]
     public class DescriptionBasedRuntimeProvider : IRuntimeProvider
     {
         private readonly IServiceProvider _services;
@@ -47,8 +46,8 @@ namespace Microsoft.Diagnostics.DebugServices.Implementation
             StringComparison pathComparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
             IRuntimeDescriptionProvider[] providers = _services.GetService<IServiceManager>()
-                .EnumerateProviderFactories(typeof(IRuntimeDescriptionProvider))
-                .Select(factory => (IRuntimeDescriptionProvider)factory(_services))
+                .EnumerateProviderFactories<IRuntimeDescriptionProvider>()
+                .Select(factory => factory(_services))
                 .ToArray();
             DataTarget dataTarget = new(dataReader, new DataTargetOptions
             {

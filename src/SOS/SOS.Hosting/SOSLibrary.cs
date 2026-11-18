@@ -69,13 +69,11 @@ namespace SOS.Hosting
         /// </summary>
         public string SOSPath { get; set; }
 
-        [ServiceExport(Scope = ServiceScope.Global)]
-        public static SOSLibrary TryCreate(IHost host, IHostAssetResolver assetResolver, [ServiceImport(Optional = true)] ISOSModule sosModule)
+        public static SOSLibrary TryCreate(IHost host, IHostAssetResolver assetResolver, ISOSModule sosModule)
         {
-            SOSLibrary sosLibrary = null;
+            SOSLibrary sosLibrary = new(host, assetResolver, sosModule);
             try
             {
-                sosLibrary = new SOSLibrary(host, assetResolver, sosModule);
                 sosLibrary.Initialize();
             }
             catch
