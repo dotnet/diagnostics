@@ -598,7 +598,7 @@ public static class SnapshotStore
     /// </summary>
     private static string SubprocessDll(string name)
     {
-        string dll = Path.Combine(RepoLayout.ArtifactsBin, name, RepoLayout.ArtifactsConfiguration, RepoLayout.TestTargetFramework, RepoLayout.Rid, name + ".dll");
+        string dll = Path.Combine(RepoLayout.ArtifactsBin, name, RepoLayout.ArtifactsConfiguration, RepoLayout.TestTargetFramework, name + ".dll");
         string project = Path.Combine(RepoLayout.Root, "src", "tests", name, name + ".csproj");
 
         if (UsePrebuiltOnHelix(dll, $"subprocess '{name}'"))
