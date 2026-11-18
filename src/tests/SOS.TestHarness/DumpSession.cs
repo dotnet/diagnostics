@@ -26,6 +26,9 @@ internal sealed class DumpSession : IPooledHost
 {
     private readonly Host _hostKind;
     private readonly HostSlot _slot;
+    private readonly HostSlotPool _pool;
+    private readonly object _commandGate = new();
+    private HostSlotPool.Reservation? _reservation;
     private IDebuggerHost? _host;
 
     // One diagnostics collector for the life of this session (survives a pooled host being closed and
@@ -48,7 +51,7 @@ internal sealed class DumpSession : IPooledHost
     {
         get
         {
-            using (_slot.Acquire(this))
+            using (AcquireDebuggerSession())
             {
                 return (_host as IStartupDiagnosticHost)?.StartupDiagnostics.ToArray() ?? [];
             }
@@ -57,7 +60,8 @@ internal sealed class DumpSession : IPooledHost
 
     internal DumpSession(Host hostKind, string targetName, string stopName, Flavor flavor, string dumpPath,
                          CoreVersion coreVersion = CoreVersion.Net10, Dac dac = Dac.Legacy,
-                         HostRuntime hostRuntime = HostRuntime.Managed)
+                         HostRuntime hostRuntime = HostRuntime.Managed,
+                         HostSlotPool.Reservation? reservation = null)
     {
         _hostKind = hostKind;
         Host = hostKind;
@@ -71,7 +75,15 @@ internal sealed class DumpSession : IPooledHost
 
         // Bound resource-heavy dump hosts independently. Cdb uses two slots to retain the suite's
         // observed two-test concurrency without allowing one EngineHost process per memoized session.
-        _slot = HostSlotPool.HostSlotFor(hostKind);
+        _pool = hostKind switch
+        {
+            Host.Cdb => HostSlotPool.Cdb,
+            Host.Lldb => HostSlotPool.Lldb,
+            Host.DotnetDump => HostSlotPool.DotNetDump,
+            _ => throw new ArgumentOutOfRangeException(nameof(hostKind)),
+        };
+        _reservation = reservation;
+        _slot = reservation?.Slot ?? _pool.Select();
 
         // The child-process hosts (lldb, dotnet-dump) capture their stdout/stderr and crash dumps; the cdb
         // child host runs dbgeng out-of-process and is not wired for capture.
@@ -93,13 +105,79 @@ internal sealed class DumpSession : IPooledHost
     public SosOutput Execute(string command) =>
         RunCommand("Execute", command, h => h.Execute(command));
 
-    public IDisposable AcquireDebuggerSession() => _slot.Acquire(this);
+    public IDisposable AcquireDebuggerSession()
+    {
+        Monitor.Enter(_commandGate);
+        bool ownsReservation = _reservation is null;
+        try
+        {
+            _reservation ??= _pool.Reserve(_slot);
+            return new CommandLease(this, _slot.Acquire(this), ownsReservation);
+        }
+        catch
+        {
+            if (ownsReservation)
+            {
+                ReleaseReservation();
+            }
+            Monitor.Exit(_commandGate);
+            throw;
+        }
+    }
+
+    internal void CloseReservedSession()
+    {
+        lock (_commandGate)
+        {
+            try
+            {
+                _slot.CloseCurrent();
+            }
+            finally
+            {
+                ReleaseReservation();
+            }
+        }
+    }
+
+    private void ReleaseReservation()
+    {
+        _reservation?.Dispose();
+        _reservation = null;
+    }
+
+    private sealed class CommandLease(DumpSession session, IDisposable slotLease, bool ownsReservation) : IDisposable
+    {
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _disposed = true;
+
+            try
+            {
+                slotLease.Dispose();
+            }
+            finally
+            {
+                if (ownsReservation)
+                {
+                    session.ReleaseReservation();
+                }
+                Monitor.Exit(session._commandGate);
+            }
+        }
+    }
 
     private SosOutput RunCommand(string kind, string command, Func<IDebuggerHost, SosOutput> action)
     {
         try
         {
-            using (_slot.Acquire(this))
+            using (AcquireDebuggerSession())
             {
                 return action(_host!);
             }

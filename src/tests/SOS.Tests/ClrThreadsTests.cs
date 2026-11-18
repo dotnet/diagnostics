@@ -18,11 +18,11 @@ public sealed class ClrThreadsTests
     public static TheoryData<TestConfig> ApartmentMatrix { get; } =
         TestConfig.BuildMatrix([TargetCatalog.ThreadApartment]);
 
-    [WindowsTheory]
+    [WindowsDumpTheory]
     [MemberData(nameof(ApartmentMatrix))]
     public async Task ClrThreads_ReportsApartmentStates(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         SosTable threads = target.Sos("clrthreads").AsThreadsTable();
@@ -53,11 +53,11 @@ public sealed class ClrThreadsTests
                         liveness: Liveness.AllValid,
                         dumpKind: DumpKind.All);
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(Matrix))]
     public async Task ClrThreads_ReportsThreadCount(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
         using IDisposable session = target.AcquireDebuggerSession();
 

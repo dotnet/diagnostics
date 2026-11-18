@@ -12,12 +12,12 @@ public sealed class ConcurrentDictionaryTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Dcd_RejectsInvalidAddresses(TestConfig config)
     {
         SOSTestSkips.SkipUnsupportedDictionary(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("dcd").AssertContains("Missing ConcurrentDictionary address");
@@ -25,12 +25,12 @@ public sealed class ConcurrentDictionaryTests
         target.Sos("dcd 0000000000000001").AssertContains("is not referencing an object");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Dcd_PrimitiveKeysAndStringValues(TestConfig config)
     {
         SOSTestSkips.SkipUnsupportedDictionary(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong dictionary = FindDictionary(target, 0);
@@ -41,12 +41,12 @@ public sealed class ConcurrentDictionaryTests
         Assert.Equal("\"three\"", entries["3"]);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Dcd_ArrayValuesRoundTrip(TestConfig config)
     {
         SOSTestSkips.SkipUnsupportedDictionary(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong dictionary = FindDictionary(target, 1);
@@ -56,12 +56,12 @@ public sealed class ConcurrentDictionaryTests
         AssertStringArray(target, entries["2"], 2);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Dcd_PrimitiveKeysAndValues(TestConfig config)
     {
         SOSTestSkips.SkipUnsupportedDictionary(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong dictionary = FindDictionary(target, 2);
@@ -72,12 +72,12 @@ public sealed class ConcurrentDictionaryTests
         Assert.Equal("512487", entries["1521482"]);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Dcd_StringKeysBooleanValuesAndTruncation(TestConfig config)
     {
         SOSTestSkips.SkipUnsupportedDictionary(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong dictionary = FindDictionary(target, 3);
@@ -88,12 +88,12 @@ public sealed class ConcurrentDictionaryTests
         Assert.Equal("False", entries["\"" + new string('S', 99) + "..."]);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Dcd_StructKeysObjectAndNullValues(TestConfig config)
     {
         SOSTestSkips.SkipUnsupportedDictionary(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong dictionary = FindDictionary(target, 4);
@@ -135,12 +135,12 @@ public sealed class ConcurrentDictionaryTests
         Assert.Equal([ 1, 2 ], keys.Order());
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Dcd_StructValuesRoundTrip(TestConfig config)
     {
         SOSTestSkips.SkipUnsupportedDictionary(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong dictionary = FindDictionary(target, 5);

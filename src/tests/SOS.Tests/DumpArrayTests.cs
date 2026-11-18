@@ -21,12 +21,12 @@ public sealed class DumpArrayTests
 
     private static readonly Regex s_elementValue = new(@"(\d+)\s+m_value", RegexOptions.Compiled);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpArray_StructureStartLengthDetails(TestConfig config)
     {
         TestMatrices.SkipUnsupportedDumpObj(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong array = ArrayAddress(target);
@@ -51,12 +51,12 @@ public sealed class DumpArrayTests
         Assert.Equal(new[] { 3 * step, 4 * step, 5 * step }, values);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpArray_ParameterEdgeCases(TestConfig config)
     {
         TestMatrices.SkipUnsupportedDumpObj(config);
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         ulong array = ArrayAddress(target);

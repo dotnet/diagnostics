@@ -118,6 +118,44 @@ sessions. A session is memoized by host, target, stop, flavor, GC type, dump
 kind, runtime, and DAC. Live targets are never shared because command execution
 advances the process; every caller receives an isolated debuggee.
 
+### Single-stop theory collections
+
+`[SosDumpTheory]` opts a theory into dump-affinity grouping while retaining its
+`[MemberData]`, individual row results, and command-oriented test class. Its
+discoverer assigns dump rows to collections keyed by the complete debugger
+configuration and stop. A second string argument supplies the stop; otherwise
+the target's default stop is used. `StopName` and `ForTarget` can override that
+choice for a target-specific stop. `[WindowsDumpTheory]` applies the same
+grouping while preserving Windows-only discovery.
+
+Opted-in methods acquire their cursor with
+`DumpCollectionFixture.GetTargetAsync(config, optionalStopName)`. The collection
+fixture lazily captures the dump and reserves a debugger slot, retains the
+session across its selected cases, and closes it at collection teardown.
+Initialization and disposal are serialized asynchronously; failed initialization
+can be retried, and disposed fixtures cannot reopen. Collection cursors reject
+navigation to any other stop. Tests must restore any debugger-global state they
+change, including on assertion failures.
+
+Collection reservations and ordinary dump commands share the existing two
+slots per backend. Reservations are thread-independent; command leases remain
+synchronous and thread-affine. Never await while holding
+`AcquireDebuggerSession()`, or retain a command lease while navigating.
+Live rows, deferred-enumeration theories, and theories in explicitly defined
+collections keep ordinary execution. Multi-stop tests remain ordinary theories
+and release their command leases before requesting the next stop.
+
+All 113 single-stop methods use dump-affinity theories. The two multi-stop
+methods and four live debugger-control methods remain ordinary theories.
+The matrices, assertions, platform skips, and separate row results are unchanged.
+
+The assembly defaults to xUnit's conservative parallel algorithm. Its admission
+limit covers an entire collection, allowing a slot-owning collection to finish
+its remaining cases and release its reservation even with one or two parallel
+collections. Do not override this with the aggressive algorithm: ordinary dump
+commands wait synchronously for slots and could otherwise block the workers
+needed by a slot owner. Runner settings can override the assembly default.
+
 ### Debugger hosts and isolation
 
 Tests issue the same `target.Sos("command")` call through `IDebuggerHost`.
@@ -140,9 +178,9 @@ The successful candidate uses the provisioned SOS host runtime; no runtime is
 built or downloaded by these tests.
 
 Debugger stdout, stderr, command lines, and host crash dumps are retained by
-`HostDiagnostics`. Dotnet-dump sessions use a single process slot because idle
-REPL children busy-wait; dump sessions are otherwise safe to share. Live
-sessions are bounded by `SOSHARNESS_MAX_LIVE`.
+`HostDiagnostics`. Dump sessions share two process slots per backend to bound
+retained mappings and idle REPL processes. Live sessions are bounded by
+`SOSHARNESS_MAX_LIVE`.
 
 ### Stable oracles and output parsing
 
@@ -171,11 +209,11 @@ default oracle.
 public static TheoryData<TestConfig> Matrix =>
     TestConfig.BuildMatrix([TargetCatalog.NestedException]);
 
-[SosTheory]
+[SosDumpTheory]
 [MemberData(nameof(Matrix))]
 public async Task PrintException_Data(TestConfig config)
 {
-    using Target target = await Targets.GetTargetAsync(config);
+    using Target target = await DumpCollectionFixture.GetTargetAsync(config);
     target.GoToFirstStop();
 
     SosOutput output = target.Sos("printexception");

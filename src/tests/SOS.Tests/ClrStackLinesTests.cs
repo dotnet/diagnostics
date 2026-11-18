@@ -55,11 +55,11 @@ public sealed class ClrStackLinesTests
             ],
             liveness: Liveness.AllValid);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopArgsLocals, ForTarget = TargetCatalog.Scenarios)]
     [MemberData(nameof(Matrix))]
     public async Task ClrStack_SourceLines(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, config.Target == TargetCatalog.Scenarios ? TargetCatalog.StopArgsLocals : null);
         if (config.Target == TargetCatalog.Scenarios)
         {
             target.GoToStopPoint(TargetCatalog.StopArgsLocals);

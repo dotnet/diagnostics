@@ -36,11 +36,11 @@ public sealed class DiagnosticCommandTests
     public static TheoryData<TestConfig> ClrmaExceptionMatrix =>
         TestConfig.BuildMatrix([TargetCatalog.NestedException], Flavor.AllValid, Host.DotnetDump, dumpKind: DumpKind.All);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpGcData_ReportsGcStatistics(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         target.Sos("dumpgcdata").AssertContains("concurrent GCs");
@@ -73,11 +73,11 @@ public sealed class DiagnosticCommandTests
         return matches.Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture)).ToArray();
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task SosStatus_ReportsTargetAndRuntime(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         SosOutput status = target.Sos("sosstatus");
@@ -85,22 +85,22 @@ public sealed class DiagnosticCommandTests
         Assert.Contains(".NET", status.Text, StringComparison.Ordinal);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task Logging_ReportsState(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // logging reports the internal-logging state (a native SOS command, both hosts).
         target.Sos("logging").AssertContains("Logging");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task LogOpenClose_CyclesConsoleLog(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // logopen/logclose are managed extension commands (the dbgeng host uses native .logopen instead).
@@ -108,21 +108,21 @@ public sealed class DiagnosticCommandTests
         try
         {
             target.Sos($"logopen {logFile}").AssertContains("logging to");
-            target.Sos("logclose");
         }
         finally
         {
+            target.Sos("logclose");
             File.Delete(logFile);
         }
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(DumpLogMatrix))]
     public async Task DumpLog_DumpsStressLog(TestConfig config)
     {
         SOSTestSkips.SkipDumpLog(config);
 
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         string logFile = Path.Combine(Path.GetTempPath(), $"stresslog-{Guid.NewGuid():N}.txt");
@@ -137,11 +137,11 @@ public sealed class DiagnosticCommandTests
         }
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(ClrmaMatrix))]
     public async Task Clrma_DrivesManagedAnalysis(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         // clrma drives the CLRMA provider (used by Watson / !analyze) and prints the managed thread analysis.
@@ -150,11 +150,11 @@ public sealed class DiagnosticCommandTests
         clrma.AssertContains("OSThreadId:");
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(ClrmaExceptionMatrix))]
     public async Task Clrma_ReportsCurrentExceptionChain(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         SosOutput clrma = target.Sos("clrma");

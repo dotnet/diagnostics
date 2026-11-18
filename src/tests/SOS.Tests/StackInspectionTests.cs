@@ -22,11 +22,11 @@ public sealed class StackInspectionTests
     public static TheoryData<TestConfig> CdbMatrix => TestMatrices.FullDumpOnCoreVersions([TargetCatalog.Scenarios], CoreVersion.Net8 | CoreVersion.Net9 | CoreVersion.Net10, Flavor.AllValid, Host.Cdb);
     public static TheoryData<TestConfig> DotnetDumpMatrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.AllValid, Host.DotnetDump);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopArgsLocals)]
     [MemberData(nameof(Matrix))]
     public async Task DumpStackObjects_ListsStackRoots(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopArgsLocals);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
         using IDisposable session = target.AcquireDebuggerSession();
 
@@ -50,11 +50,11 @@ public sealed class StackInspectionTests
         Assert.Contains(local.ToString("x"), verified.Text, StringComparison.OrdinalIgnoreCase);
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopArgsLocals)]
     [MemberData(nameof(DotnetDumpMatrix))]
     public async Task ParallelStacks_GroupsThreadsByCallStack(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopArgsLocals);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
 
         // parallelstacks is a managed extension command that only the dotnet-dump host exports.
@@ -63,11 +63,11 @@ public sealed class StackInspectionTests
         Assert.Matches(@"\d+ threads", ps.Text); // the "==> N threads with M roots" footer
     }
 
-    [WindowsTheory]
+    [WindowsDumpTheory(StopName = TargetCatalog.StopArgsLocals)]
     [MemberData(nameof(CdbMatrix))]
     public async Task DumpStack_WalksNativeAndManagedFrames(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopArgsLocals);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
 
         SosOutput stack = target.Sos("dumpstack");
@@ -79,11 +79,11 @@ public sealed class StackInspectionTests
         eeOnly.AssertContains("SosHarnessScenarios.Main()");
     }
 
-    [WindowsTheory]
+    [WindowsDumpTheory(StopName = TargetCatalog.StopArgsLocals)]
     [MemberData(nameof(CdbMatrix))]
     public async Task EeStack_WalksAllThreads(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopArgsLocals);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
 
         // eestack is dumpstack across every managed thread, so the args/locals frame still appears.

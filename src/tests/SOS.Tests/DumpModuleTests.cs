@@ -25,11 +25,11 @@ public sealed class DumpModuleTests
         "SosHarnessScenarios", "ThinLockMarker", "LiveUniqueMarker", "DeadUniqueMarker",
     };
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpModule_Structure(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         (AssemblyInfo assembly, ModuleRef module) = FindDebuggeeModule(target, config.Flavor);
@@ -45,11 +45,11 @@ public sealed class DumpModuleTests
         Assert.True(dump.MetaData.Size > 0, $"metadata size should be positive (was {dump.MetaData.Size})");
     }
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task DumpModule_Types(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         (_, ModuleRef module) = FindDebuggeeModule(target, config.Flavor);

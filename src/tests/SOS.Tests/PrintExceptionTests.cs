@@ -42,11 +42,11 @@ public sealed class PrintExceptionTests
             [TargetCatalog.Overflow],
             liveness: Liveness.AllValid);
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(NestedMatrix))]
     public async Task PrintException_Structure(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         SosOutput pe = target.Sos("printexception");
@@ -89,11 +89,11 @@ public sealed class PrintExceptionTests
         }
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(NestedMatrix))]
     public async Task PrintException_Data(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         SosOutput pe = target.Sos("printexception");
@@ -114,11 +114,11 @@ public sealed class PrintExceptionTests
         AssertFrameSequence(inner, ["NestedExceptionTest.Program.Main"]);
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(NoInnerMatrix))]
     public async Task PrintException_NoInnerException(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
         using IDisposable session = target.AcquireDebuggerSession();
 
@@ -167,13 +167,13 @@ public sealed class PrintExceptionTests
         AssertFrameSequence(lines, functions, sourceLines);
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(OverflowMatrix))]
     public async Task PrintException_StackOverflow(TestConfig config)
     {
         SOSTestSkips.SkipStackOverflowDump(config);
 
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
         using IDisposable session = target.AcquireDebuggerSession();
 
@@ -195,11 +195,11 @@ public sealed class PrintExceptionTests
         exception.AssertContains("StackTrace (generated):");
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(ReflectionMatrix))]
     public async Task PrintException_ReflectionInnerException(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
         using IDisposable session = target.AcquireDebuggerSession();
 
@@ -225,11 +225,11 @@ public sealed class PrintExceptionTests
         AssertFrameSequence(lines, ["RefLoader.Loader.Main"], ["ReflectionTest.cs @ "]);
     }
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(TaskMatrix))]
     public async Task PrintException_TaskExceptionChain(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
         using IDisposable session = target.AcquireDebuggerSession();
 

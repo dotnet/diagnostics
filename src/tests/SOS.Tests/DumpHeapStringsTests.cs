@@ -17,11 +17,11 @@ public sealed class DumpHeapStringsTests
 {
     public static TheoryData<TestConfig> Matrix => TestMatrices.HeapEnumeration([TargetCatalog.NestedException]);
 
-    [SosTheory]
+    [SosDumpTheory]
     [MemberData(nameof(Matrix))]
     public async Task DumpHeap_Strings(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config);
         target.GoToFirstStop();
 
         // -strings: a per-object listing of string objects, then the value summary.

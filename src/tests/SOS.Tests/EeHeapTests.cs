@@ -16,11 +16,11 @@ public sealed class EeHeapTests
 {
     public static TheoryData<TestConfig> Matrix => TestConfig.BuildMatrix([TargetCatalog.Scenarios]);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(Matrix))]
     public async Task EeHeap_Structure(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         EeHeap ee = target.EeHeap();
@@ -32,11 +32,11 @@ public sealed class EeHeapTests
     public static TheoryData<TestConfig> ServerMatrix =>
         TestConfig.BuildMatrix([TargetCatalog.Scenarios], Flavor.Core, Host.AllValid, Liveness.Dump, GcType.Server);
 
-    [SosTheory]
+    [SosDumpTheory(StopName = TargetCatalog.StopHeap)]
     [MemberData(nameof(ServerMatrix))]
     public async Task EeHeap_ServerGc_IsMultiHeap(TestConfig config)
     {
-        using Target target = await Targets.GetTargetAsync(config);
+        using Target target = await DumpCollectionFixture.GetTargetAsync(config, TargetCatalog.StopHeap);
         target.GoToStopPoint(TargetCatalog.StopHeap);
 
         EeHeap ee = target.EeHeap();

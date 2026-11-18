@@ -130,6 +130,75 @@ public sealed class HostSlotTests
         Assert.Equal(1, next.OpenCount);
     }
 
+    [Fact]
+    public async Task CollectionReservationsAndOrdinarySessionsShareCapacity()
+    {
+        HostSlotPool pool = new(capacity: 2);
+        CancellationToken token = TestContext.Current.CancellationToken;
+        using HostSlotPool.Reservation first = await pool.ReserveAsync(cancellationToken: token);
+        using HostSlotPool.Reservation second = await pool.ReserveAsync(cancellationToken: token);
+        Task<HostSlotPool.Reservation> collection = pool.ReserveAsync(cancellationToken: token);
+        Task<HostSlotPool.Reservation> ordinary = pool.ReserveAsync(first.Slot, token);
+
+        Assert.False(collection.IsCompleted);
+        Assert.False(ordinary.IsCompleted);
+
+        second.Dispose();
+        using HostSlotPool.Reservation next = await collection.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        Assert.Same(second.Slot, next.Slot);
+        Assert.False(ordinary.IsCompleted);
+
+        first.Dispose();
+        using HostSlotPool.Reservation fixedSlot = await ordinary.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        Assert.Same(first.Slot, fixedSlot.Slot);
+    }
+
+    [Fact]
+    public async Task CancelledReservationDoesNotLoseCapacity()
+    {
+        HostSlotPool pool = new(capacity: 1);
+        using HostSlotPool.Reservation held = await pool.ReserveAsync(cancellationToken: TestContext.Current.CancellationToken);
+        using CancellationTokenSource cancellation = new();
+        Task<HostSlotPool.Reservation> waiting = pool.ReserveAsync(cancellationToken: cancellation.Token);
+
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiting);
+        held.Dispose();
+
+        using HostSlotPool.Reservation next = await pool.ReserveAsync(cancellationToken: TestContext.Current.CancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        Assert.Same(held.Slot, next.Slot);
+    }
+
+    [Fact]
+    public async Task ReservationSurvivesThreadChangesAndKeepsOrdinaryCommandsOut()
+    {
+        HostSlotPool pool = new(capacity: 1);
+        using HostSlotPool.Reservation collection = await pool.ReserveAsync(cancellationToken: TestContext.Current.CancellationToken);
+        FakePooledHost owner = new();
+        using (collection.Slot.Acquire(owner))
+        {
+            owner.Host.Sos("first");
+        }
+
+        Task<HostSlotPool.Reservation> ordinary = Task.Run(
+            () => pool.Reserve(collection.Slot, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
+        using (collection.Slot.Acquire(owner))
+        {
+            owner.Host.Sos("second");
+        }
+        Assert.Equal(1, owner.OpenCount);
+        Assert.Equal(0, owner.CloseCount);
+
+        await Task.Run(collection.Dispose, TestContext.Current.CancellationToken);
+        using HostSlotPool.Reservation next = await ordinary.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        using (next.Slot.Acquire(new FakePooledHost()))
+        {
+            Assert.Equal(1, owner.CloseCount);
+        }
+        next.Slot.CloseCurrent();
+    }
+
     private sealed class FakePooledHost : IPooledHost
     {
         private FakeDebuggerHost? _host;

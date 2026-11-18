@@ -16,9 +16,8 @@ internal interface IPooledHost
 }
 
 /// <summary>
-/// Distributes memoized dump sessions across a fixed number of independent <see cref="HostSlot"/>
-/// instances. Each session remains assigned to one slot, preserving that slot's most-recently-used
-/// host reuse while allowing sessions assigned to different slots to execute concurrently.
+/// Shares a fixed number of slots between collection-lifetime reservations and ordinary memoized
+/// sessions. Ordinary sessions retain a fixed slot assignment for most-recently-used host reuse.
 /// </summary>
 internal sealed class HostSlotPool
 {
@@ -32,6 +31,9 @@ internal sealed class HostSlotPool
     public static readonly HostSlotPool Lldb = new(capacity: 2);
 
     private readonly HostSlot[] _slots;
+    private readonly HashSet<HostSlot> _reserved = [];
+    private readonly object _gate = new();
+    private TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _next = -1;
 
     public int Capacity => _slots.Length;
@@ -60,6 +62,61 @@ internal sealed class HostSlotPool
     {
         int index = (int)((uint)Interlocked.Increment(ref _next) % (uint)_slots.Length);
         return _slots[index];
+    }
+
+    public Reservation Reserve(HostSlot slot, CancellationToken cancellationToken = default) =>
+        ReserveAsync(slot, cancellationToken).GetAwaiter().GetResult();
+
+    public async Task<Reservation> ReserveAsync(HostSlot? slot = null, CancellationToken cancellationToken = default)
+    {
+        if (slot is not null && !_slots.Contains(slot))
+        {
+            throw new ArgumentException("The slot must belong to this pool.", nameof(slot));
+        }
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Task changed;
+            lock (_gate)
+            {
+                HostSlot? available = slot is null
+                    ? _slots.FirstOrDefault(candidate => !_reserved.Contains(candidate))
+                    : !_reserved.Contains(slot) ? slot : null;
+                if (available is not null)
+                {
+                    _reserved.Add(available);
+                    return new Reservation(this, available);
+                }
+
+                changed = _changed.Task;
+            }
+
+            await changed.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private void Release(HostSlot slot)
+    {
+        TaskCompletionSource changed;
+        lock (_gate)
+        {
+            _reserved.Remove(slot);
+            changed = _changed;
+            _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        changed.SetResult();
+    }
+
+    /// <summary>A thread-independent reservation; command serialization remains the slot's responsibility.</summary>
+    public sealed class Reservation(HostSlotPool pool, HostSlot slot) : IDisposable
+    {
+        private HostSlotPool? _pool = pool;
+
+        public HostSlot Slot { get; } = slot;
+
+        public void Dispose() => Interlocked.Exchange(ref _pool, null)?.Release(Slot);
     }
 
     /// <summary>Close the currently-open host in every slot.</summary>
