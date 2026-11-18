@@ -71,6 +71,9 @@ public static class RepoLayout
             .Single(a => a.Key == "SOS.TestHarness.TargetRid")
             .Value!;
 
+    /// <summary>True when the current test leg targets musl libc (e.g. Alpine).</summary>
+    public static bool IsMusl => Rid.StartsWith("linux-musl-", StringComparison.Ordinal);
+
     /// <summary>The .NET root used by harness subprocesses. Helix uses its multi-runtime install;
     /// repository runs use the locally acquired build SDK.</summary>
     public static string DotNetRoot =>
