@@ -18,7 +18,8 @@ namespace Microsoft.FileFormats
     {
         private Dictionary<Type, ILayout> _layouts = new();
         private List<Func<Type, LayoutManager, ILayout>> _layoutProviders = new();
-        private Dictionary<Tuple<Type, uint>, ILayout> _arrayLayouts = new();
+        private Dictionary<Tuple<Type, uint>, ILayout> _legacyArrayLayouts = new();
+        private Dictionary<Tuple<Type, uint>, ILayout> _typedArrayLayouts = new();
         private readonly Dictionary<Type, Func<LayoutManager, ILayout>> _layoutFactories = new();
         private readonly Dictionary<Type, Func<LayoutManager, uint, ILayout>> _arrayFactories = new();
 
@@ -53,11 +54,11 @@ namespace Microsoft.FileFormats
 
             ILayout layout;
             Tuple<Type, uint> key = new(arrayType, numElements);
-            if (!_arrayLayouts.TryGetValue(key, out layout))
+            if (!_legacyArrayLayouts.TryGetValue(key, out layout))
             {
                 Type elemType = arrayType.GetElementType();
                 layout = new ArrayLayout(arrayType, GetLayout(elemType), numElements);
-                _arrayLayouts.Add(key, layout);
+                _legacyArrayLayouts.Add(key, layout);
             }
             return layout;
         }
@@ -74,10 +75,10 @@ namespace Microsoft.FileFormats
         public ILayout GetArrayLayoutForElement<T>(uint numElements)
         {
             Tuple<Type, uint> key = new(typeof(T[]), numElements);
-            if (!_arrayLayouts.TryGetValue(key, out ILayout layout))
+            if (!_typedArrayLayouts.TryGetValue(key, out ILayout layout))
             {
                 layout = CreateArrayLayout<T>(numElements);
-                _arrayLayouts.Add(key, layout);
+                _typedArrayLayouts.Add(key, layout);
             }
             return layout;
         }
@@ -97,14 +98,14 @@ namespace Microsoft.FileFormats
         internal ILayout GetRegisteredArrayLayout(Type arrayType, uint count)
         {
             Tuple<Type, uint> key = new(arrayType, count);
-            if (!_arrayLayouts.TryGetValue(key, out ILayout layout))
+            if (!_typedArrayLayouts.TryGetValue(key, out ILayout layout))
             {
                 if (!_arrayFactories.TryGetValue(arrayType, out Func<LayoutManager, uint, ILayout> factory))
                 {
                     throw new LayoutException("No array allocator registered for " + arrayType.FullName + ". Use RegisterArray<T>.");
                 }
                 layout = factory(this, count);
-                _arrayLayouts.Add(key, layout);
+                _typedArrayLayouts.Add(key, layout);
             }
             return layout;
         }

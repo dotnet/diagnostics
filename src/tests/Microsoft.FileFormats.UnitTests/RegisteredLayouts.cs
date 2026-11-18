@@ -245,12 +245,42 @@ namespace Microsoft.FileFormats.Tests
             Assert.NotSame(actual, typedLayout.Read(source, 1));
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TypedEnumArraysUseSeparateCacheFromLegacyArrays(bool legacyFirst)
+        {
+            LayoutManager layouts = new LayoutManager().AddPrimitives().AddEnumTypes();
+            ILayout typedLayout;
+            ILayout legacyLayout;
+            if (legacyFirst)
+            {
+                legacyLayout = layouts.GetArrayLayout<TestEnum[]>(1);
+                typedLayout = layouts.GetArrayLayoutForElement<TestEnum>(1);
+            }
+            else
+            {
+                typedLayout = layouts.GetArrayLayoutForElement<TestEnum>(1);
+                legacyLayout = layouts.GetArrayLayout<TestEnum[]>(1);
+            }
+
+            Assert.NotSame(legacyLayout, typedLayout);
+            MemoryBufferAddressSpace source = new(new byte[] { 1 });
+            TestEnum[] values = Assert.IsType<TestEnum[]>(typedLayout.Read(source, 0));
+            Assert.Equal(new[] { TestEnum.One }, values);
+        }
+
         [Fact]
         public void LegacyGenericArrayLayoutRejectsNonArrayTypes()
         {
             LayoutManager layouts = new LayoutManager().AddPrimitives();
             Assert.Throws<ArgumentException>(() => layouts.GetArrayLayout<byte>(3));
             Assert.Throws<ArgumentException>(() => layouts.GetArrayLayout<byte[,]>(3));
+        }
+
+        private enum TestEnum : byte
+        {
+            One = 1
         }
 
         [Theory]
