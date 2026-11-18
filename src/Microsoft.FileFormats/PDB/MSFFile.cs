@@ -29,7 +29,7 @@ namespace Microsoft.FileFormats.PDB
             PDBPagedAddressSpace secondLevelPageList = CreatePagedAddressSpace(fileReader.DataSource, fileReader.DataSource, msfFileHeader.PageSize, pageIndicesOffset, secondLevelPageCount * sizeof(uint));
             PDBPagedAddressSpace directoryContent = CreatePagedAddressSpace(fileReader.DataSource, secondLevelPageList, msfFileHeader.PageSize, 0, msfFileHeader.DirectorySize);
 
-            Reader directoryReader = new(directoryContent);
+            Reader directoryReader = new(directoryContent, new LayoutManager().AddPDBTypes());
             ulong position = 0;
             uint countStreams = directoryReader.Read<uint>(ref position);
             uint[] streamSizes = directoryReader.ReadArray<uint>(ref position, countStreams);
@@ -37,7 +37,8 @@ namespace Microsoft.FileFormats.PDB
             for (uint i = 0; i < streamSizes.Length; i++)
             {
                 uint streamSize = streamSizes[i];
-                streams[i] = new Reader(CreatePagedAddressSpace(fileReader.DataSource, directoryContent, pageSize, position, streamSize));
+                streams[i] = new Reader(CreatePagedAddressSpace(fileReader.DataSource, directoryContent, pageSize, position, streamSize),
+                    new LayoutManager().AddPDBTypes());
                 position += ToPageCount(pageSize, streamSizes[i]) * sizeof(uint);
             }
 
@@ -46,7 +47,7 @@ namespace Microsoft.FileFormats.PDB
 
         private static PDBPagedAddressSpace CreatePagedAddressSpace(IAddressSpace fileData, IAddressSpace indicesData, uint pageSize, ulong offset, uint length)
         {
-            uint[] indices = new Reader(indicesData).ReadArray<uint>(offset, ToPageCount(pageSize, length));
+            uint[] indices = new Reader(indicesData, new LayoutManager().AddPDBTypes()).ReadArray<uint>(offset, ToPageCount(pageSize, length));
             return new PDBPagedAddressSpace(fileData, indices, pageSize, length);
         }
 
