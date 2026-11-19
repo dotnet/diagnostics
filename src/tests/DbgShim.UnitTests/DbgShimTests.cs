@@ -749,7 +749,7 @@ namespace Microsoft.Diagnostics
                 }
                 else
                 {
-                    Assert.True(hr != HResult.S_OK);
+                    Assert.Equal((HResult)unchecked((int)0x80131c3c), hr); // CORDBG_E_DEBUG_COMPONENT_MISSING
                     Assert.Equal(IntPtr.Zero, process);
                 }
 

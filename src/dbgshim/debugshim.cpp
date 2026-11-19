@@ -1380,7 +1380,8 @@ HRESULT CLRDebuggingImpl::OpenDataAccessProcess(
         // succeed, so we skip cDAC entirely and let the legacy DAC fallback handle the target.
         SString cdacPath;
         ULONG64 contractDescriptor = 0;
-        if (!GetCDacPath(cdacPath))
+        DWORD cdacAttributes = GetCDacPath(cdacPath) ? GetFileAttributesW(cdacPath) : INVALID_FILE_ATTRIBUTES;
+        if (cdacAttributes == INVALID_FILE_ATTRIBUTES || (cdacAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
         {
             cdacHr = CORDBG_E_DEBUG_COMPONENT_MISSING;
         }
