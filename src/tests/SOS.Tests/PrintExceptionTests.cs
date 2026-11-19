@@ -120,6 +120,7 @@ public sealed class PrintExceptionTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         (string exceptionType, string message, uint hresult, string[] functions, string[] sourceLines) = config.Target switch
         {
@@ -174,6 +175,7 @@ public sealed class PrintExceptionTests
 
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         target.Sos("clrthreads -managedexception");
         SosOutput exception = target.Sos("printexception");
@@ -199,6 +201,7 @@ public sealed class PrintExceptionTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         SosOutput pe = target.Sos("printexception");
         Assert.Equal("System.Reflection.TargetInvocationException", pe["Exception type"]);
@@ -228,6 +231,7 @@ public sealed class PrintExceptionTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         SosOutput aggregate = target.Sos("printexception");
         Assert.Equal("System.AggregateException", aggregate["Exception type"]);

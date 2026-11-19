@@ -28,6 +28,7 @@ public sealed class StackInspectionTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToStopPoint(TargetCatalog.StopArgsLocals);
+        using IDisposable session = target.AcquireDebuggerSession();
 
         // The argument and local marker objects of ArgsLocalsMethod are live on the current thread's stack.
         ulong arg = target.FindUniqueObject("ArgUniqueMarker");

@@ -69,6 +69,7 @@ public sealed class ClrStackLinesTests
             target.GoToFirstStop();
         }
 
+        using IDisposable session = target.AcquireDebuggerSession();
         SosTable plain = target.Clrstack();
 
         // The expected managed methods appear, in caller order, each resolving to its source file with

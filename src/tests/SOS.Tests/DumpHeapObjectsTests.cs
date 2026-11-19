@@ -29,6 +29,7 @@ public sealed class DumpHeapObjectsTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         // --- default: object listing + statistics + the "Total N objects, M bytes" footer ---
         DumpHeapResult full = target.DumpHeap();

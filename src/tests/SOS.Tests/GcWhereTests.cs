@@ -59,6 +59,7 @@ public sealed class GcWhereTests
     private static void CheckGeneration(Target target, int gen)
     {
         target.GoToStopPoint($"gen{gen}");
+        using IDisposable session = target.AcquireDebuggerSession();
         ulong obj = FindObject(target);
         SosOutput gcwhere = target.Sos($"gcwhere {obj:x}");
 

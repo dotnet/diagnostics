@@ -34,6 +34,7 @@ public sealed class ClrStackFrameCountTests
     {
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         SosTable full = target.Clrstack();
         Assert.True(full.Length >= 2, "expected a deep enough stack to exercise -c");
@@ -58,6 +59,7 @@ public sealed class ClrStackFrameCountTests
 
         using Target target = await Targets.GetTargetAsync(config);
         target.GoToFirstStop();
+        using IDisposable session = target.AcquireDebuggerSession();
 
         IReadOnlyList<TargetExtensions.IcorFrame> full = target.ClrstackICorDebug(variables: false);
         Assert.True(full.Count >= 2, "expected a deep enough stack to exercise -i -c");
